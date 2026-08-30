@@ -41,6 +41,13 @@
   }
 }
 
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+
 @custom-variant data-disabled {
   &:where([data-disabled="true"]),
   &:where([data-disabled]:not([data-disabled="false"])) {
