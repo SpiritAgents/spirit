@@ -1,3 +1,5 @@
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
+
 export const UI_LAYOUT_SCALE_STORAGE_KEY = "spirit-desktop-ui-layout-scale" as const;
 export const SPIRIT_UI_LAYOUT_SCALE_VAR = "--spirit-ui-layout-scale" as const;
 export const UI_LAYOUT_SCALE_ROOT_ID = "spirit-ui-scale-root" as const;
@@ -36,9 +38,10 @@ export function setStoredUiLayoutScale(scale: number): void {
   const normalized = clampUiLayoutScale(scale);
   if (normalized === DEFAULT_UI_LAYOUT_SCALE) {
     localStorage.removeItem(UI_LAYOUT_SCALE_STORAGE_KEY);
-    return;
+  } else {
+    localStorage.setItem(UI_LAYOUT_SCALE_STORAGE_KEY, String(normalized));
   }
-  localStorage.setItem(UI_LAYOUT_SCALE_STORAGE_KEY, String(normalized));
+  flushDesktopRendererStorage();
 }
 
 /*
@@ -65,11 +68,9 @@ export function computeDarwinTrafficLightPosition(scale: number): { x: number; y
 let darwinTrafficLightSyncFrame: number | null = null;
 
 /**
- * After CSS scaling is written to the DOM, the layout only actually paints once the renderer
- * main thread is idle (React re-render takes ~60–90ms), while native setWindowButtonPosition
- * takes effect within a few milliseconds; so the IPC is deferred to the first rAF after the CSS
- * takes effect (the start of the frame containing the new layout), switching the traffic lights
- * and the layout in the same frame.
+ * After CSS scaling is written to the DOM, layout paints on the next frame.
+ * Native setWindowButtonPosition is deferred to the same rAF so traffic lights
+ * move with the scaled chrome instead of jumping first.
  * A single pending rAF also coalesces duplicate updater/useLayoutEffect calls within the same keypress.
  */
 function syncDarwinTrafficLightPosition(scale: number): void {
@@ -185,6 +186,22 @@ function syncWin32ChromeClass(root: HTMLElement): void {
   root.classList.toggle("spirit-desktop-win32", shouldApplyWin32TitleBarCounterZoom());
 }
 
+let lastAppliedUiLayoutScale: number | null = null;
+let pendingUiLayoutScaleResizeFrame: number | null = null;
+
+function scheduleUiLayoutScaleResize(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  if (pendingUiLayoutScaleResizeFrame !== null) {
+    return;
+  }
+  pendingUiLayoutScaleResizeFrame = window.requestAnimationFrame(() => {
+    pendingUiLayoutScaleResizeFrame = null;
+    window.dispatchEvent(new Event("resize"));
+  });
+}
+
 export function applyUiLayoutScaleToDocument(scale: number): void {
   if (typeof document === "undefined") {
     return;
@@ -200,19 +217,21 @@ export function applyUiLayoutScaleToDocument(scale: number): void {
     return;
   }
 
+  if (lastAppliedUiLayoutScale === normalized) {
+    return;
+  }
+
   syncDarwinTrafficLightPosition(normalized);
 
   if (normalized === DEFAULT_UI_LAYOUT_SCALE) {
     root.style.removeProperty(SPIRIT_UI_LAYOUT_SCALE_VAR);
     scaleRoot.classList.remove(UI_LAYOUT_SCALED_BODY_CLASS);
-    return;
+  } else {
+    root.style.setProperty(SPIRIT_UI_LAYOUT_SCALE_VAR, String(normalized));
+    scaleRoot.classList.add(UI_LAYOUT_SCALED_BODY_CLASS);
   }
-
-  root.style.setProperty(SPIRIT_UI_LAYOUT_SCALE_VAR, String(normalized));
-  scaleRoot.classList.add(UI_LAYOUT_SCALED_BODY_CLASS);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event("resize"));
-  }
+  lastAppliedUiLayoutScale = normalized;
+  scheduleUiLayoutScaleResize();
 }
 
 export function stepUiLayoutScale(current: number, direction: "in" | "out"): number {

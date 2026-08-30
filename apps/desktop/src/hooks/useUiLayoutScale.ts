@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef } from "react";
 
 import {
   applyUiLayoutScaleToDocument,
@@ -9,35 +9,32 @@ import {
 } from "@/lib/ui-layout-scale";
 
 export function useUiLayoutScale() {
-  const [scale, setScaleState] = useState(() => getStoredUiLayoutScale());
+  const scaleRef = useRef(getStoredUiLayoutScale());
 
-  const setScale = useCallback((next: number) => {
+  const applyScale = useCallback((next: number) => {
+    scaleRef.current = next;
     setStoredUiLayoutScale(next);
-    setScaleState(next);
     applyUiLayoutScaleToDocument(next);
   }, []);
 
+  const setScale = useCallback(
+    (next: number) => {
+      applyScale(next);
+    },
+    [applyScale],
+  );
+
   const zoomIn = useCallback(() => {
-    setScaleState((current) => {
-      const next = stepUiLayoutScale(current, "in");
-      setStoredUiLayoutScale(next);
-      applyUiLayoutScaleToDocument(next);
-      return next;
-    });
-  }, []);
+    applyScale(stepUiLayoutScale(scaleRef.current, "in"));
+  }, [applyScale]);
 
   const zoomOut = useCallback(() => {
-    setScaleState((current) => {
-      const next = stepUiLayoutScale(current, "out");
-      setStoredUiLayoutScale(next);
-      applyUiLayoutScaleToDocument(next);
-      return next;
-    });
-  }, []);
+    applyScale(stepUiLayoutScale(scaleRef.current, "out"));
+  }, [applyScale]);
 
   const resetScale = useCallback(() => {
-    setScale(DEFAULT_UI_LAYOUT_SCALE);
-  }, [setScale]);
+    applyScale(DEFAULT_UI_LAYOUT_SCALE);
+  }, [applyScale]);
 
-  return { scale, setScale, zoomIn, zoomOut, resetScale };
+  return { scale: scaleRef.current, setScale, zoomIn, zoomOut, resetScale };
 }

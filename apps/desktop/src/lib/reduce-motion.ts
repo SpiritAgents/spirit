@@ -1,3 +1,5 @@
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
+
 export const REDUCE_MOTION_STORAGE_KEY = "spirit-desktop-reduce-motion" as const;
 
 export const REDUCE_MOTION_CLASS = "spirit-reduce-motion" as const;
@@ -32,6 +34,7 @@ export function setStoredReduceMotion(pref: ReduceMotionPreference): void {
     return;
   }
   localStorage.setItem(REDUCE_MOTION_STORAGE_KEY, pref);
+  flushDesktopRendererStorage();
 }
 
 export function systemPrefersReducedMotion(): boolean {

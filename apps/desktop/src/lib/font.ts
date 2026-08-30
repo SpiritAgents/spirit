@@ -1,3 +1,5 @@
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
+
 export const FONT_STORAGE_KEY = "spirit-desktop-font" as const;
 export const SPIRIT_UI_FONT_STACK_VAR = "--spirit-ui-font-stack" as const;
 export const DEFAULT_FONT_ID = "geist" as const;
@@ -19,9 +21,11 @@ export function getStoredFont(): FontPreference {
 export function setStoredFont(pref: FontPreference): void {
   if (pref === DEFAULT_FONT_ID || !pref.trim()) {
     localStorage.removeItem(FONT_STORAGE_KEY);
+    flushDesktopRendererStorage();
     return;
   }
   localStorage.setItem(FONT_STORAGE_KEY, pref.trim());
+  flushDesktopRendererStorage();
 }
 
 export function applyFontToDocument(pref: FontPreference): void {

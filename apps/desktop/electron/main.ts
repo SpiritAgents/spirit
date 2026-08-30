@@ -1441,6 +1441,11 @@ if (gotSpiritSingleInstanceLock) {
       event.returnValue = osPrefersDark;
     });
 
+    ipcMain.on("desktop:flush-renderer-storage", (event) => {
+      event.sender.session.flushStorageData();
+      event.returnValue = true;
+    });
+
     ipcMain.handle("desktop:get-window-fullscreen", (event) => {
       const window = BrowserWindow.fromWebContents(event.sender);
       return window?.isFullScreen() ?? false;

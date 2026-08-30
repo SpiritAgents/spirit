@@ -67,6 +67,8 @@ declare global {
     readOnboardingCompleted(): boolean;
     /** Synchronously reads the OS dark preference tracked by the main process; matchMedia misreports while themeSource is overridden, so this is authoritative. */
     readOsPrefersDark(): boolean;
+    /** Synchronously flushes Chromium DOM storage (localStorage) to disk after persist-intent writes. */
+    flushRendererStorage(): void;
     bootstrap(request?: BootstrapRequest): Promise<DesktopSnapshot>;
     rememberWorkspaceRoot(request: RememberWorkspaceRequest): Promise<DesktopSnapshot>;
     forgetWorkspace(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;

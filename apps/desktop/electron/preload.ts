@@ -49,6 +49,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   readOsPrefersDark() {
     return ipcRenderer.sendSync("desktop:read-os-prefers-dark") as boolean;
   },
+  flushRendererStorage() {
+    ipcRenderer.sendSync("desktop:flush-renderer-storage");
+  },
   bootstrap(request?: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "bootstrap", { request });
   },

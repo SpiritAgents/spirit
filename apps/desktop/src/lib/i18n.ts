@@ -19,6 +19,7 @@ import {
   type LanguagePreference,
   type ValidLanguage,
 } from "./ui-locale";
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
 
 export {
   FALLBACK_LANGUAGE,
@@ -52,6 +53,7 @@ export function getStoredLanguage(): ValidLanguage {
 
 export function setStoredLanguage(lang: string): void {
   localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
+  flushDesktopRendererStorage();
 }
 
 function syncHostLanguage(lang: ValidLanguage): void {

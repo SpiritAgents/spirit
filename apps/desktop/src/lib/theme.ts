@@ -1,3 +1,5 @@
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
+
 export const THEME_STORAGE_KEY = "spirit-desktop-theme" as const;
 
 export type ThemePreference = "system" | "light" | "dark";
@@ -21,6 +23,7 @@ export function getStoredTheme(): ThemePreference {
 
 export function setStoredTheme(pref: ThemePreference): void {
   localStorage.setItem(THEME_STORAGE_KEY, pref);
+  flushDesktopRendererStorage();
 }
 
 export function systemPrefersDark(): boolean {

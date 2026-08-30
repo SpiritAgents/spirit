@@ -1,3 +1,4 @@
+import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
 import { isMacDesktopPlatform } from "./desktop-shell";
 
 export const FONT_SMOOTHING_STORAGE_KEY = "spirit-desktop-font-smoothing" as const;
@@ -25,6 +26,7 @@ export function setStoredFontSmoothing(enabled: boolean): void {
     return;
   }
   localStorage.setItem(FONT_SMOOTHING_STORAGE_KEY, enabled ? "true" : "false");
+  flushDesktopRendererStorage();
 }
 
 export function applyFontSmoothingToDocument(enabled: boolean): void {
