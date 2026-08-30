@@ -165,7 +165,7 @@
     "tab": "Tab",
     "lspSection": "LSP",
     "lspEnabled": "Serveur de langage (LSP)",
-    "lspEnabledDescription": "Désactivé, les diagnostics lint et les vérifications automatiques d'erreurs après modification de fichiers sont désactivés.",
+    "lspEnabledDescription": "Fournir les diagnostics lint et les vérifications automatiques d'erreurs après modification de fichiers.",
     "attributionSection": "Attribution",
     "commitAttribution": "Attribution des commits",
     "commitAttributionDescription": "Créditer Spirit Agent sur les commits de l'agent.",

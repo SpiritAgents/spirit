@@ -165,7 +165,7 @@
     "tab": "タブ",
     "lspSection": "LSP",
     "lspEnabled": "言語サーバー (LSP)",
-    "lspEnabledDescription": "オフにすると、lint 診断とファイル編集後の自動エラーチェックが無効になります。",
+    "lspEnabledDescription": "lint 診断とファイル編集後の自動エラーチェックを行います。",
     "attributionSection": "アトリビューション",
     "commitAttribution": "コミットのアトリビューション",
     "commitAttributionDescription": "エージェントのコミットに Spirit Agent をクレジットします。",

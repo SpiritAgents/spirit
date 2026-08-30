@@ -165,7 +165,7 @@
     "tab": "Tab",
     "lspSection": "LSP",
     "lspEnabled": "Language Server (LSP)",
-    "lspEnabledDescription": "Если выключено, отключает диагностику lint и автоматические проверки ошибок после редактирования файлов.",
+    "lspEnabledDescription": "Предоставляет диагностику lint и автоматические проверки ошибок после редактирования файлов.",
     "attributionSection": "Атрибуция",
     "commitAttribution": "Атрибуция коммитов",
     "commitAttributionDescription": "Указывать Spirit Agent в коммитах агента.",

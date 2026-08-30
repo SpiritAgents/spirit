@@ -165,7 +165,7 @@
     "tab": "Tabulación",
     "lspSection": "LSP",
     "lspEnabled": "Servidor de lenguaje (LSP)",
-    "lspEnabledDescription": "Al desactivarlo, se deshabilitan los diagnósticos y la verificación automática de errores tras editar archivos.",
+    "lspEnabledDescription": "Proporciona diagnósticos lint y verificación automática de errores tras editar archivos.",
     "attributionSection": "Atribución",
     "commitAttribution": "Atribución en commits",
     "commitAttributionDescription": "Acreditar a Spirit Agent en los commits del agente.",

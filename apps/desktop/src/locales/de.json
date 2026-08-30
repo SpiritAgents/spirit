@@ -165,7 +165,7 @@
     "tab": "Tab",
     "lspSection": "LSP",
     "lspEnabled": "Language Server (LSP)",
-    "lspEnabledDescription": "Wenn deaktiviert, werden Lint-Diagnosen und automatische Fehlerprüfungen nach Dateibearbeitungen ausgeschaltet.",
+    "lspEnabledDescription": "Lint-Diagnosen und automatische Fehlerprüfungen nach Dateibearbeitungen bereitstellen.",
     "attributionSection": "Attribution",
     "commitAttribution": "Commit-Attribution",
     "commitAttributionDescription": "Spirit Agent bei Agent-Commits nennen.",

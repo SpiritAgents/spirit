@@ -165,7 +165,7 @@
     "tab": "탭",
     "lspSection": "LSP",
     "lspEnabled": "언어 서버 (LSP)",
-    "lspEnabledDescription": "끄면 파일 편집 후 린트 진단 및 자동 오류 검사가 비활성화됩니다.",
+    "lspEnabledDescription": "린트 진단과 파일 편집 후 자동 오류 검사를 제공합니다.",
     "attributionSection": "어트리뷰션",
     "commitAttribution": "커밋 어트리뷰션",
     "commitAttributionDescription": "에이전트 커밋에 Spirit Agent를 표시합니다.",

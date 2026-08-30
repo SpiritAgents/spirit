@@ -165,7 +165,7 @@
     "tab": "Tab",
     "lspSection": "LSP",
     "lspEnabled": "语言服务器（LSP）",
-    "lspEnabledDescription": "关闭后将禁用 lint 诊断与写文件后的自动错误检查。",
+    "lspEnabledDescription": "提供 lint 诊断与写文件后的自动错误检查。",
     "attributionSection": "署名",
     "commitAttribution": "提交署名",
     "commitAttributionDescription": "在智能体创建的提交中标注 Spirit Agent。",

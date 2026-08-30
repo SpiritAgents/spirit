@@ -165,7 +165,7 @@
     "tab": "Tab",
     "lspSection": "LSP",
     "lspEnabled": "Language Server (LSP)",
-    "lspEnabledDescription": "When off, lint diagnostics and automatic error checks after file edits are disabled.",
+    "lspEnabledDescription": "Provide lint diagnostics and automatic error checks after file edits.",
     "attributionSection": "Attribution",
     "commitAttribution": "Commit attribution",
     "commitAttributionDescription": "Credit Spirit Agent on agent commits.",
