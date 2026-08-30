@@ -15,7 +15,7 @@ import { Eye, ListTree, Play, Search, SquarePen } from "lucide-react";
 import { MarkdownMessage } from "@/components/markdown-message";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 import {
@@ -271,36 +271,42 @@ function WorkspaceFilesExplorerToolbar({
       {fileOpen ? (
         <div className="flex shrink-0 items-center gap-0.5">
           {isMarkdownDocument ? (
-            <ToggleGroup
-              type="single"
-              size="sm"
-              value={markdownViewMode}
-              onValueChange={onToggleMarkdownViewMode}
-              className="rounded-md border border-border/50 bg-background/80 p-px"
-            >
-              <ToggleGroupItem
-                value="preview"
-                className="h-6 gap-1 rounded-sm px-1.5 text-[10px]"
+            <div className="flex items-center gap-1" role="radiogroup">
+              <Toggle
+                variant="default"
+                size="sm"
+                pressed={markdownViewMode === "preview"}
+                onPressedChange={(pressed) => {
+                  if (pressed) {
+                    onToggleMarkdownViewMode("preview");
+                  }
+                }}
                 aria-label={t("workspace.markdownPreview")}
                 title={t("workspace.markdownPreview")}
                 disabled={!docReady}
               >
-                <Eye className="size-3" aria-hidden />
+                <Eye aria-hidden />
                 {t("workspace.preview")}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="edit"
-                className="h-6 gap-1 rounded-sm px-1.5 text-[10px]"
+              </Toggle>
+              <Toggle
+                variant="default"
+                size="sm"
+                pressed={markdownViewMode === "edit"}
+                onPressedChange={(pressed) => {
+                  if (pressed) {
+                    onToggleMarkdownViewMode("edit");
+                  }
+                }}
                 aria-label={t("workspace.markdownEdit")}
                 title={
                   docReadOnly ? t("workspace.currentDocReadOnly") : t("workspace.markdownEdit")
                 }
                 disabled={!docReady || docReadOnly}
               >
-                <SquarePen className="size-3" aria-hidden />
+                <SquarePen aria-hidden />
                 {t("workspace.edit")}
-              </ToggleGroupItem>
-            </ToggleGroup>
+              </Toggle>
+            </div>
           ) : null}
           {showStartImplementing ? (
             <button
