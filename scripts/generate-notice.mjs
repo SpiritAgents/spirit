@@ -176,8 +176,11 @@ function collectPnpmListPackages(workspaceRoot, filterName, productionOnly, recu
     if (name && node.version) {
       byKey.set(`${name}@${node.version}`, { ...node, name });
     }
-    if (node.dependencies) {
-      for (const [depName, child] of Object.entries(node.dependencies)) {
+    // pnpm list puts prod/dev/optional children on separate keys, not only `dependencies`.
+    for (const key of ["dependencies", "optionalDependencies", "devDependencies", "unsavedDependencies"]) {
+      const children = node[key];
+      if (!children) continue;
+      for (const [depName, child] of Object.entries(children)) {
         walk(child, depName);
       }
     }
