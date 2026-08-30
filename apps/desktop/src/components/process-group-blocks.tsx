@@ -4,7 +4,10 @@ import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AgentMarkdownMessage } from "@/components/agent-markdown-message";
-import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import type {
+  ReadLocalImagePreview,
+  ReadLocalVideoPreview,
+} from "@/components/tool-call/tool-call-types";
 import {
   AnimatedCollapse,
   AnimatedCollapseContent,
@@ -47,6 +50,7 @@ function ProcessGroupReasoningBlock({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: {
@@ -58,6 +62,7 @@ function ProcessGroupReasoningBlock({
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
 }) {
@@ -90,6 +95,7 @@ function ProcessGroupReasoningBlock({
             readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
             readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
             readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+            readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
             localImageBaseDir={localImageBaseDir}
             localImageAllowedRootDir={localImageAllowedRootDir}
           />
@@ -105,6 +111,7 @@ export function ProcessGroupThinkingBlock({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: {
@@ -113,6 +120,7 @@ export function ProcessGroupThinkingBlock({
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
 }) {
@@ -132,6 +140,7 @@ export function ProcessGroupThinkingBlock({
       readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
       readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
       readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+      readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
       localImageBaseDir={localImageBaseDir}
       localImageAllowedRootDir={localImageAllowedRootDir}
     />

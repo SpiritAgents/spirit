@@ -8,8 +8,8 @@ import {
   resolveMarkdownLocalImageFilePath,
 } from "../../src/lib/markdown-local-image-src.ts";
 
-test("isBlockedRemoteMarkdownMediaSrc detects http(s) and protocol-relative urls", () => {
-  assert.equal(isBlockedRemoteMarkdownMediaSrc("https://example.com/a.png"), true);
+test("isBlockedRemoteMarkdownMediaSrc detects clear-text http and protocol-relative urls", () => {
+  assert.equal(isBlockedRemoteMarkdownMediaSrc("https://example.com/a.png"), false);
   assert.equal(isBlockedRemoteMarkdownMediaSrc("http://example.com/a.png"), true);
   assert.equal(isBlockedRemoteMarkdownMediaSrc("//cdn.example.com/a.png"), true);
   assert.equal(isBlockedRemoteMarkdownMediaSrc("./docs/a.png"), false);
@@ -18,9 +18,10 @@ test("isBlockedRemoteMarkdownMediaSrc detects http(s) and protocol-relative urls
 
 test("classifyMarkdownImageSrc classifies managed remote local and invalid", () => {
   assert.equal(classifyMarkdownImageSrc("spirit://generated/image/abc.png"), "managed");
+  assert.equal(classifyMarkdownImageSrc("spirit://generated/video/abc.mp4"), "managed");
   assert.equal(classifyMarkdownImageSrc("https://example.com/a.png"), "remote");
-  assert.equal(classifyMarkdownImageSrc("http://example.com/a.png"), "remote");
-  assert.equal(classifyMarkdownImageSrc("//cdn.example.com/a.png"), "remote");
+  assert.equal(classifyMarkdownImageSrc("http://example.com/a.png"), "invalid");
+  assert.equal(classifyMarkdownImageSrc("//cdn.example.com/a.png"), "invalid");
   assert.equal(classifyMarkdownImageSrc("./docs/a.png"), "local");
   assert.equal(classifyMarkdownImageSrc("/Users/demo/a.png"), "local");
   assert.equal(classifyMarkdownImageSrc("C:\\Users\\demo\\a.png"), "local");

@@ -8,7 +8,7 @@ import {
 import { isBlockedRemoteMarkdownMediaSrc } from "@/lib/markdown-local-image-src";
 
 export const streamdownUrlTransform: StreamdownUrlTransform = (url, key) => {
-  if (key === "src") {
+  if (key === "src" || key === "srcset") {
     if (isManagedGeneratedImageRef(url) || isManagedGeneratedVideoRef(url)) {
       return url;
     }

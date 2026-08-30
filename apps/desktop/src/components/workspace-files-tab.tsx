@@ -17,6 +17,11 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  WorkspaceMarkdownLinkProvider,
+  useWorkspaceMarkdownLinkClick,
+  type WorkspaceMarkdownLinkClickHandler,
+} from "@/components/workspace-markdown-link-context";
 
 import {
   WorkspaceImagePreviewPane,
@@ -49,7 +54,10 @@ import {
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { useHostApi } from "@/hooks/useHostApi";
 import { FILES_EXPLORER_TOOLBAR_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
-import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import type {
+  ReadLocalImagePreview,
+  ReadLocalVideoPreview,
+} from "@/components/tool-call/tool-call-types";
 import {
   isUnderWorkspaceEntryPath,
   joinWorkspaceAbsolutePath,
@@ -57,6 +65,7 @@ import {
   normalizeWorkspaceEntryRel,
 } from "@/lib/workspace-entry-path-sync";
 import { ripgrepSubmatchToCodeUnitRange } from "@/lib/workspace-files-search";
+import { tryHandleMarkdownWorkspaceLink } from "@/lib/markdown-workspace-link";
 import type {
   EditorFileTarget,
   EditorFileRevealLocation,
@@ -336,6 +345,7 @@ export type WorkspaceFilesTabProps = {
   writeHostTextFile: (request: WriteHostTextFileRequest) => Promise<void>;
   readManagedImagePreviewDataUrl?: (reference: string) => Promise<string | null>;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   onStartImplementing?: () => void;
   startImplementingDisabled?: boolean;
   autoRevealPlanNonce?: number;
@@ -388,6 +398,7 @@ export function WorkspaceFilesTab({
   writeHostTextFile,
   readManagedImagePreviewDataUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   onStartImplementing,
   startImplementingDisabled = false,
   autoRevealPlanNonce = 0,
@@ -416,6 +427,7 @@ export function WorkspaceFilesTab({
 }: WorkspaceFilesTabProps) {
   const { t } = useTranslation();
   const { api } = useHostApi();
+  const parentMarkdownLinkClick = useWorkspaceMarkdownLinkClick();
   type MonacoEditor = Monaco.editor.IStandaloneCodeEditor;
   const [selectedEntry, setSelectedEntry] = useState<SelectedEntry>(null);
   const [doc, setDoc] = useState<LoadedDoc | null>(null);
@@ -427,6 +439,9 @@ export function WorkspaceFilesTab({
   const [markdownViewMode, setMarkdownViewMode] = useState<MarkdownViewMode>("edit");
   const [fileTreeOpen, setFileTreeOpen] = useState(true);
   const [fileSearchOpen, setFileSearchOpen] = useState(false);
+  const [directoryRevealPath, setDirectoryRevealPath] = useState("");
+  const [directoryRevealNonce, setDirectoryRevealNonce] = useState(0);
+  const directoryRevealNonceRef = useRef(0);
   const [editorRevealLocation, setEditorRevealLocation] = useState<EditorFileRevealLocation | null>(
     null,
   );
@@ -600,6 +615,53 @@ export function WorkspaceFilesTab({
     [markdownPreviewImageBaseDir, selectedEntry, workspaceRoot],
   );
 
+  const revealDirectoryInThisTab = useCallback((relativePath: string) => {
+    setFileTreeOpen(true);
+    setFileSearchOpen(false);
+    directoryRevealNonceRef.current += 1;
+    setDirectoryRevealPath(relativePath);
+    setDirectoryRevealNonce(directoryRevealNonceRef.current);
+  }, []);
+
+  const onMarkdownPreviewLinkClick: WorkspaceMarkdownLinkClickHandler = useCallback(
+    (href, event) => {
+      if (
+        tryHandleMarkdownWorkspaceLink(
+          href,
+          {
+            openWorkspaceFileInNewTab: (relativePath, options) => {
+              if (onOpenWorkspaceFileInNewTab) {
+                onOpenWorkspaceFileInNewTab(relativePath, options);
+                return;
+              }
+              onOpenWorkspaceFile?.(relativePath, options);
+            },
+            revealWorkspaceDirectory: revealDirectoryInThisTab,
+            statHostTextFile: api
+              ? (absolutePath) => api.statHostTextFile(absolutePath)
+              : undefined,
+          },
+          {
+            baseDir: markdownPreviewImageBaseDir,
+            workspaceRoot: markdownPreviewImageAllowedRootDir,
+          },
+        )
+      ) {
+        return true;
+      }
+      return parentMarkdownLinkClick?.(href, event) ?? false;
+    },
+    [
+      api,
+      markdownPreviewImageAllowedRootDir,
+      markdownPreviewImageBaseDir,
+      onOpenWorkspaceFile,
+      onOpenWorkspaceFileInNewTab,
+      parentMarkdownLinkClick,
+      revealDirectoryInThisTab,
+    ],
+  );
+
   useEffect(() => {
     if (!api || !selectedPath) {
       return;
@@ -634,6 +696,11 @@ export function WorkspaceFilesTab({
       return;
     }
     if (fileRevealDirectoryOnly) {
+      setFileTreeOpen(true);
+      setFileSearchOpen(false);
+      directoryRevealNonceRef.current += 1;
+      setDirectoryRevealPath(fileRevealPath);
+      setDirectoryRevealNonce(directoryRevealNonceRef.current);
       return;
     }
     setMarkdownViewMode(fileRevealViewMode);
@@ -1104,8 +1171,8 @@ export function WorkspaceFilesTab({
                 listExplorerChildren={listExplorerChildren}
                 gitRevision={gitRevision}
                 selectedEntryKey={selectedEntryKey}
-                expandDirectoryPath={fileRevealDirectoryOnly ? fileRevealPath : ""}
-                expandDirectoryNonce={fileRevealDirectoryOnly ? autoRevealFileNonce : 0}
+                expandDirectoryPath={directoryRevealPath}
+                expandDirectoryNonce={directoryRevealNonce}
                 onOpenFile={(relativePath) => {
                   setEditorRevealLocation(null);
                   const viewMode = isMarkdownPath(relativePath) ? "preview" : "edit";
@@ -1242,16 +1309,19 @@ export function WorkspaceFilesTab({
                     >
                       <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col px-4 py-4 sm:px-6">
                         {draftText.trim() ? (
-                          <MarkdownMessage
-                            content={draftText}
-                            className="text-sm"
-                            allowHtml
-                            singleLineBreaks={false}
-                            readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
-                            readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
-                            localImageBaseDir={markdownPreviewImageBaseDir}
-                            localImageAllowedRootDir={markdownPreviewImageAllowedRootDir}
-                          />
+                          <WorkspaceMarkdownLinkProvider onLinkClick={onMarkdownPreviewLinkClick}>
+                            <MarkdownMessage
+                              content={draftText}
+                              className="text-sm"
+                              allowHtml
+                              singleLineBreaks={false}
+                              readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
+                              readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+                              readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
+                              localImageBaseDir={markdownPreviewImageBaseDir}
+                              localImageAllowedRootDir={markdownPreviewImageAllowedRootDir}
+                            />
+                          </WorkspaceMarkdownLinkProvider>
                         ) : (
                           <div
                             className={cn(

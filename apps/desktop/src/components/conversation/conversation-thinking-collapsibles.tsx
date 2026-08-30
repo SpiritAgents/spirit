@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/animated-collapse";
 import type {
   ReadLocalImagePreview,
+  ReadLocalVideoPreview,
   ReadManagedImagePreview,
   ReadManagedVideoPreview,
 } from "@/components/tool-call/tool-call-types";
@@ -68,6 +69,7 @@ export function AssistantThinkingCollapsible({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: {
@@ -78,6 +80,7 @@ export function AssistantThinkingCollapsible({
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
 }) {
@@ -146,6 +149,7 @@ export function AssistantThinkingCollapsible({
               readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
               readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
               readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+              readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
               localImageBaseDir={localImageBaseDir}
               localImageAllowedRootDir={localImageAllowedRootDir}
             />
@@ -162,6 +166,7 @@ export function AssistantCompactionCollapsible({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: {
@@ -170,6 +175,7 @@ export function AssistantCompactionCollapsible({
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
 }) {
@@ -234,6 +240,7 @@ export function AssistantCompactionCollapsible({
               readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
               readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
               readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+              readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
               localImageBaseDir={localImageBaseDir}
               localImageAllowedRootDir={localImageAllowedRootDir}
             />

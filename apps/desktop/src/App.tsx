@@ -66,6 +66,7 @@ import {
   normalizeWorkspaceReferenceDirectoryPath,
 } from "@spiritagent/host-internal/workspace-file-reference-query";
 import { tryHandleDesktopWorkspaceLink } from "@/lib/workspace-navigation-link";
+import { tryHandleMarkdownWorkspaceLink } from "@/lib/markdown-workspace-link";
 import { applyUiLayoutScaleToDocument, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";
 import {
   resolveLaunchSplashActive,
@@ -318,24 +319,46 @@ export default function App() {
   }, [launchSplashActive, pairingGateBlocksLaunchSplash]);
 
   const handleWorkspaceMarkdownLinkClick = useCallback(
-    (href: string) =>
-      tryHandleDesktopWorkspaceLink(
+    (href: string) => {
+      if (
+        tryHandleDesktopWorkspaceLink(
+          href,
+          {
+            openPullRequestInPrTab: workspaceTools.openPullRequestInPrTab,
+            openBrowserUrlInNewTab: workspaceTools.openBrowserUrlInNewTab,
+          },
+          {
+            hostKind: runtime.hostKind ?? undefined,
+            interceptPrInApp: workspaceTools.prTabEnabled && gitHubAuthConnected === true,
+          },
+        )
+      ) {
+        return true;
+      }
+      const workspaceRoot = snapshot?.workspaceRoot ?? "";
+      if (!workspaceRoot) {
+        return false;
+      }
+      return tryHandleMarkdownWorkspaceLink(
         href,
         {
-          openPullRequestInPrTab: workspaceTools.openPullRequestInPrTab,
-          openBrowserUrlInNewTab: workspaceTools.openBrowserUrlInNewTab,
+          openWorkspaceFileInNewTab: workspaceTools.openWorkspaceFileInNewTab,
+          revealWorkspaceDirectory: workspaceTools.revealWorkspaceDirectory,
+          statHostTextFile: runtime.statHostTextFile,
         },
-        {
-          hostKind: runtime.hostKind ?? undefined,
-          interceptPrInApp: workspaceTools.prTabEnabled && gitHubAuthConnected === true,
-        },
-      ),
+        { baseDir: workspaceRoot, workspaceRoot },
+      );
+    },
     [
       gitHubAuthConnected,
       runtime.hostKind,
+      runtime.statHostTextFile,
+      snapshot?.workspaceRoot,
       workspaceTools.openBrowserUrlInNewTab,
       workspaceTools.openPullRequestInPrTab,
+      workspaceTools.openWorkspaceFileInNewTab,
       workspaceTools.prTabEnabled,
+      workspaceTools.revealWorkspaceDirectory,
     ],
   );
 

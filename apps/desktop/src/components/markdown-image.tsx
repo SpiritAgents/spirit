@@ -47,9 +47,17 @@ export function MarkdownImage({
   useEffect(() => {
     let cancelled = false;
 
-    if (!normalizedSrc || srcKind === "invalid" || srcKind === "remote") {
+    if (!normalizedSrc || srcKind === "invalid") {
       setResolvedSrc(null);
-      setLoadState(srcKind === "remote" ? "unavailable" : "idle");
+      setLoadState("idle");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (srcKind === "remote") {
+      setResolvedSrc(normalizedSrc);
+      setLoadState("idle");
       return () => {
         cancelled = true;
       };
@@ -131,7 +139,7 @@ export function MarkdownImage({
     srcKind,
   ]);
 
-  if (srcKind === "remote" || loadState === "unavailable") {
+  if (srcKind === "invalid" || loadState === "unavailable") {
     return (
       <div className="my-3 flex min-h-28 w-full items-center justify-center rounded-md border border-dashed border-border/50 bg-muted/20 px-3 text-xs text-muted-foreground">
         {managedRef && !readManagedImagePreviewDataUrl
@@ -163,6 +171,7 @@ export function MarkdownImage({
       alt={alt}
       loading="lazy"
       {...props}
+      onError={() => setLoadState("unavailable")}
     />
   );
 }

@@ -4,7 +4,10 @@ import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ProcessGroupThinkingBlock } from "@/components/process-group-blocks";
-import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import type {
+  ReadLocalImagePreview,
+  ReadLocalVideoPreview,
+} from "@/components/tool-call/tool-call-types";
 import {
   AnimatedCollapse,
   AnimatedCollapseContent,
@@ -35,6 +38,7 @@ export function ProcessCardCollapsible({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: {
@@ -50,6 +54,7 @@ export function ProcessCardCollapsible({
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
 }) {
@@ -144,6 +149,7 @@ export function ProcessCardCollapsible({
                 readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
                 readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
                 readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+                readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
                 localImageBaseDir={localImageBaseDir}
                 localImageAllowedRootDir={localImageAllowedRootDir}
               />

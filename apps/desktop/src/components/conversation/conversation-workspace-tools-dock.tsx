@@ -55,6 +55,7 @@ export function ConversationWorkspaceToolsDock({
         writeHostTextFile={runtime.writeHostTextFile}
         readManagedImagePreviewDataUrl={runtime.readManagedImagePreviewDataUrl}
         readLocalImagePreviewDataUrl={runtime.readLocalImagePreviewDataUrl}
+        readLocalVideoPreviewUrl={runtime.readLocalVideoPreviewUrl}
         plan={snapshot?.plan ?? { path: "", exists: false }}
         onStartImplementing={() => {
           composer.handleComposerAgentModeChange("agent");

@@ -166,7 +166,7 @@ export type WorkspaceFilesPanelProps = {
   listExplorerChildren: (relativePath: string) => Promise<WorkspaceExplorerListResult>;
   /** Currently selected entry; `plan` is the managed plan file, `workspace:*` is a workspace-relative path. */
   selectedEntryKey?: string | null;
-  /** Expands and scrolls to this directory (without trailing `/`). */
+  /** Expands, focuses, and keeps selected this directory (without trailing `/`). */
   expandDirectoryPath?: string;
   expandDirectoryNonce?: number;
   onOpenFile?: (relativePath: string) => void;
@@ -614,7 +614,7 @@ export function WorkspaceFilesPanel({
   }, [workspaceRoot]);
 
   useEffect(() => {
-    if (!expandDirectoryPath || expandDirectoryNonce <= 0) {
+    if (expandDirectoryNonce <= 0) {
       return;
     }
 
@@ -627,6 +627,7 @@ export function WorkspaceFilesPanel({
     }
 
     setRootOpen(true);
+    setFocusedDirectoryRel(expandDirectoryPath);
     setExpanded((previous) => {
       const next = { ...previous };
       for (const directory of directoriesToExpand) {

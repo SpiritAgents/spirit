@@ -147,6 +147,7 @@ export type AgentMarkdownMessageProps = Pick<
   | "readManagedImagePreviewDataUrl"
   | "readManagedVideoPreviewUrl"
   | "readLocalImagePreviewDataUrl"
+  | "readLocalVideoPreviewUrl"
   | "localImageBaseDir"
   | "localImageAllowedRootDir"
 > & {
@@ -163,6 +164,7 @@ function AgentMarkdownMessageImpl({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
 }: AgentMarkdownMessageProps) {
@@ -215,6 +217,7 @@ function AgentMarkdownMessageImpl({
         readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
         readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
         readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+        readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
         localImageBaseDir={localImageBaseDir}
         localImageAllowedRootDir={localImageAllowedRootDir}
         BlockComponent={motionActive ? StreamingAnimateBlock : undefined}

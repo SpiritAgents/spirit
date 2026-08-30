@@ -1,15 +1,18 @@
 import { looksLikeAbsolutePath, normalizeAbsolutePathInput } from "@/lib/file-picker-path";
-import { isManagedGeneratedImageRef } from "@/lib/managed-generated-asset";
+import {
+  isManagedGeneratedImageRef,
+  isManagedGeneratedVideoRef,
+} from "@/lib/managed-generated-asset";
 import { tryResolveWorkspaceRelativePath } from "@/lib/read-file-tool-navigation";
 
 export type MarkdownImageSrcKind = "managed" | "remote" | "local" | "invalid";
 
 const SCHEME_PATTERN = /^([a-zA-Z][a-zA-Z0-9+.-]*):/u;
 
-/** True for http(s) and protocol-relative URLs that must not load in Markdown media. */
+/** True for clear-text http and protocol-relative URLs that must not load in Markdown media. */
 export function isBlockedRemoteMarkdownMediaSrc(src: string): boolean {
   const trimmed = src.trim();
-  return trimmed.startsWith("//") || /^https?:/iu.test(trimmed);
+  return trimmed.startsWith("//") || /^http:/iu.test(trimmed);
 }
 
 export function classifyMarkdownImageSrc(src: string): MarkdownImageSrcKind {
@@ -17,10 +20,13 @@ export function classifyMarkdownImageSrc(src: string): MarkdownImageSrcKind {
   if (!trimmed) {
     return "invalid";
   }
-  if (isManagedGeneratedImageRef(trimmed)) {
+  if (isManagedGeneratedImageRef(trimmed) || isManagedGeneratedVideoRef(trimmed)) {
     return "managed";
   }
   if (isBlockedRemoteMarkdownMediaSrc(trimmed)) {
+    return "invalid";
+  }
+  if (/^https:/iu.test(trimmed)) {
     return "remote";
   }
   // Windows drive / UNC paths look like they have a scheme; treat them as local first.
@@ -29,10 +35,6 @@ export function classifyMarkdownImageSrc(src: string): MarkdownImageSrcKind {
   }
   const schemeMatch = SCHEME_PATTERN.exec(trimmed);
   if (schemeMatch) {
-    const scheme = schemeMatch[1]?.toLowerCase() ?? "";
-    if (scheme === "http" || scheme === "https") {
-      return "remote";
-    }
     return "invalid";
   }
   return "local";

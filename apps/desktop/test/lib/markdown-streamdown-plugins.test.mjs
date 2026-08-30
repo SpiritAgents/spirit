@@ -53,22 +53,36 @@ test("streamdown sanitize schema keeps spirit video src", () => {
   assert.equal(video.properties.src, ref);
 });
 
-test("streamdown sanitize schema strips https image src", () => {
-  const ref = "https://example.com/a.png";
-  const tree = {
+test("streamdown sanitize schema keeps https image src and strips http", () => {
+  const httpsRef = "https://example.com/a.png";
+  const httpRef = "http://example.com/a.png";
+  const httpsTree = {
     type: "root",
     children: [
       {
         type: "element",
         tagName: "img",
-        properties: { src: ref, alt: "remote" },
+        properties: { src: httpsRef, alt: "remote" },
+        children: [],
+      },
+    ],
+  };
+  const httpTree = {
+    type: "root",
+    children: [
+      {
+        type: "element",
+        tagName: "img",
+        properties: { src: httpRef, alt: "insecure" },
         children: [],
       },
     ],
   };
 
-  const safe = sanitize(tree, streamdownSanitizeSchema);
-  assert.equal(safe.children[0].properties.src, undefined);
+  const httpsSafe = sanitize(httpsTree, streamdownSanitizeSchema);
+  assert.equal(httpsSafe.children[0].properties.src, httpsRef);
+  const httpSafe = sanitize(httpTree, streamdownSanitizeSchema);
+  assert.equal(httpSafe.children[0].properties.src, undefined);
 });
 
 test("streamdown sanitize schema keeps relative image src", () => {
@@ -108,7 +122,7 @@ test("default github schema strips spirit src", () => {
   assert.equal(MANAGED_GENERATED_ASSET_SANITIZE_PROTOCOL, "spirit");
 });
 
-test("streamdown sanitize schema keeps picture link structure but strips remote media", () => {
+test("streamdown sanitize schema keeps picture link structure and https media", () => {
   const actionHref = "https://example.com/action?ref=pr-review";
   const badgeSrc = "https://example.com/assets/badge-dark.png";
   const tree = {
@@ -162,9 +176,9 @@ test("streamdown sanitize schema keeps picture link structure but strips remote 
   const picture = link.children[0];
   assert.equal(picture.tagName, "picture");
   assert.equal(picture.children[0].tagName, "source");
-  assert.equal(picture.children[0].properties.srcset, undefined);
+  assert.equal(picture.children[0].properties.srcset, badgeSrc);
   assert.equal(picture.children[1].tagName, "img");
-  assert.equal(picture.children[1].properties.src, undefined);
+  assert.equal(picture.children[1].properties.src, badgeSrc);
 });
 
 test("streamdown sanitize schema keeps sup footnotes and drops html comments", () => {

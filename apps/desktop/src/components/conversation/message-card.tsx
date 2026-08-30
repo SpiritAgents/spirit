@@ -310,6 +310,7 @@ function MessageCardImpl({
             readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
             readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
             readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+            readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
             localImageBaseDir={workspaceRoot}
             localImageAllowedRootDir={workspaceRoot}
           />
@@ -321,6 +322,7 @@ function MessageCardImpl({
             readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
             readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
             readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+            readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
             localImageBaseDir={workspaceRoot}
             localImageAllowedRootDir={workspaceRoot}
           />
@@ -371,6 +373,7 @@ function MessageCardImpl({
                 readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
                 readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
                 readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+                readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
                 localImageBaseDir={workspaceRoot}
                 localImageAllowedRootDir={workspaceRoot}
               />

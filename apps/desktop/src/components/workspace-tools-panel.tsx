@@ -130,6 +130,7 @@ export type WorkspaceToolsDockProps = {
   writeHostTextFile: (request: WriteHostTextFileRequest) => Promise<void>;
   readManagedImagePreviewDataUrl?: (reference: string) => Promise<string | null>;
   readLocalImagePreviewDataUrl?: (filePath: string) => Promise<string | null>;
+  readLocalVideoPreviewUrl?: (filePath: string) => Promise<string | null>;
   plan: PlanSnapshot;
   onStartImplementing?: () => void;
   startImplementingDisabled?: boolean;
@@ -472,6 +473,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   writeHostTextFile,
   readManagedImagePreviewDataUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   plan,
   onStartImplementing,
   startImplementingDisabled = false,
@@ -951,6 +953,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     writeHostTextFile={writeHostTextFile}
                     readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
                     readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+                    readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
                     onStartImplementing={onStartImplementing}
                     startImplementingDisabled={startImplementingDisabled}
                     autoRevealPlanNonce={planRevealEnabled ? autoRevealPlanNonce : 0}

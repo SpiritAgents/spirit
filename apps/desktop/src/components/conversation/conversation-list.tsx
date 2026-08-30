@@ -489,6 +489,7 @@ export function ConversationList({
               readManagedImagePreviewDataUrl={runtime.readManagedImagePreviewDataUrl}
               readManagedVideoPreviewUrl={runtime.readManagedVideoPreviewUrl}
               readLocalImagePreviewDataUrl={runtime.readLocalImagePreviewDataUrl}
+              readLocalVideoPreviewUrl={runtime.readLocalVideoPreviewUrl}
               localImageBaseDir={workspaceRoot}
               localImageAllowedRootDir={workspaceRoot}
             />

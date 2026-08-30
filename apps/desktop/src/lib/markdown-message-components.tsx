@@ -10,7 +10,10 @@ import type {
 
 import { MarkdownImage, type ReadManagedImagePreviewDataUrl } from "@/components/markdown-image";
 import { MarkdownVideo, type ReadManagedVideoPreviewUrl } from "@/components/markdown-video";
-import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import type {
+  ReadLocalImagePreview,
+  ReadLocalVideoPreview,
+} from "@/components/tool-call/tool-call-types";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WorkspaceMarkdownLinkClickHandler } from "@/components/workspace-markdown-link-context";
 import {
@@ -35,6 +38,7 @@ export function createMarkdownMessageComponents(
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview,
   localImageBaseDir?: string,
   localImageAllowedRootDir?: string,
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview,
 ): Record<string, ComponentType<Record<string, unknown>>> {
   const compact = size === "compact";
   const muted = tone === "muted";
@@ -292,6 +296,9 @@ export function createMarkdownMessageComponents(
       <MarkdownVideo
         className={className}
         readManagedVideoPreviewUrl={readManagedVideoPreviewUrl}
+        readLocalVideoPreviewUrl={readLocalVideoPreviewUrl}
+        localImageBaseDir={localImageBaseDir}
+        localImageAllowedRootDir={localImageAllowedRootDir}
         {...props}
       />
     ),

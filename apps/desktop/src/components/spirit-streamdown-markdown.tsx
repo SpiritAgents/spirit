@@ -4,7 +4,10 @@ import { Streamdown, type BlockProps } from "streamdown";
 
 import type { ReadManagedImagePreviewDataUrl } from "@/components/markdown-image";
 import type { ReadManagedVideoPreviewUrl } from "@/components/markdown-video";
-import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import type {
+  ReadLocalImagePreview,
+  ReadLocalVideoPreview,
+} from "@/components/tool-call/tool-call-types";
 import { useWorkspaceMarkdownLinkClick } from "@/components/workspace-markdown-link-context";
 import { useTheme } from "@/hooks/useTheme";
 import {
@@ -42,6 +45,7 @@ export type SpiritStreamdownMarkdownProps = {
   readManagedImagePreviewDataUrl?: ReadManagedImagePreviewDataUrl;
   readManagedVideoPreviewUrl?: ReadManagedVideoPreviewUrl;
   readLocalImagePreviewDataUrl?: ReadLocalImagePreview;
+  readLocalVideoPreviewUrl?: ReadLocalVideoPreview;
   localImageBaseDir?: string;
   localImageAllowedRootDir?: string;
   BlockComponent?: ComponentType<BlockProps>;
@@ -60,6 +64,7 @@ export function SpiritStreamdownMarkdown({
   readManagedImagePreviewDataUrl,
   readManagedVideoPreviewUrl,
   readLocalImagePreviewDataUrl,
+  readLocalVideoPreviewUrl,
   localImageBaseDir,
   localImageAllowedRootDir,
   BlockComponent,
@@ -97,6 +102,7 @@ export function SpiritStreamdownMarkdown({
       readLocalImagePreviewDataUrl,
       localImageBaseDir,
       localImageAllowedRootDir,
+      readLocalVideoPreviewUrl,
     );
     return {
       ...rest,
@@ -112,6 +118,7 @@ export function SpiritStreamdownMarkdown({
     localImageBaseDir,
     onMarkdownLinkClick,
     readLocalImagePreviewDataUrl,
+    readLocalVideoPreviewUrl,
     readManagedImagePreviewDataUrl,
     readManagedVideoPreviewUrl,
     resolvedDark,
