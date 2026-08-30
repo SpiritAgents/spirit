@@ -91,7 +91,7 @@ function ThemePreviewCard({
           "relative overflow-hidden border transition-[border-color,box-shadow] duration-150",
           sizeClasses.card,
           selected
-            ? "border-primary/70 ring-2 ring-primary/40"
+            ? "border-primary"
             : "border-border/60 group-hover/theme-card:border-border group-focus-visible/theme-card:ring-2 group-focus-visible/theme-card:ring-ring/50",
         )}
       >
