@@ -215,7 +215,7 @@ function WorkspaceFilesExplorerToolbar({
     <div
       ref={toolbarRef}
       className={cn(
-        "flex h-7 shrink-0 items-center gap-1 pl-1 pr-2",
+        "flex shrink-0 items-center gap-1 py-1.5 pl-1 pr-2",
         fileOpen && "justify-between",
       )}
       role="toolbar"
