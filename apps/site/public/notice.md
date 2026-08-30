@@ -4,6 +4,22 @@ Spirit site includes open source software. The following production dependencies
 are used in this project.
 
 - [@antfu/install-pkg@1.1.0](https://github.com/antfu/install-pkg) - MIT
+- [@babel/code-frame@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/compat-data@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/core@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/generator@7.29.8](https://github.com/babel/babel) - MIT
+- [@babel/helper-compilation-targets@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-globals@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-module-imports@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-module-transforms@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-string-parser@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-validator-identifier@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helper-validator-option@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/helpers@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/parser@7.29.8](https://github.com/babel/babel) - MIT
+- [@babel/template@7.29.7](https://github.com/babel/babel) - MIT
+- [@babel/traverse@7.29.8](https://github.com/babel/babel) - MIT
+- [@babel/types@7.29.8](https://github.com/babel/babel) - MIT
 - [@braintree/sanitize-url@7.1.2](https://github.com/braintree/sanitize-url) - MIT
 - [@chevrotain/types@11.1.2](https://github.com/Chevrotain/chevrotain) - Apache-2.0
 - [@floating-ui/core@1.8.0](https://github.com/floating-ui/floating-ui) - MIT
@@ -20,7 +36,11 @@ are used in this project.
 - [@img/colour@1.1.0](https://github.com/lovell/colour) - MIT
 - [@img/sharp-darwin-arm64@0.35.3](https://github.com/lovell/sharp) - Apache-2.0
 - [@img/sharp-libvips-darwin-arm64@1.3.2](https://github.com/lovell/sharp-libvips) - LGPL-3.0-or-later
+- [@jridgewell/gen-mapping@0.3.13](https://github.com/jridgewell/sourcemaps) - MIT
+- [@jridgewell/remapping@2.3.5](https://github.com/jridgewell/sourcemaps) - MIT
+- [@jridgewell/resolve-uri@3.1.2](https://github.com/jridgewell/resolve-uri) - MIT
 - [@jridgewell/sourcemap-codec@1.5.5](https://github.com/jridgewell/sourcemaps) - MIT
+- [@jridgewell/trace-mapping@0.3.31](https://github.com/jridgewell/sourcemaps) - MIT
 - [@mdx-js/mdx@3.1.1](https://github.com/mdx-js/mdx) - MIT
 - [@mermaid-js/parser@1.2.0](https://github.com/mermaid-js/mermaid) - MIT
 - [@next/env@16.3.1](https://github.com/vercel/next.js) - MIT
@@ -154,6 +174,7 @@ are used in this project.
 - [astring@1.9.0](https://github.com/davidbonnet/astring) - MIT
 - [bail@2.0.2](wooorm/bail) - MIT
 - [baseline-browser-mapping@2.11.12](https://github.com/web-platform-dx/baseline-browser-mapping) - Apache-2.0
+- [browserslist@4.28.7](browserslist/browserslist) - MIT
 - [caniuse-lite@1.0.30001806](browserslist/caniuse-lite) - CC-BY-4.0
 - [ccount@2.0.1](wooorm/ccount) - MIT
 - [character-entities@2.0.2](wooorm/character-entities) - MIT
@@ -170,6 +191,7 @@ are used in this project.
 - [commander@7.2.0](https://github.com/tj/commander.js) - MIT
 - [commander@8.3.0](https://github.com/tj/commander.js) - MIT
 - [compute-scroll-into-view@3.1.1](https://github.com/scroll-into-view/compute-scroll-into-view) - MIT
+- [convert-source-map@2.0.0](https://github.com/thlorenz/convert-source-map) - MIT
 - [cose-base@1.0.3](https://github.com/iVis-at-Bilkent/cose-base) - MIT
 - [cose-base@2.2.0](https://github.com/iVis-at-Bilkent/cose-base) - MIT
 - [csstype@3.2.3](https://github.com/frenic/csstype) - MIT
@@ -221,11 +243,13 @@ are used in this project.
 - [detect-node-es@1.1.0](https://github.com/thekashey/detect-node) - MIT
 - [devlop@1.1.0](wooorm/devlop) - MIT
 - [dompurify@3.4.13](https://github.com/cure53/DOMPurify) - (MPL-2.0 OR Apache-2.0)
+- [electron-to-chromium@1.5.401](https://github.com/Kilian/electron-to-chromium) - ISC
 - [entities@6.0.1](https://github.com/fb55/entities) - BSD-2-Clause
 - [es-toolkit@1.50.0](https://github.com/toss/es-toolkit) - MIT
 - [esast-util-from-estree@2.0.0](syntax-tree/esast-util-from-estree) - MIT
 - [esast-util-from-js@2.0.1](syntax-tree/esast-util-from-js) - MIT
 - [esbuild@0.28.1](https://github.com/evanw/esbuild) - MIT
+- [escalade@3.2.0](lukeed/escalade) - MIT
 - [escape-string-regexp@5.0.0](sindresorhus/escape-string-regexp) - MIT
 - [estree-util-attach-comments@3.0.0](syntax-tree/estree-util-attach-comments) - MIT
 - [estree-util-build-jsx@3.0.1](syntax-tree/estree-util-build-jsx) - MIT
@@ -241,9 +265,11 @@ are used in this project.
 - [fumadocs-core@16.14.4](https://github.com/fuma-nama/fumadocs) - MIT
 - [fumadocs-mdx@15.2.3](https://github.com/fuma-nama/fumadocs) - MIT
 - [fumadocs-ui@16.14.4](https://github.com/fuma-nama/fumadocs) - MIT
+- [gensync@1.0.0-beta.2](https://github.com/loganfsmyth/gensync) - MIT
 - [get-nonce@1.0.1](git@github.com:theKashey/get-nonce) - MIT
 - [github-slugger@2.0.0](https://github.com/Flet/github-slugger) - ISC
 - [hachure-fill@0.5.2](https://github.com/pshihn/hachure-fill) - MIT
+- [has-flag@4.0.0](sindresorhus/has-flag) - MIT
 - [hast-util-from-parse5@8.0.3](syntax-tree/hast-util-from-parse5) - MIT
 - [hast-util-parse-selector@4.0.0](syntax-tree/hast-util-parse-selector) - MIT
 - [hast-util-raw@9.1.0](syntax-tree/hast-util-raw) - MIT
@@ -267,6 +293,9 @@ are used in this project.
 - [is-hexadecimal@2.0.1](wooorm/is-hexadecimal) - MIT
 - [is-plain-obj@4.1.0](sindresorhus/is-plain-obj) - MIT
 - [jiti@2.7.0](unjs/jiti) - MIT
+- [js-tokens@4.0.0](lydell/js-tokens) - MIT
+- [jsesc@3.1.0](https://github.com/mathiasbynens/jsesc) - MIT
+- [json5@2.2.3](https://github.com/json5/json5) - MIT
 - [katex@0.16.47](https://github.com/KaTeX/KaTeX) - MIT
 - [khroma@2.1.0](https://github.com/fabiospampinato/khroma) - UNKNOWN
 - [layout-base@1.0.2](https://github.com/iVis-at-Bilkent/layout-base) - MIT
@@ -274,6 +303,7 @@ are used in this project.
 - [lightningcss@1.33.0](https://github.com/parcel-bundler/lightningcss) - MPL-2.0
 - [lodash-es@4.18.1](lodash/lodash) - MIT
 - [longest-streak@3.1.0](wooorm/longest-streak) - MIT
+- [lru-cache@5.1.1](ssh://git@github.com/isaacs/node-lru-cache) - BlueOak-1.0.0
 - [lucide-react@1.28.0](https://github.com/lucide-icons/lucide) - ISC
 - [lucide-react@1.31.0](https://github.com/lucide-icons/lucide) - ISC
 - [magic-string@1.2.0](https://github.com/Rich-Harris/magic-string) - MIT
@@ -340,6 +370,7 @@ are used in this project.
 - [nanoid@3.3.18](ai/nanoid) - MIT
 - [next@16.3.1](vercel/next.js) - MIT
 - [next-themes@0.4.6](https://github.com/pacocoursey/next-themes) - MIT
+- [node-releases@2.0.52](https://github.com/chicoxyzzy/node-releases) - MIT
 - [npm-to-yarn@3.2.0](https://github.com/nebrelbug/npm-to-yarn) - MIT
 - [oniguruma-parser@0.12.2](https://github.com/slevithan/oniguruma-parser) - MIT
 - [oniguruma-to-es@4.3.6](https://github.com/slevithan/oniguruma-to-es) - MIT
@@ -386,6 +417,7 @@ are used in this project.
 - [safer-buffer@2.1.2](https://github.com/ChALkeR/safer-buffer) - MIT
 - [scheduler@0.27.0](https://github.com/facebook/react) - MIT
 - [scroll-into-view-if-needed@3.1.0](https://github.com/scroll-into-view/scroll-into-view-if-needed) - MIT
+- [semver@6.3.1](https://github.com/npm/node-semver) - ISC
 - [semver@7.8.5](https://github.com/npm/node-semver) - ISC
 - [sharp@0.35.3](https://github.com/lovell/sharp) - Apache-2.0
 - [shiki@4.4.3](https://github.com/shikijs/shiki) - MIT
@@ -398,6 +430,7 @@ are used in this project.
 - [style-to-object@1.0.14](https://github.com/remarkablemark/style-to-object) - MIT
 - [styled-jsx@5.1.6](vercel/styled-jsx) - MIT
 - [stylis@4.4.0](https://github.com/thysultan/stylis.js) - MIT
+- [supports-color@8.1.1](chalk/supports-color) - MIT
 - [tailwind-merge@3.6.0](https://github.com/dcastil/tailwind-merge) - MIT
 - [tailwindcss@4.3.3](https://github.com/tailwindlabs/tailwindcss) - MIT
 - [tinyexec@1.3.0](https://github.com/tinylibs/tinyexec) - MIT
@@ -417,6 +450,7 @@ are used in this project.
 - [unist-util-stringify-position@4.0.0](syntax-tree/unist-util-stringify-position) - MIT
 - [unist-util-visit@5.1.0](syntax-tree/unist-util-visit) - MIT
 - [unist-util-visit-parents@6.0.2](syntax-tree/unist-util-visit-parents) - MIT
+- [update-browserslist-db@1.2.3](browserslist/update-db) - MIT
 - [use-callback-ref@1.3.3](https://github.com/theKashey/use-callback-ref/) - MIT
 - [use-sidecar@1.1.3](https://github.com/theKashey/use-sidecar) - MIT
 - [uuid@14.0.1](https://github.com/uuidjs/uuid) - MIT
@@ -425,6 +459,7 @@ are used in this project.
 - [vfile-message@4.0.3](vfile/vfile-message) - MIT
 - [vite@8.2.0](https://github.com/vitejs/vite) - MIT
 - [web-namespaces@2.0.1](wooorm/web-namespaces) - MIT
+- [yallist@3.1.1](https://github.com/isaacs/yallist) - ISC
 - [yaml@2.9.0](https://github.com/eemeli/yaml) - ISC
 - [yuku-analyzer@0.8.7](https://github.com/yuku-toolchain/yuku) - MIT
 - [yuku-ast@0.8.7](https://github.com/yuku-toolchain/yuku) - MIT
@@ -432,3 +467,31 @@ are used in this project.
 - [zod@4.4.3](https://github.com/colinhacks/zod) - MIT
 - [zwitch@2.0.4](wooorm/zwitch) - MIT
 
+
+## Copied UI
+
+Inlined styles from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. This is not an npm package listed above.
+
+```
+MIT License
+
+Copyright (c) 2023 shadcn
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

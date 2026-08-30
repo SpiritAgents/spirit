@@ -9,4 +9,5 @@ const pkgRoot = path.resolve(__dirname, "..");
 await generateNotice({
   pkgRoot,
   initLicenseChecker,
+  includeShadcnUiCopiedNotice: true,
 });

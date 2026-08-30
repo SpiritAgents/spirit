@@ -2,6 +2,37 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const PINNED_SHADCN_UI_MIT = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "third-party-notices",
+  "shadcn-ui.MIT.txt"
+);
+
+export function readPinnedShadcnUiMit() {
+  return readFileSync(PINNED_SHADCN_UI_MIT, "utf8");
+}
+
+/** Appendix after scanned npm licenses. Fence body is the pinned file bytes unchanged. */
+export function buildShadcnUiCopiedNoticeAppendix(pinnedMitText) {
+  const body = pinnedMitText.endsWith("\n") ? pinnedMitText : `${pinnedMitText}\n`;
+  return [
+    "",
+    "## Copied UI",
+    "",
+    "Inlined styles from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. This is not an npm package listed above.",
+    "",
+    "```",
+    "",
+  ].join("\n") + body + "```\n";
+}
+
+function appendShadcnUiCopiedNotice(noticePath) {
+  const existing = readFileSync(noticePath, "utf8");
+  const prefix = existing.endsWith("\n") ? existing : `${existing}\n`;
+  writeFileSync(noticePath, prefix + buildShadcnUiCopiedNoticeAppendix(readPinnedShadcnUiMit()), "utf8");
+}
 
 const LICENSE_FILE_NAMES = [
   "LICENSE",
@@ -279,13 +310,26 @@ function runChecker(initLicenseChecker, pkgRoot, productionOnly) {
 }
 
 function formatNoticeWithOxfmt(noticePath, workspaceRoot) {
-  execFileSync("pnpm", ["exec", "oxfmt", path.resolve(noticePath)], {
-    cwd: workspaceRoot,
-    stdio: "inherit",
-  });
+  try {
+    execFileSync("pnpm", ["exec", "oxfmt", path.resolve(noticePath)], {
+      cwd: workspaceRoot,
+      stdio: ["ignore", "inherit", "pipe"],
+    });
+  } catch (error) {
+    const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr) : "";
+    if (stderr.includes("excluded by ignore rules")) {
+      return;
+    }
+    throw error;
+  }
 }
 
-export async function generateNotice({ pkgRoot, initLicenseChecker, extraExcludedPackageNames = [] }) {
+export async function generateNotice({
+  pkgRoot,
+  initLicenseChecker,
+  extraExcludedPackageNames = [],
+  includeShadcnUiCopiedNotice = false,
+}) {
   const productionOnly = process.argv.includes("--production");
   const recursive = process.argv.includes("--recursive");
   const pkgJson = readJson(path.join(pkgRoot, "package.json"));
@@ -305,6 +349,9 @@ export async function generateNotice({ pkgRoot, initLicenseChecker, extraExclude
     const workspaceRoot = findWorkspaceRoot(pkgRoot);
     if (workspaceRoot) {
       formatNoticeWithOxfmt(noticePath, workspaceRoot);
+    }
+    if (includeShadcnUiCopiedNotice) {
+      appendShadcnUiCopiedNotice(noticePath);
     }
     console.log(`Wrote NOTICE.md (${entries.length} packages)`);
   } catch (error) {
