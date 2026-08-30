@@ -48,6 +48,12 @@
   }
 }
 
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+
 @custom-variant data-disabled {
   &:where([data-disabled="true"]),
   &:where([data-disabled]:not([data-disabled="false"])) {
