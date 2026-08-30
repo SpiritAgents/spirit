@@ -1177,7 +1177,7 @@ const settingsConnectTabs: Array<{
 ];
 
 const sidebarInteractionMotionClass =
-  "!transition-[opacity,transform,box-shadow] duration-150 active:!translate-y-0";
+  "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Sidebar interactive items' default text/icon color; hover and selection return to sidebar-foreground */
 const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";

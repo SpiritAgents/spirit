@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const BUTTON_CLASSNAME =
-  "h-9 max-w-full cursor-pointer rounded-full border border-foreground/12 bg-primary px-4 font-mono text-primary-foreground hover:bg-primary/90 active:not-aria-[haspopup]:translate-y-0";
+  "h-9 max-w-full cursor-pointer rounded-full border border-foreground/12 bg-primary px-4 font-mono text-primary-foreground hover:bg-primary/90";
 
 const EDGE_EPSILON_PX = 1;
 const MASK_FADE_MS = 150;

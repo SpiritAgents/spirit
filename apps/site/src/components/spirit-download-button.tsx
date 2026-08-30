@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const SPIRIT_DOWNLOAD_BUTTON_CLASSNAME =
-  "h-9 cursor-pointer rounded-full bg-primary px-4 text-primary-foreground hover:bg-primary/90 active:not-aria-[haspopup]:translate-y-0";
+  "h-9 cursor-pointer rounded-full bg-primary px-4 text-primary-foreground hover:bg-primary/90";
 
 type SpiritDownloadButtonVariant = "page" | "platform";
 

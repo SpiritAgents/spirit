@@ -31,7 +31,6 @@ export const DESKTOP_INSTANT_HOVER_OVERLAY = cn(
   "bg-transparent hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
   "aria-expanded:!bg-canvas-hover",
   instantHoverMotionClass,
-  "active:!translate-y-0",
 );
 
 /** Ghost icon/compact button: sidebar-sourced translucent hover + brighter text color */

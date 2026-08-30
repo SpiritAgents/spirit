@@ -36,7 +36,6 @@ const questionOptionClass = cn(
   questionRowBleedClass,
   questionOptionSurfaceClass,
   instantHoverMotionClass,
-  "active:!translate-y-0",
 );
 
 const questionInputRowClass = cn(
@@ -233,7 +232,6 @@ export function PendingQuestionsCard({
               "px-2 text-muted-foreground",
               questionOverlayHoverClass,
               instantHoverMotionClass,
-              "active:!translate-y-0",
             )}
             disabled={questionsBusy}
             onClick={() => onSkipQuestions()}
@@ -243,7 +241,7 @@ export function PendingQuestionsCard({
           <Button
             type="button"
             size="sm"
-            className={cn("min-w-20", instantHoverMotionClass, "active:!translate-y-0")}
+            className={cn("min-w-20", instantHoverMotionClass)}
             disabled={questionsBusy}
             onClick={handleContinue}
           >

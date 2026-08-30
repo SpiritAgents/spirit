@@ -306,7 +306,7 @@ export function ComposerSurface({
                   "size-7 shrink-0 rounded-full p-0 shadow-none [&_svg]:size-3",
                   instantHoverMotionClass,
                   sendDisabled &&
-                    "disabled:pointer-events-auto disabled:cursor-default disabled:active:translate-y-0",
+                    "disabled:pointer-events-auto disabled:cursor-default",
                 )}
                 onClick={showAbortButton ? onAbort : onSubmit}
                 disabled={sendDisabled}
