@@ -9,8 +9,6 @@
     "**/out/**",
     "**/dist/**",
     "**/node_modules/**",
-    "**/NOTICE.md",
-    "public/notice.md",
     "scripts/**"
   ]
 }

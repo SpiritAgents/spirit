@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,15 +18,19 @@ export function readPinnedShadcnUiMit() {
 /** Appendix after scanned npm licenses. Fence body is the pinned file bytes unchanged. */
 export function buildShadcnUiCopiedNoticeAppendix(pinnedMitText) {
   const body = pinnedMitText.endsWith("\n") ? pinnedMitText : `${pinnedMitText}\n`;
-  return [
-    "",
-    "## Copied UI",
-    "",
-    "Inlined styles from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. This is not an npm package listed above.",
-    "",
-    "```",
-    "",
-  ].join("\n") + body + "```\n";
+  return (
+    [
+      "",
+      "## Copied UI",
+      "",
+      "Inlined styles from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. This is not an npm package listed above.",
+      "",
+      "```",
+      "",
+    ].join("\n") +
+    body +
+    "```\n"
+  );
 }
 
 function appendShadcnUiCopiedNotice(noticePath) {
@@ -61,10 +66,6 @@ function dependencyEntries(pkgJson, productionOnly) {
   return entries;
 }
 
-function directDependencyNames(pkgJson, productionOnly) {
-  return new Set(dependencyEntries(pkgJson, productionOnly).map(([name]) => name));
-}
-
 function workspaceLocalDependencyNames(pkgJson) {
   const names = new Set();
   for (const [name, spec] of dependencyEntries(pkgJson, false)) {
@@ -75,25 +76,48 @@ function workspaceLocalDependencyNames(pkgJson) {
   return names;
 }
 
-function parsePackageKey(key) {
-  const index = key.lastIndexOf("@");
-  if (index <= 0) return { name: key, version: "" };
-  return { name: key.slice(0, index), version: key.slice(index + 1) };
-}
-
-function makePackageKey(name, version) {
-  return `${name}@${version}`;
+function directDependencyNames(pkgJson, productionOnly) {
+  return new Set(dependencyEntries(pkgJson, productionOnly).map(([name]) => name));
 }
 
 function normalizeRepoUrl(url) {
-  return url.replace(/^git\+/, "").replace(/\.git$/, "");
+  return url
+    .replace(/^git\+/, "")
+    .replace(/^git:\/\//, "https://")
+    .replace(/^github:/, "https://github.com/")
+    .replace(/\.git$/, "");
 }
 
 function repoUrl(info) {
   const repository = info.repository;
   if (typeof repository === "string") return normalizeRepoUrl(repository);
   if (repository && typeof repository.url === "string") return normalizeRepoUrl(repository.url);
+  if (typeof info.homepage === "string") return normalizeRepoUrl(info.homepage);
   return "";
+}
+
+function licenseLabel(license) {
+  if (typeof license === "string" && license.trim()) return license.trim();
+  if (Array.isArray(license)) {
+    return license
+      .map((item) => (typeof item === "string" ? item : item?.type))
+      .filter(Boolean)
+      .join(" OR ");
+  }
+  if (license && typeof license === "object" && "type" in license) {
+    const type = license.type;
+    if (typeof type === "string") return type;
+  }
+  return "UNKNOWN";
+}
+
+function isPlatformSpecificPackage(name) {
+  if (/^@rolldown\/binding-/.test(name)) return true;
+  if (/^@tailwindcss\/oxide-/.test(name)) return true;
+  if (/^lightningcss-(darwin|win32|linux|freebsd|android)/.test(name)) return true;
+  if (/^@esbuild\//.test(name)) return true;
+  if (name === "fsevents") return true;
+  return false;
 }
 
 function findLicenseInDir(dir) {
@@ -108,51 +132,83 @@ function hashContent(text) {
   return createHash("sha256").update(text, "utf8").digest("hex").slice(0, 16);
 }
 
-function firstLicensePath(file) {
-  if (!file) return null;
-  if (typeof file === "string") return file;
-  if (Array.isArray(file)) {
-    for (const value of file) {
-      if (typeof value === "string") return value;
+/**
+ * @typedef {{ name?: string, from?: string, version?: string, path?: string, dependencies?: Record<string, PnpmListNode> }} PnpmListNode
+ */
+
+/**
+ * pnpm list (not license-checker): hoisted node_modules is invisible to a checker started inside an app dir.
+ * --depth 1 is direct dependencies; --depth 0 is only the filtered package itself.
+ * @param {string} workspaceRoot
+ * @param {string} filterName
+ * @param {boolean} productionOnly
+ * @param {boolean} recursive
+ * @returns {PnpmListNode[]}
+ */
+function collectPnpmListPackages(workspaceRoot, filterName, productionOnly, recursive) {
+  const args = [
+    "list",
+    "--filter",
+    filterName,
+    "--json",
+    "--depth",
+    recursive ? "Infinity" : "1",
+  ];
+  if (productionOnly) args.push("--prod");
+
+  const raw = execFileSync("pnpm", args, {
+    cwd: workspaceRoot,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const parsed = JSON.parse(raw);
+  const trees = Array.isArray(parsed) ? parsed : [parsed];
+  /** @type {Map<string, PnpmListNode>} */
+  const byKey = new Map();
+
+  /**
+   * @param {PnpmListNode | undefined} node
+   * @param {string | undefined} nameFromKey
+   */
+  function walk(node, nameFromKey) {
+    if (!node) return;
+    const name = node.name || node.from || nameFromKey;
+    if (name && node.version) {
+      byKey.set(`${name}@${node.version}`, { ...node, name });
+    }
+    if (node.dependencies) {
+      for (const [depName, child] of Object.entries(node.dependencies)) {
+        walk(child, depName);
+      }
+    }
+  }
+
+  for (const tree of trees) walk(tree, undefined);
+  return [...byKey.values()].sort((a, b) => {
+    const nameCmp = (a.name ?? "").localeCompare(b.name ?? "");
+    if (nameCmp !== 0) return nameCmp;
+    return (a.version ?? "").localeCompare(b.version ?? "", undefined, { numeric: true });
+  });
+}
+
+/**
+ * @param {PnpmListNode} item
+ * @param {string} workspaceRoot
+ */
+function resolvePackageDir(item, workspaceRoot) {
+  if (item.path && existsSync(path.join(item.path, "package.json"))) return item.path;
+  if (item.name) {
+    const hoisted = path.join(workspaceRoot, "node_modules", ...item.name.split("/"));
+    if (existsSync(path.join(hoisted, "package.json"))) return hoisted;
+    try {
+      return path.dirname(
+        createRequire(path.join(workspaceRoot, "package.json")).resolve(`${item.name}/package.json`)
+      );
+    } catch {
+      // Package is not resolvable from the hoisted workspace root.
     }
   }
   return null;
-}
-
-function buildDirectDependencyFilter(pkgJson, packageLock, productionOnly, recursive) {
-  if (recursive) return null;
-
-  const exactKeys = new Set();
-  const fallbackNames = new Set();
-  const lockPackages = packageLock?.packages;
-
-  for (const name of directDependencyNames(pkgJson, productionOnly)) {
-    const topLevelEntry = lockPackages?.[`node_modules/${name}`];
-    if (topLevelEntry?.link) continue;
-
-    const version = typeof topLevelEntry?.version === "string" ? topLevelEntry.version : null;
-    if (version) exactKeys.add(makePackageKey(name, version));
-    else fallbackNames.add(name);
-  }
-
-  return { exactKeys, fallbackNames };
-}
-
-function buildIncludedEntries(packages, filter, excludedNames) {
-  return Object.entries(packages)
-    .map(([key, info]) => ({ key, info, ...parsePackageKey(key) }))
-    .filter((entry) => {
-      if (excludedNames.has(entry.name)) return false;
-      if (entry.info.private) return false;
-      if (!filter) return true;
-      if (filter.exactKeys.has(makePackageKey(entry.name, entry.version))) return true;
-      return filter.fallbackNames.has(entry.name);
-    })
-    .sort(
-      (a, b) =>
-        a.name.localeCompare(b.name) ||
-        a.version.localeCompare(b.version, undefined, { numeric: true, sensitivity: "base" })
-    );
 }
 
 function summaryCounts(entries) {
@@ -164,22 +220,14 @@ function summaryCounts(entries) {
   return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
-function resolveLicenseFile(entry, pkgRoot) {
-  let filePath = firstLicensePath(entry.info.licenseFile);
-  if (filePath && !path.isAbsolute(filePath)) {
-    const baseDir = typeof entry.info.path === "string" ? entry.info.path : pkgRoot;
-    filePath = path.join(baseDir, filePath);
-  }
-  if (filePath && existsSync(filePath)) return filePath;
-
+function resolveLicenseFile(entry) {
   if (typeof entry.info.path === "string") {
     return findLicenseInDir(entry.info.path);
   }
-
   return null;
 }
 
-function buildNoticeText(entries, displayName, productionOnly, recursive, pkgRoot) {
+function buildNoticeText(entries, displayName, productionOnly, recursive) {
   const summaryLines = summaryCounts(entries).map(([license, count]) => `- ${license}: ${count} package(s)`);
 
   const componentLines = [];
@@ -196,7 +244,7 @@ function buildNoticeText(entries, displayName, productionOnly, recursive, pkgRoo
   for (const entry of entries) {
     const label = `${entry.name} ${entry.version}`;
     const spdx = String(entry.info.licenses ?? "UNKNOWN");
-    const filePath = resolveLicenseFile(entry, pkgRoot);
+    const filePath = resolveLicenseFile(entry);
     if (!filePath || !existsSync(filePath)) {
       missing.push({ label, spdx });
       continue;
@@ -277,82 +325,104 @@ function findWorkspaceRoot(startDir) {
   }
 }
 
-function readPackageLock(pkgRoot) {
-  const lockRoot = findWorkspaceRoot(pkgRoot);
-  if (!lockRoot) {
-    return null;
-  }
-  const npmLockPath = path.join(lockRoot, "package-lock.json");
-  if (existsSync(npmLockPath)) {
-    return readJson(npmLockPath);
-  }
-  return null;
-}
-
 function resolveExcludedNames(pkgJson, extraExcludedPackageNames) {
   return new Set([pkgJson.name, ...workspaceLocalDependencyNames(pkgJson), ...extraExcludedPackageNames]);
 }
 
-function runChecker(initLicenseChecker, pkgRoot, productionOnly) {
-  return new Promise((resolve, reject) => {
-    initLicenseChecker(
-      {
-        start: pkgRoot,
-        production: productionOnly,
-        color: false,
+function buildEntriesFromPnpmList({
+  workspaceRoot,
+  filterName,
+  pkgJson,
+  productionOnly,
+  recursive,
+  excludedNames,
+  excludePlatformSpecificPackages,
+}) {
+  const packages = collectPnpmListPackages(workspaceRoot, filterName, productionOnly, recursive);
+  const directNames = directDependencyNames(pkgJson, productionOnly);
+  const entries = [];
+
+  for (const item of packages) {
+    const name = item.name;
+    if (!name || excludedNames.has(name)) continue;
+    if (!recursive && !directNames.has(name)) continue;
+    if (excludePlatformSpecificPackages && isPlatformSpecificPackage(name)) continue;
+
+    const packageDir = resolvePackageDir(item, workspaceRoot);
+    if (!packageDir) continue;
+
+    const manifest = readJson(path.join(packageDir, "package.json"));
+    if (manifest.private) continue;
+
+    entries.push({
+      name,
+      version: item.version,
+      info: {
+        licenses: licenseLabel(manifest.license ?? manifest.licenses),
+        path: packageDir,
+        repository: manifest.repository,
+        homepage: typeof manifest.homepage === "string" ? manifest.homepage : undefined,
       },
-      (error, packages) => {
-        if (error) reject(error);
-        else resolve(packages);
-      }
-    );
-  });
+    });
+  }
+
+  return entries.sort(
+    (a, b) =>
+      a.name.localeCompare(b.name) ||
+      a.version.localeCompare(b.version, undefined, { numeric: true, sensitivity: "base" })
+  );
 }
 
 function formatNoticeWithOxfmt(noticePath, workspaceRoot) {
-  try {
-    execFileSync("pnpm", ["exec", "oxfmt", path.resolve(noticePath)], {
-      cwd: workspaceRoot,
-      stdio: ["ignore", "inherit", "pipe"],
-    });
-  } catch (error) {
-    const stderr = error && typeof error === "object" && "stderr" in error ? String(error.stderr) : "";
-    if (stderr.includes("excluded by ignore rules")) {
-      return;
-    }
-    throw error;
-  }
+  execFileSync("pnpm", ["exec", "oxfmt", path.resolve(noticePath)], {
+    cwd: workspaceRoot,
+    stdio: "inherit",
+  });
 }
 
 export async function generateNotice({
   pkgRoot,
-  initLicenseChecker,
   extraExcludedPackageNames = [],
   includeShadcnUiCopiedNotice = false,
+  excludePlatformSpecificPackages = false,
+  extraNoticePaths = [],
+  productionOnly: productionOnlyOption,
+  recursive: recursiveOption,
 }) {
-  const productionOnly = process.argv.includes("--production");
-  const recursive = process.argv.includes("--recursive");
+  const productionOnly = productionOnlyOption ?? process.argv.includes("--production");
+  const recursive = recursiveOption ?? process.argv.includes("--recursive");
   const pkgJson = readJson(path.join(pkgRoot, "package.json"));
   const displayName = pkgJson.name ?? "package";
   const excludedNames = resolveExcludedNames(pkgJson, extraExcludedPackageNames);
-  const packageLock = readPackageLock(pkgRoot);
-  const licenseScanRoot = findWorkspaceRoot(pkgRoot) ?? pkgRoot;
+  const workspaceRoot = findWorkspaceRoot(pkgRoot) ?? pkgRoot;
 
   try {
-    const packages = await runChecker(initLicenseChecker, licenseScanRoot, productionOnly);
-    const filter = buildDirectDependencyFilter(pkgJson, packageLock, productionOnly, recursive);
-    const entries = buildIncludedEntries(packages, filter, excludedNames);
-    const noticeText = buildNoticeText(entries, displayName, productionOnly, recursive, pkgRoot);
+    const entries = buildEntriesFromPnpmList({
+      workspaceRoot,
+      filterName: displayName,
+      pkgJson,
+      productionOnly,
+      recursive,
+      excludedNames,
+      excludePlatformSpecificPackages,
+    });
+    const noticeText = buildNoticeText(entries, displayName, productionOnly, recursive);
 
     const noticePath = path.join(pkgRoot, "NOTICE.md");
     writeFileSync(noticePath, noticeText, "utf8");
-    const workspaceRoot = findWorkspaceRoot(pkgRoot);
-    if (workspaceRoot) {
-      formatNoticeWithOxfmt(noticePath, workspaceRoot);
-    }
+    formatNoticeWithOxfmt(noticePath, workspaceRoot);
     if (includeShadcnUiCopiedNotice) {
       appendShadcnUiCopiedNotice(noticePath);
     }
+
+    if (extraNoticePaths.length > 0) {
+      const finalText = readFileSync(noticePath, "utf8");
+      for (const extraPath of extraNoticePaths) {
+        mkdirSync(path.dirname(extraPath), { recursive: true });
+        writeFileSync(extraPath, finalText, "utf8");
+      }
+    }
+
     console.log(`Wrote NOTICE.md (${entries.length} packages)`);
   } catch (error) {
     const message = error instanceof Error ? error.stack ?? error.message : String(error);
