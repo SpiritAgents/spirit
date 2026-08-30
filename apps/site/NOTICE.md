@@ -7,13 +7,13 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 ## Summary
 
 - MIT: 391 package(s)
-- ISC: 46 package(s)
+- ISC: 45 package(s)
 - Apache-2.0: 10 package(s)
 - BSD-3-Clause: 5 package(s)
+- BlueOak-1.0.0: 2 package(s)
 - OFL-1.1: 2 package(s)
 - (MPL-2.0 OR Apache-2.0): 1 package(s)
 - 0BSD: 1 package(s)
-- BlueOak-1.0.0: 1 package(s)
 - BSD-2-Clause: 1 package(s)
 - CC-BY-4.0: 1 package(s)
 - LGPL-3.0-or-later: 1 package(s)
@@ -935,7 +935,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/vitejs/vite
 - **web-namespaces** 2.0.1 — MIT
   - wooorm/web-namespaces
-- **yallist** 3.1.1 — ISC
+- **yallist** 3.1.1 — BlueOak-1.0.0
   - https://github.com/isaacs/yallist
 - **yaml** 2.9.0 — ISC
   - https://github.com/eemeli/yaml
@@ -2324,6 +2324,78 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim.***
 ```
 
+### BlueOak-1.0.0
+
+**Used by:**
+
+- yallist 3.1.1
+
+```
+All packages under `src/` are licensed according to the terms in
+their respective `LICENSE` or `LICENSE.md` files.
+
+The remainder of this project is licensed under the Blue Oak
+Model License, as follows:
+
+-----
+
+# Blue Oak Model License
+
+Version 1.0.0
+
+## Purpose
+
+This license gives everyone as much permission to work with
+this software as possible, while protecting contributors
+from liability.
+
+## Acceptance
+
+In order to receive this license, you must agree to its
+rules.  The rules of this license are both obligations
+under that agreement and conditions to your license.
+You must not do anything with this software that triggers
+a rule that you cannot or will not follow.
+
+## Copyright
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe that contributor's
+copyright in it.
+
+## Notices
+
+You must ensure that everyone who gets a copy of
+any part of this software from you, with or without
+changes, also gets the text of this license or a link to
+<https://blueoakcouncil.org/license/1.0.0>.
+
+## Excuse
+
+If anyone notifies you in writing that you have not
+complied with [Notices](#notices), you can keep your
+license by taking all practical steps to comply within 30
+days after the notice.  If you do not do so, your license
+ends immediately.
+
+## Patent
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe any patent claims
+they can license or become able to license.
+
+## Reliability
+
+No contributor can revoke this license.
+
+## No Liability
+
+***As far as the law allows, this software comes as is,
+without any warranty or condition, and no contributor
+will be liable to anyone for any damages related to this
+software or this license, under any kind of legal claim.***
+```
+
 ### BSD-2-Clause
 
 **Used by:**
@@ -3377,7 +3449,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 - semver 6.3.1
 - semver 7.8.5
-- yallist 3.1.1
 
 ```
 The ISC License
