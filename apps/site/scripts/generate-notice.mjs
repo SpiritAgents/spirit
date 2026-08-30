@@ -3,6 +3,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import {
+  buildShadcnUiCopiedNoticeAppendix,
+  readPinnedShadcnUiMit,
+} from '../../../scripts/generate-notice.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
@@ -155,7 +159,7 @@ are used in this project.
 ${lines.join('\n')}
 `
 
-const content = `${notice}\n`
+const content = `${notice}\n${buildShadcnUiCopiedNoticeAppendix(readPinnedShadcnUiMit())}`
 const publicDir = join(root, 'public')
 
 mkdirSync(publicDir, { recursive: true })
