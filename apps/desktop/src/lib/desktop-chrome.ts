@@ -159,6 +159,9 @@ export const DESKTOP_OVERLAY_SHADOW = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:sha
 /** Overlay shadow: light-mode diffuse + dark-mode keeps lg (Tooltip / Popover / HoverCard, etc.) */
 export const DESKTOP_OVERLAY_SHADOW_LG = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:shadow-lg");
 
+/** Overlay panel edge: same 1px `--border` at 80% as Dropdown */
+export const DESKTOP_OVERLAY_EDGE = "border border-border/80";
+
 /** Ctrl+P / Ctrl+Shift+P command palette list icons and titles: slightly muted in light mode, brightened in dark mode */
 export const DESKTOP_COMMAND_PALETTE_ITEM_TONE = "opacity-70 dark:opacity-90";
 
@@ -176,7 +179,8 @@ export const DESKTOP_OVERLAY_SHORT_CONTENT = cn(DESKTOP_OVERLAY_SHORT_SHELL, "p-
 /** Dropdown primitive: short-list shell + popover face */
 export const DESKTOP_OVERLAY_SHORT_DROPDOWN_SURFACE = cn(
   DESKTOP_OVERLAY_SHORT_SHELL,
-  "border border-border/80 bg-popover p-1 text-sm text-popover-foreground",
+  DESKTOP_OVERLAY_EDGE,
+  "bg-popover p-1 text-sm text-popover-foreground",
 );
 
 export const DESKTOP_OVERLAY_SHORT_SUBCONTENT = cn(
@@ -201,7 +205,8 @@ export const DESKTOP_OVERLAY_LIST_SHELL = cn("min-w-0 rounded-lg ring-0", DESKTO
 /** Dropdown primitive: long-list shell + popover face (density aligned with the model / workspace pickers) */
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
   DESKTOP_OVERLAY_LIST_SHELL,
-  "border border-border/80 bg-popover p-0 text-xs text-popover-foreground backdrop-blur-sm",
+  DESKTOP_OVERLAY_EDGE,
+  "bg-popover p-0 text-xs text-popover-foreground backdrop-blur-sm",
 );
 
 export const DESKTOP_OVERLAY_LIST_WIDTH =
@@ -351,7 +356,8 @@ export const DESKTOP_OVERLAY_LIST_SUB_TRIGGER = "items-center gap-1.5 px-2.5 py-
 /** Detail Popover paired with a long list: density aligned with DESKTOP_OVERLAY_LIST_* */
 export const DESKTOP_OVERLAY_LIST_DETAIL_SURFACE = cn(
   DESKTOP_OVERLAY_LIST_SHELL,
-  "border border-border/80 bg-popover p-0 text-xs text-popover-foreground backdrop-blur-sm",
+  DESKTOP_OVERLAY_EDGE,
+  "bg-popover p-0 text-xs text-popover-foreground backdrop-blur-sm",
 );
 
 export const DESKTOP_OVERLAY_LIST_DETAIL_WIDTH =

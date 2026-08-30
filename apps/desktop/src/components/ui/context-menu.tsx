@@ -2,7 +2,11 @@ import * as React from "react";
 import { Fragment } from "react";
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui";
 
-import { DESKTOP_OVERLAY_SHADOW, DESKTOP_OVERLAY_SHADOW_LG } from "@/lib/desktop-chrome";
+import {
+  DESKTOP_OVERLAY_EDGE,
+  DESKTOP_OVERLAY_SHADOW,
+  DESKTOP_OVERLAY_SHADOW_LG,
+} from "@/lib/desktop-chrome";
 import { radixAnchoredOverlayMotion } from "@/lib/overlay-motion";
 import { getUiLayoutPortalContainer } from "@/lib/ui-layout-scale";
 import { FONT_WEIGHT_NORMAL } from "@/lib/desktop-typography";
@@ -64,7 +68,8 @@ function ContextMenuContent({
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
         className={cn(
-          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-36 overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground ring-1 ring-foreground/10",
+          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-36 overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground",
+          DESKTOP_OVERLAY_EDGE,
           DESKTOP_OVERLAY_SHADOW,
           radixAnchoredOverlayMotion("context-menu"),
           className,
@@ -130,7 +135,8 @@ function ContextMenuSubContent({
     <ContextMenuPrimitive.SubContent
       data-slot="context-menu-sub-content"
       className={cn(
-        "z-50 min-w-32 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground",
+        "z-50 min-w-32 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground",
+        DESKTOP_OVERLAY_EDGE,
         DESKTOP_OVERLAY_SHADOW_LG,
         radixAnchoredOverlayMotion("context-menu"),
         className,

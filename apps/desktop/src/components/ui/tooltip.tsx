@@ -13,7 +13,7 @@ import {
   subscribeTooltipItemInteraction,
 } from "@/hooks/tooltip-item-interaction-store";
 import { useGlobalTooltipSwitch } from "@/hooks/use-global-tooltip-switch";
-import { DESKTOP_OVERLAY_SHADOW_LG } from "@/lib/desktop-chrome";
+import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW_LG } from "@/lib/desktop-chrome";
 import { getUiLayoutPortalContainer, viewportPointToScaleRootLocal } from "@/lib/ui-layout-scale";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +37,14 @@ type TooltipContentRegistration = {
 };
 
 const TOOLTIP_CONTENT_COMPACT_CLASS = cn(
-  "z-50 inline-flex w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) items-center gap-1.5 rounded-lg border border-border/80 bg-popover px-3 py-1.5 text-xs text-popover-foreground ring-1 ring-white/5 backdrop-blur-sm has-data-[slot=kbd]:pr-1.5 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+  "z-50 inline-flex w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) items-center gap-1.5 rounded-lg bg-popover px-3 py-1.5 text-xs text-popover-foreground backdrop-blur-sm has-data-[slot=kbd]:pr-1.5 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+  DESKTOP_OVERLAY_EDGE,
   DESKTOP_OVERLAY_SHADOW_LG,
 );
 
 const TOOLTIP_CONTENT_DETAIL_CLASS = cn(
-  "z-50 w-auto max-w-none origin-(--radix-tooltip-content-transform-origin) rounded-lg border border-border/80 bg-popover text-popover-foreground ring-1 ring-white/5 backdrop-blur-sm data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+  "z-50 w-auto max-w-none origin-(--radix-tooltip-content-transform-origin) rounded-lg bg-popover text-popover-foreground backdrop-blur-sm data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
+  DESKTOP_OVERLAY_EDGE,
   DESKTOP_OVERLAY_SHADOW_LG,
 );
 
