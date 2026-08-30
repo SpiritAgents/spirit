@@ -59,21 +59,21 @@ function viewMenuItems(win?: BrowserWindow): Electron.MenuItemConstructorOptions
     // UI layout scale — not Electron webContents zoomIn/zoomOut/resetZoom roles.
     {
       label: menuLabel("zoomIn"),
-      accelerator: "CmdOrCtrl+Plus",
+      accelerator: "Command+Plus",
       click: () => {
         sendUiLayoutZoom("in", win);
       },
     },
     {
       label: menuLabel("zoomOut"),
-      accelerator: "CmdOrCtrl+-",
+      accelerator: "Command+-",
       click: () => {
         sendUiLayoutZoom("out", win);
       },
     },
     {
       label: menuLabel("zoomReset"),
-      accelerator: "CmdOrCtrl+0",
+      accelerator: "Command+0",
       click: () => {
         sendUiLayoutZoom("reset", win);
       },
@@ -90,7 +90,7 @@ function appMenuItems(): Electron.MenuItemConstructorOptions[] {
     { type: "separator" },
     {
       label: menuLabel("settings"),
-      accelerator: "CmdOrCtrl+,",
+      accelerator: "Command+,",
       click: () => {
         sendOpenSettings();
       },
@@ -172,7 +172,7 @@ function buildMacOSApplicationMenuTemplate(): Electron.MenuItemConstructorOption
       submenu: [
         {
           label: menuLabel("newSession"),
-          accelerator: "CmdOrCtrl+N",
+          accelerator: "Command+N",
           click: () => {
             sendNewSession();
           },
