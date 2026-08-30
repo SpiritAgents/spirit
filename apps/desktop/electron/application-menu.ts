@@ -25,6 +25,15 @@ function sendOpenSettings(win?: BrowserWindow): void {
   }
 }
 
+type UiLayoutZoomAction = "in" | "out" | "reset";
+
+function sendUiLayoutZoom(action: UiLayoutZoomAction, win?: BrowserWindow): void {
+  const target = win ?? BrowserWindow.getFocusedWindow();
+  if (target && !target.isDestroyed()) {
+    target.webContents.send("desktop:ui-layout-zoom", action);
+  }
+}
+
 function editMenuItems(): Electron.MenuItemConstructorOptions[] {
   return [
     { role: "undo", label: menuLabel("undo") },
@@ -37,7 +46,7 @@ function editMenuItems(): Electron.MenuItemConstructorOptions[] {
   ];
 }
 
-function viewMenuItems(): Electron.MenuItemConstructorOptions[] {
+function viewMenuItems(win?: BrowserWindow): Electron.MenuItemConstructorOptions[] {
   return [
     ...(isDevChrome
       ? ([
@@ -47,6 +56,29 @@ function viewMenuItems(): Electron.MenuItemConstructorOptions[] {
           { type: "separator" as const },
         ] satisfies Electron.MenuItemConstructorOptions[])
       : []),
+    // UI layout scale — not Electron webContents zoomIn/zoomOut/resetZoom roles.
+    {
+      label: menuLabel("zoomIn"),
+      accelerator: "CmdOrCtrl+Plus",
+      click: () => {
+        sendUiLayoutZoom("in", win);
+      },
+    },
+    {
+      label: menuLabel("zoomOut"),
+      accelerator: "CmdOrCtrl+-",
+      click: () => {
+        sendUiLayoutZoom("out", win);
+      },
+    },
+    {
+      label: menuLabel("zoomReset"),
+      accelerator: "CmdOrCtrl+0",
+      click: () => {
+        sendUiLayoutZoom("reset", win);
+      },
+    },
+    { type: "separator" },
     { role: "togglefullscreen", label: menuLabel("toggleFullscreen") },
   ];
 }
@@ -93,7 +125,7 @@ function buildSectionTemplate(
     case "edit":
       return editMenuItems();
     case "view":
-      return viewMenuItems();
+      return viewMenuItems(win);
     case "window":
       return [
         { role: "minimize", label: menuLabel("minimize") },

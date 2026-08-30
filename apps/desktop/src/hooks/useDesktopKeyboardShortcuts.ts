@@ -32,6 +32,21 @@ export type UiLayoutScaleShortcutApi = {
   resetScale: () => void;
 };
 
+function applyUiLayoutZoomAction(
+  action: "in" | "out" | "reset",
+  api: UiLayoutScaleShortcutApi,
+): void {
+  if (action === "in") {
+    api.zoomIn();
+    return;
+  }
+  if (action === "out") {
+    api.zoomOut();
+    return;
+  }
+  api.resetScale();
+}
+
 export type UseDesktopKeyboardShortcutsOptions = {
   runtime: DesktopRuntime;
   activeSurfaceRef: MutableRefObject<AppSurface>;
@@ -304,7 +319,11 @@ export function useDesktopKeyboardShortcuts({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setActionPickerOpen, setFilePickerOpen]);
 
+  // Cmd/Ctrl+= / - / 0 — UI layout zoom (macOS menu accelerator handles this; skip here).
   useEffect(() => {
+    if (desktopShellPlatform() === "darwin") {
+      return;
+    }
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       if (
@@ -324,17 +343,19 @@ export function useDesktopKeyboardShortcuts({
       }
       event.preventDefault();
       event.stopPropagation();
-      if (action === "in") {
-        uiLayoutScaleApi.zoomIn();
-        return;
-      }
-      if (action === "out") {
-        uiLayoutScaleApi.zoomOut();
-        return;
-      }
-      uiLayoutScaleApi.resetScale();
+      applyUiLayoutZoomAction(action, uiLayoutScaleApi);
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
+  }, [uiLayoutScaleApi.zoomIn, uiLayoutScaleApi.zoomOut, uiLayoutScaleApi.resetScale]);
+
+  useEffect(() => {
+    const bridge = window.spiritDesktop;
+    if (!bridge?.subscribeUiLayoutZoom) {
+      return;
+    }
+    return bridge.subscribeUiLayoutZoom((action) => {
+      applyUiLayoutZoomAction(action, uiLayoutScaleApi);
+    });
   }, [uiLayoutScaleApi.zoomIn, uiLayoutScaleApi.zoomOut, uiLayoutScaleApi.resetScale]);
 }

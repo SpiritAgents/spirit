@@ -34,6 +34,32 @@ ipcRenderer.on("desktop:open-settings", () => {
   pendingOpenSettingsFromMain = true;
 });
 
+type UiLayoutZoomAction = "in" | "out" | "reset";
+
+const uiLayoutZoomSubscribers = new Set<(action: UiLayoutZoomAction) => void>();
+let pendingUiLayoutZoomFromMain: UiLayoutZoomAction | null = null;
+
+function isUiLayoutZoomAction(value: unknown): value is UiLayoutZoomAction {
+  return value === "in" || value === "out" || value === "reset";
+}
+
+function dispatchUiLayoutZoomToSubscribers(action: UiLayoutZoomAction): void {
+  for (const callback of uiLayoutZoomSubscribers) {
+    callback(action);
+  }
+}
+
+ipcRenderer.on("desktop:ui-layout-zoom", (_event, action: unknown) => {
+  if (!isUiLayoutZoomAction(action)) {
+    return;
+  }
+  if (uiLayoutZoomSubscribers.size > 0) {
+    dispatchUiLayoutZoomToSubscribers(action);
+    return;
+  }
+  pendingUiLayoutZoomFromMain = action;
+});
+
 contextBridge.exposeInMainWorld("spiritDesktop", {
   platform: process.platform,
   /** Fire-and-forget uncaught error report (installed by the renderer itself, main world). */
@@ -802,6 +828,17 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
     }
     return () => {
       openSettingsSubscribers.delete(callback);
+    };
+  },
+  subscribeUiLayoutZoom(callback: (action: UiLayoutZoomAction) => void) {
+    uiLayoutZoomSubscribers.add(callback);
+    if (pendingUiLayoutZoomFromMain) {
+      const pending = pendingUiLayoutZoomFromMain;
+      pendingUiLayoutZoomFromMain = null;
+      callback(pending);
+    }
+    return () => {
+      uiLayoutZoomSubscribers.delete(callback);
     };
   },
 });

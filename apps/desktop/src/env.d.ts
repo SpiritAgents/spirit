@@ -389,6 +389,7 @@ declare global {
     ): () => void;
     subscribeNewSession(callback: () => void): () => void;
     subscribeOpenSettings(callback: () => void): () => void;
+    subscribeUiLayoutZoom(callback: (action: "in" | "out" | "reset") => void): () => void;
   }
 
   interface Window {
