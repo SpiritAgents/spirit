@@ -1,4 +1,4 @@
-import { resolveModelDisplayTitle } from "@spiritagent/host-internal/model-display-name";
+import { resolveModelDisplayTitle } from "@spiritagent/host-internal/id-display-title";
 import { normalizeOpenAiApiBase } from "@spiritagent/host-internal/openai-api-base";
 
 import { formatCompactTokenCount } from "./format-compact-token-count.js";

@@ -33,7 +33,7 @@ export * from "./credentials/index.js";
 export * from "./permissions/index.js";
 export * from "./provider-setup.js";
 export * from "./resolve-transport.js";
-export * from "./model-display-name.js";
+export * from "./id-display-title.js";
 export * from "./openai-api-base.js";
 export * from "./openai-models.js";
 export * from "./reasoning-effort.js";

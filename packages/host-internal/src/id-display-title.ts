@@ -1,4 +1,4 @@
-const MODEL_DISPLAY_NAME_SEPARATOR_PATTERN = /[-:/]/g;
+const ID_DISPLAY_TITLE_SEPARATOR_PATTERN = /[-:/_@]/g;
 const PURE_DIGIT_TOKEN_PATTERN = /^\d+$/;
 
 /** Treat adjacent pure-numeric segments as major/minor version numbers and merge them into `major.minor` (e.g. `4-8` → `4.8`). */
@@ -25,15 +25,15 @@ function mergeConsecutiveNumericVersionSegments(tokens: string[]): string[] {
   return merged;
 }
 
-/** Format a model id into a display name: `-`/`:`/`/` → space, adjacent numeric segments merged into a dotted version, each word capitalized. */
-export function formatModelDisplayNameFromId(modelId: string): string {
-  const normalized = modelId
+/** Format an id into a display title: `-`/`:`/`/`/`_`/`@` → space, adjacent numeric segments merged into a dotted version, each word capitalized. */
+export function formatTitleFromId(id: string): string {
+  const normalized = id
     .trim()
-    .replace(MODEL_DISPLAY_NAME_SEPARATOR_PATTERN, " ")
+    .replace(ID_DISPLAY_TITLE_SEPARATOR_PATTERN, " ")
     .replace(/\s+/g, " ")
     .trim();
   if (!normalized) {
-    return modelId;
+    return id;
   }
 
   const tokens = normalized.split(" ").filter((token) => token.length > 0);
@@ -62,18 +62,16 @@ export function resolveModelDisplayTitle(input: {
   if (input.preserveRawIdWithoutCatalogDisplayName) {
     return input.modelId;
   }
-  return formatModelDisplayNameFromId(input.modelId);
+  return formatTitleFromId(input.modelId);
 }
 
-/** Format model ids in batch; only write into the map when the result differs from the id. */
-export function buildFormattedDisplayTitlesFromIds(
-  modelIds: readonly string[],
-): Record<string, string> {
+/** Format ids in batch; only write into the map when the result differs from the id. */
+export function buildFormattedDisplayTitlesFromIds(ids: readonly string[]): Record<string, string> {
   const titles: Record<string, string> = {};
-  for (const modelId of modelIds) {
-    const formatted = formatModelDisplayNameFromId(modelId);
-    if (formatted !== modelId) {
-      titles[modelId] = formatted;
+  for (const id of ids) {
+    const formatted = formatTitleFromId(id);
+    if (formatted !== id) {
+      titles[id] = formatted;
     }
   }
   return titles;

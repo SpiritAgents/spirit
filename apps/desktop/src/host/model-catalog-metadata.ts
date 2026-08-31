@@ -1,4 +1,4 @@
-import { formatModelDisplayNameFromId } from "@spiritagent/host-internal/model-display-name";
+import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 import {
   gatewayGoogleGeminiSupportedEfforts,
   routedAnthropicClaudeSupportedEfforts,
@@ -198,7 +198,7 @@ function resolvePreviewCatalogDisplayName(
   if (providerUsesUpstreamModelDisplayName(provider)) {
     return {};
   }
-  return { displayName: formatModelDisplayNameFromId(entry.id) };
+  return { displayName: formatTitleFromId(entry.id) };
 }
 
 function previewCapabilitiesFromListedEntry(

@@ -46,19 +46,19 @@ fn provider_uses_catalog_display(provider: ModelProvider) -> bool {
     )
 }
 
-fn resolve_host_internal_model_display_name_path() -> Result<PathBuf, String> {
+fn resolve_host_internal_id_display_title_path() -> Result<PathBuf, String> {
     if let Ok(path) = env::var("SPIRIT_HOST_INTERNAL_MODULE_PATH") {
         let candidate = PathBuf::from(&path);
-        let model_display_name = candidate
+        let id_display_title = candidate
             .parent()
-            .map(|parent| parent.join("model-display-name.js"))
+            .map(|parent| parent.join("id-display-title.js"))
             .ok_or_else(|| "Invalid host-internal module path".to_string())?;
-        if model_display_name.exists() {
-            return Ok(model_display_name);
+        if id_display_title.exists() {
+            return Ok(id_display_title);
         }
         return Err(format!(
-            "model-display-name.js not found next to the SPIRIT_HOST_INTERNAL_MODULE_PATH environment variable: {}",
-            model_display_name.display()
+            "id-display-title.js not found next to the SPIRIT_HOST_INTERNAL_MODULE_PATH environment variable: {}",
+            id_display_title.display()
         ));
     }
 
@@ -68,13 +68,13 @@ fn resolve_host_internal_model_display_name_path() -> Result<PathBuf, String> {
         .join("packages")
         .join("host-internal")
         .join("dist")
-        .join("model-display-name.js");
+        .join("id-display-title.js");
     if from_crate.exists() {
         return Ok(from_crate);
     }
 
     Err(format!(
-        "host-internal model-display-name.js not found. Run pnpm run build in packages/host-internal first. Default lookup path: {}",
+        "host-internal id-display-title.js not found. Run pnpm run build in packages/host-internal first. Default lookup path: {}",
         from_crate.display()
     ))
 }
@@ -86,7 +86,7 @@ fn format_model_display_names_via_host_internal(
         return Ok(HashMap::new());
     }
 
-    let module_path = resolve_host_internal_model_display_name_path()?;
+    let module_path = resolve_host_internal_id_display_title_path()?;
     let module_url = module_path
         .to_str()
         .ok_or_else(|| "Invalid host-internal module path".to_string())?
@@ -314,7 +314,7 @@ mod tests {
             extra: serde_json::Map::new(),
         }];
         let titles = build_model_display_titles(&models);
-        if resolve_host_internal_model_display_name_path().is_ok() {
+        if resolve_host_internal_id_display_title_path().is_ok() {
             assert_eq!(
                 titles.get("gpt-4o-mini").map(String::as_str),
                 Some("Gpt 4o Mini")

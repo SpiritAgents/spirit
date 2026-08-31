@@ -14,7 +14,7 @@ import { assertGoogleGeminiApiBase, googleNativeModelsListUrl } from "./google-g
 import { extractAwsRegionFromBedrockApiBase } from "./bedrock-region.js";
 import { extractVertexProjectAndLocationFromApiBase } from "./google-vertex-endpoints.js";
 import { normalizeOpenAiApiBase } from "./openai-api-base.js";
-import { formatModelDisplayNameFromId } from "./model-display-name.js";
+import { formatTitleFromId } from "./id-display-title.js";
 
 export { normalizeOpenAiApiBase } from "./openai-api-base.js";
 
@@ -1208,7 +1208,7 @@ function groqSupportedReasoningEfforts(id: string): string[] | undefined {
 
 export function resolveGroqDisplayNameFromId(modelId: string): string {
   const segment = resolveHuggingFaceDisplayNameFromId(modelId);
-  const formatted = formatModelDisplayNameFromId(segment);
+  const formatted = formatTitleFromId(segment);
   return formatted.length > 0 ? formatted : modelId.trim();
 }
 
