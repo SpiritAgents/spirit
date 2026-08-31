@@ -2988,6 +2988,12 @@ class DesktopHostService {
       this.mcpServiceByWorkspaceRoot,
       workspaceRoot,
       workspaceBinding,
+      async () => {
+        const contributions = await collectEnabledExtensionInstructionContributions(
+          await this.extensionManager().list(),
+        );
+        return contributions.mcp;
+      },
     );
   }
 
@@ -4077,6 +4083,7 @@ class DesktopHostService {
   private async refreshRuntimeAfterExtensionMutation(): Promise<void> {
     await this.refreshExtensionSystemPromptsCache();
     await this.refreshExtensionsList();
+    await this.refreshSharedMcpConfigAfterExtensionMutation();
 
     if (this.runtime?.isBusy()) {
       this.activeBundle().deferredRuntimeRefreshWhileBusy = true;
@@ -4086,6 +4093,13 @@ class DesktopHostService {
     this.activeBundle().deferredRuntimeRefreshWhileBusy = false;
     await this.refreshRuntime();
     this.lastRuntimeError = "";
+  }
+
+  private async refreshSharedMcpConfigAfterExtensionMutation(): Promise<void> {
+    const state = this.requireState();
+    const mcp = this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding);
+    await mcp.refreshConfig();
+    mcp.startBackgroundRefreshInBackground(true);
   }
 
   private invalidateExtensionWarmup(): void {

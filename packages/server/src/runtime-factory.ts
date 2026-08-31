@@ -87,6 +87,7 @@ import {
 } from "@spiritagent/host-internal";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
+import { createExtensionMcpExtraConfigs } from "./mcp-registry.js";
 import { createNoopPeer } from "./noop-peer.js";
 
 export type ServerHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -222,7 +223,10 @@ export async function createServerRuntime(
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
   const mcpService = isDreamCollector
     ? new McpService(workspaceRoot, true)
-    : (options.mcpService ?? new McpService(workspaceRoot, true));
+    : (options.mcpService ??
+      new McpService(workspaceRoot, true, {
+        extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
+      }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
   if (!isDreamCollector) {
     mcpService.startBackgroundRefreshInBackground(false);
@@ -611,6 +615,8 @@ export async function createServerRuntime(
       })),
     );
     await applyExtensionInstructionOverlay();
+    await mcpService.refreshConfig();
+    mcpService.startBackgroundRefreshInBackground(true);
   };
 
   return {

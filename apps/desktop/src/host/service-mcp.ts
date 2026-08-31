@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { McpService } from "@spiritagent/agent-core";
+import { McpService, type McpExtraConfigProvider } from "@spiritagent/agent-core";
 
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -19,12 +19,17 @@ export function sharedMcpServiceForWorkspace(
   cache: Map<string, McpService>,
   workspaceRoot: string,
   workspaceBinding: DesktopWorkspaceBinding = "project",
+  extraConfigs?: McpExtraConfigProvider,
 ): McpService {
   const includeWorkspaceConfig = workspaceBinding === "project";
   const key = `${path.resolve(workspaceRoot)}|${includeWorkspaceConfig ? "project" : "none"}`;
   let service = cache.get(key);
   if (!service) {
-    service = new McpService(path.resolve(workspaceRoot), includeWorkspaceConfig);
+    service = new McpService(
+      path.resolve(workspaceRoot),
+      includeWorkspaceConfig,
+      extraConfigs ? { extraConfigs } : {},
+    );
     service.startBackgroundRefreshInBackground(false);
     cache.set(key, service);
   }
