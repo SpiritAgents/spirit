@@ -206,3 +206,217 @@ test("disabled extensions contribute no tools, prompts, events, or runs", async 
     await cleanupFixture(fixture);
   }
 });
+
+const VALID_MCP_JSON = `${JSON.stringify(
+  {
+    servers: {
+      docs: {
+        transport: { type: "stdio", command: "echo" },
+      },
+    },
+  },
+  null,
+  2,
+)}\n`;
+
+const VALID_HOOKS_JSON = `${JSON.stringify(
+  {
+    version: 1,
+    hooks: {
+      sessionStart: [{ command: "hooks/session-start.sh" }],
+    },
+  },
+  null,
+  2,
+)}\n`;
+
+const VALID_RULE_MD = "# Extension rules\n\nFollow the bundled extension rules.\n";
+
+const VALID_SKILL_MD = `---
+name: demo-skill
+description: A bundled demo skill.
+---
+
+Do the demo skill.
+`;
+
+async function writeMinimalExtensionPackage(
+  packageDir: string,
+  spiritExtension: Record<string, unknown>,
+  files?: Record<string, string>,
+): Promise<void> {
+  await mkdir(packageDir, { recursive: true });
+  await writeFile(
+    join(packageDir, "package.json"),
+    `${JSON.stringify(
+      {
+        name: "spirit.instruction-contribution-demo",
+        version: "0.0.1",
+        spiritExtension: {
+          schemaVersion: 1,
+          displayName: "Instruction contribution demo",
+          supportedHosts: ["desktop"],
+          ...spiritExtension,
+        },
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  for (const [relativePath, content] of Object.entries(files ?? {})) {
+    const target = join(packageDir, relativePath);
+    await mkdir(join(target, ".."), { recursive: true });
+    await writeFile(target, content, "utf8");
+  }
+}
+
+test("instruction contributions require matching capabilities and conventional files", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-contrib-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-contrib-prepared-"));
+  try {
+    const missingCapabilityDir = join(preparedRoot, "missing-capability");
+    await writeMinimalExtensionPackage(missingCapabilityDir, {
+      contributes: { mcp: true },
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: missingCapabilityDir, installSource: "archive" },
+        ),
+      /missing mcp in spiritExtension.requestedCapabilities/,
+    );
+
+    const missingContributeDir = join(preparedRoot, "missing-contribute");
+    await writeMinimalExtensionPackage(missingContributeDir, {
+      requestedCapabilities: ["mcp"],
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: missingContributeDir, installSource: "archive" },
+        ),
+      /missing spiritExtension.contributes.mcp/,
+    );
+
+    const missingFileDir = join(preparedRoot, "missing-file");
+    await writeMinimalExtensionPackage(missingFileDir, {
+      requestedCapabilities: ["mcp"],
+      contributes: { mcp: true },
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: missingFileDir, installSource: "archive" },
+        ),
+      /does not exist: mcp.json/,
+    );
+
+    const invalidJsonDir = join(preparedRoot, "invalid-json");
+    await writeMinimalExtensionPackage(
+      invalidJsonDir,
+      { requestedCapabilities: ["mcp"], contributes: { mcp: true } },
+      { "mcp.json": "{ not json" },
+    );
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: invalidJsonDir, installSource: "archive" },
+        ),
+      /mcp.json is not valid JSON/,
+    );
+
+    const emptySkillsDir = join(preparedRoot, "empty-skills");
+    await writeMinimalExtensionPackage(
+      emptySkillsDir,
+      { requestedCapabilities: ["skills"], contributes: { skills: true } },
+      { "skills/.keep": "" },
+    );
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: emptySkillsDir, installSource: "archive" },
+        ),
+      /no valid skills\/\*\/SKILL.md/,
+    );
+
+    const emptyRuleDir = join(preparedRoot, "empty-rule");
+    await writeMinimalExtensionPackage(
+      emptyRuleDir,
+      { requestedCapabilities: ["rules"], contributes: { rules: true } },
+      { "rule.md": "  \n" },
+    );
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: emptyRuleDir, installSource: "archive" },
+        ),
+      /rule.md must not be empty/,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
+test("undeclared instruction files are ignored and declared files install", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-contrib-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-contrib-prepared-"));
+  try {
+    const undeclaredDir = join(preparedRoot, "undeclared");
+    await writeMinimalExtensionPackage(
+      undeclaredDir,
+      {},
+      {
+        "mcp.json": VALID_MCP_JSON,
+        "hooks.json": VALID_HOOKS_JSON,
+        "rule.md": VALID_RULE_MD,
+        "skills/demo-skill/SKILL.md": VALID_SKILL_MD,
+      },
+    );
+    const undeclared = await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: undeclaredDir, installSource: "archive" },
+    );
+    assert.equal(undeclared.manifest.contributes?.mcp, undefined);
+    assert.equal(undeclared.manifest.contributes?.hooks, undefined);
+    assert.equal(undeclared.manifest.contributes?.skills, undefined);
+    assert.equal(undeclared.manifest.contributes?.rules, undefined);
+
+    const declaredDir = join(preparedRoot, "declared");
+    await writeMinimalExtensionPackage(
+      declaredDir,
+      {
+        requestedCapabilities: ["mcp", "hooks", "skills", "rules"],
+        contributes: { mcp: true, hooks: {}, skills: true, rules: true },
+      },
+      {
+        "mcp.json": VALID_MCP_JSON,
+        "hooks.json": VALID_HOOKS_JSON,
+        "rule.md": VALID_RULE_MD,
+        "skills/demo-skill/SKILL.md": VALID_SKILL_MD,
+      },
+    );
+    const declared = await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      {
+        preparedDirectoryPath: declaredDir,
+        installSource: "archive",
+        replaceExisting: true,
+      },
+    );
+    assert.equal(declared.manifest.contributes?.mcp, true);
+    assert.equal(declared.manifest.contributes?.hooks, true);
+    assert.equal(declared.manifest.contributes?.skills, true);
+    assert.equal(declared.manifest.contributes?.rules, true);
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});

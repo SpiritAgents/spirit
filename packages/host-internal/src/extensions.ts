@@ -18,7 +18,21 @@ import { pathToFileURL } from "node:url";
 
 import { unzipSync } from "fflate";
 
+import {
+  HOOKS_CONFIG_FILE_NAME,
+  MCP_CONFIG_FILE_NAME,
+  parseHooksConfigFile,
+  parseMcpConfigFile,
+} from "@spiritagent/agent-core";
+
 import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
+import { validateSkillName } from "./discovery.js";
+import {
+  parseSkillFrontmatterFields,
+  SKILL_FILE_NAME,
+  SKILLS_DIR_NAME,
+  splitSkillFrontmatter,
+} from "./skill-paths.js";
 import {
   createFileExtensionStateStore,
   EXTENSION_MANIFEST_FILE_NAME,
@@ -26,6 +40,7 @@ import {
   resolveExtensionPaths,
   saveToggleState,
   SUPPORTED_EXTENSION_HOST_KINDS,
+  USER_RULE_FILE_NAME,
   type ExtensionHostKind,
   type ExtensionSettingValue,
   type ExtensionStateStore,
@@ -64,6 +79,22 @@ export const SUPPORTED_HOST_EXTENSION_REQUESTED_CAPABILITIES = [
   "structured-results",
   "desktop-ui",
   "cli-ui",
+  "mcp",
+  "hooks",
+  "skills",
+  "rules",
+] as const;
+
+export const EXTENSION_MCP_CONFIG_FILE_NAME = MCP_CONFIG_FILE_NAME;
+export const EXTENSION_HOOKS_CONFIG_FILE_NAME = HOOKS_CONFIG_FILE_NAME;
+export const EXTENSION_RULE_FILE_NAME = USER_RULE_FILE_NAME;
+export const EXTENSION_SKILLS_DIR_NAME = SKILLS_DIR_NAME;
+
+const INSTRUCTION_CONTRIBUTION_PAIRS = [
+  { capability: "mcp", contributionKey: "mcp" },
+  { capability: "hooks", contributionKey: "hooks" },
+  { capability: "skills", contributionKey: "skills" },
+  { capability: "rules", contributionKey: "rules" },
 ] as const;
 
 export const SUPPORTED_HOST_EXTENSION_TOOL_APPROVAL_MODES = [
@@ -118,6 +149,14 @@ export interface HostExtensionContributionSet {
   tools?: HostExtensionContributedToolDefinition[];
   desktop?: HostExtensionDesktopContributionSet;
   cli?: HostExtensionCliContributionSet;
+  /** Declared agent MCP contribution; files live at the package-root mcp.json. */
+  mcp?: true;
+  /** Declared agent hooks contribution; files live at the package-root hooks.json. */
+  hooks?: true;
+  /** Declared skills contribution; files live under package-root skills/<name>/SKILL.md. */
+  skills?: true;
+  /** Declared rules contribution; files live at the package-root rule.md. */
+  rules?: true;
 }
 
 export interface HostExtensionDesktopCssDefinition {
@@ -194,6 +233,7 @@ export interface HostExtensionCliContributionSet {
 
 interface HostExtensionManifestParseOptions {
   readRelativeTextFile?: (relativePath: string, fieldName: string) => Promise<string>;
+  listRelativeChildDirectories?: (relativePath: string) => Promise<string[]>;
 }
 
 export interface HostExtensionSettingOption {
@@ -627,6 +667,8 @@ export async function importExtensionArchive(
       }
       return Buffer.from(content).toString("utf8");
     },
+    listRelativeChildDirectories: async (relativePath) =>
+      listArchiveChildDirectories(normalizedExtracted, manifestRoot, relativePath),
   });
   const directoryName = extensionDirectoryNameFromId(manifest.id);
   const tempDirectory = await mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
@@ -1579,6 +1621,24 @@ async function readExtensionManifestFile(filePath: string): Promise<HostExtensio
         );
       }
     },
+    listRelativeChildDirectories: async (relativePath) => {
+      const targetPath = path.join(
+        manifestDirectory,
+        ...normalizeArchivePath(relativePath).split("/"),
+      );
+      if (!existsSync(targetPath)) {
+        return [];
+      }
+      try {
+        const entries = await readdir(targetPath, { withFileTypes: true });
+        return entries
+          .filter((entry) => entry.isDirectory())
+          .map((entry) => entry.name)
+          .sort((left, right) => left.localeCompare(right));
+      } catch {
+        return [];
+      }
+    },
   });
 }
 
@@ -1657,6 +1717,8 @@ async function parseExtensionManifest(
   }
 
   assertHostUiContributionCapabilities(requestedCapabilities, contributes);
+  assertInstructionContributionCapabilities(requestedCapabilities, contributes);
+  await assertDeclaredInstructionContributionFiles(contributes, options);
 
   return {
     schemaVersion,
@@ -2111,7 +2173,11 @@ async function optionalContributionSetField(
   const tools = optionalContributedToolsField(value.tools, `${fieldPrefix}.tools`);
   const desktop = optionalDesktopContributionSetField(value.desktop, `${fieldPrefix}.desktop`);
   const cli = await optionalCliContributionSetField(value.cli, options, `${fieldPrefix}.cli`);
-  if (tools.length === 0 && !desktop && !cli) {
+  const mcp = optionalDeclaredContributionFlag(value.mcp, `${fieldPrefix}.mcp`);
+  const hooks = optionalDeclaredContributionFlag(value.hooks, `${fieldPrefix}.hooks`);
+  const skills = optionalDeclaredContributionFlag(value.skills, `${fieldPrefix}.skills`);
+  const rules = optionalDeclaredContributionFlag(value.rules, `${fieldPrefix}.rules`);
+  if (tools.length === 0 && !desktop && !cli && !mcp && !hooks && !skills && !rules) {
     return undefined;
   }
 
@@ -2119,7 +2185,24 @@ async function optionalContributionSetField(
     ...(tools.length > 0 ? { tools } : {}),
     ...(desktop ? { desktop } : {}),
     ...(cli ? { cli } : {}),
+    ...(mcp ? { mcp: true } : {}),
+    ...(hooks ? { hooks: true } : {}),
+    ...(skills ? { skills: true } : {}),
+    ...(rules ? { rules: true } : {}),
   };
+}
+
+function optionalDeclaredContributionFlag(value: unknown, fieldName: string): boolean {
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+  if (value === true) {
+    return true;
+  }
+  if (isRecord(value) && Object.keys(value).length === 0) {
+    return true;
+  }
+  throw new Error(`Extension field ${fieldName} must be true or {}.`);
 }
 
 function optionalContributedToolsField(
@@ -2364,6 +2447,175 @@ function assertHostUiContributionCapabilities(
         : `The extension declares the cli-ui capability but is missing ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.cli.`,
     );
   }
+}
+
+function assertInstructionContributionCapabilities(
+  requestedCapabilities: readonly HostExtensionRequestedCapability[],
+  contributes: HostExtensionContributionSet | undefined,
+): void {
+  for (const pair of INSTRUCTION_CONTRIBUTION_PAIRS) {
+    const hasContribution = contributes?.[pair.contributionKey] === true;
+    const hasCapability = requestedCapabilities.includes(pair.capability);
+    if (hasContribution === hasCapability) {
+      continue;
+    }
+    throw new Error(
+      hasContribution
+        ? `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.${pair.contributionKey} but is missing ${pair.capability} in ${SPIRIT_EXTENSION_FIELD_NAME}.requestedCapabilities.`
+        : `The extension declares the ${pair.capability} capability but is missing ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.${pair.contributionKey}.`,
+    );
+  }
+}
+
+async function assertDeclaredInstructionContributionFiles(
+  contributes: HostExtensionContributionSet | undefined,
+  options: HostExtensionManifestParseOptions,
+): Promise<void> {
+  if (!contributes?.mcp && !contributes?.hooks && !contributes?.skills && !contributes?.rules) {
+    return;
+  }
+
+  const readRelativeTextFile = options.readRelativeTextFile;
+  if (!readRelativeTextFile) {
+    throw new Error(
+      "The current context cannot read extension contribution files from the package root.",
+    );
+  }
+
+  if (contributes.mcp === true) {
+    await assertDeclaredMcpContributionFile(readRelativeTextFile);
+  }
+  if (contributes.hooks === true) {
+    await assertDeclaredHooksContributionFile(readRelativeTextFile);
+  }
+  if (contributes.rules === true) {
+    await assertDeclaredRulesContributionFile(readRelativeTextFile);
+  }
+  if (contributes.skills === true) {
+    await assertDeclaredSkillsContributionFiles(readRelativeTextFile, options);
+  }
+}
+
+async function assertDeclaredMcpContributionFile(
+  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
+): Promise<void> {
+  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.mcp`;
+  const raw = await readRelativeTextFile(EXTENSION_MCP_CONFIG_FILE_NAME, fieldName);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is not valid JSON.`);
+  }
+  try {
+    parseMcpConfigFile(parsed);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is invalid: ${detail}`);
+  }
+}
+
+async function assertDeclaredHooksContributionFile(
+  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
+): Promise<void> {
+  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.hooks`;
+  const raw = await readRelativeTextFile(EXTENSION_HOOKS_CONFIG_FILE_NAME, fieldName);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is not valid JSON.`);
+  }
+  try {
+    parseHooksConfigFile(parsed);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is invalid: ${detail}`);
+  }
+}
+
+async function assertDeclaredRulesContributionFile(
+  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
+): Promise<void> {
+  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.rules`;
+  const raw = await readRelativeTextFile(EXTENSION_RULE_FILE_NAME, fieldName);
+  if (!raw.trim()) {
+    throw new Error(`The extension ${EXTENSION_RULE_FILE_NAME} must not be empty.`);
+  }
+}
+
+async function assertDeclaredSkillsContributionFiles(
+  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
+  options: HostExtensionManifestParseOptions,
+): Promise<void> {
+  const listRelativeChildDirectories = options.listRelativeChildDirectories;
+  if (!listRelativeChildDirectories) {
+    throw new Error(
+      "The current context cannot list extension skill directories from the package root.",
+    );
+  }
+
+  const skillDirectories = await listRelativeChildDirectories(EXTENSION_SKILLS_DIR_NAME);
+  const validSkills: string[] = [];
+  for (const directoryName of skillDirectories) {
+    const relativePath = `${EXTENSION_SKILLS_DIR_NAME}/${directoryName}/${SKILL_FILE_NAME}`;
+    let raw: string;
+    try {
+      raw = await readRelativeTextFile(
+        relativePath,
+        `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills`,
+      );
+    } catch {
+      continue;
+    }
+    if (isValidDeclaredSkillMarkdown(raw, directoryName)) {
+      validSkills.push(directoryName);
+    }
+  }
+
+  if (validSkills.length === 0) {
+    throw new Error(
+      `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills but has no valid ${EXTENSION_SKILLS_DIR_NAME}/*/${SKILL_FILE_NAME}.`,
+    );
+  }
+}
+
+function isValidDeclaredSkillMarkdown(raw: string, directoryName: string): boolean {
+  const split = splitSkillFrontmatter(raw);
+  if (!split) {
+    return false;
+  }
+  const parsed = parseSkillFrontmatterFields(split.frontmatter);
+  const name = parsed.name?.trim();
+  const description = parsed.description?.trim();
+  if (!name || !description) {
+    return false;
+  }
+  if (validateSkillName(name) !== undefined) {
+    return false;
+  }
+  return directoryName === name;
+}
+
+function listArchiveChildDirectories(
+  extracted: ReadonlyMap<string, Uint8Array>,
+  manifestRoot: string,
+  relativePath: string,
+): string[] {
+  const normalizedRelative = normalizeArchivePath(relativePath);
+  const prefix = manifestRoot ? `${manifestRoot}/${normalizedRelative}/` : `${normalizedRelative}/`;
+  const names = new Set<string>();
+  for (const entryName of extracted.keys()) {
+    if (!entryName.startsWith(prefix)) {
+      continue;
+    }
+    const rest = entryName.slice(prefix.length);
+    const first = rest.split("/")[0];
+    if (first) {
+      names.add(first);
+    }
+  }
+  return [...names].sort((left, right) => left.localeCompare(right));
 }
 
 function parseContributedToolDefinition(
