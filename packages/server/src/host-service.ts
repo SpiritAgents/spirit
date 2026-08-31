@@ -219,6 +219,14 @@ export class HostService {
         await this.sessions.refreshExtensions();
         return { id };
       }
+      case "host.readExtensionDocument": {
+        const id = typeof params["id"] === "string" ? params["id"].trim() : "";
+        if (!id) {
+          throw new Error("missing extension id");
+        }
+        const fileName = typeof params["fileName"] === "string" ? params["fileName"] : "";
+        return this.extensionManager(HostService.readHostKind(params)).readDocument(id, fileName);
+      }
       case "host.setExtensionEnabled": {
         const id = typeof params["id"] === "string" ? params["id"].trim() : "";
         if (!id) {
@@ -347,6 +355,7 @@ export const HOST_METHODS = new Set([
   "host.importExtension",
   "host.deleteExtension",
   "host.setExtensionEnabled",
+  "host.readExtensionDocument",
   "host.listSessionTodos",
   "host.replaceSessionTodos",
   "host.mcp",

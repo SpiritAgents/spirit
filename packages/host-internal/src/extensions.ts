@@ -397,6 +397,7 @@ export interface HostExtensionManager {
   ): Promise<HostInstalledExtension>;
   remove(id: string): Promise<void>;
   setEnabled(id: string, enabled: boolean): Promise<void>;
+  readDocument(id: string, fileName: string): Promise<string>;
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
@@ -455,6 +456,9 @@ export function createHostExtensionManager(
       if (!enabled) {
         await deactivateExtensionById(activatedExtensions, id);
       }
+    },
+    async readDocument(id, fileName) {
+      return readExtensionDocument(context, id, fileName);
     },
     async run(request) {
       await runInstalledExtension(context, activatedExtensions, stateStore, request);
@@ -795,6 +799,30 @@ export async function removeInstalledExtension(
       .filter((item) => item.id !== normalizedId)
       .map((item) => toExtensionRegistryEntry(item)),
   );
+}
+
+const EXTENSION_DOCUMENT_FILE_NAMES = ["README.md", "CHANGELOG.md"] as const;
+
+export async function readExtensionDocument(
+  context: ExtensionManagementContext,
+  id: string,
+  fileName: string,
+): Promise<string> {
+  const normalizedId = id.trim();
+  if (!normalizedId) {
+    throw new Error("The extension id must not be empty.");
+  }
+  if (!(EXTENSION_DOCUMENT_FILE_NAMES as readonly string[]).includes(fileName)) {
+    throw new Error(`Unsupported extension document file name: ${fileName}`);
+  }
+  assertSafeRelativePath(fileName, "document");
+
+  const target = await requireInstalledExtension(context, normalizedId);
+  const documentPath = path.join(target.directoryPath, fileName);
+  if (!existsSync(documentPath)) {
+    return "";
+  }
+  return readFile(documentPath, "utf8");
 }
 
 export async function setExtensionEnabled(

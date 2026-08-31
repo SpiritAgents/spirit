@@ -542,7 +542,10 @@ export default function App() {
                           hooksBusy={runtime.busyAction === "hooks"}
                           skillsBusy={runtime.busyAction === "skills"}
                           rulesBusy={runtime.busyAction === "rules"}
-                          extensionsBusy={runtime.busyAction === "extensions"}
+                          extensionsBusy={
+                            runtime.busyAction === "extensions" ||
+                            runtime.busyAction === "extensionsImport"
+                          }
                           lspInstallBusy={runtime.lspInstallBusy}
                           isElectronShell={isElectronShell}
                           onSavePatch={runtime.saveSettingsPatch}
@@ -696,11 +699,17 @@ export default function App() {
                           showWorkspaceToggle={false}
                         />
                         <MarketplaceView
+                          useTranslucency={useContentTranslucency}
                           snapshot={snapshot}
-                          extensionsBusy={runtime.busyAction === "extensions"}
+                          extensionsBusy={
+                            runtime.busyAction === "extensions" ||
+                            runtime.busyAction === "extensionsImport"
+                          }
+                          extensionsInstalling={runtime.busyAction === "extensionsImport"}
                           onImportExtension={runtime.importExtension}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
+                          onReadExtensionDocument={runtime.readExtensionDocument}
                         />
                       </div>
                     ) : null}

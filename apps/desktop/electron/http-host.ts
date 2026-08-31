@@ -557,6 +557,21 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/extensions/document") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("readExtensionDocument", {
+        request: {
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
+          fileName: typeof jsonBody?.fileName === "string" ? jsonBody.fileName : "",
+        },
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/extensions/enabled") {
     writeJson(
       request,

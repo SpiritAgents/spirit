@@ -91,6 +91,7 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   QueryWorkspaceFileReferenceSuggestionsRequest,
+  ReadExtensionDocumentRequest,
   RewindAndSubmitMessageRequest,
   ForkSessionRequest,
   SessionListItem,
@@ -142,6 +143,7 @@ type BusyAction =
   | "skills"
   | "rules"
   | "extensions"
+  | "extensionsImport"
   | "lspInstall"
   | "git"
   | "automation";
@@ -2035,7 +2037,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      setBusyAction("extensions");
+      setBusyAction("extensionsImport");
       try {
         const next = await api.importExtension(request);
         applySnapshot(next);
@@ -2093,6 +2095,25 @@ export function useDesktopRuntime() {
       }
     },
     [api, applySnapshot],
+  );
+
+  const readExtensionDocument = useCallback(
+    async (request: ReadExtensionDocumentRequest): Promise<string> => {
+      if (!api) {
+        throw new Error(i18n.t("error.hostNotReady"));
+      }
+
+      try {
+        const content = await api.readExtensionDocument(request);
+        setRuntimeError("");
+        return content;
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      }
+    },
+    [api],
   );
 
   const runExtension = useCallback(
@@ -3903,6 +3924,7 @@ export function useDesktopRuntime() {
     createRule,
     deleteExtension,
     setExtensionEnabled,
+    readExtensionDocument,
     runExtension,
     updateExtensionSettings,
     updateExtensionSecret,

@@ -31,6 +31,7 @@ export type HostCommandName =
   | "importExtension"
   | "deleteExtension"
   | "setExtensionEnabled"
+  | "readExtensionDocument"
   | "runExtension"
   | "updateExtensionSettings"
   | "updateExtensionSecret"
