@@ -642,7 +642,7 @@
     "installedVersion": "{{version}} installée",
     "updateAvailable": "Mise à jour {{current}} → {{target}}",
     "title": "Extensions",
-    "searchPlaceholder": "Rechercher des extensions installées",
+    "searchPlaceholder": "Rechercher des extensions",
     "noMatches": "Aucune extension correspondante.",
     "featured": "En vedette",
     "extensionNotFound": "Extension introuvable. Veuillez revenir à la liste.",

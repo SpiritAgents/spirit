@@ -642,7 +642,7 @@
     "installedVersion": "Установлена {{version}}",
     "updateAvailable": "Обновить {{current}} → {{target}}",
     "title": "Расширения",
-    "searchPlaceholder": "Поиск установленных расширений",
+    "searchPlaceholder": "Поиск расширений",
     "noMatches": "Нет подходящих расширений.",
     "featured": "Рекомендуемые",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",

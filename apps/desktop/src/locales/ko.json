@@ -642,7 +642,7 @@
     "installedVersion": "설치된 버전 {{version}}",
     "updateAvailable": "업데이트 {{current}} → {{target}}",
     "title": "확장 기능",
-    "searchPlaceholder": "설치된 확장 프로그램 검색",
+    "searchPlaceholder": "확장 프로그램 검색",
     "noMatches": "일치하는 확장 기능이 없습니다.",
     "featured": "추천",
     "extensionNotFound": "확장 기능을 찾을 수 없습니다. 목록으로 돌아가세요.",

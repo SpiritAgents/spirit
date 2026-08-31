@@ -642,7 +642,7 @@
     "installedVersion": "インストール済み {{version}}",
     "updateAvailable": "アップデートあり {{current}} → {{target}}",
     "title": "拡張機能",
-    "searchPlaceholder": "インストール済み拡張機能を検索",
+    "searchPlaceholder": "拡張機能を検索",
     "noMatches": "一致する拡張機能がありません。",
     "featured": "おすすめ",
     "extensionNotFound": "拡張機能が見つかりません。リストに戻ってください。",

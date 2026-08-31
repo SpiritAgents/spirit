@@ -642,7 +642,7 @@
     "installedVersion": "已安裝 {{version}}",
     "updateAvailable": "更新 {{current}} → {{target}}",
     "title": "擴充功能",
-    "searchPlaceholder": "搜尋已安裝擴充功能",
+    "searchPlaceholder": "搜尋擴充功能",
     "noMatches": "沒有相符的擴充功能。",
     "featured": "精選",
     "extensionNotFound": "找不到擴充功能。請返回列表。",
