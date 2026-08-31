@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Ellipsis, LoaderCircle, Search, Sparkles } from "lucide-react";
+import { Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -215,23 +215,32 @@ export function MarketplaceView({
                           <Ellipsis className="size-4" aria-hidden />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          disabled={extensionsBusy}
-                          onSelect={() => handleToggleEnabled(item)}
-                        >
-                          {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
-                        </DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="min-w-40 p-0">
+                        <div className="p-1">
+                          <DropdownMenuItem
+                            disabled={extensionsBusy}
+                            className="gap-2"
+                            onSelect={() => handleToggleEnabled(item)}
+                          >
+                            <span>
+                              {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
+                            </span>
+                          </DropdownMenuItem>
+                        </div>
                         {item.installSource !== "built-in" ? (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={extensionsBusy}
-                              onSelect={() => setUninstallTarget(item)}
-                            >
-                              {t("marketplace.uninstall")}
-                            </DropdownMenuItem>
+                            <div className="p-1">
+                              <DropdownMenuItem
+                                variant="destructive"
+                                className="gap-2"
+                                disabled={extensionsBusy}
+                                onSelect={() => setUninstallTarget(item)}
+                              >
+                                <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                                <span>{t("marketplace.uninstall")}</span>
+                              </DropdownMenuItem>
+                            </div>
                           </>
                         ) : null}
                       </DropdownMenuContent>
