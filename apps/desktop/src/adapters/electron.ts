@@ -70,9 +70,6 @@ export async function createElectronHostApi(): Promise<HostApi> {
     setExtensionEnabled(request) {
       return bridge.setExtensionEnabled(request);
     },
-    readExtensionDocument(request) {
-      return bridge.readExtensionDocument(request);
-    },
     runExtension(request) {
       return bridge.runExtension(request);
     },

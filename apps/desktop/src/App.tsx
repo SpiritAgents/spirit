@@ -709,7 +709,6 @@ export default function App() {
                           onImportExtension={runtime.importExtension}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
-                          onReadExtensionDocument={runtime.readExtensionDocument}
                         />
                       </div>
                     ) : null}

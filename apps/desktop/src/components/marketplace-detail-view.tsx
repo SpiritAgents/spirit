@@ -1,30 +1,24 @@
-// Extension detail page backed entirely by local data: installed extension metadata plus
-// package documents (README.md / CHANGELOG.md) read from disk.
+// Extension detail page backed entirely by local data: installed extension metadata.
 
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Sparkles } from "lucide-react";
 
-import { MarkdownMessage } from "@/components/markdown-message";
+import { MarketplaceContributionGroups } from "@/components/marketplace-contribution-groups";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
-import { showDesktopErrorToast } from "@/lib/desktop-error-toast";
 import { cn } from "@/lib/utils";
 import type { DesktopExtensionListItem } from "@/types";
 
 /** Matches the conversation body text for visual continuity */
 const MARKETPLACE_READING_W = "max-w-[min(86vw,44rem)]";
 
-type MarketplaceTab = "readme" | "changelog";
-
 type MarketplaceDetailViewProps = {
   item: DesktopExtensionListItem;
   onBack: () => void;
-  onReadExtensionDocument: (request: { id: string; fileName: string }) => Promise<string>;
   /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with marketplace-layout. */
   useTranslucency?: boolean;
 };
@@ -32,48 +26,9 @@ type MarketplaceDetailViewProps = {
 export function MarketplaceDetailView({
   item,
   onBack,
-  onReadExtensionDocument,
   useTranslucency = false,
 }: MarketplaceDetailViewProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<MarketplaceTab>("readme");
-  const [documentByTab, setDocumentByTab] = useState<Partial<Record<MarketplaceTab, string>>>({});
-  const [localError, setLocalError] = useState("");
-
-  useEffect(() => {
-    showDesktopErrorToast(localError, "marketplace-detail-local-error");
-  }, [localError]);
-
-  useEffect(() => {
-    if (documentByTab[activeTab] !== undefined) {
-      return;
-    }
-
-    const tab = activeTab;
-    let cancelled = false;
-    setLocalError("");
-
-    void onReadExtensionDocument({
-      id: item.id,
-      fileName: tab === "readme" ? "README.md" : "CHANGELOG.md",
-    })
-      .then((content) => {
-        if (!cancelled) {
-          setDocumentByTab((current) => ({ ...current, [tab]: content }));
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLocalError(error instanceof Error ? error.message : String(error));
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, documentByTab, item.id, onReadExtensionDocument]);
-
-  const activeDocument = documentByTab[activeTab];
 
   return (
     <>
@@ -123,91 +78,7 @@ export function MarketplaceDetailView({
             </div>
           </div>
 
-          {item.instructionContributions ? (
-            <section className="space-y-2">
-              <h3 className="text-sm font-normal text-foreground">
-                {t("marketplace.contributions")}
-              </h3>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {item.instructionContributions.mcp ? (
-                  <li>
-                    <span className="text-foreground">{t("marketplace.contributionMcp")}: </span>
-                    {item.instructionContributions.mcp.length > 0
-                      ? item.instructionContributions.mcp
-                          .map((server) => `${server.name} (${server.transport})`)
-                          .join(", ")
-                      : "—"}
-                  </li>
-                ) : null}
-                {item.instructionContributions.hooks ? (
-                  <li>
-                    <span className="text-foreground">{t("marketplace.contributionHooks")}: </span>
-                    {item.instructionContributions.hooks.length > 0
-                      ? item.instructionContributions.hooks.join(", ")
-                      : "—"}
-                  </li>
-                ) : null}
-                {item.instructionContributions.skills ? (
-                  <li>
-                    <span className="text-foreground">{t("marketplace.contributionSkills")}: </span>
-                    {item.instructionContributions.skills.length > 0
-                      ? item.instructionContributions.skills.join(", ")
-                      : "—"}
-                  </li>
-                ) : null}
-                {item.instructionContributions.rules !== undefined ? (
-                  <li>
-                    <span className="text-foreground">{t("marketplace.contributionRules")}: </span>
-                    {item.instructionContributions.rules
-                      ? t("marketplace.contributionRuleIncluded")
-                      : "—"}
-                  </li>
-                ) : null}
-              </ul>
-            </section>
-          ) : null}
-
-          {/* Tabs: no full-width top divider, only the current item's bottom edge. */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap gap-1 pt-0.5">
-              {(
-                [
-                  ["readme", t("marketplace.tabReadme")],
-                  ["changelog", t("marketplace.tabChangelog")],
-                ] as const
-              ).map(([tabId, label]) => (
-                <button
-                  key={tabId}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeTab === tabId}
-                  className={cn(
-                    "rounded-md px-3 py-2 text-sm",
-                    activeTab === tabId
-                      ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
-                      : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
-                  )}
-                  onClick={() => setActiveTab(tabId)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {activeDocument !== undefined ? (
-              <div className="rounded-lg border border-border/60 bg-background px-3 py-3">
-                {activeDocument ? (
-                  <MarkdownMessage content={activeDocument} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {activeTab === "readme"
-                      ? t("marketplace.noReadme")
-                      : t("marketplace.noChangelog")}
-                  </p>
-                )}
-              </div>
-            ) : null}
-          </div>
+          <MarketplaceContributionGroups item={item} />
         </div>
       </ScrollArea>
     </>

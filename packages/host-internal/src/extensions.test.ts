@@ -65,7 +65,6 @@ async function installToggleDemoFixture(): Promise<ToggleDemoFixture> {
 `,
     "utf8",
   );
-  await writeFile(join(packageDir, "README.md"), "# Toggle demo\n\nFixture readme.\n", "utf8");
 
   const installed = await installPreparedExtensionDirectory(
     { spiritDataDir, hostKind: "desktop" },
@@ -82,41 +81,6 @@ async function cleanupFixture(fixture: ToggleDemoFixture): Promise<void> {
 function readToggleEventCount(): number {
   return (globalThis as Record<string, unknown>)[TOGGLE_EVENTS_GLOBAL] as number;
 }
-
-test("readDocument returns whitelisted package documents only", async () => {
-  const fixture = await installToggleDemoFixture();
-  try {
-    const manager = createHostExtensionManager({
-      spiritDataDir: fixture.spiritDataDir,
-      hostKind: "desktop",
-    });
-
-    const readme = await manager.readDocument(fixture.extensionId, "README.md");
-    assert.equal(readme, "# Toggle demo\n\nFixture readme.\n");
-
-    // Missing optional documents read as empty.
-    assert.equal(await manager.readDocument(fixture.extensionId, "CHANGELOG.md"), "");
-
-    // Unknown or traversal-looking ids never resolve to a directory.
-    await assert.rejects(() => manager.readDocument("../..", "README.md"), /Extension not found/);
-    await assert.rejects(
-      () => manager.readDocument("@spiritagent/extension-missing", "README.md"),
-      /Extension not found/,
-    );
-
-    // Anything outside the fixed document whitelist is refused.
-    await assert.rejects(
-      () => manager.readDocument(fixture.extensionId, "package.json"),
-      /Unsupported extension document file name/,
-    );
-    await assert.rejects(
-      () => manager.readDocument(fixture.extensionId, "../../etc/passwd"),
-      /Unsupported extension document file name/,
-    );
-  } finally {
-    await cleanupFixture(fixture);
-  }
-});
 
 test("extensions are enabled by default and setEnabled persists per-host overrides", async () => {
   const fixture = await installToggleDemoFixture();

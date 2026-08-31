@@ -441,11 +441,6 @@ export interface SetExtensionEnabledRequest {
   enabled: boolean;
 }
 
-export interface ReadExtensionDocumentRequest {
-  id: string;
-  fileName: string;
-}
-
 export interface RunExtensionRequest {
   id: string;
 }
@@ -542,10 +537,10 @@ export interface DesktopExtensionSecretStatus {
 export type DesktopExtensionHostKind = "cli" | "desktop";
 
 export interface DesktopExtensionInstructionContributionSummary {
-  mcp?: Array<{ name: string; transport: "stdio" | "http" }>;
+  mcp?: Array<{ name: string; displayName?: string; transport: "stdio" | "http" }>;
   hooks?: string[];
-  skills?: string[];
-  rules?: boolean;
+  skills?: Array<{ name: string; description: string }>;
+  rules?: { content: string };
 }
 
 export interface DesktopExtensionListItem {

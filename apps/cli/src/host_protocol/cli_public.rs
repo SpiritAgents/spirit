@@ -102,7 +102,24 @@ pub struct CliExtensionContributes {
 #[serde(rename_all = "camelCase")]
 pub struct CliExtensionMcpContributionSummary {
     pub name: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
     pub transport: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionSkillContributionSummary {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionRuleContributionSummary {
+    #[serde(default)]
+    pub content: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
@@ -113,9 +130,9 @@ pub struct CliExtensionInstructionContributions {
     #[serde(default)]
     pub hooks: Option<Vec<String>>,
     #[serde(default)]
-    pub skills: Option<Vec<String>>,
+    pub skills: Option<Vec<CliExtensionSkillContributionSummary>>,
     #[serde(default)]
-    pub rules: Option<bool>,
+    pub rules: Option<CliExtensionRuleContributionSummary>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

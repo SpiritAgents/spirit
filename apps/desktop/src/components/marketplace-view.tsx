@@ -38,7 +38,6 @@ import type {
   DeleteExtensionRequest,
   DesktopExtensionListItem,
   ImportExtensionRequest,
-  ReadExtensionDocumentRequest,
   SetExtensionEnabledRequest,
 } from "@/types";
 
@@ -54,7 +53,6 @@ type MarketplaceViewProps = {
   onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
-  onReadExtensionDocument: (request: ReadExtensionDocumentRequest) => Promise<string>;
   extensionsInstalling?: boolean;
   /** Windows Mica / macOS Vibrancy: forwarded to the detail view's top bar. */
   useTranslucency?: boolean;
@@ -66,7 +64,6 @@ export function MarketplaceView({
   onImportExtension,
   onDeleteExtension,
   onSetExtensionEnabled,
-  onReadExtensionDocument,
   extensionsInstalling = false,
   useTranslucency = false,
 }: MarketplaceViewProps) {
@@ -258,7 +255,9 @@ export function MarketplaceView({
                                 onSelect={() => handleToggleEnabled(item)}
                               >
                                 <span>
-                                  {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
+                                  {item.enabled
+                                    ? t("marketplace.disable")
+                                    : t("marketplace.enable")}
                                 </span>
                               </DropdownMenuItem>
                             </div>
@@ -292,7 +291,6 @@ export function MarketplaceView({
         <MarketplaceDetailView
           item={detailItem}
           onBack={closeDetail}
-          onReadExtensionDocument={onReadExtensionDocument}
           useTranslucency={useTranslucency}
         />
       ) : (

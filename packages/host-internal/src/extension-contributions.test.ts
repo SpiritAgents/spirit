@@ -15,6 +15,7 @@ const VALID_MCP_JSON = `${JSON.stringify(
   {
     servers: {
       bundled: {
+        displayName: "Bundled Docs",
         transport: {
           type: "stdio",
           command: "./bin/mcp-server",
@@ -173,10 +174,14 @@ Ignored.
     const disabledDeclared = disabledListed.find((item) => item.id === "spirit.collect-declared");
     assert.ok(disabledDeclared);
     const summary = await summarizeDeclaredExtensionContributionPoints(disabledDeclared);
-    assert.deepEqual(summary?.mcp, [{ name: "bundled", transport: "stdio" }]);
+    assert.deepEqual(summary?.mcp, [
+      { name: "bundled", displayName: "Bundled Docs", transport: "stdio" },
+    ]);
     assert.deepEqual(summary?.hooks, ["sessionStart"]);
-    assert.deepEqual(summary?.skills, ["demo-skill"]);
-    assert.equal(summary?.rules, true);
+    assert.deepEqual(summary?.skills, [
+      { name: "demo-skill", description: "A bundled demo skill." },
+    ]);
+    assert.deepEqual(summary?.rules, { content: VALID_RULE_MD });
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });

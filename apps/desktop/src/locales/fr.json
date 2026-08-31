@@ -640,10 +640,6 @@
     "searchPlaceholder": "Rechercher des extensions",
     "noMatches": "Aucune extension correspondante.",
     "extensionNotFound": "Extension introuvable. Veuillez revenir à la liste.",
-    "tabReadme": "Lisez-moi",
-    "tabChangelog": "Journal des modifications",
-    "noReadme": "Aucun contenu README disponible.",
-    "noChangelog": "Aucun journal des modifications disponible.",
     "install": "Installer",
     "enable": "Activer",
     "disable": "Désactiver",
@@ -652,12 +648,10 @@
     "uninstallExtension": "Désinstaller l'extension",
     "uninstallExtensionConfirm": "Voulez-vous vraiment désinstaller « {{name}} » ? Cela supprimera le répertoire d'installation local.",
     "noExtensionsInstalled": "Aucune extension installée. Sélectionnez Installer pour en ajouter une depuis une archive ZIP.",
-    "contributions": "Contributions",
-    "contributionMcp": "MCP",
-    "contributionHooks": "Hooks",
-    "contributionSkills": "Skills",
-    "contributionRules": "Rules",
-    "contributionRuleIncluded": "Inclus"
+    "contributionGroupTools": "Outils",
+    "contributionGroupDesktop": "Bureau",
+    "contributionRuleTitle": "Règle",
+    "contributionStyleTitle": "Style"
   },
   "dreams": {
     "collectorRunning": "Les Dreams sont en cours de collecte. De nouvelles tendances récentes apparaîtront ici bientôt.",

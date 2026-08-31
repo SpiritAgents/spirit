@@ -91,7 +91,6 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   QueryWorkspaceFileReferenceSuggestionsRequest,
-  ReadExtensionDocumentRequest,
   RewindAndSubmitMessageRequest,
   ForkSessionRequest,
   SessionListItem,
@@ -2097,25 +2096,6 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const readExtensionDocument = useCallback(
-    async (request: ReadExtensionDocumentRequest): Promise<string> => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-
-      try {
-        const content = await api.readExtensionDocument(request);
-        setRuntimeError("");
-        return content;
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      }
-    },
-    [api],
-  );
-
   const runExtension = useCallback(
     async (request: RunExtensionRequest) => {
       if (!api) {
@@ -3924,7 +3904,6 @@ export function useDesktopRuntime() {
     createRule,
     deleteExtension,
     setExtensionEnabled,
-    readExtensionDocument,
     runExtension,
     updateExtensionSettings,
     updateExtensionSecret,
