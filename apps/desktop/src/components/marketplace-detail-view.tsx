@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Sparkles } from "lucide-react";
 
+import { MarketplaceContributionGroups } from "@/components/marketplace-contribution-groups";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -76,6 +77,8 @@ export function MarketplaceDetailView({
               ) : null}
             </div>
           </div>
+
+          <MarketplaceContributionGroups item={item} />
         </div>
       </ScrollArea>
     </>

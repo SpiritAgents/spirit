@@ -647,7 +647,11 @@
     "uninstall": "アンインストール",
     "uninstallExtension": "拡張機能をアンインストール",
     "uninstallExtensionConfirm": "「{{name}}」をアンインストールしてもよろしいですか？ローカルのインストールディレクトリが削除されます。",
-    "noExtensionsInstalled": "拡張機能はまだインストールされていません。「インストール」から ZIP アーカイブを追加してください。"
+    "noExtensionsInstalled": "拡張機能はまだインストールされていません。「インストール」から ZIP アーカイブを追加してください。",
+    "contributionGroupTools": "ツール",
+    "contributionGroupDesktop": "デスクトップ",
+    "contributionRuleTitle": "ルール",
+    "contributionStyleTitle": "スタイル"
   },
   "dreams": {
     "collectorRunning": "Dream を収集中です。新しい最近のトレンドが間もなくここに表示されます。",

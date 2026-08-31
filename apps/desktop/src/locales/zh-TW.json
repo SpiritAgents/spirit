@@ -647,7 +647,11 @@
     "uninstall": "解除安裝",
     "uninstallExtension": "解除安裝擴充功能",
     "uninstallExtensionConfirm": "確定要解除安裝「{{name}}」嗎？這將移除本機安裝目錄。",
-    "noExtensionsInstalled": "尚未安裝擴充功能。點擊「安裝」從 ZIP 封存新增。"
+    "noExtensionsInstalled": "尚未安裝擴充功能。點擊「安裝」從 ZIP 封存新增。",
+    "contributionGroupTools": "工具",
+    "contributionGroupDesktop": "桌面",
+    "contributionRuleTitle": "規則",
+    "contributionStyleTitle": "樣式"
   },
   "dreams": {
     "collectorRunning": "正在收集 Dreams。新的近期趨勢很快就會顯示在此。",

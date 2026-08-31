@@ -647,7 +647,11 @@
     "uninstall": "Désinstaller",
     "uninstallExtension": "Désinstaller l'extension",
     "uninstallExtensionConfirm": "Voulez-vous vraiment désinstaller « {{name}} » ? Cela supprimera le répertoire d'installation local.",
-    "noExtensionsInstalled": "Aucune extension installée. Sélectionnez Installer pour en ajouter une depuis une archive ZIP."
+    "noExtensionsInstalled": "Aucune extension installée. Sélectionnez Installer pour en ajouter une depuis une archive ZIP.",
+    "contributionGroupTools": "Outils",
+    "contributionGroupDesktop": "Bureau",
+    "contributionRuleTitle": "Règle",
+    "contributionStyleTitle": "Style"
   },
   "dreams": {
     "collectorRunning": "Les Dreams sont en cours de collecte. De nouvelles tendances récentes apparaîtront ici bientôt.",

@@ -647,7 +647,11 @@
     "uninstall": "Uninstall",
     "uninstallExtension": "Uninstall Extension",
     "uninstallExtensionConfirm": "Are you sure you want to uninstall \"{{name}}\"? This will remove the local installation directory.",
-    "noExtensionsInstalled": "No extensions installed yet. Select Install to add one from a ZIP archive."
+    "noExtensionsInstalled": "No extensions installed yet. Select Install to add one from a ZIP archive.",
+    "contributionGroupTools": "Tools",
+    "contributionGroupDesktop": "Desktop",
+    "contributionRuleTitle": "Rule",
+    "contributionStyleTitle": "Style"
   },
   "dreams": {
     "collectorRunning": "Dreams are being collected. New recent trends will appear here soon.",

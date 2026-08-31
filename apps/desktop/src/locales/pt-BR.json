@@ -647,7 +647,11 @@
     "uninstall": "Desinstalar",
     "uninstallExtension": "Desinstalar extensão",
     "uninstallExtensionConfirm": "Tem certeza de que deseja desinstalar \"{{name}}\"? Isso removerá o diretório de instalação local.",
-    "noExtensionsInstalled": "Nenhuma extensão instalada. Selecione Instalar para adicionar uma de um arquivo ZIP."
+    "noExtensionsInstalled": "Nenhuma extensão instalada. Selecione Instalar para adicionar uma de um arquivo ZIP.",
+    "contributionGroupTools": "Ferramentas",
+    "contributionGroupDesktop": "Desktop",
+    "contributionRuleTitle": "Regra",
+    "contributionStyleTitle": "Estilo"
   },
   "dreams": {
     "collectorRunning": "Dreams estão sendo coletados. Novas tendências recentes aparecerão aqui em breve.",

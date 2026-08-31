@@ -647,7 +647,11 @@
     "uninstall": "Deinstallieren",
     "uninstallExtension": "Erweiterung deinstallieren",
     "uninstallExtensionConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Das lokale Installationsverzeichnis wird entfernt.",
-    "noExtensionsInstalled": "Keine Erweiterungen installiert. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen."
+    "noExtensionsInstalled": "Keine Erweiterungen installiert. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen.",
+    "contributionGroupTools": "Tools",
+    "contributionGroupDesktop": "Desktop",
+    "contributionRuleTitle": "Regel",
+    "contributionStyleTitle": "Stil"
   },
   "dreams": {
     "collectorRunning": "Dreams werden gesammelt. Neue aktuelle Trends erscheinen in Kürze hier.",
