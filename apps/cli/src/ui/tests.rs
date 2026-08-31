@@ -386,7 +386,7 @@ fn slice_styled_runs_from_display_column_skips_and_limits_width() {
 
 #[test]
 fn sessions_picker_reuses_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/sessions"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
     app.chat_picker_sessions = (0..7)
         .map(|idx| chat_picker_item(&format!("session-{idx}.json"), &format!("session-{idx}")))
         .collect();
@@ -403,7 +403,7 @@ fn sessions_picker_reuses_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn subagent_picker_reuses_inline_picker_styles_and_scroll_window() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagents"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagent"));
     app.subagent_sessions = (0..7)
         .map(|idx| SubagentSessionSummaryView {
             session_id: format!("subagent-{idx}"),
@@ -426,7 +426,7 @@ fn subagent_picker_reuses_inline_picker_styles_and_scroll_window() {
 
 #[test]
 fn subagent_picker_uses_inline_layout_without_border_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagents"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/subagent"));
     app.subagent_picker_active = true;
     app.subagent_sessions = vec![
         SubagentSessionSummaryView {
@@ -454,7 +454,7 @@ fn subagent_picker_uses_inline_layout_without_border_or_title() {
 
 #[test]
 fn sessions_picker_uses_inline_layout_without_footer_or_title() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/sessions"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
     app.chat_picker_active = true;
     app.chat_picker_sessions = vec![
         chat_picker_item("session-0.json", "session-0"),
@@ -480,7 +480,7 @@ fn sessions_picker_uses_inline_layout_without_footer_or_title() {
 
 #[test]
 fn sessions_picker_shows_relative_time_without_parentheses() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/sessions"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
     app.config.ui_locale = Some("en".to_string());
     let now_ms = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -543,7 +543,7 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
     app.slash_suggestions = vec![
         InputSuggestion::simple("/help"),
         InputSuggestion::simple("/model"),
-        InputSuggestion::simple("/sessions"),
+        InputSuggestion::simple("/session"),
     ];
     app.selected_suggestion = 1;
 
@@ -756,7 +756,7 @@ fn rewind_picker_deemphasizes_tool_messages() {
 
 #[test]
 fn rewind_picker_deemphasizes_non_selectable_user_messages() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/sessions"));
+    let mut app = build_view_model(ChatMessage::new(MessageRole::User, "/session"));
     app.messages.push(ChatMessage::new(
         MessageRole::User,
         "The message actually sent to the model",
