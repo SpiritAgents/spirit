@@ -63,6 +63,7 @@ import {
   LspService,
   NodeHostToolService,
   appendLspDiagnosticsAfterWriteIfNeeded,
+  collectEnabledExtensionInstructionContributions,
   collectHostExtensionContributedTools,
   createHostExtensionManager,
   createHookRunner,
@@ -473,6 +474,16 @@ export async function createServerRuntime(
         return options.requestWorkspaceCapabilityTrust(request);
       }
       return "deny";
+    },
+    loadExtensionHooks: async (event) => {
+      if (!extensionManager) {
+        return [];
+      }
+      const contributions = await collectEnabledExtensionInstructionContributions(
+        await extensionManager.list(),
+        (message: string) => log(message),
+      );
+      return contributions.hooks.filter((hook) => hook.event === event);
     },
   });
 

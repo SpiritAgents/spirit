@@ -1,5 +1,6 @@
 import {
   emptyHookRunResult,
+  hookMatcherTarget,
   mergePreEventHookPermission,
   serializeHookInput,
   type HookCommandOutput,
@@ -9,6 +10,7 @@ import {
   type HookRunResult,
   type HookRunner,
   type HookRunnerContext,
+  type ResolvedHookDefinition,
   isPreHookEvent,
 } from "@spiritagent/agent-core";
 
@@ -88,6 +90,14 @@ export interface CreateHookRunnerOptions extends HookRunnerContext {
    * If omitted, workspace hooks are denied (safe default for non-interactive hosts).
    */
   requestWorkspaceCapabilityTrust?: RequestWorkspaceCapabilityTrust;
+  /**
+   * Extra hook definitions from enabled extensions. Not listed in settings and
+   * not gated by workspace capability trust.
+   */
+  loadExtensionHooks?: (
+    event: HookEventName,
+    matcherTarget?: string,
+  ) => Promise<readonly ResolvedHookDefinition[]> | readonly ResolvedHookDefinition[];
 }
 
 export function createHookRunner(options: CreateHookRunnerOptions): HookRunner {
@@ -158,7 +168,14 @@ export function createHookRunner(options: CreateHookRunnerOptions): HookRunner {
 
   async function runEvent(input: HookInput): Promise<HookRunResult> {
     const loaded = getLoaded();
-    const definitions = listHookDefinitionsForInput(loaded, input);
+    const matcherTarget = hookMatcherTarget(input);
+    const extensionHooks = options.loadExtensionHooks
+      ? await options.loadExtensionHooks(input.hookEventName, matcherTarget)
+      : [];
+    const definitions = [
+      ...listHookDefinitionsForInput(loaded, input),
+      ...filterExtensionHooksByMatcher(extensionHooks, matcherTarget),
+    ];
     if (definitions.length === 0) {
       return emptyHookRunResult();
     }
@@ -214,6 +231,22 @@ export function createHookRunner(options: CreateHookRunnerOptions): HookRunner {
     runSubagentEnd: (input) =>
       runEvent({ ...input, hookEventName: "subagentEnd", timestamp: new Date().toISOString() }),
   };
+}
+
+function filterExtensionHooksByMatcher(
+  definitions: readonly ResolvedHookDefinition[],
+  matcherTarget: string | undefined,
+): ResolvedHookDefinition[] {
+  return definitions.filter((definition) => {
+    if (!definition.matcher || matcherTarget === undefined) {
+      return true;
+    }
+    try {
+      return new RegExp(definition.matcher).test(matcherTarget);
+    } catch {
+      return false;
+    }
+  });
 }
 
 export { loadHooksConfig, summarizeHooksConfig } from "./loader.js";
