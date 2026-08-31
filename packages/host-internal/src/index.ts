@@ -17,6 +17,7 @@ export * from "./tool-output-archive.js";
 export * from "./spirit-filename-sanitize.js";
 export * from "./todos.js";
 export * from "./extensions.js";
+export * from "./extension-contributions.js";
 export * from "./file-rewind.js";
 export * from "./google-gemini-endpoints.js";
 export * from "./google-vertex-endpoints.js";

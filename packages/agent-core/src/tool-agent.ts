@@ -177,9 +177,11 @@ export function buildCompactHistoryPromptMessages(
   ];
 }
 
+export type ToolAgentInstructionScope = "workspace" | "user" | "extension";
+
 export interface ToolAgentEnabledRule {
   id: string;
-  scope: "workspace" | "user";
+  scope: ToolAgentInstructionScope;
   title: string;
   path: string;
   content: string;
@@ -187,7 +189,7 @@ export interface ToolAgentEnabledRule {
 
 export interface ToolAgentEnabledSkillCatalogEntry {
   id: string;
-  scope: "workspace" | "user";
+  scope: ToolAgentInstructionScope;
   name: string;
   description: string;
   path: string;
@@ -206,7 +208,7 @@ export interface ToolAgentActiveSkillResourceEntry {
 
 export interface ToolAgentActiveSkill {
   id: string;
-  scope: "workspace" | "user";
+  scope: ToolAgentInstructionScope;
   name: string;
   description: string;
   path: string;
