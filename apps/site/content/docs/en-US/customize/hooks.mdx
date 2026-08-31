@@ -26,7 +26,7 @@ Hooks are scripts Spirit runs at fixed points. They can allow a tool, deny it, o
 
 On the same event, user entries and workspace entries are concatenated in that order. They do not overwrite each other.
 
-Manage them in **Settings → Hooks**. Validate from the CLI with `spirit hooks list` and `spirit hooks validate`. The built-in Skill `create-hook` drafts a hook.
+Manage them in **Settings → Hooks**. Validate from the CLI with `spirit hooks list` and `spirit hooks validate`. The built-in Skill `create-hook` drafts a hook. Hooks bundled in an [extension](../develop/extensions.mdx) run when that extension is enabled. They do not appear in this settings list.
 
 ## File fields
 

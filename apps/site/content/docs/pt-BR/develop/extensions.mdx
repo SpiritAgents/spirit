@@ -10,9 +10,9 @@ Uma extensão é uma pasta com um `package.json` que contém `spiritExtension`. 
 | Desktop | `{spiritDataDir}/extensions/desktop/` |
 | CLI     | `{spiritDataDir}/extensions/cli/`     |
 
-Isso é diferente de [Skills](../customize/skills.mdx) (pastas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) e [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` estiliza os slots da TUI do CLI. Não é `hooks.json`.
+Isso é diferente de [Skills](../customize/skills.mdx) (pastas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) e [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` estiliza os slots da TUI do CLI. Não é `hooks.json`. Uma extensão ainda pode empacotar esses arquivos se declarar `mcp`, `hooks`, `skills` ou `rules`.
 
-Não há chave de ativação por extensão. Após a instalação, a extensão contribui. A alternância no painel do CLI é um espaço reservado.
+Cada extensão instalada tem uma chave de ativação. Desativar ou desinstalar interrompe as contribuições. Ativar é o consentimento para executar os MCP, hooks do agente, skills e rules declarados.
 
 ## Layout do pacote
 
@@ -23,6 +23,10 @@ example-extension/
   assets/icon.svg
   styles/desktop.css
   cli-hooks.json
+  mcp.json
+  hooks.json
+  rule.md
+  skills/example/SKILL.md
 ```
 
 ```json
@@ -46,7 +50,11 @@ example-extension/
       "settings",
       "secret-storage",
       "desktop-ui",
-      "cli-ui"
+      "cli-ui",
+      "mcp",
+      "hooks",
+      "skills",
+      "rules"
     ],
     "contributes": {
       "tools": [
@@ -70,7 +78,11 @@ example-extension/
       },
       "cli": {
         "hooks": { "path": "cli-hooks.json" }
-      }
+      },
+      "mcp": true,
+      "hooks": true,
+      "skills": true,
+      "rules": true
     },
     "settingsSchema": [
       {
@@ -122,7 +134,7 @@ O `name` no `package.json` é o id da extensão. Deve corresponder a `^(?:@[a-z0
 | `supportedHosts`        | Obrigatório. Matriz não vazia de `cli` e/ou `desktop`    |
 | `activationEvents`      | Opcional. Veja [Eventos de ativação](#activation-events) |
 | `requestedCapabilities` | Opcional. Veja [Capacidades](#capabilities)              |
-| `contributes`           | Opcional. `tools`, `desktop` e/ou `cli`                  |
+| `contributes`           | Opcional. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills` e/ou `rules` |
 | `settingsSchema`        | Opcional. Definições de configurações                    |
 | `secretSlots`           | Opcional. Definições de slots de segredos                |
 
@@ -135,13 +147,17 @@ O `name` no `package.json` é o id da extensão. Deve corresponder a `^(?:@[a-z0
 | `system-prompt`      | Necessário com `main` para contribuir com um fragmento de prompt de sistema       |
 | `desktop-ui`         | Deve ser emparelhado com `contributes.desktop`                                    |
 | `cli-ui`             | Deve ser emparelhado com `contributes.cli`                                        |
+| `mcp`                | Deve ser emparelhado com `contributes.mcp`; carrega `mcp.json` na raiz do pacote  |
+| `hooks`              | Deve ser emparelhado com `contributes.hooks`; carrega `hooks.json` na raiz do pacote |
+| `skills`             | Deve ser emparelhado com `contributes.skills`; carrega `skills/<name>/SKILL.md`   |
+| `rules`              | Deve ser emparelhado com `contributes.rules`; carrega `rule.md` na raiz do pacote |
 | `approval-flow`      | Somente declarado. A aprovação é conduzida pelo `approvalMode` de cada ferramenta |
 | `questions-flow`     | Somente declarado. As perguntas são conduzidas por `approvalMode: need-questions` |
 | `settings`           | Somente declarado. As configurações vêm de `settingsSchema`                       |
 | `secret-storage`     | Usado com `secretSlots`                                                           |
 | `structured-results` | Somente declarado                                                                 |
 
-`desktop-ui` / `cli-ui` e o bloco `contributes` correspondente devem estar ambos presentes ou ambos ausentes.
+`desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` e a entrada `contributes` correspondente devem estar ambos presentes ou ambos ausentes.
 
 ## Eventos de ativação
 
@@ -218,6 +234,23 @@ Papéis de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success
   ]
 }
 ```
+
+## MCP, hooks, skills e rules empacotados
+
+Exigem a capability correspondente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` e `contributes.rules` são `true` ou `{}`. Os caminhos são convencionais; caminhos personalizados não são permitidos.
+
+| Contribuição | Capability | Arquivo |
+| ------------ | ---------- | ------- |
+| MCP | `mcp` | `mcp.json` na raiz do pacote (mesmo schema do MCP de usuário/workspace) |
+| Agent hooks | `hooks` | `hooks.json` na raiz do pacote (mesmo schema dos hooks do agente; não é `contributes.cli.hooks`) |
+| Skills | `skills` | `skills/<name>/SKILL.md` |
+| Rules | `rules` | `rule.md` na raiz do pacote |
+
+Declarado mas ausente ou inválido: a instalação falha. Arquivos não declarados são ignorados e nunca carregados.
+
+`command` e `cwd` relativos são resolvidos em relação à raiz da extensão. Se um MCP stdio omitir `cwd`, o padrão é a raiz da extensão.
+
+Essas contribuições entram na sessão em runtime quando a extensão está ativada. Não aparecem em **Configurações → MCPs | Hooks | Skills | Rules**. Em conflito de nome: workspace > usuário > extensão.
 
 ## `settingsSchema`
 

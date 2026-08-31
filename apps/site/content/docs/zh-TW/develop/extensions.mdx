@@ -10,9 +10,9 @@ description: 套件佈局、spiritExtension 欄位與啟動 API。
 | Desktop | `{spiritDataDir}/extensions/desktop/` |
 | CLI     | `{spiritDataDir}/extensions/cli/`     |
 
-這與 [Skills](../customize/skills.mdx) (`SKILL.md` 資料夾)、[MCP](../customize/mcp.mdx) (外部伺服器) 和 [Hooks](../customize/hooks.mdx) (`hooks.json` 腳本) 不同。`contributes.cli.hooks` 樣式化 CLI TUI 插槽。它不是 `hooks.json`。
+這與 [Skills](../customize/skills.mdx) (`SKILL.md` 資料夾)、[MCP](../customize/mcp.mdx) (外部伺服器) 和 [Hooks](../customize/hooks.mdx) (`hooks.json` 腳本) 不同。`contributes.cli.hooks` 樣式化 CLI TUI 插槽。它不是 `hooks.json`。擴充功能仍可在宣告 `mcp`、`hooks`、`skills` 或 `rules` 後，用相同檔案規範捆綁這些資源。
 
-沒有每個擴充功能的啟用開關。安裝後，擴充功能即會貢獻內容。CLI 面板的切換是佔位符。
+每個已安裝的擴充功能都有啟用開關。停用或解除安裝後即停止貢獻。開啟開關即同意執行它宣告的 MCP、agent hooks、skills 與 rules。
 
 ## 套件佈局
 
@@ -23,6 +23,10 @@ example-extension/
   assets/icon.svg
   styles/desktop.css
   cli-hooks.json
+  mcp.json
+  hooks.json
+  rule.md
+  skills/example/SKILL.md
 ```
 
 ```json
@@ -46,7 +50,11 @@ example-extension/
       "settings",
       "secret-storage",
       "desktop-ui",
-      "cli-ui"
+      "cli-ui",
+      "mcp",
+      "hooks",
+      "skills",
+      "rules"
     ],
     "contributes": {
       "tools": [
@@ -70,7 +78,11 @@ example-extension/
       },
       "cli": {
         "hooks": { "path": "cli-hooks.json" }
-      }
+      },
+      "mcp": true,
+      "hooks": true,
+      "skills": true,
+      "rules": true
     },
     "settingsSchema": [
       {
@@ -122,7 +134,7 @@ example-extension/
 | `supportedHosts`        | 必要。非空的 `cli` 和/或 `desktop` 陣列     |
 | `activationEvents`      | 選用。請參閱 [啟動事件](#activation-events) |
 | `requestedCapabilities` | 選用。請參閱 [功能](#capabilities)          |
-| `contributes`           | 選用。`tools`、`desktop` 和/或 `cli`        |
+| `contributes`           | 選用。`tools`、`desktop`、`cli`、`mcp`、`hooks`、`skills` 和/或 `rules` |
 | `settingsSchema`        | 選用。設定定義                              |
 | `secretSlots`           | 選用。密鑰槽定義                            |
 
@@ -135,13 +147,17 @@ example-extension/
 | `system-prompt`      | 需要搭配 `main` 才能貢獻系統提示片段                            |
 | `desktop-ui`         | 必須與 `contributes.desktop` 配對                               |
 | `cli-ui`             | 必須與 `contributes.cli` 配對                                   |
+| `mcp`                | 必須與 `contributes.mcp` 配對；載入套件根目錄 `mcp.json`        |
+| `hooks`              | 必須與 `contributes.hooks` 配對；載入套件根目錄 `hooks.json`    |
+| `skills`             | 必須與 `contributes.skills` 配對；載入 `skills/<name>/SKILL.md` |
+| `rules`              | 必須與 `contributes.rules` 配對；載入套件根目錄 `rule.md`       |
 | `approval-flow`      | 僅宣告。核准由每個工具的 `approvalMode` 驅動                    |
 | `questions-flow`     | 僅宣告。問題由 `approvalMode: need-questions` 驅動              |
 | `settings`           | 僅宣告。設定來自 `settingsSchema`                               |
 | `secret-storage`     | 與 `secretSlots` 搭配使用                                       |
 | `structured-results` | 僅宣告                                                          |
 
-`desktop-ui` / `cli-ui` 和對應的 `contributes` 區塊必須同時存在或同時不存在。
+`desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` 和對應的 `contributes` 項必須同時存在或同時不存在。
 
 ## 啟動事件
 
@@ -218,6 +234,23 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
   ]
 }
 ```
+
+## 捆綁的 MCP、Hooks、Skills 與 Rules
+
+須與對應能力成對。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路徑是約定路徑，不允許自訂 path。
+
+| 貢獻面 | 能力 | 檔案 |
+| ------ | ---- | ---- |
+| MCP | `mcp` | 套件根目錄 `mcp.json`（與使用者/工作區 MCP 同 schema） |
+| Agent hooks | `hooks` | 套件根目錄 `hooks.json`（與 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
+| Skills | `skills` | `skills/<name>/SKILL.md` |
+| Rules | `rules` | 套件根目錄 `rule.md` |
+
+已宣告但檔案缺失或非法則安裝失敗。套件內有檔案但未宣告則忽略，永不載入。
+
+這些檔案裡的相對 `command` 與 `cwd` 相對擴充功能根目錄解析。MCP stdio 省略 `cwd` 時預設為擴充功能根目錄。PATH 上的裸命令不變。
+
+擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | Skills | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
 
 ## `settingsSchema`
 
