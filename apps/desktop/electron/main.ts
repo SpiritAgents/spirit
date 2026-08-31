@@ -152,7 +152,6 @@ async function focusOrCreateSpiritDesktopWindows(): Promise<void> {
 
 import {
   invokeDesktopHostCommand,
-  setDesktopMarketplaceFetchImplementation,
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -1121,7 +1120,6 @@ if (gotSpiritSingleInstanceLock) {
     const electronNetFetch: typeof fetch = (input, init) =>
       net.fetch(input instanceof URL ? input.toString() : input, init);
 
-    setDesktopMarketplaceFetchImplementation(electronNetFetch);
     setDesktopGitHubFetchImplementation(electronNetFetch);
 
     unsubscribeDesktopDreamUpdates = subscribeDesktopDreamUpdates((snapshot) => {

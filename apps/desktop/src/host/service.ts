@@ -32,7 +32,6 @@ import {
 import {
   buildStartImplementingUserTurn,
   extractActivePlanPathFromLlmHistory,
-  createHostExtensionMarketplace,
   createHostExtensionManager,
   ensureBuiltInExtensions,
   localFileAttachmentFromPath,
@@ -43,7 +42,6 @@ import {
   type HostDreamScope,
   type HostTodoRecord,
   type HostTodoScope,
-  type HostExtensionMarketplaceManager,
   type HostExtensionEvent,
   type HostRecordedFileChange,
   type ApprovalLevel,
@@ -83,9 +81,6 @@ import type {
   DesktopMcpServerInspection,
   DesktopExtensionListItem,
   DesktopExtensionCssLayer,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DesktopGitSnapshot,
   GetGitHubPullRequestDetailRequest,
   GetGitHubPullRequestTabCountsRequest,
@@ -128,8 +123,6 @@ import type {
   SessionListItem,
   ImportExtensionRequest,
   InstallLspProviderRequest,
-  InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
   SubmitUserTurnRequest,
   AbortConversationRequest,
   BeginSplitPaneSessionRequest,
@@ -177,13 +170,8 @@ import {
   deleteMcpServerCommand,
   deleteHookEntryCommand,
   deleteSkillCommand,
-  getMarketplaceExtensionDetailCommand,
-  getMarketplaceExtensionReadmeCommand,
   importExtensionCommand,
   inspectMcpServerCommand,
-  installMarketplaceExtensionCommand,
-  listMarketplaceExtensionsCommand,
-  prepareMarketplaceExtensionInstallCommand,
   runExtensionCommand,
   saveHookEntryCommand,
   submitSkillSlashCommand,
@@ -585,8 +573,6 @@ class DesktopHostService {
     stateStore: this.extensionStateStore,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
-  private hostExtensionMarketplace: HostExtensionMarketplaceManager | undefined;
-  private hostExtensionMarketplaceFetchImpl: typeof fetch | undefined;
   private state: HostState | undefined;
   private readonly sessionRegistry = new SessionRegistry((bundle) => {
     void closeRemoteDesktopRuntime(bundle.runtime);
@@ -777,7 +763,6 @@ class DesktopHostService {
       sharedMcpServiceForWorkspace: (workspaceRoot, workspaceBinding) =>
         this.sharedMcpServiceForWorkspace(workspaceRoot, workspaceBinding),
       extensionManager: () => this.extensionManager(),
-      marketplace: () => this.marketplace(),
       requireExtensionHostAdapter: () => this.requireExtensionHostAdapter(),
       refreshExtensionsList: () => this.refreshExtensionsList(),
       refreshRuntime: () => this.refreshRuntime(),
@@ -1612,30 +1597,6 @@ class DesktopHostService {
 
   async importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot> {
     return importExtensionCommand(this.extensionCommandContext(), request);
-  }
-
-  async listMarketplaceExtensions(): Promise<DesktopMarketplaceCatalogItem[]> {
-    return listMarketplaceExtensionsCommand(this.extensionCommandContext());
-  }
-
-  async getMarketplaceExtensionDetail(extensionId: string): Promise<DesktopMarketplaceDetail> {
-    return getMarketplaceExtensionDetailCommand(this.extensionCommandContext(), extensionId);
-  }
-
-  async getMarketplaceExtensionReadme(extensionId: string): Promise<string> {
-    return getMarketplaceExtensionReadmeCommand(this.extensionCommandContext(), extensionId);
-  }
-
-  async prepareMarketplaceExtensionInstall(
-    request: PrepareMarketplaceExtensionInstallRequest,
-  ): Promise<DesktopMarketplacePreparedInstall> {
-    return prepareMarketplaceExtensionInstallCommand(this.extensionCommandContext(), request);
-  }
-
-  async installMarketplaceExtension(
-    request: InstallMarketplaceExtensionRequest,
-  ): Promise<DesktopSnapshot> {
-    return installMarketplaceExtensionCommand(this.extensionCommandContext(), request);
   }
 
   async deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot> {
@@ -4050,29 +4011,6 @@ class DesktopHostService {
     return this.hostExtensionManager;
   }
 
-  private marketplace() {
-    if (!this.hostExtensionMarketplace) {
-      this.hostExtensionMarketplace = createHostExtensionMarketplace(
-        {
-          spiritDataDir: spiritDataDir(),
-          hostKind: "desktop",
-        },
-        this.hostExtensionMarketplaceFetchImpl
-          ? { fetchImpl: this.hostExtensionMarketplaceFetchImpl }
-          : {},
-      );
-    }
-    return this.hostExtensionMarketplace;
-  }
-
-  setMarketplaceFetchImpl(fetchImpl: typeof fetch | undefined): void {
-    if (this.hostExtensionMarketplaceFetchImpl === fetchImpl) {
-      return;
-    }
-    this.hostExtensionMarketplaceFetchImpl = fetchImpl;
-    this.hostExtensionMarketplace = undefined;
-  }
-
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
     const state = this.requireState();
     const extensions = await this.extensionManager().list();
@@ -4662,12 +4600,6 @@ class DesktopHostService {
 }
 
 const desktopHostService = new DesktopHostService();
-
-export function setDesktopMarketplaceFetchImplementation(
-  fetchImpl: typeof fetch | undefined,
-): void {
-  desktopHostService.setMarketplaceFetchImpl(fetchImpl);
-}
 
 export function setDesktopGitHubFetchImplementation(fetchImpl: typeof fetch | undefined): void {
   setGitHubFetchImplementation(fetchImpl);

@@ -18,8 +18,6 @@ import type {
   DesktopUpdateAutomationRequest,
   ImportExtensionRequest,
   InstallLspProviderRequest,
-  InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
@@ -115,11 +113,6 @@ export type CommandPayloads = {
   deleteHookEntry: { request: DeleteHookEntryRequest };
   inspectMcpServer: { name: string };
   importExtension: { request: ImportExtensionRequest };
-  listMarketplaceExtensions: undefined;
-  getMarketplaceExtensionDetail: { extensionId: string };
-  getMarketplaceExtensionReadme: { extensionId: string };
-  prepareMarketplaceExtensionInstall: { request: PrepareMarketplaceExtensionInstallRequest };
-  installMarketplaceExtension: { request: InstallMarketplaceExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   runExtension: { request: RunExtensionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };

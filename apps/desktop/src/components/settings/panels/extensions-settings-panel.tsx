@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { LoaderCircle } from "lucide-react";
 
-import { formatExtensionInstalledAt, fileToBase64 } from "@/components/settings/formatters";
+import { formatExtensionInstalledAt } from "@/components/settings/formatters";
+import { fileToBase64 } from "@/lib/file-to-base64";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

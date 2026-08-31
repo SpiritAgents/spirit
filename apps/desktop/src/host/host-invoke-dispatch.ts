@@ -25,15 +25,6 @@ export interface HostCommandDelegate {
   deleteHookEntry(request: CommandPayloads["deleteHookEntry"]["request"]): Promise<unknown>;
   inspectMcpServer(name: string): Promise<unknown>;
   importExtension(request: CommandPayloads["importExtension"]["request"]): Promise<unknown>;
-  listMarketplaceExtensions(): Promise<unknown>;
-  getMarketplaceExtensionDetail(extensionId: string): Promise<unknown>;
-  getMarketplaceExtensionReadme(extensionId: string): Promise<unknown>;
-  installMarketplaceExtension(
-    request: CommandPayloads["installMarketplaceExtension"]["request"],
-  ): Promise<unknown>;
-  prepareMarketplaceExtensionInstall(
-    request: CommandPayloads["prepareMarketplaceExtensionInstall"]["request"],
-  ): Promise<unknown>;
   deleteExtension(request: CommandPayloads["deleteExtension"]["request"]): Promise<unknown>;
   runExtension(request: CommandPayloads["runExtension"]["request"]): Promise<unknown>;
   updateExtensionSettings(
@@ -249,14 +240,6 @@ const hostCommandDispatch = {
   deleteHookEntry: (host, payload) => host.deleteHookEntry(payload.request),
   inspectMcpServer: (host, payload) => host.inspectMcpServer(payload.name),
   importExtension: (host, payload) => host.importExtension(payload.request),
-  listMarketplaceExtensions: (host) => host.listMarketplaceExtensions(),
-  getMarketplaceExtensionDetail: (host, payload) =>
-    host.getMarketplaceExtensionDetail(payload.extensionId),
-  getMarketplaceExtensionReadme: (host, payload) =>
-    host.getMarketplaceExtensionReadme(payload.extensionId),
-  installMarketplaceExtension: (host, payload) => host.installMarketplaceExtension(payload.request),
-  prepareMarketplaceExtensionInstall: (host, payload) =>
-    host.prepareMarketplaceExtensionInstall(payload.request),
   deleteExtension: (host, payload) => host.deleteExtension(payload.request),
   runExtension: (host, payload) => host.runExtension(payload.request),
   updateExtensionSettings: (host, payload) => host.updateExtensionSettings(payload.request),

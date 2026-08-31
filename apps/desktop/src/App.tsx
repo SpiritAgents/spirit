@@ -698,17 +698,10 @@ export default function App() {
                           showWorkspaceToggle={false}
                         />
                         <MarketplaceView
-                          useTranslucency={useContentTranslucency}
                           snapshot={snapshot}
-                          apiReady={runtime.apiReady}
-                          busyAction={runtime.busyAction}
-                          onListMarketplaceExtensions={runtime.listMarketplaceExtensions}
-                          onGetMarketplaceExtensionDetail={runtime.getMarketplaceExtensionDetail}
-                          onGetMarketplaceExtensionReadme={runtime.getMarketplaceExtensionReadme}
-                          onPrepareMarketplaceExtensionInstall={
-                            runtime.prepareMarketplaceExtensionInstall
-                          }
-                          onInstallMarketplaceExtension={runtime.installMarketplaceExtension}
+                          extensionsBusy={runtime.busyAction === "extensions"}
+                          onImportExtension={runtime.importExtension}
+                          onDeleteExtension={runtime.deleteExtension}
                         />
                       </div>
                     ) : null}
