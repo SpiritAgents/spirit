@@ -98,14 +98,24 @@ export async function collectEnabledExtensionInstructionContributions(
 
 export interface HostExtensionMcpContributionSummary {
   name: string;
+  displayName?: string;
   transport: "stdio" | "http";
+}
+
+export interface HostExtensionSkillContributionSummary {
+  name: string;
+  description: string;
+}
+
+export interface HostExtensionRuleContributionSummary {
+  content: string;
 }
 
 export interface HostExtensionInstructionContributionSummary {
   mcp?: HostExtensionMcpContributionSummary[];
   hooks?: HookEventName[];
-  skills?: string[];
-  rules?: boolean;
+  skills?: HostExtensionSkillContributionSummary[];
+  rules?: HostExtensionRuleContributionSummary;
 }
 
 /** Per-extension contribution-point summary for the extension surface (告知权). Disabled packages still summarize. */
@@ -120,6 +130,7 @@ export async function summarizeDeclaredExtensionContributionPoints(
     await collectExtensionMcpContribution(extension, mcp, log);
     summary.mcp = Object.entries(mcp.servers).map(([name, server]) => ({
       name,
+      ...(server.displayName?.trim() ? { displayName: server.displayName.trim() } : {}),
       transport: server.transport.type,
     }));
   }
@@ -131,12 +142,15 @@ export async function summarizeDeclaredExtensionContributionPoints(
   if (isDeclaredInstructionContribution(extension, "skills")) {
     const skills: HostExtensionContributedSkill[] = [];
     await collectExtensionSkillsContribution(extension, skills, new Set(), log);
-    summary.skills = skills.map((skill) => skill.name);
+    summary.skills = skills.map((skill) => ({ name: skill.name, description: skill.description }));
   }
   if (isDeclaredInstructionContribution(extension, "rules")) {
     const rules: HostExtensionContributedRule[] = [];
     await collectExtensionRulesContribution(extension, rules, log);
-    summary.rules = rules.length > 0;
+    const rule = rules[0];
+    if (rule) {
+      summary.rules = { content: rule.content };
+    }
   }
 
   return Object.keys(summary).length > 0 ? summary : undefined;

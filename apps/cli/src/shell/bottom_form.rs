@@ -2510,12 +2510,16 @@ fn extension_help_text(entry: &CliExtensionEntry) -> String {
                 if skills.is_empty() {
                     "—".to_string()
                 } else {
-                    skills.join(", ")
+                    skills
+                        .iter()
+                        .map(|skill| skill.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 }
             ));
         }
-        if let Some(rules) = contributions.rules {
-            lines.push(format!("rules: {}", if rules { "yes" } else { "—" }));
+        if contributions.rules.is_some() {
+            lines.push("rules: yes".to_string());
         }
     }
     lines.join("\n")
@@ -2746,7 +2750,8 @@ mod tests {
     use crate::{
         host_protocol::{
             CliExtensionEntry, CliExtensionInstructionContributions,
-            CliExtensionMcpContributionSummary,
+            CliExtensionMcpContributionSummary, CliExtensionRuleContributionSummary,
+            CliExtensionSkillContributionSummary,
         },
         mcp_types::{McpDiscoveredPrompt, McpDiscoveredPromptArgument},
         rules::{RuleEntry, RulePreview, RuleScope, RuleSource},
@@ -2876,11 +2881,17 @@ mod tests {
         entry.instruction_contributions = Some(CliExtensionInstructionContributions {
             mcp: Some(vec![CliExtensionMcpContributionSummary {
                 name: "bundled".to_string(),
+                display_name: None,
                 transport: "stdio".to_string(),
             }]),
             hooks: Some(vec!["sessionStart".to_string()]),
-            skills: Some(vec!["demo-skill".to_string()]),
-            rules: Some(true),
+            skills: Some(vec![CliExtensionSkillContributionSummary {
+                name: "demo-skill".to_string(),
+                description: "A bundled demo skill.".to_string(),
+            }]),
+            rules: Some(CliExtensionRuleContributionSummary {
+                content: "# Rules".to_string(),
+            }),
         });
         let form = new_extensions_form(&[entry]);
         assert!(form.fields[1].help.contains("mcp: bundled (stdio)"));
