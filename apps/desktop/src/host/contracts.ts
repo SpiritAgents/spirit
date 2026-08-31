@@ -30,6 +30,7 @@ export type HostCommandName =
   | "inspectMcpServer"
   | "importExtension"
   | "deleteExtension"
+  | "setExtensionEnabled"
   | "runExtension"
   | "updateExtensionSettings"
   | "updateExtensionSecret"

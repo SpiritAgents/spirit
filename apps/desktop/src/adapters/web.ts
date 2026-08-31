@@ -25,6 +25,7 @@ import type {
   InstallLspProviderRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
@@ -179,6 +180,9 @@ export function createWebHostApi(): HostApi {
     },
     deleteExtension(request: DeleteExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/remove", request);
+    },
+    setExtensionEnabled(request: SetExtensionEnabledRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/extensions/enabled", request);
     },
     runExtension(request: RunExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/run", request);

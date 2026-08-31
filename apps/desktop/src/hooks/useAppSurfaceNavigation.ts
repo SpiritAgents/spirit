@@ -196,7 +196,7 @@ export function useAppSurfaceNavigation({
   const extensionSettingsItems = useMemo(
     () =>
       (snapshot?.extensionsList ?? [])
-        .filter((item) => item.desktopSettingsPage)
+        .filter((item) => item.enabled && item.desktopSettingsPage)
         .map((item) => ({
           id: item.id,
           label: item.desktopSettingsPage?.title ?? item.displayName,

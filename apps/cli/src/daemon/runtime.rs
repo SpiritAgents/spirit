@@ -1023,6 +1023,14 @@ impl DaemonRuntime {
         Ok(())
     }
 
+    pub fn set_extension_enabled(&mut self, id: &str, enabled: bool) -> Result<()> {
+        self.client.call(
+            "host.setExtensionEnabled",
+            json!({ "hostKind": "cli", "id": id, "enabled": enabled }),
+        )?;
+        Ok(())
+    }
+
     // ------------------------------------------------------------ sessions
 
     pub fn submit_user_turn(

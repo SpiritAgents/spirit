@@ -21,6 +21,7 @@ export const SKILLS_STATE_FILE_NAME = "skills-state.json";
 export const EXTENSIONS_DIR_NAME = "extensions";
 export const EXTENSION_MANIFEST_FILE_NAME = "package.json";
 export const EXTENSIONS_INDEX_FILE_NAME = "extensions.json";
+export const EXTENSIONS_STATE_FILE_NAME = "extensions-state.json";
 export const EXTENSION_STATE_DIR_NAME = "extension-state";
 
 export const SUPPORTED_EXTENSION_HOST_KINDS = ["desktop", "cli"] as const;
@@ -91,6 +92,7 @@ export interface HostToggleState {
 export interface ExtensionPaths {
   extensionsDir: string;
   extensionsIndexFile: string;
+  extensionsStateFile: string;
   extensionStateDir: string;
 }
 
@@ -113,6 +115,7 @@ export function resolveExtensionPaths(context: ExtensionManagementContext): Exte
   return {
     extensionsDir: hostRoot,
     extensionsIndexFile: path.join(hostRoot, EXTENSIONS_INDEX_FILE_NAME),
+    extensionsStateFile: path.join(hostRoot, EXTENSIONS_STATE_FILE_NAME),
     extensionStateDir: path.join(hostRoot, EXTENSION_STATE_DIR_NAME),
   };
 }

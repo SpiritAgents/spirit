@@ -101,6 +101,7 @@ pub struct CliExtensionEntry {
     pub id: String,
     pub display_name: String,
     pub version: String,
+    pub enabled: bool,
     pub description: Option<String>,
     pub author: Option<String>,
     pub homepage: Option<String>,

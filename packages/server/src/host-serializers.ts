@@ -112,11 +112,13 @@ export function serializeHostExtension(item: {
   id: string;
   manifest: ExtensionManifestLike;
   installedAtUnixMs: number;
+  enabled: boolean;
   archiveFileName?: string;
 }): JsonObject {
   return {
     id: item.id,
     displayName: item.manifest.name,
+    enabled: item.enabled,
     ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
     version: item.manifest.version,
     ...(item.manifest.description ? { description: item.manifest.description } : {}),

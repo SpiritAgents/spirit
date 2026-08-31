@@ -91,8 +91,8 @@ impl TuiShell {
             | BottomFormKind::McpAdd
             | BottomFormKind::ModelAdd
             | BottomFormKind::HookAdd
-            | BottomFormKind::McpPrompt { .. }
-            | BottomFormKind::Extensions => self.cancel_bottom_form(),
+            | BottomFormKind::McpPrompt { .. } => self.cancel_bottom_form(),
+            BottomFormKind::Extensions => self.save_extensions_bottom_form(),
             BottomFormKind::Rules => self.save_rules_bottom_form(),
             BottomFormKind::Skills => self.save_skills_bottom_form(),
         }
@@ -510,6 +510,47 @@ impl TuiShell {
                 self.messages.push(ChatMessage {
                     role: MessageRole::Agent,
                     content: t!("tui.rules.save_failed", err = err).into_owned(),
+                    tool_block: None,
+                });
+            }
+        }
+    }
+
+    fn save_extensions_bottom_form(&mut self) {
+        let Some(form) = self.forms.active.as_ref() else {
+            return;
+        };
+
+        let changed: Vec<(String, bool)> = bottom_form::extensions_form_toggles(form)
+            .into_iter()
+            .filter(|(id, checked)| {
+                self.extension_entries()
+                    .iter()
+                    .find(|entry| entry.id == *id)
+                    .map(|entry| entry.enabled != *checked)
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        for (id, enabled) in changed {
+            if let Err(err) = self.runtime.set_extension_enabled(&id, enabled) {
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!("tui.extensions.save_failed", err = err).into_owned(),
+                    tool_block: None,
+                });
+                return;
+            }
+        }
+
+        match self.refresh_extensions_from_disk() {
+            Ok(()) => {
+                self.forms.active = None;
+            }
+            Err(err) => {
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!("tui.extensions.refresh_failed", err = err).into_owned(),
                     tool_block: None,
                 });
             }

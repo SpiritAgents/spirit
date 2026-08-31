@@ -26,6 +26,7 @@ export interface HostCommandDelegate {
   inspectMcpServer(name: string): Promise<unknown>;
   importExtension(request: CommandPayloads["importExtension"]["request"]): Promise<unknown>;
   deleteExtension(request: CommandPayloads["deleteExtension"]["request"]): Promise<unknown>;
+  setExtensionEnabled(request: CommandPayloads["setExtensionEnabled"]["request"]): Promise<unknown>;
   runExtension(request: CommandPayloads["runExtension"]["request"]): Promise<unknown>;
   updateExtensionSettings(
     request: CommandPayloads["updateExtensionSettings"]["request"],
@@ -241,6 +242,7 @@ const hostCommandDispatch = {
   inspectMcpServer: (host, payload) => host.inspectMcpServer(payload.name),
   importExtension: (host, payload) => host.importExtension(payload.request),
   deleteExtension: (host, payload) => host.deleteExtension(payload.request),
+  setExtensionEnabled: (host, payload) => host.setExtensionEnabled(payload.request),
   runExtension: (host, payload) => host.runExtension(payload.request),
   updateExtensionSettings: (host, payload) => host.updateExtensionSettings(payload.request),
   updateExtensionSecret: (host, payload) => host.updateExtensionSecret(payload.request),

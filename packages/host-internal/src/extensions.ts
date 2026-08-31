@@ -19,11 +19,12 @@ import { pathToFileURL } from "node:url";
 import { unzipSync } from "fflate";
 
 import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
-import { noteBuiltInExtensionRemoved } from "./built-in/state.js";
 import {
   createFileExtensionStateStore,
   EXTENSION_MANIFEST_FILE_NAME,
+  loadToggleState,
   resolveExtensionPaths,
+  saveToggleState,
   SUPPORTED_EXTENSION_HOST_KINDS,
   type ExtensionHostKind,
   type ExtensionSettingValue,
@@ -257,6 +258,8 @@ export interface HostInstalledExtension {
   directoryPath: string;
   manifestPath: string;
   installedAtUnixMs: number;
+  /** Enabled unless the per-host toggle state file disables this id; disabled extensions contribute nothing. */
+  enabled: boolean;
   archiveFileName?: string;
   installSource?: HostExtensionInstallSource;
 }
@@ -393,6 +396,7 @@ export interface HostExtensionManager {
     request: InstallPreparedExtensionDirectoryRequest,
   ): Promise<HostInstalledExtension>;
   remove(id: string): Promise<void>;
+  setEnabled(id: string, enabled: boolean): Promise<void>;
   run<THostApi>(request: RunExtensionRequest<THostApi>): Promise<void>;
   invokeTool<THostApi>(request: InvokeExtensionToolRequest<THostApi>): Promise<string>;
   getSettingsValues(id: string): Promise<HostExtensionSettingsValues>;
@@ -407,7 +411,7 @@ export interface HostExtensionManager {
 }
 
 export function collectHostExtensionContributedTools(
-  extensions: readonly Pick<HostInstalledExtension, "id" | "manifest">[],
+  extensions: readonly Pick<HostInstalledExtension, "id" | "manifest" | "enabled">[],
 ): HostExtensionContributedToolDefinition[] {
   return collectResolvableExtensionTools(extensions).map((entry) => ({
     name: entry.invocationName,
@@ -444,6 +448,13 @@ export function createHostExtensionManager(
     async remove(id) {
       await deactivateExtensionById(activatedExtensions, id);
       await removeInstalledExtension(context, id);
+    },
+    async setEnabled(id, enabled) {
+      // Persist before disposing the live instance: a dispose failure must not leave a disabled extension running.
+      await setExtensionEnabled(context, id, enabled);
+      if (!enabled) {
+        await deactivateExtensionById(activatedExtensions, id);
+      }
     },
     async run(request) {
       await runInstalledExtension(context, activatedExtensions, stateStore, request);
@@ -497,6 +508,8 @@ export async function listInstalledExtensions(
   await ensureExtensionDirectories(paths);
 
   const registryEntries = await loadExtensionRegistry(paths.extensionsIndexFile);
+  const toggleState = await loadToggleState(paths.extensionsStateFile);
+  const enabledOverrides = toggleState.enabledOverrides ?? {};
   const directoryEntries = await readdir(paths.extensionsDir, { withFileTypes: true });
   const installed: HostInstalledExtension[] = [];
 
@@ -524,6 +537,7 @@ export async function listInstalledExtensions(
         directoryPath,
         manifestPath,
         installedAtUnixMs,
+        enabled: enabledOverrides[manifest.id] ?? true,
         ...(registryEntry?.archiveFileName
           ? { archiveFileName: registryEntry.archiveFileName }
           : {}),
@@ -739,6 +753,7 @@ export async function installPreparedExtensionDirectory(
   ];
   await writeExtensionRegistry(paths.extensionsIndexFile, nextRegistryEntries);
 
+  const toggleState = await loadToggleState(paths.extensionsStateFile);
   return {
     id: manifest.id,
     directoryName,
@@ -746,6 +761,7 @@ export async function installPreparedExtensionDirectory(
     directoryPath: targetDirectory,
     manifestPath: path.join(targetDirectory, EXTENSION_MANIFEST_FILE_NAME),
     installedAtUnixMs,
+    enabled: toggleState.enabledOverrides?.[manifest.id] ?? true,
     ...(request.fileName?.trim() ? { archiveFileName: request.fileName.trim() } : {}),
     ...(installSource ? { installSource } : {}),
   };
@@ -768,9 +784,8 @@ export async function removeInstalledExtension(
     throw new Error(`Extension not found: ${normalizedId}`);
   }
 
-  // Write the tombstone before deleting install artifacts, so a state-write failure after deletion cannot cause re-seeding on next launch.
   if (target.installSource === "built-in" || isBuiltInExtensionId(normalizedId)) {
-    await noteBuiltInExtensionRemoved(context.spiritDataDir, normalizedId);
+    throw new Error(`Built-in extensions cannot be uninstalled: ${normalizedId}`);
   }
 
   await rm(target.directoryPath, { recursive: true, force: true });
@@ -780,6 +795,33 @@ export async function removeInstalledExtension(
       .filter((item) => item.id !== normalizedId)
       .map((item) => toExtensionRegistryEntry(item)),
   );
+}
+
+export async function setExtensionEnabled(
+  context: ExtensionManagementContext,
+  id: string,
+  enabled: boolean,
+): Promise<void> {
+  const normalizedId = id.trim();
+  if (!normalizedId) {
+    throw new Error("The extension id must not be empty.");
+  }
+
+  const paths = resolveExtensionPaths(context);
+  await ensureExtensionDirectories(paths);
+  const installed = await listInstalledExtensions(context);
+  if (!installed.some((item) => item.id === normalizedId)) {
+    throw new Error(`Extension not found: ${normalizedId}`);
+  }
+
+  const state = await loadToggleState(paths.extensionsStateFile);
+  const enabledOverrides = { ...state.enabledOverrides };
+  if (enabled) {
+    delete enabledOverrides[normalizedId];
+  } else {
+    enabledOverrides[normalizedId] = false;
+  }
+  await saveToggleState(paths.extensionsStateFile, { enabledOverrides });
 }
 
 export async function runInstalledExtension<THostApi>(
@@ -794,6 +836,9 @@ export async function runInstalledExtension<THostApi>(
   }
 
   const target = await requireInstalledExtension(context, normalizedId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${normalizedId}`);
+  }
   await ensureActivatedExtension(target, activatedExtensions, stateStore, {
     host: request.host,
     ...(request.logger ? { logger: request.logger } : {}),
@@ -826,6 +871,9 @@ export async function invokeExtensionTool<THostApi>(
   request: InvokeExtensionToolRequest<THostApi>,
 ): Promise<string> {
   const target = await requireInstalledExtension(context, request.extensionId);
+  if (!target.enabled) {
+    throw new Error(`The extension is disabled: ${target.id}`);
+  }
   const tool = target.manifest.contributes?.tools?.find((item) => item.name === request.toolName);
   if (!tool) {
     throw new Error(`The extension does not declare the tool: ${request.toolName}`);
@@ -924,6 +972,9 @@ export async function dispatchExtensionEvent<THostApi>(
     : undefined;
 
   for (const extension of installed) {
+    if (!extension.enabled) {
+      continue;
+    }
     if (targetIds && !targetIds.has(extension.id)) {
       continue;
     }
@@ -968,6 +1019,9 @@ export async function collectExtensionSystemPromptContributions<THostApi>(
   const contributions: HostExtensionSystemPromptContribution[] = [];
 
   for (const extension of installed) {
+    if (!extension.enabled) {
+      continue;
+    }
     if (!supportsSystemPromptContribution(extension.manifest) || !extension.manifest.main) {
       continue;
     }
@@ -1355,12 +1409,15 @@ function supportsResolvableToolContribution(manifest: HostExtensionManifest): bo
 }
 
 function collectResolvableExtensionTools(
-  extensions: readonly Pick<HostInstalledExtension, "id" | "manifest">[],
+  extensions: readonly Pick<HostInstalledExtension, "id" | "manifest" | "enabled">[],
 ): HostResolvedExtensionTool[] {
   const collected: HostResolvedExtensionTool[] = [];
   const seenInvocationNames = new Set<string>();
 
   for (const extension of extensions) {
+    if (extension.enabled === false) {
+      continue;
+    }
     if (!supportsResolvableToolContribution(extension.manifest)) {
       continue;
     }

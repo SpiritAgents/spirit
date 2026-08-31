@@ -142,6 +142,10 @@ impl RuntimeHandle {
         self.backend.delete_extension(id)
     }
 
+    pub fn set_extension_enabled(&mut self, id: &str, enabled: bool) -> Result<()> {
+        self.backend.set_extension_enabled(id, enabled)
+    }
+
     pub fn session(&self) -> &SessionModel {
         self.backend.session()
     }

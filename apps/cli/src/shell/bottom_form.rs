@@ -1574,10 +1574,6 @@ pub(crate) fn move_right(form: &mut BottomFormView) {
 }
 
 pub(crate) fn activate(form: &mut BottomFormView) {
-    if matches!(form.kind, BottomFormKind::Extensions) {
-        return;
-    }
-
     let selected = form.selected_field.min(form.fields.len().saturating_sub(1));
     let Some(field) = form.fields.get_mut(selected) else {
         return;
@@ -2305,6 +2301,10 @@ pub(crate) fn skills_form_overrides(form: &BottomFormView) -> Vec<(String, bool)
     rules_form_overrides(form)
 }
 
+pub(crate) fn extensions_form_toggles(form: &BottomFormView) -> Vec<(String, bool)> {
+    rules_form_overrides(form)
+}
+
 fn sync_mcp_add_form_fields(form: &mut BottomFormView) {
     if !matches!(form.kind, BottomFormKind::McpAdd) {
         return;
@@ -2441,7 +2441,7 @@ fn push_extensions_section(
             help: extension_help_text(entry),
             editor: BottomFormFieldEditorView::Checkbox {
                 id: entry.id.clone(),
-                checked: true,
+                checked: entry.enabled,
                 disabled: false,
                 path: Some(entry.id.clone()),
             },
@@ -2808,13 +2808,25 @@ mod tests {
     }
 
     #[test]
-    fn extensions_activate_is_noop_for_placeholder_toggle() {
+    fn extensions_activate_toggles_selected_checkbox() {
         let mut form = new_extensions_form(&[sample_extension_entry()]);
 
         activate(&mut form);
 
         match &form.fields[1].editor {
-            BottomFormFieldEditorView::Checkbox { checked, .. } => assert!(*checked),
+            BottomFormFieldEditorView::Checkbox { checked, .. } => assert!(!*checked),
+            _ => panic!("expected checkbox"),
+        }
+    }
+
+    #[test]
+    fn extensions_form_checkbox_reflects_enabled_state() {
+        let mut disabled_entry = sample_extension_entry();
+        disabled_entry.enabled = false;
+        let form = new_extensions_form(&[disabled_entry]);
+
+        match &form.fields[1].editor {
+            BottomFormFieldEditorView::Checkbox { checked, .. } => assert!(!*checked),
             _ => panic!("expected checkbox"),
         }
     }
@@ -3613,6 +3625,7 @@ mod tests {
             id: "basic-metadata-demo".to_string(),
             display_name: "Basic Metadata Demo".to_string(),
             version: "0.1.0".to_string(),
+            enabled: true,
             description: Some("A metadata-only extension fixture.".to_string()),
             author: Some("Spirit".to_string()),
             homepage: Some("https://example.com/extensions/basic-metadata-demo".to_string()),

@@ -17,6 +17,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import type {
   DeleteExtensionRequest,
   DesktopExtensionListItem,
   ImportExtensionRequest,
+  SetExtensionEnabledRequest,
 } from "@/types";
 
 /** Slightly wider list to accommodate two-column cards */
@@ -47,6 +49,7 @@ type MarketplaceViewProps = {
   extensionsBusy: boolean;
   onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
+  onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
 };
 
 export function MarketplaceView({
@@ -54,6 +57,7 @@ export function MarketplaceView({
   extensionsBusy,
   onImportExtension,
   onDeleteExtension,
+  onSetExtensionEnabled,
 }: MarketplaceViewProps) {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState("");
@@ -75,6 +79,16 @@ export function MarketplaceView({
   });
 
   const listEmpty = filteredExtensions.length === 0;
+
+  const handleToggleEnabled = (item: DesktopExtensionListItem) => {
+    void (async () => {
+      try {
+        await onSetExtensionEnabled({ id: item.id, enabled: !item.enabled });
+      } catch {
+        /* runtimeError */
+      }
+    })();
+  };
 
   return (
     <div
@@ -171,6 +185,7 @@ export function MarketplaceView({
                       "relative isolate flex w-full items-center gap-3 overflow-hidden px-3 py-2.5",
                       DESKTOP_OUTLINE_FILL_UNDERLAY,
                       DESKTOP_ITEM_CARD_HOVER_BORDER,
+                      !item.enabled && "opacity-55",
                     )}
                   >
                     <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted text-muted-foreground">
@@ -195,19 +210,30 @@ export function MarketplaceView({
                           variant="ghost"
                           size="icon"
                           className="size-8 shrink-0 self-center"
-                          disabled={extensionsBusy}
-                          title={t("marketplace.uninstall")}
+                          title={t("marketplace.moreActions")}
                         >
                           <Ellipsis className="size-4" aria-hidden />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          variant="destructive"
-                          onSelect={() => setUninstallTarget(item)}
+                          disabled={extensionsBusy}
+                          onSelect={() => handleToggleEnabled(item)}
                         >
-                          {t("marketplace.uninstall")}
+                          {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
                         </DropdownMenuItem>
+                        {item.installSource !== "built-in" ? (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              disabled={extensionsBusy}
+                              onSelect={() => setUninstallTarget(item)}
+                            >
+                              {t("marketplace.uninstall")}
+                            </DropdownMenuItem>
+                          </>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>

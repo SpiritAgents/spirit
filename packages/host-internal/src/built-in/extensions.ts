@@ -51,10 +51,6 @@ async function listBuiltInExtensionTemplateDirs(): Promise<string[]> {
 export async function ensureBuiltInExtensions(
   request: EnsureBuiltInExtensionsRequest,
 ): Promise<readonly HostInstalledExtension[]> {
-  if (BUILT_IN_EXTENSION_IDS.length === 0) {
-    return [];
-  }
-
   const allowedIds = new Set<string>(
     (BUILT_IN_EXTENSION_IDS as readonly string[]).map((id) => id.toLowerCase()),
   );
@@ -80,6 +76,8 @@ export async function ensureBuiltInExtensions(
     if (!manifest.supportedHosts.includes(hostKind)) {
       continue;
     }
+    // removedExtensionIds are legacy tombstones written before built-in extensions became
+    // non-removable; they keep historical uninstalls from re-seeding. New removals are refused.
     if (removed.has(extensionId) || installedIds.has(extensionId)) {
       continue;
     }

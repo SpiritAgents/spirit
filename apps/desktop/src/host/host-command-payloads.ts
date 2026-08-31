@@ -43,6 +43,7 @@ import type {
   MergeGitHubPullRequestRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   SubmitGitChipRequest,
   SubmitSkillSlashRequest,
   SubmitUserTurnRequest,
@@ -114,6 +115,7 @@ export type CommandPayloads = {
   inspectMcpServer: { name: string };
   importExtension: { request: ImportExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
+  setExtensionEnabled: { request: SetExtensionEnabledRequest };
   runExtension: { request: RunExtensionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
   updateExtensionSecret: { request: UpdateExtensionSecretRequest };

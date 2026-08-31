@@ -30,6 +30,7 @@ import type {
   ImportExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   RemoveProviderGroupRequest,
@@ -124,6 +125,7 @@ export interface HostApi {
   inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
   importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
   deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
+  setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
   runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
   updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
   updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;

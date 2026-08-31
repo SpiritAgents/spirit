@@ -1332,6 +1332,9 @@ fn compile_cli_ui_hooks(entries: &[CliExtensionEntry]) -> Vec<CliUiHookView> {
     let mut hooks = Vec::new();
 
     for entry in entries {
+        if !entry.enabled {
+            continue;
+        }
         let contributed = entry
             .contributes
             .as_ref()
@@ -1426,7 +1429,7 @@ fn parse_cli_ui_hook_token_role(role: &str) -> Option<CliUiHookTokenRole> {
 #[cfg(test)]
 mod tests {
     use super::{
-        TuiShell, apply_generated_session_title_if_allowed, conversation_user_message_count,
+        apply_generated_session_title_if_allowed, conversation_user_message_count,
         is_standalone_subagent_status_aux, manual_shell_tool_command,
         next_persisted_standalone_pending_aux, next_persisted_standalone_pending_aux_anchor,
         should_reanchor_persisted_subagent_status_on_begin_assistant_response,

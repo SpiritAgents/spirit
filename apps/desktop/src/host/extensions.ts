@@ -39,6 +39,7 @@ export async function buildDesktopExtensionListItems(
       displayName: item.manifest.name,
       ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
       version: item.manifest.version,
+      enabled: item.enabled,
       ...(item.manifest.description ? { description: item.manifest.description } : {}),
       ...(item.manifest.author ? { author: item.manifest.author } : {}),
       ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
@@ -150,6 +151,9 @@ export async function collectDesktopExtensionCssLayers(
   const layers: DesktopExtensionCssLayer[] = [];
 
   for (const item of extensions) {
+    if (!item.enabled) {
+      continue;
+    }
     const cssEntries = item.manifest.contributes?.desktop?.css ?? [];
     for (const entry of cssEntries) {
       const sourcePath = path.join(item.directoryPath, ...entry.path.split("/"));

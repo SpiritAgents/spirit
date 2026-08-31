@@ -436,6 +436,11 @@ export interface DeleteExtensionRequest {
   id: string;
 }
 
+export interface SetExtensionEnabledRequest {
+  id: string;
+  enabled: boolean;
+}
+
 export interface RunExtensionRequest {
   id: string;
 }
@@ -536,6 +541,7 @@ export interface DesktopExtensionListItem {
   displayName: string;
   icon?: string;
   version: string;
+  enabled: boolean;
   description?: string;
   author?: string;
   homepage?: string;

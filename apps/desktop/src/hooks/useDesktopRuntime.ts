@@ -85,6 +85,7 @@ import type {
   ImportExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
@@ -2072,6 +2073,28 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const setExtensionEnabled = useCallback(
+    async (request: SetExtensionEnabledRequest) => {
+      if (!api) {
+        return;
+      }
+
+      setBusyAction("extensions");
+      try {
+        const next = await api.setExtensionEnabled(request);
+        applySnapshot(next);
+        setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const runExtension = useCallback(
     async (request: RunExtensionRequest) => {
       if (!api) {
@@ -3879,6 +3902,7 @@ export function useDesktopRuntime() {
     createSkill,
     createRule,
     deleteExtension,
+    setExtensionEnabled,
     runExtension,
     updateExtensionSettings,
     updateExtensionSecret,

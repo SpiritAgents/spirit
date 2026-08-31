@@ -27,6 +27,7 @@ import type {
   ImportExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
@@ -51,6 +52,7 @@ type HostExtensionManager = {
     manifest: { name: string; version: string };
   }>;
   remove(id: string): Promise<void>;
+  setEnabled(id: string, enabled: boolean): Promise<void>;
   run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
   setSettingsValues(input: {
     id: string;
@@ -295,6 +297,24 @@ export async function deleteExtensionCommand(
     }
 
     await ctx.extensionManager().remove(id);
+    await ctx.refreshExtensionsList();
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function setExtensionEnabledCommand(
+  ctx: HostExtensionCommandContext,
+  request: SetExtensionEnabledRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().setEnabled(id, request.enabled);
     await ctx.refreshExtensionsList();
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();

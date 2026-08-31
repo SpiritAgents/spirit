@@ -219,6 +219,19 @@ export class HostService {
         await this.sessions.refreshExtensions();
         return { id };
       }
+      case "host.setExtensionEnabled": {
+        const id = typeof params["id"] === "string" ? params["id"].trim() : "";
+        if (!id) {
+          throw new Error("missing extension id");
+        }
+        if (typeof params["enabled"] !== "boolean") {
+          throw new Error("missing enabled");
+        }
+        const enabled = params["enabled"];
+        await this.extensionManager(HostService.readHostKind(params)).setEnabled(id, enabled);
+        await this.sessions.refreshExtensions();
+        return { id, enabled };
+      }
       // -------------------------------------------------------------- todos
       case "host.listSessionTodos": {
         const sessionId = HostService.readSessionId(params);
@@ -333,6 +346,7 @@ export const HOST_METHODS = new Set([
   "host.listExtensions",
   "host.importExtension",
   "host.deleteExtension",
+  "host.setExtensionEnabled",
   "host.listSessionTodos",
   "host.replaceSessionTodos",
   "host.mcp",

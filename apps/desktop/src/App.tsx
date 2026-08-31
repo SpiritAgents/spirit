@@ -700,6 +700,7 @@ export default function App() {
                           extensionsBusy={runtime.busyAction === "extensions"}
                           onImportExtension={runtime.importExtension}
                           onDeleteExtension={runtime.deleteExtension}
+                          onSetExtensionEnabled={runtime.setExtensionEnabled}
                         />
                       </div>
                     ) : null}
