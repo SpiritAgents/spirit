@@ -1319,7 +1319,7 @@ fn should_toggle_aux_details_on_exit_rewind_picker(
 }
 
 fn is_subagents_command(message: &str) -> bool {
-    message == "/subagents" || message.starts_with("/subagents ")
+    message == "/subagent" || message.starts_with("/subagent ")
 }
 
 fn cursor_byte_index_for_text(text: &str, cursor_chars: usize) -> usize {

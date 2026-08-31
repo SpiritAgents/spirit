@@ -64,7 +64,7 @@ Keys are **not** in this file. They live in the [keyring](./security.mdx).
 }
 ```
 
-`deny` is absolute — no approval level, hook, or session memory overrides it. Pattern syntax, path semantics, and the full action list are in [Approvals](./agent/approvals.mdx). Verify rules without running anything: `spirit permissions check --shell "git status"`.
+`deny` is absolute — no approval level, hook, or session memory overrides it. Pattern syntax, path semantics, and the full action list are in [Approvals](./agent/approvals.mdx). Verify rules without running anything: `spirit permission check --shell "git status"`.
 
 The old `tool-permissions.json` (written by the "Always Trust" button) is deprecated: the code no longer reads or writes it, and there is no automatic migration. Leftover files are inert — delete them manually.
 

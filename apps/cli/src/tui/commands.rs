@@ -184,7 +184,7 @@ impl TuiShell {
 
     pub(crate) fn handle_sessions_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/sessions")
+            .strip_prefix("/session")
             .map(str::trim)
             .unwrap_or("");
         if tail.is_empty() {
@@ -475,7 +475,7 @@ impl TuiShell {
 
     pub(crate) fn handle_subagents_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/subagents")
+            .strip_prefix("/subagent")
             .map(str::trim)
             .unwrap_or("");
 
@@ -762,7 +762,7 @@ impl TuiShell {
 
     pub(crate) fn handle_extensions_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/extensions")
+            .strip_prefix("/extension")
             .map(str::trim)
             .unwrap_or("");
         if tail.is_empty() {
@@ -1340,7 +1340,7 @@ impl TuiShell {
     }
 
     pub(crate) fn handle_hooks_slash(&mut self, message: &str) {
-        let tail = message.strip_prefix("/hooks").map(str::trim).unwrap_or("");
+        let tail = message.strip_prefix("/hook").map(str::trim).unwrap_or("");
 
         if tail.is_empty() || tail == "list" {
             self.push_hooks_overview();

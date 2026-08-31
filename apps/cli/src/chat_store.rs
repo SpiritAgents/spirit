@@ -506,7 +506,7 @@ fn resolve_load_path(path_arg: &str) -> Result<PathBuf> {
 pub fn resolve_chat_file_path(path_arg: &str) -> Result<PathBuf> {
     let trimmed = path_arg.trim();
     if trimmed.is_empty() {
-        return Err(anyhow!("/sessions load requires a file name or path"));
+        return Err(anyhow!("/session load requires a file name or path"));
     }
 
     let raw = PathBuf::from(trimmed);

@@ -81,7 +81,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Skills,
+    Skill,
     Interactive,
     /// Run the Spirit Server daemon in the foreground (WebSocket backend for hosts)
     Serve,
@@ -101,11 +101,11 @@ enum Commands {
         #[command(subcommand)]
         action: ExtensionAction,
     },
-    Hooks {
+    Hook {
         #[command(subcommand)]
         action: HookAction,
     },
-    Permissions {
+    Permission {
         #[command(subcommand)]
         action: PermissionAction,
     },
@@ -312,14 +312,14 @@ fn main() -> Result<()> {
     }
 
     match cli.command {
-        Some(Commands::Skills) => print_skills_stub(),
+        Some(Commands::Skill) => print_skills_stub(),
         Some(Commands::Serve) => run_serve()?,
         Some(Commands::Interactive) | None => run_interactive(&options, &config)?,
         Some(Commands::Model { action }) => handle_model_cli(into_model_command(action))?,
         Some(Commands::Config { action }) => handle_config_cli(into_config_command(action))?,
         Some(Commands::Mcp { action }) => handle_mcp_cli(into_mcp_command(action))?,
-        Some(Commands::Hooks { action }) => handle_hooks_cli(into_hook_command(action))?,
-        Some(Commands::Permissions { action }) => {
+        Some(Commands::Hook { action }) => handle_hooks_cli(into_hook_command(action))?,
+        Some(Commands::Permission { action }) => {
             handle_permissions_cli(into_permission_command(action))?
         }
         Some(Commands::Extension { action }) => {
