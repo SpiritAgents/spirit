@@ -424,7 +424,7 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
         "- /<server>_<prompt> [args_json | user_message]".to_string(),
         "- /rules".to_string(),
         "- /skills".to_string(),
-        "- /extensions [list|import <zip>|remove <id>|marketplace [query]]".to_string(),
+        "- /extensions [list|import <zip>|remove <id>]".to_string(),
         t!("tui.help.skill_usage").into_owned(),
         t!("tui.help.log_variants").into_owned(),
         format!("- /language [{}]", locale::available_ui_locales_csv()),

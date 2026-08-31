@@ -15,10 +15,7 @@ use crate::{
     ask_questions::AskQuestionsResult,
     chat_store,
     chat_timeline::project_live_chat_from_llm_history,
-    host_protocol::{
-        CliExtensionCliUiHookEntry, CliExtensionEntry, CliMarketplaceCatalogItem,
-        CliMarketplaceDetail, CliMarketplaceDetailVersion, CliMarketplacePreparedInstall,
-    },
+    host_protocol::{CliExtensionCliUiHookEntry, CliExtensionEntry},
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
@@ -43,9 +40,7 @@ use crate::{
     view::{
         AssistantAuxData, BottomFormKind, ChatMessage, CliUiHookSlot, CliUiHookTokenRole,
         CliUiHookTokensView, CliUiHookVariant, CliUiHookView, InputSuggestion, InputSuggestionKind,
-        MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView, MarketplaceFlowStep,
-        MarketplaceVersionChangelogView, MarketplaceVersionView, MarketplaceViewModel, MessageRole,
-        PendingAssistantAux, PendingSubagentApprovalView, SlashFlowItemView, SlashFlowView,
+        MainInputMode, MessageRole, PendingAssistantAux, PendingSubagentApprovalView,
         SubagentApprovalInputView, SubagentSessionDetailView, SubagentSessionSummaryView,
         TuiViewModel,
     },
@@ -59,7 +54,6 @@ mod host_actions;
 mod image_paths;
 mod inline;
 mod input;
-mod marketplace;
 mod mcp_actions;
 mod pickers;
 mod projection;
@@ -72,7 +66,6 @@ pub use inline::{INLINE_BOOTSTRAP_HEIGHT, InlineBackend, InlineRecreate, leave_i
 use conversation::ConversationUiState;
 use forms::BottomFormUiState;
 use input::InputState;
-use marketplace::MarketplaceState;
 use subagent::SubagentUiState;
 
 const VIEW_MODEL_MESSAGE_LIMIT: usize = 180;
@@ -130,7 +123,6 @@ pub struct TuiShell {
     rule_entries: Vec<RuleEntry>,
     skill_entries: Vec<SkillEntry>,
     extension_entries: Vec<CliExtensionEntry>,
-    marketplace: MarketplaceState,
     cli_ui_hooks: Vec<CliUiHookView>,
     ui_runtime_state: UiRuntimeState,
     /// Mirrors Desktop `workspaceBinding`; CLI defaults to project.
@@ -250,7 +242,6 @@ impl TuiShell {
             rule_entries,
             skill_entries,
             extension_entries,
-            marketplace: MarketplaceState::default(),
             cli_ui_hooks,
             // The inline TUI draws on the main screen and must not probe image protocols (that would emit kitty/sixel queries to stdout).
             ui_runtime_state: if inline_mode {
@@ -457,7 +448,6 @@ impl TuiShell {
 
     fn reset_conversation_ui_for_new_session(&mut self) {
         self.reset_primary_picker_overlay();
-        self.close_marketplace_view();
         self.messages.clear();
         self.assistant_aux_by_message.clear();
         self.clear_input_history();
@@ -1630,30 +1620,6 @@ mod tests {
             next_persisted_standalone_pending_aux_anchor(None, None, Some(&persisted), Some(5));
 
         assert_eq!(next, Some(5));
-    }
-
-    #[test]
-    fn marketplace_version_compare_prefers_higher_semver() {
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.10.0", "1.2.0"),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("2.0.0", "10.0.0"),
-            std::cmp::Ordering::Less
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0", "1.0.0-alpha.1"),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0-alpha.2", "1.0.0-alpha.10"),
-            std::cmp::Ordering::Less
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0+build.1", "1.0.0+build.2"),
-            std::cmp::Ordering::Equal
-        );
     }
 
     #[test]

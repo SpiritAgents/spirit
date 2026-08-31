@@ -4,9 +4,8 @@ use crate::{
     ports::{ChatSessionListItem, SubagentSessionStatus},
     view::{
         AssistantAuxData, BottomFormFieldEditorView, BottomFormFieldView, BottomFormView,
-        ForkPickerView, MainInputMode, MarketplaceFlowStep, MarketplaceViewModel,
-        PendingAssistantAux, PendingSubagentApprovalView, RewindPickerView, SlashFlowItemView,
-        SlashFlowSearchView, SlashFlowView, SubagentSessionDetailView, SubagentSessionSummaryView,
+        ForkPickerView, MainInputMode, PendingAssistantAux, PendingSubagentApprovalView,
+        RewindPickerView, SubagentSessionDetailView, SubagentSessionSummaryView,
     },
 };
 use ratatui::{Terminal, backend::TestBackend};
@@ -110,7 +109,6 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         image_picker_index: 0,
         image_picker_files: vec![],
         bottom_form: None,
-        marketplace_view: None,
         history_offset_from_bottom: 0,
         pending_response_active: false,
         pending_assistant_msg_index: None,
@@ -562,61 +560,6 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
             .iter()
             .any(|line| line.contains(t!("ui.footer.preview").as_ref()))
     );
-}
-
-#[test]
-fn marketplace_catalog_reuses_minimal_picker_with_search() {
-    let mut app = build_view_model(ChatMessage::new(
-        MessageRole::User,
-        "/extensions marketplace",
-    ));
-    app.marketplace_view = Some(MarketplaceViewModel {
-        step: MarketplaceFlowStep::CatalogPicker,
-        query: "css".to_string(),
-        error: None,
-        catalog_items: Vec::new(),
-        selected_item: None,
-        detail: None,
-        slash: SlashFlowView {
-            title: "Extensions".to_string(),
-            subtitle: None,
-            search: Some(SlashFlowSearchView {
-                value: "css".to_string(),
-                placeholder: "Type an extension name, author, or keyword".to_string(),
-            }),
-            empty_text: "No matching extensions.".to_string(),
-            selected_index: 1,
-            items: vec![
-                SlashFlowItemView {
-                    label: "System message demo".to_string(),
-                    summary: "This is an extension example.".to_string(),
-                    details: Vec::new(),
-                    disabled: false,
-                    muted: false,
-                },
-                SlashFlowItemView {
-                    label: "Void Desktop CSS".to_string(),
-                    summary: "Desktop CSS extension.".to_string(),
-                    details: Vec::new(),
-                    disabled: false,
-                    muted: false,
-                },
-            ],
-            compact_items: true,
-            footer_hint: "Enter Open  Esc Close".to_string(),
-        },
-        readme_scroll: 0,
-    });
-
-    let lines = render_ui_lines(&app, 80, 20);
-
-    assert!(lines.iter().any(
-        |line| line.contains(t!("tui.marketplace.search_label").trim()) && line.contains("css")
-    ));
-    assert!(lines.iter().any(|line| line.contains("> Void Desktop CSS")));
-    assert!(!lines.iter().any(|line| line.contains("Extensions")));
-    assert!(!lines.iter().any(|line| line.contains("2 items")));
-    assert!(!lines.iter().any(|line| line.contains("Enter Open")));
 }
 
 #[test]

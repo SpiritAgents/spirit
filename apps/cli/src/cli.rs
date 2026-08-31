@@ -1,12 +1,11 @@
 use anyhow::{Context, Result, anyhow};
 use rust_i18n::t;
 use std::fs;
-use std::{collections::BTreeMap, env, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use crate::{
     adapters::{DefaultAppPaths, JsonConfigStore, KeyringSecretStore},
     daemon::DaemonRuntime,
-    host_protocol::CliMarketplaceDetail,
     mcp::{
         example_github_mcp_config, load_mcp_config, save_mcp_config, set_server_enabled,
         user_mcp_config_path, workspace_mcp_config_path,
@@ -123,24 +122,6 @@ pub enum ExtensionCommand {
     List,
     Import { archive: String },
     Remove { id: String },
-    Marketplace { action: MarketplaceCommand },
-}
-
-pub enum MarketplaceCommand {
-    List {
-        query: Vec<String>,
-    },
-    Detail {
-        id: String,
-    },
-    Readme {
-        id: String,
-    },
-    Install {
-        id: String,
-        version: Option<String>,
-        review_acknowledged: bool,
-    },
 }
 
 pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
@@ -1194,122 +1175,6 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
             runtime.delete_extension(trimmed_id)?;
             println!("{}", t!("cli.extensions.removed", id = trimmed_id));
         }
-        ExtensionCommand::Marketplace { action } => handle_marketplace_cli(action)?,
-    }
-
-    Ok(())
-}
-
-pub fn handle_marketplace_cli(action: MarketplaceCommand) -> Result<()> {
-    let app_paths = DefaultAppPaths::new();
-    let workspace_root = app_paths.workspace_root();
-
-    match action {
-        MarketplaceCommand::List { query } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let catalog = runtime.list_marketplace_extensions()?;
-            let installed = runtime
-                .list_extensions()?
-                .into_iter()
-                .map(|entry| (entry.id, entry.version))
-                .collect::<BTreeMap<_, _>>();
-            let needle = query.join(" ").trim().to_lowercase();
-
-            println!("Marketplace catalog:");
-            for item in catalog.into_iter().filter(|item| {
-                if needle.is_empty() {
-                    return true;
-                }
-
-                let haystack = format!(
-                    "{} {} {} {} {}",
-                    item.display_name,
-                    item.description,
-                    item.extension_id,
-                    item.package_name,
-                    item.keywords.join(" "),
-                );
-                haystack.to_lowercase().contains(&needle)
-            }) {
-                let installed_label = installed
-                    .get(&item.package_name)
-                    .or_else(|| installed.get(&item.extension_id))
-                    .map(|version| {
-                        t!("cli.extensions.installed_version", version = version).into_owned()
-                    })
-                    .unwrap_or_else(|| t!("cli.extensions.not_installed").into_owned());
-                println!(
-                    "  - {}\n    id: {}\n    package: {}\n    version: {}\n    status: {}\n    review: {}\n    installed: {}",
-                    item.display_name,
-                    item.extension_id,
-                    item.package_name,
-                    item.default_version,
-                    item.status,
-                    item.default_review_status,
-                    installed_label
-                );
-                if !item.description.trim().is_empty() {
-                    println!("    description: {}", item.description);
-                }
-                if !item.keywords.is_empty() {
-                    println!("    keywords: {}", item.keywords.join(", "));
-                }
-                if !item.supported_hosts.is_empty() {
-                    println!("    hosts: {}", item.supported_hosts.join(", "));
-                }
-            }
-        }
-        MarketplaceCommand::Detail { id } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let detail = runtime.get_marketplace_extension_detail(&id)?;
-            print_marketplace_detail(&detail);
-        }
-        MarketplaceCommand::Readme { id } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let readme = runtime.get_marketplace_extension_readme(&id)?;
-            println!("{}", readme);
-        }
-        MarketplaceCommand::Install {
-            id,
-            version,
-            review_acknowledged,
-        } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let prepared =
-                runtime.prepare_marketplace_extension_install(&id, version.as_deref())?;
-            let needs_ack = prepared.review_status != "verified";
-            if needs_ack && !review_acknowledged {
-                return Err(anyhow!(
-                    "{}",
-                    t!(
-                        "cli.extensions.review_required",
-                        id = prepared.extension_id,
-                        version = prepared.version
-                    )
-                ));
-            }
-
-            let installed = runtime.install_marketplace_extension(
-                &prepared.extension_id,
-                Some(&prepared.version),
-                review_acknowledged || needs_ack,
-            )?;
-            println!(
-                "{}",
-                t!(
-                    "cli.extensions.marketplace_installed",
-                    name = installed.display_name
-                )
-            );
-            println!("id: {}", installed.id);
-            println!("version: {}", installed.version);
-            if let Some(description) = installed.description {
-                println!("description: {}", description);
-            }
-            if let Some(main) = installed.main {
-                println!("main: {}", main);
-            }
-        }
     }
 
     Ok(())
@@ -1321,29 +1186,6 @@ fn new_mcp_cli_runtime(workspace_root: PathBuf) -> Result<DaemonRuntime> {
 
 fn new_extension_cli_runtime(workspace_root: PathBuf) -> Result<DaemonRuntime> {
     new_mcp_cli_runtime(workspace_root)
-}
-
-fn print_marketplace_detail(detail: &CliMarketplaceDetail) {
-    println!("id: {}", detail.extension_id);
-    println!("package: {}", detail.package_name);
-    println!("status: {}", detail.status);
-    println!("featured: {}", yes_no(detail.featured));
-    println!("default_version: {}", detail.default_version);
-    println!("readme_path: {}", detail.readme_path);
-    println!("versions:");
-    for version in &detail.versions {
-        println!(
-            "  - {}\n    channel: {}\n    review: {}\n    name: {}\n    description: {}",
-            version.version,
-            version.channel,
-            version.review_status,
-            version.display_name,
-            version.description
-        );
-        if let Some(changelog) = &version.changelog {
-            println!("    changelog: {}", changelog.summary);
-        }
-    }
 }
 
 fn yes_no(flag: bool) -> &'static str {

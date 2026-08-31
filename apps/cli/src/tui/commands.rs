@@ -776,16 +776,6 @@ impl TuiShell {
             return;
         }
 
-        if let Some(query) = tail.strip_prefix("marketplace").map(str::trim) {
-            self.open_marketplace_view((!query.is_empty()).then_some(query));
-            self.push_agent_message(if query.is_empty() {
-                t!("tui.marketplace.opened").into_owned()
-            } else {
-                t!("tui.marketplace.opened_filtered", query = query).into_owned()
-            });
-            return;
-        }
-
         let Some(subcommand) = tail.split_whitespace().next() else {
             self.push_agent_message(t!("tui.extensions.usage").into_owned());
             return;

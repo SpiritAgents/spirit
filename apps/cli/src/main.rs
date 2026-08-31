@@ -20,10 +20,9 @@ use std::{
 };
 
 use spirit::tui::InlineRecreate;
-use spirit::view::MarketplaceFlowStep;
 use spirit::{
-    ConfigCommand, ExtensionCommand, GlobalCliOptions, HookCommand, KeyCommand, MarketplaceCommand,
-    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
+    ConfigCommand, ExtensionCommand, GlobalCliOptions, HookCommand, KeyCommand, McpCommand,
+    ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
     handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli, handle_model_cli,
     handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
     run_headless_prompt, run_serve, tui, ui,
@@ -283,34 +282,6 @@ enum ExtensionAction {
         #[arg(value_name = "id")]
         id: String,
     },
-    Marketplace {
-        #[command(subcommand)]
-        action: Option<MarketplaceAction>,
-    },
-}
-
-#[derive(Subcommand)]
-enum MarketplaceAction {
-    List {
-        #[arg(value_name = "query")]
-        query: Vec<String>,
-    },
-    Detail {
-        #[arg(value_name = "id")]
-        id: String,
-    },
-    Readme {
-        #[arg(value_name = "id")]
-        id: String,
-    },
-    Install {
-        #[arg(value_name = "id")]
-        id: String,
-        #[arg(long, value_name = "version")]
-        version: Option<String>,
-        #[arg(long, default_value_t = false)]
-        review_acknowledged: bool,
-    },
 }
 
 fn main() -> Result<()> {
@@ -412,28 +383,6 @@ fn into_extension_command(action: ExtensionAction) -> ExtensionCommand {
         ExtensionAction::List => ExtensionCommand::List,
         ExtensionAction::Import { archive } => ExtensionCommand::Import { archive },
         ExtensionAction::Remove { id } => ExtensionCommand::Remove { id },
-        ExtensionAction::Marketplace { action } => ExtensionCommand::Marketplace {
-            action: action
-                .map(into_marketplace_command)
-                .unwrap_or(MarketplaceCommand::List { query: Vec::new() }),
-        },
-    }
-}
-
-fn into_marketplace_command(action: MarketplaceAction) -> MarketplaceCommand {
-    match action {
-        MarketplaceAction::List { query } => MarketplaceCommand::List { query },
-        MarketplaceAction::Detail { id } => MarketplaceCommand::Detail { id },
-        MarketplaceAction::Readme { id } => MarketplaceCommand::Readme { id },
-        MarketplaceAction::Install {
-            id,
-            version,
-            review_acknowledged,
-        } => MarketplaceCommand::Install {
-            id,
-            version,
-            review_acknowledged,
-        },
     }
 }
 
@@ -734,22 +683,14 @@ fn process_event_batch(
                 flush_pending_text(shell, &mut pending_text);
                 match mouse.kind {
                     MouseEventKind::ScrollUp => {
-                        if shell.is_marketplace_view_active()
-                            && shell.marketplace_step() != Some(MarketplaceFlowStep::CatalogPicker)
-                        {
-                            shell.marketplace_scroll_readme_up(3);
-                        } else if shell.is_subagent_view_active() {
+                        if shell.is_subagent_view_active() {
                             shell.scroll_subagent_view_up(3)
                         } else if !shell.scroll_active_bottom_form_up(3) {
                             shell.scroll_history_up(3)
                         }
                     }
                     MouseEventKind::ScrollDown => {
-                        if shell.is_marketplace_view_active()
-                            && shell.marketplace_step() != Some(MarketplaceFlowStep::CatalogPicker)
-                        {
-                            shell.marketplace_scroll_readme_down(3);
-                        } else if shell.is_subagent_view_active() {
+                        if shell.is_subagent_view_active() {
                             shell.scroll_subagent_view_down(3)
                         } else if !shell.scroll_active_bottom_form_down(3) {
                             shell.scroll_history_down(3)
@@ -821,7 +762,6 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
-                    && !shell.is_marketplace_view_active()
                     && !shell.is_bottom_form_active()
                     && pending_text.is_empty()
                     && matches!(key.code, KeyCode::Char('!'))
@@ -844,7 +784,6 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
-                    && !shell.is_marketplace_view_active()
                     && let Some(ch) = batched_text_char(&key)
                 {
                     pending_text.push(ch);
@@ -875,8 +814,6 @@ fn flush_pending_text(shell: &mut TuiShell, pending_text: &mut String) {
 
     if shell.is_bottom_form_active() {
         shell.bottom_form_insert_text(pending_text);
-    } else if shell.is_marketplace_view_active() && shell.marketplace_filter_accepts_input() {
-        shell.marketplace_insert_filter_text(pending_text);
     } else {
         shell.insert_text_at_cursor(pending_text);
         shell.clamp_cursor();
@@ -1167,55 +1104,6 @@ fn process_key_event(
         return;
     }
 
-    if shell.is_marketplace_view_active() {
-        match key.code {
-            KeyCode::Esc => shell.marketplace_go_back(),
-            KeyCode::Enter => shell.marketplace_submit_selection(),
-            KeyCode::Up => shell.marketplace_move_selection_prev(),
-            KeyCode::Down => shell.marketplace_move_selection_next(),
-            KeyCode::PageUp
-                if shell.marketplace_step() != Some(MarketplaceFlowStep::CatalogPicker) =>
-            {
-                shell.marketplace_scroll_readme_up(8);
-            }
-            KeyCode::PageDown
-                if shell.marketplace_step() != Some(MarketplaceFlowStep::CatalogPicker) =>
-            {
-                shell.marketplace_scroll_readme_down(8);
-            }
-            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                if let Err(err) = shell.refresh_marketplace_catalog() {
-                    shell.push_agent_message(spirit::locale::marketplace_refresh_failed_message(
-                        &err,
-                    ));
-                }
-            }
-            KeyCode::Char('l')
-                if key.modifiers.contains(KeyModifiers::CONTROL)
-                    && shell.marketplace_filter_accepts_input() =>
-            {
-                shell.marketplace_clear_filter();
-            }
-            KeyCode::Backspace if shell.marketplace_filter_accepts_input() => {
-                shell.marketplace_backspace_filter()
-            }
-            KeyCode::Delete if shell.marketplace_filter_accepts_input() => {
-                shell.marketplace_backspace_filter()
-            }
-            KeyCode::Char(ch)
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && shell.marketplace_filter_accepts_input() =>
-            {
-                shell.marketplace_insert_filter_char(ch);
-            }
-            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                shell.request_quit();
-            }
-            _ => {}
-        }
-        return;
-    }
-
     let suggestion_mode =
         shell.is_input_suggestion_active() && !shell.view_model().slash_suggestions.is_empty();
     let should_insert_newline =
@@ -1351,7 +1239,6 @@ fn normalize_pasted_text(text: &str) -> String {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PasteTarget {
     MainInput,
-    MarketplaceFilter,
     BottomFormSingleLine,
     BottomFormMultiline,
 }
@@ -1360,7 +1247,6 @@ impl PasteTarget {
     fn newline_text(self) -> &'static str {
         match self {
             Self::MainInput => "\n",
-            Self::MarketplaceFilter => " ",
             Self::BottomFormSingleLine => " ",
             Self::BottomFormMultiline => "\n",
         }
@@ -1369,7 +1255,6 @@ impl PasteTarget {
     fn as_str(self) -> &'static str {
         match self {
             Self::MainInput => "main-input",
-            Self::MarketplaceFilter => "marketplace-filter",
             Self::BottomFormSingleLine => "bottom-form-single-line",
             Self::BottomFormMultiline => "bottom-form-multiline",
         }
@@ -1575,12 +1460,6 @@ fn paste_target(shell: &TuiShell) -> Option<PasteTarget> {
         || shell.is_image_picker_active()
     {
         None
-    } else if shell.is_marketplace_view_active() {
-        if shell.marketplace_filter_accepts_input() {
-            Some(PasteTarget::MarketplaceFilter)
-        } else {
-            None
-        }
     } else if shell.is_bottom_form_active() {
         Some(if shell.bottom_form_preserves_newline() {
             PasteTarget::BottomFormMultiline

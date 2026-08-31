@@ -60,12 +60,6 @@ pub fn supported_ui_locales() -> &'static [&'static str] {
     &SUPPORTED_UI_LOCALES
 }
 
-/// Localized marketplace refresh failure notice for the `spirit` binary entrypoint
-/// (`main.rs` cannot use `t!` directly: `_rust_i18n_t` is generated in the lib crate root).
-pub fn marketplace_refresh_failed_message(err: impl std::fmt::Display) -> String {
-    t!("tui.marketplace.refresh_failed", err = err).into_owned()
-}
-
 pub fn language_display_name(locale: &str) -> String {
     match normalize_ui_locale(locale).as_str() {
         "zh-CN" => t!("ui.picker.languages.simplified_chinese").into_owned(),

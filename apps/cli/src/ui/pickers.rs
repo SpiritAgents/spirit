@@ -375,7 +375,6 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
         "/extensions" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
             "    /extensions".to_string(),
-            "    /extensions marketplace [query]".to_string(),
             "    /extensions list".to_string(),
             "    /extensions import <zip>".to_string(),
             "    /extensions remove <id>".to_string(),

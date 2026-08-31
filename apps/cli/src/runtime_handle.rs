@@ -8,10 +8,7 @@ use std::{
 use crate::{
     ask_questions::AskQuestionsResult,
     daemon::DaemonRuntime,
-    host_protocol::{
-        CliExtensionEntry, CliHostMetadataSnapshot, CliMarketplaceCatalogItem,
-        CliMarketplaceDetail, CliMarketplacePreparedInstall, WorkspaceCapabilityTrustPrompter,
-    },
+    host_protocol::{CliExtensionEntry, CliHostMetadataSnapshot, WorkspaceCapabilityTrustPrompter},
     host_runtime::RuntimeEvent,
     mcp::{McpScope, McpServerConfig},
     mcp_types::{
@@ -143,40 +140,6 @@ impl RuntimeHandle {
 
     pub fn delete_extension(&mut self, id: &str) -> Result<()> {
         self.backend.delete_extension(id)
-    }
-
-    pub fn list_marketplace_extensions(&mut self) -> Result<Vec<CliMarketplaceCatalogItem>> {
-        self.backend.list_marketplace_extensions()
-    }
-
-    pub fn get_marketplace_extension_detail(
-        &mut self,
-        extension_id: &str,
-    ) -> Result<CliMarketplaceDetail> {
-        self.backend.get_marketplace_extension_detail(extension_id)
-    }
-
-    pub fn get_marketplace_extension_readme(&mut self, extension_id: &str) -> Result<String> {
-        self.backend.get_marketplace_extension_readme(extension_id)
-    }
-
-    pub fn prepare_marketplace_extension_install(
-        &mut self,
-        extension_id: &str,
-        version: Option<&str>,
-    ) -> Result<CliMarketplacePreparedInstall> {
-        self.backend
-            .prepare_marketplace_extension_install(extension_id, version)
-    }
-
-    pub fn install_marketplace_extension(
-        &mut self,
-        extension_id: &str,
-        version: Option<&str>,
-        review_acknowledged: bool,
-    ) -> Result<CliExtensionEntry> {
-        self.backend
-            .install_marketplace_extension(extension_id, version, review_acknowledged)
     }
 
     pub fn session(&self) -> &SessionModel {

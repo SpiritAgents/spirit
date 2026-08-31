@@ -801,7 +801,6 @@ impl TuiShell {
     }
 
     pub fn open_rules_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_rules_form(&self.rule_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;
@@ -815,7 +814,6 @@ impl TuiShell {
     }
 
     pub fn open_skills_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_skills_form(&self.skill_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;
@@ -829,7 +827,6 @@ impl TuiShell {
     }
 
     pub fn open_extensions_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_extensions_form(&self.extension_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;

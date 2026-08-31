@@ -5,7 +5,7 @@ use comrak::{
 };
 use ratatui::{
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::Span,
 };
 use std::{cell::RefCell, collections::HashMap};
 use unicode_width::UnicodeWidthStr;
@@ -52,50 +52,6 @@ fn markdown_cache_key(text: &str, body_style: Style) -> String {
         "{text}\u{1f}fg={:?};mod={:?}",
         body_style.fg, body_style.add_modifier
     )
-}
-
-/// Extension detail README: reuses the Markdown AST but forces grayscale to match the terminal black-white-gray aesthetic.
-pub(in crate::ui) fn marketplace_markdown_lines(text: &str) -> Vec<Line<'static>> {
-    markdown_lines(text)
-        .into_iter()
-        .map(|row| {
-            Line::from(
-                row.into_iter()
-                    .map(marketplace_grayscale_span)
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .collect()
-}
-
-fn marketplace_grayscale_span(span: Span<'static>) -> Span<'static> {
-    let content = span.content;
-    let st = span.style;
-    let m = st.add_modifier;
-    let looks_inline_code = content.starts_with('`') && content.ends_with('`');
-    let fg = if m.contains(Modifier::BOLD) && m.contains(Modifier::UNDERLINED) {
-        Color::Rgb(238, 238, 238)
-    } else if m.contains(Modifier::BOLD) {
-        Color::Rgb(215, 215, 215)
-    } else if looks_inline_code {
-        Color::Rgb(190, 190, 190)
-    } else if m.contains(Modifier::ITALIC) {
-        Color::Rgb(155, 155, 155)
-    } else {
-        Color::Rgb(168, 168, 168)
-    };
-    let mut keep = Modifier::empty();
-    for flag in [
-        Modifier::BOLD,
-        Modifier::ITALIC,
-        Modifier::UNDERLINED,
-        Modifier::CROSSED_OUT,
-    ] {
-        if m.contains(flag) {
-            keep |= flag;
-        }
-    }
-    Span::styled(content, Style::default().fg(fg).add_modifier(keep))
 }
 
 fn markdown_options() -> Options<'static> {

@@ -21,7 +21,6 @@ impl TuiShell {
             .iter()
             .map(Self::subagent_summary_view)
             .collect();
-        let marketplace_view = self.build_marketplace_view_model();
         let rewind_picker = self.rewind_picker_view();
         let fork_picker = self.fork_picker_view();
         let todo_strip = if self.todo_items.is_empty() {
@@ -100,7 +99,6 @@ impl TuiShell {
             persisted_standalone_pending_aux: self.persisted_standalone_pending_aux.clone(),
             persisted_standalone_pending_aux_anchor: self.persisted_standalone_pending_aux_anchor,
             cli_ui_hooks: self.cli_ui_hooks.clone(),
-            marketplace_view,
             todo_strip,
             conversation_sel_anchor: self.conversation.sel_anchor,
             conversation_sel_head: self.conversation.sel_head,
