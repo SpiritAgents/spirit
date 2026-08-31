@@ -8,7 +8,6 @@ import type {
   AddProviderModelsRequest,
   CreateRuleRequest,
   CreateSkillRequest,
-  DeleteExtensionRequest,
   DeleteHookEntryRequest,
   DeleteMcpServerRequest,
   DeleteRuleRequest,
@@ -18,7 +17,6 @@ import type {
   DesktopSnapshot,
   GitHubAuthStatus,
   GitHubDeviceAuthChallenge,
-  ImportExtensionRequest,
   ModelRef,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -84,8 +82,6 @@ export type SettingsViewProps = {
   onRemoveModel: (name: string) => Promise<void>;
   onRemoveProviderModels: (groupId: string) => Promise<void>;
   onAddMcpServer: (request: AddMcpServerRequest) => Promise<void>;
-  onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
-  onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
   onUpdateExtensionSecret: (request: UpdateExtensionSecretRequest) => Promise<void>;
   onDeleteMcpServer: (request: DeleteMcpServerRequest) => Promise<void>;

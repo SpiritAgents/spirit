@@ -554,8 +554,6 @@ export default function App() {
                           onRemoveModel={runtime.removeModel}
                           onRemoveProviderModels={runtime.removeProviderModels}
                           onAddMcpServer={runtime.addMcpServer}
-                          onImportExtension={runtime.importExtension}
-                          onDeleteExtension={runtime.deleteExtension}
                           onUpdateExtensionSettings={runtime.updateExtensionSettings}
                           onUpdateExtensionSecret={runtime.updateExtensionSecret}
                           onDeleteMcpServer={runtime.deleteMcpServer}

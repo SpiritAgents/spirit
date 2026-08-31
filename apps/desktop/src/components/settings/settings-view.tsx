@@ -9,7 +9,6 @@ import { AppearanceSettingsPanel } from "@/components/settings/panels/appearance
 import { DeveloperSettingsPanel } from "@/components/settings/panels/developer-settings-panel";
 import { DreamSettingsPanel } from "@/components/settings/panels/dream-settings-panel";
 import { ExtensionConfigurationPanel } from "@/components/settings/panels/extension-configuration-panel";
-import { ExtensionsSettingsPanel } from "@/components/settings/panels/extensions-settings-panel";
 import { HooksSettingsPanel } from "@/components/settings/panels/hooks-settings-panel";
 import { IntegrationsSettingsPanel } from "@/components/settings/panels/integrations-settings-panel";
 import { McpsSettingsPanel } from "@/components/settings/panels/mcps-settings-panel";
@@ -53,8 +52,6 @@ export function SettingsView({
   onRemoveModel,
   onRemoveProviderModels,
   onAddMcpServer,
-  onImportExtension,
-  onDeleteExtension,
   onUpdateExtensionSettings,
   onUpdateExtensionSecret,
   onDeleteMcpServer,
@@ -116,7 +113,6 @@ export function SettingsView({
             tab !== "rules" &&
             tab !== "mcps" &&
             tab !== "hooks" &&
-            tab !== "extensions" &&
             tab !== "agents" &&
             tab !== "tab" &&
             tab !== "integrations" ? (
@@ -186,13 +182,6 @@ export function SettingsView({
                 onCreateRule={onCreateRule}
                 onDeleteRule={onDeleteRule}
                 onGenerateRuleNavigate={onGenerateRuleNavigate}
-              />
-            ) : tab === "extensions" ? (
-              <ExtensionsSettingsPanel
-                snapshot={snapshot}
-                extensionsBusy={extensionsBusy}
-                onImportExtension={onImportExtension}
-                onDeleteExtension={onDeleteExtension}
               />
             ) : tab === "mcps" ? (
               <McpsSettingsPanel

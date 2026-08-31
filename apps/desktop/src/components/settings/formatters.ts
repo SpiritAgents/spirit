@@ -1,9 +1,3 @@
-export function formatExtensionInstalledAt(unixMs: number): string {
-  return new Date(unixMs).toLocaleString("zh-CN", {
-    hour12: false,
-  });
-}
-
 export function formatSettingsTime(unixMs?: number): string {
   if (typeof unixMs !== "number") {
     return "—";
