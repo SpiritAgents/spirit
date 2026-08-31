@@ -640,10 +640,6 @@
     "searchPlaceholder": "Поиск расширений",
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
-    "tabReadme": "Readme",
-    "tabChangelog": "Журнал изменений",
-    "noReadme": "Нет содержимого README.",
-    "noChangelog": "Нет журнала изменений.",
     "install": "Установить",
     "enable": "Включить",
     "disable": "Отключить",
@@ -651,13 +647,7 @@
     "uninstall": "Удалить",
     "uninstallExtension": "Удалить расширение",
     "uninstallExtensionConfirm": "Вы уверены, что хотите удалить «{{name}}»? Локальный каталог установки будет удалён.",
-    "noExtensionsInstalled": "Расширения ещё не установлены. Нажмите «Установить», чтобы добавить из ZIP-архива.",
-    "contributions": "Вклады",
-    "contributionMcp": "MCP",
-    "contributionHooks": "Hooks",
-    "contributionSkills": "Skills",
-    "contributionRules": "Rules",
-    "contributionRuleIncluded": "Включено"
+    "noExtensionsInstalled": "Расширения ещё не установлены. Нажмите «Установить», чтобы добавить из ZIP-архива."
   },
   "dreams": {
     "collectorRunning": "Сбор снов выполняется. Скоро здесь появятся новые последние тренды.",

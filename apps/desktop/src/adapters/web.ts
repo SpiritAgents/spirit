@@ -31,7 +31,6 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   QueryWorkspaceFileReferenceSuggestionsRequest,
-  ReadExtensionDocumentRequest,
   QueuedUserTurnRequest,
   RewindAndSubmitMessageRequest,
   ForkSessionRequest,
@@ -184,9 +183,6 @@ export function createWebHostApi(): HostApi {
     },
     setExtensionEnabled(request: SetExtensionEnabledRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/enabled", request);
-    },
-    readExtensionDocument(request: ReadExtensionDocumentRequest) {
-      return post<string>(baseUrl, "/api/extensions/document", request);
     },
     runExtension(request: RunExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/run", request);

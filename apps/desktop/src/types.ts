@@ -441,11 +441,6 @@ export interface SetExtensionEnabledRequest {
   enabled: boolean;
 }
 
-export interface ReadExtensionDocumentRequest {
-  id: string;
-  fileName: string;
-}
-
 export interface RunExtensionRequest {
   id: string;
 }

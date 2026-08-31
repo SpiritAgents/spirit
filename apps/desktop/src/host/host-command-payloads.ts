@@ -21,7 +21,6 @@ import type {
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
-  ReadExtensionDocumentRequest,
   RecordCodeCompletionFileStateRequest,
   RequestCodeCompletionRequest,
   ReadGitHistoryRequest,
@@ -117,7 +116,6 @@ export type CommandPayloads = {
   importExtension: { request: ImportExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
-  readExtensionDocument: { request: ReadExtensionDocumentRequest };
   runExtension: { request: RunExtensionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
   updateExtensionSecret: { request: UpdateExtensionSecretRequest };

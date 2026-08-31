@@ -640,10 +640,6 @@
     "searchPlaceholder": "Erweiterungen suchen",
     "noMatches": "Keine passenden Erweiterungen.",
     "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",
-    "tabReadme": "Readme",
-    "tabChangelog": "Changelog",
-    "noReadme": "Kein README-Inhalt verfügbar.",
-    "noChangelog": "Kein Changelog verfügbar.",
     "install": "Installieren",
     "enable": "Aktivieren",
     "disable": "Deaktivieren",
@@ -651,13 +647,7 @@
     "uninstall": "Deinstallieren",
     "uninstallExtension": "Erweiterung deinstallieren",
     "uninstallExtensionConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Das lokale Installationsverzeichnis wird entfernt.",
-    "noExtensionsInstalled": "Keine Erweiterungen installiert. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen.",
-    "contributions": "Beiträge",
-    "contributionMcp": "MCP",
-    "contributionHooks": "Hooks",
-    "contributionSkills": "Skills",
-    "contributionRules": "Rules",
-    "contributionRuleIncluded": "Enthalten"
+    "noExtensionsInstalled": "Keine Erweiterungen installiert. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen."
   },
   "dreams": {
     "collectorRunning": "Dreams werden gesammelt. Neue aktuelle Trends erscheinen in Kürze hier.",

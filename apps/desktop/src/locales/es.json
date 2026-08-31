@@ -640,10 +640,6 @@
     "searchPlaceholder": "Buscar extensiones",
     "noMatches": "No se encontraron extensiones.",
     "extensionNotFound": "Extensión no encontrada. Regresa a la lista.",
-    "tabReadme": "Readme",
-    "tabChangelog": "Changelog",
-    "noReadme": "No hay contenido README.",
-    "noChangelog": "No hay changelog.",
     "install": "Instalar",
     "enable": "Activar",
     "disable": "Desactivar",
@@ -651,13 +647,7 @@
     "uninstall": "Desinstalar",
     "uninstallExtension": "Desinstalar extensión",
     "uninstallExtensionConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Se eliminará el directorio de instalación local.",
-    "noExtensionsInstalled": "No hay extensiones instaladas. Selecciona Instalar para añadir una desde un archivo ZIP.",
-    "contributions": "Contribuciones",
-    "contributionMcp": "MCP",
-    "contributionHooks": "Hooks",
-    "contributionSkills": "Skills",
-    "contributionRules": "Rules",
-    "contributionRuleIncluded": "Incluido"
+    "noExtensionsInstalled": "No hay extensiones instaladas. Selecciona Instalar para añadir una desde un archivo ZIP."
   },
   "dreams": {
     "collectorRunning": "Se están recolectando Dreams. Las nuevas tendencias recientes aparecerán aquí pronto.",

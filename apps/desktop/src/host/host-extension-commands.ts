@@ -25,7 +25,6 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
-  ReadExtensionDocumentRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -54,7 +53,6 @@ type HostExtensionManager = {
   }>;
   remove(id: string): Promise<void>;
   setEnabled(id: string, enabled: boolean): Promise<void>;
-  readDocument(id: string, fileName: string): Promise<string>;
   run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
   setSettingsValues(input: {
     id: string;
@@ -310,14 +308,6 @@ export async function deleteExtensionCommand(
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();
   });
-}
-
-export async function readExtensionDocumentCommand(
-  ctx: HostExtensionCommandContext,
-  request: ReadExtensionDocumentRequest,
-): Promise<string> {
-  // Pure per-host disk read: no workspace init or serialization needed.
-  return ctx.extensionManager().readDocument(request.id, request.fileName);
 }
 
 export async function setExtensionEnabledCommand(

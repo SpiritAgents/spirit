@@ -126,7 +126,6 @@ import type {
   SessionListItem,
   ImportExtensionRequest,
   InstallLspProviderRequest,
-  ReadExtensionDocumentRequest,
   SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
   AbortConversationRequest,
@@ -177,7 +176,6 @@ import {
   deleteSkillCommand,
   importExtensionCommand,
   inspectMcpServerCommand,
-  readExtensionDocumentCommand,
   runExtensionCommand,
   setExtensionEnabledCommand,
   saveHookEntryCommand,
@@ -1613,10 +1611,6 @@ class DesktopHostService {
 
   async setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot> {
     return setExtensionEnabledCommand(this.extensionCommandContext(), request);
-  }
-
-  async readExtensionDocument(request: ReadExtensionDocumentRequest): Promise<string> {
-    return readExtensionDocumentCommand(this.extensionCommandContext(), request);
   }
 
   async runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot> {

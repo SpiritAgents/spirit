@@ -27,7 +27,6 @@ import type {
   PreviewModelsRequest,
   PreviewModelsResponse,
   QueryWorkspaceFileReferenceSuggestionsRequest,
-  ReadExtensionDocumentRequest,
   RememberWorkspaceRequest,
   ForgetWorkspaceRequest,
   RewindAndSubmitMessageRequest,
@@ -88,7 +87,6 @@ declare global {
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
     setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
-    readExtensionDocument(request: ReadExtensionDocumentRequest): Promise<string>;
     runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
     updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
     updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;
