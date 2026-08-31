@@ -96,6 +96,52 @@ export async function collectEnabledExtensionInstructionContributions(
   return { mcp, hooks, skills, rules };
 }
 
+export interface HostExtensionMcpContributionSummary {
+  name: string;
+  transport: "stdio" | "http";
+}
+
+export interface HostExtensionInstructionContributionSummary {
+  mcp?: HostExtensionMcpContributionSummary[];
+  hooks?: HookEventName[];
+  skills?: string[];
+  rules?: boolean;
+}
+
+/** Per-extension contribution-point summary for the extension surface (告知权). Disabled packages still summarize. */
+export async function summarizeDeclaredExtensionContributionPoints(
+  extension: HostInstalledExtension,
+  log?: (message: string) => void,
+): Promise<HostExtensionInstructionContributionSummary | undefined> {
+  const summary: HostExtensionInstructionContributionSummary = {};
+
+  if (isDeclaredInstructionContribution(extension, "mcp")) {
+    const mcp: McpConfigFile = { servers: {} };
+    await collectExtensionMcpContribution(extension, mcp, log);
+    summary.mcp = Object.entries(mcp.servers).map(([name, server]) => ({
+      name,
+      transport: server.transport.type,
+    }));
+  }
+  if (isDeclaredInstructionContribution(extension, "hooks")) {
+    const hooks: HostExtensionContributedHook[] = [];
+    await collectExtensionHooksContribution(extension, hooks, log);
+    summary.hooks = HOOK_EVENT_NAMES.filter((event) => hooks.some((hook) => hook.event === event));
+  }
+  if (isDeclaredInstructionContribution(extension, "skills")) {
+    const skills: HostExtensionContributedSkill[] = [];
+    await collectExtensionSkillsContribution(extension, skills, new Set(), log);
+    summary.skills = skills.map((skill) => skill.name);
+  }
+  if (isDeclaredInstructionContribution(extension, "rules")) {
+    const rules: HostExtensionContributedRule[] = [];
+    await collectExtensionRulesContribution(extension, rules, log);
+    summary.rules = rules.length > 0;
+  }
+
+  return Object.keys(summary).length > 0 ? summary : undefined;
+}
+
 function isDeclaredInstructionContribution(
   extension: HostInstalledExtension,
   key: "mcp" | "hooks" | "skills" | "rules",
@@ -125,9 +171,7 @@ async function collectExtensionMcpContribution(
 
   for (const [name, server] of Object.entries(parsed.servers)) {
     if (name in merged.servers) {
-      log?.(
-        `[extensions] shadowed mcp server name=${name} kept=existing ignored=${extension.id}`,
-      );
+      log?.(`[extensions] shadowed mcp server name=${name} kept=existing ignored=${extension.id}`);
       continue;
     }
     try {
@@ -256,9 +300,7 @@ async function collectExtensionSkillsContribution(
       continue;
     }
     if (claimedNames.has(parsed.name)) {
-      log?.(
-        `[extensions] shadowed skill name=${parsed.name} kept=existing ignored=${skillPath}`,
-      );
+      log?.(`[extensions] shadowed skill name=${parsed.name} kept=existing ignored=${skillPath}`);
       continue;
     }
     claimedNames.add(parsed.name);
@@ -369,9 +411,7 @@ export function overlayExtensionRulesAndSkills(
   const overlaySkills: LlmEnabledSkillCatalogEntry[] = [];
   for (const skill of contributions.skills) {
     if (claimedSkillNames.has(skill.name)) {
-      log?.(
-        `[extensions] shadowed skill name=${skill.name} kept=existing ignored=${skill.path}`,
-      );
+      log?.(`[extensions] shadowed skill name=${skill.name} kept=existing ignored=${skill.path}`);
       continue;
     }
     claimedSkillNames.add(skill.name);

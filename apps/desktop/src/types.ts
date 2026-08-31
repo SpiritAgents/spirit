@@ -541,6 +541,13 @@ export interface DesktopExtensionSecretStatus {
 
 export type DesktopExtensionHostKind = "cli" | "desktop";
 
+export interface DesktopExtensionInstructionContributionSummary {
+  mcp?: Array<{ name: string; transport: "stdio" | "http" }>;
+  hooks?: string[];
+  skills?: string[];
+  rules?: boolean;
+}
+
 export interface DesktopExtensionListItem {
   id: string;
   displayName: string;
@@ -558,6 +565,7 @@ export interface DesktopExtensionListItem {
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
   cliHooks?: DesktopExtensionCliUiHookEntry[];
+  instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
   settingsValues?: Record<string, DesktopExtensionSettingValue>;
   secretSlots?: DesktopExtensionSecretSlot[];

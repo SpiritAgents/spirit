@@ -651,7 +651,13 @@
     "uninstall": "Desinstalar",
     "uninstallExtension": "Desinstalar extensión",
     "uninstallExtensionConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Se eliminará el directorio de instalación local.",
-    "noExtensionsInstalled": "No hay extensiones instaladas. Selecciona Instalar para añadir una desde un archivo ZIP."
+    "noExtensionsInstalled": "No hay extensiones instaladas. Selecciona Instalar para añadir una desde un archivo ZIP.",
+    "contributions": "Contribuciones",
+    "contributionMcp": "MCP",
+    "contributionHooks": "Hooks",
+    "contributionSkills": "Skills",
+    "contributionRules": "Rules",
+    "contributionRuleIncluded": "Incluido"
   },
   "dreams": {
     "collectorRunning": "Se están recolectando Dreams. Las nuevas tendencias recientes aparecerán aquí pronto.",

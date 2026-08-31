@@ -648,7 +648,13 @@
     "uninstall": "卸载",
     "uninstallExtension": "卸载扩展",
     "uninstallExtensionConfirm": "确定卸载“{{name}}”？这会移除本地安装目录。",
-    "noExtensionsInstalled": "尚未安装扩展。点击“安装”从 ZIP 归档添加。"
+    "noExtensionsInstalled": "尚未安装扩展。点击“安装”从 ZIP 归档添加。",
+    "contributions": "贡献",
+    "contributionMcp": "MCP",
+    "contributionHooks": "Hooks",
+    "contributionSkills": "Skills",
+    "contributionRules": "Rules",
+    "contributionRuleIncluded": "已包含"
   },
   "dreams": {
     "collectorRunning": "梦境正在收集中，新的近期动向会很快出现在这里",

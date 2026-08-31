@@ -2482,6 +2482,42 @@ fn extension_help_text(entry: &CliExtensionEntry) -> String {
     {
         lines.push(format!("source: {}", file_name));
     }
+    if let Some(contributions) = entry.instruction_contributions.as_ref() {
+        if let Some(mcp) = contributions.mcp.as_ref() {
+            let summary = mcp
+                .iter()
+                .map(|server| format!("{} ({})", server.name, server.transport))
+                .collect::<Vec<_>>()
+                .join(", ");
+            lines.push(format!(
+                "mcp: {}",
+                if summary.is_empty() { "—" } else { &summary }
+            ));
+        }
+        if let Some(hooks) = contributions.hooks.as_ref() {
+            lines.push(format!(
+                "hooks: {}",
+                if hooks.is_empty() {
+                    "—".to_string()
+                } else {
+                    hooks.join(", ")
+                }
+            ));
+        }
+        if let Some(skills) = contributions.skills.as_ref() {
+            lines.push(format!(
+                "skills: {}",
+                if skills.is_empty() {
+                    "—".to_string()
+                } else {
+                    skills.join(", ")
+                }
+            ));
+        }
+        if let Some(rules) = contributions.rules {
+            lines.push(format!("rules: {}", if rules { "yes" } else { "—" }));
+        }
+    }
     lines.join("\n")
 }
 
@@ -2708,7 +2744,10 @@ mod tests {
     use std::path::PathBuf;
 
     use crate::{
-        host_protocol::CliExtensionEntry,
+        host_protocol::{
+            CliExtensionEntry, CliExtensionInstructionContributions,
+            CliExtensionMcpContributionSummary,
+        },
         mcp_types::{McpDiscoveredPrompt, McpDiscoveredPromptArgument},
         rules::{RuleEntry, RulePreview, RuleScope, RuleSource},
         skills::{SkillEntry, SkillPreview, SkillRootKind, SkillScope, SkillSource},
@@ -2829,6 +2868,25 @@ mod tests {
             BottomFormFieldEditorView::Checkbox { checked, .. } => assert!(!*checked),
             _ => panic!("expected checkbox"),
         }
+    }
+
+    #[test]
+    fn extensions_form_help_lists_instruction_contributions() {
+        let mut entry = sample_extension_entry();
+        entry.instruction_contributions = Some(CliExtensionInstructionContributions {
+            mcp: Some(vec![CliExtensionMcpContributionSummary {
+                name: "bundled".to_string(),
+                transport: "stdio".to_string(),
+            }]),
+            hooks: Some(vec!["sessionStart".to_string()]),
+            skills: Some(vec!["demo-skill".to_string()]),
+            rules: Some(true),
+        });
+        let form = new_extensions_form(&[entry]);
+        assert!(form.fields[1].help.contains("mcp: bundled (stdio)"));
+        assert!(form.fields[1].help.contains("hooks: sessionStart"));
+        assert!(form.fields[1].help.contains("skills: demo-skill"));
+        assert!(form.fields[1].help.contains("rules: yes"));
     }
 
     #[test]
@@ -3599,6 +3657,14 @@ mod tests {
                 PathBuf::from("C:/users/demo/AppData/Roaming/Spirit/skills/data-analysis/SKILL.md"),
                 SkillRootKind::User,
             ),
+            SkillScope::Extension => (
+                "extension-skill",
+                "bundled-skill",
+                "A skill bundled by an extension.",
+                "extension/skills/bundled-skill/SKILL.md",
+                PathBuf::from("/extensions/demo/skills/bundled-skill/SKILL.md"),
+                SkillRootKind::Extension,
+            ),
         };
 
         SkillEntry {
@@ -3637,6 +3703,7 @@ mod tests {
             settings_schema: None,
             secret_slots: None,
             archive_file_name: Some("basic-metadata-demo.zip".to_string()),
+            instruction_contributions: None,
             installed_at_unix_ms: 0,
         }
     }

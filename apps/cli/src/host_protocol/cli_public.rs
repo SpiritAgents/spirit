@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf;
 
 use crate::{plan::PlanMetadata, rules::RuleEntry, skills::SkillEntry};
 
@@ -8,6 +9,8 @@ use crate::{plan::PlanMetadata, rules::RuleEntry, skills::SkillEntry};
 pub struct CliHostMetadataSnapshot {
     pub rule_entries: Vec<RuleEntry>,
     pub skill_entries: Vec<SkillEntry>,
+    #[serde(default)]
+    pub extension_skill_entries: Vec<CliExtensionSkillSlashEntry>,
     pub plan_metadata: PlanMetadata,
 }
 
@@ -97,6 +100,36 @@ pub struct CliExtensionContributes {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CliExtensionMcpContributionSummary {
+    pub name: String,
+    pub transport: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionInstructionContributions {
+    #[serde(default)]
+    pub mcp: Option<Vec<CliExtensionMcpContributionSummary>>,
+    #[serde(default)]
+    pub hooks: Option<Vec<String>>,
+    #[serde(default)]
+    pub skills: Option<Vec<String>>,
+    #[serde(default)]
+    pub rules: Option<bool>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionSkillSlashEntry {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub path: PathBuf,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CliExtensionEntry {
     pub id: String,
     pub display_name: String,
@@ -110,6 +143,8 @@ pub struct CliExtensionEntry {
     pub activation_events: Option<Vec<String>>,
     pub requested_capabilities: Option<Vec<String>>,
     pub contributes: Option<CliExtensionContributes>,
+    #[serde(default)]
+    pub instruction_contributions: Option<CliExtensionInstructionContributions>,
     pub settings_schema: Option<Vec<CliExtensionSettingEntry>>,
     pub secret_slots: Option<Vec<CliExtensionSecretSlotEntry>>,
     pub archive_file_name: Option<String>,

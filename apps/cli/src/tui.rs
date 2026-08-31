@@ -15,7 +15,7 @@ use crate::{
     ask_questions::AskQuestionsResult,
     chat_store,
     chat_timeline::project_live_chat_from_llm_history,
-    host_protocol::{CliExtensionCliUiHookEntry, CliExtensionEntry},
+    host_protocol::{CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry},
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
@@ -34,7 +34,7 @@ use crate::{
         ask_questions, bottom_form, file_reference, manual_shell, slash,
         workspace_trust as workspace_trust_form,
     },
-    skills::{self, SkillEntry},
+    skills::{self, SkillEntry, SkillPreview, SkillRootKind, SkillScope, SkillSource},
     subagent_display::parse_pending_subagent_status_text,
     ui::UiRuntimeState,
     view::{
@@ -122,6 +122,7 @@ pub struct TuiShell {
     plan_metadata: PlanMetadata,
     rule_entries: Vec<RuleEntry>,
     skill_entries: Vec<SkillEntry>,
+    extension_skill_entries: Vec<SkillEntry>,
     extension_entries: Vec<CliExtensionEntry>,
     cli_ui_hooks: Vec<CliUiHookView>,
     ui_runtime_state: UiRuntimeState,
@@ -181,6 +182,11 @@ impl TuiShell {
             .context("Failed to read shared host metadata")?;
         let rule_entries = cli_metadata.rule_entries;
         let skill_entries = cli_metadata.skill_entries;
+        let extension_skill_entries = cli_metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         let plan_metadata = cli_metadata.plan_metadata;
         let extension_entries = runtime.list_extensions().unwrap_or_else(|err| {
             logging::log_event(&format!("[extensions] failed to initialize list: {err:#}"));
@@ -241,6 +247,7 @@ impl TuiShell {
             plan_metadata,
             rule_entries,
             skill_entries,
+            extension_skill_entries,
             extension_entries,
             cli_ui_hooks,
             // The inline TUI draws on the main screen and must not probe image protocols (that would emit kitty/sixel queries to stdout).
@@ -284,7 +291,10 @@ impl TuiShell {
     }
 
     pub(crate) fn enabled_skill_entries(&self) -> impl Iterator<Item = &SkillEntry> {
-        self.skill_entries.iter().filter(|entry| entry.enabled)
+        self.skill_entries
+            .iter()
+            .filter(|entry| entry.enabled)
+            .chain(self.extension_skill_entries.iter())
     }
 
     pub(crate) fn find_enabled_skill_entry(&self, name: &str) -> Option<&SkillEntry> {
@@ -302,6 +312,11 @@ impl TuiShell {
             .context("Failed to read shared rule metadata")?;
         self.rule_entries = metadata.rule_entries;
         self.skill_entries = metadata.skill_entries;
+        self.extension_skill_entries = metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         self.plan_metadata = metadata.plan_metadata;
         Ok(())
     }
@@ -316,6 +331,11 @@ impl TuiShell {
             .context("Failed to read shared skill metadata")?;
         self.rule_entries = metadata.rule_entries;
         self.skill_entries = metadata.skill_entries;
+        self.extension_skill_entries = metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         self.plan_metadata = metadata.plan_metadata;
         if self.current_slash_query().is_some() {
             self.refresh_suggestions();
@@ -329,6 +349,13 @@ impl TuiShell {
             .list_extensions()
             .context("Failed to read extension list")?;
         self.cli_ui_hooks = compile_cli_ui_hooks(&self.extension_entries);
+        if let Ok(metadata) = self.runtime.load_cli_host_metadata(self.agent_mode()) {
+            self.extension_skill_entries = metadata
+                .extension_skill_entries
+                .into_iter()
+                .map(skill_entry_from_extension_slash)
+                .collect();
+        }
         if self.current_slash_query().is_some() {
             self.refresh_suggestions();
         }
@@ -1326,6 +1353,26 @@ fn truncate_input_log_preview(text: &str, max_chars: usize) -> String {
         }
     }
     preview
+}
+
+fn skill_entry_from_extension_slash(entry: CliExtensionSkillSlashEntry) -> SkillEntry {
+    SkillEntry {
+        source: SkillSource {
+            id: entry.id,
+            scope: SkillScope::Extension,
+            root_kind: SkillRootKind::Extension,
+            name: entry.name.clone(),
+            description: entry.description.clone(),
+            short_label: format!("extension/skills/{}/SKILL.md", entry.name),
+            path: entry.path,
+        },
+        enabled: true,
+        content: entry.content.clone(),
+        preview: SkillPreview {
+            excerpt: entry.content,
+            truncated: false,
+        },
+    }
 }
 
 fn compile_cli_ui_hooks(entries: &[CliExtensionEntry]) -> Vec<CliUiHookView> {

@@ -21,10 +21,11 @@ import {
   saveHookEntry,
   saveToggleState,
   validateHooksConfig,
+  collectEnabledExtensionInstructionContributions,
   type PermissionEvalResult,
 } from "@spiritagent/host-internal";
 
-import { serializeHostExtension } from "./host-serializers.js";
+import { serializeListedHostExtension } from "./host-serializers.js";
 import type { SessionManager } from "./session-manager.js";
 
 /**
@@ -73,9 +74,20 @@ export class HostService {
         ) as AgentMode;
         const activePlanPath =
           typeof params["activePlanPath"] === "string" ? params["activePlanPath"] : undefined;
+        const hostKind = HostService.readHostKind(params);
+        const contributions = await collectEnabledExtensionInstructionContributions(
+          await this.extensionManager(hostKind).list(),
+        );
         return {
           ruleEntries: await discoverRuleEntries(context),
           skillEntries: await discoverSkillEntries(context),
+          extensionSkillEntries: contributions.skills.map((skill) => ({
+            id: skill.id,
+            name: skill.name,
+            description: skill.description,
+            path: skill.path,
+            content: skill.content,
+          })),
           planMetadata: planMetadataSnapshot(
             context,
             agentMode,
@@ -192,7 +204,7 @@ export class HostService {
       // --------------------------------------------------------- extensions
       case "host.listExtensions": {
         const items = await this.extensionManager(HostService.readHostKind(params)).list();
-        return items.map((item) => serializeHostExtension(item));
+        return Promise.all(items.map((item) => serializeListedHostExtension(item)));
       }
       case "host.importExtension": {
         const archiveBase64 =
@@ -208,7 +220,7 @@ export class HostService {
             : {}),
         });
         await this.sessions.refreshExtensions();
-        return serializeHostExtension(item);
+        return serializeListedHostExtension(item);
       }
       case "host.deleteExtension": {
         const id = typeof params["id"] === "string" ? params["id"].trim() : "";

@@ -123,6 +123,50 @@ export function MarketplaceDetailView({
             </div>
           </div>
 
+          {item.instructionContributions ? (
+            <section className="space-y-2">
+              <h3 className="text-sm font-normal text-foreground">
+                {t("marketplace.contributions")}
+              </h3>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {item.instructionContributions.mcp ? (
+                  <li>
+                    <span className="text-foreground">{t("marketplace.contributionMcp")}: </span>
+                    {item.instructionContributions.mcp.length > 0
+                      ? item.instructionContributions.mcp
+                          .map((server) => `${server.name} (${server.transport})`)
+                          .join(", ")
+                      : "—"}
+                  </li>
+                ) : null}
+                {item.instructionContributions.hooks ? (
+                  <li>
+                    <span className="text-foreground">{t("marketplace.contributionHooks")}: </span>
+                    {item.instructionContributions.hooks.length > 0
+                      ? item.instructionContributions.hooks.join(", ")
+                      : "—"}
+                  </li>
+                ) : null}
+                {item.instructionContributions.skills ? (
+                  <li>
+                    <span className="text-foreground">{t("marketplace.contributionSkills")}: </span>
+                    {item.instructionContributions.skills.length > 0
+                      ? item.instructionContributions.skills.join(", ")
+                      : "—"}
+                  </li>
+                ) : null}
+                {item.instructionContributions.rules !== undefined ? (
+                  <li>
+                    <span className="text-foreground">{t("marketplace.contributionRules")}: </span>
+                    {item.instructionContributions.rules
+                      ? t("marketplace.contributionRuleIncluded")
+                      : "—"}
+                  </li>
+                ) : null}
+              </ul>
+            </section>
+          ) : null}
+
           {/* Tabs: no full-width top divider, only the current item's bottom edge. */}
           <div className="space-y-4">
             <div className="flex flex-wrap gap-1 pt-0.5">

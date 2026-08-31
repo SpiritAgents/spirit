@@ -1,4 +1,8 @@
 import type { JsonObject, JsonValue } from "@spiritagent/agent-core";
+import {
+  summarizeDeclaredExtensionContributionPoints,
+  type HostInstalledExtension,
+} from "@spiritagent/host-internal";
 
 /**
  * Serializers mirroring the legacy host-bridge shapes — CLI/Desktop clients
@@ -168,6 +172,16 @@ export function serializeHostExtension(item: {
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
   } as unknown as JsonObject;
+}
+
+export async function serializeListedHostExtension(
+  item: HostInstalledExtension,
+): Promise<JsonObject> {
+  const summary = await summarizeDeclaredExtensionContributionPoints(item);
+  return {
+    ...serializeHostExtension(item),
+    ...(summary ? { instructionContributions: summary as unknown as JsonValue } : {}),
+  };
 }
 
 export type { JsonValue };

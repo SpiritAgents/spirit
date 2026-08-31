@@ -7,6 +7,7 @@ import { test } from "vitest";
 import {
   collectEnabledExtensionInstructionContributions,
   overlayExtensionRulesAndSkills,
+  summarizeDeclaredExtensionContributionPoints,
 } from "./extension-contributions.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./extensions.js";
 
@@ -167,6 +168,15 @@ Ignored.
     assert.equal(disabledCollected.hooks.length, 0);
     assert.equal(disabledCollected.skills.length, 0);
     assert.equal(disabledCollected.rules.length, 0);
+
+    const disabledListed = await manager.list();
+    const disabledDeclared = disabledListed.find((item) => item.id === "spirit.collect-declared");
+    assert.ok(disabledDeclared);
+    const summary = await summarizeDeclaredExtensionContributionPoints(disabledDeclared);
+    assert.deepEqual(summary?.mcp, [{ name: "bundled", transport: "stdio" }]);
+    assert.deepEqual(summary?.hooks, ["sessionStart"]);
+    assert.deepEqual(summary?.skills, ["demo-skill"]);
+    assert.equal(summary?.rules, true);
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });

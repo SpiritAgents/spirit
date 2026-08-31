@@ -651,7 +651,13 @@
     "uninstall": "Удалить",
     "uninstallExtension": "Удалить расширение",
     "uninstallExtensionConfirm": "Вы уверены, что хотите удалить «{{name}}»? Локальный каталог установки будет удалён.",
-    "noExtensionsInstalled": "Расширения ещё не установлены. Нажмите «Установить», чтобы добавить из ZIP-архива."
+    "noExtensionsInstalled": "Расширения ещё не установлены. Нажмите «Установить», чтобы добавить из ZIP-архива.",
+    "contributions": "Вклады",
+    "contributionMcp": "MCP",
+    "contributionHooks": "Hooks",
+    "contributionSkills": "Skills",
+    "contributionRules": "Rules",
+    "contributionRuleIncluded": "Включено"
   },
   "dreams": {
     "collectorRunning": "Сбор снов выполняется. Скоро здесь появятся новые последние тренды.",

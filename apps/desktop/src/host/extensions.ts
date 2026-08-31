@@ -9,6 +9,7 @@ import {
 } from "@spiritagent/agent-core";
 import {
   collectHostExtensionContributedTools,
+  summarizeDeclaredExtensionContributionPoints,
   type HostExtensionManager,
   type HostInstalledExtension,
 } from "@spiritagent/host-internal";
@@ -34,114 +35,120 @@ export async function buildDesktopExtensionListItems(
 ): Promise<DesktopExtensionListItem[]> {
   const metadataOnly = options?.metadataOnly === true;
   return Promise.all(
-    extensions.map(async (item) => ({
-      id: item.id,
-      displayName: item.manifest.name,
-      ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
-      version: item.manifest.version,
-      enabled: item.enabled,
-      ...(item.manifest.description ? { description: item.manifest.description } : {}),
-      ...(item.manifest.author ? { author: item.manifest.author } : {}),
-      ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
-      ...(item.manifest.main ? { main: item.manifest.main } : {}),
-      supportedHosts: [...item.manifest.supportedHosts],
-      ...(item.manifest.activationEvents?.length
-        ? { activationEvents: [...item.manifest.activationEvents] }
-        : {}),
-      ...(item.manifest.requestedCapabilities?.length
-        ? { requestedCapabilities: [...item.manifest.requestedCapabilities] }
-        : {}),
-      ...(item.manifest.contributes?.tools?.length
-        ? {
-            contributedTools: item.manifest.contributes.tools.map((tool) => ({
-              name: tool.name,
-              description: tool.description,
-              ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
-              ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.contributes?.desktop?.css?.length
-        ? {
-            desktopCss: item.manifest.contributes.desktop.css.map((entry) => ({
-              path: entry.path,
-              ...(entry.media ? { media: entry.media } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.contributes?.desktop?.settingsPage
-        ? {
-            desktopSettingsPage: item.manifest.contributes.desktop.settingsPage.title
-              ? { title: item.manifest.contributes.desktop.settingsPage.title }
-              : {},
-          }
-        : {}),
-      ...(item.manifest.contributes?.cli?.hooks?.length
-        ? {
-            cliHooks: item.manifest.contributes.cli.hooks.map((hook) => ({
-              slot: hook.slot,
-              ...(hook.variant ? { variant: hook.variant } : {}),
-              ...(hook.tokens
-                ? {
-                    tokens: {
-                      ...(hook.tokens.foreground ? { foreground: hook.tokens.foreground } : {}),
-                      ...(hook.tokens.border ? { border: hook.tokens.border } : {}),
-                      ...(hook.tokens.accent ? { accent: hook.tokens.accent } : {}),
-                    },
-                  }
-                : {}),
-              ...(hook.prefix ? { prefix: hook.prefix } : {}),
-              ...(hook.suffix ? { suffix: hook.suffix } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.settingsSchema?.length
-        ? {
-            settingsSchema: item.manifest.settingsSchema.map((setting) => ({
-              key: setting.key,
-              type: setting.type,
-              title: setting.title,
-              ...(setting.description ? { description: setting.description } : {}),
-              ...(setting.placeholder ? { placeholder: setting.placeholder } : {}),
-              ...(setting.required !== undefined ? { required: setting.required } : {}),
-              ...(setting.defaultValue !== undefined ? { defaultValue: setting.defaultValue } : {}),
-              ...(setting.options?.length
-                ? {
-                    options: setting.options.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                      ...(option.description ? { description: option.description } : {}),
-                    })),
-                  }
-                : {}),
-            })),
-            ...(metadataOnly ? {} : { settingsValues: await manager.getSettingsValues(item.id) }),
-          }
-        : {}),
-      ...(item.manifest.secretSlots?.length
-        ? {
-            secretSlots: item.manifest.secretSlots.map((slot) => ({
-              key: slot.key,
-              title: slot.title,
-              ...(slot.description ? { description: slot.description } : {}),
-              ...(slot.required !== undefined ? { required: slot.required } : {}),
-            })),
-            ...(metadataOnly
-              ? {}
-              : {
-                  secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
-                    ([key, configured]) => ({
-                      key,
-                      configured,
-                    }),
-                  ),
-                }),
-          }
-        : {}),
-      ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
-      ...(item.installSource ? { installSource: item.installSource } : {}),
-      installedAtUnixMs: item.installedAtUnixMs,
-    })),
+    extensions.map(async (item) => {
+      const instructionContributions = await summarizeDeclaredExtensionContributionPoints(item);
+      return {
+        id: item.id,
+        displayName: item.manifest.name,
+        ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
+        version: item.manifest.version,
+        enabled: item.enabled,
+        ...(item.manifest.description ? { description: item.manifest.description } : {}),
+        ...(item.manifest.author ? { author: item.manifest.author } : {}),
+        ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
+        ...(item.manifest.main ? { main: item.manifest.main } : {}),
+        supportedHosts: [...item.manifest.supportedHosts],
+        ...(item.manifest.activationEvents?.length
+          ? { activationEvents: [...item.manifest.activationEvents] }
+          : {}),
+        ...(item.manifest.requestedCapabilities?.length
+          ? { requestedCapabilities: [...item.manifest.requestedCapabilities] }
+          : {}),
+        ...(item.manifest.contributes?.tools?.length
+          ? {
+              contributedTools: item.manifest.contributes.tools.map((tool) => ({
+                name: tool.name,
+                description: tool.description,
+                ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
+                ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
+              })),
+            }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.css?.length
+          ? {
+              desktopCss: item.manifest.contributes.desktop.css.map((entry) => ({
+                path: entry.path,
+                ...(entry.media ? { media: entry.media } : {}),
+              })),
+            }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.settingsPage
+          ? {
+              desktopSettingsPage: item.manifest.contributes.desktop.settingsPage.title
+                ? { title: item.manifest.contributes.desktop.settingsPage.title }
+                : {},
+            }
+          : {}),
+        ...(item.manifest.contributes?.cli?.hooks?.length
+          ? {
+              cliHooks: item.manifest.contributes.cli.hooks.map((hook) => ({
+                slot: hook.slot,
+                ...(hook.variant ? { variant: hook.variant } : {}),
+                ...(hook.tokens
+                  ? {
+                      tokens: {
+                        ...(hook.tokens.foreground ? { foreground: hook.tokens.foreground } : {}),
+                        ...(hook.tokens.border ? { border: hook.tokens.border } : {}),
+                        ...(hook.tokens.accent ? { accent: hook.tokens.accent } : {}),
+                      },
+                    }
+                  : {}),
+                ...(hook.prefix ? { prefix: hook.prefix } : {}),
+                ...(hook.suffix ? { suffix: hook.suffix } : {}),
+              })),
+            }
+          : {}),
+        ...(instructionContributions ? { instructionContributions } : {}),
+        ...(item.manifest.settingsSchema?.length
+          ? {
+              settingsSchema: item.manifest.settingsSchema.map((setting) => ({
+                key: setting.key,
+                type: setting.type,
+                title: setting.title,
+                ...(setting.description ? { description: setting.description } : {}),
+                ...(setting.placeholder ? { placeholder: setting.placeholder } : {}),
+                ...(setting.required !== undefined ? { required: setting.required } : {}),
+                ...(setting.defaultValue !== undefined
+                  ? { defaultValue: setting.defaultValue }
+                  : {}),
+                ...(setting.options?.length
+                  ? {
+                      options: setting.options.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                        ...(option.description ? { description: option.description } : {}),
+                      })),
+                    }
+                  : {}),
+              })),
+              ...(metadataOnly ? {} : { settingsValues: await manager.getSettingsValues(item.id) }),
+            }
+          : {}),
+        ...(item.manifest.secretSlots?.length
+          ? {
+              secretSlots: item.manifest.secretSlots.map((slot) => ({
+                key: slot.key,
+                title: slot.title,
+                ...(slot.description ? { description: slot.description } : {}),
+                ...(slot.required !== undefined ? { required: slot.required } : {}),
+              })),
+              ...(metadataOnly
+                ? {}
+                : {
+                    secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
+                      ([key, configured]) => ({
+                        key,
+                        configured,
+                      }),
+                    ),
+                  }),
+            }
+          : {}),
+        ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
+        ...(item.installSource ? { installSource: item.installSource } : {}),
+        installedAtUnixMs: item.installedAtUnixMs,
+      };
+    }),
   );
 }
 

@@ -25,6 +25,7 @@ const ACTIVE_SKILL_RESOURCE_MAX_ENTRIES: usize = 24;
 pub enum SkillScope {
     Workspace,
     User,
+    Extension,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -33,6 +34,7 @@ pub enum SkillRootKind {
     WorkspaceSpirit,
     WorkspaceAgents,
     User,
+    Extension,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,7 +148,7 @@ pub fn user_skills_dir() -> PathBuf {
 pub fn skill_path_for_scope(workspace_root: &Path, scope: SkillScope, skill_name: &str) -> PathBuf {
     let root = match scope {
         SkillScope::Workspace => workspace_spirit_skills_dir(workspace_root),
-        SkillScope::User => user_skills_dir(),
+        SkillScope::User | SkillScope::Extension => user_skills_dir(),
     };
 
     root.join(skill_name).join(SKILL_FILE_NAME)
@@ -534,6 +536,7 @@ fn scope_rank(scope: SkillScope) -> u8 {
     match scope {
         SkillScope::Workspace => 0,
         SkillScope::User => 1,
+        SkillScope::Extension => 2,
     }
 }
 
@@ -552,6 +555,12 @@ fn short_label_for_skill(root_kind: SkillRootKind, skill_name: &str) -> String {
             )
         }
         SkillRootKind::User => format!("{}/{}/{}", SKILLS_DIR_NAME, skill_name, SKILL_FILE_NAME),
+        SkillRootKind::Extension => {
+            format!(
+                "extension/{}/{}/{}",
+                SKILLS_DIR_NAME, skill_name, SKILL_FILE_NAME
+            )
+        }
     }
 }
 
