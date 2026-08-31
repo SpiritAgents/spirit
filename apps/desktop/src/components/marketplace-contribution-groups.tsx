@@ -128,7 +128,7 @@ export function MarketplaceContributionGroups({ item }: { item: DesktopExtension
                     {entry.title}
                   </span>
                   {entry.overview ? (
-                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground line-clamp-2">
+                    <span className="mt-0.5 block truncate text-xs leading-5 text-muted-foreground">
                       {entry.overview}
                     </span>
                   ) : null}
