@@ -38,9 +38,11 @@ import { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
 
 import {
   NodeHostToolService,
+  createHostExtensionManager,
   createNoopMcpAdapter,
   ensureBuiltInSkills,
   loadHostInstructionMetadata,
+  overlayEnabledExtensionRulesAndSkills,
   ensureTranscriptSessionDir,
   persistSessionTranscript,
   persistSubagentTranscript,
@@ -122,6 +124,20 @@ export async function createAcpRuntime(
   const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [
     ...metadata.skills.enabledSkillCatalog,
   ];
+  try {
+    const extensionManager = createHostExtensionManager({ spiritDataDir, hostKind: "cli" });
+    const overlay = await overlayEnabledExtensionRulesAndSkills(
+      await extensionManager.list(),
+      enabledRules,
+      enabledSkillCatalog,
+    );
+    enabledRules.length = 0;
+    enabledRules.push(...overlay.rules);
+    enabledSkillCatalog.length = 0;
+    enabledSkillCatalog.push(...overlay.skills);
+  } catch (error) {
+    console.warn("[acp] failed to overlay extension skills and rules", error);
+  }
   // Mutable: closures capture the binding, setAgentMode() reassigns it
   let currentPlanMetadata: LlmPlanMetadata | undefined = metadata.planMetadata;
 

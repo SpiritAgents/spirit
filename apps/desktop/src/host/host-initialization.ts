@@ -27,6 +27,7 @@ import type {
 } from "../types.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
 import { ensureBuiltInSkills } from "@spiritagent/host-internal";
+import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
 import { resolveWorkspaceBindingForRequestedRoot, sameWorkspaceRoot } from "./service-utils.js";
 import { spiritDataDir } from "./storage.js";
 import type { ExtensionWarmupTrigger } from "./extension-warmup.js";
@@ -40,6 +41,7 @@ export interface InitializationState {
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
+  extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
 }
 
@@ -213,6 +215,12 @@ export async function ensureInitializedCommand(
     plan,
     extensionsList: state?.extensionsList ?? [],
     extensionCss: state?.extensionCss ?? [],
+    extensionInstructionContributions: state?.extensionInstructionContributions ?? {
+      mcp: { servers: {} },
+      hooks: [],
+      skills: [],
+      rules: [],
+    },
     ephemeralSessions: state?.ephemeralSessions ?? [],
   });
   ctx.setInitialized(true);

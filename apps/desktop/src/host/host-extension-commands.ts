@@ -101,7 +101,16 @@ export interface HostExtensionCommandContext {
     event: HostExtensionEvent,
     options?: { targetExtensionIds?: readonly string[] },
   ): Promise<void>;
-  requireEnabledSkillEntry(skillName: string): HostMetadataSummary["skills"]["entries"][number];
+  requireEnabledSkillEntry(skillName: string): {
+    source: {
+      id: string;
+      scope: LlmActiveSkill["scope"];
+      name: string;
+      description: string;
+      path: string;
+    };
+    content: string;
+  };
   submitUserTurnAfterInitialized(
     text: string,
     options?: {

@@ -4,7 +4,10 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "vitest";
 
-import { collectEnabledExtensionInstructionContributions } from "./extension-contributions.js";
+import {
+  collectEnabledExtensionInstructionContributions,
+  overlayExtensionRulesAndSkills,
+} from "./extension-contributions.js";
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "./extensions.js";
 
 const VALID_MCP_JSON = `${JSON.stringify(
@@ -236,4 +239,71 @@ Second.
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });
   }
+});
+
+test("overlay keeps user and workspace skills ahead of extension skills", async () => {
+  const overlay = overlayExtensionRulesAndSkills(
+    [
+      {
+        id: "user-rule",
+        scope: "user",
+        title: "User rules",
+        path: "/tmp/rule.md",
+        content: "user",
+      },
+    ],
+    [
+      {
+        id: "user-skill",
+        scope: "user",
+        name: "shared-skill",
+        description: "User skill",
+        path: "/tmp/skills/shared-skill/SKILL.md",
+      },
+    ],
+    {
+      mcp: { servers: {} },
+      hooks: [],
+      skills: [
+        {
+          id: "ext-skill",
+          extensionId: "spirit.demo",
+          extensionName: "Demo",
+          scope: "extension",
+          name: "shared-skill",
+          description: "Extension skill",
+          path: "/tmp/ext/skills/shared-skill/SKILL.md",
+          content: "ext",
+        },
+        {
+          id: "ext-only",
+          extensionId: "spirit.demo",
+          extensionName: "Demo",
+          scope: "extension",
+          name: "ext-only",
+          description: "Extension only",
+          path: "/tmp/ext/skills/ext-only/SKILL.md",
+          content: "only",
+        },
+      ],
+      rules: [
+        {
+          id: "ext-rule",
+          extensionId: "spirit.demo",
+          extensionName: "Demo",
+          scope: "extension",
+          title: "Extension Demo rules",
+          path: "/tmp/ext/rule.md",
+          content: "ext rules",
+        },
+      ],
+    },
+  );
+
+  assert.equal(overlay.skills.length, 2);
+  assert.equal(overlay.skills[0]?.scope, "user");
+  assert.equal(overlay.skills[1]?.scope, "extension");
+  assert.equal(overlay.skills[1]?.name, "ext-only");
+  assert.equal(overlay.rules.length, 2);
+  assert.equal(overlay.rules[1]?.scope, "extension");
 });

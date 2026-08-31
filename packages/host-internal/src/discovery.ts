@@ -29,8 +29,8 @@ const SKILL_PREVIEW_MAX_LINES = 8;
 const SKILL_PREVIEW_MAX_CHARS = 1_200;
 const SKILL_NAME_MAX_CHARS = 64;
 
-export type HostRuleScope = "workspace" | "user";
-export type HostSkillScope = "workspace" | "user";
+export type HostRuleScope = "workspace" | "user" | "extension";
+export type HostSkillScope = "workspace" | "user" | "extension";
 export type HostSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user";
 
 export type HostRuleRootKind = HostSkillRootKind;

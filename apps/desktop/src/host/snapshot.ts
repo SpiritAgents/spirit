@@ -8,6 +8,7 @@ import type {
   DesktopHookListItem,
   DesktopGitSnapshot,
   DesktopMcpServerListItem,
+  DesktopExtensionSkillSlashItem,
   WorkspaceContentInvalidation,
   DesktopModelCatalogHint,
   DesktopSnapshot,
@@ -27,6 +28,12 @@ import { buildAvailableWorkspaces, buildWebHostSnapshot } from "./service-utils.
 import { resolveDesktopHomeDirectory } from "./storage.js";
 import type { DesktopLspSnapshot } from "../types.js";
 
+function isSettingsInstructionScope<T extends { source: { scope: string } }>(
+  entry: T,
+): entry is T & { source: { scope: "workspace" | "user" } } {
+  return entry.source.scope === "workspace" || entry.source.scope === "user";
+}
+
 export interface BuildDesktopSnapshotInput {
   workspaceRoot: string;
   config: DesktopConfigFile;
@@ -36,6 +43,7 @@ export interface BuildDesktopSnapshotInput {
   plan: DesktopSnapshot["plan"];
   extensionsList: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
+  extensionSkills?: DesktopExtensionSkillSlashItem[];
   extensionsLoading?: boolean;
   dreamCollectorStatus: DesktopDreamCollectorSnapshot;
   runtimeReady: boolean;
@@ -125,7 +133,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       discovered: input.metadata.skills.discovered,
       enabled: input.metadata.skills.enabled,
     },
-    rulesList: input.metadata.rules.entries.map((entry) => ({
+    rulesList: input.metadata.rules.entries.filter(isSettingsInstructionScope).map((entry) => ({
       id: entry.source.id,
       title: entry.source.title,
       shortLabel: entry.source.shortLabel,
@@ -140,7 +148,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
           }
         : {}),
     })),
-    skillsList: input.metadata.skills.entries.map((entry) => ({
+    skillsList: input.metadata.skills.entries.filter(isSettingsInstructionScope).map((entry) => ({
       id: entry.source.id,
       name: entry.source.name,
       description: entry.source.description,
@@ -150,6 +158,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       enabled: entry.enabled,
       path: entry.source.path,
     })),
+    extensionSkills: (input.extensionSkills ?? []).map((skill) => ({ ...skill })),
     extensionsList: input.extensionsList.map((item) => ({ ...item })),
     extensionCss: input.extensionCss.map((entry) => ({ ...entry })),
     ...(input.extensionsLoading ? { extensionsLoading: true } : {}),

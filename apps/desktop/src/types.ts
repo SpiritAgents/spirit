@@ -801,6 +801,13 @@ export interface DesktopSkillListItem {
   path: string;
 }
 
+export interface DesktopExtensionSkillSlashItem {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+}
+
 export interface DesktopRuleListItem {
   id: string;
   title: string;
@@ -978,6 +985,8 @@ export interface DesktopSnapshot {
   rulesList: DesktopRuleListItem[];
   /** All Skills discovered under the current workspace and user directory, for the settings page list. */
   skillsList: DesktopSkillListItem[];
+  /** Extension-contributed skills for slash activation; omitted from settings lists. */
+  extensionSkills: DesktopExtensionSkillSlashItem[];
   extensionsList: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
   /** Extension background warmup in progress (does not block session navigation or sending messages). */

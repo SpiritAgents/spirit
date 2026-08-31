@@ -33,6 +33,8 @@ import {
   buildStartImplementingUserTurn,
   extractActivePlanPathFromLlmHistory,
   createHostExtensionManager,
+  collectEnabledExtensionInstructionContributions,
+  overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
@@ -53,6 +55,7 @@ import {
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
 } from "@spiritagent/host-internal";
+import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
 
 import type {
   AddModelRequest,
@@ -533,6 +536,7 @@ interface HostState {
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
+  extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
 }
 
@@ -1717,10 +1721,13 @@ class DesktopHostService {
       const runtime = this.requireRuntime();
       const remoteState = await exportRemoteDesktopState(runtime);
       const extensionSystemPrompts = await this.collectExtensionSystemPrompts();
-      const rulesSystemPrompt = buildRulesSystemMessage(state.metadata.rules.enabledRules);
-      const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(
+      const overlay = overlayExtensionRulesAndSkills(
+        state.metadata.rules.enabledRules,
         state.metadata.skills.enabledSkillCatalog,
+        state.extensionInstructionContributions,
       );
+      const rulesSystemPrompt = buildRulesSystemMessage(overlay.rules);
+      const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(overlay.skills);
       const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
         this.requireToolExecutor().mcpToolCatalogSnapshot(),
       );
@@ -3632,6 +3639,12 @@ class DesktopHostService {
       plan: state.plan,
       extensionsList: state.extensionsList,
       extensionCss: state.extensionCss,
+      extensionSkills: state.extensionInstructionContributions.skills.map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        path: skill.path,
+      })),
       ...(this.extensionWarmup.extensionsLoading ? { extensionsLoading: true } : {}),
       dreamCollectorStatus: this.dreamCollectorStatus,
       runtimeReady: activeRuntime !== undefined,
@@ -3996,6 +4009,11 @@ class DesktopHostService {
       throw new Error(i18n.t("error.autoWorktreeNameFailedNoKey"));
     }
 
+    const overlay = overlayExtensionRulesAndSkills(
+      state.metadata.rules.enabledRules,
+      state.metadata.skills.enabledSkillCatalog,
+      state.extensionInstructionContributions,
+    );
     const extensionSystemPrompts = await this.collectExtensionSystemPrompts();
     const toolExecutor = await this.ensureToolExecutor();
     return generateWorktreeNamesFromModelTask({
@@ -4005,7 +4023,11 @@ class DesktopHostService {
       taskModel: lightweightModel.name,
       taskProfile: lightweightModel.profile,
       apiKey,
-      metadata: state.metadata,
+      metadata: {
+        ...state.metadata,
+        rules: { ...state.metadata.rules, enabledRules: overlay.rules },
+        skills: { ...state.metadata.skills, enabledSkillCatalog: overlay.skills },
+      },
       extensionSystemPrompts,
       toolExecutor,
       runtimeBasicInfo: buildDesktopRuntimeBasicInfo(
@@ -4032,6 +4054,8 @@ class DesktopHostService {
       options,
     );
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);
+    state.extensionInstructionContributions =
+      await collectEnabledExtensionInstructionContributions(extensions);
   }
 
   private async refreshExtensionToolDefinitions(
@@ -4563,17 +4587,39 @@ class DesktopHostService {
     this.liveSnapshotEmitTimer = timer;
   }
 
-  private requireEnabledSkillEntry(
-    skillName: string,
-  ): HostMetadataSummary["skills"]["entries"][number] {
+  private requireEnabledSkillEntry(skillName: string): {
+    source: {
+      id: string;
+      scope: LlmActiveSkill["scope"];
+      name: string;
+      description: string;
+      path: string;
+    };
+    content: string;
+  } {
     const normalized = skillName.trim();
     const entry = this.requireState().metadata.skills.entries.find(
       (candidate) => candidate.enabled && candidate.source.name === normalized,
     );
-    if (!entry) {
-      throw new Error(i18n.t("error.skillNotFound", { name: normalized }));
+    if (entry) {
+      return entry;
     }
-    return entry;
+    const extensionSkill = this.requireState().extensionInstructionContributions.skills.find(
+      (candidate) => candidate.name === normalized,
+    );
+    if (extensionSkill) {
+      return {
+        source: {
+          id: extensionSkill.id,
+          scope: "extension",
+          name: extensionSkill.name,
+          description: extensionSkill.description,
+          path: extensionSkill.path,
+        },
+        content: extensionSkill.content,
+      };
+    }
+    throw new Error(i18n.t("error.skillNotFound", { name: normalized }));
   }
 
   private requireToolExecutor(): DesktopToolExecutor {

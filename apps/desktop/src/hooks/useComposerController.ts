@@ -405,7 +405,15 @@ export function useComposerController({
   }, [composerCursorChars, dismissedSlashQueryKey, composerText]);
 
   const slashSuggestions = useMemo(() => {
-    const suggestions = buildSkillSlashSuggestions(slashQuery?.raw, snapshot?.skillsList ?? []);
+    const settingsSkills = snapshot?.skillsList ?? [];
+    const extensionSkills = (snapshot?.extensionSkills ?? []).map((skill) => ({
+      ...skill,
+      enabled: true,
+    }));
+    const suggestions = buildSkillSlashSuggestions(slashQuery?.raw, [
+      ...settingsSkills,
+      ...extensionSkills,
+    ]);
     const messageId = findLastForkableAssistantMessageId(snapshot?.conversation.messages ?? []);
     const showSideChat = canBeginSideChat({
       conversationBusy: snapshot?.conversation.isBusy === true,
@@ -425,6 +433,7 @@ export function useComposerController({
     snapshot?.conversation.isBusy,
     snapshot?.conversation.messages,
     snapshot?.skillsList,
+    snapshot?.extensionSkills,
   ]);
 
   const fileReferenceQuery = useMemo(() => {

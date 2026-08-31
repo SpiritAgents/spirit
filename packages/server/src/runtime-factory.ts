@@ -71,6 +71,7 @@ import {
   ensureBuiltInSkills,
   ensureTranscriptSessionDir,
   loadHostInstructionMetadata,
+  overlayEnabledExtensionRulesAndSkills,
   persistSessionTranscript,
   persistSubagentTranscript,
   persistToolOutputArchive,
@@ -323,7 +324,30 @@ export async function createServerRuntime(
   // 3. Rules / skills / plan metadata.
   const enabledRules: LlmEnabledRule[] = [];
   const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
+  let baseEnabledRules: LlmEnabledRule[] = [];
+  let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
   let currentPlanMetadata: LlmPlanMetadata | undefined;
+
+  const applyExtensionInstructionOverlay = async (): Promise<void> => {
+    if (!extensionManager) {
+      enabledRules.length = 0;
+      enabledRules.push(...baseEnabledRules);
+      enabledSkillCatalog.length = 0;
+      enabledSkillCatalog.push(...baseEnabledSkillCatalog);
+      return;
+    }
+    const overlay = await overlayEnabledExtensionRulesAndSkills(
+      await extensionManager.list(),
+      baseEnabledRules,
+      baseEnabledSkillCatalog,
+      (message: string) => log(message),
+    );
+    enabledRules.length = 0;
+    enabledRules.push(...overlay.rules);
+    enabledSkillCatalog.length = 0;
+    enabledSkillCatalog.push(...overlay.skills);
+  };
+
   if (isDreamCollector) {
     currentPlanMetadata = {
       path: "",
@@ -337,8 +361,9 @@ export async function createServerRuntime(
       { workspaceRoot, spiritDataDir },
       { planMode: false, agentMode: "agent" },
     );
-    enabledRules.push(...metadata.rules.enabledRules);
-    enabledSkillCatalog.push(...metadata.skills.enabledSkillCatalog);
+    baseEnabledRules = [...metadata.rules.enabledRules];
+    baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
+    await applyExtensionInstructionOverlay();
     currentPlanMetadata = metadata.planMetadata;
     toolExecutor.setAgentModeToolExposure("agent");
   }
@@ -574,6 +599,7 @@ export async function createServerRuntime(
         content: entry.content,
       })),
     );
+    await applyExtensionInstructionOverlay();
   };
 
   return {
@@ -608,10 +634,9 @@ export async function createServerRuntime(
         { workspaceRoot, spiritDataDir },
         { planMode: mode === "plan", agentMode: mode },
       );
-      enabledRules.length = 0;
-      enabledRules.push(...refreshed.rules.enabledRules);
-      enabledSkillCatalog.length = 0;
-      enabledSkillCatalog.push(...refreshed.skills.enabledSkillCatalog);
+      baseEnabledRules = [...refreshed.rules.enabledRules];
+      baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
+      await applyExtensionInstructionOverlay();
       currentPlanMetadata = refreshed.planMetadata;
     },
     exportState: async () => {

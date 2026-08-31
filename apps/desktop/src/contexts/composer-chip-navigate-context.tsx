@@ -115,7 +115,10 @@ export function ComposerChipNavigateProvider({
         path: session.path,
         transcriptPath: session.transcriptPath,
       })),
-      skills: (snapshot?.skillsList ?? sourceSnapshot?.skillsList ?? []).map((skill) => ({
+      skills: [
+        ...(snapshot?.skillsList ?? sourceSnapshot?.skillsList ?? []),
+        ...(snapshot?.extensionSkills ?? sourceSnapshot?.extensionSkills ?? []),
+      ].map((skill) => ({
         name: skill.name,
         path: skill.path,
       })),
@@ -131,11 +134,13 @@ export function ComposerChipNavigateProvider({
     snapshot?.activeSession?.filePath,
     snapshot?.conversation.messages,
     snapshot?.skillsList,
+    snapshot?.extensionSkills,
     snapshot?.workspaceRoot,
     sourceSnapshot?.activeSession?.filePath,
     sourceSnapshot?.conversation.messages,
     sourceSnapshot?.paneSessions,
     sourceSnapshot?.skillsList,
+    sourceSnapshot?.extensionSkills,
     sourceSnapshot?.workspaceRoot,
     split.layout,
     workspaceTools.browserTabEnabled,
