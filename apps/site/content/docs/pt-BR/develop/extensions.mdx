@@ -1,6 +1,6 @@
 ---
 title: Extensões
-description: Layout do pacote, campos spiritExtension, API de ativação e listagem no registro oficial.
+description: Layout do pacote, campos spiritExtension e API de ativação.
 ---
 
 Uma extensão é uma pasta com um `package.json` que contém `spiritExtension`. O Spirit a instala por usuário e por host, não no diretório `.spirit/` do workspace.
@@ -148,7 +148,7 @@ O `name` no `package.json` é o id da extensão. Deve corresponder a `^(?:@[a-z0
 | Evento                 | Quando dispara                              |
 | ---------------------- | ------------------------------------------- |
 | `onStartup`            | Aquecimento do host                         |
-| `onExtensionInstalled` | Após instalação via ZIP ou marketplace      |
+| `onExtensionInstalled` | Após instalação via ZIP      |
 | `onSessionOpened`      | Sessão se torna ativa                       |
 | `onSessionReset`       | Reset da sessão                             |
 | `onUserMessage`        | Usuário envia uma mensagem                  |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## Instalação
 
-- **ZIP** — o arquivo deve conter exatamente um `package.json` (pode estar em um subdiretório). Importe com `spirit extension import ./extension.zip` ou **Configurações → Extensões**.
-- **Tarball do Marketplace** — a raiz do arquivo deve conter um diretório `package/`.
+- **ZIP** — o arquivo deve conter exatamente um `package.json` (pode estar em um subdiretório). Importe com `spirit extension import ./extension.zip` ou na página **Extensões**.
 
-`supportedHosts` deve incluir o host atual. Uma segunda instalação do mesmo id não substitui a cópia existente por padrão. Consulte [Marketplace](../customize/marketplace.mdx) para canais e a interface de instalação.
+`supportedHosts` deve incluir o host atual. Uma segunda instalação do mesmo id não substitui a cópia existente por padrão.
 
-## Publicar no registro oficial
-
-O repositório [SpiritAgents/registry](https://github.com/SpiritAgents/registry) é um índice de marketplace. Ele não hospeda fonte de extensões, `dist`, arquivos ZIP ou tarballs.
-
-Execute estas etapas em ordem:
-
-1. Publique um pacote npm público.
-2. Abra um pull request que liste esse pacote.
-
-### 1. Publique o pacote npm
-
-O `package.json` publicado é a fonte da verdade, especialmente `spiritExtension`. O construtor do registro requer:
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-Ele também lê `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords` e o opcional `spiritExtension.icon`. Se você definir `icon`, inclua esse arquivo no pacote publicado. Um objeto `spiritExtension` ausente faz a construção do registro falhar para essa versão.
-
-Exemplo oficial: [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. Liste o pacote
-
-Crie `registry/extensions/<extension-id>/` com:
-
-| Arquivo      | Descrição                        |
-| ------------ | -------------------------------- |
-| `entry.json` | Governança do marketplace        |
-| `README.md`  | Texto de detalhes do marketplace |
-
-Não edite estes manualmente (regere-os):
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` precisa de pelo menos dois segmentos separados por pontos, letras minúsculas e dígitos, com pontos ou hífens dentro de um segmento. Exemplos: `spirit.system-message-demo`, `yourteam.some-extension`. `packageName` e `extensionId` devem ser únicos no repositório.
-
-### `entry.json`
-
-| Campo                 | Descrição                                                  |
-| --------------------- | ---------------------------------------------------------- |
-| `schemaVersion`       | Obrigatório. `1`                                           |
-| `extensionId`         | Obrigatório. Consulte as regras acima                      |
-| `packageName`         | Obrigatório. Nome do pacote npm                            |
-| `status`              | Obrigatório. `listed`, `hidden`, `deprecated` ou `blocked` |
-| `featured`            | Obrigatório. Booleano                                      |
-| `defaultVersion`      | Obrigatório. String de versão padrão                       |
-| `defaultReviewStatus` | Obrigatório. `unverified`, `verified` ou `revoked`         |
-| `versions`            | Obrigatório. Pelo menos um item                            |
-
-Cada item de `versions[]`:
-
-| Campo          | Descrição                                                           |
-| -------------- | ------------------------------------------------------------------- |
-| `version`      | Obrigatório                                                         |
-| `channel`      | Obrigatório. `stable`, `preview` ou `experimental`                  |
-| `reviewStatus` | Obrigatório. `unverified`, `verified` ou `revoked`                  |
-| `changelog`    | Opcional. `{ summary, body }` — ambos obrigatórios quando presentes |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-O README do marketplace deve cobrir o que a extensão faz, o nome do pacote, a versão padrão aprovada, a compatibilidade de host e capacidade e notas para os leitores do marketplace.
-
-Gere arquivos derivados localmente:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-O script busca metadados do npm para as versões listadas, reconstrói `catalog.json` e cada `detail.json` e valida a consistência.
-
-### Pull request
-
-Inclua `entry.json`, o `README.md` do marketplace e os `catalog.json` / `detail.json` regenerados. Liste apenas versões que já são públicas no npm. Defina `reviewStatus` e `channel` com precisão. Novas versões geralmente começam como `unverified`.
-
-Não faça commit de árvores de origem de extensões, `dist`, arquivos ZIP, tarballs ou outros artefatos binários.
-
-Abrir um pull request não garante a listagem. A revisão pode solicitar alterações antes que uma versão seja aprovada ou verificada.

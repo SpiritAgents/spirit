@@ -1,6 +1,6 @@
 ---
 title: 扩展
-description: 包结构、spiritExtension 字段、activate API，以及上架官方 registry。
+description: 包结构、spiritExtension 字段与 activate API。
 ---
 
 扩展是带 `package.json` 且含 `spiritExtension` 的文件夹。Spirit 按用户、按宿主安装，不放在工作区 `.spirit/` 下。
@@ -148,7 +148,7 @@ example-extension/
 | 事件                   | 何时触发           |
 | ---------------------- | ------------------ |
 | `onStartup`            | 宿主预热           |
-| `onExtensionInstalled` | ZIP 或市场安装之后 |
+| `onExtensionInstalled` | ZIP 安装之后 |
 | `onSessionOpened`      | 会话变为活动       |
 | `onSessionReset`       | 会话重置           |
 | `onUserMessage`        | 用户提交消息       |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## 安装
 
-- **ZIP** — 压缩包里必须恰好有一个 `package.json`（可以在子目录中）。用 `spirit extension import ./extension.zip` 或 **设置 → 扩展** 导入。
-- **市场 tarball** — 压缩包根目录下必须有 `package/` 目录。
+- **ZIP** — 压缩包里必须恰好有一个 `package.json`（可以在子目录中）。用 `spirit extension import ./extension.zip` 或在 **扩展** 页导入。
 
-`supportedHosts` 必须包含当前宿主。默认不会用同 id 的第二次安装覆盖已有副本。通道和安装界面见[市场](../customize/marketplace.mdx)。
+`supportedHosts` 必须包含当前宿主。默认不会用同 id 的第二次安装覆盖已有副本。
 
-## 上架官方扩展注册处
-
-[SpiritAgents/registry](https://github.com/SpiritAgents/registry) 仓库是市场索引。它不托管扩展源码、`dist`、ZIP 或 tarball。
-
-按此顺序：
-
-1. 公开发布 npm 包。
-2. 提交将该包列入索引的 pull request。
-
-### 1. 发布 npm 包
-
-已发布的 `package.json` 是元数据来源，尤其是 `spiritExtension`。registry 构建会读取：
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-同时会读 `name`、`version`、`description`、`author`、`repository`、`homepage`、`keywords`，以及可选的 `spiritExtension.icon`。若设置了 `icon`，须把该文件打进发布包。缺少 `spiritExtension` 时，该版本的 registry 构建会失败。
-
-官方示例：[`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo)（`spirit.system-message-demo`）。
-
-### 2. 列入索引
-
-在 `registry/extensions/<extension-id>/` 下创建：
-
-| 文件         | 说明         |
-| ------------ | ------------ |
-| `entry.json` | 市场治理数据 |
-| `README.md`  | 市场详情文案 |
-
-不要手改这些文件（重新生成）：
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` 至少两段、用点分隔，小写字母和数字，段内可用点或连字符。例如：`spirit.system-message-demo`、`yourteam.some-extension`。`packageName` 与 `extensionId` 在仓库内都必须唯一。
-
-### `entry.json`
-
-| 参数                  | 说明                                                |
-| --------------------- | --------------------------------------------------- |
-| `schemaVersion`       | 必填。`1`                                           |
-| `extensionId`         | 必填。见上方规则                                    |
-| `packageName`         | 必填。npm 包名                                      |
-| `status`              | 必填。`listed`、`hidden`、`deprecated` 或 `blocked` |
-| `featured`            | 必填。布尔值                                        |
-| `defaultVersion`      | 必填。默认版本字符串                                |
-| `defaultReviewStatus` | 必填。`unverified`、`verified` 或 `revoked`         |
-| `versions`            | 必填。至少一项                                      |
-
-每条 `versions[]`：
-
-| 参数           | 说明                                         |
-| -------------- | -------------------------------------------- |
-| `version`      | 必填                                         |
-| `channel`      | 必填。`stable`、`preview` 或 `experimental`  |
-| `reviewStatus` | 必填。`unverified`、`verified` 或 `revoked`  |
-| `changelog`    | 可选。`{ summary, body }` — 出现时两者都必填 |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-市场 README 应说明扩展做什么、包名、默认批准版本、宿主与能力兼容性，以及市场读者需要看到的备注。
-
-在本地重新生成派生文件：
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-脚本会拉取所列版本的 npm 元数据，重建 `catalog.json` 和各 `detail.json`，然后校验一致性。
-
-### Pull request
-
-包含 `entry.json`、市场 `README.md`，以及重新生成的 `catalog.json` / `detail.json`。只列入已在 npm 上公开的版本。准确填写 `reviewStatus` 和 `channel`。新版本通常从 `unverified` 开始。
-
-不要提交扩展源码树、`dist`、ZIP、tarball 或其他二进制产物。
-
-提交 pull request 不保证上架。审核可能在批准或 verified 之前要求修改。

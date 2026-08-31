@@ -1,6 +1,6 @@
 ---
 title: 擴充功能
-description: 套件佈局、spiritExtension 欄位、啟動 API，以及在官方註冊表中的列出方式。
+description: 套件佈局、spiritExtension 欄位與啟動 API。
 ---
 
 擴充功能是一個包含 `package.json` 的資料夾，其中含有 `spiritExtension`。Spirit 會為每個使用者和每個主機安裝它，而不是放在工作區的 `.spirit/` 目錄下。
@@ -148,7 +148,7 @@ example-extension/
 | 事件                   | 觸發時機                       |
 | ---------------------- | ------------------------------ |
 | `onStartup`            | 主機預熱                       |
-| `onExtensionInstalled` | 在 ZIP 或 marketplace 安裝之後 |
+| `onExtensionInstalled` | 在 ZIP 安裝之後 |
 | `onSessionOpened`      | 會話變為啟用狀態               |
 | `onSessionReset`       | 會話重置                       |
 | `onUserMessage`        | 使用者提交訊息                 |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## 安裝
 
-- **ZIP** — 壓縮檔必須恰好包含一個 `package.json`（它可以位於子目錄中）。使用 `spirit extension import ./extension.zip` 或 **設定 → 擴充功能** 匯入。
-- **Marketplace tarball** — 壓縮檔根目錄必須包含 `package/` 目錄。
+- **ZIP** — 壓縮檔必須恰好包含一個 `package.json`（它可以位於子目錄中）。使用 `spirit extension import ./extension.zip` 或在 **擴充功能** 頁面匯入。
 
-`supportedHosts` 必須包含目前的主機。相同 id 的第二次安裝預設不會取代現有副本。有關頻道和安裝介面，請參閱 [Marketplace](../customize/marketplace.mdx)。
+`supportedHosts` 必須包含目前的主機。相同 id 的第二次安裝預設不會取代現有副本。
 
-## 發布到官方登錄檔
-
-[SpiritAgents/registry](https://github.com/SpiritAgents/registry) 儲存庫是 marketplace 索引。它不託管擴充功能原始碼、`dist`、ZIP 檔案或 tarball。
-
-請依序執行下列步驟：
-
-1. 發布一個公開的 npm 套件。
-2. 開啟一個列出該套件的 pull request。
-
-### 1. 發布 npm 套件
-
-發布的 `package.json` 是主要依據，尤其是 `spiritExtension`。註冊表建置器需要：
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-它也會讀取 `name`、`version`、`description`、`author`、`repository`、`homepage`、`keywords` 以及選用的 `spiritExtension.icon`。如果您設定了 `icon`，請將該檔案包含在發布的套件中。缺少 `spiritExtension` 物件會導致該版本的註冊表建置失敗。
-
-官方範例：[`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo)（`spirit.system-message-demo`）。
-
-### 2. 列出套件
-
-建立 `registry/extensions/<extension-id>/`，內容包含：
-
-| 檔案         | 說明             |
-| ------------ | ---------------- |
-| `entry.json` | 市集治理         |
-| `README.md`  | 市集詳細資訊文字 |
-
-請勿手動編輯這些（請重新產生）：
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` 需要至少兩個以點分隔的區段，使用小寫字母和數字，區段內可包含點或連字號。範例：`spirit.system-message-demo`、`yourteam.some-extension`。`packageName` 和 `extensionId` 在儲存庫中必須是唯一的。
-
-### `entry.json`
-
-| 欄位                  | 說明                                                |
-| --------------------- | --------------------------------------------------- |
-| `schemaVersion`       | 必要。`1`                                           |
-| `extensionId`         | 必要。請參閱上述規則                                |
-| `packageName`         | 必要。npm 套件名稱                                  |
-| `status`              | 必要。`listed`、`hidden`、`deprecated` 或 `blocked` |
-| `featured`            | 必要。布林值                                        |
-| `defaultVersion`      | 必要。預設版本字串                                  |
-| `defaultReviewStatus` | 必要。`unverified`、`verified` 或 `revoked`         |
-| `versions`            | 必要。至少一個項目                                  |
-
-每個 `versions[]` 項目：
-
-| 欄位           | 說明                                           |
-| -------------- | ---------------------------------------------- |
-| `version`      | 必要                                           |
-| `channel`      | 必要。`stable`、`preview` 或 `experimental`    |
-| `reviewStatus` | 必要。`unverified`、`verified` 或 `revoked`    |
-| `changelog`    | 選用。`{ summary, body }` — 存在時兩者皆為必要 |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-市集 README 應說明擴充功能的功能、套件名稱、預設核准版本、主機與能力相容性，以及給市集讀者的注意事項。
-
-在本機重新產生衍生檔案：
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-此腳本會擷取所列版本的 npm 中繼資料，重建 `catalog.json` 和每個 `detail.json`，然後驗證一致性。
-
-### Pull request
-
-包含 `entry.json`、市集 `README.md` 以及重新產生的 `catalog.json` / `detail.json`。僅列出已在 npm 上公開的版本。準確設定 `reviewStatus` 和 `channel`。新版本通常以 `unverified` 開始。
-
-請勿提交擴充功能原始碼樹、`dist`、ZIP 檔案、tarball 或其他二進位成品。
-
-開啟 pull request 並不保證會上架。在版本獲得核准或驗證之前，審查可能會要求變更。

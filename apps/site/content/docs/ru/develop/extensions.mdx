@@ -1,6 +1,6 @@
 ---
 title: Расширения
-description: Структура пакета, поля spiritExtension, API активации и список в официальном реестре.
+description: Структура пакета, поля spiritExtension и API активации.
 ---
 
 Расширение — это папка с `package.json`, содержащая `spiritExtension`. Spirit устанавливает его для каждого пользователя и хоста, а не в каталог `.spirit/` рабочей области.
@@ -148,7 +148,7 @@ example-extension/
 | Событие                | Когда срабатывает                       |
 | ---------------------- | --------------------------------------- |
 | `onStartup`            | Прогрев хоста                           |
-| `onExtensionInstalled` | После установки из ZIP или маркетплейса |
+| `onExtensionInstalled` | После установки из ZIP |
 | `onSessionOpened`      | Сеанс становится активным               |
 | `onSessionReset`       | Сброс сеанса                            |
 | `onUserMessage`        | Пользователь отправляет сообщение       |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## Установка
 
-- **ZIP** — архив должен содержать ровно один `package.json` (он может находиться в подкаталоге). Импортируйте с помощью `spirit extension import ./extension.zip` или **Settings → Extensions**.
-- **Tarball из маркетплейса** — в корне архива должна находиться директория `package/`.
+- **ZIP** — архив должен содержать ровно один `package.json` (он может находиться в подкаталоге). Импортируйте с помощью `spirit extension import ./extension.zip` или на странице **Расширения**.
 
-`supportedHosts` должен включать текущий хост. Повторная установка того же id по умолчанию не заменяет существующую копию. См. [Marketplace](../customize/marketplace.mdx) для каналов и интерфейса установки.
+`supportedHosts` должен включать текущий хост. Повторная установка того же id по умолчанию не заменяет существующую копию.
 
-## Публикация в официальный реестр
-
-Репозиторий [SpiritAgents/registry](https://github.com/SpiritAgents/registry) является индексом маркетплейса. Он не содержит исходный код расширений, `dist`, ZIP-файлы или tarball.
-
-Выполните следующие шаги по порядку:
-
-1. Опубликуйте публичный npm-пакет.
-2. Откройте pull request, в котором указан этот пакет.
-
-### 1. Опубликуйте npm-пакет
-
-Опубликованный `package.json` является источником истины, особенно `spiritExtension`. Сборщик реестра требует:
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-Он также читает `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords` и опциональный `spiritExtension.icon`. Если вы установили `icon`, включите этот файл в опубликованный пакет. Отсутствие объекта `spiritExtension` приводит к сбою сборки реестра для этой версии.
-
-Официальный пример: [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. Укажите пакет
-
-Создайте `registry/extensions/<extension-id>/` со следующими файлами:
-
-| Файл         | Описание                        |
-| ------------ | ------------------------------- |
-| `entry.json` | Управление маркетплейсом        |
-| `README.md`  | Текст описания для маркетплейса |
-
-Не редактируйте эти файлы вручную (перегенерируйте их):
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` должен содержать как минимум два сегмента, разделенных точкой, состоящих из строчных букв и цифр, с точками или дефисами внутри сегмента. Примеры: `spirit.system-message-demo`, `yourteam.some-extension`. `packageName` и `extensionId` должны быть уникальными в репозитории.
-
-### `entry.json`
-
-| Поле                  | Описание                                                     |
-| --------------------- | ------------------------------------------------------------ |
-| `schemaVersion`       | Обязательное. `1`                                            |
-| `extensionId`         | Обязательное. См. правила выше                               |
-| `packageName`         | Обязательное. Имя npm-пакета                                 |
-| `status`              | Обязательное. `listed`, `hidden`, `deprecated` или `blocked` |
-| `featured`            | Обязательное. Логическое значение                            |
-| `defaultVersion`      | Обязательное. Строка версии по умолчанию                     |
-| `defaultReviewStatus` | Обязательное. `unverified`, `verified` или `revoked`         |
-| `versions`            | Обязательное. Как минимум один элемент                       |
-
-Каждый элемент `versions[]`:
-
-| Поле           | Описание                                                                 |
-| -------------- | ------------------------------------------------------------------------ |
-| `version`      | Обязательное                                                             |
-| `channel`      | Обязательное. `stable`, `preview` или `experimental`                     |
-| `reviewStatus` | Обязательное. `unverified`, `verified` или `revoked`                     |
-| `changelog`    | Необязательное. `{ summary, body }` — оба обязательны, если присутствуют |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-В README маркетплейса следует описать, что делает расширение, имя пакета, версию по умолчанию, совместимость с хостами и возможностями, а также примечания для читателей маркетплейса.
-
-Перегенерируйте производные файлы локально:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-Скрипт получает метаданные npm для указанных версий, пересобирает `catalog.json` и каждый `detail.json`, а затем проверяет согласованность.
-
-### Запрос на включение
-
-Включите `entry.json`, `README.md` из маркетплейса и перегенерированные `catalog.json` / `detail.json`. Укажите только те версии, которые уже опубликованы в npm. Установите `reviewStatus` и `channel` точно. Новые версии обычно начинаются как `unverified`.
-
-Не коммитьте исходные деревья расширений, `dist`, ZIP-файлы, тарболы и другие бинарные артефакты.
-
-Открытие запроса на включение не гарантирует публикацию. Проверка может потребовать изменений до того, как версия будет одобрена или проверена.

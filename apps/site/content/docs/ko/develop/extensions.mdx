@@ -1,6 +1,6 @@
 ---
 title: 확장 프로그램
-description: 패키지 구조, spiritExtension 필드, 활성화 API, 공식 레지스트리 등록.
+description: 패키지 구조, spiritExtension 필드, 활성화 API.
 ---
 
 확장 프로그램은 `spiritExtension`을 포함하는 `package.json`이 있는 폴더입니다. Spirit은 워크스페이스 `.spirit/` 디렉터리가 아닌 사용자 및 호스트별로 설치합니다.
@@ -148,7 +148,7 @@ example-extension/
 | 이벤트                 | 발생 시점                     |
 | ---------------------- | ----------------------------- |
 | `onStartup`            | 호스트 준비                   |
-| `onExtensionInstalled` | ZIP 또는 마켓플레이스 설치 후 |
+| `onExtensionInstalled` | ZIP 설치 후 |
 | `onSessionOpened`      | 세션이 활성 상태가 됨         |
 | `onSessionReset`       | 세션 재설정                   |
 | `onUserMessage`        | 사용자가 메시지를 제출함      |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## 설치
 
-- **ZIP** — 아카이브에는 정확히 하나의 `package.json`이 포함되어야 합니다 (하위 디렉터리에 있어도 됩니다). `spirit extension import ./extension.zip` 또는 **설정 → 확장 프로그램**으로 가져옵니다.
-- **마켓플레이스 tarball** — 아카이브 루트에는 `package/` 디렉터리가 포함되어야 합니다.
+- **ZIP** — 아카이브에는 정확히 하나의 `package.json`이 포함되어야 합니다 (하위 디렉터리에 있어도 됩니다). `spirit extension import ./extension.zip` 또는 **확장 프로그램** 페이지에서 가져옵니다.
 
-`supportedHosts`에는 현재 호스트가 포함되어야 합니다. 동일한 ID의 두 번째 설치는 기본적으로 기존 복사본을 대체하지 않습니다. 채널 및 설치 UI는 [마켓플레이스](../customize/marketplace.mdx)를 참조하세요.
+`supportedHosts`에는 현재 호스트가 포함되어야 합니다. 동일한 ID의 두 번째 설치는 기본적으로 기존 복사본을 대체하지 않습니다.
 
-## 공식 레지스트리에 게시
-
-[SpiritAgents/registry](https://github.com/SpiritAgents/registry) 저장소는 마켓플레이스 인덱스입니다. 확장 프로그램 소스, `dist`, ZIP 파일 또는 tarball을 호스팅하지 않습니다.
-
-다음 단계를 순서대로 수행하세요:
-
-1. 공개 npm 패키지를 게시합니다.
-2. 해당 패키지를 나열하는 pull request를 엽니다.
-
-### 1. npm 패키지 게시
-
-게시된 `package.json`이 진실의 원천이며, 특히 `spiritExtension`이 중요합니다. 레지스트리 빌더에는 다음이 필요합니다:
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-또한 `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords`, 그리고 선택적으로 `spiritExtension.icon`을 읽습니다. `icon`을 설정한 경우 해당 파일을 게시된 패키지에 포함하세요. `spiritExtension` 객체가 없으면 해당 버전의 레지스트리 빌드가 실패합니다.
-
-공식 예시: [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. 패키지 나열
-
-`registry/extensions/<extension-id>/`를 생성하고 다음을 포함하세요:
-
-| 파일         | 설명                        |
-| ------------ | --------------------------- |
-| `entry.json` | 마켓플레이스 거버넌스       |
-| `README.md`  | 마켓플레이스 세부 정보 사본 |
-
-이러한 항목을 수동으로 편집하지 마세요(재생성하세요):
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId`에는 최소한 두 개의 점으로 구분된 세그먼트가 필요하며, 소문자와 숫자만 사용하고 각 세그먼트 내부에는 점이나 하이픈을 사용할 수 있습니다. 예: `spirit.system-message-demo`, `yourteam.some-extension`. `packageName`과 `extensionId`는 저장소 내에서 고유해야 합니다.
-
-### `entry.json`
-
-| 필드                  | 설명                                                  |
-| --------------------- | ----------------------------------------------------- |
-| `schemaVersion`       | 필수. `1`                                             |
-| `extensionId`         | 필수. 위의 규칙 참조                                  |
-| `packageName`         | 필수. npm 패키지 이름                                 |
-| `status`              | 필수. `listed`, `hidden`, `deprecated` 또는 `blocked` |
-| `featured`            | 필수. 부울 값                                         |
-| `defaultVersion`      | 필수. 기본 버전 문자열                                |
-| `defaultReviewStatus` | 필수. `unverified`, `verified` 또는 `revoked`         |
-| `versions`            | 필수. 최소한 하나의 항목                              |
-
-각 `versions[]` 항목:
-
-| 필드           | 설명                                                     |
-| -------------- | -------------------------------------------------------- |
-| `version`      | 필수                                                     |
-| `channel`      | 필수. `stable`, `preview` 또는 `experimental`            |
-| `reviewStatus` | 필수. `unverified`, `verified` 또는 `revoked`            |
-| `changelog`    | 선택 사항. `{ summary, body }` — 둘 다 있을 때 모두 필수 |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-마켓플레이스 README에는 확장 프로그램이 수행하는 작업, 패키지 이름, 기본 승인 버전, 호스트 및 기능 호환성, 그리고 마켓플레이스 독자를 위한 참고 사항이 포함되어야 합니다.
-
-파생 파일을 로컬에서 재생성합니다:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-스크립트는 나열된 버전에 대한 npm 메타데이터를 가져와 `catalog.json`과 각 `detail.json`을 다시 빌드한 다음 일관성을 검증합니다.
-
-### Pull request
-
-`entry.json`, 마켓플레이스 `README.md`, 재생성된 `catalog.json` / `detail.json`을 포함하세요. 이미 npm에 공개된 버전만 나열하세요. `reviewStatus`와 `channel`을 정확하게 설정하세요. 새 버전은 일반적으로 `unverified`로 시작합니다.
-
-확장 프로그램 소스 트리, `dist`, ZIP 파일, tarball 또는 기타 바이너리 아티팩트를 커밋하지 마세요.
-
-Pull request를 여는 것이 목록 등록을 보장하지는 않습니다. 검토 과정에서 버전이 승인되거나 검증되기 전에 변경을 요청할 수 있습니다.

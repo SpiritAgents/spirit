@@ -34,7 +34,7 @@ Docked panels attach to the active workspace:
 - **Models** — configure inference providers, API keys, reasoning effort, and a lightweight background model.
 - **Skills and Rules** — discover workspace and user-level skills; manage Spirit rule slots (`AGENTS.md`, `.spirit/rule.md`, and user `rule.md`).
 - **MCP servers** — add stdio or HTTP Model Context Protocol servers from settings.
-- **Extensions** — import ZIP packages or install from the built-in marketplace; extensions can contribute tools, Desktop CSS, CLI hooks, and settings pages.
+- **Extensions** — import ZIP packages from the Extensions page; extensions can contribute tools, Desktop CSS, CLI hooks, and settings pages.
 - **Dreams** (beta) — background summarization of recent session trends for the current workspace and branch.
 - **LSP** — optional language-server diagnostics after file edits.
 - **General** — UI locale (English / 简体中文 / 繁體中文 / 日本語 / 한국어 / Deutsch / Français / Español / Português do Brasil / Русский), system notifications, and tray / menu bar icon.

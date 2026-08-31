@@ -18,7 +18,6 @@ export * from "./spirit-filename-sanitize.js";
 export * from "./todos.js";
 export * from "./extensions.js";
 export * from "./file-rewind.js";
-export * from "./marketplace.js";
 export * from "./google-gemini-endpoints.js";
 export * from "./google-vertex-endpoints.js";
 export * from "./google-vertex-models.js";

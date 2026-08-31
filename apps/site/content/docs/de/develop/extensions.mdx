@@ -1,6 +1,6 @@
 ---
 title: Erweiterungen
-description: Paketstruktur, spiritExtension-Felder, Aktivierungs-API und Auflistung im offiziellen Registry.
+description: Paketstruktur, spiritExtension-Felder und Aktivierungs-API.
 ---
 
 Eine Erweiterung ist ein Ordner mit einer `package.json`, die das Feld `spiritExtension` enthält. Spirit installiert sie pro Benutzer und pro Host, nicht im `.spirit/`-Verzeichnis des Workspaces.
@@ -148,7 +148,7 @@ Der `name` in der `package.json` ist die Erweiterungs-ID. Er muss dem Muster `^(
 | Ereignis               | Wann es ausgelöst wird                      |
 | ---------------------- | ------------------------------------------- |
 | `onStartup`            | Host-Aufwärmphase                           |
-| `onExtensionInstalled` | Nach ZIP- oder Marketplace-Installation     |
+| `onExtensionInstalled` | Nach ZIP-Installation     |
 | `onSessionOpened`      | Sitzung wird aktiv                          |
 | `onSessionReset`       | Sitzung wird zurückgesetzt                  |
 | `onUserMessage`        | Benutzer sendet eine Nachricht              |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## Installation
 
-- **ZIP** — Das Archiv muss genau eine `package.json` enthalten (sie darf in einem Unterverzeichnis liegen). Importieren Sie mit `spirit extension import ./extension.zip` oder über **Einstellungen → Erweiterungen**.
-- **Marktplatz-Tarball** — Das Archivstammverzeichnis muss ein `package/`-Verzeichnis enthalten.
+- **ZIP** — Das Archiv muss genau eine `package.json` enthalten (sie darf in einem Unterverzeichnis liegen). Importieren Sie mit `spirit extension import ./extension.zip` oder über die Seite **Erweiterungen**.
 
-`supportedHosts` muss den aktuellen Host enthalten. Eine zweite Installation derselben ID ersetzt standardmäßig nicht die vorhandene Kopie. Siehe [Marktplatz](../customize/marketplace.mdx) für Kanäle und die Installationsoberfläche.
+`supportedHosts` muss den aktuellen Host enthalten. Eine zweite Installation derselben ID ersetzt standardmäßig nicht die vorhandene Kopie.
 
-## Im offiziellen Registry veröffentlichen
-
-Das [SpiritAgents/registry](https://github.com/SpiritAgents/registry)-Repository ist ein Marktplatzindex. Es hostet keine Erweiterungsquellen, `dist`, ZIP-Dateien oder Tarballs.
-
-Führen Sie diese Schritte in der angegebenen Reihenfolge aus:
-
-1. Veröffentlichen Sie ein öffentliches npm-Paket.
-2. Erstellen Sie einen Pull-Request, der dieses Paket auflistet.
-
-### 1. Veröffentlichen Sie das npm-Paket
-
-Das veröffentlichte `package.json` ist die Quelle der Wahrheit, insbesondere `spiritExtension`. Der Registry-Builder erfordert:
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-Es liest auch `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords` und optional `spiritExtension.icon`. Wenn Sie `icon` festlegen, fügen Sie diese Datei in das veröffentlichte Paket ein. Ein fehlendes `spiritExtension`-Objekt führt dazu, dass der Registry-Build für diese Version fehlschlägt.
-
-Offizielles Beispiel: [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. Paket auflisten
-
-Erstellen Sie `registry/extensions/<extension-id>/` mit:
-
-| Datei        | Beschreibung           |
-| ------------ | ---------------------- |
-| `entry.json` | Marktplatz-Governance  |
-| `README.md`  | Marktplatz-Detailtexte |
-
-Bearbeiten Sie diese nicht von Hand (generieren Sie sie neu):
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` benötigt mindestens zwei durch Punkte getrennte Segmente, Kleinbuchstaben und Ziffern, mit Punkten oder Bindestrichen innerhalb eines Segments. Beispiele: `spirit.system-message-demo`, `yourteam.some-extension`. `packageName` und `extensionId` müssen im Repository eindeutig sein.
-
-### `entry.json`
-
-| Feld                  | Beschreibung                                                  |
-| --------------------- | ------------------------------------------------------------- |
-| `schemaVersion`       | Erforderlich. `1`                                             |
-| `extensionId`         | Erforderlich. Siehe die obigen Regeln                         |
-| `packageName`         | Erforderlich. npm-Paketname                                   |
-| `status`              | Erforderlich. `listed`, `hidden`, `deprecated` oder `blocked` |
-| `featured`            | Erforderlich. Boolescher Wert                                 |
-| `defaultVersion`      | Erforderlich. Standardversionszeichenfolge                    |
-| `defaultReviewStatus` | Erforderlich. `unverified`, `verified` oder `revoked`         |
-| `versions`            | Erforderlich. Mindestens ein Element                          |
-
-Jedes `versions[]`-Element:
-
-| Feld           | Beschreibung                                                       |
-| -------------- | ------------------------------------------------------------------ |
-| `version`      | Erforderlich                                                       |
-| `channel`      | Erforderlich. `stable`, `preview` oder `experimental`              |
-| `reviewStatus` | Erforderlich. `unverified`, `verified` oder `revoked`              |
-| `changelog`    | Optional. `{ summary, body }` – beide erforderlich, wenn vorhanden |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-Die Marktplatz-README sollte abdecken, was die Erweiterung tut, den Paketnamen, die standardmäßig genehmigte Version, die Kompatibilität von Host und Fähigkeiten sowie Hinweise für Marktplatz-Leser.
-
-Generierte abgeleitete Dateien lokal neu erzeugen:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-Das Skript ruft die npm-Metadaten für die aufgeführten Versionen ab, baut `catalog.json` und jede `detail.json` neu auf und validiert dann die Konsistenz.
-
-### Pull request
-
-Fügen Sie `entry.json`, die Marktplatz-`README.md` sowie das neu generierte `catalog.json` / `detail.json` hinzu. Listen Sie nur Versionen auf, die bereits öffentlich auf npm verfügbar sind. Setzen Sie `reviewStatus` und `channel` genau. Neue Versionen starten typischerweise als `unverified`.
-
-Committen Sie keine Extension-Source-Trees, `dist`, ZIP-Dateien, Tarballs oder andere Binärartefakte.
-
-Das Eröffnen eines Pull Requests garantiert keine Auflistung. Die Überprüfung kann Änderungen anfordern, bevor eine Version genehmigt oder verifiziert wird.

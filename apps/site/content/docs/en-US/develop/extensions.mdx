@@ -1,6 +1,6 @@
 ---
 title: Extensions
-description: Package layout, spiritExtension fields, activate API, and listing on the official registry.
+description: Package layout, spiritExtension fields, and the activate API.
 ---
 
 An extension is a folder with a `package.json` that contains `spiritExtension`. Spirit installs it per user and per host, not under the workspace `.spirit/` directory.
@@ -148,7 +148,7 @@ example-extension/
 | Event                  | When it fires                    |
 | ---------------------- | -------------------------------- |
 | `onStartup`            | Host warmup                      |
-| `onExtensionInstalled` | After ZIP or marketplace install |
+| `onExtensionInstalled` | After ZIP install |
 | `onSessionOpened`      | Session becomes active           |
 | `onSessionReset`       | Session reset                    |
 | `onUserMessage`        | User submits a message           |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## Install
 
-- **ZIP** — the archive must contain exactly one `package.json` (it may sit in a subdirectory). Import with `spirit extension import ./extension.zip` or **Settings → Extensions**.
-- **Marketplace tarball** — the archive root must contain a `package/` directory.
+- **ZIP** — the archive must contain exactly one `package.json` (it may sit in a subdirectory). Import with `spirit extension import ./extension.zip` or from the **Extensions** page.
 
-`supportedHosts` must include the current host. A second install of the same id does not replace the existing copy by default. See [Marketplace](../customize/marketplace.mdx) for channels and the install UI.
+`supportedHosts` must include the current host. A second install of the same id does not replace the existing copy by default.
 
-## Publish to the official registry
-
-The [SpiritAgents/registry](https://github.com/SpiritAgents/registry) repository is a marketplace index. It does not host extension source, `dist`, ZIP files, or tarballs.
-
-Do these steps in order:
-
-1. Publish a public npm package.
-2. Open a pull request that lists that package.
-
-### 1. Publish the npm package
-
-The published `package.json` is the source of truth, especially `spiritExtension`. The registry builder requires:
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-It also reads `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords`, and optional `spiritExtension.icon`. If you set `icon`, include that file in the published package. A missing `spiritExtension` object fails the registry build for that version.
-
-Official example: [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. List the package
-
-Create `registry/extensions/<extension-id>/` with:
-
-| File         | Description             |
-| ------------ | ----------------------- |
-| `entry.json` | Marketplace governance  |
-| `README.md`  | Marketplace detail copy |
-
-Do not edit these by hand (regenerate them):
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` needs at least two dot-separated segments, lowercase letters and digits, with dots or hyphens inside a segment. Examples: `spirit.system-message-demo`, `yourteam.some-extension`. `packageName` and `extensionId` must be unique in the repository.
-
-### `entry.json`
-
-| Field                 | Description                                              |
-| --------------------- | -------------------------------------------------------- |
-| `schemaVersion`       | Required. `1`                                            |
-| `extensionId`         | Required. See the rules above                            |
-| `packageName`         | Required. npm package name                               |
-| `status`              | Required. `listed`, `hidden`, `deprecated`, or `blocked` |
-| `featured`            | Required. Boolean                                        |
-| `defaultVersion`      | Required. Default version string                         |
-| `defaultReviewStatus` | Required. `unverified`, `verified`, or `revoked`         |
-| `versions`            | Required. At least one item                              |
-
-Each `versions[]` item:
-
-| Field          | Description                                                |
-| -------------- | ---------------------------------------------------------- |
-| `version`      | Required                                                   |
-| `channel`      | Required. `stable`, `preview`, or `experimental`           |
-| `reviewStatus` | Required. `unverified`, `verified`, or `revoked`           |
-| `changelog`    | Optional. `{ summary, body }` — both required when present |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-The marketplace README should cover what the extension does, the package name, the default approved version, host and capability compatibility, and notes for marketplace readers.
-
-Regenerate derived files locally:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-The script fetches npm metadata for the listed versions, rebuilds `catalog.json` and each `detail.json`, then validates consistency.
-
-### Pull request
-
-Include `entry.json`, the marketplace `README.md`, and the regenerated `catalog.json` / `detail.json`. List only versions that are already public on npm. Set `reviewStatus` and `channel` accurately. New versions typically start as `unverified`.
-
-Do not commit extension source trees, `dist`, ZIP files, tarballs, or other binary artifacts.
-
-Opening a pull request does not guarantee listing. Review may request changes before a version is approved or verified.

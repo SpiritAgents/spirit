@@ -1,6 +1,6 @@
 ---
 title: 拡張機能
-description: パッケージレイアウト、spiritExtensionフィールド、activate API、公式レジストリへの掲載。
+description: パッケージレイアウト、spiritExtensionフィールド、activate API。
 ---
 
 拡張機能は、`spiritExtension` を含む `package.json` を持つフォルダです。Spirit はこれをワークスペースの `.spirit/` ディレクトリではなく、ユーザーごと、ホストごとにインストールします。
@@ -148,7 +148,7 @@ example-extension/
 | イベント               | 発火タイミング                                  |
 | ---------------------- | ----------------------------------------------- |
 | `onStartup`            | ホストのウォームアップ                          |
-| `onExtensionInstalled` | ZIPまたはマーケットプレイスからのインストール後 |
+| `onExtensionInstalled` | ZIPからのインストール後 |
 | `onSessionOpened`      | セッションがアクティブになったとき              |
 | `onSessionReset`       | セッションのリセット                            |
 | `onUserMessage`        | ユーザーがメッセージを送信したとき              |
@@ -327,108 +327,7 @@ export function activate(ctx) {
 
 ## インストール
 
-- **ZIP** — アーカイブには正確に 1 つの `package.json` が含まれている必要があります（サブディレクトリにある場合もあります）。`spirit extension import ./extension.zip` または **Settings → Extensions** でインポートします。
-- **マーケットプレイスの tarball** — アーカイブのルートに `package/` ディレクトリが含まれている必要があります。
+- **ZIP** — アーカイブには正確に 1 つの `package.json` が含まれている必要があります（サブディレクトリにある場合もあります）。`spirit extension import ./extension.zip` または **Extensions** ページでインポートします。
 
-`supportedHosts` には現在のホストが含まれている必要があります。同じ ID の 2 回目のインストールは、デフォルトでは既存のコピーを置き換えません。チャンネルとインストール UI については [Marketplace](../customize/marketplace.mdx) を参照してください。
+`supportedHosts` には現在のホストが含まれている必要があります。同じ ID の 2 回目のインストールは、デフォルトでは既存のコピーを置き換えません。
 
-## 公式レジストリに公開
-
-[SpiritAgents/registry](https://github.com/SpiritAgents/registry) リポジトリはマーケットプレイスのインデックスです。拡張機能のソース、`dist`、ZIP ファイル、または tarball はホストされません。
-
-次の手順をこの順序で実行してください：
-
-1. 公開のnpmパッケージを公開します。
-2. そのパッケージをリストする pull request を開きます。
-
-### 1. npmパッケージを公開する
-
-公開された `package.json` が信頼できる情報源であり、特に `spiritExtension` が重要です。レジストリビルダーには次のものが必要です：
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-また、`name`、`version`、`description`、`author`、`repository`、`homepage`、`keywords`、およびオプションの `spiritExtension.icon` も読み取ります。`icon` を設定する場合は、そのファイルを公開パッケージに含めてください。`spiritExtension` オブジェクトがないと、そのバージョンのレジストリビルドは失敗します。
-
-公式例：[`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo)（`spirit.system-message-demo`）。
-
-### 2. パッケージをリストする
-
-`registry/extensions/<extension-id>/` を作成し、次のものを含めます：
-
-| ファイル     | 説明                           |
-| ------------ | ------------------------------ |
-| `entry.json` | マーケットプレイスのガバナンス |
-| `README.md`  | マーケットプレイスの詳細コピー |
-
-これらを手動で編集しないでください（再生成するものです）：
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` は、少なくとも2つのドット区切りのセグメント、小文字の英数字、セグメント内にドットまたはハイフンを使用する必要があります。例：`spirit.system-message-demo`、`yourteam.some-extension`。`packageName` と `extensionId` はリポジトリ内で一意である必要があります。
-
-### `entry.json`
-
-| フィールド            | 説明                                                     |
-| --------------------- | -------------------------------------------------------- |
-| `schemaVersion`       | 必須。`1`                                                |
-| `extensionId`         | 必須。上記のルールを参照                                 |
-| `packageName`         | 必須。npmパッケージ名                                    |
-| `status`              | 必須。`listed`、`hidden`、`deprecated`、または `blocked` |
-| `featured`            | 必須。ブール値                                           |
-| `defaultVersion`      | 必須。デフォルトのバージョン文字列                       |
-| `defaultReviewStatus` | 必須。`unverified`、`verified`、または `revoked`         |
-| `versions`            | 必須。少なくとも1つの項目                                |
-
-各 `versions[]` 項目：
-
-| フィールド     | 説明                                                     |
-| -------------- | -------------------------------------------------------- |
-| `version`      | 必須                                                     |
-| `channel`      | 必須。`stable`、`preview`、または `experimental`         |
-| `reviewStatus` | 必須。`unverified`、`verified`、または `revoked`         |
-| `changelog`    | オプション。`{ summary, body }` — 存在する場合は両方必須 |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
-```
-
-マーケットプレイスのREADMEでは、拡張機能の機能、パッケージ名、デフォルトの承認バージョン、ホストと機能の互換性、マーケットプレイスの読者向けのメモをカバーする必要があります。
-
-派生ファイルをローカルで再生成します:
-
-```powershell
-./scripts/build-registry.ps1
-```
-
-スクリプトは、リストされたバージョンのnpmメタデータを取得し、`catalog.json`と各`detail.json`を再構築して、一貫性を検証します。
-
-### Pull request
-
-`entry.json`、マーケットプレイスの`README.md`、再生成された`catalog.json` / `detail.json`を含めてください。npmで公開されているバージョンのみをリストしてください。`reviewStatus`と`channel`を正確に設定してください。新しいバージョンは通常`unverified`から始まります。
-
-拡張機能のソースツリー、`dist`、ZIPファイル、tarball、その他のバイナリアーティファクトをコミットしないでください。
-
-pull request を開いてもリスト掲載が保証されるわけではありません。レビューでは、バージョンが承認または検証される前に変更が要求される場合があります。

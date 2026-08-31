@@ -6,7 +6,6 @@ import type { JsonValue } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import {
   createHostExtensionManager,
-  createHostExtensionMarketplace,
   createHostTodoStore,
   deleteHookEntry,
   discoverRuleEntries,
@@ -25,12 +24,7 @@ import {
   type PermissionEvalResult,
 } from "@spiritagent/host-internal";
 
-import {
-  serializeHostExtension,
-  serializeMarketplaceCatalogItem,
-  serializeMarketplaceDetail,
-  serializeMarketplacePreparedInstall,
-} from "./host-serializers.js";
+import { serializeHostExtension } from "./host-serializers.js";
 import type { SessionManager } from "./session-manager.js";
 
 /**
@@ -47,10 +41,6 @@ export class HostService {
 
   private extensionManager(hostKind: "cli" | "desktop") {
     return createHostExtensionManager({ spiritDataDir: this.spiritDataDir, hostKind });
-  }
-
-  private marketplace(hostKind: "cli" | "desktop") {
-    return createHostExtensionMarketplace({ spiritDataDir: this.spiritDataDir, hostKind });
   }
 
   private static readWorkspaceRoot(params: Record<string, unknown>): string {
@@ -229,60 +219,6 @@ export class HostService {
         await this.sessions.refreshExtensions();
         return { id };
       }
-      case "host.listMarketplaceExtensions": {
-        const items = await this.marketplace(HostService.readHostKind(params)).listCatalog();
-        return items.map((item) => serializeMarketplaceCatalogItem(item));
-      }
-      case "host.getMarketplaceExtensionDetail": {
-        const extensionId =
-          typeof params["extensionId"] === "string" ? params["extensionId"].trim() : "";
-        if (!extensionId) {
-          throw new Error("missing extensionId");
-        }
-        const detail = await this.marketplace(HostService.readHostKind(params)).getDetail(
-          extensionId,
-        );
-        return serializeMarketplaceDetail(detail);
-      }
-      case "host.getMarketplaceExtensionReadme": {
-        const extensionId =
-          typeof params["extensionId"] === "string" ? params["extensionId"].trim() : "";
-        if (!extensionId) {
-          throw new Error("missing extensionId");
-        }
-        return this.marketplace(HostService.readHostKind(params)).getReadme(extensionId);
-      }
-      case "host.prepareMarketplaceExtensionInstall": {
-        const extensionId =
-          typeof params["extensionId"] === "string" ? params["extensionId"].trim() : "";
-        if (!extensionId) {
-          throw new Error("missing extensionId");
-        }
-        const prepared = await this.marketplace(HostService.readHostKind(params)).prepareInstall({
-          extensionId,
-          ...(typeof params["version"] === "string" && params["version"].trim()
-            ? { version: params["version"].trim() }
-            : {}),
-        });
-        return serializeMarketplacePreparedInstall(prepared);
-      }
-      case "host.installMarketplaceExtension": {
-        const extensionId =
-          typeof params["extensionId"] === "string" ? params["extensionId"].trim() : "";
-        if (!extensionId) {
-          throw new Error("missing extensionId");
-        }
-        const item = await this.marketplace(HostService.readHostKind(params)).install({
-          extensionId,
-          ...(typeof params["version"] === "string" && params["version"].trim()
-            ? { version: params["version"].trim() }
-            : {}),
-          ...(params["reviewAcknowledged"] === true ? { reviewAcknowledged: true } : {}),
-        });
-        await this.sessions.refreshExtensions();
-        return serializeHostExtension(item);
-      }
-
       // -------------------------------------------------------------- todos
       case "host.listSessionTodos": {
         const sessionId = HostService.readSessionId(params);
@@ -397,11 +333,6 @@ export const HOST_METHODS = new Set([
   "host.listExtensions",
   "host.importExtension",
   "host.deleteExtension",
-  "host.listMarketplaceExtensions",
-  "host.getMarketplaceExtensionDetail",
-  "host.getMarketplaceExtensionReadme",
-  "host.prepareMarketplaceExtensionInstall",
-  "host.installMarketplaceExtension",
   "host.listSessionTodos",
   "host.replaceSessionTodos",
   "host.mcp",
