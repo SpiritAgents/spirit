@@ -747,4 +747,4 @@ cli.permissions.check.matched: '命中規則: %{rule} "%{pattern}" = %{action}'
 cli.permissions.check.segment_ref: ' (第 %{index} 段: "%{segment}")'
 cli.permissions.check.segments: "分段: %{count} (%{details})"
 cli.permissions.check.warning: "警告: %{warning}"
-cli.permissions.check.daemon_unreachable: "無法連線 Spirit 常駐程式。`spirit permissions check` 在常駐程式側評估權限規則,需要執行中的常駐程式。"
+cli.permissions.check.daemon_unreachable: "無法連線 Spirit 常駐程式。`spirit permission check` 在常駐程式側評估權限規則,需要執行中的常駐程式。"

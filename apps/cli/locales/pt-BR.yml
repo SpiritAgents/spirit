@@ -747,4 +747,4 @@ cli.permissions.check.matched: 'correspondência: %{rule} "%{pattern}" = %{actio
 cli.permissions.check.segment_ref: ' (segmento %{index}: "%{segment}")'
 cli.permissions.check.segments: "segmentos: %{count} (%{details})"
 cli.permissions.check.warning: "aviso: %{warning}"
-cli.permissions.check.daemon_unreachable: "Não foi possível conectar ao daemon do Spirit. `spirit permissions check` avalia as regras de permissão no daemon e requer um daemon em execução."
+cli.permissions.check.daemon_unreachable: "Não foi possível conectar ao daemon do Spirit. `spirit permission check` avalia as regras de permissão no daemon e requer um daemon em execução."

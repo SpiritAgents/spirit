@@ -747,4 +747,4 @@ cli.permissions.check.matched: 'совпадение: %{rule} "%{pattern}" = %{a
 cli.permissions.check.segment_ref: ' (сегмент %{index}: "%{segment}")'
 cli.permissions.check.segments: "сегменты: %{count} (%{details})"
 cli.permissions.check.warning: "предупреждение: %{warning}"
-cli.permissions.check.daemon_unreachable: "Не удалось подключиться к демону Spirit. `spirit permissions check` вычисляет правила разрешений на стороне демона и требует запущенный демон."
+cli.permissions.check.daemon_unreachable: "Не удалось подключиться к демону Spirit. `spirit permission check` вычисляет правила разрешений на стороне демона и требует запущенный демон."

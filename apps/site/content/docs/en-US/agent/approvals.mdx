@@ -96,13 +96,13 @@ Auto-approval also cannot override a hook `ask`.
 ## Test rules offline
 
 ```bash
-spirit permissions check --shell "git push origin main"
-spirit permissions check --read-file ~/.ssh/id_rsa
+spirit permission check --shell "git push origin main"
+spirit permission check --read-file ~/.ssh/id_rsa
 ```
 
 Prints the verdict, the matched rule, and per-segment detail without running anything. Evaluation runs daemon-side, so a reachable Spirit daemon is required.
 
-There is no settings UI for rules yet. Edit `config.json` and verify with `spirit permissions check`.
+There is no settings UI for rules yet. Edit `config.json` and verify with `spirit permission check`.
 
 ## Deprecated: tool-permissions.json
 

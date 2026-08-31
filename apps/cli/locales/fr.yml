@@ -747,4 +747,4 @@ cli.permissions.check.matched: 'correspondance : %{rule} "%{pattern}" = %{action
 cli.permissions.check.segment_ref: ' (segment %{index} : "%{segment}")'
 cli.permissions.check.segments: "segments : %{count} (%{details})"
 cli.permissions.check.warning: "avertissement : %{warning}"
-cli.permissions.check.daemon_unreachable: "Impossible de joindre le démon Spirit. `spirit permissions check` évalue les règles de permission côté démon et nécessite un démon en cours d'exécution."
+cli.permissions.check.daemon_unreachable: "Impossible de joindre le démon Spirit. `spirit permission check` évalue les règles de permission côté démon et nécessite un démon en cours d'exécution."

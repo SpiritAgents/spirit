@@ -748,4 +748,4 @@ cli.permissions.check.matched: 'matched: %{rule} "%{pattern}" = %{action}'
 cli.permissions.check.segment_ref: ' (segment %{index}: "%{segment}")'
 cli.permissions.check.segments: "segments: %{count} (%{details})"
 cli.permissions.check.warning: "warning: %{warning}"
-cli.permissions.check.daemon_unreachable: "Could not reach the Spirit daemon. `spirit permissions check` evaluates permission rules daemon-side and requires a running daemon."
+cli.permissions.check.daemon_unreachable: "Could not reach the Spirit daemon. `spirit permission check` evaluates permission rules daemon-side and requires a running daemon."

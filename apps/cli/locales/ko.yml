@@ -747,4 +747,4 @@ cli.permissions.check.matched: '일치 규칙: %{rule} "%{pattern}" = %{action}'
 cli.permissions.check.segment_ref: ' (세그먼트 %{index}: "%{segment}")'
 cli.permissions.check.segments: "세그먼트: %{count} (%{details})"
 cli.permissions.check.warning: "경고: %{warning}"
-cli.permissions.check.daemon_unreachable: "Spirit 데몬에 연결할 수 없습니다. `spirit permissions check`는 데몬 측에서 권한 규칙을 평가하므로 실행 중인 데몬이 필요합니다."
+cli.permissions.check.daemon_unreachable: "Spirit 데몬에 연결할 수 없습니다. `spirit permission check`는 데몬 측에서 권한 규칙을 평가하므로 실행 중인 데몬이 필요합니다."

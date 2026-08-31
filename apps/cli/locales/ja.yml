@@ -747,4 +747,4 @@ cli.permissions.check.matched: '一致: %{rule} "%{pattern}" = %{action}'
 cli.permissions.check.segment_ref: ' (セグメント %{index}: "%{segment}")'
 cli.permissions.check.segments: "セグメント: %{count} (%{details})"
 cli.permissions.check.warning: "警告: %{warning}"
-cli.permissions.check.daemon_unreachable: "Spirit デーモンに接続できません。`spirit permissions check` はデーモン側で権限ルールを評価するため、実行中のデーモンが必要です。"
+cli.permissions.check.daemon_unreachable: "Spirit デーモンに接続できません。`spirit permission check` はデーモン側で権限ルールを評価するため、実行中のデーモンが必要です。"
