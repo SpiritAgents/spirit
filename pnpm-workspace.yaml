@@ -20,28 +20,3 @@ allowBuilds:
   koffi: true
   node-pty: true
   sharp: true
-
-minimumReleaseAgeExclude:
-  - '@ai-sdk/alibaba@2.0.37'
-  - '@ai-sdk/amazon-bedrock@5.0.66'
-  - '@ai-sdk/anthropic@4.0.44'
-  - '@ai-sdk/azure@4.0.52'
-  - '@ai-sdk/baseten@2.1.17'
-  - '@ai-sdk/cohere@4.0.33'
-  - '@ai-sdk/deepinfra@3.0.39'
-  - '@ai-sdk/deepseek@3.0.35'
-  - '@ai-sdk/fireworks@3.0.42'
-  - '@ai-sdk/gateway@4.0.67'
-  - '@ai-sdk/google-vertex@5.0.66'
-  - '@ai-sdk/google@4.0.54'
-  - '@ai-sdk/groq@4.0.33'
-  - '@ai-sdk/huggingface@2.0.39'
-  - '@ai-sdk/minimax@3.0.20'
-  - '@ai-sdk/moonshotai@3.0.41'
-  - '@ai-sdk/open-responses@2.0.34'
-  - '@ai-sdk/openai-compatible@3.0.39'
-  - '@ai-sdk/openai@4.0.50'
-  - '@ai-sdk/provider-utils@5.0.32'
-  - '@ai-sdk/togetherai@3.0.40'
-  - '@ai-sdk/xai@4.0.47'
-  - ai@7.0.83
