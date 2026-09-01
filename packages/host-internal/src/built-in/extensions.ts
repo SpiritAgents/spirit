@@ -110,7 +110,7 @@ export async function ensureBuiltInExtensions(
     if (
       shouldSkipBuiltInExtensionSeed({
         extensionId,
-        defaultInstalled: manifest.defaultInstalled,
+        ...(manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
         removedIds: removed,
         installedIds,
       })
