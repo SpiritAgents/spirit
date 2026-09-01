@@ -126,17 +126,17 @@ Der `name` in der `package.json` ist die Erweiterungs-ID. Er muss dem Muster `^(
 
 ## `spiritExtension`
 
-| Feld                    | Beschreibung                                                  |
-| ----------------------- | ------------------------------------------------------------- |
-| `schemaVersion`         | Optional. Standardwert: `1`. Nur `1` wird unterstützt         |
-| `displayName`           | Erforderlich. Sichtbarer Name                                 |
-| `icon`                  | Optional. Pfad relativ zum Paketstamm                         |
-| `supportedHosts`        | Erforderlich. Nicht leeres Array mit `cli` und/oder `desktop` |
-| `activationEvents`      | Optional. Siehe [Aktivierungsereignisse](#activation-events)  |
-| `requestedCapabilities` | Optional. Siehe [Fähigkeiten](#capabilities)                  |
+| Feld                    | Beschreibung                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------ |
+| `schemaVersion`         | Optional. Standardwert: `1`. Nur `1` wird unterstützt                          |
+| `displayName`           | Erforderlich. Sichtbarer Name                                                  |
+| `icon`                  | Optional. Pfad relativ zum Paketstamm                                          |
+| `supportedHosts`        | Erforderlich. Nicht leeres Array mit `cli` und/oder `desktop`                  |
+| `activationEvents`      | Optional. Siehe [Aktivierungsereignisse](#activation-events)                   |
+| `requestedCapabilities` | Optional. Siehe [Fähigkeiten](#capabilities)                                   |
 | `contributes`           | Optional. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills` und/oder `rules` |
-| `settingsSchema`        | Optional. Definitionen von Einstellungen                      |
-| `secretSlots`           | Optional. Definitionen von Geheimnis-Slots                    |
+| `settingsSchema`        | Optional. Definitionen von Einstellungen                                       |
+| `secretSlots`           | Optional. Definitionen von Geheimnis-Slots                                     |
 
 ## Fähigkeiten
 
@@ -164,7 +164,7 @@ Der `name` in der `package.json` ist die Erweiterungs-ID. Er muss dem Muster `^(
 | Ereignis               | Wann es ausgelöst wird                      |
 | ---------------------- | ------------------------------------------- |
 | `onStartup`            | Host-Aufwärmphase                           |
-| `onExtensionInstalled` | Nach ZIP-Installation     |
+| `onExtensionInstalled` | Nach ZIP-Installation                       |
 | `onSessionOpened`      | Sitzung wird aktiv                          |
 | `onSessionReset`       | Sitzung wird zurückgesetzt                  |
 | `onUserMessage`        | Benutzer sendet eine Nachricht              |
@@ -239,12 +239,12 @@ Token-Rollen: `default`, `primary`, `secondary`, `muted`, `accent`, `success`, `
 
 Erfordert die passende Capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills` und `contributes.rules` sind `true` oder `{}`. Die Pfade sind konventionell; eigene Pfade sind nicht erlaubt.
 
-| Beitrag | Capability | Datei |
-| ------- | ---------- | ----- |
-| MCP | `mcp` | `mcp.json` im Paketstamm (gleiches Schema wie Benutzer-/Workspace-MCP) |
-| Agent-Hooks | `hooks` | `hooks.json` im Paketstamm (gleiches Schema wie Agent-Hooks; nicht `contributes.cli.hooks`) |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | `rule.md` im Paketstamm |
+| Beitrag     | Capability | Datei                                                                                       |
+| ----------- | ---------- | ------------------------------------------------------------------------------------------- |
+| MCP         | `mcp`      | `mcp.json` im Paketstamm (gleiches Schema wie Benutzer-/Workspace-MCP)                      |
+| Agent-Hooks | `hooks`    | `hooks.json` im Paketstamm (gleiches Schema wie Agent-Hooks; nicht `contributes.cli.hooks`) |
+| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                    |
+| Rules       | `rules`    | `rule.md` im Paketstamm                                                                     |
 
 Deklariert, aber fehlend oder ungültig: Installation schlägt fehl. Vorhandene, aber nicht deklarierte Dateien werden ignoriert und nie geladen.
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — Das Archiv muss genau eine `package.json` enthalten (sie darf in einem Unterverzeichnis liegen). Importieren Sie mit `spirit extension import ./extension.zip` oder über die Seite **Erweiterungen**.
 
 `supportedHosts` muss den aktuellen Host enthalten. Eine zweite Installation derselben ID ersetzt standardmäßig nicht die vorhandene Kopie.
-

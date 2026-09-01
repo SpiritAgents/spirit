@@ -4059,14 +4059,11 @@ class DesktopHostService {
     const manager = this.extensionManager();
     const extensions = await manager.list();
     state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
-    state.marketplaceCatalog = await buildDesktopExtensionListItems(
-      manager,
-      await listMarketplaceCatalog({
-        spiritDataDir: spiritDataDir(),
-        hostKind: "desktop",
-      }),
-      options,
-    );
+    const rawCatalog = await listMarketplaceCatalog({
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop",
+    });
+    state.marketplaceCatalog = await buildDesktopExtensionListItems(manager, rawCatalog, options);
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);
     state.extensionInstructionContributions =
       await collectEnabledExtensionInstructionContributions(extensions);

@@ -4,10 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import {
-  createHostExtensionManager,
-  installPreparedExtensionDirectory,
-} from "../extensions.js";
+import { createHostExtensionManager, installPreparedExtensionDirectory } from "../extensions.js";
 import { loadBuiltInState } from "./state.js";
 import {
   ensureBuiltInExtensions,

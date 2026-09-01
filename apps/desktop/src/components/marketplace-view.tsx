@@ -1,7 +1,15 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Download, Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Download,
+  Ellipsis,
+  LoaderCircle,
+  Search,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { Button } from "@/components/ui/button";

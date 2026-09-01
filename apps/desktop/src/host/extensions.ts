@@ -124,7 +124,9 @@ export async function buildDesktopExtensionListItems(
                     }
                   : {}),
               })),
-              ...(skipLiveState ? {} : { settingsValues: await manager.getSettingsValues(item.id) }),
+              ...(skipLiveState
+                ? {}
+                : { settingsValues: await manager.getSettingsValues(item.id) }),
             }
           : {}),
         ...(item.manifest.secretSlots?.length

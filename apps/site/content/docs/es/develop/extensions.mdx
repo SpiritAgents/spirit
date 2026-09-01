@@ -126,36 +126,36 @@ El `name` en `package.json` es el id de la extensión. Debe coincidir con `^(?:@
 
 ## `spiritExtension`
 
-| Campo                   | Descripción                                               |
-| ----------------------- | --------------------------------------------------------- |
-| `schemaVersion`         | Opcional. Por defecto es `1`. Solo se soporta `1`         |
-| `displayName`           | Requerido. Nombre visible para el usuario                 |
-| `icon`                  | Opcional. Ruta relativa a la raíz del paquete             |
-| `supportedHosts`        | Requerido. Arreglo no vacío de `cli` y/o `desktop`        |
-| `activationEvents`      | Opcional. Ver [Eventos de activación](#activation-events) |
-| `requestedCapabilities` | Opcional. Ver [Capacidades](#capacities)                  |
+| Campo                   | Descripción                                                               |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `schemaVersion`         | Opcional. Por defecto es `1`. Solo se soporta `1`                         |
+| `displayName`           | Requerido. Nombre visible para el usuario                                 |
+| `icon`                  | Opcional. Ruta relativa a la raíz del paquete                             |
+| `supportedHosts`        | Requerido. Arreglo no vacío de `cli` y/o `desktop`                        |
+| `activationEvents`      | Opcional. Ver [Eventos de activación](#activation-events)                 |
+| `requestedCapabilities` | Opcional. Ver [Capacidades](#capacities)                                  |
 | `contributes`           | Opcional. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills` y/o `rules` |
-| `settingsSchema`        | Opcional. Definiciones de ajustes                         |
-| `secretSlots`           | Opcional. Definiciones de ranuras de secretos             |
+| `settingsSchema`        | Opcional. Definiciones de ajustes                                         |
+| `secretSlots`           | Opcional. Definiciones de ranuras de secretos                             |
 
 ## Capacidades
 
-| Valor                | Tiempo de ejecución                                                             |
-| -------------------- | ------------------------------------------------------------------------------- |
-| `tool-definitions`   | Requerido con `tool-execution` para exponer `contributes.tools` al modelo       |
-| `tool-execution`     | Requerido con `tool-definitions` para ejecutar esas herramientas                |
-| `system-prompt`      | Requerido con `main` para contribuir con un fragmento de prompt del sistema     |
-| `desktop-ui`         | Debe estar emparejado con `contributes.desktop`                                 |
-| `cli-ui`             | Debe estar emparejado con `contributes.cli`                                     |
-| `mcp`                | Debe estar emparejado con `contributes.mcp`; carga `mcp.json` en la raíz del paquete |
+| Valor                | Tiempo de ejecución                                                                      |
+| -------------------- | ---------------------------------------------------------------------------------------- |
+| `tool-definitions`   | Requerido con `tool-execution` para exponer `contributes.tools` al modelo                |
+| `tool-execution`     | Requerido con `tool-definitions` para ejecutar esas herramientas                         |
+| `system-prompt`      | Requerido con `main` para contribuir con un fragmento de prompt del sistema              |
+| `desktop-ui`         | Debe estar emparejado con `contributes.desktop`                                          |
+| `cli-ui`             | Debe estar emparejado con `contributes.cli`                                              |
+| `mcp`                | Debe estar emparejado con `contributes.mcp`; carga `mcp.json` en la raíz del paquete     |
 | `hooks`              | Debe estar emparejado con `contributes.hooks`; carga `hooks.json` en la raíz del paquete |
-| `skills`             | Debe estar emparejado con `contributes.skills`; carga `skills/<name>/SKILL.md`  |
-| `rules`              | Debe estar emparejado con `contributes.rules`; carga `rule.md` en la raíz del paquete |
-| `approval-flow`      | Solo declarado. La aprobación se rige por el `approvalMode` de cada herramienta |
-| `questions-flow`     | Solo declarado. Las preguntas se rigen por `approvalMode: need-questions`       |
-| `settings`           | Solo declarado. La configuración proviene de `settingsSchema`                   |
-| `secret-storage`     | Se usa con `secretSlots`                                                        |
-| `structured-results` | Solo declarado                                                                  |
+| `skills`             | Debe estar emparejado con `contributes.skills`; carga `skills/<name>/SKILL.md`           |
+| `rules`              | Debe estar emparejado con `contributes.rules`; carga `rule.md` en la raíz del paquete    |
+| `approval-flow`      | Solo declarado. La aprobación se rige por el `approvalMode` de cada herramienta          |
+| `questions-flow`     | Solo declarado. Las preguntas se rigen por `approvalMode: need-questions`                |
+| `settings`           | Solo declarado. La configuración proviene de `settingsSchema`                            |
+| `secret-storage`     | Se usa con `secretSlots`                                                                 |
+| `structured-results` | Solo declarado                                                                           |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` y la entrada `contributes` correspondiente deben estar ambos presentes o ambos ausentes.
 
@@ -164,7 +164,7 @@ El `name` en `package.json` es el id de la extensión. Debe coincidir con `^(?:@
 | Evento                 | Cuándo se dispara                           |
 | ---------------------- | ------------------------------------------- |
 | `onStartup`            | Calentamiento del host                      |
-| `onExtensionInstalled` | Después de instalar desde ZIP |
+| `onExtensionInstalled` | Después de instalar desde ZIP               |
 | `onSessionOpened`      | La sesión se vuelve activa                  |
 | `onSessionReset`       | Reinicio de sesión                          |
 | `onUserMessage`        | El usuario envía un mensaje                 |
@@ -239,12 +239,12 @@ Roles de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success`,
 
 Requieren la capability correspondiente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` y `contributes.rules` son `true` o `{}`. Las rutas son convencionales; no se permiten rutas personalizadas.
 
-| Contribución | Capability | Archivo |
-| ------------ | ---------- | ------- |
-| MCP | `mcp` | `mcp.json` en la raíz del paquete (mismo schema que el MCP de usuario/espacio de trabajo) |
-| Agent hooks | `hooks` | `hooks.json` en la raíz del paquete (mismo schema que los hooks del agente; no `contributes.cli.hooks`) |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | `rule.md` en la raíz del paquete |
+| Contribución | Capability | Archivo                                                                                                 |
+| ------------ | ---------- | ------------------------------------------------------------------------------------------------------- |
+| MCP          | `mcp`      | `mcp.json` en la raíz del paquete (mismo schema que el MCP de usuario/espacio de trabajo)               |
+| Agent hooks  | `hooks`    | `hooks.json` en la raíz del paquete (mismo schema que los hooks del agente; no `contributes.cli.hooks`) |
+| Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                                |
+| Rules        | `rules`    | `rule.md` en la raíz del paquete                                                                        |
 
 Si están declarados pero el archivo falta o es inválido, la instalación falla. Los archivos no declarados se ignoran y nunca se cargan.
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — el archivo debe contener exactamente un `package.json` (puede estar en un subdirectorio). Importa con `spirit extension import ./extension.zip` o desde la página **Extensiones**.
 
 `supportedHosts` debe incluir el host actual. Una segunda instalación del mismo id no reemplaza la copia existente por defecto.
-

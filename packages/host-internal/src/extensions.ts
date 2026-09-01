@@ -26,10 +26,7 @@ import {
 } from "@spiritagent/agent-core";
 
 import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
-import {
-  clearBuiltInExtensionRemoved,
-  noteBuiltInExtensionRemoved,
-} from "./built-in/state.js";
+import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
 import { validateSkillName } from "./discovery.js";
 import {
   parseSkillFrontmatterFields,
