@@ -40,6 +40,7 @@ export interface InitializationState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
+  marketplaceCatalog: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
@@ -214,6 +215,7 @@ export async function ensureInitializedCommand(
     metadata,
     plan,
     extensionsList: state?.extensionsList ?? [],
+    marketplaceCatalog: state?.marketplaceCatalog ?? [],
     extensionCss: state?.extensionCss ?? [],
     extensionInstructionContributions: state?.extensionInstructionContributions ?? {
       mcp: { servers: {} },

@@ -64,6 +64,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     importExtension(request) {
       return bridge.importExtension(request);
     },
+    installBuiltInExtension(request) {
+      return bridge.installBuiltInExtension(request);
+    },
     deleteExtension(request) {
       return bridge.deleteExtension(request);
     },

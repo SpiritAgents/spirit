@@ -36,6 +36,7 @@ import {
   collectEnabledExtensionInstructionContributions,
   overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
+  listMarketplaceCatalog,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
   classifyLocalFileComposerRoute as resolveLocalFileComposerRoute,
@@ -125,6 +126,7 @@ import type {
   CodeCompletionResponse,
   SessionListItem,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallLspProviderRequest,
   SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
@@ -175,6 +177,7 @@ import {
   deleteHookEntryCommand,
   deleteSkillCommand,
   importExtensionCommand,
+  installBuiltInExtensionCommand,
   inspectMcpServerCommand,
   runExtensionCommand,
   setExtensionEnabledCommand,
@@ -533,6 +536,7 @@ interface HostState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
+  marketplaceCatalog: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
@@ -1603,6 +1607,10 @@ class DesktopHostService {
 
   async importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot> {
     return importExtensionCommand(this.extensionCommandContext(), request);
+  }
+
+  async installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot> {
+    return installBuiltInExtensionCommand(this.extensionCommandContext(), request);
   }
 
   async deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot> {
@@ -3638,6 +3646,7 @@ class DesktopHostService {
       metadata: state.metadata,
       plan: state.plan,
       extensionsList: state.extensionsList,
+      marketplaceCatalog: state.marketplaceCatalog,
       extensionCss: state.extensionCss,
       extensionSkills: state.extensionInstructionContributions.skills.map((skill) => ({
         id: skill.id,
@@ -4047,10 +4056,15 @@ class DesktopHostService {
 
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
     const state = this.requireState();
-    const extensions = await this.extensionManager().list();
-    state.extensionsList = await buildDesktopExtensionListItems(
-      this.extensionManager(),
-      extensions,
+    const manager = this.extensionManager();
+    const extensions = await manager.list();
+    state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
+    state.marketplaceCatalog = await buildDesktopExtensionListItems(
+      manager,
+      await listMarketplaceCatalog({
+        spiritDataDir: spiritDataDir(),
+        hostKind: "desktop",
+      }),
       options,
     );
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);

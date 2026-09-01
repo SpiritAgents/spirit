@@ -22,6 +22,7 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallLspProviderRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
@@ -177,6 +178,9 @@ export function createWebHostApi(): HostApi {
     },
     importExtension(request: ImportExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions", request);
+    },
+    installBuiltInExtension(request: InstallBuiltInExtensionRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/extensions/install-built-in", request);
     },
     deleteExtension(request: DeleteExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/remove", request);

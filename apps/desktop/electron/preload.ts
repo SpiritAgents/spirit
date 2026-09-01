@@ -132,6 +132,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   importExtension(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "importExtension", { request });
   },
+  installBuiltInExtension(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "installBuiltInExtension", { request });
+  },
   deleteExtension(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "deleteExtension", { request });
   },

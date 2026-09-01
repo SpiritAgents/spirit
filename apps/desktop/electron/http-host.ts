@@ -557,6 +557,20 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/extensions/install-built-in") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("installBuiltInExtension", {
+        request: {
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
+        },
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/extensions/enabled") {
     writeJson(
       request,

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
 
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import type {
   DeleteExtensionRequest,
   DesktopExtensionListItem,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   SetExtensionEnabledRequest,
 } from "@/types";
 
@@ -46,11 +47,12 @@ const MARKETPLACE_LIST_W = "max-w-[min(92vw,52rem)]";
 
 type MarketplaceViewProps = {
   snapshot: {
-    extensionsList: DesktopExtensionListItem[];
+    marketplaceCatalog?: DesktopExtensionListItem[];
     extensionsLoading?: boolean;
   } | null;
   extensionsBusy: boolean;
   onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
+  onInstallBuiltInExtension: (request: InstallBuiltInExtensionRequest) => Promise<void>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
   extensionsInstalling?: boolean;
@@ -62,6 +64,7 @@ export function MarketplaceView({
   snapshot,
   extensionsBusy,
   onImportExtension,
+  onInstallBuiltInExtension,
   onDeleteExtension,
   onSetExtensionEnabled,
   extensionsInstalling = false,
@@ -74,12 +77,12 @@ export function MarketplaceView({
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const installedExtensions = snapshot?.extensionsList ?? [];
+  const catalog = snapshot?.marketplaceCatalog ?? [];
   const detailItem = detailExtensionId
-    ? installedExtensions.find((item) => item.id === detailExtensionId)
+    ? catalog.find((item) => item.id === detailExtensionId)
     : undefined;
 
-  const filteredExtensions = installedExtensions.filter((item) => {
+  const filteredExtensions = catalog.filter((item) => {
     const query = searchText.trim().toLowerCase();
     if (!query) {
       return true;
@@ -105,6 +108,16 @@ export function MarketplaceView({
     void (async () => {
       try {
         await onSetExtensionEnabled({ id: item.id, enabled: !item.enabled });
+      } catch {
+        /* runtimeError */
+      }
+    })();
+  };
+
+  const handleInstallBuiltIn = (item: DesktopExtensionListItem) => {
+    void (async () => {
+      try {
+        await onInstallBuiltInExtension({ id: item.id });
       } catch {
         /* runtimeError */
       }
@@ -196,7 +209,7 @@ export function MarketplaceView({
 
               {listEmpty ? (
                 <p className="text-center text-sm text-muted-foreground">
-                  {installedExtensions.length === 0
+                  {catalog.length === 0
                     ? t("marketplace.noExtensionsInstalled")
                     : t("marketplace.noMatches")}
                 </p>
@@ -210,7 +223,7 @@ export function MarketplaceView({
                         "relative isolate flex w-full items-center overflow-hidden",
                         DESKTOP_OUTLINE_FILL_UNDERLAY,
                         DESKTOP_ITEM_CARD_HOVER_BORDER,
-                        !item.enabled && "opacity-55",
+                        item.installed && !item.enabled && "opacity-55",
                       )}
                     >
                       <button
@@ -248,21 +261,21 @@ export function MarketplaceView({
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="min-w-40 p-0">
-                            <div className="p-1">
-                              <DropdownMenuItem
-                                disabled={extensionsBusy}
-                                className="gap-2"
-                                onSelect={() => handleToggleEnabled(item)}
-                              >
-                                <span>
-                                  {item.enabled
-                                    ? t("marketplace.disable")
-                                    : t("marketplace.enable")}
-                                </span>
-                              </DropdownMenuItem>
-                            </div>
-                            {item.installSource !== "built-in" ? (
+                            {item.installed ? (
                               <>
+                                <div className="p-1">
+                                  <DropdownMenuItem
+                                    disabled={extensionsBusy}
+                                    className="gap-2"
+                                    onSelect={() => handleToggleEnabled(item)}
+                                  >
+                                    <span>
+                                      {item.enabled
+                                        ? t("marketplace.disable")
+                                        : t("marketplace.enable")}
+                                    </span>
+                                  </DropdownMenuItem>
+                                </div>
                                 <DropdownMenuSeparator />
                                 <div className="p-1">
                                   <DropdownMenuItem
@@ -276,7 +289,18 @@ export function MarketplaceView({
                                   </DropdownMenuItem>
                                 </div>
                               </>
-                            ) : null}
+                            ) : (
+                              <div className="p-1">
+                                <DropdownMenuItem
+                                  disabled={extensionsBusy}
+                                  className="gap-2"
+                                  onSelect={() => handleInstallBuiltIn(item)}
+                                >
+                                  <Download className="size-3.5 shrink-0" aria-hidden />
+                                  <span>{t("marketplace.install")}</span>
+                                </DropdownMenuItem>
+                              </div>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -330,9 +354,14 @@ export function MarketplaceView({
           <DialogHeader>
             <DialogTitle>{t("marketplace.uninstallExtension")}</DialogTitle>
             <DialogDescription>
-              {t("marketplace.uninstallExtensionConfirm", {
-                name: uninstallTarget?.displayName ?? "",
-              })}
+              {t(
+                uninstallTarget?.installSource === "built-in"
+                  ? "marketplace.uninstallBuiltInConfirm"
+                  : "marketplace.uninstallExtensionConfirm",
+                {
+                  name: uninstallTarget?.displayName ?? "",
+                },
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
