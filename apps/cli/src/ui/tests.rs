@@ -612,7 +612,7 @@ fn marketplace_picker_lines_mark_installed_state() {
 }
 
 #[test]
-fn marketplace_picker_overlay_projects_catalog_title_and_rows() {
+fn marketplace_picker_overlay_projects_catalog_rows() {
     let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_picker_active = true;
     app.marketplace_catalog = vec![sample_marketplace_catalog_entry(
@@ -622,10 +622,6 @@ fn marketplace_picker_overlay_projects_catalog_title_and_rows() {
     )];
 
     let snapshot = render_ui_lines(&app, 80, 24).join("\n");
-    assert!(
-        snapshot.contains(t!("ui.picker.marketplace").as_ref()),
-        "marketplace overlay should use the catalog title, got:\n{snapshot}"
-    );
     assert!(
         snapshot.contains("Catalog Demo") && snapshot.contains("spirit.catalog-demo"),
         "marketplace overlay should project catalog rows, got:\n{snapshot}"

@@ -251,10 +251,14 @@ pub fn draw_ui(
     let show_rewind_picker = app.rewind_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
+        || show_language_picker
         || show_chat_picker
+        || show_subagent_picker
         || show_approval_picker
         || show_network_picker
-        || show_tui_picker;
+        || show_tui_picker
+        || show_image_picker
+        || show_marketplace_picker;
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
@@ -486,10 +490,14 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_fork_picker = app.fork_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
+        || show_language_picker
         || show_chat_picker
+        || show_subagent_picker
         || show_approval_picker
         || show_network_picker
-        || show_tui_picker;
+        || show_tui_picker
+        || show_image_picker
+        || show_marketplace_picker;
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
@@ -863,14 +871,7 @@ fn draw_aux_overlay(
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_language_picker {
         let picker_lines = build_language_picker_lines(app, 5);
-        let picker_widget = Paragraph::new(picker_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(t!("ui.picker.language")),
-            )
-            .wrap(Wrap { trim: true });
-        frame.render_widget(picker_widget, overlay);
+        draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_chat_picker {
         let picker_lines = build_chat_picker_lines(app, 5);
         draw_inline_picker(frame, overlay, picker_lines);
@@ -879,24 +880,10 @@ fn draw_aux_overlay(
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_image_picker {
         let picker_lines = build_image_picker_lines(app, 5);
-        let picker_widget = Paragraph::new(picker_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(t!("ui.picker.image")),
-            )
-            .wrap(Wrap { trim: true });
-        frame.render_widget(picker_widget, overlay);
+        draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_marketplace_picker {
         let picker_lines = build_marketplace_picker_lines(app, 5);
-        let picker_widget = Paragraph::new(picker_lines)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(t!("ui.picker.marketplace")),
-            )
-            .wrap(Wrap { trim: true });
-        frame.render_widget(picker_widget, overlay);
+        draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_suggestions {
         let use_inline_suggestions = suggestions_use_inline_picker(app);
         let suggestion_content_width = if use_inline_suggestions {
