@@ -26,6 +26,10 @@ import {
 } from "@spiritagent/agent-core";
 
 import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
+import {
+  clearBuiltInExtensionRemoved,
+  noteBuiltInExtensionRemoved,
+} from "./built-in/state.js";
 import { validateSkillName } from "./discovery.js";
 import {
   parseSkillFrontmatterFields,
@@ -279,6 +283,16 @@ export interface HostExtensionManifest {
   contributes?: HostExtensionContributionSet;
   settingsSchema?: HostExtensionSettingDefinition[];
   secretSlots?: HostExtensionSecretSlot[];
+  /**
+   * When false, `ensureBuiltInExtensions` does not seed this package.
+   * Omitted or true means seed on first launch (unless a removal tombstone exists).
+   */
+  defaultInstalled?: boolean;
+}
+
+export interface HostMarketplaceCatalogItem extends HostInstalledExtension {
+  /** False when the bundled template is listed but not copied into the host extensions directory. */
+  installed: boolean;
 }
 
 export type HostExtensionInstallSource = "built-in" | "archive" | "marketplace";
@@ -796,6 +810,9 @@ export async function installPreparedExtensionDirectory(
   await writeExtensionRegistry(paths.extensionsIndexFile, nextRegistryEntries);
 
   const toggleState = await loadToggleState(paths.extensionsStateFile);
+  if (installSource === "built-in" || isBuiltInExtensionId(manifest.id)) {
+    await clearBuiltInExtensionRemoved(context.spiritDataDir, manifest.id);
+  }
   return {
     id: manifest.id,
     directoryName,
@@ -826,10 +843,6 @@ export async function removeInstalledExtension(
     throw new Error(`Extension not found: ${normalizedId}`);
   }
 
-  if (target.installSource === "built-in" || isBuiltInExtensionId(normalizedId)) {
-    throw new Error(`Built-in extensions cannot be uninstalled: ${normalizedId}`);
-  }
-
   await rm(target.directoryPath, { recursive: true, force: true });
   await writeExtensionRegistry(
     paths.extensionsIndexFile,
@@ -837,6 +850,17 @@ export async function removeInstalledExtension(
       .filter((item) => item.id !== normalizedId)
       .map((item) => toExtensionRegistryEntry(item)),
   );
+
+  const toggleState = await loadToggleState(paths.extensionsStateFile);
+  if (toggleState.enabledOverrides?.[normalizedId] !== undefined) {
+    const enabledOverrides = { ...toggleState.enabledOverrides };
+    delete enabledOverrides[normalizedId];
+    await saveToggleState(paths.extensionsStateFile, { enabledOverrides });
+  }
+
+  if (target.installSource === "built-in" || isBuiltInExtensionId(normalizedId)) {
+    await noteBuiltInExtensionRemoved(context.spiritDataDir, normalizedId);
+  }
 }
 
 export async function setExtensionEnabled(
@@ -1708,6 +1732,9 @@ async function parseExtensionManifest(
     ...(contributes ? { contributes } : {}),
     ...(settingsSchema.length > 0 ? { settingsSchema } : {}),
     ...(secretSlots.length > 0 ? { secretSlots } : {}),
+    ...(optionalBooleanField(spiritExtension.defaultInstalled) === false
+      ? { defaultInstalled: false }
+      : {}),
   };
 }
 

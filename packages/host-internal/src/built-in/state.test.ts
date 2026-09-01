@@ -85,18 +85,16 @@ test("installPreparedDirectory records installSource and remove notes built-in",
     assert.ok(match);
     assert.equal(match?.installSource, "built-in");
 
-    // Built-in extensions are no longer removable; the tombstone file remains only as a
-    // legacy read path for uninstalls written by older versions.
-    await assert.rejects(
-      () => manager.remove(installed.id),
-      /Built-in extensions cannot be uninstalled/,
+    await manager.remove(installed.id);
+    assert.equal(
+      (await manager.list()).some((item) => item.id === installed.id),
+      false,
     );
-    assert.ok((await manager.list()).some((item) => item.id === installed.id));
+    const state = await loadBuiltInState(spiritDataDir);
+    assert.ok(state.removedExtensionIds.includes(installed.id));
 
     // Direct note API is idempotent.
     await noteBuiltInExtensionRemoved(spiritDataDir, installed.id);
-    const state = await loadBuiltInState(spiritDataDir);
-    assert.ok(state.removedExtensionIds.includes(installed.id));
     const again = await loadBuiltInState(spiritDataDir);
     assert.equal(again.removedExtensionIds.filter((id) => id === installed.id).length, 1);
 
