@@ -247,6 +247,7 @@ pub fn draw_ui(
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
+    let show_marketplace_picker = app.marketplace_picker_active;
     let show_rewind_picker = app.rewind_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
@@ -261,7 +262,8 @@ pub fn draw_ui(
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
-        || show_image_picker;
+        || show_image_picker
+        || show_marketplace_picker;
     let show_suggestions = app.input_suggestion_kind.is_some()
         && !show_picker
         && !show_rewind_picker
@@ -399,6 +401,7 @@ pub fn draw_ui(
             show_chat_picker,
             show_subagent_picker,
             show_image_picker,
+            show_marketplace_picker,
             show_picker,
             show_bottom_form,
             show_suggestions,
@@ -462,6 +465,7 @@ struct InlineSurfaceFlags {
     show_chat_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
+    show_marketplace_picker: bool,
     show_picker: bool,
     show_inline_picker: bool,
     show_bottom_form: bool,
@@ -477,6 +481,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
+    let show_marketplace_picker = app.marketplace_picker_active;
     let show_rewind_picker = app.rewind_picker.is_some();
     let show_fork_picker = app.fork_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
@@ -492,7 +497,8 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
-        || show_image_picker;
+        || show_image_picker
+        || show_marketplace_picker;
     let show_suggestions = app.input_suggestion_kind.is_some()
         && !show_picker
         && !show_rewind_picker
@@ -507,6 +513,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         show_chat_picker,
         show_subagent_picker,
         show_image_picker,
+        show_marketplace_picker,
         show_picker,
         show_inline_picker,
         show_bottom_form,
@@ -721,6 +728,7 @@ fn draw_inline_ui(
             show_chat_picker: flags.show_chat_picker,
             show_subagent_picker: flags.show_subagent_picker,
             show_image_picker: flags.show_image_picker,
+            show_marketplace_picker: flags.show_marketplace_picker,
             show_picker: flags.show_picker,
             show_bottom_form: flags.show_bottom_form,
             show_suggestions: flags.show_suggestions,
@@ -763,6 +771,7 @@ struct AuxOverlayFlags {
     show_chat_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
+    show_marketplace_picker: bool,
     show_picker: bool,
     show_bottom_form: bool,
     show_suggestions: bool,
@@ -875,6 +884,16 @@ fn draw_aux_overlay(
                 Block::default()
                     .borders(Borders::ALL)
                     .title(t!("ui.picker.image")),
+            )
+            .wrap(Wrap { trim: true });
+        frame.render_widget(picker_widget, overlay);
+    } else if flags.show_marketplace_picker {
+        let picker_lines = build_marketplace_picker_lines(app, 5);
+        let picker_widget = Paragraph::new(picker_lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(t!("ui.picker.marketplace")),
             )
             .wrap(Wrap { trim: true });
         frame.render_widget(picker_widget, overlay);

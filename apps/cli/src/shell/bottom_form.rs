@@ -3716,6 +3716,8 @@ mod tests {
             archive_file_name: Some("basic-metadata-demo.zip".to_string()),
             instruction_contributions: None,
             installed_at_unix_ms: 0,
+            installed: true,
+            install_source: Some("archive".to_string()),
         }
     }
 

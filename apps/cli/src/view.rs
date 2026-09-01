@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::ask_questions::AskQuestionsRequest;
+use crate::host_protocol::CliExtensionEntry;
 use crate::model_registry::AppConfig;
 use crate::ports::SubagentSessionStatus;
 use crate::session::PendingMcpResource;
@@ -417,6 +418,9 @@ pub struct TuiViewModel {
     pub image_picker_active: bool,
     pub image_picker_index: usize,
     pub image_picker_files: Vec<String>,
+    pub marketplace_picker_active: bool,
+    pub marketplace_picker_index: usize,
+    pub marketplace_catalog: Vec<CliExtensionEntry>,
     pub bottom_form: Option<BottomFormView>,
     pub history_offset_from_bottom: usize,
     pub pending_response_active: bool,

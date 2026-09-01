@@ -166,4 +166,12 @@ pub struct CliExtensionEntry {
     pub secret_slots: Option<Vec<CliExtensionSecretSlotEntry>>,
     pub archive_file_name: Option<String>,
     pub installed_at_unix_ms: u64,
+    #[serde(default = "default_extension_installed")]
+    pub installed: bool,
+    #[serde(default)]
+    pub install_source: Option<String>,
+}
+
+fn default_extension_installed() -> bool {
+    true
 }

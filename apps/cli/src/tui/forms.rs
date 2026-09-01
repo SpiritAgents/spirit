@@ -726,6 +726,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
         self.messages.push(ChatMessage {
@@ -744,6 +745,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
@@ -757,6 +759,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
@@ -775,6 +778,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
         self.scroll_history_to_bottom();
@@ -837,6 +841,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
@@ -850,6 +855,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
@@ -863,6 +869,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
@@ -876,6 +883,7 @@ impl TuiShell {
         self.tui_picker_active = false;
         self.chat_picker_active = false;
         self.image_picker_active = false;
+        self.marketplace_picker_active = false;
         self.set_input(String::new());
         self.refresh_suggestions();
     }
