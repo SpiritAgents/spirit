@@ -24,6 +24,12 @@
   initial-value: 1;
 }
 
+@property --list-mask-top-alpha {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
+
 :root {
   --background: oklch(1 0 0);
   /* Default body text color (non-emphasis state); sidebar interaction default see --sidebar-action-foreground */

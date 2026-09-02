@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Расширения",
+    "subtitle": "Добавьте Spirit новые возможности.",
     "searchPlaceholder": "Поиск расширений",
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",

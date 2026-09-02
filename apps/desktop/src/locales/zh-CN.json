@@ -634,6 +634,7 @@
   },
   "marketplace": {
     "title": "扩展",
+    "subtitle": "为 Spirit 添加新能力。",
     "searchPlaceholder": "搜索扩展",
     "noMatches": "没有匹配的扩展。",
     "extensionNotFound": "找不到该扩展，请返回列表。",

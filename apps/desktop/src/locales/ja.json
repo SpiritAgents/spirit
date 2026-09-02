@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "拡張機能",
+    "subtitle": "Spirit に新しい機能を追加。",
     "searchPlaceholder": "拡張機能を検索",
     "noMatches": "一致する拡張機能がありません。",
     "extensionNotFound": "拡張機能が見つかりません。リストに戻ってください。",

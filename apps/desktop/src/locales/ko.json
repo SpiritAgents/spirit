@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "확장 기능",
+    "subtitle": "Spirit에 새로운 기능을 추가하세요.",
     "searchPlaceholder": "확장 프로그램 검색",
     "noMatches": "일치하는 확장 기능이 없습니다.",
     "extensionNotFound": "확장 기능을 찾을 수 없습니다. 목록으로 돌아가세요.",

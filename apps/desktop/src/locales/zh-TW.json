@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "擴充功能",
+    "subtitle": "為 Spirit 添加新能力。",
     "searchPlaceholder": "搜尋擴充功能",
     "noMatches": "沒有相符的擴充功能。",
     "extensionNotFound": "找不到擴充功能。請返回列表。",

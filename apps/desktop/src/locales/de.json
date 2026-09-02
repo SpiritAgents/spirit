@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Erweiterungen",
+    "subtitle": "Füge Spirit neue Fähigkeiten hinzu.",
     "searchPlaceholder": "Erweiterungen suchen",
     "noMatches": "Keine passenden Erweiterungen.",
     "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",

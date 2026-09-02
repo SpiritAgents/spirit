@@ -18,6 +18,12 @@ type UseWorkspaceToolsShellRowDividersOptions = {
   dividerAnchorEdge?: "left" | "right";
   /** Observe layout changes on this element to re-sync divider left offset (e.g. sibling panel resize). */
   layoutWatchRef?: RefObject<HTMLElement | null>;
+  /**
+   * Extra top inset (shell-local px) clipped off the divider host: rows scrolling under a
+   * top-docked translucent header must not draw divider lines inside the header's band
+   * (the host is painted in the panel shell, outside the scroll root's occlusion mask).
+   */
+  clipTopInsetPx?: number;
 };
 
 export function useWorkspaceToolsShellRowDividers(
@@ -30,6 +36,7 @@ export function useWorkspaceToolsShellRowDividers(
     dividerAnchorRef,
     dividerAnchorEdge = "left",
     layoutWatchRef,
+    clipTopInsetPx = 0,
   }: UseWorkspaceToolsShellRowDividersOptions = {},
 ) {
   const hostIdRef = useRef(`shell-list-dividers-${Math.random().toString(36).slice(2)}`);
@@ -86,8 +93,8 @@ export function useWorkspaceToolsShellRowDividers(
       clipHost!.style.display = "block";
       clipHost!.style.left = "0";
       clipHost!.style.right = "0";
-      clipHost!.style.top = `${shellLocalLengthFromViewportDelta(clipRect.top - shellRect.top)}px`;
-      clipHost!.style.height = `${shellLocalLengthFromViewportDelta(clipRect.height)}px`;
+      clipHost!.style.top = `${shellLocalLengthFromViewportDelta(clipRect.top - shellRect.top) + clipTopInsetPx}px`;
+      clipHost!.style.height = `${Math.max(0, shellLocalLengthFromViewportDelta(clipRect.height) - clipTopInsetPx)}px`;
 
       const rows = Array.from(root.children).filter(
         (child): child is HTMLElement => child instanceof HTMLElement,
@@ -146,6 +153,7 @@ export function useWorkspaceToolsShellRowDividers(
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- caller controls invalidation via deps
   }, [
+    clipTopInsetPx,
     dividerAnchorEdge,
     dividerAnchorRef,
     dividerClassName,

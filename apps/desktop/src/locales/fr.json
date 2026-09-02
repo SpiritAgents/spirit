@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Extensions",
+    "subtitle": "Ajoutez de nouvelles capacités à Spirit.",
     "searchPlaceholder": "Rechercher des extensions",
     "noMatches": "Aucune extension correspondante.",
     "extensionNotFound": "Extension introuvable. Veuillez revenir à la liste.",

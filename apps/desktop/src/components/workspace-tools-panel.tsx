@@ -1054,6 +1054,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                             onPrDiffAddToSession({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
+                    useTranslucency={useTranslucency}
                     onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                     onPrStatusChange={(status) => handleTabPrStatusChange(item.id, status)}
                   />
