@@ -12,6 +12,7 @@ import {
   summarizeDeclaredExtensionContributionPoints,
   type HostExtensionManager,
   type HostInstalledExtension,
+  type HostMarketplaceCatalogItem,
 } from "@spiritagent/host-internal";
 
 import type { DesktopExtensionCssLayer, DesktopExtensionListItem } from "../types.js";
@@ -36,6 +37,8 @@ export async function buildDesktopExtensionListItems(
   const metadataOnly = options?.metadataOnly === true;
   return Promise.all(
     extensions.map(async (item) => {
+      const catalogInstalled = isMarketplaceCatalogInstalled(item);
+      const skipLiveState = metadataOnly || !catalogInstalled;
       const instructionContributions = await summarizeDeclaredExtensionContributionPoints(item);
       return {
         id: item.id,
@@ -121,7 +124,9 @@ export async function buildDesktopExtensionListItems(
                     }
                   : {}),
               })),
-              ...(metadataOnly ? {} : { settingsValues: await manager.getSettingsValues(item.id) }),
+              ...(skipLiveState
+                ? {}
+                : { settingsValues: await manager.getSettingsValues(item.id) }),
             }
           : {}),
         ...(item.manifest.secretSlots?.length
@@ -132,7 +137,7 @@ export async function buildDesktopExtensionListItems(
                 ...(slot.description ? { description: slot.description } : {}),
                 ...(slot.required !== undefined ? { required: slot.required } : {}),
               })),
-              ...(metadataOnly
+              ...(skipLiveState
                 ? {}
                 : {
                     secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
@@ -146,10 +151,18 @@ export async function buildDesktopExtensionListItems(
           : {}),
         ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
         ...(item.installSource ? { installSource: item.installSource } : {}),
-        installedAtUnixMs: item.installedAtUnixMs,
+        installed: catalogInstalled,
+        ...(catalogInstalled ? { installedAtUnixMs: item.installedAtUnixMs } : {}),
       };
     }),
   );
+}
+
+function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
+  if (!("installed" in item)) {
+    return true;
+  }
+  return (item as HostMarketplaceCatalogItem).installed;
 }
 
 export async function collectDesktopExtensionCssLayers(

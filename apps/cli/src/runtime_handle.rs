@@ -146,6 +146,14 @@ impl RuntimeHandle {
         self.backend.set_extension_enabled(id, enabled)
     }
 
+    pub fn list_marketplace_catalog(&mut self) -> Result<Vec<CliExtensionEntry>> {
+        self.backend.list_marketplace_catalog()
+    }
+
+    pub fn install_built_in_extension(&mut self, id: &str) -> Result<CliExtensionEntry> {
+        self.backend.install_built_in_extension(id)
+    }
+
     pub fn session(&self) -> &SessionModel {
         self.backend.session()
     }

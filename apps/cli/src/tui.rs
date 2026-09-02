@@ -107,6 +107,9 @@ pub struct TuiShell {
     image_picker_active: bool,
     image_picker_index: usize,
     image_picker_files: Vec<String>,
+    marketplace_picker_active: bool,
+    marketplace_picker_index: usize,
+    marketplace_catalog: Vec<CliExtensionEntry>,
     forms: BottomFormUiState,
     conversation: ConversationUiState,
     interrupt_escape_armed_at: Option<Instant>,
@@ -232,6 +235,9 @@ impl TuiShell {
             image_picker_active: false,
             image_picker_index: 0,
             image_picker_files: vec![],
+            marketplace_picker_active: false,
+            marketplace_picker_index: 0,
+            marketplace_catalog: vec![],
             forms: BottomFormUiState::default(),
             conversation: ConversationUiState::default(),
             interrupt_escape_armed_at: None,
@@ -578,6 +584,10 @@ impl TuiShell {
 
     pub fn is_image_picker_active(&self) -> bool {
         self.image_picker_active
+    }
+
+    pub fn is_marketplace_picker_active(&self) -> bool {
+        self.marketplace_picker_active
     }
 
     fn handle_slash_command(&mut self, message: &str) {

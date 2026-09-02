@@ -150,3 +150,42 @@ test("host.checkPermission passes through config lint warnings", async () => {
     assert.equal(result.matched, undefined);
   });
 });
+
+test("HOST_METHODS whitelists local marketplace catalog RPCs", () => {
+  assert.ok(HOST_METHODS.has("host.listMarketplaceCatalog"));
+  assert.ok(HOST_METHODS.has("host.installBuiltInExtension"));
+});
+
+test("host.listMarketplaceCatalog returns an array for the current host", async () => {
+  await withTempDir(async (dir) => {
+    const service = makeService(dir);
+    const catalog = (await service.handle("host.listMarketplaceCatalog", {
+      hostKind: "desktop",
+    })) as Array<{ id: string; installed: boolean }>;
+    assert.ok(Array.isArray(catalog));
+  });
+});
+
+test("host.installBuiltInExtension requires an id and rejects unknown ids", async () => {
+  await withTempDir(async (dir) => {
+    let refreshed = 0;
+    const service = new HostService(dir, {
+      refreshExtensions: async () => {
+        refreshed += 1;
+      },
+    } as unknown as SessionManager);
+
+    await assert.rejects(
+      service.handle("host.installBuiltInExtension", { hostKind: "desktop" }),
+      /missing extension id/u,
+    );
+    await assert.rejects(
+      service.handle("host.installBuiltInExtension", {
+        hostKind: "desktop",
+        id: "spirit.missing",
+      }),
+      /Unknown built-in extension/u,
+    );
+    assert.equal(refreshed, 0);
+  });
+});

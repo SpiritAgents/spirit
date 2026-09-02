@@ -126,17 +126,17 @@ example-extension/
 
 ## `spiritExtension`
 
-| 参数                    | 说明                                       |
-| ----------------------- | ------------------------------------------ |
-| `schemaVersion`         | 可选。默认 `1`。仅支持 `1`                 |
-| `displayName`           | 必填。用户可见名称                         |
-| `icon`                  | 可选。相对包根的路径                       |
-| `supportedHosts`        | 必填。非空数组，值为 `cli` 和/或 `desktop` |
-| `activationEvents`      | 可选。见[激活事件](#激活事件)              |
-| `requestedCapabilities` | 可选。见[能力](#能力)                      |
+| 参数                    | 说明                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `schemaVersion`         | 可选。默认 `1`。仅支持 `1`                                              |
+| `displayName`           | 必填。用户可见名称                                                      |
+| `icon`                  | 可选。相对包根的路径                                                    |
+| `supportedHosts`        | 必填。非空数组，值为 `cli` 和/或 `desktop`                              |
+| `activationEvents`      | 可选。见[激活事件](#激活事件)                                           |
+| `requestedCapabilities` | 可选。见[能力](#能力)                                                   |
 | `contributes`           | 可选。`tools`、`desktop`、`cli`、`mcp`、`hooks`、`skills` 和/或 `rules` |
-| `settingsSchema`        | 可选。设置项定义                           |
-| `secretSlots`           | 可选。密钥槽定义                           |
+| `settingsSchema`        | 可选。设置项定义                                                        |
+| `secretSlots`           | 可选。密钥槽定义                                                        |
 
 ## 能力
 
@@ -161,16 +161,16 @@ example-extension/
 
 ## 激活事件
 
-| 事件                   | 何时触发           |
-| ---------------------- | ------------------ |
-| `onStartup`            | 宿主预热           |
-| `onExtensionInstalled` | ZIP 安装之后 |
-| `onSessionOpened`      | 会话变为活动       |
-| `onSessionReset`       | 会话重置           |
-| `onUserMessage`        | 用户提交消息       |
-| `onToolCall`           | 工具即将运行       |
-| `onToolResult`         | 工具结果可用       |
-| `onApprovalResolved`   | 审批决定已解析     |
+| 事件                   | 何时触发       |
+| ---------------------- | -------------- |
+| `onStartup`            | 宿主预热       |
+| `onExtensionInstalled` | ZIP 安装之后   |
+| `onSessionOpened`      | 会话变为活动   |
+| `onSessionReset`       | 会话重置       |
+| `onUserMessage`        | 用户提交消息   |
+| `onToolCall`           | 工具即将运行   |
+| `onToolResult`         | 工具结果可用   |
+| `onApprovalResolved`   | 审批决定已解析 |
 
 扩展列出该事件且有可读的 `main` 时，宿主会调用 `activate`。
 
@@ -239,12 +239,12 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 须与对应能力成对。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路径是约定路径，不允许自定义 path。
 
-| 贡献面 | 能力 | 文件 |
-| ------ | ---- | ---- |
-| MCP | `mcp` | 包根 `mcp.json`（与用户/工作区 MCP 同 schema） |
-| Agent hooks | `hooks` | 包根 `hooks.json`（与 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | 包根 `rule.md` |
+| 贡献面      | 能力     | 文件                                                                        |
+| ----------- | -------- | --------------------------------------------------------------------------- |
+| MCP         | `mcp`    | 包根 `mcp.json`（与用户/工作区 MCP 同 schema）                              |
+| Agent hooks | `hooks`  | 包根 `hooks.json`（与 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
+| Skills      | `skills` | `skills/<name>/SKILL.md`                                                    |
+| Rules       | `rules`  | 包根 `rule.md`                                                              |
 
 已声明但文件缺失或非法则安装失败。包内有文件但未声明则忽略，永不加载。
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — 压缩包里必须恰好有一个 `package.json`（可以在子目录中）。用 `spirit extension import ./extension.zip` 或在 **扩展** 页导入。
 
 `supportedHosts` 必须包含当前宿主。默认不会用同 id 的第二次安装覆盖已有副本。
-

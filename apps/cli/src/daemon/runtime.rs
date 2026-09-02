@@ -1031,6 +1031,21 @@ impl DaemonRuntime {
         Ok(())
     }
 
+    pub fn list_marketplace_catalog(&mut self) -> Result<Vec<CliExtensionEntry>> {
+        let value = self
+            .client
+            .call("host.listMarketplaceCatalog", json!({ "hostKind": "cli" }))?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn install_built_in_extension(&mut self, id: &str) -> Result<CliExtensionEntry> {
+        let value = self.client.call(
+            "host.installBuiltInExtension",
+            json!({ "hostKind": "cli", "id": id }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
     // ------------------------------------------------------------ sessions
 
     pub fn submit_user_turn(

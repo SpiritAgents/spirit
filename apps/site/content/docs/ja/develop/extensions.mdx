@@ -126,51 +126,51 @@ example-extension/
 
 ## `spiritExtension`
 
-| フィールド              | 説明                                                          |
-| ----------------------- | ------------------------------------------------------------- |
-| `schemaVersion`         | 任意。デフォルトは `1`。サポートされているのは `1` のみ       |
-| `displayName`           | 必須。ユーザーに表示される名前                                |
-| `icon`                  | 任意。パッケージルートからの相対パス                          |
-| `supportedHosts`        | 必須。`cli` または `desktop` の非空配列                       |
-| `activationEvents`      | 任意。[アクティベーションイベント](#activation-events) を参照 |
-| `requestedCapabilities` | 任意。[機能](#capabilities) を参照                            |
+| フィールド              | 説明                                                                      |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `schemaVersion`         | 任意。デフォルトは `1`。サポートされているのは `1` のみ                   |
+| `displayName`           | 必須。ユーザーに表示される名前                                            |
+| `icon`                  | 任意。パッケージルートからの相対パス                                      |
+| `supportedHosts`        | 必須。`cli` または `desktop` の非空配列                                   |
+| `activationEvents`      | 任意。[アクティベーションイベント](#activation-events) を参照             |
+| `requestedCapabilities` | 任意。[機能](#capabilities) を参照                                        |
 | `contributes`           | 任意。`tools`、`desktop`、`cli`、`mcp`、`hooks`、`skills`、または `rules` |
-| `settingsSchema`        | 任意。設定定義                                                |
-| `secretSlots`           | 任意。シークレットスロット定義                                |
+| `settingsSchema`        | 任意。設定定義                                                            |
+| `secretSlots`           | 任意。シークレットスロット定義                                            |
 
 ## 機能
 
-| 値                   | ランタイム                                                         |
-| -------------------- | ------------------------------------------------------------------ |
-| `tool-definitions`   | `contributes.tools` をモデルに公開するには `tool-execution` が必要 |
-| `tool-execution`     | これらのツールを実行するには `tool-definitions` が必要             |
-| `system-prompt`      | システムプロンプトフラグメントを提供するには `main` が必要         |
-| `desktop-ui`         | `contributes.desktop` と対で指定する必要があります                 |
-| `cli-ui`             | `contributes.cli` と対で指定する必要があります                     |
-| `mcp`                | `contributes.mcp` と対で指定し、パッケージルートの `mcp.json` を読み込みます |
+| 値                   | ランタイム                                                                       |
+| -------------------- | -------------------------------------------------------------------------------- |
+| `tool-definitions`   | `contributes.tools` をモデルに公開するには `tool-execution` が必要               |
+| `tool-execution`     | これらのツールを実行するには `tool-definitions` が必要                           |
+| `system-prompt`      | システムプロンプトフラグメントを提供するには `main` が必要                       |
+| `desktop-ui`         | `contributes.desktop` と対で指定する必要があります                               |
+| `cli-ui`             | `contributes.cli` と対で指定する必要があります                                   |
+| `mcp`                | `contributes.mcp` と対で指定し、パッケージルートの `mcp.json` を読み込みます     |
 | `hooks`              | `contributes.hooks` と対で指定し、パッケージルートの `hooks.json` を読み込みます |
-| `skills`             | `contributes.skills` と対で指定し、`skills/<name>/SKILL.md` を読み込みます |
-| `rules`              | `contributes.rules` と対で指定し、パッケージルートの `rule.md` を読み込みます |
-| `approval-flow`      | 宣言のみ。承認は各ツールの `approvalMode` によって行われます       |
-| `questions-flow`     | 宣言のみ。質問は `approvalMode: need-questions` によって行われます |
-| `settings`           | 宣言のみ。設定は `settingsSchema` から取得されます                 |
-| `secret-storage`     | `secretSlots` と一緒に使用されます                                 |
-| `structured-results` | 宣言のみ                                                           |
+| `skills`             | `contributes.skills` と対で指定し、`skills/<name>/SKILL.md` を読み込みます       |
+| `rules`              | `contributes.rules` と対で指定し、パッケージルートの `rule.md` を読み込みます    |
+| `approval-flow`      | 宣言のみ。承認は各ツールの `approvalMode` によって行われます                     |
+| `questions-flow`     | 宣言のみ。質問は `approvalMode: need-questions` によって行われます               |
+| `settings`           | 宣言のみ。設定は `settingsSchema` から取得されます                               |
+| `secret-storage`     | `secretSlots` と一緒に使用されます                                               |
+| `structured-results` | 宣言のみ                                                                         |
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` と対応する `contributes` は、両方存在するか、両方存在しないかのどちらかでなければなりません。
 
 ## アクティベーションイベント
 
-| イベント               | 発火タイミング                                  |
-| ---------------------- | ----------------------------------------------- |
-| `onStartup`            | ホストのウォームアップ                          |
-| `onExtensionInstalled` | ZIPからのインストール後 |
-| `onSessionOpened`      | セッションがアクティブになったとき              |
-| `onSessionReset`       | セッションのリセット                            |
-| `onUserMessage`        | ユーザーがメッセージを送信したとき              |
-| `onToolCall`           | ツールが実行されようとしているとき              |
-| `onToolResult`         | ツールの結果が利用可能になったとき              |
-| `onApprovalResolved`   | 承認の決定が解決されたとき                      |
+| イベント               | 発火タイミング                     |
+| ---------------------- | ---------------------------------- |
+| `onStartup`            | ホストのウォームアップ             |
+| `onExtensionInstalled` | ZIPからのインストール後            |
+| `onSessionOpened`      | セッションがアクティブになったとき |
+| `onSessionReset`       | セッションのリセット               |
+| `onUserMessage`        | ユーザーがメッセージを送信したとき |
+| `onToolCall`           | ツールが実行されようとしているとき |
+| `onToolResult`         | ツールの結果が利用可能になったとき |
+| `onApprovalResolved`   | 承認の決定が解決されたとき         |
 
 ホストは、拡張機能がイベントをリストし、読み取り可能な `main` を持っている場合に `activate` を呼び出します。
 
@@ -239,12 +239,12 @@ example-extension/
 
 対応する capability が必要です。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` は `true` または `{}` です。パスは規約どおりで、カスタム path はできません。
 
-| 貢献 | Capability | ファイル |
-| ---- | ---------- | -------- |
-| MCP | `mcp` | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema） |
-| Agent hooks | `hooks` | パッケージルートの `hooks.json`（agent hooks と同じ schema。`contributes.cli.hooks` ではありません） |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | パッケージルートの `rule.md` |
+| 貢献        | Capability | ファイル                                                                                             |
+| ----------- | ---------- | ---------------------------------------------------------------------------------------------------- |
+| MCP         | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
+| Agent hooks | `hooks`    | パッケージルートの `hooks.json`（agent hooks と同じ schema。`contributes.cli.hooks` ではありません） |
+| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
+| Rules       | `rules`    | パッケージルートの `rule.md`                                                                         |
 
 宣言したのにファイルが無い、または不正な場合はインストールに失敗します。宣言されていないファイルは無視され、読み込まれません。
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — アーカイブには正確に 1 つの `package.json` が含まれている必要があります（サブディレクトリにある場合もあります）。`spirit extension import ./extension.zip` または **Extensions** ページでインポートします。
 
 `supportedHosts` には現在のホストが含まれている必要があります。同じ ID の 2 回目のインストールは、デフォルトでは既存のコピーを置き換えません。
-

@@ -264,7 +264,7 @@ export const DESKTOP_OUTLINE_FOCUS_WITHIN_KEYBOARD =
 
 /** Consistent with the PendingApprovalCard guided input: thin-border shell, inner Input without ring */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
-  "overflow-hidden rounded-md bg-transparent",
+  "overflow-hidden rounded-md bg-background",
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OUTLINE_HOVER,
   DESKTOP_OUTLINE_FOCUS_WITHIN,
@@ -274,10 +274,10 @@ export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
   "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
 
-/** ghost: transparent background consistent with popover; overrides the Input base class hover/focus fill (especially noticeable on light-mode focus) */
+/** ghost: transparent background consistent with popover; overrides the Input base class rest/hover/focus fill */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
   DESKTOP_OVERLAY_LIST_FILTER_INPUT,
-  "rounded-md hover:!bg-transparent focus:!bg-transparent focus-visible:!bg-transparent dark:!bg-transparent",
+  "rounded-md !bg-transparent hover:!bg-transparent focus:!bg-transparent focus-visible:!bg-transparent dark:!bg-transparent",
 );
 
 /** Standard form input: consistent with the PendingApprovalCard guided input (h-8) */

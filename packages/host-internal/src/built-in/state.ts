@@ -92,3 +92,21 @@ export async function noteBuiltInExtensionRemoved(
     removedExtensionIds: [...state.removedExtensionIds, normalized],
   });
 }
+
+export async function clearBuiltInExtensionRemoved(
+  spiritDataDir: string,
+  extensionId: string,
+): Promise<void> {
+  const normalized = extensionId.trim().toLowerCase();
+  if (!normalized) {
+    return;
+  }
+  const state = await loadBuiltInState(spiritDataDir);
+  if (!state.removedExtensionIds.includes(normalized)) {
+    return;
+  }
+  await saveBuiltInState(spiritDataDir, {
+    ...state,
+    removedExtensionIds: state.removedExtensionIds.filter((id) => id !== normalized),
+  });
+}

@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Erweiterungen",
+    "subtitle": "Füge Spirit neue Fähigkeiten hinzu.",
     "searchPlaceholder": "Erweiterungen suchen",
     "noMatches": "Keine passenden Erweiterungen.",
     "extensionNotFound": "Erweiterung nicht gefunden. Bitte zurück zur Liste.",
@@ -647,7 +648,8 @@
     "uninstall": "Deinstallieren",
     "uninstallExtension": "Erweiterung deinstallieren",
     "uninstallExtensionConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Das lokale Installationsverzeichnis wird entfernt.",
-    "noExtensionsInstalled": "Keine Erweiterungen installiert. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen.",
+    "uninstallBuiltInConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Sie können sie auf dieser Seite erneut installieren.",
+    "noExtensionsInstalled": "Noch keine Erweiterungen im Katalog. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen.",
     "contributionGroupTools": "Tools",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regel",

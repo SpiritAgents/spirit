@@ -126,17 +126,17 @@ example-extension/
 
 ## `spiritExtension`
 
-| 필드                    | 설명                                                |
-| ----------------------- | --------------------------------------------------- |
-| `schemaVersion`         | 선택. 기본값은 `1`입니다. `1`만 지원됨              |
-| `displayName`           | 필수. 사용자에게 표시되는 이름                      |
-| `icon`                  | 선택. 패키지 루트 기준 상대 경로                    |
-| `supportedHosts`        | 필수. `cli` 및/또는 `desktop`의 비어 있지 않은 배열 |
-| `activationEvents`      | 선택. [활성화 이벤트](#activation-events) 참조      |
-| `requestedCapabilities` | 선택. [역량](#capabilities) 참조                    |
+| 필드                    | 설명                                                                      |
+| ----------------------- | ------------------------------------------------------------------------- |
+| `schemaVersion`         | 선택. 기본값은 `1`입니다. `1`만 지원됨                                    |
+| `displayName`           | 필수. 사용자에게 표시되는 이름                                            |
+| `icon`                  | 선택. 패키지 루트 기준 상대 경로                                          |
+| `supportedHosts`        | 필수. `cli` 및/또는 `desktop`의 비어 있지 않은 배열                       |
+| `activationEvents`      | 선택. [활성화 이벤트](#activation-events) 참조                            |
+| `requestedCapabilities` | 선택. [역량](#capabilities) 참조                                          |
 | `contributes`           | 선택. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills` 및/또는 `rules` |
-| `settingsSchema`        | 선택. 설정 정의                                     |
-| `secretSlots`           | 선택. 비밀 슬롯 정의                                |
+| `settingsSchema`        | 선택. 설정 정의                                                           |
+| `secretSlots`           | 선택. 비밀 슬롯 정의                                                      |
 
 ## 역량
 
@@ -164,7 +164,7 @@ example-extension/
 | 이벤트                 | 발생 시점                     |
 | ---------------------- | ----------------------------- |
 | `onStartup`            | 호스트 준비                   |
-| `onExtensionInstalled` | ZIP 설치 후 |
+| `onExtensionInstalled` | ZIP 설치 후                   |
 | `onSessionOpened`      | 세션이 활성 상태가 됨         |
 | `onSessionReset`       | 세션 재설정                   |
 | `onUserMessage`        | 사용자가 메시지를 제출함      |
@@ -239,12 +239,12 @@ example-extension/
 
 대응하는 capability가 필요합니다. `contributes.mcp`, `contributes.hooks`, `contributes.skills`, `contributes.rules`는 `true` 또는 `{}`입니다. 경로는 규약이며 사용자 지정 path는 허용되지 않습니다.
 
-| 기여 | Capability | 파일 |
-| ---- | ---------- | ---- |
-| MCP | `mcp` | 패키지 루트 `mcp.json` (사용자/워크스페이스 MCP와 동일한 schema) |
-| Agent hooks | `hooks` | 패키지 루트 `hooks.json` (agent hooks와 동일한 schema. `contributes.cli.hooks`가 아님) |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | 패키지 루트 `rule.md` |
+| 기여        | Capability | 파일                                                                                   |
+| ----------- | ---------- | -------------------------------------------------------------------------------------- |
+| MCP         | `mcp`      | 패키지 루트 `mcp.json` (사용자/워크스페이스 MCP와 동일한 schema)                       |
+| Agent hooks | `hooks`    | 패키지 루트 `hooks.json` (agent hooks와 동일한 schema. `contributes.cli.hooks`가 아님) |
+| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                               |
+| Rules       | `rules`    | 패키지 루트 `rule.md`                                                                  |
 
 선언했는데 파일이 없거나 잘못된 경우 설치가 실패합니다. 선언되지 않은 파일은 무시되며 로드되지 않습니다.
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — 아카이브에는 정확히 하나의 `package.json`이 포함되어야 합니다 (하위 디렉터리에 있어도 됩니다). `spirit extension import ./extension.zip` 또는 **확장 프로그램** 페이지에서 가져옵니다.
 
 `supportedHosts`에는 현재 호스트가 포함되어야 합니다. 동일한 ID의 두 번째 설치는 기본적으로 기존 복사본을 대체하지 않습니다.
-

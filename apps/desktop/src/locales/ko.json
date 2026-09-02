@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "확장 기능",
+    "subtitle": "Spirit에 새로운 기능을 추가하세요.",
     "searchPlaceholder": "확장 프로그램 검색",
     "noMatches": "일치하는 확장 기능이 없습니다.",
     "extensionNotFound": "확장 기능을 찾을 수 없습니다. 목록으로 돌아가세요.",
@@ -647,7 +648,8 @@
     "uninstall": "제거",
     "uninstallExtension": "확장 프로그램 제거",
     "uninstallExtensionConfirm": "확장 프로그램 \"{{name}}\"을(를) 제거하시겠습니까? 로컬 설치 디렉터리가 삭제됩니다.",
-    "noExtensionsInstalled": "설치된 확장 프로그램이 없습니다. '설치'를 선택해 ZIP 아카이브에서 추가하세요.",
+    "uninstallBuiltInConfirm": "확장 프로그램 \"{{name}}\"을(를) 제거하시겠습니까? 이 페이지에서 다시 설치할 수 있습니다.",
+    "noExtensionsInstalled": "카탈로그에 확장 프로그램이 없습니다. '설치'를 선택해 ZIP 아카이브에서 추가하세요.",
     "contributionGroupTools": "도구",
     "contributionGroupDesktop": "데스크톱",
     "contributionRuleTitle": "규칙",

@@ -42,6 +42,7 @@ export interface BuildDesktopSnapshotInput {
   metadata: HostMetadataSummary;
   plan: DesktopSnapshot["plan"];
   extensionsList: DesktopExtensionListItem[];
+  marketplaceCatalog?: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionSkills?: DesktopExtensionSkillSlashItem[];
   extensionsLoading?: boolean;
@@ -160,6 +161,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
     })),
     extensionSkills: (input.extensionSkills ?? []).map((skill) => ({ ...skill })),
     extensionsList: input.extensionsList.map((item) => ({ ...item })),
+    marketplaceCatalog: (input.marketplaceCatalog ?? []).map((item) => ({ ...item })),
     extensionCss: input.extensionCss.map((entry) => ({ ...entry })),
     ...(input.extensionsLoading ? { extensionsLoading: true } : {}),
     plan: { ...input.plan },

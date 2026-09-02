@@ -634,6 +634,7 @@
   },
   "marketplace": {
     "title": "扩展",
+    "subtitle": "为 Spirit 添加新能力。",
     "searchPlaceholder": "搜索扩展",
     "noMatches": "没有匹配的扩展。",
     "extensionNotFound": "找不到该扩展，请返回列表。",
@@ -644,7 +645,8 @@
     "uninstall": "卸载",
     "uninstallExtension": "卸载扩展",
     "uninstallExtensionConfirm": "确定卸载“{{name}}”？这会移除本地安装目录。",
-    "noExtensionsInstalled": "尚未安装扩展。点击“安装”从 ZIP 归档添加。",
+    "uninstallBuiltInConfirm": "确定卸载“{{name}}”？你可以随时从本页重新安装。",
+    "noExtensionsInstalled": "目录中还没有扩展。点击“安装”从 ZIP 归档添加。",
     "contributionGroupTools": "工具",
     "contributionGroupDesktop": "桌面",
     "contributionRuleTitle": "规则",

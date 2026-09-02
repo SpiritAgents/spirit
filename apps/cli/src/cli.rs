@@ -124,6 +124,12 @@ pub enum ExtensionCommand {
     Remove { id: String },
 }
 
+pub enum MarketplaceCommand {
+    List,
+    Install { id: String },
+    Remove { id: String },
+}
+
 pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
     let config_store = JsonConfigStore;
     let secret_store = KeyringSecretStore;
@@ -1174,6 +1180,67 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
             let mut runtime = new_extension_cli_runtime(workspace_root)?;
             runtime.delete_extension(trimmed_id)?;
             println!("{}", t!("cli.extensions.removed", id = trimmed_id));
+        }
+    }
+
+    Ok(())
+}
+
+pub fn handle_marketplace_cli(action: MarketplaceCommand) -> Result<()> {
+    let app_paths = DefaultAppPaths::new();
+    let workspace_root = app_paths.workspace_root();
+
+    match action {
+        MarketplaceCommand::List => {
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let catalog = runtime.list_marketplace_catalog()?;
+
+            if catalog.is_empty() {
+                println!("{}", t!("cli.marketplace.none"));
+                return Ok(());
+            }
+
+            println!("{}", t!("cli.marketplace.list_header"));
+            for extension in catalog {
+                println!(
+                    "  - {}\n    id: {}\n    version: {}\n    installed: {}",
+                    extension.display_name,
+                    extension.id,
+                    extension.version,
+                    yes_no(extension.installed),
+                );
+                if let Some(description) = extension.description {
+                    println!("    description: {}", description);
+                }
+                if let Some(source) = extension.install_source {
+                    println!("    source: {}", source);
+                }
+            }
+        }
+        MarketplaceCommand::Install { id } => {
+            let trimmed_id = id.trim();
+            if trimmed_id.is_empty() {
+                return Err(anyhow!("{}", t!("cli.marketplace.id_empty")));
+            }
+
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let extension = runtime.install_built_in_extension(trimmed_id)?;
+            println!(
+                "{}",
+                t!("cli.marketplace.installed", name = extension.display_name)
+            );
+            println!("id: {}", extension.id);
+            println!("version: {}", extension.version);
+        }
+        MarketplaceCommand::Remove { id } => {
+            let trimmed_id = id.trim();
+            if trimmed_id.is_empty() {
+                return Err(anyhow!("{}", t!("cli.marketplace.id_empty")));
+            }
+
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            runtime.delete_extension(trimmed_id)?;
+            println!("{}", t!("cli.marketplace.removed", id = trimmed_id));
         }
     }
 

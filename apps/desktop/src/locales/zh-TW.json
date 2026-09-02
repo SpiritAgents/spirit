@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "擴充功能",
+    "subtitle": "為 Spirit 添加新能力。",
     "searchPlaceholder": "搜尋擴充功能",
     "noMatches": "沒有相符的擴充功能。",
     "extensionNotFound": "找不到擴充功能。請返回列表。",
@@ -647,7 +648,8 @@
     "uninstall": "解除安裝",
     "uninstallExtension": "解除安裝擴充功能",
     "uninstallExtensionConfirm": "確定要解除安裝「{{name}}」嗎？這將移除本機安裝目錄。",
-    "noExtensionsInstalled": "尚未安裝擴充功能。點擊「安裝」從 ZIP 封存新增。",
+    "uninstallBuiltInConfirm": "確定要解除安裝「{{name}}」嗎？你可以隨時從此頁重新安裝。",
+    "noExtensionsInstalled": "目錄中還沒有擴充功能。點擊「安裝」從 ZIP 封存新增。",
     "contributionGroupTools": "工具",
     "contributionGroupDesktop": "桌面",
     "contributionRuleTitle": "規則",

@@ -83,6 +83,7 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -2052,6 +2053,28 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const installBuiltInExtension = useCallback(
+    async (request: InstallBuiltInExtensionRequest) => {
+      if (!api) {
+        return;
+      }
+
+      setBusyAction("extensions");
+      try {
+        const next = await api.installBuiltInExtension(request);
+        applySnapshot(next);
+        setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const deleteExtension = useCallback(
     async (request: DeleteExtensionRequest) => {
       if (!api) {
@@ -3900,6 +3923,7 @@ export function useDesktopRuntime() {
     removeProviderModels,
     addMcpServer,
     importExtension,
+    installBuiltInExtension,
     createSkill,
     createRule,
     deleteExtension,

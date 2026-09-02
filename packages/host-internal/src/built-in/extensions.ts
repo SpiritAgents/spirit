@@ -6,9 +6,11 @@ import { fileURLToPath } from "node:url";
 import type { ExtensionHostKind } from "../storage.js";
 import {
   installPreparedExtensionDirectory,
+  listInstalledExtensions,
   readPreparedExtensionManifestDirectory,
   type HostExtensionManager,
   type HostInstalledExtension,
+  type HostMarketplaceCatalogItem,
 } from "../extensions.js";
 import { BUILT_IN_EXTENSION_IDS } from "./extension-ids.js";
 import { loadBuiltInState } from "./state.js";
@@ -25,6 +27,17 @@ export interface EnsureBuiltInExtensionsRequest {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
   manager: Pick<HostExtensionManager, "list" | "installPreparedDirectory">;
+}
+
+export interface ListMarketplaceCatalogRequest {
+  spiritDataDir: string;
+  hostKind: ExtensionHostKind;
+}
+
+export interface InstallBuiltInExtensionRequest {
+  spiritDataDir: string;
+  hostKind: ExtensionHostKind;
+  extensionId: string;
 }
 
 async function listBuiltInExtensionTemplateDirs(): Promise<string[]> {
@@ -48,12 +61,30 @@ async function listBuiltInExtensionTemplateDirs(): Promise<string[]> {
   return directories.sort((left, right) => left.localeCompare(right, "en"));
 }
 
+function allowedBuiltInIds(): Set<string> {
+  return new Set((BUILT_IN_EXTENSION_IDS as readonly string[]).map((id) => id.toLowerCase()));
+}
+
+export function shouldSkipBuiltInExtensionSeed(input: {
+  extensionId: string;
+  defaultInstalled?: boolean;
+  removedIds: ReadonlySet<string>;
+  installedIds: ReadonlySet<string>;
+}): boolean {
+  const extensionId = input.extensionId.trim().toLowerCase();
+  if (!extensionId) {
+    return true;
+  }
+  if (input.defaultInstalled === false) {
+    return true;
+  }
+  return input.removedIds.has(extensionId) || input.installedIds.has(extensionId);
+}
+
 export async function ensureBuiltInExtensions(
   request: EnsureBuiltInExtensionsRequest,
 ): Promise<readonly HostInstalledExtension[]> {
-  const allowedIds = new Set<string>(
-    (BUILT_IN_EXTENSION_IDS as readonly string[]).map((id) => id.toLowerCase()),
-  );
+  const allowedIds = allowedBuiltInIds();
   const { spiritDataDir, hostKind } = request;
   const state = await loadBuiltInState(spiritDataDir);
   const removed = new Set(state.removedExtensionIds.map((id) => id.toLowerCase()));
@@ -76,9 +107,14 @@ export async function ensureBuiltInExtensions(
     if (!manifest.supportedHosts.includes(hostKind)) {
       continue;
     }
-    // removedExtensionIds are legacy tombstones written before built-in extensions became
-    // non-removable; they keep historical uninstalls from re-seeding. New removals are refused.
-    if (removed.has(extensionId) || installedIds.has(extensionId)) {
+    if (
+      shouldSkipBuiltInExtensionSeed({
+        extensionId,
+        ...(manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
+        removedIds: removed,
+        installedIds,
+      })
+    ) {
       continue;
     }
 
@@ -95,4 +131,101 @@ export async function ensureBuiltInExtensions(
   }
 
   return seeded;
+}
+
+export async function listMarketplaceCatalog(
+  request: ListMarketplaceCatalogRequest,
+): Promise<readonly HostMarketplaceCatalogItem[]> {
+  const allowedIds = allowedBuiltInIds();
+  const { spiritDataDir, hostKind } = request;
+  const installed = await listInstalledExtensions({ spiritDataDir, hostKind });
+  const installedById = new Map(installed.map((item) => [item.id.trim().toLowerCase(), item]));
+  const catalog: HostMarketplaceCatalogItem[] = [];
+  const seen = new Set<string>();
+
+  for (const templateDir of await listBuiltInExtensionTemplateDirs()) {
+    let manifest;
+    try {
+      manifest = await readPreparedExtensionManifestDirectory(templateDir);
+    } catch {
+      continue;
+    }
+
+    const extensionId = manifest.id.trim().toLowerCase();
+    if (!allowedIds.has(extensionId)) {
+      continue;
+    }
+    if (!manifest.supportedHosts.includes(hostKind)) {
+      continue;
+    }
+
+    const installedItem = installedById.get(extensionId);
+    catalog.push(
+      installedItem
+        ? { ...installedItem, installed: true }
+        : {
+            id: manifest.id,
+            directoryName: path.basename(templateDir),
+            manifest,
+            directoryPath: templateDir,
+            manifestPath: path.join(templateDir, "package.json"),
+            installedAtUnixMs: 0,
+            enabled: false,
+            installSource: "built-in",
+            installed: false,
+          },
+    );
+    seen.add(extensionId);
+  }
+
+  for (const item of installed) {
+    const extensionId = item.id.trim().toLowerCase();
+    if (seen.has(extensionId)) {
+      continue;
+    }
+    catalog.push({ ...item, installed: true });
+  }
+
+  return catalog.sort((left, right) => left.id.localeCompare(right.id, "en"));
+}
+
+export async function installBuiltInExtension(
+  request: InstallBuiltInExtensionRequest,
+): Promise<HostInstalledExtension> {
+  const extensionId = request.extensionId.trim().toLowerCase();
+  if (!extensionId) {
+    throw new Error("The extension id must not be empty.");
+  }
+  if (!allowedBuiltInIds().has(extensionId)) {
+    throw new Error(`Unknown built-in extension: ${request.extensionId.trim()}`);
+  }
+
+  for (const templateDir of await listBuiltInExtensionTemplateDirs()) {
+    let manifest;
+    try {
+      manifest = await readPreparedExtensionManifestDirectory(templateDir);
+    } catch {
+      continue;
+    }
+
+    if (manifest.id.trim().toLowerCase() !== extensionId) {
+      continue;
+    }
+    if (!manifest.supportedHosts.includes(request.hostKind)) {
+      throw new Error(
+        `Built-in extension ${manifest.id} does not support the ${request.hostKind} host.`,
+      );
+    }
+
+    return installPreparedExtensionDirectory(
+      { spiritDataDir: request.spiritDataDir, hostKind: request.hostKind },
+      {
+        preparedDirectoryPath: templateDir,
+        installSource: "built-in",
+        replaceExisting: false,
+      },
+    );
+  }
+
+  throw new Error(`Built-in extension template not found: ${request.extensionId.trim()}`);
 }

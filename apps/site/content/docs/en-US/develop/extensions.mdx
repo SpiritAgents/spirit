@@ -10,7 +10,7 @@ An extension is a folder with a `package.json` that contains `spiritExtension`. 
 | Desktop | `{spiritDataDir}/extensions/desktop/` |
 | CLI     | `{spiritDataDir}/extensions/cli/`     |
 
-That is different from [Skills](../customize/skills.mdx) (`SKILL.md` folders), [MCP](../customize/mcp.mdx) (external servers), and [Hooks](../customize/hooks.mdx) (`hooks.json` scripts). `contributes.cli.hooks` styles CLI TUI slots. It is not `hooks.json`. An extension can still *bundle* those same files when it declares `mcp`, `hooks`, `skills`, or `rules`.
+That is different from [Skills](../customize/skills.mdx) (`SKILL.md` folders), [MCP](../customize/mcp.mdx) (external servers), and [Hooks](../customize/hooks.mdx) (`hooks.json` scripts). `contributes.cli.hooks` styles CLI TUI slots. It is not `hooks.json`. An extension can still _bundle_ those same files when it declares `mcp`, `hooks`, `skills`, or `rules`.
 
 Each installed extension has an enable switch. Disable or uninstall it to stop its contributions. Turning the extension on is consent to run the MCP servers, agent hooks, skills, and rules it declared.
 
@@ -126,17 +126,17 @@ example-extension/
 
 ## `spiritExtension`
 
-| Field                   | Description                                           |
-| ----------------------- | ----------------------------------------------------- |
-| `schemaVersion`         | Optional. Defaults to `1`. Only `1` is supported      |
-| `displayName`           | Required. User-visible name                           |
-| `icon`                  | Optional. Path relative to the package root           |
-| `supportedHosts`        | Required. Non-empty array of `cli` and/or `desktop`   |
-| `activationEvents`      | Optional. See [Activation events](#activation-events) |
-| `requestedCapabilities` | Optional. See [Capabilities](#capabilities)           |
+| Field                   | Description                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------- |
+| `schemaVersion`         | Optional. Defaults to `1`. Only `1` is supported                              |
+| `displayName`           | Required. User-visible name                                                   |
+| `icon`                  | Optional. Path relative to the package root                                   |
+| `supportedHosts`        | Required. Non-empty array of `cli` and/or `desktop`                           |
+| `activationEvents`      | Optional. See [Activation events](#activation-events)                         |
+| `requestedCapabilities` | Optional. See [Capabilities](#capabilities)                                   |
 | `contributes`           | Optional. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills`, and/or `rules` |
-| `settingsSchema`        | Optional. Setting definitions                         |
-| `secretSlots`           | Optional. Secret slot definitions                     |
+| `settingsSchema`        | Optional. Setting definitions                                                 |
+| `secretSlots`           | Optional. Secret slot definitions                                             |
 
 ## Capabilities
 
@@ -164,7 +164,7 @@ example-extension/
 | Event                  | When it fires                    |
 | ---------------------- | -------------------------------- |
 | `onStartup`            | Host warmup                      |
-| `onExtensionInstalled` | After ZIP install |
+| `onExtensionInstalled` | After ZIP install                |
 | `onSessionOpened`      | Session becomes active           |
 | `onSessionReset`       | Session reset                    |
 | `onUserMessage`        | User submits a message           |
@@ -239,12 +239,12 @@ Token roles: `default`, `primary`, `secondary`, `muted`, `accent`, `success`, `w
 
 Requires the matching capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills`, and `contributes.rules` are `true` or `{}`. Paths are conventional; custom paths are not allowed.
 
-| Contribution | Capability | File |
-| ------------ | ---------- | ---- |
-| MCP          | `mcp`      | Package-root `mcp.json` (same schema as user/workspace MCP) |
+| Contribution | Capability | File                                                                                |
+| ------------ | ---------- | ----------------------------------------------------------------------------------- |
+| MCP          | `mcp`      | Package-root `mcp.json` (same schema as user/workspace MCP)                         |
 | Agent hooks  | `hooks`    | Package-root `hooks.json` (same schema as agent hooks; not `contributes.cli.hooks`) |
-| Skills       | `skills`   | `skills/<name>/SKILL.md` |
-| Rules        | `rules`    | Package-root `rule.md` |
+| Skills       | `skills`   | `skills/<name>/SKILL.md`                                                            |
+| Rules        | `rules`    | Package-root `rule.md`                                                              |
 
 Declared but missing or invalid files fail install. Files in the package that are not declared are ignored and never loaded.
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — the archive must contain exactly one `package.json` (it may sit in a subdirectory). Import with `spirit extension import ./extension.zip` or from the **Extensions** page.
 
 `supportedHosts` must include the current host. A second install of the same id does not replace the existing copy by default.
-

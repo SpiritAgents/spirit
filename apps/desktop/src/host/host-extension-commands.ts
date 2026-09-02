@@ -11,6 +11,7 @@ import {
   inspectDesktopMcpServer,
 } from "./service-mcp.js";
 import { deleteDesktopHookEntry, saveDesktopHookEntry } from "./hooks.js";
+import { spiritDataDir } from "./storage.js";
 import { invalidateSharedUserMcpToolingCache } from "@spiritagent/agent-core";
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -25,6 +26,7 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -33,6 +35,7 @@ import type {
   UpdateExtensionSettingsRequest,
 } from "../types.js";
 import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import { installBuiltInExtension } from "@spiritagent/host-internal";
 import type { LlmActiveSkill } from "@spiritagent/agent-core";
 import type { DesktopExtensionHostAdapter } from "./extension-host-adapter.js";
 import type { DesktopConfigFile, DesktopWorkspaceBinding, HostMetadataSummary } from "./storage.js";
@@ -276,6 +279,38 @@ export async function importExtensionCommand(
     const installed = await ctx.extensionManager().importArchive({
       archiveBase64,
       ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    await ctx.dispatchExtensionEvent(
+      {
+        type: "onExtensionInstalled",
+        detail: {
+          extensionId: installed.id,
+          name: installed.manifest.name,
+          version: installed.manifest.version,
+        },
+      },
+      { targetExtensionIds: [installed.id] },
+    );
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function installBuiltInExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: InstallBuiltInExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    const installed = await installBuiltInExtension({
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop",
+      extensionId: id,
     });
     await ctx.refreshRuntimeAfterExtensionMutation();
     await ctx.dispatchExtensionEvent(

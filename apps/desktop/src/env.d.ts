@@ -19,6 +19,7 @@ import type {
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -85,6 +86,7 @@ declare global {
     deleteHookEntry(request: DeleteHookEntryRequest): Promise<DesktopSnapshot>;
     inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
+    installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
     setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
     runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;

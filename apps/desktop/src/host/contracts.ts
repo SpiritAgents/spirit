@@ -29,6 +29,7 @@ export type HostCommandName =
   | "deleteHookEntry"
   | "inspectMcpServer"
   | "importExtension"
+  | "installBuiltInExtension"
   | "deleteExtension"
   | "setExtensionEnabled"
   | "runExtension"

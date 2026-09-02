@@ -268,6 +268,7 @@ pub(in crate::ui) fn suggestion_summary(suggestion: &InputSuggestion) -> String 
         "/rule" => t!("ui.suggestion.summary.rules").into_owned(),
         "/skill" => t!("ui.suggestion.summary.skills").into_owned(),
         "/extension" => t!("ui.suggestion.summary.extensions").into_owned(),
+        "/marketplace" => t!("ui.suggestion.summary.marketplace").into_owned(),
         "/log" => t!("ui.suggestion.summary.log").into_owned(),
         "/language" => t!("ui.suggestion.summary.language").into_owned(),
         "/approval" => t!("ui.suggestion.summary.approval").into_owned(),
@@ -378,6 +379,13 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             "    /extension list".to_string(),
             "    /extension import <zip>".to_string(),
             "    /extension remove <id>".to_string(),
+        ],
+        "/marketplace" => vec![
+            t!("ui.suggestion.usage.heading").into_owned(),
+            "    /marketplace".to_string(),
+            "    /marketplace list".to_string(),
+            "    /marketplace install <id>".to_string(),
+            "    /marketplace remove <id>".to_string(),
         ],
         "/log" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
@@ -654,9 +662,7 @@ pub(in crate::ui) fn build_language_picker_lines(
         .language_picker_index
         .min(locales.len().saturating_sub(1));
     let total = locales.len();
-    let window = max_items.max(1);
-    let start = (selected + 1).saturating_sub(window);
-    let end = (start + window).min(total);
+    let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let current_locale = rust_i18n::locale().to_string();
     let mut lines = Vec::new();
@@ -668,27 +674,13 @@ pub(in crate::ui) fn build_language_picker_lines(
         } else {
             String::new()
         };
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD | Modifier::REVERSED)
-        } else if is_active {
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        lines.push(Line::from(Span::styled(
-            format!(
-                "{}{} ({}){}",
-                picker_selection_prefix(is_selected),
-                crate::locale::language_display_name(locale_code),
-                locale_code,
-                active_suffix
-            ),
-            style,
-        )));
+        let row_style = inline_picker_text_style(is_selected);
+        let meta_style = inline_picker_meta_style(is_selected);
+        lines.push(Line::from(vec![
+            Span::styled(picker_selection_prefix(is_selected), row_style),
+            Span::styled(crate::locale::language_display_name(locale_code), row_style),
+            Span::styled(format!(" ({locale_code}){active_suffix}"), meta_style),
+        ]));
     }
 
     lines
@@ -706,25 +698,52 @@ pub(in crate::ui) fn build_image_picker_lines(
         .image_picker_index
         .min(app.image_picker_files.len().saturating_sub(1));
     let total = app.image_picker_files.len();
-    let window = max_items.max(1);
-    let start = (selected + 1).saturating_sub(window);
-    let end = (start + window).min(total);
+    let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
     for idx in start..end {
         let name = &app.image_picker_files[idx];
         let is_selected = idx == selected;
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD | Modifier::REVERSED)
+        let row_style = inline_picker_text_style(is_selected);
+        lines.push(Line::from(vec![
+            Span::styled(picker_selection_prefix(is_selected), row_style),
+            Span::styled(name.clone(), row_style),
+        ]));
+    }
+
+    lines
+}
+
+pub(in crate::ui) fn build_marketplace_picker_lines(
+    app: &TuiViewModel,
+    max_items: usize,
+) -> Vec<Line<'static>> {
+    if app.marketplace_catalog.is_empty() {
+        return vec![Line::from(t!("ui.picker.marketplace.empty").into_owned())];
+    }
+
+    let selected = app
+        .marketplace_picker_index
+        .min(app.marketplace_catalog.len().saturating_sub(1));
+    let total = app.marketplace_catalog.len();
+    let (start, end) = inline_picker_bounds(total, selected, max_items);
+
+    let mut lines = Vec::new();
+    for idx in start..end {
+        let entry = &app.marketplace_catalog[idx];
+        let is_selected = idx == selected;
+        let row_style = inline_picker_text_style(is_selected);
+        let meta_style = inline_picker_meta_style(is_selected);
+        let suffix = if entry.installed {
+            t!("ui.picker.marketplace.installed_suffix")
         } else {
-            Style::default().fg(Color::White)
+            t!("ui.picker.marketplace.not_installed_suffix")
         };
-        lines.push(Line::from(Span::styled(
-            format!("{}{}", picker_selection_prefix(is_selected), name),
-            style,
-        )));
+        lines.push(Line::from(vec![
+            Span::styled(picker_selection_prefix(is_selected), row_style),
+            Span::styled(entry.display_name.clone(), row_style),
+            Span::styled(format!("  {}{}", entry.id, suffix), meta_style),
+        ]));
     }
 
     lines

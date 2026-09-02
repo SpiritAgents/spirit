@@ -126,17 +126,17 @@ example-extension/
 
 ## `spiritExtension`
 
-| 欄位                    | 描述                                        |
-| ----------------------- | ------------------------------------------- |
-| `schemaVersion`         | 選用。預設為 `1`。僅支援 `1`                |
-| `displayName`           | 必要。使用者可見名稱                        |
-| `icon`                  | 選用。相對於套件根目錄的路徑                |
-| `supportedHosts`        | 必要。非空的 `cli` 和/或 `desktop` 陣列     |
-| `activationEvents`      | 選用。請參閱 [啟動事件](#activation-events) |
-| `requestedCapabilities` | 選用。請參閱 [功能](#capabilities)          |
+| 欄位                    | 描述                                                                    |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `schemaVersion`         | 選用。預設為 `1`。僅支援 `1`                                            |
+| `displayName`           | 必要。使用者可見名稱                                                    |
+| `icon`                  | 選用。相對於套件根目錄的路徑                                            |
+| `supportedHosts`        | 必要。非空的 `cli` 和/或 `desktop` 陣列                                 |
+| `activationEvents`      | 選用。請參閱 [啟動事件](#activation-events)                             |
+| `requestedCapabilities` | 選用。請參閱 [功能](#capabilities)                                      |
 | `contributes`           | 選用。`tools`、`desktop`、`cli`、`mcp`、`hooks`、`skills` 和/或 `rules` |
-| `settingsSchema`        | 選用。設定定義                              |
-| `secretSlots`           | 選用。密鑰槽定義                            |
+| `settingsSchema`        | 選用。設定定義                                                          |
+| `secretSlots`           | 選用。密鑰槽定義                                                        |
 
 ## 功能
 
@@ -161,16 +161,16 @@ example-extension/
 
 ## 啟動事件
 
-| 事件                   | 觸發時機                       |
-| ---------------------- | ------------------------------ |
-| `onStartup`            | 主機預熱                       |
-| `onExtensionInstalled` | 在 ZIP 安裝之後 |
-| `onSessionOpened`      | 會話變為啟用狀態               |
-| `onSessionReset`       | 會話重置                       |
-| `onUserMessage`        | 使用者提交訊息                 |
-| `onToolCall`           | 工具即將執行                   |
-| `onToolResult`         | 工具結果可用時                 |
-| `onApprovalResolved`   | 核准決定已解決時               |
+| 事件                   | 觸發時機         |
+| ---------------------- | ---------------- |
+| `onStartup`            | 主機預熱         |
+| `onExtensionInstalled` | 在 ZIP 安裝之後  |
+| `onSessionOpened`      | 會話變為啟用狀態 |
+| `onSessionReset`       | 會話重置         |
+| `onUserMessage`        | 使用者提交訊息   |
+| `onToolCall`           | 工具即將執行     |
+| `onToolResult`         | 工具結果可用時   |
+| `onApprovalResolved`   | 核准決定已解決時 |
 
 當擴充功能列出事件且具有可讀的 `main` 時，主機會呼叫 `activate`。
 
@@ -239,12 +239,12 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 須與對應能力成對。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路徑是約定路徑，不允許自訂 path。
 
-| 貢獻面 | 能力 | 檔案 |
-| ------ | ---- | ---- |
-| MCP | `mcp` | 套件根目錄 `mcp.json`（與使用者/工作區 MCP 同 schema） |
-| Agent hooks | `hooks` | 套件根目錄 `hooks.json`（與 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
-| Skills | `skills` | `skills/<name>/SKILL.md` |
-| Rules | `rules` | 套件根目錄 `rule.md` |
+| 貢獻面      | 能力     | 檔案                                                                              |
+| ----------- | -------- | --------------------------------------------------------------------------------- |
+| MCP         | `mcp`    | 套件根目錄 `mcp.json`（與使用者/工作區 MCP 同 schema）                            |
+| Agent hooks | `hooks`  | 套件根目錄 `hooks.json`（與 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
+| Skills      | `skills` | `skills/<name>/SKILL.md`                                                          |
+| Rules       | `rules`  | 套件根目錄 `rule.md`                                                              |
 
 已宣告但檔案缺失或非法則安裝失敗。套件內有檔案但未宣告則忽略，永不載入。
 
@@ -363,4 +363,3 @@ export function activate(ctx) {
 - **ZIP** — 壓縮檔必須恰好包含一個 `package.json`（它可以位於子目錄中）。使用 `spirit extension import ./extension.zip` 或在 **擴充功能** 頁面匯入。
 
 `supportedHosts` 必須包含目前的主機。相同 id 的第二次安裝預設不會取代現有副本。
-

@@ -2,6 +2,7 @@ import type { JsonObject, JsonValue } from "@spiritagent/agent-core";
 import {
   summarizeDeclaredExtensionContributionPoints,
   type HostInstalledExtension,
+  type HostMarketplaceCatalogItem,
 } from "@spiritagent/host-internal";
 
 /**
@@ -114,10 +115,11 @@ function serializeExtensionContributes(
 
 export function serializeHostExtension(item: {
   id: string;
-  manifest: ExtensionManifestLike;
+  manifest: ExtensionManifestLike & { defaultInstalled?: boolean };
   installedAtUnixMs: number;
   enabled: boolean;
   archiveFileName?: string;
+  installSource?: "built-in" | "archive" | "marketplace";
 }): JsonObject {
   return {
     id: item.id,
@@ -170,6 +172,8 @@ export function serializeHostExtension(item: {
         }
       : {}),
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
+    ...(item.installSource ? { installSource: item.installSource } : {}),
+    ...(item.manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
   } as unknown as JsonObject;
 }
@@ -181,6 +185,15 @@ export async function serializeListedHostExtension(
   return {
     ...serializeHostExtension(item),
     ...(summary ? { instructionContributions: summary as unknown as JsonValue } : {}),
+  };
+}
+
+export async function serializeListedMarketplaceCatalogItem(
+  item: HostMarketplaceCatalogItem,
+): Promise<JsonObject> {
+  return {
+    ...(await serializeListedHostExtension(item)),
+    installed: item.installed,
   };
 }
 

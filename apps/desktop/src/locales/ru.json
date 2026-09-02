@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Расширения",
+    "subtitle": "Добавьте Spirit новые возможности.",
     "searchPlaceholder": "Поиск расширений",
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
@@ -647,7 +648,8 @@
     "uninstall": "Удалить",
     "uninstallExtension": "Удалить расширение",
     "uninstallExtensionConfirm": "Вы уверены, что хотите удалить «{{name}}»? Локальный каталог установки будет удалён.",
-    "noExtensionsInstalled": "Расширения ещё не установлены. Нажмите «Установить», чтобы добавить из ZIP-архива.",
+    "uninstallBuiltInConfirm": "Вы уверены, что хотите удалить «{{name}}»? Его можно снова установить на этой странице.",
+    "noExtensionsInstalled": "В каталоге пока нет расширений. Нажмите «Установить», чтобы добавить из ZIP-архива.",
     "contributionGroupTools": "Инструменты",
     "contributionGroupDesktop": "Рабочий стол",
     "contributionRuleTitle": "Правило",

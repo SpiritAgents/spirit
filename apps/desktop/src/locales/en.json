@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Extensions",
+    "subtitle": "Add new capabilities to Spirit.",
     "searchPlaceholder": "Search extensions",
     "noMatches": "No matching extensions.",
     "extensionNotFound": "Extension not found. Please return to the list.",
@@ -647,7 +648,8 @@
     "uninstall": "Uninstall",
     "uninstallExtension": "Uninstall Extension",
     "uninstallExtensionConfirm": "Are you sure you want to uninstall \"{{name}}\"? This will remove the local installation directory.",
-    "noExtensionsInstalled": "No extensions installed yet. Select Install to add one from a ZIP archive.",
+    "uninstallBuiltInConfirm": "Are you sure you want to uninstall \"{{name}}\"? You can install it again from this page.",
+    "noExtensionsInstalled": "No extensions in the catalog yet. Select Install to add one from a ZIP archive.",
     "contributionGroupTools": "Tools",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Rule",

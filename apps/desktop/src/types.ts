@@ -432,6 +432,10 @@ export interface ImportExtensionRequest {
   fileName?: string;
 }
 
+export interface InstallBuiltInExtensionRequest {
+  id: string;
+}
+
 export interface DeleteExtensionRequest {
   id: string;
 }
@@ -567,7 +571,8 @@ export interface DesktopExtensionListItem {
   secretStatuses?: DesktopExtensionSecretStatus[];
   archiveFileName?: string;
   installSource?: "built-in" | "archive" | "marketplace";
-  installedAtUnixMs: number;
+  installed?: boolean;
+  installedAtUnixMs?: number;
 }
 
 export interface DesktopMcpStdioTransportSnapshot {
@@ -991,6 +996,7 @@ export interface DesktopSnapshot {
   /** Extension-contributed skills for slash activation; omitted from settings lists. */
   extensionSkills: DesktopExtensionSkillSlashItem[];
   extensionsList: DesktopExtensionListItem[];
+  marketplaceCatalog: DesktopExtensionListItem[];
   extensionCss: DesktopExtensionCssLayer[];
   /** Extension background warmup in progress (does not block session navigation or sending messages). */
   extensionsLoading?: boolean;

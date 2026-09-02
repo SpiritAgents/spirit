@@ -21,11 +21,11 @@ use std::{
 
 use spirit::tui::InlineRecreate;
 use spirit::{
-    ConfigCommand, ExtensionCommand, GlobalCliOptions, HookCommand, KeyCommand, McpCommand,
-    ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
-    handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli, handle_model_cli,
-    handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
-    run_headless_prompt, run_serve, tui, ui,
+    ConfigCommand, ExtensionCommand, GlobalCliOptions, HookCommand, KeyCommand, MarketplaceCommand,
+    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
+    handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_marketplace_cli,
+    handle_mcp_cli, handle_model_cli, handle_permissions_cli, logging, print_skills_stub,
+    resolve_session_tui_mode, run_headless_prompt, run_serve, tui, ui,
 };
 
 const MAX_EVENT_BATCH_PER_TICK: usize = 2048;
@@ -100,6 +100,10 @@ enum Commands {
     Extension {
         #[command(subcommand)]
         action: ExtensionAction,
+    },
+    Marketplace {
+        #[command(subcommand)]
+        action: MarketplaceAction,
     },
     Hook {
         #[command(subcommand)]
@@ -284,6 +288,19 @@ enum ExtensionAction {
     },
 }
 
+#[derive(Subcommand)]
+enum MarketplaceAction {
+    List,
+    Install {
+        #[arg(value_name = "id")]
+        id: String,
+    },
+    Remove {
+        #[arg(value_name = "id")]
+        id: String,
+    },
+}
+
 fn main() -> Result<()> {
     spirit::logging::init_logging();
     let cli = Cli::parse();
@@ -324,6 +341,9 @@ fn main() -> Result<()> {
         }
         Some(Commands::Extension { action }) => {
             handle_extension_cli(into_extension_command(action))?
+        }
+        Some(Commands::Marketplace { action }) => {
+            handle_marketplace_cli(into_marketplace_command(action))?
         }
     }
 
@@ -383,6 +403,14 @@ fn into_extension_command(action: ExtensionAction) -> ExtensionCommand {
         ExtensionAction::List => ExtensionCommand::List,
         ExtensionAction::Import { archive } => ExtensionCommand::Import { archive },
         ExtensionAction::Remove { id } => ExtensionCommand::Remove { id },
+    }
+}
+
+fn into_marketplace_command(action: MarketplaceAction) -> MarketplaceCommand {
+    match action {
+        MarketplaceAction::List => MarketplaceCommand::List,
+        MarketplaceAction::Install { id } => MarketplaceCommand::Install { id },
+        MarketplaceAction::Remove { id } => MarketplaceCommand::Remove { id },
     }
 }
 
@@ -725,6 +753,7 @@ fn process_event_batch(
                     || shell.is_subagent_picker_active()
                     || shell.is_subagent_view_active()
                     || shell.is_image_picker_active()
+                    || shell.is_marketplace_picker_active()
                 {
                     continue;
                 }
@@ -762,6 +791,7 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
+                    && !shell.is_marketplace_picker_active()
                     && !shell.is_bottom_form_active()
                     && pending_text.is_empty()
                     && matches!(key.code, KeyCode::Char('!'))
@@ -784,6 +814,7 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
+                    && !shell.is_marketplace_picker_active()
                     && let Some(ch) = batched_text_char(&key)
                 {
                     pending_text.push(ch);
@@ -1055,6 +1086,20 @@ fn process_key_event(
             KeyCode::Up => shell.select_prev_image(),
             KeyCode::Down => shell.select_next_image(),
             KeyCode::Enter => shell.confirm_image_picker(),
+            KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                shell.request_quit();
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    if shell.is_marketplace_picker_active() {
+        match key.code {
+            KeyCode::Esc => shell.cancel_marketplace_picker(),
+            KeyCode::Up => shell.select_prev_marketplace_item(),
+            KeyCode::Down => shell.select_next_marketplace_item(),
+            KeyCode::Enter => shell.confirm_marketplace_picker(),
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 shell.request_quit();
             }
@@ -1458,6 +1503,7 @@ fn paste_target(shell: &TuiShell) -> Option<PasteTarget> {
         || shell.is_rewind_picker_active()
         || shell.is_fork_picker_active()
         || shell.is_image_picker_active()
+        || shell.is_marketplace_picker_active()
     {
         None
     } else if shell.is_bottom_form_active() {

@@ -17,6 +17,7 @@ import type {
   DesktopCreateAutomationRequest,
   DesktopUpdateAutomationRequest,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallLspProviderRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
@@ -114,6 +115,7 @@ export type CommandPayloads = {
   deleteHookEntry: { request: DeleteHookEntryRequest };
   inspectMcpServer: { name: string };
   importExtension: { request: ImportExtensionRequest };
+  installBuiltInExtension: { request: InstallBuiltInExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
   runExtension: { request: RunExtensionRequest };

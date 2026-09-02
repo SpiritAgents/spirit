@@ -637,6 +637,7 @@
   },
   "marketplace": {
     "title": "Extensiones",
+    "subtitle": "Añade nuevas capacidades a Spirit.",
     "searchPlaceholder": "Buscar extensiones",
     "noMatches": "No se encontraron extensiones.",
     "extensionNotFound": "Extensión no encontrada. Regresa a la lista.",
@@ -647,7 +648,8 @@
     "uninstall": "Desinstalar",
     "uninstallExtension": "Desinstalar extensión",
     "uninstallExtensionConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Se eliminará el directorio de instalación local.",
-    "noExtensionsInstalled": "No hay extensiones instaladas. Selecciona Instalar para añadir una desde un archivo ZIP.",
+    "uninstallBuiltInConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Puedes volver a instalarla desde esta página.",
+    "noExtensionsInstalled": "Aún no hay extensiones en el catálogo. Selecciona Instalar para añadir una desde un archivo ZIP.",
     "contributionGroupTools": "Herramientas",
     "contributionGroupDesktop": "Escritorio",
     "contributionRuleTitle": "Regla",

@@ -707,6 +707,7 @@ export default function App() {
                           }
                           extensionsInstalling={runtime.busyAction === "extensionsImport"}
                           onImportExtension={runtime.importExtension}
+                          onInstallBuiltInExtension={runtime.installBuiltInExtension}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
                         />

@@ -1,5 +1,6 @@
 use super::*;
 use crate::{
+    host_protocol::CliExtensionEntry,
     model_registry::AppConfig,
     ports::{ChatSessionListItem, SubagentSessionStatus},
     view::{
@@ -108,6 +109,9 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         image_picker_active: false,
         image_picker_index: 0,
         image_picker_files: vec![],
+        marketplace_picker_active: false,
+        marketplace_picker_index: 0,
+        marketplace_catalog: vec![],
         bottom_form: None,
         history_offset_from_bottom: 0,
         pending_response_active: false,
@@ -122,6 +126,34 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         conversation_sel_head: None,
         inline_mode: false,
         committed_history_lines: 0,
+    }
+}
+
+fn sample_marketplace_catalog_entry(
+    id: &str,
+    display_name: &str,
+    installed: bool,
+) -> CliExtensionEntry {
+    CliExtensionEntry {
+        id: id.to_string(),
+        display_name: display_name.to_string(),
+        version: "0.1.0".to_string(),
+        enabled: installed,
+        description: None,
+        author: None,
+        homepage: None,
+        main: None,
+        supported_hosts: vec!["cli".to_string()],
+        activation_events: None,
+        requested_capabilities: None,
+        contributes: None,
+        instruction_contributions: None,
+        settings_schema: None,
+        secret_slots: None,
+        archive_file_name: None,
+        installed_at_unix_ms: 0,
+        installed,
+        install_source: Some("built-in".to_string()),
     }
 }
 
@@ -559,6 +591,40 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
         !lines
             .iter()
             .any(|line| line.contains(t!("ui.footer.preview").as_ref()))
+    );
+}
+
+#[test]
+fn marketplace_picker_lines_mark_installed_state() {
+    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    app.marketplace_picker_active = true;
+    app.marketplace_catalog = vec![
+        sample_marketplace_catalog_entry("spirit.catalog-demo", "Catalog Demo", true),
+        sample_marketplace_catalog_entry("spirit.local-demo", "Local Demo", false),
+    ];
+
+    let text = render_text_lines(build_marketplace_picker_lines(&app, 5));
+    assert!(text[0].contains("Catalog Demo"));
+    assert!(text[0].contains("spirit.catalog-demo"));
+    assert!(text[0].contains(t!("ui.picker.marketplace.installed_suffix").as_ref()));
+    assert!(text[1].contains("Local Demo"));
+    assert!(text[1].contains(t!("ui.picker.marketplace.not_installed_suffix").as_ref()));
+}
+
+#[test]
+fn marketplace_picker_overlay_projects_catalog_rows() {
+    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    app.marketplace_picker_active = true;
+    app.marketplace_catalog = vec![sample_marketplace_catalog_entry(
+        "spirit.catalog-demo",
+        "Catalog Demo",
+        false,
+    )];
+
+    let snapshot = render_ui_lines(&app, 80, 24).join("\n");
+    assert!(
+        snapshot.contains("Catalog Demo") && snapshot.contains("spirit.catalog-demo"),
+        "marketplace overlay should project catalog rows, got:\n{snapshot}"
     );
 }
 

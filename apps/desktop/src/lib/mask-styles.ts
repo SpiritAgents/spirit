@@ -25,3 +25,27 @@ export function bottomScrollFadeMaskStyle(
     ...(options?.animate !== false ? { transition: "--sidebar-mask-bottom-alpha 150ms" } : {}),
   } as CSSProperties;
 }
+
+const DEFAULT_TOP_FADE_PX = 32;
+
+/**
+ * Top-edge fade-out below a top-docked header: same alpha-mask approach as the onboarding
+ * connect list's bottom fade, shifted down by the header band (`bandHeightPx`). Content
+ * fades out toward the header instead of being covered by a painted shadow, so the window
+ * system material stays visible through it. `active` animates via the registered custom
+ * property (150ms fade in/out).
+ */
+export function topScrollFadeMaskStyle(
+  active: boolean,
+  options?: { bandHeightPx?: number; fadePx?: number; animate?: boolean },
+): CSSProperties {
+  const band = Math.max(0, options?.bandHeightPx ?? 0);
+  const fade = options?.fadePx ?? DEFAULT_TOP_FADE_PX;
+  const maskImage = `linear-gradient(to bottom, rgb(0 0 0 / 0) ${band}px, rgb(0 0 0 / var(--list-mask-top-alpha)) ${band}px, rgb(0 0 0 / 1) calc(${band}px + ${fade}px))`;
+  return {
+    "--list-mask-top-alpha": active ? "0" : "1",
+    maskImage,
+    WebkitMaskImage: maskImage,
+    ...(options?.animate !== false ? { transition: "--list-mask-top-alpha 150ms" } : {}),
+  } as CSSProperties;
+}

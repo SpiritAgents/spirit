@@ -22,10 +22,15 @@ import {
   saveToggleState,
   validateHooksConfig,
   collectEnabledExtensionInstructionContributions,
+  installBuiltInExtension,
+  listMarketplaceCatalog,
   type PermissionEvalResult,
 } from "@spiritagent/host-internal";
 
-import { serializeListedHostExtension } from "./host-serializers.js";
+import {
+  serializeListedHostExtension,
+  serializeListedMarketplaceCatalogItem,
+} from "./host-serializers.js";
 import type { SessionManager } from "./session-manager.js";
 
 /**
@@ -244,6 +249,26 @@ export class HostService {
         await this.sessions.refreshExtensions();
         return { id, enabled };
       }
+      case "host.listMarketplaceCatalog": {
+        const items = await listMarketplaceCatalog({
+          spiritDataDir: this.spiritDataDir,
+          hostKind: HostService.readHostKind(params),
+        });
+        return Promise.all(items.map((item) => serializeListedMarketplaceCatalogItem(item)));
+      }
+      case "host.installBuiltInExtension": {
+        const id = typeof params["id"] === "string" ? params["id"].trim() : "";
+        if (!id) {
+          throw new Error("missing extension id");
+        }
+        const item = await installBuiltInExtension({
+          spiritDataDir: this.spiritDataDir,
+          hostKind: HostService.readHostKind(params),
+          extensionId: id,
+        });
+        await this.sessions.refreshExtensions();
+        return serializeListedHostExtension(item);
+      }
       // -------------------------------------------------------------- todos
       case "host.listSessionTodos": {
         const sessionId = HostService.readSessionId(params);
@@ -359,6 +384,8 @@ export const HOST_METHODS = new Set([
   "host.importExtension",
   "host.deleteExtension",
   "host.setExtensionEnabled",
+  "host.listMarketplaceCatalog",
+  "host.installBuiltInExtension",
   "host.listSessionTodos",
   "host.replaceSessionTodos",
   "host.mcp",
