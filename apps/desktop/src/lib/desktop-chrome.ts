@@ -216,6 +216,9 @@ export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-bord
 /** Outline rest fill / hover wash (Input, Outline button, item cards and rows) */
 export const DESKTOP_OUTLINE_FILL = "bg-outline-fill";
 
+/** Canvas All-mode see-through fill (outline controls + cards). Light /30, dark /10 via `--content-translucent-fill`. Portaled overlays sit outside the marker and stay solid. */
+export const DESKTOP_CONTENT_TRANSLUCENT_FILL = "content-translucent:bg-content-translucent-fill";
+
 /** Outline rest border (Input, Outline button, item cards) */
 export const DESKTOP_OUTLINE_BORDER = "border border-outline-border transition-none";
 
@@ -228,16 +231,22 @@ export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OU
 /** Mouse-click focus: keep the hover border, no ring */
 export const DESKTOP_OUTLINE_FOCUSED = "focus:border-outline-border-hover focus:bg-outline-fill";
 
-/** Shell: keep the border whenever an inner element has focus */
-export const DESKTOP_OUTLINE_FOCUS_WITHIN =
-  "focus-within:border-outline-border-hover focus-within:bg-outline-fill";
-
 /** Card hover wash when replacing `background-color` would punch through translucency */
 export const DESKTOP_OUTLINE_FILL_UNDERLAY =
   "before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-outline-fill before:opacity-0 hover:before:opacity-100";
 
-/** Bordered item card face (marketplace / automations) */
-export const DESKTOP_ITEM_CARD_SURFACE = cn("rounded-lg bg-background/80", DESKTOP_OUTLINE_BORDER);
+/** Bordered item card face (marketplace / automations); see-through under All-mode translucency on the canvas */
+export const DESKTOP_ITEM_CARD_SURFACE = cn(
+  "rounded-lg bg-background/80",
+  DESKTOP_CONTENT_TRANSLUCENT_FILL,
+  DESKTOP_OUTLINE_BORDER,
+);
+
+/** Grouped canvas card (settings sections, contribution groups, dream graph). */
+export const DESKTOP_CANVAS_CARD_SURFACE = cn(
+  "rounded-lg border border-border/40 bg-background/80",
+  DESKTOP_CONTENT_TRANSLUCENT_FILL,
+);
 
 export const DESKTOP_ITEM_CARD_HOVER_BORDER = DESKTOP_OUTLINE_BORDER_HOVER;
 
@@ -250,29 +259,19 @@ export const DESKTOP_OUTLINE_BUTTON_FOCUSED = DESKTOP_OUTLINE_FOCUSED;
 export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
   "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-sidebar-foreground";
 
-/** Keyboard Tab focus-visible: shadcn ring (mouse clicks do not trigger focus-visible) */
-export const DESKTOP_OUTLINE_FOCUS_VISIBLE =
-  "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
-
 /** Select trigger: slightly smaller ring, consistent with the shadcn Select default */
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =
   "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";
 
-/** Shell: ring only on inner keyboard focus-visible */
-export const DESKTOP_OUTLINE_FOCUS_WITHIN_KEYBOARD =
-  "focus-within:has(:focus-visible):border-ring focus-within:has(:focus-visible):ring-2 focus-within:has(:focus-visible):ring-ring/50";
-
-/** Consistent with the PendingApprovalCard guided input: thin-border shell, inner Input without ring */
+/** Thin-border shell for text inputs/areas, inner field without ring. No hover/focus brightening anywhere: the text cursor already signals the input state. Under All-mode translucency the background turns see-through on the canvas (app-shell marker); portaled overlays (dialogs, menus) live outside the marker and stay solid. */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
   "overflow-hidden rounded-md bg-background",
+  DESKTOP_CONTENT_TRANSLUCENT_FILL,
   DESKTOP_OUTLINE_BORDER,
-  DESKTOP_OUTLINE_HOVER,
-  DESKTOP_OUTLINE_FOCUS_WITHIN,
-  DESKTOP_OUTLINE_FOCUS_WITHIN_KEYBOARD,
 );
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none";
 
 /** ghost: transparent background consistent with popover; overrides the Input base class rest/hover/focus fill */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
@@ -284,10 +283,10 @@ export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
 export const DESKTOP_FORM_INPUT_SHELL = DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL;
 
 export const DESKTOP_FORM_INPUT_INNER =
-  "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
+  "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-sm shadow-none dark:bg-transparent";
 
 export const DESKTOP_FORM_TEXTAREA_INNER =
-  "min-h-9 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
+  "min-h-9 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-sm shadow-none dark:bg-transparent";
 
 /** Select / custom trigger placed inside DESKTOP_FORM_INPUT_SHELL */
 export const DESKTOP_FORM_FIELD_TRIGGER_INNER =
@@ -332,7 +331,10 @@ export const DESKTOP_SELECT_CONTENT = cn(
 
 /** Standalone bordered Select trigger (settings pages, etc.) */
 export const DESKTOP_SELECT_TRIGGER = cn(
+  // content-translucent: canvas-only see-through tint under All-mode translucency
+  // (app-shell marker); hover/focus highlights still win over it.
   "flex h-8 min-h-8 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md bg-background px-2.5 py-1 text-sm outline-none",
+  DESKTOP_CONTENT_TRANSLUCENT_FILL,
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OUTLINE_HOVER,
   DESKTOP_OUTLINE_FOCUSED,

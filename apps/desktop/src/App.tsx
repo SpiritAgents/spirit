@@ -390,6 +390,7 @@ export default function App() {
               data-spirit-surface="app-shell"
               data-spirit-shell-kind={isElectronShell ? "electron" : "web"}
               data-spirit-mica={useTranslucency ? "true" : "false"}
+              data-spirit-content-translucency={useContentTranslucency ? "true" : "false"}
               className={cn(
                 "flex h-full min-h-0 flex-col",
                 useTranslucency ? "bg-transparent" : "bg-background",

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  DESKTOP_FORM_INPUT_INNER,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
   instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
@@ -231,7 +232,7 @@ export function WorkspaceFilesSearchPanel({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("workspace.fileSearchPlaceholder")}
-            className="h-8 rounded-none border-0 bg-transparent pl-2 pr-[5.5rem] text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+            className={cn(DESKTOP_FORM_INPUT_INNER, "pl-2 pr-[5.5rem]")}
             aria-label={t("workspace.fileSearch")}
           />
           <div className="absolute inset-y-0 right-1 flex items-center gap-0.5">

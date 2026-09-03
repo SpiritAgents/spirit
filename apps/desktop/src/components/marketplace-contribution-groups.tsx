@@ -7,6 +7,7 @@ import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench, type LucideIcon } fr
 
 import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
@@ -119,7 +120,7 @@ export function MarketplaceContributionGroups({ item }: { item: DesktopExtension
       {groups.map((group) => (
         <section key={group.key} className="space-y-3">
           <p className="text-xs text-muted-foreground">{group.label}</p>
-          <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80">
+          <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
             {group.items.map((entry) => (
               <div key={entry.key} className="flex items-center gap-3 px-4 py-3">
                 <entry.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />

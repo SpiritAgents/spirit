@@ -23,6 +23,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { spiritAgentBrandIconSrc } from "@/lib/brand-icon";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import type { ThemePreference } from "@/lib/theme";
 import type { DesktopDreamCollectorState, DesktopDreamOverviewItem } from "@/types";
@@ -552,7 +553,7 @@ export function DreamGraphCard({
   const graphHeight = dreamGraphHeightPx(graphItems.length);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border/40 bg-background/80">
+    <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "overflow-hidden")}>
       <div className="relative w-full" style={{ height: `${String(graphHeight)}px` }}>
         {loading ? (
           <div className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full border border-border/50 bg-background/75 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">

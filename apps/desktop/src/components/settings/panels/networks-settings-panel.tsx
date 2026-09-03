@@ -15,8 +15,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import type { DesktopSnapshot } from "@/types";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
+import { cn } from "@/lib/utils";
 
 function webHostStatusLabel(state: DesktopSnapshot["webHost"]["status"]["state"]): string {
   switch (state) {
@@ -58,7 +60,7 @@ export function NetworksSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
         <SettingsRow
           label={t("settings.llmHttpVersion")}
           description={t("settings.llmHttpVersionDescription")}
@@ -89,7 +91,7 @@ export function NetworksSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.remoteAccessSection")}</p>
-        <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           <SettingsRow
             label={t("settings.webRemoteAccess")}
             description={t("settings.webRemoteAccessDescription")}

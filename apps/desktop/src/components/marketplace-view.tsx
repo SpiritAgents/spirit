@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
@@ -23,11 +23,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { scrollAreaViewport } from "@/hooks/use-sticky-header-pinned";
+import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
-  DESKTOP_ITEM_CARD_HOVER_BORDER,
-  DESKTOP_ITEM_CARD_SURFACE,
-  DESKTOP_OUTLINE_FILL_UNDERLAY,
+  DESKTOP_FORM_INPUT_INNER,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
   instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
@@ -48,8 +46,15 @@ import type {
 /** Matches the automations entry page content width */
 const MARKETPLACE_LIST_W = "max-w-4xl";
 
-/** h-8: the whitespace above the title bar that scrolls away before the header docks */
+/** h-8: the whitespace above the title; it scrolls away with the title before the search bar docks */
 const MARKETPLACE_HEADER_TOP_GAP_PX = 32;
+
+declare global {
+  /** Not yet in TS lib.dom; runtime support is detected via `typeof ScrollTimeline`. */
+  class ScrollTimeline extends AnimationTimeline {
+    constructor(options?: { source?: Element | null; axis?: "block" | "inline" });
+  }
+}
 
 type MarketplaceViewProps = {
   snapshot: {
@@ -86,27 +91,66 @@ export function MarketplaceView({
     null,
   );
   const [headerElement, setHeaderElement] = useState<HTMLDivElement | null>(null);
-  const [headerPinned, setHeaderPinned] = useState(false);
-  // The occlusion clip is always on while the list is shown: the band only ever covers the
-  // top gap + header placeholder (both empty) or content beneath the docked header, so there
-  // is no pin-moment style change for the compositor to defer during fast scrolls.
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
+  const getListScrollViewport = useCallback(
+    () => scrollAreaViewport(listScrollRoot),
+    [listScrollRoot],
+  );
+  // Pin detection via sentinel + IntersectionObserver: the callback runs inside the
+  // rendering steps with the latest (compositor-driven) scroll offset, so the pinned
+  // styling commits in the same frame as the crossing scroll position (same pattern as
+  // the PR changes view). A scroll-event listener would commit one frame late.
+  const headerPinned = useStickyHeaderPinned(
+    stickySentinelRef,
+    getListScrollViewport,
+    detailExtensionId === null,
+  );
+  const [titleElement, setTitleElement] = useState<HTMLDivElement | null>(null);
+  const [titleHeight, setTitleHeight] = useState(0);
+
+  // The title block scrolls away with the list, so the dock offset (top gap + title height)
+  // is measured rather than hardcoded.
+  useLayoutEffect(() => {
+    if (!titleElement) {
+      setTitleHeight(0);
+      return;
+    }
+    const syncTitleHeight = () => setTitleHeight(titleElement.offsetHeight);
+    syncTitleHeight();
+    const observer = new ResizeObserver(syncTitleHeight);
+    observer.observe(titleElement);
+    return () => observer.disconnect();
+  }, [titleElement]);
+
+  // The occlusion clip applies only once the search bar is pinned: before that, the title
+  // scrolls through the top band and must stay visible. clip-path is compositor-only, so
+  // the pin-moment toggle still takes effect in the same frame (see scroll-top-band-occlusion).
   const { occlusionStyle: headerOcclusionStyle, bandHeight: headerHeight } =
-    useScrollTopBandOcclusion(listScrollRoot, headerElement, true);
+    useScrollTopBandOcclusion(listScrollRoot, headerElement, headerPinned);
 
   // clip-path occludes the header band; the alpha-mask fade below it (onboarding-style)
   // softens content approaching the docked header, animating in/out on pin transitions.
-  const listScrollRootStyle = useMemo(
-    () => ({
+  // The mask band is zero while unpinned so the scrolling title is not faded out.
+  const listScrollRootStyle = useMemo(() => {
+    return {
       ...headerOcclusionStyle,
-      ...topScrollFadeMaskStyle(headerPinned, { bandHeightPx: headerHeight ?? 0 }),
-    }),
-    [headerOcclusionStyle, headerHeight, headerPinned],
-  );
+      ...topScrollFadeMaskStyle(headerPinned, {
+        bandHeightPx: headerPinned ? (headerHeight ?? 0) : 0,
+      }),
+    };
+  }, [headerOcclusionStyle, headerHeight, headerPinned]);
 
-  // The header lives outside the ScrollArea so the occlusion mask on the scroll root can clip
-  // list content beneath it (the mask clips every DOM descendant of the masked element). Its
-  // dock position is synced to the scroll offset: the top gap scrolls away, then the header
-  // stays pinned. One element at all times, so search-input focus survives the pin transition.
+  // The search bar lives outside the ScrollArea so the occlusion mask on the scroll root can
+  // clip list content beneath it (the mask clips every DOM descendant of the masked element).
+  // Its dock translateY is driven by a WAAPI ScrollTimeline animation running on the
+  // compositor, tracking async scrolling frame-perfectly; a JS scroll-event sync always
+  // commits one frame after the compositor has already presented the scrolled content, which
+  // made the header visibly trail the list. Pixel values are passed straight from JS: an
+  // earlier CSS @keyframes + var() attempt resolved the custom property to its fallback
+  // inside the keyframes, pinning the header at translateY(0). One element at all times, so
+  // input focus survives the pin. The scroll listener below is the single fallback for
+  // engines without ScrollTimeline support.
+  const headerDockOffset = MARKETPLACE_HEADER_TOP_GAP_PX + titleHeight;
   useLayoutEffect(() => {
     if (detailExtensionId !== null || !headerElement || !listScrollRoot) {
       return;
@@ -115,14 +159,25 @@ export function MarketplaceView({
     if (!viewport) {
       return;
     }
+    const scrollTimelineSupported = typeof ScrollTimeline !== "undefined";
+    if (scrollTimelineSupported) {
+      // fill: both holds translateY(0) once scrolled past the range; the duration defaults
+      // to auto, i.e. the timeline supplies the progress. rangeEnd docks the header once the
+      // top gap + title have scrolled away instead of at the end of the list.
+      const animation = headerElement.animate(
+        [{ transform: `translateY(${headerDockOffset}px)` }, { transform: "translateY(0px)" }],
+        { fill: "both", timeline: new ScrollTimeline({ source: viewport }) },
+      );
+      (animation as Animation & { rangeEnd: string }).rangeEnd = `${headerDockOffset}px`;
+      return () => animation.cancel();
+    }
     const syncHeaderDock = () => {
-      headerElement.style.transform = `translateY(${Math.max(0, MARKETPLACE_HEADER_TOP_GAP_PX - viewport.scrollTop)}px)`;
-      setHeaderPinned(viewport.scrollTop > MARKETPLACE_HEADER_TOP_GAP_PX);
+      headerElement.style.transform = `translateY(${Math.max(0, headerDockOffset - viewport.scrollTop)}px)`;
     };
     syncHeaderDock();
     viewport.addEventListener("scroll", syncHeaderDock, { passive: true });
     return () => viewport.removeEventListener("scroll", syncHeaderDock);
-  }, [detailExtensionId, headerElement, listScrollRoot]);
+  }, [detailExtensionId, headerDockOffset, headerElement, listScrollRoot]);
 
   const catalog = snapshot?.marketplaceCatalog ?? [];
   const detailItem = detailExtensionId
@@ -212,10 +267,34 @@ export function MarketplaceView({
             style={listScrollRootStyle}
           >
             <div className={cn("mx-auto w-full px-4 pb-8", MARKETPLACE_LIST_W)}>
-              {/* The top gap scrolls away; the header (overlay sibling of the ScrollArea)
-                  docks once the gap is consumed. The placeholder reserves its flow space. */}
+              {/* The top gap and title scroll away; the search bar (overlay sibling of the
+                  ScrollArea) docks once they are consumed. The placeholder reserves its
+                  flow space. */}
               <div className="h-8" aria-hidden />
+              <div ref={setTitleElement} className="space-y-1 pb-4">
+                <h1 className={cn("flex items-center gap-2", DESKTOP_PAGE_TITLE_CLASS)}>
+                  {t("marketplace.title")}
+                  {snapshot?.extensionsLoading ? (
+                    <LoaderCircle
+                      className="size-4 animate-spin text-muted-foreground"
+                      aria-label={t("common.loading")}
+                    />
+                  ) : null}
+                </h1>
+                <p className="text-sm text-muted-foreground">{t("marketplace.subtitle")}</p>
+              </div>
+              {/* Pin sentinel: when it scrolls above the viewport top, the search bar is
+                  docked (see useStickyHeaderPinned). */}
+              <div
+                ref={stickySentinelRef}
+                className="pointer-events-none h-px w-full -mb-px"
+                aria-hidden
+              />
               <div aria-hidden style={{ height: headerHeight ?? 0 }} />
+              {/* Flow gap between the search bar and the list (scrolls away); the pinned
+                  band itself carries no bottom padding — the fade mask below it already
+                  softens the content transition. */}
+              <div className="h-4" aria-hidden />
 
               {listEmpty ? (
                 <p className="text-sm text-muted-foreground">
@@ -229,10 +308,9 @@ export function MarketplaceView({
                     <div
                       key={item.id}
                       className={cn(
-                        DESKTOP_ITEM_CARD_SURFACE,
-                        "relative isolate flex w-full items-center overflow-hidden",
-                        DESKTOP_OUTLINE_FILL_UNDERLAY,
-                        DESKTOP_ITEM_CARD_HOVER_BORDER,
+                        // Ghost row: no card surface (border/background); hover only lays the
+                        // sidebar-style semi-transparent canvas wash (instant, no color fade).
+                        "flex w-full items-center rounded-lg hover:bg-canvas-hover",
                         item.installed && !item.enabled && "opacity-55",
                       )}
                     >
@@ -317,55 +395,53 @@ export function MarketplaceView({
               )}
             </div>
           </ScrollArea>
-          <div ref={setHeaderElement} className="absolute inset-x-0 top-0 z-20">
+          <div
+            ref={setHeaderElement}
+            className="absolute inset-x-0 top-0 z-20"
+            // Base position below the title; applies only while the dock animation is not
+            // running (list not overflowing) or as the pre-effect value. The WAAPI scroll
+            // animation overrides it on the compositor; the JS fallback listener overrides
+            // it on engines without ScrollTimeline support.
+            style={{ transform: `translateY(${headerDockOffset}px)` }}
+          >
             <div
               className={cn(
-                "mx-auto w-full px-4 pb-4",
+                "mx-auto w-full px-4",
                 MARKETPLACE_LIST_W,
                 headerPinned && !useTranslucency ? "bg-background" : "bg-transparent",
               )}
             >
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1">
-                  <h1 className={cn("flex items-center gap-2", DESKTOP_PAGE_TITLE_CLASS)}>
-                    {t("marketplace.title")}
-                    {snapshot?.extensionsLoading ? (
-                      <LoaderCircle
-                        className="size-4 animate-spin text-muted-foreground"
-                        aria-label={t("common.loading")}
-                      />
-                    ) : null}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">{t("marketplace.subtitle")}</p>
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "relative min-w-0 flex-1",
+                    DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
+                    "rounded-full",
+                  )}
+                >
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    value={searchText}
+                    onChange={(event) => setSearchText(event.target.value)}
+                    placeholder={t("marketplace.searchPlaceholder")}
+                    className={cn(DESKTOP_FORM_INPUT_INNER, "pl-9 pr-3.5")}
+                  />
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <div
-                    className={cn("relative w-56 sm:w-64", DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL)}
-                  >
-                    <Search
-                      className="pointer-events-none absolute left-2 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    />
-                    <Input
-                      value={searchText}
-                      onChange={(event) => setSearchText(event.target.value)}
-                      placeholder={t("marketplace.searchPlaceholder")}
-                      className="h-8 rounded-none border-0 bg-transparent pl-8 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 shrink-0"
-                    disabled={extensionsInstalling}
-                    onClick={() => inputRef.current?.click()}
-                  >
-                    {extensionsInstalling ? (
-                      <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                    ) : null}
-                    {t("marketplace.install")}
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 shrink-0 rounded-full px-3.5"
+                  disabled={extensionsInstalling}
+                  onClick={() => inputRef.current?.click()}
+                >
+                  {extensionsInstalling ? (
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                  ) : null}
+                  {t("marketplace.install")}
+                </Button>
               </div>
             </div>
           </div>

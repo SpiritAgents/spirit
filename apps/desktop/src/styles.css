@@ -11,6 +11,10 @@
 
 @custom-variant dark (&:is(.dark *));
 @custom-variant motion-reduce (&:is(html.spirit-reduce-motion *));
+/* All-mode content translucency (app-shell marker): canvas surfaces only — portaled
+   overlays (dialogs, menus) live outside the marker and stay solid. :where() keeps zero
+   added specificity so hover/focus utilities still win over the translucent base. */
+@custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
 @property --sidebar-mask-top-alpha {
   syntax: "<number>";
@@ -55,6 +59,8 @@
   --outline-border-hover: var(--border);
   /* Outline wash: Input / Outline button hover, item-card and history-row hover */
   --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* Canvas outline/card fill under All-mode translucency; light /30 so white keeps presence */
+  --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
   --control-border: var(--outline-border);
   /* Canvas hover: 6% wash on normal page/sidebar surfaces; not for overlays */
   --canvas-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
@@ -137,6 +143,8 @@ html.dark,
   /* Solid `--border` (#272727) is too hard on black; step up from rest, not full */
   --outline-border-hover: color-mix(in oklab, var(--border) 80%, transparent);
   --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* Dark already reads well at /10; do not match the light /30 bump */
+  --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
   --control-border: var(--outline-border);
   --canvas-hover: color-mix(in oklab, white 6%, transparent);
   --overlay-hover: color-mix(in oklab, var(--foreground) 6%, var(--popover));
@@ -466,6 +474,7 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
   --color-outline-border: var(--outline-border);
   --color-outline-border-hover: var(--outline-border-hover);
   --color-outline-fill: var(--outline-fill);
+  --color-content-translucent-fill: var(--content-translucent-fill);
   --color-control-border: var(--control-border);
   --color-canvas-hover: var(--canvas-hover);
   --color-overlay-hover: var(--overlay-hover);
