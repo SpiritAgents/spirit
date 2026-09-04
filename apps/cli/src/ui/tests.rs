@@ -1,12 +1,13 @@
 use super::*;
 use crate::{
-    host_protocol::CliExtensionEntry,
     model_registry::AppConfig,
     ports::{ChatSessionListItem, SubagentSessionStatus},
     view::{
         AssistantAuxData, BottomFormFieldEditorView, BottomFormFieldView, BottomFormView,
-        ForkPickerView, MainInputMode, PendingAssistantAux, PendingSubagentApprovalView,
-        RewindPickerView, SubagentSessionDetailView, SubagentSessionSummaryView,
+        ForkPickerView, MainInputMode, MarketplaceCatalogItemView, MarketplaceFlowStep,
+        MarketplaceSourceTabView, MarketplaceViewModel, PendingAssistantAux,
+        PendingSubagentApprovalView, RewindPickerView, SlashFlowItemView, SlashFlowSearchView,
+        SlashFlowView, SubagentSessionDetailView, SubagentSessionSummaryView,
     },
 };
 use ratatui::{Terminal, backend::TestBackend};
@@ -109,9 +110,7 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         image_picker_active: false,
         image_picker_index: 0,
         image_picker_files: vec![],
-        marketplace_picker_active: false,
-        marketplace_picker_index: 0,
-        marketplace_catalog: vec![],
+        marketplace_view: None,
         bottom_form: None,
         history_offset_from_bottom: 0,
         pending_response_active: false,
@@ -126,33 +125,6 @@ fn build_view_model(message: ChatMessage) -> TuiViewModel {
         conversation_sel_head: None,
         inline_mode: false,
         committed_history_lines: 0,
-    }
-}
-
-fn sample_marketplace_catalog_entry(
-    id: &str,
-    display_name: &str,
-    installed: bool,
-) -> CliExtensionEntry {
-    CliExtensionEntry {
-        id: id.to_string(),
-        display_name: display_name.to_string(),
-        version: "0.1.0".to_string(),
-        enabled: installed,
-        description: None,
-        author: None,
-        main: None,
-        supported_hosts: vec!["cli".to_string()],
-        activation_events: None,
-        requested_capabilities: None,
-        contributes: None,
-        instruction_contributions: None,
-        settings_schema: None,
-        secret_slots: None,
-        archive_file_name: None,
-        installed_at_unix_ms: 0,
-        installed,
-        install_source: Some("built-in".to_string()),
     }
 }
 
@@ -594,36 +566,67 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
 }
 
 #[test]
-fn marketplace_picker_lines_mark_installed_state() {
+fn marketplace_view_renders_source_bar_and_catalog_rows() {
     let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
-    app.marketplace_picker_active = true;
-    app.marketplace_catalog = vec![
-        sample_marketplace_catalog_entry("spirit.catalog-demo", "Catalog Demo", true),
-        sample_marketplace_catalog_entry("spirit.local-demo", "Local Demo", false),
-    ];
-
-    let text = render_text_lines(build_marketplace_picker_lines(&app, 5));
-    assert!(text[0].contains("Catalog Demo"));
-    assert!(text[0].contains("spirit.catalog-demo"));
-    assert!(text[0].contains(t!("ui.picker.marketplace.installed_suffix").as_ref()));
-    assert!(text[1].contains("Local Demo"));
-    assert!(text[1].contains(t!("ui.picker.marketplace.not_installed_suffix").as_ref()));
-}
-
-#[test]
-fn marketplace_picker_overlay_projects_catalog_rows() {
-    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
-    app.marketplace_picker_active = true;
-    app.marketplace_catalog = vec![sample_marketplace_catalog_entry(
-        "spirit.catalog-demo",
-        "Catalog Demo",
-        false,
-    )];
+    app.marketplace_view = Some(MarketplaceViewModel {
+        step: MarketplaceFlowStep::CatalogPicker,
+        query: String::new(),
+        error: None,
+        sources: vec![
+            MarketplaceSourceTabView {
+                id: "built-in".to_string(),
+                label: "Built-in".to_string(),
+            },
+            MarketplaceSourceTabView {
+                id: "personal".to_string(),
+                label: "Personal".to_string(),
+            },
+        ],
+        active_source_index: 0,
+        catalog_items: vec![MarketplaceCatalogItemView {
+            id: "built-in/catalog-demo".to_string(),
+            name: "catalog-demo".to_string(),
+            display_name: "Catalog Demo".to_string(),
+            description: "A demo catalog entry.".to_string(),
+            author: None,
+            review_status: "verified".to_string(),
+            version: "1.0.0".to_string(),
+            installed: false,
+            enabled: false,
+            installed_version: None,
+            update_available: false,
+        }],
+        selected_item: None,
+        detail: None,
+        slash: SlashFlowView {
+            title: "Extensions".to_string(),
+            subtitle: None,
+            search: Some(SlashFlowSearchView {
+                value: String::new(),
+                placeholder: "Search extensions".to_string(),
+            }),
+            empty_text: "No matching extensions.".to_string(),
+            selected_index: 0,
+            items: vec![SlashFlowItemView {
+                label: "Catalog Demo".to_string(),
+                summary: "A demo catalog entry.".to_string(),
+                details: Vec::new(),
+                disabled: false,
+                muted: false,
+            }],
+            compact_items: true,
+            footer_hint: String::new(),
+        },
+    });
 
     let snapshot = render_ui_lines(&app, 80, 24).join("\n");
     assert!(
-        snapshot.contains("Catalog Demo") && snapshot.contains("spirit.catalog-demo"),
-        "marketplace overlay should project catalog rows, got:\n{snapshot}"
+        snapshot.contains("Built-in") && snapshot.contains("Personal"),
+        "source bar should render both source tabs, got:\n{snapshot}"
+    );
+    assert!(
+        snapshot.contains("Catalog Demo"),
+        "catalog row should render, got:\n{snapshot}"
     );
 }
 

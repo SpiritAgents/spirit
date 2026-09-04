@@ -56,7 +56,6 @@ const DEFAULT_SLASH_COMMANDS: &[&str] = &[
     "/rule",
     "/skill",
     "/extension",
-    "/marketplace",
     "/log",
     "/language",
     "/approval",
@@ -85,7 +84,6 @@ const RESERVED_SLASH_COMMANDS: &[&str] = &[
     "/rule",
     "/skill",
     "/extension",
-    "/marketplace",
     "/log",
     "/language",
     "/approval",
@@ -151,8 +149,7 @@ fn command_suggestion(command: &str) -> InputSuggestion {
 fn command_replacement(command: &str) -> String {
     match command {
         "/model" | "/session" | "/rewind" | "/fork" | "/subagent" | "/image" | "/mcp" | "/hook"
-        | "/log" | "/language" | "/approval" | "/network" | "/tui" | "/extension"
-        | "/marketplace" => {
+        | "/log" | "/language" | "/approval" | "/network" | "/tui" | "/extension" => {
             format!("{} ", command)
         }
         _ => command.to_string(),
@@ -230,10 +227,6 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
 
     if query == "/extension" || query.starts_with("/extension ") {
         return vec![primary_help_suggestion("/extension", query)];
-    }
-
-    if query == "/marketplace" || query.starts_with("/marketplace ") {
-        return vec![primary_help_suggestion("/marketplace", query)];
     }
 
     if query == "/log" || query.starts_with("/log ") {
@@ -431,8 +424,7 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
         "- /<server>_<prompt> [args_json | user_message]".to_string(),
         "- /rule".to_string(),
         "- /skill".to_string(),
-        "- /extension [list|import <zip>|remove <id>]".to_string(),
-        "- /marketplace [list|install <id>|remove <id>]".to_string(),
+        "- /extension [marketplace|list|import <zip>|remove <id>]".to_string(),
         t!("tui.help.skill_usage").into_owned(),
         t!("tui.help.log_variants").into_owned(),
         format!("- /language [{}]", locale::available_ui_locales_csv()),
@@ -513,7 +505,6 @@ pub(crate) fn handle_command(shell: &mut TuiShell, message: &str) {
         "/rule" => shell.handle_rules_slash(&parts[1..]),
         "/skill" => shell.handle_skills_slash(&parts[1..]),
         "/extension" => shell.handle_extensions_slash(message),
-        "/marketplace" => shell.handle_marketplace_slash(message),
         "/log" => shell.handle_log_slash(&parts[1..]),
         "/language" => shell.handle_language_slash(&parts[1..]),
         "/approval" => shell.handle_approval_slash(&parts[1..]),
@@ -567,7 +558,7 @@ mod tests {
         assert!(help.contains("/rule"));
         assert!(help.contains("/skill"));
         assert!(help.contains("/extension"));
-        assert!(help.contains("/marketplace"));
+        assert!(help.contains("/extension marketplace"));
         assert!(help.contains("/tui"));
         assert!(help.contains(t!("tui.help.extensions").as_ref()));
         assert!(help.contains(t!("tui.help.marketplace").as_ref()));
@@ -581,7 +572,6 @@ mod tests {
         let commands = default_commands();
         assert!(commands.contains(&"/skill".to_string()));
         assert!(commands.contains(&"/extension".to_string()));
-        assert!(commands.contains(&"/marketplace".to_string()));
         assert_eq!(
             commands,
             DEFAULT_SLASH_COMMANDS
@@ -619,18 +609,5 @@ mod tests {
 
         assert_eq!(suggestion.label, "/extension");
         assert_eq!(suggestion.replacement, "/extension ");
-    }
-
-    #[test]
-    fn marketplace_command_completion_appends_space() {
-        assert_eq!(command_replacement("/marketplace"), "/marketplace ");
-    }
-
-    #[test]
-    fn marketplace_context_keeps_primary_help_suggestion() {
-        let suggestion = primary_help_suggestion("/marketplace", "/marketplace ");
-
-        assert_eq!(suggestion.label, "/marketplace");
-        assert_eq!(suggestion.replacement, "/marketplace ");
     }
 }
