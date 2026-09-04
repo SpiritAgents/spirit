@@ -85,7 +85,7 @@ export function MarketplaceDetailView({
                 {item.author || item.description ? (
                   <p className="truncate text-sm leading-snug text-muted-foreground">
                     {item.author ? (
-                      <span className="text-muted-foreground">{item.author}</span>
+                      <span className="text-muted-foreground">{item.author.name}</span>
                     ) : null}
                     {item.author ? <span className="text-muted-foreground/70"> · </span> : null}
                     {item.description}

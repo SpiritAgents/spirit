@@ -547,6 +547,11 @@ export interface DesktopExtensionInstructionContributionSummary {
   rules?: { content: string };
 }
 
+export interface DesktopExtensionAuthor {
+  name: string;
+  url?: string;
+}
+
 export interface DesktopExtensionListItem {
   id: string;
   displayName: string;
@@ -554,8 +559,7 @@ export interface DesktopExtensionListItem {
   version: string;
   enabled: boolean;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: DesktopExtensionAuthor;
   main?: string;
   supportedHosts: DesktopExtensionHostKind[];
   activationEvents?: string[];

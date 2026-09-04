@@ -9,6 +9,7 @@ export interface MarketplaceIndexFetchResponse {
   ok: boolean;
   status: number;
   text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
 }
 
 export type MarketplaceIndexFetch = (url: string) => Promise<MarketplaceIndexFetchResponse>;

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "built-in",
+  "displayName": "Built-in",
+  "description": "Extensions bundled with the app.",
+  "owner": { "name": "Spirit", "url": "https://spirit.dev" },
+  "extensions": []
+}

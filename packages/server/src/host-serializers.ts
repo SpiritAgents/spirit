@@ -21,11 +21,11 @@ interface ExtensionToolContribution {
 
 interface ExtensionManifestLike {
   name: string;
+  displayName: string;
   icon?: string;
   version: string;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: { name: string; url?: string };
   main?: string;
   supportedHosts: Array<"cli" | "desktop">;
   activationEvents?: string[];
@@ -115,7 +115,7 @@ function serializeExtensionContributes(
 
 export function serializeHostExtension(item: {
   id: string;
-  manifest: ExtensionManifestLike & { defaultInstalled?: boolean };
+  manifest: ExtensionManifestLike;
   installedAtUnixMs: number;
   enabled: boolean;
   archiveFileName?: string;
@@ -123,13 +123,19 @@ export function serializeHostExtension(item: {
 }): JsonObject {
   return {
     id: item.id,
-    displayName: item.manifest.name,
+    displayName: item.manifest.displayName,
     enabled: item.enabled,
     ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
     version: item.manifest.version,
     ...(item.manifest.description ? { description: item.manifest.description } : {}),
-    ...(item.manifest.author ? { author: item.manifest.author } : {}),
-    ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
+    ...(item.manifest.author
+      ? {
+          author: {
+            name: item.manifest.author.name,
+            ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
+          },
+        }
+      : {}),
     ...(item.manifest.main ? { main: item.manifest.main } : {}),
     supportedHosts: [...item.manifest.supportedHosts],
     ...(item.manifest.activationEvents?.length
@@ -173,7 +179,6 @@ export function serializeHostExtension(item: {
       : {}),
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
     ...(item.installSource ? { installSource: item.installSource } : {}),
-    ...(item.manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
   } as unknown as JsonObject;
 }

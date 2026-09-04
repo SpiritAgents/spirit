@@ -1131,7 +1131,7 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
                     println!("    description: {}", description);
                 }
                 if let Some(author) = extension.author {
-                    println!("    author: {}", author);
+                    println!("    author: {}", author.name);
                 }
                 if let Some(main) = extension.main {
                     println!("    main: {}", main);

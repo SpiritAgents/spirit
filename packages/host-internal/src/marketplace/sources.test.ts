@@ -148,7 +148,12 @@ test("http-index source: fetch, snapshot write, and offline fallback", async () 
       if (fail) {
         return Promise.reject(new Error("network down"));
       }
-      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(raw) });
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(raw),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      });
     };
 
     const context = contextFor(dataDir, { fetchImpl });
@@ -179,7 +184,12 @@ test("http-index source: first fetch failure without snapshot is an error", asyn
   const dataDir = await makeTempDir();
   try {
     const fetchImpl: MarketplaceIndexFetch = () =>
-      Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve("") });
+      Promise.resolve({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve(""),
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+      });
     await assert.rejects(
       addMarketplaceSource(contextFor(dataDir, { fetchImpl }), "https://example.com/market"),
       /no snapshot is available|HTTP 404/,

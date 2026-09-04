@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   assertMarketplaceExtensionName,
+  parseExtensionDump,
   parseMarketplaceIndex,
   parseMarketplaceIndexText,
   parseNpmPackageSpecifier,
@@ -233,4 +234,41 @@ test("displayName and description are required list-level metadata", () => {
   entry["displayName"] = "Hello";
   delete entry["description"];
   assert.throws(() => parseMarketplaceIndex(doc), /description must be a non-empty string/);
+});
+
+test("parseExtensionDump validates the install-record schema", () => {
+  const dump = parseExtensionDump({
+    schemaVersion: 1,
+    name: "extension-hello",
+    version: "1.0.0",
+    sourceId: "built-in",
+    displayName: "Hello",
+    description: "Example Spirit extension.",
+    icon: ".spirit/icon.svg",
+    manifest: {
+      supportedHosts: ["cli"],
+      requestedCapabilities: ["skills"],
+      contributes: { skills: true },
+    },
+  });
+  assert.equal(dump.sourceId, "built-in");
+  assert.equal(dump.name, "extension-hello");
+  assert.equal(dump.icon, ".spirit/icon.svg");
+
+  assert.throws(
+    () => parseExtensionDump({ schemaVersion: 2, name: "x" }),
+    /schemaVersion must be 1/,
+  );
+  assert.throws(
+    () =>
+      parseExtensionDump({
+        schemaVersion: 1,
+        name: "extension-hello",
+        version: "1.0.0",
+        displayName: "Hello",
+        description: "x",
+        manifest: { supportedHosts: ["cli"] },
+      }),
+    /sourceId must be a non-empty string/,
+  );
 });

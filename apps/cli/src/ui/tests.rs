@@ -141,7 +141,6 @@ fn sample_marketplace_catalog_entry(
         enabled: installed,
         description: None,
         author: None,
-        homepage: None,
         main: None,
         supported_hosts: vec!["cli".to_string()],
         activation_events: None,

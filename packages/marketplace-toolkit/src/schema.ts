@@ -14,6 +14,8 @@ import { isMarketplaceVersionString, parseMarketplaceVersion } from "./semver.js
 export const MARKETPLACE_SCHEMA_VERSION = 1;
 export const MARKETPLACE_INDEX_FILE_NAME = "marketplace.json";
 export const MARKETPLACE_SPIRIT_DIR_NAME = ".spirit";
+/** Installed extension dump file name; lives at `<installDir>/.spirit/extension.json`. */
+export const EXTENSION_DUMP_FILE_NAME = "extension.json";
 
 export const MARKETPLACE_EXTENSION_NAME_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
@@ -307,23 +309,27 @@ function assertDeclarationConsistency(
   }
 }
 
-function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
-  const fieldName = `extensions[${index}]`;
-  if (!isRecord(value)) {
-    throw new Error(`${fieldName} must be an object.`);
-  }
+/** Shared identity + display + declaration fields (marketplace entry and install dump). */
+interface MarketplaceExtensionCoreFields {
+  name: string;
+  version: string;
+  icon?: string;
+  displayName: string;
+  description: string;
+  author?: MarketplaceExtensionAuthor;
+  categories?: string[];
+  manifest: MarketplaceExtensionManifest;
+}
 
+function parseCoreFields(
+  value: Record<string, unknown>,
+  fieldName: string,
+): MarketplaceExtensionCoreFields {
   const name = assertMarketplaceExtensionName(value.name, `${fieldName}.name`);
   const version = requiredString(value.version, `${fieldName}.version`);
   if (!isMarketplaceVersionString(version)) {
     parseMarketplaceVersion(version, `${fieldName}.version`);
   }
-  const resolvedSource = resolveMarketplaceExtensionSource(value.source, `${fieldName}.source`);
-  const source: MarketplaceExtensionSource =
-    resolvedSource.kind === "local"
-      ? resolvedSource.path
-      : { source: "npm", package: `${resolvedSource.packageName}@${resolvedSource.version}` };
-
   const icon =
     value.icon === undefined
       ? undefined
@@ -333,6 +339,33 @@ function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
   const author =
     value.author === undefined ? undefined : parseOwner(value.author, `${fieldName}.author`);
   const categories = optionalStringArray(value.categories, `${fieldName}.categories`);
+  const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
+
+  return {
+    name,
+    version,
+    ...(icon ? { icon } : {}),
+    displayName,
+    description,
+    ...(author ? { author } : {}),
+    ...(categories ? { categories } : {}),
+    manifest,
+  };
+}
+
+function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
+  const fieldName = `extensions[${index}]`;
+  if (!isRecord(value)) {
+    throw new Error(`${fieldName} must be an object.`);
+  }
+
+  const core = parseCoreFields(value, fieldName);
+  const resolvedSource = resolveMarketplaceExtensionSource(value.source, `${fieldName}.source`);
+  const source: MarketplaceExtensionSource =
+    resolvedSource.kind === "local"
+      ? resolvedSource.path
+      : { source: "npm", package: `${resolvedSource.packageName}@${resolvedSource.version}` };
+
   const featured = optionalBoolean(value.featured, `${fieldName}.featured`);
   const defaultInstalled = optionalBoolean(value.defaultInstalled, `${fieldName}.defaultInstalled`);
 
@@ -349,21 +382,12 @@ function parseEntry(value: unknown, index: number): MarketplaceExtensionEntry {
     reviewStatus = value.reviewStatus as MarketplaceReviewStatus;
   }
 
-  const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
-
   return {
-    name,
-    version,
+    ...core,
     source,
-    ...(icon ? { icon } : {}),
-    displayName,
-    description,
-    ...(author ? { author } : {}),
-    ...(categories ? { categories } : {}),
     ...(featured !== undefined ? { featured } : {}),
     reviewStatus,
     ...(defaultInstalled !== undefined ? { defaultInstalled } : {}),
-    manifest,
   };
 }
 
@@ -414,4 +438,55 @@ export function parseMarketplaceIndexText(raw: string): MarketplaceIndex {
     throw new Error("marketplace.json is not valid JSON.");
   }
   return parseMarketplaceIndex(parsed);
+}
+
+/**
+ * Installed extension dump (`.spirit/extension.json`): the same identity +
+ * display + declaration schema as a marketplace entry, plus the owning source
+ * id. One manifest schema, three containers (marketplace entry / install dump
+ * / ZIP import payload); the dump carries no source backend or curation
+ * fields, and its icon path is install-dir-relative.
+ */
+export interface MarketplaceExtensionDump {
+  schemaVersion: number;
+  name: string;
+  version: string;
+  /** Owning marketplace source id. */
+  sourceId: string;
+  displayName: string;
+  description: string;
+  icon?: string;
+  author?: MarketplaceExtensionAuthor;
+  categories?: string[];
+  manifest: MarketplaceExtensionManifest;
+}
+
+export const EXTENSION_DUMP_SCHEMA_VERSION = 1;
+
+export function parseExtensionDump(value: unknown): MarketplaceExtensionDump {
+  if (!isRecord(value)) {
+    throw new Error("The extension dump must be an object.");
+  }
+  if (value.schemaVersion !== EXTENSION_DUMP_SCHEMA_VERSION) {
+    throw new Error(
+      `The extension dump schemaVersion must be ${EXTENSION_DUMP_SCHEMA_VERSION}, got: ${String(value.schemaVersion)}`,
+    );
+  }
+  const core = parseCoreFields(value, "extension.json");
+  const sourceId = requiredString(value.sourceId, "extension.json.sourceId");
+  return {
+    schemaVersion: EXTENSION_DUMP_SCHEMA_VERSION,
+    ...core,
+    sourceId,
+  };
+}
+
+export function parseExtensionDumpText(raw: string): MarketplaceExtensionDump {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("The extension .spirit/extension.json is not valid JSON.");
+  }
+  return parseExtensionDump(parsed);
 }

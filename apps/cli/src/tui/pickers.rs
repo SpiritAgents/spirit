@@ -682,7 +682,6 @@ mod tests {
             enabled: false,
             description: description.map(str::to_string),
             author: None,
-            homepage: None,
             main: None,
             supported_hosts: vec!["cli".to_string()],
             activation_events: None,

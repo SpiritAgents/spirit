@@ -1534,7 +1534,8 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
         if let Some(author) = entry
             .author
             .as_ref()
-            .filter(|value| !value.trim().is_empty())
+            .map(|value| value.name.trim())
+            .filter(|value| !value.is_empty())
         {
             lines.push(format!("  author: {}", author));
         }

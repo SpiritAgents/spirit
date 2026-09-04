@@ -147,14 +147,20 @@ pub struct CliExtensionSkillSlashEntry {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CliExtensionAuthor {
+    pub name: String,
+    pub url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CliExtensionEntry {
     pub id: String,
     pub display_name: String,
     pub version: String,
     pub enabled: bool,
     pub description: Option<String>,
-    pub author: Option<String>,
-    pub homepage: Option<String>,
+    pub author: Option<CliExtensionAuthor>,
     pub main: Option<String>,
     pub supported_hosts: Vec<String>,
     pub activation_events: Option<Vec<String>>,

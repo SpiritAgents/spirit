@@ -321,7 +321,7 @@ async function collectExtensionSkillsContribution(
     collected.push({
       id: await stablePathId(skillPath),
       extensionId: extension.id,
-      extensionName: extension.manifest.name,
+      extensionName: extension.manifest.displayName,
       scope: "extension",
       name: parsed.name,
       description: parsed.description,
@@ -382,9 +382,9 @@ async function collectExtensionRulesContribution(
     collected.push({
       id: await stablePathId(rulePath),
       extensionId: extension.id,
-      extensionName: extension.manifest.name,
+      extensionName: extension.manifest.displayName,
       scope: "extension",
-      title: `Extension ${extension.manifest.name} rules`,
+      title: `Extension ${extension.manifest.displayName} rules`,
       path: rulePath,
       content,
     });
