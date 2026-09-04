@@ -15,6 +15,7 @@ import { spiritDataDir } from "./storage.js";
 import { invalidateSharedUserMcpToolingCache } from "@spiritagent/agent-core";
 import i18n from "../lib/i18n-host.js";
 import type {
+  AddMarketplaceSourceRequest,
   AddMcpServerRequest,
   CreateRuleRequest,
   CreateSkillRequest,
@@ -25,17 +26,30 @@ import type {
   DeleteSkillRequest,
   DesktopMcpServerInspection,
   DesktopSnapshot,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
   ImportExtensionRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  RemoveMarketplaceSourceRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
+  UpdateExtensionRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "../types.js";
 import type { HostExtensionEvent } from "@spiritagent/host-internal";
-import { installBuiltInExtension } from "@spiritagent/host-internal";
+import {
+  addMarketplaceSource,
+  installBuiltInExtension,
+  installMarketplaceExtensionByName,
+  MarketplaceReviewAcknowledgementRequiredError,
+  removeMarketplaceSource,
+  updateExtensionById,
+} from "@spiritagent/host-internal";
 import type { LlmActiveSkill } from "@spiritagent/agent-core";
 import type { DesktopExtensionHostAdapter } from "./extension-host-adapter.js";
 import type { DesktopConfigFile, DesktopWorkspaceBinding, HostMetadataSummary } from "./storage.js";
@@ -325,6 +339,121 @@ export async function installBuiltInExtensionCommand(
       { targetExtensionIds: [installed.id] },
     );
     return ctx.buildSnapshot();
+  });
+}
+
+export async function addMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: AddMarketplaceSourceRequest,
+): Promise<MarketplaceSourceCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const locator = request.locator.trim();
+    if (!locator) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    const record = await addMarketplaceSource(
+      { spiritDataDir: spiritDataDir() },
+      locator,
+      request.ref?.trim() ? { ref: request.ref.trim() } : undefined,
+    );
+    await ctx.refreshExtensionsList();
+    return { snapshot: ctx.buildSnapshot(), sourceId: record.id };
+  });
+}
+
+export async function removeMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: RemoveMarketplaceSourceRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    await removeMarketplaceSource({ spiritDataDir: spiritDataDir() }, name);
+    await ctx.refreshExtensionsList();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function installMarketplaceExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: InstallMarketplaceExtensionRequest,
+): Promise<MarketplaceInstallCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    try {
+      const installed = await installMarketplaceExtensionByName(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        name,
+        {
+          ...(request.marketplace?.trim() ? { marketplace: request.marketplace.trim() } : {}),
+          reviewAcknowledged: request.reviewAcknowledged === true,
+        },
+      );
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      await ctx.dispatchExtensionEvent(
+        {
+          type: "onExtensionInstalled",
+          detail: {
+            extensionId: installed.id,
+            name: installed.manifest.name,
+            version: installed.manifest.version,
+          },
+        },
+        { targetExtensionIds: [installed.id] },
+      );
+      return { status: "installed", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
+  });
+}
+
+export async function updateExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: UpdateExtensionRequest,
+): Promise<MarketplaceUpdateCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    try {
+      const updated = await updateExtensionById(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        id,
+        { reviewAcknowledged: request.reviewAcknowledged === true },
+      );
+      if (!updated) {
+        return { status: "up-to-date" };
+      }
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      return { status: "updated", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
   });
 }
 

@@ -16,8 +16,12 @@ import type {
   DeleteSkillRequest,
   DesktopCreateAutomationRequest,
   DesktopUpdateAutomationRequest,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   InstallLspProviderRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
@@ -116,6 +120,10 @@ export type CommandPayloads = {
   inspectMcpServer: { name: string };
   importExtension: { request: ImportExtensionRequest };
   installBuiltInExtension: { request: InstallBuiltInExtensionRequest };
+  addMarketplaceSource: { request: AddMarketplaceSourceRequest };
+  removeMarketplaceSource: { request: RemoveMarketplaceSourceRequest };
+  installMarketplaceExtension: { request: InstallMarketplaceExtensionRequest };
+  updateExtension: { request: UpdateExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
   setExtensionEnabled: { request: SetExtensionEnabledRequest };
   runExtension: { request: RunExtensionRequest };

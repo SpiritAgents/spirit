@@ -1637,38 +1637,51 @@ async function readInstalledExtensionDump(
  */
 export async function buildHostExtensionManifestFromDump(
   dump: MarketplaceExtensionDump,
-  directoryPath: string,
+  directoryPath?: string,
 ): Promise<HostExtensionManifest> {
-  const manifest = await parseExtensionManifestFields(dump, {
-    readRelativeTextFile: async (relativePath, fieldName) => {
-      const targetPath = path.join(directoryPath, ...normalizeArchivePath(relativePath).split("/"));
-      try {
-        return await readFile(targetPath, "utf8");
-      } catch {
-        throw new Error(
-          `The file referenced by extension ${fieldName} does not exist: ${relativePath}`,
-        );
-      }
-    },
-    listRelativeChildDirectories: async (relativePath) => {
-      const targetPath = path.join(directoryPath, ...normalizeArchivePath(relativePath).split("/"));
-      if (!existsSync(targetPath)) {
-        return [];
-      }
-      try {
-        const entries = await readdir(targetPath, { withFileTypes: true });
-        return entries
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name)
-          .sort((left, right) => left.localeCompare(right));
-      } catch {
-        return [];
-      }
-    },
-  });
+  const manifest = await parseExtensionManifestFields(
+    dump,
+    directoryPath
+      ? {
+          readRelativeTextFile: async (relativePath, fieldName) => {
+            const targetPath = path.join(
+              directoryPath,
+              ...normalizeArchivePath(relativePath).split("/"),
+            );
+            try {
+              return await readFile(targetPath, "utf8");
+            } catch {
+              throw new Error(
+                `The file referenced by extension ${fieldName} does not exist: ${relativePath}`,
+              );
+            }
+          },
+          listRelativeChildDirectories: async (relativePath) => {
+            const targetPath = path.join(
+              directoryPath,
+              ...normalizeArchivePath(relativePath).split("/"),
+            );
+            if (!existsSync(targetPath)) {
+              return [];
+            }
+            try {
+              const entries = await readdir(targetPath, { withFileTypes: true });
+              return entries
+                .filter((entry) => entry.isDirectory())
+                .map((entry) => entry.name)
+                .sort((left, right) => left.localeCompare(right));
+            } catch {
+              return [];
+            }
+          },
+        }
+      : {},
+  );
 
   // package.json is pure npm; only its `main` module entry is read here.
-  const main = await readPackageJsonMain(path.join(directoryPath, "package.json"));
+  const main = directoryPath
+    ? await readPackageJsonMain(path.join(directoryPath, "package.json"))
+    : undefined;
   return main ? { ...manifest, main } : manifest;
 }
 
@@ -1717,7 +1730,12 @@ async function parseExtensionManifestFields(
     "manifest.supportedHosts",
   );
 
-  await assertDeclaredInstructionContributionFiles(contributes, options);
+  // The declared-file check runs whenever the caller can read package files
+  // (install, ZIP import, local catalog display); remote catalog entries
+  // without local files are display-only and skip it.
+  if (options.readRelativeTextFile) {
+    await assertDeclaredInstructionContributionFiles(contributes, options);
+  }
 
   return {
     schemaVersion: dump.schemaVersion,

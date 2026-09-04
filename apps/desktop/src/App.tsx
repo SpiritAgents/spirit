@@ -708,7 +708,10 @@ export default function App() {
                           }
                           extensionsInstalling={runtime.busyAction === "extensionsImport"}
                           onImportExtension={runtime.importExtension}
-                          onInstallBuiltInExtension={runtime.installBuiltInExtension}
+                          onInstallMarketplaceExtension={runtime.installMarketplaceExtension}
+                          onUpdateExtension={runtime.updateExtension}
+                          onAddMarketplaceSource={runtime.addMarketplaceSource}
+                          onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
                         />

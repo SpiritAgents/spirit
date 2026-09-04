@@ -24,6 +24,12 @@ export interface MarketplaceCatalogItem {
   entry: MarketplaceExtensionEntry;
   /** Renderable icon: absolute path (local/git registries) or https URL (index direct-links). */
   iconUrl?: string;
+  /**
+   * Locally readable content directory: the install dir for installed entries,
+   * or the registry content dir for local/git sources. Undefined for remote
+   * npm artifacts until installed.
+   */
+  contentDir?: string;
   installed: boolean;
   enabled?: boolean;
   installedVersion?: string;
@@ -42,6 +48,17 @@ function resolveIconUrl(
     return path.join(registryRoot.path, ...icon.split("/"));
   }
   return resolveRegistryRelativeUrl(registryRoot.url, icon);
+}
+
+/** Locally readable content dir for an entry: registry content dir for local sources on path roots. */
+function resolveEntryContentDir(
+  registryRoot: MarketplaceRegistryRoot,
+  entry: MarketplaceExtensionEntry,
+): string | undefined {
+  if (registryRoot.kind !== "path" || typeof entry.source !== "string") {
+    return undefined;
+  }
+  return path.join(registryRoot.path, ...entry.source.split("/"));
 }
 
 /**
@@ -65,6 +82,7 @@ export async function readMarketplaceCatalogForSource(
     .map((entry) => {
       const installedItem = installedByName.get(entry.name);
       const iconUrl = resolveIconUrl(read.registryRoot, entry.icon);
+      const contentDir = installedItem?.directoryPath ?? resolveEntryContentDir(read.registryRoot, entry);
       const updateAvailable =
         installedItem !== undefined &&
         source.id !== BUILT_IN_MARKETPLACE_SOURCE_ID &&
@@ -74,6 +92,7 @@ export async function readMarketplaceCatalogForSource(
         source,
         entry,
         ...(iconUrl ? { iconUrl } : {}),
+        ...(contentDir ? { contentDir } : {}),
         installed: installedItem !== undefined,
         ...(installedItem ? { enabled: installedItem.enabled } : {}),
         ...(installedItem ? { installedVersion: installedItem.manifest.version } : {}),

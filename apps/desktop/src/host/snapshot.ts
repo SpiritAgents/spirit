@@ -5,6 +5,8 @@ import type {
   DesktopDreamCollectorSnapshot,
   DesktopExtensionCssLayer,
   DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceSource,
   DesktopHookListItem,
   DesktopGitSnapshot,
   DesktopMcpServerListItem,
@@ -42,7 +44,9 @@ export interface BuildDesktopSnapshotInput {
   metadata: HostMetadataSummary;
   plan: DesktopSnapshot["plan"];
   extensionsList: DesktopExtensionListItem[];
-  marketplaceCatalog?: DesktopExtensionListItem[];
+  marketplaceSources?: DesktopMarketplaceSource[];
+  marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceWarnings?: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionSkills?: DesktopExtensionSkillSlashItem[];
   extensionsLoading?: boolean;
@@ -161,7 +165,16 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
     })),
     extensionSkills: (input.extensionSkills ?? []).map((skill) => ({ ...skill })),
     extensionsList: input.extensionsList.map((item) => ({ ...item })),
-    marketplaceCatalog: (input.marketplaceCatalog ?? []).map((item) => ({ ...item })),
+    marketplaceSources: (input.marketplaceSources ?? []).map((item) => ({ ...item })),
+    marketplaceCatalogs: Object.fromEntries(
+      Object.entries(input.marketplaceCatalogs ?? {}).map(([sourceId, items]) => [
+        sourceId,
+        items.map((item) => ({ ...item })),
+      ]),
+    ),
+    ...(input.marketplaceWarnings?.length
+      ? { marketplaceWarnings: [...input.marketplaceWarnings] }
+      : {}),
     extensionCss: input.extensionCss.map((entry) => ({ ...entry })),
     ...(input.extensionsLoading ? { extensionsLoading: true } : {}),
     plan: { ...input.plan },

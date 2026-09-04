@@ -649,11 +649,34 @@
     "uninstallExtension": "확장 프로그램 제거",
     "uninstallExtensionConfirm": "확장 프로그램 \"{{name}}\"을(를) 제거하시겠습니까? 로컬 설치 디렉터리가 삭제됩니다.",
     "uninstallBuiltInConfirm": "확장 프로그램 \"{{name}}\"을(를) 제거하시겠습니까? 이 페이지에서 다시 설치할 수 있습니다.",
-    "noExtensionsInstalled": "카탈로그에 확장 프로그램이 없습니다. '설치'를 선택해 ZIP 아카이브에서 추가하세요.",
+    "noExtensionsInstalled": "이 마켓플레이스에 아직 확장이 없습니다.",
     "contributionGroupTools": "도구",
     "contributionGroupDesktop": "데스크톱",
     "contributionRuleTitle": "규칙",
-    "contributionStyleTitle": "스타일"
+    "contributionStyleTitle": "스타일",
+    "importExtension": "확장 가져오기",
+    "addMarketplace": "마켓플레이스 추가",
+    "addFromDisk": "디스크에서 추가…",
+    "addFromUrl": "URL에서 추가…",
+    "tabBuiltIn": "내장",
+    "tabPersonal": "개인",
+    "tabsLabel": "마켓플레이스",
+    "addMarketplaceDescription": "로컬 디렉터리, Git 저장소 또는 HTTP 인덱스 URL에서 확장 마켓플레이스를 추가합니다.",
+    "addSourceSourceLabel": "소스",
+    "addSourceSourcePlaceholder": "https://example.com/marketplace 또는 git@github.com:octocat/Hello-World.git",
+    "addSourceSourceRequired": "소스 URL 또는 경로를 입력하세요.",
+    "addSourceGitRefLabel": "Git Ref",
+    "addSourceGitRefPlaceholder": "main",
+    "update": "업데이트",
+    "reviewRequiredTitle": "확장 검토",
+    "reviewRequiredUnverified": "\"{{name}}\"은(는) 마켓플레이스에서 검증되지 않았습니다. 확인 후에도 호스트 측 호환성 검사가 수행됩니다.",
+    "reviewRequiredRevoked": "\"{{name}}\"은(는) 마켓플레이스에서 취소되었습니다. 위험을 명시적으로 수락하는 경우에만 계속하세요.",
+    "reviewRequiredContinue": "계속",
+    "review": {
+      "verified": "검증됨",
+      "unverified": "검증되지 않음",
+      "revoked": "취소됨"
+    }
   },
   "dreams": {
     "collectorRunning": "Dream이 수집 중입니다. 곧 새로운 최근 트렌드가 여기에 표시됩니다.",
@@ -1243,7 +1266,8 @@
     "autoWorktreeNameFailedEmpty": "Worktree 이름 자동 생성 실패: 모델이 빈 이름을 반환했습니다.",
     "autoWorktreeNameFailedInvalidWorktreeName": "Worktree 이름 자동 생성 실패: worktreeName 형식이 잘못되었습니다 ({{worktreeName}}).",
     "autoWorktreeNameFailedInvalidBranchName": "Worktree 이름 자동 생성 실패: branchName 형식이 잘못되었습니다 ({{branchName}}).",
-    "autoWorktreeNameFailedNotObject": "Worktree 이름 자동 생성 실패: 모델이 객체가 아닌 JSON을 반환했습니다."
+    "autoWorktreeNameFailedNotObject": "Worktree 이름 자동 생성 실패: 모델이 객체가 아닌 JSON을 반환했습니다.",
+    "marketplaceSourceRequired": "마켓플레이스 소스 URL 또는 경로가 필요합니다."
   },
   "crashPage": {
     "title": "Spirit가 충돌했습니다",

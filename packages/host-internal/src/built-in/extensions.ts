@@ -19,7 +19,10 @@ import {
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
 } from "../extensions.js";
-import { installMarketplaceExtensionEntry } from "../marketplace/install.js";
+import {
+  buildExtensionDumpFromEntry,
+  installMarketplaceExtensionEntry,
+} from "../marketplace/install.js";
 import {
   BUILT_IN_MARKETPLACE_SOURCE_ID,
   type MarketplaceRegistryRoot,
@@ -176,18 +179,7 @@ export async function listMarketplaceCatalog(
         sourceId: source.id,
         relativePath: `${source.id}/${entry.name}`,
         manifest: await buildHostExtensionManifestFromDump(
-          {
-            schemaVersion: 1,
-            name: entry.name,
-            version: entry.version,
-            sourceId: source.id,
-            displayName: entry.displayName,
-            description: entry.description,
-            ...(entry.icon ? { icon: entry.icon } : {}),
-            ...(entry.author ? { author: entry.author } : {}),
-            ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
-            manifest: entry.manifest,
-          },
+          buildExtensionDumpFromEntry(entry, source.id),
           contentDir,
         ),
         directoryPath: contentDir,

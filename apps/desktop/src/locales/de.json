@@ -649,11 +649,34 @@
     "uninstallExtension": "Erweiterung deinstallieren",
     "uninstallExtensionConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Das lokale Installationsverzeichnis wird entfernt.",
     "uninstallBuiltInConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Sie können sie auf dieser Seite erneut installieren.",
-    "noExtensionsInstalled": "Noch keine Erweiterungen im Katalog. Wählen Sie „Installieren“, um eine aus einem ZIP-Archiv hinzuzufügen.",
+    "noExtensionsInstalled": "In diesem Marketplace sind noch keine Erweiterungen vorhanden.",
     "contributionGroupTools": "Tools",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regel",
-    "contributionStyleTitle": "Stil"
+    "contributionStyleTitle": "Stil",
+    "importExtension": "Erweiterung importieren",
+    "addMarketplace": "Marketplace hinzufügen",
+    "addFromDisk": "Von Festplatte hinzufügen…",
+    "addFromUrl": "Von URL hinzufügen…",
+    "tabBuiltIn": "Integriert",
+    "tabPersonal": "Persönlich",
+    "tabsLabel": "Marketplaces",
+    "addMarketplaceDescription": "Füge einen Erweiterungs-Marketplace aus einem lokalen Verzeichnis, einem Git-Repository oder einer HTTP-Index-URL hinzu.",
+    "addSourceSourceLabel": "Quelle",
+    "addSourceSourcePlaceholder": "https://example.com/marketplace oder git@github.com:octocat/Hello-World.git",
+    "addSourceSourceRequired": "Gib eine Quell-URL oder einen Pfad ein.",
+    "addSourceGitRefLabel": "Git-Ref",
+    "addSourceGitRefPlaceholder": "main",
+    "update": "Aktualisieren",
+    "reviewRequiredTitle": "Erweiterung prüfen",
+    "reviewRequiredUnverified": "„{{name}}“ wurde von seinem Marketplace nicht verifiziert. Host-seitige Kompatibilitätsprüfungen werden nach der Bestätigung weiterhin durchgeführt.",
+    "reviewRequiredRevoked": "„{{name}}“ wurde von seinem Marketplace widerrufen. Fahre nur fort, wenn du das Risiko ausdrücklich akzeptierst.",
+    "reviewRequiredContinue": "Fortfahren",
+    "review": {
+      "verified": "Verifiziert",
+      "unverified": "Nicht verifiziert",
+      "revoked": "Widerrufen"
+    }
   },
   "dreams": {
     "collectorRunning": "Dreams werden gesammelt. Neue aktuelle Trends erscheinen in Kürze hier.",
@@ -1243,7 +1266,8 @@
     "autoWorktreeNameFailedEmpty": "Automatische Worktree-Namensgenerierung fehlgeschlagen: Modell hat leere Namen zurückgegeben.",
     "autoWorktreeNameFailedInvalidWorktreeName": "Automatische Worktree-Namensgenerierung fehlgeschlagen: worktreeName-Format ungültig ({{worktreeName}}).",
     "autoWorktreeNameFailedInvalidBranchName": "Automatische Worktree-Namensgenerierung fehlgeschlagen: branchName-Format ungültig ({{branchName}}).",
-    "autoWorktreeNameFailedNotObject": "Automatische Worktree-Namensgenerierung fehlgeschlagen: Modell hat kein JSON-Objekt zurückgegeben."
+    "autoWorktreeNameFailedNotObject": "Automatische Worktree-Namensgenerierung fehlgeschlagen: Modell hat kein JSON-Objekt zurückgegeben.",
+    "marketplaceSourceRequired": "Eine Marketplace-Quell-URL oder ein Pfad ist erforderlich."
   },
   "crashPage": {
     "title": "Spirit ist abgestürzt",

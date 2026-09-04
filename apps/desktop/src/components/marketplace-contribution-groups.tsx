@@ -11,7 +11,13 @@ import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
-import type { DesktopExtensionListItem } from "@/types";
+import type { DesktopExtensionListItem, DesktopMarketplaceCatalogEntry } from "@/types";
+
+/** Structural subset shared by installed list items and marketplace catalog entries. */
+type ContributionItem = Pick<
+  DesktopExtensionListItem,
+  "instructionContributions" | "contributedTools" | "desktopCss" | "desktopSettingsPage"
+>;
 
 type ContributionEntry = {
   key: string;
@@ -26,7 +32,11 @@ type ContributionGroup = {
   items: ContributionEntry[];
 };
 
-export function MarketplaceContributionGroups({ item }: { item: DesktopExtensionListItem }) {
+export function MarketplaceContributionGroups({
+  item,
+}: {
+  item: ContributionItem | DesktopMarketplaceCatalogEntry;
+}) {
   const { t } = useTranslation();
 
   const groups: ContributionGroup[] = [];

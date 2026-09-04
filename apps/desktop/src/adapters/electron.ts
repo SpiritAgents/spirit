@@ -1,5 +1,10 @@
 import type { HostApi } from "../host-api";
 import type { AbortConversationRequest } from "../types";
+import type {
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+} from "../types";
 
 export async function createElectronHostApi(): Promise<HostApi> {
   if (typeof window === "undefined" || !window.spiritDesktop) {
@@ -66,6 +71,20 @@ export async function createElectronHostApi(): Promise<HostApi> {
     },
     installBuiltInExtension(request) {
       return bridge.installBuiltInExtension(request);
+    },
+    addMarketplaceSource(request) {
+      return bridge.addMarketplaceSource(request) as Promise<MarketplaceSourceCommandResult>;
+    },
+    removeMarketplaceSource(request) {
+      return bridge.removeMarketplaceSource(request);
+    },
+    installMarketplaceExtension(request) {
+      return bridge.installMarketplaceExtension(
+        request,
+      ) as Promise<MarketplaceInstallCommandResult>;
+    },
+    updateExtension(request) {
+      return bridge.updateExtension(request) as Promise<MarketplaceUpdateCommandResult>;
     },
     deleteExtension(request) {
       return bridge.deleteExtension(request);

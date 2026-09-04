@@ -24,6 +24,8 @@ import type {
   DesktopGitSnapshot,
   DesktopExtensionCssLayer,
   DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceSource,
 } from "../types.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
 import { ensureBuiltInSkills } from "@spiritagent/host-internal";
@@ -40,7 +42,9 @@ export interface InitializationState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
-  marketplaceCatalog: DesktopExtensionListItem[];
+  marketplaceSources: DesktopMarketplaceSource[];
+  marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
@@ -215,7 +219,9 @@ export async function ensureInitializedCommand(
     metadata,
     plan,
     extensionsList: state?.extensionsList ?? [],
-    marketplaceCatalog: state?.marketplaceCatalog ?? [],
+    marketplaceSources: state?.marketplaceSources ?? [],
+    marketplaceCatalogs: state?.marketplaceCatalogs ?? {},
+    marketplaceWarnings: state?.marketplaceWarnings ?? [],
     extensionCss: state?.extensionCss ?? [],
     extensionInstructionContributions: state?.extensionInstructionContributions ?? {
       mcp: { servers: {} },

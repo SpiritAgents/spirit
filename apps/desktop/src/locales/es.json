@@ -649,11 +649,34 @@
     "uninstallExtension": "Desinstalar extensión",
     "uninstallExtensionConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Se eliminará el directorio de instalación local.",
     "uninstallBuiltInConfirm": "¿Seguro que quieres desinstalar \"{{name}}\"? Puedes volver a instalarla desde esta página.",
-    "noExtensionsInstalled": "Aún no hay extensiones en el catálogo. Selecciona Instalar para añadir una desde un archivo ZIP.",
+    "noExtensionsInstalled": "Aún no hay extensiones en este mercado.",
     "contributionGroupTools": "Herramientas",
     "contributionGroupDesktop": "Escritorio",
     "contributionRuleTitle": "Regla",
-    "contributionStyleTitle": "Estilo"
+    "contributionStyleTitle": "Estilo",
+    "importExtension": "Importar extensión",
+    "addMarketplace": "Añadir mercado",
+    "addFromDisk": "Añadir desde disco…",
+    "addFromUrl": "Añadir desde URL…",
+    "tabBuiltIn": "Integrado",
+    "tabPersonal": "Personal",
+    "tabsLabel": "Mercados",
+    "addMarketplaceDescription": "Añade un mercado de extensiones desde un directorio local, un repositorio git o una URL de índice HTTP.",
+    "addSourceSourceLabel": "Origen",
+    "addSourceSourcePlaceholder": "https://example.com/marketplace o git@github.com:octocat/Hello-World.git",
+    "addSourceSourceRequired": "Introduce una URL o ruta de origen.",
+    "addSourceGitRefLabel": "Ref de Git",
+    "addSourceGitRefPlaceholder": "main",
+    "update": "Actualizar",
+    "reviewRequiredTitle": "Revisar extensión",
+    "reviewRequiredUnverified": "\"{{name}}\" no ha sido verificada por su mercado. Las comprobaciones de compatibilidad del host se realizarán tras la confirmación.",
+    "reviewRequiredRevoked": "\"{{name}}\" está revocada por su mercado. Continúa solo si aceptas explícitamente el riesgo.",
+    "reviewRequiredContinue": "Continuar",
+    "review": {
+      "verified": "Verificada",
+      "unverified": "No verificada",
+      "revoked": "Revocada"
+    }
   },
   "dreams": {
     "collectorRunning": "Se están recolectando Dreams. Las nuevas tendencias recientes aparecerán aquí pronto.",
@@ -1243,7 +1266,8 @@
     "autoWorktreeNameFailedEmpty": "Error al generar nombre de Worktree automáticamente: el modelo devolvió nombres vacíos.",
     "autoWorktreeNameFailedInvalidWorktreeName": "Error al generar nombre de Worktree automáticamente: el formato de worktreeName no es válido ({{worktreeName}}).",
     "autoWorktreeNameFailedInvalidBranchName": "Error al generar nombre de Worktree automáticamente: el formato de branchName no es válido ({{branchName}}).",
-    "autoWorktreeNameFailedNotObject": "Error al generar nombre de Worktree automáticamente: el modelo devolvió un JSON que no es un objeto."
+    "autoWorktreeNameFailedNotObject": "Error al generar nombre de Worktree automáticamente: el modelo devolvió un JSON que no es un objeto.",
+    "marketplaceSourceRequired": "Se requiere una URL o ruta de origen del mercado."
   },
   "crashPage": {
     "title": "Spirit se ha bloqueado",

@@ -13,6 +13,7 @@ import {
   MARKETPLACE_SPIRIT_DIR_NAME,
   resolveMarketplaceExtensionSource,
   resolveRegistryRelativeUrl,
+  type MarketplaceExtensionDump,
   type MarketplaceExtensionEntry,
 } from "@spiritagent/marketplace-toolkit";
 
@@ -27,6 +28,27 @@ const SUPPORTED_SRI_HASH_ALGORITHMS = new Set(["sha256", "sha384", "sha512"]);
 export interface MarketplaceInstallContext extends ExtensionManagementContext {
   /** Injectable fetch (packument / tarball / registry assets); tests must not touch the network. */
   fetchImpl?: MarketplaceIndexFetch;
+}
+
+/** Build the install-dump object for a registry entry (identity + display + declaration + source id). */
+export function buildExtensionDumpFromEntry(
+  entry: MarketplaceExtensionEntry,
+  sourceId: string,
+  options?: { icon?: string },
+): MarketplaceExtensionDump {
+  const icon = options?.icon ?? entry.icon;
+  return {
+    schemaVersion: EXTENSION_DUMP_SCHEMA_VERSION,
+    name: entry.name,
+    version: entry.version,
+    sourceId,
+    displayName: entry.displayName,
+    description: entry.description,
+    ...(icon ? { icon } : {}),
+    ...(entry.author ? { author: entry.author } : {}),
+    ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
+    manifest: entry.manifest,
+  };
 }
 
 export interface InstallMarketplaceExtensionEntryRequest {
@@ -76,18 +98,9 @@ export async function installMarketplaceExtensionEntry(
       await writeFile(path.join(stagingDirectory, dumpIcon), iconBytes);
     }
 
-    const dump = {
-      schemaVersion: EXTENSION_DUMP_SCHEMA_VERSION,
-      name: entry.name,
-      version: entry.version,
-      sourceId: source.id,
-      displayName: entry.displayName,
-      description: entry.description,
+    const dump = buildExtensionDumpFromEntry(entry, source.id, {
       ...(dumpIcon ? { icon: dumpIcon } : {}),
-      ...(entry.author ? { author: entry.author } : {}),
-      ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
-      manifest: entry.manifest,
-    };
+    });
     await writeFile(
       path.join(dumpDir, EXTENSION_DUMP_FILE_NAME),
       `${JSON.stringify(dump, null, 2)}\n`,

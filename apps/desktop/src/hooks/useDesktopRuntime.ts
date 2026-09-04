@@ -82,8 +82,13 @@ import type {
   DesktopUpdateAutomationRequest,
   DesktopMcpServerInspection,
   DesktopSnapshot,
+  AddMarketplaceSourceRequest,
+  DesktopMarketplaceInstallResult,
+  DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -2075,6 +2080,94 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const addMarketplaceSource = useCallback(
+    async (request: AddMarketplaceSourceRequest): Promise<{ sourceId: string }> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.addMarketplaceSource(request);
+        applySnapshot(result.snapshot);
+        setRuntimeError("");
+        return { sourceId: result.sourceId ?? "" };
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const installMarketplaceExtension = useCallback(
+    async (
+      request: InstallMarketplaceExtensionRequest,
+    ): Promise<DesktopMarketplaceInstallResult> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.installMarketplaceExtension(request);
+        if (result.status === "installed") {
+          applySnapshot(result.snapshot);
+          setRuntimeError("");
+          return { status: "installed" };
+        }
+        return {
+          status: "review-required",
+          extensionId: result.extensionId,
+          reviewStatus: result.reviewStatus,
+        };
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const updateExtension = useCallback(
+    async (request: UpdateExtensionRequest): Promise<DesktopMarketplaceUpdateResult> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.updateExtension(request);
+        if (result.status === "updated") {
+          applySnapshot(result.snapshot);
+          setRuntimeError("");
+          return { status: "updated" };
+        }
+        if (result.status === "up-to-date") {
+          return { status: "up-to-date" };
+        }
+        return {
+          status: "review-required",
+          extensionId: result.extensionId,
+          reviewStatus: result.reviewStatus,
+        };
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const deleteExtension = useCallback(
     async (request: DeleteExtensionRequest) => {
       if (!api) {
@@ -3924,6 +4017,9 @@ export function useDesktopRuntime() {
     addMcpServer,
     importExtension,
     installBuiltInExtension,
+    addMarketplaceSource,
+    installMarketplaceExtension,
+    updateExtension,
     createSkill,
     createRule,
     deleteExtension,

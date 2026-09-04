@@ -646,11 +646,34 @@
     "uninstallExtension": "卸载扩展",
     "uninstallExtensionConfirm": "确定卸载“{{name}}”？这会移除本地安装目录。",
     "uninstallBuiltInConfirm": "确定卸载“{{name}}”？你可以随时从本页重新安装。",
-    "noExtensionsInstalled": "目录中还没有扩展。点击“安装”从 ZIP 归档添加。",
+    "noExtensionsInstalled": "此市场暂无扩展。",
     "contributionGroupTools": "工具",
     "contributionGroupDesktop": "桌面",
     "contributionRuleTitle": "规则",
-    "contributionStyleTitle": "样式"
+    "contributionStyleTitle": "样式",
+    "importExtension": "导入扩展",
+    "addMarketplace": "添加市场",
+    "addFromDisk": "从磁盘添加…",
+    "addFromUrl": "从 URL 添加…",
+    "tabBuiltIn": "内置",
+    "tabPersonal": "个人",
+    "tabsLabel": "扩展市场",
+    "addMarketplaceDescription": "从本地目录、Git 仓库或 HTTP 索引 URL 添加扩展市场。",
+    "addSourceSourceLabel": "来源",
+    "addSourceSourcePlaceholder": "https://example.com/marketplace 或 git@github.com:octocat/Hello-World.git",
+    "addSourceSourceRequired": "请输入来源 URL 或路径。",
+    "addSourceGitRefLabel": "Git Ref",
+    "addSourceGitRefPlaceholder": "main",
+    "update": "更新",
+    "reviewRequiredTitle": "审核扩展",
+    "reviewRequiredUnverified": "“{{name}}”尚未经过其市场验证。确认后仍会执行宿主侧兼容性检查。",
+    "reviewRequiredRevoked": "“{{name}}”已被其市场撤销。仅在明确接受风险时才继续。",
+    "reviewRequiredContinue": "继续",
+    "review": {
+      "verified": "已验证",
+      "unverified": "未验证",
+      "revoked": "已撤销"
+    }
   },
   "dreams": {
     "collectorRunning": "梦境正在收集中，新的近期动向会很快出现在这里",
@@ -1240,7 +1263,8 @@
     "autoWorktreeNameFailedEmpty": "自动生成 Worktree 名称失败：模型返回了空名称。",
     "autoWorktreeNameFailedInvalidWorktreeName": "自动生成 Worktree 名称失败：worktreeName 格式无效（{{worktreeName}}）。",
     "autoWorktreeNameFailedInvalidBranchName": "自动生成 Worktree 名称失败：branchName 格式无效（{{branchName}}）。",
-    "autoWorktreeNameFailedNotObject": "自动生成 Worktree 名称失败：模型返回的 JSON 不是对象。"
+    "autoWorktreeNameFailedNotObject": "自动生成 Worktree 名称失败：模型返回的 JSON 不是对象。",
+    "marketplaceSourceRequired": "需要市场来源的 URL 或路径。"
   },
   "crashPage": {
     "title": "Spirit 已崩溃",
