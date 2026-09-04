@@ -9,3 +9,4 @@ export * from "./errors.js";
 export * from "./personal.js";
 export * from "./resolve.js";
 export * from "./import-zip.js";
+export * from "./catalog.js";
