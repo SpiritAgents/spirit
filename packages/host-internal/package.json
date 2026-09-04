@@ -97,6 +97,10 @@
       "types": "./dist/extensions.d.ts",
       "default": "./dist/extensions.js"
     },
+    "./marketplace": {
+      "types": "./dist/marketplace/index.d.ts",
+      "default": "./dist/marketplace/index.js"
+    },
     "./runtime": {
       "types": "./dist/runtime.d.ts",
       "default": "./dist/runtime.js"
@@ -167,6 +171,7 @@
     "@mozilla/readability": "0.6.0",
     "@napi-rs/keyring": "1.3.0",
     "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/marketplace-toolkit": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
     "fast-glob": "3.3.3",
     "fflate": "0.8.3",

@@ -24,16 +24,11 @@ import {
   parseHooksConfigFile,
   parseMcpConfigFile,
 } from "@spiritagent/agent-core";
+import { assertDeclaredInstructionContributionFiles as assertToolkitDeclaredInstructionContributionFiles } from "@spiritagent/marketplace-toolkit";
 
 import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
-import { validateSkillName } from "./discovery.js";
-import {
-  parseSkillFrontmatterFields,
-  SKILL_FILE_NAME,
-  SKILLS_DIR_NAME,
-  splitSkillFrontmatter,
-} from "./skill-paths.js";
+import { SKILLS_DIR_NAME } from "./skill-paths.js";
 import {
   createFileExtensionStateStore,
   EXTENSION_MANIFEST_FILE_NAME,
@@ -2463,134 +2458,23 @@ function assertInstructionContributionCapabilities(
   }
 }
 
+/**
+ * Declaration-vs-content check, owned by the marketplace toolkit (registry CI
+ * runs the same code). The host injects the agent-core MCP / hooks config
+ * parsers so both sides validate with identical semantics.
+ */
 async function assertDeclaredInstructionContributionFiles(
   contributes: HostExtensionContributionSet | undefined,
   options: HostExtensionManifestParseOptions,
 ): Promise<void> {
-  if (!contributes?.mcp && !contributes?.hooks && !contributes?.skills && !contributes?.rules) {
-    return;
-  }
-
-  const readRelativeTextFile = options.readRelativeTextFile;
-  if (!readRelativeTextFile) {
-    throw new Error(
-      "The current context cannot read extension contribution files from the package root.",
-    );
-  }
-
-  if (contributes.mcp === true) {
-    await assertDeclaredMcpContributionFile(readRelativeTextFile);
-  }
-  if (contributes.hooks === true) {
-    await assertDeclaredHooksContributionFile(readRelativeTextFile);
-  }
-  if (contributes.rules === true) {
-    await assertDeclaredRulesContributionFile(readRelativeTextFile);
-  }
-  if (contributes.skills === true) {
-    await assertDeclaredSkillsContributionFiles(readRelativeTextFile, options);
-  }
-}
-
-async function assertDeclaredMcpContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.mcp`;
-  const raw = await readRelativeTextFile(EXTENSION_MCP_CONFIG_FILE_NAME, fieldName);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is not valid JSON.`);
-  }
-  try {
-    parseMcpConfigFile(parsed);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is invalid: ${detail}`);
-  }
-}
-
-async function assertDeclaredHooksContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.hooks`;
-  const raw = await readRelativeTextFile(EXTENSION_HOOKS_CONFIG_FILE_NAME, fieldName);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is not valid JSON.`);
-  }
-  try {
-    parseHooksConfigFile(parsed);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is invalid: ${detail}`);
-  }
-}
-
-async function assertDeclaredRulesContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.rules`;
-  const raw = await readRelativeTextFile(EXTENSION_RULE_FILE_NAME, fieldName);
-  if (!raw.trim()) {
-    throw new Error(`The extension ${EXTENSION_RULE_FILE_NAME} must not be empty.`);
-  }
-}
-
-async function assertDeclaredSkillsContributionFiles(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-  options: HostExtensionManifestParseOptions,
-): Promise<void> {
-  const listRelativeChildDirectories = options.listRelativeChildDirectories;
-  if (!listRelativeChildDirectories) {
-    throw new Error(
-      "The current context cannot list extension skill directories from the package root.",
-    );
-  }
-
-  const skillDirectories = await listRelativeChildDirectories(EXTENSION_SKILLS_DIR_NAME);
-  const validSkills: string[] = [];
-  for (const directoryName of skillDirectories) {
-    const relativePath = `${EXTENSION_SKILLS_DIR_NAME}/${directoryName}/${SKILL_FILE_NAME}`;
-    let raw: string;
-    try {
-      raw = await readRelativeTextFile(
-        relativePath,
-        `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills`,
-      );
-    } catch {
-      continue;
-    }
-    if (isValidDeclaredSkillMarkdown(raw, directoryName)) {
-      validSkills.push(directoryName);
-    }
-  }
-
-  if (validSkills.length === 0) {
-    throw new Error(
-      `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills but has no valid ${EXTENSION_SKILLS_DIR_NAME}/*/${SKILL_FILE_NAME}.`,
-    );
-  }
-}
-
-function isValidDeclaredSkillMarkdown(raw: string, directoryName: string): boolean {
-  const split = splitSkillFrontmatter(raw);
-  if (!split) {
-    return false;
-  }
-  const parsed = parseSkillFrontmatterFields(split.frontmatter);
-  const name = parsed.name?.trim();
-  const description = parsed.description?.trim();
-  if (!name || !description) {
-    return false;
-  }
-  if (validateSkillName(name) !== undefined) {
-    return false;
-  }
-  return directoryName === name;
+  await assertToolkitDeclaredInstructionContributionFiles(contributes, {
+    ...(options.readRelativeTextFile ? { readRelativeTextFile: options.readRelativeTextFile } : {}),
+    ...(options.listRelativeChildDirectories
+      ? { listRelativeChildDirectories: options.listRelativeChildDirectories }
+      : {}),
+    validators: { parseMcpConfigFile, parseHooksConfigFile },
+    fieldPrefix: `${SPIRIT_EXTENSION_FIELD_NAME}.contributes`,
+  });
 }
 
 function listArchiveChildDirectories(
