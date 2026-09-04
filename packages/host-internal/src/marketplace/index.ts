@@ -5,3 +5,7 @@ export * from "./git-source.js";
 export * from "./http-index-source.js";
 export * from "./sources.js";
 export * from "./install.js";
+export * from "./errors.js";
+export * from "./personal.js";
+export * from "./resolve.js";
+export * from "./import-zip.js";

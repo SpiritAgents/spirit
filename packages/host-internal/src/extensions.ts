@@ -32,10 +32,7 @@ import {
 } from "@spiritagent/marketplace-toolkit";
 
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
-import {
-  BUILT_IN_MARKETPLACE_SOURCE_ID,
-  PERSONAL_MARKETPLACE_SOURCE_ID,
-} from "./marketplace/types.js";
+import { BUILT_IN_MARKETPLACE_SOURCE_ID } from "./marketplace/types.js";
 import { SKILLS_DIR_NAME } from "./skill-paths.js";
 import {
   createFileExtensionStateStore,
@@ -716,21 +713,14 @@ export async function importExtensionArchive(
       await writeFile(targetFilePath, Buffer.from(content));
     }
 
-    // A ZIP self-declares its identity; the owning source is always Personal.
-    const dumpJson = JSON.parse(dumpRaw) as Record<string, unknown>;
-    dumpJson["sourceId"] = PERSONAL_MARKETPLACE_SOURCE_ID;
-    await writeFile(
-      path.join(stagingDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME),
-      `${JSON.stringify(dumpJson, null, 2)}\n`,
-      "utf8",
-    );
-
-    const installed = await installPreparedExtensionDirectory(context, {
+    // ZIP import is a self-declared side channel: route through the Personal
+    // registry (index upsert + install from the Personal source).
+    // `await` is required: the finally block deletes the staging directory.
+    const { importPreparedDirectoryToPersonal } = await import("./marketplace/import-zip.js");
+    return await importPreparedDirectoryToPersonal(context, {
       preparedDirectoryPath: stagingDirectory,
-      replaceExisting: true,
       ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
     });
-    return installed;
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }

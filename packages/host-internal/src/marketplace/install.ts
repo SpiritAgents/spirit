@@ -35,6 +35,8 @@ export interface InstallMarketplaceExtensionEntryRequest {
   registryRoot: MarketplaceRegistryRoot;
   entry: MarketplaceExtensionEntry;
   replaceExisting?: boolean;
+  /** Original ZIP file name for Personal imports, recorded in the install registry. */
+  fileName?: string;
 }
 
 /**
@@ -95,6 +97,7 @@ export async function installMarketplaceExtensionEntry(
     return await installPreparedExtensionDirectory(context, {
       preparedDirectoryPath: stagingDirectory,
       replaceExisting: request.replaceExisting === true,
+      ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
     });
   } finally {
     await rm(stagingRoot, { recursive: true, force: true });
