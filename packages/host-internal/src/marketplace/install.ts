@@ -98,9 +98,11 @@ export async function installMarketplaceExtensionEntry(
       await writeFile(path.join(stagingDirectory, dumpIcon), iconBytes);
     }
 
-    const dump = buildExtensionDumpFromEntry(entry, source.id, {
-      ...(dumpIcon ? { icon: dumpIcon } : {}),
-    });
+    const dump = buildExtensionDumpFromEntry(
+      entry,
+      source.id,
+      dumpIcon ? { icon: dumpIcon } : undefined,
+    );
     await writeFile(
       path.join(dumpDir, EXTENSION_DUMP_FILE_NAME),
       `${JSON.stringify(dump, null, 2)}\n`,

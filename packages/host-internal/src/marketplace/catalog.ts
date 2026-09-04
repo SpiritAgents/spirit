@@ -82,7 +82,8 @@ export async function readMarketplaceCatalogForSource(
     .map((entry) => {
       const installedItem = installedByName.get(entry.name);
       const iconUrl = resolveIconUrl(read.registryRoot, entry.icon);
-      const contentDir = installedItem?.directoryPath ?? resolveEntryContentDir(read.registryRoot, entry);
+      const contentDir =
+        installedItem?.directoryPath ?? resolveEntryContentDir(read.registryRoot, entry);
       const updateAvailable =
         installedItem !== undefined &&
         source.id !== BUILT_IN_MARKETPLACE_SOURCE_ID &&
