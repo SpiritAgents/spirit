@@ -846,8 +846,11 @@ function TooltipTrigger({
   );
 
   if (isAnchor) {
+    // asChild: merge into the wrapper span instead of rendering Radix's default
+    // <button>, which is not disabled and would match the global pointer-cursor
+    // rule when wrapping non-interactive/disabled content.
     return (
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props}>
+      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...props}>
         {rowWrapper}
       </TooltipPrimitive.Trigger>
     );
