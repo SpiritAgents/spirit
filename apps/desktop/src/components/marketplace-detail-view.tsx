@@ -28,7 +28,8 @@ const MARKETPLACE_READING_W = "max-w-4xl";
 type MarketplaceDetailViewProps = {
   item: DesktopMarketplaceCatalogEntry;
   onBack: () => void;
-  extensionsBusy: boolean;
+  /** True while this item's install or update is in flight. */
+  itemActionBusy?: boolean;
   /** HTTP registries cannot serve local-path artifacts: disable install and explain via tooltip. */
   installUnsupported?: boolean;
   onInstall: () => void;
@@ -42,7 +43,7 @@ type MarketplaceDetailViewProps = {
 export function MarketplaceDetailView({
   item,
   onBack,
-  extensionsBusy,
+  itemActionBusy = false,
   installUnsupported = false,
   onInstall,
   onUpdate,
@@ -128,11 +129,7 @@ export function MarketplaceDetailView({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-40 p-0">
                       <div className="p-1">
-                        <DropdownMenuItem
-                          disabled={extensionsBusy}
-                          className="gap-2"
-                          onSelect={onToggleEnabled}
-                        >
+                        <DropdownMenuItem className="gap-2" onSelect={onToggleEnabled}>
                           <span>
                             {item.enabled ? t("marketplace.disable") : t("marketplace.enable")}
                           </span>
@@ -143,7 +140,6 @@ export function MarketplaceDetailView({
                         <DropdownMenuItem
                           variant="destructive"
                           className="gap-2"
-                          disabled={extensionsBusy}
                           onSelect={onRequestUninstall}
                         >
                           <Trash2 className="size-3.5 shrink-0" aria-hidden />
@@ -156,7 +152,7 @@ export function MarketplaceDetailView({
                     <Button
                       type="button"
                       variant="default"
-                      disabled={extensionsBusy}
+                      disabled={itemActionBusy}
                       className="shrink-0 self-center"
                       onClick={onUpdate}
                     >
@@ -184,7 +180,7 @@ export function MarketplaceDetailView({
                 <Button
                   type="button"
                   variant="default"
-                  disabled={extensionsBusy}
+                  disabled={itemActionBusy}
                   className="shrink-0 self-center"
                   onClick={onInstall}
                 >

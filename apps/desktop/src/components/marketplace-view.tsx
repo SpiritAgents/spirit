@@ -141,6 +141,8 @@ export function MarketplaceView({
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
+  /** Install / update in flight for these catalog ids; other rows stay clickable. */
+  const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [listScrollRoot, setListScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
     null,
@@ -294,6 +296,23 @@ export function MarketplaceView({
     setDetailExtensionId(null);
   };
 
+  const runInstallAction = useCallback(async (extensionId: string, action: () => Promise<void>) => {
+    setInstallBusyIds((prev) => {
+      const next = new Set(prev);
+      next.add(extensionId);
+      return next;
+    });
+    try {
+      await action();
+    } finally {
+      setInstallBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(extensionId);
+        return next;
+      });
+    }
+  }, []);
+
   const handleToggleEnabled = (item: DesktopMarketplaceCatalogEntry) => {
     void (async () => {
       try {
@@ -326,13 +345,13 @@ export function MarketplaceView({
   );
 
   const handleInstall = (item: DesktopMarketplaceCatalogEntry) => {
-    void (async () => {
+    void runInstallAction(item.id, async () => {
       try {
         await installWithReviewGate(item);
       } catch {
         /* runtimeError */
       }
-    })();
+    });
   };
 
   const updateWithReviewGate = useCallback(
@@ -353,13 +372,13 @@ export function MarketplaceView({
   );
 
   const handleUpdate = (item: DesktopMarketplaceCatalogEntry) => {
-    void (async () => {
+    void runInstallAction(item.id, async () => {
       try {
         await updateWithReviewGate(item);
       } catch {
         /* runtimeError */
       }
-    })();
+    });
   };
 
   const handleAddFromDisk = () => {
@@ -536,7 +555,6 @@ export function MarketplaceView({
                             <DropdownMenuContent align="end" className="min-w-40 p-0">
                               <div className="p-1">
                                 <DropdownMenuItem
-                                  disabled={extensionsBusy}
                                   className="gap-2"
                                   onSelect={() => handleToggleEnabled(item)}
                                 >
@@ -552,7 +570,6 @@ export function MarketplaceView({
                                 <DropdownMenuItem
                                   variant="destructive"
                                   className="gap-2"
-                                  disabled={extensionsBusy}
                                   onSelect={() => setUninstallTarget(item)}
                                 >
                                   <Trash2 className="size-3.5 shrink-0" aria-hidden />
@@ -581,7 +598,7 @@ export function MarketplaceView({
                           <Button
                             type="button"
                             variant="outline"
-                            disabled={extensionsBusy}
+                            disabled={installBusyIds.has(item.id)}
                             className="shrink-0 self-center"
                             onClick={() => handleInstall(item)}
                           >
@@ -672,7 +689,7 @@ export function MarketplaceView({
         <MarketplaceDetailView
           item={detailItem}
           onBack={closeDetail}
-          extensionsBusy={extensionsBusy}
+          itemActionBusy={installBusyIds.has(detailItem.id)}
           installUnsupported={isInstallUnsupported(detailItem)}
           onInstall={() => handleInstall(detailItem)}
           onUpdate={() => handleUpdate(detailItem)}
@@ -752,14 +769,14 @@ export function MarketplaceView({
                   if (!target) {
                     return;
                   }
-                  void (async () => {
+                  void runInstallAction(target.extensionId, async () => {
                     try {
                       await target.retry(true);
                       setReviewGate(null);
                     } catch {
                       /* runtimeError */
                     }
-                  })();
+                  });
                 }}
               >
                 {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
