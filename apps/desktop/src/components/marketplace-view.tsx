@@ -530,7 +530,12 @@ export function MarketplaceView({
                   }
                   return (
                     <ContextMenu key={source.id}>
-                      <ContextMenuTrigger asChild>{tab}</ContextMenuTrigger>
+                      {/* No asChild onto the Toggle: the trigger's own
+                          data-state="closed" would reach Toggle.Root through the Slot
+                          merge, and radix Toggle spreads incoming props after its own
+                          data-state, so the menu state would clobber data-state="on" and
+                          silently disable all data-[state=on] styling on the tab. */}
+                      <ContextMenuTrigger className="inline-flex">{tab}</ContextMenuTrigger>
                       <ContextMenuContent>
                         <ContextMenuItem
                           variant="destructive"
