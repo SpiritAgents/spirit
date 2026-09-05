@@ -127,17 +127,28 @@ async function checkIconFile(dir: string, relativePath: string): Promise<CheckFi
   );
 }
 
-/** Declared-vs-content check with fs readers rooted at `dir` (dump mode). */
-async function checkDeclaredContributions(
+/**
+ * Declared-vs-content check with fs readers rooted at `dir`. Shared by the
+ * package command (dump mode) and the marketplace command (per local entry);
+ * not part of the library's public API.
+ */
+export async function checkDeclaredContributions(
   dir: string,
   contributes: MarketplaceInstructionContributionDeclarations | undefined,
+  fieldPath = "manifest.contributes",
 ): Promise<CheckFinding[]> {
   const finding = await assertDeclaredInstructionContributionFiles(contributes, {
-    readRelativeTextFile: (relativePath) =>
-      readFile(path.join(dir, ...relativePath.split("/")), "utf8"),
+    readRelativeTextFile: async (relativePath, fieldName) => {
+      try {
+        return await readFile(path.join(dir, ...relativePath.split("/")), "utf8");
+      } catch {
+        throw new Error(`The file referenced by ${fieldName} does not exist: ${relativePath}`);
+      }
+    },
     listRelativeChildDirectories: async (relativePath) =>
       (await listChildDirectories(path.join(dir, ...relativePath.split("/")))) ?? [],
     validators: { parseMcpConfigFile, parseHooksConfigFile },
+    fieldPrefix: fieldPath,
   }).then(
     () => undefined,
     (error: unknown) => error,
@@ -145,7 +156,7 @@ async function checkDeclaredContributions(
   return finding
     ? [
         {
-          path: "manifest.contributes",
+          path: fieldPath,
           message: finding instanceof Error ? finding.message : String(finding),
         },
       ]

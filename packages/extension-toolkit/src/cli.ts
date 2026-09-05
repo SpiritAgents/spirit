@@ -11,16 +11,18 @@
 import path from "node:path";
 import { parseArgs } from "node:util";
 
+import { checkMarketplaceRegistry } from "./check-marketplace.js";
 import { checkExtensionPackage, type CheckFinding } from "./check-package.js";
 
 const USAGE = `Usage: extension-toolkit <command> [path]
 
 Commands:
-  check [dir]  Validate an extension package directory (or an installed
-               extension with .spirit/extension.json)
+  check [dir]              Validate an extension package directory (or an
+                           installed extension with .spirit/extension.json)
+  marketplace check [dir]  Validate a marketplace registry (registry CI)
 
 Options:
-  -h, --help   Show this help
+  -h, --help               Show this help
 `;
 
 function printFindings(findings: CheckFinding[]): number {
@@ -52,7 +54,12 @@ async function main(): Promise<number> {
     return printFindings(await checkExtensionPackage(target));
   }
 
-  process.stderr.write(`Unknown command: ${command}\n\n${USAGE}`);
+  if (command === "marketplace" && rest[0] === "check") {
+    const target = path.resolve(rest[1] ?? ".");
+    return printFindings(await checkMarketplaceRegistry(target));
+  }
+
+  process.stderr.write(`Unknown command: ${positionals.join(" ")}\n\n${USAGE}`);
   return 1;
 }
 
