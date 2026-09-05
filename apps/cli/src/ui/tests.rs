@@ -4,8 +4,8 @@ use crate::{
     ports::{ChatSessionListItem, SubagentSessionStatus},
     view::{
         AssistantAuxData, BottomFormFieldEditorView, BottomFormFieldView, BottomFormView,
-        ForkPickerView, MainInputMode, MarketplaceCatalogItemView, MarketplaceFlowStep,
-        MarketplaceSourceTabView, MarketplaceViewModel, PendingAssistantAux,
+        ForkPickerView, MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView,
+        MarketplaceFlowStep, MarketplaceSourceTabView, MarketplaceViewModel, PendingAssistantAux,
         PendingSubagentApprovalView, RewindPickerView, SlashFlowItemView, SlashFlowSearchView,
         SlashFlowView, SubagentSessionDetailView, SubagentSessionSummaryView,
     },
@@ -619,7 +619,8 @@ fn marketplace_view_renders_source_bar_and_catalog_rows() {
         },
     });
 
-    let snapshot = render_ui_lines(&app, 80, 24).join("\n");
+    let lines = render_ui_lines(&app, 80, 24);
+    let snapshot = lines.join("\n");
     assert!(
         snapshot.contains("Built-in") && snapshot.contains("Personal"),
         "source bar should render both source tabs, got:\n{snapshot}"
@@ -627,6 +628,140 @@ fn marketplace_view_renders_source_bar_and_catalog_rows() {
     assert!(
         snapshot.contains("Catalog Demo"),
         "catalog row should render, got:\n{snapshot}"
+    );
+
+    let source_row = lines
+        .iter()
+        .find(|line| line.contains("Built-in"))
+        .expect("source bar row renders");
+    let selected_row = lines
+        .iter()
+        .find(|line| line.contains("> Catalog Demo"))
+        .expect("selected catalog row renders");
+    assert!(
+        !source_row.contains("Source:"),
+        "source bar label drops the colon, got: {source_row}"
+    );
+    assert_eq!(
+        source_row.find("Source"),
+        selected_row.find('>'),
+        "source bar starts where the list indicator does, got:\n{snapshot}"
+    );
+}
+
+#[test]
+fn marketplace_detail_page_hugs_content_and_hides_id() {
+    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    app.marketplace_view = Some(MarketplaceViewModel {
+        step: MarketplaceFlowStep::DetailActions,
+        query: String::new(),
+        error: None,
+        sources: vec![MarketplaceSourceTabView {
+            id: "source-1".to_string(),
+            label: "Loopback".to_string(),
+        }],
+        active_source_index: 0,
+        catalog_items: Vec::new(),
+        selected_item: None,
+        detail: Some(MarketplaceDetailView {
+            id: "source-1/detail-demo".to_string(),
+            name: "detail-demo".to_string(),
+            display_name: "Detail Demo".to_string(),
+            description: "A detail demo.".to_string(),
+            author: None,
+            review_status: "verified".to_string(),
+            version: "1.2.0".to_string(),
+            installed: false,
+            enabled: false,
+            update_available: false,
+            installed_version: None,
+            supported_hosts: vec!["cli".to_string()],
+            requested_capabilities: vec!["skills".to_string()],
+            contribution_lines: vec!["skills: demo-skill".to_string()],
+        }),
+        slash: SlashFlowView {
+            title: "Actions".to_string(),
+            subtitle: None,
+            search: None,
+            empty_text: String::new(),
+            selected_index: 0,
+            items: vec![
+                SlashFlowItemView {
+                    label: "Install".to_string(),
+                    summary: String::new(),
+                    details: Vec::new(),
+                    disabled: false,
+                    muted: false,
+                },
+                SlashFlowItemView {
+                    label: "Back".to_string(),
+                    summary: String::new(),
+                    details: Vec::new(),
+                    disabled: false,
+                    muted: false,
+                },
+            ],
+            compact_items: false,
+            footer_hint: String::new(),
+        },
+    });
+
+    let lines = render_ui_lines(&app, 80, 24);
+    let snapshot = lines.join("\n");
+    assert!(
+        !snapshot.contains("source-1/detail-demo"),
+        "detail page should not render the id row, got:\n{snapshot}"
+    );
+
+    let title_row = lines
+        .iter()
+        .position(|line| line.contains("Detail Demo"))
+        .expect("overview title renders");
+    let capabilities_row = lines
+        .iter()
+        .position(|line| line.contains("Capabilities"))
+        .expect("capabilities line renders");
+    let install_row = lines
+        .iter()
+        .position(|line| line.contains("> Install"))
+        .expect("actions form renders");
+    // Borderless layout: four overview rows (title, description, capabilities,
+    // one contribution line), exactly one blank gap row, then the actions.
+    assert_eq!(
+        install_row - title_row,
+        5,
+        "actions form docks one blank row below the overview content, got:\n{snapshot}"
+    );
+    assert!(
+        lines[install_row - 1].trim().is_empty(),
+        "one blank gap row separates the info block and the actions form, got:\n{snapshot}"
+    );
+    assert_eq!(
+        lines[install_row].find('>'),
+        lines[capabilities_row].find("Capabilities"),
+        "the action indicator starts where the overview text starts, got:\n{snapshot}"
+    );
+    assert!(
+        lines[install_row + 1].contains("Back"),
+        "single-line action rows pack without blank separators, got:\n{snapshot}"
+    );
+
+    // Narrow width: the title line wraps, and the wrap-aware height must still
+    // dock the actions form right below the (now taller) overview without
+    // clipping its last line.
+    let narrow = render_ui_lines(&app, 40, 24);
+    let narrow_snapshot = narrow.join("\n");
+    let contribution_row = narrow
+        .iter()
+        .position(|line| line.contains("skills: demo-skill"))
+        .expect("contribution line survives wrapping");
+    let narrow_install_row = narrow
+        .iter()
+        .position(|line| line.contains("> Install"))
+        .expect("actions form renders");
+    assert!(
+        narrow_install_row - contribution_row <= 2,
+        "actions form docks right below the wrapped overview, got:\n{narrow_snapshot}"
     );
 }
 

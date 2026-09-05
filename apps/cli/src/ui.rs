@@ -299,7 +299,7 @@ pub fn draw_ui(
     let marketplace_height = app
         .marketplace_view
         .as_ref()
-        .map(|view| marketplace_panel_height(view, content_area.height, input_height))
+        .map(|view| marketplace_panel_height(view, content_area.height, content_area.width, input_height))
         .unwrap_or(0);
 
     let chunks = Layout::default()
@@ -580,7 +580,7 @@ fn measure_inline_chrome(
     } else if flags.show_marketplace {
         app.marketplace_view
             .as_ref()
-            .map(|view| marketplace_panel_height(view, viewport_h, input_height))
+            .map(|view| marketplace_panel_height(view, viewport_h, width, input_height))
             .unwrap_or(0)
     } else if flags.show_bottom_form {
         bottom_form_height
