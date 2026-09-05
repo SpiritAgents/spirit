@@ -52,6 +52,10 @@
     "./host-bridge": {
       "types": "./dist/host-bridge-public.d.ts",
       "default": "./dist/host-bridge-public.js"
+    },
+    "./extension-config-files": {
+      "types": "./dist/extension-config-files.d.ts",
+      "default": "./dist/extension-config-files.js"
     }
   },
   "publishConfig": {
