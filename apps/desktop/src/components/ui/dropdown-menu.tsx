@@ -3,8 +3,9 @@ import { Check, ChevronRight } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import {
-  DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "@/lib/desktop-chrome";
 import { isEventTargetWithinTooltipCompanionOverlays } from "@/hooks/tooltip-switch-registry";
 import { useOptionalTooltipItemMenuHighlight } from "@/components/ui/tooltip";
@@ -58,7 +59,8 @@ function DropdownMenuSubContent({
         sideOffset={sideOffset}
         className={cn(
           radixAnchoredOverlayMotion("dropdown-menu"),
-          "spirit-scroll z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-32 overflow-y-auto overflow-x-hidden",
+          "spirit-scroll z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto overflow-x-hidden",
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
           DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
           className,
         )}
@@ -100,7 +102,8 @@ function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           radixAnchoredOverlayMotion("dropdown-menu"),
-          "spirit-scroll z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] min-w-32 overflow-y-auto overflow-x-hidden",
+          "spirit-scroll z-50 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto overflow-x-hidden",
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
           DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
           className,
         )}
