@@ -83,6 +83,7 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   AddMarketplaceSourceRequest,
+  RemoveMarketplaceSourceRequest,
   DesktopMarketplaceInstallResult,
   DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
@@ -2103,6 +2104,28 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const removeMarketplaceSource = useCallback(
+    async (request: RemoveMarketplaceSourceRequest) => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const next = await api.removeMarketplaceSource(request);
+        applySnapshot(next);
+        setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const installMarketplaceExtension = useCallback(
     async (
       request: InstallMarketplaceExtensionRequest,
@@ -4018,6 +4041,7 @@ export function useDesktopRuntime() {
     importExtension,
     installBuiltInExtension,
     addMarketplaceSource,
+    removeMarketplaceSource,
     installMarketplaceExtension,
     updateExtension,
     createSkill,

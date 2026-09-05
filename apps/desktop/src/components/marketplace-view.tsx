@@ -13,11 +13,18 @@ import {
   Sparkles,
   Store,
   Trash2,
+  X,
 } from "lucide-react";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +59,7 @@ import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-su
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { fileToBase64 } from "@/lib/file-to-base64";
 import { topScrollFadeMaskStyle } from "@/lib/mask-styles";
+import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import { useScrollTopBandOcclusion } from "@/lib/scroll-top-band-occlusion";
 import { cn } from "@/lib/utils";
 import type {
@@ -63,6 +71,7 @@ import type {
   DesktopMarketplaceSource,
   DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
+  RemoveMarketplaceSourceRequest,
   SetExtensionEnabledRequest,
   UpdateExtensionRequest,
 } from "@/types";
@@ -114,6 +123,7 @@ type MarketplaceViewProps = {
   }) => Promise<DesktopMarketplaceInstallResult>;
   onUpdateExtension: (request: UpdateExtensionRequest) => Promise<DesktopMarketplaceUpdateResult>;
   onAddMarketplaceSource: (request: AddMarketplaceSourceRequest) => Promise<{ sourceId: string }>;
+  onRemoveMarketplaceSource: (request: RemoveMarketplaceSourceRequest) => Promise<void>;
   onPickMarketplaceDirectory: () => Promise<string | null>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
@@ -129,6 +139,7 @@ export function MarketplaceView({
   onInstallMarketplaceExtension,
   onUpdateExtension,
   onAddMarketplaceSource,
+  onRemoveMarketplaceSource,
   onPickMarketplaceDirectory,
   onDeleteExtension,
   onSetExtensionEnabled,
@@ -145,6 +156,10 @@ export function MarketplaceView({
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
+  const [removeSourceTarget, setRemoveSourceTarget] = useState<DesktopMarketplaceSource | null>(
+    null,
+  );
+  const [removeSourceDialogOpen, setRemoveSourceDialogOpen] = useState(false);
   /** Install / update in flight for these catalog ids; other rows stay clickable. */
   const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -409,6 +424,18 @@ export function MarketplaceView({
     }
   };
 
+  const handleRemoveSource = (source: DesktopMarketplaceSource) => {
+    setRemoveSourceTarget(source);
+    setRemoveSourceDialogOpen(true);
+  };
+
+  const dismissRemoveSourceDialog = useCallback(() => {
+    setRemoveSourceDialogOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setRemoveSourceTarget(null);
+    });
+  }, []);
+
   return (
     <div
       data-spirit-surface="marketplace-shell"
@@ -483,17 +510,39 @@ export function MarketplaceView({
                 role="tablist"
                 aria-label={t("marketplace.tabsLabel")}
               >
-                {sources.map((source) => (
-                  <Toggle
-                    key={source.id}
-                    size="sm"
-                    pressed={resolvedActiveSourceId === source.id}
-                    onPressedChange={() => setActiveSourceId(source.id)}
-                    aria-label={sourceTabLabel(source)}
-                  >
-                    {sourceTabLabel(source)}
-                  </Toggle>
-                ))}
+                {sources.map((source) => {
+                  const tab = (
+                    <Toggle
+                      size="sm"
+                      pressed={resolvedActiveSourceId === source.id}
+                      onPressedChange={() => setActiveSourceId(source.id)}
+                      aria-label={sourceTabLabel(source)}
+                    >
+                      {sourceTabLabel(source)}
+                    </Toggle>
+                  );
+                  if (source.internal) {
+                    return (
+                      <span key={source.id} className="contents">
+                        {tab}
+                      </span>
+                    );
+                  }
+                  return (
+                    <ContextMenu key={source.id}>
+                      <ContextMenuTrigger asChild>{tab}</ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem
+                          variant="destructive"
+                          onSelect={() => handleRemoveSource(source)}
+                        >
+                          <X aria-hidden />
+                          {t("marketplace.removeMarketplace")}
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  );
+                })}
               </div>
 
               {listEmpty ? (
@@ -789,6 +838,73 @@ export function MarketplaceView({
               >
                 {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
                 {t("marketplace.reviewRequiredContinue")}
+              </Button>
+            </DialogFooterActions>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={removeSourceDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setRemoveSourceDialogOpen(true);
+          } else if (!extensionsBusy) {
+            dismissRemoveSourceDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!extensionsBusy}>
+          <DialogHeader>
+            <DialogTitle>{t("marketplace.removeMarketplaceTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("marketplace.removeMarketplaceConfirm", {
+                name: removeSourceTarget?.displayName ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogFooterActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!extensionsBusy) {
+                    dismissRemoveSourceDialog();
+                  }
+                }}
+                disabled={extensionsBusy}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={extensionsBusy || !removeSourceTarget}
+                onClick={() => {
+                  const target = removeSourceTarget;
+                  if (!target) {
+                    return;
+                  }
+                  void (async () => {
+                    try {
+                      await onRemoveMarketplaceSource({ name: target.name });
+                      if (resolvedActiveSourceId === target.id) {
+                        setActiveSourceId("built-in");
+                      }
+                      dismissRemoveSourceDialog();
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {extensionsBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                {t("marketplace.removeMarketplace")}
               </Button>
             </DialogFooterActions>
           </DialogFooter>

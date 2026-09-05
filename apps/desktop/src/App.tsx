@@ -711,6 +711,7 @@ export default function App() {
                           onInstallMarketplaceExtension={runtime.installMarketplaceExtension}
                           onUpdateExtension={runtime.updateExtension}
                           onAddMarketplaceSource={runtime.addMarketplaceSource}
+                          onRemoveMarketplaceSource={runtime.removeMarketplaceSource}
                           onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
