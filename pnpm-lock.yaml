@@ -474,6 +474,10 @@ importers:
         version: 19.2.8
 
   packages/extension-toolkit:
+    dependencies:
+      '@spiritagent/agent-core':
+        specifier: workspace:*
+        version: link:../agent-core
     devDependencies:
       '@types/node':
         specifier: 25.9.5
