@@ -130,9 +130,7 @@
       "expandTools": "Expandir Ferramentas",
       "newSession": "Nova Sessão",
       "settingsPlaceholderTitle": "Visualização de configurações da área de trabalho",
-      "settingsPlaceholderDescription": "Mantém a estrutura e a hierarquia da primeira tela da superfície de configurações.",
       "marketplacePlaceholderTitle": "Visualização de extensões",
-      "marketplacePlaceholderDescription": "Mantém a estrutura e a hierarquia da primeira tela da superfície de extensões.",
       "previewEditorOnlyTextError": "Somente arquivos de texto podem ser abertos no editor de pré-visualização.",
       "hostStatus": "Pré-visualização do Web Hero",
       "mcpReady": "MCP pronto"

@@ -650,7 +650,7 @@
     "uninstallExtension": "Désinstaller l'extension",
     "uninstallExtensionConfirm": "Voulez-vous vraiment désinstaller « {{name}} » ? Cela supprimera le répertoire d'installation local.",
     "uninstallBuiltInConfirm": "Voulez-vous vraiment désinstaller « {{name}} » ? Vous pourrez la réinstaller depuis cette page.",
-    "noExtensionsInstalled": "Aucune extension dans ce marché pour le moment.",
+    "empty": "Aucune extension",
     "contributionGroupTools": "Outils",
     "contributionGroupDesktop": "Bureau",
     "contributionRuleTitle": "Règle",

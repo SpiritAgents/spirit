@@ -34,6 +34,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyCard } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
@@ -474,11 +475,11 @@ export function MarketplaceView({
               </div>
 
               {listEmpty ? (
-                <p className="text-sm text-muted-foreground">
-                  {catalog.length === 0
-                    ? t("marketplace.noExtensionsInstalled")
-                    : t("marketplace.noMatches")}
-                </p>
+                catalog.length === 0 ? (
+                  <EmptyCard>{t("marketplace.empty")}</EmptyCard>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
+                )
               ) : (
                 <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                   {filteredExtensions.map((item) => (

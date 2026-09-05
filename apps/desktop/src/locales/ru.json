@@ -650,7 +650,7 @@
     "uninstallExtension": "Удалить расширение",
     "uninstallExtensionConfirm": "Вы уверены, что хотите удалить «{{name}}»? Локальный каталог установки будет удалён.",
     "uninstallBuiltInConfirm": "Вы уверены, что хотите удалить «{{name}}»? Его можно снова установить на этой странице.",
-    "noExtensionsInstalled": "В этом маркетплейсе пока нет расширений.",
+    "empty": "Нет расширений",
     "contributionGroupTools": "Инструменты",
     "contributionGroupDesktop": "Рабочий стол",
     "contributionRuleTitle": "Правило",

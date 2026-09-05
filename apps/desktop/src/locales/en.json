@@ -650,7 +650,7 @@
     "uninstallExtension": "Uninstall Extension",
     "uninstallExtensionConfirm": "Are you sure you want to uninstall \"{{name}}\"? This will remove the local installation directory.",
     "uninstallBuiltInConfirm": "Are you sure you want to uninstall \"{{name}}\"? You can install it again from this page.",
-    "noExtensionsInstalled": "No extensions in this marketplace yet.",
+    "empty": "No extensions",
     "contributionGroupTools": "Tools",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Rule",

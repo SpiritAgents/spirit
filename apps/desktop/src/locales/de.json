@@ -650,7 +650,7 @@
     "uninstallExtension": "Erweiterung deinstallieren",
     "uninstallExtensionConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Das lokale Installationsverzeichnis wird entfernt.",
     "uninstallBuiltInConfirm": "Möchten Sie \"{{name}}\" wirklich deinstallieren? Sie können sie auf dieser Seite erneut installieren.",
-    "noExtensionsInstalled": "In diesem Marketplace sind noch keine Erweiterungen vorhanden.",
+    "empty": "Keine Erweiterungen vorhanden",
     "contributionGroupTools": "Tools",
     "contributionGroupDesktop": "Desktop",
     "contributionRuleTitle": "Regel",
