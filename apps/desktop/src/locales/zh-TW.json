@@ -642,6 +642,7 @@
     "noMatches": "沒有相符的擴充功能。",
     "extensionNotFound": "找不到擴充功能。請返回列表。",
     "install": "安裝",
+    "httpLocalSourceInstallUnsupported": "HTTP 市場不支援安裝本機路徑來源的擴充功能",
     "enable": "啟用",
     "disable": "停用",
     "moreActions": "更多動作",

@@ -248,6 +248,7 @@ export async function buildDesktopMarketplaceCatalogEntries(
         ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
         ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
         reviewStatus: entry.reviewStatus,
+        artifactKind: typeof entry.source === "string" ? "local" : "npm",
         ...(iconUrl ? { iconUrl } : {}),
         supportedHosts: [...manifest.supportedHosts],
         ...(manifest.activationEvents?.length

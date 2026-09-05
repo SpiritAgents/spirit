@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
   DESKTOP_FORM_INPUT_INNER,
@@ -239,6 +240,12 @@ export function MarketplaceView({
     ? activeSourceId
     : "built-in";
   const catalog = catalogs[resolvedActiveSourceId] ?? [];
+  // HTTP registries cannot serve directory content, so local-path artifacts are
+  // listed but not installable there; the CLI surfaces the same rule as an
+  // install-time error.
+  const isInstallUnsupported = (item: DesktopMarketplaceCatalogEntry) =>
+    item.artifactKind === "local" &&
+    sources.find((source) => source.id === item.sourceId)?.kind === "http-index";
   const detailItem = detailExtensionId
     ? (catalog.find((item) => item.id === detailExtensionId) ??
       Object.values(catalogs)
@@ -560,6 +567,22 @@ export function MarketplaceView({
                               </div>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        ) : isInstallUnsupported(item) ? (
+                          <Tooltip delayDuration={300} disableHoverableContent>
+                            <TooltipTrigger>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled
+                                className="shrink-0 self-center"
+                              >
+                                {t("marketplace.install")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("marketplace.httpLocalSourceInstallUnsupported")}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <Button
                             type="button"
@@ -656,6 +679,7 @@ export function MarketplaceView({
           item={detailItem}
           onBack={closeDetail}
           extensionsBusy={extensionsBusy}
+          installUnsupported={isInstallUnsupported(detailItem)}
           onInstall={() => handleInstall(detailItem)}
           onUpdate={() => handleUpdate(detailItem)}
           onToggleEnabled={() => handleToggleEnabled(detailItem)}

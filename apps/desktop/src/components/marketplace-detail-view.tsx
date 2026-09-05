@@ -16,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,8 @@ type MarketplaceDetailViewProps = {
   item: DesktopMarketplaceCatalogEntry;
   onBack: () => void;
   extensionsBusy: boolean;
+  /** HTTP registries cannot serve local-path artifacts: disable install and explain via tooltip. */
+  installUnsupported?: boolean;
   onInstall: () => void;
   onUpdate: () => void;
   onToggleEnabled: () => void;
@@ -40,6 +43,7 @@ export function MarketplaceDetailView({
   item,
   onBack,
   extensionsBusy,
+  installUnsupported = false,
   onInstall,
   onUpdate,
   onToggleEnabled,
@@ -160,6 +164,22 @@ export function MarketplaceDetailView({
                     </Button>
                   ) : null}
                 </>
+              ) : installUnsupported ? (
+                <Tooltip delayDuration={300} disableHoverableContent>
+                  <TooltipTrigger>
+                    <Button
+                      type="button"
+                      variant="default"
+                      disabled
+                      className="shrink-0 self-center"
+                    >
+                      {t("marketplace.install")}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("marketplace.httpLocalSourceInstallUnsupported")}
+                  </TooltipContent>
+                </Tooltip>
               ) : (
                 <Button
                   type="button"

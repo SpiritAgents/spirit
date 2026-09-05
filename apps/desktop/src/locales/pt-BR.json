@@ -642,6 +642,7 @@
     "noMatches": "Nenhuma extensão correspondente.",
     "extensionNotFound": "Extensão não encontrada. Volte para a lista.",
     "install": "Instalar",
+    "httpLocalSourceInstallUnsupported": "Mercados HTTP não podem instalar extensões que usam um caminho de origem local",
     "enable": "Ativar",
     "disable": "Desativar",
     "moreActions": "Mais ações",

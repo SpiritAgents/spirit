@@ -642,6 +642,7 @@
     "noMatches": "一致する拡張機能がありません。",
     "extensionNotFound": "拡張機能が見つかりません。リストに戻ってください。",
     "install": "インストール",
+    "httpLocalSourceInstallUnsupported": "HTTP マーケットプレイスではローカルパスソースの拡張機能をインストールできません",
     "enable": "有効にする",
     "disable": "無効にする",
     "moreActions": "その他の操作",

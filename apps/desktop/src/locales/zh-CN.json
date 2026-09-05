@@ -639,6 +639,7 @@
     "noMatches": "没有匹配的扩展。",
     "extensionNotFound": "找不到该扩展，请返回列表。",
     "install": "安装",
+    "httpLocalSourceInstallUnsupported": "HTTP 市场不支持安装本地路径源的扩展",
     "enable": "启用",
     "disable": "禁用",
     "moreActions": "更多操作",

@@ -642,6 +642,7 @@
     "noMatches": "Нет подходящих расширений.",
     "extensionNotFound": "Расширение не найдено. Вернитесь к списку.",
     "install": "Установить",
+    "httpLocalSourceInstallUnsupported": "HTTP-каталоги не поддерживают установку расширений с локальным путём",
     "enable": "Включить",
     "disable": "Отключить",
     "moreActions": "Другие действия",

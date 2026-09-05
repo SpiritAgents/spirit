@@ -465,6 +465,8 @@ export interface DesktopMarketplaceCatalogEntry {
   categories?: string[];
   featured?: boolean;
   reviewStatus: DesktopMarketplaceReviewStatus;
+  /** Artifact delivery: registry-relative local path or pinned npm package. */
+  artifactKind: "local" | "npm";
   /** Renderable icon: data URL (local/git registries) or https URL (index direct-links). */
   iconUrl?: string;
   supportedHosts: DesktopExtensionHostKind[];
