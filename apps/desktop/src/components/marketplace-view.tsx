@@ -3,11 +3,15 @@ import { useTranslation } from "react-i18next";
 
 import {
   ArrowLeft,
+  Blocks,
   ChevronDown,
   Ellipsis,
+  Folder,
+  Globe,
   LoaderCircle,
   Search,
   Sparkles,
+  Store,
   Trash2,
 } from "lucide-react";
 
@@ -663,18 +667,22 @@ export function MarketplaceView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-44 p-1">
-                    <DropdownMenuItem onSelect={() => inputRef.current?.click()}>
+                    <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
+                      <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                       {t("marketplace.importExtension")}
                     </DropdownMenuItem>
                     <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger className="gap-2">
+                        <Store className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                         {t("marketplace.addMarketplace")}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="min-w-44 p-1">
-                        <DropdownMenuItem onSelect={handleAddFromDisk}>
+                        <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
+                          <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                           {t("marketplace.addFromDisk")}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setAddSourceOpen(true)}>
+                        <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
+                          <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                           {t("marketplace.addFromUrl")}
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
