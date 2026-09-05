@@ -508,12 +508,12 @@ export function MarketplaceView({
                             <Sparkles className="size-4" aria-hidden />
                           )}
                         </div>
-                        <span className="min-w-0 flex-1 space-y-1">
-                          <span className="block truncate font-normal text-foreground">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-normal leading-snug text-foreground">
                             {item.displayName}
                           </span>
                           {item.description ? (
-                            <span className="block truncate text-xs leading-relaxed text-muted-foreground">
+                            <span className="block truncate text-xs leading-snug text-muted-foreground">
                               {item.description}
                             </span>
                           ) : null}
