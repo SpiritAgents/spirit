@@ -13,7 +13,6 @@ import {
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -510,16 +509,8 @@ export function MarketplaceView({
                           )}
                         </div>
                         <span className="min-w-0 flex-1 space-y-1">
-                          <span className="flex flex-wrap items-center gap-1.5">
-                            <span className="truncate font-normal text-foreground">
-                              {item.displayName}
-                            </span>
-                            <Badge
-                              variant={reviewStatusBadgeVariant(item.reviewStatus)}
-                              className="text-[10px] font-normal"
-                            >
-                              {t(`marketplace.review.${item.reviewStatus}`)}
-                            </Badge>
+                          <span className="block truncate font-normal text-foreground">
+                            {item.displayName}
                           </span>
                           {item.description ? (
                             <span className="block truncate text-xs leading-relaxed text-muted-foreground">
