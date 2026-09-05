@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   MARKETPLACE_INDEX_FILE_NAME,
   MARKETPLACE_SPIRIT_DIR_NAME,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import type { MarketplaceSourceKind } from "./types.js";
 

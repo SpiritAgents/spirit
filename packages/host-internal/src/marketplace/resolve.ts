@@ -1,5 +1,5 @@
-import type { MarketplaceExtensionEntry } from "@spiritagent/marketplace-toolkit";
-import { isMarketplaceVersionNewer } from "@spiritagent/marketplace-toolkit";
+import type { MarketplaceExtensionEntry } from "@spiritagent/extension-toolkit";
+import { isMarketplaceVersionNewer } from "@spiritagent/extension-toolkit";
 
 import {
   builtInMarketplaceSourceRecord,

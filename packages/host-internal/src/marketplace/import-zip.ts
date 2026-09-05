@@ -6,7 +6,7 @@ import {
   MARKETPLACE_SPIRIT_DIR_NAME,
   parseExtensionDumpText,
   type MarketplaceExtensionEntry,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 import { readFile } from "node:fs/promises";
 
 import type { HostInstalledExtension } from "../extensions.js";

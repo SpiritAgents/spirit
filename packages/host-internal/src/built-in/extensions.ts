@@ -9,7 +9,7 @@ import {
   parseMarketplaceIndexText,
   type MarketplaceExtensionEntry,
   type MarketplaceIndex,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import {
   buildHostExtensionManifestFromDump,

@@ -473,6 +473,18 @@ importers:
         specifier: '>=18'
         version: 19.2.8
 
+  packages/extension-toolkit:
+    devDependencies:
+      '@types/node':
+        specifier: 25.9.5
+        version: 25.9.5
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   packages/host-internal:
     dependencies:
       '@aws-sdk/client-bedrock':
@@ -487,9 +499,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
-      '@spiritagent/marketplace-toolkit':
+      '@spiritagent/extension-toolkit':
         specifier: workspace:*
-        version: link:../marketplace-toolkit
+        version: link:../extension-toolkit
       '@vscode/ripgrep':
         specifier: 1.18.0
         version: 1.18.0
@@ -536,18 +548,6 @@ importers:
       '@types/turndown':
         specifier: 5.0.6
         version: 5.0.6
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.11(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
-
-  packages/marketplace-toolkit:
-    devDependencies:
-      '@types/node':
-        specifier: 25.9.5
-        version: 25.9.5
       typescript:
         specifier: 5.9.3
         version: 5.9.3

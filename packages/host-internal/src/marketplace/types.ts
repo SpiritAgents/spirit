@@ -1,4 +1,4 @@
-import type { MarketplaceIndex } from "@spiritagent/marketplace-toolkit";
+import type { MarketplaceIndex } from "@spiritagent/extension-toolkit";
 
 /** Reserved ids for internal sources (never stored in marketplaces.json). */
 export const BUILT_IN_MARKETPLACE_SOURCE_ID = "built-in";

@@ -9,7 +9,7 @@ import { test } from "vitest";
 import {
   parseExtensionDumpText,
   type MarketplaceExtensionEntry,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import { listInstalledExtensions } from "../extensions.js";
 import type { MarketplaceIndexFetch } from "./http-index-source.js";

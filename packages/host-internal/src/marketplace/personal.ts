@@ -8,7 +8,7 @@ import {
   parseMarketplaceIndexText,
   type MarketplaceExtensionEntry,
   type MarketplaceIndex,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import { marketplacesDirPath } from "./registry-store.js";
 import { PERSONAL_MARKETPLACE_SOURCE_ID, type MarketplaceSourceRecord } from "./types.js";

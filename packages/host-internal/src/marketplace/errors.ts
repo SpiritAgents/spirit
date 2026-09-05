@@ -1,4 +1,4 @@
-import type { MarketplaceReviewStatus } from "@spiritagent/marketplace-toolkit";
+import type { MarketplaceReviewStatus } from "@spiritagent/extension-toolkit";
 
 /**
  * Raised when installing or updating an entry whose reviewStatus is not

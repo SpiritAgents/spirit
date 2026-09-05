@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { parseMarketplaceIndexText } from "@spiritagent/marketplace-toolkit";
+import { parseMarketplaceIndexText } from "@spiritagent/extension-toolkit";
 
 import { createHostExtensionManager, installPreparedExtensionDirectory } from "../extensions.js";
 import { loadBuiltInState } from "./state.js";

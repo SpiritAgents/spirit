@@ -15,7 +15,7 @@ import {
   resolveRegistryRelativeUrl,
   type MarketplaceExtensionDump,
   type MarketplaceExtensionEntry,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import { installPreparedExtensionDirectory, type HostInstalledExtension } from "../extensions.js";
 import type { ExtensionManagementContext } from "../storage.js";

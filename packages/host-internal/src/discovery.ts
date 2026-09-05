@@ -4,7 +4,7 @@ import { normalizeAgentMode, type AgentMode } from "@spiritagent/agent-core";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { validateSkillName } from "@spiritagent/marketplace-toolkit";
+import { validateSkillName } from "@spiritagent/extension-toolkit";
 
 import {
   parseSkillFrontmatterFields,
@@ -13,7 +13,7 @@ import {
   splitSkillFrontmatter,
 } from "./skill-paths.js";
 
-export { validateSkillName } from "@spiritagent/marketplace-toolkit";
+export { validateSkillName } from "@spiritagent/extension-toolkit";
 import {
   AGENTS_DIR_NAME,
   SPIRIT_DIR_NAME,

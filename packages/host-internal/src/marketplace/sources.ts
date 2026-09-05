@@ -5,7 +5,7 @@ import {
   MARKETPLACE_INDEX_FILE_NAME,
   MARKETPLACE_SPIRIT_DIR_NAME,
   parseMarketplaceIndexText,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import { ensureGitSourceClone, type MarketplaceGitRunner } from "./git-source.js";
 import { readHttpIndexSource, type MarketplaceIndexFetch } from "./http-index-source.js";

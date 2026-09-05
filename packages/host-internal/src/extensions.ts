@@ -29,7 +29,7 @@ import {
   EXTENSION_DUMP_FILE_NAME,
   parseExtensionDumpText,
   type MarketplaceExtensionDump,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
 import { BUILT_IN_MARKETPLACE_SOURCE_ID } from "./marketplace/types.js";

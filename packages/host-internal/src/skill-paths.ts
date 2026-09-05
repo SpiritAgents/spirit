@@ -2,7 +2,7 @@
  * Skill path constants and pure path utilities (no Node built-in dependencies; safe to import from the Desktop renderer).
  *
  * Format-level helpers (SKILL.md frontmatter parsing, skill-name rules) live
- * in `@spiritagent/marketplace-toolkit` as the single source of truth for the
+ * in `@spiritagent/extension-toolkit` as the single source of truth for the
  * extension package layout contract; they are re-exported here so existing
  * call sites keep working.
  */
@@ -12,7 +12,7 @@ import {
   parseSkillFrontmatterFields,
   splitSkillFrontmatter,
   unquoteYamlScalar,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 export {
   isSkillMarkdownPath,
@@ -20,7 +20,7 @@ export {
   SKILL_FILE_NAME,
   SKILLS_DIR_NAME,
   splitSkillFrontmatter,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 
 function normalizePath(path: string): string {
   return path.trim().replace(/\\/g, "/");

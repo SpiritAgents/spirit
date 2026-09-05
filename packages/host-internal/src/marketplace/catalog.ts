@@ -2,7 +2,7 @@ import {
   isMarketplaceVersionNewer,
   resolveRegistryRelativeUrl,
   type MarketplaceExtensionEntry,
-} from "@spiritagent/marketplace-toolkit";
+} from "@spiritagent/extension-toolkit";
 import path from "node:path";
 
 import { listInstalledExtensions } from "../extensions.js";
