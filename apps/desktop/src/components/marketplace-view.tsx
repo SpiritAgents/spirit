@@ -13,18 +13,12 @@ import {
   Sparkles,
   Store,
   Trash2,
-  X,
 } from "lucide-react";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
+import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
 import { Button } from "@/components/ui/button";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +41,6 @@ import {
 import { EmptyCard } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
@@ -274,19 +267,6 @@ export function MarketplaceView({
         .find((item) => item.id === detailExtensionId))
     : undefined;
 
-  const sourceTabLabel = useCallback(
-    (source: DesktopMarketplaceSource): string => {
-      if (source.id === "built-in") {
-        return t("marketplace.tabBuiltIn");
-      }
-      if (source.id === "personal") {
-        return t("marketplace.tabPersonal");
-      }
-      return source.displayName;
-    },
-    [t],
-  );
-
   const filteredExtensions = catalog.filter((item) => {
     const query = searchText.trim().toLowerCase();
     if (!query) {
@@ -510,44 +490,15 @@ export function MarketplaceView({
                 role="tablist"
                 aria-label={t("marketplace.tabsLabel")}
               >
-                {sources.map((source) => {
-                  const tab = (
-                    <Toggle
-                      size="sm"
-                      pressed={resolvedActiveSourceId === source.id}
-                      onPressedChange={() => setActiveSourceId(source.id)}
-                      aria-label={sourceTabLabel(source)}
-                    >
-                      {sourceTabLabel(source)}
-                    </Toggle>
-                  );
-                  if (source.internal) {
-                    return (
-                      <span key={source.id} className="contents">
-                        {tab}
-                      </span>
-                    );
-                  }
-                  return (
-                    <ContextMenu key={source.id}>
-                      {/* No asChild onto the Toggle: the trigger's own
-                          data-state="closed" would reach Toggle.Root through the Slot
-                          merge, and radix Toggle spreads incoming props after its own
-                          data-state, so the menu state would clobber data-state="on" and
-                          silently disable all data-[state=on] styling on the tab. */}
-                      <ContextMenuTrigger className="inline-flex">{tab}</ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem
-                          variant="destructive"
-                          onSelect={() => handleRemoveSource(source)}
-                        >
-                          <X aria-hidden />
-                          {t("marketplace.removeMarketplace")}
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  );
-                })}
+                {sources.map((source) => (
+                  <MarketplaceSourceTab
+                    key={source.id}
+                    source={source}
+                    active={resolvedActiveSourceId === source.id}
+                    onSelect={setActiveSourceId}
+                    onRemove={handleRemoveSource}
+                  />
+                ))}
               </div>
 
               {listEmpty ? (

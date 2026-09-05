@@ -13,7 +13,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["test/**/*.test.mjs"],
+    // Component tests (.tsx) opt into jsdom individually via docblock pragma.
+    include: ["test/**/*.test.mjs", "test/**/*.test.tsx"],
     // Never collect compiled Electron output or dependencies.
     exclude: ["dist-electron/**", "dist/**", "node_modules/**"],
     // Host tests spawn real git processes; node:test had no per-test timeout,
