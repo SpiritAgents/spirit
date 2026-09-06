@@ -550,14 +550,25 @@ export function MarketplaceView({
                       className={cn(
                         // Ghost row: no card surface (border/background); hover only lays the
                         // sidebar-style semi-transparent canvas wash (instant, no color fade).
-                        "flex w-full items-center rounded-lg hover:bg-canvas-hover",
+                        // Rows bleed 8px past the container's outer edge(s) into the page
+                        // padding, so the wash keeps a cushion around the content while the
+                        // content itself aligns with the container edges: leading icons flush
+                        // with the tab bar / search box on the left, trailing action buttons
+                        // flush with the header's Add button on the right. In the two-column
+                        // layout each row is its cell width plus one outer bleed (sm), and
+                        // sm:even moves the right column's bleed to the right side — column
+                        // widths stay equal and the inter-column gap survives between washes.
+                        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
                         item.installed && !item.enabled && "opacity-55",
                       )}
                     >
                       <button
                         type="button"
                         onClick={() => openDetail(item.id)}
-                        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-3 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+                        // pl-2 is the wash's left cushion: on bleeding rows the
+                        // icon lands exactly on the container edge; on
+                        // right-column rows it insets the icon within the cell.
+                        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                       >
                         <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
                           {item.iconUrl ? (
