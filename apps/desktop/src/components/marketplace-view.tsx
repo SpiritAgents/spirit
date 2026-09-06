@@ -52,6 +52,7 @@ import {
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { fileToBase64 } from "@/lib/file-to-base64";
+import { filterVisibleMarketplaceSources } from "@/lib/marketplace-source-visibility";
 import { topScrollFadeMaskStyle } from "@/lib/mask-styles";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import { useScrollTopBandOcclusion } from "@/lib/scroll-top-band-occlusion";
@@ -252,10 +253,15 @@ export function MarketplaceView({
 
   const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
   const catalogs = snapshot?.marketplaceCatalogs ?? {};
-  const resolvedActiveSourceId =
-    activeSourceId === "all" || sources.some((source) => source.id === activeSourceId)
-      ? activeSourceId
-      : "all";
+  // Internal-source tabs hide while their catalog is empty; the All tab shows
+  // exactly when any tab shows, so an all-empty marketplace hides the tab bar.
+  const visibleSources = filterVisibleMarketplaceSources(sources, catalogs);
+  const showAll = visibleSources.length > 0;
+  const activeTabVisible =
+    activeSourceId === "all"
+      ? showAll
+      : visibleSources.some((source) => source.id === activeSourceId);
+  const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
   // The All view merges every source's catalog and sorts globally by display
   // name (per-source tabs keep the registry's curated order); each entry keeps
   // its <sourceId>/<name> identity.
@@ -499,36 +505,45 @@ export function MarketplaceView({
               {/* Marketplace domain tabs: below the search box, scroll away with the title,
                   horizontal scroll instead of wrapping. pt-4 mirrors the pre-tabs flow gap
                   between the search bar and the list (the pinned band carries no bottom
-                  padding; its fade mask only softens the transition). */}
-              <div
-                className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-4"
-                role="tablist"
-                aria-label={t("marketplace.tabsLabel")}
-              >
-                {/* The All tab is pinned first and is the page default; it is a
-                    pseudo source, so it carries no per-source context menu. */}
-                <Toggle
-                  size="sm"
-                  pressed={resolvedActiveSourceId === "all"}
-                  onPressedChange={() => setActiveSourceId("all")}
-                  aria-label={t("marketplace.tabAll")}
+                  padding; its fade mask only softens the transition). The row hides
+                  entirely when no tab is visible (all sources empty). */}
+              {showAll ? (
+                <div
+                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-4"
+                  role="tablist"
+                  aria-label={t("marketplace.tabsLabel")}
                 >
-                  {t("marketplace.tabAll")}
-                </Toggle>
-                {sources.map((source) => (
-                  <MarketplaceSourceTab
-                    key={source.id}
-                    source={source}
-                    active={resolvedActiveSourceId === source.id}
-                    onSelect={setActiveSourceId}
-                    onRemove={handleRemoveSource}
-                  />
-                ))}
-              </div>
+                  {/* The All tab is pinned first and is the page default; it is a
+                      pseudo source, so it carries no per-source context menu. */}
+                  <Toggle
+                    size="sm"
+                    pressed={resolvedActiveSourceId === "all"}
+                    onPressedChange={() => setActiveSourceId("all")}
+                    aria-label={t("marketplace.tabAll")}
+                  >
+                    {t("marketplace.tabAll")}
+                  </Toggle>
+                  {visibleSources.map((source) => (
+                    <MarketplaceSourceTab
+                      key={source.id}
+                      source={source}
+                      active={resolvedActiveSourceId === source.id}
+                      onSelect={setActiveSourceId}
+                      onRemove={handleRemoveSource}
+                    />
+                  ))}
+                </div>
+              ) : null}
 
               {listEmpty ? (
                 catalog.length === 0 ? (
-                  <EmptyCard>{t("marketplace.empty")}</EmptyCard>
+                  // With the tab bar hidden the card becomes the first content below
+                  // the docked search header, which carries no bottom gap of its
+                  // own — like the toggle row, the card brings its own top
+                  // whitespace instead.
+                  <EmptyCard className={showAll ? undefined : "mt-4"}>
+                    {t("marketplace.empty")}
+                  </EmptyCard>
                 ) : (
                   <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
                 )
