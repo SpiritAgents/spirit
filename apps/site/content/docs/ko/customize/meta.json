@@ -7,6 +7,7 @@
     "hooks",
     "dreams",
     "automations",
-    "integrations"
+    "integrations",
+    "extensions"
   ]
 }

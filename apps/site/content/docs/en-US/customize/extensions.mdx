@@ -1,0 +1,64 @@
+---
+title: Extensions
+description: Install extensions from marketplaces, import a ZIP package, or add your own remote extension marketplace.
+---
+
+Extensions add capabilities to Spirit — tools, skills, hooks, MCP servers, and UI contributions. They are distributed through extension marketplaces:
+
+- **Built-in** — ships with the app.
+- **Personal** — your own imports: ZIP packages you added yourself.
+- **Remote extension marketplaces** — added by you: a Git repository, an HTTP index URL, or a local directory.
+
+On Desktop, the sidebar's **Extensions** page shows one tab per marketplace, and the **All** tab merges every marketplace into one list. The CLI offers the same flows through `spirit extension` commands and the `/extension marketplace` TUI.
+
+## Install, update, and uninstall
+
+On Desktop, open **Extensions**, pick an extension, and choose **Install**. An installed extension shows a **More Actions** menu with **Disable** (turns it off without removing it) and **Uninstall**. When the marketplace publishes a newer version, the detail page shows an **Update** button.
+
+In the CLI:
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` resolves `<name>` across every added marketplace. If two marketplaces provide the same name, the command fails and lists them; re-run with `--marketplace <name>` to choose one. The same name installed from different marketplaces coexists — installs are scoped by marketplace.
+
+Built-in extensions update automatically with the app. Personal (imported) extensions have no upstream to pull from — re-import a newer ZIP instead.
+
+## Review gate
+
+Installing or updating an extension whose marketplace entry is unverified — or has been revoked — requires an explicit confirmation. Desktop shows a **Review Extension** dialog; the CLI asks for `--review-acknowledged`, and the TUI shows a confirmation step.
+
+## Import an extension (ZIP)
+
+A ZIP package is the self-declared side channel: no marketplace involved.
+
+- Desktop: **Extensions** page → **Add** → **Import Extension**, then pick the ZIP file.
+- CLI: `spirit extension import <archive>`.
+
+Imports land in the **Personal** marketplace as unverified entries and go through the same review gate. Importing the same name again overwrites it, and uninstalling an imported extension also removes its Personal record.
+
+## Add a marketplace
+
+- Desktop: **Extensions** page → **Add** → **Add Marketplace** → **Add from Disk…** (a local directory) or **Add from URL…** (a Git repository or an HTTP index URL).
+- CLI: `spirit extension marketplace add <url|path>`.
+
+Three locator forms:
+
+| Form                          | Example                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| Local directory               | `spirit extension marketplace add ./my-marketplace`                      |
+| Git repository (HTTPS or SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| HTTP index URL                | `spirit extension marketplace add https://example.com`                   |
+
+Git URLs accept `--git-ref <tag|branch|commit>` to pin a ref; the default is the remote's default branch. A bare site URL resolves to its `/.spirit/marketplace.json` automatically.
+
+List and remove added marketplaces with `spirit extension marketplace list` and `spirit extension marketplace remove <name>`. On Desktop, right-click a marketplace tab for the remove action.
+
+<Callout type="info">
+  An extension's declared capabilities are endorsed by its marketplace, not by the package itself.
+  Adding a marketplace means trusting its operator's review — add only sources you trust.
+</Callout>

@@ -1,0 +1,65 @@
+---
+title: Extensions
+description: Installez des extensions depuis des marchés, importez un paquet ZIP ou ajoutez votre propre marché d'extensions distant.
+---
+
+Les extensions ajoutent des capacités à Spirit — outils, skills, hooks, serveurs MCP et contributions d'interface. Elles sont distribuées via des marchés d'extensions :
+
+- **Intégré** — fourni avec l'application.
+- **Personnel** — vos propres imports : des paquets ZIP que vous avez ajoutés vous-même.
+- **Marchés d'extensions distants** — ajoutés par vous : un dépôt Git, une URL d'index HTTP ou un répertoire local.
+
+Sur Desktop, la page **Extensions** de la barre latérale affiche un onglet par marché, et l'onglet **Tous** fusionne tous les marchés en une seule liste. La CLI propose les mêmes flux via les commandes `spirit extension` et la TUI `/extension marketplace`.
+
+## Installer, mettre à jour et désinstaller
+
+Sur Desktop, ouvrez **Extensions**, choisissez une extension et cliquez sur **Installer**. Une extension installée affiche un menu **Plus d'actions** avec **Désactiver** (l'éteint sans la supprimer) et **Désinstaller**. Lorsque le marché publie une version plus récente, la page de détail affiche un bouton **Mettre à jour**.
+
+Dans la CLI :
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` résout `<name>` dans tous les marchés ajoutés. Si deux marchés proposent le même nom, la commande échoue et les liste — relancez avec `--marketplace <name>` pour en choisir un. Le même nom installé depuis des marchés différents coexiste : les installations sont isolées par marché.
+
+Les extensions intégrées se mettent à jour automatiquement avec l'application. Les extensions personnelles (importées) n'ont pas de source amont — réimportez plutôt un ZIP plus récent.
+
+## Confirmation de vérification
+
+Installer ou mettre à jour une extension dont l'entrée de marché n'est pas vérifiée — ou a été révoquée — exige une confirmation explicite. Desktop affiche une boîte de dialogue **Vérifier l'extension** ; la CLI demande `--review-acknowledged`, et la TUI affiche une étape de confirmation.
+
+## Importer une extension (ZIP)
+
+Un paquet ZIP est le canal parallèle auto-déclaré : sans aucun marché.
+
+- Desktop : page **Extensions** → **Ajouter** → **Importer une extension**, puis choisissez le fichier ZIP.
+- CLI : `spirit extension import <archive>`.
+
+Les imports aboutissent dans le marché **Personnel** comme entrées non vérifiées et passent par la même confirmation de vérification. Réimporter le même nom l'écrase, et désinstaller une extension importée supprime aussi son enregistrement Personnel.
+
+## Ajouter un marché
+
+- Desktop : page **Extensions** → **Ajouter** → **Ajouter un marché** → **Ajouter depuis le disque…** (un répertoire local) ou **Ajouter depuis une URL…** (un dépôt Git ou une URL d'index HTTP).
+- CLI : `spirit extension marketplace add <url|path>`.
+
+Trois formes de localisateur :
+
+| Forme                    | Exemple                                                                  |
+| ------------------------ | ------------------------------------------------------------------------ |
+| Répertoire local         | `spirit extension marketplace add ./my-marketplace`                      |
+| Dépôt Git (HTTPS ou SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| URL d'index HTTP         | `spirit extension marketplace add https://example.com`                   |
+
+Les URL Git acceptent `--git-ref <tag|branch|commit>` pour épingler une ref ; par défaut, c'est la branche par défaut du distant. Une URL de site nue résout automatiquement vers son `/.spirit/marketplace.json`.
+
+Gérez les marchés ajoutés avec `spirit extension marketplace list` et `spirit extension marketplace remove <name>`. Sur Desktop, faites un clic droit sur un onglet de marché pour l'action de suppression.
+
+<Callout type="info">
+  Les capacités déclarées d'une extension sont cautionnées par son marché, pas par le paquet
+  lui-même. Ajouter un marché signifie faire confiance à la vérification de son opérateur —
+  n'ajoutez que des sources auxquelles vous faites confiance.
+</Callout>
