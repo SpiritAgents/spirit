@@ -299,7 +299,9 @@ pub fn draw_ui(
     let marketplace_height = app
         .marketplace_view
         .as_ref()
-        .map(|view| marketplace_panel_height(view, content_area.height, content_area.width, input_height))
+        .map(|view| {
+            marketplace_panel_height(view, content_area.height, content_area.width, input_height)
+        })
         .unwrap_or(0);
 
     let chunks = Layout::default()
