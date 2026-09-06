@@ -19,7 +19,10 @@ import {
   type MarketplaceExtensionEntry,
 } from "./schema.js";
 
-async function checkEntryIcon(root: string, entry: MarketplaceExtensionEntry): Promise<CheckFinding[]> {
+async function checkEntryIcon(
+  root: string,
+  entry: MarketplaceExtensionEntry,
+): Promise<CheckFinding[]> {
   if (!entry.icon) {
     return [];
   }

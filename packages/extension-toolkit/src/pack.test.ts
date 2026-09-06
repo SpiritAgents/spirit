@@ -68,7 +68,9 @@ test("pack produces a zip whose dump parses and whose content is complete", asyn
   assert.ok(result.zipPath.endsWith("demo-ext-1.2.0.zip"));
 
   const unzipped = unzipSync(new Uint8Array(await readFile(result.zipPath)));
-  const dump = parseExtensionDumpText(strFromU8(unzipped[".spirit/extension.json"] ?? new Uint8Array()));
+  const dump = parseExtensionDumpText(
+    strFromU8(unzipped[".spirit/extension.json"] ?? new Uint8Array()),
+  );
   assert.equal(dump.name, "demo-ext");
   assert.equal(dump.version, "1.2.0");
   assert.equal(strFromU8(unzipped["skills/demo/SKILL.md"]), VALID_SKILL);

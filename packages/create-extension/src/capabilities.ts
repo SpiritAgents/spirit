@@ -216,9 +216,7 @@ export function mergeContributes(
 }
 
 /** Ordered, de-duplicated requestedCapabilities for the selected capabilities. */
-export function mergeRequestedCapabilities(
-  capabilities: readonly InitCapabilityId[],
-): string[] {
+export function mergeRequestedCapabilities(capabilities: readonly InitCapabilityId[]): string[] {
   const seen = new Set<string>();
   for (const id of capabilities) {
     for (const capability of capabilityDefinition(id).requestedCapabilities) {

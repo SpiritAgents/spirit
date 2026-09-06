@@ -122,9 +122,7 @@ async function checkIconFile(dir: string, relativePath: string): Promise<CheckFi
   if (raw === undefined) {
     return { path: relativePath, message: "The icon file does not exist." };
   }
-  return capture(relativePath, () =>
-    assertMarketplaceIconSvgContent(raw, relativePath),
-  );
+  return capture(relativePath, () => assertMarketplaceIconSvgContent(raw, relativePath));
 }
 
 /**
@@ -217,10 +215,7 @@ async function checkBarePackage(dir: string): Promise<CheckFinding[]> {
       if (nameFinding) {
         findings.push(nameFinding);
       }
-      if (
-        typeof parsed.version !== "string" ||
-        !isMarketplaceVersionString(parsed.version)
-      ) {
+      if (typeof parsed.version !== "string" || !isMarketplaceVersionString(parsed.version)) {
         findings.push({
           path: "package.json",
           message: `package.json version must be a strict "major.minor.patch" semver, got: ${String(parsed.version)}`,
@@ -251,9 +246,7 @@ async function checkBarePackage(dir: string): Promise<CheckFinding[]> {
   // conventional root icon.svg when present.
   const iconRaw = await readTextIfExists(path.join(dir, "icon.svg"));
   if (iconRaw !== undefined) {
-    const finding = capture("icon.svg", () =>
-      assertMarketplaceIconSvgContent(iconRaw, "icon.svg"),
-    );
+    const finding = capture("icon.svg", () => assertMarketplaceIconSvgContent(iconRaw, "icon.svg"));
     if (finding) {
       findings.push(finding);
     }

@@ -35,9 +35,7 @@ async function scaffold(
 }
 
 afterEach(async () => {
-  await Promise.all(
-    targetDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })),
-  );
+  await Promise.all(targetDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
 test("skills + rules scaffold valid files and a consistent dump", async () => {
@@ -95,7 +93,10 @@ test("mcp and hooks scaffold parseable config files", async () => {
 });
 
 test("an invalid extension name is rejected with the toolkit rule", async () => {
-  await assert.rejects(initExtension({ name: "Not Kebab", capabilities: [], targetDir: await targetDir() }), /kebab-case/);
+  await assert.rejects(
+    initExtension({ name: "Not Kebab", capabilities: [], targetDir: await targetDir() }),
+    /kebab-case/,
+  );
 });
 
 test("a non-empty target directory is rejected", async () => {
