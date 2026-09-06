@@ -1,5 +1,24 @@
 use super::*;
 
+/// Reserved id of the UI-level "All" pseudo source: a merged, display-only
+/// catalog over every added source, resolved by the daemon's catalog RPC.
+const ALL_MARKETPLACE_SOURCE_ID: &str = "all";
+
+/// The All pseudo source pinned first in the source bar; kind/locator are
+/// placeholders — the TUI only reads the id, and the daemon resolves it.
+fn all_marketplace_source() -> CliMarketplaceSource {
+    CliMarketplaceSource {
+        id: ALL_MARKETPLACE_SOURCE_ID.into(),
+        name: ALL_MARKETPLACE_SOURCE_ID.into(),
+        display_name: ALL_MARKETPLACE_SOURCE_ID.into(),
+        kind: ALL_MARKETPLACE_SOURCE_ID.into(),
+        locator: String::new(),
+        git_ref: None,
+        added_at_unix_ms: 0,
+        internal: true,
+    }
+}
+
 /// Two-level marketplace flow (list → detail) over the multi-source backend.
 /// The source bar switches sources with Left/Right while the list keeps focus;
 /// entries pin exact versions, so there is no version picker and no README.
@@ -37,6 +56,8 @@ impl TuiShell {
             .runtime
             .list_marketplace_sources()
             .context(t!("tui.marketplace.catalog_read_failed").into_owned())?;
+        // The All pseudo source is pinned first and serves as the default view.
+        self.marketplace.sources.insert(0, all_marketplace_source());
         if self.marketplace.sources.is_empty() {
             self.marketplace.catalog = Vec::new();
         } else {
@@ -668,6 +689,8 @@ impl TuiShell {
         self.image_picker_active = false;
         self.marketplace.open = true;
         self.marketplace.step_stack = vec![MarketplaceFlowStep::CatalogPicker];
+        // Every entry into the marketplace lands on the All pseudo source.
+        self.marketplace.active_source_index = 0;
         self.marketplace.catalog_filter = query.unwrap_or("").trim().to_string();
         self.marketplace.catalog_selected_index = 0;
         self.marketplace.detail_action_selected_index = 0;
@@ -702,6 +725,9 @@ impl TuiShell {
 
 /// Tab label: internal sources are localized; user registries show their displayName.
 fn marketplace_source_tab_label(source: &CliMarketplaceSource) -> String {
+    if source.id == ALL_MARKETPLACE_SOURCE_ID {
+        return t!("tui.marketplace.source_all").into_owned();
+    }
     if source.id == "built-in" {
         return t!("tui.marketplace.source_built_in").into_owned();
     }
@@ -709,4 +735,41 @@ fn marketplace_source_tab_label(source: &CliMarketplaceSource) -> String {
         return t!("tui.marketplace.source_personal").into_owned();
     }
     source.display_name.clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_pseudo_source_is_internal_with_the_reserved_id() {
+        let source = all_marketplace_source();
+        assert_eq!(source.id, ALL_MARKETPLACE_SOURCE_ID);
+        assert!(source.internal);
+    }
+
+    #[test]
+    fn all_pseudo_source_tab_label_is_localized() {
+        assert_eq!(
+            marketplace_source_tab_label(&all_marketplace_source()),
+            t!("tui.marketplace.source_all").into_owned()
+        );
+    }
+
+    #[test]
+    fn all_pseudo_source_prepends_to_the_source_bar() {
+        let mut sources = vec![CliMarketplaceSource {
+            id: "built-in".into(),
+            name: "built-in".into(),
+            display_name: "Built-in".into(),
+            kind: "local".into(),
+            locator: String::new(),
+            git_ref: None,
+            added_at_unix_ms: 0,
+            internal: true,
+        }];
+        sources.insert(0, all_marketplace_source());
+        assert_eq!(sources[0].id, ALL_MARKETPLACE_SOURCE_ID);
+        assert_eq!(sources.len(), 2);
+    }
 }

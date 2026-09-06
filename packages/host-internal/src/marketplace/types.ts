@@ -4,6 +4,13 @@ import type { MarketplaceIndex } from "@spiritagent/extension-toolkit";
 export const BUILT_IN_MARKETPLACE_SOURCE_ID = "built-in";
 export const PERSONAL_MARKETPLACE_SOURCE_ID = "personal";
 
+/**
+ * Reserved id for the UI-level "All" pseudo source: a merged, display-only
+ * view over every added source. Never stored in marketplaces.json and never
+ * an install identity; the catalog RPC resolves it before source lookup.
+ */
+export const ALL_MARKETPLACE_SOURCE_ID = "all";
+
 export type MarketplaceSourceKind = "local" | "git" | "http-index";
 
 /**

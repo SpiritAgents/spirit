@@ -778,6 +778,7 @@ tui.marketplace.detail_not_found: "Расширение не найдено. В�
 tui.marketplace.installed_version: "Установлено %{version}"
 tui.marketplace.not_installed: "Не установлено"
 tui.marketplace.source_bar_label: "Источник"
+tui.marketplace.source_all: "Все"
 tui.marketplace.source_built_in: "Встроенные"
 tui.marketplace.source_personal: "Личные"
 tui.marketplace.contribution_tool: "Инструмент"

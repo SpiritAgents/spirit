@@ -778,6 +778,7 @@ tui.marketplace.detail_not_found: "拡張機能が見つかりません。一覧
 tui.marketplace.installed_version: "インストール済み %{version}"
 tui.marketplace.not_installed: "未インストール"
 tui.marketplace.source_bar_label: "ソース"
+tui.marketplace.source_all: "すべて"
 tui.marketplace.source_built_in: "組み込み"
 tui.marketplace.source_personal: "個人"
 tui.marketplace.contribution_tool: "ツール"

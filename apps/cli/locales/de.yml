@@ -778,6 +778,7 @@ tui.marketplace.detail_not_found: "Erweiterung nicht gefunden. Zurück zur Liste
 tui.marketplace.installed_version: "Installiert %{version}"
 tui.marketplace.not_installed: "Nicht installiert"
 tui.marketplace.source_bar_label: "Quelle"
+tui.marketplace.source_all: "Alle"
 tui.marketplace.source_built_in: "Integriert"
 tui.marketplace.source_personal: "Persönlich"
 tui.marketplace.contribution_tool: "Werkzeug"

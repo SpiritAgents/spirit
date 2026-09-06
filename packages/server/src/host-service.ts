@@ -6,6 +6,7 @@ import type { JsonValue } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import {
   addMarketplaceSource,
+  ALL_MARKETPLACE_SOURCE_ID,
   checkExtensionUpdate,
   createHostExtensionManager,
   createHostTodoStore,
@@ -24,6 +25,7 @@ import {
   MarketplaceReviewAcknowledgementRequiredError,
   planMetadataSnapshot,
   primeWorkspaceFileReferenceIndexCache,
+  readMarketplaceCatalog,
   readMarketplaceCatalogForSource,
   removeMarketplaceSource,
   resolveInstructionPaths,
@@ -268,6 +270,15 @@ export class HostService {
       case "host.listMarketplaceCatalog": {
         const hostKind = HostService.readHostKind(params);
         const sourceId = typeof params["sourceId"] === "string" ? params["sourceId"].trim() : "";
+        if (sourceId === ALL_MARKETPLACE_SOURCE_ID) {
+          // UI-level pseudo source: the merged catalog over every added source.
+          const context = this.marketplaceHostContext(hostKind);
+          const read = await readMarketplaceCatalog(context);
+          return {
+            items: read.items.map((item) => serializeMarketplaceCatalogItem(item)),
+            ...(read.warnings.length > 0 ? { warning: read.warnings.join("\n") } : {}),
+          };
+        }
         if (sourceId) {
           // Multi-source per-source catalog (new shape).
           const context = this.marketplaceHostContext(hostKind);
