@@ -44,7 +44,19 @@ export interface InitExtensionResult {
 
 const DEFAULT_VERSION = "0.1.0";
 
-const DEFAULT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+// Construction-grid placeholder icon (1024 canvas, 8×8 grid of 128px cells,
+// two diagonals, concentric circles at 820/512/204). Stroke 8 is ~0.3 CSS px
+// at the 40px list icon. Do not use vector-effect=non-scaling-stroke here:
+// <img> rasterization raises that stroke to at least 1 CSS px, which reads
+// as a bold grate at this density.
+const DEFAULT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" stroke="#8E8E93" stroke-width="8">
+  <path d="M0 0H1024M0 128H1024M0 256H1024M0 384H1024M0 512H1024M0 640H1024M0 768H1024M0 896H1024M0 1024H1024" />
+  <path d="M0 0V1024M128 0V1024M256 0V1024M384 0V1024M512 0V1024M640 0V1024M768 0V1024M896 0V1024M1024 0V1024" />
+  <path d="M0 0L1024 1024M1024 0L0 1024" />
+  <circle cx="512" cy="512" r="410" />
+  <circle cx="512" cy="512" r="256" />
+  <circle cx="512" cy="512" r="102" />
+</svg>
 `;
 
 export async function initExtension(options: InitExtensionOptions): Promise<InitExtensionResult> {
