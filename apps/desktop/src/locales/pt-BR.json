@@ -650,6 +650,7 @@
     "uninstallExtension": "Desinstalar extensão",
     "uninstallExtensionConfirm": "Tem certeza de que deseja desinstalar \"{{name}}\"? Isso removerá o diretório de instalação local.",
     "uninstallBuiltInConfirm": "Tem certeza de que deseja desinstalar \"{{name}}\"? Você pode instalá-la novamente nesta página.",
+    "uninstallPersonalConfirm": "Tem certeza de que deseja desinstalar \"{{name}}\"? Isso removerá o diretório de instalação local e excluirá seu registro do marketplace Pessoal.",
     "empty": "Nenhuma extensão",
     "contributionGroupTools": "Ferramentas",
     "contributionGroupDesktop": "Desktop",

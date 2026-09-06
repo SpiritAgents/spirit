@@ -32,7 +32,11 @@ import {
 } from "@spiritagent/extension-toolkit";
 
 import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
-import { BUILT_IN_MARKETPLACE_SOURCE_ID } from "./marketplace/types.js";
+import { removePersonalRegistryEntry } from "./marketplace/personal.js";
+import {
+  BUILT_IN_MARKETPLACE_SOURCE_ID,
+  PERSONAL_MARKETPLACE_SOURCE_ID,
+} from "./marketplace/types.js";
 import { SKILLS_DIR_NAME } from "./skill-paths.js";
 import {
   createFileExtensionStateStore,
@@ -880,6 +884,14 @@ export async function removeInstalledExtension(
 
   if (target.sourceId === BUILT_IN_MARKETPLACE_SOURCE_ID) {
     await noteBuiltInExtensionRemoved(context.spiritDataDir, normalizedId);
+  }
+
+  // Personal entries are a ZIP-import byproduct whose lifecycle is bound to
+  // the install state: uninstalling deletes the registry record along with its
+  // content copy. Hosts are isolated — a copy another host installed stays
+  // installed there and is managed by that host.
+  if (target.sourceId === PERSONAL_MARKETPLACE_SOURCE_ID) {
+    await removePersonalRegistryEntry(context.spiritDataDir, target.manifest.name);
   }
 }
 

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -81,4 +81,32 @@ export async function upsertPersonalRegistryEntry(
     `${JSON.stringify(document, null, 2)}\n`,
     "utf8",
   );
+}
+
+/**
+ * Remove an entry from the Personal registry index and delete its content
+ * directory. Personal entries are a byproduct of ZIP import, so their
+ * lifecycle is bound to the install state: uninstalling the extension removes
+ * the record. Idempotent — a missing entry or content directory is a no-op.
+ */
+export async function removePersonalRegistryEntry(
+  spiritDataDir: string,
+  name: string,
+): Promise<void> {
+  const root = personalRegistryRoot(spiritDataDir);
+
+  // Index first: a leftover content directory is harmless, while an index
+  // entry pointing at deleted content would break catalog reads.
+  const index = await readPersonalMarketplaceIndex(spiritDataDir);
+  const extensions = index.extensions.filter((existing) => existing.name !== name);
+  if (extensions.length !== index.extensions.length) {
+    const document: MarketplaceIndex = { ...index, extensions };
+    await writeFile(
+      path.join(root, MARKETPLACE_SPIRIT_DIR_NAME, MARKETPLACE_INDEX_FILE_NAME),
+      `${JSON.stringify(document, null, 2)}\n`,
+      "utf8",
+    );
+  }
+
+  await rm(path.join(root, "extensions", name), { recursive: true, force: true });
 }

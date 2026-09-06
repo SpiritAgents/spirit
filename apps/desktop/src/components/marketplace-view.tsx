@@ -882,7 +882,9 @@ export function MarketplaceView({
               {t(
                 uninstallTarget?.sourceId === "built-in"
                   ? "marketplace.uninstallBuiltInConfirm"
-                  : "marketplace.uninstallExtensionConfirm",
+                  : uninstallTarget?.sourceId === "personal"
+                    ? "marketplace.uninstallPersonalConfirm"
+                    : "marketplace.uninstallExtensionConfirm",
                 {
                   name: uninstallTarget?.displayName ?? "",
                 },

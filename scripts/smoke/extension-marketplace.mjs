@@ -51,6 +51,15 @@ function check(label, condition, detail) {
 function ensureFixture() {
   const indexPath = path.join(fixtureRoot, ".spirit", "marketplace.json");
   if (existsSync(indexPath)) {
+    // The fixture path doubles as a convenient local registry for manual
+    // experiments. Never run against a foreign index: the finally-block
+    // version reset would clobber it.
+    const existing = JSON.parse(readFileSync(indexPath, "utf8"));
+    if (existing?.name !== "smoke-registry") {
+      throw new Error(
+        `${fixtureRoot} is occupied by another registry ("${existing?.name ?? "unknown"}"). Move it aside before running this smoke test.`,
+      );
+    }
     return;
   }
   console.log("[smoke] fixture missing; generating .marketplace/");
@@ -290,6 +299,19 @@ async function main() {
       "personal entries have no update semantics",
       result.ok && result.output.includes("up to date"),
       result.output,
+    );
+
+    // Uninstalling a Personal extension deletes its registry record and
+    // content copy — the entry lifecycle is bound to the install state.
+    result = runCli(dataDir, ["extension", "remove", "personal/zip-imported"]);
+    check("remove the ZIP-imported extension", result.ok, result.output);
+    check(
+      "uninstall removes the personal registry record and content",
+      existsSync(personalIndexPath) &&
+        !JSON.parse(readFileSync(personalIndexPath, "utf8")).extensions.some(
+          (item) => item.name === "zip-imported",
+        ) &&
+        !existsSync(path.join(dataDir, "marketplaces", "personal", "extensions", "zip-imported")),
     );
 
     // 7. conflict: a second source with the same name → error + --marketplace resolves

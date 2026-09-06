@@ -650,6 +650,7 @@
     "uninstallExtension": "解除安裝擴充功能",
     "uninstallExtensionConfirm": "確定要解除安裝「{{name}}」嗎？這將移除本機安裝目錄。",
     "uninstallBuiltInConfirm": "確定要解除安裝「{{name}}」嗎？你可以隨時從此頁重新安裝。",
+    "uninstallPersonalConfirm": "確定要解除安裝「{{name}}」嗎？這將移除本機安裝目錄，並從個人市場刪除其記錄。",
     "empty": "暫無擴充功能",
     "contributionGroupTools": "工具",
     "contributionGroupDesktop": "桌面",

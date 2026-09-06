@@ -650,6 +650,7 @@
     "uninstallExtension": "拡張機能をアンインストール",
     "uninstallExtensionConfirm": "「{{name}}」をアンインストールしてもよろしいですか？ローカルのインストールディレクトリが削除されます。",
     "uninstallBuiltInConfirm": "「{{name}}」をアンインストールしてもよろしいですか？このページから再インストールできます。",
+    "uninstallPersonalConfirm": "「{{name}}」をアンインストールしてもよろしいですか？ローカルのインストールディレクトリが削除され、個人マーケットプレイスのレコードも削除されます。",
     "empty": "拡張機能がありません",
     "contributionGroupTools": "ツール",
     "contributionGroupDesktop": "デスクトップ",

@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { zipSync } from "fflate";
 import { test } from "vitest";
 
-import { listInstalledExtensions } from "../extensions.js";
+import { createHostExtensionManager, listInstalledExtensions } from "../extensions.js";
 import { importPreparedDirectoryToPersonal } from "./import-zip.js";
-import { readPersonalMarketplaceIndex } from "./personal.js";
+import { readPersonalMarketplaceIndex, removePersonalRegistryEntry } from "./personal.js";
 import { checkExtensionUpdate, type MarketplaceHostContext } from "./resolve.js";
 
 const ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"></svg>\n';
@@ -102,6 +103,40 @@ test("ZIP import writes the Personal registry, refreshes its index, and installs
 
     const listed = await listInstalledExtensions(context);
     assert.equal(listed.filter((item) => item.id === "personal/extension-zipped").length, 1);
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("uninstalling a ZIP-imported extension removes its Personal registry record", async () => {
+  const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-zip-personal-remove-"));
+  try {
+    const context: MarketplaceHostContext = { spiritDataDir, hostKind: "desktop" };
+    const { importExtensionArchive } = await import("../extensions.js");
+    const manager = createHostExtensionManager(context);
+    const installed = await importExtensionArchive(context, {
+      archiveBase64: makeZip(zipDump("1.0.0"), { "icon.svg": ICON_SVG }),
+    });
+    assert.equal(installed.id, "personal/extension-zipped");
+
+    await manager.remove(installed.id);
+
+    // The index entry and the registry content copy are gone with the install.
+    const index = await readPersonalMarketplaceIndex(spiritDataDir);
+    assert.equal(
+      index.extensions.some((candidate) => candidate.name === "extension-zipped"),
+      false,
+    );
+    assert.equal(
+      existsSync(
+        path.join(spiritDataDir, "marketplaces", "personal", "extensions", "extension-zipped"),
+      ),
+      false,
+    );
+    assert.equal((await listInstalledExtensions(context)).length, 0);
+
+    // Registry removal is idempotent (e.g. a direct install that never wrote an entry).
+    await removePersonalRegistryEntry(spiritDataDir, "extension-zipped");
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
   }
