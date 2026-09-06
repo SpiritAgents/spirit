@@ -34,7 +34,8 @@
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
   },
   "dependencies": {
-    "@spiritagent/agent-core": "workspace:*"
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/create-extension": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.9.5",

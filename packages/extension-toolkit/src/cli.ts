@@ -13,10 +13,13 @@ import { parseArgs } from "node:util";
 
 import { checkMarketplaceRegistry } from "./check-marketplace.js";
 import { checkExtensionPackage, type CheckFinding } from "./check-package.js";
+import { runInitCommand } from "./cli-init.js";
 
 const USAGE = `Usage: extension-toolkit <command> [path]
 
 Commands:
+  init [target-dir]        Scaffold a new extension (wizard or flags; run
+                           with -h for the full option list)
   check [dir]              Validate an extension package directory (or an
                            installed extension with .spirit/extension.json)
   marketplace check [dir]  Validate a marketplace registry (registry CI)
@@ -37,8 +40,15 @@ function printFindings(findings: CheckFinding[]): number {
 }
 
 async function main(): Promise<number> {
+  const argv = process.argv.slice(2);
+  // init delegates raw args: create-extension owns its flags, and strict
+  // parsing here would reject them.
+  if (argv[0] === "init") {
+    return runInitCommand(argv.slice(1));
+  }
+
   const { values, positionals } = parseArgs({
-    args: process.argv.slice(2),
+    args: argv,
     allowPositionals: true,
     options: { help: { type: "boolean", short: "h", default: false } },
   });

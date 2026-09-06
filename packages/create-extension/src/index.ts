@@ -5,6 +5,7 @@
 
 export { initExtension } from "./init.js";
 export type { InitExtensionOptions, InitExtensionResult } from "./init.js";
+export { runCreateExtensionCli } from "./run-cli.js";
 export {
   CAPABILITY_DEFINITIONS,
   INIT_CAPABILITY_IDS,

@@ -497,6 +497,9 @@ importers:
       '@spiritagent/agent-core':
         specifier: workspace:*
         version: link:../agent-core
+      '@spiritagent/create-extension':
+        specifier: workspace:*
+        version: link:../create-extension
     devDependencies:
       '@types/node':
         specifier: 25.9.5
