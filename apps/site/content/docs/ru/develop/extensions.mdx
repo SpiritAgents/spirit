@@ -1,144 +1,123 @@
 ---
 title: Расширения
-description: Структура пакета, поля spiritExtension и API активации.
+description: Создавайте расширения мастером npm create или вручную и управляйте собственным удалённым маркетплейсом расширений.
 ---
 
-Расширение — это папка с `package.json`, содержащая `spiritExtension`. Spirit устанавливает его для каждого пользователя и хоста, а не в каталог `.spirit/` рабочей области.
+Расширение — это папка с `.spirit/extension.json` — дампом манифеста Spirit — рядом с чисто npm-ным `package.json`. Spirit устанавливает расширения для каждого пользователя и каждого хоста отдельно, а не в каталог `.spirit/` рабочей области, и ограничивает каждую установку маркетплейсом-источником: идентичность установки — `(id источника, name)`.
 
-| Хост    | Путь                                  |
-| ------- | ------------------------------------- |
-| Desktop | `{spiritDataDir}/extensions/desktop/` |
-| CLI     | `{spiritDataDir}/extensions/cli/`     |
+| Хост    | Путь                                                    |
+| ------- | ------------------------------------------------------- |
+| Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
+| CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-Это отличается от [Skills](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Hooks](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` оформляет слоты CLI TUI. Это не `hooks.json`. Расширение может поставлять те же файлы, если объявит `mcp`, `hooks`, `skills` или `rules`.
+Это отличается от [Skills](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Hooks](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` стилизует слоты TUI CLI. Это не `hooks.json`. Расширение всё же может _поставлять_ те же файлы, если объявляет `mcp`, `hooks`, `skills` или `rules`.
 
-У каждого установленного расширения есть переключатель включения. Отключение или удаление останавливает вклад. Включение — это согласие запускать объявленные MCP, agent hooks, skills и rules.
+У каждого установленного расширения есть переключатель включения. Отключите или удалите его, чтобы остановить его вклады. Включение расширения — это согласие на запуск объявленных им MCP-серверов, хуков агента, навыков и правил.
 
-## Структура пакета
+## Создание расширения
+
+<Tabs items={["Командная строка", "Вручную"]}>
+<Tab value="Командная строка">
+
+Создайте каркас нового расширения мастером создания:
+
+<Tabs items={["npm", "pnpm", "Bun", "Yarn", "Deno"]}>
+<Tab value="npm">
+
+```bash
+npm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Bun">
+
+```bash
+bun create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Yarn">
+
+```bash
+yarn create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Deno">
+
+```bash
+deno init --npm @spiritagent/extension
+```
+
+</Tab>
+</Tabs>
+
+Мастер спрашивает имя расширения (kebab-case), отображаемое имя, однострочное описание и возможности для каркаса. Он записывает `package.json`, `icon.svg` и `.spirit/extension.json`, плюс файлы выбранных возможностей (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), а в конце выводит готовую запись маркетплейса для вставки.
+
+Для скриптов у каждого вопроса есть флаг: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` и `--yes` для пропуска подтверждения.
+
+Проверить результат можно в любой момент:
+
+```bash
+npx @spiritagent/extension-toolkit check ./my-extension
+```
+
+</Tab>
+<Tab value="Вручную">
+
+Каталогу расширения нужны только два файла — `.spirit/extension.json` и `package.json` — плюс файлы объявленных возможностей:
 
 ```text
-example-extension/
-  package.json
-  dist/index.js
-  assets/icon.svg
-  styles/desktop.css
-  cli-hooks.json
-  mcp.json
-  hooks.json
-  rule.md
-  skills/example/SKILL.md
+my-extension/
+  .spirit/
+    extension.json        # дамп манифеста Spirit (обязательно)
+  package.json            # чисто npm; читается только `main`
+  icon.svg                # необязательно; только SVG, без <script>
+  index.mjs               # необязательно; вход activate, на который ссылается `main`
+  mcp.json                # при объявлении mcp
+  hooks.json              # при объявлении hooks (хуки агента)
+  rule.md                 # при объявлении rules
+  skills/<name>/SKILL.md  # при объявлении skills
+  styles.css              # при объявлении CSS для desktop (путь указан в манифесте)
+  cli-hooks.json          # при объявлении хуков CLI (путь указан в манифесте)
 ```
 
-```json
-{
-  "name": "@example/spirit-extension",
-  "version": "0.1.0",
-  "description": "Example Spirit extension.",
-  "author": { "name": "example" },
-  "homepage": "https://example.com/spirit-extension",
-  "main": "dist/index.js",
-  "spiritExtension": {
-    "schemaVersion": 1,
-    "displayName": "Example extension",
-    "icon": "assets/icon.svg",
-    "supportedHosts": ["cli", "desktop"],
-    "activationEvents": ["onStartup", "onUserMessage"],
-    "requestedCapabilities": [
-      "tool-definitions",
-      "tool-execution",
-      "system-prompt",
-      "settings",
-      "secret-storage",
-      "desktop-ui",
-      "cli-ui",
-      "mcp",
-      "hooks",
-      "skills",
-      "rules"
-    ],
-    "contributes": {
-      "tools": [
-        {
-          "name": "lookup_item",
-          "description": "Look up an item by id.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" }
-            },
-            "required": ["id"]
-          },
-          "approvalMode": "allowed",
-          "executionMode": "foreground"
-        }
-      ],
-      "desktop": {
-        "css": [{ "path": "styles/desktop.css" }],
-        "settingsPage": { "title": "Example extension" }
-      },
-      "cli": {
-        "hooks": { "path": "cli-hooks.json" }
-      },
-      "mcp": true,
-      "hooks": true,
-      "skills": true,
-      "rules": true
-    },
-    "settingsSchema": [
-      {
-        "key": "region",
-        "type": "select",
-        "title": "Region",
-        "required": true,
-        "defaultValue": "us",
-        "options": [
-          { "value": "us", "label": "US" },
-          { "value": "eu", "label": "EU" }
-        ]
-      }
-    ],
-    "secretSlots": [
-      {
-        "key": "api_token",
-        "title": "API token",
-        "required": true
-      }
-    ]
-  }
-}
-```
+`package.json` не несёт полей Spirit — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` остаются чисто npm. Хост читает только `main`, вход модуля [`activate`](#activate).
 
-`name` в `package.json` — это идентификатор расширения. Он должен соответствовать `^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`.
+Поля `.spirit/extension.json`:
 
-## Поля `package.json`
+| Поле            | Описание                                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | Обязательно. Должно быть `1`                                                                                                                                        |
+| `name`          | Обязательно. kebab-case; id записи внутри маркетплейса                                                                                                              |
+| `version`       | Обязательно. Semver `major.minor.patch`; суффиксы предварительных версий не поддерживаются                                                                          |
+| `sourceId`      | Обязательно. Id источника-маркетплейса-владельца. ZIP-пакеты самодекларируют любое значение (например, `"self-declared"`); установочный конвейер перезаписывает его |
+| `displayName`   | Обязательно. Видимое пользователю имя                                                                                                                               |
+| `description`   | Обязательно. Однострочное описание                                                                                                                                  |
+| `icon`          | Необязательно. Путь к SVG относительно корня расширения                                                                                                             |
+| `author`        | Необязательно. `{ name, url? }`                                                                                                                                     |
+| `categories`    | Необязательно. Массив строк                                                                                                                                         |
+| `manifest`      | Обязательно. Декларация времени выполнения — см. раздел «`manifest`»                                                                                                |
 
-| Поле              | Описание                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`            | Обязательное. Имя npm-пакета; используется как идентификатор расширения                                                                                             |
-| `version`         | Обязательное. Строка версии                                                                                                                                         |
-| `spiritExtension` | Обязательное. Объект. См. ниже                                                                                                                                      |
-| `description`     | Необязательное. Строка                                                                                                                                              |
-| `author`          | Необязательное. Строка или `{ name }`                                                                                                                               |
-| `homepage`        | Необязательное. Строка                                                                                                                                              |
-| `main`            | Необязательное. Относительный путь к точке входа `activate`. Требуется, если расширение использует `activationEvents`, выполнение инструментов или системный промпт |
+Дамп не несёт ни `source`, ни полей кураторства (`reviewStatus`, `featured`) — они принадлежат записи маркетплейса.
 
-`main`, `spiritExtension.icon`, пути CSS и пути хуков CLI должны быть относительными и оставаться внутри пакета.
+Объявленные файлы должны существовать и быть корректными: объявление `mcp`, `hooks`, `skills` или `rules` без соответствующего файла проваливает проверку и установку. Присутствующие, но не объявленные файлы игнорируются и никогда не загружаются.
 
-## `spiritExtension`
+</Tab>
+</Tabs>
 
-| Поле                    | Описание                                                                          |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| `schemaVersion`         | Необязательное. По умолчанию `1`. Поддерживается только `1`                       |
-| `displayName`           | Обязательное. Имя, видимое пользователю                                           |
-| `icon`                  | Необязательное. Путь относительно корня пакета                                    |
-| `supportedHosts`        | Обязательное. Непустой массив из `cli` и/или `desktop`                            |
-| `activationEvents`      | Необязательное. См. [События активации](#activation-events)                       |
-| `requestedCapabilities` | Необязательное. См. [Возможности](#capabilities)                                  |
-| `contributes`           | Необязательное. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills` и/или `rules` |
-| `settingsSchema`        | Необязательное. Определения настроек                                              |
-| `secretSlots`           | Необязательное. Определения слотов секретов                                       |
+## `manifest`
 
-## Возможности
+Объект `manifest` — это декларация времени выполнения расширения: какие хосты оно поддерживает, когда активируется и что вносит. В записи маркетплейса манифест подтверждён оператором маркетплейса; в ZIP-пакете он самодекларируем и контролируется подтверждением проверки.
+
+### Возможности
 
 | Значение             | Среда выполнения                                                                          |
 | -------------------- | ----------------------------------------------------------------------------------------- |
@@ -159,12 +138,12 @@ example-extension/
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` и соответствующая запись `contributes` должны либо присутствовать оба, либо отсутствовать оба.
 
-## События активации
+### События активации
 
 | Событие                | Когда срабатывает                 |
 | ---------------------- | --------------------------------- |
 | `onStartup`            | Прогрев хоста                     |
-| `onExtensionInstalled` | После установки из ZIP            |
+| `onExtensionInstalled` | После завершения установки        |
 | `onSessionOpened`      | Сеанс становится активным         |
 | `onSessionReset`       | Сброс сеанса                      |
 | `onUserMessage`        | Пользователь отправляет сообщение |
@@ -174,7 +153,7 @@ example-extension/
 
 Хост вызывает `activate`, когда расширение перечисляет событие и имеет читаемый `main`.
 
-## `contributes.tools`
+### `contributes.tools`
 
 | Поле            | Описание                                                       |
 | --------------- | -------------------------------------------------------------- |
@@ -187,7 +166,7 @@ example-extension/
 
 Модель не видит `name` как есть. Хост создаёт имя вызова, например, `extension__{id}__{tool}__{hash}`.
 
-## `contributes.desktop`
+### `contributes.desktop`
 
 Требует `desktop-ui`.
 
@@ -197,7 +176,7 @@ example-extension/
 | `css[].media`  | Необязательно. CSS media query                                                     |
 | `settingsPage` | Необязательно. `true`, `{}` или `{ title }` — добавляет запись в настройки Desktop |
 
-## `contributes.cli`
+### `contributes.cli`
 
 Требует `cli-ui`. `hooks` — это объект с `path`, а не встроенный массив:
 
@@ -235,7 +214,7 @@ example-extension/
 }
 ```
 
-## Встроенные MCP, hooks, skills и rules
+### Встроенные MCP, hooks, skills и rules
 
 Требуют соответствующую capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills` и `contributes.rules` равны `true` или `{}`. Пути фиксированные; свои пути задавать нельзя.
 
@@ -252,7 +231,7 @@ example-extension/
 
 Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Hooks | Skills | Rules**. При конфликте имён: workspace > user > extension.
 
-## `settingsSchema`
+### `settingsSchema`
 
 | Поле           | Описание                                                          |
 | -------------- | ----------------------------------------------------------------- |
@@ -267,7 +246,7 @@ example-extension/
 
 Значения — `string`, `number`, `boolean` или `null`. `null` очищает необязательную настройку.
 
-## `secretSlots`
+### `secretSlots`
 
 | Поле          | Описание                           |
 | ------------- | ---------------------------------- |
@@ -358,8 +337,68 @@ export function activate(ctx) {
 }
 ```
 
-## Установка
+## Распространение в виде ZIP
 
-- **ZIP** — архив должен содержать ровно один `package.json` (он может находиться в подкаталоге). Импортируйте с помощью `spirit extension import ./extension.zip` или на странице **Расширения**.
+Упакуйте каталог расширения в распространяемый формат ZIP (содержимое плюс `.spirit/extension.json`):
 
-`supportedHosts` должен включать текущий хост. Повторная установка того же id по умолчанию не заменяет существующую копию.
+```bash
+npx @spiritagent/extension-toolkit pack ./my-extension
+```
+
+Команда сначала проверяет пакет и записывает `<name>-<version>.zip` в текущий каталог. Пользователи импортируют ZIP на странице **Расширения** или командой `spirit extension import`; он попадает в их маркетплейс «Личные». См. [Расширения](../customize/extensions.mdx).
+
+## Управление удалённым маркетплейсом расширений
+
+Удалённый маркетплейс расширений — это обслуживаемый каталог с индексом `.spirit/marketplace.json`: Git-репозиторий, статический сайт или локальный каталог. Пользователи добавляют его командой `spirit extension marketplace add <url|path>` или на странице **Расширения** в Desktop, а затем просматривают и устанавливают его записи.
+
+<Tabs items={["Репозиторий-шаблон", "Вручную"]}>
+<Tab value="Репозиторий-шаблон">
+
+[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) — создайте собственный репозиторий маркетплейса из `SpiritAgents/extension-template`.
+
+Шаблон содержит структуру реестра, два примера расширений и CI, проверяющий реестр при каждом push и pull request. Чтобы опубликовать расширение:
+
+1. Создайте каркас командой `npm create @spiritagent/extension`.
+2. Переместите папку расширения в `extensions/`.
+3. Добавьте запись реестра, выведенную мастером, в `.spirit/marketplace.json`.
+4. Отправьте изменения — пользователи добавляют маркетплейс по его Git-URL.
+
+</Tab>
+<Tab value="Вручную">
+
+Корень маркетплейса содержит индекс плюс по одному каталогу содержимого на расширение:
+
+```text
+my-marketplace/
+  .spirit/
+    marketplace.json  # индекс
+  extensions/
+    my-extension/     # каталог содержимого (простой npm-пакет + файлы возможностей)
+      icon.svg
+      package.json
+      ...
+```
+
+Относительные пути внутри `marketplace.json` разрешаются относительно корня маркетплейса и не должны содержать сегменты `..` или абсолютные пути.
+
+Поля записи по группам:
+
+- **Идентичность** — `name` (kebab-case; id записи), `version` (semver, без предварительных версий) и `source`: строка пути относительно корня, например `"./extensions/my-extension"`, для локального содержимого или `{ "source": "npm", "package": "@scope/name@1.0.0" }` для фиксации точной версии npm (целостность проверяется по SRI-хешу пакумента при установке).
+- **Отображение** — `displayName`, `description`, `icon` (путь к SVG относительно корня), `categories`, `author`.
+- **Декларация** — `manifest`: декларация времени выполнения, описанная в разделе «`manifest`». Маркетплейс её подтверждает; пакет не может сам заявлять о возможностях.
+- **Кураторство** — `featured` и `reviewStatus` (`unverified` / `verified` / `revoked`).
+
+Проверьте реестр локально — офлайн: схема, имена kebab-case, semver без предварительных версий, формат источников npm, объявленные файлы вкладов для локальных источников и правила для значков:
+
+```bash
+npx -y @spiritagent/extension-toolkit marketplace check .
+```
+
+Дисциплина проверки: pull request'ы, добавляющие запись или меняющие её `version`, должны сохранять `reviewStatus: "unverified"`; повышение до `verified` происходит отдельным коммитом после человеческой проверки. `.github/workflows/marketplace.yml` репозитория-шаблона — эталонная реализация: он сравнивает индекс с базой PR.
+
+</Tab>
+</Tabs>
+
+### Локальные маркетплейсы
+
+Любой локальный каталог с `.spirit/marketplace.json` работает как маркетплейс — добавьте его командой `spirit extension marketplace add <path>` или через **Добавить с диска…** в Desktop. Локальные маркетплейсы читаются на месте и не требуют CI, что делает их циклом разработки авторов расширений: править, переустановить, повторить.
