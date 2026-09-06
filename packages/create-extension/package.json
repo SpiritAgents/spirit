@@ -1,19 +1,18 @@
 {
-  "name": "@spiritagent/extension-toolkit",
+  "name": "@spiritagent/create-extension",
   "version": "1.0.0-alpha.0",
-  "description": "Spirit extension package and marketplace registry schema toolkit (marketplace.json parsing, semver, registry-relative paths, contribution file checks)",
+  "description": "Scaffold Spirit extensions (npm create @spiritagent/extension). Thin alias over @spiritagent/extension-toolkit.",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SpiritAgents/spirit.git",
-    "directory": "packages/extension-toolkit"
+    "directory": "packages/create-extension"
   },
   "bin": {
-    "extension-toolkit": "./dist/cli.js"
+    "create-extension": "./dist/cli.js"
   },
   "files": [
-    "dist",
-    "README.md"
+    "dist"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -34,9 +33,8 @@
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
   },
   "dependencies": {
-    "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/create-extension": "workspace:*",
-    "fflate": "0.8.3"
+    "@inquirer/prompts": "7.10.1",
+    "@spiritagent/extension-toolkit": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.9.5",
