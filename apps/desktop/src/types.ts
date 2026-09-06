@@ -462,7 +462,7 @@ export interface DesktopMarketplaceCatalogEntry {
   description: string;
   version: string;
   author?: DesktopExtensionAuthor;
-  categories?: string[];
+  category?: string;
   featured?: boolean;
   reviewStatus: DesktopMarketplaceReviewStatus;
   /** Artifact delivery: registry-relative local path or pinned npm package. */

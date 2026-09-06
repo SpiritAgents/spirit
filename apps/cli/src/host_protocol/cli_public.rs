@@ -212,7 +212,7 @@ pub struct CliMarketplaceCatalogEntry {
     pub version: String,
     pub author: Option<CliExtensionAuthor>,
     #[serde(default)]
-    pub categories: Option<Vec<String>>,
+    pub category: Option<String>,
     #[serde(default)]
     pub featured: Option<bool>,
     pub review_status: String,

@@ -236,7 +236,7 @@ export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): J
           },
         }
       : {}),
-    ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
+    ...(entry.category ? { category: entry.category } : {}),
     ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
     reviewStatus: entry.reviewStatus,
     ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),

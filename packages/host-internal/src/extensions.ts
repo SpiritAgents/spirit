@@ -280,7 +280,7 @@ export interface HostExtensionManifest {
   version: string;
   description?: string;
   author?: HostExtensionAuthor;
-  categories?: string[];
+  category?: string;
   main?: string;
   /** Hosts the extension declares it can be installed on (cli / desktop). */
   supportedHosts: ExtensionHostKind[];
@@ -1759,7 +1759,7 @@ async function parseExtensionManifestFields(
     version: dump.version,
     ...(dump.description ? { description: dump.description } : {}),
     ...(dump.author ? { author: dump.author } : {}),
-    ...(dump.categories?.length ? { categories: [...dump.categories] } : {}),
+    ...(dump.category ? { category: dump.category } : {}),
     supportedHosts,
     ...(activationEvents.length > 0 ? { activationEvents } : {}),
     ...(requestedCapabilities.length > 0 ? { requestedCapabilities } : {}),

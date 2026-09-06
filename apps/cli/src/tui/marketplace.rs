@@ -370,7 +370,7 @@ impl TuiShell {
                         .as_ref()
                         .map(|author| author.name.as_str())
                         .unwrap_or(""),
-                    item.categories.as_deref().unwrap_or(&[]).join(" "),
+                    item.category.as_deref().unwrap_or(""),
                 );
                 haystack.to_lowercase().contains(&query).then_some(index)
             })

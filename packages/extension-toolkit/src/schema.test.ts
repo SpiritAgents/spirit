@@ -19,7 +19,7 @@ function validEntry(): Record<string, unknown> {
     displayName: "Hello",
     description: "Example Spirit extension.",
     author: { name: "Spirit" },
-    categories: ["developer-tools"],
+    category: "developer-tools",
     featured: true,
     reviewStatus: "verified",
     manifest: {

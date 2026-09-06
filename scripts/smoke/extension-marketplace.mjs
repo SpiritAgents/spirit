@@ -95,7 +95,7 @@ function writeFixtureIndex(version) {
         displayName: "I Am A Extension",
         description: "Smoke fixture extension with a skills contribution.",
         author: { name: "Spirit" },
-        categories: ["developer-tools"],
+        category: "developer-tools",
         reviewStatus: "verified",
         manifest: {
           supportedHosts: ["cli", "desktop"],

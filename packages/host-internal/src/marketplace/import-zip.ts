@@ -59,7 +59,7 @@ export async function importPreparedDirectoryToPersonal(
     displayName: dump.displayName,
     description: dump.description,
     ...(dump.author ? { author: dump.author } : {}),
-    ...(dump.categories?.length ? { categories: [...dump.categories] } : {}),
+    ...(dump.category ? { category: dump.category } : {}),
     reviewStatus: "unverified",
     manifest: dump.manifest,
   };

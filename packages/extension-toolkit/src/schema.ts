@@ -86,7 +86,7 @@ export interface MarketplaceExtensionEntry {
   displayName: string;
   description: string;
   author?: MarketplaceExtensionAuthor;
-  categories?: string[];
+  category?: string;
   featured?: boolean;
   /** Per-version review semantics; defaults to "unverified" when omitted. */
   reviewStatus: MarketplaceReviewStatus;
@@ -317,7 +317,7 @@ interface MarketplaceExtensionCoreFields {
   displayName: string;
   description: string;
   author?: MarketplaceExtensionAuthor;
-  categories?: string[];
+  category?: string;
   manifest: MarketplaceExtensionManifest;
 }
 
@@ -338,7 +338,7 @@ function parseCoreFields(
   const description = requiredString(value.description, `${fieldName}.description`);
   const author =
     value.author === undefined ? undefined : parseOwner(value.author, `${fieldName}.author`);
-  const categories = optionalStringArray(value.categories, `${fieldName}.categories`);
+  const category = optionalString(value.category, `${fieldName}.category`);
   const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
 
   return {
@@ -348,7 +348,7 @@ function parseCoreFields(
     displayName,
     description,
     ...(author ? { author } : {}),
-    ...(categories ? { categories } : {}),
+    ...(category ? { category } : {}),
     manifest,
   };
 }
@@ -457,7 +457,7 @@ export interface MarketplaceExtensionDump {
   description: string;
   icon?: string;
   author?: MarketplaceExtensionAuthor;
-  categories?: string[];
+  category?: string;
   manifest: MarketplaceExtensionManifest;
 }
 
