@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
 
-import { readMarketplaceCatalog } from "./catalog.js";
+import { readMarketplaceCatalog, readMarketplaceCatalogForSource } from "./catalog.js";
 import { importPreparedDirectoryToPersonal } from "./import-zip.js";
-import type { MarketplaceHostContext } from "./resolve.js";
+import { listAllMarketplaceSources, type MarketplaceHostContext } from "./resolve.js";
 import { addMarketplaceSource } from "./sources.js";
 import { PERSONAL_MARKETPLACE_SOURCE_ID } from "./types.js";
 
@@ -16,6 +16,14 @@ async function writeUserRegistry(
   entryName: string,
   entryDisplayName?: string,
 ): Promise<void> {
+  await writeUserRegistryEntries(root, name, [[entryName, entryDisplayName ?? entryName]]);
+}
+
+async function writeUserRegistryEntries(
+  root: string,
+  name: string,
+  entries: ReadonlyArray<readonly [entryName: string, entryDisplayName: string]>,
+): Promise<void> {
   await mkdir(path.join(root, ".spirit"), { recursive: true });
   await writeFile(
     path.join(root, ".spirit", "marketplace.json"),
@@ -24,30 +32,30 @@ async function writeUserRegistry(
         schemaVersion: 1,
         name,
         displayName: name,
-        extensions: [
-          {
-            name: entryName,
-            version: "1.0.0",
-            source: `./extensions/${entryName}`,
-            displayName: entryDisplayName ?? entryName,
-            description: `${entryName} extension.`,
-            reviewStatus: "verified",
-            manifest: { supportedHosts: ["desktop"] },
-          },
-        ],
+        extensions: entries.map(([entryName, entryDisplayName]) => ({
+          name: entryName,
+          version: "1.0.0",
+          source: `./extensions/${entryName}`,
+          displayName: entryDisplayName,
+          description: `${entryName} extension.`,
+          reviewStatus: "verified",
+          manifest: { supportedHosts: ["desktop"] },
+        })),
       },
       null,
       2,
     )}\n`,
     "utf8",
   );
-  const contentDir = path.join(root, "extensions", entryName);
-  await mkdir(contentDir, { recursive: true });
-  await writeFile(
-    path.join(contentDir, "package.json"),
-    `${JSON.stringify({ name: entryName, version: "1.0.0" }, null, 2)}\n`,
-    "utf8",
-  );
+  for (const [entryName] of entries) {
+    const contentDir = path.join(root, "extensions", entryName);
+    await mkdir(contentDir, { recursive: true });
+    await writeFile(
+      path.join(contentDir, "package.json"),
+      `${JSON.stringify({ name: entryName, version: "1.0.0" }, null, 2)}\n`,
+      "utf8",
+    );
+  }
 }
 
 async function importPersonalExtension(
@@ -108,6 +116,33 @@ test("readMarketplaceCatalog merges every configured source", async () => {
     assert.ok(
       displayOrder.indexOf("Alpha User") < displayOrder.indexOf("Zebra Personal"),
       `expected global display-name order, got: ${displayOrder.join(", ")}`,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(registryRoot, { recursive: true, force: true });
+  }
+});
+
+test("readMarketplaceCatalogForSource sorts by display name, not file order", async () => {
+  const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-catalog-source-data-"));
+  const registryRoot = await mkdtemp(path.join(tmpdir(), "spirit-catalog-source-registry-"));
+  try {
+    const context: MarketplaceHostContext = { spiritDataDir, hostKind: "desktop" };
+    // File order is the reverse of display-name order.
+    await writeUserRegistryEntries(registryRoot, "registry-user", [
+      ["extension-zebra", "Zebra User"],
+      ["extension-alpha", "Alpha User"],
+    ]);
+    await addMarketplaceSource(context, registryRoot);
+
+    const sources = await listAllMarketplaceSources(context);
+    const source = sources.find((candidate) => candidate.name === "registry-user");
+    assert.ok(source);
+
+    const { items } = await readMarketplaceCatalogForSource(context, source);
+    assert.deepEqual(
+      items.map((item) => item.entry.displayName),
+      ["Alpha User", "Zebra User"],
     );
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });

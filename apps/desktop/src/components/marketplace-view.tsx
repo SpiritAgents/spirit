@@ -262,9 +262,9 @@ export function MarketplaceView({
       ? showAll
       : visibleSources.some((source) => source.id === activeSourceId);
   const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
-  // The All view merges every source's catalog and sorts globally by display
-  // name (per-source tabs keep the registry's curated order); each entry keeps
-  // its <sourceId>/<name> identity.
+  // Per-source catalogs arrive display-name sorted from the host; the All view
+  // merges every source and re-sorts with the same comparator so rows
+  // interleave across sources. Each entry keeps its <sourceId>/<name> identity.
   const catalog =
     resolvedActiveSourceId === "all"
       ? Object.values(catalogs)

@@ -62,8 +62,29 @@ function resolveEntryContentDir(
 }
 
 /**
+ * Catalog order everywhere: display name (zh-CN collation), then the
+ * <sourceId>/<name> id as tie-break (en collation). Per-source catalogs and
+ * the merged All catalog share it, so a single-source All view matches the
+ * source's own tab.
+ */
+function compareMarketplaceCatalogItems(
+  left: MarketplaceCatalogItem,
+  right: MarketplaceCatalogItem,
+): number {
+  return (
+    left.entry.displayName.localeCompare(right.entry.displayName, "zh-CN") ||
+    composeExtensionId(left.source.id, left.entry.name).localeCompare(
+      composeExtensionId(right.source.id, right.entry.name),
+      "en",
+    )
+  );
+}
+
+/**
  * Read one source's catalog: refresh the source, merge install state, and
  * compute per-entry update availability. Reading never crosses sources.
+ * Rows come back sorted by display name; the registry file order is
+ * authorship, not presentation.
  */
 export async function readMarketplaceCatalogForSource(
   context: MarketplaceHostContext,
@@ -101,6 +122,7 @@ export async function readMarketplaceCatalogForSource(
       } satisfies MarketplaceCatalogItem;
     });
 
+  items.sort(compareMarketplaceCatalogItems);
   return { items, ...(read.warning ? { warning: read.warning } : {}) };
 }
 
@@ -123,16 +145,9 @@ export async function readMarketplaceCatalog(
       continue;
     }
   }
-  // The merged view sorts globally by display name; per-source catalogs keep
-  // the registry's curated order.
-  items.sort(
-    (left, right) =>
-      left.entry.displayName.localeCompare(right.entry.displayName, "zh-CN") ||
-      composeExtensionId(left.source.id, left.entry.name).localeCompare(
-        composeExtensionId(right.source.id, right.entry.name),
-        "en",
-      ),
-  );
+  // Per-source catalogs arrive sorted; the merge re-sorts so rows interleave
+  // across sources instead of grouping by source.
+  items.sort(compareMarketplaceCatalogItems);
   return { items, warnings };
 }
 
