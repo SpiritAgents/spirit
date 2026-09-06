@@ -103,7 +103,7 @@ my-extension/
 | `description`   | Required. One-line summary                                                                                                                    |
 | `icon`          | Optional. SVG path relative to the extension root                                                                                             |
 | `author`        | Optional. `{ name, url? }`                                                                                                                    |
-| `categories`    | Optional. String array                                                                                                                        |
+| `category`      | Optional. Single string                                                                                                                       |
 | `manifest`      | Required. The runtime declaration — see [The manifest](#the-manifest)                                                                         |
 
 The dump carries no `source` or curation fields (`reviewStatus`, `featured`) — those belong to the marketplace entry.
@@ -384,7 +384,7 @@ Relative paths inside `marketplace.json` resolve against the marketplace root an
 Entry fields, by group:
 
 - **Identity** — `name` (kebab-case; the entry id), `version` (semver, no pre-release), and `source`: a root-relative path string like `"./extensions/my-extension"` for local content, or `{ "source": "npm", "package": "@scope/name@1.0.0" }` to pin an exact npm version (integrity is verified against the packument's SRI hash at install time).
-- **Display** — `displayName`, `description`, `icon` (root-relative SVG path), `categories`, `author`.
+- **Display** — `displayName`, `description`, `icon` (root-relative SVG path), `category`, `author`.
 - **Declaration** — `manifest`: the runtime declaration described in [The manifest](#the-manifest). The marketplace endorses it; a package cannot assert capabilities on its own.
 - **Curation** — `featured` and `reviewStatus` (`unverified` / `verified` / `revoked`).
 
