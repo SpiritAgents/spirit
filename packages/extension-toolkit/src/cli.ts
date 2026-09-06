@@ -14,6 +14,7 @@ import { parseArgs } from "node:util";
 import { checkMarketplaceRegistry } from "./check-marketplace.js";
 import { checkExtensionPackage, type CheckFinding } from "./check-package.js";
 import { runInitCommand } from "./cli-init.js";
+import { packExtension } from "./pack.js";
 
 const USAGE = `Usage: extension-toolkit <command> [path]
 
@@ -22,6 +23,8 @@ Commands:
                            with -h for the full option list)
   check [dir]              Validate an extension package directory (or an
                            installed extension with .spirit/extension.json)
+  pack [dir]               Pack an extension directory into a distributable
+                           <name>-<version>.zip (runs check first)
   marketplace check [dir]  Validate a marketplace registry (registry CI)
 
 Options:
@@ -67,6 +70,20 @@ async function main(): Promise<number> {
   if (command === "marketplace" && rest[0] === "check") {
     const target = path.resolve(rest[1] ?? ".");
     return printFindings(await checkMarketplaceRegistry(target));
+  }
+
+  if (command === "pack") {
+    const target = path.resolve(rest[0] ?? ".");
+    try {
+      const result = await packExtension(target, process.cwd());
+      process.stdout.write(
+        `Wrote ${result.zipPath} (${result.fileCount} files, ${result.name}@${result.version})\n`,
+      );
+      return 0;
+    } catch (error) {
+      process.stderr.write(`error: ${error instanceof Error ? error.message : String(error)}\n`);
+      return 1;
+    }
   }
 
   process.stderr.write(`Unknown command: ${positionals.join(" ")}\n\n${USAGE}`);

@@ -35,7 +35,8 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/create-extension": "workspace:*"
+    "@spiritagent/create-extension": "workspace:*",
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@types/node": "25.9.5",
