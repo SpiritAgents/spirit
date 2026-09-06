@@ -271,7 +271,7 @@ export function MarketplaceView({
           .flat()
           .sort(
             (left, right) =>
-              left.displayName.localeCompare(right.displayName, "zh-CN") ||
+              left.displayName.localeCompare(right.displayName, "en") ||
               left.id.localeCompare(right.id, "en"),
           )
       : (catalogs[resolvedActiveSourceId] ?? []);

@@ -202,7 +202,7 @@ export async function listMarketplaceCatalog(
   }
 
   return catalog.sort((left, right) =>
-    left.manifest.displayName.localeCompare(right.manifest.displayName, "zh-CN"),
+    left.manifest.displayName.localeCompare(right.manifest.displayName, "en"),
   );
 }
 

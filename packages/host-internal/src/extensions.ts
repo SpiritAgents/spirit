@@ -638,7 +638,7 @@ export async function listInstalledExtensions(
   }
 
   installed.sort((left, right) => {
-    const byName = left.manifest.displayName.localeCompare(right.manifest.displayName, "zh-CN");
+    const byName = left.manifest.displayName.localeCompare(right.manifest.displayName, "en");
     if (byName !== 0) {
       return byName;
     }

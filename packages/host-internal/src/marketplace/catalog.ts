@@ -62,17 +62,16 @@ function resolveEntryContentDir(
 }
 
 /**
- * Catalog order everywhere: display name (zh-CN collation), then the
- * <sourceId>/<name> id as tie-break (en collation). Per-source catalogs and
- * the merged All catalog share it, so a single-source All view matches the
- * source's own tab.
+ * Catalog order everywhere: display name, then the <sourceId>/<name> id as
+ * tie-break, both with en collation. Per-source catalogs and the merged All
+ * catalog share it, so a single-source All view matches the source's own tab.
  */
 function compareMarketplaceCatalogItems(
   left: MarketplaceCatalogItem,
   right: MarketplaceCatalogItem,
 ): number {
   return (
-    left.entry.displayName.localeCompare(right.entry.displayName, "zh-CN") ||
+    left.entry.displayName.localeCompare(right.entry.displayName, "en") ||
     composeExtensionId(left.source.id, left.entry.name).localeCompare(
       composeExtensionId(right.source.id, right.entry.name),
       "en",
