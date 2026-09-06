@@ -650,6 +650,41 @@ fn marketplace_view_renders_source_bar_and_catalog_rows() {
 }
 
 #[test]
+fn marketplace_view_hides_source_bar_when_no_source_tab_is_visible() {
+    let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
+    app.marketplace_view = Some(MarketplaceViewModel {
+        step: MarketplaceFlowStep::CatalogPicker,
+        query: String::new(),
+        error: None,
+        sources: Vec::new(),
+        active_source_index: 0,
+        catalog_items: Vec::new(),
+        selected_item: None,
+        detail: None,
+        slash: SlashFlowView {
+            title: "Extensions".to_string(),
+            subtitle: None,
+            search: Some(SlashFlowSearchView {
+                value: String::new(),
+                placeholder: "Search extensions".to_string(),
+            }),
+            empty_text: "No matching extensions.".to_string(),
+            selected_index: 0,
+            items: Vec::new(),
+            compact_items: true,
+            footer_hint: String::new(),
+        },
+    });
+
+    let lines = render_ui_lines(&app, 80, 24);
+    let snapshot = lines.join("\n");
+    assert!(
+        !snapshot.contains(t!("tui.marketplace.source_bar_label").as_ref()),
+        "source bar should hide when no source tab is visible, got:\n{snapshot}"
+    );
+}
+
+#[test]
 fn marketplace_detail_page_hugs_content_and_hides_id() {
     let mut app = build_view_model(ChatMessage::new(MessageRole::Agent, "welcome"));
     app.marketplace_view = Some(MarketplaceViewModel {

@@ -19,6 +19,24 @@ fn all_marketplace_source() -> CliMarketplaceSource {
     }
 }
 
+/// Visible source tabs: internal-source tabs hide while their catalog is empty
+/// for this host; user-added sources always keep their tab (the user added
+/// them explicitly).
+fn visible_marketplace_sources(
+    sources: Vec<CliMarketplaceSource>,
+    built_in_empty: bool,
+    personal_empty: bool,
+) -> Vec<CliMarketplaceSource> {
+    sources
+        .into_iter()
+        .filter(|source| match source.id.as_str() {
+            "built-in" => !built_in_empty,
+            "personal" => !personal_empty,
+            _ => true,
+        })
+        .collect()
+}
+
 /// Two-level marketplace flow (list → detail) over the multi-source backend.
 /// The source bar switches sources with Left/Right while the list keeps focus;
 /// entries pin exact versions, so there is no version picker and no README.
@@ -52,19 +70,49 @@ impl MarketplaceState {
 
 impl TuiShell {
     pub fn refresh_marketplace_catalog(&mut self) -> Result<()> {
-        self.marketplace.sources = self
+        let all_sources = self
             .runtime
             .list_marketplace_sources()
             .context(t!("tui.marketplace.catalog_read_failed").into_owned())?;
-        // The All pseudo source is pinned first and serves as the default view.
-        self.marketplace.sources.insert(0, all_marketplace_source());
+        // The merged catalog doubles as the tab-visibility signal: internal
+        // sources hide while they contribute no entries for this host.
+        let merged = self
+            .runtime
+            .list_marketplace_catalog(ALL_MARKETPLACE_SOURCE_ID)
+            .context(t!("tui.marketplace.catalog_read_failed").into_owned())?;
+        let has_entries =
+            |source_id: &str| merged.items.iter().any(|item| item.source_id == source_id);
+        let mut visible = visible_marketplace_sources(
+            all_sources,
+            !has_entries("built-in"),
+            !has_entries("personal"),
+        );
+        // The All pseudo source is pinned first and shows exactly when any tab
+        // shows — an all-empty marketplace hides the whole source bar.
+        if !visible.is_empty() {
+            visible.insert(0, all_marketplace_source());
+        }
+        self.marketplace.sources = visible;
         if self.marketplace.sources.is_empty() {
             self.marketplace.catalog = Vec::new();
         } else {
             if self.marketplace.active_source_index >= self.marketplace.sources.len() {
                 self.marketplace.active_source_index = 0;
             }
-            self.marketplace.catalog = self.load_active_source_catalog()?;
+            let active_is_all = self
+                .marketplace
+                .sources
+                .get(self.marketplace.active_source_index)
+                .is_some_and(|source| source.id == ALL_MARKETPLACE_SOURCE_ID);
+            if active_is_all {
+                // The All view reuses the merged catalog fetched for visibility.
+                if let Some(warning) = merged.warning.as_deref() {
+                    self.push_marketplace_warning(warning);
+                }
+                self.marketplace.catalog = merged.items;
+            } else {
+                self.marketplace.catalog = self.load_active_source_catalog()?;
+            }
         }
         logging::log_event(&format!(
             "[marketplace] refreshed sources={} items={}",
@@ -95,13 +143,17 @@ impl TuiShell {
                 .into_owned()
             })?;
         if let Some(warning) = response.warning.as_deref() {
-            self.messages.push(ChatMessage {
-                role: MessageRole::Agent,
-                content: warning.to_string(),
-                tool_block: None,
-            });
+            self.push_marketplace_warning(warning);
         }
         Ok(response.items)
+    }
+
+    fn push_marketplace_warning(&mut self, warning: &str) {
+        self.messages.push(ChatMessage {
+            role: MessageRole::Agent,
+            content: warning.to_string(),
+            tool_block: None,
+        });
     }
 
     /// Left/Right switches the source directly; the list keeps focus.
@@ -741,11 +793,62 @@ fn marketplace_source_tab_label(source: &CliMarketplaceSource) -> String {
 mod tests {
     use super::*;
 
+    fn source(id: &str, internal: bool) -> CliMarketplaceSource {
+        CliMarketplaceSource {
+            id: id.into(),
+            name: id.into(),
+            display_name: id.into(),
+            kind: "local".into(),
+            locator: String::new(),
+            git_ref: None,
+            added_at_unix_ms: 0,
+            internal,
+        }
+    }
+
+    fn source_ids(sources: &[CliMarketplaceSource]) -> Vec<&str> {
+        sources.iter().map(|source| source.id.as_str()).collect()
+    }
+
     #[test]
     fn all_pseudo_source_is_internal_with_the_reserved_id() {
         let source = all_marketplace_source();
         assert_eq!(source.id, ALL_MARKETPLACE_SOURCE_ID);
         assert!(source.internal);
+    }
+
+    #[test]
+    fn internal_source_tabs_hide_while_their_catalog_is_empty() {
+        let visible = visible_marketplace_sources(
+            vec![source("built-in", true), source("personal", true)],
+            false,
+            true,
+        );
+        assert_eq!(source_ids(&visible), vec!["built-in"]);
+    }
+
+    #[test]
+    fn user_sources_keep_their_tab_even_when_empty() {
+        let visible = visible_marketplace_sources(
+            vec![
+                source("built-in", true),
+                source("personal", true),
+                source("abc123", false),
+            ],
+            true,
+            true,
+        );
+        assert_eq!(source_ids(&visible), vec!["abc123"]);
+    }
+
+    #[test]
+    fn all_empty_internal_sources_leave_no_visible_tab() {
+        let visible = visible_marketplace_sources(
+            vec![source("built-in", true), source("personal", true)],
+            true,
+            true,
+        );
+        assert!(visible.is_empty());
     }
 
     #[test]

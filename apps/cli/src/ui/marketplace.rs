@@ -12,8 +12,11 @@ fn wrapped_line_count(lines: &[Line<'static>], width: u16) -> usize {
     for line in lines {
         let alignment = line.alignment.unwrap_or(Alignment::Left);
         let graphemes = line.styled_graphemes(Style::default()).collect::<Vec<_>>();
-        let mut composer =
-            WordWrapper::new(std::iter::once((graphemes.into_iter(), alignment)), width, true);
+        let mut composer = WordWrapper::new(
+            std::iter::once((graphemes.into_iter(), alignment)),
+            width,
+            true,
+        );
         while composer.next_line().is_some() {
             count += 1;
         }
@@ -114,14 +117,17 @@ pub(in crate::ui) fn draw_marketplace_catalog_picker(
     area: Rect,
     view: &MarketplaceViewModel,
 ) {
-    let source_bar_height: u16 = 1;
+    // The source bar hides when no source tab is visible (all sources empty).
+    let source_bar_height: u16 = if view.sources.is_empty() { 0 } else { 1 };
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(source_bar_height), Constraint::Min(1)])
         .split(area);
 
-    // Same inset as the list body below, so the bar starts where the ">" indicator does.
-    draw_marketplace_source_bar(frame, inline_picker_area(chunks[0]), view);
+    if source_bar_height > 0 {
+        // Same inset as the list body below, so the bar starts where the ">" indicator does.
+        draw_marketplace_source_bar(frame, inline_picker_area(chunks[0]), view);
+    }
     draw_slash_flow_body(
         frame,
         inline_picker_area(chunks[1]),
