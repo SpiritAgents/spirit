@@ -19,7 +19,6 @@ export const PLANS_DIR_NAME = "plans";
 export const RULES_STATE_FILE_NAME = "rules-state.json";
 export const SKILLS_STATE_FILE_NAME = "skills-state.json";
 export const EXTENSIONS_DIR_NAME = "extensions";
-export const EXTENSION_MANIFEST_FILE_NAME = "package.json";
 export const EXTENSIONS_INDEX_FILE_NAME = "extensions.json";
 export const EXTENSIONS_STATE_FILE_NAME = "extensions-state.json";
 export const EXTENSION_STATE_DIR_NAME = "extension-state";

@@ -5,6 +5,9 @@ import path from "node:path";
 import type { JsonValue } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import {
+  addMarketplaceSource,
+  ALL_MARKETPLACE_SOURCE_ID,
+  checkExtensionUpdate,
   createHostExtensionManager,
   createHostTodoStore,
   deleteHookEntry,
@@ -12,24 +15,35 @@ import {
   discoverSkillEntries,
   evaluateReadFilePermission,
   evaluateShellPermission,
+  getMarketplaceExtensionDetail,
+  installMarketplaceExtensionByName,
+  listAllMarketplaceSources,
   listCachedWorkspaceFileReferenceSuggestions,
   listHookListItems,
+  listMarketplaceCatalog,
   loadPermissionConfig,
+  MarketplaceReviewAcknowledgementRequiredError,
   planMetadataSnapshot,
   primeWorkspaceFileReferenceIndexCache,
+  readMarketplaceCatalog,
+  readMarketplaceCatalogForSource,
+  removeMarketplaceSource,
   resolveInstructionPaths,
   saveHookEntry,
   saveToggleState,
+  updateExtensionById,
   validateHooksConfig,
   collectEnabledExtensionInstructionContributions,
   installBuiltInExtension,
-  listMarketplaceCatalog,
+  type MarketplaceHostContext,
   type PermissionEvalResult,
 } from "@spiritagent/host-internal";
 
 import {
   serializeListedHostExtension,
   serializeListedMarketplaceCatalogItem,
+  serializeMarketplaceCatalogItem,
+  serializeMarketplaceSource,
 } from "./host-serializers.js";
 import type { SessionManager } from "./session-manager.js";
 
@@ -47,6 +61,10 @@ export class HostService {
 
   private extensionManager(hostKind: "cli" | "desktop") {
     return createHostExtensionManager({ spiritDataDir: this.spiritDataDir, hostKind });
+  }
+
+  private marketplaceHostContext(hostKind: "cli" | "desktop"): MarketplaceHostContext {
+    return { spiritDataDir: this.spiritDataDir, hostKind };
   }
 
   private static readWorkspaceRoot(params: Record<string, unknown>): string {
@@ -250,9 +268,35 @@ export class HostService {
         return { id, enabled };
       }
       case "host.listMarketplaceCatalog": {
+        const hostKind = HostService.readHostKind(params);
+        const sourceId = typeof params["sourceId"] === "string" ? params["sourceId"].trim() : "";
+        if (sourceId === ALL_MARKETPLACE_SOURCE_ID) {
+          // UI-level pseudo source: the merged catalog over every added source.
+          const context = this.marketplaceHostContext(hostKind);
+          const read = await readMarketplaceCatalog(context);
+          return {
+            items: read.items.map((item) => serializeMarketplaceCatalogItem(item)),
+            ...(read.warnings.length > 0 ? { warning: read.warnings.join("\n") } : {}),
+          };
+        }
+        if (sourceId) {
+          // Multi-source per-source catalog (new shape).
+          const context = this.marketplaceHostContext(hostKind);
+          const sources = await listAllMarketplaceSources(context);
+          const source = sources.find((candidate) => candidate.id === sourceId);
+          if (!source) {
+            throw new Error(`No marketplace with id "${sourceId}" is configured.`);
+          }
+          const read = await readMarketplaceCatalogForSource(context, source);
+          return {
+            items: read.items.map((item) => serializeMarketplaceCatalogItem(item)),
+            ...(read.warning ? { warning: read.warning } : {}),
+          };
+        }
+        // Legacy shape: built-in registry catalog merged with installed state.
         const items = await listMarketplaceCatalog({
           spiritDataDir: this.spiritDataDir,
-          hostKind: HostService.readHostKind(params),
+          hostKind,
         });
         return Promise.all(items.map((item) => serializeListedMarketplaceCatalogItem(item)));
       }
@@ -268,6 +312,128 @@ export class HostService {
         });
         await this.sessions.refreshExtensions();
         return serializeListedHostExtension(item);
+      }
+
+      // ------------------------------------------- marketplace sources (multi-source)
+      case "host.listMarketplaceSources": {
+        const context = this.marketplaceHostContext(HostService.readHostKind(params));
+        const sources = await listAllMarketplaceSources(context);
+        return sources.map((record) => serializeMarketplaceSource(record));
+      }
+      case "host.addMarketplaceSource": {
+        const locator = typeof params["locator"] === "string" ? params["locator"].trim() : "";
+        if (!locator) {
+          throw new Error("missing locator");
+        }
+        const ref =
+          typeof params["ref"] === "string" && params["ref"].trim()
+            ? params["ref"].trim()
+            : undefined;
+        const record = await addMarketplaceSource(
+          { spiritDataDir: this.spiritDataDir },
+          locator,
+          ref ? { ref } : undefined,
+        );
+        return serializeMarketplaceSource(record);
+      }
+      case "host.removeMarketplaceSource": {
+        const name = typeof params["name"] === "string" ? params["name"].trim() : "";
+        if (!name) {
+          throw new Error("missing marketplace name");
+        }
+        const removed = await removeMarketplaceSource({ spiritDataDir: this.spiritDataDir }, name);
+        return serializeMarketplaceSource(removed);
+      }
+      case "host.getMarketplaceExtensionDetail": {
+        const sourceId = typeof params["sourceId"] === "string" ? params["sourceId"].trim() : "";
+        const name = typeof params["name"] === "string" ? params["name"].trim() : "";
+        if (!sourceId || !name) {
+          throw new Error("missing sourceId or name");
+        }
+        const item = await getMarketplaceExtensionDetail(
+          this.marketplaceHostContext(HostService.readHostKind(params)),
+          sourceId,
+          name,
+        );
+        return serializeMarketplaceCatalogItem(item);
+      }
+      case "host.installMarketplaceExtension": {
+        const name = typeof params["name"] === "string" ? params["name"].trim() : "";
+        if (!name) {
+          throw new Error("missing extension name");
+        }
+        const marketplace =
+          typeof params["marketplace"] === "string" && params["marketplace"].trim()
+            ? params["marketplace"].trim()
+            : undefined;
+        const reviewAcknowledged = params["reviewAcknowledged"] === true;
+        try {
+          const item = await installMarketplaceExtensionByName(
+            this.marketplaceHostContext(HostService.readHostKind(params)),
+            name,
+            { ...(marketplace ? { marketplace } : {}), reviewAcknowledged },
+          );
+          await this.sessions.refreshExtensions();
+          return { status: "installed", extension: await serializeListedHostExtension(item) };
+        } catch (error) {
+          if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+            return {
+              status: "review-required",
+              extensionId: error.extensionId,
+              reviewStatus: error.reviewStatus,
+            };
+          }
+          throw error;
+        }
+      }
+      case "host.updateExtension": {
+        const id = typeof params["id"] === "string" ? params["id"].trim() : "";
+        if (!id) {
+          throw new Error("missing extension id");
+        }
+        const reviewAcknowledged = params["reviewAcknowledged"] === true;
+        try {
+          const updated = await updateExtensionById(
+            this.marketplaceHostContext(HostService.readHostKind(params)),
+            id,
+            { reviewAcknowledged },
+          );
+          if (!updated) {
+            return { status: "up-to-date", id };
+          }
+          await this.sessions.refreshExtensions();
+          return { status: "updated", extension: await serializeListedHostExtension(updated) };
+        } catch (error) {
+          if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+            return {
+              status: "review-required",
+              extensionId: error.extensionId,
+              reviewStatus: error.reviewStatus,
+            };
+          }
+          throw error;
+        }
+      }
+      case "host.checkExtensionUpdate": {
+        const id = typeof params["id"] === "string" ? params["id"].trim() : "";
+        if (!id) {
+          throw new Error("missing extension id");
+        }
+        const update = await checkExtensionUpdate(
+          this.marketplaceHostContext(HostService.readHostKind(params)),
+          id,
+        );
+        if (!update) {
+          return { id, updateAvailable: false };
+        }
+        return {
+          id,
+          updateAvailable: true,
+          installedVersion: update.installedVersion,
+          version: update.entry.version,
+          reviewStatus: update.entry.reviewStatus,
+          ...(update.warning ? { warning: update.warning } : {}),
+        };
       }
       // -------------------------------------------------------------- todos
       case "host.listSessionTodos": {
@@ -386,6 +552,13 @@ export const HOST_METHODS = new Set([
   "host.setExtensionEnabled",
   "host.listMarketplaceCatalog",
   "host.installBuiltInExtension",
+  "host.listMarketplaceSources",
+  "host.addMarketplaceSource",
+  "host.removeMarketplaceSource",
+  "host.getMarketplaceExtensionDetail",
+  "host.installMarketplaceExtension",
+  "host.updateExtension",
+  "host.checkExtensionUpdate",
   "host.listSessionTodos",
   "host.replaceSessionTodos",
   "host.mcp",

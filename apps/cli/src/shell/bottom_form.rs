@@ -2461,16 +2461,10 @@ fn extension_help_text(entry: &CliExtensionEntry) -> String {
     if let Some(author) = entry
         .author
         .as_ref()
-        .filter(|value| !value.trim().is_empty())
+        .map(|value| value.name.trim())
+        .filter(|value| !value.is_empty())
     {
         lines.push(format!("author: {}", author));
-    }
-    if let Some(homepage) = entry
-        .homepage
-        .as_ref()
-        .filter(|value| !value.trim().is_empty())
-    {
-        lines.push(format!("homepage: {}", homepage));
     }
     if let Some(main) = entry.main.as_ref().filter(|value| !value.trim().is_empty()) {
         lines.push(format!("main: {}", main));
@@ -3704,8 +3698,10 @@ mod tests {
             version: "0.1.0".to_string(),
             enabled: true,
             description: Some("A metadata-only extension fixture.".to_string()),
-            author: Some("Spirit".to_string()),
-            homepage: Some("https://example.com/extensions/basic-metadata-demo".to_string()),
+            author: Some(crate::host_protocol::cli_public::CliExtensionAuthor {
+                name: "Spirit".to_string(),
+                url: None,
+            }),
             main: Some("dist/index.js".to_string()),
             supported_hosts: vec!["cli".to_string(), "desktop".to_string()],
             activation_events: None,

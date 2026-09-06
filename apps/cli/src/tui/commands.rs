@@ -782,6 +782,14 @@ impl TuiShell {
         };
 
         match subcommand {
+            // Two-level marketplace TUI (list → detail) over the configured sources.
+            "marketplace" => {
+                let query = tail
+                    .strip_prefix("marketplace")
+                    .map(str::trim)
+                    .unwrap_or("");
+                self.open_marketplace_view(if query.is_empty() { None } else { Some(query) });
+            }
             "list" if tail == "list" => match self.refresh_extensions_from_disk() {
                 Ok(()) => {
                     self.push_agent_message(format_extension_list_message(self.extension_entries()))
@@ -869,83 +877,6 @@ impl TuiShell {
                 }
             }
             _ => self.push_agent_message(t!("tui.extensions.usage").into_owned()),
-        }
-    }
-
-    pub(crate) fn handle_marketplace_slash(&mut self, message: &str) {
-        let tail = message
-            .strip_prefix("/marketplace")
-            .map(str::trim)
-            .unwrap_or("");
-        if tail.is_empty() {
-            self.open_marketplace_picker(None);
-            return;
-        }
-
-        let Some(subcommand) = tail.split_whitespace().next() else {
-            self.push_agent_message(t!("tui.marketplace.usage").into_owned());
-            return;
-        };
-
-        match subcommand {
-            "list" if tail == "list" => match self.reload_marketplace_catalog(None) {
-                Ok(()) => self
-                    .push_agent_message(format_marketplace_list_message(&self.marketplace_catalog)),
-                Err(err) => self
-                    .push_agent_message(t!("tui.marketplace.read_failed", err = err).into_owned()),
-            },
-            "install" => {
-                let id = tail.strip_prefix("install").map(str::trim).unwrap_or("");
-                if id.is_empty() {
-                    self.push_agent_message(t!("tui.marketplace.usage").into_owned());
-                    return;
-                }
-
-                match self.runtime.install_built_in_extension(id) {
-                    Ok(extension) => {
-                        if let Err(err) = self.refresh_extensions_from_disk() {
-                            self.push_agent_message(
-                                t!("tui.extensions.refresh_failed", err = err).into_owned(),
-                            );
-                            return;
-                        }
-
-                        self.push_agent_message(
-                            t!("tui.marketplace.installed", name = extension.display_name)
-                                .into_owned(),
-                        );
-                    }
-                    Err(err) => self.push_agent_message(
-                        t!("tui.marketplace.install_failed", err = err).into_owned(),
-                    ),
-                }
-            }
-            "remove" => {
-                let id = tail.strip_prefix("remove").map(str::trim).unwrap_or("");
-                if id.is_empty() {
-                    self.push_agent_message(t!("tui.marketplace.usage").into_owned());
-                    return;
-                }
-
-                match self.runtime.delete_extension(id) {
-                    Ok(()) => {
-                        if let Err(err) = self.refresh_extensions_from_disk() {
-                            self.push_agent_message(
-                                t!("tui.extensions.refresh_failed", err = err).into_owned(),
-                            );
-                            return;
-                        }
-
-                        self.push_agent_message(
-                            t!("tui.marketplace.removed", id = id).into_owned(),
-                        );
-                    }
-                    Err(err) => self.push_agent_message(
-                        t!("tui.marketplace.remove_failed", err = err).into_owned(),
-                    ),
-                }
-            }
-            _ => self.open_marketplace_picker(Some(tail)),
         }
     }
 
@@ -1534,7 +1465,8 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
         if let Some(author) = entry
             .author
             .as_ref()
-            .filter(|value| !value.trim().is_empty())
+            .map(|value| value.name.trim())
+            .filter(|value| !value.is_empty())
         {
             lines.push(format!("  author: {}", author));
         }
@@ -1547,39 +1479,6 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
             .filter(|value| !value.trim().is_empty())
         {
             lines.push(format!("  source: {}", file_name));
-        }
-    }
-
-    lines.join("\n")
-}
-
-fn format_marketplace_list_message(entries: &[CliExtensionEntry]) -> String {
-    if entries.is_empty() {
-        return t!("tui.marketplace.list_empty").into_owned();
-    }
-
-    let mut lines = vec![t!("tui.marketplace.list_header").into_owned()];
-    for entry in entries {
-        lines.push(format!("- {}", entry.display_name));
-        lines.push(format!("  id: {}", entry.id));
-        lines.push(format!("  version: {}", entry.version));
-        lines.push(format!(
-            "  installed: {}",
-            if entry.installed { "yes" } else { "no" }
-        ));
-        if let Some(description) = entry
-            .description
-            .as_ref()
-            .filter(|value| !value.trim().is_empty())
-        {
-            lines.push(format!("  description: {}", description));
-        }
-        if let Some(source) = entry
-            .install_source
-            .as_ref()
-            .filter(|value| !value.trim().is_empty())
-        {
-            lines.push(format!("  source: {}", source));
         }
     }
 

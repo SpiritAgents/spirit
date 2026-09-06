@@ -1,144 +1,123 @@
 ---
 title: 拡張機能
-description: パッケージレイアウト、spiritExtensionフィールド、activate API。
+description: npm create ウィザードまたは手動で拡張機能を作成し、独自のリモート拡張機能マーケットプレイスを運営します。
 ---
 
-拡張機能は、`spiritExtension` を含む `package.json` を持つフォルダです。Spirit はこれをワークスペースの `.spirit/` ディレクトリではなく、ユーザーごと、ホストごとにインストールします。
+拡張機能は、`.spirit/extension.json`（Spirit マニフェストダンプ）と純粋な npm の `package.json` を持つフォルダーです。Spirit は拡張機能をユーザーごと・ホストごとにインストールし、ワークスペースの `.spirit/` には置きません。各インストールは入手元のマーケットプレイスでスコープされます：インストール ID は `(ソース id, name)` です。
 
-| ホスト  | パス                                  |
-| ------- | ------------------------------------- |
-| Desktop | `{spiritDataDir}/extensions/desktop/` |
-| CLI     | `{spiritDataDir}/extensions/cli/`     |
+| ホスト  | パス                                                    |
+| ------- | ------------------------------------------------------- |
+| Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
+| CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-これは [Skills](../customize/skills.mdx)（`SKILL.md` フォルダ）、[MCP](../customize/mcp.mdx)（外部サーバー）、[Hooks](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットをスタイルします。これは `hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言したうえで、同じファイル規約でこれらを同梱できます。
+これは [Skills](../customize/skills.mdx)（`SKILL.md` フォルダー）、[MCP](../customize/mcp.mdx)（外部サーバー）、[Hooks](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットにスタイルを適用するもので、`hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言すれば、同じファイル群を*バンドル*することもできます。
 
-インストール済みの拡張機能には有効化スイッチがあります。無効化またはアンインストールすると貢献は停止します。スイッチをオンにすることは、宣言した MCP、agent hooks、skills、rules の実行に同意することです。
+インストール済みの各拡張機能には有効スイッチがあります。無効化またはアンインストールすると貢献は停止します。拡張機能を有効にすることは、宣言された MCP サーバー、エージェントフック、スキル、ルールの実行に同意することを意味します。
 
-## パッケージレイアウト
+## 拡張機能を作成する
+
+<Tabs items={["コマンドラインで作成", "手動で作成"]}>
+<Tab value="コマンドラインで作成">
+
+作成ウィザードで新しい拡張機能をスキャフォールドします：
+
+<Tabs items={["npm", "pnpm", "Bun", "Yarn", "Deno"]}>
+<Tab value="npm">
+
+```bash
+npm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Bun">
+
+```bash
+bun create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Yarn">
+
+```bash
+yarn create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Deno">
+
+```bash
+deno init --npm @spiritagent/extension
+```
+
+</Tab>
+</Tabs>
+
+ウィザードは拡張機能名（kebab-case）、表示名、一行の説明、スキャフォールドする機能を尋ねます。`package.json`、`icon.svg`、`.spirit/extension.json` を書き込み、選んだ機能に応じたファイル（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`）を追加し、終了時にそのまま貼り付けられるマーケットプレイスエントリを出力します。
+
+スクリプト化する場合、すべての質問にフラグがあります：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`、確認をスキップする `--yes`。
+
+結果はいつでも検証できます：
+
+```bash
+npx @spiritagent/extension-toolkit check ./my-extension
+```
+
+</Tab>
+<Tab value="手動で作成">
+
+拡張機能ディレクトリに必要なのは `.spirit/extension.json` と `package.json` の 2 ファイルだけ、そして宣言する機能ファイルです：
 
 ```text
-example-extension/
-  package.json
-  dist/index.js
-  assets/icon.svg
-  styles/desktop.css
-  cli-hooks.json
-  mcp.json
-  hooks.json
-  rule.md
-  skills/example/SKILL.md
+my-extension/
+  .spirit/
+    extension.json        # Spirit マニフェストダンプ（必須）
+  package.json            # 純粋な npm。読み込まれるのは `main` のみ
+  icon.svg                # 任意。SVG のみ、<script> 禁止
+  index.mjs               # 任意。`main` が参照する activate エントリ
+  mcp.json                # mcp を宣言する場合
+  hooks.json              # hooks を宣言する場合（agent hooks）
+  rule.md                 # rules を宣言する場合
+  skills/<name>/SKILL.md  # skills を宣言する場合
+  styles.css              # desktop CSS を宣言する場合（パスはマニフェストから参照）
+  cli-hooks.json          # CLI hooks を宣言する場合（パスはマニフェストから参照）
 ```
 
-```json
-{
-  "name": "@example/spirit-extension",
-  "version": "0.1.0",
-  "description": "Example Spirit extension.",
-  "author": { "name": "example" },
-  "homepage": "https://example.com/spirit-extension",
-  "main": "dist/index.js",
-  "spiritExtension": {
-    "schemaVersion": 1,
-    "displayName": "Example extension",
-    "icon": "assets/icon.svg",
-    "supportedHosts": ["cli", "desktop"],
-    "activationEvents": ["onStartup", "onUserMessage"],
-    "requestedCapabilities": [
-      "tool-definitions",
-      "tool-execution",
-      "system-prompt",
-      "settings",
-      "secret-storage",
-      "desktop-ui",
-      "cli-ui",
-      "mcp",
-      "hooks",
-      "skills",
-      "rules"
-    ],
-    "contributes": {
-      "tools": [
-        {
-          "name": "lookup_item",
-          "description": "Look up an item by id.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" }
-            },
-            "required": ["id"]
-          },
-          "approvalMode": "allowed",
-          "executionMode": "foreground"
-        }
-      ],
-      "desktop": {
-        "css": [{ "path": "styles/desktop.css" }],
-        "settingsPage": { "title": "Example extension" }
-      },
-      "cli": {
-        "hooks": { "path": "cli-hooks.json" }
-      },
-      "mcp": true,
-      "hooks": true,
-      "skills": true,
-      "rules": true
-    },
-    "settingsSchema": [
-      {
-        "key": "region",
-        "type": "select",
-        "title": "Region",
-        "required": true,
-        "defaultValue": "us",
-        "options": [
-          { "value": "us", "label": "US" },
-          { "value": "eu", "label": "EU" }
-        ]
-      }
-    ],
-    "secretSlots": [
-      {
-        "key": "api_token",
-        "title": "API token",
-        "required": true
-      }
-    ]
-  }
-}
-```
+`package.json` に Spirit のフィールドはありません——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` は純粋な npm のままです。ホストが読むのは `main` のみ、つまり [`activate`](#activate) のモジュールエントリです。
 
-`package.json` の `name` は拡張機能 ID です。`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$` に一致する必要があります。
+`.spirit/extension.json` のフィールド：
 
-## `package.json` フィールド
+| フィールド      | 説明                                                                                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | 必須。`1` 固定                                                                                                                                       |
+| `name`          | 必須。kebab-case。マーケットプレイス内のエントリ id                                                                                                  |
+| `version`       | 必須。semver `major.minor.patch`。プレリリース suffix は未対応                                                                                       |
+| `sourceId`      | 必須。所属マーケットプレイスのソース id。ZIP パッケージは任意の値を自己宣言できます（例：`"self-declared"`）。インストールパイプラインが書き換えます |
+| `displayName`   | 必須。ユーザーに表示される名前                                                                                                                       |
+| `description`   | 必須。一行の概要                                                                                                                                     |
+| `icon`          | 任意。拡張機能ルートからの相対 SVG パス                                                                                                              |
+| `author`        | 任意。`{ name, url? }`                                                                                                                               |
+| `categories`    | 任意。文字列配列                                                                                                                                     |
+| `manifest`      | 必須。ランタイム宣言——後述の「`manifest`」節を参照                                                                                                   |
 
-| フィールド        | 説明                                                                                                                    |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `name`            | 必須。npm パッケージ名。拡張機能 ID として使用されます                                                                  |
-| `version`         | 必須。バージョン文字列                                                                                                  |
-| `spiritExtension` | 必須。オブジェクト。以下を参照                                                                                          |
-| `description`     | 任意。文字列                                                                                                            |
-| `author`          | 任意。文字列または `{ name }`                                                                                           |
-| `homepage`        | 任意。文字列                                                                                                            |
-| `main`            | 任意。`activate` エントリへの相対パス。`activationEvents`、ツール実行、またはシステムプロンプトを使用する場合に必要です |
+ダンプに `source` やキュレーションフィールド（`reviewStatus`、`featured`）は含まれません——それらはマーケットプレイスエントリのものです。
 
-`main`、`spiritExtension.icon`、CSS パス、CLI フックパスは相対パスで、パッケージ内に収まる必要があります。
+宣言したファイルは存在し、かつ有効でなければなりません：`mcp`、`hooks`、`skills`、`rules` を宣言しながら対応ファイルがない場合、検証とインストールは失敗します。存在するが宣言されていないファイルは無視され、読み込まれません。
 
-## `spiritExtension`
+</Tab>
+</Tabs>
 
-| フィールド              | 説明                                                                      |
-| ----------------------- | ------------------------------------------------------------------------- |
-| `schemaVersion`         | 任意。デフォルトは `1`。サポートされているのは `1` のみ                   |
-| `displayName`           | 必須。ユーザーに表示される名前                                            |
-| `icon`                  | 任意。パッケージルートからの相対パス                                      |
-| `supportedHosts`        | 必須。`cli` または `desktop` の非空配列                                   |
-| `activationEvents`      | 任意。[アクティベーションイベント](#activation-events) を参照             |
-| `requestedCapabilities` | 任意。[機能](#capabilities) を参照                                        |
-| `contributes`           | 任意。`tools`、`desktop`、`cli`、`mcp`、`hooks`、`skills`、または `rules` |
-| `settingsSchema`        | 任意。設定定義                                                            |
-| `secretSlots`           | 任意。シークレットスロット定義                                            |
+## `manifest`
 
-## 機能
+`manifest` オブジェクトは拡張機能のランタイム宣言です：どのホストをサポートし、いつアクティブになり、何を貢献するか。マーケットプレイスエントリでは、マニフェストはマーケットプレイス運営者によって裏付けられます。ZIP パッケージでは自己宣言であり、レビュー確認ゲートでゲートされます。
+
+### 機能
 
 | 値                   | ランタイム                                                                       |
 | -------------------- | -------------------------------------------------------------------------------- |
@@ -159,12 +138,12 @@ example-extension/
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` と対応する `contributes` は、両方存在するか、両方存在しないかのどちらかでなければなりません。
 
-## アクティベーションイベント
+### アクティベーションイベント
 
 | イベント               | 発火タイミング                     |
 | ---------------------- | ---------------------------------- |
 | `onStartup`            | ホストのウォームアップ             |
-| `onExtensionInstalled` | ZIPからのインストール後            |
+| `onExtensionInstalled` | インストール完了後                 |
 | `onSessionOpened`      | セッションがアクティブになったとき |
 | `onSessionReset`       | セッションのリセット               |
 | `onUserMessage`        | ユーザーがメッセージを送信したとき |
@@ -174,7 +153,7 @@ example-extension/
 
 ホストは、拡張機能がイベントをリストし、読み取り可能な `main` を持っている場合に `activate` を呼び出します。
 
-## `contributes.tools`
+### `contributes.tools`
 
 | フィールド      | 説明                                                      |
 | --------------- | --------------------------------------------------------- |
@@ -187,7 +166,7 @@ example-extension/
 
 モデルは `name` をそのまま認識しません。ホストは `extension__{id}__{tool}__{hash}` のような呼び出し名を構築します。
 
-## `contributes.desktop`
+### `contributes.desktop`
 
 `desktop-ui` が必要です。
 
@@ -197,7 +176,7 @@ example-extension/
 | `css[].media`  | 任意。CSSメディアクエリ                                                    |
 | `settingsPage` | 任意。`true`、`{}`、または `{ title }` — Desktopの設定エントリを追加します |
 
-## `contributes.cli`
+### `contributes.cli`
 
 `cli-ui` が必要です。`hooks` はインライン配列ではなく、`path` を持つオブジェクトです:
 
@@ -235,7 +214,7 @@ example-extension/
 }
 ```
 
-## バンドルする MCP、hooks、skills、rules
+### バンドルする MCP、hooks、skills、rules
 
 対応する capability が必要です。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` は `true` または `{}` です。パスは規約どおりで、カスタム path はできません。
 
@@ -252,7 +231,7 @@ example-extension/
 
 拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | Hooks | Skills | Rules** には出ません。名前の衝突は workspace > user > extension です。
 
-## `settingsSchema`
+### `settingsSchema`
 
 | フィールド     | 説明                                                       |
 | -------------- | ---------------------------------------------------------- |
@@ -267,7 +246,7 @@ example-extension/
 
 値は `string`, `number`, `boolean`, または `null` です。`null` は必須でない設定をクリアします。
 
-## `secretSlots`
+### `secretSlots`
 
 | フィールド    | 説明           |
 | ------------- | -------------- |
@@ -358,8 +337,68 @@ export function activate(ctx) {
 }
 ```
 
-## インストール
+## ZIP として配布する
 
-- **ZIP** — アーカイブには正確に 1 つの `package.json` が含まれている必要があります（サブディレクトリにある場合もあります）。`spirit extension import ./extension.zip` または **Extensions** ページでインポートします。
+拡張機能ディレクトリを共有可能な ZIP 形式（コンテンツと `.spirit/extension.json`）にパックします：
 
-`supportedHosts` には現在のホストが含まれている必要があります。同じ ID の 2 回目のインストールは、デフォルトでは既存のコピーを置き換えません。
+```bash
+npx @spiritagent/extension-toolkit pack ./my-extension
+```
+
+このコマンドはまずパッケージを検証し、`<name>-<version>.zip` をカレントディレクトリに書き込みます。ユーザーは**拡張機能**ページまたは `spirit extension import` で ZIP をインポートします。それは個人マーケットプレイスに登録されます。[拡張機能](../customize/extensions.mdx)を参照してください。
+
+## リモート拡張機能マーケットプレイスを運営する
+
+リモート拡張機能マーケットプレイスとは、`.spirit/marketplace.json` インデックスを提供するサービス可能なディレクトリです：Git リポジトリ、静的サイト、またはローカルディレクトリ。ユーザーは `spirit extension marketplace add <url|path>` または Desktop の**拡張機能**ページで追加し、エントリを閲覧・インストールします。
+
+<Tabs items={["テンプレートリポジトリ", "手動で作成"]}>
+<Tab value="テンプレートリポジトリ">
+
+[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) から `SpiritAgents/extension-template` を使って独自のマーケットプレイスリポジトリを作成できます。
+
+テンプレートにはレジストリレイアウト、2 つのサンプル拡張機能、そして push と pull request のたびにレジストリを検証する CI が含まれています。拡張機能を公開するには：
+
+1. `npm create @spiritagent/extension` でスキャフォールドする。
+2. 拡張機能フォルダーを `extensions/` に移動する。
+3. ウィザードが出力したレジストリエントリを `.spirit/marketplace.json` に追加する。
+4. プッシュする——ユーザーはその Git URL でマーケットプレイスを追加します。
+
+</Tab>
+<Tab value="手動で作成">
+
+マーケットプレイスのルートは、インデックスと拡張機能ごとのコンテンツディレクトリを保持します：
+
+```text
+my-marketplace/
+  .spirit/
+    marketplace.json  # インデックス
+  extensions/
+    my-extension/     # コンテンツディレクトリ（純粋な npm パッケージ + 機能ファイル）
+      icon.svg
+      package.json
+      ...
+```
+
+`marketplace.json` 内の相対パスはマーケットプレイスルートを基準に解決され、`..` セグメントや絶対パスは許可されません。
+
+エントリのフィールドを意味グループ別に：
+
+- **ID**——`name`（kebab-case。エントリ id）、`version`（semver。プレリリースなし）、`source`：ローカルコンテンツの場合はルート相対パス文字列（例：`"./extensions/my-extension"`）、または `{ "source": "npm", "package": "@scope/name@1.0.0" }` で正確な npm バージョンを固定（インストール時に packument の SRI ハッシュで整合性が検証されます）。
+- **表示**——`displayName`、`description`、`icon`（ルート相対 SVG パス）、`categories`、`author`。
+- **宣言**——`manifest`：前述の「`manifest`」節で説明したランタイム宣言。マーケットプレイスがこれを裏付けます。パッケージが単独で機能を主張することはできません。
+- **キュレーション**——`featured` と `reviewStatus`（`unverified` / `verified` / `revoked`）。
+
+レジストリをローカルで検証——オフライン：schema、kebab-case 名、プレリリースなしの semver、npm source 形式、ローカル source の宣言-コンテンツファイル、アイコンルール：
+
+```bash
+npx -y @spiritagent/extension-toolkit marketplace check .
+```
+
+レビュー規律：エントリを追加する、または `version` を変更する PR は `reviewStatus: "unverified"` を維持しなければなりません。人間のレビュー後に別コミットで `verified` に昇格させます。テンプレートリポジトリの `.github/workflows/marketplace.yml` が参照実装です——PR ベースに対してインデックスを diff します。
+
+</Tab>
+</Tabs>
+
+### ローカルマーケットプレイス
+
+`.spirit/marketplace.json` を持つ任意のローカルディレクトリはマーケットプレイスとして追加できます——`spirit extension marketplace add <path>` または Desktop の**ディスクから追加…**で。ローカルマーケットプレイスはその場で読み取られ、CI は不要です。拡張機能作者の開発ループとしても使えます：編集、再インストール、繰り返し。

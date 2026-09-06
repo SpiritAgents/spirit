@@ -1,144 +1,123 @@
 ---
 title: Extensions
-description: Package layout, spiritExtension fields, and the activate API.
+description: Create extensions with the npm create wizard or by hand, and run your own extension marketplace.
 ---
 
-An extension is a folder with a `package.json` that contains `spiritExtension`. Spirit installs it per user and per host, not under the workspace `.spirit/` directory.
+An extension is a folder with a `.spirit/extension.json` — the Spirit manifest dump — next to a pure-npm `package.json`. Spirit installs extensions per user and per host, not under the workspace `.spirit/` directory, and scopes each install by the marketplace it came from: the install identity is `(source id, name)`.
 
-| Host    | Path                                  |
-| ------- | ------------------------------------- |
-| Desktop | `{spiritDataDir}/extensions/desktop/` |
-| CLI     | `{spiritDataDir}/extensions/cli/`     |
+| Host    | Path                                                    |
+| ------- | ------------------------------------------------------- |
+| Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
+| CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
 That is different from [Skills](../customize/skills.mdx) (`SKILL.md` folders), [MCP](../customize/mcp.mdx) (external servers), and [Hooks](../customize/hooks.mdx) (`hooks.json` scripts). `contributes.cli.hooks` styles CLI TUI slots. It is not `hooks.json`. An extension can still _bundle_ those same files when it declares `mcp`, `hooks`, `skills`, or `rules`.
 
 Each installed extension has an enable switch. Disable or uninstall it to stop its contributions. Turning the extension on is consent to run the MCP servers, agent hooks, skills, and rules it declared.
 
-## Package layout
+## Create an extension
+
+<Tabs items={["Command line", "Manual"]}>
+<Tab value="Command line">
+
+Scaffold a new extension with the create wizard:
+
+<Tabs items={["npm", "pnpm", "Bun", "Yarn", "Deno"]}>
+<Tab value="npm">
+
+```bash
+npm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Bun">
+
+```bash
+bun create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Yarn">
+
+```bash
+yarn create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Deno">
+
+```bash
+deno init --npm @spiritagent/extension
+```
+
+</Tab>
+</Tabs>
+
+The wizard asks for an extension name (kebab-case), a display name, a one-line description, and the capabilities to scaffold. It writes `package.json`, `icon.svg`, and `.spirit/extension.json`, plus the files for the capabilities you picked (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), and prints a ready-to-paste marketplace entry when it finishes.
+
+For scripting, every prompt has a flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, and `--yes` to skip confirmation.
+
+Validate the result at any time:
+
+```bash
+npx @spiritagent/extension-toolkit check ./my-extension
+```
+
+</Tab>
+<Tab value="Manual">
+
+An extension directory needs only two files — `.spirit/extension.json` and `package.json` — plus the capability files it declares:
 
 ```text
-example-extension/
-  package.json
-  dist/index.js
-  assets/icon.svg
-  styles/desktop.css
-  cli-hooks.json
-  mcp.json
-  hooks.json
-  rule.md
-  skills/example/SKILL.md
+my-extension/
+  .spirit/
+    extension.json        # Spirit manifest dump (required)
+  package.json            # pure npm; only `main` is read
+  icon.svg                # optional; SVG only, no <script>
+  index.mjs               # optional; the activate entry referenced by `main`
+  mcp.json                # when declaring mcp
+  hooks.json              # when declaring hooks (agent hooks)
+  rule.md                 # when declaring rules
+  skills/<name>/SKILL.md  # when declaring skills
+  styles.css              # when declaring desktop CSS (path referenced from the manifest)
+  cli-hooks.json          # when declaring CLI hooks (path referenced from the manifest)
 ```
 
-```json
-{
-  "name": "@example/spirit-extension",
-  "version": "0.1.0",
-  "description": "Example Spirit extension.",
-  "author": { "name": "example" },
-  "homepage": "https://example.com/spirit-extension",
-  "main": "dist/index.js",
-  "spiritExtension": {
-    "schemaVersion": 1,
-    "displayName": "Example extension",
-    "icon": "assets/icon.svg",
-    "supportedHosts": ["cli", "desktop"],
-    "activationEvents": ["onStartup", "onUserMessage"],
-    "requestedCapabilities": [
-      "tool-definitions",
-      "tool-execution",
-      "system-prompt",
-      "settings",
-      "secret-storage",
-      "desktop-ui",
-      "cli-ui",
-      "mcp",
-      "hooks",
-      "skills",
-      "rules"
-    ],
-    "contributes": {
-      "tools": [
-        {
-          "name": "lookup_item",
-          "description": "Look up an item by id.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" }
-            },
-            "required": ["id"]
-          },
-          "approvalMode": "allowed",
-          "executionMode": "foreground"
-        }
-      ],
-      "desktop": {
-        "css": [{ "path": "styles/desktop.css" }],
-        "settingsPage": { "title": "Example extension" }
-      },
-      "cli": {
-        "hooks": { "path": "cli-hooks.json" }
-      },
-      "mcp": true,
-      "hooks": true,
-      "skills": true,
-      "rules": true
-    },
-    "settingsSchema": [
-      {
-        "key": "region",
-        "type": "select",
-        "title": "Region",
-        "required": true,
-        "defaultValue": "us",
-        "options": [
-          { "value": "us", "label": "US" },
-          { "value": "eu", "label": "EU" }
-        ]
-      }
-    ],
-    "secretSlots": [
-      {
-        "key": "api_token",
-        "title": "API token",
-        "required": true
-      }
-    ]
-  }
-}
-```
+`package.json` carries no Spirit fields — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` stay pure npm. The host reads only `main`, the module entry for [`activate`](#activate).
 
-`package.json` `name` is the extension id. It must match `^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`.
+`.spirit/extension.json` fields:
 
-## `package.json` fields
+| Field           | Description                                                                                                                                   |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | Required. Must be `1`                                                                                                                         |
+| `name`          | Required. kebab-case; the entry id inside a marketplace                                                                                       |
+| `version`       | Required. Semver `major.minor.patch`; pre-release suffixes are not supported                                                                  |
+| `sourceId`      | Required. Owning marketplace source id. ZIP packages self-declare any value (for example `"self-declared"`); the install pipeline rewrites it |
+| `displayName`   | Required. User-visible name                                                                                                                   |
+| `description`   | Required. One-line summary                                                                                                                    |
+| `icon`          | Optional. SVG path relative to the extension root                                                                                             |
+| `author`        | Optional. `{ name, url? }`                                                                                                                    |
+| `categories`    | Optional. String array                                                                                                                        |
+| `manifest`      | Required. The runtime declaration — see [The manifest](#the-manifest)                                                                         |
 
-| Field             | Description                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`            | Required. npm package name; used as the extension id                                                                                     |
-| `version`         | Required. Version string                                                                                                                 |
-| `spiritExtension` | Required. Object. See below                                                                                                              |
-| `description`     | Optional. String                                                                                                                         |
-| `author`          | Optional. String or `{ name }`                                                                                                           |
-| `homepage`        | Optional. String                                                                                                                         |
-| `main`            | Optional. Relative path to the `activate` entry. Required when the extension uses `activationEvents`, tool execution, or a system prompt |
+The dump carries no `source` or curation fields (`reviewStatus`, `featured`) — those belong to the marketplace entry.
 
-`main`, `spiritExtension.icon`, CSS paths, and CLI hook paths must be relative and must stay inside the package.
+Declared files must exist and be valid: declaring `mcp`, `hooks`, `skills`, or `rules` without the matching file fails validation and install. Files present but not declared are ignored and never loaded.
 
-## `spiritExtension`
+</Tab>
+</Tabs>
 
-| Field                   | Description                                                                   |
-| ----------------------- | ----------------------------------------------------------------------------- |
-| `schemaVersion`         | Optional. Defaults to `1`. Only `1` is supported                              |
-| `displayName`           | Required. User-visible name                                                   |
-| `icon`                  | Optional. Path relative to the package root                                   |
-| `supportedHosts`        | Required. Non-empty array of `cli` and/or `desktop`                           |
-| `activationEvents`      | Optional. See [Activation events](#activation-events)                         |
-| `requestedCapabilities` | Optional. See [Capabilities](#capabilities)                                   |
-| `contributes`           | Optional. `tools`, `desktop`, `cli`, `mcp`, `hooks`, `skills`, and/or `rules` |
-| `settingsSchema`        | Optional. Setting definitions                                                 |
-| `secretSlots`           | Optional. Secret slot definitions                                             |
+## The manifest
 
-## Capabilities
+The `manifest` object is the extension's runtime declaration: which hosts it supports, when it activates, and what it contributes. In a marketplace entry, the manifest is endorsed by the marketplace operator; in a ZIP package, it is self-declared and gated by the review confirmation.
+
+### Capabilities
 
 | Value                | Runtime                                                                   |
 | -------------------- | ------------------------------------------------------------------------- |
@@ -159,12 +138,12 @@ example-extension/
 
 `desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` and the matching `contributes` entry must both be present or both be absent.
 
-## Activation events
+### Activation events
 
 | Event                  | When it fires                    |
 | ---------------------- | -------------------------------- |
 | `onStartup`            | Host warmup                      |
-| `onExtensionInstalled` | After ZIP install                |
+| `onExtensionInstalled` | After an install completes       |
 | `onSessionOpened`      | Session becomes active           |
 | `onSessionReset`       | Session reset                    |
 | `onUserMessage`        | User submits a message           |
@@ -174,7 +153,7 @@ example-extension/
 
 The host calls `activate` when the extension lists the event and has a readable `main`.
 
-## `contributes.tools`
+### `contributes.tools`
 
 | Field           | Description                                               |
 | --------------- | --------------------------------------------------------- |
@@ -187,7 +166,7 @@ The host calls `activate` when the extension lists the event and has a readable 
 
 The model does not see `name` as-is. The host builds an invocation name such as `extension__{id}__{tool}__{hash}`.
 
-## `contributes.desktop`
+### `contributes.desktop`
 
 Requires `desktop-ui`.
 
@@ -197,7 +176,7 @@ Requires `desktop-ui`.
 | `css[].media`  | Optional. CSS media query                                              |
 | `settingsPage` | Optional. `true`, `{}`, or `{ title }` — adds a Desktop settings entry |
 
-## `contributes.cli`
+### `contributes.cli`
 
 Requires `cli-ui`. `hooks` is an object with `path`, not an inline array:
 
@@ -235,7 +214,7 @@ Token roles: `default`, `primary`, `secondary`, `muted`, `accent`, `success`, `w
 }
 ```
 
-## Bundled MCP, hooks, skills, and rules
+### Bundled MCP, hooks, skills, and rules
 
 Requires the matching capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills`, and `contributes.rules` are `true` or `{}`. Paths are conventional; custom paths are not allowed.
 
@@ -252,7 +231,7 @@ Relative `command` and `cwd` values resolve against the extension root. If an MC
 
 These contributions overlay into the agent session when the extension is enabled. They do not appear in **Settings → MCPs | Hooks | Skills | Rules**. On a name conflict, workspace wins, then user, then extension.
 
-## `settingsSchema`
+### `settingsSchema`
 
 | Field          | Description                                                      |
 | -------------- | ---------------------------------------------------------------- |
@@ -267,7 +246,7 @@ These contributions overlay into the agent session when the extension is enabled
 
 Values are `string`, `number`, `boolean`, or `null`. `null` clears a non-required setting.
 
-## `secretSlots`
+### `secretSlots`
 
 | Field         | Description       |
 | ------------- | ----------------- |
@@ -358,8 +337,68 @@ export function activate(ctx) {
 }
 ```
 
-## Install
+## Distribute as a ZIP
 
-- **ZIP** — the archive must contain exactly one `package.json` (it may sit in a subdirectory). Import with `spirit extension import ./extension.zip` or from the **Extensions** page.
+Pack an extension directory into the shareable ZIP format (content plus `.spirit/extension.json`):
 
-`supportedHosts` must include the current host. A second install of the same id does not replace the existing copy by default.
+```bash
+npx @spiritagent/extension-toolkit pack ./my-extension
+```
+
+The command validates the package first and writes `<name>-<version>.zip` to the current directory. Users import the ZIP from the **Extensions** page or with `spirit extension import`; it lands in their Personal marketplace. See [Extensions](../customize/extensions.mdx).
+
+## Run a marketplace
+
+A marketplace is a servable directory with a `.spirit/marketplace.json` index: a Git repository, a static site, or a local directory. Users add it with `spirit extension marketplace add <url|path>` or from the Desktop **Extensions** page, then browse and install its entries.
+
+<Tabs items={["Template repository", "Manual"]}>
+<Tab value="Template repository">
+
+[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) to create your own marketplace repository from `SpiritAgents/extension-template`.
+
+The template ships the registry layout, two example extensions, and CI that validates the registry on every push and pull request. To publish an extension:
+
+1. Scaffold it with `npm create @spiritagent/extension`.
+2. Move the extension folder into `extensions/`.
+3. Add the registry entry the wizard printed to `.spirit/marketplace.json`.
+4. Push — users add the marketplace with its Git URL.
+
+</Tab>
+<Tab value="Manual">
+
+A marketplace root holds the index plus one content directory per extension:
+
+```text
+my-marketplace/
+  .spirit/
+    marketplace.json  # the index
+  extensions/
+    my-extension/     # content directory (plain npm package + capability files)
+      icon.svg
+      package.json
+      ...
+```
+
+Relative paths inside `marketplace.json` resolve against the marketplace root and must not contain `..` segments or absolute paths.
+
+Entry fields, by group:
+
+- **Identity** — `name` (kebab-case; the entry id), `version` (semver, no pre-release), and `source`: a root-relative path string like `"./extensions/my-extension"` for local content, or `{ "source": "npm", "package": "@scope/name@1.0.0" }` to pin an exact npm version (integrity is verified against the packument's SRI hash at install time).
+- **Display** — `displayName`, `description`, `icon` (root-relative SVG path), `categories`, `author`.
+- **Declaration** — `manifest`: the runtime declaration described in [The manifest](#the-manifest). The marketplace endorses it; a package cannot assert capabilities on its own.
+- **Curation** — `featured` and `reviewStatus` (`unverified` / `verified` / `revoked`).
+
+Validate the registry locally — offline: schema, kebab-case names, semver without pre-release, npm source format, declared-contribution files for local sources, and icon rules:
+
+```bash
+npx -y @spiritagent/extension-toolkit marketplace check .
+```
+
+Review discipline: pull requests that add an entry or change its `version` must keep `reviewStatus: "unverified"`; promote to `verified` in a separate commit after a human review. The template repository's `.github/workflows/marketplace.yml` is a reference implementation — it diffs the index against the PR base.
+
+</Tab>
+</Tabs>
+
+### Local marketplaces
+
+Any local directory with a `.spirit/marketplace.json` works as a marketplace — add it with `spirit extension marketplace add <path>` or Desktop **Add from Disk…**. Local marketplaces are read in place and need no CI, which makes them the development loop for extension authors: edit, reinstall, repeat.

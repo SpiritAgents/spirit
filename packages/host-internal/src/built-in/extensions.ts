@@ -1,133 +1,152 @@
-import { existsSync } from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { ExtensionHostKind } from "../storage.js";
 import {
-  installPreparedExtensionDirectory,
+  isMarketplaceVersionNewer,
+  MARKETPLACE_INDEX_FILE_NAME,
+  MARKETPLACE_SPIRIT_DIR_NAME,
+  parseMarketplaceIndexText,
+  type MarketplaceExtensionEntry,
+  type MarketplaceIndex,
+} from "@spiritagent/extension-toolkit";
+
+import {
+  buildHostExtensionManifestFromDump,
+  composeExtensionId,
   listInstalledExtensions,
-  readPreparedExtensionManifestDirectory,
   type HostExtensionManager,
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
 } from "../extensions.js";
-import { BUILT_IN_EXTENSION_IDS } from "./extension-ids.js";
+import {
+  buildExtensionDumpFromEntry,
+  installMarketplaceExtensionEntry,
+} from "../marketplace/install.js";
+import {
+  BUILT_IN_MARKETPLACE_SOURCE_ID,
+  type MarketplaceRegistryRoot,
+  type MarketplaceSourceRecord,
+} from "../marketplace/types.js";
+import type { ExtensionHostKind } from "../storage.js";
 import { loadBuiltInState } from "./state.js";
 
-export { BUILT_IN_EXTENSION_IDS, isBuiltInExtensionId } from "./extension-ids.js";
-export type { BuiltInExtensionId } from "./extension-ids.js";
-
-export function resolveBuiltInExtensionsRoot(): string {
+/**
+ * The built-in registry root shipped inside the host-internal package:
+ * `built-in/.spirit/marketplace.json` + `built-in/extensions/<name>/`.
+ * Same format as any remote registry; only the artifact backend differs
+ * (local copy of prebuilt content).
+ */
+export function resolveBuiltInRegistryRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(here, "../../built-in/extensions");
+  return path.join(here, "../../built-in");
+}
+
+export function builtInMarketplaceSourceRecord(
+  index?: MarketplaceIndex,
+  registryRoot?: string,
+): MarketplaceSourceRecord {
+  return {
+    id: BUILT_IN_MARKETPLACE_SOURCE_ID,
+    name: index?.name ?? BUILT_IN_MARKETPLACE_SOURCE_ID,
+    displayName: index?.displayName ?? "Built-in",
+    kind: "local",
+    locator: registryRoot ?? resolveBuiltInRegistryRoot(),
+    addedAtUnixMs: 0,
+  };
+}
+
+export async function readBuiltInMarketplaceIndex(
+  registryRoot?: string,
+): Promise<MarketplaceIndex> {
+  const indexPath = path.join(
+    registryRoot ?? resolveBuiltInRegistryRoot(),
+    MARKETPLACE_SPIRIT_DIR_NAME,
+    MARKETPLACE_INDEX_FILE_NAME,
+  );
+  return parseMarketplaceIndexText(await readFile(indexPath, "utf8"));
+}
+
+function builtInRegistryRoot(registryRoot?: string): MarketplaceRegistryRoot {
+  return { kind: "path", path: registryRoot ?? resolveBuiltInRegistryRoot() };
+}
+
+/** Registry-root-relative content directory of a built-in entry (local source). */
+function builtInEntryContentDir(entry: MarketplaceExtensionEntry, registryRoot?: string): string {
+  const relative = typeof entry.source === "string" ? entry.source : `extensions/${entry.name}`;
+  return path.join(registryRoot ?? resolveBuiltInRegistryRoot(), ...relative.split("/"));
 }
 
 export interface EnsureBuiltInExtensionsRequest {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
-  manager: Pick<HostExtensionManager, "list" | "installPreparedDirectory">;
+  manager: Pick<HostExtensionManager, "list">;
+  /** Test-only override for the built-in registry root. */
+  registryRoot?: string;
 }
 
 export interface ListMarketplaceCatalogRequest {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
+  /** Test-only override for the built-in registry root. */
+  registryRoot?: string;
 }
 
 export interface InstallBuiltInExtensionRequest {
   spiritDataDir: string;
   hostKind: ExtensionHostKind;
   extensionId: string;
+  /** Test-only override for the built-in registry root. */
+  registryRoot?: string;
 }
 
-async function listBuiltInExtensionTemplateDirs(): Promise<string[]> {
-  const root = resolveBuiltInExtensionsRoot();
-  if (!existsSync(root)) {
-    return [];
-  }
-
-  const entries = await readdir(root, { withFileTypes: true });
-  const directories: string[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    const directoryPath = path.join(root, entry.name);
-    if (!existsSync(path.join(directoryPath, "package.json"))) {
-      continue;
-    }
-    directories.push(directoryPath);
-  }
-  return directories.sort((left, right) => left.localeCompare(right, "en"));
-}
-
-function allowedBuiltInIds(): Set<string> {
-  return new Set((BUILT_IN_EXTENSION_IDS as readonly string[]).map((id) => id.toLowerCase()));
-}
-
-export function shouldSkipBuiltInExtensionSeed(input: {
-  extensionId: string;
-  defaultInstalled?: boolean;
-  removedIds: ReadonlySet<string>;
-  installedIds: ReadonlySet<string>;
-}): boolean {
-  const extensionId = input.extensionId.trim().toLowerCase();
-  if (!extensionId) {
-    return true;
-  }
-  if (input.defaultInstalled === false) {
-    return true;
-  }
-  return input.removedIds.has(extensionId) || input.installedIds.has(extensionId);
-}
-
+/**
+ * Install every `defaultInstalled` entry of the built-in registry, and
+ * auto-update already-installed built-in extensions when the app upgrade
+ * shipped a newer entry version (no confirmation gate: the built-in source
+ * is part of the app and trusted with it). Removal tombstones are honored
+ * for seeding.
+ */
 export async function ensureBuiltInExtensions(
   request: EnsureBuiltInExtensionsRequest,
 ): Promise<readonly HostInstalledExtension[]> {
-  const allowedIds = allowedBuiltInIds();
   const { spiritDataDir, hostKind } = request;
   const state = await loadBuiltInState(spiritDataDir);
   const removed = new Set(state.removedExtensionIds.map((id) => id.toLowerCase()));
   const installed = await request.manager.list();
-  const installedIds = new Set(installed.map((item) => item.id.toLowerCase()));
+  const installedById = new Map(installed.map((item) => [item.id, item]));
+
+  const index = await readBuiltInMarketplaceIndex(request.registryRoot);
+  const source = builtInMarketplaceSourceRecord(index, request.registryRoot);
+  const registryRoot = builtInRegistryRoot(request.registryRoot);
   const seeded: HostInstalledExtension[] = [];
 
-  for (const templateDir of await listBuiltInExtensionTemplateDirs()) {
-    let manifest;
-    try {
-      manifest = await readPreparedExtensionManifestDirectory(templateDir);
-    } catch {
+  for (const entry of index.extensions) {
+    if (!entry.manifest.supportedHosts.includes(hostKind)) {
       continue;
     }
-
-    const extensionId = manifest.id.trim().toLowerCase();
-    if (!allowedIds.has(extensionId)) {
+    const id = composeExtensionId(source.id, entry.name);
+    const installedItem = installedById.get(id);
+    if (installedItem) {
+      if (isMarketplaceVersionNewer(entry.version, installedItem.manifest.version)) {
+        seeded.push(
+          await installMarketplaceExtensionEntry(
+            { spiritDataDir, hostKind },
+            { source, registryRoot, entry, replaceExisting: true },
+          ),
+        );
+      }
       continue;
     }
-    if (!manifest.supportedHosts.includes(hostKind)) {
+    if (entry.defaultInstalled === false || removed.has(id.toLowerCase())) {
       continue;
     }
-    if (
-      shouldSkipBuiltInExtensionSeed({
-        extensionId,
-        ...(manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
-        removedIds: removed,
-        installedIds,
-      })
-    ) {
-      continue;
-    }
-
-    const next = await installPreparedExtensionDirectory(
-      { spiritDataDir, hostKind },
-      {
-        preparedDirectoryPath: templateDir,
-        installSource: "built-in",
-        replaceExisting: false,
-      },
+    seeded.push(
+      await installMarketplaceExtensionEntry(
+        { spiritDataDir, hostKind },
+        { source, registryRoot, entry },
+      ),
     );
-    installedIds.add(next.id.trim().toLowerCase());
-    seeded.push(next);
   }
 
   return seeded;
@@ -136,96 +155,83 @@ export async function ensureBuiltInExtensions(
 export async function listMarketplaceCatalog(
   request: ListMarketplaceCatalogRequest,
 ): Promise<readonly HostMarketplaceCatalogItem[]> {
-  const allowedIds = allowedBuiltInIds();
   const { spiritDataDir, hostKind } = request;
   const installed = await listInstalledExtensions({ spiritDataDir, hostKind });
-  const installedById = new Map(installed.map((item) => [item.id.trim().toLowerCase(), item]));
+  const installedById = new Map(installed.map((item) => [item.id, item]));
   const catalog: HostMarketplaceCatalogItem[] = [];
   const seen = new Set<string>();
 
-  for (const templateDir of await listBuiltInExtensionTemplateDirs()) {
-    let manifest;
-    try {
-      manifest = await readPreparedExtensionManifestDirectory(templateDir);
-    } catch {
-      continue;
-    }
+  const index = await readBuiltInMarketplaceIndex(request.registryRoot);
+  const source = builtInMarketplaceSourceRecord(index, request.registryRoot);
 
-    const extensionId = manifest.id.trim().toLowerCase();
-    if (!allowedIds.has(extensionId)) {
+  for (const entry of index.extensions) {
+    if (!entry.manifest.supportedHosts.includes(hostKind)) {
       continue;
     }
-    if (!manifest.supportedHosts.includes(hostKind)) {
-      continue;
+    const id = composeExtensionId(source.id, entry.name);
+    const installedItem = installedById.get(id);
+    if (installedItem) {
+      catalog.push({ ...installedItem, installed: true });
+    } else {
+      const contentDir = builtInEntryContentDir(entry, request.registryRoot);
+      catalog.push({
+        id,
+        sourceId: source.id,
+        relativePath: `${source.id}/${entry.name}`,
+        manifest: await buildHostExtensionManifestFromDump(
+          buildExtensionDumpFromEntry(entry, source.id),
+          contentDir,
+        ),
+        directoryPath: contentDir,
+        manifestPath: path.join(contentDir, MARKETPLACE_SPIRIT_DIR_NAME, "extension.json"),
+        installedAtUnixMs: 0,
+        enabled: false,
+        installSource: "built-in",
+        installed: false,
+      });
     }
-
-    const installedItem = installedById.get(extensionId);
-    catalog.push(
-      installedItem
-        ? { ...installedItem, installed: true }
-        : {
-            id: manifest.id,
-            directoryName: path.basename(templateDir),
-            manifest,
-            directoryPath: templateDir,
-            manifestPath: path.join(templateDir, "package.json"),
-            installedAtUnixMs: 0,
-            enabled: false,
-            installSource: "built-in",
-            installed: false,
-          },
-    );
-    seen.add(extensionId);
+    seen.add(id);
   }
 
+  // Installed extensions from any other source still surface in the catalog.
   for (const item of installed) {
-    const extensionId = item.id.trim().toLowerCase();
-    if (seen.has(extensionId)) {
+    if (seen.has(item.id)) {
       continue;
     }
     catalog.push({ ...item, installed: true });
   }
 
-  return catalog.sort((left, right) => left.id.localeCompare(right.id, "en"));
+  return catalog.sort((left, right) =>
+    left.manifest.displayName.localeCompare(right.manifest.displayName, "zh-CN"),
+  );
 }
 
 export async function installBuiltInExtension(
   request: InstallBuiltInExtensionRequest,
 ): Promise<HostInstalledExtension> {
-  const extensionId = request.extensionId.trim().toLowerCase();
+  const extensionId = request.extensionId.trim();
   if (!extensionId) {
     throw new Error("The extension id must not be empty.");
   }
-  if (!allowedBuiltInIds().has(extensionId)) {
-    throw new Error(`Unknown built-in extension: ${request.extensionId.trim()}`);
+
+  const index = await readBuiltInMarketplaceIndex(request.registryRoot);
+  const source = builtInMarketplaceSourceRecord(index, request.registryRoot);
+  const entry = index.extensions.find(
+    (candidate) =>
+      composeExtensionId(source.id, candidate.name) === extensionId ||
+      candidate.name === extensionId,
+  );
+  if (!entry) {
+    throw new Error(`Unknown built-in extension: ${extensionId}`);
   }
-
-  for (const templateDir of await listBuiltInExtensionTemplateDirs()) {
-    let manifest;
-    try {
-      manifest = await readPreparedExtensionManifestDirectory(templateDir);
-    } catch {
-      continue;
-    }
-
-    if (manifest.id.trim().toLowerCase() !== extensionId) {
-      continue;
-    }
-    if (!manifest.supportedHosts.includes(request.hostKind)) {
-      throw new Error(
-        `Built-in extension ${manifest.id} does not support the ${request.hostKind} host.`,
-      );
-    }
-
-    return installPreparedExtensionDirectory(
-      { spiritDataDir: request.spiritDataDir, hostKind: request.hostKind },
-      {
-        preparedDirectoryPath: templateDir,
-        installSource: "built-in",
-        replaceExisting: false,
-      },
+  if (!entry.manifest.supportedHosts.includes(request.hostKind)) {
+    throw new Error(
+      `Built-in extension ${entry.name} does not support the ${request.hostKind} host.`,
     );
   }
 
-  throw new Error(`Built-in extension template not found: ${request.extensionId.trim()}`);
+  return installMarketplaceExtensionEntry(
+    { spiritDataDir: request.spiritDataDir, hostKind: request.hostKind },
+    { source, registryRoot: builtInRegistryRoot(request.registryRoot), entry },
+  );
 }

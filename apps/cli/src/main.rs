@@ -21,11 +21,11 @@ use std::{
 
 use spirit::tui::InlineRecreate;
 use spirit::{
-    ConfigCommand, ExtensionCommand, GlobalCliOptions, HookCommand, KeyCommand, MarketplaceCommand,
-    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
-    handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_marketplace_cli,
-    handle_mcp_cli, handle_model_cli, handle_permissions_cli, logging, print_skills_stub,
-    resolve_session_tui_mode, run_headless_prompt, run_serve, tui, ui,
+    ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, GlobalCliOptions, HookCommand,
+    KeyCommand, McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell,
+    bootstrap_config, handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli,
+    handle_model_cli, handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
+    run_headless_prompt, run_serve, tui, ui,
 };
 
 const MAX_EVENT_BATCH_PER_TICK: usize = 2048;
@@ -100,10 +100,6 @@ enum Commands {
     Extension {
         #[command(subcommand)]
         action: ExtensionAction,
-    },
-    Marketplace {
-        #[command(subcommand)]
-        action: MarketplaceAction,
     },
     Hook {
         #[command(subcommand)]
@@ -286,18 +282,48 @@ enum ExtensionAction {
         #[arg(value_name = "id")]
         id: String,
     },
+    /// Install an extension from a configured marketplace
+    Install {
+        #[arg(value_name = "name")]
+        name: String,
+        /// Marketplace source name when multiple sources provide the same extension
+        #[arg(long, value_name = "marketplace")]
+        marketplace: Option<String>,
+        /// Confirm installing an unverified or revoked entry
+        #[arg(long = "review-acknowledged")]
+        review_acknowledged: bool,
+    },
+    /// Update an installed extension from its recorded marketplace source
+    Update {
+        #[arg(value_name = "name")]
+        name: String,
+        /// Confirm updating to an unverified or revoked entry
+        #[arg(long = "review-acknowledged")]
+        review_acknowledged: bool,
+    },
+    /// Manage extension marketplaces
+    Marketplace {
+        #[command(subcommand)]
+        action: ExtensionMarketplaceAction,
+    },
 }
 
 #[derive(Subcommand)]
-enum MarketplaceAction {
-    List,
-    Install {
-        #[arg(value_name = "id")]
-        id: String,
+enum ExtensionMarketplaceAction {
+    /// Add a marketplace from a local directory, a git repository, or an HTTP index URL
+    Add {
+        #[arg(value_name = "url|path")]
+        locator: String,
+        /// Git ref (tag, branch, or commit); defaults to the remote default branch
+        #[arg(long, value_name = "ref")]
+        git_ref: Option<String>,
     },
+    /// List configured marketplaces
+    List,
+    /// Remove a marketplace by name
     Remove {
-        #[arg(value_name = "id")]
-        id: String,
+        #[arg(value_name = "name")]
+        name: String,
     },
 }
 
@@ -341,9 +367,6 @@ fn main() -> Result<()> {
         }
         Some(Commands::Extension { action }) => {
             handle_extension_cli(into_extension_command(action))?
-        }
-        Some(Commands::Marketplace { action }) => {
-            handle_marketplace_cli(into_marketplace_command(action))?
         }
     }
 
@@ -403,14 +426,37 @@ fn into_extension_command(action: ExtensionAction) -> ExtensionCommand {
         ExtensionAction::List => ExtensionCommand::List,
         ExtensionAction::Import { archive } => ExtensionCommand::Import { archive },
         ExtensionAction::Remove { id } => ExtensionCommand::Remove { id },
+        ExtensionAction::Install {
+            name,
+            marketplace,
+            review_acknowledged,
+        } => ExtensionCommand::Install {
+            name,
+            marketplace,
+            review_acknowledged,
+        },
+        ExtensionAction::Update {
+            name,
+            review_acknowledged,
+        } => ExtensionCommand::Update {
+            name,
+            review_acknowledged,
+        },
+        ExtensionAction::Marketplace { action } => ExtensionCommand::Marketplace {
+            action: into_extension_marketplace_command(action),
+        },
     }
 }
 
-fn into_marketplace_command(action: MarketplaceAction) -> MarketplaceCommand {
+fn into_extension_marketplace_command(
+    action: ExtensionMarketplaceAction,
+) -> ExtensionMarketplaceCommand {
     match action {
-        MarketplaceAction::List => MarketplaceCommand::List,
-        MarketplaceAction::Install { id } => MarketplaceCommand::Install { id },
-        MarketplaceAction::Remove { id } => MarketplaceCommand::Remove { id },
+        ExtensionMarketplaceAction::Add { locator, git_ref } => {
+            ExtensionMarketplaceCommand::Add { locator, git_ref }
+        }
+        ExtensionMarketplaceAction::List => ExtensionMarketplaceCommand::List,
+        ExtensionMarketplaceAction::Remove { name } => ExtensionMarketplaceCommand::Remove { name },
     }
 }
 
@@ -753,7 +799,7 @@ fn process_event_batch(
                     || shell.is_subagent_picker_active()
                     || shell.is_subagent_view_active()
                     || shell.is_image_picker_active()
-                    || shell.is_marketplace_picker_active()
+                    || shell.is_marketplace_view_active()
                 {
                     continue;
                 }
@@ -791,7 +837,7 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
-                    && !shell.is_marketplace_picker_active()
+                    && !shell.is_marketplace_view_active()
                     && !shell.is_bottom_form_active()
                     && pending_text.is_empty()
                     && matches!(key.code, KeyCode::Char('!'))
@@ -814,7 +860,7 @@ fn process_event_batch(
                     && !shell.is_subagent_picker_active()
                     && !shell.is_subagent_view_active()
                     && !shell.is_image_picker_active()
-                    && !shell.is_marketplace_picker_active()
+                    && !shell.is_marketplace_view_active()
                     && let Some(ch) = batched_text_char(&key)
                 {
                     pending_text.push(ch);
@@ -1094,12 +1140,39 @@ fn process_key_event(
         return;
     }
 
-    if shell.is_marketplace_picker_active() {
+    if shell.is_marketplace_view_active() {
         match key.code {
-            KeyCode::Esc => shell.cancel_marketplace_picker(),
-            KeyCode::Up => shell.select_prev_marketplace_item(),
-            KeyCode::Down => shell.select_next_marketplace_item(),
-            KeyCode::Enter => shell.confirm_marketplace_picker(),
+            KeyCode::Esc => shell.marketplace_go_back(),
+            KeyCode::Enter => shell.marketplace_submit_selection(),
+            KeyCode::Up => shell.marketplace_move_selection_prev(),
+            KeyCode::Down => shell.marketplace_move_selection_next(),
+            // The source bar switches sources directly; the list keeps focus.
+            KeyCode::Left => shell.marketplace_switch_source(-1),
+            KeyCode::Right => shell.marketplace_switch_source(1),
+            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                if let Err(err) = shell.refresh_marketplace_catalog() {
+                    shell.push_agent_message(format!("{}", err));
+                }
+            }
+            KeyCode::Char('l')
+                if key.modifiers.contains(KeyModifiers::CONTROL)
+                    && shell.marketplace_filter_accepts_input() =>
+            {
+                shell.marketplace_clear_filter();
+            }
+            KeyCode::Backspace if shell.marketplace_filter_accepts_input() => {
+                shell.marketplace_backspace_filter()
+            }
+            KeyCode::Delete if shell.marketplace_filter_accepts_input() => {
+                shell.marketplace_backspace_filter()
+            }
+            KeyCode::Char(ch)
+                if !key.modifiers.contains(KeyModifiers::CONTROL)
+                    && !key.modifiers.contains(KeyModifiers::ALT)
+                    && shell.marketplace_filter_accepts_input() =>
+            {
+                shell.marketplace_insert_filter_char(ch);
+            }
             KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                 shell.request_quit();
             }
@@ -1503,7 +1576,7 @@ fn paste_target(shell: &TuiShell) -> Option<PasteTarget> {
         || shell.is_rewind_picker_active()
         || shell.is_fork_picker_active()
         || shell.is_image_picker_active()
-        || shell.is_marketplace_picker_active()
+        || shell.is_marketplace_view_active()
     {
         None
     } else if shell.is_bottom_form_active() {

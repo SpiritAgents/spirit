@@ -22,6 +22,7 @@
     "customize/dreams",
     "customize/automations",
     "customize/integrations",
+    "customize/extensions",
     "---Hôtes---",
     "desktop",
     "cli",

@@ -15,7 +15,10 @@ use crate::{
     ask_questions::AskQuestionsResult,
     chat_store,
     chat_timeline::project_live_chat_from_llm_history,
-    host_protocol::{CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry},
+    host_protocol::{
+        CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry,
+        CliMarketplaceCatalogEntry, CliMarketplaceSource,
+    },
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
@@ -40,9 +43,10 @@ use crate::{
     view::{
         AssistantAuxData, BottomFormKind, ChatMessage, CliUiHookSlot, CliUiHookTokenRole,
         CliUiHookTokensView, CliUiHookVariant, CliUiHookView, InputSuggestion, InputSuggestionKind,
-        MainInputMode, MessageRole, PendingAssistantAux, PendingSubagentApprovalView,
-        SubagentApprovalInputView, SubagentSessionDetailView, SubagentSessionSummaryView,
-        TuiViewModel,
+        MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView, MarketplaceFlowStep,
+        MarketplaceSourceTabView, MarketplaceViewModel, MessageRole, PendingAssistantAux,
+        PendingSubagentApprovalView, SlashFlowItemView, SlashFlowView, SubagentApprovalInputView,
+        SubagentSessionDetailView, SubagentSessionSummaryView, TuiViewModel,
     },
 };
 
@@ -54,6 +58,7 @@ mod host_actions;
 mod image_paths;
 mod inline;
 mod input;
+mod marketplace;
 mod mcp_actions;
 mod pickers;
 mod projection;
@@ -107,9 +112,7 @@ pub struct TuiShell {
     image_picker_active: bool,
     image_picker_index: usize,
     image_picker_files: Vec<String>,
-    marketplace_picker_active: bool,
-    marketplace_picker_index: usize,
-    marketplace_catalog: Vec<CliExtensionEntry>,
+    marketplace: marketplace::MarketplaceState,
     forms: BottomFormUiState,
     conversation: ConversationUiState,
     interrupt_escape_armed_at: Option<Instant>,
@@ -235,9 +238,7 @@ impl TuiShell {
             image_picker_active: false,
             image_picker_index: 0,
             image_picker_files: vec![],
-            marketplace_picker_active: false,
-            marketplace_picker_index: 0,
-            marketplace_catalog: vec![],
+            marketplace: marketplace::MarketplaceState::default(),
             forms: BottomFormUiState::default(),
             conversation: ConversationUiState::default(),
             interrupt_escape_armed_at: None,
@@ -586,8 +587,8 @@ impl TuiShell {
         self.image_picker_active
     }
 
-    pub fn is_marketplace_picker_active(&self) -> bool {
-        self.marketplace_picker_active
+    pub fn is_marketplace_view_active(&self) -> bool {
+        self.marketplace.open
     }
 
     fn handle_slash_command(&mut self, message: &str) {

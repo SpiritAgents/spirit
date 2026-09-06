@@ -61,23 +61,28 @@ async function writeExtensionPackage(
   await mkdir(packageDir, { recursive: true });
   await writeFile(
     join(packageDir, "package.json"),
-    `${JSON.stringify(
-      {
-        name: options.name,
-        version: "0.0.1",
-        spiritExtension: {
-          schemaVersion: 1,
-          displayName: options.name,
-          supportedHosts: ["desktop"],
-          ...(options.requestedCapabilities
-            ? { requestedCapabilities: options.requestedCapabilities }
-            : {}),
-          ...(options.contributes ? { contributes: options.contributes } : {}),
-        },
-      },
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify({ name: options.name, version: "0.0.1" }, null, 2)}\n`,
+    "utf8",
+  );
+  const dump = {
+    schemaVersion: 1,
+    name: options.name,
+    version: "0.0.1",
+    sourceId: "personal",
+    displayName: options.name,
+    description: `${options.name} extension.`,
+    manifest: {
+      supportedHosts: ["desktop"],
+      ...(options.requestedCapabilities
+        ? { requestedCapabilities: options.requestedCapabilities }
+        : {}),
+      ...(options.contributes ? { contributes: options.contributes } : {}),
+    },
+  };
+  await mkdir(join(packageDir, ".spirit"), { recursive: true });
+  await writeFile(
+    join(packageDir, ".spirit", "extension.json"),
+    `${JSON.stringify(dump, null, 2)}\n`,
     "utf8",
   );
   for (const [relativePath, content] of Object.entries(options.files ?? {})) {
@@ -93,7 +98,7 @@ test("collector loads declared instruction contributions from enabled extensions
   try {
     const declaredDir = join(preparedRoot, "declared");
     await writeExtensionPackage(declaredDir, {
-      name: "spirit.collect-declared",
+      name: "collect-declared",
       requestedCapabilities: ["mcp", "hooks", "skills", "rules"],
       contributes: { mcp: true, hooks: true, skills: true, rules: true },
       files: {
@@ -105,12 +110,12 @@ test("collector loads declared instruction contributions from enabled extensions
     });
     await installPreparedExtensionDirectory(
       { spiritDataDir, hostKind: "desktop" },
-      { preparedDirectoryPath: declaredDir, installSource: "archive" },
+      { preparedDirectoryPath: declaredDir },
     );
 
     const undeclaredDir = join(preparedRoot, "undeclared");
     await writeExtensionPackage(undeclaredDir, {
-      name: "spirit.collect-undeclared",
+      name: "collect-undeclared",
       files: {
         "mcp.json": VALID_MCP_JSON,
         "hooks.json": VALID_HOOKS_JSON,
@@ -126,7 +131,7 @@ Ignored.
     });
     await installPreparedExtensionDirectory(
       { spiritDataDir, hostKind: "desktop" },
-      { preparedDirectoryPath: undeclaredDir, installSource: "archive" },
+      { preparedDirectoryPath: undeclaredDir },
     );
 
     const manager = createHostExtensionManager({
@@ -140,7 +145,7 @@ Ignored.
     const bundled = collected.mcp.servers.bundled;
     assert.equal(bundled?.transport.type, "stdio");
     if (bundled?.transport.type === "stdio") {
-      const declared = listed.find((item) => item.id === "spirit.collect-declared");
+      const declared = listed.find((item) => item.id === "personal/collect-declared");
       assert.ok(declared);
       assert.equal(bundled.transport.command, resolve(declared.directoryPath, "bin/mcp-server"));
       assert.equal(bundled.transport.cwd, resolve(declared.directoryPath));
@@ -152,7 +157,7 @@ Ignored.
     assert.equal(collected.hooks[0]?.command, "hooks/session-start.sh");
     assert.equal(
       collected.hooks[0]?.configDir,
-      resolve(listed.find((item) => item.id === "spirit.collect-declared")?.directoryPath ?? ""),
+      resolve(listed.find((item) => item.id === "personal/collect-declared")?.directoryPath ?? ""),
     );
 
     assert.equal(collected.skills.length, 1);
@@ -161,7 +166,7 @@ Ignored.
     assert.equal(collected.rules.length, 1);
     assert.equal(collected.rules[0]?.scope, "extension");
 
-    await manager.setEnabled("spirit.collect-declared", false);
+    await manager.setEnabled("personal/collect-declared", false);
     const disabledCollected = await collectEnabledExtensionInstructionContributions(
       await manager.list(),
     );
@@ -171,7 +176,7 @@ Ignored.
     assert.equal(disabledCollected.rules.length, 0);
 
     const disabledListed = await manager.list();
-    const disabledDeclared = disabledListed.find((item) => item.id === "spirit.collect-declared");
+    const disabledDeclared = disabledListed.find((item) => item.id === "personal/collect-declared");
     assert.ok(disabledDeclared);
     const summary = await summarizeDeclaredExtensionContributionPoints(disabledDeclared);
     assert.deepEqual(summary?.mcp, [
@@ -194,7 +199,7 @@ test("collector keeps the first extension on mcp and skill name collisions", asy
   try {
     const firstDir = join(preparedRoot, "aaa");
     await writeExtensionPackage(firstDir, {
-      name: "spirit.collect-aaa",
+      name: "collect-aaa",
       requestedCapabilities: ["mcp", "skills"],
       contributes: { mcp: true, skills: true },
       files: {
@@ -212,7 +217,7 @@ First.
     });
     const secondDir = join(preparedRoot, "bbb");
     await writeExtensionPackage(secondDir, {
-      name: "spirit.collect-bbb",
+      name: "collect-bbb",
       requestedCapabilities: ["mcp", "skills"],
       contributes: { mcp: true, skills: true },
       files: {
@@ -230,11 +235,11 @@ Second.
     });
     await installPreparedExtensionDirectory(
       { spiritDataDir, hostKind: "desktop" },
-      { preparedDirectoryPath: firstDir, installSource: "archive" },
+      { preparedDirectoryPath: firstDir },
     );
     await installPreparedExtensionDirectory(
       { spiritDataDir, hostKind: "desktop" },
-      { preparedDirectoryPath: secondDir, installSource: "archive" },
+      { preparedDirectoryPath: secondDir },
     );
 
     const manager = createHostExtensionManager({
@@ -249,7 +254,7 @@ Second.
     }
     assert.equal(collected.skills.length, 1);
     assert.equal(collected.skills[0]?.description, "First skill.");
-    assert.equal(collected.skills[0]?.extensionId, "spirit.collect-aaa");
+    assert.equal(collected.skills[0]?.extensionId, "personal/collect-aaa");
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(preparedRoot, { recursive: true, force: true });

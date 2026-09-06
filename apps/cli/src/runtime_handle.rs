@@ -8,7 +8,11 @@ use std::{
 use crate::{
     ask_questions::AskQuestionsResult,
     daemon::DaemonRuntime,
-    host_protocol::{CliExtensionEntry, CliHostMetadataSnapshot, WorkspaceCapabilityTrustPrompter},
+    host_protocol::{
+        CliExtensionEntry, CliHostMetadataSnapshot, CliMarketplaceActionResult,
+        CliMarketplaceCatalogEntry, CliMarketplaceCatalogResponse, CliMarketplaceSource,
+        WorkspaceCapabilityTrustPrompter,
+    },
     host_runtime::RuntimeEvent,
     mcp::{McpScope, McpServerConfig},
     mcp_types::{
@@ -146,12 +150,54 @@ impl RuntimeHandle {
         self.backend.set_extension_enabled(id, enabled)
     }
 
-    pub fn list_marketplace_catalog(&mut self) -> Result<Vec<CliExtensionEntry>> {
-        self.backend.list_marketplace_catalog()
+    pub fn list_marketplace_sources(&mut self) -> Result<Vec<CliMarketplaceSource>> {
+        self.backend.list_marketplace_sources()
     }
 
-    pub fn install_built_in_extension(&mut self, id: &str) -> Result<CliExtensionEntry> {
-        self.backend.install_built_in_extension(id)
+    pub fn add_marketplace_source(
+        &mut self,
+        locator: &str,
+        git_ref: Option<&str>,
+    ) -> Result<CliMarketplaceSource> {
+        self.backend.add_marketplace_source(locator, git_ref)
+    }
+
+    pub fn remove_marketplace_source(&mut self, name: &str) -> Result<CliMarketplaceSource> {
+        self.backend.remove_marketplace_source(name)
+    }
+
+    pub fn list_marketplace_catalog(
+        &mut self,
+        source_id: &str,
+    ) -> Result<CliMarketplaceCatalogResponse> {
+        self.backend.list_marketplace_catalog(source_id)
+    }
+
+    pub fn get_marketplace_extension_detail(
+        &mut self,
+        source_id: &str,
+        name: &str,
+    ) -> Result<CliMarketplaceCatalogEntry> {
+        self.backend
+            .get_marketplace_extension_detail(source_id, name)
+    }
+
+    pub fn install_marketplace_extension(
+        &mut self,
+        name: &str,
+        marketplace: Option<&str>,
+        review_acknowledged: bool,
+    ) -> Result<CliMarketplaceActionResult> {
+        self.backend
+            .install_marketplace_extension(name, marketplace, review_acknowledged)
+    }
+
+    pub fn update_extension(
+        &mut self,
+        id: &str,
+        review_acknowledged: bool,
+    ) -> Result<CliMarketplaceActionResult> {
+        self.backend.update_extension(id, review_acknowledged)
     }
 
     pub fn session(&self) -> &SessionModel {

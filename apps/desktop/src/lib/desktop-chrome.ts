@@ -194,6 +194,7 @@ export const DESKTOP_OVERLAY_SHORT_LIST_PADDING = "p-1";
 export const DESKTOP_OVERLAY_SHORT_LIST_GAP = "gap-0.5";
 
 /** Only adds local business classes such as a minimum width */
+/** Compact overlay menu floor (approval / schedule Dropdown, Context Menu) */
 export const DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH = "min-w-[8.5rem]";
 
 /** Long list: disable the base class overflow-y-auto so the inner ScrollArea owns scrolling exclusively */

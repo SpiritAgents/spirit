@@ -22,7 +22,11 @@ import type {
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
+  AddMarketplaceSourceRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   InstallLspProviderRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
@@ -55,6 +59,9 @@ import type {
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
   DesktopModelProvider,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
 } from "../types";
 
 const DEFAULT_HOST_URL = import.meta.env.VITE_SPIRIT_HOST_URL?.toString().trim() || "";
@@ -181,6 +188,18 @@ export function createWebHostApi(): HostApi {
     },
     installBuiltInExtension(request: InstallBuiltInExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/install-built-in", request);
+    },
+    addMarketplaceSource(request: AddMarketplaceSourceRequest) {
+      return post<MarketplaceSourceCommandResult>(baseUrl, "/api/marketplaces/add", request);
+    },
+    removeMarketplaceSource(request: RemoveMarketplaceSourceRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/marketplaces/remove", request);
+    },
+    installMarketplaceExtension(request: InstallMarketplaceExtensionRequest) {
+      return post<MarketplaceInstallCommandResult>(baseUrl, "/api/extensions/install", request);
+    },
+    updateExtension(request: UpdateExtensionRequest) {
+      return post<MarketplaceUpdateCommandResult>(baseUrl, "/api/extensions/update", request);
     },
     deleteExtension(request: DeleteExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/remove", request);

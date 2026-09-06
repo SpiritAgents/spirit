@@ -156,6 +156,180 @@ test("HOST_METHODS whitelists local marketplace catalog RPCs", () => {
   assert.ok(HOST_METHODS.has("host.installBuiltInExtension"));
 });
 
+test("HOST_METHODS whitelists the multi-source marketplace RPCs", () => {
+  for (const method of [
+    "host.listMarketplaceSources",
+    "host.addMarketplaceSource",
+    "host.removeMarketplaceSource",
+    "host.getMarketplaceExtensionDetail",
+    "host.installMarketplaceExtension",
+    "host.updateExtension",
+    "host.checkExtensionUpdate",
+  ]) {
+    assert.ok(HOST_METHODS.has(method), method);
+  }
+});
+
+async function writeRegistryFixture(
+  root: string,
+  name: string,
+  entries: Array<Record<string, unknown>>,
+): Promise<void> {
+  const { mkdir } = await import("node:fs/promises");
+  await mkdir(join(root, ".spirit"), { recursive: true });
+  await writeFile(
+    join(root, ".spirit", "marketplace.json"),
+    `${JSON.stringify({ schemaVersion: 1, name, displayName: name, extensions: entries }, null, 2)}\n`,
+    "utf8",
+  );
+  for (const entry of entries) {
+    const entryName = (entry as { name: string }).name;
+    const contentDir = join(root, "extensions", entryName);
+    await mkdir(contentDir, { recursive: true });
+    await writeFile(
+      join(contentDir, "package.json"),
+      `${JSON.stringify({ name: entryName, version: "0.0.0" }, null, 2)}\n`,
+      "utf8",
+    );
+  }
+}
+
+function fixtureEntry(
+  name: string,
+  version: string,
+  reviewStatus?: string,
+): Record<string, unknown> {
+  return {
+    name,
+    version,
+    source: `./extensions/${name}`,
+    displayName: name,
+    description: `${name} extension.`,
+    ...(reviewStatus ? { reviewStatus } : {}),
+    manifest: { supportedHosts: ["desktop", "cli"] },
+  };
+}
+
+test("marketplace source RPCs add, list, catalog, detail, install, update, remove", async () => {
+  await withTempDir(async (dir) => {
+    let refreshed = 0;
+    const service = new HostService(dir, {
+      refreshExtensions: async () => {
+        refreshed += 1;
+      },
+    } as unknown as SessionManager);
+
+    const registryDir = await mkdtemp(join(tmpdir(), "spirit-host-service-registry-"));
+    try {
+      await writeRegistryFixture(registryDir, "fixture-registry", [
+        fixtureEntry("extension-alpha", "1.0.0", "verified"),
+        fixtureEntry("extension-beta", "1.0.0"),
+      ]);
+
+      // add (locator is an absolute path here; clients resolve relative paths)
+      const added = (await service.handle("host.addMarketplaceSource", {
+        locator: registryDir,
+      })) as { id: string; name: string; kind: string };
+      assert.equal(added.name, "fixture-registry");
+      assert.equal(added.kind, "local");
+
+      // list includes built-in + personal + the added source
+      const sources = (await service.handle("host.listMarketplaceSources", {})) as Array<{
+        id: string;
+        name: string;
+        internal: boolean;
+      }>;
+      assert.deepEqual(
+        sources.map((source) => source.name),
+        ["built-in", "personal", "fixture-registry"],
+      );
+      assert.equal(sources[0]?.internal, true);
+      assert.equal(sources[2]?.internal, false);
+
+      // per-source catalog
+      const catalog = (await service.handle("host.listMarketplaceCatalog", {
+        hostKind: "desktop",
+        sourceId: added.id,
+      })) as {
+        items: Array<{ id: string; name: string; installed: boolean; reviewStatus: string }>;
+      };
+      assert.deepEqual(
+        catalog.items.map((item) => item.id),
+        [`${added.id}/extension-alpha`, `${added.id}/extension-beta`],
+      );
+      assert.equal(catalog.items[0]?.reviewStatus, "verified");
+      assert.equal(catalog.items[1]?.reviewStatus, "unverified");
+
+      // detail
+      const detail = (await service.handle("host.getMarketplaceExtensionDetail", {
+        hostKind: "desktop",
+        sourceId: added.id,
+        name: "extension-alpha",
+      })) as { id: string; installed: boolean };
+      assert.equal(detail.id, `${added.id}/extension-alpha`);
+      assert.equal(detail.installed, false);
+
+      // install: verified entry installs straight away
+      const installed = (await service.handle("host.installMarketplaceExtension", {
+        hostKind: "desktop",
+        name: "extension-alpha",
+      })) as { status: string; extension: { id: string } };
+      assert.equal(installed.status, "installed");
+      assert.equal(installed.extension.id, `${added.id}/extension-alpha`);
+      assert.ok(refreshed > 0);
+
+      // install: unverified entry hits the review gate, then passes with acknowledgement
+      const gated = (await service.handle("host.installMarketplaceExtension", {
+        hostKind: "desktop",
+        name: "extension-beta",
+      })) as { status: string; reviewStatus: string };
+      assert.equal(gated.status, "review-required");
+      assert.equal(gated.reviewStatus, "unverified");
+      const acknowledged = (await service.handle("host.installMarketplaceExtension", {
+        hostKind: "desktop",
+        name: "extension-beta",
+        reviewAcknowledged: true,
+      })) as { status: string };
+      assert.equal(acknowledged.status, "installed");
+
+      // update check: no update yet
+      const noUpdate = (await service.handle("host.checkExtensionUpdate", {
+        hostKind: "desktop",
+        id: `${added.id}/extension-alpha`,
+      })) as { updateAvailable: boolean };
+      assert.equal(noUpdate.updateAvailable, false);
+
+      // bump the registry version, then update
+      await writeRegistryFixture(registryDir, "fixture-registry", [
+        fixtureEntry("extension-alpha", "1.1.0", "verified"),
+        fixtureEntry("extension-beta", "1.0.0"),
+      ]);
+      const hasUpdate = (await service.handle("host.checkExtensionUpdate", {
+        hostKind: "desktop",
+        id: `${added.id}/extension-alpha`,
+      })) as { updateAvailable: boolean; version: string };
+      assert.equal(hasUpdate.updateAvailable, true);
+      assert.equal(hasUpdate.version, "1.1.0");
+      const updated = (await service.handle("host.updateExtension", {
+        hostKind: "desktop",
+        id: `${added.id}/extension-alpha`,
+      })) as { status: string; extension: { version: string } };
+      assert.equal(updated.status, "updated");
+      assert.equal(updated.extension.version, "1.1.0");
+
+      // remove
+      const removed = (await service.handle("host.removeMarketplaceSource", {
+        name: "fixture-registry",
+      })) as { name: string };
+      assert.equal(removed.name, "fixture-registry");
+      const after = (await service.handle("host.listMarketplaceSources", {})) as Array<unknown>;
+      assert.equal(after.length, 2);
+    } finally {
+      await rm(registryDir, { recursive: true, force: true });
+    }
+  });
+});
+
 test("host.listMarketplaceCatalog returns an array for the current host", async () => {
   await withTempDir(async (dir) => {
     const service = makeService(dir);

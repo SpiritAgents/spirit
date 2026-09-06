@@ -436,6 +436,105 @@ export interface InstallBuiltInExtensionRequest {
   id: string;
 }
 
+export type DesktopMarketplaceReviewStatus = "unverified" | "verified" | "revoked";
+
+export type DesktopMarketplaceSourceKind = "local" | "git" | "http-index";
+
+export interface DesktopMarketplaceSource {
+  id: string;
+  name: string;
+  displayName: string;
+  kind: DesktopMarketplaceSourceKind;
+  locator: string;
+  ref?: string;
+  /** built-in / personal: shipped with the app, not user-added. */
+  internal: boolean;
+}
+
+/** A marketplace catalog row: registry entry fields plus install state. */
+export interface DesktopMarketplaceCatalogEntry {
+  /** Composite identity: `<sourceId>/<name>`. */
+  id: string;
+  sourceId: string;
+  sourceName: string;
+  name: string;
+  displayName: string;
+  description: string;
+  version: string;
+  author?: DesktopExtensionAuthor;
+  categories?: string[];
+  featured?: boolean;
+  reviewStatus: DesktopMarketplaceReviewStatus;
+  /** Artifact delivery: registry-relative local path or pinned npm package. */
+  artifactKind: "local" | "npm";
+  /** Renderable icon: data URL (local/git registries) or https URL (index direct-links). */
+  iconUrl?: string;
+  supportedHosts: DesktopExtensionHostKind[];
+  activationEvents?: string[];
+  requestedCapabilities?: string[];
+  contributedTools?: DesktopExtensionContributedTool[];
+  desktopCss?: DesktopExtensionDesktopCssEntry[];
+  desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
+  cliHooks?: DesktopExtensionCliUiHookEntry[];
+  instructionContributions?: DesktopExtensionInstructionContributionSummary;
+  installed: boolean;
+  enabled?: boolean;
+  installedVersion?: string;
+  updateAvailable: boolean;
+}
+
+export interface AddMarketplaceSourceRequest {
+  locator: string;
+  ref?: string;
+}
+
+export interface RemoveMarketplaceSourceRequest {
+  name: string;
+}
+
+export interface InstallMarketplaceExtensionRequest {
+  name: string;
+  marketplace?: string;
+  reviewAcknowledged?: boolean;
+}
+
+export interface UpdateExtensionRequest {
+  id: string;
+  reviewAcknowledged?: boolean;
+}
+
+/** Review gate for unverified / revoked entries: the UI confirms, then retries with reviewAcknowledged. */
+export interface DesktopMarketplaceReviewRequired {
+  status: "review-required";
+  extensionId: string;
+  reviewStatus: DesktopMarketplaceReviewStatus;
+}
+
+export type DesktopMarketplaceInstallResult =
+  | { status: "installed" }
+  | DesktopMarketplaceReviewRequired;
+
+export type DesktopMarketplaceUpdateResult =
+  | { status: "updated" }
+  | { status: "up-to-date" }
+  | DesktopMarketplaceReviewRequired;
+
+/** Command results carrying the updated snapshot (host-side command layer). */
+export interface MarketplaceSourceCommandResult {
+  snapshot: DesktopSnapshot;
+  /** add: the new source id (the view switches to its tab). */
+  sourceId?: string;
+}
+
+export type MarketplaceInstallCommandResult =
+  | { status: "installed"; snapshot: DesktopSnapshot }
+  | DesktopMarketplaceReviewRequired;
+
+export type MarketplaceUpdateCommandResult =
+  | { status: "updated"; snapshot: DesktopSnapshot }
+  | { status: "up-to-date" }
+  | DesktopMarketplaceReviewRequired;
+
 export interface DeleteExtensionRequest {
   id: string;
 }
@@ -447,17 +546,6 @@ export interface SetExtensionEnabledRequest {
 
 export interface RunExtensionRequest {
   id: string;
-}
-
-export interface InstallMarketplaceExtensionRequest {
-  extensionId: string;
-  version?: string;
-  reviewAcknowledged?: boolean;
-}
-
-export interface PrepareMarketplaceExtensionInstallRequest {
-  extensionId: string;
-  version?: string;
 }
 
 export type DesktopExtensionSettingValue = string | boolean | number | null;
@@ -547,6 +635,11 @@ export interface DesktopExtensionInstructionContributionSummary {
   rules?: { content: string };
 }
 
+export interface DesktopExtensionAuthor {
+  name: string;
+  url?: string;
+}
+
 export interface DesktopExtensionListItem {
   id: string;
   displayName: string;
@@ -554,8 +647,7 @@ export interface DesktopExtensionListItem {
   version: string;
   enabled: boolean;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: DesktopExtensionAuthor;
   main?: string;
   supportedHosts: DesktopExtensionHostKind[];
   activationEvents?: string[];
@@ -996,7 +1088,12 @@ export interface DesktopSnapshot {
   /** Extension-contributed skills for slash activation; omitted from settings lists. */
   extensionSkills: DesktopExtensionSkillSlashItem[];
   extensionsList: DesktopExtensionListItem[];
-  marketplaceCatalog: DesktopExtensionListItem[];
+  /** Configured marketplace sources (built-in, personal, user-added). */
+  marketplaceSources: DesktopMarketplaceSource[];
+  /** Catalog rows keyed by source id. */
+  marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  /** Refresh fallback warnings (offline snapshot / stale clone). */
+  marketplaceWarnings?: string[];
   extensionCss: DesktopExtensionCssLayer[];
   /** Extension background warmup in progress (does not block session navigation or sending messages). */
   extensionsLoading?: boolean;

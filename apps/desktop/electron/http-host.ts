@@ -571,6 +571,66 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/extensions/install") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("installMarketplaceExtension", {
+        request: {
+          name: typeof jsonBody?.name === "string" ? jsonBody.name : "",
+          marketplace: typeof jsonBody?.marketplace === "string" ? jsonBody.marketplace : undefined,
+          reviewAcknowledged: jsonBody?.reviewAcknowledged === true,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/extensions/update") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("updateExtension", {
+        request: {
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
+          reviewAcknowledged: jsonBody?.reviewAcknowledged === true,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/marketplaces/add") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("addMarketplaceSource", {
+        request: {
+          locator: typeof jsonBody?.locator === "string" ? jsonBody.locator : "",
+          ref: typeof jsonBody?.ref === "string" ? jsonBody.ref : undefined,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/marketplaces/remove") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("removeMarketplaceSource", {
+        request: {
+          name: typeof jsonBody?.name === "string" ? jsonBody.name : "",
+        },
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/extensions/enabled") {
     writeJson(
       request,

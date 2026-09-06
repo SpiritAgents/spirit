@@ -1,0 +1,49 @@
+{
+  "name": "@spiritagent/extension-toolkit",
+  "version": "1.0.0-alpha.0",
+  "description": "Spirit extension package and marketplace registry schema toolkit (marketplace.json parsing, semver, registry-relative paths, contribution file checks)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpiritAgents/spirit.git",
+    "directory": "packages/extension-toolkit"
+  },
+  "bin": {
+    "extension-toolkit": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
+  },
+  "dependencies": {
+    "@spiritagent/agent-core": "workspace:*",
+    "@spiritagent/create-extension": "workspace:*",
+    "fflate": "0.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "25.9.5",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

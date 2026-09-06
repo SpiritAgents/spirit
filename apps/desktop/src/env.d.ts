@@ -19,7 +19,11 @@ import type {
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
+  AddMarketplaceSourceRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -87,6 +91,10 @@ declare global {
     inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
     installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
+    addMarketplaceSource(request: AddMarketplaceSourceRequest): Promise<unknown>;
+    removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot>;
+    installMarketplaceExtension(request: InstallMarketplaceExtensionRequest): Promise<unknown>;
+    updateExtension(request: UpdateExtensionRequest): Promise<unknown>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
     setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
     runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;

@@ -1,0 +1,63 @@
+---
+title: 扩展
+description: 从市场安装扩展、导入 ZIP 包，或添加你自己的远程扩展市场。
+---
+
+扩展为 Spirit 添加能力——工具、技能、钩子、MCP 服务器与界面贡献。扩展通过扩展市场分发：
+
+- **内置**——随应用附带。
+- **个人**——你自己的导入：亲手添加的 ZIP 包。
+- **远程扩展市场**——由你添加：Git 仓库、HTTP 索引 URL 或本地目录。
+
+Desktop 侧栏的**扩展**页为每个市场显示一个 Tab，**全部** Tab 则把所有市场合并为一个列表。CLI 通过 `spirit extension` 命令与 `/extension marketplace` TUI 提供同样的流程。
+
+## 安装、更新与卸载
+
+在 Desktop 打开**扩展**，选择扩展并点击**安装**。已安装的扩展提供**更多操作**菜单，内含**禁用**（不删除、仅停用）与**卸载**。当市场发布更新的版本时，详情页会显示**更新**按钮。
+
+在 CLI 中：
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` 会在所有已添加的市场中解析 `<name>`。若两个市场提供同名扩展，命令会失败并列出它们——加 `--marketplace <name>` 重跑以指定其一。同名扩展从不同市场安装可以共存：安装按市场隔离。
+
+内置扩展随应用自动更新。个人（导入的）扩展没有可拉取的上游——改为重新导入更新的 ZIP。
+
+## 审核确认门槛
+
+安装或更新市场条目未验证（或已被撤销）的扩展时，需要显式确认。Desktop 显示**审核扩展**对话框；CLI 需加 `--review-acknowledged`，TUI 则显示确认步骤。
+
+## 导入扩展（ZIP）
+
+ZIP 包是自声明旁路：不经过任何市场。
+
+- Desktop：**扩展**页 → **添加** → **导入扩展**，然后选择 ZIP 文件。
+- CLI：`spirit extension import <archive>`。
+
+导入会进入**个人**市场并固定为未验证条目，同样经过审核确认门槛。重复导入同名扩展会覆盖；卸载导入的扩展会同时删除其个人市场记录。
+
+## 添加市场
+
+- Desktop：**扩展**页 → **添加** → **添加市场** → **从磁盘添加…**（本地目录）或**从 URL 添加…**（Git 仓库或 HTTP 索引 URL）。
+- CLI：`spirit extension marketplace add <url|path>`。
+
+三种定位形式：
+
+| 形式                     | 示例                                                                     |
+| ------------------------ | ------------------------------------------------------------------------ |
+| 本地目录                 | `spirit extension marketplace add ./my-marketplace`                      |
+| Git 仓库（HTTPS 或 SSH） | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| HTTP 索引 URL            | `spirit extension marketplace add https://example.com`                   |
+
+Git URL 可用 `--git-ref <tag|branch|commit>` 钉住 ref；缺省为远端默认分支。裸站点 URL 会自动补全其 `/.spirit/marketplace.json`。
+
+用 `spirit extension marketplace list` 与 `spirit extension marketplace remove <name>` 管理已添加的市场。Desktop 上右键点击市场 Tab 即可移除。
+
+<Callout type="info">
+  扩展的能力声明由市场背书，而非包自证。添加市场即选择信任其运营者的审核——只添加你信任的来源。
+</Callout>

@@ -16,6 +16,7 @@ mod conversation;
 mod forms;
 mod input;
 mod markdown;
+mod marketplace;
 mod pickers;
 mod subagent;
 mod text;
@@ -27,6 +28,7 @@ use conversation::*;
 use forms::*;
 use input::*;
 use markdown::*;
+use marketplace::*;
 use pickers::*;
 use subagent::*;
 use text::*;
@@ -44,9 +46,9 @@ use crate::{
         AskQuestionsOptionView, AskQuestionsQuestionView, AssistantAuxKind,
         BottomFormFieldEditorView, BottomFormFieldView, BottomFormKind, BottomFormView,
         ChatMessage, CliUiHookSlot, ConversationPanelHit, InputSuggestion, InputSuggestionKind,
-        MainInputMode, MessageRole, PendingAssistantAux, PendingSubagentApprovalView,
-        SubagentApprovalInputView, SubagentSessionDetailView, ToolUiBlock, ToolUiPhase,
-        TuiViewModel,
+        MainInputMode, MarketplaceViewModel, MessageRole, PendingAssistantAux,
+        PendingSubagentApprovalView, SubagentApprovalInputView, SubagentSessionDetailView,
+        ToolUiBlock, ToolUiPhase, TuiViewModel,
     },
 };
 
@@ -247,7 +249,7 @@ pub fn draw_ui(
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
-    let show_marketplace_picker = app.marketplace_picker_active;
+    let show_marketplace = app.marketplace_view.is_some();
     let show_rewind_picker = app.rewind_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
     let show_inline_picker = show_model_picker
@@ -257,8 +259,8 @@ pub fn draw_ui(
         || show_approval_picker
         || show_network_picker
         || show_tui_picker
-        || show_image_picker
-        || show_marketplace_picker;
+        || show_image_picker;
+
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
@@ -266,8 +268,8 @@ pub fn draw_ui(
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
-        || show_image_picker
-        || show_marketplace_picker;
+        || show_image_picker;
+
     let show_suggestions = app.input_suggestion_kind.is_some()
         && !show_picker
         && !show_rewind_picker
@@ -294,6 +296,14 @@ pub fn draw_ui(
         })
         .unwrap_or(0);
 
+    let marketplace_height = app
+        .marketplace_view
+        .as_ref()
+        .map(|view| {
+            marketplace_panel_height(view, content_area.height, content_area.width, input_height)
+        })
+        .unwrap_or(0);
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints(if show_inline_picker {
@@ -308,6 +318,12 @@ pub fn draw_ui(
                 Constraint::Length(input_height),
                 Constraint::Length(7),
                 Constraint::Length(1),
+            ]
+        } else if show_marketplace {
+            vec![
+                Constraint::Min(0),
+                Constraint::Length(input_height),
+                Constraint::Length(marketplace_height),
             ]
         } else if show_bottom_form {
             vec![
@@ -385,7 +401,11 @@ pub fn draw_ui(
 
     draw_input_block(frame, app, chunks[1], show_bottom_form);
 
-    let overlay_area = if show_inline_picker || show_picker || show_bottom_form || show_suggestions
+    let overlay_area = if show_inline_picker
+        || show_picker
+        || show_marketplace
+        || show_bottom_form
+        || show_suggestions
     {
         Some(chunks[2])
     } else {
@@ -405,7 +425,7 @@ pub fn draw_ui(
             show_chat_picker,
             show_subagent_picker,
             show_image_picker,
-            show_marketplace_picker,
+            show_marketplace,
             show_picker,
             show_bottom_form,
             show_suggestions,
@@ -413,7 +433,7 @@ pub fn draw_ui(
         &mut feedback,
     );
 
-    if !show_suggestions && !show_bottom_form && !show_inline_picker {
+    if !show_suggestions && !show_bottom_form && !show_marketplace && !show_inline_picker {
         let help_idx = if show_picker { 3 } else { 2 };
         let footer = Paragraph::new(build_footer_line(app, chunks[help_idx].width as usize));
         frame.render_widget(footer, chunks[help_idx]);
@@ -469,7 +489,7 @@ struct InlineSurfaceFlags {
     show_chat_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
-    show_marketplace_picker: bool,
+    show_marketplace: bool,
     show_picker: bool,
     show_inline_picker: bool,
     show_bottom_form: bool,
@@ -485,7 +505,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
     let show_chat_picker = app.chat_picker_active;
     let show_subagent_picker = app.subagent_picker_active;
     let show_image_picker = app.image_picker_active;
-    let show_marketplace_picker = app.marketplace_picker_active;
+    let show_marketplace = app.marketplace_view.is_some();
     let show_rewind_picker = app.rewind_picker.is_some();
     let show_fork_picker = app.fork_picker.is_some();
     let show_bottom_form = app.bottom_form.is_some();
@@ -496,8 +516,8 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         || show_approval_picker
         || show_network_picker
         || show_tui_picker
-        || show_image_picker
-        || show_marketplace_picker;
+        || show_image_picker;
+
     let show_picker = show_model_picker
         || show_language_picker
         || show_approval_picker
@@ -505,8 +525,8 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         || show_tui_picker
         || show_chat_picker
         || show_subagent_picker
-        || show_image_picker
-        || show_marketplace_picker;
+        || show_image_picker;
+
     let show_suggestions = app.input_suggestion_kind.is_some()
         && !show_picker
         && !show_rewind_picker
@@ -521,7 +541,7 @@ fn inline_surface_flags(app: &TuiViewModel) -> InlineSurfaceFlags {
         show_chat_picker,
         show_subagent_picker,
         show_image_picker,
-        show_marketplace_picker,
+        show_marketplace,
         show_picker,
         show_inline_picker,
         show_bottom_form,
@@ -559,6 +579,11 @@ fn measure_inline_chrome(
 
     let overlay_h = if flags.show_inline_picker || flags.show_picker {
         7
+    } else if flags.show_marketplace {
+        app.marketplace_view
+            .as_ref()
+            .map(|view| marketplace_panel_height(view, viewport_h, width, input_height))
+            .unwrap_or(0)
     } else if flags.show_bottom_form {
         bottom_form_height
     } else if flags.show_suggestions {
@@ -736,7 +761,7 @@ fn draw_inline_ui(
             show_chat_picker: flags.show_chat_picker,
             show_subagent_picker: flags.show_subagent_picker,
             show_image_picker: flags.show_image_picker,
-            show_marketplace_picker: flags.show_marketplace_picker,
+            show_marketplace: flags.show_marketplace,
             show_picker: flags.show_picker,
             show_bottom_form: flags.show_bottom_form,
             show_suggestions: flags.show_suggestions,
@@ -779,7 +804,7 @@ struct AuxOverlayFlags {
     show_chat_picker: bool,
     show_subagent_picker: bool,
     show_image_picker: bool,
-    show_marketplace_picker: bool,
+    show_marketplace: bool,
     show_picker: bool,
     show_bottom_form: bool,
     show_suggestions: bool,
@@ -850,6 +875,12 @@ fn draw_aux_overlay(
         }
         return;
     }
+    if flags.show_marketplace {
+        if let (Some(view), Some(overlay)) = (&app.marketplace_view, overlay) {
+            draw_marketplace_view(frame, overlay, view);
+        }
+        return;
+    }
     if !flags.show_picker {
         set_main_input_cursor(frame, app, input_area);
     }
@@ -880,9 +911,6 @@ fn draw_aux_overlay(
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_image_picker {
         let picker_lines = build_image_picker_lines(app, 5);
-        draw_inline_picker(frame, overlay, picker_lines);
-    } else if flags.show_marketplace_picker {
-        let picker_lines = build_marketplace_picker_lines(app, 5);
         draw_inline_picker(frame, overlay, picker_lines);
     } else if flags.show_suggestions {
         let use_inline_suggestions = suggestions_use_inline_picker(app);

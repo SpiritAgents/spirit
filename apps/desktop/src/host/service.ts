@@ -36,7 +36,8 @@ import {
   collectEnabledExtensionInstructionContributions,
   overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
-  listMarketplaceCatalog,
+  listAllMarketplaceSources,
+  readMarketplaceCatalogForSource,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
   classifyLocalFileComposerRoute as resolveLocalFileComposerRoute,
@@ -84,6 +85,8 @@ import type {
   DesktopApprovalDecision,
   DesktopMcpServerInspection,
   DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceSource,
   DesktopExtensionCssLayer,
   DesktopGitSnapshot,
   GetGitHubPullRequestDetailRequest,
@@ -125,8 +128,15 @@ import type {
   RequestCodeCompletionRequest,
   CodeCompletionResponse,
   SessionListItem,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   InstallLspProviderRequest,
   SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
@@ -174,15 +184,19 @@ import {
   deleteExtensionCommand,
   deleteRuleCommand,
   deleteMcpServerCommand,
+  addMarketplaceSourceCommand,
   deleteHookEntryCommand,
   deleteSkillCommand,
   importExtensionCommand,
   installBuiltInExtensionCommand,
+  installMarketplaceExtensionCommand,
   inspectMcpServerCommand,
+  removeMarketplaceSourceCommand,
   runExtensionCommand,
   setExtensionEnabledCommand,
   saveHookEntryCommand,
   submitSkillSlashCommand,
+  updateExtensionCommand,
   updateExtensionSecretCommand,
   updateExtensionSettingsCommand,
   type HostExtensionCommandContext,
@@ -455,6 +469,7 @@ import { createTodoScope } from "./todos.js";
 import {
   buildDesktopExtensionListItems,
   buildDesktopExtensionToolDefinitions,
+  buildDesktopMarketplaceCatalogEntries,
   collectDesktopExtensionCssLayers,
   collectExtensionSystemPrompts,
 } from "./extensions.js";
@@ -536,7 +551,9 @@ interface HostState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
-  marketplaceCatalog: DesktopExtensionListItem[];
+  marketplaceSources: DesktopMarketplaceSource[];
+  marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
@@ -1611,6 +1628,26 @@ class DesktopHostService {
 
   async installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot> {
     return installBuiltInExtensionCommand(this.extensionCommandContext(), request);
+  }
+
+  async addMarketplaceSource(
+    request: AddMarketplaceSourceRequest,
+  ): Promise<MarketplaceSourceCommandResult> {
+    return addMarketplaceSourceCommand(this.extensionCommandContext(), request);
+  }
+
+  async removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot> {
+    return removeMarketplaceSourceCommand(this.extensionCommandContext(), request);
+  }
+
+  async installMarketplaceExtension(
+    request: InstallMarketplaceExtensionRequest,
+  ): Promise<MarketplaceInstallCommandResult> {
+    return installMarketplaceExtensionCommand(this.extensionCommandContext(), request);
+  }
+
+  async updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult> {
+    return updateExtensionCommand(this.extensionCommandContext(), request);
   }
 
   async deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot> {
@@ -3646,7 +3683,11 @@ class DesktopHostService {
       metadata: state.metadata,
       plan: state.plan,
       extensionsList: state.extensionsList,
-      marketplaceCatalog: state.marketplaceCatalog,
+      marketplaceSources: state.marketplaceSources,
+      marketplaceCatalogs: state.marketplaceCatalogs,
+      ...(state.marketplaceWarnings.length > 0
+        ? { marketplaceWarnings: state.marketplaceWarnings }
+        : {}),
       extensionCss: state.extensionCss,
       extensionSkills: state.extensionInstructionContributions.skills.map((skill) => ({
         id: skill.id,
@@ -4059,11 +4100,38 @@ class DesktopHostService {
     const manager = this.extensionManager();
     const extensions = await manager.list();
     state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
-    const rawCatalog = await listMarketplaceCatalog({
-      spiritDataDir: spiritDataDir(),
-      hostKind: "desktop",
-    });
-    state.marketplaceCatalog = await buildDesktopExtensionListItems(manager, rawCatalog, options);
+
+    // Multi-source marketplace: refresh every source, then read its catalog.
+    const marketplaceContext = { spiritDataDir: spiritDataDir(), hostKind: "desktop" as const };
+    const sources = await listAllMarketplaceSources(marketplaceContext);
+    state.marketplaceSources = sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      displayName: source.displayName,
+      kind: source.kind,
+      locator: source.locator,
+      ...(source.ref ? { ref: source.ref } : {}),
+      internal: source.id === "built-in" || source.id === "personal",
+    }));
+    const catalogs: Record<string, DesktopMarketplaceCatalogEntry[]> = {};
+    const warnings: string[] = [];
+    for (const source of sources) {
+      try {
+        const read = await readMarketplaceCatalogForSource(marketplaceContext, source);
+        catalogs[source.id] = await buildDesktopMarketplaceCatalogEntries(read.items);
+        if (read.warning) {
+          warnings.push(read.warning);
+        }
+      } catch (error) {
+        catalogs[source.id] = [];
+        warnings.push(
+          `Failed to read marketplace "${source.displayName}": ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    state.marketplaceCatalogs = catalogs;
+    state.marketplaceWarnings = warnings;
+
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);
     state.extensionInstructionContributions =
       await collectEnabledExtensionInstructionContributions(extensions);

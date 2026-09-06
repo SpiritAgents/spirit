@@ -1,9 +1,23 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Ellipsis, LoaderCircle, Search, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Blocks,
+  ChevronDown,
+  Ellipsis,
+  Folder,
+  Globe,
+  LoaderCircle,
+  Search,
+  Sparkles,
+  Store,
+  Trash2,
+} from "lucide-react";
 
+import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
+import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,10 +33,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { EmptyCard } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
   DESKTOP_FORM_INPUT_INNER,
@@ -32,15 +52,23 @@ import {
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { fileToBase64 } from "@/lib/file-to-base64";
+import { filterVisibleMarketplaceSources } from "@/lib/marketplace-source-visibility";
 import { topScrollFadeMaskStyle } from "@/lib/mask-styles";
+import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import { useScrollTopBandOcclusion } from "@/lib/scroll-top-band-occlusion";
 import { cn } from "@/lib/utils";
 import type {
+  AddMarketplaceSourceRequest,
   DeleteExtensionRequest,
-  DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceInstallResult,
+  DesktopMarketplaceReviewStatus,
+  DesktopMarketplaceSource,
+  DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
-  InstallBuiltInExtensionRequest,
+  RemoveMarketplaceSourceRequest,
   SetExtensionEnabledRequest,
+  UpdateExtensionRequest,
 } from "@/types";
 
 /** Matches the automations entry page content width */
@@ -56,14 +84,42 @@ declare global {
   }
 }
 
+export function reviewStatusBadgeVariant(status: DesktopMarketplaceReviewStatus) {
+  if (status === "verified") {
+    return "secondary" as const;
+  }
+  if (status === "revoked") {
+    return "destructive" as const;
+  }
+  return "outline" as const;
+}
+
+/** Pending review-gate confirmation for an install / update / import action. */
+type ReviewGateTarget = {
+  extensionId: string;
+  displayName: string;
+  reviewStatus: DesktopMarketplaceReviewStatus;
+  retry: (reviewAcknowledged: true) => Promise<void>;
+};
+
 type MarketplaceViewProps = {
   snapshot: {
-    marketplaceCatalog?: DesktopExtensionListItem[];
+    marketplaceSources?: DesktopMarketplaceSource[];
+    marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
+    marketplaceWarnings?: string[];
     extensionsLoading?: boolean;
   } | null;
   extensionsBusy: boolean;
   onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
-  onInstallBuiltInExtension: (request: InstallBuiltInExtensionRequest) => Promise<void>;
+  onInstallMarketplaceExtension: (request: {
+    name: string;
+    marketplace?: string;
+    reviewAcknowledged?: boolean;
+  }) => Promise<DesktopMarketplaceInstallResult>;
+  onUpdateExtension: (request: UpdateExtensionRequest) => Promise<DesktopMarketplaceUpdateResult>;
+  onAddMarketplaceSource: (request: AddMarketplaceSourceRequest) => Promise<{ sourceId: string }>;
+  onRemoveMarketplaceSource: (request: RemoveMarketplaceSourceRequest) => Promise<void>;
+  onPickMarketplaceDirectory: () => Promise<string | null>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
   extensionsInstalling?: boolean;
@@ -75,7 +131,11 @@ export function MarketplaceView({
   snapshot,
   extensionsBusy,
   onImportExtension,
-  onInstallBuiltInExtension,
+  onInstallMarketplaceExtension,
+  onUpdateExtension,
+  onAddMarketplaceSource,
+  onRemoveMarketplaceSource,
+  onPickMarketplaceDirectory,
   onDeleteExtension,
   onSetExtensionEnabled,
   extensionsInstalling = false,
@@ -83,9 +143,21 @@ export function MarketplaceView({
 }: MarketplaceViewProps) {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState("");
-  const [uninstallTarget, setUninstallTarget] = useState<DesktopExtensionListItem | null>(null);
+  // "all" is a UI-level pseudo source: the merged view over every added marketplace.
+  const [activeSourceId, setActiveSourceId] = useState("all");
+  const [uninstallTarget, setUninstallTarget] = useState<DesktopMarketplaceCatalogEntry | null>(
+    null,
+  );
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
+  const [addSourceOpen, setAddSourceOpen] = useState(false);
+  const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
+  const [removeSourceTarget, setRemoveSourceTarget] = useState<DesktopMarketplaceSource | null>(
+    null,
+  );
+  const [removeSourceDialogOpen, setRemoveSourceDialogOpen] = useState(false);
+  /** Install / update in flight for these catalog ids; other rows stay clickable. */
+  const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [listScrollRoot, setListScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
     null,
@@ -179,9 +251,41 @@ export function MarketplaceView({
     return () => viewport.removeEventListener("scroll", syncHeaderDock);
   }, [detailExtensionId, headerDockOffset, headerElement, listScrollRoot]);
 
-  const catalog = snapshot?.marketplaceCatalog ?? [];
+  const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
+  const catalogs = snapshot?.marketplaceCatalogs ?? {};
+  // Internal-source tabs hide while their catalog is empty; the All tab shows
+  // exactly when any tab shows, so an all-empty marketplace hides the tab bar.
+  const visibleSources = filterVisibleMarketplaceSources(sources, catalogs);
+  const showAll = visibleSources.length > 0;
+  const activeTabVisible =
+    activeSourceId === "all"
+      ? showAll
+      : visibleSources.some((source) => source.id === activeSourceId);
+  const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
+  // The All view merges every source's catalog and sorts globally by display
+  // name (per-source tabs keep the registry's curated order); each entry keeps
+  // its <sourceId>/<name> identity.
+  const catalog =
+    resolvedActiveSourceId === "all"
+      ? Object.values(catalogs)
+          .flat()
+          .sort(
+            (left, right) =>
+              left.displayName.localeCompare(right.displayName, "zh-CN") ||
+              left.id.localeCompare(right.id, "en"),
+          )
+      : (catalogs[resolvedActiveSourceId] ?? []);
+  // HTTP registries cannot serve directory content, so local-path artifacts are
+  // listed but not installable there; the CLI surfaces the same rule as an
+  // install-time error.
+  const isInstallUnsupported = (item: DesktopMarketplaceCatalogEntry) =>
+    item.artifactKind === "local" &&
+    sources.find((source) => source.id === item.sourceId)?.kind === "http-index";
   const detailItem = detailExtensionId
-    ? catalog.find((item) => item.id === detailExtensionId)
+    ? (catalog.find((item) => item.id === detailExtensionId) ??
+      Object.values(catalogs)
+        .flat()
+        .find((item) => item.id === detailExtensionId))
     : undefined;
 
   const filteredExtensions = catalog.filter((item) => {
@@ -190,7 +294,13 @@ export function MarketplaceView({
       return true;
     }
 
-    return [item.displayName, item.description ?? "", item.author ?? ""]
+    return [
+      item.displayName,
+      item.description ?? "",
+      item.author?.name ?? "",
+      item.name,
+      ...(item.categories ?? []),
+    ]
       .join(" ")
       .toLowerCase()
       .includes(query);
@@ -206,7 +316,24 @@ export function MarketplaceView({
     setDetailExtensionId(null);
   };
 
-  const handleToggleEnabled = (item: DesktopExtensionListItem) => {
+  const runInstallAction = useCallback(async (extensionId: string, action: () => Promise<void>) => {
+    setInstallBusyIds((prev) => {
+      const next = new Set(prev);
+      next.add(extensionId);
+      return next;
+    });
+    try {
+      await action();
+    } finally {
+      setInstallBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(extensionId);
+        return next;
+      });
+    }
+  }, []);
+
+  const handleToggleEnabled = (item: DesktopMarketplaceCatalogEntry) => {
     void (async () => {
       try {
         await onSetExtensionEnabled({ id: item.id, enabled: !item.enabled });
@@ -216,15 +343,99 @@ export function MarketplaceView({
     })();
   };
 
-  const handleInstallBuiltIn = (item: DesktopExtensionListItem) => {
-    void (async () => {
+  const installWithReviewGate = useCallback(
+    async (item: DesktopMarketplaceCatalogEntry) => {
+      const request = {
+        name: item.name,
+        marketplace: item.sourceName,
+      };
+      const result = await onInstallMarketplaceExtension(request);
+      if (result.status === "review-required") {
+        setReviewGate({
+          extensionId: result.extensionId,
+          displayName: item.displayName,
+          reviewStatus: result.reviewStatus,
+          retry: async () => {
+            await onInstallMarketplaceExtension({ ...request, reviewAcknowledged: true });
+          },
+        });
+      }
+    },
+    [onInstallMarketplaceExtension],
+  );
+
+  const handleInstall = (item: DesktopMarketplaceCatalogEntry) => {
+    void runInstallAction(item.id, async () => {
       try {
-        await onInstallBuiltInExtension({ id: item.id });
+        await installWithReviewGate(item);
+      } catch {
+        /* runtimeError */
+      }
+    });
+  };
+
+  const updateWithReviewGate = useCallback(
+    async (item: DesktopMarketplaceCatalogEntry) => {
+      const result = await onUpdateExtension({ id: item.id });
+      if (result.status === "review-required") {
+        setReviewGate({
+          extensionId: result.extensionId,
+          displayName: item.displayName,
+          reviewStatus: result.reviewStatus,
+          retry: async () => {
+            await onUpdateExtension({ id: item.id, reviewAcknowledged: true });
+          },
+        });
+      }
+    },
+    [onUpdateExtension],
+  );
+
+  const handleUpdate = (item: DesktopMarketplaceCatalogEntry) => {
+    void runInstallAction(item.id, async () => {
+      try {
+        await updateWithReviewGate(item);
+      } catch {
+        /* runtimeError */
+      }
+    });
+  };
+
+  const handleAddFromDisk = () => {
+    void (async () => {
+      const directory = await onPickMarketplaceDirectory();
+      if (!directory) {
+        return;
+      }
+      try {
+        const result = await onAddMarketplaceSource({ locator: directory });
+        if (result.sourceId) {
+          setActiveSourceId(result.sourceId);
+        }
       } catch {
         /* runtimeError */
       }
     })();
   };
+
+  const handleAddFromUrl = async (request: AddMarketplaceSourceRequest) => {
+    const result = await onAddMarketplaceSource(request);
+    if (result.sourceId) {
+      setActiveSourceId(result.sourceId);
+    }
+  };
+
+  const handleRemoveSource = (source: DesktopMarketplaceSource) => {
+    setRemoveSourceTarget(source);
+    setRemoveSourceDialogOpen(true);
+  };
+
+  const dismissRemoveSourceDialog = useCallback(() => {
+    setRemoveSourceDialogOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setRemoveSourceTarget(null);
+    });
+  }, []);
 
   return (
     <div
@@ -291,17 +502,51 @@ export function MarketplaceView({
                 aria-hidden
               />
               <div aria-hidden style={{ height: headerHeight ?? 0 }} />
-              {/* Flow gap between the search bar and the list (scrolls away); the pinned
-                  band itself carries no bottom padding — the fade mask below it already
-                  softens the content transition. */}
-              <div className="h-4" aria-hidden />
+              {/* Marketplace domain tabs: below the search box, scroll away with the title,
+                  horizontal scroll instead of wrapping. pt-4 mirrors the pre-tabs flow gap
+                  between the search bar and the list (the pinned band carries no bottom
+                  padding; its fade mask only softens the transition). The row hides
+                  entirely when no tab is visible (all sources empty). */}
+              {showAll ? (
+                <div
+                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-4"
+                  role="tablist"
+                  aria-label={t("marketplace.tabsLabel")}
+                >
+                  {/* The All tab is pinned first and is the page default; it is a
+                      pseudo source, so it carries no per-source context menu. */}
+                  <Toggle
+                    size="sm"
+                    pressed={resolvedActiveSourceId === "all"}
+                    onPressedChange={() => setActiveSourceId("all")}
+                    aria-label={t("marketplace.tabAll")}
+                  >
+                    {t("marketplace.tabAll")}
+                  </Toggle>
+                  {visibleSources.map((source) => (
+                    <MarketplaceSourceTab
+                      key={source.id}
+                      source={source}
+                      active={resolvedActiveSourceId === source.id}
+                      onSelect={setActiveSourceId}
+                      onRemove={handleRemoveSource}
+                    />
+                  ))}
+                </div>
+              ) : null}
 
               {listEmpty ? (
-                <p className="text-sm text-muted-foreground">
-                  {catalog.length === 0
-                    ? t("marketplace.noExtensionsInstalled")
-                    : t("marketplace.noMatches")}
-                </p>
+                catalog.length === 0 ? (
+                  // With the tab bar hidden the card becomes the first content below
+                  // the docked search header, which carries no bottom gap of its
+                  // own — like the toggle row, the card brings its own top
+                  // whitespace instead.
+                  <EmptyCard className={showAll ? undefined : "mt-4"}>
+                    {t("marketplace.empty")}
+                  </EmptyCard>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
+                )
               ) : (
                 <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                   {filteredExtensions.map((item) => (
@@ -319,17 +564,24 @@ export function MarketplaceView({
                         onClick={() => openDetail(item.id)}
                         className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-3 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                       >
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted text-muted-foreground">
-                          <Sparkles className="size-4" aria-hidden />
+                        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
+                          {item.iconUrl ? (
+                            <img
+                              src={item.iconUrl}
+                              alt=""
+                              className="size-full object-cover"
+                              aria-hidden
+                            />
+                          ) : (
+                            <Sparkles className="size-4" aria-hidden />
+                          )}
                         </div>
-                        <span className="min-w-0 flex-1 space-y-1">
-                          <span className="flex flex-wrap items-center gap-1.5">
-                            <span className="truncate font-normal text-foreground">
-                              {item.displayName}
-                            </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-normal leading-snug text-foreground">
+                            {item.displayName}
                           </span>
                           {item.description ? (
-                            <span className="block truncate text-xs leading-relaxed text-muted-foreground">
+                            <span className="block truncate text-xs leading-snug text-muted-foreground">
                               {item.description}
                             </span>
                           ) : null}
@@ -352,7 +604,6 @@ export function MarketplaceView({
                             <DropdownMenuContent align="end" className="min-w-40 p-0">
                               <div className="p-1">
                                 <DropdownMenuItem
-                                  disabled={extensionsBusy}
                                   className="gap-2"
                                   onSelect={() => handleToggleEnabled(item)}
                                 >
@@ -368,7 +619,6 @@ export function MarketplaceView({
                                 <DropdownMenuItem
                                   variant="destructive"
                                   className="gap-2"
-                                  disabled={extensionsBusy}
                                   onSelect={() => setUninstallTarget(item)}
                                 >
                                   <Trash2 className="size-3.5 shrink-0" aria-hidden />
@@ -377,13 +627,29 @@ export function MarketplaceView({
                               </div>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                        ) : isInstallUnsupported(item) ? (
+                          <Tooltip delayDuration={300} disableHoverableContent>
+                            <TooltipTrigger>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled
+                                className="shrink-0 self-center"
+                              >
+                                {t("marketplace.install")}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t("marketplace.httpLocalSourceInstallUnsupported")}
+                            </TooltipContent>
+                          </Tooltip>
                         ) : (
                           <Button
                             type="button"
                             variant="outline"
-                            disabled={extensionsBusy}
+                            disabled={installBusyIds.has(item.id)}
                             className="shrink-0 self-center"
-                            onClick={() => handleInstallBuiltIn(item)}
+                            onClick={() => handleInstall(item)}
                           >
                             {t("marketplace.install")}
                           </Button>
@@ -430,18 +696,44 @@ export function MarketplaceView({
                     className={cn(DESKTOP_FORM_INPUT_INNER, "pl-9 pr-3.5")}
                   />
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 shrink-0 rounded-full px-3.5"
-                  disabled={extensionsInstalling}
-                  onClick={() => inputRef.current?.click()}
-                >
-                  {extensionsInstalling ? (
-                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                  ) : null}
-                  {t("marketplace.install")}
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1 rounded-full px-3.5"
+                      disabled={extensionsInstalling}
+                    >
+                      {extensionsInstalling ? (
+                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                      ) : null}
+                      {t("common.add")}
+                      <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-44 p-1">
+                    <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
+                      <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      {t("marketplace.importExtension")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="gap-2">
+                        <Store className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        {t("marketplace.addMarketplace")}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="min-w-44 p-1">
+                        <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
+                          <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          {t("marketplace.addFromDisk")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
+                          <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          {t("marketplace.addFromUrl")}
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
@@ -450,8 +742,10 @@ export function MarketplaceView({
         <MarketplaceDetailView
           item={detailItem}
           onBack={closeDetail}
-          extensionsBusy={extensionsBusy}
-          onInstall={() => handleInstallBuiltIn(detailItem)}
+          itemActionBusy={installBusyIds.has(detailItem.id)}
+          installUnsupported={isInstallUnsupported(detailItem)}
+          onInstall={() => handleInstall(detailItem)}
+          onUpdate={() => handleUpdate(detailItem)}
           onToggleEnabled={() => handleToggleEnabled(detailItem)}
           onRequestUninstall={() => setUninstallTarget(detailItem)}
           useTranslucency={useTranslucency}
@@ -481,6 +775,138 @@ export function MarketplaceView({
         </div>
       )}
 
+      <MarketplaceAddSourceDialog
+        open={addSourceOpen}
+        onOpenChange={setAddSourceOpen}
+        busy={extensionsBusy}
+        onSubmit={handleAddFromUrl}
+      />
+
+      <Dialog
+        open={reviewGate !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setReviewGate(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>{t("marketplace.reviewRequiredTitle")}</DialogTitle>
+            <DialogDescription>
+              {t(
+                reviewGate?.reviewStatus === "revoked"
+                  ? "marketplace.reviewRequiredRevoked"
+                  : "marketplace.reviewRequiredUnverified",
+                { name: reviewGate?.displayName ?? "" },
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogFooterActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReviewGate(null)}
+                disabled={extensionsBusy}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={extensionsBusy || !reviewGate}
+                onClick={() => {
+                  const target = reviewGate;
+                  if (!target) {
+                    return;
+                  }
+                  void runInstallAction(target.extensionId, async () => {
+                    try {
+                      await target.retry(true);
+                      setReviewGate(null);
+                    } catch {
+                      /* runtimeError */
+                    }
+                  });
+                }}
+              >
+                {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {t("marketplace.reviewRequiredContinue")}
+              </Button>
+            </DialogFooterActions>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={removeSourceDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setRemoveSourceDialogOpen(true);
+          } else if (!extensionsBusy) {
+            dismissRemoveSourceDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!extensionsBusy}>
+          <DialogHeader>
+            <DialogTitle>{t("marketplace.removeMarketplaceTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("marketplace.removeMarketplaceConfirm", {
+                name: removeSourceTarget?.displayName ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogFooterActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!extensionsBusy) {
+                    dismissRemoveSourceDialog();
+                  }
+                }}
+                disabled={extensionsBusy}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={extensionsBusy || !removeSourceTarget}
+                onClick={() => {
+                  const target = removeSourceTarget;
+                  if (!target) {
+                    return;
+                  }
+                  void (async () => {
+                    try {
+                      await onRemoveMarketplaceSource({ name: target.name });
+                      if (resolvedActiveSourceId === target.id) {
+                        setActiveSourceId("built-in");
+                      }
+                      dismissRemoveSourceDialog();
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {extensionsBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                ) : null}
+                {t("marketplace.removeMarketplace")}
+              </Button>
+            </DialogFooterActions>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={uninstallTarget !== null}
         onOpenChange={(open) => {
@@ -494,9 +920,11 @@ export function MarketplaceView({
             <DialogTitle>{t("marketplace.uninstallExtension")}</DialogTitle>
             <DialogDescription>
               {t(
-                uninstallTarget?.installSource === "built-in"
+                uninstallTarget?.sourceId === "built-in"
                   ? "marketplace.uninstallBuiltInConfirm"
-                  : "marketplace.uninstallExtensionConfirm",
+                  : uninstallTarget?.sourceId === "personal"
+                    ? "marketplace.uninstallPersonalConfirm"
+                    : "marketplace.uninstallExtensionConfirm",
                 {
                   name: uninstallTarget?.displayName ?? "",
                 },

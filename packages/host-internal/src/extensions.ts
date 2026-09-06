@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, type Dirent } from "node:fs";
 import {
   cp,
   mkdir,
@@ -24,22 +24,26 @@ import {
   parseHooksConfigFile,
   parseMcpConfigFile,
 } from "@spiritagent/agent-core";
-
-import { isBuiltInExtensionId } from "./built-in/extension-ids.js";
-import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
-import { validateSkillName } from "./discovery.js";
 import {
-  parseSkillFrontmatterFields,
-  SKILL_FILE_NAME,
-  SKILLS_DIR_NAME,
-  splitSkillFrontmatter,
-} from "./skill-paths.js";
+  assertDeclaredInstructionContributionFiles as assertToolkitDeclaredInstructionContributionFiles,
+  EXTENSION_DUMP_FILE_NAME,
+  parseExtensionDumpText,
+  type MarketplaceExtensionDump,
+} from "@spiritagent/extension-toolkit";
+
+import { clearBuiltInExtensionRemoved, noteBuiltInExtensionRemoved } from "./built-in/state.js";
+import { removePersonalRegistryEntry } from "./marketplace/personal.js";
+import {
+  BUILT_IN_MARKETPLACE_SOURCE_ID,
+  PERSONAL_MARKETPLACE_SOURCE_ID,
+} from "./marketplace/types.js";
+import { SKILLS_DIR_NAME } from "./skill-paths.js";
 import {
   createFileExtensionStateStore,
-  EXTENSION_MANIFEST_FILE_NAME,
   loadToggleState,
   resolveExtensionPaths,
   saveToggleState,
+  SPIRIT_DIR_NAME,
   SUPPORTED_EXTENSION_HOST_KINDS,
   USER_RULE_FILE_NAME,
   type ExtensionHostKind,
@@ -49,11 +53,8 @@ import {
   type ExtensionPaths,
 } from "./storage.js";
 
-const EXTENSION_SCHEMA_VERSION = 1;
-const EXTENSION_PACKAGE_NAME_PATTERN = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u;
 const TEMP_DIR_PREFIX = "spirit-extension-";
 const EXTENSION_FIELD_KEY_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/u;
-const SPIRIT_EXTENSION_FIELD_NAME = "spiritExtension";
 const EXTENSION_TOOL_INVOCATION_NAME_MAX_LENGTH = 64;
 const EXTENSION_TOOL_ID_FRAGMENT_LIMIT = 16;
 const EXTENSION_TOOL_NAME_FRAGMENT_LIMIT = 24;
@@ -90,13 +91,6 @@ export const EXTENSION_MCP_CONFIG_FILE_NAME = MCP_CONFIG_FILE_NAME;
 export const EXTENSION_HOOKS_CONFIG_FILE_NAME = HOOKS_CONFIG_FILE_NAME;
 export const EXTENSION_RULE_FILE_NAME = USER_RULE_FILE_NAME;
 export const EXTENSION_SKILLS_DIR_NAME = SKILLS_DIR_NAME;
-
-const INSTRUCTION_CONTRIBUTION_PAIRS = [
-  { capability: "mcp", contributionKey: "mcp" },
-  { capability: "hooks", contributionKey: "hooks" },
-  { capability: "skills", contributionKey: "skills" },
-  { capability: "rules", contributionKey: "rules" },
-] as const;
 
 export const SUPPORTED_HOST_EXTENSION_TOOL_APPROVAL_MODES = [
   "allowed",
@@ -261,17 +255,32 @@ export interface HostExtensionSecretSlot {
   required?: boolean;
 }
 
+export interface HostExtensionAuthor {
+  name: string;
+  url?: string;
+}
+
+/**
+ * Runtime extension manifest, parsed from the installed `.spirit/extension.json`
+ * dump (identity + display + declaration + owning source id). The package.json
+ * inside an installed extension is pure npm; only its `main` is read here.
+ */
 export interface HostExtensionManifest {
   schemaVersion: number;
+  /** Composite identity: `<sourceId>/<name>`. */
   id: string;
-  /** User-visible extension name, from spiritExtension.displayName in package.json. */
+  /** Owning marketplace source id (`built-in`, `personal`, or a user source id). */
+  sourceId: string;
+  /** Spirit-owned extension name (kebab-case), unique within its source. */
   name: string;
-  /** Extension icon: file path relative to the package root, from spiritExtension.icon in package.json. */
+  /** User-visible display name. */
+  displayName: string;
+  /** Icon path relative to the install directory. */
   icon?: string;
   version: string;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: HostExtensionAuthor;
+  categories?: string[];
   main?: string;
   /** Hosts the extension declares it can be installed on (cli / desktop). */
   supportedHosts: ExtensionHostKind[];
@@ -280,11 +289,6 @@ export interface HostExtensionManifest {
   contributes?: HostExtensionContributionSet;
   settingsSchema?: HostExtensionSettingDefinition[];
   secretSlots?: HostExtensionSecretSlot[];
-  /**
-   * When false, `ensureBuiltInExtensions` does not seed this package.
-   * Omitted or true means seed on first launch (unless a removal tombstone exists).
-   */
-  defaultInstalled?: boolean;
 }
 
 export interface HostMarketplaceCatalogItem extends HostInstalledExtension {
@@ -294,25 +298,47 @@ export interface HostMarketplaceCatalogItem extends HostInstalledExtension {
 
 export type HostExtensionInstallSource = "built-in" | "archive" | "marketplace";
 
+/** Derive the legacy install-source label from the owning source id. */
+export function installSourceForSourceId(sourceId: string): HostExtensionInstallSource {
+  if (sourceId === "built-in") {
+    return "built-in";
+  }
+  if (sourceId === "personal") {
+    return "archive";
+  }
+  return "marketplace";
+}
+
+/** Composite extension identity: `<sourceId>/<name>`. */
+export function composeExtensionId(sourceId: string, name: string): string {
+  return `${sourceId}/${name}`;
+}
+
 export interface HostExtensionRegistryEntry {
+  /** Composite identity: `<sourceId>/<name>`. */
   id: string;
-  directoryName: string;
+  /** Install path relative to the host extensions directory: `<sourceId>/<name>`. */
+  relativePath: string;
   installedAtUnixMs: number;
   archiveFileName?: string;
-  installSource?: HostExtensionInstallSource;
 }
 
 export interface HostInstalledExtension {
+  /** Composite identity: `<sourceId>/<name>`. */
   id: string;
-  directoryName: string;
+  /** Owning marketplace source id. */
+  sourceId: string;
+  /** Install path relative to the host extensions directory: `<sourceId>/<name>`. */
+  relativePath: string;
   manifest: HostExtensionManifest;
   directoryPath: string;
+  /** Path of the installed `.spirit/extension.json` dump. */
   manifestPath: string;
   installedAtUnixMs: number;
   /** Enabled unless the per-host toggle state file disables this id; disabled extensions contribute nothing. */
   enabled: boolean;
   archiveFileName?: string;
-  installSource?: HostExtensionInstallSource;
+  installSource: HostExtensionInstallSource;
 }
 
 export interface ImportExtensionArchiveRequest {
@@ -324,7 +350,6 @@ export interface InstallPreparedExtensionDirectoryRequest {
   preparedDirectoryPath: string;
   fileName?: string;
   replaceExisting?: boolean;
-  installSource?: HostExtensionInstallSource;
 }
 
 export interface RunExtensionRequest<THostApi> {
@@ -561,46 +586,59 @@ export async function listInstalledExtensions(
   const registryEntries = await loadExtensionRegistry(paths.extensionsIndexFile);
   const toggleState = await loadToggleState(paths.extensionsStateFile);
   const enabledOverrides = toggleState.enabledOverrides ?? {};
-  const directoryEntries = await readdir(paths.extensionsDir, { withFileTypes: true });
   const installed: HostInstalledExtension[] = [];
 
-  for (const entry of directoryEntries) {
-    if (!entry.isDirectory()) {
+  // Install layout: extensions/<host>/<sourceId>/<name>/ — same-name
+  // extensions from different sources coexist without overwriting each other.
+  const sourceEntries = await readdir(paths.extensionsDir, { withFileTypes: true });
+  for (const sourceEntry of sourceEntries) {
+    if (!sourceEntry.isDirectory() || sourceEntry.name.startsWith(".")) {
       continue;
     }
+    const sourceDir = path.join(paths.extensionsDir, sourceEntry.name);
+    const nameEntries = await readdir(sourceDir, { withFileTypes: true }).catch(
+      () => [] as Dirent[],
+    );
+    for (const nameEntry of nameEntries) {
+      if (!nameEntry.isDirectory() || nameEntry.name.startsWith(".")) {
+        continue;
+      }
 
-    const directoryPath = path.join(paths.extensionsDir, entry.name);
-    const manifestPath = path.join(directoryPath, EXTENSION_MANIFEST_FILE_NAME);
-    if (!existsSync(manifestPath)) {
-      continue;
-    }
+      const relativePath = `${sourceEntry.name}/${nameEntry.name}`;
+      const directoryPath = path.join(sourceDir, nameEntry.name);
+      const dumpPath = path.join(directoryPath, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME);
+      if (!existsSync(dumpPath)) {
+        continue;
+      }
 
-    try {
-      const manifest = await readExtensionManifestFile(manifestPath);
-      const registryEntry = registryEntries.get(manifest.id);
-      const installedAtUnixMs =
-        registryEntry?.installedAtUnixMs ?? Math.trunc((await stat(directoryPath)).mtimeMs);
+      try {
+        const manifest = await readInstalledExtensionDump(dumpPath, directoryPath);
+        const registryEntry = registryEntries.get(manifest.id);
+        const installedAtUnixMs =
+          registryEntry?.installedAtUnixMs ?? Math.trunc((await stat(directoryPath)).mtimeMs);
 
-      installed.push({
-        id: manifest.id,
-        directoryName: entry.name,
-        manifest,
-        directoryPath,
-        manifestPath,
-        installedAtUnixMs,
-        enabled: enabledOverrides[manifest.id] ?? true,
-        ...(registryEntry?.archiveFileName
-          ? { archiveFileName: registryEntry.archiveFileName }
-          : {}),
-        ...(registryEntry?.installSource ? { installSource: registryEntry.installSource } : {}),
-      });
-    } catch {
-      continue;
+        installed.push({
+          id: manifest.id,
+          sourceId: manifest.sourceId,
+          relativePath,
+          manifest,
+          directoryPath,
+          manifestPath: dumpPath,
+          installedAtUnixMs,
+          enabled: enabledOverrides[manifest.id] ?? true,
+          ...(registryEntry?.archiveFileName
+            ? { archiveFileName: registryEntry.archiveFileName }
+            : {}),
+          installSource: installSourceForSourceId(manifest.sourceId),
+        });
+      } catch {
+        continue;
+      }
     }
   }
 
   installed.sort((left, right) => {
-    const byName = left.manifest.name.localeCompare(right.manifest.name, "zh-CN");
+    const byName = left.manifest.displayName.localeCompare(right.manifest.displayName, "zh-CN");
     if (byName !== 0) {
       return byName;
     }
@@ -655,37 +693,21 @@ export async function importExtensionArchive(
       content,
     ]),
   );
-  const manifestEntryName = resolveManifestArchivePath(Object.keys(extracted));
-  const manifestRaw = Buffer.from(normalizedExtracted.get(manifestEntryName) ?? []).toString(
-    "utf8",
-  );
-  const manifestRoot = manifestEntryName.includes("/")
-    ? manifestEntryName.slice(0, manifestEntryName.lastIndexOf("/"))
-    : "";
-  const manifest = await parseExtensionManifest(manifestRaw, {
-    readRelativeTextFile: async (relativePath, fieldName) => {
-      const normalized = normalizeArchivePath(relativePath);
-      const archivePath = manifestRoot ? `${manifestRoot}/${normalized}` : normalized;
-      const content = normalizedExtracted.get(archivePath);
-      if (!content) {
-        throw new Error(
-          `The file referenced by extension ${fieldName} does not exist: ${relativePath}`,
-        );
-      }
-      return Buffer.from(content).toString("utf8");
-    },
-    listRelativeChildDirectories: async (relativePath) =>
-      listArchiveChildDirectories(normalizedExtracted, manifestRoot, relativePath),
-  });
-  const directoryName = extensionDirectoryNameFromId(manifest.id);
+  // ZIP layout = install directory layout: content plus `.spirit/extension.json`.
+  const dumpEntryName = resolveManifestArchivePath(Object.keys(extracted));
+  const contentRoot = archiveContentRootForDumpPath(dumpEntryName);
+  const dumpRaw = Buffer.from(normalizedExtracted.get(dumpEntryName) ?? []).toString("utf8");
+  // Structural validation; the deep declaration parse runs during install.
+  parseExtensionDumpText(dumpRaw);
+
   const tempDirectory = await mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
-  const stagingDirectory = path.join(tempDirectory, directoryName);
+  const stagingDirectory = path.join(tempDirectory, "content");
 
   try {
     await mkdir(stagingDirectory, { recursive: true });
 
-    for (const [entryName, content] of Object.entries(extracted)) {
-      const relativePath = resolveArchiveRelativePath(entryName, manifestEntryName);
+    for (const [entryName, content] of normalizedExtracted) {
+      const relativePath = resolveArchiveRelativePath(entryName, contentRoot);
       if (!relativePath) {
         continue;
       }
@@ -695,19 +717,14 @@ export async function importExtensionArchive(
       await writeFile(targetFilePath, Buffer.from(content));
     }
 
-    if (manifest.main) {
-      const mainFilePath = path.join(stagingDirectory, ...manifest.main.split("/"));
-      if (!existsSync(mainFilePath)) {
-        throw new Error(`The extension main file does not exist: ${manifest.main}`);
-      }
-    }
-
-    const installed = await installPreparedExtensionDirectory(context, {
+    // ZIP import is a self-declared side channel: route through the Personal
+    // registry (index upsert + install from the Personal source).
+    // `await` is required: the finally block deletes the staging directory.
+    const { importPreparedDirectoryToPersonal } = await import("./marketplace/import-zip.js");
+    return await importPreparedDirectoryToPersonal(context, {
       preparedDirectoryPath: stagingDirectory,
-      installSource: "archive",
       ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
     });
-    return installed;
   } finally {
     await rm(tempDirectory, { recursive: true, force: true });
   }
@@ -716,11 +733,13 @@ export async function importExtensionArchive(
 export async function readPreparedExtensionManifestDirectory(
   preparedDirectoryPath: string,
 ): Promise<HostExtensionManifest> {
-  const manifestPath = path.join(preparedDirectoryPath, EXTENSION_MANIFEST_FILE_NAME);
-  if (!existsSync(manifestPath)) {
-    throw new Error(`The prepared extension directory is missing ${EXTENSION_MANIFEST_FILE_NAME}.`);
+  const dumpPath = path.join(preparedDirectoryPath, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME);
+  if (!existsSync(dumpPath)) {
+    throw new Error(
+      `The prepared extension directory is missing ${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}.`,
+    );
   }
-  return readExtensionManifestFile(manifestPath);
+  return readInstalledExtensionDump(dumpPath, preparedDirectoryPath);
 }
 
 export async function installPreparedExtensionDirectory(
@@ -737,8 +756,9 @@ export async function installPreparedExtensionDirectory(
 
   const manifest = await readPreparedExtensionManifestDirectory(preparedDirectoryPath);
   assertExtensionImportAllowedForHost(manifest, context.hostKind);
-  const directoryName = extensionDirectoryNameFromId(manifest.id);
-  const targetDirectory = path.join(paths.extensionsDir, directoryName);
+  const relativePath = `${manifest.sourceId}/${manifest.name}`;
+  const sourceDirectory = path.join(paths.extensionsDir, manifest.sourceId);
+  const targetDirectory = path.join(paths.extensionsDir, relativePath);
 
   const registryEntries = await loadExtensionRegistry(paths.extensionsIndexFile);
   const replaceExisting = request.replaceExisting === true;
@@ -753,11 +773,19 @@ export async function installPreparedExtensionDirectory(
     }
   }
 
-  const stagingRoot = await mkdtemp(path.join(paths.extensionsDir, `${directoryName}.stage-`));
-  const stagedDirectory = path.join(stagingRoot, directoryName);
+  if (manifest.icon) {
+    const iconFilePath = path.join(preparedDirectoryPath, ...manifest.icon.split("/"));
+    if (!existsSync(iconFilePath)) {
+      throw new Error(`The extension icon file does not exist: ${manifest.icon}`);
+    }
+  }
+
+  await mkdir(sourceDirectory, { recursive: true });
+  const stagingRoot = await mkdtemp(path.join(sourceDirectory, ".stage-"));
+  const stagedDirectory = path.join(stagingRoot, manifest.name);
   const backupDirectory = path.join(
-    paths.extensionsDir,
-    `${directoryName}.backup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    sourceDirectory,
+    `.backup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
   );
   let renamedExisting = false;
   let movedIntoPlace = false;
@@ -793,33 +821,32 @@ export async function installPreparedExtensionDirectory(
   }
 
   const installedAtUnixMs = Date.now();
-  const installSource = request.installSource;
   const nextRegistryEntries = [
     ...Array.from(registryEntries.values()).filter((entry) => entry.id !== manifest.id),
     {
       id: manifest.id,
-      directoryName,
+      relativePath,
       installedAtUnixMs,
       ...(request.fileName?.trim() ? { archiveFileName: request.fileName.trim() } : {}),
-      ...(installSource ? { installSource } : {}),
     },
   ];
   await writeExtensionRegistry(paths.extensionsIndexFile, nextRegistryEntries);
 
   const toggleState = await loadToggleState(paths.extensionsStateFile);
-  if (installSource === "built-in" || isBuiltInExtensionId(manifest.id)) {
+  if (manifest.sourceId === BUILT_IN_MARKETPLACE_SOURCE_ID) {
     await clearBuiltInExtensionRemoved(context.spiritDataDir, manifest.id);
   }
   return {
     id: manifest.id,
-    directoryName,
+    sourceId: manifest.sourceId,
+    relativePath,
     manifest,
     directoryPath: targetDirectory,
-    manifestPath: path.join(targetDirectory, EXTENSION_MANIFEST_FILE_NAME),
+    manifestPath: path.join(targetDirectory, SPIRIT_DIR_NAME, EXTENSION_DUMP_FILE_NAME),
     installedAtUnixMs,
     enabled: toggleState.enabledOverrides?.[manifest.id] ?? true,
     ...(request.fileName?.trim() ? { archiveFileName: request.fileName.trim() } : {}),
-    ...(installSource ? { installSource } : {}),
+    installSource: installSourceForSourceId(manifest.sourceId),
   };
 }
 
@@ -855,8 +882,16 @@ export async function removeInstalledExtension(
     await saveToggleState(paths.extensionsStateFile, { enabledOverrides });
   }
 
-  if (target.installSource === "built-in" || isBuiltInExtensionId(normalizedId)) {
+  if (target.sourceId === BUILT_IN_MARKETPLACE_SOURCE_ID) {
     await noteBuiltInExtensionRemoved(context.spiritDataDir, normalizedId);
+  }
+
+  // Personal entries are a ZIP-import byproduct whose lifecycle is bound to
+  // the install state: uninstalling deletes the registry record along with its
+  // content copy. Hosts are isolated — a copy another host installed stays
+  // installed there and is managed by that host.
+  if (target.sourceId === PERSONAL_MARKETPLACE_SOURCE_ID) {
+    await removePersonalRegistryEntry(context.spiritDataDir, target.manifest.name);
   }
 }
 
@@ -1065,7 +1100,7 @@ export async function dispatchExtensionEvent<THostApi>(
     } catch (error) {
       request.logger?.error(`[extension:${extension.id}] event failed`, error);
       throw new Error(
-        `Extension event execution failed: ${extension.manifest.name} (${error instanceof Error ? error.message : String(error)})`,
+        `Extension event execution failed: ${extension.manifest.displayName} (${error instanceof Error ? error.message : String(error)})`,
         { cause: error },
       );
     }
@@ -1104,7 +1139,7 @@ export async function collectExtensionSystemPromptContributions<THostApi>(
 
       contributions.push({
         extensionId: extension.id,
-        extensionName: extension.manifest.name,
+        extensionName: extension.manifest.displayName,
         content,
       });
     } catch (error) {
@@ -1172,7 +1207,7 @@ async function ensureActivatedExtension<THostApi>(
 function createRuntimeInfo(target: HostInstalledExtension): HostExtensionRuntimeInfo {
   return {
     id: target.id,
-    name: target.manifest.name,
+    name: target.manifest.displayName,
     version: target.manifest.version,
     directoryPath: target.directoryPath,
     manifestPath: target.manifestPath,
@@ -1491,7 +1526,7 @@ function collectResolvableExtensionTools(
       seenInvocationNames.add(invocationName);
       collected.push({
         extensionId: extension.id,
-        extensionName: extension.manifest.name,
+        extensionName: extension.manifest.displayName,
         tool,
         invocationName,
       });
@@ -1597,141 +1632,140 @@ async function ensureExtensionDirectories(paths: ExtensionPaths): Promise<void> 
   await mkdir(path.dirname(paths.extensionsIndexFile), { recursive: true });
 }
 
-async function readExtensionManifestFile(filePath: string): Promise<HostExtensionManifest> {
-  const raw = await readFile(filePath, "utf8");
-  const manifestDirectory = path.dirname(filePath);
-  return parseExtensionManifest(raw, {
-    readRelativeTextFile: async (relativePath, fieldName) => {
-      const targetPath = path.join(
-        manifestDirectory,
-        ...normalizeArchivePath(relativePath).split("/"),
-      );
-      try {
-        return await readFile(targetPath, "utf8");
-      } catch {
-        throw new Error(
-          `The file referenced by extension ${fieldName} does not exist: ${relativePath}`,
-        );
-      }
-    },
-    listRelativeChildDirectories: async (relativePath) => {
-      const targetPath = path.join(
-        manifestDirectory,
-        ...normalizeArchivePath(relativePath).split("/"),
-      );
-      if (!existsSync(targetPath)) {
-        return [];
-      }
-      try {
-        const entries = await readdir(targetPath, { withFileTypes: true });
-        return entries
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name)
-          .sort((left, right) => left.localeCompare(right));
-      } catch {
-        return [];
-      }
-    },
-  });
+async function readInstalledExtensionDump(
+  dumpPath: string,
+  directoryPath: string,
+): Promise<HostExtensionManifest> {
+  const raw = await readFile(dumpPath, "utf8");
+  const dump = parseExtensionDumpText(raw);
+  return buildHostExtensionManifestFromDump(dump, directoryPath);
 }
 
-async function parseExtensionManifest(
-  raw: string,
+/**
+ * Deep-parse a validated extension dump into a runtime manifest, resolving
+ * declared contribution files and the pure-npm package.json `main` under
+ * `directoryPath` (the install dir, or a registry content dir for catalog
+ * display of not-yet-installed entries).
+ */
+export async function buildHostExtensionManifestFromDump(
+  dump: MarketplaceExtensionDump,
+  directoryPath?: string,
+): Promise<HostExtensionManifest> {
+  const manifest = await parseExtensionManifestFields(
+    dump,
+    directoryPath
+      ? {
+          readRelativeTextFile: async (relativePath, fieldName) => {
+            const targetPath = path.join(
+              directoryPath,
+              ...normalizeArchivePath(relativePath).split("/"),
+            );
+            try {
+              return await readFile(targetPath, "utf8");
+            } catch {
+              throw new Error(
+                `The file referenced by extension ${fieldName} does not exist: ${relativePath}`,
+              );
+            }
+          },
+          listRelativeChildDirectories: async (relativePath) => {
+            const targetPath = path.join(
+              directoryPath,
+              ...normalizeArchivePath(relativePath).split("/"),
+            );
+            if (!existsSync(targetPath)) {
+              return [];
+            }
+            try {
+              const entries = await readdir(targetPath, { withFileTypes: true });
+              return entries
+                .filter((entry) => entry.isDirectory())
+                .map((entry) => entry.name)
+                .sort((left, right) => left.localeCompare(right));
+            } catch {
+              return [];
+            }
+          },
+        }
+      : {},
+  );
+
+  // package.json is pure npm; only its `main` module entry is read here.
+  const main = directoryPath
+    ? await readPackageJsonMain(path.join(directoryPath, "package.json"))
+    : undefined;
+  return main ? { ...manifest, main } : manifest;
+}
+
+async function readPackageJsonMain(packageJsonPath: string): Promise<string | undefined> {
+  if (!existsSync(packageJsonPath)) {
+    return undefined;
+  }
+  const parsed: unknown = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  if (!isRecord(parsed)) {
+    return undefined;
+  }
+  const main = parsed.main;
+  if (typeof main !== "string" || !main.trim()) {
+    return undefined;
+  }
+  const trimmed = main.trim();
+  assertSafeRelativePath(trimmed, "main");
+  return trimmed;
+}
+
+/** Deep-parse the declaration fields of a validated extension dump. */
+async function parseExtensionManifestFields(
+  dump: MarketplaceExtensionDump,
   options: HostExtensionManifestParseOptions = {},
 ): Promise<HostExtensionManifest> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error("The extension package.json is not valid JSON.");
-  }
-
-  if (!isRecord(parsed)) {
-    throw new Error("The extension package.json must be a JSON object.");
-  }
-
-  const spiritExtension = requiredSpiritExtensionField(parsed[SPIRIT_EXTENSION_FIELD_NAME]);
-  const schemaVersion =
-    spiritExtension.schemaVersion === undefined
-      ? EXTENSION_SCHEMA_VERSION
-      : numberField(spiritExtension.schemaVersion, `${SPIRIT_EXTENSION_FIELD_NAME}.schemaVersion`);
-  if (schemaVersion !== EXTENSION_SCHEMA_VERSION) {
-    throw new Error(
-      `Only extension package.json with ${SPIRIT_EXTENSION_FIELD_NAME}.schemaVersion=${EXTENSION_SCHEMA_VERSION} is supported.`,
-    );
-  }
-
-  const id = packageNameField(parsed.name);
-  const name = stringField(
-    spiritExtension.displayName,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.displayName`,
-  );
-  const icon = optionalPackageStringField(
-    spiritExtension.icon,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.icon`,
-  );
-  const version = stringField(parsed.version, "version");
-  const description = optionalPackageStringField(parsed.description, "description");
-  const author = optionalPackageAuthorField(parsed.author);
-  const homepage = optionalPackageStringField(parsed.homepage, "homepage");
-  const main = optionalPackageStringField(parsed.main, "main");
   const activationEvents = optionalActivationEventsField(
-    spiritExtension.activationEvents,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.activationEvents`,
+    dump.manifest.activationEvents,
+    "manifest.activationEvents",
   );
   const requestedCapabilities = optionalRequestedCapabilitiesField(
-    spiritExtension.requestedCapabilities,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.requestedCapabilities`,
+    dump.manifest.requestedCapabilities,
+    "manifest.requestedCapabilities",
   );
   const contributes = await optionalContributionSetField(
-    spiritExtension.contributes,
+    dump.manifest.contributes,
     options,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.contributes`,
+    "manifest.contributes",
   );
   const settingsSchema = optionalSettingsSchemaField(
-    spiritExtension.settingsSchema,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.settingsSchema`,
+    dump.manifest.settingsSchema,
+    "manifest.settingsSchema",
   );
-  const secretSlots = optionalSecretSlotsField(
-    spiritExtension.secretSlots,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.secretSlots`,
-  );
+  const secretSlots = optionalSecretSlotsField(dump.manifest.secretSlots, "manifest.secretSlots");
   const supportedHosts = requiredSupportedHostsField(
-    spiritExtension.supportedHosts,
-    `${SPIRIT_EXTENSION_FIELD_NAME}.supportedHosts`,
+    dump.manifest.supportedHosts,
+    "manifest.supportedHosts",
   );
 
-  if (main) {
-    assertSafeRelativePath(main, "main");
+  // The declared-file check runs whenever the caller can read package files
+  // (install, ZIP import, local catalog display); remote catalog entries
+  // without local files are display-only and skip it.
+  if (options.readRelativeTextFile) {
+    await assertDeclaredInstructionContributionFiles(contributes, options);
   }
-
-  if (icon) {
-    assertSafeRelativePath(icon, `${SPIRIT_EXTENSION_FIELD_NAME}.icon`);
-  }
-
-  assertHostUiContributionCapabilities(requestedCapabilities, contributes);
-  assertInstructionContributionCapabilities(requestedCapabilities, contributes);
-  await assertDeclaredInstructionContributionFiles(contributes, options);
 
   return {
-    schemaVersion,
-    id,
-    name,
-    ...(icon ? { icon } : {}),
-    version,
-    ...(description ? { description } : {}),
-    ...(author ? { author } : {}),
-    ...(homepage ? { homepage } : {}),
-    ...(main ? { main } : {}),
+    schemaVersion: dump.schemaVersion,
+    id: composeExtensionId(dump.sourceId, dump.name),
+    sourceId: dump.sourceId,
+    name: dump.name,
+    displayName: dump.displayName,
+    ...(dump.icon ? { icon: dump.icon } : {}),
+    version: dump.version,
+    ...(dump.description ? { description: dump.description } : {}),
+    ...(dump.author ? { author: dump.author } : {}),
+    ...(dump.categories?.length ? { categories: [...dump.categories] } : {}),
     supportedHosts,
     ...(activationEvents.length > 0 ? { activationEvents } : {}),
     ...(requestedCapabilities.length > 0 ? { requestedCapabilities } : {}),
     ...(contributes ? { contributes } : {}),
     ...(settingsSchema.length > 0 ? { settingsSchema } : {}),
     ...(secretSlots.length > 0 ? { secretSlots } : {}),
-    ...(optionalBooleanField(spiritExtension.defaultInstalled) === false
-      ? { defaultInstalled: false }
-      : {}),
   };
 }
 
@@ -1748,9 +1782,7 @@ async function loadExtensionRegistry(
     const entries = Array.isArray(parsed.entries) ? parsed.entries : [];
     return new Map(
       entries
-        .filter(
-          (entry) => typeof entry?.id === "string" && typeof entry?.directoryName === "string",
-        )
+        .filter((entry) => typeof entry?.id === "string" && typeof entry?.relativePath === "string")
         .map((entry) => [entry.id, entry]),
     );
   } catch {
@@ -1788,60 +1820,63 @@ function serializeRegistry(entries: readonly HostExtensionRegistryEntry[]): stri
 function toExtensionRegistryEntry(
   item: Pick<
     HostInstalledExtension,
-    "id" | "directoryName" | "installedAtUnixMs" | "archiveFileName" | "installSource"
+    "id" | "relativePath" | "installedAtUnixMs" | "archiveFileName"
   >,
 ): HostExtensionRegistryEntry {
   return {
     id: item.id,
-    directoryName: item.directoryName,
+    relativePath: item.relativePath,
     installedAtUnixMs: item.installedAtUnixMs,
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
-    ...(item.installSource ? { installSource: item.installSource } : {}),
   };
 }
 
 function resolveManifestArchivePath(entryNames: readonly string[]): string {
+  const dumpSuffix = `${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}`;
   const candidates = entryNames.filter((entryName) => {
     const normalized = normalizeArchivePath(entryName);
-    return (
-      normalized.endsWith(`/${EXTENSION_MANIFEST_FILE_NAME}`) ||
-      normalized === EXTENSION_MANIFEST_FILE_NAME
-    );
+    return normalized.endsWith(`/${dumpSuffix}`) || normalized === dumpSuffix;
   });
 
   if (candidates.length === 0) {
-    throw new Error(`The extension ZIP is missing ${EXTENSION_MANIFEST_FILE_NAME}.`);
+    throw new Error(`The extension ZIP is missing ${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}.`);
   }
 
   if (candidates.length > 1) {
-    throw new Error(`The extension ZIP contains multiple ${EXTENSION_MANIFEST_FILE_NAME}.`);
+    throw new Error(
+      `The extension ZIP contains multiple ${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}.`,
+    );
   }
 
-  const manifestPath = candidates[0];
-  if (!manifestPath) {
-    throw new Error(`The extension ZIP is missing ${EXTENSION_MANIFEST_FILE_NAME}.`);
+  const dumpPath = candidates[0];
+  if (!dumpPath) {
+    throw new Error(`The extension ZIP is missing ${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}.`);
   }
 
-  return normalizeArchivePath(manifestPath);
+  return normalizeArchivePath(dumpPath);
 }
 
-function resolveArchiveRelativePath(
-  entryName: string,
-  manifestEntryName: string,
-): string | undefined {
-  const normalizedEntryName = normalizeArchivePath(entryName);
-  const manifestRoot = manifestEntryName.includes("/")
-    ? manifestEntryName.slice(0, manifestEntryName.lastIndexOf("/"))
-    : "";
+/**
+ * Content root of a ZIP dump entry: the dump lives at
+ * `<contentRoot>/.spirit/extension.json`, so the root is two levels up.
+ */
+function archiveContentRootForDumpPath(dumpEntryName: string): string {
+  const normalized = normalizeArchivePath(dumpEntryName);
+  const suffix = `${SPIRIT_DIR_NAME}/${EXTENSION_DUMP_FILE_NAME}`;
+  if (normalized === suffix) {
+    return "";
+  }
+  return normalized.slice(0, normalized.length - suffix.length - 1);
+}
 
-  if (manifestRoot) {
-    if (!normalizedEntryName.startsWith(`${manifestRoot}/`)) {
-      return undefined;
-    }
+function resolveArchiveRelativePath(entryName: string, contentRoot: string): string | undefined {
+  const normalizedEntryName = normalizeArchivePath(entryName);
+  if (contentRoot && !normalizedEntryName.startsWith(`${contentRoot}/`)) {
+    return undefined;
   }
 
-  const relativePath = manifestRoot
-    ? normalizedEntryName.slice(manifestRoot.length + 1)
+  const relativePath = contentRoot
+    ? normalizedEntryName.slice(contentRoot.length + 1)
     : normalizedEntryName;
 
   if (!relativePath || relativePath.endsWith("/")) {
@@ -1854,10 +1889,6 @@ function resolveArchiveRelativePath(
 
 function normalizeArchivePath(filePath: string): string {
   return filePath.replace(/\\/gu, "/").replace(/^\.\//u, "");
-}
-
-function extensionDirectoryNameFromId(id: string): string {
-  return `pkg-${Buffer.from(id, "utf8").toString("base64url")}`;
 }
 
 async function activateExtension<THostApi>(
@@ -1876,7 +1907,7 @@ async function activateExtension<THostApi>(
   const activate = resolveActivateHandler<THostApi>(loadedModule);
   if (!activate) {
     throw new Error(
-      `Extension ${target.manifest.name} does not export activate; export activate(context) or a default export of that function.`,
+      `Extension ${target.manifest.displayName} does not export activate; export activate(context) or a default export of that function.`,
     );
   }
 
@@ -1884,7 +1915,7 @@ async function activateExtension<THostApi>(
     const activationResult = await activate({
       extension: {
         id: target.id,
-        name: target.manifest.name,
+        name: target.manifest.displayName,
         version: target.manifest.version,
         directoryPath: target.directoryPath,
         manifestPath: target.manifestPath,
@@ -1901,7 +1932,7 @@ async function activateExtension<THostApi>(
   } catch (error) {
     options.logger?.error(`[extension:${target.id}] activate failed`, error);
     throw new Error(
-      `Failed to execute extension: ${target.manifest.name} (${error instanceof Error ? error.message : String(error)})`,
+      `Failed to execute extension: ${target.manifest.displayName} (${error instanceof Error ? error.message : String(error)})`,
       { cause: error },
     );
   }
@@ -1919,7 +1950,7 @@ async function loadExtensionModule(
   } catch (error) {
     logger?.error(`[extension:${target.id}] load failed`, error);
     throw new Error(
-      `Failed to load extension: ${target.manifest.name} (${error instanceof Error ? error.message : String(error)})`,
+      `Failed to load extension: ${target.manifest.displayName} (${error instanceof Error ? error.message : String(error)})`,
       { cause: error },
     );
   }
@@ -2012,52 +2043,6 @@ function assertSafeRelativePath(filePath: string, label: string): void {
   if (segments.some((segment) => !segment || segment === "." || segment === "..")) {
     throw new Error(`Extension ${label} contains an illegal path segment.`);
   }
-}
-
-function requiredSpiritExtensionField(value: unknown): Record<string, unknown> {
-  if (!isRecord(value)) {
-    throw new Error(
-      `The extension package.json is missing the ${SPIRIT_EXTENSION_FIELD_NAME} field, which must be an object.`,
-    );
-  }
-  return value;
-}
-
-function packageNameField(value: unknown): string {
-  const packageName = stringField(value, "name");
-  if (!EXTENSION_PACKAGE_NAME_PATTERN.test(packageName)) {
-    throw new Error(
-      "The extension package.json name field is invalid; it must be a valid npm package name, and only lowercase names with an optional scope are supported.",
-    );
-  }
-  return packageName;
-}
-
-function optionalPackageStringField(value: unknown, fieldName: string): string | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value !== "string") {
-    throw new Error(`The extension package.json field ${fieldName} must be a string.`);
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function optionalPackageAuthorField(value: unknown): string | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
-  if (isRecord(value)) {
-    return optionalPackageStringField(value.name, "author.name");
-  }
-  throw new Error(
-    "The extension package.json author field must be a string or an object with a name field.",
-  );
 }
 
 function stringField(value: unknown, fieldName: string): string {
@@ -2419,199 +2404,23 @@ function optionalDesktopSettingsPageDefinitionField(
   return title ? { title } : {};
 }
 
-function assertHostUiContributionCapabilities(
-  requestedCapabilities: readonly HostExtensionRequestedCapability[],
-  contributes: HostExtensionContributionSet | undefined,
-): void {
-  const hasDesktopContribution = Boolean(contributes?.desktop);
-  const hasCliContribution = Boolean(contributes?.cli);
-  const hasDesktopCapability = requestedCapabilities.includes("desktop-ui");
-  const hasCliCapability = requestedCapabilities.includes("cli-ui");
-
-  if (hasDesktopContribution !== hasDesktopCapability) {
-    throw new Error(
-      hasDesktopContribution
-        ? `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.desktop but is missing desktop-ui in ${SPIRIT_EXTENSION_FIELD_NAME}.requestedCapabilities.`
-        : `The extension declares the desktop-ui capability but is missing ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.desktop.`,
-    );
-  }
-
-  if (hasCliContribution !== hasCliCapability) {
-    throw new Error(
-      hasCliContribution
-        ? `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.cli but is missing cli-ui in ${SPIRIT_EXTENSION_FIELD_NAME}.requestedCapabilities.`
-        : `The extension declares the cli-ui capability but is missing ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.cli.`,
-    );
-  }
-}
-
-function assertInstructionContributionCapabilities(
-  requestedCapabilities: readonly HostExtensionRequestedCapability[],
-  contributes: HostExtensionContributionSet | undefined,
-): void {
-  for (const pair of INSTRUCTION_CONTRIBUTION_PAIRS) {
-    const hasContribution = contributes?.[pair.contributionKey] === true;
-    const hasCapability = requestedCapabilities.includes(pair.capability);
-    if (hasContribution === hasCapability) {
-      continue;
-    }
-    throw new Error(
-      hasContribution
-        ? `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.${pair.contributionKey} but is missing ${pair.capability} in ${SPIRIT_EXTENSION_FIELD_NAME}.requestedCapabilities.`
-        : `The extension declares the ${pair.capability} capability but is missing ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.${pair.contributionKey}.`,
-    );
-  }
-}
-
+/**
+ * Declaration-vs-content check, owned by the marketplace toolkit (registry CI
+ * runs the same code). The host injects the agent-core MCP / hooks config
+ * parsers so both sides validate with identical semantics.
+ */
 async function assertDeclaredInstructionContributionFiles(
   contributes: HostExtensionContributionSet | undefined,
   options: HostExtensionManifestParseOptions,
 ): Promise<void> {
-  if (!contributes?.mcp && !contributes?.hooks && !contributes?.skills && !contributes?.rules) {
-    return;
-  }
-
-  const readRelativeTextFile = options.readRelativeTextFile;
-  if (!readRelativeTextFile) {
-    throw new Error(
-      "The current context cannot read extension contribution files from the package root.",
-    );
-  }
-
-  if (contributes.mcp === true) {
-    await assertDeclaredMcpContributionFile(readRelativeTextFile);
-  }
-  if (contributes.hooks === true) {
-    await assertDeclaredHooksContributionFile(readRelativeTextFile);
-  }
-  if (contributes.rules === true) {
-    await assertDeclaredRulesContributionFile(readRelativeTextFile);
-  }
-  if (contributes.skills === true) {
-    await assertDeclaredSkillsContributionFiles(readRelativeTextFile, options);
-  }
-}
-
-async function assertDeclaredMcpContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.mcp`;
-  const raw = await readRelativeTextFile(EXTENSION_MCP_CONFIG_FILE_NAME, fieldName);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is not valid JSON.`);
-  }
-  try {
-    parseMcpConfigFile(parsed);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`The extension ${EXTENSION_MCP_CONFIG_FILE_NAME} is invalid: ${detail}`);
-  }
-}
-
-async function assertDeclaredHooksContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.hooks`;
-  const raw = await readRelativeTextFile(EXTENSION_HOOKS_CONFIG_FILE_NAME, fieldName);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is not valid JSON.`);
-  }
-  try {
-    parseHooksConfigFile(parsed);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new Error(`The extension ${EXTENSION_HOOKS_CONFIG_FILE_NAME} is invalid: ${detail}`);
-  }
-}
-
-async function assertDeclaredRulesContributionFile(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-): Promise<void> {
-  const fieldName = `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.rules`;
-  const raw = await readRelativeTextFile(EXTENSION_RULE_FILE_NAME, fieldName);
-  if (!raw.trim()) {
-    throw new Error(`The extension ${EXTENSION_RULE_FILE_NAME} must not be empty.`);
-  }
-}
-
-async function assertDeclaredSkillsContributionFiles(
-  readRelativeTextFile: NonNullable<HostExtensionManifestParseOptions["readRelativeTextFile"]>,
-  options: HostExtensionManifestParseOptions,
-): Promise<void> {
-  const listRelativeChildDirectories = options.listRelativeChildDirectories;
-  if (!listRelativeChildDirectories) {
-    throw new Error(
-      "The current context cannot list extension skill directories from the package root.",
-    );
-  }
-
-  const skillDirectories = await listRelativeChildDirectories(EXTENSION_SKILLS_DIR_NAME);
-  const validSkills: string[] = [];
-  for (const directoryName of skillDirectories) {
-    const relativePath = `${EXTENSION_SKILLS_DIR_NAME}/${directoryName}/${SKILL_FILE_NAME}`;
-    let raw: string;
-    try {
-      raw = await readRelativeTextFile(
-        relativePath,
-        `${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills`,
-      );
-    } catch {
-      continue;
-    }
-    if (isValidDeclaredSkillMarkdown(raw, directoryName)) {
-      validSkills.push(directoryName);
-    }
-  }
-
-  if (validSkills.length === 0) {
-    throw new Error(
-      `The extension declares ${SPIRIT_EXTENSION_FIELD_NAME}.contributes.skills but has no valid ${EXTENSION_SKILLS_DIR_NAME}/*/${SKILL_FILE_NAME}.`,
-    );
-  }
-}
-
-function isValidDeclaredSkillMarkdown(raw: string, directoryName: string): boolean {
-  const split = splitSkillFrontmatter(raw);
-  if (!split) {
-    return false;
-  }
-  const parsed = parseSkillFrontmatterFields(split.frontmatter);
-  const name = parsed.name?.trim();
-  const description = parsed.description?.trim();
-  if (!name || !description) {
-    return false;
-  }
-  if (validateSkillName(name) !== undefined) {
-    return false;
-  }
-  return directoryName === name;
-}
-
-function listArchiveChildDirectories(
-  extracted: ReadonlyMap<string, Uint8Array>,
-  manifestRoot: string,
-  relativePath: string,
-): string[] {
-  const normalizedRelative = normalizeArchivePath(relativePath);
-  const prefix = manifestRoot ? `${manifestRoot}/${normalizedRelative}/` : `${normalizedRelative}/`;
-  const names = new Set<string>();
-  for (const entryName of extracted.keys()) {
-    if (!entryName.startsWith(prefix)) {
-      continue;
-    }
-    const rest = entryName.slice(prefix.length);
-    const first = rest.split("/")[0];
-    if (first) {
-      names.add(first);
-    }
-  }
-  return [...names].sort((left, right) => left.localeCompare(right));
+  await assertToolkitDeclaredInstructionContributionFiles(contributes, {
+    ...(options.readRelativeTextFile ? { readRelativeTextFile: options.readRelativeTextFile } : {}),
+    ...(options.listRelativeChildDirectories
+      ? { listRelativeChildDirectories: options.listRelativeChildDirectories }
+      : {}),
+    validators: { parseMcpConfigFile, parseHooksConfigFile },
+    fieldPrefix: "manifest.contributes",
+  });
 }
 
 function parseContributedToolDefinition(
@@ -2845,13 +2654,6 @@ function optionalEnumField<T extends readonly string[]>(
     return undefined;
   }
   return enumField(value, fieldName, allowedValues);
-}
-
-function numberField(value: unknown, fieldName: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new Error(`Extension field ${fieldName} must be a number.`);
-  }
-  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

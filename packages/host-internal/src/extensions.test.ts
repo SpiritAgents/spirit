@@ -18,40 +18,78 @@ type ToggleDemoFixture = {
   extensionId: string;
 };
 
-async function installToggleDemoFixture(): Promise<ToggleDemoFixture> {
-  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-toggle-data-"));
-  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-toggle-prepared-"));
-  const packageDir = join(preparedRoot, "toggle-demo");
+/** Write an install-dir-layout extension: pure npm package.json + `.spirit/extension.json`. */
+async function writeExtensionDumpPackage(
+  packageDir: string,
+  options: {
+    name: string;
+    displayName: string;
+    sourceId?: string;
+    version?: string;
+    main?: string;
+    manifest: Record<string, unknown>;
+  },
+  files?: Record<string, string>,
+): Promise<void> {
   await mkdir(packageDir, { recursive: true });
   await writeFile(
     join(packageDir, "package.json"),
     `${JSON.stringify(
       {
-        name: "@spiritagent/extension-toggle-demo",
-        version: "0.0.1",
-        main: "index.js",
-        spiritExtension: {
-          schemaVersion: 1,
-          displayName: "Toggle demo",
-          supportedHosts: ["desktop"],
-          activationEvents: ["onStartup"],
-          requestedCapabilities: ["system-prompt", "tool-definitions", "tool-execution"],
-          contributes: {
-            tools: [
-              {
-                name: "demo_tool",
-                description: "Demo tool",
-                inputSchema: { type: "object" },
-              },
-            ],
-          },
-        },
+        name: options.name,
+        version: options.version ?? "0.0.1",
+        ...(options.main ? { main: options.main } : {}),
       },
       null,
       2,
     )}\n`,
     "utf8",
   );
+  const dump = {
+    schemaVersion: 1,
+    name: options.name,
+    version: options.version ?? "0.0.1",
+    sourceId: options.sourceId ?? "personal",
+    displayName: options.displayName,
+    description: `${options.displayName} extension.`,
+    manifest: options.manifest,
+  };
+  await mkdir(join(packageDir, ".spirit"), { recursive: true });
+  await writeFile(
+    join(packageDir, ".spirit", "extension.json"),
+    `${JSON.stringify(dump, null, 2)}\n`,
+    "utf8",
+  );
+  for (const [relativePath, content] of Object.entries(files ?? {})) {
+    const target = join(packageDir, relativePath);
+    await mkdir(join(target, ".."), { recursive: true });
+    await writeFile(target, content, "utf8");
+  }
+}
+
+async function installToggleDemoFixture(): Promise<ToggleDemoFixture> {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-toggle-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-toggle-prepared-"));
+  const packageDir = join(preparedRoot, "toggle-demo");
+  await writeExtensionDumpPackage(packageDir, {
+    name: "extension-toggle-demo",
+    displayName: "Toggle demo",
+    main: "index.js",
+    manifest: {
+      supportedHosts: ["desktop"],
+      activationEvents: ["onStartup"],
+      requestedCapabilities: ["system-prompt", "tool-definitions", "tool-execution"],
+      contributes: {
+        tools: [
+          {
+            name: "demo_tool",
+            description: "Demo tool",
+            inputSchema: { type: "object" },
+          },
+        ],
+      },
+    },
+  });
   await writeFile(
     join(packageDir, "index.js"),
     `export function activate() {
@@ -68,7 +106,7 @@ async function installToggleDemoFixture(): Promise<ToggleDemoFixture> {
 
   const installed = await installPreparedExtensionDirectory(
     { spiritDataDir, hostKind: "desktop" },
-    { preparedDirectoryPath: packageDir, installSource: "archive" },
+    { preparedDirectoryPath: packageDir },
   );
   return { spiritDataDir, preparedRoot, extensionId: installed.id };
 }
@@ -85,6 +123,7 @@ function readToggleEventCount(): number {
 test("extensions are enabled by default and setEnabled persists per-host overrides", async () => {
   const fixture = await installToggleDemoFixture();
   try {
+    assert.equal(fixture.extensionId, "personal/extension-toggle-demo");
     const manager = createHostExtensionManager({
       spiritDataDir: fixture.spiritDataDir,
       hostKind: "desktop",
@@ -116,7 +155,7 @@ test("extensions are enabled by default and setEnabled persists per-host overrid
     assert.equal(fixture.extensionId in (prunedRaw.enabledOverrides ?? {}), false);
 
     await assert.rejects(
-      () => manager.setEnabled("@spiritagent/extension-missing", false),
+      () => manager.setEnabled("personal/extension-missing", false),
       /Extension not found/,
     );
   } finally {
@@ -206,33 +245,21 @@ Do the demo skill.
 
 async function writeMinimalExtensionPackage(
   packageDir: string,
-  spiritExtension: Record<string, unknown>,
+  manifest: Record<string, unknown>,
   files?: Record<string, string>,
 ): Promise<void> {
-  await mkdir(packageDir, { recursive: true });
-  await writeFile(
-    join(packageDir, "package.json"),
-    `${JSON.stringify(
-      {
-        name: "spirit.instruction-contribution-demo",
-        version: "0.0.1",
-        spiritExtension: {
-          schemaVersion: 1,
-          displayName: "Instruction contribution demo",
-          supportedHosts: ["desktop"],
-          ...spiritExtension,
-        },
+  await writeExtensionDumpPackage(
+    packageDir,
+    {
+      name: "instruction-contribution-demo",
+      displayName: "Instruction contribution demo",
+      manifest: {
+        supportedHosts: ["desktop"],
+        ...manifest,
       },
-      null,
-      2,
-    )}\n`,
-    "utf8",
+    },
+    files,
   );
-  for (const [relativePath, content] of Object.entries(files ?? {})) {
-    const target = join(packageDir, relativePath);
-    await mkdir(join(target, ".."), { recursive: true });
-    await writeFile(target, content, "utf8");
-  }
 }
 
 test("instruction contributions require matching capabilities and conventional files", async () => {
@@ -247,9 +274,9 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: missingCapabilityDir, installSource: "archive" },
+          { preparedDirectoryPath: missingCapabilityDir },
         ),
-      /missing mcp in spiritExtension.requestedCapabilities/,
+      /missing mcp in .*requestedCapabilities/,
     );
 
     const missingContributeDir = join(preparedRoot, "missing-contribute");
@@ -260,9 +287,9 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: missingContributeDir, installSource: "archive" },
+          { preparedDirectoryPath: missingContributeDir },
         ),
-      /missing spiritExtension.contributes.mcp/,
+      /declares the mcp capability but is missing/,
     );
 
     const missingFileDir = join(preparedRoot, "missing-file");
@@ -274,7 +301,7 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: missingFileDir, installSource: "archive" },
+          { preparedDirectoryPath: missingFileDir },
         ),
       /does not exist: mcp.json/,
     );
@@ -289,7 +316,7 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: invalidJsonDir, installSource: "archive" },
+          { preparedDirectoryPath: invalidJsonDir },
         ),
       /mcp.json is not valid JSON/,
     );
@@ -304,7 +331,7 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: emptySkillsDir, installSource: "archive" },
+          { preparedDirectoryPath: emptySkillsDir },
         ),
       /no valid skills\/\*\/SKILL.md/,
     );
@@ -319,7 +346,7 @@ test("instruction contributions require matching capabilities and conventional f
       () =>
         installPreparedExtensionDirectory(
           { spiritDataDir, hostKind: "desktop" },
-          { preparedDirectoryPath: emptyRuleDir, installSource: "archive" },
+          { preparedDirectoryPath: emptyRuleDir },
         ),
       /rule.md must not be empty/,
     );
@@ -346,7 +373,7 @@ test("undeclared instruction files are ignored and declared files install", asyn
     );
     const undeclared = await installPreparedExtensionDirectory(
       { spiritDataDir, hostKind: "desktop" },
-      { preparedDirectoryPath: undeclaredDir, installSource: "archive" },
+      { preparedDirectoryPath: undeclaredDir },
     );
     assert.equal(undeclared.manifest.contributes?.mcp, undefined);
     assert.equal(undeclared.manifest.contributes?.hooks, undefined);
@@ -358,7 +385,7 @@ test("undeclared instruction files are ignored and declared files install", asyn
       declaredDir,
       {
         requestedCapabilities: ["mcp", "hooks", "skills", "rules"],
-        contributes: { mcp: true, hooks: {}, skills: true, rules: true },
+        contributes: { mcp: true, hooks: true, skills: true, rules: true },
       },
       {
         "mcp.json": VALID_MCP_JSON,
@@ -371,7 +398,6 @@ test("undeclared instruction files are ignored and declared files install", asyn
       { spiritDataDir, hostKind: "desktop" },
       {
         preparedDirectoryPath: declaredDir,
-        installSource: "archive",
         replaceExisting: true,
       },
     );

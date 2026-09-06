@@ -3,9 +3,9 @@ import { Fragment } from "react";
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui";
 
 import {
-  DESKTOP_OVERLAY_EDGE,
-  DESKTOP_OVERLAY_SHADOW,
-  DESKTOP_OVERLAY_SHADOW_LG,
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "@/lib/desktop-chrome";
 import { radixAnchoredOverlayMotion } from "@/lib/overlay-motion";
 import { getUiLayoutPortalContainer } from "@/lib/ui-layout-scale";
@@ -68,10 +68,11 @@ function ContextMenuContent({
       <ContextMenuPrimitive.Content
         data-slot="context-menu-content"
         className={cn(
-          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-36 overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground",
-          DESKTOP_OVERLAY_EDGE,
-          DESKTOP_OVERLAY_SHADOW,
           radixAnchoredOverlayMotion("context-menu"),
+          "spirit-scroll z-50 max-h-(--radix-context-menu-content-available-height) overflow-x-hidden overflow-y-auto",
+          DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+          "p-1",
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
           className,
         )}
         {...props}
@@ -95,7 +96,10 @@ function ContextMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/context-menu-item relative flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-overlay-hover focus:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 focus:*:[svg]:text-accent-foreground data-[variant=destructive]:*:[svg]:text-destructive",
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "group/context-menu-item gap-1.5 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        variant === "destructive" &&
+          "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20 [&_svg]:text-destructive",
         className,
       )}
       {...props}
@@ -116,13 +120,14 @@ function ContextMenuSubTrigger({
       data-slot="context-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-overlay-hover focus:text-accent-foreground data-inset:pl-7 data-open:bg-overlay-hover data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 data-inset:pl-7 data-open:bg-overlay-hover data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <ChevronRightIcon className="ml-auto size-4 text-muted-foreground/80" aria-hidden />
     </ContextMenuPrimitive.SubTrigger>
   );
 }
@@ -135,10 +140,11 @@ function ContextMenuSubContent({
     <ContextMenuPrimitive.SubContent
       data-slot="context-menu-sub-content"
       className={cn(
-        "z-50 min-w-32 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground",
-        DESKTOP_OVERLAY_EDGE,
-        DESKTOP_OVERLAY_SHADOW_LG,
         radixAnchoredOverlayMotion("context-menu"),
+        "z-50 overflow-hidden",
+        DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+        "p-1",
+        DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
         className,
       )}
       {...props}
@@ -160,7 +166,8 @@ function ContextMenuCheckboxItem({
       data-slot="context-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-pointer items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-overlay-hover focus:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 pr-8 pl-1.5 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       checked={checked}
@@ -168,7 +175,7 @@ function ContextMenuCheckboxItem({
     >
       <span className="pointer-events-none absolute right-2">
         <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon />
+          <CheckIcon className="size-4" aria-hidden />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -189,14 +196,15 @@ function ContextMenuRadioItem({
       data-slot="context-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "relative flex cursor-pointer items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-overlay-hover focus:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 pr-8 pl-1.5 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       {...props}
     >
       <span className="pointer-events-none absolute right-2">
         <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon />
+          <CheckIcon className="size-4" aria-hidden />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}

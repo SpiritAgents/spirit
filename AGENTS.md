@@ -82,6 +82,18 @@ EOF
 - Unless explicitly required by the test target, avoid adding third-party products, services, models, or brand strings in unit tests, snapshots, fixtures, example inputs, etc.; prefer in-project semantics or neutral descriptions.
 - This project is in very early development; if a change involves user configuration structure, persistence format, or migration strategy and requires significant adjustment, avoid stacking too many compatibility fallbacks. Prefer keeping the implementation directly evolvable, and clearly communicate to developers the reasons, costs, and future evolution space for doing so. Note that "early stage" only means fewer compatibility fallbacks are needed; **it does not mean avoiding significant changes** — restructure directly when necessary, rather than bypassing necessary refactoring for the sake of stability.
 
+### Copyright Header for New UI Components
+
+A new **original** UI component file (e.g. a new `components/ui/*.tsx`) starts with the project copyright header, mirroring the root `LICENSE`:
+
+```tsx
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+```
+
+- Why: shadcn/ui is vendored by copying source files rather than installed as an npm package, so there is no package-level license boundary separating it from in-project code; shadcn-derived files are attributed collectively via `NOTICE.md`, and the header is what marks a file as original in-project work. Example: `apps/desktop/src/components/ui/empty.tsx`.
+- **UI only, and only when applicable**: add the header only to new UI component files that are fully original in-project work. Do not add it to non-UI code, to files copied or adapted from shadcn/ui or other third parties (those remain covered by `NOTICE.md` attribution), or when editing existing files.
+
 ## Bug Fixes: Logs, Root Cause, No Multiple Safeguards
 
 ### Process

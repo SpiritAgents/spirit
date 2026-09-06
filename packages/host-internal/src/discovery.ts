@@ -4,12 +4,16 @@ import { normalizeAgentMode, type AgentMode } from "@spiritagent/agent-core";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { validateSkillName } from "@spiritagent/extension-toolkit";
+
 import {
   parseSkillFrontmatterFields,
   SKILL_FILE_NAME,
   SKILLS_DIR_NAME,
   splitSkillFrontmatter,
 } from "./skill-paths.js";
+
+export { validateSkillName } from "@spiritagent/extension-toolkit";
 import {
   AGENTS_DIR_NAME,
   SPIRIT_DIR_NAME,
@@ -27,7 +31,6 @@ const RULE_PREVIEW_MAX_LINES = 8;
 const RULE_PREVIEW_MAX_CHARS = 1_200;
 const SKILL_PREVIEW_MAX_LINES = 8;
 const SKILL_PREVIEW_MAX_CHARS = 1_200;
-const SKILL_NAME_MAX_CHARS = 64;
 
 export type HostRuleScope = "workspace" | "user" | "extension";
 export type HostSkillScope = "workspace" | "user" | "extension";
@@ -487,23 +490,6 @@ async function parseSkillDocument(
     description,
     body: split.body.trim(),
   };
-}
-
-export function validateSkillName(name: string): string | undefined {
-  if (!name || [...name].length > SKILL_NAME_MAX_CHARS) {
-    return `skill-name must be 1-${SKILL_NAME_MAX_CHARS} characters`;
-  }
-  if (name.startsWith("-") || name.endsWith("-")) {
-    return "skill-name must not start or end with a hyphen";
-  }
-  if (name.includes("--")) {
-    return "skill-name must not contain consecutive hyphens";
-  }
-  if (![...name].every((character) => /[a-z0-9-]/u.test(character))) {
-    return "skill-name only allows lowercase letters, digits, and hyphens";
-  }
-
-  return undefined;
 }
 
 function shortLabelForSkill(rootKind: HostSkillRootKind, skillName: string): string {

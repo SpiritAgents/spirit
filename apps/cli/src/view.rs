@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::ask_questions::AskQuestionsRequest;
-use crate::host_protocol::CliExtensionEntry;
 use crate::model_registry::AppConfig;
 use crate::ports::SubagentSessionStatus;
 use crate::session::PendingMcpResource;
@@ -418,9 +417,7 @@ pub struct TuiViewModel {
     pub image_picker_active: bool,
     pub image_picker_index: usize,
     pub image_picker_files: Vec<String>,
-    pub marketplace_picker_active: bool,
-    pub marketplace_picker_index: usize,
-    pub marketplace_catalog: Vec<CliExtensionEntry>,
+    pub marketplace_view: Option<MarketplaceViewModel>,
     pub bottom_form: Option<BottomFormView>,
     pub history_offset_from_bottom: usize,
     pub pending_response_active: bool,
@@ -475,4 +472,92 @@ impl TuiViewModel {
     pub fn pending_aux_state(&self) -> Option<&PendingAssistantAux> {
         self.pending_aux.as_ref()
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarketplaceFlowStep {
+    CatalogPicker,
+    DetailActions,
+    UnverifiedConfirm,
+}
+
+#[derive(Clone, Debug)]
+pub struct MarketplaceSourceTabView {
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct MarketplaceCatalogItemView {
+    /// Composite identity: `<sourceId>/<name>`.
+    pub id: String,
+    pub name: String,
+    pub display_name: String,
+    pub description: String,
+    pub author: Option<String>,
+    pub review_status: String,
+    pub version: String,
+    pub installed: bool,
+    pub enabled: bool,
+    pub installed_version: Option<String>,
+    pub update_available: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct MarketplaceDetailView {
+    pub id: String,
+    pub name: String,
+    pub display_name: String,
+    pub description: String,
+    pub author: Option<String>,
+    pub review_status: String,
+    pub version: String,
+    pub installed: bool,
+    pub enabled: bool,
+    pub update_available: bool,
+    pub installed_version: Option<String>,
+    pub supported_hosts: Vec<String>,
+    pub requested_capabilities: Vec<String>,
+    /// Pre-rendered capability lines (declared contributions).
+    pub contribution_lines: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct SlashFlowItemView {
+    pub label: String,
+    pub summary: String,
+    pub details: Vec<String>,
+    pub disabled: bool,
+    pub muted: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct SlashFlowSearchView {
+    pub value: String,
+    pub placeholder: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct SlashFlowView {
+    pub title: String,
+    pub subtitle: Option<String>,
+    pub search: Option<SlashFlowSearchView>,
+    pub empty_text: String,
+    pub selected_index: usize,
+    pub items: Vec<SlashFlowItemView>,
+    pub compact_items: bool,
+    pub footer_hint: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct MarketplaceViewModel {
+    pub step: MarketplaceFlowStep,
+    pub query: String,
+    pub error: Option<String>,
+    pub sources: Vec<MarketplaceSourceTabView>,
+    pub active_source_index: usize,
+    pub catalog_items: Vec<MarketplaceCatalogItemView>,
+    pub selected_item: Option<MarketplaceCatalogItemView>,
+    pub detail: Option<MarketplaceDetailView>,
+    pub slash: SlashFlowView,
 }

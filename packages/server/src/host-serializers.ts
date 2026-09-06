@@ -3,6 +3,8 @@ import {
   summarizeDeclaredExtensionContributionPoints,
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
+  type MarketplaceCatalogItem,
+  type MarketplaceSourceRecord,
 } from "@spiritagent/host-internal";
 
 /**
@@ -21,11 +23,11 @@ interface ExtensionToolContribution {
 
 interface ExtensionManifestLike {
   name: string;
+  displayName: string;
   icon?: string;
   version: string;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: { name: string; url?: string };
   main?: string;
   supportedHosts: Array<"cli" | "desktop">;
   activationEvents?: string[];
@@ -115,7 +117,7 @@ function serializeExtensionContributes(
 
 export function serializeHostExtension(item: {
   id: string;
-  manifest: ExtensionManifestLike & { defaultInstalled?: boolean };
+  manifest: ExtensionManifestLike;
   installedAtUnixMs: number;
   enabled: boolean;
   archiveFileName?: string;
@@ -123,13 +125,19 @@ export function serializeHostExtension(item: {
 }): JsonObject {
   return {
     id: item.id,
-    displayName: item.manifest.name,
+    displayName: item.manifest.displayName,
     enabled: item.enabled,
     ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
     version: item.manifest.version,
     ...(item.manifest.description ? { description: item.manifest.description } : {}),
-    ...(item.manifest.author ? { author: item.manifest.author } : {}),
-    ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
+    ...(item.manifest.author
+      ? {
+          author: {
+            name: item.manifest.author.name,
+            ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
+          },
+        }
+      : {}),
     ...(item.manifest.main ? { main: item.manifest.main } : {}),
     supportedHosts: [...item.manifest.supportedHosts],
     ...(item.manifest.activationEvents?.length
@@ -173,7 +181,6 @@ export function serializeHostExtension(item: {
       : {}),
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
     ...(item.installSource ? { installSource: item.installSource } : {}),
-    ...(item.manifest.defaultInstalled === false ? { defaultInstalled: false } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
   } as unknown as JsonObject;
 }
@@ -195,6 +202,65 @@ export async function serializeListedMarketplaceCatalogItem(
     ...(await serializeListedHostExtension(item)),
     installed: item.installed,
   };
+}
+
+export function serializeMarketplaceSource(record: MarketplaceSourceRecord): JsonObject {
+  return {
+    id: record.id,
+    name: record.name,
+    displayName: record.displayName,
+    kind: record.kind,
+    locator: record.locator,
+    ...(record.ref ? { ref: record.ref } : {}),
+    addedAtUnixMs: record.addedAtUnixMs,
+    internal: record.id === "built-in" || record.id === "personal",
+  };
+}
+
+/** Multi-source catalog row: registry entry fields plus install state. */
+export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): JsonObject {
+  const { entry } = item;
+  return {
+    id: `${item.source.id}/${entry.name}`,
+    sourceId: item.source.id,
+    sourceName: item.source.name,
+    name: entry.name,
+    displayName: entry.displayName,
+    description: entry.description,
+    version: entry.version,
+    ...(entry.author
+      ? {
+          author: {
+            name: entry.author.name,
+            ...(entry.author.url ? { url: entry.author.url } : {}),
+          },
+        }
+      : {}),
+    ...(entry.categories?.length ? { categories: [...entry.categories] } : {}),
+    ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
+    reviewStatus: entry.reviewStatus,
+    ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
+    supportedHosts: [...entry.manifest.supportedHosts],
+    ...(entry.manifest.activationEvents?.length
+      ? { activationEvents: [...entry.manifest.activationEvents] }
+      : {}),
+    ...(entry.manifest.requestedCapabilities?.length
+      ? { requestedCapabilities: [...entry.manifest.requestedCapabilities] }
+      : {}),
+    ...(entry.manifest.contributes
+      ? { contributes: entry.manifest.contributes as unknown as JsonValue }
+      : {}),
+    ...(entry.manifest.settingsSchema?.length
+      ? { settingsSchema: entry.manifest.settingsSchema as unknown as JsonValue }
+      : {}),
+    ...(entry.manifest.secretSlots?.length
+      ? { secretSlots: entry.manifest.secretSlots as unknown as JsonValue }
+      : {}),
+    installed: item.installed,
+    ...(item.enabled !== undefined ? { enabled: item.enabled } : {}),
+    ...(item.installedVersion ? { installedVersion: item.installedVersion } : {}),
+    updateAvailable: item.updateAvailable,
+  } as unknown as JsonObject;
 }
 
 export type { JsonValue };

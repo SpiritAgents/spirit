@@ -27,8 +27,15 @@ import type {
   DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
   InstallBuiltInExtensionRequest,
+  InstallMarketplaceExtensionRequest,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -126,6 +133,14 @@ export interface HostApi {
   inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
   importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
   installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
+  addMarketplaceSource(
+    request: AddMarketplaceSourceRequest,
+  ): Promise<MarketplaceSourceCommandResult>;
+  removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot>;
+  installMarketplaceExtension(
+    request: InstallMarketplaceExtensionRequest,
+  ): Promise<MarketplaceInstallCommandResult>;
+  updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult>;
   deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
   setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
   runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
