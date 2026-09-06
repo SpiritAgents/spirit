@@ -473,6 +473,25 @@ importers:
         specifier: '>=18'
         version: 19.2.8
 
+  packages/create-extension:
+    dependencies:
+      '@inquirer/prompts':
+        specifier: 7.10.1
+        version: 7.10.1(@types/node@25.9.5)
+      '@spiritagent/extension-toolkit':
+        specifier: workspace:*
+        version: link:../extension-toolkit
+    devDependencies:
+      '@types/node':
+        specifier: 25.9.5
+        version: 25.9.5
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.11(@types/node@25.9.5)(happy-dom@20.11.1)(jsdom@30.0.1(@noble/hashes@2.2.0))(vite@8.2.0(@types/node@25.9.5)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.7)(yaml@2.9.0))
+
   packages/extension-toolkit:
     dependencies:
       '@spiritagent/agent-core':
