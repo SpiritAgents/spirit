@@ -256,11 +256,18 @@ export function MarketplaceView({
     activeSourceId === "all" || sources.some((source) => source.id === activeSourceId)
       ? activeSourceId
       : "all";
-  // The All view concatenates every source's catalog in source order (built-in,
-  // personal, then user sources); each entry keeps its <sourceId>/<name> identity.
+  // The All view merges every source's catalog and sorts globally by display
+  // name (per-source tabs keep the registry's curated order); each entry keeps
+  // its <sourceId>/<name> identity.
   const catalog =
     resolvedActiveSourceId === "all"
-      ? Object.values(catalogs).flat()
+      ? Object.values(catalogs)
+          .flat()
+          .sort(
+            (left, right) =>
+              left.displayName.localeCompare(right.displayName, "zh-CN") ||
+              left.id.localeCompare(right.id, "en"),
+          )
       : (catalogs[resolvedActiveSourceId] ?? []);
   // HTTP registries cannot serve directory content, so local-path artifacts are
   // listed but not installable there; the CLI surfaces the same rule as an

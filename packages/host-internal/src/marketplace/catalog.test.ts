@@ -10,7 +10,12 @@ import type { MarketplaceHostContext } from "./resolve.js";
 import { addMarketplaceSource } from "./sources.js";
 import { PERSONAL_MARKETPLACE_SOURCE_ID } from "./types.js";
 
-async function writeUserRegistry(root: string, name: string, entryName: string): Promise<void> {
+async function writeUserRegistry(
+  root: string,
+  name: string,
+  entryName: string,
+  entryDisplayName?: string,
+): Promise<void> {
   await mkdir(path.join(root, ".spirit"), { recursive: true });
   await writeFile(
     path.join(root, ".spirit", "marketplace.json"),
@@ -24,7 +29,7 @@ async function writeUserRegistry(root: string, name: string, entryName: string):
             name: entryName,
             version: "1.0.0",
             source: `./extensions/${entryName}`,
-            displayName: entryName,
+            displayName: entryDisplayName ?? entryName,
             description: `${entryName} extension.`,
             reviewStatus: "verified",
             manifest: { supportedHosts: ["desktop"] },
@@ -48,6 +53,7 @@ async function writeUserRegistry(root: string, name: string, entryName: string):
 async function importPersonalExtension(
   context: MarketplaceHostContext,
   name: string,
+  displayName?: string,
 ): Promise<void> {
   const prepared = path.join(context.spiritDataDir, "prepared", name);
   await mkdir(path.join(prepared, ".spirit"), { recursive: true });
@@ -59,7 +65,7 @@ async function importPersonalExtension(
         name,
         version: "1.0.0",
         sourceId: "self-declared",
-        displayName: name,
+        displayName: displayName ?? name,
         description: `${name} extension.`,
         manifest: { supportedHosts: ["desktop"] },
       },
@@ -76,8 +82,8 @@ test("readMarketplaceCatalog merges every configured source", async () => {
   const registryRoot = await mkdtemp(path.join(tmpdir(), "spirit-catalog-all-registry-"));
   try {
     const context: MarketplaceHostContext = { spiritDataDir, hostKind: "desktop" };
-    await importPersonalExtension(context, "extension-personal");
-    await writeUserRegistry(registryRoot, "registry-user", "extension-user");
+    await importPersonalExtension(context, "extension-personal", "Zebra Personal");
+    await writeUserRegistry(registryRoot, "registry-user", "extension-user", "Alpha User");
     await addMarketplaceSource(context, registryRoot);
 
     const { items, warnings } = await readMarketplaceCatalog(context);
@@ -95,6 +101,14 @@ test("readMarketplaceCatalog merges every configured source", async () => {
     assert.ok(user);
     assert.equal(user.entry.name, "extension-user");
     assert.equal(user.installed, false);
+
+    // The merged catalog sorts globally by display name, not by source order
+    // (Personal precedes user sources, yet "Alpha User" precedes "Zebra Personal").
+    const displayOrder = items.map((item) => item.entry.displayName);
+    assert.ok(
+      displayOrder.indexOf("Alpha User") < displayOrder.indexOf("Zebra Personal"),
+      `expected global display-name order, got: ${displayOrder.join(", ")}`,
+    );
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(registryRoot, { recursive: true, force: true });

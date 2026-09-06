@@ -5,7 +5,7 @@ import {
 } from "@spiritagent/extension-toolkit";
 import path from "node:path";
 
-import { listInstalledExtensions } from "../extensions.js";
+import { composeExtensionId, listInstalledExtensions } from "../extensions.js";
 import {
   listAllMarketplaceSources,
   readMarketplaceIndexForSource,
@@ -123,6 +123,16 @@ export async function readMarketplaceCatalog(
       continue;
     }
   }
+  // The merged view sorts globally by display name; per-source catalogs keep
+  // the registry's curated order.
+  items.sort(
+    (left, right) =>
+      left.entry.displayName.localeCompare(right.entry.displayName, "zh-CN") ||
+      composeExtensionId(left.source.id, left.entry.name).localeCompare(
+        composeExtensionId(right.source.id, right.entry.name),
+        "en",
+      ),
+  );
   return { items, warnings };
 }
 
