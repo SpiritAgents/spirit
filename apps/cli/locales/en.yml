@@ -451,7 +451,6 @@ tui.help.mcp_prompt_form: "- If the trailing text is omitted and the prompt defi
 tui.help.rules: "- /rule opens a scrollable rule enablement list; Enter toggles the current rule, Esc saves and closes, and the mouse wheel scrolls long content."
 tui.help.skills: "- /skill opens a scrollable skill enablement list; Enter toggles the current skill, Esc saves and closes, and the mouse wheel scrolls long content."
 tui.help.extensions: "- /extension with no arguments opens the installed-extensions panel (Enter toggles enabled, Esc saves). /extension list prints the installed extensions, /extension import <zip> imports a ZIP, /extension remove <id> removes an extension."
-tui.help.marketplace: "- /marketplace with no arguments opens the local built-in catalog (Enter installs or uninstalls, Esc closes). /marketplace list prints the catalog, /marketplace install <id> installs a bundled built-in, /marketplace remove <id> uninstalls."
 tui.help.skill_alias: "- Enabled skills are exposed directly as first-level slash commands, e.g. /llm-debug; trailing text is used as this turn's extra note, and the skill body is injected as a separate system prompt state instead of pretending the model reads files by itself."
 tui.help.mcp_server_optional: "- /mcp tools, /mcp resources, and /mcp prompts can omit the server when there is only one server."
 tui.help.log: "- /log opens the current CLI log by default; /log export exports a snapshot of the current CLI log; /log session export exports the full LLM session and request trace."

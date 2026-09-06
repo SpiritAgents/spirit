@@ -450,7 +450,6 @@ tui.help.mcp_prompt_form: "- 省略尾部且 prompt 定義了參數時，會自�
 tui.help.rules: "- /rule 打開可滾動的規則啟用清單；Enter 切換當前規則，Esc 保存並關閉，滑鼠滾輪可瀏覽長內容。"
 tui.help.skills: "- /skill 打開可滾動的技能啟用清單；Enter 切換當前技能，Esc 保存並關閉，滑鼠滾輪可瀏覽長內容。"
 tui.help.extensions: "- /extension 不帶參數時會打開已安裝擴展面板（Enter 切換啟用狀態，Esc 儲存）。/extension list 會輸出當前已安裝擴展，/extension import <zip> 匯入 ZIP，/extension remove <id> 刪除擴展。"
-tui.help.marketplace: "- /marketplace 不帶參數時打開本機內建擴充功能目錄（Enter 安裝或解除安裝，Esc 關閉）。/marketplace list 列出目錄，/marketplace install <id> 安裝捆綁內建擴充功能，/marketplace remove <id> 解除安裝。"
 tui.help.skill_alias: "- 已啟用的 skill 會直接作為一級 slash 命令暴露，例如 /llm-debug；尾部文字會作為本輪附加說明，skill 正文會作為獨立 system prompt 狀態注入，不會偽裝成模型自行讀檔案。"
 tui.help.mcp_server_optional: "- /mcp tools、/mcp resources、/mcp prompts 在只有一個 server 時可省略 server。"
 tui.help.log: "- /log 預設打開當前 CLI 日誌；/log export 匯出當前 CLI 日誌快照；/log session export 匯出 LLM 會話全文與請求軌跡。"

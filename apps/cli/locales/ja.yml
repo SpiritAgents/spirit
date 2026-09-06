@@ -450,7 +450,6 @@ tui.help.mcp_prompt_form: "- 末尾を省略し、prompt に引数が定義さ�
 tui.help.rules: "- /rule でスクロール可能なルール有効化リストを開きます。Enter で現在のルールを切り替え、Esc で保存して閉じ、マウスホイールで長い内容をスクロールできます。"
 tui.help.skills: "- /skill でスクロール可能なスキル有効化リストを開きます。Enter で現在のスキルを切り替え、Esc で保存して閉じ、マウスホイールで長い内容をスクロールできます。"
 tui.help.extensions: "- /extension を引数なしで実行するとインストール済み拡張パネルを開きます（Enter で有効状態を切り替え、Esc で保存）。/extension list はインストール済み拡張を出力し、/extension import <zip> は ZIP をインポート、/extension remove <id> は拡張を削除します。"
-tui.help.marketplace: "- /marketplace を引数なしで実行するとローカル内蔵カタログを開きます（Enter でインストールまたはアンインストール、Esc で閉じる）。/marketplace list はカタログを表示し、/marketplace install <id> は同梱の内蔵拡張をインストール、/marketplace remove <id> はアンインストールします。"
 tui.help.skill_alias: "- 有効な skill は /llm-debug のような一級 slash コマンドとして直接公開されます。末尾のテキストはこのターンの追加補足として使われ、skill 本文は独立した system prompt 状態として注入され、モデルが自分でファイルを読んだかのように振る舞いません。"
 tui.help.mcp_server_optional: "- /mcp tools、/mcp resources、/mcp prompts は server が1つだけの場合 server を省略できます。"
 tui.help.log: "- /log は既定で現在の CLI ログを開きます。/log export は現在の CLI ログのスナップショットをエクスポートし、/log session export は LLM セッション全文とリクエスト履歴をエクスポートします。"

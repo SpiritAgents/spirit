@@ -450,7 +450,6 @@ tui.help.mcp_prompt_form: "- Se o texto final for omitido e o prompt definir arg
 tui.help.rules: "- /rule abre uma lista rolável de ativação de regras; Enter alterna a regra atual, Esc salva e fecha, e a roda do mouse percorre conteúdos longos."
 tui.help.skills: "- /skill abre uma lista rolável de ativação de skills; Enter alterna a skill atual, Esc salva e fecha, e a roda do mouse percorre conteúdos longos."
 tui.help.extensions: "- /extension sem argumentos abre o painel de extensões instaladas (Enter alterna o estado ativado, Esc salva). /extension list exibe as extensões instaladas, /extension import <zip> importa um ZIP, /extension remove <id> remove uma extensão."
-tui.help.marketplace: "- /marketplace sem argumentos abre o catálogo local de extensões internas (Enter instala ou desinstala, Esc fecha). /marketplace list exibe o catálogo, /marketplace install <id> instala uma extensão interna empacotada, /marketplace remove <id> desinstala."
 tui.help.skill_alias: "- Skills habilitadas são expostas diretamente como comandos slash de primeiro nível, ex. /llm-debug; o texto final serve como nota adicional deste turno e o corpo da skill é injetado como estado de system prompt separado, sem fingir que o modelo lê arquivos por conta própria."
 tui.help.mcp_server_optional: "- /mcp tools, /mcp resources e /mcp prompts podem omitir o server quando há apenas um."
 tui.help.log: "- /log abre por padrão o log atual da CLI; /log export exporta um snapshot do log atual da CLI; /log session export exporta a sessão LLM completa com o rastro de requisições."

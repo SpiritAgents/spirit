@@ -450,7 +450,6 @@ tui.help.mcp_prompt_form: "- 끝부분을 생략하고 prompt에 인수가 정�
 tui.help.rules: "- /rule는 스크롤 가능한 규칙 활성화 목록을 엽니다. Enter로 현재 규칙을 전환하고 Esc로 저장 후 닫으며, 마우스 휠로 긴 내용을 탐색할 수 있습니다."
 tui.help.skills: "- /skill는 스크롤 가능한 스킬 활성화 목록을 엽니다. Enter로 현재 스킬을 전환하고 Esc로 저장 후 닫으며, 마우스 휠로 긴 내용을 탐색할 수 있습니다."
 tui.help.extensions: "- /extension를 인수 없이 실행하면 설치된 확장 패널을 엽니다(Enter로 활성화 상태 전환, Esc로 저장). /extension list는 설치된 확장을 출력하고, /extension import <zip>은 ZIP을 가져오며, /extension remove <id>는 확장을 삭제합니다."
-tui.help.marketplace: "- /marketplace를 인수 없이 실행하면 로컬 내장 카탈로그를 엽니다(Enter로 설치 또는 제거, Esc로 닫기). /marketplace list는 카탈로그를 출력하고, /marketplace install <id>는 번들 내장 확장을 설치하며, /marketplace remove <id>는 제거합니다."
 tui.help.skill_alias: "- 활성화된 skill은 /llm-debug처럼 일급 slash 명령으로 바로 노출됩니다. 끝부분 텍스트는 이번 턴의 추가 설명으로 사용되고, skill 본문은 별도의 system prompt 상태로 주입되며 모델이 스스로 파일을 읽는 것처럼 가장하지 않습니다."
 tui.help.mcp_server_optional: "- /mcp tools, /mcp resources, /mcp prompts는 server가 하나뿐일 때 server를 생략할 수 있습니다."
 tui.help.log: "- /log는 기본적으로 현재 CLI 로그를 엽니다. /log export는 현재 CLI 로그 스냅샷을 내보내고, /log session export는 LLM 세션 전문과 요청 추적을 내보냅니다."
