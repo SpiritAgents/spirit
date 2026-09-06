@@ -21,6 +21,7 @@ Options:
   -y, --yes                Skip the confirmation prompt
   -h, --help               Show this help
 
+Without a target directory, the extension is created in ./<name>.
 Without --name, an interactive wizard collects the missing options (TTY only).
 `;
 
@@ -44,7 +45,6 @@ export async function runCreateExtensionCli(args: string[]): Promise<number> {
       return 0;
     }
 
-    const targetDir = path.resolve(positionals[0] ?? values.name ?? ".");
     const capabilities = values.capabilities
       ? parseCapabilitiesFlag(values.capabilities)
       : undefined;
@@ -70,6 +70,7 @@ export async function runCreateExtensionCli(args: string[]): Promise<number> {
           capabilities: capabilities ?? [],
         };
 
+    const targetDir = path.resolve(positionals[0] ?? options.name);
     const result = await initExtension({ ...options, targetDir });
 
     process.stdout.write(
