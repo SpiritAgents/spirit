@@ -106,6 +106,7 @@ type MarketplaceViewProps = {
   snapshot: {
     marketplaceSources?: DesktopMarketplaceSource[];
     marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
+    marketplaceCatalogAll?: DesktopMarketplaceCatalogEntry[];
     marketplaceWarnings?: string[];
     extensionsLoading?: boolean;
   } | null;
@@ -262,18 +263,12 @@ export function MarketplaceView({
       ? showAll
       : visibleSources.some((source) => source.id === activeSourceId);
   const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
-  // Per-source catalogs arrive display-name sorted from the host; the All view
-  // merges every source and re-sorts with the same comparator so rows
-  // interleave across sources. Each entry keeps its <sourceId>/<name> identity.
+  // Per-source catalogs and the merged All catalog arrive display-name sorted
+  // from the host; the view never re-sorts. Each entry keeps its
+  // <sourceId>/<name> identity.
   const catalog =
     resolvedActiveSourceId === "all"
-      ? Object.values(catalogs)
-          .flat()
-          .sort(
-            (left, right) =>
-              left.displayName.localeCompare(right.displayName, "en") ||
-              left.id.localeCompare(right.id, "en"),
-          )
+      ? (snapshot?.marketplaceCatalogAll ?? [])
       : (catalogs[resolvedActiveSourceId] ?? []);
   // HTTP registries cannot serve directory content, so local-path artifacts are
   // listed but not installable there; the CLI surfaces the same rule as an

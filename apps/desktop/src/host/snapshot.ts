@@ -46,6 +46,7 @@ export interface BuildDesktopSnapshotInput {
   extensionsList: DesktopExtensionListItem[];
   marketplaceSources?: DesktopMarketplaceSource[];
   marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceCatalogAll?: DesktopMarketplaceCatalogEntry[];
   marketplaceWarnings?: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionSkills?: DesktopExtensionSkillSlashItem[];
@@ -172,6 +173,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
         items.map((item) => ({ ...item })),
       ]),
     ),
+    marketplaceCatalogAll: (input.marketplaceCatalogAll ?? []).map((item) => ({ ...item })),
     ...(input.marketplaceWarnings?.length
       ? { marketplaceWarnings: [...input.marketplaceWarnings] }
       : {}),

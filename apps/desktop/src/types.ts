@@ -1092,6 +1092,8 @@ export interface DesktopSnapshot {
   marketplaceSources: DesktopMarketplaceSource[];
   /** Catalog rows keyed by source id. */
   marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  /** Merged catalog over every source, sorted by the host (the All view's rows). */
+  marketplaceCatalogAll: DesktopMarketplaceCatalogEntry[];
   /** Refresh fallback warnings (offline snapshot / stale clone). */
   marketplaceWarnings?: string[];
   extensionCss: DesktopExtensionCssLayer[];

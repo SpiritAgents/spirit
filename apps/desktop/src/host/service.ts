@@ -37,6 +37,7 @@ import {
   overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
   listAllMarketplaceSources,
+  compareMarketplaceDisplayOrder,
   readMarketplaceCatalogForSource,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
@@ -553,6 +554,7 @@ interface HostState {
   extensionsList: DesktopExtensionListItem[];
   marketplaceSources: DesktopMarketplaceSource[];
   marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceCatalogAll: DesktopMarketplaceCatalogEntry[];
   marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
@@ -3685,6 +3687,7 @@ class DesktopHostService {
       extensionsList: state.extensionsList,
       marketplaceSources: state.marketplaceSources,
       marketplaceCatalogs: state.marketplaceCatalogs,
+      marketplaceCatalogAll: state.marketplaceCatalogAll,
       ...(state.marketplaceWarnings.length > 0
         ? { marketplaceWarnings: state.marketplaceWarnings }
         : {}),
@@ -4130,6 +4133,11 @@ class DesktopHostService {
       }
     }
     state.marketplaceCatalogs = catalogs;
+    // The All view's merged catalog: per-source rows concatenated and sorted
+    // with the backend's comparator, so the renderer never re-sorts.
+    state.marketplaceCatalogAll = Object.values(catalogs)
+      .flat()
+      .sort(compareMarketplaceDisplayOrder);
     state.marketplaceWarnings = warnings;
 
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);

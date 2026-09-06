@@ -65,17 +65,31 @@ function resolveEntryContentDir(
  * Catalog order everywhere: display name, then the <sourceId>/<name> id as
  * tie-break, both with en collation. Per-source catalogs and the merged All
  * catalog share it, so a single-source All view matches the source's own tab.
+ * Hosts that merge per-source catalogs themselves (e.g. the desktop snapshot)
+ * reuse this so the ordering rule lives in exactly one place.
  */
+export function compareMarketplaceDisplayOrder(
+  left: { displayName: string; id: string },
+  right: { displayName: string; id: string },
+): number {
+  return (
+    left.displayName.localeCompare(right.displayName, "en") || left.id.localeCompare(right.id, "en")
+  );
+}
+
 function compareMarketplaceCatalogItems(
   left: MarketplaceCatalogItem,
   right: MarketplaceCatalogItem,
 ): number {
-  return (
-    left.entry.displayName.localeCompare(right.entry.displayName, "en") ||
-    composeExtensionId(left.source.id, left.entry.name).localeCompare(
-      composeExtensionId(right.source.id, right.entry.name),
-      "en",
-    )
+  return compareMarketplaceDisplayOrder(
+    {
+      displayName: left.entry.displayName,
+      id: composeExtensionId(left.source.id, left.entry.name),
+    },
+    {
+      displayName: right.entry.displayName,
+      id: composeExtensionId(right.source.id, right.entry.name),
+    },
   );
 }
 

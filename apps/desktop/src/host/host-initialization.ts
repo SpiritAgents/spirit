@@ -44,6 +44,7 @@ export interface InitializationState {
   extensionsList: DesktopExtensionListItem[];
   marketplaceSources: DesktopMarketplaceSource[];
   marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceCatalogAll: DesktopMarketplaceCatalogEntry[];
   marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
   extensionInstructionContributions: HostExtensionInstructionContributions;
@@ -221,6 +222,7 @@ export async function ensureInitializedCommand(
     extensionsList: state?.extensionsList ?? [],
     marketplaceSources: state?.marketplaceSources ?? [],
     marketplaceCatalogs: state?.marketplaceCatalogs ?? {},
+    marketplaceCatalogAll: state?.marketplaceCatalogAll ?? [],
     marketplaceWarnings: state?.marketplaceWarnings ?? [],
     extensionCss: state?.extensionCss ?? [],
     extensionInstructionContributions: state?.extensionInstructionContributions ?? {
