@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "¿Quitar el mercado \"{{name}}\"? Esta acción no se puede deshacer.",
     "addFromDisk": "Añadir desde disco…",
     "addFromUrl": "Añadir desde URL…",
+    "tabAll": "Todos",
     "tabBuiltIn": "Integrado",
     "tabPersonal": "Personal",
     "tabsLabel": "Mercados",

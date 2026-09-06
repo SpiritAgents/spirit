@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "Marketplace \"{{name}}\" entfernen? Dies kann nicht rückgängig gemacht werden.",
     "addFromDisk": "Von Festplatte hinzufügen…",
     "addFromUrl": "Von URL hinzufügen…",
+    "tabAll": "Alle",
     "tabBuiltIn": "Integriert",
     "tabPersonal": "Persönlich",
     "tabsLabel": "Marketplaces",

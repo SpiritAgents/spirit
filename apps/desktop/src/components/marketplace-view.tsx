@@ -41,6 +41,7 @@ import {
 import { EmptyCard } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
@@ -141,7 +142,8 @@ export function MarketplaceView({
 }: MarketplaceViewProps) {
   const { t } = useTranslation();
   const [searchText, setSearchText] = useState("");
-  const [activeSourceId, setActiveSourceId] = useState("built-in");
+  // "all" is a UI-level pseudo source: the merged view over every added marketplace.
+  const [activeSourceId, setActiveSourceId] = useState("all");
   const [uninstallTarget, setUninstallTarget] = useState<DesktopMarketplaceCatalogEntry | null>(
     null,
   );
@@ -250,10 +252,16 @@ export function MarketplaceView({
 
   const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
   const catalogs = snapshot?.marketplaceCatalogs ?? {};
-  const resolvedActiveSourceId = sources.some((source) => source.id === activeSourceId)
-    ? activeSourceId
-    : "built-in";
-  const catalog = catalogs[resolvedActiveSourceId] ?? [];
+  const resolvedActiveSourceId =
+    activeSourceId === "all" || sources.some((source) => source.id === activeSourceId)
+      ? activeSourceId
+      : "all";
+  // The All view concatenates every source's catalog in source order (built-in,
+  // personal, then user sources); each entry keeps its <sourceId>/<name> identity.
+  const catalog =
+    resolvedActiveSourceId === "all"
+      ? Object.values(catalogs).flat()
+      : (catalogs[resolvedActiveSourceId] ?? []);
   // HTTP registries cannot serve directory content, so local-path artifacts are
   // listed but not installable there; the CLI surfaces the same rule as an
   // install-time error.
@@ -490,6 +498,16 @@ export function MarketplaceView({
                 role="tablist"
                 aria-label={t("marketplace.tabsLabel")}
               >
+                {/* The All tab is pinned first and is the page default; it is a
+                    pseudo source, so it carries no per-source context menu. */}
+                <Toggle
+                  size="sm"
+                  pressed={resolvedActiveSourceId === "all"}
+                  onPressedChange={() => setActiveSourceId("all")}
+                  aria-label={t("marketplace.tabAll")}
+                >
+                  {t("marketplace.tabAll")}
+                </Toggle>
                 {sources.map((source) => (
                   <MarketplaceSourceTab
                     key={source.id}

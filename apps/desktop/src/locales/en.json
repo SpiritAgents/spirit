@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "Remove marketplace \"{{name}}\"? This cannot be undone.",
     "addFromDisk": "Add from Disk…",
     "addFromUrl": "Add from URL…",
+    "tabAll": "All",
     "tabBuiltIn": "Built-in",
     "tabPersonal": "Personal",
     "tabsLabel": "Marketplaces",

@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "\"{{name}}\" 마켓플레이스를 제거하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "addFromDisk": "디스크에서 추가…",
     "addFromUrl": "URL에서 추가…",
+    "tabAll": "전체",
     "tabBuiltIn": "내장",
     "tabPersonal": "개인",
     "tabsLabel": "마켓플레이스",

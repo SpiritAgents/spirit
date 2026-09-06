@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "Удалить маркетплейс \"{{name}}\"? Это действие необратимо.",
     "addFromDisk": "Добавить с диска…",
     "addFromUrl": "Добавить по URL…",
+    "tabAll": "Все",
     "tabBuiltIn": "Встроенные",
     "tabPersonal": "Личные",
     "tabsLabel": "Маркетплейсы",

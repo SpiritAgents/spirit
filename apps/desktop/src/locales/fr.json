@@ -664,6 +664,7 @@
     "removeMarketplaceConfirm": "Retirer le marché « {{name}} » ? Cette action est irréversible.",
     "addFromDisk": "Ajouter depuis le disque…",
     "addFromUrl": "Ajouter depuis une URL…",
+    "tabAll": "Tous",
     "tabBuiltIn": "Intégré",
     "tabPersonal": "Personnel",
     "tabsLabel": "Marchés",
