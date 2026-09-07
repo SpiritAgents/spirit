@@ -257,6 +257,7 @@ export interface HostExtensionSecretSlot {
 
 export interface HostExtensionAuthor {
   name: string;
+  email?: string;
   url?: string;
 }
 
@@ -281,6 +282,7 @@ export interface HostExtensionManifest {
   description?: string;
   author?: HostExtensionAuthor;
   category?: string;
+  keywords?: string[];
   main?: string;
   /** Hosts the extension declares it can be installed on (cli / desktop). */
   supportedHosts: ExtensionHostKind[];
@@ -1760,6 +1762,7 @@ async function parseExtensionManifestFields(
     ...(dump.description ? { description: dump.description } : {}),
     ...(dump.author ? { author: dump.author } : {}),
     ...(dump.category ? { category: dump.category } : {}),
+    ...(dump.keywords?.length ? { keywords: [...dump.keywords] } : {}),
     supportedHosts,
     ...(activationEvents.length > 0 ? { activationEvents } : {}),
     ...(requestedCapabilities.length > 0 ? { requestedCapabilities } : {}),

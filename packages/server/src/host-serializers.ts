@@ -27,7 +27,8 @@ interface ExtensionManifestLike {
   icon?: string;
   version: string;
   description?: string;
-  author?: { name: string; url?: string };
+  author?: { name: string; email?: string; url?: string };
+  keywords?: string[];
   main?: string;
   supportedHosts: Array<"cli" | "desktop">;
   activationEvents?: string[];
@@ -134,10 +135,12 @@ export function serializeHostExtension(item: {
       ? {
           author: {
             name: item.manifest.author.name,
+            ...(item.manifest.author.email ? { email: item.manifest.author.email } : {}),
             ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
           },
         }
       : {}),
+    ...(item.manifest.keywords?.length ? { keywords: [...item.manifest.keywords] } : {}),
     ...(item.manifest.main ? { main: item.manifest.main } : {}),
     supportedHosts: [...item.manifest.supportedHosts],
     ...(item.manifest.activationEvents?.length
@@ -232,11 +235,13 @@ export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): J
       ? {
           author: {
             name: entry.author.name,
+            ...(entry.author.email ? { email: entry.author.email } : {}),
             ...(entry.author.url ? { url: entry.author.url } : {}),
           },
         }
       : {}),
     ...(entry.category ? { category: entry.category } : {}),
+    ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
     ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
     reviewStatus: entry.reviewStatus,
     ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),

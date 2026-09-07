@@ -37,6 +37,7 @@ export type MarketplaceInstructionContributionKey =
 
 export interface MarketplaceOwner {
   name: string;
+  email?: string;
   url?: string;
 }
 
@@ -87,6 +88,7 @@ export interface MarketplaceExtensionEntry {
   description: string;
   author?: MarketplaceExtensionAuthor;
   category?: string;
+  keywords?: string[];
   featured?: boolean;
   /** Per-version review semantics; defaults to "unverified" when omitted. */
   reviewStatus: MarketplaceReviewStatus;
@@ -143,13 +145,47 @@ function optionalStringArray(value: unknown, fieldName: string): string[] | unde
   return value.map((item) => (item as string).trim());
 }
 
+/** Parse the npm-style person string: "Name <email> (https://url)". */
+function parseNpmPersonString(value: string, fieldName: string): MarketplaceOwner {
+  const trimmed = value.trim();
+  const email = /<([^<>]*)>/.exec(trimmed)?.[1]?.trim();
+  const url = /\(([^()]*)\)/.exec(trimmed)?.[1]?.trim();
+  const name = trimmed
+    .replace(/<[^<>]*>/, "")
+    .replace(/\([^()]*\)/, "")
+    .trim();
+  if (!name) {
+    throw new Error(`${fieldName} must name the person: ${value}`);
+  }
+  return {
+    name,
+    ...(email ? { email } : {}),
+    ...(url ? { url } : {}),
+  };
+}
+
+/**
+ * Shared person parsing for the registry-level owner and the entry/dump
+ * author: an object with a name plus optional email/url, or the npm string
+ * form "Name <email> (https://url)".
+ */
 function parseOwner(value: unknown, fieldName: string): MarketplaceOwner {
+  if (typeof value === "string") {
+    return parseNpmPersonString(value, fieldName);
+  }
   if (!isRecord(value)) {
-    throw new Error(`${fieldName} must be an object with a name.`);
+    throw new Error(
+      `${fieldName} must be an object with a name or an npm-style "Name <email> (url)" string.`,
+    );
   }
   const name = requiredString(value.name, `${fieldName}.name`);
+  const email = optionalString(value.email, `${fieldName}.email`);
   const url = optionalString(value.url, `${fieldName}.url`);
-  return url === undefined ? { name } : { name, url };
+  return {
+    name,
+    ...(email === undefined ? {} : { email }),
+    ...(url === undefined ? {} : { url }),
+  };
 }
 
 export function assertMarketplaceExtensionName(name: unknown, fieldName: string): string {
@@ -318,6 +354,7 @@ interface MarketplaceExtensionCoreFields {
   description: string;
   author?: MarketplaceExtensionAuthor;
   category?: string;
+  keywords?: string[];
   manifest: MarketplaceExtensionManifest;
 }
 
@@ -339,6 +376,7 @@ function parseCoreFields(
   const author =
     value.author === undefined ? undefined : parseOwner(value.author, `${fieldName}.author`);
   const category = optionalString(value.category, `${fieldName}.category`);
+  const keywords = optionalStringArray(value.keywords, `${fieldName}.keywords`);
   const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
 
   return {
@@ -349,6 +387,7 @@ function parseCoreFields(
     description,
     ...(author ? { author } : {}),
     ...(category ? { category } : {}),
+    ...(keywords ? { keywords } : {}),
     manifest,
   };
 }
@@ -458,6 +497,7 @@ export interface MarketplaceExtensionDump {
   icon?: string;
   author?: MarketplaceExtensionAuthor;
   category?: string;
+  keywords?: string[];
   manifest: MarketplaceExtensionManifest;
 }
 

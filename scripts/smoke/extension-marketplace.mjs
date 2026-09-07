@@ -85,7 +85,7 @@ function writeFixtureIndex(version) {
     name: "smoke-registry",
     displayName: "Smoke Registry",
     description: "Local fixture registry for the extension marketplace smoke test.",
-    owner: { name: "Spirit" },
+    owner: { name: "Spirit", email: "support@spirit.dev" },
     extensions: [
       {
         name: "i-am-a-extension",
@@ -94,8 +94,9 @@ function writeFixtureIndex(version) {
         icon: "extensions/i-am-a-extension/icon.svg",
         displayName: "I Am A Extension",
         description: "Smoke fixture extension with a skills contribution.",
-        author: { name: "Spirit" },
+        author: { name: "Spirit", email: "support@spirit.dev" },
         category: "developer-tools",
+        keywords: ["smoke"],
         reviewStatus: "verified",
         manifest: {
           supportedHosts: ["cli", "desktop"],

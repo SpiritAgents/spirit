@@ -3700,6 +3700,7 @@ mod tests {
             description: Some("A metadata-only extension fixture.".to_string()),
             author: Some(crate::host_protocol::cli_public::CliExtensionAuthor {
                 name: "Spirit".to_string(),
+                email: None,
                 url: None,
             }),
             main: Some("dist/index.js".to_string()),

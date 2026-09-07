@@ -47,6 +47,7 @@ export function buildExtensionDumpFromEntry(
     ...(icon ? { icon } : {}),
     ...(entry.author ? { author: entry.author } : {}),
     ...(entry.category ? { category: entry.category } : {}),
+    ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
     manifest: entry.manifest,
   };
 }

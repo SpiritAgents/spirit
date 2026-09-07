@@ -59,6 +59,7 @@ export async function buildDesktopExtensionListItems(
           ? {
               author: {
                 name: item.manifest.author.name,
+                ...(item.manifest.author.email ? { email: item.manifest.author.email } : {}),
                 ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
               },
             }
@@ -241,11 +242,13 @@ export async function buildDesktopMarketplaceCatalogEntries(
           ? {
               author: {
                 name: entry.author.name,
+                ...(entry.author.email ? { email: entry.author.email } : {}),
                 ...(entry.author.url ? { url: entry.author.url } : {}),
               },
             }
           : {}),
         ...(entry.category ? { category: entry.category } : {}),
+        ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
         ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
         reviewStatus: entry.reviewStatus,
         artifactKind: typeof entry.source === "string" ? "local" : "npm",

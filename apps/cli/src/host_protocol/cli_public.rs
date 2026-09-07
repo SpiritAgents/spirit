@@ -149,6 +149,7 @@ pub struct CliExtensionSkillSlashEntry {
 #[serde(rename_all = "camelCase")]
 pub struct CliExtensionAuthor {
     pub name: String,
+    pub email: Option<String>,
     pub url: Option<String>,
 }
 
@@ -213,6 +214,8 @@ pub struct CliMarketplaceCatalogEntry {
     pub author: Option<CliExtensionAuthor>,
     #[serde(default)]
     pub category: Option<String>,
+    #[serde(default)]
+    pub keywords: Option<Vec<String>>,
     #[serde(default)]
     pub featured: Option<bool>,
     pub review_status: String,

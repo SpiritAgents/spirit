@@ -361,7 +361,7 @@ impl TuiShell {
                 }
 
                 let haystack = format!(
-                    "{} {} {} {} {} {}",
+                    "{} {} {} {} {} {} {}",
                     item.display_name,
                     item.description,
                     item.name,
@@ -371,6 +371,7 @@ impl TuiShell {
                         .map(|author| author.name.as_str())
                         .unwrap_or(""),
                     item.category.as_deref().unwrap_or(""),
+                    item.keywords.as_deref().unwrap_or(&[]).join(" "),
                 );
                 haystack.to_lowercase().contains(&query).then_some(index)
             })

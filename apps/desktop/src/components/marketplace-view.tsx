@@ -301,6 +301,7 @@ export function MarketplaceView({
       item.author?.name ?? "",
       item.name,
       item.category ?? "",
+      ...(item.keywords ?? []),
     ]
       .join(" ")
       .toLowerCase()

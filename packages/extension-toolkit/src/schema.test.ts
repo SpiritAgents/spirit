@@ -18,8 +18,9 @@ function validEntry(): Record<string, unknown> {
     icon: "extensions/extension-hello/icon.svg",
     displayName: "Hello",
     description: "Example Spirit extension.",
-    author: { name: "Spirit" },
+    author: { name: "Spirit", email: "support@spirit.dev" },
     category: "developer-tools",
+    keywords: ["example", "smoke"],
     featured: true,
     reviewStatus: "verified",
     manifest: {
@@ -37,7 +38,7 @@ function validIndex(): Record<string, unknown> {
     name: "spirit-official",
     displayName: "Spirit Official",
     description: "Official Spirit extension registry.",
-    owner: { name: "Spirit", url: "https://spirit.dev" },
+    owner: { name: "Spirit", email: "support@spirit.dev", url: "https://spirit.dev" },
     extensions: [validEntry()],
   };
 }
@@ -47,6 +48,7 @@ test("parseMarketplaceIndex accepts the spec example shape", () => {
   assert.equal(index.name, "spirit-official");
   assert.equal(index.displayName, "Spirit Official");
   assert.equal(index.owner?.url, "https://spirit.dev");
+  assert.equal(index.owner?.email, "support@spirit.dev");
   assert.equal(index.extensions.length, 1);
   const entry = index.extensions[0]!;
   assert.equal(entry.name, "extension-hello");
@@ -58,9 +60,37 @@ test("parseMarketplaceIndex accepts the spec example shape", () => {
   assert.equal(entry.icon, "extensions/extension-hello/icon.svg");
   assert.equal(entry.reviewStatus, "verified");
   assert.equal(entry.featured, true);
+  assert.deepEqual(entry.author, { name: "Spirit", email: "support@spirit.dev" });
+  assert.deepEqual(entry.keywords, ["example", "smoke"]);
   assert.deepEqual(entry.manifest.supportedHosts, ["cli", "desktop"]);
   assert.deepEqual(entry.manifest.requestedCapabilities, ["skills"]);
   assert.equal(entry.manifest.contributes?.skills, true);
+});
+
+test("parseMarketplaceIndex accepts npm-style person strings for owner and author", () => {
+  const index = parseMarketplaceIndex({
+    ...validIndex(),
+    owner: "Spirit <support@spirit.dev> (https://spirit.dev)",
+    extensions: [{ ...validEntry(), author: "Spirit <support@spirit.dev>" }],
+  });
+  assert.deepEqual(index.owner, {
+    name: "Spirit",
+    email: "support@spirit.dev",
+    url: "https://spirit.dev",
+  });
+  assert.deepEqual(index.extensions[0]?.author, { name: "Spirit", email: "support@spirit.dev" });
+});
+
+test("parseMarketplaceIndex rejects a person string without a name", () => {
+  assert.throws(
+    () =>
+      parseMarketplaceIndex({
+        ...validIndex(),
+        owner: "<support@spirit.dev>",
+        extensions: [validEntry()],
+      }),
+    /owner must name the person/,
+  );
 });
 
 test("parseMarketplaceIndexText parses raw JSON", () => {
