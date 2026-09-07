@@ -131,6 +131,9 @@ test("defaults: title-cased display name, TODO description, minimal package", as
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.equal(dump.displayName, "My Ext");
   assert.match(dump.description, /^TODO:/);
+  // The scaffold carries example author/keywords so the fields are discoverable.
+  assert.deepEqual(dump.author, { name: "Your Name", email: "you@example.com" });
+  assert.deepEqual(dump.keywords, ["spirit-extension"]);
   assert.equal(dump.manifest.contributes, undefined);
   assert.equal(files["index.mjs"], undefined);
   assert.ok(files["icon.svg"]);
@@ -147,6 +150,8 @@ test("the registry entry snippet mirrors the dump identity", async () => {
   assert.equal(entry.name, "my-ext");
   assert.equal(entry.source, "./extensions/my-ext");
   assert.equal(entry.reviewStatus, "unverified");
+  assert.deepEqual(entry.author, { name: "Your Name", email: "you@example.com" });
+  assert.deepEqual(entry.keywords, ["spirit-extension"]);
   const manifest = entry.manifest as { requestedCapabilities?: string[] };
   assert.deepEqual(manifest.requestedCapabilities, ["skills"]);
 });

@@ -96,6 +96,9 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     displayName: title,
     description,
     icon: "icon.svg",
+    // Example values so the protocol fields are discoverable without the docs.
+    author: { name: "Your Name", email: "you@example.com" },
+    keywords: ["spirit-extension"],
     manifest,
   };
 
@@ -139,6 +142,8 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     icon: `extensions/${name}/icon.svg`,
     displayName: title,
     description,
+    author: { name: "Your Name", email: "you@example.com" },
+    keywords: ["spirit-extension"],
     reviewStatus: "unverified",
     manifest,
   };
