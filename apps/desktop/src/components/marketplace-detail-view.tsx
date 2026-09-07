@@ -21,10 +21,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 import type { DesktopMarketplaceCatalogEntry } from "@/types";
-
-/** Matches the marketplace entry page content width */
-const MARKETPLACE_READING_W = "max-w-4xl";
 
 type MarketplaceDetailViewProps = {
   item: DesktopMarketplaceCatalogEntry;
@@ -57,7 +58,13 @@ export function MarketplaceDetailView({
   return (
     <>
       <div className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}>
-        <div className={cn("mx-auto flex items-center px-3 py-2", MARKETPLACE_READING_W)}>
+        <div
+          className={cn(
+            "mx-auto flex items-center py-2",
+            CONVERSATION_GUTTER_X,
+            CONVERSATION_MESSAGE_LIST_MAX_W,
+          )}
+        >
           <Button
             type="button"
             variant="ghost"
@@ -75,7 +82,13 @@ export function MarketplaceDetailView({
       </div>
 
       <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
-        <div className={cn("mx-auto w-full space-y-6 px-3 pb-12 pt-5", MARKETPLACE_READING_W)}>
+        <div
+          className={cn(
+            "mx-auto w-full space-y-6 pb-12 pt-5",
+            CONVERSATION_GUTTER_X,
+            CONVERSATION_MESSAGE_LIST_MAX_W,
+          )}
+        >
           {/* Detail top bar: icon and text vertically centered; body compressed to a title row + single-line summary (author merged into the summary prefix) */}
           <div className="flex min-w-0 items-center">
             <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">

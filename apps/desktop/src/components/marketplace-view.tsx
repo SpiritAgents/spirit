@@ -53,6 +53,10 @@ import {
   instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { fileToBase64 } from "@/lib/file-to-base64";
 import { groupMarketplaceEntriesByCategory } from "@/lib/marketplace-category-sections";
@@ -74,9 +78,6 @@ import type {
   SetExtensionEnabledRequest,
   UpdateExtensionRequest,
 } from "@/types";
-
-/** Matches the automations entry page content width */
-const MARKETPLACE_LIST_W = "max-w-4xl";
 
 /** h-8: the whitespace above the title; it scrolls away with the title before the search bar docks */
 const MARKETPLACE_HEADER_TOP_GAP_PX = 32;
@@ -622,7 +623,14 @@ export function MarketplaceView({
             scrollHideDelay={450}
             style={listScrollRootStyle}
           >
-            <div className={cn("mx-auto w-full px-4 pb-8", MARKETPLACE_LIST_W)}>
+            {/* Shares the conversation message list's max width and gutter; the docking search header below uses the same to stay aligned */}
+            <div
+              className={cn(
+                "mx-auto w-full pb-8",
+                CONVERSATION_GUTTER_X,
+                CONVERSATION_MESSAGE_LIST_MAX_W,
+              )}
+            >
               {/* The top gap and title scroll away; the search bar (overlay sibling of the
                   ScrollArea) docks once they are consumed. The placeholder reserves its
                   flow space. */}
@@ -763,8 +771,9 @@ export function MarketplaceView({
           >
             <div
               className={cn(
-                "mx-auto w-full px-4",
-                MARKETPLACE_LIST_W,
+                "mx-auto w-full",
+                CONVERSATION_GUTTER_X,
+                CONVERSATION_MESSAGE_LIST_MAX_W,
                 headerPinned && !useTranslucency ? "bg-background" : "bg-transparent",
               )}
             >

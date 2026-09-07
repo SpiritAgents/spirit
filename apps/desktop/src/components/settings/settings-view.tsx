@@ -23,6 +23,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 
 export function SettingsView({
   tab,
@@ -106,7 +110,15 @@ export function SettingsView({
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
         <div className="flex min-h-full flex-col justify-center">
-          <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+          {/* Shares the conversation message list's max width and gutter: full width up to
+              the cap, then proportional side margins on narrower windows. */}
+          <div
+            className={cn(
+              "mx-auto w-full py-8",
+              CONVERSATION_GUTTER_X,
+              CONVERSATION_MESSAGE_LIST_MAX_W,
+            )}
+          >
             {!extensionSettingsItem &&
             tab !== "models" &&
             tab !== "skills" &&
