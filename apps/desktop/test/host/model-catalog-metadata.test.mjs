@@ -30,7 +30,7 @@ test("siliconflow provider uses listed model catalog metadata", () => {
   assert.deepEqual(preview, [
     {
       id: "deepseek-ai/DeepSeek-V3",
-      displayName: "Deepseek Ai DeepSeek V3",
+      displayName: "DeepSeek AI DeepSeek V3",
       capabilities: ["chat"],
     },
     {
@@ -346,12 +346,12 @@ test("xiaomi provider consumes Xiaomi model catalog metadata", () => {
   assert.deepEqual(preview, [
     {
       id: "mimo-v2.5",
-      displayName: "Mimo V2.5",
+      displayName: "MiMo V2.5",
       capabilities: ["chat", "image", "video"],
     },
     {
       id: "mimo-v2-flash",
-      displayName: "Mimo V2 Flash",
+      displayName: "MiMo V2 Flash",
       capabilities: ["chat"],
     },
   ]);

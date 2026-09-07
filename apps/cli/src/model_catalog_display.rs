@@ -317,7 +317,7 @@ mod tests {
         if resolve_host_internal_id_display_title_path().is_ok() {
             assert_eq!(
                 titles.get("gpt-4o-mini").map(String::as_str),
-                Some("Gpt 4o Mini")
+                Some("GPT 4o Mini")
             );
         }
     }

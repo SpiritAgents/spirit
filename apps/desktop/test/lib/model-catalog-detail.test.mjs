@@ -161,7 +161,7 @@ test("buildModelCatalogDisplayTitleMap formats non-gateway model ids", () => {
   const titles = buildModelCatalogDisplayTitleMap(models, []);
   assert.equal(
     titles.get("openai::openai-compatible::https://api.openai.com/v1::gpt-4o-mini"),
-    "Gpt 4o Mini",
+    "GPT 4o Mini",
   );
 });
 
@@ -196,7 +196,7 @@ test("buildModelCatalogDisplayTitleMap scopes titles by provider for shared mode
   ];
 
   const titles = buildModelCatalogDisplayTitleMap(models, hints);
-  assert.equal(modelDisplayTitleFromMap(models[0], titles), "Deepseek V4 Pro");
+  assert.equal(modelDisplayTitleFromMap(models[0], titles), "DeepSeek V4 Pro");
   assert.equal(modelDisplayTitleFromMap(models[1], titles), "DeepSeek-V4-Pro");
 });
 

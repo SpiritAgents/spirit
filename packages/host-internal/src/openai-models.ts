@@ -15,6 +15,7 @@ import { extractAwsRegionFromBedrockApiBase } from "./bedrock-region.js";
 import { extractVertexProjectAndLocationFromApiBase } from "./google-vertex-endpoints.js";
 import { normalizeOpenAiApiBase } from "./openai-api-base.js";
 import { formatTitleFromId } from "./id-display-title.js";
+import { WELL_KNOWN_CASING_OVERRIDES } from "./well-known-casing.js";
 
 export { normalizeOpenAiApiBase } from "./openai-api-base.js";
 
@@ -1208,7 +1209,7 @@ function groqSupportedReasoningEfforts(id: string): string[] | undefined {
 
 export function resolveGroqDisplayNameFromId(modelId: string): string {
   const segment = resolveHuggingFaceDisplayNameFromId(modelId);
-  const formatted = formatTitleFromId(segment);
+  const formatted = formatTitleFromId(segment, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES });
   return formatted.length > 0 ? formatted : modelId.trim();
 }
 

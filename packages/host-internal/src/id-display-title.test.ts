@@ -29,6 +29,22 @@ test("formatTitleFromId keeps empty input as-is", () => {
   assert.equal(formatTitleFromId("   "), "   ");
 });
 
+test("formatTitleFromId applies whole-token casing overrides", () => {
+  const casingOverrides = { foo: "FOO", barbaz: "BarBaz" };
+  assert.equal(formatTitleFromId("foo-bar", { casingOverrides }), "FOO Bar");
+  assert.equal(formatTitleFromId("FOO-bar", { casingOverrides }), "FOO Bar");
+  assert.equal(formatTitleFromId("foobar", { casingOverrides }), "Foobar");
+  assert.equal(formatTitleFromId("barbaz-4-8", { casingOverrides }), "BarBaz 4.8");
+});
+
+test("formatTitleFromId applies multi-token phrase overrides with longest match first", () => {
+  const casingOverrides = { foo: "FOO", "foo bar": "FooBar" };
+  assert.equal(formatTitleFromId("foo-bar-baz", { casingOverrides }), "FooBar Baz");
+  assert.equal(formatTitleFromId("foo-qux", { casingOverrides }), "FOO Qux");
+  assert.equal(formatTitleFromId("foo-barista", { casingOverrides }), "FOO Barista");
+  assert.equal(formatTitleFromId("foo-bar-4-8", { casingOverrides }), "FooBar 4.8");
+});
+
 test("resolveModelDisplayTitle prefers catalog displayName", () => {
   assert.equal(
     resolveModelDisplayTitle({
@@ -55,12 +71,16 @@ test("resolveModelDisplayTitle formats non-catalog model ids", () => {
     resolveModelDisplayTitle({
       modelId: "gpt-4o-mini",
     }),
-    "Gpt 4o Mini",
+    "GPT 4o Mini",
   );
 });
 
+test("resolveModelDisplayTitle applies well-known casing overrides", () => {
+  assert.equal(resolveModelDisplayTitle({ modelId: "my-mcp-helper" }), "My MCP Helper");
+});
+
 test("buildFormattedDisplayTitlesFromIds only includes changed titles", () => {
-  assert.deepEqual(buildFormattedDisplayTitlesFromIds(["gpt-4o-mini", "Gpt"]), {
-    "gpt-4o-mini": "Gpt 4o Mini",
+  assert.deepEqual(buildFormattedDisplayTitlesFromIds(["gpt-4o-mini", "Foo"]), {
+    "gpt-4o-mini": "GPT 4o Mini",
   });
 });

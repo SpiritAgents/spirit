@@ -61,6 +61,10 @@
       "types": "./dist/id-display-title.d.ts",
       "default": "./dist/id-display-title.js"
     },
+    "./well-known-casing": {
+      "types": "./dist/well-known-casing.d.ts",
+      "default": "./dist/well-known-casing.js"
+    },
     "./openai-models": {
       "types": "./dist/openai-models.d.ts",
       "default": "./dist/openai-models.js"
