@@ -102,8 +102,9 @@ Campos do `.spirit/extension.json`:
 | `displayName`   | Obrigatório. Nome visível ao usuário                                                                                                                                |
 | `description`   | Obrigatório. Resumo de uma linha                                                                                                                                    |
 | `icon`          | Opcional. Caminho SVG relativo à raiz da extensão                                                                                                                   |
-| `author`        | Opcional. `{ name, url? }`                                                                                                                                          |
+| `author`        | Opcional. `{ name, email?, url? }` ou uma string no estilo npm `"Name <email> (url)"`                                                                               |
 | `category`      | Opcional. String única                                                                                                                                              |
+| `keywords`      | Opcional. Matriz de strings de palavras-chave de busca                                                                                                              |
 | `manifest`      | Obrigatório. A declaração de runtime — veja a seção «O `manifest`»                                                                                                  |
 
 O dump não carrega `source` nem campos de curadoria (`reviewStatus`, `featured`) — esses pertencem à entrada do marketplace.
@@ -384,7 +385,7 @@ Caminhos relativos dentro do `marketplace.json` resolvem contra a raiz do market
 Campos da entrada, por grupo:
 
 - **Identidade** — `name` (kebab-case; o id da entrada), `version` (semver, sem pré-lançamento) e `source`: uma string de caminho relativo à raiz como `"./extensions/my-extension"` para conteúdo local, ou `{ "source": "npm", "package": "@scope/name@1.0.0" }` para fixar uma versão npm exata (a integridade é verificada contra o hash SRI do packument na instalação).
-- **Exibição** — `displayName`, `description`, `icon` (caminho SVG relativo à raiz), `category`, `author`.
+- **Exibição** — `displayName`, `description`, `icon` (caminho SVG relativo à raiz), `category`, `keywords`, `author`.
 - **Declaração** — `manifest`: a declaração de runtime descrita na seção «O `manifest`». O marketplace a endossa; um pacote não pode afirmar capacidades por conta própria.
 - **Curadoria** — `featured` e `reviewStatus` (`unverified` / `verified` / `revoked`).
 

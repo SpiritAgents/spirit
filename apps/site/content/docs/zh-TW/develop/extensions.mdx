@@ -102,8 +102,9 @@ my-extension/
 | `displayName`   | 必填。使用者可見名稱                                                                        |
 | `description`   | 必填。一行概述                                                                              |
 | `icon`          | 選填。相對擴充功能根目錄的 SVG 路徑                                                         |
-| `author`        | 選填。`{ name, url? }`                                                                      |
+| `author`        | 選填。`{ name, email?, url? }` 或 npm 風格字串 `"Name <email> (url)"`                       |
 | `category`      | 選填。單一字串                                                                              |
+| `keywords`      | 選填。搜尋關鍵字字串陣列                                                                    |
 | `manifest`      | 必填。執行時期宣言——見下方「`manifest` 宣言」一節                                           |
 
 轉儲不攜帶 `source` 與策展欄位（`reviewStatus`、`featured`）——它們屬於市場條目。
@@ -384,7 +385,7 @@ my-marketplace/
 條目欄位按語義分組：
 
 - **身份**——`name`（kebab-case，條目 id）、`version`（semver，不含 pre-release）、`source`：本機內容為根相對路徑字串（如 `"./extensions/my-extension"`），或 `{ "source": "npm", "package": "@scope/name@1.0.0" }` 釘住精確 npm 版本（安裝時會按 packument 的 SRI 雜湊校驗完整性）。
-- **展示**——`displayName`、`description`、`icon`（根相對 SVG 路徑）、`category`、`author`。
+- **展示**——`displayName`、`description`、`icon`（根相對 SVG 路徑）、`category`、`keywords`、`author`。
 - **宣言**——`manifest`：即「`manifest` 宣言」一節描述的執行時期宣言。市場為它背書；套件不能自行聲明能力。
 - **策展**——`featured` 與 `reviewStatus`（`unverified` / `verified` / `revoked`）。
 

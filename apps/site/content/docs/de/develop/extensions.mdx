@@ -102,8 +102,9 @@ my-extension/
 | `displayName`   | Erforderlich. Für den Benutzer sichtbarer Name                                                                                                                                  |
 | `description`   | Erforderlich. Einzeilige Zusammenfassung                                                                                                                                        |
 | `icon`          | Optional. SVG-Pfad relativ zum Erweiterungsstamm                                                                                                                                |
-| `author`        | Optional. `{ name, url? }`                                                                                                                                                      |
+| `author`        | Optional. `{ name, email?, url? }` oder ein String im npm-Stil `"Name <email> (url)"`                                                                                           |
 | `category`      | Optional. Einzelner String                                                                                                                                                      |
+| `keywords`      | Optional. String-Array mit Suchbegriffen                                                                                                                                        |
 | `manifest`      | Erforderlich. Die Laufzeitdeklaration — siehe den Abschnitt „Das `manifest`“                                                                                                    |
 
 Der Dump trägt kein `source` und keine Kuratierungsfelder (`reviewStatus`, `featured`) — die gehören zum Marktplatz-Eintrag.
@@ -384,7 +385,7 @@ Relative Pfade in `marketplace.json` lösen gegen den Marktplatz-Stamm auf und d
 Eintragsfelder nach Gruppen:
 
 - **Identität** — `name` (kebab-case; die Eintrags-ID), `version` (Semver, kein Pre-Release) und `source`: ein stammrelativer Pfad-String wie `"./extensions/my-extension"` für lokalen Inhalt oder `{ "source": "npm", "package": "@scope/name@1.0.0" }`, um eine exakte npm-Version festzupinnen (die Integrität wird bei der Installation gegen den SRI-Hash des Packuments geprüft).
-- **Anzeige** — `displayName`, `description`, `icon` (stammrelativer SVG-Pfad), `category`, `author`.
+- **Anzeige** — `displayName`, `description`, `icon` (stammrelativer SVG-Pfad), `category`, `keywords`, `author`.
 - **Deklaration** — `manifest`: die im Abschnitt „Das `manifest`“ beschriebene Laufzeitdeklaration. Der Marktplatz bestätigt sie; ein Paket kann Fähigkeiten nicht von sich aus behaupten.
 - **Kuratierung** — `featured` und `reviewStatus` (`unverified` / `verified` / `revoked`).
 

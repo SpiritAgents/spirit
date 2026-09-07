@@ -102,8 +102,9 @@ Campos de `.spirit/extension.json`:
 | `displayName`   | Obligatorio. Nombre visible para el usuario                                                                                                                                  |
 | `description`   | Obligatorio. Resumen de una línea                                                                                                                                            |
 | `icon`          | Opcional. Ruta SVG relativa a la raíz de la extensión                                                                                                                        |
-| `author`        | Opcional. `{ name, url? }`                                                                                                                                                   |
+| `author`        | Opcional. `{ name, email?, url? }` o una cadena de estilo npm `"Name <email> (url)"`                                                                                         |
 | `category`      | Opcional. Una sola cadena                                                                                                                                                    |
+| `keywords`      | Opcional. Array de cadenas con palabras clave de búsqueda                                                                                                                    |
 | `manifest`      | Obligatorio. La declaración en tiempo de ejecución — véase la sección «El `manifest`»                                                                                        |
 
 El volcado no lleva `source` ni campos de curaduría (`reviewStatus`, `featured`) — esos pertenecen a la entrada del mercado.
@@ -384,7 +385,7 @@ Las rutas relativas dentro de `marketplace.json` se resuelven contra la raíz de
 Campos de entrada, por grupo:
 
 - **Identidad** — `name` (kebab-case; el id de la entrada), `version` (semver, sin pre-lanzamiento) y `source`: una cadena de ruta relativa a la raíz como `"./extensions/my-extension"` para contenido local, o `{ "source": "npm", "package": "@scope/name@1.0.0" }` para fijar una versión npm exacta (la integridad se verifica contra el hash SRI del packument en la instalación).
-- **Presentación** — `displayName`, `description`, `icon` (ruta SVG relativa a la raíz), `category`, `author`.
+- **Presentación** — `displayName`, `description`, `icon` (ruta SVG relativa a la raíz), `category`, `keywords`, `author`.
 - **Declaración** — `manifest`: la declaración en tiempo de ejecución descrita en la sección «El `manifest`». El mercado la avala; un paquete no puede afirmar capacidades por sí mismo.
 - **Curaduría** — `featured` y `reviewStatus` (`unverified` / `verified` / `revoked`).
 
