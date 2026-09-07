@@ -153,10 +153,12 @@ export function MarketplaceView({
   const [uninstallTarget, setUninstallTarget] = useState<DesktopMarketplaceCatalogEntry | null>(
     null,
   );
+  const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
   const [addSourceOpen, setAddSourceOpen] = useState(false);
   const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
+  const [reviewGateOpen, setReviewGateOpen] = useState(false);
   const [removeSourceTarget, setRemoveSourceTarget] = useState<DesktopMarketplaceSource | null>(
     null,
   );
@@ -374,6 +376,7 @@ export function MarketplaceView({
             await onInstallMarketplaceExtension({ ...request, reviewAcknowledged: true });
           },
         });
+        setReviewGateOpen(true);
       }
     },
     [onInstallMarketplaceExtension],
@@ -401,6 +404,7 @@ export function MarketplaceView({
             await onUpdateExtension({ id: item.id, reviewAcknowledged: true });
           },
         });
+        setReviewGateOpen(true);
       }
     },
     [onUpdateExtension],
@@ -450,6 +454,27 @@ export function MarketplaceView({
     runAfterRadixOverlayClose(() => {
       setRemoveSourceTarget(null);
     });
+  }, []);
+
+  // Keep the bound extension data mounted through the close animation;
+  // clearing it at openChange(false) flashes an empty name on the last frame.
+  const dismissReviewGate = useCallback(() => {
+    setReviewGateOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setReviewGate(null);
+    });
+  }, []);
+
+  const dismissUninstallDialog = useCallback(() => {
+    setUninstallDialogOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setUninstallTarget(null);
+    });
+  }, []);
+
+  const openUninstallDialog = useCallback((item: DesktopMarketplaceCatalogEntry) => {
+    setUninstallTarget(item);
+    setUninstallDialogOpen(true);
   }, []);
 
   // One row renderer for every list context: featured-section rows and
@@ -524,7 +549,7 @@ export function MarketplaceView({
                 <DropdownMenuItem
                   variant="destructive"
                   className="gap-2"
-                  onSelect={() => setUninstallTarget(item)}
+                  onSelect={() => openUninstallDialog(item)}
                 >
                   <Trash2 className="size-3.5 shrink-0" aria-hidden />
                   <span>{t("marketplace.uninstall")}</span>
@@ -812,7 +837,7 @@ export function MarketplaceView({
           onInstall={() => handleInstall(detailItem)}
           onUpdate={() => handleUpdate(detailItem)}
           onToggleEnabled={() => handleToggleEnabled(detailItem)}
-          onRequestUninstall={() => setUninstallTarget(detailItem)}
+          onRequestUninstall={() => openUninstallDialog(detailItem)}
           useTranslucency={useTranslucency}
         />
       ) : (
@@ -848,10 +873,10 @@ export function MarketplaceView({
       />
 
       <Dialog
-        open={reviewGate !== null}
+        open={reviewGateOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setReviewGate(null);
+            dismissReviewGate();
           }
         }}
       >
@@ -873,7 +898,7 @@ export function MarketplaceView({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setReviewGate(null)}
+                onClick={dismissReviewGate}
                 disabled={extensionsBusy}
               >
                 {t("common.cancel")}
@@ -890,7 +915,7 @@ export function MarketplaceView({
                   void runInstallAction(target.extensionId, async () => {
                     try {
                       await target.retry(true);
-                      setReviewGate(null);
+                      dismissReviewGate();
                     } catch {
                       /* runtimeError */
                     }
@@ -973,10 +998,10 @@ export function MarketplaceView({
       </Dialog>
 
       <Dialog
-        open={uninstallTarget !== null}
+        open={uninstallDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setUninstallTarget(null);
+            dismissUninstallDialog();
           }
         }}
       >
@@ -1002,7 +1027,7 @@ export function MarketplaceView({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setUninstallTarget(null)}
+                onClick={dismissUninstallDialog}
                 disabled={extensionsBusy}
               >
                 {t("common.cancel")}
@@ -1020,7 +1045,7 @@ export function MarketplaceView({
                   void (async () => {
                     try {
                       await onDeleteExtension({ id: target.id });
-                      setUninstallTarget(null);
+                      dismissUninstallDialog();
                     } catch {
                       /* runtimeError */
                     }
