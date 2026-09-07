@@ -665,6 +665,8 @@
     "addFromDisk": "Add from Disk…",
     "addFromUrl": "Add from URL…",
     "tabAll": "All",
+    "featured": "Featured",
+    "other": "Other",
     "tabBuiltIn": "Built-in",
     "tabPersonal": "Personal",
     "tabsLabel": "Marketplaces",

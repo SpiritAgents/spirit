@@ -665,6 +665,8 @@
     "addFromDisk": "ディスクから追加…",
     "addFromUrl": "URL から追加…",
     "tabAll": "すべて",
+    "featured": "注目",
+    "other": "その他",
     "tabBuiltIn": "組み込み",
     "tabPersonal": "個人",
     "tabsLabel": "マーケットプレイス",

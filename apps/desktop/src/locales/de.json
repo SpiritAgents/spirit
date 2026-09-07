@@ -665,6 +665,8 @@
     "addFromDisk": "Von Festplatte hinzufügen…",
     "addFromUrl": "Von URL hinzufügen…",
     "tabAll": "Alle",
+    "featured": "Empfohlen",
+    "other": "Weitere",
     "tabBuiltIn": "Integriert",
     "tabPersonal": "Persönlich",
     "tabsLabel": "Marketplaces",

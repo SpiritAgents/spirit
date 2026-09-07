@@ -665,6 +665,8 @@
     "addFromDisk": "디스크에서 추가…",
     "addFromUrl": "URL에서 추가…",
     "tabAll": "전체",
+    "featured": "추천",
+    "other": "기타",
     "tabBuiltIn": "내장",
     "tabPersonal": "개인",
     "tabsLabel": "마켓플레이스",

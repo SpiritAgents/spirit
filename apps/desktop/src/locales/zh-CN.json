@@ -662,6 +662,8 @@
     "addFromDisk": "从磁盘添加…",
     "addFromUrl": "从 URL 添加…",
     "tabAll": "全部",
+    "featured": "精选",
+    "other": "其它",
     "tabBuiltIn": "内置",
     "tabPersonal": "个人",
     "tabsLabel": "扩展市场",

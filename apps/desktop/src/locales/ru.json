@@ -665,6 +665,8 @@
     "addFromDisk": "Добавить с диска…",
     "addFromUrl": "Добавить по URL…",
     "tabAll": "Все",
+    "featured": "Рекомендуемые",
+    "other": "Другие",
     "tabBuiltIn": "Встроенные",
     "tabPersonal": "Личные",
     "tabsLabel": "Маркетплейсы",

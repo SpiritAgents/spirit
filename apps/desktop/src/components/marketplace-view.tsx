@@ -15,6 +15,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
@@ -52,6 +54,7 @@ import {
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
 import { fileToBase64 } from "@/lib/file-to-base64";
+import { groupMarketplaceEntriesByCategory } from "@/lib/marketplace-category-sections";
 import { filterVisibleMarketplaceSources } from "@/lib/marketplace-source-visibility";
 import { topScrollFadeMaskStyle } from "@/lib/mask-styles";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
@@ -303,6 +306,22 @@ export function MarketplaceView({
 
   const listEmpty = filteredExtensions.length === 0;
 
+  const isFiltering = searchText.trim().length > 0;
+  // Featured rows lift out of the flat list into their own section; both
+  // arrays stay display-name ordered because the host-sorted catalog is only
+  // ever filtered here, never re-sorted.
+  const featuredExtensions = filteredExtensions.filter((item) => item.featured);
+  const restExtensions = filteredExtensions.filter((item) => !item.featured);
+  const showFeaturedSection = !isFiltering && featuredExtensions.length > 0;
+  // Category sections group the remaining rows; an "Other" section trails
+  // them and exists only to follow real category sections — with no
+  // categorized rows at all, the rest stays a flat list.
+  const categorySections = groupMarketplaceEntriesByCategory(restExtensions);
+  const showCategorySections = !isFiltering && categorySections.length > 0;
+  // The first section header gets the section-rhythm gap below the tab bar; a
+  // flat list keeps the tab row's tighter pb-3-only gap.
+  const hasSections = showFeaturedSection || showCategorySections;
+
   const openDetail = (extensionId: string) => {
     setDetailExtensionId(extensionId);
   };
@@ -432,6 +451,110 @@ export function MarketplaceView({
     });
   }, []);
 
+  // One row renderer for every list context: featured-section rows and
+  // flat-list rows are identical, only their grouping differs.
+  const renderExtensionRow = (item: DesktopMarketplaceCatalogEntry) => (
+    <div
+      key={item.id}
+      className={cn(
+        // Ghost row: no card surface (border/background); hover only lays the
+        // sidebar-style semi-transparent canvas wash (instant, no color fade).
+        // Rows bleed 8px past the container's outer edge(s) into the page
+        // padding, so the wash keeps a cushion around the content while the
+        // content itself aligns with the container edges: leading icons flush
+        // with the tab bar / section headers / search box on the left,
+        // trailing action buttons flush with the header's Add button on the
+        // right. In the two-column layout each row is its cell width plus one
+        // outer bleed (sm), and sm:even moves the right column's bleed to the
+        // right side — column widths stay equal and the inter-column gap
+        // survives between washes.
+        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
+        item.installed && !item.enabled && "opacity-55",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => openDetail(item.id)}
+        // pl-2 is the wash's left cushion: on bleeding rows the icon lands
+        // exactly on the container edge; on right-column rows it insets the
+        // icon within the cell instead.
+        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+      >
+        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
+          {item.iconUrl ? (
+            <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
+          ) : (
+            <Sparkles className="size-4" aria-hidden />
+          )}
+        </div>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-normal leading-snug text-foreground">
+            {item.displayName}
+          </span>
+          {item.description ? (
+            <span className="block truncate text-xs leading-snug text-muted-foreground">
+              {item.description}
+            </span>
+          ) : null}
+        </span>
+      </button>
+      <div className="shrink-0 pr-2">
+        {item.installed ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 self-center"
+                title={t("marketplace.moreActions")}
+              >
+                <Ellipsis className="size-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40 p-0">
+              <div className="p-1">
+                <DropdownMenuItem className="gap-2" onSelect={() => handleToggleEnabled(item)}>
+                  <span>{item.enabled ? t("marketplace.disable") : t("marketplace.enable")}</span>
+                </DropdownMenuItem>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-1">
+                <DropdownMenuItem
+                  variant="destructive"
+                  className="gap-2"
+                  onSelect={() => setUninstallTarget(item)}
+                >
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <span>{t("marketplace.uninstall")}</span>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : isInstallUnsupported(item) ? (
+          <Tooltip delayDuration={300} disableHoverableContent>
+            <TooltipTrigger>
+              <Button type="button" variant="outline" disabled className="shrink-0 self-center">
+                {t("marketplace.install")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("marketplace.httpLocalSourceInstallUnsupported")}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={installBusyIds.has(item.id)}
+            className="shrink-0 self-center"
+            onClick={() => handleInstall(item)}
+          >
+            {t("marketplace.install")}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div
       data-spirit-surface="marketplace-shell"
@@ -542,128 +665,59 @@ export function MarketplaceView({
                 ) : (
                   <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
                 )
-              ) : (
+              ) : isFiltering ? (
+                // Search flattens to a single list: no sections, and zero
+                // results still surface as the noMatches state above.
                 <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                  {filteredExtensions.map((item) => (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        // Ghost row: no card surface (border/background); hover only lays the
-                        // sidebar-style semi-transparent canvas wash (instant, no color fade).
-                        // Rows bleed 8px past the container's outer edge(s) into the page
-                        // padding, so the wash keeps a cushion around the content while the
-                        // content itself aligns with the container edges: leading icons flush
-                        // with the tab bar / search box on the left, trailing action buttons
-                        // flush with the header's Add button on the right. In the two-column
-                        // layout each row is its cell width plus one outer bleed (sm), and
-                        // sm:even moves the right column's bleed to the right side — column
-                        // widths stay equal and the inter-column gap survives between washes.
-                        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
-                        item.installed && !item.enabled && "opacity-55",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => openDetail(item.id)}
-                        // pl-2 is the wash's left cushion: on bleeding rows the
-                        // icon lands exactly on the container edge; on
-                        // right-column rows it insets the icon within the cell.
-                        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
-                      >
-                        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
-                          {item.iconUrl ? (
-                            <img
-                              src={item.iconUrl}
-                              alt=""
-                              className="size-full object-cover"
-                              aria-hidden
-                            />
-                          ) : (
-                            <Sparkles className="size-4" aria-hidden />
-                          )}
-                        </div>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate font-normal leading-snug text-foreground">
-                            {item.displayName}
-                          </span>
-                          {item.description ? (
-                            <span className="block truncate text-xs leading-snug text-muted-foreground">
-                              {item.description}
-                            </span>
-                          ) : null}
-                        </span>
-                      </button>
-                      <div className="shrink-0 pr-2">
-                        {item.installed ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8 shrink-0 self-center"
-                                title={t("marketplace.moreActions")}
-                              >
-                                <Ellipsis className="size-4" aria-hidden />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="min-w-40 p-0">
-                              <div className="p-1">
-                                <DropdownMenuItem
-                                  className="gap-2"
-                                  onSelect={() => handleToggleEnabled(item)}
-                                >
-                                  <span>
-                                    {item.enabled
-                                      ? t("marketplace.disable")
-                                      : t("marketplace.enable")}
-                                  </span>
-                                </DropdownMenuItem>
-                              </div>
-                              <DropdownMenuSeparator />
-                              <div className="p-1">
-                                <DropdownMenuItem
-                                  variant="destructive"
-                                  className="gap-2"
-                                  onSelect={() => setUninstallTarget(item)}
-                                >
-                                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
-                                  <span>{t("marketplace.uninstall")}</span>
-                                </DropdownMenuItem>
-                              </div>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : isInstallUnsupported(item) ? (
-                          <Tooltip delayDuration={300} disableHoverableContent>
-                            <TooltipTrigger>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled
-                                className="shrink-0 self-center"
-                              >
-                                {t("marketplace.install")}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              {t("marketplace.httpLocalSourceInstallUnsupported")}
-                            </TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={installBusyIds.has(item.id)}
-                            className="shrink-0 self-center"
-                            onClick={() => handleInstall(item)}
-                          >
-                            {t("marketplace.install")}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  {filteredExtensions.map(renderExtensionRow)}
                 </div>
+              ) : (
+                <>
+                  {hasSections ? (
+                    // The tab row's pb-3 plus this h-3 lands the first section
+                    // header one section-rhythm gap (24px) below the tab bar,
+                    // matching the breathing room between sections.
+                    <div className="h-3" aria-hidden />
+                  ) : null}
+                  {showFeaturedSection ? (
+                    // mb-6 steps above the page's mb-4 flow-gap rhythm: sections
+                    // read as separate blocks with breathing room between them.
+                    <section aria-label={t("marketplace.featured")} className="mb-6">
+                      <h2 className="mb-2 text-base font-medium text-foreground">
+                        {t("marketplace.featured")}
+                      </h2>
+                      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                        {featuredExtensions.map(renderExtensionRow)}
+                      </div>
+                    </section>
+                  ) : null}
+                  {showCategorySections ? (
+                    categorySections.map((section) => (
+                      <section
+                        key={section.category ?? "other"}
+                        aria-label={
+                          section.category
+                            ? formatTitleFromId(section.category)
+                            : t("marketplace.other")
+                        }
+                        className="mb-6 last:mb-0"
+                      >
+                        <h2 className="mb-2 text-base font-medium text-foreground">
+                          {section.category
+                            ? formatTitleFromId(section.category)
+                            : t("marketplace.other")}
+                        </h2>
+                        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                          {section.items.map(renderExtensionRow)}
+                        </div>
+                      </section>
+                    ))
+                  ) : restExtensions.length > 0 ? (
+                    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                      {restExtensions.map(renderExtensionRow)}
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
           </ScrollArea>
