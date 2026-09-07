@@ -19,6 +19,7 @@ import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
+import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
 import { Button } from "@/components/ui/button";
@@ -717,41 +718,36 @@ export function MarketplaceView({
                   {showFeaturedSection ? (
                     // mb-6 steps above the page's mb-4 flow-gap rhythm: sections
                     // read as separate blocks with breathing room between them.
-                    <section aria-label={t("marketplace.featured")} className="mb-6">
-                      <h2 className="mb-2 text-base font-medium text-foreground">
-                        {t("marketplace.featured")}
-                      </h2>
-                      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                        {featuredExtensions.map(renderExtensionRow)}
-                      </div>
-                    </section>
+                    <MarketplaceCatalogSection
+                      ariaLabel={t("marketplace.featured")}
+                      title={t("marketplace.featured")}
+                      items={featuredExtensions}
+                      className="mb-6"
+                      renderRow={renderExtensionRow}
+                    />
                   ) : null}
                   {showCategorySections ? (
-                    categorySections.map((section) => (
-                      <section
-                        key={section.category ?? "other"}
-                        aria-label={
-                          section.category
-                            ? formatTitleFromId(section.category, {
-                                casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
-                              })
-                            : t("marketplace.other")
-                        }
-                        className="mb-6 last:mb-0"
-                      >
-                        <h2 className="mb-2 text-base font-medium text-foreground">
-                          {section.category
-                            ? formatTitleFromId(section.category, {
-                                casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
-                              })
-                            : t("marketplace.other")}
-                        </h2>
-                        <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                          {section.items.map(renderExtensionRow)}
-                        </div>
-                      </section>
-                    ))
+                    categorySections.map((section) => {
+                      const sectionTitle = section.category
+                        ? formatTitleFromId(section.category, {
+                            casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                          })
+                        : t("marketplace.other");
+                      return (
+                        <MarketplaceCatalogSection
+                          key={section.category ?? "other"}
+                          ariaLabel={sectionTitle}
+                          title={sectionTitle}
+                          items={section.items}
+                          className="mb-6 last:mb-0"
+                          renderRow={renderExtensionRow}
+                        />
+                      );
+                    })
                   ) : restExtensions.length > 0 ? (
+                    // No category sections at all: the flat list is not
+                    // truncated — with nothing sectioned below it, a long list
+                    // hides nothing.
                     <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
                       {restExtensions.map(renderExtensionRow)}
                     </div>
