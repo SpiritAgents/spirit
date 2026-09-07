@@ -21,6 +21,7 @@ function validEntry(): Record<string, unknown> {
     author: { name: "Spirit", email: "support@spirit.dev" },
     category: "developer-tools",
     keywords: ["example", "smoke"],
+    homepage: "https://spirit.dev/extensions/extension-hello",
     featured: true,
     reviewStatus: "verified",
     manifest: {
@@ -62,6 +63,7 @@ test("parseMarketplaceIndex accepts the spec example shape", () => {
   assert.equal(entry.featured, true);
   assert.deepEqual(entry.author, { name: "Spirit", email: "support@spirit.dev" });
   assert.deepEqual(entry.keywords, ["example", "smoke"]);
+  assert.equal(entry.homepage, "https://spirit.dev/extensions/extension-hello");
   assert.deepEqual(entry.manifest.supportedHosts, ["cli", "desktop"]);
   assert.deepEqual(entry.manifest.requestedCapabilities, ["skills"]);
   assert.equal(entry.manifest.contributes?.skills, true);

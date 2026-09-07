@@ -89,6 +89,8 @@ export interface MarketplaceExtensionEntry {
   author?: MarketplaceExtensionAuthor;
   category?: string;
   keywords?: string[];
+  /** Project URL (npm package.json homepage convention), shown as the Website row. */
+  homepage?: string;
   featured?: boolean;
   /** Per-version review semantics; defaults to "unverified" when omitted. */
   reviewStatus: MarketplaceReviewStatus;
@@ -355,6 +357,7 @@ interface MarketplaceExtensionCoreFields {
   author?: MarketplaceExtensionAuthor;
   category?: string;
   keywords?: string[];
+  homepage?: string;
   manifest: MarketplaceExtensionManifest;
 }
 
@@ -377,6 +380,7 @@ function parseCoreFields(
     value.author === undefined ? undefined : parseOwner(value.author, `${fieldName}.author`);
   const category = optionalString(value.category, `${fieldName}.category`);
   const keywords = optionalStringArray(value.keywords, `${fieldName}.keywords`);
+  const homepage = optionalString(value.homepage, `${fieldName}.homepage`);
   const manifest = parseManifest(value.manifest, `${fieldName}.manifest`);
 
   return {
@@ -388,6 +392,7 @@ function parseCoreFields(
     ...(author ? { author } : {}),
     ...(category ? { category } : {}),
     ...(keywords ? { keywords } : {}),
+    ...(homepage ? { homepage } : {}),
     manifest,
   };
 }
@@ -498,6 +503,7 @@ export interface MarketplaceExtensionDump {
   author?: MarketplaceExtensionAuthor;
   category?: string;
   keywords?: string[];
+  homepage?: string;
   manifest: MarketplaceExtensionManifest;
 }
 

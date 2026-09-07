@@ -64,6 +64,7 @@ function demoEntry(overrides?: Partial<MarketplaceExtensionEntry>): MarketplaceE
     author: { name: "Spirit", email: "support@spirit.dev", url: "https://spirit.dev" },
     category: "developer-tools",
     keywords: ["example"],
+    homepage: "https://spirit.dev/extensions/extension-demo",
     reviewStatus: "verified",
     manifest: { supportedHosts: ["desktop"] },
     ...overrides,
@@ -110,6 +111,7 @@ test("local source install copies content, dumps identity + declaration + source
     });
     assert.equal(dump.category, "developer-tools");
     assert.deepEqual(dump.keywords, ["example"]);
+    assert.equal(dump.homepage, "https://spirit.dev/extensions/extension-demo");
     assert.deepEqual(dump.manifest.supportedHosts, ["desktop"]);
 
     // The registry icon is copied into the install dir and referenced from the dump.

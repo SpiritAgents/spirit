@@ -105,6 +105,7 @@ my-extension/
 | `author`        | 可选。`{ name, email?, url? }` 或 npm 风格字符串 `"Name <email> (url)"`                 |
 | `category`      | 可选。单个字符串                                                                        |
 | `keywords`      | 可选。搜索关键字字符串数组                                                              |
+| `homepage`      | 可选。项目 URL                                                                          |
 | `manifest`      | 必填。运行时宣言——见下方「`manifest` 宣言」一节                                         |
 
 转储不携带 `source` 与策展字段（`reviewStatus`、`featured`）——它们属于市场条目。
@@ -385,7 +386,7 @@ my-marketplace/
 条目字段按语义分组：
 
 - **身份**——`name`（kebab-case，条目 id）、`version`（semver，不含 pre-release）、`source`：本地内容为根相对路径字符串（如 `"./extensions/my-extension"`），或 `{ "source": "npm", "package": "@scope/name@1.0.0" }` 钉住精确 npm 版本（安装时会按 packument 的 SRI 哈希校验完整性）。
-- **展示**——`displayName`、`description`、`icon`（根相对 SVG 路径）、`category`、`keywords`、`author`。
+- **展示**——`displayName`、`description`、`icon`（根相对 SVG 路径）、`category`、`keywords`、`homepage`、`author`。
 - **宣言**——`manifest`：即「`manifest` 宣言」一节描述的运行时宣言。市场为它背书；包不能自证能力。
 - **策展**——`featured` 与 `reviewStatus`（`unverified` / `verified` / `revoked`）。
 

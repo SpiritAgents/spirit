@@ -105,6 +105,7 @@ my-extension/
 | `author`        | 任意。`{ name, email?, url? }` または npm 形式の文字列 `"Name <email> (url)"`                                                                        |
 | `category`      | 任意。単一の文字列                                                                                                                                   |
 | `keywords`      | 任意。検索キーワードの文字列配列                                                                                                                     |
+| `homepage`      | 任意。プロジェクト URL                                                                                                                               |
 | `manifest`      | 必須。ランタイム宣言——後述の「`manifest`」節を参照                                                                                                   |
 
 ダンプに `source` やキュレーションフィールド（`reviewStatus`、`featured`）は含まれません——それらはマーケットプレイスエントリのものです。
@@ -385,7 +386,7 @@ my-marketplace/
 エントリのフィールドを意味グループ別に：
 
 - **ID**——`name`（kebab-case。エントリ id）、`version`（semver。プレリリースなし）、`source`：ローカルコンテンツの場合はルート相対パス文字列（例：`"./extensions/my-extension"`）、または `{ "source": "npm", "package": "@scope/name@1.0.0" }` で正確な npm バージョンを固定（インストール時に packument の SRI ハッシュで整合性が検証されます）。
-- **表示**——`displayName`、`description`、`icon`（ルート相対 SVG パス）、`category`、`keywords`、`author`。
+- **表示**——`displayName`、`description`、`icon`（ルート相対 SVG パス）、`category`、`keywords`、`homepage`、`author`。
 - **宣言**——`manifest`：前述の「`manifest`」節で説明したランタイム宣言。マーケットプレイスがこれを裏付けます。パッケージが単独で機能を主張することはできません。
 - **キュレーション**——`featured` と `reviewStatus`（`unverified` / `verified` / `revoked`）。
 

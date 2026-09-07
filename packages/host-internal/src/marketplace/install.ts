@@ -48,6 +48,7 @@ export function buildExtensionDumpFromEntry(
     ...(entry.author ? { author: entry.author } : {}),
     ...(entry.category ? { category: entry.category } : {}),
     ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
+    ...(entry.homepage ? { homepage: entry.homepage } : {}),
     manifest: entry.manifest,
   };
 }

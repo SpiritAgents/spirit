@@ -105,6 +105,7 @@ my-extension/
 | `author`        | 선택 사항. `{ name, email?, url? }` 또는 npm 스타일 문자열 `"Name <email> (url)"`                                               |
 | `category`      | 선택 사항. 단일 문자열                                                                                                          |
 | `keywords`      | 선택 사항. 검색 키워드 문자열 배열                                                                                              |
+| `homepage`      | 선택 사항. 프로젝트 URL                                                                                                         |
 | `manifest`      | 필수. 런타임 선언——아래 「`manifest`」 절 참조                                                                                  |
 
 덤프에는 `source`나 큐레이션 필드(`reviewStatus`, `featured`)가 없습니다——이들은 마켓플레이스 항목에 속합니다.
@@ -385,7 +386,7 @@ my-marketplace/
 항목 필드를 의미 그룹별로:
 
 - **ID**——`name`(kebab-case; 항목 id), `version`(semver, 프리릴리스 없음), `source`: 로컬 콘텐츠의 경우 루트 상대 경로 문자열(예: `"./extensions/my-extension"`), 또는 `{ "source": "npm", "package": "@scope/name@1.0.0" }`로 정확한 npm 버전 고정(설치 시 packument의 SRI 해시로 무결성 검증).
-- **표시**——`displayName`, `description`, `icon`(루트 상대 SVG 경로), `category`, `keywords`, `author`.
+- **표시**——`displayName`, `description`, `icon`(루트 상대 SVG 경로), `category`, `keywords`, `homepage`, `author`.
 - **선언**——`manifest`: 위 「`manifest`」 절에서 설명한 런타임 선언. 마켓플레이스가 이를 보증합니다; 패키지가 스스로 기능을 주장할 수는 없습니다.
 - **큐레이션**——`featured`와 `reviewStatus`(`unverified` / `verified` / `revoked`).
 

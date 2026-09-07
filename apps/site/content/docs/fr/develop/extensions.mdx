@@ -105,6 +105,7 @@ Champs de `.spirit/extension.json` :
 | `author`        | Facultatif. `{ name, email?, url? }` ou une chaîne de style npm `"Name <email> (url)"`                                                                                              |
 | `category`      | Facultatif. Chaîne unique                                                                                                                                                           |
 | `keywords`      | Facultatif. Tableau de chaînes de mots-clés de recherche                                                                                                                            |
+| `homepage`      | Facultatif. URL du projet                                                                                                                                                           |
 | `manifest`      | Obligatoire. La déclaration d'exécution — voir la section « Le `manifest` »                                                                                                         |
 
 Le dump ne porte ni `source` ni champs de curation (`reviewStatus`, `featured`) — ceux-ci appartiennent à l'entrée du marché.
@@ -385,7 +386,7 @@ Les chemins relatifs dans `marketplace.json` se résolvent par rapport à la rac
 Champs d'entrée, par groupe :
 
 - **Identité** — `name` (kebab-case ; l'id d'entrée), `version` (semver, sans pré-version) et `source` : une chaîne de chemin relatif à la racine comme `"./extensions/my-extension"` pour du contenu local, ou `{ "source": "npm", "package": "@scope/name@1.0.0" }` pour épingler une version npm exacte (l'intégrité est vérifiée contre le hachage SRI du packument à l'installation).
-- **Affichage** — `displayName`, `description`, `icon` (chemin SVG relatif à la racine), `category`, `keywords`, `author`.
+- **Affichage** — `displayName`, `description`, `icon` (chemin SVG relatif à la racine), `category`, `keywords`, `homepage`, `author`.
 - **Déclaration** — `manifest` : la déclaration d'exécution décrite dans la section « Le `manifest` ». Le marché la cautionne ; un paquet ne peut pas affirmer des capacités de lui-même.
 - **Curation** — `featured` et `reviewStatus` (`unverified` / `verified` / `revoked`).
 

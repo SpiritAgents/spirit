@@ -242,6 +242,7 @@ export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): J
       : {}),
     ...(entry.category ? { category: entry.category } : {}),
     ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
+    ...(entry.homepage ? { homepage: entry.homepage } : {}),
     ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
     reviewStatus: entry.reviewStatus,
     ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),

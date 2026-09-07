@@ -217,6 +217,8 @@ pub struct CliMarketplaceCatalogEntry {
     #[serde(default)]
     pub keywords: Option<Vec<String>>,
     #[serde(default)]
+    pub homepage: Option<String>,
+    #[serde(default)]
     pub featured: Option<bool>,
     pub review_status: String,
     #[serde(default)]

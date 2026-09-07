@@ -61,6 +61,7 @@ export async function importPreparedDirectoryToPersonal(
     ...(dump.author ? { author: dump.author } : {}),
     ...(dump.category ? { category: dump.category } : {}),
     ...(dump.keywords?.length ? { keywords: [...dump.keywords] } : {}),
+    ...(dump.homepage ? { homepage: dump.homepage } : {}),
     reviewStatus: "unverified",
     manifest: dump.manifest,
   };

@@ -97,6 +97,7 @@ function writeFixtureIndex(version) {
         author: { name: "Spirit", email: "support@spirit.dev" },
         category: "developer-tools",
         keywords: ["smoke"],
+        homepage: "https://spirit.dev/extensions/i-am-a-extension",
         reviewStatus: "verified",
         manifest: {
           supportedHosts: ["cli", "desktop"],

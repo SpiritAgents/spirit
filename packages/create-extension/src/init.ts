@@ -99,6 +99,7 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     // Example values so the protocol fields are discoverable without the docs.
     author: { name: "Your Name", email: "you@example.com" },
     keywords: ["spirit-extension"],
+    homepage: `https://example.com/${name}`,
     manifest,
   };
 
@@ -144,6 +145,7 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     description,
     author: { name: "Your Name", email: "you@example.com" },
     keywords: ["spirit-extension"],
+    homepage: `https://example.com/${name}`,
     reviewStatus: "unverified",
     manifest,
   };
