@@ -647,13 +647,13 @@ export function MarketplaceView({
               />
               <div aria-hidden style={{ height: headerHeight ?? 0 }} />
               {/* Marketplace domain tabs: below the search box, scroll away with the title,
-                  horizontal scroll instead of wrapping. pt-4 mirrors the pre-tabs flow gap
-                  between the search bar and the list (the pinned band carries no bottom
+                  horizontal scroll instead of wrapping. pt-6 gives the row the same 24px
+                  section rhythm the list uses below (the pinned band carries no bottom
                   padding; its fade mask only softens the transition). The row hides
                   entirely when no tab is visible (all sources empty). */}
               {showAll ? (
                 <div
-                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-4"
+                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-6"
                   role="tablist"
                   aria-label={t("marketplace.tabsLabel")}
                 >
