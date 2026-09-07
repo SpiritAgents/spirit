@@ -74,7 +74,7 @@ export function MarketplaceDetailView({
       </div>
 
       <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
-        <div className={cn("mx-auto w-full space-y-4 px-3 pb-12 pt-5", MARKETPLACE_READING_W)}>
+        <div className={cn("mx-auto w-full space-y-6 px-3 pb-12 pt-5", MARKETPLACE_READING_W)}>
           {/* Detail top bar: icon and text vertically centered; body compressed to a title row + single-line summary (author merged into the summary prefix) */}
           <div className="flex min-w-0 items-center">
             <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">

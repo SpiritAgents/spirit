@@ -167,7 +167,8 @@ export function MarketplaceContributionGroups({
     <div className="space-y-6">
       {groups.map((group) => (
         <section key={group.key} className="space-y-3">
-          <p className="text-xs text-muted-foreground">{group.label}</p>
+          {/* Section labels match the marketplace list's section headers. */}
+          <p className="text-base font-medium text-foreground">{group.label}</p>
           <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
             {group.items.map((entry) => (
               <div key={entry.key} className="flex items-center gap-3 px-4 py-3">
