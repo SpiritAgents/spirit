@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft, Ellipsis, Sparkles, Trash2 } from "lucide-react";
 
 import { MarketplaceContributionGroups } from "@/components/marketplace-contribution-groups";
+import { MarketplaceInformationSection } from "@/components/marketplace-information-section";
 import { reviewStatusBadgeVariant } from "@/components/marketplace-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,9 +91,6 @@ export function MarketplaceDetailView({
                   <h2 className="min-w-0 truncate text-base font-normal leading-snug tracking-tight text-foreground">
                     {item.displayName}
                   </h2>
-                  <Badge variant="secondary" className="shrink-0 text-[10px] font-normal">
-                    {item.version}
-                  </Badge>
                   <Badge
                     variant={reviewStatusBadgeVariant(item.reviewStatus)}
                     className="shrink-0 text-[10px] font-normal"
@@ -100,12 +98,8 @@ export function MarketplaceDetailView({
                     {t(`marketplace.review.${item.reviewStatus}`)}
                   </Badge>
                 </div>
-                {item.author || item.description ? (
+                {item.description ? (
                   <p className="truncate text-sm leading-snug text-muted-foreground">
-                    {item.author ? (
-                      <span className="text-muted-foreground">{item.author.name}</span>
-                    ) : null}
-                    {item.author ? <span className="text-muted-foreground/70"> · </span> : null}
                     {item.description}
                   </p>
                 ) : null}
@@ -191,6 +185,7 @@ export function MarketplaceDetailView({
           </div>
 
           <MarketplaceContributionGroups item={item} />
+          <MarketplaceInformationSection item={item} />
         </div>
       </ScrollArea>
     </>
