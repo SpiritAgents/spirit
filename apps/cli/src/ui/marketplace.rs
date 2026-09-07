@@ -128,10 +128,26 @@ pub(in crate::ui) fn draw_marketplace_catalog_picker(
         // Same inset as the list body below, so the bar starts where the ">" indicator does.
         draw_marketplace_source_bar(frame, inline_picker_area(chunks[0]), view);
     }
+
+    // The slash-flow body renders a plain Paragraph with no scrolling, so the
+    // catalog windows its items first — same inline_picker_bounds semantics as
+    // the session / slash pickers — to keep the selection visible. Catalog
+    // rows are uniform three-line cards (label + summary + blank separator;
+    // compact mode skips details).
+    let header_height = slash_flow_header_height(&view.slash, view.error.as_deref());
+    let body_height = inline_picker_area(chunks[1])
+        .height
+        .saturating_sub(header_height);
+    let max_items = (usize::from(body_height) / 3).max(1);
+    let (start, end) =
+        inline_picker_bounds(view.slash.items.len(), view.slash.selected_index, max_items);
+    let mut windowed = view.slash.clone();
+    windowed.items = view.slash.items[start..end].to_vec();
+    windowed.selected_index = view.slash.selected_index - start;
     draw_slash_flow_body(
         frame,
         inline_picker_area(chunks[1]),
-        &view.slash,
+        &windowed,
         view.error.as_deref(),
     );
 }
