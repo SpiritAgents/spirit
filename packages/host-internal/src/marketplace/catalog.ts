@@ -62,18 +62,21 @@ function resolveEntryContentDir(
 }
 
 /**
- * Catalog order everywhere: display name, then the <sourceId>/<name> id as
- * tie-break, both with en collation. Per-source catalogs and the merged All
- * catalog share it, so a single-source All view matches the source's own tab.
- * Hosts that merge per-source catalogs themselves (e.g. the desktop snapshot)
- * reuse this so the ordering rule lives in exactly one place.
+ * Catalog order everywhere: featured entries first, then display name, then
+ * the <sourceId>/<name> id as tie-break, both with en collation. Per-source
+ * catalogs and the merged All catalog share it, so a single-source All view
+ * matches the source's own tab. Hosts that merge per-source catalogs
+ * themselves (e.g. the desktop snapshot) reuse this so the ordering rule
+ * lives in exactly one place.
  */
 export function compareMarketplaceDisplayOrder(
-  left: { displayName: string; id: string },
-  right: { displayName: string; id: string },
+  left: { displayName: string; id: string; featured?: boolean | undefined },
+  right: { displayName: string; id: string; featured?: boolean | undefined },
 ): number {
   return (
-    left.displayName.localeCompare(right.displayName, "en") || left.id.localeCompare(right.id, "en")
+    Number(right.featured ?? false) - Number(left.featured ?? false) ||
+    left.displayName.localeCompare(right.displayName, "en") ||
+    left.id.localeCompare(right.id, "en")
   );
 }
 
@@ -85,10 +88,12 @@ function compareMarketplaceCatalogItems(
     {
       displayName: left.entry.displayName,
       id: composeExtensionId(left.source.id, left.entry.name),
+      featured: left.entry.featured,
     },
     {
       displayName: right.entry.displayName,
       id: composeExtensionId(right.source.id, right.entry.name),
+      featured: right.entry.featured,
     },
   );
 }

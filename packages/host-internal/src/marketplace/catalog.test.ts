@@ -22,7 +22,9 @@ async function writeUserRegistry(
 async function writeUserRegistryEntries(
   root: string,
   name: string,
-  entries: ReadonlyArray<readonly [entryName: string, entryDisplayName: string]>,
+  entries: ReadonlyArray<
+    readonly [entryName: string, entryDisplayName: string, featured?: boolean]
+  >,
 ): Promise<void> {
   await mkdir(path.join(root, ".spirit"), { recursive: true });
   await writeFile(
@@ -32,13 +34,14 @@ async function writeUserRegistryEntries(
         schemaVersion: 1,
         name,
         displayName: name,
-        extensions: entries.map(([entryName, entryDisplayName]) => ({
+        extensions: entries.map(([entryName, entryDisplayName, featured]) => ({
           name: entryName,
           version: "1.0.0",
           source: `./extensions/${entryName}`,
           displayName: entryDisplayName,
           description: `${entryName} extension.`,
           reviewStatus: "verified",
+          ...(featured ? { featured: true } : {}),
           manifest: { supportedHosts: ["desktop"] },
         })),
       },
@@ -143,6 +146,33 @@ test("readMarketplaceCatalogForSource sorts by display name, not file order", as
     assert.deepEqual(
       items.map((item) => item.entry.displayName),
       ["Alpha User", "Zebra User"],
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(registryRoot, { recursive: true, force: true });
+  }
+});
+
+test("readMarketplaceCatalogForSource lists featured entries first", async () => {
+  const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-catalog-featured-data-"));
+  const registryRoot = await mkdtemp(path.join(tmpdir(), "spirit-catalog-featured-registry-"));
+  try {
+    const context: MarketplaceHostContext = { spiritDataDir, hostKind: "desktop" };
+    // Featured wins over display-name order.
+    await writeUserRegistryEntries(registryRoot, "registry-user", [
+      ["extension-alpha", "Alpha User"],
+      ["extension-zebra", "Zebra User", true],
+    ]);
+    await addMarketplaceSource(context, registryRoot);
+
+    const sources = await listAllMarketplaceSources(context);
+    const source = sources.find((candidate) => candidate.name === "registry-user");
+    assert.ok(source);
+
+    const { items } = await readMarketplaceCatalogForSource(context, source);
+    assert.deepEqual(
+      items.map((item) => item.entry.displayName),
+      ["Zebra User", "Alpha User"],
     );
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
