@@ -960,6 +960,11 @@ html:not(.spirit-clickable-pointer)
   cursor: default;
 }
 
+/* <a href> takes cursor:pointer from the UA stylesheet, not a utility class */
+html:not(.spirit-clickable-pointer) a[href] {
+  cursor: default;
+}
+
 /* Before the Composer suggestion menu open animation settles: temporary text cursor to avoid flashing the pointer when expanding under the cursor; the settings-page rules resume once settled */
 .spirit-composer-suggestion-open-settle,
 .spirit-composer-suggestion-open-settle * {

@@ -19,6 +19,7 @@ import {
 import { EditFileLineDeltaBadge } from "@/components/edit-file-line-delta-badge";
 import { WorkspacePrChangesFileTree } from "@/components/workspace-pr-changes-file-tree";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@/components/ui/animated-collapse";
+import { TEXT_LINK_CLASS } from "@/components/ui/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollapsibleChildMount } from "@/hooks/use-collapsible-child-mount";
 import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
@@ -351,7 +352,7 @@ function PrChangedFileCard({
                 {file.blobUrl && onOpenExternal ? (
                   <button
                     type="button"
-                    className="text-foreground underline underline-offset-2 hover:text-sidebar-foreground/80"
+                    className={TEXT_LINK_CLASS}
                     onClick={() => onOpenExternal(file.blobUrl!)}
                   >
                     {t("workspace.prChangesViewOnGitHub")}

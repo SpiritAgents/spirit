@@ -14,6 +14,7 @@ import type {
   ReadLocalImagePreview,
   ReadLocalVideoPreview,
 } from "@/components/tool-call/tool-call-types";
+import { TextLink } from "@/components/ui/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WorkspaceMarkdownLinkClickHandler } from "@/components/workspace-markdown-link-context";
 import {
@@ -175,13 +176,9 @@ export function createMarkdownMessageComponents(
       const hrefValue = href?.trim() ?? "";
       const isFragmentLink = isMarkdownFragmentHref(hrefValue);
       return (
-        <a
-          className={cn(
-            muted
-              ? "break-words text-muted-foreground underline underline-offset-2 hover:text-sidebar-foreground/80"
-              : "break-words text-foreground underline underline-offset-2 hover:text-sidebar-foreground",
-            className,
-          )}
+        <TextLink
+          className={cn("break-words", className)}
+          muted={muted}
           href={href}
           target={isFragmentLink ? undefined : "_blank"}
           rel={isFragmentLink ? undefined : "noopener noreferrer"}
@@ -199,7 +196,7 @@ export function createMarkdownMessageComponents(
           {...props}
         >
           {children}
-        </a>
+        </TextLink>
       );
     },
     strong: ({ className, ...props }: HTMLAttributes<HTMLElement>) => (
