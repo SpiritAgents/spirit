@@ -4,7 +4,7 @@
  * @spiritagent/extension-toolkit — this package never reimplements them.
  */
 
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -124,6 +124,11 @@ export async function initExtension(options: InitExtensionOptions): Promise<Init
     const target = path.join(targetDir, ...relativePath.split("/"));
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, content, "utf8");
+    // Hook scripts are spawned as executables on POSIX hosts; Windows has no
+    // executable bit, and the hook runner skips the check there.
+    if (relativePath.endsWith(".sh") && process.platform !== "win32") {
+      await chmod(target, 0o755);
+    }
     filesWritten.push(relativePath);
   }
 

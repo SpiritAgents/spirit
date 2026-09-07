@@ -56,9 +56,75 @@ Tell the agent how to use this skill: when it applies, and what to do.
 
 const MAIN_MODULE_HEADER = (title: string): string =>
   `/**
- * ${title} extension main module. The host imports this file on activation;
- * exported tool handlers and the system prompt are picked up directly.
+ * ${title} extension main module. The host imports this file and calls
+ * activate(context) on activation; the module-level exports below (tools,
+ * systemPrompt) are picked up afterwards.
  */
+`;
+
+/** Minimal MCP stdio server scaffolded for the mcp capability: newline-delimited JSON-RPC 2.0 with one demo tool. */
+const MCP_SERVER_EXAMPLE = `#!/usr/bin/env node
+/**
+ * Minimal MCP stdio server: newline-delimited JSON-RPC 2.0 over stdio.
+ * Answers initialize/ping and exposes one demo tool.
+ */
+
+import readline from "node:readline";
+
+const SERVER_INFO = { name: "example", version: "0.1.0" };
+
+const TOOLS = [
+  {
+    name: "hello",
+    description: "Say hello from the example MCP server.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+];
+
+function respond(id, result) {
+  process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: id, result: result }) + "\\n");
+}
+
+function fail(id, message) {
+  process.stdout.write(
+    JSON.stringify({ jsonrpc: "2.0", id: id, error: { code: -32601, message: message } }) + "\\n",
+  );
+}
+
+readline
+  .createInterface({ input: process.stdin, terminal: false })
+  .on("line", (line) => {
+    let message;
+    try {
+      message = JSON.parse(line);
+    } catch {
+      return; // Not JSON: ignore.
+    }
+    const { id, method } = message;
+    if (id === undefined || id === null) {
+      return; // Notification: nothing to answer.
+    }
+    if (method === "initialize") {
+      respond(id, {
+        protocolVersion:
+          message.params && message.params.protocolVersion
+            ? message.params.protocolVersion
+            : "2024-11-05",
+        capabilities: { tools: {} },
+        serverInfo: SERVER_INFO,
+      });
+    } else if (method === "ping") {
+      respond(id, {});
+    } else if (method === "tools/list") {
+      respond(id, { tools: TOOLS });
+    } else if (method === "tools/call") {
+      respond(id, {
+        content: [{ type: "text", text: "Hello from the example MCP server." }],
+      });
+    } else {
+      fail(id, "Unknown method: " + String(method));
+    }
+  });
 `;
 
 export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
@@ -98,6 +164,8 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
         null,
         2,
       )}\n`,
+      // The referenced server entry must exist: a minimal stdio server.
+      "server.mjs": MCP_SERVER_EXAMPLE,
     }),
   },
   {
@@ -106,16 +174,23 @@ export const CAPABILITY_DEFINITIONS: readonly CapabilityDefinition[] = [
     requestedCapabilities: ["hooks"],
     contributes: () => ({ hooks: true }),
     files: (input) => ({
+      // The hook runner spawns command as an executable file resolved inside
+      // the extension directory — inline shell strings are not commands.
       "hooks.json": `${JSON.stringify(
         {
           version: 1,
           hooks: {
-            sessionStart: [{ command: `echo "session started with ${input.name}"` }],
+            sessionStart: [{ command: "hooks/session-start.sh" }],
           },
         },
         null,
         2,
       )}\n`,
+      "hooks/session-start.sh": `#!/bin/sh
+# sessionStart hook: the hook input JSON arrives on stdin; a JSON object on
+# stdout feeds back into the session (anything else is ignored).
+echo "session started with ${input.name}"
+`,
     }),
   },
   {
@@ -177,6 +252,12 @@ export function buildMainModule(
   input: { name: string; title: string },
 ): string {
   const parts: string[] = [MAIN_MODULE_HEADER(input.title)];
+  // The host refuses to activate a module without an activate export, so the
+  // scaffold always provides one; the exports below are collected afterwards.
+  parts.push(`export function activate(context) {
+  context.log("${input.title} activated");
+}
+`);
   if (capabilities.includes("tools")) {
     parts.push(`export const tools = {
   hello: async ({ arguments: args }) =>

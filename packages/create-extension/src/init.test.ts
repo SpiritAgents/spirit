@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, test } from "vitest";
@@ -56,6 +56,8 @@ test("tools scaffold a main module with a handler and matching declaration", asy
   const { files } = await scaffold({ capabilities: ["tools"] });
 
   assert.ok(files["index.mjs"]?.includes("export const tools"));
+  // The host refuses to activate a module without an activate export.
+  assert.ok(files["index.mjs"]?.includes("export function activate"));
   const packageJson = JSON.parse(files["package.json"] ?? "{}");
   assert.equal(packageJson.main, "index.mjs");
 
@@ -79,6 +81,7 @@ test("desktop css and settings page merge into one desktop contribution", async 
 test("system-prompt scaffolds the main module export", async () => {
   const { files } = await scaffold({ capabilities: ["system-prompt"] });
   assert.ok(files["index.mjs"]?.includes("export const systemPrompt"));
+  assert.ok(files["index.mjs"]?.includes("export function activate"));
   const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
   assert.deepEqual(dump.manifest.requestedCapabilities, ["system-prompt"]);
 });
@@ -87,9 +90,23 @@ test("mcp and hooks scaffold parseable config files", async () => {
   const { files } = await scaffold({ capabilities: ["mcp", "hooks"] });
   const mcp = JSON.parse(files["mcp.json"] ?? "{}");
   assert.equal(mcp.servers.example.type, "stdio");
+  // The referenced stdio server entry must exist.
+  assert.ok(files["server.mjs"]?.includes("tools/list"));
   const hooks = JSON.parse(files["hooks.json"] ?? "{}");
   assert.equal(hooks.version, 1);
   assert.ok(Array.isArray(hooks.hooks.sessionStart));
+  // The hook command is a script path inside the extension, not inline shell.
+  assert.equal(hooks.hooks.sessionStart[0]?.command, "hooks/session-start.sh");
+  assert.ok(files["hooks/session-start.sh"]?.startsWith("#!/bin/sh"));
+});
+
+test("hook scripts scaffold as executable on POSIX hosts", async () => {
+  if (process.platform === "win32") {
+    return;
+  }
+  const { dir } = await scaffold({ capabilities: ["hooks"] });
+  const script = await stat(path.join(dir, "hooks", "session-start.sh"));
+  assert.ok(script.mode & 0o111, "hook script should carry the executable bit");
 });
 
 test("an invalid extension name is rejected with the toolkit rule", async () => {
