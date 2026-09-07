@@ -16,6 +16,7 @@ const RENDERER_SAFE_HOST_INTERNAL_SUBPATHS = new Set([
   "workspace-file-reference-query",
   "model-provider-presets",
   "id-display-title",
+  "well-known-casing",
   "openai-api-base",
   "azure-resource",
   "bedrock-region",

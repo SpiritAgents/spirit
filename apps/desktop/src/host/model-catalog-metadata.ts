@@ -1,4 +1,5 @@
 import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
 import {
   gatewayGoogleGeminiSupportedEfforts,
   routedAnthropicClaudeSupportedEfforts,
@@ -198,7 +199,9 @@ function resolvePreviewCatalogDisplayName(
   if (providerUsesUpstreamModelDisplayName(provider)) {
     return {};
   }
-  return { displayName: formatTitleFromId(entry.id) };
+  return {
+    displayName: formatTitleFromId(entry.id, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES }),
+  };
 }
 
 function previewCapabilitiesFromListedEntry(

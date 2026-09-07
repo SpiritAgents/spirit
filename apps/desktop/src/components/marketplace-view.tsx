@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
@@ -697,14 +698,18 @@ export function MarketplaceView({
                         key={section.category ?? "other"}
                         aria-label={
                           section.category
-                            ? formatTitleFromId(section.category)
+                            ? formatTitleFromId(section.category, {
+                                casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                              })
                             : t("marketplace.other")
                         }
                         className="mb-6 last:mb-0"
                       >
                         <h2 className="mb-2 text-base font-medium text-foreground">
                           {section.category
-                            ? formatTitleFromId(section.category)
+                            ? formatTitleFromId(section.category, {
+                                casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                              })
                             : t("marketplace.other")}
                         </h2>
                         <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
