@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "업데이트",
     "reviewRequiredTitle": "확장 검토",
-    "reviewRequiredUnverified": "\"{{name}}\"은(는) 마켓플레이스에서 검증되지 않았습니다. 확인 후에도 호스트 측 호환성 검사가 수행됩니다.",
+    "reviewRequiredUnverified": "\"{{name}}\"은(는) 마켓플레이스에서 검증되지 않았습니다.",
     "reviewRequiredRevoked": "\"{{name}}\"은(는) 마켓플레이스에서 취소되었습니다. 위험을 명시적으로 수락하는 경우에만 계속하세요.",
     "reviewRequiredContinue": "계속",
     "review": {

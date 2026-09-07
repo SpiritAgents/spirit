@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "更新",
     "reviewRequiredTitle": "審核擴充功能",
-    "reviewRequiredUnverified": "「{{name}}」尚未經過其市場驗證。確認後仍會執行主機端相容性檢查。",
+    "reviewRequiredUnverified": "「{{name}}」尚未經過其市場驗證。",
     "reviewRequiredRevoked": "「{{name}}」已被其市場撤銷。僅在明確接受風險時才繼續。",
     "reviewRequiredContinue": "繼續",
     "review": {

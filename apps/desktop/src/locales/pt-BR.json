@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "Atualizar",
     "reviewRequiredTitle": "Revisar extensão",
-    "reviewRequiredUnverified": "\"{{name}}\" não foi verificada pelo seu marketplace. As verificações de compatibilidade do host ainda serão executadas após a confirmação.",
+    "reviewRequiredUnverified": "\"{{name}}\" não foi verificada pelo seu marketplace.",
     "reviewRequiredRevoked": "\"{{name}}\" está revogada pelo seu marketplace. Continue apenas se aceitar explicitamente o risco.",
     "reviewRequiredContinue": "Continuar",
     "review": {

@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "Aktualisieren",
     "reviewRequiredTitle": "Erweiterung prüfen",
-    "reviewRequiredUnverified": "„{{name}}“ wurde von seinem Marketplace nicht verifiziert. Host-seitige Kompatibilitätsprüfungen werden nach der Bestätigung weiterhin durchgeführt.",
+    "reviewRequiredUnverified": "„{{name}}“ wurde von seinem Marketplace nicht verifiziert.",
     "reviewRequiredRevoked": "„{{name}}“ wurde von seinem Marketplace widerrufen. Fahre nur fort, wenn du das Risiko ausdrücklich akzeptierst.",
     "reviewRequiredContinue": "Fortfahren",
     "review": {

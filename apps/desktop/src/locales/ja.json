@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "更新",
     "reviewRequiredTitle": "拡張機能の確認",
-    "reviewRequiredUnverified": "「{{name}}」はマーケットプレイスによる検証が行われていません。確認後もホスト側の互換性チェックは実行されます。",
+    "reviewRequiredUnverified": "「{{name}}」はマーケットプレイスによる検証が行われていません。",
     "reviewRequiredRevoked": "「{{name}}」はマーケットプレイスにより取り消されています。リスクを明示的に受け入れる場合のみ続行してください。",
     "reviewRequiredContinue": "続行",
     "review": {

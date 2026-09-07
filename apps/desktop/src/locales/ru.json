@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "Обновить",
     "reviewRequiredTitle": "Проверка расширения",
-    "reviewRequiredUnverified": "«{{name}}» не проверено его маркетплейсом. После подтверждения всё равно будут выполнены проверки совместимости на стороне хоста.",
+    "reviewRequiredUnverified": "«{{name}}» не проверено его маркетплейсом.",
     "reviewRequiredRevoked": "«{{name}}» отозвано его маркетплейсом. Продолжайте, только если явно принимаете риск.",
     "reviewRequiredContinue": "Продолжить",
     "review": {

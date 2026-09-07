@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "Update",
     "reviewRequiredTitle": "Review Extension",
-    "reviewRequiredUnverified": "\"{{name}}\" has not been verified by its marketplace. Host-side compatibility checks will still be performed after confirmation.",
+    "reviewRequiredUnverified": "\"{{name}}\" has not been verified by its marketplace.",
     "reviewRequiredRevoked": "\"{{name}}\" is currently revoked by its marketplace. Only continue if you explicitly accept the risk.",
     "reviewRequiredContinue": "Continue",
     "review": {

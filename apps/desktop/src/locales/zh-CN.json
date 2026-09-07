@@ -675,7 +675,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "更新",
     "reviewRequiredTitle": "审核扩展",
-    "reviewRequiredUnverified": "“{{name}}”尚未经过其市场验证。确认后仍会执行宿主侧兼容性检查。",
+    "reviewRequiredUnverified": "“{{name}}”尚未经过其市场验证。",
     "reviewRequiredRevoked": "“{{name}}”已被其市场撤销。仅在明确接受风险时才继续。",
     "reviewRequiredContinue": "继续",
     "review": {

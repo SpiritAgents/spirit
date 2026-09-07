@@ -678,7 +678,7 @@
     "addSourceGitRefPlaceholder": "main",
     "update": "Mettre à jour",
     "reviewRequiredTitle": "Vérifier l'extension",
-    "reviewRequiredUnverified": "« {{name}} » n'a pas été vérifiée par son marché. Les vérifications de compatibilité côté hôte seront tout de même effectuées après confirmation.",
+    "reviewRequiredUnverified": "« {{name}} » n'a pas été vérifiée par son marché.",
     "reviewRequiredRevoked": "« {{name}} » est actuellement révoquée par son marché. Ne continuez que si vous acceptez explicitement le risque.",
     "reviewRequiredContinue": "Continuer",
     "review": {
