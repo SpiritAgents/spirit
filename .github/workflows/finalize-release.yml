@@ -1,0 +1,225 @@
+# Manual release pipeline, phase 2 of 2: the npm packages staged by release.yml have been
+# approved on npmjs.com (2FA); this run publishes the public channels — self-hosted R2 objects,
+# the GitHub Release, and the archival tag X.Y.Z (or X.Y.Z-alpha.N / -beta.N / -rc.N).
+# Inputs come from the notification issue opened by release.yml. The publish job sits behind
+# GitHub Environment "release" (Required reviewers + Cloudflare secrets), which also mails the
+# reviewers. This workflow never authenticates to npm, so it needs no Trusted Publisher entry.
+name: Finalize Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (X.Y.Z or X.Y.Z-alpha.N / -beta.N / -rc.N), matching the release.yml run"
+        required: true
+        type: string
+      run_id:
+        description: "Run ID of the release.yml run that staged this version (linked in the notification issue)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+  RELEASE_RUN_ID: ${{ inputs.run_id }}
+
+jobs:
+  verify:
+    name: Verify staged release is live
+    runs-on: ubuntu-latest
+    outputs:
+      head_sha: ${{ steps.run.outputs.head_sha }}
+    steps:
+      - name: Inspect source release run
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          info="$(gh run view "$RELEASE_RUN_ID" --json workflowName,conclusion,headSha)"
+          echo "$info"
+          workflow="$(jq -r .workflowName <<<"$info")"
+          conclusion="$(jq -r .conclusion <<<"$info")"
+          if [ "$workflow" != "Release" ] || [ "$conclusion" != "success" ]; then
+            echo "::error::Run $RELEASE_RUN_ID is not a successful Release run (workflow=$workflow, conclusion=$conclusion)."
+            exit 1
+          fi
+          echo "head_sha=$(jq -r .headSha <<<"$info")" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.run.outputs.head_sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Verify versions
+        run: pnpm run release:verify-version -- --version "$RELEASE_VERSION"
+
+      # Staged packages are invisible to `pnpm view` until a maintainer approves them on
+      # npmjs.com, so this is the proof that the 2FA approval pass already happened.
+      - name: Verify npm packages are live
+        run: |
+          set -euo pipefail
+          missing=0
+          check_live() {
+            local dir="$1"
+            local name version
+            name="$(node -p "require('./${dir}/package.json').name")"
+            version="$(node -p "require('./${dir}/package.json').version")"
+            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "live: ${name}@${version}"
+            else
+              echo "::error::${name}@${version} is not live on npm. Approve the staged packages first (see the release notification issue)."
+              missing=1
+            fi
+          }
+          check_live packages/agent-core
+          check_live packages/host-internal
+          check_live packages/extension-toolkit
+          check_live packages/create-extension
+          check_live packages/acp-server
+          [ "$missing" -eq 0 ]
+
+  # Phase-2 approval gate: Environment "release" (Required reviewers + Cloudflare secrets).
+  # After approval, publish self-hosted CDN objects, the GitHub Release, and the archival tag.
+  publish:
+    name: Publish public channels
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - name: Checkout release SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify.outputs.head_sha }}
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Resolve release channel
+        run: |
+          set -euo pipefail
+          parsed="$(node scripts/release/version.mjs --version "$RELEASE_VERSION")"
+          echo "Resolved release version: $parsed"
+          node -e '
+            const parsed = JSON.parse(process.argv[1]);
+            console.log(`RELEASE_CHANNEL=${parsed.channel}`);
+            console.log(`RELEASE_PRERELEASE=${parsed.prerelease}`);
+          ' "$parsed" >> "$GITHUB_ENV"
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release-assets
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show approval report
+        run: |
+          echo "Review the English approval report from the release.yml run before approving this environment deployment."
+          echo
+          cat release-assets/approval/approval-report.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-assets/approval/approval-report.md
+
+      # Self-hosted first: R2 failures must not leave the GitHub Release already public.
+      # publish-selfhosted.mjs is dependency-free, so this job never runs `pnpm install` and
+      # the R2 credentials cannot leak into dependency postinstall scripts.
+      - name: Publish self-hosted downloads
+        env:
+          SPIRIT_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCOUNT_ID }}
+          SPIRIT_CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCESS_KEY_ID }}
+          SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY }}
+          SPIRIT_CLOUDFLARE_BUCKET_NAME: ${{ secrets.SPIRIT_CLOUDFLARE_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SPIRIT_CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$SPIRIT_CLOUDFLARE_ACCESS_KEY_ID" ] || [ -z "$SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY" ] || [ -z "$SPIRIT_CLOUDFLARE_BUCKET_NAME" ]; then
+            echo "::error::Environment secrets SPIRIT_CLOUDFLARE_ACCOUNT_ID, SPIRIT_CLOUDFLARE_ACCESS_KEY_ID, SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY, and SPIRIT_CLOUDFLARE_BUCKET_NAME are required (R2 S3 API credentials)."
+            exit 1
+          fi
+          pnpm run release:publish-selfhosted -- \
+            --input release-assets \
+            --version "$RELEASE_VERSION"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.verify.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Allow re-runs after partial success (e.g. R2 OK, GitHub Release failed).
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "GitHub Release $RELEASE_VERSION already exists; skipping create."
+          else
+            mapfile -d '' -t assets < <(find release-assets -maxdepth 1 -type f -print0)
+            if [ "${#assets[@]}" -eq 0 ]; then
+              echo "No release assets found under release-assets" >&2
+              exit 1
+            fi
+            notes_file="release-assets/approval/release-notes.md"
+            if [ ! -f "$notes_file" ]; then
+              echo "Missing approval release notes: $notes_file" >&2
+              exit 1
+            fi
+            # Tag name is X.Y.Z or X.Y.Z-alpha.N / -beta.N / -rc.N (no "v" prefix).
+            extra_args=()
+            if [ "${RELEASE_PRERELEASE}" = "true" ]; then
+              extra_args+=(--prerelease)
+            fi
+            gh release create "$RELEASE_VERSION" "${assets[@]}" \
+              --title "$RELEASE_VERSION" \
+              --target "$RELEASE_SHA" \
+              --notes-file "$notes_file" \
+              "${extra_args[@]}"
+          fi
+
+      # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
+      - name: Ensure tag at release SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ needs.verify.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="$RELEASE_VERSION"
+
+          git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}" 2>/dev/null || true
+
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            ACTUAL_SHA="$(git rev-list -n 1 "refs/tags/${TAG}")"
+            if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+              # Recovery re-run after a prior partial publish may land on a newer workflow SHA.
+              if gh release view "$TAG" >/dev/null 2>&1; then
+                echo "Tag ${TAG} already at ${ACTUAL_SHA} and GitHub Release exists; leaving tag unchanged (run SHA ${EXPECTED_SHA})."
+                exit 0
+              fi
+              echo "::error::Tag ${TAG} points to ${ACTUAL_SHA}, expected ${EXPECTED_SHA}"
+              exit 1
+            fi
+            echo "Tag ${TAG} already points at ${EXPECTED_SHA}"
+          else
+            git tag "$TAG" "$EXPECTED_SHA"
+            git push origin "refs/tags/${TAG}"
+            echo "Created and pushed tag ${TAG} at ${EXPECTED_SHA}"
+          fi
