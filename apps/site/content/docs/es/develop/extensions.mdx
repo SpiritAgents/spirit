@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 El comando valida primero el paquete y escribe `<name>-<version>.zip` en el directorio actual. Los usuarios importan el ZIP desde la página **Extensiones** o con `spirit extension import`; llega a su mercado Personal. Consulta [Extensiones](../customize/extensions.mdx).
 
+Para listar la extensión en un mercado, consulta [Publicar con publish](#publicar-con-publish).
+
 ## Operar un mercado de extensiones remoto
 
 Un mercado de extensiones remoto es un directorio servible con un índice `.spirit/marketplace.json`: un repositorio Git, un sitio estático o un directorio local. Los usuarios lo añaden con `spirit extension marketplace add <url|path>` o desde la página **Extensiones** de Desktop, y luego exploran e instalan sus entradas.
@@ -361,9 +363,8 @@ Un mercado de extensiones remoto es un directorio servible con un índice `.spir
 La plantilla incluye la estructura de registro, dos extensiones de ejemplo y CI que valida el registro en cada push y pull request. Para publicar una extensión:
 
 1. Genérala con `npm create @spiritagent/extension`.
-2. Mueve la carpeta de la extensión a `extensions/`.
-3. Añade la entrada de registro que imprimió el asistente a `.spirit/marketplace.json`.
-4. Haz push — los usuarios añaden el mercado con su URL de Git.
+2. Ejecuta `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — copia la extensión a `extensions/` y fusiona la entrada en `.spirit/marketplace.json`. Consulta [Publicar con publish](#publicar-con-publish).
+3. Haz push — los usuarios añaden el mercado con su URL de Git.
 
 </Tab>
 <Tab value="Manual">
@@ -390,6 +391,8 @@ Campos de entrada, por grupo:
 - **Declaración** — `manifest`: la declaración en tiempo de ejecución descrita en la sección «El `manifest`». El mercado la avala; un paquete no puede afirmar capacidades por sí mismo.
 - **Curaduría** — `featured` y `reviewStatus` (`unverified` / `verified` / `revoked`).
 
+`extension-toolkit publish` puede fusionar la entrada por ti — consulta [Publicar con publish](#publicar-con-publish).
+
 Valida el registro localmente — sin conexión: esquema, nombres kebab-case, semver sin pre-lanzamiento, formato de fuentes npm, archivos de contribución declarados para fuentes locales y reglas de iconos:
 
 ```bash
@@ -404,3 +407,18 @@ Disciplina de revisión: los pull requests que añaden una entrada o cambian su 
 ### Mercados locales
 
 Cualquier directorio local con un `.spirit/marketplace.json` funciona como mercado — añádelo con `spirit extension marketplace add <path>` o con **Añadir desde disco** en Desktop. Los mercados locales se leen in situ y no necesitan CI, lo que los convierte en el bucle de desarrollo de los autores de extensiones: editar, reinstalar, repetir.
+
+### Publicar con publish
+
+`extension-toolkit publish` fusiona el `.spirit/extension.json` de una extensión en el `.spirit/marketplace.json` de un mercado y copia el contenido que la fuente de la entrada necesita:
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- El primer argumento es el directorio de la extensión; el segundo es la raíz del mercado — cualquier directorio local con un `.spirit/marketplace.json`: un clon del repositorio de plantilla, el mercado Personal en `{spiritDataDir}/marketplaces/personal`, etc.
+- `--source local` (predeterminado): copia el paquete completo en `extensions/<name>/` del mercado — incluyendo `.spirit/extension.json`, excluyendo `node_modules` y `.git` — y apunta el `source` de la entrada a él.
+- `--source npm`: fija `name@version` desde el `package.json` de la extensión como `source` npm de la entrada; solo el icono declarado se copia a `extensions/<name>/` (los mercados autoalojan los iconos). La publicación del paquete npm en sí sigue a cargo de tu CLI de npm.
+- `--dry-run`: imprime la entrada y las acciones planeadas sin escribir nada.
+- Reglas de fusión: una entrada con el mismo nombre se reemplaza en su lugar; si no, se añade. Las entradas nuevas y los cambios de `version` vuelven a `reviewStatus: "unverified"`; republicar la misma versión lo conserva. Los campos de curaduría como `featured` siempre conservan los valores del mercado.
+- La misma validación que `check` se ejecuta primero; si falla, no se escribe nada.

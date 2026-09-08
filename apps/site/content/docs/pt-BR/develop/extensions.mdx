@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 O comando valida o pacote primeiro e escreve `<name>-<version>.zip` no diretório atual. Os usuários importam o ZIP na página **Extensões** ou com `spirit extension import`; ele chega ao marketplace Pessoal deles. Veja [Extensões](../customize/extensions.mdx).
 
+Para listar a extensão em um marketplace, veja [Publicar com publish](#publicar-com-publish).
+
 ## Operar um marketplace de extensões remoto
 
 Um marketplace de extensões remoto é um diretório servível com um índice `.spirit/marketplace.json`: um repositório Git, um site estático ou um diretório local. Os usuários o adicionam com `spirit extension marketplace add <url|path>` ou na página **Extensões** do Desktop, e então navegam e instalam suas entradas.
@@ -361,9 +363,8 @@ Um marketplace de extensões remoto é um diretório servível com um índice `.
 O modelo traz o layout de registro, duas extensões de exemplo e CI que valida o registro em cada push e pull request. Para publicar uma extensão:
 
 1. Crie o scaffold com `npm create @spiritagent/extension`.
-2. Mova a pasta da extensão para `extensions/`.
-3. Adicione a entrada de registro que o assistente imprimiu em `.spirit/marketplace.json`.
-4. Faça push — os usuários adicionam o marketplace pela sua URL Git.
+2. Execute `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — ele copia a extensão para `extensions/` e mescla a entrada em `.spirit/marketplace.json`. Veja [Publicar com publish](#publicar-com-publish).
+3. Faça push — os usuários adicionam o marketplace pela sua URL Git.
 
 </Tab>
 <Tab value="Manual">
@@ -390,6 +391,8 @@ Campos da entrada, por grupo:
 - **Declaração** — `manifest`: a declaração de runtime descrita na seção «O `manifest`». O marketplace a endossa; um pacote não pode afirmar capacidades por conta própria.
 - **Curadoria** — `featured` e `reviewStatus` (`unverified` / `verified` / `revoked`).
 
+O `extension-toolkit publish` pode mesclar a entrada para você — veja [Publicar com publish](#publicar-com-publish).
+
 Valide o registro localmente — offline: schema, nomes kebab-case, semver sem pré-lançamento, formato de fontes npm, arquivos de contribuição declarados para fontes locais e regras de ícone:
 
 ```bash
@@ -404,3 +407,18 @@ Disciplina de revisão: pull requests que adicionam uma entrada ou mudam sua `ve
 ### Marketplaces locais
 
 Qualquer diretório local com um `.spirit/marketplace.json` funciona como marketplace — adicione-o com `spirit extension marketplace add <path>` ou em **Adicionar do disco** no Desktop. Marketplaces locais são lidos no lugar e não precisam de CI, o que os torna o loop de desenvolvimento dos autores de extensões: editar, reinstalar, repetir.
+
+### Publicar com publish
+
+O `extension-toolkit publish` mescla o `.spirit/extension.json` de uma extensão no `.spirit/marketplace.json` de um marketplace e copia o conteúdo que a fonte da entrada precisa:
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- O primeiro argumento é o diretório da extensão; o segundo é a raiz do marketplace — qualquer diretório local com um `.spirit/marketplace.json`: um clone do repositório de modelo, o marketplace Pessoal em `{spiritDataDir}/marketplaces/personal`, e assim por diante.
+- `--source local` (padrão): copia o pacote completo para `extensions/<name>/` do marketplace — incluindo `.spirit/extension.json`, excluindo `node_modules` e `.git` — e aponta o `source` da entrada para ele.
+- `--source npm`: fixa `name@version` a partir do `package.json` da extensão como o `source` npm da entrada; apenas o ícone declarado é copiado para `extensions/<name>/` (marketplaces hospedam os próprios ícones). A publicação do pacote npm em si continua com a sua CLI npm.
+- `--dry-run`: imprime a entrada e as ações planejadas sem escrever nada.
+- Regras de mesclagem: uma entrada com o mesmo nome é substituída no lugar; caso contrário, é adicionada. Entradas novas e mudanças de `version` voltam para `reviewStatus: "unverified"`; republicar a mesma versão a mantém. Campos de curadoria como `featured` sempre mantêm os valores do marketplace.
+- A mesma validação do `check` roda primeiro; em caso de falha, nada é escrito.

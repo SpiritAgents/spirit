@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 Der Befehl validiert das Paket zuerst und schreibt `<name>-<version>.zip` in das aktuelle Verzeichnis. Benutzer importieren das ZIP über die Seite **Erweiterungen** oder mit `spirit extension import`; es landet in ihrem persönlichen Marktplatz. Siehe [Erweiterungen](../customize/extensions.mdx).
 
+Um die Erweiterung stattdessen in einem Marktplatz zu listen, siehe [Mit publish veröffentlichen](#mit-publish-veröffentlichen).
+
 ## Einen entfernten Erweiterungsmarktplatz betreiben
 
 Ein entfernter Erweiterungsmarktplatz ist ein bereitstellbares Verzeichnis mit einem `.spirit/marketplace.json`-Index: ein Git-Repository, eine statische Site oder ein lokales Verzeichnis. Benutzer fügen ihn mit `spirit extension marketplace add <url|path>` oder über die Desktop-Seite **Erweiterungen** hinzu und stöbern dann in seinen Einträgen und installieren sie.
@@ -361,9 +363,8 @@ Ein entfernter Erweiterungsmarktplatz ist ein bereitstellbares Verzeichnis mit e
 Das Template bringt das Registry-Layout, zwei Beispiel-Erweiterungen und CI mit, die die Registry bei jedem Push und Pull Request validiert. So veröffentlichst du eine Erweiterung:
 
 1. Gerüste sie mit `npm create @spiritagent/extension`.
-2. Verschiebe den Erweiterungsordner nach `extensions/`.
-3. Füge den Registry-Eintrag, den der Assistent ausgegeben hat, in `.spirit/marketplace.json` ein.
-4. Pushe — Benutzer fügen den Marktplatz über seine Git-URL hinzu.
+2. Führe `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` aus — es kopiert die Erweiterung nach `extensions/` und mergt den Eintrag in `.spirit/marketplace.json`. Siehe [Mit publish veröffentlichen](#mit-publish-veröffentlichen).
+3. Pushe — Benutzer fügen den Marktplatz über seine Git-URL hinzu.
 
 </Tab>
 <Tab value="Manuell">
@@ -390,6 +391,8 @@ Eintragsfelder nach Gruppen:
 - **Deklaration** — `manifest`: die im Abschnitt „Das `manifest`“ beschriebene Laufzeitdeklaration. Der Marktplatz bestätigt sie; ein Paket kann Fähigkeiten nicht von sich aus behaupten.
 - **Kuratierung** — `featured` und `reviewStatus` (`unverified` / `verified` / `revoked`).
 
+`extension-toolkit publish` kann den Eintrag für dich mergen — siehe [Mit publish veröffentlichen](#mit-publish-veröffentlichen).
+
 Validiere die Registry lokal — offline: Schema, kebab-case-Namen, Semver ohne Pre-Release, npm-Source-Format, deklarierte Beitragsdateien für lokale Sources und Icon-Regeln:
 
 ```bash
@@ -404,3 +407,18 @@ Prüfungsdisziplin: Pull Requests, die einen Eintrag hinzufügen oder seine `ver
 ### Lokale Marktplätze
 
 Jedes lokale Verzeichnis mit einer `.spirit/marketplace.json` funktioniert als Marktplatz — füge es mit `spirit extension marketplace add <path>` oder auf dem Desktop über **Von Festplatte hinzufügen** hinzu. Lokale Marktplätze werden an Ort und Stelle gelesen und brauchen keine CI, was sie zum Entwicklungsloop für Erweiterungsautoren macht: bearbeiten, neu installieren, wiederholen.
+
+### Mit publish veröffentlichen
+
+`extension-toolkit publish` mergt die `.spirit/extension.json` einer Erweiterung in die `.spirit/marketplace.json` eines Marktplatzes und kopiert den Inhalt, den die Source des Eintrags braucht:
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- Das erste Argument ist das Erweiterungsverzeichnis, das zweite der Marktplatz-Stamm — jedes lokale Verzeichnis mit einer `.spirit/marketplace.json`: ein Klon des Template-Repositorys, der persönliche Marktplatz unter `{spiritDataDir}/marketplaces/personal` und so weiter.
+- `--source local` (Standard): kopiert das vollständige Paket in `extensions/<name>/` des Marktplatzes — einschließlich `.spirit/extension.json`, ausgenommen `node_modules` und `.git` — und zeigt mit dem `source` des Eintrags darauf.
+- `--source npm`: pinnt `name@version` aus der `package.json` der Erweiterung als npm-`source` des Eintrags; nur das deklarierte Icon wird nach `extensions/<name>/` kopiert (Marktplätze hosten Icons selbst). Das Veröffentlichen des npm-Pakets selbst bleibt deiner npm CLI überlassen.
+- `--dry-run`: gibt den Eintrag und die geplanten Aktionen aus, ohne etwas zu schreiben.
+- Merge-Regeln: ein gleichnamiger Eintrag wird an Ort und Stelle ersetzt, sonst wird er angehängt. Neue Einträge und `version`-Änderungen fallen auf `reviewStatus: "unverified"` zurück; das erneute Veröffentlichen derselben Version behält ihn bei. Kuratierungsfelder wie `featured` behalten immer die Werte des Marktplatzes.
+- Vorher läuft dieselbe Validierung wie bei `check`; bei einem Fehlschlag wird nichts geschrieben.

@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 このコマンドはまずパッケージを検証し、`<name>-<version>.zip` をカレントディレクトリに書き込みます。ユーザーは**拡張機能**ページまたは `spirit extension import` で ZIP をインポートします。それは個人マーケットプレイスに登録されます。[拡張機能](../customize/extensions.mdx)を参照してください。
 
+拡張機能をマーケットプレイスに登録する場合は、[publish で公開する](#publish-で公開する)を参照してください。
+
 ## リモート拡張機能マーケットプレイスを運営する
 
 リモート拡張機能マーケットプレイスとは、`.spirit/marketplace.json` インデックスを提供するサービス可能なディレクトリです：Git リポジトリ、静的サイト、またはローカルディレクトリ。ユーザーは `spirit extension marketplace add <url|path>` または Desktop の**拡張機能**ページで追加し、エントリを閲覧・インストールします。
@@ -361,9 +363,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 テンプレートにはレジストリレイアウト、2 つのサンプル拡張機能、そして push と pull request のたびにレジストリを検証する CI が含まれています。拡張機能を公開するには：
 
 1. `npm create @spiritagent/extension` でスキャフォールドする。
-2. 拡張機能フォルダーを `extensions/` に移動する。
-3. ウィザードが出力したレジストリエントリを `.spirit/marketplace.json` に追加する。
-4. プッシュする——ユーザーはその Git URL でマーケットプレイスを追加します。
+2. `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` を実行する——拡張機能が `extensions/` にコピーされ、エントリが `.spirit/marketplace.json` にマージされます。[publish で公開する](#publish-で公開する)を参照してください。
+3. プッシュする——ユーザーはその Git URL でマーケットプレイスを追加します。
 
 </Tab>
 <Tab value="手動で作成">
@@ -390,6 +391,8 @@ my-marketplace/
 - **宣言**——`manifest`：前述の「`manifest`」節で説明したランタイム宣言。マーケットプレイスがこれを裏付けます。パッケージが単独で機能を主張することはできません。
 - **キュレーション**——`featured` と `reviewStatus`（`unverified` / `verified` / `revoked`）。
 
+`extension-toolkit publish` でエントリのマージを自動化できます——[publish で公開する](#publish-で公開する)を参照してください。
+
 レジストリをローカルで検証——オフライン：schema、kebab-case 名、プレリリースなしの semver、npm source 形式、ローカル source の宣言-コンテンツファイル、アイコンルール：
 
 ```bash
@@ -404,3 +407,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 ### ローカルマーケットプレイス
 
 `.spirit/marketplace.json` を持つ任意のローカルディレクトリはマーケットプレイスとして追加できます——`spirit extension marketplace add <path>` または Desktop の**ディスクから追加**で。ローカルマーケットプレイスはその場で読み取られ、CI は不要です。拡張機能作者の開発ループとしても使えます：編集、再インストール、繰り返し。
+
+### publish で公開する
+
+`extension-toolkit publish` は拡張機能の `.spirit/extension.json` を対象マーケットプレイスの `.spirit/marketplace.json` にマージし、エントリの source が必要とするコンテンツをコピーします：
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- 第 1 引数は拡張機能ディレクトリ、第 2 引数はマーケットプレイスのルート——`.spirit/marketplace.json` を持つ任意のローカルディレクトリ：テンプレートリポジトリのクローン、`{spiritDataDir}/marketplaces/personal` の個人マーケットプレイスなど。
+- `--source local`（デフォルト）：パッケージ全体をマーケットプレイスの `extensions/<name>/` にコピーし（`.spirit/extension.json` を含み、`node_modules` と `.git` は除外）、エントリの `source` をそこに向けます。
+- `--source npm`：拡張機能の `package.json` から `name@version` を読み取り、エントリの npm `source` として固定します。宣言されたアイコンのみを `extensions/<name>/` にコピーします（アイコンはマーケットプレイスが自己ホスト）。npm パッケージ自体の公開は、引き続き npm CLI で行います。
+- `--dry-run`：書き込まれるエントリと予定されるアクションを表示し、ディスクには書き込みません。
+- マージ規則：同名エントリはその位置で置き換え、なければ追加します。新規エントリや `version` 変更時は `reviewStatus` が `unverified` に戻り、同バージョンの再公開では維持されます。`featured` などのキュレーションフィールドは常にマーケットプレイス側の値を保持します。
+- 公開前に `check` と同じ検証が実行されます。失敗時は何も書き込まれません。
