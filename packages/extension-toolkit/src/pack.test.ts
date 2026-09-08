@@ -73,7 +73,7 @@ test("pack produces a zip whose dump parses and whose content is complete", asyn
   );
   assert.equal(dump.name, "demo-ext");
   assert.equal(dump.version, "1.2.0");
-  assert.equal(strFromU8(unzipped["skills/demo/SKILL.md"]), VALID_SKILL);
+  assert.equal(strFromU8(unzipped["skills/demo/SKILL.md"] ?? new Uint8Array()), VALID_SKILL);
   assert.ok(unzipped["package.json"]);
 });
 
