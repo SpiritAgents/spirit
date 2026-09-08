@@ -715,6 +715,9 @@ export default function App() {
                           onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
                           onDeleteExtension={runtime.deleteExtension}
                           onSetExtensionEnabled={runtime.setExtensionEnabled}
+                          onGenerateExtensionNavigate={() => {
+                            surfaceNav.handlePrefillComposerSkillChip("create-extension");
+                          }}
                         />
                       </div>
                     ) : null}

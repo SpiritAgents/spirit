@@ -129,6 +129,8 @@ type MarketplaceViewProps = {
   onPickMarketplaceDirectory: () => Promise<string | null>;
   onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
   onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
+  /** "Generate Extension": returns to the conversation surface and inserts a create-extension chip. */
+  onGenerateExtensionNavigate?: () => void;
   extensionsInstalling?: boolean;
   /** Windows Mica / macOS Vibrancy: forwarded to the detail view's top bar. */
   useTranslucency?: boolean;
@@ -145,6 +147,7 @@ export function MarketplaceView({
   onPickMarketplaceDirectory,
   onDeleteExtension,
   onSetExtensionEnabled,
+  onGenerateExtensionNavigate,
   extensionsInstalling = false,
   useTranslucency = false,
 }: MarketplaceViewProps) {
@@ -808,6 +811,15 @@ export function MarketplaceView({
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-44 p-1">
+                    {onGenerateExtensionNavigate ? (
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onSelect={() => onGenerateExtensionNavigate()}
+                      >
+                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        {t("marketplace.generateExtension")}
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
                       <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
                       {t("marketplace.importExtension")}
