@@ -11,7 +11,7 @@
 复制安装命令
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 ## ACP

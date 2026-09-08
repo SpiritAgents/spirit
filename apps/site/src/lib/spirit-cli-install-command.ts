@@ -1,8 +1,8 @@
 import { detectSpiritDownloadPlatform } from "@/lib/spirit-download-platform";
 
-export const SPIRIT_CLI_INSTALL_CURL = "curl -fsSL https://spirit.fast/install | bash";
+export const SPIRIT_CLI_INSTALL_CURL = "curl -fsSL https://spirit.dev/install | bash";
 
-export const SPIRIT_CLI_INSTALL_POWERSHELL = "irm https://spirit.fast/install.ps1 | iex";
+export const SPIRIT_CLI_INSTALL_POWERSHELL = "irm https://spirit.dev/install.ps1 | iex";
 
 /** Returns the one-liner install command for the current (or given) platform. */
 export function resolveSpiritCliInstallCommand(

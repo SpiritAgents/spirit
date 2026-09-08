@@ -1,4 +1,4 @@
-appId: fast.spirit.desktop
+appId: dev.spirit.desktop
 productName: Spirit
 icon: build/icon.ico
 artifactName: Spirit-Desktop-${version}-${os}-${arch}.${ext}

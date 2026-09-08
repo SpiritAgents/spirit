@@ -321,7 +321,7 @@ test("built-in tool round-trip keeps interleaved body-tool-body order in one seg
     toolCallId: "find-1",
     toolName: "web_search",
     phase: "failed",
-    headline: "Find in page spirit.fast failed",
+    headline: "Find in page spirit.dev failed",
     detailLines: [],
     argsExcerpt: "{}",
   });
@@ -330,7 +330,7 @@ test("built-in tool round-trip keeps interleaved body-tool-body order in one seg
     toolCallId: "find-2",
     toolName: "web_search",
     phase: "succeeded",
-    headline: "Find in page https://spirit.fast",
+    headline: "Find in page https://spirit.dev",
     detailLines: [],
     argsExcerpt: "{}",
   });

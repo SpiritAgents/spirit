@@ -7,9 +7,9 @@ Create or update a Spirit extension from the user's request. An extension is a d
 
 The docs are the contract. When a field shape or API is unclear, fetch the reference instead of guessing:
 
-- Extension reference (manifest, capabilities, `activate` API, validate, publish): https://spirit.fast/en-US/docs/develop/extensions.md
-- Bundled MCP servers (`mcp.json`): https://spirit.fast/en-US/docs/customize/mcp.md
-- Page index: https://spirit.fast/llms.txt
+- Extension reference (manifest, capabilities, `activate` API, validate, publish): https://spirit.dev/en-US/docs/develop/extensions.md
+- Bundled MCP servers (`mcp.json`): https://spirit.dev/en-US/docs/customize/mcp.md
+- Page index: https://spirit.dev/llms.txt
 
 ## Capabilities
 

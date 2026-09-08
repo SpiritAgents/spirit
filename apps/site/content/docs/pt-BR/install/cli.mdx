@@ -10,16 +10,16 @@ O CLI é um host de terminal com um TUI e um modo não interativo `-p`. Ele fala
 macOS e Linux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-O script baixa um build de `download.spirit.fast`, verifica o SHA-256 com o `SHA256SUMS.txt` do Release correspondente no GitHub (aborta se não coincidir), descompacta e coloca `spirit` no seu `PATH`.
+O script baixa um build de `download.spirit.dev`, verifica o SHA-256 com o `SHA256SUMS.txt` do Release correspondente no GitHub (aborta se não coincidir), descompacta e coloca `spirit` no seu `PATH`.
 
 Abra um novo terminal e então:
 
@@ -44,10 +44,10 @@ No Unix, o script cria um link `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/c
 | ---------------------- | -------------------------------------- | ------------------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` ou `%LOCALAPPDATA%\Spirit` | Diretório de instalação dos binários do CLI |
 | `SPIRIT_VERSION`       | `latest`                               | Segmento de versão na URL de download       |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                 | Host de CDN                                 |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                 | Host de CDN                                 |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 Você também pode baixar um arquivo do CLI da [página de download](/en-US/download) ou do [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) e descompactar você mesmo.

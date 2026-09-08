@@ -11,7 +11,7 @@ Baixe o Spirit para Desktop, instale o CLI ou fique atento para ACP.
 Copiar comando de instalação
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 ## ACP
