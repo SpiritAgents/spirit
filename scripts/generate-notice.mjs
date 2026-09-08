@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -121,9 +121,18 @@ function isPlatformSpecificPackage(name) {
 }
 
 function findLicenseInDir(dir) {
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return null;
+  }
+  // Match case-insensitively: some packages ship lowercase variants (e.g.
+  // express-rate-limit 8.7's extensionless `license`), which exact-name lookups
+  // only find on case-insensitive filesystems and miss on Linux.
   for (const fileName of LICENSE_FILE_NAMES) {
-    const filePath = path.join(dir, fileName);
-    if (existsSync(filePath)) return filePath;
+    const match = entries.find((entry) => entry.toLowerCase() === fileName.toLowerCase());
+    if (match) return path.join(dir, match);
   }
   return null;
 }
