@@ -24,8 +24,8 @@ export interface PackExtensionResult {
   fileCount: number;
 }
 
-/** Directories that never belong in a distribution archive. */
-const EXCLUDED_DIR_NAMES = new Set(["node_modules", ".git"]);
+/** Directories that never belong in a distribution archive or a registry content copy. */
+export const EXCLUDED_DIR_NAMES = new Set(["node_modules", ".git"]);
 
 async function collectPackageFiles(dir: string): Promise<Record<string, Uint8Array>> {
   const files: Record<string, Uint8Array> = {};
