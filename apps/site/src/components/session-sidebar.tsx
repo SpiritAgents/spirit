@@ -645,8 +645,7 @@ function WorkspaceListNav({
   );
 }
 
-const sidebarInteractionMotionClass =
-  "!transition-[opacity,transform,box-shadow] duration-150";
+const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Default text/icon color for sidebar interactive items; hover and selected states return to sidebar-foreground */
 const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";

@@ -4,11 +4,5 @@
   "singleQuote": false,
   "tabWidth": 2,
   "printWidth": 100,
-  "ignorePatterns": [
-    "**/.next/**",
-    "**/out/**",
-    "**/dist/**",
-    "**/node_modules/**",
-    "scripts/**"
-  ]
+  "ignorePatterns": ["**/.next/**", "**/out/**", "**/dist/**", "**/node_modules/**", "scripts/**"]
 }
