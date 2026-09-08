@@ -1,7 +1,6 @@
-# Manual release pipeline, phase 1 of 2: build HEAD → prepare report → environment:release gate →
-# stage npm packages (nothing becomes public in this run) → open a notification issue. After a
-# maintainer approves the staged packages on npmjs.com (2FA), finalize-release.yml (phase 2)
-# publishes the R2 objects, the GitHub Release, and the tag X.Y.Z (or X.Y.Z-alpha.N / -beta.N / -rc.N).
+# Manual release pipeline: build HEAD → prepare report → environment:release gate → stage npm
+# packages → environment:release gate again (approve the staged packages on npmjs.com first) →
+# publish R2 objects, the GitHub Release, and the tag X.Y.Z (or X.Y.Z-alpha.N / -beta.N / -rc.N).
 # Configure GitHub Environment "release" with Required reviewers (and Cloudflare secrets) before publishing.
 # Configure GitHub Environment "signing" WITHOUT reviewers (build jobs must not sit behind the approval gate):
 #   APPLE_CSC_LINK / APPLE_CSC_PASSWORD      base64 Developer ID .p12 and its password
@@ -546,10 +545,11 @@ jobs:
           if-no-files-found: error
 
   # Phase-1 approval gate: Environment "release" (Required reviewers). After approval this job
-  # only STAGES the npm packages — R2 objects, the GitHub Release, and the archival tag all wait
-  # for finalize-release.yml, which runs after the maintainer approves the staged packages on
-  # npmjs.com with 2FA. npm Trusted Publisher on each package must use Environment name "release"
-  # (match this job) and allow "npm stage publish" only — direct "npm publish" is rejected there.
+  # only STAGES the npm packages; the publish job below sits behind the same environment again,
+  # and its Waiting notification is the "staging done" signal — approve the staged packages on
+  # npmjs.com (2FA) before approving that second deployment.
+  # npm Trusted Publisher on each package must use Environment name "release" (match this job)
+  # and allow "npm stage publish" only — direct "npm publish" is rejected there.
   stage:
     name: Stage npm packages
     needs: prepare
@@ -558,7 +558,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -662,34 +661,174 @@ jobs:
           stage_one packages/extension-toolkit
           stage_one packages/create-extension
           stage_one packages/acp-server
+          # npm sends no notification when a package is staged; the publish job's Waiting
+          # deployment mails the reviewers instead, and this summary is what they see when
+          # they follow it. Approve on npmjs.com (2FA) before approving the publish job.
+          {
+            echo '## Staged on npm — approve before the publish job'
+            echo
+            cat staged-packages.md
+            echo
+            echo 'npmjs.com → profile menu → **Staged Packages**, or per package (2FA):'
+            echo
+            echo '```bash'
+            cat approve-commands.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      # npm sends no notification when a package is staged, so the pipeline opens (or updates)
-      # one issue per release version; the @mention mails the maintainer through GitHub.
-      - name: Notify maintainer to approve staged packages
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+  # Phase-2 approval gate: Environment "release" again (Required reviewers + Cloudflare secrets).
+  # GitHub mails the reviewers when this job enters Waiting — that is the "staging done" signal.
+  # Approve the staged packages on npmjs.com BEFORE approving here: the first real step verifies
+  # every package is live and fails fast otherwise (re-running the failed job re-asks approval).
+  publish:
+    name: Publish public channels
+    needs: stage
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Resolve release channel
         run: |
           set -euo pipefail
-          title="Release ${RELEASE_VERSION} staged on npm — approval needed"
-          {
-            printf 'The release pipeline staged these npm packages ([run %s](%s/%s/actions/runs/%s)). They are **not installable** until a maintainer approves them with 2FA.\n\n' "$GITHUB_RUN_ID" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
-            printf '## Staged packages\n\n'
-            cat staged-packages.md
-            printf '\n## Approve\n\n'
-            printf 'npmjs.com → profile menu → **Staged Packages**, or per package:\n\n'
-            while IFS= read -r cmd; do printf '    %s\n' "$cmd"; done < approve-commands.txt
-            printf '\nOptional inspection first: pnpm stage view <name>@<version> or pnpm stage download <name>@<version>.\n'
-            printf '\n## After approval — publish public channels\n\n'
-            printf 'R2 objects, the GitHub Release, and the archival tag are published by the finalize workflow (it asks for the release environment approval again by design):\n\n'
-            printf '    gh workflow run finalize-release.yml -f version=%s -f run_id=%s\n\n' "$RELEASE_VERSION" "$GITHUB_RUN_ID"
-            printf 'or Actions → Finalize Release → Run workflow with the same inputs.\n\n'
-            printf 'cc @%s\n' "$TRIGGERING_ACTOR"
-          } > notify-body.md
-          existing="$(gh issue list --search "in:title \"${title}\"" --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body-file notify-body.md
-            echo "Updated existing issue #${existing}"
+          parsed="$(node scripts/release/version.mjs --version "$RELEASE_VERSION")"
+          echo "Resolved release version: $parsed"
+          node -e '
+            const parsed = JSON.parse(process.argv[1]);
+            console.log(`RELEASE_CHANNEL=${parsed.channel}`);
+            console.log(`RELEASE_PRERELEASE=${parsed.prerelease}`);
+          ' "$parsed" >> "$GITHUB_ENV"
+
+      # Staged packages are invisible to `pnpm view` until a maintainer approves them on
+      # npmjs.com, so this is the proof that the 2FA approval pass already happened.
+      - name: Verify npm packages are live
+        run: |
+          set -euo pipefail
+          missing=0
+          check_live() {
+            local dir="$1"
+            local name version
+            name="$(node -p "require('./${dir}/package.json').name")"
+            version="$(node -p "require('./${dir}/package.json').version")"
+            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "live: ${name}@${version}"
+            else
+              echo "::error::${name}@${version} is not live on npm. Approve the staged packages first (see the stage job summary)."
+              missing=1
+            fi
+          }
+          check_live packages/agent-core
+          check_live packages/host-internal
+          check_live packages/extension-toolkit
+          check_live packages/create-extension
+          check_live packages/acp-server
+          [ "$missing" -eq 0 ]
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release-assets
+
+      - name: Show approval report
+        run: |
+          echo "Review the English approval report in the prepare job summary before approving this environment deployment."
+          echo
+          cat release-assets/approval/approval-report.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-assets/approval/approval-report.md
+
+      # Self-hosted first: R2 failures must not leave the GitHub Release already public.
+      # Keep R2 credentials on this step only; this job runs no dependency install, so
+      # postinstall scripts never see them.
+      - name: Publish self-hosted downloads
+        env:
+          SPIRIT_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCOUNT_ID }}
+          SPIRIT_CLOUDFLARE_ACCESS_KEY_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCESS_KEY_ID }}
+          SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY: ${{ secrets.SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY }}
+          SPIRIT_CLOUDFLARE_BUCKET_NAME: ${{ secrets.SPIRIT_CLOUDFLARE_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SPIRIT_CLOUDFLARE_ACCOUNT_ID" ] || [ -z "$SPIRIT_CLOUDFLARE_ACCESS_KEY_ID" ] || [ -z "$SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY" ] || [ -z "$SPIRIT_CLOUDFLARE_BUCKET_NAME" ]; then
+            echo "::error::Environment secrets SPIRIT_CLOUDFLARE_ACCOUNT_ID, SPIRIT_CLOUDFLARE_ACCESS_KEY_ID, SPIRIT_CLOUDFLARE_SECRET_ACCESS_KEY, and SPIRIT_CLOUDFLARE_BUCKET_NAME are required (R2 S3 API credentials)."
+            exit 1
+          fi
+          pnpm run release:publish-selfhosted -- \
+            --input release-assets \
+            --version "$RELEASE_VERSION"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Allow re-runs after partial success (e.g. R2 OK, GitHub Release failed).
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            echo "GitHub Release $RELEASE_VERSION already exists; skipping create."
           else
-            gh issue create --title "$title" --body-file notify-body.md
+            mapfile -d '' -t assets < <(find release-assets -maxdepth 1 -type f -print0)
+            if [ "${#assets[@]}" -eq 0 ]; then
+              echo "No release assets found under release-assets" >&2
+              exit 1
+            fi
+            notes_file="release-assets/approval/release-notes.md"
+            if [ ! -f "$notes_file" ]; then
+              echo "Missing approval release notes: $notes_file" >&2
+              exit 1
+            fi
+            # Tag name is X.Y.Z or X.Y.Z-alpha.N / -beta.N / -rc.N (no "v" prefix).
+            extra_args=()
+            if [ "${RELEASE_PRERELEASE}" = "true" ]; then
+              extra_args+=(--prerelease)
+            fi
+            gh release create "$RELEASE_VERSION" "${assets[@]}" \
+              --title "$RELEASE_VERSION" \
+              --target "${{ github.sha }}" \
+              --notes-file "$notes_file" \
+              "${extra_args[@]}"
+          fi
+
+      # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
+      - name: Ensure tag at release SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="$RELEASE_VERSION"
+          EXPECTED_SHA="${{ github.sha }}"
+
+          git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}" 2>/dev/null || true
+
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            ACTUAL_SHA="$(git rev-list -n 1 "refs/tags/${TAG}")"
+            if [ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]; then
+              # Recovery re-run after a prior partial publish may land on a newer workflow SHA.
+              if gh release view "$TAG" >/dev/null 2>&1; then
+                echo "Tag ${TAG} already at ${ACTUAL_SHA} and GitHub Release exists; leaving tag unchanged (run SHA ${EXPECTED_SHA})."
+                exit 0
+              fi
+              echo "::error::Tag ${TAG} points to ${ACTUAL_SHA}, expected ${EXPECTED_SHA}"
+              exit 1
+            fi
+            echo "Tag ${TAG} already points at ${EXPECTED_SHA}"
+          else
+            git tag "$TAG" "$EXPECTED_SHA"
+            git push origin "refs/tags/${TAG}"
+            echo "Created and pushed tag ${TAG} at ${EXPECTED_SHA}"
           fi
