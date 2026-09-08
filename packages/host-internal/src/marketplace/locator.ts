@@ -90,7 +90,7 @@ export function classifyMarketplaceLocator(
   }
 
   throw new Error(
-    `Unrecognized marketplace source locator: ${input}. Expected an existing local directory, a git URL (…​.git, git@…, ssh://…, or an Azure DevOps /_git/ URL), or an http(s) URL.`,
+    `Unrecognized marketplace source locator: ${input}. Expected an existing local directory, a git URL (….git, git@…, ssh://…, or an Azure DevOps /_git/ URL), or an http(s) URL.`,
   );
 }
 
