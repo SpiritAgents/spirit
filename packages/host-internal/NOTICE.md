@@ -6,10 +6,9 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 ## Summary
 
-- MIT: 13 package(s)
+- MIT: 14 package(s)
 - Apache-2.0: 4 package(s)
-- BlueOak-1.0.0: 1 package(s)
-- ISC: 1 package(s)
+- BlueOak-1.0.0: 2 package(s)
 
 ## Components
 
@@ -19,7 +18,11 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/mozilla/readability
 - **@napi-rs/keyring** 1.3.0 — MIT
   - https://github.com/Brooooooklyn/keyring-node
+- **@types/jsdom** 28.0.3 — MIT
+  - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/node** 25.9.5 — MIT
+  - https://github.com/DefinitelyTyped/DefinitelyTyped
+- **@types/turndown** 5.0.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@vscode/ripgrep** 1.18.0 — MIT
   - https://github.com/microsoft/vscode-ripgrep
@@ -27,13 +30,13 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - mrmlnc/fast-glob
 - **fflate** 0.8.3 — MIT
   - https://github.com/101arrowz/fflate
-- **glob** 13.0.6 — ISC
-  - https://github.com/isaacs/node-glob
+- **glob** 13.0.6 — BlueOak-1.0.0
+  - git@github.com:isaacs/node-glob
 - **google-auth-library** 10.9.1 — Apache-2.0
   - https://github.com/googleapis/google-cloud-node
 - **ignore** 5.3.2 — MIT
   - git@github.com:kaelzhang/node-ignore
-- **jsdom** 29.1.1 — MIT
+- **jsdom** 30.0.1 — MIT
   - https://github.com/jsdom/jsdom
 - **tar** 7.5.22 — BlueOak-1.0.0
   - https://github.com/isaacs/node-tar
@@ -46,8 +49,6 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 - **vitest** 4.1.11 — MIT
   - https://github.com/vitest-dev/vitest
 - **vscode-jsonrpc** 8.2.1 — MIT
-  - https://github.com/Microsoft/vscode-languageserver-node
-- **vscode-jsonrpc** 9.0.1 — MIT
   - https://github.com/Microsoft/vscode-languageserver-node
 - **vscode-languageserver-protocol** 3.18.2 — MIT
   - https://github.com/Microsoft/vscode-languageserver-node
@@ -565,6 +566,78 @@ END OF TERMS AND CONDITIONS
 
 **Used by:**
 
+- glob 13.0.6
+
+```
+All packages under `src/` are licensed according to the terms in
+their respective `LICENSE` or `LICENSE.md` files.
+
+The remainder of this project is licensed under the Blue Oak
+Model License, as follows:
+
+-----
+
+# Blue Oak Model License
+
+Version 1.0.0
+
+## Purpose
+
+This license gives everyone as much permission to work with
+this software as possible, while protecting contributors
+from liability.
+
+## Acceptance
+
+In order to receive this license, you must agree to its
+rules.  The rules of this license are both obligations
+under that agreement and conditions to your license.
+You must not do anything with this software that triggers
+a rule that you cannot or will not follow.
+
+## Copyright
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe that contributor's
+copyright in it.
+
+## Notices
+
+You must ensure that everyone who gets a copy of
+any part of this software from you, with or without
+changes, also gets the text of this license or a link to
+<https://blueoakcouncil.org/license/1.0.0>.
+
+## Excuse
+
+If anyone notifies you in writing that you have not
+complied with [Notices](#notices), you can keep your
+license by taking all practical steps to comply within 30
+days after the notice.  If you do not do so, your license
+ends immediately.
+
+## Patent
+
+Each contributor licenses you to do everything with this
+software that would otherwise infringe any patent claims
+they can license or become able to license.
+
+## Reliability
+
+No contributor can revoke this license.
+
+## No Liability
+
+***As far as the law allows, this software comes as is,
+without any warranty or condition, and no contributor
+will be liable to anyone for any damages related to this
+software or this license, under any kind of legal claim.***
+```
+
+### BlueOak-1.0.0
+
+**Used by:**
+
 - tar 7.5.22
 
 ```
@@ -625,36 +698,6 @@ will be liable to anyone for any damages related to this
 software or this license, under any kind of legal claim.***
 ```
 
-### ISC
-
-**Used by:**
-
-- glob 13.0.6
-
-```
-The ISC License
-
-Copyright (c) Isaac Z. Schlueter and Contributors
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
-IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-## Glob Logo
-
-Glob's logo created by Tanya Brassie <http://tanyabrassie.com/>, licensed
-under a Creative Commons Attribution-ShareAlike 4.0 International License
-https://creativecommons.org/licenses/by-sa/4.0/
-```
-
 ### MIT
 
 **Used by:**
@@ -689,7 +732,9 @@ SOFTWARE.
 
 **Used by:**
 
+- @types/jsdom 28.0.3
 - @types/node 25.9.5
+- @types/turndown 5.0.6
 
 ```
     MIT License
@@ -801,7 +846,7 @@ SOFTWARE.
 
 **Used by:**
 
-- jsdom 29.1.1
+- jsdom 30.0.1
 
 ```
 Copyright (c) 2010 Elijah Insua
@@ -1684,7 +1729,6 @@ Repository: git+https://github.com/websockets/ws.git
 **Used by:**
 
 - vscode-jsonrpc 8.2.1
-- vscode-jsonrpc 9.0.1
 - vscode-languageserver-protocol 3.18.2
 
 ```

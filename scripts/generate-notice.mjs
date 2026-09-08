@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parse as parseYaml } from "yaml";
 
 const PINNED_SHADCN_UI_MIT = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -76,10 +76,6 @@ function workspaceLocalDependencyNames(pkgJson) {
   return names;
 }
 
-function directDependencyNames(pkgJson, productionOnly) {
-  return new Set(dependencyEntries(pkgJson, productionOnly).map(([name]) => name));
-}
-
 function normalizeRepoUrl(url) {
   return url
     .replace(/^git\+/, "")
@@ -111,13 +107,16 @@ function licenseLabel(license) {
   return "UNKNOWN";
 }
 
-function isPlatformSpecificPackage(name) {
-  if (/^@rolldown\/binding-/.test(name)) return true;
-  if (/^@tailwindcss\/oxide-/.test(name)) return true;
-  if (/^lightningcss-(darwin|win32|linux|freebsd|android)/.test(name)) return true;
-  if (/^@esbuild\//.test(name)) return true;
-  if (name === "fsevents") return true;
-  return false;
+// Platform binary packages ship the same license as their parent package, so
+// they are folded away to keep NOTICE output identical across build platforms.
+// Lockfile packages carry os/cpu restrictions; @img/sharp-wasm32 is the one
+// platform variant without those fields and is matched by name instead.
+const PLATFORM_BINARY_NAME_RE = /^@img\/sharp-wasm32$/;
+
+function isPlatformBinaryPackage(packagesMeta, name, version) {
+  if (PLATFORM_BINARY_NAME_RE.test(name)) return true;
+  const meta = packagesMeta[`${name}@${version}`];
+  return Boolean(meta?.os || meta?.cpu);
 }
 
 function findLicenseInDir(dir) {
@@ -142,85 +141,124 @@ function hashContent(text) {
 }
 
 /**
- * @typedef {{ name?: string, from?: string, version?: string, path?: string, dependencies?: Record<string, PnpmListNode> }} PnpmListNode
+ * pnpm-lock.yaml (lockfileVersion 9) is the source of truth for the dependency graph.
+ * `pnpm list` is unusable under nodeLinker=hoisted: it reports every hoisted
+ * workspace package as `unsavedDependencies`, which would pull the whole monorepo
+ * into each package's NOTICE.
  */
+function loadLockfile(workspaceRoot) {
+  return parseYaml(readFileSync(path.join(workspaceRoot, "pnpm-lock.yaml"), "utf8"));
+}
 
-/**
- * pnpm list (not license-checker): hoisted node_modules is invisible to a checker started inside an app dir.
- * --depth 1 is direct dependencies; --depth 0 is only the filtered package itself.
- * @param {string} workspaceRoot
- * @param {string} filterName
- * @param {boolean} productionOnly
- * @param {boolean} recursive
- * @returns {PnpmListNode[]}
- */
-function collectPnpmListPackages(workspaceRoot, filterName, productionOnly, recursive) {
-  const args = [
-    "list",
-    "--filter",
-    filterName,
-    "--json",
-    "--depth",
-    recursive ? "Infinity" : "1",
-  ];
-  if (productionOnly) args.push("--prod");
+/** Posix-style importer key for the package, e.g. "apps/site". */
+function importerKeyFor(pkgRoot, workspaceRoot) {
+  return path.relative(workspaceRoot, pkgRoot).split(path.sep).join("/");
+}
 
-  const raw = execFileSync("pnpm", args, {
-    cwd: workspaceRoot,
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  const parsed = JSON.parse(raw);
-  const trees = Array.isArray(parsed) ? parsed : [parsed];
-  /** @type {Map<string, PnpmListNode>} */
-  const byKey = new Map();
-
-  /**
-   * @param {PnpmListNode | undefined} node
-   * @param {string | undefined} nameFromKey
-   */
-  function walk(node, nameFromKey) {
-    if (!node) return;
-    const name = node.name || node.from || nameFromKey;
-    if (name && node.version) {
-      byKey.set(`${name}@${node.version}`, { ...node, name });
-    }
-    // pnpm list puts prod/dev/optional children on separate keys, not only `dependencies`.
-    for (const key of ["dependencies", "optionalDependencies", "devDependencies", "unsavedDependencies"]) {
-      const children = node[key];
-      if (!children) continue;
-      for (const [depName, child] of Object.entries(children)) {
-        walk(child, depName);
-      }
-    }
-  }
-
-  for (const tree of trees) walk(tree, undefined);
-  return [...byKey.values()].sort((a, b) => {
-    const nameCmp = (a.name ?? "").localeCompare(b.name ?? "");
-    if (nameCmp !== 0) return nameCmp;
-    return (a.version ?? "").localeCompare(b.version ?? "", undefined, { numeric: true });
-  });
+/** Strip the peer suffix from a lockfile version key: "16.3.0(react@19.2.5)" -> "16.3.0". */
+function bareVersion(versionKey) {
+  const paren = versionKey.indexOf("(");
+  return paren === -1 ? versionKey : versionKey.slice(0, paren);
 }
 
 /**
- * @param {PnpmListNode} item
+ * Walk the node_modules chain from a referring directory up to the workspace
+ * root, so nested conflict versions win over the hoisted root (e.g. shiki's
+ * nested @shikijs/core 4 vs the hoisted 3). A level only matches when it holds
+ * the lockfile version. createRequire is not usable here: exports-sealed
+ * packages like @modelcontextprotocol/sdk do not export ./package.json.
+ * @param {{ name: string, version: string }} item
+ * @param {string} fromDir
  * @param {string} workspaceRoot
  */
-function resolvePackageDir(item, workspaceRoot) {
-  if (item.path && existsSync(path.join(item.path, "package.json"))) return item.path;
-  if (item.name) {
-    const hoisted = path.join(workspaceRoot, "node_modules", ...item.name.split("/"));
-    if (existsSync(path.join(hoisted, "package.json"))) return hoisted;
-    try {
-      return path.dirname(
-        createRequire(path.join(workspaceRoot, "package.json")).resolve(`${item.name}/package.json`)
-      );
-    } catch {
-      // Package is not resolvable from the hoisted workspace root.
+function resolvePackageDir(item, fromDir, workspaceRoot) {
+  const segments = item.name.split("/");
+  let dir = fromDir;
+  while (true) {
+    const candidate = path.join(dir, "node_modules", ...segments);
+    const manifestPath = path.join(candidate, "package.json");
+    if (existsSync(manifestPath)) {
+      try {
+        if (readJson(manifestPath).version === item.version) return candidate;
+      } catch {
+        // Unreadable manifest at this level; keep walking up.
+      }
     }
+    if (dir === workspaceRoot) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
   return null;
+}
+
+/**
+ * Walk the lockfile snapshot graph from the package's declared dependencies,
+ * resolving each node's install directory from its referrer's directory so
+ * transitive dependencies nested under intermediate packages are found.
+ * @param {{ lockfile: object, importerKey: string, pkgRoot: string, workspaceRoot: string, productionOnly: boolean, recursive: boolean, excludePlatformSpecificPackages: boolean }} options
+ * @returns {{ name: string, version: string, dir: string | null }[]}
+ */
+function collectLockfilePackages({ lockfile, importerKey, pkgRoot, workspaceRoot, productionOnly, recursive, excludePlatformSpecificPackages }) {
+  const importer = lockfile.importers?.[importerKey];
+  if (!importer) {
+    throw new Error(`No importer "${importerKey}" found in pnpm-lock.yaml`);
+  }
+  const snapshots = lockfile.snapshots ?? {};
+  const packagesMeta = lockfile.packages ?? {};
+
+  const direct = new Map();
+  const addDeclared = (deps) => {
+    for (const [name, info] of Object.entries(deps ?? {})) {
+      if (info && typeof info.version === "string") direct.set(name, info.version);
+    }
+  };
+  addDeclared(importer.dependencies);
+  addDeclared(importer.optionalDependencies);
+  if (!productionOnly) addDeclared(importer.devDependencies);
+
+  /** @type {Map<string, { name: string, version: string, dir: string | null }>} */
+  const visited = new Map();
+  const queue = [...direct.entries()].map(([name, versionKey]) => ({
+    name,
+    versionKey,
+    fromDir: pkgRoot,
+  }));
+  while (queue.length > 0) {
+    const { name, versionKey, fromDir } = queue.shift();
+    if (versionKey.startsWith("link:")) continue; // workspace-local dependency
+    const snapshotKey = `${name}@${versionKey}`;
+    if (visited.has(snapshotKey)) continue;
+    const version = bareVersion(versionKey);
+    if (
+      excludePlatformSpecificPackages &&
+      isPlatformBinaryPackage(packagesMeta, name, version)
+    ) {
+      // Folded into the parent package's license; prune the subtree so
+      // binary-only dependencies (e.g. @emnapi/runtime) stay out as well.
+      visited.set(snapshotKey, { name, version, dir: null });
+      continue;
+    }
+    let dir = resolvePackageDir({ name, version }, fromDir, workspaceRoot);
+    if (!dir && fromDir !== pkgRoot) {
+      // Peer-resolved instances are nested under the importer, not the referrer
+      // (e.g. site's @types/node@24 while the hoisted root holds 25).
+      dir = resolvePackageDir({ name, version }, pkgRoot, workspaceRoot);
+    }
+    visited.set(snapshotKey, { name, version, dir });
+    const snapshot = snapshots[snapshotKey];
+    if (!snapshot || !recursive || !dir) continue;
+    for (const key of ["dependencies", "optionalDependencies"]) {
+      for (const [depName, depVersion] of Object.entries(snapshot[key] ?? {})) {
+        queue.push({ name: depName, versionKey: String(depVersion), fromDir: dir });
+      }
+    }
+  }
+  return [...visited.values()].sort((a, b) => {
+    const nameCmp = a.name.localeCompare(b.name);
+    if (nameCmp !== 0) return nameCmp;
+    return a.version.localeCompare(b.version, undefined, { numeric: true });
+  });
 }
 
 function summaryCounts(entries) {
@@ -341,27 +379,34 @@ function resolveExcludedNames(pkgJson, extraExcludedPackageNames) {
   return new Set([pkgJson.name, ...workspaceLocalDependencyNames(pkgJson), ...extraExcludedPackageNames]);
 }
 
-function buildEntriesFromPnpmList({
+function buildEntriesFromLockfile({
   workspaceRoot,
-  filterName,
-  pkgJson,
+  pkgRoot,
   productionOnly,
   recursive,
   excludedNames,
   excludePlatformSpecificPackages,
 }) {
-  const packages = collectPnpmListPackages(workspaceRoot, filterName, productionOnly, recursive);
-  const directNames = directDependencyNames(pkgJson, productionOnly);
+  const lockfile = loadLockfile(workspaceRoot);
+  const packages = collectLockfilePackages({
+    lockfile,
+    importerKey: importerKeyFor(pkgRoot, workspaceRoot),
+    pkgRoot,
+    workspaceRoot,
+    productionOnly,
+    recursive,
+    excludePlatformSpecificPackages,
+  });
   const entries = [];
 
   for (const item of packages) {
     const name = item.name;
     if (!name || excludedNames.has(name)) continue;
-    if (!recursive && !directNames.has(name)) continue;
-    if (excludePlatformSpecificPackages && isPlatformSpecificPackage(name)) continue;
 
-    const packageDir = resolvePackageDir(item, workspaceRoot);
-    if (!packageDir) continue;
+    // Nodes without a dir are not installed on this platform (optional
+    // platform-specific dependencies); they cannot contribute a license file.
+    if (!item.dir) continue;
+    const packageDir = item.dir;
 
     const manifest = readJson(path.join(packageDir, "package.json"));
     if (manifest.private) continue;
@@ -409,10 +454,9 @@ export async function generateNotice({
   const workspaceRoot = findWorkspaceRoot(pkgRoot) ?? pkgRoot;
 
   try {
-    const entries = buildEntriesFromPnpmList({
+    const entries = buildEntriesFromLockfile({
       workspaceRoot,
-      filterName: displayName,
-      pkgJson,
+      pkgRoot,
       productionOnly,
       recursive,
       excludedNames,

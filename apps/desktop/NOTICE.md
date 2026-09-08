@@ -6,7 +6,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 ## Summary
 
-- MIT: 57 package(s)
+- MIT: 60 package(s)
 - Apache-2.0: 7 package(s)
 - ISC: 2 package(s)
 - BSD-3-Clause: 1 package(s)
@@ -52,8 +52,10 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/TanStack/table
 - **@tanstack/react-virtual** 3.14.9 — MIT
   - https://github.com/TanStack/virtual
-- **@types/node** 24.13.3 — MIT
-  - https://github.com/DefinitelyTyped/DefinitelyTyped
+- **@testing-library/dom** 10.4.1 — MIT
+  - https://github.com/testing-library/dom-testing-library
+- **@testing-library/react** 16.3.3 — MIT
+  - https://github.com/testing-library/react-testing-library
 - **@types/node** 25.9.5 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/react** 19.2.18 — MIT
@@ -94,8 +96,8 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - syntax-tree/hast-util-sanitize
 - **i18next** 26.3.0 — MIT
   - https://github.com/i18next/i18next
-- **katex** 0.16.47 — MIT
-  - https://github.com/KaTeX/KaTeX
+- **jsdom** 30.0.1 — MIT
+  - https://github.com/jsdom/jsdom
 - **katex** 0.17.0 — MIT
   - https://github.com/KaTeX/KaTeX
 - **koffi** 2.16.3 — MIT
@@ -128,6 +130,8 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - remarkjs/remark-breaks
 - **remark-gfm** 4.0.1 — MIT
   - remarkjs/remark-gfm
+- **remark-parse** 11.0.0 — MIT
+  - https://github.com/remarkjs/remark/tree/main/packages/remark-parse
 - **sharp** 0.35.3 — Apache-2.0
   - https://github.com/lovell/sharp
 - **shiki** 3.23.0 — MIT
@@ -144,6 +148,8 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - Wombosvideo/tw-animate-css
 - **typescript** 5.9.3 — Apache-2.0
   - https://github.com/microsoft/TypeScript
+- **unified** 11.0.5 — MIT
+  - unifiedjs/unified
 - **vite** 8.2.0 — MIT
   - https://github.com/vitejs/vite
 - **vitest** 4.1.11 — MIT
@@ -1013,7 +1019,64 @@ SOFTWARE.
 
 **Used by:**
 
-- @types/node 24.13.3
+- @testing-library/dom 10.4.1
+
+```
+The MIT License (MIT)
+Copyright (c) 2017 Kent C. Dodds
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### MIT
+
+**Used by:**
+
+- @testing-library/react 16.3.3
+
+```
+The MIT License (MIT)
+Copyright (c) 2017-Present Kent C. Dodds
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### MIT
+
+**Used by:**
+
 - @types/node 25.9.5
 - @types/react 19.2.18
 - @types/react-dom 19.2.4
@@ -1479,7 +1542,37 @@ SOFTWARE.
 
 **Used by:**
 
-- katex 0.16.47
+- jsdom 30.0.1
+
+```
+Copyright (c) 2010 Elijah Insua
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+```
+
+### MIT
+
+**Used by:**
+
 - katex 0.17.0
 
 ```
@@ -1772,6 +1865,36 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
+- remark-parse 11.0.0
+
+```
+(The MIT License)
+
+Copyright (c) 2014 Titus Wormer <tituswormer@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
+### MIT
+
+**Used by:**
+
 - sonner 2.0.7
 
 ```
@@ -1856,6 +1979,36 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### MIT
+
+**Used by:**
+
+- unified 11.0.5
+
+```
+(The MIT License)
+
+Copyright (c) 2015 Titus Wormer <tituswormer@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```
 
 ### MIT

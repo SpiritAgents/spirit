@@ -21,6 +21,9 @@ importers:
       turbo:
         specifier: 2.10.12
         version: 2.10.12
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
   apps/desktop:
     dependencies:
