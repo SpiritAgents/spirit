@@ -28,7 +28,7 @@ import type {
   DesktopMarketplaceSource,
 } from "../types.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
-import { ensureBuiltInSkills } from "@spiritagent/host-internal";
+import { ensureBuiltInSkills, ensurePersonalMarketplace } from "@spiritagent/host-internal";
 import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
 import { resolveWorkspaceBindingForRequestedRoot, sameWorkspaceRoot } from "./service-utils.js";
 import { spiritDataDir } from "./storage.js";
@@ -91,6 +91,7 @@ export async function ensureInitializedCommand(
   applyLlmHttpVersionFromConfig(loadedConfig);
   applyLlmClientVersionFromApp();
   await ensureBuiltInSkills(spiritDataDir());
+  await ensurePersonalMarketplace(spiritDataDir());
   await ctx.seedBuiltInExtensions();
   const previousState = ctx.state();
   const previousBinding = normalizeWorkspaceBinding(

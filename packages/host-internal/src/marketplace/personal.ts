@@ -16,7 +16,8 @@ import { PERSONAL_MARKETPLACE_SOURCE_ID, type MarketplaceSourceRecord } from "./
 /**
  * Personal is a built-in source (reserved id `personal`): the default
  * registry for extensions imported without a marketplace (ZIP import). Its
- * directory is the registry root; it is created on the first ZIP import.
+ * directory is the registry root; it is created at startup with an empty
+ * index.
  */
 export function personalRegistryRoot(spiritDataDir: string): string {
   return path.join(marketplacesDirPath(spiritDataDir), PERSONAL_MARKETPLACE_SOURCE_ID);
@@ -40,6 +41,22 @@ function emptyPersonalIndex(): MarketplaceIndex {
     displayName: "Personal",
     extensions: [],
   };
+}
+
+/**
+ * Create the Personal registry root on startup: an empty index and no
+ * extensions. Publishing flows (ZIP import, extension-toolkit publish) then
+ * always find a marketplace root in place. Never overwrites an existing
+ * index.
+ */
+export async function ensurePersonalMarketplace(spiritDataDir: string): Promise<void> {
+  const spiritDir = path.join(personalRegistryRoot(spiritDataDir), MARKETPLACE_SPIRIT_DIR_NAME);
+  const indexPath = path.join(spiritDir, MARKETPLACE_INDEX_FILE_NAME);
+  if (existsSync(indexPath)) {
+    return;
+  }
+  await mkdir(spiritDir, { recursive: true });
+  await writeFile(indexPath, `${JSON.stringify(emptyPersonalIndex(), null, 2)}\n`, "utf8");
 }
 
 /** Read the Personal registry index; a not-yet-created registry reads as empty. */
