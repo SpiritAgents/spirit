@@ -6,7 +6,12 @@ import { fileURLToPath } from "node:url";
 import { SKILL_FILE_NAME, SKILLS_DIR_NAME } from "../storage.js";
 import { loadBuiltInState } from "./state.js";
 
-export const BUILT_IN_SKILL_NAMES = ["create-rule", "create-skill", "create-hook"] as const;
+export const BUILT_IN_SKILL_NAMES = [
+  "create-rule",
+  "create-skill",
+  "create-hook",
+  "create-extension",
+] as const;
 
 export type BuiltInSkillName = (typeof BUILT_IN_SKILL_NAMES)[number];
 

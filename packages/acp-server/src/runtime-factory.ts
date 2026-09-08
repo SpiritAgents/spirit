@@ -41,6 +41,7 @@ import {
   createHostExtensionManager,
   createNoopMcpAdapter,
   ensureBuiltInSkills,
+  ensurePersonalMarketplace,
   loadHostInstructionMetadata,
   overlayEnabledExtensionRulesAndSkills,
   ensureTranscriptSessionDir,
@@ -105,6 +106,7 @@ export async function createAcpRuntime(
 
   // 2. Create NodeHostToolService with noop MCP adapter
   await ensureBuiltInSkills(spiritDataDir);
+  await ensurePersonalMarketplace(spiritDataDir);
   const service = new NodeHostToolService(
     { workspaceRoot, spiritDataDir },
     {

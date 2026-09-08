@@ -70,6 +70,7 @@ import {
   createNoopMcpAdapter,
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
+  ensurePersonalMarketplace,
   ensureTranscriptSessionDir,
   loadHostInstructionMetadata,
   overlayEnabledExtensionRulesAndSkills,
@@ -239,6 +240,7 @@ export async function createServerRuntime(
   const extensionSystemPrompts: LlmExtensionSystemPrompt[] = [];
   if (!isDreamCollector) {
     await ensureBuiltInSkills(spiritDataDir);
+    await ensurePersonalMarketplace(spiritDataDir);
     extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
     await ensureBuiltInExtensions({
       spiritDataDir,
