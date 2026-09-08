@@ -1,4 +1,6 @@
-# Manual release pipeline: build HEAD → prepare report → single environment:release publish → tag X.Y.Z (or X.Y.Z-alpha.N / -beta.N / -rc.N).
+# Manual release pipeline: build HEAD → prepare report → environment:release gate → stage npm
+# packages → environment:release gate again (approve the staged packages on npmjs.com first) →
+# publish R2 objects, the GitHub Release, and the tag X.Y.Z (or X.Y.Z-alpha.N / -beta.N / -rc.N).
 # Configure GitHub Environment "release" with Required reviewers (and Cloudflare secrets) before publishing.
 # Configure GitHub Environment "signing" WITHOUT reviewers (build jobs must not sit behind the approval gate):
 #   APPLE_CSC_LINK / APPLE_CSC_PASSWORD      base64 Developer ID .p12 and its password
@@ -542,16 +544,19 @@ jobs:
           path: release-assets/
           if-no-files-found: error
 
-  # Single approval gate: Environment "release" (Required reviewers + Cloudflare secrets).
-  # After approval, publish GitHub Release, npm packages, and self-hosted CDN objects.
-  # npm Trusted Publisher on each package must use Environment name "release" (match this job).
-  publish:
-    name: Publish release channels
+  # Phase-1 approval gate: Environment "release" (Required reviewers). After approval this job
+  # only STAGES the npm packages; the publish job below sits behind the same environment again,
+  # and its Waiting notification is the "staging done" signal — approve the staged packages on
+  # npmjs.com (2FA) before approving that second deployment.
+  # npm Trusted Publisher on each package must use Environment name "release" (match this job)
+  # and allow "npm stage publish" only — direct "npm publish" is rejected there.
+  stage:
+    name: Stage npm packages
     needs: prepare
     runs-on: ubuntu-latest
     environment: release
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - name: Checkout
@@ -567,20 +572,8 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           # No registry-url: Trusted Publishing uses OIDC. setup-node registry-url injects
-          # _authToken=${NODE_AUTH_TOKEN} (often GitHub token), which skips OIDC and breaks publish.
+          # _authToken=${NODE_AUTH_TOKEN} (often GitHub token), which skips OIDC and breaks staging.
           cache: pnpm
-
-      - name: Resolve release channel
-        run: |
-          set -euo pipefail
-          parsed="$(node scripts/release/version.mjs --version "$RELEASE_VERSION")"
-          echo "Resolved release version: $parsed"
-          node -e '
-            const parsed = JSON.parse(process.argv[1]);
-            console.log(`RELEASE_CHANNEL=${parsed.channel}`);
-            console.log(`RELEASE_PRERELEASE=${parsed.prerelease}`);
-            console.log(`NPM_DIST_TAG=${parsed.npmTag}`);
-          ' "$parsed" >> "$GITHUB_ENV"
 
       - name: Download release bundle
         uses: actions/download-artifact@v4
@@ -595,9 +588,173 @@ jobs:
           cat release-assets/approval/approval-report.md >> "$GITHUB_STEP_SUMMARY"
           cat release-assets/approval/approval-report.md
 
-      # Self-hosted first: R2 failures must not leave GitHub Release / npm already public.
-      # Keep R2 credentials on this step only. Job-level env would expose them to later
-      # `pnpm install` / `pnpm publish` (dependency postinstall can read process.env).
+      - name: Install dependencies for npm stage
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages for npm stage
+        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal --filter=@spiritagent/extension-toolkit --filter=@spiritagent/create-extension --filter=@spiritagent/acp-server
+
+      - name: Stage npm packages
+        run: |
+          set -euo pipefail
+          # Trusted Publishing (OIDC): do not set NODE_AUTH_TOKEN (empty still blocks OIDC).
+          unset NODE_AUTH_TOKEN
+          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
+            sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG" || true
+          fi
+          # This job uses GitHub Environment "release". On npmjs.com → Trusted Publisher,
+          # each package MUST set Environment name to exactly "release" (not blank), or OIDC
+          # claim matching fails (often with a misleading error).
+          # Workflow filename must be release.yml. Provenance needs matching repository.url.
+          mkdir -p npm-publish-logs
+          : > staged-packages.md
+          : > approve-commands.txt
+          # Dependency order: agent-core → host-internal → extension-toolkit → create-extension; acp-server stays last
+          stage_one() {
+            local dir="$1"
+            local name version parsed tag tarball tarball_path log
+            name="$(node -p "require('./${dir}/package.json').name")"
+            # The extension packages version independently of the product release, so the
+            # already-published check reads each package's own version rather than RELEASE_VERSION.
+            version="$(node -p "require('./${dir}/package.json').version")"
+            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "Already on npm: ${name}@${version}; skipping."
+              echo "- ${name}@${version} (already live — no action needed)" >> staged-packages.md
+              return 0
+            fi
+            # A prerelease must carry an explicit dist-tag (npm errors otherwise), and the tag
+            # follows the package's own channel rather than the product release channel.
+            parsed="$(node scripts/release/version.mjs --version "$version")"
+            tag="$(node -e 'console.log(JSON.parse(process.argv[1]).npmTag)' "$parsed")"
+            echo "Packing ${name}@${version} from ${dir} (tag: ${tag})"
+            # Stage a local tarball so pack failures are visible before OIDC upload.
+            tarball="$(pnpm --dir "./${dir}" pack --pack-destination "../../npm-publish-logs" | tail -1)"
+            tarball_path="./npm-publish-logs/$(basename "$tarball")"
+            echo "Staging tarball ${tarball_path}"
+            tag_args=()
+            if [ "$tag" != "latest" ]; then
+              tag_args+=(--tag "$tag")
+            fi
+            log="npm-publish-logs/${name//\//_}.log"
+            if pnpm stage publish "${tarball_path}" --access public --no-git-checks --loglevel verbose "${tag_args[@]}" 2>&1 | tee "$log"; then
+              echo "- ${name}@${version}" >> staged-packages.md
+              echo "pnpm stage approve ${name}@${version}" >> approve-commands.txt
+              return 0
+            fi
+            # Re-runs converge: a version staged by an earlier run occupies the version slot and
+            # cannot be re-staged (E409 "Cannot stage previously published version"). CI cannot
+            # reject it ("npm stage reject" needs interactive 2FA), so tolerate exactly this
+            # conflict and leave the staged version for the maintainer's approval pass.
+            if grep -qE 'E409|Cannot stage previously published version' "$log"; then
+              echo "::warning::${name}@${version} is already staged; leaving it for approval."
+              echo "- ${name}@${version} (already staged)" >> staged-packages.md
+              echo "pnpm stage approve ${name}@${version}" >> approve-commands.txt
+              return 0
+            fi
+            echo "::error::pnpm stage publish failed for ${name}. Check Trusted Publisher: org/repo/workflow=release.yml/environment=release, allowed action = npm stage publish"
+            echo '--- last 80 lines of stage log ---' >> "$GITHUB_STEP_SUMMARY"
+            tail -n 80 "$log" >> "$GITHUB_STEP_SUMMARY" || true
+            return 1
+          }
+          stage_one packages/agent-core
+          stage_one packages/host-internal
+          stage_one packages/extension-toolkit
+          stage_one packages/create-extension
+          stage_one packages/acp-server
+          # npm sends no notification when a package is staged; the publish job's Waiting
+          # deployment mails the reviewers instead, and this summary is what they see when
+          # they follow it. Approve on npmjs.com (2FA) before approving the publish job.
+          {
+            echo '## Staged on npm — approve before the publish job'
+            echo
+            cat staged-packages.md
+            echo
+            echo 'npmjs.com → profile menu → **Staged Packages**, or per package (2FA):'
+            echo
+            echo '```bash'
+            cat approve-commands.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Phase-2 approval gate: Environment "release" again (Required reviewers + Cloudflare secrets).
+  # GitHub mails the reviewers when this job enters Waiting — that is the "staging done" signal.
+  # Approve the staged packages on npmjs.com BEFORE approving here: the first real step verifies
+  # every package is live and fails fast otherwise (re-running the failed job re-asks approval).
+  publish:
+    name: Publish public channels
+    needs: stage
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.24.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Resolve release channel
+        run: |
+          set -euo pipefail
+          parsed="$(node scripts/release/version.mjs --version "$RELEASE_VERSION")"
+          echo "Resolved release version: $parsed"
+          node -e '
+            const parsed = JSON.parse(process.argv[1]);
+            console.log(`RELEASE_CHANNEL=${parsed.channel}`);
+            console.log(`RELEASE_PRERELEASE=${parsed.prerelease}`);
+          ' "$parsed" >> "$GITHUB_ENV"
+
+      # Staged packages are invisible to `pnpm view` until a maintainer approves them on
+      # npmjs.com, so this is the proof that the 2FA approval pass already happened.
+      - name: Verify npm packages are live
+        run: |
+          set -euo pipefail
+          missing=0
+          check_live() {
+            local dir="$1"
+            local name version
+            name="$(node -p "require('./${dir}/package.json').name")"
+            version="$(node -p "require('./${dir}/package.json').version")"
+            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "live: ${name}@${version}"
+            else
+              echo "::error::${name}@${version} is not live on npm. Approve the staged packages first (see the stage job summary)."
+              missing=1
+            fi
+          }
+          check_live packages/agent-core
+          check_live packages/host-internal
+          check_live packages/extension-toolkit
+          check_live packages/create-extension
+          check_live packages/acp-server
+          [ "$missing" -eq 0 ]
+
+      - name: Download release bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: release-assets
+
+      - name: Show approval report
+        run: |
+          echo "Review the English approval report in the prepare job summary before approving this environment deployment."
+          echo
+          cat release-assets/approval/approval-report.md >> "$GITHUB_STEP_SUMMARY"
+          cat release-assets/approval/approval-report.md
+
+      # Self-hosted first: R2 failures must not leave the GitHub Release already public.
+      # Keep R2 credentials on this step only; this job runs no dependency install, so
+      # postinstall scripts never see them.
       - name: Publish self-hosted downloads
         env:
           SPIRIT_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCOUNT_ID }}
@@ -620,97 +777,33 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Allow re-runs after partial success (e.g. R2 + GitHub OK, npm failed).
+          # Allow re-runs after partial success (e.g. R2 OK, GitHub Release failed).
           if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "GitHub Release $RELEASE_VERSION already exists; skipping create."
-            exit 0
-          fi
-          mapfile -d '' -t assets < <(find release-assets -maxdepth 1 -type f -print0)
-          if [ "${#assets[@]}" -eq 0 ]; then
-            echo "No release assets found under release-assets" >&2
-            exit 1
-          fi
-          notes_file="release-assets/approval/release-notes.md"
-          if [ ! -f "$notes_file" ]; then
-            echo "Missing approval release notes: $notes_file" >&2
-            exit 1
-          fi
-          # Tag name is X.Y.Z or X.Y.Z-alpha.N / -beta.N / -rc.N (no "v" prefix).
-          extra_args=()
-          if [ "${RELEASE_PRERELEASE}" = "true" ]; then
-            extra_args+=(--prerelease)
-          fi
-          gh release create "$RELEASE_VERSION" "${assets[@]}" \
-            --title "$RELEASE_VERSION" \
-            --target "${{ github.sha }}" \
-            --notes-file "$notes_file" \
-            "${extra_args[@]}"
-
-      - name: Install dependencies for npm publish
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages for npm publish
-        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal --filter=@spiritagent/extension-toolkit --filter=@spiritagent/create-extension --filter=@spiritagent/acp-server
-
-      - name: Publish npm packages
-        run: |
-          set -euo pipefail
-          # Trusted Publishing (OIDC): do not set NODE_AUTH_TOKEN (empty still blocks OIDC).
-          unset NODE_AUTH_TOKEN
-          if [ -n "${NPM_CONFIG_USERCONFIG:-}" ] && [ -f "$NPM_CONFIG_USERCONFIG" ]; then
-            sed -i '/_authToken/d' "$NPM_CONFIG_USERCONFIG" || true
-          fi
-          # This job uses GitHub Environment "release". On npmjs.com → Trusted Publisher,
-          # each package MUST set Environment name to exactly "release" (not blank), or OIDC
-          # claim matching fails (often with a misleading error).
-          # Workflow filename must be release.yml. Provenance needs matching repository.url.
-          mkdir -p npm-publish-logs
-          # Dependency order: agent-core → host-internal → extension-toolkit → create-extension; acp-server stays last
-          publish_one() {
-            local dir="$1"
-            local name version tarball tarball_path
-            name="$(node -p "require('./${dir}/package.json').name")"
-            # The extension packages version independently of the product release, so the
-            # already-published check reads each package's own version rather than RELEASE_VERSION.
-            version="$(node -p "require('./${dir}/package.json').version")"
-            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
-              echo "Already on npm: ${name}@${version}; skipping."
-              return 0
+          else
+            mapfile -d '' -t assets < <(find release-assets -maxdepth 1 -type f -print0)
+            if [ "${#assets[@]}" -eq 0 ]; then
+              echo "No release assets found under release-assets" >&2
+              exit 1
             fi
-            echo "Packing ${name}@${version} from ${dir}"
-            # Publish a local tarball so pack failures are visible before OIDC upload.
-            tarball="$(pnpm --dir "./${dir}" pack --pack-destination "../../npm-publish-logs" | tail -1)"
-            tarball_path="./npm-publish-logs/$(basename "$tarball")"
-            echo "Publishing tarball ${tarball_path}"
-            tag_args=()
-            if [ "${NPM_DIST_TAG}" != "latest" ]; then
-              tag_args+=(--tag "$NPM_DIST_TAG")
+            notes_file="release-assets/approval/release-notes.md"
+            if [ ! -f "$notes_file" ]; then
+              echo "Missing approval release notes: $notes_file" >&2
+              exit 1
             fi
-            if ! pnpm publish "${tarball_path}" --access public --no-git-checks --loglevel verbose "${tag_args[@]}" 2>&1 | tee "npm-publish-logs/${name//\//_}.log"; then
-              echo "::error::pnpm publish failed for ${name}. Check Trusted Publisher: org/repo/workflow=release.yml/environment=release"
-              echo '--- last 80 lines of publish log ---' >> "$GITHUB_STEP_SUMMARY"
-              tail -n 80 "npm-publish-logs/${name//\//_}.log" >> "$GITHUB_STEP_SUMMARY" || true
-              return 1
+            # Tag name is X.Y.Z or X.Y.Z-alpha.N / -beta.N / -rc.N (no "v" prefix).
+            extra_args=()
+            if [ "${RELEASE_PRERELEASE}" = "true" ]; then
+              extra_args+=(--prerelease)
             fi
-          }
-          publish_one packages/agent-core
-          publish_one packages/host-internal
-          publish_one packages/extension-toolkit
-          publish_one packages/create-extension
-          publish_one packages/acp-server
+            gh release create "$RELEASE_VERSION" "${assets[@]}" \
+              --title "$RELEASE_VERSION" \
+              --target "${{ github.sha }}" \
+              --notes-file "$notes_file" \
+              "${extra_args[@]}"
+          fi
 
-  # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
-  finalize-tag:
-    name: Finalize release tag
-    needs:
-      - publish
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+      # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
       - name: Ensure tag at release SHA
         env:
           GH_TOKEN: ${{ github.token }}
