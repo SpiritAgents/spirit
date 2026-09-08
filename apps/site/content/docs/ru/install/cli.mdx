@@ -10,16 +10,16 @@ CLI — это терминальный хост с TUI и неинтеракт�
 macOS и Linux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-Скрипт загружает сборку с `download.spirit.fast`, сверяет SHA-256 с `SHA256SUMS.txt` соответствующего GitHub Release (при несовпадении установка прерывается), распаковывает её и добавляет `spirit` в ваш `PATH`.
+Скрипт загружает сборку с `download.spirit.dev`, сверяет SHA-256 с `SHA256SUMS.txt` соответствующего GitHub Release (при несовпадении установка прерывается), распаковывает её и добавляет `spirit` в ваш `PATH`.
 
 Откройте новый терминал, затем:
 
@@ -44,10 +44,10 @@ spirit --version
 | ---------------------- | --------------------------------------- | ---------------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` или `%LOCALAPPDATA%\Spirit` | Корень установки для бинарных файлов CLI |
 | `SPIRIT_VERSION`       | `latest`                                | Сегмент версии в URL загрузки            |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                  | Хост CDN                                 |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                  | Хост CDN                                 |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 Вы также можете загрузить архив CLI со [страницы загрузки](/en-US/download) или [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) и распаковать его самостоятельно.

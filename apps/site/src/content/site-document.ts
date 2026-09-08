@@ -9,7 +9,7 @@ import {
 import { messagesByLocale } from "@/i18n/messages";
 import { SPIRIT_GITHUB_REPO_URL, SPIRIT_RELEASES_URL } from "@/lib/github-links";
 
-export const DEFAULT_SITE_ORIGIN = "https://spirit.fast";
+export const DEFAULT_SITE_ORIGIN = "https://spirit.dev";
 
 export function getSiteOrigin(): string {
   return (process.env.SITE_URL ?? DEFAULT_SITE_ORIGIN).replace(/\/$/, "");
@@ -211,7 +211,7 @@ export function renderDownloadBodyHtml(locale: AppLocale): string {
     <article>
       <h2>${escapeHtml(download.cli)}</h2>
       <p>${escapeHtml(download.copyInstall)}</p>
-      <pre>curl -fsSL https://spirit.fast/install | bash</pre>
+      <pre>curl -fsSL https://spirit.dev/install | bash</pre>
     </article>
     <article>
       <h2>${escapeHtml(download.acp)}</h2>
@@ -244,7 +244,7 @@ export function renderDownloadMarkdown(locale: AppLocale): string {
     download.copyInstall,
     "",
     "```bash",
-    "curl -fsSL https://spirit.fast/install | bash",
+    "curl -fsSL https://spirit.dev/install | bash",
     "```",
     "",
     `## ${download.acp}`,

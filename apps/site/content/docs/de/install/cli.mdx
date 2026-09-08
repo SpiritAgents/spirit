@@ -10,16 +10,16 @@ Die CLI ist ein Terminal-Host mit einer TUI und einem nicht-interaktiven `-p`-Mo
 macOS und Linux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-Das Skript lädt einen Build von `download.spirit.fast` herunter, prüft dessen SHA-256 gegen die `SHA256SUMS.txt` des passenden GitHub-Release (Abbruch bei Abweichung), entpackt ihn und fügt `spirit` zu Ihrem `PATH` hinzu.
+Das Skript lädt einen Build von `download.spirit.dev` herunter, prüft dessen SHA-256 gegen die `SHA256SUMS.txt` des passenden GitHub-Release (Abbruch bei Abweichung), entpackt ihn und fügt `spirit` zu Ihrem `PATH` hinzu.
 
 Öffnen Sie ein neues Terminal und dann:
 
@@ -44,10 +44,10 @@ Auf Unix verlinkt das Skript `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/cur
 | ---------------------- | ---------------------------------------- | --------------------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` oder `%LOCALAPPDATA%\Spirit` | Installationsverzeichnis für CLI-Binärdateien |
 | `SPIRIT_VERSION`       | `latest`                                 | Versionssegment in der Download-URL           |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                   | CDN-Host                                      |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                   | CDN-Host                                      |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 Sie können auch ein CLI-Archiv von der [Download-Seite](/en-US/download) oder [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) herunterladen und selbst entpacken.

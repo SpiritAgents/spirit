@@ -11,7 +11,7 @@ Spirit를 Desktop용으로 다운로드하고, CLI를 설치하고, ACP를 기�
 설치 명령 복사
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 ## ACP

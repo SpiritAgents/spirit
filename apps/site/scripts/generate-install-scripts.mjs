@@ -7,7 +7,7 @@ const installDir = join(root, 'scripts', 'install')
 const publicDir = join(root, 'public')
 
 /** Keep in sync with `src/lib/spirit-download-urls.ts` SPIRIT_DOWNLOAD_HOST. */
-const SPIRIT_DOWNLOAD_HOST = 'download.spirit.fast'
+const SPIRIT_DOWNLOAD_HOST = 'download.spirit.dev'
 const PLACEHOLDER = '__SPIRIT_DOWNLOAD_HOST__'
 
 function render(sourceName, destName) {

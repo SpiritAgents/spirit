@@ -1,8 +1,8 @@
-/** Shared GitHub artifact → download.spirit.fast path mapping (primary installers only). */
+/** Shared GitHub artifact → download.spirit.dev path mapping (primary installers only). */
 
 import { VERSION_IN_FILENAME_RE } from './version.mjs';
 
-export const PUBLIC_DOWNLOAD_HOST = 'download.spirit.fast';
+export const PUBLIC_DOWNLOAD_HOST = 'download.spirit.dev';
 
 const PRIMARY_PATTERNS = [
   {

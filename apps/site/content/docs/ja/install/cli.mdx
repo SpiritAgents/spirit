@@ -10,16 +10,16 @@ CLIは、TUIと非対話型の `-p` モードを備えたターミナルホス�
 macOSおよびLinux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-スクリプトは `download.spirit.fast` からビルドをダウンロードし、対応する GitHub Release の `SHA256SUMS.txt` と SHA-256 を照合します（不一致なら中止）。その後解凍して `spirit` を `PATH` に配置します。
+スクリプトは `download.spirit.dev` からビルドをダウンロードし、対応する GitHub Release の `SHA256SUMS.txt` と SHA-256 を照合します（不一致なら中止）。その後解凍して `spirit` を `PATH` に配置します。
 
 新しいターミナルを開いて、次のコマンドを実行します:
 
@@ -44,10 +44,10 @@ Unixでは、スクリプトは `$SPIRIT_HOME/bin/spirit` から `$SPIRIT_HOME/c
 | ---------------------- | ------------------------------------------ | ------------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` または `%LOCALAPPDATA%\Spirit` | CLIバイナリのインストールルート       |
 | `SPIRIT_VERSION`       | `latest`                                   | ダウンロードURLのバージョンセグメント |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                     | CDNホスト                             |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                     | CDNホスト                             |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 [ダウンロードページ](/en-US/download) または [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) からCLIアーカイブを直接ダウンロードして、自分で解凍することもできます。

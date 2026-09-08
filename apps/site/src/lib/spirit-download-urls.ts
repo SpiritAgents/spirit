@@ -1,6 +1,6 @@
 /** Mirrors Spirit `scripts/release/selfhosted-paths.mjs` public CDN layout. */
 
-export const SPIRIT_DOWNLOAD_HOST = "download.spirit.fast";
+export const SPIRIT_DOWNLOAD_HOST = "download.spirit.dev";
 
 export type SpiritDownloadChannel = "desktop" | "cli";
 export type SpiritDownloadOs = "darwin" | "windows" | "linux";

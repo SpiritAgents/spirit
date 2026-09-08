@@ -1,5 +1,5 @@
 # Spirit CLI installer for Windows.
-# Usage: irm https://spirit.fast/install.ps1 | iex
+# Usage: irm https://spirit.dev/install.ps1 | iex
 #
 # Optional environment variables:
 #   SPIRIT_HOME     Install root (default: %LOCALAPPDATA%\Spirit)
@@ -7,7 +7,7 @@
 
 $ErrorActionPreference = 'Stop'
 
-$SpiritDownloadHost = if ($env:SPIRIT_DOWNLOAD_HOST) { $env:SPIRIT_DOWNLOAD_HOST } else { 'download.spirit.fast' }
+$SpiritDownloadHost = if ($env:SPIRIT_DOWNLOAD_HOST) { $env:SPIRIT_DOWNLOAD_HOST } else { 'download.spirit.dev' }
 $SpiritHome = if ($env:SPIRIT_HOME) { $env:SPIRIT_HOME } else { Join-Path $env:LOCALAPPDATA 'Spirit' }
 $SpiritVersion = if ($env:SPIRIT_VERSION) { $env:SPIRIT_VERSION } else { 'latest' }
 

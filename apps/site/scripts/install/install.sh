@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Spirit CLI installer for macOS and Linux.
-# Usage: curl -fsSL https://spirit.fast/install | bash
+# Usage: curl -fsSL https://spirit.dev/install | bash
 #
 # Optional environment variables:
 #   SPIRIT_HOME     Install root (default: ~/.spirit)

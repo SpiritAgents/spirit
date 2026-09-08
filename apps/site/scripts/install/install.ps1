@@ -1,5 +1,5 @@
 # Spirit CLI installer for Windows.
-# Usage: irm https://spirit.fast/install.ps1 | iex
+# Usage: irm https://spirit.dev/install.ps1 | iex
 #
 # Optional environment variables:
 #   SPIRIT_HOME     Install root (default: %LOCALAPPDATA%\Spirit)

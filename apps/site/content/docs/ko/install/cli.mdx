@@ -10,16 +10,16 @@ CLI는 TUI와 비대화형 `-p` 모드를 갖춘 터미널 호스트입니다. [
 macOS 및 Linux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-스크립트는 `download.spirit.fast`에서 빌드를 다운로드한 뒤, 같은 GitHub Release의 `SHA256SUMS.txt`로 SHA-256을 검증합니다(불일치 시 중단). 통과하면 압축을 풀어 `spirit`을 `PATH`에 추가합니다.
+스크립트는 `download.spirit.dev`에서 빌드를 다운로드한 뒤, 같은 GitHub Release의 `SHA256SUMS.txt`로 SHA-256을 검증합니다(불일치 시 중단). 통과하면 압축을 풀어 `spirit`을 `PATH`에 추가합니다.
 
 새 터미널을 연 다음:
 
@@ -44,10 +44,10 @@ Unix에서 스크립트는 `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/curre
 | ---------------------- | ---------------------------------------- | ---------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` 또는 `%LOCALAPPDATA%\Spirit` | CLI 바이너리 설치 루트       |
 | `SPIRIT_VERSION`       | `latest`                                 | 다운로드 URL의 버전 세그먼트 |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                   | CDN 호스트                   |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                   | CDN 호스트                   |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 [다운로드 페이지](/en-US/download)나 [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest)에서 CLI 아카이브를 직접 다운로드하여 압축을 풀 수도 있습니다.

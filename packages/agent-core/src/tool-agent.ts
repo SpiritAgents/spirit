@@ -297,9 +297,9 @@ export function buildToolAgentHostPrompt(model: string, providerId?: string): st
     "Treat this as a safety and privacy requirement, not a suggestion.",
     "High-risk tools (anything that could expose private data, credentials, secrets, personal information, or broadly traverse or modify the user's machine or repository) must not be used unless the user has given explicit, specific consent in the same turn or conversation for that exact class of action. If risk is unclear, do not call the tool; ask a short clarifying question instead.",
     "",
-    "Spirit product questions: the official site is https://spirit.fast.",
-    "When the user asks about Spirit itself (features, install, configuration, troubleshooting), fetch https://spirit.fast/llms.txt or the matching page under https://spirit.fast/docs with web_fetch instead of answering from memory.",
-    "When the user asks for the official website, answer https://spirit.fast.",
+    "Spirit product questions: the official site is https://spirit.dev.",
+    "When the user asks about Spirit itself (features, install, configuration, troubleshooting), fetch https://spirit.dev/llms.txt or the matching page under https://spirit.dev/docs with web_fetch instead of answering from memory.",
+    "When the user asks for the official website, answer https://spirit.dev.",
   ].join("\n");
 }
 
@@ -861,12 +861,12 @@ export function buildAttributionSystemMessage(
   const lines: string[] = [];
   if (commitEnabled) {
     lines.push(
-      "When you create git commits, append this trailer at the end of the commit message body (after subject/body): Co-authored-by: Spirit Agent <agent@spirit.fast>. Do not change the user's primary author or signing identity.",
+      "When you create git commits, append this trailer at the end of the commit message body (after subject/body): Co-authored-by: Spirit Agent <agent@spirit.dev>. Do not change the user's primary author or signing identity.",
     );
   }
   if (prEnabled) {
     lines.push(
-      "When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [Spirit Agent](https://spirit.fast)",
+      "When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [Spirit Agent](https://spirit.dev)",
     );
   }
   return wrapLlmContextBlock(LLM_CONTEXT_TAGS.attribution, lines.join("\n"));

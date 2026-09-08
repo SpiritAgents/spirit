@@ -10,16 +10,16 @@ El CLI es un host de terminal con una TUI y un modo no interactivo `-p`. Se comu
 macOS y Linux:
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-El script descarga una compilación desde `download.spirit.fast`, verifica su SHA-256 con el `SHA256SUMS.txt` de la Release de GitHub correspondiente (aborta si no coincide), la descomprime y coloca `spirit` en tu `PATH`.
+El script descarga una compilación desde `download.spirit.dev`, verifica su SHA-256 con el `SHA256SUMS.txt` de la Release de GitHub correspondiente (aborta si no coincide), la descomprime y coloca `spirit` en tu `PATH`.
 
 Abre una nueva terminal y luego:
 
@@ -44,10 +44,10 @@ En Unix, el script enlaza `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/curren
 | ---------------------- | ------------------------------------- | ----------------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` o `%LOCALAPPDATA%\Spirit` | Raíz de instalación para binarios del CLI |
 | `SPIRIT_VERSION`       | `latest`                              | Segmento de versión en la URL de descarga |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                | Host de CDN                               |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                | Host de CDN                               |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 También puedes descargar un archivo del CLI desde la [página de descargas](/en-US/download) o [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) y descomprimirlo tú mismo.

@@ -1171,7 +1171,7 @@ test("interleaved built-in web_search shows Thinking placeholder after last term
       toolName: "web_search",
       argumentsJson: JSON.stringify({
         status: "failed",
-        _spiritUi: { inputExcerpt: "spirit.fast", internalActionType: "find_in_page" },
+        _spiritUi: { inputExcerpt: "spirit.dev", internalActionType: "find_in_page" },
       }),
     },
     { kind: "assistant-chunk", text: "It failed, trying again:" },
@@ -1181,7 +1181,7 @@ test("interleaved built-in web_search shows Thinking placeholder after last term
       toolName: "web_search",
       argumentsJson: JSON.stringify({
         status: "completed",
-        _spiritUi: { inputExcerpt: "https://spirit.fast", internalActionType: "find_in_page" },
+        _spiritUi: { inputExcerpt: "https://spirit.dev", internalActionType: "find_in_page" },
       }),
     },
   ]);

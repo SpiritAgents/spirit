@@ -213,13 +213,13 @@ test("buildResponsesBuiltInToolCardData sets internalActionType for open_page", 
       status: "completed",
       action: {
         type: "open_page",
-        url: "https://spirit.fast#ws_call_id=call_01",
+        url: "https://spirit.dev#ws_call_id=call_01",
       },
     },
     "web_search",
   );
   assert.equal(card.internalActionType, "open_page");
-  assert.equal(card.headlineDetail, "https://spirit.fast");
+  assert.equal(card.headlineDetail, "https://spirit.dev");
   assert.equal(card.suppressExpand, true);
 });
 

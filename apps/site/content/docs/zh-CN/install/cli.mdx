@@ -10,16 +10,16 @@ CLI 是终端宿主，带 TUI 和非交互 `-p` 模式。它与 [Desktop](./desk
 macOS 与 Linux：
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows（PowerShell）：
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-脚本从 `download.spirit.fast` 下载构建，用 GitHub 同 Release 的 `SHA256SUMS.txt` 校验 SHA-256（不一致则中止），再解包并把 `spirit` 加进 `PATH`。
+脚本从 `download.spirit.dev` 下载构建，用 GitHub 同 Release 的 `SHA256SUMS.txt` 校验 SHA-256（不一致则中止），再解包并把 `spirit` 加进 `PATH`。
 
 新开一个终端，然后：
 
@@ -44,10 +44,10 @@ spirit --version
 | ---------------------- | -------------------------------------- | ------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` 或 `%LOCALAPPDATA%\Spirit` | CLI 二进制安装根    |
 | `SPIRIT_VERSION`       | `latest`                               | 下载 URL 里的版本段 |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                 | CDN 主机            |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                 | CDN 主机            |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 也可以从[下载页](/zh-CN/download)或 [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) 自行下载 CLI 压缩包再解压。

@@ -10,16 +10,16 @@ CLI 是一個終端主機，具有 TUI 和非互動式 `-p` 模式。它與 [Des
 macOS 和 Linux：
 
 ```bash
-curl -fsSL https://spirit.fast/install | bash
+curl -fsSL https://spirit.dev/install | bash
 ```
 
 Windows（PowerShell）：
 
 ```powershell
-irm https://spirit.fast/install.ps1 | iex
+irm https://spirit.dev/install.ps1 | iex
 ```
 
-該腳本從 `download.spirit.fast` 下載構建，以 GitHub 同 Release 的 `SHA256SUMS.txt` 核對 SHA-256（不一致則中止），再解壓縮並將 `spirit` 放入您的 `PATH`。
+該腳本從 `download.spirit.dev` 下載構建，以 GitHub 同 Release 的 `SHA256SUMS.txt` 核對 SHA-256（不一致則中止），再解壓縮並將 `spirit` 放入您的 `PATH`。
 
 打開一個新的終端，然後：
 
@@ -44,10 +44,10 @@ spirit --version
 | ---------------------- | -------------------------------------- | ------------------------ |
 | `SPIRIT_HOME`          | `~/.spirit` 或 `%LOCALAPPDATA%\Spirit` | CLI 二進位檔的安裝根目錄 |
 | `SPIRIT_VERSION`       | `latest`                               | 下載 URL 中的版本段      |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.fast`                 | CDN 主機                 |
+| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                 | CDN 主機                 |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.fast/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
 ```
 
 您也可以從[下載頁面](/en-US/download)或 [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) 下載 CLI 壓縮檔，然後自行解壓縮。
