@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 The command validates the package first and writes `<name>-<version>.zip` to the current directory. Users import the ZIP from the **Extensions** page or with `spirit extension import`; it lands in their Personal marketplace. See [Extensions](../customize/extensions.mdx).
 
+To list the extension in a marketplace instead, see [Publish to a marketplace](#publish-to-a-marketplace).
+
 ## Run a marketplace
 
 A marketplace is a servable directory with a `.spirit/marketplace.json` index: a Git repository, a static site, or a local directory. Users add it with `spirit extension marketplace add <url|path>` or from the Desktop **Extensions** page, then browse and install its entries.
@@ -361,9 +363,8 @@ A marketplace is a servable directory with a `.spirit/marketplace.json` index: a
 The template ships the registry layout, two example extensions, and CI that validates the registry on every push and pull request. To publish an extension:
 
 1. Scaffold it with `npm create @spiritagent/extension`.
-2. Move the extension folder into `extensions/`.
-3. Add the registry entry the wizard printed to `.spirit/marketplace.json`.
-4. Push — users add the marketplace with its Git URL.
+2. Run `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — it copies the extension into `extensions/` and merges the entry into `.spirit/marketplace.json`. See [Publish to a marketplace](#publish-to-a-marketplace).
+3. Push — users add the marketplace with its Git URL.
 
 </Tab>
 <Tab value="Manual">
@@ -390,6 +391,8 @@ Entry fields, by group:
 - **Declaration** — `manifest`: the runtime declaration described in [The manifest](#the-manifest). The marketplace endorses it; a package cannot assert capabilities on its own.
 - **Curation** — `featured` and `reviewStatus` (`unverified` / `verified` / `revoked`).
 
+`extension-toolkit publish` can merge the entry for you — see [Publish to a marketplace](#publish-to-a-marketplace).
+
 Validate the registry locally — offline: schema, kebab-case names, semver without pre-release, npm source format, declared-contribution files for local sources, and icon rules:
 
 ```bash
@@ -404,3 +407,18 @@ Review discipline: pull requests that add an entry or change its `version` must 
 ### Local marketplaces
 
 Any local directory with a `.spirit/marketplace.json` works as a marketplace — add it with `spirit extension marketplace add <path>` or Desktop **Add from Disk**. Local marketplaces are read in place and need no CI, which makes them the development loop for extension authors: edit, reinstall, repeat.
+
+### Publish to a marketplace
+
+`extension-toolkit publish` merges an extension's `.spirit/extension.json` into a marketplace's `.spirit/marketplace.json` and copies the content the entry's source needs:
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- The first argument is the extension directory; the second is the marketplace root — any local directory with a `.spirit/marketplace.json`: a template-repository clone, the Personal marketplace at `{spiritDataDir}/marketplaces/personal`, and so on.
+- `--source local` (default): copy the full package into the marketplace's `extensions/<name>/` — including `.spirit/extension.json`, excluding `node_modules` and `.git` — and point the entry's `source` at it.
+- `--source npm`: pin `name@version` from the extension's `package.json` as the entry's npm `source`; only the declared icon is copied into `extensions/<name>/` (marketplaces self-host icons). Publishing the npm package itself stays with your npm CLI.
+- `--dry-run`: print the entry and the planned actions without writing anything.
+- Merge rules: a same-name entry is replaced in place, otherwise the entry is appended. New entries and `version` changes fall back to `reviewStatus: "unverified"`; republishing the same version keeps it. Curation fields such as `featured` always keep the marketplace's values.
+- The same validation as `check` runs first; on failure nothing is written.

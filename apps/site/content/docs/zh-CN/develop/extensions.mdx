@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 命令会先校验包，再把 `<name>-<version>.zip` 写入当前目录。用户在**扩展**页导入该 ZIP，或用 `spirit extension import`；它会进入他们的个人市场。见[扩展](../customize/extensions.mdx)。
 
+如需把扩展上架到市场，见[用 publish 发布](#用-publish-发布)。
+
 ## 搭建远程扩展市场
 
 远程扩展市场就是一个提供 `.spirit/marketplace.json` 索引的可服务目录：Git 仓库、静态站点或本地目录。用户通过 `spirit extension marketplace add <url|path>` 或 Desktop **扩展**页添加它，然后浏览并安装其中的条目。
@@ -361,9 +363,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 模板自带注册处布局、两个示例扩展，以及在每次 push 与 PR 上校验注册处的 CI。发布一个扩展：
 
 1. 用 `npm create @spiritagent/extension` 脚手架。
-2. 把扩展目录移入 `extensions/`。
-3. 把向导打印的注册处条目加入 `.spirit/marketplace.json`。
-4. 推送——用户用它的 Git URL 添加市场。
+2. 运行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它会把扩展复制进 `extensions/`，并把条目合并进 `.spirit/marketplace.json`。见[用 publish 发布](#用-publish-发布)。
+3. 推送——用户用它的 Git URL 添加市场。
 
 </Tab>
 <Tab value="手动创建">
@@ -390,6 +391,8 @@ my-marketplace/
 - **宣言**——`manifest`：即「`manifest` 宣言」一节描述的运行时宣言。市场为它背书；包不能自证能力。
 - **策展**——`featured` 与 `reviewStatus`（`unverified` / `verified` / `revoked`）。
 
+也可以用 `extension-toolkit publish` 自动合并条目——见[用 publish 发布](#用-publish-发布)。
+
 本地校验注册处——纯离线：schema、kebab-case 名称、不含 pre-release 的 semver、npm source 格式、本地 source 的声明-内容文件、图标规则：
 
 ```bash
@@ -404,3 +407,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 ### 本地市场
 
 任何带 `.spirit/marketplace.json` 的本地目录都可以作为市场添加——用 `spirit extension marketplace add <path>` 或 Desktop 的**从磁盘添加**。本地市场原地读取、无需 CI，因此也是扩展作者的开发循环：编辑、重装、重复。
+
+### 用 publish 发布
+
+`extension-toolkit publish` 把扩展的 `.spirit/extension.json` 合并进目标市场的 `.spirit/marketplace.json`，并按条目 source 的需要复制内容：
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- 第一个参数是扩展目录，第二个是市场根目录——任何带 `.spirit/marketplace.json` 的本地目录：模板仓库克隆、`{spiritDataDir}/marketplaces/personal` 的个人市场等。
+- `--source local`（默认）：把完整的包复制进市场的 `extensions/<name>/`——含 `.spirit/extension.json`，排除 `node_modules` 与 `.git`——并把条目 `source` 指向该目录。
+- `--source npm`：从扩展的 `package.json` 读 `name@version` 钉版作为条目的 npm `source`；只把宣言声明的图标复制进 `extensions/<name>/`（图标由市场自托管）。npm 包本身的发布仍由你用 npm CLI 完成。
+- `--dry-run`：打印将写入的条目与计划动作，不落盘。
+- 合并规则：同名条目原位替换，否则追加；新条目或 `version` 变动时 `reviewStatus` 回落为 `unverified`，同版本重发保留；`featured` 等策展字段始终保留市场侧原值。
+- 发布前会跑与 `check` 相同的校验；失败则不写任何文件。

@@ -349,6 +349,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 命令會先校驗套件，再把 `<name>-<version>.zip` 寫入目前目錄。使用者在**擴充功能**頁面匯入該 ZIP，或用 `spirit extension import`；它會進入他們的個人市場。見[擴充功能](../customize/extensions.mdx)。
 
+如需把擴充功能上架到市場，見[用 publish 發佈](#用-publish-發佈)。
+
 ## 搭建遠端擴充功能市場
 
 遠端擴充功能市場就是一個提供 `.spirit/marketplace.json` 索引的可服務目錄：Git 儲存庫、靜態網站或本機目錄。使用者透過 `spirit extension marketplace add <url|path>` 或 Desktop **擴充功能**頁新增它，然後瀏覽並安裝其中的條目。
@@ -361,9 +363,8 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 模板自帶註冊處佈局、兩個範例擴充功能，以及在每次 push 與 PR 上校驗註冊處的 CI。發布一個擴充功能：
 
 1. 用 `npm create @spiritagent/extension` 鷹架。
-2. 把擴充功能資料夾移入 `extensions/`。
-3. 把精靈打印的註冊處條目加入 `.spirit/marketplace.json`。
-4. 推送——使用者用它的 Git URL 新增市場。
+2. 執行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它會把擴充功能複製進 `extensions/`，並把條目合併進 `.spirit/marketplace.json`。見[用 publish 發佈](#用-publish-發佈)。
+3. 推送——使用者用它的 Git URL 新增市場。
 
 </Tab>
 <Tab value="手動建立">
@@ -390,6 +391,8 @@ my-marketplace/
 - **宣言**——`manifest`：即「`manifest` 宣言」一節描述的執行時期宣言。市場為它背書；套件不能自行聲明能力。
 - **策展**——`featured` 與 `reviewStatus`（`unverified` / `verified` / `revoked`）。
 
+也可以用 `extension-toolkit publish` 自動合併條目——見[用 publish 發佈](#用-publish-發佈)。
+
 本機校驗註冊處——純離線：schema、kebab-case 名稱、不含 pre-release 的 semver、npm source 格式、本機 source 的宣告-內容檔案、圖示規則：
 
 ```bash
@@ -404,3 +407,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 ### 本機市場
 
 任何帶 `.spirit/marketplace.json` 的本機目錄都可以作為市場新增——用 `spirit extension marketplace add <path>` 或 Desktop 的**從磁碟新增**。本機市場原地讀取、無需 CI，因此也是擴充功能作者的開發循環：編輯、重裝、重複。
+
+### 用 publish 發佈
+
+`extension-toolkit publish` 把擴充功能的 `.spirit/extension.json` 合併進目標市場的 `.spirit/marketplace.json`，並按條目 source 的需要複製內容：
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- 第一個參數是擴充功能目錄，第二個是市場根目錄——任何帶 `.spirit/marketplace.json` 的本機目錄：模板儲存庫克隆、`{spiritDataDir}/marketplaces/personal` 的個人市場等。
+- `--source local`（預設）：把完整的套件複製進市場的 `extensions/<name>/`——含 `.spirit/extension.json`，排除 `node_modules` 與 `.git`——並把條目 `source` 指向該目錄。
+- `--source npm`：從擴充功能的 `package.json` 讀 `name@version` 釘版作為條目的 npm `source`；只把宣言宣告的圖示複製進 `extensions/<name>/`（圖示由市場自託管）。npm 套件本身的發佈仍由你用 npm CLI 完成。
+- `--dry-run`：打印將寫入的條目與計畫動作，不落盤。
+- 合併規則：同名條目原位替換，否則追加；新條目或 `version` 變動時 `reviewStatus` 回落為 `unverified`，同版本重發保留；`featured` 等策展欄位始終保留市場側原值。
+- 發佈前會跑與 `check` 相同的校驗；失敗則不寫任何檔案。

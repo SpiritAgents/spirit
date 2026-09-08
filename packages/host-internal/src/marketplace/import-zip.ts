@@ -4,8 +4,8 @@ import path from "node:path";
 import {
   EXTENSION_DUMP_FILE_NAME,
   MARKETPLACE_SPIRIT_DIR_NAME,
+  buildMarketplaceEntryFromDump,
   parseExtensionDumpText,
-  type MarketplaceExtensionEntry,
 } from "@spiritagent/extension-toolkit";
 import { readFile } from "node:fs/promises";
 
@@ -49,22 +49,11 @@ export async function importPreparedDirectoryToPersonal(
   await rm(contentDir, { recursive: true, force: true });
   await cp(preparedDirectoryPath, contentDir, { recursive: true });
 
-  const entry: MarketplaceExtensionEntry = {
-    name: dump.name,
-    version: dump.version,
+  // Personal entries are self-declared imports: fixed local source into the
+  // Personal registry, always unverified.
+  const entry = buildMarketplaceEntryFromDump(dump, {
     source: `./extensions/${dump.name}`,
-    // The dump icon is install-dir-relative; the registry entry re-points it
-    // at the content directory inside the Personal registry root.
-    ...(dump.icon ? { icon: `extensions/${dump.name}/${dump.icon}` } : {}),
-    displayName: dump.displayName,
-    description: dump.description,
-    ...(dump.author ? { author: dump.author } : {}),
-    ...(dump.category ? { category: dump.category } : {}),
-    ...(dump.keywords?.length ? { keywords: [...dump.keywords] } : {}),
-    ...(dump.homepage ? { homepage: dump.homepage } : {}),
-    reviewStatus: "unverified",
-    manifest: dump.manifest,
-  };
+  });
   await upsertPersonalRegistryEntry(context.spiritDataDir, entry);
 
   return installMarketplaceExtensionEntry(context, {
