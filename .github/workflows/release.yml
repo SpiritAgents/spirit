@@ -699,7 +699,6 @@ jobs:
           publish_one packages/create-extension
           publish_one packages/acp-server
 
-
   # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
   finalize-tag:
     name: Finalize release tag
