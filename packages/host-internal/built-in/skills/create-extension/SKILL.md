@@ -30,9 +30,13 @@ Declaration-only capabilities (`approval-flow`, `questions-flow`, `settings`, `s
 
 For bundled resource formats, the sibling skills create-skill, create-hook, and create-rule carry the authoring conventions — write the files into the extension's own layout (`skills/<name>/SKILL.md`, extension-root `hooks.json` and `rule.md`), not the managed workspace or user roots.
 
+## Publish target
+
+Unless the user names another marketplace, publish to the built-in Personal marketplace at `<spirit_data_dir>/marketplaces/personal` — if this skill is active from `<spirit_data_dir>/skills/create-extension/SKILL.md`, use that same `<spirit_data_dir>`. Local marketplaces are read in place, so the entry appears right away; after publishing, tell the user to install the extension from the **Extensions** page.
+
 ## Workflow
 
 1. Scaffold: `npx create @spiritagent/extension` (wizard; every prompt has a flag, `--yes` skips confirmation). Manual alternative: write `.spirit/extension.json`, `package.json`, and the declared capability files by hand per the reference.
 2. Validate: `npx @spiritagent/extension-toolkit check <dir>` until clean — install runs the same validation.
-3. Publish: `npx @spiritagent/extension-toolkit publish <dir> <marketplace-dir> [--source local|npm] [--dry-run]` merges the entry into a marketplace; `pack <dir>` builds a ZIP for import into a user's Personal marketplace. To self-test, publish into any local directory marketplace and add it with `spirit extension marketplace add <path>`.
+3. Publish: `npx @spiritagent/extension-toolkit publish <dir> <marketplace-dir> [--source local|npm] [--dry-run]` — the default marketplace is the Personal one above; use `pack <dir>` instead when the user wants a shareable ZIP file.
 4. Fallback: when a detail is missing or unclear, fetch the reference page; never invent manifest fields.
