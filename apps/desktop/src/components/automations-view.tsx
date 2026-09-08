@@ -16,6 +16,10 @@ import {
   DESKTOP_OUTLINE_FILL_HOVER,
 } from "@/lib/desktop-chrome";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -32,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyCard } from "@/components/ui/empty";
 import type { DesktopAutomationListItem, DesktopSnapshot } from "@/types";
 import { buildAutomationTriggerFormatLabels } from "@/lib/automation-trigger-i18n";
 import { formatDesktopAutomationTriggerLabel } from "@/lib/automation-trigger";
@@ -111,7 +116,15 @@ export function AutomationsView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="mx-auto flex w-full max-w-4xl min-h-0 flex-1 flex-col px-4 py-8">
+      {/* Shares the conversation message list's max width and gutter: full width up to
+          the cap, then proportional side margins on narrower windows. */}
+      <div
+        className={cn(
+          "mx-auto flex w-full min-h-0 flex-1 flex-col py-8",
+          CONVERSATION_GUTTER_X,
+          CONVERSATION_MESSAGE_LIST_MAX_W,
+        )}
+      >
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
@@ -152,28 +165,26 @@ export function AutomationsView({
             onContextMenuOpenChange={handleContextMenuOpenChange}
             onRequestDelete={handleContextMenuDelete}
           >
-            <div
-              className={cn(
-                DESKTOP_ITEM_CARD_SURFACE,
-                "divide-y divide-border/35 overflow-hidden",
-                DESKTOP_ITEM_CARD_HOVER_BORDER,
-              )}
-            >
-              {items.length === 0 ? (
-                <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  {t("automations.empty")}
-                </p>
-              ) : (
-                items.map((item) => (
+            {items.length === 0 ? (
+              <EmptyCard>{t("automations.empty")}</EmptyCard>
+            ) : (
+              <div
+                className={cn(
+                  DESKTOP_ITEM_CARD_SURFACE,
+                  "divide-y divide-border/35 overflow-hidden",
+                  DESKTOP_ITEM_CARD_HOVER_BORDER,
+                )}
+              >
+                {items.map((item) => (
                   <AutomationListRow
                     key={item.id}
                     item={item}
                     githubConnected={githubConnected}
                     onOpen={() => onOpenAutomation(item.id)}
                   />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </AutomationListNav>
         </div>
       </div>

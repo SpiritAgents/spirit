@@ -91,7 +91,7 @@ Agent Core owns how the model sees project context:
 - **Smoke suites** — contract, runtime, and live provider checks under `packages/agent-core/src/smoke`.
 - **Eval harness** — scenario comparison and judging for prompt or tool-definition changes (`pnpm run eval:compare` from the repo root).
 
-`@spiritagent/agent-core` is published to npm; [`packages/host-internal`](packages/host-internal) holds shared host-side discovery, extensions, marketplace, workspace helpers, and LSP orchestration used by Desktop.
+`@spiritagent/agent-core` is published to npm; [`packages/host-internal`](packages/host-internal) holds shared host-side discovery, extensions, workspace helpers, and LSP orchestration used by Desktop.
 
 ## Desktop
 
@@ -99,7 +99,7 @@ The [Desktop app](apps/desktop) is the primary graphical host: a workspace-bound
 
 - **Docked panels** — file explorer with Monaco editor, embedded terminal (Electron), Git changes and history, in-app browser for local dev servers.
 - **Sessions** — multi-conversation history, worktree-per-session workflows, tool approval, subagent viewer, structured questionnaires, context usage, and rewind.
-- **Configuration** — model providers and API keys, Skills and Rules, MCP servers, extensions marketplace, Dreams (beta), LSP, themes, and UI locale (10 languages including English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Português do Brasil, and Русский).
+- **Configuration** — model providers and API keys, Skills and Rules, MCP servers, extensions, Dreams (beta), LSP, themes, and UI locale (10 languages including English, 简体中文, 繁體中文, 日本語, 한국어, Deutsch, Français, Español, Português do Brasil, and Русский).
 - **Platforms** — Electron on Windows, macOS, and Linux; optional web host with remote pairing.
 
 See [apps/desktop/README.md](apps/desktop/README.md) for Desktop-specific development and layout.

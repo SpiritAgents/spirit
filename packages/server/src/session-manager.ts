@@ -25,7 +25,7 @@ import {
   type ServerRuntimeResult,
   type ServerSessionKind,
 } from "./runtime-factory.js";
-import { McpRegistry } from "./mcp-registry.js";
+import { McpRegistry, createExtensionMcpExtraConfigs } from "./mcp-registry.js";
 import { buildServerSnapshot } from "./snapshot-projector.js";
 import {
   mediaPathsFromLatestUserMessage,
@@ -249,7 +249,7 @@ export class SessionManager {
   private readonly pendingTrustRequests = new Map<string, PendingTrustRequest>();
   private readonly spiritDataDir: string;
   /** Shared per-workspace MCP services (also serve host.mcp* management RPCs). */
-  readonly mcpRegistry = new McpRegistry();
+  readonly mcpRegistry: McpRegistry;
   /** conversationKey → in-flight create; collapses concurrent creates for the same chat. */
   private readonly creatingByConversationKey = new Map<string, Promise<ServerSessionInfo>>();
 
@@ -258,6 +258,7 @@ export class SessionManager {
     private readonly callbacks: SessionManagerCallbacks,
   ) {
     this.spiritDataDir = spiritDataDir;
+    this.mcpRegistry = new McpRegistry(createExtensionMcpExtraConfigs(spiritDataDir, "cli"));
   }
 
   async createSession(params: CreateSessionParams): Promise<ServerSessionInfo> {
@@ -1215,6 +1216,7 @@ export class SessionManager {
 
   /** Re-read installed extensions into every live session (post install/remove). */
   async refreshExtensions(): Promise<void> {
+    await this.mcpRegistry.refreshAllConfigs();
     for (const session of this.sessions.values()) {
       await session.runtimeResult.refreshExtensions();
     }

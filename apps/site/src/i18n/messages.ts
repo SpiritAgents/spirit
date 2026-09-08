@@ -111,9 +111,7 @@ type DesktopWindowCopy = {
   collapseTools: string;
   expandTools: string;
   settingsPlaceholderTitle: string;
-  settingsPlaceholderDescription: string;
   marketplacePlaceholderTitle: string;
-  marketplacePlaceholderDescription: string;
   previewEditorOnlyTextError: string;
   hostStatus: string;
   mcpReady: string;

@@ -16,7 +16,7 @@ export const HOOK_EVENT_NAMES = [
 
 export type HookEventName = (typeof HOOK_EVENT_NAMES)[number];
 export type HookPermission = "allow" | "deny" | "ask";
-export type HookConfigScope = "user" | "workspace";
+export type HookConfigScope = "user" | "workspace" | "extension";
 
 export interface HookDefinition {
   command: string;

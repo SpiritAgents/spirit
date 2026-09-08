@@ -127,9 +127,7 @@
       "expandTools": "展開工具",
       "newSession": "新工作階段",
       "settingsPlaceholderTitle": "桌面設定檢視",
-      "settingsPlaceholderDescription": "保留設定的第一層結構與階層。",
-      "marketplacePlaceholderTitle": "擴充功能市集檢視",
-      "marketplacePlaceholderDescription": "保留市集的第一層結構與階層。",
+      "marketplacePlaceholderTitle": "擴充功能檢視",
       "previewEditorOnlyTextError": "預覽編輯器只能開啟文字檔。",
       "hostStatus": "Web Hero 預覽",
       "mcpReady": "MCP 就緒"

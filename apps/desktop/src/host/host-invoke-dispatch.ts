@@ -25,16 +25,21 @@ export interface HostCommandDelegate {
   deleteHookEntry(request: CommandPayloads["deleteHookEntry"]["request"]): Promise<unknown>;
   inspectMcpServer(name: string): Promise<unknown>;
   importExtension(request: CommandPayloads["importExtension"]["request"]): Promise<unknown>;
-  listMarketplaceExtensions(): Promise<unknown>;
-  getMarketplaceExtensionDetail(extensionId: string): Promise<unknown>;
-  getMarketplaceExtensionReadme(extensionId: string): Promise<unknown>;
+  installBuiltInExtension(
+    request: CommandPayloads["installBuiltInExtension"]["request"],
+  ): Promise<unknown>;
+  addMarketplaceSource(
+    request: CommandPayloads["addMarketplaceSource"]["request"],
+  ): Promise<unknown>;
+  removeMarketplaceSource(
+    request: CommandPayloads["removeMarketplaceSource"]["request"],
+  ): Promise<unknown>;
   installMarketplaceExtension(
     request: CommandPayloads["installMarketplaceExtension"]["request"],
   ): Promise<unknown>;
-  prepareMarketplaceExtensionInstall(
-    request: CommandPayloads["prepareMarketplaceExtensionInstall"]["request"],
-  ): Promise<unknown>;
+  updateExtension(request: CommandPayloads["updateExtension"]["request"]): Promise<unknown>;
   deleteExtension(request: CommandPayloads["deleteExtension"]["request"]): Promise<unknown>;
+  setExtensionEnabled(request: CommandPayloads["setExtensionEnabled"]["request"]): Promise<unknown>;
   runExtension(request: CommandPayloads["runExtension"]["request"]): Promise<unknown>;
   updateExtensionSettings(
     request: CommandPayloads["updateExtensionSettings"]["request"],
@@ -249,15 +254,13 @@ const hostCommandDispatch = {
   deleteHookEntry: (host, payload) => host.deleteHookEntry(payload.request),
   inspectMcpServer: (host, payload) => host.inspectMcpServer(payload.name),
   importExtension: (host, payload) => host.importExtension(payload.request),
-  listMarketplaceExtensions: (host) => host.listMarketplaceExtensions(),
-  getMarketplaceExtensionDetail: (host, payload) =>
-    host.getMarketplaceExtensionDetail(payload.extensionId),
-  getMarketplaceExtensionReadme: (host, payload) =>
-    host.getMarketplaceExtensionReadme(payload.extensionId),
+  installBuiltInExtension: (host, payload) => host.installBuiltInExtension(payload.request),
+  addMarketplaceSource: (host, payload) => host.addMarketplaceSource(payload.request),
+  removeMarketplaceSource: (host, payload) => host.removeMarketplaceSource(payload.request),
   installMarketplaceExtension: (host, payload) => host.installMarketplaceExtension(payload.request),
-  prepareMarketplaceExtensionInstall: (host, payload) =>
-    host.prepareMarketplaceExtensionInstall(payload.request),
+  updateExtension: (host, payload) => host.updateExtension(payload.request),
   deleteExtension: (host, payload) => host.deleteExtension(payload.request),
+  setExtensionEnabled: (host, payload) => host.setExtensionEnabled(payload.request),
   runExtension: (host, payload) => host.runExtension(payload.request),
   updateExtensionSettings: (host, payload) => host.updateExtensionSettings(payload.request),
   updateExtensionSecret: (host, payload) => host.updateExtensionSecret(payload.request),

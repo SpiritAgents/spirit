@@ -8,9 +8,11 @@ import { ThemePreviewPicker } from "@/components/theme-preview-picker";
 import { Switch } from "@/components/ui/switch";
 import { Toggle } from "@/components/ui/toggle";
 import { useReduceMotion } from "@/hooks/useReduceMotion";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { isMacDesktopPlatform, isNativeTranslucencySupported } from "@/lib/desktop-shell";
 import type { ReduceMotionPreference } from "@/lib/reduce-motion";
 import type { ThemePreference } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 
 const appearanceSelectTriggerClassName = "w-full sm:w-fit sm:max-w-full";
 
@@ -49,7 +51,7 @@ export function AppearanceSettingsPanel({
   const { reduceMotion, setReduceMotion } = useReduceMotion();
   return (
     <div className="space-y-6">
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
         <SettingsRow label={t("settings.theme")} description={t("settings.themeDescription")}>
           <ThemePreviewPicker
             value={theme}
@@ -96,7 +98,7 @@ export function AppearanceSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.motionSection")}</p>
-        <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           <SettingsRow
             label={t("settings.reduceMotion")}
             description={t("settings.reduceMotionDescription")}
@@ -131,7 +133,7 @@ export function AppearanceSettingsPanel({
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.typographySection")}</p>
-        <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           <SettingsRow
             label={t("settings.font")}
             description={t("settings.fontDescription")}

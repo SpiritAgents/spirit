@@ -16,10 +16,13 @@ import type {
   DeleteSkillRequest,
   DesktopCreateAutomationRequest,
   DesktopUpdateAutomationRequest,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
-  InstallLspProviderRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
+  InstallLspProviderRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
@@ -45,6 +48,7 @@ import type {
   MergeGitHubPullRequestRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   SubmitGitChipRequest,
   SubmitSkillSlashRequest,
   SubmitUserTurnRequest,
@@ -115,12 +119,13 @@ export type CommandPayloads = {
   deleteHookEntry: { request: DeleteHookEntryRequest };
   inspectMcpServer: { name: string };
   importExtension: { request: ImportExtensionRequest };
-  listMarketplaceExtensions: undefined;
-  getMarketplaceExtensionDetail: { extensionId: string };
-  getMarketplaceExtensionReadme: { extensionId: string };
-  prepareMarketplaceExtensionInstall: { request: PrepareMarketplaceExtensionInstallRequest };
+  installBuiltInExtension: { request: InstallBuiltInExtensionRequest };
+  addMarketplaceSource: { request: AddMarketplaceSourceRequest };
+  removeMarketplaceSource: { request: RemoveMarketplaceSourceRequest };
   installMarketplaceExtension: { request: InstallMarketplaceExtensionRequest };
+  updateExtension: { request: UpdateExtensionRequest };
   deleteExtension: { request: DeleteExtensionRequest };
+  setExtensionEnabled: { request: SetExtensionEnabledRequest };
   runExtension: { request: RunExtensionRequest };
   updateExtensionSettings: { request: UpdateExtensionSettingsRequest };
   updateExtensionSecret: { request: UpdateExtensionSecretRequest };

@@ -105,6 +105,12 @@ export function invalidateSharedUserMcpToolingCache(): void {
   sharedUserMcpToolingCache = undefined;
 }
 
+export type McpExtraConfigProvider = () => McpConfigFile | Promise<McpConfigFile>;
+
+export interface McpServiceOptions {
+  extraConfigs?: McpExtraConfigProvider;
+}
+
 export class McpService {
   private readonly registry = new McpRegistry();
   private loadedConfigStore: LoadedMcpConfig = {
@@ -125,6 +131,7 @@ export class McpService {
   constructor(
     private readonly workspaceRootStore = process.cwd(),
     private readonly includeWorkspaceConfig = true,
+    private readonly serviceOptions: McpServiceOptions = {},
   ) {
     this.registry.replaceConfig({ servers: {} });
   }
@@ -235,11 +242,12 @@ export class McpService {
 
   async refreshConfig(): Promise<void> {
     try {
+      const extra = await this.loadExtraConfig();
       const { merged, serverScopes, user } = await loadMergedMcpConfigForWorkspace(
         this.workspaceRootStore,
         { includeWorkspace: this.includeWorkspaceConfig },
       );
-      const raw = merged;
+      const raw = mergeMcpConfigFiles(extra, merged);
       const nextDigest = mcpConfigDigest(raw);
       const nextUserDigest = mcpConfigDigest(user);
       if (sharedUserMcpToolingCache && sharedUserMcpToolingCache.digest !== nextUserDigest) {
@@ -278,6 +286,19 @@ export class McpService {
       this.catalogRevisionStore += 1;
       this.promptCatalogStore = new Map<string, McpPromptCatalogEntry[]>();
       throw error;
+    }
+  }
+
+  private async loadExtraConfig(): Promise<McpConfigFile> {
+    const provider = this.serviceOptions.extraConfigs;
+    if (!provider) {
+      return { servers: {} };
+    }
+    try {
+      return await provider();
+    } catch (error) {
+      console.warn("[mcp-service] extraConfigs.failed", { error: describeError(error) });
+      return { servers: {} };
     }
   }
 
@@ -429,14 +450,19 @@ export class McpService {
       }
     }
 
-    return Object.entries(this.loadedConfigStore.raw.servers).map(([name, server]) =>
-      buildManagedServerForRust(
-        name,
-        server,
-        this.loadedConfigStore.resolved[name],
-        this.loadedConfigStore.serverScopes[name],
-      ),
-    );
+    return Object.entries(this.loadedConfigStore.raw.servers)
+      .filter(([name]) => {
+        const scope = this.loadedConfigStore.serverScopes[name];
+        return scope === "user" || scope === "workspace";
+      })
+      .map(([name, server]) =>
+        buildManagedServerForRust(
+          name,
+          server,
+          this.loadedConfigStore.resolved[name],
+          this.loadedConfigStore.serverScopes[name],
+        ),
+      );
   }
 
   /** When startup refreshToolingCaches already populated registry / promptCatalog, the settings page does not need to reconnect MCP. */

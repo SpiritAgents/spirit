@@ -44,14 +44,6 @@ impl MainInputMode {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MarketplaceFlowStep {
-    CatalogPicker,
-    DetailActions,
-    VersionPicker,
-    UnverifiedConfirm,
-}
-
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct InputSuggestion {
     pub label: String,
@@ -425,6 +417,7 @@ pub struct TuiViewModel {
     pub image_picker_active: bool,
     pub image_picker_index: usize,
     pub image_picker_files: Vec<String>,
+    pub marketplace_view: Option<MarketplaceViewModel>,
     pub bottom_form: Option<BottomFormView>,
     pub history_offset_from_bottom: usize,
     pub pending_response_active: bool,
@@ -434,7 +427,6 @@ pub struct TuiViewModel {
     pub persisted_standalone_pending_aux: Option<PendingAssistantAux>,
     pub persisted_standalone_pending_aux_anchor: Option<usize>,
     pub cli_ui_hooks: Vec<CliUiHookView>,
-    pub marketplace_view: Option<MarketplaceViewModel>,
     pub todo_strip: Option<TodoStripView>,
     /// Conversation selection: global line number after wrapping + display column (consistent with WordWrapper).
     pub conversation_sel_anchor: Option<(usize, usize)>,
@@ -482,56 +474,52 @@ impl TuiViewModel {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MarketplaceFlowStep {
+    CatalogPicker,
+    DetailActions,
+    UnverifiedConfirm,
+}
+
+#[derive(Clone, Debug)]
+pub struct MarketplaceSourceTabView {
+    pub id: String,
+    pub label: String,
+}
+
 #[derive(Clone, Debug)]
 pub struct MarketplaceCatalogItemView {
-    pub extension_id: String,
-    pub package_name: String,
+    /// Composite identity: `<sourceId>/<name>`.
+    pub id: String,
+    pub name: String,
     pub display_name: String,
     pub description: String,
     pub author: Option<String>,
-    pub featured: bool,
-    pub default_version: String,
-    pub default_channel: String,
-    pub default_review_status: String,
-    pub supported_hosts: Vec<String>,
-    pub requested_capabilities: Vec<String>,
-    pub icon_url: Option<String>,
-    pub installed_version: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub struct MarketplaceVersionChangelogView {
-    pub summary: String,
-    pub body: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct MarketplaceVersionView {
-    pub version: String,
-    pub channel: String,
     pub review_status: String,
-    pub display_name: String,
-    pub description: String,
-    pub author: Option<String>,
-    pub homepage_url: Option<String>,
-    pub repository_url: Option<String>,
-    pub keywords: Vec<String>,
-    pub supported_hosts: Vec<String>,
-    pub requested_capabilities: Vec<String>,
-    pub icon_url: Option<String>,
-    pub published_at: Option<String>,
-    pub tarball_url: Option<String>,
-    pub changelog: Option<MarketplaceVersionChangelogView>,
+    pub version: String,
+    pub installed: bool,
+    pub enabled: bool,
+    pub installed_version: Option<String>,
+    pub update_available: bool,
 }
 
 #[derive(Clone, Debug)]
 pub struct MarketplaceDetailView {
-    pub package_name: String,
-    pub status: String,
-    pub featured: bool,
-    pub default_version: String,
-    pub readme: Option<String>,
-    pub versions: Vec<MarketplaceVersionView>,
+    pub id: String,
+    pub name: String,
+    pub display_name: String,
+    pub description: String,
+    pub author: Option<String>,
+    pub review_status: String,
+    pub version: String,
+    pub installed: bool,
+    pub enabled: bool,
+    pub update_available: bool,
+    pub installed_version: Option<String>,
+    pub supported_hosts: Vec<String>,
+    pub requested_capabilities: Vec<String>,
+    /// Pre-rendered capability lines (declared contributions).
+    pub contribution_lines: Vec<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -566,9 +554,10 @@ pub struct MarketplaceViewModel {
     pub step: MarketplaceFlowStep,
     pub query: String,
     pub error: Option<String>,
+    pub sources: Vec<MarketplaceSourceTabView>,
+    pub active_source_index: usize,
     pub catalog_items: Vec<MarketplaceCatalogItemView>,
     pub selected_item: Option<MarketplaceCatalogItemView>,
     pub detail: Option<MarketplaceDetailView>,
     pub slash: SlashFlowView,
-    pub readme_scroll: usize,
 }

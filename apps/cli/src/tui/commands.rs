@@ -184,7 +184,7 @@ impl TuiShell {
 
     pub(crate) fn handle_sessions_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/sessions")
+            .strip_prefix("/session")
             .map(str::trim)
             .unwrap_or("");
         if tail.is_empty() {
@@ -475,7 +475,7 @@ impl TuiShell {
 
     pub(crate) fn handle_subagents_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/subagents")
+            .strip_prefix("/subagent")
             .map(str::trim)
             .unwrap_or("");
 
@@ -762,7 +762,7 @@ impl TuiShell {
 
     pub(crate) fn handle_extensions_slash(&mut self, message: &str) {
         let tail = message
-            .strip_prefix("/extensions")
+            .strip_prefix("/extension")
             .map(str::trim)
             .unwrap_or("");
         if tail.is_empty() {
@@ -776,22 +776,20 @@ impl TuiShell {
             return;
         }
 
-        if let Some(query) = tail.strip_prefix("marketplace").map(str::trim) {
-            self.open_marketplace_view((!query.is_empty()).then_some(query));
-            self.push_agent_message(if query.is_empty() {
-                t!("tui.marketplace.opened").into_owned()
-            } else {
-                t!("tui.marketplace.opened_filtered", query = query).into_owned()
-            });
-            return;
-        }
-
         let Some(subcommand) = tail.split_whitespace().next() else {
             self.push_agent_message(t!("tui.extensions.usage").into_owned());
             return;
         };
 
         match subcommand {
+            // Two-level marketplace TUI (list → detail) over the configured sources.
+            "marketplace" => {
+                let query = tail
+                    .strip_prefix("marketplace")
+                    .map(str::trim)
+                    .unwrap_or("");
+                self.open_marketplace_view(if query.is_empty() { None } else { Some(query) });
+            }
             "list" if tail == "list" => match self.refresh_extensions_from_disk() {
                 Ok(()) => {
                     self.push_agent_message(format_extension_list_message(self.extension_entries()))
@@ -1350,7 +1348,7 @@ impl TuiShell {
     }
 
     pub(crate) fn handle_hooks_slash(&mut self, message: &str) {
-        let tail = message.strip_prefix("/hooks").map(str::trim).unwrap_or("");
+        let tail = message.strip_prefix("/hook").map(str::trim).unwrap_or("");
 
         if tail.is_empty() || tail == "list" {
             self.push_hooks_overview();
@@ -1467,7 +1465,8 @@ fn format_extension_list_message(entries: &[CliExtensionEntry]) -> String {
         if let Some(author) = entry
             .author
             .as_ref()
-            .filter(|value| !value.trim().is_empty())
+            .map(|value| value.name.trim())
+            .filter(|value| !value.is_empty())
         {
             lines.push(format!("  author: {}", author));
         }

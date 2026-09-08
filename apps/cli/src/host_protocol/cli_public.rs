@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::path::PathBuf;
 
 use crate::{plan::PlanMetadata, rules::RuleEntry, skills::SkillEntry};
 
@@ -8,6 +9,8 @@ use crate::{plan::PlanMetadata, rules::RuleEntry, skills::SkillEntry};
 pub struct CliHostMetadataSnapshot {
     pub rule_entries: Vec<RuleEntry>,
     pub skill_entries: Vec<SkillEntry>,
+    #[serde(default)]
+    pub extension_skill_entries: Vec<CliExtensionSkillSlashEntry>,
     pub plan_metadata: PlanMetadata,
 }
 
@@ -97,103 +100,165 @@ pub struct CliExtensionContributes {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CliExtensionMcpContributionSummary {
+    pub name: String,
+    #[serde(default)]
+    pub display_name: Option<String>,
+    pub transport: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionSkillContributionSummary {
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionRuleContributionSummary {
+    #[serde(default)]
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionInstructionContributions {
+    #[serde(default)]
+    pub mcp: Option<Vec<CliExtensionMcpContributionSummary>>,
+    #[serde(default)]
+    pub hooks: Option<Vec<String>>,
+    #[serde(default)]
+    pub skills: Option<Vec<CliExtensionSkillContributionSummary>>,
+    #[serde(default)]
+    pub rules: Option<CliExtensionRuleContributionSummary>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionSkillSlashEntry {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub path: PathBuf,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliExtensionAuthor {
+    pub name: String,
+    pub email: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CliExtensionEntry {
     pub id: String,
     pub display_name: String,
     pub version: String,
+    pub enabled: bool,
     pub description: Option<String>,
-    pub author: Option<String>,
-    pub homepage: Option<String>,
+    pub author: Option<CliExtensionAuthor>,
     pub main: Option<String>,
     pub supported_hosts: Vec<String>,
     pub activation_events: Option<Vec<String>>,
     pub requested_capabilities: Option<Vec<String>>,
     pub contributes: Option<CliExtensionContributes>,
+    #[serde(default)]
+    pub instruction_contributions: Option<CliExtensionInstructionContributions>,
     pub settings_schema: Option<Vec<CliExtensionSettingEntry>>,
     pub secret_slots: Option<Vec<CliExtensionSecretSlotEntry>>,
     pub archive_file_name: Option<String>,
     pub installed_at_unix_ms: u64,
+    #[serde(default = "default_extension_installed")]
+    pub installed: bool,
+    #[serde(default)]
+    pub install_source: Option<String>,
+}
+
+fn default_extension_installed() -> bool {
+    true
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CliMarketplaceCatalogItem {
-    pub extension_id: String,
-    pub package_name: String,
-    pub status: String,
-    pub featured: bool,
-    pub default_version: String,
-    pub default_channel: String,
-    pub default_review_status: String,
-    pub detail_path: String,
+pub struct CliMarketplaceSource {
+    pub id: String,
+    pub name: String,
     pub display_name: String,
-    pub description: String,
-    pub author: Option<String>,
-    pub homepage_url: Option<String>,
-    pub repository_url: Option<String>,
-    pub keywords: Vec<String>,
-    pub supported_hosts: Vec<String>,
-    pub requested_capabilities: Vec<String>,
-    pub icon_url: Option<String>,
+    pub kind: String,
+    pub locator: String,
+    #[serde(rename = "ref")]
+    pub git_ref: Option<String>,
+    pub added_at_unix_ms: u64,
+    #[serde(default)]
+    pub internal: bool,
 }
 
+/// A marketplace catalog row: registry entry fields plus install state.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CliMarketplaceVersionChangelog {
-    pub summary: String,
-    pub body: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliMarketplaceDetailVersion {
-    pub version: String,
-    pub channel: String,
-    pub review_status: String,
+pub struct CliMarketplaceCatalogEntry {
+    /// Composite identity: `<sourceId>/<name>`.
+    pub id: String,
+    pub source_id: String,
+    pub source_name: String,
+    pub name: String,
     pub display_name: String,
-    pub description: String,
-    pub author: Option<String>,
-    pub homepage_url: Option<String>,
-    pub repository_url: Option<String>,
-    pub keywords: Vec<String>,
-    pub supported_hosts: Vec<String>,
-    pub requested_capabilities: Vec<String>,
-    pub icon_url: Option<String>,
-    pub published_at: Option<String>,
-    pub tarball_url: Option<String>,
-    pub integrity: Option<String>,
-    pub shasum: Option<String>,
-    pub changelog: Option<CliMarketplaceVersionChangelog>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliMarketplaceDetail {
-    pub extension_id: String,
-    pub package_name: String,
-    pub status: String,
-    pub featured: bool,
-    pub default_version: String,
-    pub readme_path: String,
-    pub versions: Vec<CliMarketplaceDetailVersion>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CliMarketplacePreparedInstall {
-    pub extension_id: String,
-    pub package_name: String,
-    pub display_name: String,
+    #[serde(default)]
     pub description: String,
     pub version: String,
-    pub channel: String,
+    pub author: Option<CliExtensionAuthor>,
+    #[serde(default)]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub keywords: Option<Vec<String>>,
+    #[serde(default)]
+    pub homepage: Option<String>,
+    #[serde(default)]
+    pub featured: Option<bool>,
     pub review_status: String,
+    #[serde(default)]
+    pub icon_url: Option<String>,
+    #[serde(default)]
     pub supported_hosts: Vec<String>,
-    pub supports_current_host: bool,
-    pub tarball_url: Option<String>,
-    pub integrity: Option<String>,
-    pub shasum: Option<String>,
-    pub source_file_name: String,
-    pub catalog_item: CliMarketplaceCatalogItem,
-    pub detail: CliMarketplaceDetail,
+    #[serde(default)]
+    pub activation_events: Option<Vec<String>>,
+    #[serde(default)]
+    pub requested_capabilities: Option<Vec<String>>,
+    #[serde(default)]
+    pub contributes: Option<CliExtensionContributes>,
+    #[serde(default)]
+    pub installed: bool,
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub installed_version: Option<String>,
+    #[serde(default)]
+    pub update_available: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliMarketplaceCatalogResponse {
+    #[serde(default)]
+    pub items: Vec<CliMarketplaceCatalogEntry>,
+    #[serde(default)]
+    pub warning: Option<String>,
+}
+
+/// Install / update result union from host.installMarketplaceExtension / host.updateExtension.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CliMarketplaceActionResult {
+    pub status: String,
+    #[serde(default)]
+    pub extension: Option<CliExtensionEntry>,
+    #[serde(default)]
+    pub extension_id: Option<String>,
+    #[serde(default)]
+    pub review_status: Option<String>,
 }

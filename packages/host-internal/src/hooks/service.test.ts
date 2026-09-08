@@ -67,3 +67,52 @@ echo '{"permission":"ask","userMessage":"hook wants confirmation"}'
   assert.equal(result.permission, "ask");
   assert.equal(result.userMessage, "hook wants confirmation");
 });
+
+test("createHookRunner runs extension hooks without workspace trust", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "spirit-hook-extension-"));
+  const script = join(dir, "extension.sh");
+  await writeFile(
+    script,
+    `#!/bin/bash
+cat > /dev/null
+echo '{"additionalContext":"from-extension"}'
+`,
+    "utf8",
+  );
+  await chmod(script, 0o755);
+
+  const runner = createHookRunner({
+    spiritDataDir: dir,
+    workspaceRoot: join(dir, "workspace"),
+    reloadConfig: () => ({
+      user: { version: 1, hooks: {} },
+      workspace: {
+        version: 1,
+        hooks: {
+          sessionStart: [{ command: "missing-workspace.sh" }],
+        },
+      },
+      userConfigDir: dir,
+      workspaceConfigDir: join(dir, "workspace"),
+    }),
+    loadExtensionHooks: () => [
+      {
+        command: script,
+        scope: "extension",
+        configDir: dir,
+        timeout: 30,
+      },
+    ],
+  });
+
+  const result = await runner.runSessionStart({
+    sessionId: "s1",
+    conversationPath: null,
+    workspaceRoot: join(dir, "workspace"),
+    model: "m",
+    source: "startup",
+  });
+
+  assert.equal(result.denied, false);
+  assert.deepEqual(result.additionalContexts, ["from-extension"]);
+});

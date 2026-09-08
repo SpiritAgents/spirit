@@ -1,4 +1,11 @@
 import type { JsonObject, JsonValue } from "@spiritagent/agent-core";
+import {
+  summarizeDeclaredExtensionContributionPoints,
+  type HostInstalledExtension,
+  type HostMarketplaceCatalogItem,
+  type MarketplaceCatalogItem,
+  type MarketplaceSourceRecord,
+} from "@spiritagent/host-internal";
 
 /**
  * Serializers mirroring the legacy host-bridge shapes — CLI/Desktop clients
@@ -16,11 +23,12 @@ interface ExtensionToolContribution {
 
 interface ExtensionManifestLike {
   name: string;
+  displayName: string;
   icon?: string;
   version: string;
   description?: string;
-  author?: string;
-  homepage?: string;
+  author?: { name: string; email?: string; url?: string };
+  keywords?: string[];
   main?: string;
   supportedHosts: Array<"cli" | "desktop">;
   activationEvents?: string[];
@@ -112,16 +120,27 @@ export function serializeHostExtension(item: {
   id: string;
   manifest: ExtensionManifestLike;
   installedAtUnixMs: number;
+  enabled: boolean;
   archiveFileName?: string;
+  installSource?: "built-in" | "archive" | "marketplace";
 }): JsonObject {
   return {
     id: item.id,
-    displayName: item.manifest.name,
+    displayName: item.manifest.displayName,
+    enabled: item.enabled,
     ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
     version: item.manifest.version,
     ...(item.manifest.description ? { description: item.manifest.description } : {}),
-    ...(item.manifest.author ? { author: item.manifest.author } : {}),
-    ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
+    ...(item.manifest.author
+      ? {
+          author: {
+            name: item.manifest.author.name,
+            ...(item.manifest.author.email ? { email: item.manifest.author.email } : {}),
+            ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
+          },
+        }
+      : {}),
+    ...(item.manifest.keywords?.length ? { keywords: [...item.manifest.keywords] } : {}),
     ...(item.manifest.main ? { main: item.manifest.main } : {}),
     supportedHosts: [...item.manifest.supportedHosts],
     ...(item.manifest.activationEvents?.length
@@ -164,157 +183,89 @@ export function serializeHostExtension(item: {
         }
       : {}),
     ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
+    ...(item.installSource ? { installSource: item.installSource } : {}),
     installedAtUnixMs: item.installedAtUnixMs,
   } as unknown as JsonObject;
 }
 
-interface MarketplaceCatalogItemLike {
-  extensionId: string;
-  packageName: string;
-  status: string;
-  featured: boolean;
-  defaultVersion: string;
-  defaultChannel: string;
-  defaultReviewStatus: string;
-  detailPath: string;
-  displayName: string;
-  description: string;
-  author?: string;
-  homepageUrl?: string;
-  repositoryUrl?: string;
-  keywords: string[];
-  supportedHosts: string[];
-  requestedCapabilities: string[];
-  iconUrl?: string;
-}
-
-export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItemLike): JsonObject {
+export async function serializeListedHostExtension(
+  item: HostInstalledExtension,
+): Promise<JsonObject> {
+  const summary = await summarizeDeclaredExtensionContributionPoints(item);
   return {
-    extensionId: item.extensionId,
-    packageName: item.packageName,
-    status: item.status,
-    featured: item.featured,
-    defaultVersion: item.defaultVersion,
-    defaultChannel: item.defaultChannel,
-    defaultReviewStatus: item.defaultReviewStatus,
-    detailPath: item.detailPath,
-    displayName: item.displayName,
-    description: item.description,
-    ...(item.author ? { author: item.author } : {}),
-    ...(item.homepageUrl ? { homepageUrl: item.homepageUrl } : {}),
-    ...(item.repositoryUrl ? { repositoryUrl: item.repositoryUrl } : {}),
-    keywords: [...item.keywords],
-    supportedHosts: [...item.supportedHosts],
-    requestedCapabilities: [...item.requestedCapabilities],
-    ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
-  } as unknown as JsonObject;
-}
-
-interface MarketplaceVersionLike {
-  version: string;
-  channel: string;
-  reviewStatus: string;
-  displayName: string;
-  description: string;
-  author?: string;
-  homepageUrl?: string;
-  repositoryUrl?: string;
-  keywords: string[];
-  supportedHosts: string[];
-  requestedCapabilities: string[];
-  iconUrl?: string;
-  publishedAt?: string;
-  tarballUrl?: string;
-  integrity?: string;
-  shasum?: string;
-  changelog?: { summary: string; body: string };
-}
-
-function serializeMarketplaceVersion(item: MarketplaceVersionLike): JsonObject {
-  return {
-    version: item.version,
-    channel: item.channel,
-    reviewStatus: item.reviewStatus,
-    displayName: item.displayName,
-    description: item.description,
-    ...(item.author ? { author: item.author } : {}),
-    ...(item.homepageUrl ? { homepageUrl: item.homepageUrl } : {}),
-    ...(item.repositoryUrl ? { repositoryUrl: item.repositoryUrl } : {}),
-    keywords: [...item.keywords],
-    supportedHosts: [...item.supportedHosts],
-    requestedCapabilities: [...item.requestedCapabilities],
-    ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
-    ...(item.publishedAt ? { publishedAt: item.publishedAt } : {}),
-    ...(item.tarballUrl ? { tarballUrl: item.tarballUrl } : {}),
-    ...(item.integrity ? { integrity: item.integrity } : {}),
-    ...(item.shasum ? { shasum: item.shasum } : {}),
-    ...(item.changelog
-      ? { changelog: { summary: item.changelog.summary, body: item.changelog.body } }
-      : {}),
-  } as unknown as JsonObject;
-}
-
-export function serializeMarketplaceDetail(detail: {
-  extensionId: string;
-  packageName: string;
-  status: string;
-  featured: boolean;
-  defaultVersion: string;
-  readmePath: string;
-  versions: MarketplaceVersionLike[];
-}): JsonObject {
-  return {
-    extensionId: detail.extensionId,
-    packageName: detail.packageName,
-    status: detail.status,
-    featured: detail.featured,
-    defaultVersion: detail.defaultVersion,
-    readmePath: detail.readmePath,
-    versions: detail.versions.map(serializeMarketplaceVersion),
-  } as unknown as JsonObject;
-}
-
-export function serializeMarketplacePreparedInstall(item: {
-  extensionId: string;
-  packageName: string;
-  displayName: string;
-  description: string;
-  version: string;
-  channel: string;
-  reviewStatus: string;
-  supportedHosts: string[];
-  supportsCurrentHost: boolean;
-  tarballUrl?: string;
-  integrity?: string;
-  shasum?: string;
-  sourceFileName: string;
-  catalogItem: MarketplaceCatalogItemLike;
-  detail: {
-    extensionId: string;
-    packageName: string;
-    status: string;
-    featured: boolean;
-    defaultVersion: string;
-    readmePath: string;
-    versions: MarketplaceVersionLike[];
+    ...serializeHostExtension(item),
+    ...(summary ? { instructionContributions: summary as unknown as JsonValue } : {}),
   };
-}): JsonObject {
+}
+
+export async function serializeListedMarketplaceCatalogItem(
+  item: HostMarketplaceCatalogItem,
+): Promise<JsonObject> {
   return {
-    extensionId: item.extensionId,
-    packageName: item.packageName,
-    displayName: item.displayName,
-    description: item.description,
-    version: item.version,
-    channel: item.channel,
-    reviewStatus: item.reviewStatus,
-    supportedHosts: [...item.supportedHosts],
-    supportsCurrentHost: item.supportsCurrentHost,
-    ...(item.tarballUrl ? { tarballUrl: item.tarballUrl } : {}),
-    ...(item.integrity ? { integrity: item.integrity } : {}),
-    ...(item.shasum ? { shasum: item.shasum } : {}),
-    sourceFileName: item.sourceFileName,
-    catalogItem: serializeMarketplaceCatalogItem(item.catalogItem),
-    detail: serializeMarketplaceDetail(item.detail),
+    ...(await serializeListedHostExtension(item)),
+    installed: item.installed,
+  };
+}
+
+export function serializeMarketplaceSource(record: MarketplaceSourceRecord): JsonObject {
+  return {
+    id: record.id,
+    name: record.name,
+    displayName: record.displayName,
+    kind: record.kind,
+    locator: record.locator,
+    ...(record.ref ? { ref: record.ref } : {}),
+    addedAtUnixMs: record.addedAtUnixMs,
+    internal: record.id === "built-in" || record.id === "personal",
+  };
+}
+
+/** Multi-source catalog row: registry entry fields plus install state. */
+export function serializeMarketplaceCatalogItem(item: MarketplaceCatalogItem): JsonObject {
+  const { entry } = item;
+  return {
+    id: `${item.source.id}/${entry.name}`,
+    sourceId: item.source.id,
+    sourceName: item.source.name,
+    name: entry.name,
+    displayName: entry.displayName,
+    description: entry.description,
+    version: entry.version,
+    ...(entry.author
+      ? {
+          author: {
+            name: entry.author.name,
+            ...(entry.author.email ? { email: entry.author.email } : {}),
+            ...(entry.author.url ? { url: entry.author.url } : {}),
+          },
+        }
+      : {}),
+    ...(entry.category ? { category: entry.category } : {}),
+    ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
+    ...(entry.homepage ? { homepage: entry.homepage } : {}),
+    ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
+    reviewStatus: entry.reviewStatus,
+    ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
+    supportedHosts: [...entry.manifest.supportedHosts],
+    ...(entry.manifest.activationEvents?.length
+      ? { activationEvents: [...entry.manifest.activationEvents] }
+      : {}),
+    ...(entry.manifest.requestedCapabilities?.length
+      ? { requestedCapabilities: [...entry.manifest.requestedCapabilities] }
+      : {}),
+    ...(entry.manifest.contributes
+      ? { contributes: entry.manifest.contributes as unknown as JsonValue }
+      : {}),
+    ...(entry.manifest.settingsSchema?.length
+      ? { settingsSchema: entry.manifest.settingsSchema as unknown as JsonValue }
+      : {}),
+    ...(entry.manifest.secretSlots?.length
+      ? { secretSlots: entry.manifest.secretSlots as unknown as JsonValue }
+      : {}),
+    installed: item.installed,
+    ...(item.enabled !== undefined ? { enabled: item.enabled } : {}),
+    ...(item.installedVersion ? { installedVersion: item.installedVersion } : {}),
+    updateAvailable: item.updateAvailable,
   } as unknown as JsonObject;
 }
 

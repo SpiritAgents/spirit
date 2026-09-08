@@ -25,6 +25,7 @@
     "eval:compare": "turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal && node scripts/eval-compare.mjs",
     "eval:judge": "turbo run build --filter=@spiritagent/agent-core && node scripts/eval-judge.mjs",
     "smoke:host-internal-models-parse": "pnpm --filter @spiritagent/host-internal run smoke:openai-models-parse",
+    "smoke:extension-marketplace": "node scripts/smoke/extension-marketplace.mjs",
     "dev": "turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal && cargo run -p spirit",
     "dev:cli": "cargo run -p spirit",
     "dev:desktop": "pnpm --filter @spiritagent/desktop dev",

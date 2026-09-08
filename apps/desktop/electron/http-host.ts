@@ -557,60 +557,89 @@ async function handleApiRequest({
     return;
   }
 
-  if (request.method === "GET" && pathname === "/api/marketplace/extensions") {
-    writeJson(request, response, 200, await runHostCommand("listMarketplaceExtensions"));
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/api/marketplace/extensions/detail") {
+  if (request.method === "POST" && pathname === "/api/extensions/install-built-in") {
     writeJson(
       request,
       response,
       200,
-      await runHostCommand("getMarketplaceExtensionDetail", {
-        extensionId: typeof jsonBody?.extensionId === "string" ? jsonBody.extensionId : "",
-      }),
-    );
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/api/marketplace/extensions/readme") {
-    writeJson(
-      request,
-      response,
-      200,
-      await runHostCommand("getMarketplaceExtensionReadme", {
-        extensionId: typeof jsonBody?.extensionId === "string" ? jsonBody.extensionId : "",
-      }),
-    );
-    return;
-  }
-
-  if (request.method === "POST" && pathname === "/api/marketplace/extensions/prepare") {
-    writeJson(
-      request,
-      response,
-      200,
-      await runHostCommand("prepareMarketplaceExtensionInstall", {
+      await runHostCommand("installBuiltInExtension", {
         request: {
-          extensionId: typeof jsonBody?.extensionId === "string" ? jsonBody.extensionId : "",
-          version: typeof jsonBody?.version === "string" ? jsonBody.version : undefined,
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
         },
       }),
     );
     return;
   }
 
-  if (request.method === "POST" && pathname === "/api/marketplace/extensions/install") {
+  if (request.method === "POST" && pathname === "/api/extensions/install") {
     writeJson(
       request,
       response,
       200,
       await runHostCommand("installMarketplaceExtension", {
         request: {
-          extensionId: typeof jsonBody?.extensionId === "string" ? jsonBody.extensionId : "",
-          version: typeof jsonBody?.version === "string" ? jsonBody.version : undefined,
+          name: typeof jsonBody?.name === "string" ? jsonBody.name : "",
+          marketplace: typeof jsonBody?.marketplace === "string" ? jsonBody.marketplace : undefined,
           reviewAcknowledged: jsonBody?.reviewAcknowledged === true,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/extensions/update") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("updateExtension", {
+        request: {
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
+          reviewAcknowledged: jsonBody?.reviewAcknowledged === true,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/marketplaces/add") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("addMarketplaceSource", {
+        request: {
+          locator: typeof jsonBody?.locator === "string" ? jsonBody.locator : "",
+          ref: typeof jsonBody?.ref === "string" ? jsonBody.ref : undefined,
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/marketplaces/remove") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("removeMarketplaceSource", {
+        request: {
+          name: typeof jsonBody?.name === "string" ? jsonBody.name : "",
+        },
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/extensions/enabled") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("setExtensionEnabled", {
+        request: {
+          id: typeof jsonBody?.id === "string" ? jsonBody.id : "",
+          enabled: jsonBody?.enabled === true,
         },
       }),
     );

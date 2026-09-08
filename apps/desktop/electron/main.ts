@@ -152,7 +152,6 @@ async function focusOrCreateSpiritDesktopWindows(): Promise<void> {
 
 import {
   invokeDesktopHostCommand,
-  setDesktopMarketplaceFetchImplementation,
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -951,8 +950,10 @@ async function createMainWindow(): Promise<BrowserWindow> {
   const window = new BrowserWindow({
     width: 1440,
     height: 920,
-    minWidth: 1100,
-    minHeight: 720,
+    // Phone-class minimum (the standard 360x640 handset viewport), so
+    // small-screen and phone-like layouts stay testable by resizing.
+    minWidth: 360,
+    minHeight: 640,
     show: false,
     ...(windowIcon ? { icon: windowIcon } : {}),
     backgroundColor: initialBg,
@@ -1121,7 +1122,6 @@ if (gotSpiritSingleInstanceLock) {
     const electronNetFetch: typeof fetch = (input, init) =>
       net.fetch(input instanceof URL ? input.toString() : input, init);
 
-    setDesktopMarketplaceFetchImplementation(electronNetFetch);
     setDesktopGitHubFetchImplementation(electronNetFetch);
 
     unsubscribeDesktopDreamUpdates = subscribeDesktopDreamUpdates((snapshot) => {

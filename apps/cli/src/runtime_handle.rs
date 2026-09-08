@@ -9,8 +9,9 @@ use crate::{
     ask_questions::AskQuestionsResult,
     daemon::DaemonRuntime,
     host_protocol::{
-        CliExtensionEntry, CliHostMetadataSnapshot, CliMarketplaceCatalogItem,
-        CliMarketplaceDetail, CliMarketplacePreparedInstall, WorkspaceCapabilityTrustPrompter,
+        CliExtensionEntry, CliHostMetadataSnapshot, CliMarketplaceActionResult,
+        CliMarketplaceCatalogEntry, CliMarketplaceCatalogResponse, CliMarketplaceSource,
+        WorkspaceCapabilityTrustPrompter,
     },
     host_runtime::RuntimeEvent,
     mcp::{McpScope, McpServerConfig},
@@ -145,38 +146,58 @@ impl RuntimeHandle {
         self.backend.delete_extension(id)
     }
 
-    pub fn list_marketplace_extensions(&mut self) -> Result<Vec<CliMarketplaceCatalogItem>> {
-        self.backend.list_marketplace_extensions()
+    pub fn set_extension_enabled(&mut self, id: &str, enabled: bool) -> Result<()> {
+        self.backend.set_extension_enabled(id, enabled)
+    }
+
+    pub fn list_marketplace_sources(&mut self) -> Result<Vec<CliMarketplaceSource>> {
+        self.backend.list_marketplace_sources()
+    }
+
+    pub fn add_marketplace_source(
+        &mut self,
+        locator: &str,
+        git_ref: Option<&str>,
+    ) -> Result<CliMarketplaceSource> {
+        self.backend.add_marketplace_source(locator, git_ref)
+    }
+
+    pub fn remove_marketplace_source(&mut self, name: &str) -> Result<CliMarketplaceSource> {
+        self.backend.remove_marketplace_source(name)
+    }
+
+    pub fn list_marketplace_catalog(
+        &mut self,
+        source_id: &str,
+    ) -> Result<CliMarketplaceCatalogResponse> {
+        self.backend.list_marketplace_catalog(source_id)
     }
 
     pub fn get_marketplace_extension_detail(
         &mut self,
-        extension_id: &str,
-    ) -> Result<CliMarketplaceDetail> {
-        self.backend.get_marketplace_extension_detail(extension_id)
-    }
-
-    pub fn get_marketplace_extension_readme(&mut self, extension_id: &str) -> Result<String> {
-        self.backend.get_marketplace_extension_readme(extension_id)
-    }
-
-    pub fn prepare_marketplace_extension_install(
-        &mut self,
-        extension_id: &str,
-        version: Option<&str>,
-    ) -> Result<CliMarketplacePreparedInstall> {
+        source_id: &str,
+        name: &str,
+    ) -> Result<CliMarketplaceCatalogEntry> {
         self.backend
-            .prepare_marketplace_extension_install(extension_id, version)
+            .get_marketplace_extension_detail(source_id, name)
     }
 
     pub fn install_marketplace_extension(
         &mut self,
-        extension_id: &str,
-        version: Option<&str>,
+        name: &str,
+        marketplace: Option<&str>,
         review_acknowledged: bool,
-    ) -> Result<CliExtensionEntry> {
+    ) -> Result<CliMarketplaceActionResult> {
         self.backend
-            .install_marketplace_extension(extension_id, version, review_acknowledged)
+            .install_marketplace_extension(name, marketplace, review_acknowledged)
+    }
+
+    pub fn update_extension(
+        &mut self,
+        id: &str,
+        review_acknowledged: bool,
+    ) -> Result<CliMarketplaceActionResult> {
+        self.backend.update_extension(id, review_acknowledged)
     }
 
     pub fn session(&self) -> &SessionModel {

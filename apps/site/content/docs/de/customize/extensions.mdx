@@ -1,0 +1,65 @@
+---
+title: Erweiterungen
+description: Installiere Erweiterungen aus Marketplaces, importiere ein ZIP-Paket oder füge deinen eigenen entfernten Erweiterungsmarktplatz hinzu.
+---
+
+Erweiterungen fügen Spirit Fähigkeiten hinzu — Werkzeuge, Skills, Hooks, MCP-Server und UI-Beiträge. Sie werden über Erweiterungsmarktplätze verteilt:
+
+- **Integriert** — wird mit der App ausgeliefert.
+- **Persönlich** — deine eigenen Importe: ZIP-Pakete, die du selbst hinzugefügt hast.
+- **Entfernte Erweiterungsmarktplätze** — von dir hinzugefügt: ein Git-Repository, eine HTTP-Index-URL oder ein lokales Verzeichnis.
+
+Auf dem Desktop zeigt die Seite **Erweiterungen** in der Seitenleiste einen Tab pro Marktplatz, und der Tab **Alle** fasst alle Marktplätze in einer Liste zusammen. Die CLI bietet dieselben Abläufe über die `spirit extension`-Befehle und die `/extension marketplace`-TUI.
+
+## Installieren, Aktualisieren und Deinstallieren
+
+Öffne auf dem Desktop **Erweiterungen**, wähle eine Erweiterung und klicke auf **Installieren**. Eine installierte Erweiterung zeigt ein Menü **Weitere Aktionen** mit **Deaktivieren** (schaltet sie aus, ohne sie zu entfernen) und **Deinstallieren**. Wenn der Marktplatz eine neuere Version veröffentlicht, zeigt die Detailseite eine Schaltfläche **Aktualisieren**.
+
+In der CLI:
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` löst `<name>` über alle hinzugefügten Marktplätze auf. Wenn zwei Marktplätze denselben Namen anbieten, schlägt der Befehl fehl und listet sie auf — führe ihn mit `--marketplace <name>` erneut aus, um einen auszuwählen. Derselbe Name kann aus verschiedenen Marktplätzen installiert nebeneinander bestehen — Installationen sind pro Marktplatz isoliert.
+
+Integrierte Erweiterungen werden automatisch mit der App aktualisiert. Persönliche (importierte) Erweiterungen haben keine Quelle, aus der sie aktualisiert werden könnten — importiere stattdessen ein neueres ZIP.
+
+## Prüfungsbestätigung
+
+Das Installieren oder Aktualisieren einer Erweiterung, deren Marktplatz-Eintrag nicht verifiziert — oder widerrufen — ist, erfordert eine ausdrückliche Bestätigung. Der Desktop zeigt den Dialog **Erweiterung prüfen**; die CLI verlangt `--review-acknowledged`, und die TUI zeigt einen Bestätigungsschritt.
+
+## Eine Erweiterung importieren (ZIP)
+
+Ein ZIP-Paket ist der selbstdeklarierte Seitenkanal: ganz ohne Marktplatz.
+
+- Desktop: Seite **Erweiterungen** → **Hinzufügen** → **Erweiterung importieren**, dann die ZIP-Datei auswählen.
+- CLI: `spirit extension import <archive>`.
+
+Importe landen als nicht verifizierte Einträge im **Persönlich**-Marktplatz und durchlaufen dieselbe Prüfungsbestätigung. Ein erneuter Import desselben Namens überschreibt ihn, und das Deinstallieren einer importierten Erweiterung entfernt auch ihren Persönlich-Eintrag.
+
+## Einen Marktplatz hinzufügen
+
+- Desktop: Seite **Erweiterungen** → **Hinzufügen** → **Marketplace hinzufügen** → **Von Festplatte hinzufügen** (ein lokales Verzeichnis) oder **Von URL hinzufügen** (ein Git-Repository oder eine HTTP-Index-URL).
+- CLI: `spirit extension marketplace add <url|path>`.
+
+Drei Locator-Formen:
+
+| Form                            | Beispiel                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| Lokales Verzeichnis             | `spirit extension marketplace add ./my-marketplace`                      |
+| Git-Repository (HTTPS oder SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| HTTP-Index-URL                  | `spirit extension marketplace add https://example.com`                   |
+
+Git-URLs akzeptieren `--git-ref <tag|branch|commit>`, um ein Ref festzulegen; Standard ist der Standard-Branch des Remotes. Eine nackte Site-URL wird automatisch um `/.spirit/marketplace.json` ergänzt.
+
+Verwalte hinzugefügte Marktplätze mit `spirit extension marketplace list` und `spirit extension marketplace remove <name>`. Auf dem Desktop erreichst du die Entfernen-Aktion per Rechtsklick auf einen Marktplatz-Tab.
+
+<Callout type="info">
+  Die deklarierten Fähigkeiten einer Erweiterung werden von ihrem Marktplatz bestätigt, nicht vom
+  Paket selbst. Einen Marktplatz hinzuzufügen bedeutet, der Prüfung seines Betreibers zu vertrauen —
+  füge nur Quellen hinzu, denen du vertraust.
+</Callout>

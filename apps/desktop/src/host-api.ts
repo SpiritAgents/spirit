@@ -22,19 +22,23 @@ import type {
   DesktopCreateAutomationRequest,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
   DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   RemoveProviderGroupRequest,
@@ -128,16 +132,17 @@ export interface HostApi {
   deleteHookEntry(request: DeleteHookEntryRequest): Promise<DesktopSnapshot>;
   inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
   importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
-  listMarketplaceExtensions(): Promise<DesktopMarketplaceCatalogItem[]>;
-  getMarketplaceExtensionDetail(extensionId: string): Promise<DesktopMarketplaceDetail>;
-  getMarketplaceExtensionReadme(extensionId: string): Promise<string>;
-  prepareMarketplaceExtensionInstall(
-    request: PrepareMarketplaceExtensionInstallRequest,
-  ): Promise<DesktopMarketplacePreparedInstall>;
+  installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
+  addMarketplaceSource(
+    request: AddMarketplaceSourceRequest,
+  ): Promise<MarketplaceSourceCommandResult>;
+  removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot>;
   installMarketplaceExtension(
     request: InstallMarketplaceExtensionRequest,
-  ): Promise<DesktopSnapshot>;
+  ): Promise<MarketplaceInstallCommandResult>;
+  updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult>;
   deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
+  setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
   runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
   updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
   updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;

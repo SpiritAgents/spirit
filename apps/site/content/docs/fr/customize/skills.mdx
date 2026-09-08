@@ -1,6 +1,6 @@
 ---
 title: Compétences
-description: Compétences utilisateur, .spirit et .agents, plus create-rule, create-skill et create-hook intégrés.
+description: Compétences utilisateur, .spirit et .agents, plus create-rule, create-skill, create-hook et create-extension intégrés.
 ---
 
 Une compétence est un dossier avec un `SKILL.md`. Spirit découvre les compétences à partir de trois emplacements :
@@ -29,5 +29,6 @@ Celles-ci sont fournies avec Spirit (ce ne sont pas des fichiers dans votre rép
 - `create-rule` — rédigez une [règle](./rules.mdx)
 - `create-skill` — rédigez une [compétence](./skills.mdx)
 - `create-hook` — rédigez un [hook](./hooks.mdx)
+- `create-extension` — rédigez une [extension](../develop/extensions.mdx)
 
-Gérez les compétences dans **Paramètres → Compétences**. Les pastilles Git commit / push / merge sont de l'interface hôte, pas des compétences groupées. Voir [Desktop](../desktop.mdx).
+Gérez les compétences dans **Paramètres → Compétences**. Les pastilles Git commit / push / merge sont de l'interface hôte, pas des compétences groupées. Voir [Desktop](../desktop.mdx). Les skills bundlées dans une [extension](../develop/extensions.mdx) sont disponibles lorsque cette extension est activée. Elles n'apparaissent pas dans cette liste de paramètres.

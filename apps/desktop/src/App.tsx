@@ -390,6 +390,7 @@ export default function App() {
               data-spirit-surface="app-shell"
               data-spirit-shell-kind={isElectronShell ? "electron" : "web"}
               data-spirit-mica={useTranslucency ? "true" : "false"}
+              data-spirit-content-translucency={useContentTranslucency ? "true" : "false"}
               className={cn(
                 "flex h-full min-h-0 flex-col",
                 useTranslucency ? "bg-transparent" : "bg-background",
@@ -542,7 +543,10 @@ export default function App() {
                           hooksBusy={runtime.busyAction === "hooks"}
                           skillsBusy={runtime.busyAction === "skills"}
                           rulesBusy={runtime.busyAction === "rules"}
-                          extensionsBusy={runtime.busyAction === "extensions"}
+                          extensionsBusy={
+                            runtime.busyAction === "extensions" ||
+                            runtime.busyAction === "extensionsImport"
+                          }
                           lspInstallBusy={runtime.lspInstallBusy}
                           isElectronShell={isElectronShell}
                           onSavePatch={runtime.saveSettingsPatch}
@@ -554,8 +558,6 @@ export default function App() {
                           onRemoveModel={runtime.removeModel}
                           onRemoveProviderModels={runtime.removeProviderModels}
                           onAddMcpServer={runtime.addMcpServer}
-                          onImportExtension={runtime.importExtension}
-                          onDeleteExtension={runtime.deleteExtension}
                           onUpdateExtensionSettings={runtime.updateExtensionSettings}
                           onUpdateExtensionSecret={runtime.updateExtensionSecret}
                           onDeleteMcpServer={runtime.deleteMcpServer}
@@ -700,15 +702,22 @@ export default function App() {
                         <MarketplaceView
                           useTranslucency={useContentTranslucency}
                           snapshot={snapshot}
-                          apiReady={runtime.apiReady}
-                          busyAction={runtime.busyAction}
-                          onListMarketplaceExtensions={runtime.listMarketplaceExtensions}
-                          onGetMarketplaceExtensionDetail={runtime.getMarketplaceExtensionDetail}
-                          onGetMarketplaceExtensionReadme={runtime.getMarketplaceExtensionReadme}
-                          onPrepareMarketplaceExtensionInstall={
-                            runtime.prepareMarketplaceExtensionInstall
+                          extensionsBusy={
+                            runtime.busyAction === "extensions" ||
+                            runtime.busyAction === "extensionsImport"
                           }
+                          extensionsInstalling={runtime.busyAction === "extensionsImport"}
+                          onImportExtension={runtime.importExtension}
                           onInstallMarketplaceExtension={runtime.installMarketplaceExtension}
+                          onUpdateExtension={runtime.updateExtension}
+                          onAddMarketplaceSource={runtime.addMarketplaceSource}
+                          onRemoveMarketplaceSource={runtime.removeMarketplaceSource}
+                          onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
+                          onDeleteExtension={runtime.deleteExtension}
+                          onSetExtensionEnabled={runtime.setExtensionEnabled}
+                          onGenerateExtensionNavigate={() => {
+                            surfaceNav.handlePrefillComposerSkillChip("create-extension");
+                          }}
                         />
                       </div>
                     ) : null}

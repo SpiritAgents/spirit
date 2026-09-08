@@ -12,6 +12,10 @@ import type {
   SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 import { cn } from "@/lib/utils";
 
 type AutomationDetailViewProps = {
@@ -142,7 +146,15 @@ export function AutomationDetailView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="mx-auto flex w-full max-w-4xl min-h-0 flex-1 flex-col px-4 py-8">
+      {/* Shares the conversation message list's max width and gutter: full width up to
+          the cap, then proportional side margins on narrower windows. */}
+      <div
+        className={cn(
+          "mx-auto flex w-full min-h-0 flex-1 flex-col py-8",
+          CONVERSATION_GUTTER_X,
+          CONVERSATION_MESSAGE_LIST_MAX_W,
+        )}
+      >
         <div className="space-y-4">
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             <button

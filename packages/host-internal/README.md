@@ -6,7 +6,7 @@ Shared **host-side implementation** for [Spirit](https://github.com/SpiritAgents
 
 - **Discovery** — rules, skills, and workspace instruction metadata for Agent Core system assembly.
 - **Tools** — `NodeHostToolService` and related helpers for in-process file, shell, grep/glob, and workspace operations.
-- **Extensions & marketplace** — extension catalog, install paths, and marketplace integration used by Desktop.
+- **Extensions** — extension install paths, local ZIP import, and lifecycle management used by Desktop and CLI.
 - **LSP orchestration** — language-server install, probe, and diagnostics wiring after file edits.
 - **Storage & runtime helpers** — Spirit data directory access, provider presets, and model listing utilities shared across hosts.
 

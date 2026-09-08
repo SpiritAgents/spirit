@@ -258,20 +258,20 @@ pub(in crate::ui) fn suggestion_summary(suggestion: &InputSuggestion) -> String 
         "/loop" => t!("ui.suggestion.summary.loop").into_owned(),
         "/model" => t!("ui.suggestion.summary.model").into_owned(),
         "/compact" => t!("ui.suggestion.summary.compact").into_owned(),
-        "/sessions" => t!("ui.suggestion.summary.sessions").into_owned(),
+        "/session" => t!("ui.suggestion.summary.sessions").into_owned(),
         "/rewind" => t!("ui.suggestion.summary.rewind").into_owned(),
         "/fork" => t!("ui.suggestion.summary.fork").into_owned(),
-        "/subagents" => t!("ui.suggestion.summary.subagents").into_owned(),
+        "/subagent" => t!("ui.suggestion.summary.subagents").into_owned(),
         "/image" => t!("ui.suggestion.summary.image").into_owned(),
         "/mcp" => t!("ui.suggestion.summary.mcp").into_owned(),
-        "/hooks" => t!("ui.suggestion.summary.hooks").into_owned(),
-        "/rules" => t!("ui.suggestion.summary.rules").into_owned(),
-        "/skills" => t!("ui.suggestion.summary.skills").into_owned(),
-        "/extensions" => t!("ui.suggestion.summary.extensions").into_owned(),
+        "/hook" => t!("ui.suggestion.summary.hooks").into_owned(),
+        "/rule" => t!("ui.suggestion.summary.rules").into_owned(),
+        "/skill" => t!("ui.suggestion.summary.skills").into_owned(),
+        "/extension" => t!("ui.suggestion.summary.extensions").into_owned(),
         "/log" => t!("ui.suggestion.summary.log").into_owned(),
         "/language" => t!("ui.suggestion.summary.language").into_owned(),
         "/approval" => t!("ui.suggestion.summary.approval").into_owned(),
-        "/networks" => t!("ui.suggestion.summary.networks").into_owned(),
+        "/network" => t!("ui.suggestion.summary.networks").into_owned(),
         "/tui" => t!("ui.suggestion.summary.tui").into_owned(),
         "/start-implementing" => t!("ui.suggestion.summary.start_implementing").into_owned(),
         _ => String::new(),
@@ -312,11 +312,11 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             t!("ui.suggestion.usage.model.add_cli").into_owned(),
             "    /model remove <name>".to_string(),
         ],
-        "/sessions" => vec![
+        "/session" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /sessions".to_string(),
-            "    /sessions save [path]".to_string(),
-            "    /sessions load <file>".to_string(),
+            "    /session".to_string(),
+            "    /session save [path]".to_string(),
+            "    /session load <file>".to_string(),
         ],
         "/rewind" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
@@ -329,12 +329,12 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             "    /fork".to_string(),
             t!("ui.suggestion.usage.fork.note").into_owned(),
         ],
-        "/subagents" => vec![
+        "/subagent" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /subagents".to_string(),
-            "    /subagents list".to_string(),
-            "    /subagents open <session_id>".to_string(),
-            "    /subagents close".to_string(),
+            "    /subagent".to_string(),
+            "    /subagent list".to_string(),
+            "    /subagent open <session_id>".to_string(),
+            "    /subagent close".to_string(),
             t!("ui.suggestion.usage.subagents.note").into_owned(),
         ],
         "/image" => vec![
@@ -356,29 +356,29 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             t!("ui.suggestion.usage.note").into_owned(),
             t!("ui.suggestion.usage.mcp_note").into_owned(),
         ],
-        "/hooks" => vec![
+        "/hook" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /hooks".to_string(),
-            "    /hooks list".to_string(),
-            "    /hooks add".to_string(),
+            "    /hook".to_string(),
+            "    /hook list".to_string(),
+            "    /hook add".to_string(),
             t!("ui.suggestion.usage.note").into_owned(),
             t!("ui.suggestion.usage.hooks_note").into_owned(),
         ],
-        "/rules" => vec![
+        "/rule" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /rules".to_string(),
+            "    /rule".to_string(),
         ],
-        "/skills" => vec![
+        "/skill" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /skills".to_string(),
+            "    /skill".to_string(),
         ],
-        "/extensions" => vec![
+        "/extension" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /extensions".to_string(),
-            "    /extensions marketplace [query]".to_string(),
-            "    /extensions list".to_string(),
-            "    /extensions import <zip>".to_string(),
-            "    /extensions remove <id>".to_string(),
+            "    /extension".to_string(),
+            "    /extension marketplace".to_string(),
+            "    /extension list".to_string(),
+            "    /extension import <zip>".to_string(),
+            "    /extension remove <id>".to_string(),
         ],
         "/log" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
@@ -404,11 +404,11 @@ pub(in crate::ui) fn suggestion_usage_lines(suggestion: &InputSuggestion) -> Vec
             "    /approval default".to_string(),
             "    /approval bypass-approval".to_string(),
         ],
-        "/networks" => vec![
+        "/network" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
-            "    /networks".to_string(),
-            "    /networks http1.1".to_string(),
-            "    /networks http2".to_string(),
+            "    /network".to_string(),
+            "    /network http1.1".to_string(),
+            "    /network http2".to_string(),
         ],
         "/tui" => vec![
             t!("ui.suggestion.usage.heading").into_owned(),
@@ -655,9 +655,7 @@ pub(in crate::ui) fn build_language_picker_lines(
         .language_picker_index
         .min(locales.len().saturating_sub(1));
     let total = locales.len();
-    let window = max_items.max(1);
-    let start = (selected + 1).saturating_sub(window);
-    let end = (start + window).min(total);
+    let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let current_locale = rust_i18n::locale().to_string();
     let mut lines = Vec::new();
@@ -669,27 +667,13 @@ pub(in crate::ui) fn build_language_picker_lines(
         } else {
             String::new()
         };
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD | Modifier::REVERSED)
-        } else if is_active {
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        lines.push(Line::from(Span::styled(
-            format!(
-                "{}{} ({}){}",
-                picker_selection_prefix(is_selected),
-                crate::locale::language_display_name(locale_code),
-                locale_code,
-                active_suffix
-            ),
-            style,
-        )));
+        let row_style = inline_picker_text_style(is_selected);
+        let meta_style = inline_picker_meta_style(is_selected);
+        lines.push(Line::from(vec![
+            Span::styled(picker_selection_prefix(is_selected), row_style),
+            Span::styled(crate::locale::language_display_name(locale_code), row_style),
+            Span::styled(format!(" ({locale_code}){active_suffix}"), meta_style),
+        ]));
     }
 
     lines
@@ -707,25 +691,17 @@ pub(in crate::ui) fn build_image_picker_lines(
         .image_picker_index
         .min(app.image_picker_files.len().saturating_sub(1));
     let total = app.image_picker_files.len();
-    let window = max_items.max(1);
-    let start = (selected + 1).saturating_sub(window);
-    let end = (start + window).min(total);
+    let (start, end) = inline_picker_bounds(total, selected, max_items);
 
     let mut lines = Vec::new();
     for idx in start..end {
         let name = &app.image_picker_files[idx];
         let is_selected = idx == selected;
-        let style = if is_selected {
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD | Modifier::REVERSED)
-        } else {
-            Style::default().fg(Color::White)
-        };
-        lines.push(Line::from(Span::styled(
-            format!("{}{}", picker_selection_prefix(is_selected), name),
-            style,
-        )));
+        let row_style = inline_picker_text_style(is_selected);
+        lines.push(Line::from(vec![
+            Span::styled(picker_selection_prefix(is_selected), row_style),
+            Span::styled(name.clone(), row_style),
+        ]));
     }
 
     lines

@@ -18,8 +18,8 @@ use crate::{
         BridgeChatArchive, BridgeExportState, BridgeManualToolCommandStartResult,
         BridgeRuntimeEvent, BridgeRuntimeSnapshot, BridgeSubagentSessionArchiveEntry,
         BridgeWorkspaceFileReferenceSuggestions, CliExtensionEntry, CliHostMetadataSnapshot,
-        CliMarketplaceCatalogItem, CliMarketplaceDetail, CliMarketplacePreparedInstall,
-        WorkspaceCapabilityTrustDecision, WorkspaceCapabilityTrustPrompter,
+        CliMarketplaceActionResult, CliMarketplaceCatalogEntry, CliMarketplaceCatalogResponse,
+        CliMarketplaceSource, WorkspaceCapabilityTrustDecision, WorkspaceCapabilityTrustPrompter,
         WorkspaceCapabilityTrustRequest,
     },
     host_runtime::RuntimeEvent,
@@ -1024,68 +1024,90 @@ impl DaemonRuntime {
         Ok(())
     }
 
-    pub fn list_marketplace_extensions(&mut self) -> Result<Vec<CliMarketplaceCatalogItem>> {
+    pub fn set_extension_enabled(&mut self, id: &str, enabled: bool) -> Result<()> {
+        self.client.call(
+            "host.setExtensionEnabled",
+            json!({ "hostKind": "cli", "id": id, "enabled": enabled }),
+        )?;
+        Ok(())
+    }
+
+    pub fn list_marketplace_sources(&mut self) -> Result<Vec<CliMarketplaceSource>> {
+        let value = self
+            .client
+            .call("host.listMarketplaceSources", json!({ "hostKind": "cli" }))?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn add_marketplace_source(
+        &mut self,
+        locator: &str,
+        git_ref: Option<&str>,
+    ) -> Result<CliMarketplaceSource> {
         let value = self.client.call(
-            "host.listMarketplaceExtensions",
-            json!({ "hostKind": "cli" }),
+            "host.addMarketplaceSource",
+            json!({ "locator": locator, "ref": git_ref }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn remove_marketplace_source(&mut self, name: &str) -> Result<CliMarketplaceSource> {
+        let value = self
+            .client
+            .call("host.removeMarketplaceSource", json!({ "name": name }))?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn list_marketplace_catalog(
+        &mut self,
+        source_id: &str,
+    ) -> Result<CliMarketplaceCatalogResponse> {
+        let value = self.client.call(
+            "host.listMarketplaceCatalog",
+            json!({ "hostKind": "cli", "sourceId": source_id }),
         )?;
         Ok(serde_json::from_value(value)?)
     }
 
     pub fn get_marketplace_extension_detail(
         &mut self,
-        extension_id: &str,
-    ) -> Result<CliMarketplaceDetail> {
+        source_id: &str,
+        name: &str,
+    ) -> Result<CliMarketplaceCatalogEntry> {
         let value = self.client.call(
             "host.getMarketplaceExtensionDetail",
-            json!({ "hostKind": "cli", "extensionId": extension_id }),
+            json!({ "hostKind": "cli", "sourceId": source_id, "name": name }),
         )?;
-        Ok(serde_json::from_value(value)?)
-    }
-
-    pub fn get_marketplace_extension_readme(&mut self, extension_id: &str) -> Result<String> {
-        let value = self.client.call(
-            "host.getMarketplaceExtensionReadme",
-            json!({ "hostKind": "cli", "extensionId": extension_id }),
-        )?;
-        Ok(value.as_str().unwrap_or_default().to_string())
-    }
-
-    pub fn prepare_marketplace_extension_install(
-        &mut self,
-        extension_id: &str,
-        version: Option<&str>,
-    ) -> Result<CliMarketplacePreparedInstall> {
-        let mut params = json!({ "hostKind": "cli", "extensionId": extension_id });
-        if let Some(version) = version
-            && !version.trim().is_empty()
-        {
-            params["version"] = Value::String(version.trim().to_string());
-        }
-        let value = self
-            .client
-            .call("host.prepareMarketplaceExtensionInstall", params)?;
         Ok(serde_json::from_value(value)?)
     }
 
     pub fn install_marketplace_extension(
         &mut self,
-        extension_id: &str,
-        version: Option<&str>,
+        name: &str,
+        marketplace: Option<&str>,
         review_acknowledged: bool,
-    ) -> Result<CliExtensionEntry> {
-        let mut params = json!({ "hostKind": "cli", "extensionId": extension_id });
-        if let Some(version) = version
-            && !version.trim().is_empty()
-        {
-            params["version"] = Value::String(version.trim().to_string());
-        }
-        if review_acknowledged {
-            params["reviewAcknowledged"] = Value::Bool(true);
-        }
-        let value = self
-            .client
-            .call("host.installMarketplaceExtension", params)?;
+    ) -> Result<CliMarketplaceActionResult> {
+        let value = self.client.call(
+            "host.installMarketplaceExtension",
+            json!({
+                "hostKind": "cli",
+                "name": name,
+                "marketplace": marketplace,
+                "reviewAcknowledged": review_acknowledged,
+            }),
+        )?;
+        Ok(serde_json::from_value(value)?)
+    }
+
+    pub fn update_extension(
+        &mut self,
+        id: &str,
+        review_acknowledged: bool,
+    ) -> Result<CliMarketplaceActionResult> {
+        let value = self.client.call(
+            "host.updateExtension",
+            json!({ "hostKind": "cli", "id": id, "reviewAcknowledged": review_acknowledged }),
+        )?;
         Ok(serde_json::from_value(value)?)
     }
 

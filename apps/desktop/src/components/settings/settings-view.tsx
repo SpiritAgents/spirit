@@ -9,7 +9,6 @@ import { AppearanceSettingsPanel } from "@/components/settings/panels/appearance
 import { DeveloperSettingsPanel } from "@/components/settings/panels/developer-settings-panel";
 import { DreamSettingsPanel } from "@/components/settings/panels/dream-settings-panel";
 import { ExtensionConfigurationPanel } from "@/components/settings/panels/extension-configuration-panel";
-import { ExtensionsSettingsPanel } from "@/components/settings/panels/extensions-settings-panel";
 import { HooksSettingsPanel } from "@/components/settings/panels/hooks-settings-panel";
 import { IntegrationsSettingsPanel } from "@/components/settings/panels/integrations-settings-panel";
 import { McpsSettingsPanel } from "@/components/settings/panels/mcps-settings-panel";
@@ -24,6 +23,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
 
 export function SettingsView({
   tab,
@@ -53,8 +56,6 @@ export function SettingsView({
   onRemoveModel,
   onRemoveProviderModels,
   onAddMcpServer,
-  onImportExtension,
-  onDeleteExtension,
   onUpdateExtensionSettings,
   onUpdateExtensionSecret,
   onDeleteMcpServer,
@@ -109,14 +110,21 @@ export function SettingsView({
     <div className="flex min-h-0 flex-1 flex-col">
       <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
         <div className="flex min-h-full flex-col justify-center">
-          <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
+          {/* Shares the conversation message list's max width and gutter: full width up to
+              the cap, then proportional side margins on narrower windows. */}
+          <div
+            className={cn(
+              "mx-auto w-full py-8",
+              CONVERSATION_GUTTER_X,
+              CONVERSATION_MESSAGE_LIST_MAX_W,
+            )}
+          >
             {!extensionSettingsItem &&
             tab !== "models" &&
             tab !== "skills" &&
             tab !== "rules" &&
             tab !== "mcps" &&
             tab !== "hooks" &&
-            tab !== "extensions" &&
             tab !== "agents" &&
             tab !== "tab" &&
             tab !== "integrations" ? (
@@ -186,13 +194,6 @@ export function SettingsView({
                 onCreateRule={onCreateRule}
                 onDeleteRule={onDeleteRule}
                 onGenerateRuleNavigate={onGenerateRuleNavigate}
-              />
-            ) : tab === "extensions" ? (
-              <ExtensionsSettingsPanel
-                snapshot={snapshot}
-                extensionsBusy={extensionsBusy}
-                onImportExtension={onImportExtension}
-                onDeleteExtension={onDeleteExtension}
               />
             ) : tab === "mcps" ? (
               <McpsSettingsPanel

@@ -59,9 +59,10 @@ mod word_wrap;
 rust_i18n::i18n!("locales", fallback = "en");
 
 pub use cli::{
-    ConfigCommand, ExtensionCommand, HookCommand, KeyCommand, MarketplaceCommand, McpCommand,
-    ModelAddCommand, ModelCommand, PermissionCommand, handle_config_cli, handle_extension_cli,
-    handle_hooks_cli, handle_mcp_cli, handle_model_cli, handle_permissions_cli,
+    ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, HookCommand, KeyCommand,
+    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, handle_config_cli,
+    handle_extension_cli, handle_extension_marketplace_cli, handle_hooks_cli, handle_mcp_cli,
+    handle_model_cli, handle_permissions_cli,
 };
 pub use cli_bootstrap::{
     GlobalCliOptions, bootstrap_config, print_skills_stub, resolve_session_tui_mode,

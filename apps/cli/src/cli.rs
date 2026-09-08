@@ -1,12 +1,11 @@
 use anyhow::{Context, Result, anyhow};
 use rust_i18n::t;
 use std::fs;
-use std::{collections::BTreeMap, env, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use crate::{
     adapters::{DefaultAppPaths, JsonConfigStore, KeyringSecretStore},
     daemon::DaemonRuntime,
-    host_protocol::CliMarketplaceDetail,
     mcp::{
         example_github_mcp_config, load_mcp_config, save_mcp_config, set_server_enabled,
         user_mcp_config_path, workspace_mcp_config_path,
@@ -121,25 +120,34 @@ pub fn handle_permissions_cli(action: PermissionCommand) -> Result<()> {
 
 pub enum ExtensionCommand {
     List,
-    Import { archive: String },
-    Remove { id: String },
-    Marketplace { action: MarketplaceCommand },
-}
-
-pub enum MarketplaceCommand {
-    List {
-        query: Vec<String>,
+    Import {
+        archive: String,
     },
-    Detail {
-        id: String,
-    },
-    Readme {
+    Remove {
         id: String,
     },
     Install {
-        id: String,
-        version: Option<String>,
+        name: String,
+        marketplace: Option<String>,
         review_acknowledged: bool,
+    },
+    Update {
+        name: String,
+        review_acknowledged: bool,
+    },
+    Marketplace {
+        action: ExtensionMarketplaceCommand,
+    },
+}
+
+pub enum ExtensionMarketplaceCommand {
+    Add {
+        locator: String,
+        git_ref: Option<String>,
+    },
+    List,
+    Remove {
+        name: String,
     },
 }
 
@@ -1144,7 +1152,7 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
                     println!("    description: {}", description);
                 }
                 if let Some(author) = extension.author {
-                    println!("    author: {}", author);
+                    println!("    author: {}", author.name);
                 }
                 if let Some(main) = extension.main {
                     println!("    main: {}", main);
@@ -1194,125 +1202,184 @@ pub fn handle_extension_cli(action: ExtensionCommand) -> Result<()> {
             runtime.delete_extension(trimmed_id)?;
             println!("{}", t!("cli.extensions.removed", id = trimmed_id));
         }
-        ExtensionCommand::Marketplace { action } => handle_marketplace_cli(action)?,
+        ExtensionCommand::Install {
+            name,
+            marketplace,
+            review_acknowledged,
+        } => {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                return Err(anyhow!("{}", t!("cli.extensions.name_empty")));
+            }
+
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let result = runtime.install_marketplace_extension(
+                trimmed,
+                marketplace.as_deref(),
+                review_acknowledged,
+            )?;
+            match result.status.as_str() {
+                "installed" => {
+                    let extension = result.extension.context("missing installed extension")?;
+                    println!(
+                        "{}",
+                        t!("cli.marketplace.installed", name = extension.display_name)
+                    );
+                    println!("id: {}", extension.id);
+                    println!("version: {}", extension.version);
+                }
+                "review-required" => {
+                    println!(
+                        "{}",
+                        t!(
+                            "cli.marketplace.review_required",
+                            id = result.extension_id.unwrap_or_default(),
+                            status = result.review_status.unwrap_or_default()
+                        )
+                    );
+                }
+                other => return Err(anyhow!("unexpected install status: {}", other)),
+            }
+        }
+        ExtensionCommand::Update {
+            name,
+            review_acknowledged,
+        } => {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                return Err(anyhow!("{}", t!("cli.extensions.name_empty")));
+            }
+
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let extensions = runtime.list_extensions()?;
+            let id = resolve_installed_extension_id(&extensions, trimmed)?;
+            let result = runtime.update_extension(&id, review_acknowledged)?;
+            match result.status.as_str() {
+                "updated" => {
+                    let extension = result.extension.context("missing updated extension")?;
+                    println!(
+                        "{}",
+                        t!("cli.marketplace.updated", name = extension.display_name)
+                    );
+                    println!("id: {}", extension.id);
+                    println!("version: {}", extension.version);
+                }
+                "up-to-date" => {
+                    println!("{}", t!("cli.marketplace.up_to_date", id = id));
+                }
+                "review-required" => {
+                    println!(
+                        "{}",
+                        t!(
+                            "cli.marketplace.review_required",
+                            id = result.extension_id.unwrap_or_default(),
+                            status = result.review_status.unwrap_or_default()
+                        )
+                    );
+                }
+                other => return Err(anyhow!("unexpected update status: {}", other)),
+            }
+        }
+        ExtensionCommand::Marketplace { action } => {
+            return handle_extension_marketplace_cli(action);
+        }
     }
 
     Ok(())
 }
 
-pub fn handle_marketplace_cli(action: MarketplaceCommand) -> Result<()> {
+pub fn handle_extension_marketplace_cli(action: ExtensionMarketplaceCommand) -> Result<()> {
     let app_paths = DefaultAppPaths::new();
     let workspace_root = app_paths.workspace_root();
 
     match action {
-        MarketplaceCommand::List { query } => {
+        ExtensionMarketplaceCommand::Add { locator, git_ref } => {
+            let trimmed = locator.trim();
+            if trimmed.is_empty() {
+                return Err(anyhow!("{}", t!("cli.marketplace.locator_empty")));
+            }
+            // Local paths resolve client-side: the daemon's cwd differs from the user's.
+            let resolved = if trimmed.contains("://") || trimmed.starts_with("git@") {
+                trimmed.to_string()
+            } else {
+                std::fs::canonicalize(trimmed)
+                    .with_context(|| t!("cli.marketplace.locator_missing").into_owned())?
+                    .to_string_lossy()
+                    .into_owned()
+            };
+
             let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let catalog = runtime.list_marketplace_extensions()?;
-            let installed = runtime
-                .list_extensions()?
-                .into_iter()
-                .map(|entry| (entry.id, entry.version))
-                .collect::<BTreeMap<_, _>>();
-            let needle = query.join(" ").trim().to_lowercase();
+            let source = runtime.add_marketplace_source(&resolved, git_ref.as_deref())?;
+            println!(
+                "{}",
+                t!("cli.marketplace.source_added", name = source.display_name)
+            );
+            println!("id: {}", source.id);
+            println!("kind: {}", source.kind);
+        }
+        ExtensionMarketplaceCommand::List => {
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let sources = runtime.list_marketplace_sources()?;
 
-            println!("Marketplace catalog:");
-            for item in catalog.into_iter().filter(|item| {
-                if needle.is_empty() {
-                    return true;
-                }
-
-                let haystack = format!(
-                    "{} {} {} {} {}",
-                    item.display_name,
-                    item.description,
-                    item.extension_id,
-                    item.package_name,
-                    item.keywords.join(" "),
-                );
-                haystack.to_lowercase().contains(&needle)
-            }) {
-                let installed_label = installed
-                    .get(&item.package_name)
-                    .or_else(|| installed.get(&item.extension_id))
-                    .map(|version| {
-                        t!("cli.extensions.installed_version", version = version).into_owned()
-                    })
-                    .unwrap_or_else(|| t!("cli.extensions.not_installed").into_owned());
+            println!("{}", t!("cli.marketplace.sources_header"));
+            for source in sources {
                 println!(
-                    "  - {}\n    id: {}\n    package: {}\n    version: {}\n    status: {}\n    review: {}\n    installed: {}",
-                    item.display_name,
-                    item.extension_id,
-                    item.package_name,
-                    item.default_version,
-                    item.status,
-                    item.default_review_status,
-                    installed_label
+                    "  - {}\n    id: {}\n    kind: {}\n    locator: {}",
+                    source.display_name, source.name, source.kind, source.locator,
                 );
-                if !item.description.trim().is_empty() {
-                    println!("    description: {}", item.description);
-                }
-                if !item.keywords.is_empty() {
-                    println!("    keywords: {}", item.keywords.join(", "));
-                }
-                if !item.supported_hosts.is_empty() {
-                    println!("    hosts: {}", item.supported_hosts.join(", "));
+                if let Some(git_ref) = source.git_ref {
+                    println!("    ref: {}", git_ref);
                 }
             }
         }
-        MarketplaceCommand::Detail { id } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let detail = runtime.get_marketplace_extension_detail(&id)?;
-            print_marketplace_detail(&detail);
-        }
-        MarketplaceCommand::Readme { id } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let readme = runtime.get_marketplace_extension_readme(&id)?;
-            println!("{}", readme);
-        }
-        MarketplaceCommand::Install {
-            id,
-            version,
-            review_acknowledged,
-        } => {
-            let mut runtime = new_extension_cli_runtime(workspace_root)?;
-            let prepared =
-                runtime.prepare_marketplace_extension_install(&id, version.as_deref())?;
-            let needs_ack = prepared.review_status != "verified";
-            if needs_ack && !review_acknowledged {
-                return Err(anyhow!(
-                    "{}",
-                    t!(
-                        "cli.extensions.review_required",
-                        id = prepared.extension_id,
-                        version = prepared.version
-                    )
-                ));
+        ExtensionMarketplaceCommand::Remove { name } => {
+            let trimmed = name.trim();
+            if trimmed.is_empty() {
+                return Err(anyhow!("{}", t!("cli.marketplace.name_empty")));
             }
 
-            let installed = runtime.install_marketplace_extension(
-                &prepared.extension_id,
-                Some(&prepared.version),
-                review_acknowledged || needs_ack,
-            )?;
+            let mut runtime = new_extension_cli_runtime(workspace_root)?;
+            let removed = runtime.remove_marketplace_source(trimmed)?;
             println!(
                 "{}",
                 t!(
-                    "cli.extensions.marketplace_installed",
-                    name = installed.display_name
+                    "cli.marketplace.source_removed",
+                    name = removed.display_name
                 )
             );
-            println!("id: {}", installed.id);
-            println!("version: {}", installed.version);
-            if let Some(description) = installed.description {
-                println!("description: {}", description);
-            }
-            if let Some(main) = installed.main {
-                println!("main: {}", main);
-            }
         }
     }
 
     Ok(())
+}
+
+/// Resolve an `extension update <name>` argument to a composite install id:
+/// exact id match first, then the `<sourceId>/<name>` suffix form.
+fn resolve_installed_extension_id(
+    extensions: &[crate::host_protocol::CliExtensionEntry],
+    name: &str,
+) -> Result<String> {
+    if let Some(entry) = extensions.iter().find(|entry| entry.id == name) {
+        return Ok(entry.id.clone());
+    }
+    let suffix = format!("/{name}");
+    let matches = extensions
+        .iter()
+        .filter(|entry| entry.id.ends_with(&suffix))
+        .map(|entry| entry.id.clone())
+        .collect::<Vec<_>>();
+    match matches.as_slice() {
+        [only] => Ok(only.clone()),
+        [] => Err(anyhow!("{}", t!("cli.extensions.not_installed", id = name))),
+        many => Err(anyhow!(
+            "{}",
+            t!(
+                "cli.extensions.ambiguous",
+                id = name,
+                matches = many.join(", ")
+            )
+        )),
+    }
 }
 
 fn new_mcp_cli_runtime(workspace_root: PathBuf) -> Result<DaemonRuntime> {
@@ -1321,29 +1388,6 @@ fn new_mcp_cli_runtime(workspace_root: PathBuf) -> Result<DaemonRuntime> {
 
 fn new_extension_cli_runtime(workspace_root: PathBuf) -> Result<DaemonRuntime> {
     new_mcp_cli_runtime(workspace_root)
-}
-
-fn print_marketplace_detail(detail: &CliMarketplaceDetail) {
-    println!("id: {}", detail.extension_id);
-    println!("package: {}", detail.package_name);
-    println!("status: {}", detail.status);
-    println!("featured: {}", yes_no(detail.featured));
-    println!("default_version: {}", detail.default_version);
-    println!("readme_path: {}", detail.readme_path);
-    println!("versions:");
-    for version in &detail.versions {
-        println!(
-            "  - {}\n    channel: {}\n    review: {}\n    name: {}\n    description: {}",
-            version.version,
-            version.channel,
-            version.review_status,
-            version.display_name,
-            version.description
-        );
-        if let Some(changelog) = &version.changelog {
-            println!("    changelog: {}", changelog.summary);
-        }
-    }
 }
 
 fn yes_no(flag: bool) -> &'static str {

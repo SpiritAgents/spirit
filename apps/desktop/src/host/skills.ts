@@ -13,7 +13,7 @@ import {
 } from "@spiritagent/host-internal";
 
 import type { CreateSkillRequest, DeleteSkillRequest, DesktopSkillRootKind } from "../types.js";
-import { type HostMetadataSummary, spiritDataDir } from "./storage.js";
+import { spiritDataDir } from "./storage.js";
 import { formatYamlScalarForSkillFrontmatter } from "./service-utils.js";
 
 const ACTIVE_SKILL_CONTENT_MAX_CHARS = 12_000;
@@ -151,8 +151,19 @@ export function buildActivateSkillUserTurn(skillName: string, extraNote: string)
   return trimmed;
 }
 
+export interface ActiveSkillPayloadSource {
+  source: {
+    id: string;
+    scope: OpenAiActiveSkill["scope"];
+    name: string;
+    description: string;
+    path: string;
+  };
+  content: string;
+}
+
 export async function buildActiveSkillPayload(
-  entry: HostMetadataSummary["skills"]["entries"][number],
+  entry: ActiveSkillPayloadSource,
 ): Promise<OpenAiActiveSkill> {
   const skillRoot = path.dirname(entry.source.path);
   const { content, truncated } = truncateActiveSkillContent(entry.content);

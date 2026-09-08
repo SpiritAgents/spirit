@@ -130,9 +130,7 @@
       "expandTools": "Werkzeuge ausklappen",
       "newSession": "Neue Sitzung",
       "settingsPlaceholderTitle": "Desktop-Einstellungen",
-      "settingsPlaceholderDescription": "Behält die Struktur und Hierarchie des ersten Bildschirms der Einstellungen bei.",
-      "marketplacePlaceholderTitle": "Erweiterungen-Marketplace",
-      "marketplacePlaceholderDescription": "Behält die Struktur und Hierarchie des ersten Bildschirms des Marktplatzes bei.",
+      "marketplacePlaceholderTitle": "Erweiterungsansicht",
       "previewEditorOnlyTextError": "Nur Textdateien können im Vorschau-Editor geöffnet werden.",
       "hostStatus": "Web Hero Vorschau",
       "mcpReady": "MCP bereit"

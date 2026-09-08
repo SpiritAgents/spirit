@@ -18,7 +18,9 @@ import type {
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "@/types";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import { cn } from "@/lib/utils";
 
 export function ExtensionConfigurationPanel({
   item,
@@ -81,11 +83,16 @@ export function ExtensionConfigurationPanel({
       </div>
 
       {!hasSettings && !hasSecrets ? (
-        <div className="rounded-lg border border-border/40 bg-background/80 px-4 py-10 text-center text-sm text-muted-foreground">
+        <div
+          className={cn(
+            DESKTOP_CANVAS_CARD_SURFACE,
+            "px-4 py-10 text-center text-sm text-muted-foreground",
+          )}
+        >
           {t("settings.noExtensionSettings")}
         </div>
       ) : (
-        <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           {item.settingsSchema?.map((setting) => {
             const fieldKey = settingDraftKey(item.id, setting.key);
             const currentText = currentSettingText(item, setting.key, setting.defaultValue);

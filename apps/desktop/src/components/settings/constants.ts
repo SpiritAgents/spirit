@@ -6,7 +6,6 @@ export const settingsPageTitleKey: Record<SettingsSidebarTab, string> = {
   models: "settings.models",
   agents: "settings.agents",
   tab: "settings.tab",
-  extensions: "settings.extensions",
   mcps: "settings.mcps",
   hooks: "settings.hooks",
   skills: "settings.skills",

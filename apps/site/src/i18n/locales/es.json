@@ -130,9 +130,7 @@
       "expandTools": "Expandir herramientas",
       "newSession": "Nueva sesión",
       "settingsPlaceholderTitle": "Vista de ajustes de escritorio",
-      "settingsPlaceholderDescription": "Mantiene la estructura de la primera pantalla y la jerarquía de la superficie de ajustes.",
-      "marketplacePlaceholderTitle": "Vista del marketplace de extensiones",
-      "marketplacePlaceholderDescription": "Mantiene la estructura de la primera pantalla y la jerarquía de la superficie del marketplace.",
+      "marketplacePlaceholderTitle": "Vista de extensiones",
       "previewEditorOnlyTextError": "Solo se pueden abrir archivos de texto en el editor de vista previa.",
       "hostStatus": "Vista previa de Web Hero",
       "mcpReady": "MCP listo"

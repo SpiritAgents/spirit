@@ -277,7 +277,7 @@ function slashSuggestionMatchesQuery(suggestion: SkillSlashSuggestion, query: st
 
 export function buildSkillSlashSuggestions(
   query: string | undefined,
-  skills: readonly DesktopSkillListItem[] = [],
+  skills: readonly Pick<DesktopSkillListItem, "id" | "name" | "description" | "enabled">[] = [],
 ): SkillSlashSuggestion[] {
   if (!query) {
     return [];

@@ -1,0 +1,64 @@
+---
+title: 확장
+description: 마켓플레이스에서 확장을 설치하고, ZIP 패키지를 가져오고, 나만의 원격 확장 마켓플레이스를 추가하세요.
+---
+
+확장은 Spirit에 기능을 추가합니다——도구, 스킬, 훅, MCP 서버, UI 기여. 확장은 확장 마켓플레이스를 통해 배포됩니다:
+
+- **내장**——앱에 함께 제공됩니다.
+- **개인**——직접 추가한 ZIP 패키지 가져오기.
+- **원격 확장 마켓플레이스**——직접 추가하는 것: Git 저장소, HTTP 인덱스 URL 또는 로컬 디렉터리.
+
+Desktop에서는 사이드바의 **확장** 페이지에 마켓플레이스별 탭이 표시되고, **전체** 탭은 모든 마켓플레이스를 하나의 목록으로 병합합니다. CLI에서는 `spirit extension` 명령과 `/extension marketplace` TUI로 동일한 흐름을 제공합니다.
+
+## 설치, 업데이트 및 제거
+
+Desktop에서 **확장**을 열고 확장을 선택한 다음 **설치**를 선택하세요. 설치된 확장에는 **추가 작업** 메뉴가 표시되며, **비활성화**(삭제하지 않고 끄기)와 **제거**를 선택할 수 있습니다. 마켓플레이스에서 더 새로운 버전을 게시하면 상세 페이지에 **업데이트** 버튼이 표시됩니다.
+
+CLI에서는:
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install`은 추가된 모든 마켓플레이스에서 `<name>`을 해석합니다. 두 마켓플레이스가 같은 이름을 제공하면 명령이 실패하며 목록을 보여줍니다. `--marketplace <name>`을 붙여 다시 실행하세요. 다른 마켓플레이스에서 설치한 같은 이름의 확장은 공존할 수 있습니다——설치는 마켓플레이스별로 분리됩니다.
+
+내장 확장은 앱과 함께 자동으로 업데이트됩니다. 개인(가져온) 확장에는 가져올 업스트림이 없습니다——새 ZIP을 다시 가져오세요.
+
+## 검토 확인 게이트
+
+마켓플레이스 항목이 검증되지 않았거나(또는 취소된) 확장을 설치하거나 업데이트하려면 명시적인 확인이 필요합니다. Desktop에서는 **확장 검토** 대화 상자가 표시되고, CLI에서는 `--review-acknowledged`가 필요하며, TUI에서는 확인 단계가 표시됩니다.
+
+## 확장 가져오기(ZIP)
+
+ZIP 패키지는 자체 선언 사이드 채널입니다: 마켓플레이스를 거치지 않습니다.
+
+- Desktop: **확장** 페이지 → **추가** → **확장 가져오기**를 선택한 다음 ZIP 파일을 선택합니다.
+- CLI: `spirit extension import <archive>`.
+
+가져오기는 **개인** 마켓플레이스에 검증되지 않은 항목으로 등록되며 동일한 검토 확인 게이트를 거칩니다. 같은 이름을 다시 가져오면 덮어씁니다. 가져온 확장을 제거하면 개인 마켓플레이스 기록도 함께 삭제됩니다.
+
+## 마켓플레이스 추가
+
+- Desktop: **확장** 페이지 → **추가** → **마켓플레이스 추가** → **디스크에서 추가**(로컬 디렉터리) 또는 **URL에서 추가**(Git 저장소 또는 HTTP 인덱스 URL).
+- CLI: `spirit extension marketplace add <url|path>`.
+
+세 가지 로케이터 형식:
+
+| 형식                       | 예시                                                                     |
+| -------------------------- | ------------------------------------------------------------------------ |
+| 로컬 디렉터리              | `spirit extension marketplace add ./my-marketplace`                      |
+| Git 저장소(HTTPS 또는 SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| HTTP 인덱스 URL            | `spirit extension marketplace add https://example.com`                   |
+
+Git URL은 `--git-ref <tag|branch|commit>`으로 ref를 고정할 수 있습니다. 기본값은 원격의 기본 브랜치입니다. 단순 사이트 URL은 자동으로 `/.spirit/marketplace.json`이 보완됩니다.
+
+추가된 마켓플레이스는 `spirit extension marketplace list`와 `spirit extension marketplace remove <name>`으로 관리합니다. Desktop에서는 마켓플레이스 탭을 마우스 오른쪽 버튼으로 클릭하면 제거 작업이 표시됩니다.
+
+<Callout type="info">
+  확장이 선언하는 기능은 패키지 자체가 아니라 마켓플레이스가 보증합니다. 마켓플레이스를 추가한다는
+  것은 운영자의 검토를 신뢰한다는 뜻입니다——신뢰하는 소스만 추가하세요.
+</Callout>

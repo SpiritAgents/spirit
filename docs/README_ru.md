@@ -91,7 +91,7 @@ Agent Core определяет, как модель видит контекст
 - **Smoke-наборы** — проверки контракта, runtime и live-провайдера в `packages/agent-core/src/smoke`.
 - **Eval harness** — сравнение сценариев при изменении prompts или определений инструментов (`pnpm run eval:compare` из корня репозитория).
 
-`@spiritagent/agent-core` публикуется в npm; [`packages/host-internal`](../packages/host-internal) содержит общий host discovery, extensions, marketplace, workspace helpers и оркестрацию LSP для Desktop.
+`@spiritagent/agent-core` публикуется в npm; [`packages/host-internal`](../packages/host-internal) содержит общий host discovery, extensions, workspace helpers и оркестрацию LSP для Desktop.
 
 ## Desktop
 
@@ -99,7 +99,7 @@ Agent Core определяет, как модель видит контекст
 
 - **Dock-панели** — проводник файлов с Monaco, встроенный терминал (Electron), Git changes и history, in-app browser для локальных dev-серверов.
 - **Сессии** — история нескольких диалогов, worktree-per-session workflows, одобрение инструментов, subagent viewer, структурированные опросники, использование контекста и rewind.
-- **Настройки** — провайдеры моделей и API keys, Skills и Rules, MCP servers, marketplace расширений, Dreams (beta), LSP, темы и язык UI (английский / упрощённый китайский / русский и др.).
+- **Настройки** — провайдеры моделей и API keys, Skills и Rules, MCP servers, расширения, Dreams (beta), LSP, темы и язык UI (английский / упрощённый китайский / русский и др.).
 - **Платформы** — Electron на Windows, macOS и Linux; опциональный web host с remote pairing.
 
 См. [apps/desktop/README.md](../apps/desktop/README.md) для разработки Desktop.

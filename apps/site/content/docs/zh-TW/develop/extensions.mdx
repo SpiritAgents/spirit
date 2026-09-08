@@ -1,132 +1,125 @@
 ---
 title: 擴充功能
-description: 套件佈局、spiritExtension 欄位、啟動 API，以及在官方註冊表中的列出方式。
+description: 用 npm create 精靈或手動建立擴充功能，並搭建你自己的遠端擴充功能市場。
 ---
 
-擴充功能是一個包含 `package.json` 的資料夾，其中含有 `spiritExtension`。Spirit 會為每個使用者和每個主機安裝它，而不是放在工作區的 `.spirit/` 目錄下。
+擴充功能是一個資料夾：內含 `.spirit/extension.json`（Spirit 宣言轉儲）與一個純 npm 的 `package.json`。Spirit 按使用者、按主機安裝擴充功能，不放在工作區 `.spirit/` 下，並按來源市場對每次安裝做隔離：安裝身份為 `(源 id, name)`。
 
-| 主機    | 路徑                                  |
-| ------- | ------------------------------------- |
-| Desktop | `{spiritDataDir}/extensions/desktop/` |
-| CLI     | `{spiritDataDir}/extensions/cli/`     |
+| 主機    | 路徑                                                    |
+| ------- | ------------------------------------------------------- |
+| Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
+| CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-這與 [Skills](../customize/skills.mdx) (`SKILL.md` 資料夾)、[MCP](../customize/mcp.mdx) (外部伺服器) 和 [Hooks](../customize/hooks.mdx) (`hooks.json` 腳本) 不同。`contributes.cli.hooks` 樣式化 CLI TUI 插槽。它不是 `hooks.json`。
+這與 [Skills](../customize/skills.mdx)（`SKILL.md` 資料夾）、[MCP](../customize/mcp.mdx)（外部伺服器）、[Hooks](../customize/hooks.mdx)（`hooks.json` 腳本）不同。`contributes.cli.hooks` 用來為 CLI TUI 插槽加樣式，不是 `hooks.json`。擴充功能也可以在宣告 `mcp`、`hooks`、`skills` 或 `rules` 後，用同樣的檔案規範捆綁這些資源。
 
-沒有每個擴充功能的啟用開關。安裝後，擴充功能即會貢獻內容。CLI 面板的切換是佔位符。
+每個已安裝擴充功能都有啟用開關。停用或解除安裝後即停止貢獻。打開開關即同意執行它宣告的 MCP、agent hooks、skills 和 rules。
 
-## 套件佈局
+## 建立擴充功能
+
+<Tabs items={["命令列建立", "手動建立"]}>
+<Tab value="命令列建立">
+
+用建立精靈鷹架一個新擴充功能：
+
+<Tabs items={["npm", "pnpm", "Bun", "Yarn", "Deno"]}>
+<Tab value="npm">
+
+```bash
+npm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Bun">
+
+```bash
+bun create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Yarn">
+
+```bash
+yarn create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Deno">
+
+```bash
+deno init --npm @spiritagent/extension
+```
+
+</Tab>
+</Tabs>
+
+精靈會詢問擴充功能名稱（kebab-case）、顯示名稱、一行描述以及要鷹架的能力。它會寫入 `package.json`、`icon.svg` 與 `.spirit/extension.json`，並按你選擇的能力追加對應檔案（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），結束時打印一段可直接貼上的市場條目。
+
+腳本化使用時，每個提問都有對應 flag：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`，以及跳過確認的 `--yes`。
+
+隨時校驗結果：
+
+```bash
+npx @spiritagent/extension-toolkit check ./my-extension
+```
+
+</Tab>
+<Tab value="手動建立">
+
+擴充功能目錄只需要兩個檔案——`.spirit/extension.json` 與 `package.json`——再加上它宣告的能力檔案：
 
 ```text
-example-extension/
-  package.json
-  dist/index.js
-  assets/icon.svg
-  styles/desktop.css
-  cli-hooks.json
+my-extension/
+  .spirit/
+    extension.json        # Spirit 宣言轉儲（必填）
+  package.json            # 純 npm；只讀取 `main`
+  icon.svg                # 選填；僅 SVG，禁止 <script>
+  index.mjs               # 選填；`main` 引用的 activate 入口
+  mcp.json                # 宣告 mcp 時
+  hooks.json              # 宣告 hooks 時（agent hooks）
+  rule.md                 # 宣告 rules 時
+  skills/<name>/SKILL.md  # 宣告 skills 時
+  styles.css              # 宣告 desktop CSS 時（路徑由宣言引用）
+  cli-hooks.json          # 宣告 CLI hooks 時（路徑由宣言引用）
 ```
 
-```json
-{
-  "name": "@example/spirit-extension",
-  "version": "0.1.0",
-  "description": "Example Spirit extension.",
-  "author": { "name": "example" },
-  "homepage": "https://example.com/spirit-extension",
-  "main": "dist/index.js",
-  "spiritExtension": {
-    "schemaVersion": 1,
-    "displayName": "Example extension",
-    "icon": "assets/icon.svg",
-    "supportedHosts": ["cli", "desktop"],
-    "activationEvents": ["onStartup", "onUserMessage"],
-    "requestedCapabilities": [
-      "tool-definitions",
-      "tool-execution",
-      "system-prompt",
-      "settings",
-      "secret-storage",
-      "desktop-ui",
-      "cli-ui"
-    ],
-    "contributes": {
-      "tools": [
-        {
-          "name": "lookup_item",
-          "description": "Look up an item by id.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" }
-            },
-            "required": ["id"]
-          },
-          "approvalMode": "allowed",
-          "executionMode": "foreground"
-        }
-      ],
-      "desktop": {
-        "css": [{ "path": "styles/desktop.css" }],
-        "settingsPage": { "title": "Example extension" }
-      },
-      "cli": {
-        "hooks": { "path": "cli-hooks.json" }
-      }
-    },
-    "settingsSchema": [
-      {
-        "key": "region",
-        "type": "select",
-        "title": "Region",
-        "required": true,
-        "defaultValue": "us",
-        "options": [
-          { "value": "us", "label": "US" },
-          { "value": "eu", "label": "EU" }
-        ]
-      }
-    ],
-    "secretSlots": [
-      {
-        "key": "api_token",
-        "title": "API token",
-        "required": true
-      }
-    ]
-  }
-}
-```
+`package.json` 不攜帶任何 Spirit 欄位——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` 保持純 npm 語義。主機只讀取 `main`，即 [`activate`](#activate) 的模組入口。
 
-`package.json` 的 `name` 是擴充功能 ID。它必須符合 `^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`。
+`.spirit/extension.json` 欄位：
 
-## `package.json` 欄位
+| 欄位            | 說明                                                                                        |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `schemaVersion` | 必填。必須為 `1`                                                                            |
+| `name`          | 必填。kebab-case；在市場內即條目 id                                                         |
+| `version`       | 必填。semver `major.minor.patch`；不支援 pre-release 後綴                                   |
+| `sourceId`      | 必填。所屬市場的源 id。ZIP 套件可自我宣告任意值（例如 `"self-declared"`）；安裝管線會重寫它 |
+| `displayName`   | 必填。使用者可見名稱                                                                        |
+| `description`   | 必填。一行概述                                                                              |
+| `icon`          | 選填。相對擴充功能根目錄的 SVG 路徑                                                         |
+| `author`        | 選填。`{ name, email?, url? }` 或 npm 風格字串 `"Name <email> (url)"`                       |
+| `category`      | 選填。單一字串                                                                              |
+| `keywords`      | 選填。搜尋關鍵字字串陣列                                                                    |
+| `homepage`      | 選填。專案 URL                                                                              |
+| `manifest`      | 必填。執行時期宣言——見下方「`manifest` 宣言」一節                                           |
 
-| 欄位              | 描述                                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------------------ |
-| `name`            | 必要。npm 套件名稱；用作擴充功能 ID                                                              |
-| `version`         | 必要。版本字串                                                                                   |
-| `spiritExtension` | 必要。物件。請參閱下方                                                                           |
-| `description`     | 選用。字串                                                                                       |
-| `author`          | 選用。字串或 `{ name }`                                                                          |
-| `homepage`        | 選用。字串                                                                                       |
-| `main`            | 選用。`activate` 進入點的相對路徑。當擴充功能使用 `activationEvents`、工具執行或系統提示時為必要 |
+轉儲不攜帶 `source` 與策展欄位（`reviewStatus`、`featured`）——它們屬於市場條目。
 
-`main`、`spiritExtension.icon`、CSS 路徑和 CLI 鉤子路徑必須是相對的，且必須位於套件內部。
+宣告的檔案必須存在且合法：宣告了 `mcp`、`hooks`、`skills` 或 `rules` 卻缺少對應檔案，校驗與安裝都會失敗。套件內存在但未宣告的檔案會被忽略，永不載入。
 
-## `spiritExtension`
+</Tab>
+</Tabs>
 
-| 欄位                    | 描述                                        |
-| ----------------------- | ------------------------------------------- |
-| `schemaVersion`         | 選用。預設為 `1`。僅支援 `1`                |
-| `displayName`           | 必要。使用者可見名稱                        |
-| `icon`                  | 選用。相對於套件根目錄的路徑                |
-| `supportedHosts`        | 必要。非空的 `cli` 和/或 `desktop` 陣列     |
-| `activationEvents`      | 選用。請參閱 [啟動事件](#activation-events) |
-| `requestedCapabilities` | 選用。請參閱 [功能](#capabilities)          |
-| `contributes`           | 選用。`tools`、`desktop` 和/或 `cli`        |
-| `settingsSchema`        | 選用。設定定義                              |
-| `secretSlots`           | 選用。密鑰槽定義                            |
+## `manifest` 宣言
 
-## 功能
+`manifest` 物件是擴充功能的執行時期宣言：支援哪些主機、何時啟動、貢獻什麼。在市場條目中，宣言由市場營運者背書；在 ZIP 套件中，宣言是自我宣告的，並由審核確認門檻把關。
+
+### 功能
 
 | 值                   | 執行環境                                                        |
 | -------------------- | --------------------------------------------------------------- |
@@ -135,30 +128,34 @@ example-extension/
 | `system-prompt`      | 需要搭配 `main` 才能貢獻系統提示片段                            |
 | `desktop-ui`         | 必須與 `contributes.desktop` 配對                               |
 | `cli-ui`             | 必須與 `contributes.cli` 配對                                   |
+| `mcp`                | 必須與 `contributes.mcp` 配對；載入套件根目錄 `mcp.json`        |
+| `hooks`              | 必須與 `contributes.hooks` 配對；載入套件根目錄 `hooks.json`    |
+| `skills`             | 必須與 `contributes.skills` 配對；載入 `skills/<name>/SKILL.md` |
+| `rules`              | 必須與 `contributes.rules` 配對；載入套件根目錄 `rule.md`       |
 | `approval-flow`      | 僅宣告。核准由每個工具的 `approvalMode` 驅動                    |
 | `questions-flow`     | 僅宣告。問題由 `approvalMode: need-questions` 驅動              |
 | `settings`           | 僅宣告。設定來自 `settingsSchema`                               |
 | `secret-storage`     | 與 `secretSlots` 搭配使用                                       |
 | `structured-results` | 僅宣告                                                          |
 
-`desktop-ui` / `cli-ui` 和對應的 `contributes` 區塊必須同時存在或同時不存在。
+`desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` 和對應的 `contributes` 項必須同時存在或同時不存在。
 
-## 啟動事件
+### 啟動事件
 
-| 事件                   | 觸發時機                       |
-| ---------------------- | ------------------------------ |
-| `onStartup`            | 主機預熱                       |
-| `onExtensionInstalled` | 在 ZIP 或 marketplace 安裝之後 |
-| `onSessionOpened`      | 會話變為啟用狀態               |
-| `onSessionReset`       | 會話重置                       |
-| `onUserMessage`        | 使用者提交訊息                 |
-| `onToolCall`           | 工具即將執行                   |
-| `onToolResult`         | 工具結果可用時                 |
-| `onApprovalResolved`   | 核准決定已解決時               |
+| 事件                   | 觸發時機         |
+| ---------------------- | ---------------- |
+| `onStartup`            | 主機預熱         |
+| `onExtensionInstalled` | 安裝完成之後     |
+| `onSessionOpened`      | 會話變為啟用狀態 |
+| `onSessionReset`       | 會話重置         |
+| `onUserMessage`        | 使用者提交訊息   |
+| `onToolCall`           | 工具即將執行     |
+| `onToolResult`         | 工具結果可用時   |
+| `onApprovalResolved`   | 核准決定已解決時 |
 
 當擴充功能列出事件且具有可讀的 `main` 時，主機會呼叫 `activate`。
 
-## `contributes.tools`
+### `contributes.tools`
 
 | 欄位            | 描述                                                 |
 | --------------- | ---------------------------------------------------- |
@@ -171,7 +168,7 @@ example-extension/
 
 模型不會直接看到 `name`。主機會建構一個呼叫名稱，例如 `extension__{id}__{tool}__{hash}`。
 
-## `contributes.desktop`
+### `contributes.desktop`
 
 需要 `desktop-ui`。
 
@@ -181,7 +178,7 @@ example-extension/
 | `css[].media`  | 選填。CSS media query                                     |
 | `settingsPage` | 選填。`true`、`{}` 或 `{ title }` — 新增 Desktop 設定項目 |
 
-## `contributes.cli`
+### `contributes.cli`
 
 需要 `cli-ui`。`hooks` 是帶有 `path` 的物件，不是內聯陣列：
 
@@ -219,7 +216,24 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 }
 ```
 
-## `settingsSchema`
+### 捆綁的 MCP、Hooks、Skills 與 Rules
+
+須與對應能力成對。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路徑是約定路徑，不允許自訂 path。
+
+| 貢獻面      | 能力     | 檔案                                                                              |
+| ----------- | -------- | --------------------------------------------------------------------------------- |
+| MCP         | `mcp`    | 套件根目錄 `mcp.json`（與使用者/工作區 MCP 同 schema）                            |
+| Agent hooks | `hooks`  | 套件根目錄 `hooks.json`（與 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
+| Skills      | `skills` | `skills/<name>/SKILL.md`                                                          |
+| Rules       | `rules`  | 套件根目錄 `rule.md`                                                              |
+
+已宣告但檔案缺失或非法則安裝失敗。套件內有檔案但未宣告則忽略，永不載入。
+
+這些檔案裡的相對 `command` 與 `cwd` 相對擴充功能根目錄解析。MCP stdio 省略 `cwd` 時預設為擴充功能根目錄。PATH 上的裸命令不變。
+
+擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | Skills | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
+
+### `settingsSchema`
 
 | 欄位           | 說明                                                   |
 | -------------- | ------------------------------------------------------ |
@@ -234,7 +248,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 值為 `string`、`number`、`boolean` 或 `null`。`null` 會清除非必要設定。
 
-## `secretSlots`
+### `secretSlots`
 
 | 欄位          | 說明         |
 | ------------- | ------------ |
@@ -270,7 +284,7 @@ Desktop 將秘密儲存在作業系統鑰匙圈中。在 CLI 守護程式路徑�
 
 | 欄位              | 描述                                                                 |
 | ----------------- | -------------------------------------------------------------------- |
-| `tools`           | `Record<string, (ctx) => unknown>`。鍵為 manifest 工具名稱           |
+| `tools`           | `Record<string, (ctx) => unknown>`。鍵為宣言中的工具名稱             |
 | `invokeTool`      | `(ctx) => unknown`。當存在時，用來取代 `tools[name]`                 |
 | `systemPrompt`    | 靜態系統片段                                                         |
 | `getSystemPrompt` | `() => string \| Promise<string>`。當存在時，用來取代 `systemPrompt` |
@@ -283,7 +297,7 @@ Desktop 將秘密儲存在作業系統鑰匙圈中。在 CLI 守護程式路徑�
 | ----------------- | -------------------------------------------------- |
 | `extension`       | 與 `activate` 相同的執行時期資訊                   |
 | `host`            | 相同的主機 API                                     |
-| `toolName`        | Manifest 工具名稱                                  |
+| `toolName`        | 宣言中的工具名稱                                   |
 | `arguments`       | 來自模型的物件                                     |
 | `log`             | 相同的記錄器                                       |
 | `settings`        | 相同的設定存取器                                   |
@@ -325,110 +339,86 @@ export function activate(ctx) {
 }
 ```
 
-## 安裝
+## 打包為 ZIP 分發
 
-- **ZIP** — 壓縮檔必須恰好包含一個 `package.json`（它可以位於子目錄中）。使用 `spirit extension import ./extension.zip` 或 **設定 → 擴充功能** 匯入。
-- **Marketplace tarball** — 壓縮檔根目錄必須包含 `package/` 目錄。
+把擴充功能目錄打包為可分享的 ZIP（內容加 `.spirit/extension.json`）：
 
-`supportedHosts` 必須包含目前的主機。相同 id 的第二次安裝預設不會取代現有副本。有關頻道和安裝介面，請參閱 [Marketplace](../customize/marketplace.mdx)。
-
-## 發布到官方登錄檔
-
-[SpiritAgents/registry](https://github.com/SpiritAgents/registry) 儲存庫是 marketplace 索引。它不託管擴充功能原始碼、`dist`、ZIP 檔案或 tarball。
-
-請依序執行下列步驟：
-
-1. 發布一個公開的 npm 套件。
-2. 開啟一個列出該套件的 pull request。
-
-### 1. 發布 npm 套件
-
-發布的 `package.json` 是主要依據，尤其是 `spiritExtension`。註冊表建置器需要：
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-它也會讀取 `name`、`version`、`description`、`author`、`repository`、`homepage`、`keywords` 以及選用的 `spiritExtension.icon`。如果您設定了 `icon`，請將該檔案包含在發布的套件中。缺少 `spiritExtension` 物件會導致該版本的註冊表建置失敗。
-
-官方範例：[`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo)（`spirit.system-message-demo`）。
-
-### 2. 列出套件
-
-建立 `registry/extensions/<extension-id>/`，內容包含：
-
-| 檔案         | 說明             |
-| ------------ | ---------------- |
-| `entry.json` | 市集治理         |
-| `README.md`  | 市集詳細資訊文字 |
-
-請勿手動編輯這些（請重新產生）：
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` 需要至少兩個以點分隔的區段，使用小寫字母和數字，區段內可包含點或連字號。範例：`spirit.system-message-demo`、`yourteam.some-extension`。`packageName` 和 `extensionId` 在儲存庫中必須是唯一的。
-
-### `entry.json`
-
-| 欄位                  | 說明                                                |
-| --------------------- | --------------------------------------------------- |
-| `schemaVersion`       | 必要。`1`                                           |
-| `extensionId`         | 必要。請參閱上述規則                                |
-| `packageName`         | 必要。npm 套件名稱                                  |
-| `status`              | 必要。`listed`、`hidden`、`deprecated` 或 `blocked` |
-| `featured`            | 必要。布林值                                        |
-| `defaultVersion`      | 必要。預設版本字串                                  |
-| `defaultReviewStatus` | 必要。`unverified`、`verified` 或 `revoked`         |
-| `versions`            | 必要。至少一個項目                                  |
-
-每個 `versions[]` 項目：
-
-| 欄位           | 說明                                           |
-| -------------- | ---------------------------------------------- |
-| `version`      | 必要                                           |
-| `channel`      | 必要。`stable`、`preview` 或 `experimental`    |
-| `reviewStatus` | 必要。`unverified`、`verified` 或 `revoked`    |
-| `changelog`    | 選用。`{ summary, body }` — 存在時兩者皆為必要 |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
+```bash
+npx @spiritagent/extension-toolkit pack ./my-extension
 ```
 
-市集 README 應說明擴充功能的功能、套件名稱、預設核准版本、主機與能力相容性，以及給市集讀者的注意事項。
+命令會先校驗套件，再把 `<name>-<version>.zip` 寫入目前目錄。使用者在**擴充功能**頁面匯入該 ZIP，或用 `spirit extension import`；它會進入他們的個人市場。見[擴充功能](../customize/extensions.mdx)。
 
-在本機重新產生衍生檔案：
+如需把擴充功能上架到市場，見[用 publish 發佈](#用-publish-發佈)。
 
-```powershell
-./scripts/build-registry.ps1
+## 搭建遠端擴充功能市場
+
+遠端擴充功能市場就是一個提供 `.spirit/marketplace.json` 索引的可服務目錄：Git 儲存庫、靜態網站或本機目錄。使用者透過 `spirit extension marketplace add <url|path>` 或 Desktop **擴充功能**頁新增它，然後瀏覽並安裝其中的條目。
+
+<Tabs items={["使用模板儲存庫", "手動建立"]}>
+<Tab value="使用模板儲存庫">
+
+[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) 可以從 `SpiritAgents/extension-template` 一鍵建立你自己的市場儲存庫。
+
+模板自帶註冊處佈局、兩個範例擴充功能，以及在每次 push 與 PR 上校驗註冊處的 CI。發布一個擴充功能：
+
+1. 用 `npm create @spiritagent/extension` 鷹架。
+2. 執行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它會把擴充功能複製進 `extensions/`，並把條目合併進 `.spirit/marketplace.json`。見[用 publish 發佈](#用-publish-發佈)。
+3. 推送——使用者用它的 Git URL 新增市場。
+
+</Tab>
+<Tab value="手動建立">
+
+市場根目錄 = 索引 + 每個擴充功能一個內容目錄：
+
+```text
+my-marketplace/
+  .spirit/
+    marketplace.json  # 索引
+  extensions/
+    my-extension/     # 內容目錄（純 npm 套件 + 能力檔案）
+      icon.svg
+      package.json
+      ...
 ```
 
-此腳本會擷取所列版本的 npm 中繼資料，重建 `catalog.json` 和每個 `detail.json`，然後驗證一致性。
+`marketplace.json` 內的相對路徑相對市場根目錄解析，禁止 `..` 段與絕對路徑。
 
-### Pull request
+條目欄位按語義分組：
 
-包含 `entry.json`、市集 `README.md` 以及重新產生的 `catalog.json` / `detail.json`。僅列出已在 npm 上公開的版本。準確設定 `reviewStatus` 和 `channel`。新版本通常以 `unverified` 開始。
+- **身份**——`name`（kebab-case，條目 id）、`version`（semver，不含 pre-release）、`source`：本機內容為根相對路徑字串（如 `"./extensions/my-extension"`），或 `{ "source": "npm", "package": "@scope/name@1.0.0" }` 釘住精確 npm 版本（安裝時會按 packument 的 SRI 雜湊校驗完整性）。
+- **展示**——`displayName`、`description`、`icon`（根相對 SVG 路徑）、`category`、`keywords`、`homepage`、`author`。
+- **宣言**——`manifest`：即「`manifest` 宣言」一節描述的執行時期宣言。市場為它背書；套件不能自行聲明能力。
+- **策展**——`featured` 與 `reviewStatus`（`unverified` / `verified` / `revoked`）。
 
-請勿提交擴充功能原始碼樹、`dist`、ZIP 檔案、tarball 或其他二進位成品。
+也可以用 `extension-toolkit publish` 自動合併條目——見[用 publish 發佈](#用-publish-發佈)。
 
-開啟 pull request 並不保證會上架。在版本獲得核准或驗證之前，審查可能會要求變更。
+本機校驗註冊處——純離線：schema、kebab-case 名稱、不含 pre-release 的 semver、npm source 格式、本機 source 的宣告-內容檔案、圖示規則：
+
+```bash
+npx -y @spiritagent/extension-toolkit marketplace check .
+```
+
+審核紀律：新增條目或變動 `version` 的 PR 必須保持 `reviewStatus: "unverified"`；人工複核後在單獨提交中晉升為 `verified`。模板儲存庫的 `.github/workflows/marketplace.yml` 即參考實作——它相對 PR 基線 diff 索引。
+
+</Tab>
+</Tabs>
+
+### 本機市場
+
+任何帶 `.spirit/marketplace.json` 的本機目錄都可以作為市場新增——用 `spirit extension marketplace add <path>` 或 Desktop 的**從磁碟新增**。本機市場原地讀取、無需 CI，因此也是擴充功能作者的開發循環：編輯、重裝、重複。
+
+### 用 publish 發佈
+
+`extension-toolkit publish` 把擴充功能的 `.spirit/extension.json` 合併進目標市場的 `.spirit/marketplace.json`，並按條目 source 的需要複製內容：
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- 第一個參數是擴充功能目錄，第二個是市場根目錄——任何帶 `.spirit/marketplace.json` 的本機目錄：模板儲存庫克隆、`{spiritDataDir}/marketplaces/personal` 的個人市場等。
+- `--source local`（預設）：把完整的套件複製進市場的 `extensions/<name>/`——含 `.spirit/extension.json`，排除 `node_modules` 與 `.git`——並把條目 `source` 指向該目錄。
+- `--source npm`：從擴充功能的 `package.json` 讀 `name@version` 釘版作為條目的 npm `source`；只把宣言宣告的圖示複製進 `extensions/<name>/`（圖示由市場自託管）。npm 套件本身的發佈仍由你用 npm CLI 完成。
+- `--dry-run`：打印將寫入的條目與計畫動作，不落盤。
+- 合併規則：同名條目原位替換，否則追加；新條目或 `version` 變動時 `reviewStatus` 回落為 `unverified`，同版本重發保留；`featured` 等策展欄位始終保留市場側原值。
+- 發佈前會跑與 `check` 相同的校驗；失敗則不寫任何檔案。

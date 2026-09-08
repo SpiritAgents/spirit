@@ -24,9 +24,12 @@ import type {
   DesktopGitSnapshot,
   DesktopExtensionCssLayer,
   DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceSource,
 } from "../types.js";
 import type { EphemeralSessionRecord } from "./sessions.js";
-import { ensureBuiltInSkills } from "@spiritagent/host-internal";
+import { ensureBuiltInSkills, ensurePersonalMarketplace } from "@spiritagent/host-internal";
+import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
 import { resolveWorkspaceBindingForRequestedRoot, sameWorkspaceRoot } from "./service-utils.js";
 import { spiritDataDir } from "./storage.js";
 import type { ExtensionWarmupTrigger } from "./extension-warmup.js";
@@ -39,7 +42,12 @@ export interface InitializationState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
+  marketplaceSources: DesktopMarketplaceSource[];
+  marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceCatalogAll: DesktopMarketplaceCatalogEntry[];
+  marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
+  extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
 }
 
@@ -83,6 +91,7 @@ export async function ensureInitializedCommand(
   applyLlmHttpVersionFromConfig(loadedConfig);
   applyLlmClientVersionFromApp();
   await ensureBuiltInSkills(spiritDataDir());
+  await ensurePersonalMarketplace(spiritDataDir());
   await ctx.seedBuiltInExtensions();
   const previousState = ctx.state();
   const previousBinding = normalizeWorkspaceBinding(
@@ -212,7 +221,17 @@ export async function ensureInitializedCommand(
     metadata,
     plan,
     extensionsList: state?.extensionsList ?? [],
+    marketplaceSources: state?.marketplaceSources ?? [],
+    marketplaceCatalogs: state?.marketplaceCatalogs ?? {},
+    marketplaceCatalogAll: state?.marketplaceCatalogAll ?? [],
+    marketplaceWarnings: state?.marketplaceWarnings ?? [],
     extensionCss: state?.extensionCss ?? [],
+    extensionInstructionContributions: state?.extensionInstructionContributions ?? {
+      mcp: { servers: {} },
+      hooks: [],
+      skills: [],
+      rules: [],
+    },
     ephemeralSessions: state?.ephemeralSessions ?? [],
   });
   ctx.setInitialized(true);

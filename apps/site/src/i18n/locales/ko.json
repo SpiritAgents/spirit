@@ -127,9 +127,7 @@
       "expandTools": "도구 펼치기",
       "newSession": "새 세션",
       "settingsPlaceholderTitle": "데스크톱 설정 보기",
-      "settingsPlaceholderDescription": "설정 화면의 첫 화면 구조와 계층을 유지합니다.",
-      "marketplacePlaceholderTitle": "확장 기능 마켓플레이스 보기",
-      "marketplacePlaceholderDescription": "마켓플레이스 화면의 첫 화면 구조와 계층을 유지합니다.",
+      "marketplacePlaceholderTitle": "확장 기능 보기",
       "previewEditorOnlyTextError": "미리보기 편집기에서는 텍스트 파일만 열 수 있습니다.",
       "hostStatus": "Web Hero 미리보기",
       "mcpReady": "MCP 준비됨"

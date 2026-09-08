@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import {
   DESKTOP_EDITOR_TAB_CLASS,
@@ -194,7 +195,7 @@ export function HooksSettingsPanel({
         </div>
       </div>
 
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {t("settings.hooksEmpty")}

@@ -8,17 +8,21 @@ import {
   type OpenAiExtensionSystemPrompt,
 } from "@spiritagent/agent-core";
 import {
+  buildExtensionDumpFromEntry,
+  buildHostExtensionManifestFromDump,
   collectHostExtensionContributedTools,
+  installSourceForSourceId,
+  summarizeDeclaredExtensionContributionPoints,
   type HostExtensionManager,
   type HostInstalledExtension,
+  type HostMarketplaceCatalogItem,
+  type MarketplaceCatalogItem,
 } from "@spiritagent/host-internal";
 
 import type {
   DesktopExtensionCssLayer,
   DesktopExtensionListItem,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
+  DesktopMarketplaceCatalogEntry,
 } from "../types.js";
 
 export function buildDesktopExtensionToolDefinitions(
@@ -40,113 +44,274 @@ export async function buildDesktopExtensionListItems(
 ): Promise<DesktopExtensionListItem[]> {
   const metadataOnly = options?.metadataOnly === true;
   return Promise.all(
-    extensions.map(async (item) => ({
-      id: item.id,
-      displayName: item.manifest.name,
-      ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
-      version: item.manifest.version,
-      ...(item.manifest.description ? { description: item.manifest.description } : {}),
-      ...(item.manifest.author ? { author: item.manifest.author } : {}),
-      ...(item.manifest.homepage ? { homepage: item.manifest.homepage } : {}),
-      ...(item.manifest.main ? { main: item.manifest.main } : {}),
-      supportedHosts: [...item.manifest.supportedHosts],
-      ...(item.manifest.activationEvents?.length
-        ? { activationEvents: [...item.manifest.activationEvents] }
-        : {}),
-      ...(item.manifest.requestedCapabilities?.length
-        ? { requestedCapabilities: [...item.manifest.requestedCapabilities] }
-        : {}),
-      ...(item.manifest.contributes?.tools?.length
-        ? {
-            contributedTools: item.manifest.contributes.tools.map((tool) => ({
-              name: tool.name,
-              description: tool.description,
-              ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
-              ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.contributes?.desktop?.css?.length
-        ? {
-            desktopCss: item.manifest.contributes.desktop.css.map((entry) => ({
-              path: entry.path,
-              ...(entry.media ? { media: entry.media } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.contributes?.desktop?.settingsPage
-        ? {
-            desktopSettingsPage: item.manifest.contributes.desktop.settingsPage.title
-              ? { title: item.manifest.contributes.desktop.settingsPage.title }
-              : {},
-          }
-        : {}),
-      ...(item.manifest.contributes?.cli?.hooks?.length
-        ? {
-            cliHooks: item.manifest.contributes.cli.hooks.map((hook) => ({
-              slot: hook.slot,
-              ...(hook.variant ? { variant: hook.variant } : {}),
-              ...(hook.tokens
-                ? {
-                    tokens: {
-                      ...(hook.tokens.foreground ? { foreground: hook.tokens.foreground } : {}),
-                      ...(hook.tokens.border ? { border: hook.tokens.border } : {}),
-                      ...(hook.tokens.accent ? { accent: hook.tokens.accent } : {}),
-                    },
-                  }
-                : {}),
-              ...(hook.prefix ? { prefix: hook.prefix } : {}),
-              ...(hook.suffix ? { suffix: hook.suffix } : {}),
-            })),
-          }
-        : {}),
-      ...(item.manifest.settingsSchema?.length
-        ? {
-            settingsSchema: item.manifest.settingsSchema.map((setting) => ({
-              key: setting.key,
-              type: setting.type,
-              title: setting.title,
-              ...(setting.description ? { description: setting.description } : {}),
-              ...(setting.placeholder ? { placeholder: setting.placeholder } : {}),
-              ...(setting.required !== undefined ? { required: setting.required } : {}),
-              ...(setting.defaultValue !== undefined ? { defaultValue: setting.defaultValue } : {}),
-              ...(setting.options?.length
-                ? {
-                    options: setting.options.map((option) => ({
-                      value: option.value,
-                      label: option.label,
-                      ...(option.description ? { description: option.description } : {}),
-                    })),
-                  }
-                : {}),
-            })),
-            ...(metadataOnly ? {} : { settingsValues: await manager.getSettingsValues(item.id) }),
-          }
-        : {}),
-      ...(item.manifest.secretSlots?.length
-        ? {
-            secretSlots: item.manifest.secretSlots.map((slot) => ({
-              key: slot.key,
-              title: slot.title,
-              ...(slot.description ? { description: slot.description } : {}),
-              ...(slot.required !== undefined ? { required: slot.required } : {}),
-            })),
-            ...(metadataOnly
-              ? {}
-              : {
-                  secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
-                    ([key, configured]) => ({
-                      key,
-                      configured,
-                    }),
-                  ),
-                }),
-          }
-        : {}),
-      ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
-      ...(item.installSource ? { installSource: item.installSource } : {}),
-      installedAtUnixMs: item.installedAtUnixMs,
-    })),
+    extensions.map(async (item) => {
+      const catalogInstalled = isMarketplaceCatalogInstalled(item);
+      const skipLiveState = metadataOnly || !catalogInstalled;
+      const instructionContributions = await summarizeDeclaredExtensionContributionPoints(item);
+      return {
+        id: item.id,
+        displayName: item.manifest.displayName,
+        ...(item.manifest.icon ? { icon: item.manifest.icon } : {}),
+        version: item.manifest.version,
+        enabled: item.enabled,
+        ...(item.manifest.description ? { description: item.manifest.description } : {}),
+        ...(item.manifest.author
+          ? {
+              author: {
+                name: item.manifest.author.name,
+                ...(item.manifest.author.email ? { email: item.manifest.author.email } : {}),
+                ...(item.manifest.author.url ? { url: item.manifest.author.url } : {}),
+              },
+            }
+          : {}),
+        ...(item.manifest.main ? { main: item.manifest.main } : {}),
+        supportedHosts: [...item.manifest.supportedHosts],
+        ...(item.manifest.activationEvents?.length
+          ? { activationEvents: [...item.manifest.activationEvents] }
+          : {}),
+        ...(item.manifest.requestedCapabilities?.length
+          ? { requestedCapabilities: [...item.manifest.requestedCapabilities] }
+          : {}),
+        ...(item.manifest.contributes?.tools?.length
+          ? {
+              contributedTools: item.manifest.contributes.tools.map((tool) => ({
+                name: tool.name,
+                description: tool.description,
+                ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
+                ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
+              })),
+            }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.css?.length
+          ? {
+              desktopCss: item.manifest.contributes.desktop.css.map((entry) => ({
+                path: entry.path,
+                ...(entry.media ? { media: entry.media } : {}),
+              })),
+            }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.settingsPage
+          ? {
+              desktopSettingsPage: item.manifest.contributes.desktop.settingsPage.title
+                ? { title: item.manifest.contributes.desktop.settingsPage.title }
+                : {},
+            }
+          : {}),
+        ...(item.manifest.contributes?.cli?.hooks?.length
+          ? {
+              cliHooks: item.manifest.contributes.cli.hooks.map((hook) => ({
+                slot: hook.slot,
+                ...(hook.variant ? { variant: hook.variant } : {}),
+                ...(hook.tokens
+                  ? {
+                      tokens: {
+                        ...(hook.tokens.foreground ? { foreground: hook.tokens.foreground } : {}),
+                        ...(hook.tokens.border ? { border: hook.tokens.border } : {}),
+                        ...(hook.tokens.accent ? { accent: hook.tokens.accent } : {}),
+                      },
+                    }
+                  : {}),
+                ...(hook.prefix ? { prefix: hook.prefix } : {}),
+                ...(hook.suffix ? { suffix: hook.suffix } : {}),
+              })),
+            }
+          : {}),
+        ...(instructionContributions ? { instructionContributions } : {}),
+        ...(item.manifest.settingsSchema?.length
+          ? {
+              settingsSchema: item.manifest.settingsSchema.map((setting) => ({
+                key: setting.key,
+                type: setting.type,
+                title: setting.title,
+                ...(setting.description ? { description: setting.description } : {}),
+                ...(setting.placeholder ? { placeholder: setting.placeholder } : {}),
+                ...(setting.required !== undefined ? { required: setting.required } : {}),
+                ...(setting.defaultValue !== undefined
+                  ? { defaultValue: setting.defaultValue }
+                  : {}),
+                ...(setting.options?.length
+                  ? {
+                      options: setting.options.map((option) => ({
+                        value: option.value,
+                        label: option.label,
+                        ...(option.description ? { description: option.description } : {}),
+                      })),
+                    }
+                  : {}),
+              })),
+              ...(skipLiveState
+                ? {}
+                : { settingsValues: await manager.getSettingsValues(item.id) }),
+            }
+          : {}),
+        ...(item.manifest.secretSlots?.length
+          ? {
+              secretSlots: item.manifest.secretSlots.map((slot) => ({
+                key: slot.key,
+                title: slot.title,
+                ...(slot.description ? { description: slot.description } : {}),
+                ...(slot.required !== undefined ? { required: slot.required } : {}),
+              })),
+              ...(skipLiveState
+                ? {}
+                : {
+                    secretStatuses: Object.entries(await manager.getSecretStatus(item.id)).map(
+                      ([key, configured]) => ({
+                        key,
+                        configured,
+                      }),
+                    ),
+                  }),
+            }
+          : {}),
+        ...(item.archiveFileName ? { archiveFileName: item.archiveFileName } : {}),
+        ...(item.installSource ? { installSource: item.installSource } : {}),
+        installed: catalogInstalled,
+        ...(catalogInstalled ? { installedAtUnixMs: item.installedAtUnixMs } : {}),
+      };
+    }),
+  );
+}
+
+function isMarketplaceCatalogInstalled(item: HostInstalledExtension): boolean {
+  if (!("installed" in item)) {
+    return true;
+  }
+  return (item as HostMarketplaceCatalogItem).installed;
+}
+
+/**
+ * Map host-internal catalog rows to renderer entries. Icons from local/git
+ * registries are read into data URLs (the renderer cannot fetch file paths);
+ * index direct-links keep their https URL. Contribution summaries are computed
+ * when the content is locally readable (installed, or a local/git registry).
+ */
+export async function buildDesktopMarketplaceCatalogEntries(
+  items: readonly MarketplaceCatalogItem[],
+): Promise<DesktopMarketplaceCatalogEntry[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      const { entry, source } = item;
+      const manifest = await buildHostExtensionManifestFromDump(
+        buildExtensionDumpFromEntry(entry, source.id),
+        item.contentDir,
+      );
+
+      let instructionContributions: DesktopMarketplaceCatalogEntry["instructionContributions"];
+      if (item.contentDir) {
+        const summary = await summarizeDeclaredExtensionContributionPoints({
+          id: `${source.id}/${entry.name}`,
+          sourceId: source.id,
+          relativePath: `${source.id}/${entry.name}`,
+          manifest,
+          directoryPath: item.contentDir,
+          manifestPath: "",
+          installedAtUnixMs: 0,
+          enabled: true,
+          installSource: installSourceForSourceId(source.id),
+        });
+        instructionContributions = summary
+          ? {
+              ...(summary.mcp?.length ? { mcp: summary.mcp } : {}),
+              ...(summary.hooks?.length ? { hooks: summary.hooks } : {}),
+              ...(summary.skills?.length ? { skills: summary.skills } : {}),
+              ...(summary.rules ? { rules: summary.rules } : {}),
+            }
+          : undefined;
+      }
+
+      let iconUrl = item.iconUrl;
+      if (iconUrl && !/^https?:\/\//u.test(iconUrl)) {
+        try {
+          const bytes = await readFile(iconUrl);
+          iconUrl = `data:image/svg+xml;base64,${bytes.toString("base64")}`;
+        } catch {
+          iconUrl = undefined;
+        }
+      }
+
+      return {
+        id: `${source.id}/${entry.name}`,
+        sourceId: source.id,
+        sourceName: source.name,
+        name: entry.name,
+        displayName: entry.displayName,
+        description: entry.description,
+        version: entry.version,
+        ...(entry.author
+          ? {
+              author: {
+                name: entry.author.name,
+                ...(entry.author.email ? { email: entry.author.email } : {}),
+                ...(entry.author.url ? { url: entry.author.url } : {}),
+              },
+            }
+          : {}),
+        ...(entry.category ? { category: entry.category } : {}),
+        ...(entry.keywords?.length ? { keywords: [...entry.keywords] } : {}),
+        ...(entry.homepage ? { homepage: entry.homepage } : {}),
+        ...(entry.featured !== undefined ? { featured: entry.featured } : {}),
+        reviewStatus: entry.reviewStatus,
+        artifactKind: typeof entry.source === "string" ? "local" : "npm",
+        ...(iconUrl ? { iconUrl } : {}),
+        supportedHosts: [...manifest.supportedHosts],
+        ...(manifest.activationEvents?.length
+          ? { activationEvents: [...manifest.activationEvents] }
+          : {}),
+        ...(manifest.requestedCapabilities?.length
+          ? { requestedCapabilities: [...manifest.requestedCapabilities] }
+          : {}),
+        ...(manifest.contributes?.tools?.length
+          ? {
+              contributedTools: manifest.contributes.tools.map((tool) => ({
+                name: tool.name,
+                description: tool.description,
+                ...(tool.approvalMode ? { approvalMode: tool.approvalMode } : {}),
+                ...(tool.executionMode ? { executionMode: tool.executionMode } : {}),
+              })),
+            }
+          : {}),
+        ...(manifest.contributes?.desktop?.css?.length
+          ? {
+              desktopCss: manifest.contributes.desktop.css.map((css) => ({
+                path: css.path,
+                ...(css.media ? { media: css.media } : {}),
+              })),
+            }
+          : {}),
+        ...(manifest.contributes?.desktop?.settingsPage
+          ? {
+              desktopSettingsPage: manifest.contributes.desktop.settingsPage.title
+                ? { title: manifest.contributes.desktop.settingsPage.title }
+                : {},
+            }
+          : {}),
+        ...(manifest.contributes?.cli?.hooks?.length
+          ? {
+              cliHooks: manifest.contributes.cli.hooks.map((hook) => ({
+                slot: hook.slot,
+                ...(hook.variant ? { variant: hook.variant } : {}),
+                ...(hook.tokens
+                  ? {
+                      tokens: {
+                        ...(hook.tokens.foreground ? { foreground: hook.tokens.foreground } : {}),
+                        ...(hook.tokens.border ? { border: hook.tokens.border } : {}),
+                        ...(hook.tokens.accent ? { accent: hook.tokens.accent } : {}),
+                      },
+                    }
+                  : {}),
+                ...(hook.prefix ? { prefix: hook.prefix } : {}),
+                ...(hook.suffix ? { suffix: hook.suffix } : {}),
+              })),
+            }
+          : {}),
+        ...(instructionContributions ? { instructionContributions } : {}),
+        installed: item.installed,
+        ...(item.enabled !== undefined ? { enabled: item.enabled } : {}),
+        ...(item.installedVersion ? { installedVersion: item.installedVersion } : {}),
+        updateAvailable: item.updateAvailable,
+      } satisfies DesktopMarketplaceCatalogEntry;
+    }),
   );
 }
 
@@ -156,6 +321,9 @@ export async function collectDesktopExtensionCssLayers(
   const layers: DesktopExtensionCssLayer[] = [];
 
   for (const item of extensions) {
+    if (!item.enabled) {
+      continue;
+    }
     const cssEntries = item.manifest.contributes?.desktop?.css ?? [];
     for (const entry of cssEntries) {
       const sourcePath = path.join(item.directoryPath, ...entry.path.split("/"));
@@ -166,7 +334,7 @@ export async function collectDesktopExtensionCssLayers(
         }
         layers.push({
           extensionId: item.id,
-          extensionName: item.manifest.name,
+          extensionName: item.manifest.displayName,
           sourcePath: entry.path,
           cssText,
           ...(entry.media ? { media: entry.media } : {}),
@@ -193,142 +361,4 @@ export async function collectExtensionSystemPrompts(
     extensionName: entry.extensionName,
     content: entry.content,
   }));
-}
-
-export function toDesktopMarketplaceCatalogItem(item: {
-  extensionId: string;
-  packageName: string;
-  status: string;
-  featured: boolean;
-  defaultVersion: string;
-  defaultChannel: "stable" | "preview" | "experimental";
-  defaultReviewStatus: "unverified" | "verified" | "revoked";
-  detailPath: string;
-  displayName: string;
-  description: string;
-  author?: string;
-  homepageUrl?: string;
-  repositoryUrl?: string;
-  keywords: string[];
-  supportedHosts: Array<"cli" | "desktop">;
-  requestedCapabilities: string[];
-  iconUrl?: string;
-}): DesktopMarketplaceCatalogItem {
-  return {
-    extensionId: item.extensionId,
-    packageName: item.packageName,
-    status: item.status,
-    featured: item.featured,
-    defaultVersion: item.defaultVersion,
-    defaultChannel: item.defaultChannel,
-    defaultReviewStatus: item.defaultReviewStatus,
-    detailPath: item.detailPath,
-    displayName: item.displayName,
-    description: item.description,
-    ...(item.author ? { author: item.author } : {}),
-    ...(item.homepageUrl ? { homepageUrl: item.homepageUrl } : {}),
-    ...(item.repositoryUrl ? { repositoryUrl: item.repositoryUrl } : {}),
-    keywords: [...item.keywords],
-    supportedHosts: [...item.supportedHosts],
-    requestedCapabilities: [...item.requestedCapabilities],
-    ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
-  };
-}
-
-export function toDesktopMarketplaceDetail(detail: {
-  extensionId: string;
-  packageName: string;
-  status: string;
-  featured: boolean;
-  defaultVersion: string;
-  readmePath: string;
-  versions: Array<{
-    version: string;
-    channel: "stable" | "preview" | "experimental";
-    reviewStatus: "unverified" | "verified" | "revoked";
-    displayName: string;
-    description: string;
-    author?: string;
-    homepageUrl?: string;
-    repositoryUrl?: string;
-    keywords: string[];
-    supportedHosts: Array<"cli" | "desktop">;
-    requestedCapabilities: string[];
-    iconUrl?: string;
-    publishedAt?: string;
-    tarballUrl?: string;
-    integrity?: string;
-    shasum?: string;
-    changelog?: {
-      summary: string;
-      body: string;
-    };
-  }>;
-}): DesktopMarketplaceDetail {
-  return {
-    extensionId: detail.extensionId,
-    packageName: detail.packageName,
-    status: detail.status,
-    featured: detail.featured,
-    defaultVersion: detail.defaultVersion,
-    readmePath: detail.readmePath,
-    versions: detail.versions.map((item) => ({
-      version: item.version,
-      channel: item.channel,
-      reviewStatus: item.reviewStatus,
-      displayName: item.displayName,
-      description: item.description,
-      ...(item.author ? { author: item.author } : {}),
-      ...(item.homepageUrl ? { homepageUrl: item.homepageUrl } : {}),
-      ...(item.repositoryUrl ? { repositoryUrl: item.repositoryUrl } : {}),
-      keywords: [...item.keywords],
-      supportedHosts: [...item.supportedHosts],
-      requestedCapabilities: [...item.requestedCapabilities],
-      ...(item.iconUrl ? { iconUrl: item.iconUrl } : {}),
-      ...(item.publishedAt ? { publishedAt: item.publishedAt } : {}),
-      ...(item.tarballUrl ? { tarballUrl: item.tarballUrl } : {}),
-      ...(item.integrity ? { integrity: item.integrity } : {}),
-      ...(item.shasum ? { shasum: item.shasum } : {}),
-      ...(item.changelog
-        ? {
-            changelog: {
-              summary: item.changelog.summary,
-              body: item.changelog.body,
-            },
-          }
-        : {}),
-    })),
-  };
-}
-
-export function toDesktopMarketplacePreparedInstall(prepared: {
-  extensionId: string;
-  packageName: string;
-  displayName: string;
-  description: string;
-  version: string;
-  channel: "stable" | "preview" | "experimental";
-  reviewStatus: "unverified" | "verified" | "revoked";
-  supportedHosts: Array<"cli" | "desktop">;
-  supportsCurrentHost: boolean;
-  tarballUrl?: string;
-  integrity?: string;
-  shasum?: string;
-  sourceFileName: string;
-}): DesktopMarketplacePreparedInstall {
-  return {
-    extensionId: prepared.extensionId,
-    packageName: prepared.packageName,
-    displayName: prepared.displayName,
-    description: prepared.description,
-    version: prepared.version,
-    channel: prepared.channel,
-    reviewStatus: prepared.reviewStatus,
-    supportedHosts: [...prepared.supportedHosts],
-    supportsCurrentHost: prepared.supportsCurrentHost,
-    ...(prepared.tarballUrl ? { tarballUrl: prepared.tarballUrl } : {}),
-    ...(prepared.integrity ? { integrity: prepared.integrity } : {}),
-    ...(prepared.shasum ? { shasum: prepared.shasum } : {}),
-    sourceFileName: prepared.sourceFileName,
-  };
 }

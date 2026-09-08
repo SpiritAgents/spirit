@@ -13,19 +13,20 @@ import type {
   DeleteHookEntryRequest,
   DesktopApprovalDecision,
   DesktopDreamOverviewItem,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
   DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
+  AddMarketplaceSourceRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
@@ -89,16 +90,13 @@ declare global {
     deleteHookEntry(request: DeleteHookEntryRequest): Promise<DesktopSnapshot>;
     inspectMcpServer(name: string): Promise<DesktopMcpServerInspection>;
     importExtension(request: ImportExtensionRequest): Promise<DesktopSnapshot>;
-    listMarketplaceExtensions(): Promise<DesktopMarketplaceCatalogItem[]>;
-    getMarketplaceExtensionDetail(extensionId: string): Promise<DesktopMarketplaceDetail>;
-    getMarketplaceExtensionReadme(extensionId: string): Promise<string>;
-    prepareMarketplaceExtensionInstall(
-      request: PrepareMarketplaceExtensionInstallRequest,
-    ): Promise<DesktopMarketplacePreparedInstall>;
-    installMarketplaceExtension(
-      request: InstallMarketplaceExtensionRequest,
-    ): Promise<DesktopSnapshot>;
+    installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot>;
+    addMarketplaceSource(request: AddMarketplaceSourceRequest): Promise<unknown>;
+    removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot>;
+    installMarketplaceExtension(request: InstallMarketplaceExtensionRequest): Promise<unknown>;
+    updateExtension(request: UpdateExtensionRequest): Promise<unknown>;
     deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot>;
+    setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot>;
     runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot>;
     updateExtensionSettings(request: UpdateExtensionSettingsRequest): Promise<DesktopSnapshot>;
     updateExtensionSecret(request: UpdateExtensionSecretRequest): Promise<DesktopSnapshot>;

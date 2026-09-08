@@ -1,4 +1,28 @@
+use ratatui::layout::Alignment;
+
 use super::*;
+use crate::word_wrap::{LineComposer, WordWrapper};
+
+/// Row count of `lines` rendered with `Wrap { trim: true }` at `width`,
+/// measured with the vendored WordWrapper — the repo's authoritative wrapping
+/// pipeline. ratatui's `Paragraph::line_count` stays unstable-gated upstream
+/// (ratatui#293); see SPIRIT-8 for adopting it once stabilized.
+fn wrapped_line_count(lines: &[Line<'static>], width: u16) -> usize {
+    let mut count = 0;
+    for line in lines {
+        let alignment = line.alignment.unwrap_or(Alignment::Left);
+        let graphemes = line.styled_graphemes(Style::default()).collect::<Vec<_>>();
+        let mut composer = WordWrapper::new(
+            std::iter::once((graphemes.into_iter(), alignment)),
+            width,
+            true,
+        );
+        while composer.next_line().is_some() {
+            count += 1;
+        }
+    }
+    count
+}
 
 pub(in crate::ui) fn marketplace_review_label(status: &str) -> String {
     match status.trim() {
@@ -8,12 +32,15 @@ pub(in crate::ui) fn marketplace_review_label(status: &str) -> String {
     }
 }
 
-pub(in crate::ui) fn marketplace_channel_label(channel: &str) -> String {
-    match channel.trim() {
-        "stable" => t!("tui.marketplace.channel_stable").into_owned(),
-        "preview" => t!("tui.marketplace.channel_preview").into_owned(),
-        "experimental" => t!("tui.marketplace.channel_experimental").into_owned(),
-        other => other.to_string(),
+pub(in crate::ui) fn review_status_style(status: &str) -> Style {
+    match status.trim() {
+        "verified" => Style::default()
+            .fg(Color::Rgb(228, 228, 228))
+            .add_modifier(Modifier::BOLD),
+        "revoked" => Style::default()
+            .fg(Color::Rgb(135, 135, 135))
+            .add_modifier(Modifier::DIM),
+        _ => Style::default().fg(Color::Rgb(175, 175, 175)),
     }
 }
 
@@ -34,6 +61,7 @@ pub(in crate::ui) fn draw_marketplace_view(
 pub(in crate::ui) fn marketplace_panel_height(
     view: &MarketplaceViewModel,
     panel_height: u16,
+    panel_width: u16,
     input_height: u16,
 ) -> u16 {
     let available = panel_height.saturating_sub(input_height).max(8);
@@ -43,89 +71,161 @@ pub(in crate::ui) fn marketplace_panel_height(
             available.min(half.max(8))
         }
         _ => {
-            let expanded = available.saturating_mul(4) / 5;
-            available.min(expanded.max(22))
+            // The detail page hugs its content: wrap-aware overview height
+            // plus a one-row gap and the borderless actions form, capped by
+            // the available space.
+            let content_width = inline_picker_area(Rect::new(0, 0, panel_width, 1)).width;
+            let overview_lines = view
+                .detail
+                .as_ref()
+                .map(|detail| {
+                    wrapped_line_count(
+                        &build_marketplace_overview_lines(
+                            detail,
+                            Style::default(),
+                            Style::default(),
+                        ),
+                        content_width,
+                    )
+                })
+                .unwrap_or(1);
+            let needed = (overview_lines as u16)
+                .saturating_add(1)
+                .saturating_add(marketplace_detail_actions_height(view, content_width));
+            available.min(needed)
         }
     }
 }
 
+/// Height of the detail page's borderless actions form: header rows (search /
+/// error) plus the rendered item lines.
+fn marketplace_detail_actions_height(view: &MarketplaceViewModel, width: u16) -> u16 {
+    let header = slash_flow_header_height(&view.slash, view.error.as_deref());
+    let items = build_slash_flow_lines(
+        &view.slash,
+        width.saturating_sub(1) as usize,
+        view.slash.compact_items,
+    )
+    .len() as u16;
+    header + items
+}
+
+/// Catalog step: search line on top, the borderless source bar below it, then
+/// the filtered list (matching the Desktop "search above, source bar below" order).
 pub(in crate::ui) fn draw_marketplace_catalog_picker(
     frame: &mut ratatui::Frame<'_>,
     area: Rect,
     view: &MarketplaceViewModel,
 ) {
+    // The source bar hides when no source tab is visible (all sources empty).
+    let source_bar_height: u16 = if view.sources.is_empty() { 0 } else { 1 };
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(source_bar_height), Constraint::Min(1)])
+        .split(area);
+
+    if source_bar_height > 0 {
+        // Same inset as the list body below, so the bar starts where the ">" indicator does.
+        draw_marketplace_source_bar(frame, inline_picker_area(chunks[0]), view);
+    }
+
+    // The slash-flow body renders a plain Paragraph with no scrolling, so the
+    // catalog windows its items first — same inline_picker_bounds semantics as
+    // the session / slash pickers — to keep the selection visible. Catalog
+    // rows are uniform three-line cards (label + summary + blank separator;
+    // compact mode skips details).
+    let header_height = slash_flow_header_height(&view.slash, view.error.as_deref());
+    let body_height = inline_picker_area(chunks[1])
+        .height
+        .saturating_sub(header_height);
+    let max_items = (usize::from(body_height) / 3).max(1);
+    let (start, end) =
+        inline_picker_bounds(view.slash.items.len(), view.slash.selected_index, max_items);
+    let mut windowed = view.slash.clone();
+    windowed.items = view.slash.items[start..end].to_vec();
+    windowed.selected_index = view.slash.selected_index - start;
     draw_slash_flow_body(
         frame,
-        inline_picker_area(area),
-        &view.slash,
+        inline_picker_area(chunks[1]),
+        &windowed,
         view.error.as_deref(),
     );
 }
 
+/// Horizontal source bar without a border; the active source is highlighted.
+/// Left/Right switches sources while the list keeps focus.
+fn draw_marketplace_source_bar(
+    frame: &mut ratatui::Frame<'_>,
+    area: Rect,
+    view: &MarketplaceViewModel,
+) {
+    let mut spans = vec![Span::styled(
+        t!("tui.marketplace.source_bar_label").into_owned(),
+        subtle_aux_text_style(),
+    )];
+    for (index, source) in view.sources.iter().enumerate() {
+        let active = index == view.active_source_index;
+        spans.push(Span::raw("  "));
+        spans.push(Span::styled(
+            source.label.clone(),
+            if active {
+                inline_picker_text_style(true)
+            } else {
+                subtle_aux_text_style()
+            },
+        ));
+    }
+    frame.render_widget(Paragraph::new(Line::from(spans)), area);
+}
+
+/// Borderless detail page, matching the catalog's minimal style: overview on
+/// top, a one-row gap, then the actions form. The gap keeps the actionable
+/// form visually separate from the read-only info above.
 pub(in crate::ui) fn draw_marketplace_detail_page(
     frame: &mut ratatui::Frame<'_>,
     area: Rect,
     view: &MarketplaceViewModel,
 ) {
-    let border_style = input_block_border_style(false, MainInputMode::Agent, false);
-    let panel_title_style = Style::default().fg(Color::Rgb(225, 225, 225));
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(border_style)
-        .title(Line::from(Span::styled(
-            t!("tui.marketplace.detail_title").into_owned(),
-            border_style,
-        )));
-    frame.render_widget(block.clone(), area);
-    let inner = block.inner(area);
+    let content = inline_picker_area(area);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(if view.error.is_some() { 7 } else { 6 }),
-            Constraint::Min(8),
-            Constraint::Length(10),
+            Constraint::Min(1),
+            Constraint::Length(1),
+            Constraint::Length(marketplace_detail_actions_height(view, content.width)),
         ])
-        .split(inner);
+        .split(content);
 
     render_marketplace_overview(
         frame,
         chunks[0],
         view,
-        panel_title_style,
+        Style::default().fg(Color::Rgb(225, 225, 225)),
         subtle_aux_text_style(),
     );
-    render_marketplace_readme(frame, chunks[1], view, panel_title_style);
-    draw_slash_flow_panel(frame, chunks[2], &view.slash, None);
+    draw_slash_flow_body(frame, chunks[2], &view.slash, view.error.as_deref());
 }
 
-pub(in crate::ui) fn render_marketplace_overview(
-    frame: &mut ratatui::Frame<'_>,
-    area: Rect,
-    view: &MarketplaceViewModel,
+/// Overview content lines of the detail page. Shared by the renderer and the
+/// panel-height measurement so the two never drift.
+fn build_marketplace_overview_lines(
+    detail: &crate::view::MarketplaceDetailView,
     title_style: Style,
     subtle_style: Style,
-) {
-    let Some(item) = view.selected_item.as_ref() else {
-        frame.render_widget(
-            Paragraph::new(t!("tui.marketplace.detail_not_found").into_owned())
-                .wrap(Wrap { trim: true }),
-            area,
-        );
-        return;
-    };
-
+) -> Vec<Line<'static>> {
     let mut lines = vec![Line::from(vec![
-        Span::styled(item.display_name.clone(), title_style),
+        Span::styled(detail.display_name.clone(), title_style),
         Span::raw("  "),
-        Span::styled(format!("@{}", item.default_version), subtle_style),
+        Span::styled(format!("@{}", detail.version), subtle_style),
         Span::raw("  "),
         Span::styled(
-            marketplace_review_label(&item.default_review_status),
-            review_status_style(&item.default_review_status),
+            marketplace_review_label(&detail.review_status),
+            review_status_style(&detail.review_status),
         ),
         Span::raw("  "),
         Span::styled(
-            item.installed_version
+            detail
+                .installed_version
                 .as_ref()
                 .map(|installed| {
                     t!("tui.marketplace.installed_version", version = installed).into_owned()
@@ -135,113 +235,72 @@ pub(in crate::ui) fn render_marketplace_overview(
         ),
     ])];
 
-    if !item.description.trim().is_empty() {
+    if !detail.description.trim().is_empty() {
         let mut description = String::new();
-        if let Some(author) = item.author.as_deref() {
+        if let Some(author) = detail.author.as_deref() {
             description.push_str(author);
             description.push_str(" · ");
         }
-        description.push_str(&item.description);
+        description.push_str(&detail.description);
         lines.push(Line::from(Span::styled(description, subtle_style)));
     }
 
-    lines.push(Line::from(vec![
-        Span::styled("id ", subtle_style),
-        Span::styled(
-            item.extension_id.clone(),
-            Style::default().fg(Color::Rgb(205, 205, 205)),
-        ),
-        Span::raw("  "),
-        Span::styled("package ", subtle_style),
-        Span::styled(
-            item.package_name.clone(),
-            Style::default().fg(Color::Rgb(205, 205, 205)),
-        ),
-    ]));
-
-    if let Some(detail) = view.detail.as_ref() {
-        lines.push(Line::from(vec![
-            Span::styled(
-                t!("tui.marketplace.detail_status_label").into_owned(),
-                subtle_style,
-            ),
-            Span::styled(
-                detail.status.clone(),
+    if !detail.supported_hosts.is_empty() || !detail.requested_capabilities.is_empty() {
+        let mut capability_spans = vec![Span::styled(
+            t!("tui.marketplace.detail_capabilities_label").into_owned(),
+            subtle_style,
+        )];
+        capability_spans.push(Span::styled(
+            detail.supported_hosts.join(", "),
+            Style::default().fg(Color::Rgb(185, 185, 185)),
+        ));
+        if !detail.requested_capabilities.is_empty() {
+            capability_spans.push(Span::raw("  ·  "));
+            capability_spans.push(Span::styled(
+                detail.requested_capabilities.join(", "),
                 Style::default().fg(Color::Rgb(185, 185, 185)),
-            ),
-            Span::raw("  "),
-            Span::styled(
-                t!("tui.marketplace.detail_default_channel_label").into_owned(),
-                subtle_style,
-            ),
-            Span::styled(
-                marketplace_channel_label(&item.default_channel),
-                Style::default().fg(Color::Rgb(185, 185, 185)),
-            ),
-        ]));
+            ));
+        }
+        lines.push(Line::from(capability_spans));
     }
 
-    if let Some(error) = view.error.as_deref() {
-        lines.push(Line::from(Span::styled(
-            truncate_to_width(error, area.width.saturating_sub(1) as usize),
-            Style::default().fg(Color::Rgb(220, 220, 220)),
-        )));
+    for line in &detail.contribution_lines {
+        lines.push(Line::from(Span::styled(line.clone(), subtle_style)));
     }
 
-    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), area);
+    lines
 }
 
-pub(in crate::ui) fn render_marketplace_readme(
+pub(in crate::ui) fn render_marketplace_overview(
     frame: &mut ratatui::Frame<'_>,
     area: Rect,
     view: &MarketplaceViewModel,
     title_style: Style,
+    subtle_style: Style,
 ) {
-    let block = Block::default()
-        .title(Line::from(Span::styled("README", title_style)))
-        .borders(Borders::TOP);
-    frame.render_widget(block.clone(), area);
-    let inner = block.inner(area);
+    let Some(detail) = view.detail.as_ref() else {
+        frame.render_widget(
+            Paragraph::new(t!("tui.marketplace.detail_not_found").into_owned())
+                .wrap(Wrap { trim: true }),
+            area,
+        );
+        return;
+    };
 
-    let lines = view
-        .detail
-        .as_ref()
-        .and_then(|detail| detail.readme.as_deref())
-        .filter(|readme| !readme.trim().is_empty())
-        .map(marketplace_markdown_lines)
-        .unwrap_or_else(|| {
-            vec![Line::from(Span::styled(
-                t!("tui.marketplace.readme_empty").into_owned(),
-                subtle_aux_text_style(),
-            ))]
-        });
-
-    let visible_height = inner.height.max(1) as usize;
-    let max_scroll = lines.len().saturating_sub(visible_height);
-    let scroll = view.readme_scroll.min(max_scroll);
-    let visible = lines
-        .into_iter()
-        .skip(scroll)
-        .take(visible_height)
-        .collect::<Vec<_>>();
-    frame.render_widget(Paragraph::new(visible).wrap(Wrap { trim: false }), inner);
+    let lines = build_marketplace_overview_lines(detail, title_style, subtle_style);
+    frame.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }), area);
 }
 
-pub(in crate::ui) fn draw_slash_flow_panel(
-    frame: &mut ratatui::Frame<'_>,
-    area: Rect,
-    flow: &crate::view::SlashFlowView,
-    error: Option<&str>,
-) {
-    let border_style = input_block_border_style(false, MainInputMode::Agent, false);
-    let title_style = Style::default().fg(Color::Rgb(225, 225, 225));
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(border_style)
-        .title(Line::from(Span::styled(flow.title.clone(), title_style)));
-    frame.render_widget(block.clone(), area);
-    let inner = block.inner(area);
-    draw_slash_flow_body(frame, inner, flow, error);
+/// Header rows of a slash flow body: the search line (plus its blank spacer)
+/// and/or the error line.
+fn slash_flow_header_height(flow: &crate::view::SlashFlowView, error: Option<&str>) -> u16 {
+    if flow.search.is_some() {
+        if error.is_some() { 3 } else { 2 }
+    } else if error.is_some() {
+        1
+    } else {
+        0
+    }
 }
 
 pub(in crate::ui) fn draw_slash_flow_body(
@@ -252,13 +311,7 @@ pub(in crate::ui) fn draw_slash_flow_body(
 ) {
     let subtle_style = subtle_aux_text_style();
     let title_style = Style::default().fg(Color::Rgb(225, 225, 225));
-    let header_height = if flow.search.is_some() {
-        if error.is_some() { 3 } else { 2 }
-    } else if error.is_some() {
-        1
-    } else {
-        0
-    };
+    let header_height = slash_flow_header_height(flow, error);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Length(header_height), Constraint::Min(1)])
@@ -373,20 +426,12 @@ pub(in crate::ui) fn build_slash_flow_lines(
                 }
             }
 
-            lines.push(Line::from(""));
+            // Multi-row items (summary / details) read as cards: separate them
+            // with a blank row. Single-line action rows pack tight.
+            if lines.len() > 1 {
+                lines.push(Line::from(""));
+            }
             lines
         })
         .collect()
-}
-
-pub(in crate::ui) fn review_status_style(status: &str) -> Style {
-    match status.trim() {
-        "verified" => Style::default()
-            .fg(Color::Rgb(228, 228, 228))
-            .add_modifier(Modifier::BOLD),
-        "revoked" => Style::default()
-            .fg(Color::Rgb(135, 135, 135))
-            .add_modifier(Modifier::DIM),
-        _ => Style::default().fg(Color::Rgb(175, 175, 175)),
-    }
 }

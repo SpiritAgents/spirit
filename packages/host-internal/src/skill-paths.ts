@@ -1,9 +1,26 @@
 /**
  * Skill path constants and pure path utilities (no Node built-in dependencies; safe to import from the Desktop renderer).
+ *
+ * Format-level helpers (SKILL.md frontmatter parsing, skill-name rules) live
+ * in `@spiritagent/extension-toolkit` as the single source of truth for the
+ * extension package layout contract; they are re-exported here so existing
+ * call sites keep working.
  */
 
-export const SKILLS_DIR_NAME = "skills";
-export const SKILL_FILE_NAME = "SKILL.md";
+import {
+  isSkillMarkdownPath,
+  parseSkillFrontmatterFields,
+  splitSkillFrontmatter,
+  unquoteYamlScalar,
+} from "@spiritagent/extension-toolkit";
+
+export {
+  isSkillMarkdownPath,
+  parseSkillFrontmatterFields,
+  SKILL_FILE_NAME,
+  SKILLS_DIR_NAME,
+  splitSkillFrontmatter,
+} from "@spiritagent/extension-toolkit";
 
 function normalizePath(path: string): string {
   return path.trim().replace(/\\/g, "/");
@@ -19,75 +36,6 @@ function pathBasename(path: string): string {
     return normalizePath(path);
   }
   return segments[segments.length - 1] ?? normalizePath(path);
-}
-
-export function isSkillMarkdownPath(path: string): boolean {
-  return pathBasename(path) === SKILL_FILE_NAME;
-}
-
-export function splitSkillFrontmatter(
-  raw: string,
-): { frontmatter: string; body: string } | undefined {
-  const content = raw.startsWith("\uFEFF") ? raw.slice(1) : raw;
-  const segments = content.split(/\r?\n/u);
-  if (segments[0] !== "---") {
-    return undefined;
-  }
-
-  let closingIndex = -1;
-  for (let index = 1; index < segments.length; index += 1) {
-    if (segments[index] === "---") {
-      closingIndex = index;
-      break;
-    }
-  }
-
-  if (closingIndex < 0) {
-    return undefined;
-  }
-
-  return {
-    frontmatter: segments.slice(1, closingIndex).join("\n"),
-    body: segments.slice(closingIndex + 1).join("\n"),
-  };
-}
-
-function unquoteYamlScalar(value: string): string {
-  if (value.length >= 2) {
-    const first = value[0];
-    const last = value[value.length - 1];
-    if ((first === '"' && last === '"') || (first === "'" && last === "'")) {
-      return value.slice(1, -1);
-    }
-  }
-
-  return value;
-}
-
-export function parseSkillFrontmatterFields(frontmatter: string): {
-  name?: string;
-  description?: string;
-} {
-  const parsed: { name?: string; description?: string } = {};
-  for (const line of frontmatter.split(/\r?\n/u)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    if (line.startsWith(" ") || line.startsWith("\t")) {
-      continue;
-    }
-
-    if (parsed.name === undefined && trimmed.startsWith("name:")) {
-      parsed.name = unquoteYamlScalar(trimmed.slice("name:".length).trim());
-      continue;
-    }
-    if (parsed.description === undefined && trimmed.startsWith("description:")) {
-      parsed.description = unquoteYamlScalar(trimmed.slice("description:".length).trim());
-    }
-  }
-
-  return parsed;
 }
 
 /** Parse top-level `name:` from SKILL.md YAML frontmatter; tolerates incomplete closing `---`. */

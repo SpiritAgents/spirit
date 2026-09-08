@@ -7,6 +7,7 @@ import { SettingsRow } from "@/components/settings/settings-row";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Switch } from "@/components/ui/switch";
 import i18n from "@/lib/i18n";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import type { ThemePreference } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import type { DesktopDreamOverviewItem, DesktopSnapshot } from "@/types";
@@ -90,7 +91,7 @@ export function DreamSettingsPanel({
         debugMode={settings.dreamDebugMode}
       />
 
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80 px-4 sm:px-5">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
         <SettingsRow
           label={t("settings.dreams")}
           description={t("settings.dreamDescription")}

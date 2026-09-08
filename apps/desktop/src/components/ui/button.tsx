@@ -4,6 +4,7 @@ import { Slot } from "radix-ui";
 
 import { FONT_WEIGHT_NORMAL } from "@/lib/desktop-typography";
 import {
+  DESKTOP_CONTENT_TRANSLUCENT_FILL,
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OUTLINE_BUTTON_EXPANDED,
   DESKTOP_OUTLINE_BUTTON_FOCUSED,
@@ -19,7 +20,10 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         outline: cn(
+          // content-translucent: canvas-only see-through tint under All-mode translucency
+          // (app-shell marker); hover/focus/expanded highlights still win over it.
           "bg-background transition-none",
+          DESKTOP_CONTENT_TRANSLUCENT_FILL,
           DESKTOP_OUTLINE_BORDER,
           DESKTOP_OUTLINE_BUTTON_HOVER,
           DESKTOP_OUTLINE_BUTTON_FOCUSED,

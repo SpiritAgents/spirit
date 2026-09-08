@@ -32,9 +32,13 @@ import {
 import {
   buildStartImplementingUserTurn,
   extractActivePlanPathFromLlmHistory,
-  createHostExtensionMarketplace,
   createHostExtensionManager,
+  collectEnabledExtensionInstructionContributions,
+  overlayExtensionRulesAndSkills,
   ensureBuiltInExtensions,
+  listAllMarketplaceSources,
+  compareMarketplaceDisplayOrder,
+  readMarketplaceCatalogForSource,
   localFileAttachmentFromPath,
   workspaceFileReferenceAttachmentFromPath,
   classifyLocalFileComposerRoute as resolveLocalFileComposerRoute,
@@ -43,7 +47,6 @@ import {
   type HostDreamScope,
   type HostTodoRecord,
   type HostTodoScope,
-  type HostExtensionMarketplaceManager,
   type HostExtensionEvent,
   type HostRecordedFileChange,
   type ApprovalLevel,
@@ -55,6 +58,7 @@ import {
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
 } from "@spiritagent/host-internal";
+import type { HostExtensionInstructionContributions } from "@spiritagent/host-internal";
 
 import type {
   AddModelRequest,
@@ -82,10 +86,9 @@ import type {
   DesktopApprovalDecision,
   DesktopMcpServerInspection,
   DesktopExtensionListItem,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceSource,
   DesktopExtensionCssLayer,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DesktopGitSnapshot,
   GetGitHubPullRequestDetailRequest,
   GetGitHubPullRequestTabCountsRequest,
@@ -126,10 +129,17 @@ import type {
   RequestCodeCompletionRequest,
   CodeCompletionResponse,
   SessionListItem,
+  AddMarketplaceSourceRequest,
   ImportExtensionRequest,
-  InstallLspProviderRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
+  InstallLspProviderRequest,
+  SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
   AbortConversationRequest,
   BeginSplitPaneSessionRequest,
@@ -175,18 +185,19 @@ import {
   deleteExtensionCommand,
   deleteRuleCommand,
   deleteMcpServerCommand,
+  addMarketplaceSourceCommand,
   deleteHookEntryCommand,
   deleteSkillCommand,
-  getMarketplaceExtensionDetailCommand,
-  getMarketplaceExtensionReadmeCommand,
   importExtensionCommand,
-  inspectMcpServerCommand,
+  installBuiltInExtensionCommand,
   installMarketplaceExtensionCommand,
-  listMarketplaceExtensionsCommand,
-  prepareMarketplaceExtensionInstallCommand,
+  inspectMcpServerCommand,
+  removeMarketplaceSourceCommand,
   runExtensionCommand,
+  setExtensionEnabledCommand,
   saveHookEntryCommand,
   submitSkillSlashCommand,
+  updateExtensionCommand,
   updateExtensionSecretCommand,
   updateExtensionSettingsCommand,
   type HostExtensionCommandContext,
@@ -459,6 +470,7 @@ import { createTodoScope } from "./todos.js";
 import {
   buildDesktopExtensionListItems,
   buildDesktopExtensionToolDefinitions,
+  buildDesktopMarketplaceCatalogEntries,
   collectDesktopExtensionCssLayers,
   collectExtensionSystemPrompts,
 } from "./extensions.js";
@@ -540,7 +552,12 @@ interface HostState {
   metadata: HostMetadataSummary;
   plan: PlanSnapshot;
   extensionsList: DesktopExtensionListItem[];
+  marketplaceSources: DesktopMarketplaceSource[];
+  marketplaceCatalogs: Record<string, DesktopMarketplaceCatalogEntry[]>;
+  marketplaceCatalogAll: DesktopMarketplaceCatalogEntry[];
+  marketplaceWarnings: string[];
   extensionCss: DesktopExtensionCssLayer[];
+  extensionInstructionContributions: HostExtensionInstructionContributions;
   ephemeralSessions: EphemeralSessionRecord[];
 }
 
@@ -585,8 +602,6 @@ class DesktopHostService {
     stateStore: this.extensionStateStore,
   });
   private readonly extensionWarmup = new ExtensionWarmupCoordinator();
-  private hostExtensionMarketplace: HostExtensionMarketplaceManager | undefined;
-  private hostExtensionMarketplaceFetchImpl: typeof fetch | undefined;
   private state: HostState | undefined;
   private readonly sessionRegistry = new SessionRegistry((bundle) => {
     void closeRemoteDesktopRuntime(bundle.runtime);
@@ -777,7 +792,6 @@ class DesktopHostService {
       sharedMcpServiceForWorkspace: (workspaceRoot, workspaceBinding) =>
         this.sharedMcpServiceForWorkspace(workspaceRoot, workspaceBinding),
       extensionManager: () => this.extensionManager(),
-      marketplace: () => this.marketplace(),
       requireExtensionHostAdapter: () => this.requireExtensionHostAdapter(),
       refreshExtensionsList: () => this.refreshExtensionsList(),
       refreshRuntime: () => this.refreshRuntime(),
@@ -1614,32 +1628,36 @@ class DesktopHostService {
     return importExtensionCommand(this.extensionCommandContext(), request);
   }
 
-  async listMarketplaceExtensions(): Promise<DesktopMarketplaceCatalogItem[]> {
-    return listMarketplaceExtensionsCommand(this.extensionCommandContext());
+  async installBuiltInExtension(request: InstallBuiltInExtensionRequest): Promise<DesktopSnapshot> {
+    return installBuiltInExtensionCommand(this.extensionCommandContext(), request);
   }
 
-  async getMarketplaceExtensionDetail(extensionId: string): Promise<DesktopMarketplaceDetail> {
-    return getMarketplaceExtensionDetailCommand(this.extensionCommandContext(), extensionId);
+  async addMarketplaceSource(
+    request: AddMarketplaceSourceRequest,
+  ): Promise<MarketplaceSourceCommandResult> {
+    return addMarketplaceSourceCommand(this.extensionCommandContext(), request);
   }
 
-  async getMarketplaceExtensionReadme(extensionId: string): Promise<string> {
-    return getMarketplaceExtensionReadmeCommand(this.extensionCommandContext(), extensionId);
-  }
-
-  async prepareMarketplaceExtensionInstall(
-    request: PrepareMarketplaceExtensionInstallRequest,
-  ): Promise<DesktopMarketplacePreparedInstall> {
-    return prepareMarketplaceExtensionInstallCommand(this.extensionCommandContext(), request);
+  async removeMarketplaceSource(request: RemoveMarketplaceSourceRequest): Promise<DesktopSnapshot> {
+    return removeMarketplaceSourceCommand(this.extensionCommandContext(), request);
   }
 
   async installMarketplaceExtension(
     request: InstallMarketplaceExtensionRequest,
-  ): Promise<DesktopSnapshot> {
+  ): Promise<MarketplaceInstallCommandResult> {
     return installMarketplaceExtensionCommand(this.extensionCommandContext(), request);
+  }
+
+  async updateExtension(request: UpdateExtensionRequest): Promise<MarketplaceUpdateCommandResult> {
+    return updateExtensionCommand(this.extensionCommandContext(), request);
   }
 
   async deleteExtension(request: DeleteExtensionRequest): Promise<DesktopSnapshot> {
     return deleteExtensionCommand(this.extensionCommandContext(), request);
+  }
+
+  async setExtensionEnabled(request: SetExtensionEnabledRequest): Promise<DesktopSnapshot> {
+    return setExtensionEnabledCommand(this.extensionCommandContext(), request);
   }
 
   async runExtension(request: RunExtensionRequest): Promise<DesktopSnapshot> {
@@ -1744,10 +1762,13 @@ class DesktopHostService {
       const runtime = this.requireRuntime();
       const remoteState = await exportRemoteDesktopState(runtime);
       const extensionSystemPrompts = await this.collectExtensionSystemPrompts();
-      const rulesSystemPrompt = buildRulesSystemMessage(state.metadata.rules.enabledRules);
-      const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(
+      const overlay = overlayExtensionRulesAndSkills(
+        state.metadata.rules.enabledRules,
         state.metadata.skills.enabledSkillCatalog,
+        state.extensionInstructionContributions,
       );
+      const rulesSystemPrompt = buildRulesSystemMessage(overlay.rules);
+      const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(overlay.skills);
       const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
         this.requireToolExecutor().mcpToolCatalogSnapshot(),
       );
@@ -3008,6 +3029,12 @@ class DesktopHostService {
       this.mcpServiceByWorkspaceRoot,
       workspaceRoot,
       workspaceBinding,
+      async () => {
+        const contributions = await collectEnabledExtensionInstructionContributions(
+          await this.extensionManager().list(),
+        );
+        return contributions.mcp;
+      },
     );
   }
 
@@ -3658,7 +3685,19 @@ class DesktopHostService {
       metadata: state.metadata,
       plan: state.plan,
       extensionsList: state.extensionsList,
+      marketplaceSources: state.marketplaceSources,
+      marketplaceCatalogs: state.marketplaceCatalogs,
+      marketplaceCatalogAll: state.marketplaceCatalogAll,
+      ...(state.marketplaceWarnings.length > 0
+        ? { marketplaceWarnings: state.marketplaceWarnings }
+        : {}),
       extensionCss: state.extensionCss,
+      extensionSkills: state.extensionInstructionContributions.skills.map((skill) => ({
+        id: skill.id,
+        name: skill.name,
+        description: skill.description,
+        path: skill.path,
+      })),
       ...(this.extensionWarmup.extensionsLoading ? { extensionsLoading: true } : {}),
       dreamCollectorStatus: this.dreamCollectorStatus,
       runtimeReady: activeRuntime !== undefined,
@@ -4023,6 +4062,11 @@ class DesktopHostService {
       throw new Error(i18n.t("error.autoWorktreeNameFailedNoKey"));
     }
 
+    const overlay = overlayExtensionRulesAndSkills(
+      state.metadata.rules.enabledRules,
+      state.metadata.skills.enabledSkillCatalog,
+      state.extensionInstructionContributions,
+    );
     const extensionSystemPrompts = await this.collectExtensionSystemPrompts();
     const toolExecutor = await this.ensureToolExecutor();
     return generateWorktreeNamesFromModelTask({
@@ -4032,7 +4076,11 @@ class DesktopHostService {
       taskModel: lightweightModel.name,
       taskProfile: lightweightModel.profile,
       apiKey,
-      metadata: state.metadata,
+      metadata: {
+        ...state.metadata,
+        rules: { ...state.metadata.rules, enabledRules: overlay.rules },
+        skills: { ...state.metadata.skills, enabledSkillCatalog: overlay.skills },
+      },
       extensionSystemPrompts,
       toolExecutor,
       runtimeBasicInfo: buildDesktopRuntimeBasicInfo(
@@ -4050,38 +4098,51 @@ class DesktopHostService {
     return this.hostExtensionManager;
   }
 
-  private marketplace() {
-    if (!this.hostExtensionMarketplace) {
-      this.hostExtensionMarketplace = createHostExtensionMarketplace(
-        {
-          spiritDataDir: spiritDataDir(),
-          hostKind: "desktop",
-        },
-        this.hostExtensionMarketplaceFetchImpl
-          ? { fetchImpl: this.hostExtensionMarketplaceFetchImpl }
-          : {},
-      );
-    }
-    return this.hostExtensionMarketplace;
-  }
-
-  setMarketplaceFetchImpl(fetchImpl: typeof fetch | undefined): void {
-    if (this.hostExtensionMarketplaceFetchImpl === fetchImpl) {
-      return;
-    }
-    this.hostExtensionMarketplaceFetchImpl = fetchImpl;
-    this.hostExtensionMarketplace = undefined;
-  }
-
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
     const state = this.requireState();
-    const extensions = await this.extensionManager().list();
-    state.extensionsList = await buildDesktopExtensionListItems(
-      this.extensionManager(),
-      extensions,
-      options,
-    );
+    const manager = this.extensionManager();
+    const extensions = await manager.list();
+    state.extensionsList = await buildDesktopExtensionListItems(manager, extensions, options);
+
+    // Multi-source marketplace: refresh every source, then read its catalog.
+    const marketplaceContext = { spiritDataDir: spiritDataDir(), hostKind: "desktop" as const };
+    const sources = await listAllMarketplaceSources(marketplaceContext);
+    state.marketplaceSources = sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      displayName: source.displayName,
+      kind: source.kind,
+      locator: source.locator,
+      ...(source.ref ? { ref: source.ref } : {}),
+      internal: source.id === "built-in" || source.id === "personal",
+    }));
+    const catalogs: Record<string, DesktopMarketplaceCatalogEntry[]> = {};
+    const warnings: string[] = [];
+    for (const source of sources) {
+      try {
+        const read = await readMarketplaceCatalogForSource(marketplaceContext, source);
+        catalogs[source.id] = await buildDesktopMarketplaceCatalogEntries(read.items);
+        if (read.warning) {
+          warnings.push(read.warning);
+        }
+      } catch (error) {
+        catalogs[source.id] = [];
+        warnings.push(
+          `Failed to read marketplace "${source.displayName}": ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    state.marketplaceCatalogs = catalogs;
+    // The All view's merged catalog: per-source rows concatenated and sorted
+    // with the backend's comparator, so the renderer never re-sorts.
+    state.marketplaceCatalogAll = Object.values(catalogs)
+      .flat()
+      .sort(compareMarketplaceDisplayOrder);
+    state.marketplaceWarnings = warnings;
+
     state.extensionCss = await collectDesktopExtensionCssLayers(extensions);
+    state.extensionInstructionContributions =
+      await collectEnabledExtensionInstructionContributions(extensions);
   }
 
   private async refreshExtensionToolDefinitions(
@@ -4103,6 +4164,7 @@ class DesktopHostService {
   private async refreshRuntimeAfterExtensionMutation(): Promise<void> {
     await this.refreshExtensionSystemPromptsCache();
     await this.refreshExtensionsList();
+    await this.refreshSharedMcpConfigAfterExtensionMutation();
 
     if (this.runtime?.isBusy()) {
       this.activeBundle().deferredRuntimeRefreshWhileBusy = true;
@@ -4112,6 +4174,13 @@ class DesktopHostService {
     this.activeBundle().deferredRuntimeRefreshWhileBusy = false;
     await this.refreshRuntime();
     this.lastRuntimeError = "";
+  }
+
+  private async refreshSharedMcpConfigAfterExtensionMutation(): Promise<void> {
+    const state = this.requireState();
+    const mcp = this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding);
+    await mcp.refreshConfig();
+    mcp.startBackgroundRefreshInBackground(true);
   }
 
   private invalidateExtensionWarmup(): void {
@@ -4613,17 +4682,39 @@ class DesktopHostService {
     this.liveSnapshotEmitTimer = timer;
   }
 
-  private requireEnabledSkillEntry(
-    skillName: string,
-  ): HostMetadataSummary["skills"]["entries"][number] {
+  private requireEnabledSkillEntry(skillName: string): {
+    source: {
+      id: string;
+      scope: LlmActiveSkill["scope"];
+      name: string;
+      description: string;
+      path: string;
+    };
+    content: string;
+  } {
     const normalized = skillName.trim();
     const entry = this.requireState().metadata.skills.entries.find(
       (candidate) => candidate.enabled && candidate.source.name === normalized,
     );
-    if (!entry) {
-      throw new Error(i18n.t("error.skillNotFound", { name: normalized }));
+    if (entry) {
+      return entry;
     }
-    return entry;
+    const extensionSkill = this.requireState().extensionInstructionContributions.skills.find(
+      (candidate) => candidate.name === normalized,
+    );
+    if (extensionSkill) {
+      return {
+        source: {
+          id: extensionSkill.id,
+          scope: "extension",
+          name: extensionSkill.name,
+          description: extensionSkill.description,
+          path: extensionSkill.path,
+        },
+        content: extensionSkill.content,
+      };
+    }
+    throw new Error(i18n.t("error.skillNotFound", { name: normalized }));
   }
 
   private requireToolExecutor(): DesktopToolExecutor {
@@ -4662,12 +4753,6 @@ class DesktopHostService {
 }
 
 const desktopHostService = new DesktopHostService();
-
-export function setDesktopMarketplaceFetchImplementation(
-  fetchImpl: typeof fetch | undefined,
-): void {
-  desktopHostService.setMarketplaceFetchImpl(fetchImpl);
-}
 
 export function setDesktopGitHubFetchImplementation(fetchImpl: typeof fetch | undefined): void {
   setGitHubFetchImplementation(fetchImpl);

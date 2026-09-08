@@ -46,20 +46,20 @@ const DEFAULT_SLASH_COMMANDS: &[&str] = &[
     "/loop",
     "/model",
     "/compact",
-    "/sessions",
+    "/session",
     "/rewind",
     "/fork",
-    "/subagents",
+    "/subagent",
     "/image",
     "/mcp",
-    "/hooks",
-    "/rules",
-    "/skills",
-    "/extensions",
+    "/hook",
+    "/rule",
+    "/skill",
+    "/extension",
     "/log",
     "/language",
     "/approval",
-    "/networks",
+    "/network",
     "/tui",
 ];
 
@@ -74,20 +74,20 @@ const RESERVED_SLASH_COMMANDS: &[&str] = &[
     START_IMPLEMENTING_SLASH,
     "/model",
     "/compact",
-    "/sessions",
+    "/session",
     "/rewind",
     "/fork",
-    "/subagents",
+    "/subagent",
     "/image",
     "/mcp",
-    "/hooks",
-    "/rules",
-    "/skills",
-    "/extensions",
+    "/hook",
+    "/rule",
+    "/skill",
+    "/extension",
     "/log",
     "/language",
     "/approval",
-    "/networks",
+    "/network",
     "/tui",
 ];
 
@@ -148,8 +148,8 @@ fn command_suggestion(command: &str) -> InputSuggestion {
 
 fn command_replacement(command: &str) -> String {
     match command {
-        "/model" | "/sessions" | "/rewind" | "/fork" | "/subagents" | "/image" | "/mcp"
-        | "/hooks" | "/log" | "/language" | "/approval" | "/networks" | "/tui" | "/extensions" => {
+        "/model" | "/session" | "/rewind" | "/fork" | "/subagent" | "/image" | "/mcp" | "/hook"
+        | "/log" | "/language" | "/approval" | "/network" | "/tui" | "/extension" => {
             format!("{} ", command)
         }
         _ => command.to_string(),
@@ -190,8 +190,8 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
         return vec![primary_help_suggestion(START_IMPLEMENTING_SLASH, query)];
     }
 
-    if query == "/sessions" || query.starts_with("/sessions ") {
-        return vec![primary_help_suggestion("/sessions", query)];
+    if query == "/session" || query.starts_with("/session ") {
+        return vec![primary_help_suggestion("/session", query)];
     }
 
     if query == "/rewind" || query.starts_with("/rewind ") {
@@ -201,8 +201,8 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
         return vec![primary_help_suggestion("/fork", query)];
     }
 
-    if query == "/subagents" || query.starts_with("/subagents ") {
-        return vec![primary_help_suggestion("/subagents", query)];
+    if query == "/subagent" || query.starts_with("/subagent ") {
+        return vec![primary_help_suggestion("/subagent", query)];
     }
 
     if query == "/image" || query.starts_with("/image ") {
@@ -213,20 +213,20 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
         return vec![primary_help_suggestion("/mcp", query)];
     }
 
-    if query == "/hooks" || query.starts_with("/hooks ") {
-        return vec![primary_help_suggestion("/hooks", query)];
+    if query == "/hook" || query.starts_with("/hook ") {
+        return vec![primary_help_suggestion("/hook", query)];
     }
 
-    if query == "/rules" || query.starts_with("/rules ") {
-        return vec![primary_help_suggestion("/rules", query)];
+    if query == "/rule" || query.starts_with("/rule ") {
+        return vec![primary_help_suggestion("/rule", query)];
     }
 
-    if query == "/skills" || query.starts_with("/skills ") {
-        return vec![primary_help_suggestion("/skills", query)];
+    if query == "/skill" || query.starts_with("/skill ") {
+        return vec![primary_help_suggestion("/skill", query)];
     }
 
-    if query == "/extensions" || query.starts_with("/extensions ") {
-        return vec![primary_help_suggestion("/extensions", query)];
+    if query == "/extension" || query.starts_with("/extension ") {
+        return vec![primary_help_suggestion("/extension", query)];
     }
 
     if query == "/log" || query.starts_with("/log ") {
@@ -239,8 +239,8 @@ fn contextual_suggestions(shell: &mut TuiShell, query: &str) -> Vec<InputSuggest
     if query == "/approval" || query.starts_with("/approval ") {
         return vec![primary_help_suggestion("/approval", query)];
     }
-    if query == "/networks" || query.starts_with("/networks ") {
-        return vec![primary_help_suggestion("/networks", query)];
+    if query == "/network" || query.starts_with("/network ") {
+        return vec![primary_help_suggestion("/network", query)];
     }
     if query == "/tui" || query.starts_with("/tui ") {
         return vec![primary_help_suggestion("/tui", query)];
@@ -409,22 +409,22 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
     lines.extend([
         "- /model [list|use <name>|add|add <name> <api_base> <api_key>|remove <name>]".to_string(),
         "- /compact".to_string(),
-        "- /sessions".to_string(),
-        "- /sessions save [path]".to_string(),
-        "- /sessions load <file>".to_string(),
+        "- /session".to_string(),
+        "- /session save [path]".to_string(),
+        "- /session load <file>".to_string(),
         "- /rewind".to_string(),
         "- /rewind <index> [new_message]".to_string(),
         "- /fork".to_string(),
-        "- /subagents [list|open <session_id>|close]".to_string(),
+        "- /subagent [list|open <session_id>|close]".to_string(),
         "- /image <path> [prompt]".to_string(),
         "- /image pick".to_string(),
         "- /image clear".to_string(),
         "- /mcp [list|add|inspect|tools|resources|prompts]".to_string(),
-        "- /hooks [list|add]".to_string(),
+        "- /hook [list|add]".to_string(),
         "- /<server>_<prompt> [args_json | user_message]".to_string(),
-        "- /rules".to_string(),
-        "- /skills".to_string(),
-        "- /extensions [list|import <zip>|remove <id>|marketplace [query]]".to_string(),
+        "- /rule".to_string(),
+        "- /skill".to_string(),
+        "- /extension [marketplace|list|import <zip>|remove <id>]".to_string(),
         t!("tui.help.skill_usage").into_owned(),
         t!("tui.help.log_variants").into_owned(),
         format!("- /language [{}]", locale::available_ui_locales_csv()),
@@ -453,6 +453,7 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
         t!("tui.help.rules").into_owned(),
         t!("tui.help.skills").into_owned(),
         t!("tui.help.extensions").into_owned(),
+        t!("tui.help.marketplace").into_owned(),
         t!("tui.help.skill_alias").into_owned(),
         t!("tui.help.mcp_server_optional").into_owned(),
         t!("tui.help.log").into_owned(),
@@ -494,20 +495,20 @@ pub(crate) fn handle_command(shell: &mut TuiShell, message: &str) {
         START_IMPLEMENTING_SLASH => shell.handle_start_implementing_slash(),
         "/model" => shell.handle_model_slash(&parts[1..]),
         "/compact" => shell.compact_history_for_slash(),
-        "/sessions" => shell.handle_sessions_slash(message),
+        "/session" => shell.handle_sessions_slash(message),
         "/rewind" => shell.handle_rewind_slash(message),
         "/fork" => shell.handle_fork_slash(message),
-        "/subagents" => shell.handle_subagents_slash(message),
+        "/subagent" => shell.handle_subagents_slash(message),
         "/image" => shell.handle_image_slash(message),
         "/mcp" => shell.handle_mcp_slash(message),
-        "/hooks" => shell.handle_hooks_slash(message),
-        "/rules" => shell.handle_rules_slash(&parts[1..]),
-        "/skills" => shell.handle_skills_slash(&parts[1..]),
-        "/extensions" => shell.handle_extensions_slash(message),
+        "/hook" => shell.handle_hooks_slash(message),
+        "/rule" => shell.handle_rules_slash(&parts[1..]),
+        "/skill" => shell.handle_skills_slash(&parts[1..]),
+        "/extension" => shell.handle_extensions_slash(message),
         "/log" => shell.handle_log_slash(&parts[1..]),
         "/language" => shell.handle_language_slash(&parts[1..]),
         "/approval" => shell.handle_approval_slash(&parts[1..]),
-        "/networks" => shell.handle_networks_slash(&parts[1..]),
+        "/network" => shell.handle_networks_slash(&parts[1..]),
         "/tui" => shell.handle_tui_slash(&parts[1..]),
         _ => {
             if !shell.handle_skill_alias_slash(message) {
@@ -554,11 +555,13 @@ mod tests {
         assert!(help.contains("/mcp add"));
         assert!(help.contains("/model add"));
         assert!(help.contains(t!("tui.help.mcp_add").as_ref()));
-        assert!(help.contains("/rules"));
-        assert!(help.contains("/skills"));
-        assert!(help.contains("/extensions"));
+        assert!(help.contains("/rule"));
+        assert!(help.contains("/skill"));
+        assert!(help.contains("/extension"));
+        assert!(help.contains("/extension marketplace"));
         assert!(help.contains("/tui"));
         assert!(help.contains(t!("tui.help.extensions").as_ref()));
+        assert!(help.contains(t!("tui.help.marketplace").as_ref()));
         assert!(help.contains(t!("tui.help.skill_usage").as_ref()));
         assert!(help.contains(t!("tui.help.hooks_add").as_ref()));
         assert!(help.contains(t!("tui.help.file_reference").as_ref()));
@@ -567,8 +570,8 @@ mod tests {
     #[test]
     fn default_commands_hide_legacy_skill_alias() {
         let commands = default_commands();
-        assert!(commands.contains(&"/skills".to_string()));
-        assert!(commands.contains(&"/extensions".to_string()));
+        assert!(commands.contains(&"/skill".to_string()));
+        assert!(commands.contains(&"/extension".to_string()));
         assert_eq!(
             commands,
             DEFAULT_SLASH_COMMANDS
@@ -597,14 +600,14 @@ mod tests {
 
     #[test]
     fn extensions_command_completion_appends_space() {
-        assert_eq!(command_replacement("/extensions"), "/extensions ");
+        assert_eq!(command_replacement("/extension"), "/extension ");
     }
 
     #[test]
     fn extensions_context_keeps_primary_help_suggestion() {
-        let suggestion = primary_help_suggestion("/extensions", "/extensions ");
+        let suggestion = primary_help_suggestion("/extension", "/extension ");
 
-        assert_eq!(suggestion.label, "/extensions");
-        assert_eq!(suggestion.replacement, "/extensions ");
+        assert_eq!(suggestion.label, "/extension");
+        assert_eq!(suggestion.replacement, "/extension ");
     }
 }

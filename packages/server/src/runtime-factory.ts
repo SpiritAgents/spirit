@@ -63,14 +63,17 @@ import {
   LspService,
   NodeHostToolService,
   appendLspDiagnosticsAfterWriteIfNeeded,
+  collectEnabledExtensionInstructionContributions,
   collectHostExtensionContributedTools,
   createHostExtensionManager,
   createHookRunner,
   createNoopMcpAdapter,
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
+  ensurePersonalMarketplace,
   ensureTranscriptSessionDir,
   loadHostInstructionMetadata,
+  overlayEnabledExtensionRulesAndSkills,
   persistSessionTranscript,
   persistSubagentTranscript,
   persistToolOutputArchive,
@@ -85,6 +88,7 @@ import {
 } from "@spiritagent/host-internal";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
+import { createExtensionMcpExtraConfigs } from "./mcp-registry.js";
 import { createNoopPeer } from "./noop-peer.js";
 
 export type ServerHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -220,7 +224,10 @@ export async function createServerRuntime(
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
   const mcpService = isDreamCollector
     ? new McpService(workspaceRoot, true)
-    : (options.mcpService ?? new McpService(workspaceRoot, true));
+    : (options.mcpService ??
+      new McpService(workspaceRoot, true, {
+        extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
+      }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
   if (!isDreamCollector) {
     mcpService.startBackgroundRefreshInBackground(false);
@@ -233,6 +240,7 @@ export async function createServerRuntime(
   const extensionSystemPrompts: LlmExtensionSystemPrompt[] = [];
   if (!isDreamCollector) {
     await ensureBuiltInSkills(spiritDataDir);
+    await ensurePersonalMarketplace(spiritDataDir);
     extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
     await ensureBuiltInExtensions({
       spiritDataDir,
@@ -323,7 +331,30 @@ export async function createServerRuntime(
   // 3. Rules / skills / plan metadata.
   const enabledRules: LlmEnabledRule[] = [];
   const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
+  let baseEnabledRules: LlmEnabledRule[] = [];
+  let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
   let currentPlanMetadata: LlmPlanMetadata | undefined;
+
+  const applyExtensionInstructionOverlay = async (): Promise<void> => {
+    if (!extensionManager) {
+      enabledRules.length = 0;
+      enabledRules.push(...baseEnabledRules);
+      enabledSkillCatalog.length = 0;
+      enabledSkillCatalog.push(...baseEnabledSkillCatalog);
+      return;
+    }
+    const overlay = await overlayEnabledExtensionRulesAndSkills(
+      await extensionManager.list(),
+      baseEnabledRules,
+      baseEnabledSkillCatalog,
+      (message: string) => log(message),
+    );
+    enabledRules.length = 0;
+    enabledRules.push(...overlay.rules);
+    enabledSkillCatalog.length = 0;
+    enabledSkillCatalog.push(...overlay.skills);
+  };
+
   if (isDreamCollector) {
     currentPlanMetadata = {
       path: "",
@@ -337,8 +368,9 @@ export async function createServerRuntime(
       { workspaceRoot, spiritDataDir },
       { planMode: false, agentMode: "agent" },
     );
-    enabledRules.push(...metadata.rules.enabledRules);
-    enabledSkillCatalog.push(...metadata.skills.enabledSkillCatalog);
+    baseEnabledRules = [...metadata.rules.enabledRules];
+    baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
+    await applyExtensionInstructionOverlay();
     currentPlanMetadata = metadata.planMetadata;
     toolExecutor.setAgentModeToolExposure("agent");
   }
@@ -448,6 +480,16 @@ export async function createServerRuntime(
         return options.requestWorkspaceCapabilityTrust(request);
       }
       return "deny";
+    },
+    loadExtensionHooks: async (event) => {
+      if (!extensionManager) {
+        return [];
+      }
+      const contributions = await collectEnabledExtensionInstructionContributions(
+        await extensionManager.list(),
+        (message: string) => log(message),
+      );
+      return contributions.hooks.filter((hook) => hook.event === event);
     },
   });
 
@@ -574,6 +616,9 @@ export async function createServerRuntime(
         content: entry.content,
       })),
     );
+    await applyExtensionInstructionOverlay();
+    await mcpService.refreshConfig();
+    mcpService.startBackgroundRefreshInBackground(true);
   };
 
   return {
@@ -608,10 +653,9 @@ export async function createServerRuntime(
         { workspaceRoot, spiritDataDir },
         { planMode: mode === "plan", agentMode: mode },
       );
-      enabledRules.length = 0;
-      enabledRules.push(...refreshed.rules.enabledRules);
-      enabledSkillCatalog.length = 0;
-      enabledSkillCatalog.push(...refreshed.skills.enabledSkillCatalog);
+      baseEnabledRules = [...refreshed.rules.enabledRules];
+      baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
+      await applyExtensionInstructionOverlay();
       currentPlanMetadata = refreshed.planMetadata;
     },
     exportState: async () => {

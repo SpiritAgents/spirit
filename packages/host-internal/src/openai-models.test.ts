@@ -1461,7 +1461,7 @@ test("parseGroqModelEntriesPayload maps chat models with vision and reasoning al
     },
     {
       id: "openai/gpt-oss-20b",
-      displayName: "Gpt Oss 20b",
+      displayName: "GPT OSS 20b",
       contextLength: 131072,
       maxCompletionTokens: 65536,
       supportsReasoning: true,

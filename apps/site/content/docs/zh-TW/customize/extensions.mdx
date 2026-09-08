@@ -1,0 +1,63 @@
+---
+title: 擴充功能
+description: 從市場安裝擴充功能、匯入 ZIP 套件，或新增你自己的遠端擴充功能市場。
+---
+
+擴充功能為 Spirit 添加能力——工具、技能、鉤子、MCP 伺服器與介面貢獻。擴充功能透過擴充功能市場分發：
+
+- **內建**——隨應用程式附帶。
+- **個人**——你自己的匯入：親手加入的 ZIP 套件。
+- **遠端擴充功能市場**——由你新增：Git 儲存庫、HTTP 索引 URL 或本機目錄。
+
+Desktop 側欄的**擴充功能**頁為每個市場顯示一個 Tab，**全部** Tab 則把所有市場合併為一個列表。CLI 透過 `spirit extension` 命令與 `/extension marketplace` TUI 提供同樣的流程。
+
+## 安裝、更新與解除安裝
+
+在 Desktop 開啟**擴充功能**，選擇擴充功能並點擊**安裝**。已安裝的擴充功能提供**更多動作**選單，內含**停用**（不移除、僅停用）與**解除安裝**。當市場發布更新的版本時，詳情頁會顯示**更新**按鈕。
+
+在 CLI 中：
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` 會在所有已新增的市場中解析 `<name>`。若兩個市場提供同名擴充功能，命令會失敗並列出它們——加 `--marketplace <name>` 重跑以指定其一。同名擴充功能從不同市場安裝可以共存：安裝按市場隔離。
+
+內建擴充功能隨應用程式自動更新。個人（匯入的）擴充功能沒有可拉取的上游——改為重新匯入更新的 ZIP。
+
+## 審核確認門檻
+
+安裝或更新市場條目未驗證（或已被撤銷）的擴充功能時，需要明確確認。Desktop 顯示**審核擴充功能**對話框；CLI 需加 `--review-acknowledged`，TUI 則顯示確認步驟。
+
+## 匯入擴充功能（ZIP）
+
+ZIP 套件是自聲明旁路：不經過任何市場。
+
+- Desktop：**擴充功能**頁 → **新增** → **匯入擴充功能**，然後選擇 ZIP 檔案。
+- CLI：`spirit extension import <archive>`。
+
+匯入會進入**個人**市場並固定為未驗證條目，同樣經過審核確認門檻。重複匯入同名擴充功能會覆蓋；解除安裝匯入的擴充功能會同時刪除其個人市場記錄。
+
+## 新增市場
+
+- Desktop：**擴充功能**頁 → **新增** → **新增市場** → **從磁碟新增**（本機目錄）或**從 URL 新增**（Git 儲存庫或 HTTP 索引 URL）。
+- CLI：`spirit extension marketplace add <url|path>`。
+
+三種定位形式：
+
+| 形式                       | 範例                                                                     |
+| -------------------------- | ------------------------------------------------------------------------ |
+| 本機目錄                   | `spirit extension marketplace add ./my-marketplace`                      |
+| Git 儲存庫（HTTPS 或 SSH） | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| HTTP 索引 URL              | `spirit extension marketplace add https://example.com`                   |
+
+Git URL 可用 `--git-ref <tag|branch|commit>` 釘住 ref；預設為遠端預設分支。裸網站 URL 會自動補全其 `/.spirit/marketplace.json`。
+
+用 `spirit extension marketplace list` 與 `spirit extension marketplace remove <name>` 管理已新增的市場。Desktop 上右鍵點擊市場 Tab 即可移除。
+
+<Callout type="info">
+  擴充功能的能力聲明由市場背書，而非套件自行聲明。新增市場即選擇信任其營運者的審核——只新增你信任的來源。
+</Callout>

@@ -130,9 +130,7 @@
       "expandTools": "ツールを展開",
       "newSession": "新規セッション",
       "settingsPlaceholderTitle": "デスクトップ設定ビュー",
-      "settingsPlaceholderDescription": "設定サーフェスの初期画面の構造と階層を維持します。",
-      "marketplacePlaceholderTitle": "拡張機能マーケットプレイスビュー",
-      "marketplacePlaceholderDescription": "マーケットプレイス画面の初期構造と階層を維持します。",
+      "marketplacePlaceholderTitle": "拡張機能ビュー",
       "previewEditorOnlyTextError": "プレビューエディターではテキストファイルのみ開くことができます。",
       "hostStatus": "Web Hero プレビュー",
       "mcpReady": "MCP 準備完了"

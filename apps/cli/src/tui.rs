@@ -16,8 +16,8 @@ use crate::{
     chat_store,
     chat_timeline::project_live_chat_from_llm_history,
     host_protocol::{
-        CliExtensionCliUiHookEntry, CliExtensionEntry, CliMarketplaceCatalogItem,
-        CliMarketplaceDetail, CliMarketplaceDetailVersion, CliMarketplacePreparedInstall,
+        CliExtensionCliUiHookEntry, CliExtensionEntry, CliExtensionSkillSlashEntry,
+        CliMarketplaceCatalogEntry, CliMarketplaceSource,
     },
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
@@ -37,17 +37,16 @@ use crate::{
         ask_questions, bottom_form, file_reference, manual_shell, slash,
         workspace_trust as workspace_trust_form,
     },
-    skills::{self, SkillEntry},
+    skills::{self, SkillEntry, SkillPreview, SkillRootKind, SkillScope, SkillSource},
     subagent_display::parse_pending_subagent_status_text,
     ui::UiRuntimeState,
     view::{
         AssistantAuxData, BottomFormKind, ChatMessage, CliUiHookSlot, CliUiHookTokenRole,
         CliUiHookTokensView, CliUiHookVariant, CliUiHookView, InputSuggestion, InputSuggestionKind,
         MainInputMode, MarketplaceCatalogItemView, MarketplaceDetailView, MarketplaceFlowStep,
-        MarketplaceVersionChangelogView, MarketplaceVersionView, MarketplaceViewModel, MessageRole,
-        PendingAssistantAux, PendingSubagentApprovalView, SlashFlowItemView, SlashFlowView,
-        SubagentApprovalInputView, SubagentSessionDetailView, SubagentSessionSummaryView,
-        TuiViewModel,
+        MarketplaceSourceTabView, MarketplaceViewModel, MessageRole, PendingAssistantAux,
+        PendingSubagentApprovalView, SlashFlowItemView, SlashFlowView, SubagentApprovalInputView,
+        SubagentSessionDetailView, SubagentSessionSummaryView, TuiViewModel,
     },
 };
 
@@ -72,7 +71,6 @@ pub use inline::{INLINE_BOOTSTRAP_HEIGHT, InlineBackend, InlineRecreate, leave_i
 use conversation::ConversationUiState;
 use forms::BottomFormUiState;
 use input::InputState;
-use marketplace::MarketplaceState;
 use subagent::SubagentUiState;
 
 const VIEW_MODEL_MESSAGE_LIMIT: usize = 180;
@@ -114,6 +112,7 @@ pub struct TuiShell {
     image_picker_active: bool,
     image_picker_index: usize,
     image_picker_files: Vec<String>,
+    marketplace: marketplace::MarketplaceState,
     forms: BottomFormUiState,
     conversation: ConversationUiState,
     interrupt_escape_armed_at: Option<Instant>,
@@ -129,8 +128,8 @@ pub struct TuiShell {
     plan_metadata: PlanMetadata,
     rule_entries: Vec<RuleEntry>,
     skill_entries: Vec<SkillEntry>,
+    extension_skill_entries: Vec<SkillEntry>,
     extension_entries: Vec<CliExtensionEntry>,
-    marketplace: MarketplaceState,
     cli_ui_hooks: Vec<CliUiHookView>,
     ui_runtime_state: UiRuntimeState,
     /// Mirrors Desktop `workspaceBinding`; CLI defaults to project.
@@ -189,6 +188,11 @@ impl TuiShell {
             .context("Failed to read shared host metadata")?;
         let rule_entries = cli_metadata.rule_entries;
         let skill_entries = cli_metadata.skill_entries;
+        let extension_skill_entries = cli_metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         let plan_metadata = cli_metadata.plan_metadata;
         let extension_entries = runtime.list_extensions().unwrap_or_else(|err| {
             logging::log_event(&format!("[extensions] failed to initialize list: {err:#}"));
@@ -234,6 +238,7 @@ impl TuiShell {
             image_picker_active: false,
             image_picker_index: 0,
             image_picker_files: vec![],
+            marketplace: marketplace::MarketplaceState::default(),
             forms: BottomFormUiState::default(),
             conversation: ConversationUiState::default(),
             interrupt_escape_armed_at: None,
@@ -249,8 +254,8 @@ impl TuiShell {
             plan_metadata,
             rule_entries,
             skill_entries,
+            extension_skill_entries,
             extension_entries,
-            marketplace: MarketplaceState::default(),
             cli_ui_hooks,
             // The inline TUI draws on the main screen and must not probe image protocols (that would emit kitty/sixel queries to stdout).
             ui_runtime_state: if inline_mode {
@@ -293,7 +298,10 @@ impl TuiShell {
     }
 
     pub(crate) fn enabled_skill_entries(&self) -> impl Iterator<Item = &SkillEntry> {
-        self.skill_entries.iter().filter(|entry| entry.enabled)
+        self.skill_entries
+            .iter()
+            .filter(|entry| entry.enabled)
+            .chain(self.extension_skill_entries.iter())
     }
 
     pub(crate) fn find_enabled_skill_entry(&self, name: &str) -> Option<&SkillEntry> {
@@ -311,6 +319,11 @@ impl TuiShell {
             .context("Failed to read shared rule metadata")?;
         self.rule_entries = metadata.rule_entries;
         self.skill_entries = metadata.skill_entries;
+        self.extension_skill_entries = metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         self.plan_metadata = metadata.plan_metadata;
         Ok(())
     }
@@ -325,6 +338,11 @@ impl TuiShell {
             .context("Failed to read shared skill metadata")?;
         self.rule_entries = metadata.rule_entries;
         self.skill_entries = metadata.skill_entries;
+        self.extension_skill_entries = metadata
+            .extension_skill_entries
+            .into_iter()
+            .map(skill_entry_from_extension_slash)
+            .collect();
         self.plan_metadata = metadata.plan_metadata;
         if self.current_slash_query().is_some() {
             self.refresh_suggestions();
@@ -338,6 +356,13 @@ impl TuiShell {
             .list_extensions()
             .context("Failed to read extension list")?;
         self.cli_ui_hooks = compile_cli_ui_hooks(&self.extension_entries);
+        if let Ok(metadata) = self.runtime.load_cli_host_metadata(self.agent_mode()) {
+            self.extension_skill_entries = metadata
+                .extension_skill_entries
+                .into_iter()
+                .map(skill_entry_from_extension_slash)
+                .collect();
+        }
         if self.current_slash_query().is_some() {
             self.refresh_suggestions();
         }
@@ -457,7 +482,6 @@ impl TuiShell {
 
     fn reset_conversation_ui_for_new_session(&mut self) {
         self.reset_primary_picker_overlay();
-        self.close_marketplace_view();
         self.messages.clear();
         self.assistant_aux_by_message.clear();
         self.clear_input_history();
@@ -561,6 +585,10 @@ impl TuiShell {
 
     pub fn is_image_picker_active(&self) -> bool {
         self.image_picker_active
+    }
+
+    pub fn is_marketplace_view_active(&self) -> bool {
+        self.marketplace.open
     }
 
     fn handle_slash_command(&mut self, message: &str) {
@@ -1302,7 +1330,7 @@ fn should_toggle_aux_details_on_exit_rewind_picker(
 }
 
 fn is_subagents_command(message: &str) -> bool {
-    message == "/subagents" || message.starts_with("/subagents ")
+    message == "/subagent" || message.starts_with("/subagent ")
 }
 
 fn cursor_byte_index_for_text(text: &str, cursor_chars: usize) -> usize {
@@ -1338,10 +1366,33 @@ fn truncate_input_log_preview(text: &str, max_chars: usize) -> String {
     preview
 }
 
+fn skill_entry_from_extension_slash(entry: CliExtensionSkillSlashEntry) -> SkillEntry {
+    SkillEntry {
+        source: SkillSource {
+            id: entry.id,
+            scope: SkillScope::Extension,
+            root_kind: SkillRootKind::Extension,
+            name: entry.name.clone(),
+            description: entry.description.clone(),
+            short_label: format!("extension/skills/{}/SKILL.md", entry.name),
+            path: entry.path,
+        },
+        enabled: true,
+        content: entry.content.clone(),
+        preview: SkillPreview {
+            excerpt: entry.content,
+            truncated: false,
+        },
+    }
+}
+
 fn compile_cli_ui_hooks(entries: &[CliExtensionEntry]) -> Vec<CliUiHookView> {
     let mut hooks = Vec::new();
 
     for entry in entries {
+        if !entry.enabled {
+            continue;
+        }
         let contributed = entry
             .contributes
             .as_ref()
@@ -1436,7 +1487,7 @@ fn parse_cli_ui_hook_token_role(role: &str) -> Option<CliUiHookTokenRole> {
 #[cfg(test)]
 mod tests {
     use super::{
-        TuiShell, apply_generated_session_title_if_allowed, conversation_user_message_count,
+        apply_generated_session_title_if_allowed, conversation_user_message_count,
         is_standalone_subagent_status_aux, manual_shell_tool_command,
         next_persisted_standalone_pending_aux, next_persisted_standalone_pending_aux_anchor,
         should_reanchor_persisted_subagent_status_on_begin_assistant_response,
@@ -1630,30 +1681,6 @@ mod tests {
             next_persisted_standalone_pending_aux_anchor(None, None, Some(&persisted), Some(5));
 
         assert_eq!(next, Some(5));
-    }
-
-    #[test]
-    fn marketplace_version_compare_prefers_higher_semver() {
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.10.0", "1.2.0"),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("2.0.0", "10.0.0"),
-            std::cmp::Ordering::Less
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0", "1.0.0-alpha.1"),
-            std::cmp::Ordering::Greater
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0-alpha.2", "1.0.0-alpha.10"),
-            std::cmp::Ordering::Less
-        );
-        assert_eq!(
-            TuiShell::compare_marketplace_versions("1.0.0+build.1", "1.0.0+build.2"),
-            std::cmp::Ordering::Equal
-        );
     }
 
     #[test]

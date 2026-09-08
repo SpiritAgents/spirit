@@ -1,164 +1,161 @@
 ---
 title: Extensions
-description: Structure de package, champs spiritExtension, API activate et inscription sur le registre officiel.
+description: Créez des extensions avec l'assistant npm create ou à la main, et hébergez votre propre marché d'extensions distant.
 ---
 
-Une extension est un dossier avec un `package.json` contenant `spiritExtension`. Spirit l'installe par utilisateur et par hôte, pas dans le répertoire `.spirit/` du workspace.
+Une extension est un dossier contenant un `.spirit/extension.json` — le dump de manifeste Spirit — à côté d'un `package.json` purement npm. Spirit installe les extensions par utilisateur et par hôte, pas sous le répertoire `.spirit/` de l'espace de travail, et isole chaque installation selon le marché d'origine : l'identité d'installation est `(id de source, name)`.
 
-| Hôte    | Chemin                                |
-| ------- | ------------------------------------- |
-| Desktop | `{spiritDataDir}/extensions/desktop/` |
-| CLI     | `{spiritDataDir}/extensions/cli/`     |
+| Hôte    | Chemin                                                  |
+| ------- | ------------------------------------------------------- |
+| Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
+| CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-Cela diffère des [Skills](../customize/skills.mdx) (dossiers `SKILL.md`), des [MCP](../customize/mcp.mdx) (serveurs externes) et des [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` stylise les emplacements CLI TUI. Ce n'est pas `hooks.json`.
+Cela diffère des [Skills](../customize/skills.mdx) (dossiers `SKILL.md`), de [MCP](../customize/mcp.mdx) (serveurs externes) et des [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` stylise les emplacements de la TUI CLI. Ce n'est pas `hooks.json`. Une extension peut néanmoins _regrouper_ ces mêmes fichiers lorsqu'elle déclare `mcp`, `hooks`, `skills` ou `rules`.
 
-Il n'y a pas d'interrupteur d'activation par extension. Après l'installation, l'extension contribue. Le bouton bascule du panneau CLI est un placeholder.
+Chaque extension installée possède un interrupteur d'activation. Désactivez-la ou désinstallez-la pour arrêter ses contributions. Activer l'extension vaut consentement à exécuter les serveurs MCP, hooks d'agent, skills et rules qu'elle déclare.
 
-## Structure du package
+## Créer une extension
+
+<Tabs items={["Ligne de commande", "Manuel"]}>
+<Tab value="Ligne de commande">
+
+Générez une nouvelle extension avec l'assistant de création :
+
+<Tabs items={["npm", "pnpm", "Bun", "Yarn", "Deno"]}>
+<Tab value="npm">
+
+```bash
+npm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="pnpm">
+
+```bash
+pnpm create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Bun">
+
+```bash
+bun create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Yarn">
+
+```bash
+yarn create @spiritagent/extension
+```
+
+</Tab>
+<Tab value="Deno">
+
+```bash
+deno init --npm @spiritagent/extension
+```
+
+</Tab>
+</Tabs>
+
+L'assistant demande un nom d'extension (kebab-case), un nom d'affichage, une description d'une ligne et les capacités à générer. Il écrit `package.json`, `icon.svg` et `.spirit/extension.json`, plus les fichiers des capacités choisies (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), et affiche en terminant une entrée de marché prête à coller.
+
+Pour les scripts, chaque question a un drapeau : `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, et `--yes` pour sauter la confirmation.
+
+Validez le résultat à tout moment :
+
+```bash
+npx @spiritagent/extension-toolkit check ./my-extension
+```
+
+</Tab>
+<Tab value="Manuel">
+
+Un répertoire d'extension n'a besoin que de deux fichiers — `.spirit/extension.json` et `package.json` — plus les fichiers des capacités déclarées :
 
 ```text
-example-extension/
-  package.json
-  dist/index.js
-  assets/icon.svg
-  styles/desktop.css
-  cli-hooks.json
+my-extension/
+  .spirit/
+    extension.json        # dump de manifeste Spirit (obligatoire)
+  package.json            # purement npm ; seul `main` est lu
+  icon.svg                # facultatif ; SVG uniquement, pas de <script>
+  index.mjs               # facultatif ; l'entrée activate référencée par `main`
+  mcp.json                # lorsque mcp est déclaré
+  hooks.json              # lorsque hooks est déclaré (hooks d'agent)
+  rule.md                 # lorsque rules est déclaré
+  skills/<name>/SKILL.md  # lorsque skills est déclaré
+  styles.css              # lorsque le CSS desktop est déclaré (chemin référencé depuis le manifeste)
+  cli-hooks.json          # lorsque les hooks CLI sont déclarés (chemin référencé depuis le manifeste)
 ```
 
-```json
-{
-  "name": "@example/spirit-extension",
-  "version": "0.1.0",
-  "description": "Example Spirit extension.",
-  "author": { "name": "example" },
-  "homepage": "https://example.com/spirit-extension",
-  "main": "dist/index.js",
-  "spiritExtension": {
-    "schemaVersion": 1,
-    "displayName": "Example extension",
-    "icon": "assets/icon.svg",
-    "supportedHosts": ["cli", "desktop"],
-    "activationEvents": ["onStartup", "onUserMessage"],
-    "requestedCapabilities": [
-      "tool-definitions",
-      "tool-execution",
-      "system-prompt",
-      "settings",
-      "secret-storage",
-      "desktop-ui",
-      "cli-ui"
-    ],
-    "contributes": {
-      "tools": [
-        {
-          "name": "lookup_item",
-          "description": "Look up an item by id.",
-          "inputSchema": {
-            "type": "object",
-            "properties": {
-              "id": { "type": "string" }
-            },
-            "required": ["id"]
-          },
-          "approvalMode": "allowed",
-          "executionMode": "foreground"
-        }
-      ],
-      "desktop": {
-        "css": [{ "path": "styles/desktop.css" }],
-        "settingsPage": { "title": "Example extension" }
-      },
-      "cli": {
-        "hooks": { "path": "cli-hooks.json" }
-      }
-    },
-    "settingsSchema": [
-      {
-        "key": "region",
-        "type": "select",
-        "title": "Region",
-        "required": true,
-        "defaultValue": "us",
-        "options": [
-          { "value": "us", "label": "US" },
-          { "value": "eu", "label": "EU" }
-        ]
-      }
-    ],
-    "secretSlots": [
-      {
-        "key": "api_token",
-        "title": "API token",
-        "required": true
-      }
-    ]
-  }
-}
-```
+`package.json` ne porte aucun champ Spirit — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` restent purement npm. L'hôte ne lit que `main`, l'entrée de module d'[`activate`](#activate).
 
-Le `name` du `package.json` est l'identifiant de l'extension. Il doit correspondre à `^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`.
+Champs de `.spirit/extension.json` :
 
-## Champs de `package.json`
+| Champ           | Description                                                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion` | Obligatoire. Doit valoir `1`                                                                                                                                                        |
+| `name`          | Obligatoire. kebab-case ; l'id d'entrée au sein d'un marché                                                                                                                         |
+| `version`       | Obligatoire. Semver `major.minor.patch` ; les suffixes de pré-version ne sont pas pris en charge                                                                                    |
+| `sourceId`      | Obligatoire. Id de la source du marché propriétaire. Les paquets ZIP auto-déclarent n'importe quelle valeur (par exemple `"self-declared"`) ; le pipeline d'installation la réécrit |
+| `displayName`   | Obligatoire. Nom visible par l'utilisateur                                                                                                                                          |
+| `description`   | Obligatoire. Résumé d'une ligne                                                                                                                                                     |
+| `icon`          | Facultatif. Chemin SVG relatif à la racine de l'extension                                                                                                                           |
+| `author`        | Facultatif. `{ name, email?, url? }` ou une chaîne de style npm `"Name <email> (url)"`                                                                                              |
+| `category`      | Facultatif. Chaîne unique                                                                                                                                                           |
+| `keywords`      | Facultatif. Tableau de chaînes de mots-clés de recherche                                                                                                                            |
+| `homepage`      | Facultatif. URL du projet                                                                                                                                                           |
+| `manifest`      | Obligatoire. La déclaration d'exécution — voir la section « Le `manifest` »                                                                                                         |
 
-| Champ             | Description                                                                                                                                                   |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`            | Requis. Nom du package npm ; utilisé comme identifiant d'extension                                                                                            |
-| `version`         | Requis. Chaîne de version                                                                                                                                     |
-| `spiritExtension` | Requis. Objet. Voir ci-dessous                                                                                                                                |
-| `description`     | Optionnel. Chaîne                                                                                                                                             |
-| `author`          | Optionnel. Chaîne ou `{ name }`                                                                                                                               |
-| `homepage`        | Optionnel. Chaîne                                                                                                                                             |
-| `main`            | Optionnel. Chemin relatif vers le point d'entrée `activate`. Requis lorsque l'extension utilise `activationEvents`, l'exécution d'outils ou un prompt système |
+Le dump ne porte ni `source` ni champs de curation (`reviewStatus`, `featured`) — ceux-ci appartiennent à l'entrée du marché.
 
-`main`, `spiritExtension.icon`, les chemins CSS et les chemins de hooks CLI doivent être relatifs et doivent rester dans le package.
+Les fichiers déclarés doivent exister et être valides : déclarer `mcp`, `hooks`, `skills` ou `rules` sans le fichier correspondant fait échouer la validation et l'installation. Les fichiers présents mais non déclarés sont ignorés et jamais chargés.
 
-## `spiritExtension`
+</Tab>
+</Tabs>
 
-| Champ                   | Description                                                   |
-| ----------------------- | ------------------------------------------------------------- |
-| `schemaVersion`         | Optionnel. Par défaut `1`. Seul `1` est pris en charge        |
-| `displayName`           | Requis. Nom visible par l'utilisateur                         |
-| `icon`                  | Optionnel. Chemin relatif à la racine du package              |
-| `supportedHosts`        | Requis. Tableau non vide de `cli` et/ou `desktop`             |
-| `activationEvents`      | Optionnel. Voir [Événements d'activation](#activation-events) |
-| `requestedCapabilities` | Optionnel. Voir [Capacités](#capabilities)                    |
-| `contributes`           | Optionnel. `tools`, `desktop` et/ou `cli`                     |
-| `settingsSchema`        | Optionnel. Définitions de paramètres                          |
-| `secretSlots`           | Optionnel. Définitions d'emplacements de secrets              |
+## Le `manifest`
 
-## Capacités
+L'objet `manifest` est la déclaration d'exécution de l'extension : quels hôtes elle prend en charge, quand elle s'active et ce qu'elle contribue. Dans une entrée de marché, le manifeste est cautionné par l'opérateur du marché ; dans un paquet ZIP, il est auto-déclaré et encadré par la confirmation de vérification.
 
-| Valeur               | Runtime                                                                            |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| `tool-definitions`   | Requis avec `tool-execution` pour exposer `contributes.tools` au modèle            |
-| `tool-execution`     | Requis avec `tool-definitions` pour exécuter ces outils                            |
-| `system-prompt`      | Requis avec `main` pour contribuer un fragment de prompt système                   |
-| `desktop-ui`         | Doit être associé à `contributes.desktop`                                          |
-| `cli-ui`             | Doit être associé à `contributes.cli`                                              |
-| `approval-flow`      | Déclaré uniquement. L'approbation est pilotée par `approvalMode` de chaque outil   |
-| `questions-flow`     | Déclaré uniquement. Les questions sont pilotées par `approvalMode: need-questions` |
-| `settings`           | Déclaré uniquement. Les paramètres proviennent de `settingsSchema`                 |
-| `secret-storage`     | Utilisé avec `secretSlots`                                                         |
-| `structured-results` | Déclaré uniquement                                                                 |
+### Capacités
 
-`desktop-ui` / `cli-ui` et le bloc `contributes` correspondant doivent être tous deux présents ou tous deux absents.
+| Valeur               | Runtime                                                                             |
+| -------------------- | ----------------------------------------------------------------------------------- |
+| `tool-definitions`   | Requis avec `tool-execution` pour exposer `contributes.tools` au modèle             |
+| `tool-execution`     | Requis avec `tool-definitions` pour exécuter ces outils                             |
+| `system-prompt`      | Requis avec `main` pour contribuer un fragment de prompt système                    |
+| `desktop-ui`         | Doit être associé à `contributes.desktop`                                           |
+| `cli-ui`             | Doit être associé à `contributes.cli`                                               |
+| `mcp`                | Doit être associé à `contributes.mcp` ; charge `mcp.json` à la racine du paquet     |
+| `hooks`              | Doit être associé à `contributes.hooks` ; charge `hooks.json` à la racine du paquet |
+| `skills`             | Doit être associé à `contributes.skills` ; charge `skills/<name>/SKILL.md`          |
+| `rules`              | Doit être associé à `contributes.rules` ; charge `rule.md` à la racine du paquet    |
+| `approval-flow`      | Déclaré uniquement. L'approbation est pilotée par `approvalMode` de chaque outil    |
+| `questions-flow`     | Déclaré uniquement. Les questions sont pilotées par `approvalMode: need-questions`  |
+| `settings`           | Déclaré uniquement. Les paramètres proviennent de `settingsSchema`                  |
+| `secret-storage`     | Utilisé avec `secretSlots`                                                          |
+| `structured-results` | Déclaré uniquement                                                                  |
 
-## Événements d'activation
+`desktop-ui` / `cli-ui` / `mcp` / `hooks` / `skills` / `rules` et l'entrée `contributes` correspondante doivent être tous deux présents ou tous deux absents.
 
-| Événement              | Moment de déclenchement                                 |
-| ---------------------- | ------------------------------------------------------- |
-| `onStartup`            | Échauffement de l'hôte                                  |
-| `onExtensionInstalled` | Après l'installation d'un ZIP ou via la place de marché |
-| `onSessionOpened`      | La session devient active                               |
-| `onSessionReset`       | Réinitialisation de la session                          |
-| `onUserMessage`        | L'utilisateur soumet un message                         |
-| `onToolCall`           | Un outil est sur le point de s'exécuter                 |
-| `onToolResult`         | Un résultat d'outil est disponible                      |
-| `onApprovalResolved`   | Une décision d'approbation est résolue                  |
+### Événements d'activation
+
+| Événement              | Moment de déclenchement                 |
+| ---------------------- | --------------------------------------- |
+| `onStartup`            | Échauffement de l'hôte                  |
+| `onExtensionInstalled` | Une fois l'installation terminée        |
+| `onSessionOpened`      | La session devient active               |
+| `onSessionReset`       | Réinitialisation de la session          |
+| `onUserMessage`        | L'utilisateur soumet un message         |
+| `onToolCall`           | Un outil est sur le point de s'exécuter |
+| `onToolResult`         | Un résultat d'outil est disponible      |
+| `onApprovalResolved`   | Une décision d'approbation est résolue  |
 
 L'hôte appelle `activate` lorsque l'extension répertorie l'événement et possède un `main` lisible.
 
-## `contributes.tools`
+### `contributes.tools`
 
 | Champ           | Description                                                |
 | --------------- | ---------------------------------------------------------- |
@@ -171,7 +168,7 @@ L'hôte appelle `activate` lorsque l'extension répertorie l'événement et poss
 
 Le modèle ne voit pas `name` tel quel. L'hôte construit un nom d'invocation comme `extension__{id}__{tool}__{hash}`.
 
-## `contributes.desktop`
+### `contributes.desktop`
 
 Requiert `desktop-ui`.
 
@@ -181,7 +178,7 @@ Requiert `desktop-ui`.
 | `css[].media`  | Facultatif. Requête média CSS                                                     |
 | `settingsPage` | Facultatif. `true`, `{}` ou `{ title }` — ajoute une entrée de paramètres Desktop |
 
-## `contributes.cli`
+### `contributes.cli`
 
 Requiert `cli-ui`. `hooks` est un objet avec `path`, pas un tableau en ligne :
 
@@ -219,7 +216,24 @@ Rôles de jeton : `default`, `primary`, `secondary`, `muted`, `accent`, `success
 }
 ```
 
-## `settingsSchema`
+### MCP, hooks, skills et rules bundlés
+
+Exigent la capability correspondante. `contributes.mcp`, `contributes.hooks`, `contributes.skills` et `contributes.rules` valent `true` ou `{}`. Les chemins sont conventionnels ; les chemins personnalisés ne sont pas autorisés.
+
+| Contribution | Capability | Fichier                                                                                            |
+| ------------ | ---------- | -------------------------------------------------------------------------------------------------- |
+| MCP          | `mcp`      | `mcp.json` à la racine du paquet (même schéma que le MCP utilisateur/workspace)                    |
+| Agent hooks  | `hooks`    | `hooks.json` à la racine du paquet (même schéma que les hooks agent ; pas `contributes.cli.hooks`) |
+| Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                           |
+| Rules        | `rules`    | `rule.md` à la racine du paquet                                                                    |
+
+Déclaré mais fichier manquant ou invalide : l'installation échoue. Les fichiers non déclarés sont ignorés et jamais chargés.
+
+Les `command` et `cwd` relatifs sont résolus par rapport à la racine de l'extension. Si un MCP stdio omet `cwd`, la racine de l'extension est utilisée.
+
+Ces contributions sont superposées dans la session lorsque l'extension est activée. Elles n'apparaissent pas dans **Paramètres → MCPs | Hooks | Skills | Rules**. En cas de conflit de nom : workspace > utilisateur > extension.
+
+### `settingsSchema`
 
 | Champ          | Description                                                       |
 | -------------- | ----------------------------------------------------------------- |
@@ -234,7 +248,7 @@ Rôles de jeton : `default`, `primary`, `secondary`, `muted`, `accent`, `success
 
 Les valeurs sont `string`, `number`, `boolean` ou `null`. `null` efface un réglage non requis.
 
-## `secretSlots`
+### `secretSlots`
 
 | Champ         | Description        |
 | ------------- | ------------------ |
@@ -325,110 +339,86 @@ export function activate(ctx) {
 }
 ```
 
-## Installation
+## Distribuer en ZIP
 
-- **ZIP** — l'archive doit contenir exactement un `package.json` (il peut se trouver dans un sous-répertoire). Importez avec `spirit extension import ./extension.zip` ou **Settings → Extensions**.
-- **Tarball du marketplace** — la racine de l'archive doit contenir un répertoire `package/`.
+Empaquetez un répertoire d'extension dans le format ZIP partageable (contenu plus `.spirit/extension.json`) :
 
-`supportedHosts` doit inclure l'hôte actuel. Une deuxième installation de la même id ne remplace pas la copie existante par défaut. Voir [Marketplace](../customize/marketplace.mdx) pour les canaux et l'interface d'installation.
-
-## Publier sur le registre officiel
-
-Le dépôt [SpiritAgents/registry](https://github.com/SpiritAgents/registry) est un index marketplace. Il n'héberge pas le code source des extensions, `dist`, les fichiers ZIP ou les tarballs.
-
-Effectuez ces étapes dans l'ordre :
-
-1. Publiez un package npm public.
-2. Ouvrez une pull request qui liste ce package.
-
-### 1. Publier le package npm
-
-Le `package.json` publié est la source de vérité, en particulier `spiritExtension`. Le générateur de registre exige :
-
-- `spiritExtension.schemaVersion`
-- `spiritExtension.displayName`
-- `spiritExtension.supportedHosts`
-- `spiritExtension.requestedCapabilities`
-
-Il lit également `name`, `version`, `description`, `author`, `repository`, `homepage`, `keywords`, et `spiritExtension.icon` optionnel. Si vous définissez `icon`, incluez ce fichier dans le package publié. Un objet `spiritExtension` manquant fait échouer la construction du registre pour cette version.
-
-Exemple officiel : [`@spiritagent/extension-system-message-demo`](https://www.npmjs.com/package/@spiritagent/extension-system-message-demo) (`spirit.system-message-demo`).
-
-### 2. Lister le package
-
-Créez `registry/extensions/<extension-id>/` avec :
-
-| Fichier      | Description               |
-| ------------ | ------------------------- |
-| `entry.json` | Gouvernance du marché     |
-| `README.md`  | Texte de détail du marché |
-
-Ne modifiez pas ces fichiers à la main (régénérez-les) :
-
-- `registry/catalog.json`
-- `registry/extensions/<extension-id>/detail.json`
-
-`extensionId` doit avoir au moins deux segments séparés par des points, des lettres minuscules et des chiffres, avec des points ou des traits d'union à l'intérieur d'un segment. Exemples : `spirit.system-message-demo`, `yourteam.some-extension`. `packageName` et `extensionId` doivent être uniques dans le dépôt.
-
-### `entry.json`
-
-| Champ                 | Description                                            |
-| --------------------- | ------------------------------------------------------ |
-| `schemaVersion`       | Requis. `1`                                            |
-| `extensionId`         | Requis. Voir les règles ci-dessus                      |
-| `packageName`         | Requis. Nom du package npm                             |
-| `status`              | Requis. `listed`, `hidden`, `deprecated`, ou `blocked` |
-| `featured`            | Requis. Booléen                                        |
-| `defaultVersion`      | Requis. Chaîne de version par défaut                   |
-| `defaultReviewStatus` | Requis. `unverified`, `verified`, ou `revoked`         |
-| `versions`            | Requis. Au moins un élément                            |
-
-Chaque élément `versions[]` :
-
-| Champ          | Description                                                               |
-| -------------- | ------------------------------------------------------------------------- |
-| `version`      | Requis                                                                    |
-| `channel`      | Requis. `stable`, `preview`, ou `experimental`                            |
-| `reviewStatus` | Requis. `unverified`, `verified`, ou `revoked`                            |
-| `changelog`    | Optionnel. `{ summary, body }` — les deux requis lorsqu'ils sont présents |
-
-```json
-{
-  "schemaVersion": 1,
-  "extensionId": "example.spirit-extension",
-  "packageName": "@example/spirit-extension",
-  "status": "listed",
-  "featured": false,
-  "defaultVersion": "0.1.0",
-  "defaultReviewStatus": "unverified",
-  "versions": [
-    {
-      "version": "0.1.0",
-      "channel": "stable",
-      "reviewStatus": "unverified",
-      "changelog": {
-        "summary": "Initial public release.",
-        "body": "- Initial public release."
-      }
-    }
-  ]
-}
+```bash
+npx @spiritagent/extension-toolkit pack ./my-extension
 ```
 
-Le README du marché doit couvrir ce que fait l'extension, le nom du package, la version approuvée par défaut, la compatibilité avec les hôtes et capacités, et des notes pour les lecteurs du marché.
+La commande valide d'abord le paquet puis écrit `<name>-<version>.zip` dans le répertoire courant. Les utilisateurs importent le ZIP depuis la page **Extensions** ou avec `spirit extension import` ; il aboutit dans leur marché Personnel. Voir [Extensions](../customize/extensions.mdx).
 
-Régénérez localement les fichiers dérivés :
+Pour lister l'extension dans un marché, voir [Publier avec publish](#publier-avec-publish).
 
-```powershell
-./scripts/build-registry.ps1
+## Héberger un marché d'extensions distant
+
+Un marché d'extensions distant est un répertoire servable avec un index `.spirit/marketplace.json` : un dépôt Git, un site statique ou un répertoire local. Les utilisateurs l'ajoutent avec `spirit extension marketplace add <url|path>` ou depuis la page **Extensions** de Desktop, puis parcourent et installent ses entrées.
+
+<Tabs items={["Dépôt modèle", "Manuel"]}>
+<Tab value="Dépôt modèle">
+
+[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) crée votre propre dépôt de marché à partir de `SpiritAgents/extension-template`.
+
+Le modèle fournit la structure de registre, deux extensions d'exemple et une CI qui valide le registre à chaque push et pull request. Pour publier une extension :
+
+1. Générez-la avec `npm create @spiritagent/extension`.
+2. Exécutez `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — cela copie l'extension dans `extensions/` et fusionne l'entrée dans `.spirit/marketplace.json`. Voir [Publier avec publish](#publier-avec-publish).
+3. Poussez — les utilisateurs ajoutent le marché avec son URL Git.
+
+</Tab>
+<Tab value="Manuel">
+
+Une racine de marché contient l'index plus un répertoire de contenu par extension :
+
+```text
+my-marketplace/
+  .spirit/
+    marketplace.json  # l'index
+  extensions/
+    my-extension/     # répertoire de contenu (paquet npm simple + fichiers de capacités)
+      icon.svg
+      package.json
+      ...
 ```
 
-Le script récupère les métadonnées npm pour les versions répertoriées, reconstruit `catalog.json` et chaque `detail.json`, puis vérifie la cohérence.
+Les chemins relatifs dans `marketplace.json` se résolvent par rapport à la racine du marché et ne doivent contenir ni segments `..` ni chemins absolus.
 
-### Pull request
+Champs d'entrée, par groupe :
 
-Incluez `entry.json`, le `README.md` du marketplace, ainsi que les fichiers `catalog.json` / `detail.json` régénérés. Ne listez que les versions déjà publiques sur npm. Définissez précisément `reviewStatus` et `channel`. Les nouvelles versions commencent généralement par `unverified`.
+- **Identité** — `name` (kebab-case ; l'id d'entrée), `version` (semver, sans pré-version) et `source` : une chaîne de chemin relatif à la racine comme `"./extensions/my-extension"` pour du contenu local, ou `{ "source": "npm", "package": "@scope/name@1.0.0" }` pour épingler une version npm exacte (l'intégrité est vérifiée contre le hachage SRI du packument à l'installation).
+- **Affichage** — `displayName`, `description`, `icon` (chemin SVG relatif à la racine), `category`, `keywords`, `homepage`, `author`.
+- **Déclaration** — `manifest` : la déclaration d'exécution décrite dans la section « Le `manifest` ». Le marché la cautionne ; un paquet ne peut pas affirmer des capacités de lui-même.
+- **Curation** — `featured` et `reviewStatus` (`unverified` / `verified` / `revoked`).
 
-Ne committez pas les arborescences source des extensions, les répertoires `dist`, les fichiers ZIP, les tarballs ou autres artefacts binaires.
+`extension-toolkit publish` peut fusionner l'entrée pour vous — voir [Publier avec publish](#publier-avec-publish).
 
-Ouvrir une pull request ne garantit pas la publication. La revue peut demander des modifications avant qu'une version soit approuvée ou vérifiée.
+Validez le registre localement — hors ligne : schéma, noms kebab-case, semver sans pré-version, format des sources npm, fichiers de contribution déclarés pour les sources locales et règles d'icône :
+
+```bash
+npx -y @spiritagent/extension-toolkit marketplace check .
+```
+
+Discipline de vérification : les pull requests qui ajoutent une entrée ou modifient sa `version` doivent conserver `reviewStatus: "unverified"` ; la promotion en `verified` se fait dans un commit séparé après une revue humaine. Le `.github/workflows/marketplace.yml` du dépôt modèle est une implémentation de référence — il diff l'index contre la base de la PR.
+
+</Tab>
+</Tabs>
+
+### Marchés locaux
+
+Tout répertoire local contenant un `.spirit/marketplace.json` fonctionne comme un marché — ajoutez-le avec `spirit extension marketplace add <path>` ou **Ajouter depuis le disque** sur Desktop. Les marchés locaux sont lus sur place et n'ont pas besoin de CI, ce qui en fait la boucle de développement des auteurs d'extensions : modifier, réinstaller, recommencer.
+
+### Publier avec publish
+
+`extension-toolkit publish` fusionne le `.spirit/extension.json` d'une extension dans le `.spirit/marketplace.json` d'un marché et copie le contenu requis par la source de l'entrée :
+
+```bash
+npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
+```
+
+- Le premier argument est le répertoire de l'extension, le second la racine du marché — tout répertoire local contenant un `.spirit/marketplace.json` : un clone du dépôt modèle, le marché Personnel sous `{spiritDataDir}/marketplaces/personal`, etc.
+- `--source local` (par défaut) : copie le paquet complet dans `extensions/<name>/` du marché — y compris `.spirit/extension.json`, à l'exclusion de `node_modules` et `.git` — et y pointe le `source` de l'entrée.
+- `--source npm` : épingle `name@version` depuis le `package.json` de l'extension comme `source` npm de l'entrée ; seule l'icône déclarée est copiée dans `extensions/<name>/` (les marchés hébergent leurs icônes). La publication du paquet npm proprement dit reste du ressort de votre CLI npm.
+- `--dry-run` : affiche l'entrée et les actions prévues sans rien écrire.
+- Règles de fusion : une entrée du même nom est remplacée sur place, sinon elle est ajoutée. Les nouvelles entrées et les changements de `version` retombent à `reviewStatus: "unverified"` ; republier la même version la conserve. Les champs de curation comme `featured` conservent toujours les valeurs du marché.
+- La même validation que `check` s'exécute d'abord ; en cas d'échec, rien n'est écrit.

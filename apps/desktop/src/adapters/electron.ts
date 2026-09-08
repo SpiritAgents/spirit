@@ -1,5 +1,10 @@
 import type { HostApi } from "../host-api";
 import type { AbortConversationRequest } from "../types";
+import type {
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
+} from "../types";
 
 export async function createElectronHostApi(): Promise<HostApi> {
   if (typeof window === "undefined" || !window.spiritDesktop) {
@@ -64,23 +69,28 @@ export async function createElectronHostApi(): Promise<HostApi> {
     importExtension(request) {
       return bridge.importExtension(request);
     },
-    listMarketplaceExtensions() {
-      return bridge.listMarketplaceExtensions();
+    installBuiltInExtension(request) {
+      return bridge.installBuiltInExtension(request);
     },
-    getMarketplaceExtensionDetail(extensionId) {
-      return bridge.getMarketplaceExtensionDetail(extensionId);
+    addMarketplaceSource(request) {
+      return bridge.addMarketplaceSource(request) as Promise<MarketplaceSourceCommandResult>;
     },
-    getMarketplaceExtensionReadme(extensionId) {
-      return bridge.getMarketplaceExtensionReadme(extensionId);
-    },
-    prepareMarketplaceExtensionInstall(request) {
-      return bridge.prepareMarketplaceExtensionInstall(request);
+    removeMarketplaceSource(request) {
+      return bridge.removeMarketplaceSource(request);
     },
     installMarketplaceExtension(request) {
-      return bridge.installMarketplaceExtension(request);
+      return bridge.installMarketplaceExtension(
+        request,
+      ) as Promise<MarketplaceInstallCommandResult>;
+    },
+    updateExtension(request) {
+      return bridge.updateExtension(request) as Promise<MarketplaceUpdateCommandResult>;
     },
     deleteExtension(request) {
       return bridge.deleteExtension(request);
+    },
+    setExtensionEnabled(request) {
+      return bridge.setExtensionEnabled(request);
     },
     runExtension(request) {
       return bridge.runExtension(request);

@@ -1,19 +1,27 @@
-import { useEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import i18n from "@/lib/i18n";
 import {
   ArrowLeft,
-  ArrowLeftRight,
-  Download,
+  Blocks,
+  ChevronDown,
+  Ellipsis,
+  Folder,
+  Globe,
   LoaderCircle,
-  RefreshCw,
   Search,
   Sparkles,
+  Store,
+  Trash2,
 } from "lucide-react";
 
-import { MarkdownMessage } from "@/components/markdown-message";
-import { Badge } from "@/components/ui/badge";
+import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
+
+import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
+import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
+import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
+import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,63 +32,65 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EmptyCard } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import {
-  DESKTOP_ITEM_CARD_HOVER_BORDER,
-  DESKTOP_ITEM_CARD_SURFACE,
-  DESKTOP_OUTLINE_FILL_UNDERLAY,
+  DESKTOP_FORM_INPUT_INNER,
   DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
   instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTintInnerClass } from "@/lib/desktop-translucency-surface";
-import { showDesktopErrorToast } from "@/lib/desktop-error-toast";
-import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
+import {
+  CONVERSATION_GUTTER_X,
+  CONVERSATION_MESSAGE_LIST_MAX_W,
+} from "@/lib/conversation-layout-constants";
+import { DESKTOP_PAGE_TITLE_CLASS } from "@/lib/desktop-typography";
+import { fileToBase64 } from "@/lib/file-to-base64";
+import { groupMarketplaceEntriesByCategory } from "@/lib/marketplace-category-sections";
+import { filterVisibleMarketplaceSources } from "@/lib/marketplace-source-visibility";
+import { topScrollFadeMaskStyle } from "@/lib/mask-styles";
+import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
+import { useScrollTopBandOcclusion } from "@/lib/scroll-top-band-occlusion";
 import { cn } from "@/lib/utils";
 import type {
-  DesktopExtensionListItem,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
+  AddMarketplaceSourceRequest,
+  DeleteExtensionRequest,
+  DesktopMarketplaceCatalogEntry,
+  DesktopMarketplaceInstallResult,
+  DesktopMarketplaceReviewStatus,
+  DesktopMarketplaceSource,
+  DesktopMarketplaceUpdateResult,
+  ImportExtensionRequest,
+  RemoveMarketplaceSourceRequest,
+  SetExtensionEnabledRequest,
+  UpdateExtensionRequest,
 } from "@/types";
 
-/** Matches the conversation body text for visual continuity */
-const MARKETPLACE_READING_W = "max-w-[min(86vw,44rem)]";
-/** Slightly wider list to accommodate two-column cards */
-const MARKETPLACE_LIST_W = "max-w-[min(92vw,52rem)]";
+/** h-8: the whitespace above the title; it scrolls away with the title before the search bar docks */
+const MARKETPLACE_HEADER_TOP_GAP_PX = 32;
 
-type MarketplaceViewProps = {
-  snapshot: {
-    extensionsList: DesktopExtensionListItem[];
-  } | null;
-  apiReady: boolean;
-  busyAction: string;
-  onListMarketplaceExtensions: () => Promise<DesktopMarketplaceCatalogItem[]>;
-  onGetMarketplaceExtensionDetail: (extensionId: string) => Promise<DesktopMarketplaceDetail>;
-  onGetMarketplaceExtensionReadme: (extensionId: string) => Promise<string>;
-  onPrepareMarketplaceExtensionInstall: (request: {
-    extensionId: string;
-    version?: string;
-  }) => Promise<DesktopMarketplacePreparedInstall>;
-  onInstallMarketplaceExtension: (request: {
-    extensionId: string;
-    version?: string;
-    reviewAcknowledged?: boolean;
-  }) => Promise<void>;
-  /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with marketplace-layout. */
-  useTranslucency?: boolean;
-};
+declare global {
+  /** Not yet in TS lib.dom; runtime support is detected via `typeof ScrollTimeline`. */
+  class ScrollTimeline extends AnimationTimeline {
+    constructor(options?: { source?: Element | null; axis?: "block" | "inline" });
+  }
+}
 
-type MarketplaceTab = "readme" | "changelog" | "versions";
-
-type PendingInstall = {
-  extensionId: string;
-  version: string;
-  displayName: string;
-  reviewStatus: DesktopMarketplacePreparedInstall["reviewStatus"];
-};
-
-function reviewStatusBadgeVariant(status: DesktopMarketplaceCatalogItem["defaultReviewStatus"]) {
+export function reviewStatusBadgeVariant(status: DesktopMarketplaceReviewStatus) {
   if (status === "verified") {
     return "secondary" as const;
   }
@@ -90,71 +100,201 @@ function reviewStatusBadgeVariant(status: DesktopMarketplaceCatalogItem["default
   return "outline" as const;
 }
 
-function reviewStatusLabel(status: DesktopMarketplaceCatalogItem["defaultReviewStatus"]) {
-  if (status === "verified") {
-    return i18n.t("marketplace.verified");
-  }
-  if (status === "revoked") {
-    return i18n.t("marketplace.revoked");
-  }
-  return i18n.t("marketplace.unverified");
-}
+/** Pending review-gate confirmation for an install / update / import action. */
+type ReviewGateTarget = {
+  extensionId: string;
+  displayName: string;
+  reviewStatus: DesktopMarketplaceReviewStatus;
+  retry: (reviewAcknowledged: true) => Promise<void>;
+};
 
-function installedExtensionForCatalog(
-  catalog: DesktopMarketplaceCatalogItem | undefined,
-  installed: DesktopExtensionListItem[],
-): DesktopExtensionListItem | undefined {
-  if (!catalog) {
-    return undefined;
-  }
-  return installed.find(
-    (item) => item.id === catalog.extensionId || item.id === catalog.packageName,
-  );
-}
-
-function installedBadgeLabel(installed: DesktopExtensionListItem, targetVersion: string) {
-  if (installed.version === targetVersion) {
-    return i18n.t("marketplace.installedVersion", { version: installed.version });
-  }
-  return i18n.t("marketplace.updateAvailable", {
-    current: installed.version,
-    target: targetVersion,
-  });
-}
+type MarketplaceViewProps = {
+  snapshot: {
+    marketplaceSources?: DesktopMarketplaceSource[];
+    marketplaceCatalogs?: Record<string, DesktopMarketplaceCatalogEntry[]>;
+    marketplaceCatalogAll?: DesktopMarketplaceCatalogEntry[];
+    marketplaceWarnings?: string[];
+    extensionsLoading?: boolean;
+  } | null;
+  extensionsBusy: boolean;
+  onImportExtension: (request: ImportExtensionRequest) => Promise<void>;
+  onInstallMarketplaceExtension: (request: {
+    name: string;
+    marketplace?: string;
+    reviewAcknowledged?: boolean;
+  }) => Promise<DesktopMarketplaceInstallResult>;
+  onUpdateExtension: (request: UpdateExtensionRequest) => Promise<DesktopMarketplaceUpdateResult>;
+  onAddMarketplaceSource: (request: AddMarketplaceSourceRequest) => Promise<{ sourceId: string }>;
+  onRemoveMarketplaceSource: (request: RemoveMarketplaceSourceRequest) => Promise<void>;
+  onPickMarketplaceDirectory: () => Promise<string | null>;
+  onDeleteExtension: (request: DeleteExtensionRequest) => Promise<void>;
+  onSetExtensionEnabled: (request: SetExtensionEnabledRequest) => Promise<void>;
+  /** "Generate Extension": returns to the conversation surface and inserts a create-extension chip. */
+  onGenerateExtensionNavigate?: () => void;
+  extensionsInstalling?: boolean;
+  /** Windows Mica / macOS Vibrancy: forwarded to the detail view's top bar. */
+  useTranslucency?: boolean;
+};
 
 export function MarketplaceView({
   snapshot,
-  apiReady,
-  busyAction,
-  onListMarketplaceExtensions,
-  onGetMarketplaceExtensionDetail,
-  onGetMarketplaceExtensionReadme,
-  onPrepareMarketplaceExtensionInstall,
+  extensionsBusy,
+  onImportExtension,
   onInstallMarketplaceExtension,
+  onUpdateExtension,
+  onAddMarketplaceSource,
+  onRemoveMarketplaceSource,
+  onPickMarketplaceDirectory,
+  onDeleteExtension,
+  onSetExtensionEnabled,
+  onGenerateExtensionNavigate,
+  extensionsInstalling = false,
   useTranslucency = false,
 }: MarketplaceViewProps) {
   const { t } = useTranslation();
-  const [catalog, setCatalog] = useState<DesktopMarketplaceCatalogItem[]>([]);
+  const [searchText, setSearchText] = useState("");
+  // "all" is a UI-level pseudo source: the merged view over every added marketplace.
+  const [activeSourceId, setActiveSourceId] = useState("all");
+  const [uninstallTarget, setUninstallTarget] = useState<DesktopMarketplaceCatalogEntry | null>(
+    null,
+  );
+  const [uninstallDialogOpen, setUninstallDialogOpen] = useState(false);
   /** null = list; non-null = that extension's detail page */
   const [detailExtensionId, setDetailExtensionId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<MarketplaceTab>("readme");
-  const [searchText, setSearchText] = useState("");
-  const [detailById, setDetailById] = useState<Record<string, DesktopMarketplaceDetail>>({});
-  const [readmeById, setReadmeById] = useState<Record<string, string>>({});
-  const [localError, setLocalError] = useState("");
-  const [loadingCatalog, setLoadingCatalog] = useState(false);
-  const [loadingDetailId, setLoadingDetailId] = useState("");
-  const [loadingReadmeId, setLoadingReadmeId] = useState("");
-  const [pendingInstall, setPendingInstall] = useState<PendingInstall | null>(null);
+  const [addSourceOpen, setAddSourceOpen] = useState(false);
+  const [reviewGate, setReviewGate] = useState<ReviewGateTarget | null>(null);
+  const [reviewGateOpen, setReviewGateOpen] = useState(false);
+  const [removeSourceTarget, setRemoveSourceTarget] = useState<DesktopMarketplaceSource | null>(
+    null,
+  );
+  const [removeSourceDialogOpen, setRemoveSourceDialogOpen] = useState(false);
+  /** Install / update in flight for these catalog ids; other rows stay clickable. */
+  const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [listScrollRoot, setListScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
+    null,
+  );
+  const [headerElement, setHeaderElement] = useState<HTMLDivElement | null>(null);
+  const stickySentinelRef = useRef<HTMLDivElement>(null);
+  const getListScrollViewport = useCallback(
+    () => scrollAreaViewport(listScrollRoot),
+    [listScrollRoot],
+  );
+  // Pin detection via sentinel + IntersectionObserver: the callback runs inside the
+  // rendering steps with the latest (compositor-driven) scroll offset, so the pinned
+  // styling commits in the same frame as the crossing scroll position (same pattern as
+  // the PR changes view). A scroll-event listener would commit one frame late.
+  const headerPinned = useStickyHeaderPinned(
+    stickySentinelRef,
+    getListScrollViewport,
+    detailExtensionId === null,
+  );
+  const [titleElement, setTitleElement] = useState<HTMLDivElement | null>(null);
+  const [titleHeight, setTitleHeight] = useState(0);
 
-  const installedExtensions = snapshot?.extensionsList ?? [];
-  const marketplaceBusy = busyAction === "marketplace";
+  // The title block scrolls away with the list, so the dock offset (top gap + title height)
+  // is measured rather than hardcoded.
+  useLayoutEffect(() => {
+    if (!titleElement) {
+      setTitleHeight(0);
+      return;
+    }
+    const syncTitleHeight = () => setTitleHeight(titleElement.offsetHeight);
+    syncTitleHeight();
+    const observer = new ResizeObserver(syncTitleHeight);
+    observer.observe(titleElement);
+    return () => observer.disconnect();
+  }, [titleElement]);
 
-  useEffect(() => {
-    showDesktopErrorToast(localError, "marketplace-local-error");
-  }, [localError]);
+  // The occlusion clip applies only once the search bar is pinned: before that, the title
+  // scrolls through the top band and must stay visible. clip-path is compositor-only, so
+  // the pin-moment toggle still takes effect in the same frame (see scroll-top-band-occlusion).
+  const { occlusionStyle: headerOcclusionStyle, bandHeight: headerHeight } =
+    useScrollTopBandOcclusion(listScrollRoot, headerElement, headerPinned);
 
-  const filteredCatalog = catalog.filter((item) => {
+  // clip-path occludes the header band; the alpha-mask fade below it (onboarding-style)
+  // softens content approaching the docked header, animating in/out on pin transitions.
+  // The mask band is zero while unpinned so the scrolling title is not faded out.
+  const listScrollRootStyle = useMemo(() => {
+    return {
+      ...headerOcclusionStyle,
+      ...topScrollFadeMaskStyle(headerPinned, {
+        bandHeightPx: headerPinned ? (headerHeight ?? 0) : 0,
+      }),
+    };
+  }, [headerOcclusionStyle, headerHeight, headerPinned]);
+
+  // The search bar lives outside the ScrollArea so the occlusion mask on the scroll root can
+  // clip list content beneath it (the mask clips every DOM descendant of the masked element).
+  // Its dock translateY is driven by a WAAPI ScrollTimeline animation running on the
+  // compositor, tracking async scrolling frame-perfectly; a JS scroll-event sync always
+  // commits one frame after the compositor has already presented the scrolled content, which
+  // made the header visibly trail the list. Pixel values are passed straight from JS: an
+  // earlier CSS @keyframes + var() attempt resolved the custom property to its fallback
+  // inside the keyframes, pinning the header at translateY(0). One element at all times, so
+  // input focus survives the pin. The scroll listener below is the single fallback for
+  // engines without ScrollTimeline support.
+  const headerDockOffset = MARKETPLACE_HEADER_TOP_GAP_PX + titleHeight;
+  useLayoutEffect(() => {
+    if (detailExtensionId !== null || !headerElement || !listScrollRoot) {
+      return;
+    }
+    const viewport = scrollAreaViewport(listScrollRoot);
+    if (!viewport) {
+      return;
+    }
+    const scrollTimelineSupported = typeof ScrollTimeline !== "undefined";
+    if (scrollTimelineSupported) {
+      // fill: both holds translateY(0) once scrolled past the range; the duration defaults
+      // to auto, i.e. the timeline supplies the progress. rangeEnd docks the header once the
+      // top gap + title have scrolled away instead of at the end of the list.
+      const animation = headerElement.animate(
+        [{ transform: `translateY(${headerDockOffset}px)` }, { transform: "translateY(0px)" }],
+        { fill: "both", timeline: new ScrollTimeline({ source: viewport }) },
+      );
+      (animation as Animation & { rangeEnd: string }).rangeEnd = `${headerDockOffset}px`;
+      return () => animation.cancel();
+    }
+    const syncHeaderDock = () => {
+      headerElement.style.transform = `translateY(${Math.max(0, headerDockOffset - viewport.scrollTop)}px)`;
+    };
+    syncHeaderDock();
+    viewport.addEventListener("scroll", syncHeaderDock, { passive: true });
+    return () => viewport.removeEventListener("scroll", syncHeaderDock);
+  }, [detailExtensionId, headerDockOffset, headerElement, listScrollRoot]);
+
+  const sources = useMemo(() => snapshot?.marketplaceSources ?? [], [snapshot?.marketplaceSources]);
+  const catalogs = snapshot?.marketplaceCatalogs ?? {};
+  // Internal-source tabs hide while their catalog is empty; the All tab shows
+  // exactly when any tab shows, so an all-empty marketplace hides the tab bar.
+  const visibleSources = filterVisibleMarketplaceSources(sources, catalogs);
+  const showAll = visibleSources.length > 0;
+  const activeTabVisible =
+    activeSourceId === "all"
+      ? showAll
+      : visibleSources.some((source) => source.id === activeSourceId);
+  const resolvedActiveSourceId = activeTabVisible ? activeSourceId : "all";
+  // Per-source catalogs and the merged All catalog arrive display-name sorted
+  // from the host; the view never re-sorts. Each entry keeps its
+  // <sourceId>/<name> identity.
+  const catalog =
+    resolvedActiveSourceId === "all"
+      ? (snapshot?.marketplaceCatalogAll ?? [])
+      : (catalogs[resolvedActiveSourceId] ?? []);
+  // HTTP registries cannot serve directory content, so local-path artifacts are
+  // listed but not installable there; the CLI surfaces the same rule as an
+  // install-time error.
+  const isInstallUnsupported = (item: DesktopMarketplaceCatalogEntry) =>
+    item.artifactKind === "local" &&
+    sources.find((source) => source.id === item.sourceId)?.kind === "http-index";
+  const detailItem = detailExtensionId
+    ? (catalog.find((item) => item.id === detailExtensionId) ??
+      Object.values(catalogs)
+        .flat()
+        .find((item) => item.id === detailExtensionId))
+    : undefined;
+
+  const filteredExtensions = catalog.filter((item) => {
     const query = searchText.trim().toLowerCase();
     if (!query) {
       return true;
@@ -162,405 +302,566 @@ export function MarketplaceView({
 
     return [
       item.displayName,
-      item.description,
-      item.extensionId,
-      item.packageName,
-      item.author ?? "",
-      item.keywords.join(" "),
+      item.description ?? "",
+      item.author?.name ?? "",
+      item.name,
+      item.category ?? "",
+      ...(item.keywords ?? []),
     ]
       .join(" ")
       .toLowerCase()
       .includes(query);
   });
 
-  const selectedCatalog =
-    detailExtensionId !== null
-      ? catalog.find((item) => item.extensionId === detailExtensionId)
-      : undefined;
-  const selectedDetail = selectedCatalog ? detailById[selectedCatalog.extensionId] : undefined;
-  const installedItem = installedExtensionForCatalog(selectedCatalog, installedExtensions);
-  /** Catalog-recommended / registry-latest default version (no "selected version" state; this is the only top-bar install target) */
-  const latestVersion = selectedCatalog
-    ? (selectedDetail?.defaultVersion ?? selectedCatalog.defaultVersion)
-    : "";
-  /** Top-bar primary button: only compares "catalog default latest vs locally installed version"; there is no separate selected-version state */
-  const headerPrimaryDisabled =
-    marketplaceBusy ||
-    !latestVersion ||
-    (installedItem !== undefined && installedItem.version === latestVersion);
-  const headerPrimaryTitle = !latestVersion
-    ? undefined
-    : installedItem
-      ? installedItem.version === latestVersion
-        ? t("marketplace.alreadyLatest")
-        : t("marketplace.goToVersionList")
-      : t("marketplace.installVersion", { version: latestVersion });
-  const selectedReadme = selectedCatalog ? readmeById[selectedCatalog.extensionId] : undefined;
+  const listEmpty = filteredExtensions.length === 0;
 
-  useEffect(() => {
-    if (!apiReady) {
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingCatalog(true);
-    setLocalError("");
-
-    void onListMarketplaceExtensions()
-      .then((items) => {
-        if (cancelled) {
-          return;
-        }
-        setCatalog(items);
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLocalError(error instanceof Error ? error.message : String(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingCatalog(false);
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [apiReady, onListMarketplaceExtensions]);
-
-  useEffect(() => {
-    if (!selectedCatalog || detailExtensionId === null) {
-      return;
-    }
-    if (detailById[selectedCatalog.extensionId]) {
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingDetailId(selectedCatalog.extensionId);
-    setLocalError("");
-
-    void onGetMarketplaceExtensionDetail(selectedCatalog.extensionId)
-      .then((detail) => {
-        if (cancelled) {
-          return;
-        }
-        setDetailById((current) => ({
-          ...current,
-          [selectedCatalog.extensionId]: detail,
-        }));
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLocalError(error instanceof Error ? error.message : String(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingDetailId("");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [detailById, detailExtensionId, onGetMarketplaceExtensionDetail, selectedCatalog]);
-
-  useEffect(() => {
-    if (activeTab !== "readme" || !selectedCatalog || detailExtensionId === null) {
-      return;
-    }
-    if (readmeById[selectedCatalog.extensionId] !== undefined) {
-      return;
-    }
-
-    let cancelled = false;
-    setLoadingReadmeId(selectedCatalog.extensionId);
-    setLocalError("");
-
-    void onGetMarketplaceExtensionReadme(selectedCatalog.extensionId)
-      .then((readme) => {
-        if (cancelled) {
-          return;
-        }
-        setReadmeById((current) => ({
-          ...current,
-          [selectedCatalog.extensionId]: readme,
-        }));
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          setLocalError(error instanceof Error ? error.message : String(error));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoadingReadmeId("");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, detailExtensionId, onGetMarketplaceExtensionReadme, readmeById, selectedCatalog]);
-
-  const refreshCatalog = async () => {
-    setLoadingCatalog(true);
-    setLocalError("");
-    setPendingInstall(null);
-    try {
-      const items = await onListMarketplaceExtensions();
-      setCatalog(items);
-      setDetailById({});
-      setReadmeById({});
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setLoadingCatalog(false);
-    }
-  };
-
-  const prepareInstall = async (request: {
-    extensionId: string;
-    version?: string;
-  }): Promise<DesktopMarketplacePreparedInstall | null> => {
-    try {
-      const prepared = await onPrepareMarketplaceExtensionInstall(request);
-      if (!prepared.supportsCurrentHost) {
-        setLocalError(
-          t("marketplace.extensionNotSupported", {
-            name: prepared.displayName,
-            version: prepared.version,
-          }),
-        );
-        return null;
-      }
-      setPendingInstall(null);
-      setLocalError("");
-      return prepared;
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error));
-      return null;
-    }
-  };
-
-  const installSelectedVersion = async (
-    reviewAcknowledged: boolean,
-    payload: { extensionId: string; version: string },
-  ) => {
-    const { extensionId, version } = payload;
-    if (!extensionId || !version) {
-      return;
-    }
-
-    try {
-      await onInstallMarketplaceExtension({
-        extensionId,
-        version,
-        ...(reviewAcknowledged ? { reviewAcknowledged: true } : {}),
-      });
-      setPendingInstall(null);
-      setLocalError("");
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : String(error));
-    }
-  };
-
-  const requestInstallLatest = async () => {
-    if (!selectedCatalog || !latestVersion) {
-      return;
-    }
-    const prepared = await prepareInstall({
-      extensionId: selectedCatalog.extensionId,
-      version: latestVersion,
-    });
-    if (!prepared) {
-      return;
-    }
-    if (prepared.reviewStatus !== "verified") {
-      setPendingInstall({
-        extensionId: prepared.extensionId,
-        version: prepared.version,
-        displayName: prepared.displayName,
-        reviewStatus: prepared.reviewStatus,
-      });
-      return;
-    }
-    await installSelectedVersion(false, {
-      extensionId: prepared.extensionId,
-      version: prepared.version,
-    });
-  };
-
-  const handleHeaderPrimaryClick = () => {
-    if (!selectedCatalog || !latestVersion || marketplaceBusy) {
-      return;
-    }
-    if (installedItem) {
-      setActiveTab("versions");
-      return;
-    }
-    void requestInstallLatest();
-  };
-
-  const requestInstallVersion = async (version: string) => {
-    if (!selectedCatalog) {
-      return;
-    }
-    const prepared = await prepareInstall({
-      extensionId: selectedCatalog.extensionId,
-      version,
-    });
-    if (!prepared) {
-      return;
-    }
-    if (prepared.reviewStatus !== "verified") {
-      setPendingInstall({
-        extensionId: prepared.extensionId,
-        version: prepared.version,
-        displayName: prepared.displayName,
-        reviewStatus: prepared.reviewStatus,
-      });
-      return;
-    }
-    await installSelectedVersion(false, {
-      extensionId: prepared.extensionId,
-      version: prepared.version,
-    });
-  };
+  const isFiltering = searchText.trim().length > 0;
+  // Featured rows lift out of the flat list into their own section; both
+  // arrays stay display-name ordered because the host-sorted catalog is only
+  // ever filtered here, never re-sorted.
+  const featuredExtensions = filteredExtensions.filter((item) => item.featured);
+  const restExtensions = filteredExtensions.filter((item) => !item.featured);
+  const showFeaturedSection = !isFiltering && featuredExtensions.length > 0;
+  // Category sections group the remaining rows; an "Other" section trails
+  // them and exists only to follow real category sections — with no
+  // categorized rows at all, the rest stays a flat list.
+  const categorySections = groupMarketplaceEntriesByCategory(restExtensions);
+  const showCategorySections = !isFiltering && categorySections.length > 0;
+  // The first section header gets the section-rhythm gap below the tab bar; a
+  // flat list keeps the tab row's tighter pb-3-only gap.
+  const hasSections = showFeaturedSection || showCategorySections;
 
   const openDetail = (extensionId: string) => {
     setDetailExtensionId(extensionId);
-    setActiveTab("readme");
-    setLocalError("");
   };
 
   const closeDetail = () => {
     setDetailExtensionId(null);
-    setPendingInstall(null);
   };
 
-  const listEmpty = filteredCatalog.length === 0 && !loadingCatalog;
+  const runInstallAction = useCallback(async (extensionId: string, action: () => Promise<void>) => {
+    setInstallBusyIds((prev) => {
+      const next = new Set(prev);
+      next.add(extensionId);
+      return next;
+    });
+    try {
+      await action();
+    } finally {
+      setInstallBusyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(extensionId);
+        return next;
+      });
+    }
+  }, []);
+
+  const handleToggleEnabled = (item: DesktopMarketplaceCatalogEntry) => {
+    void (async () => {
+      try {
+        await onSetExtensionEnabled({ id: item.id, enabled: !item.enabled });
+      } catch {
+        /* runtimeError */
+      }
+    })();
+  };
+
+  const installWithReviewGate = useCallback(
+    async (item: DesktopMarketplaceCatalogEntry) => {
+      const request = {
+        name: item.name,
+        marketplace: item.sourceName,
+      };
+      const result = await onInstallMarketplaceExtension(request);
+      if (result.status === "review-required") {
+        setReviewGate({
+          extensionId: result.extensionId,
+          displayName: item.displayName,
+          reviewStatus: result.reviewStatus,
+          retry: async () => {
+            await onInstallMarketplaceExtension({ ...request, reviewAcknowledged: true });
+          },
+        });
+        setReviewGateOpen(true);
+      }
+    },
+    [onInstallMarketplaceExtension],
+  );
+
+  const handleInstall = (item: DesktopMarketplaceCatalogEntry) => {
+    void runInstallAction(item.id, async () => {
+      try {
+        await installWithReviewGate(item);
+      } catch {
+        /* runtimeError */
+      }
+    });
+  };
+
+  const updateWithReviewGate = useCallback(
+    async (item: DesktopMarketplaceCatalogEntry) => {
+      const result = await onUpdateExtension({ id: item.id });
+      if (result.status === "review-required") {
+        setReviewGate({
+          extensionId: result.extensionId,
+          displayName: item.displayName,
+          reviewStatus: result.reviewStatus,
+          retry: async () => {
+            await onUpdateExtension({ id: item.id, reviewAcknowledged: true });
+          },
+        });
+        setReviewGateOpen(true);
+      }
+    },
+    [onUpdateExtension],
+  );
+
+  const handleUpdate = (item: DesktopMarketplaceCatalogEntry) => {
+    void runInstallAction(item.id, async () => {
+      try {
+        await updateWithReviewGate(item);
+      } catch {
+        /* runtimeError */
+      }
+    });
+  };
+
+  const handleAddFromDisk = () => {
+    void (async () => {
+      const directory = await onPickMarketplaceDirectory();
+      if (!directory) {
+        return;
+      }
+      try {
+        const result = await onAddMarketplaceSource({ locator: directory });
+        if (result.sourceId) {
+          setActiveSourceId(result.sourceId);
+        }
+      } catch {
+        /* runtimeError */
+      }
+    })();
+  };
+
+  const handleAddFromUrl = async (request: AddMarketplaceSourceRequest) => {
+    const result = await onAddMarketplaceSource(request);
+    if (result.sourceId) {
+      setActiveSourceId(result.sourceId);
+    }
+  };
+
+  const handleRemoveSource = (source: DesktopMarketplaceSource) => {
+    setRemoveSourceTarget(source);
+    setRemoveSourceDialogOpen(true);
+  };
+
+  const dismissRemoveSourceDialog = useCallback(() => {
+    setRemoveSourceDialogOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setRemoveSourceTarget(null);
+    });
+  }, []);
+
+  // Keep the bound extension data mounted through the close animation;
+  // clearing it at openChange(false) flashes an empty name on the last frame.
+  const dismissReviewGate = useCallback(() => {
+    setReviewGateOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setReviewGate(null);
+    });
+  }, []);
+
+  const dismissUninstallDialog = useCallback(() => {
+    setUninstallDialogOpen(false);
+    runAfterRadixOverlayClose(() => {
+      setUninstallTarget(null);
+    });
+  }, []);
+
+  const openUninstallDialog = useCallback((item: DesktopMarketplaceCatalogEntry) => {
+    setUninstallTarget(item);
+    setUninstallDialogOpen(true);
+  }, []);
+
+  // One row renderer for every list context: featured-section rows and
+  // flat-list rows are identical, only their grouping differs.
+  const renderExtensionRow = (item: DesktopMarketplaceCatalogEntry) => (
+    <div
+      key={item.id}
+      className={cn(
+        // Ghost row: no card surface (border/background); hover only lays the
+        // sidebar-style semi-transparent canvas wash (instant, no color fade).
+        // Rows bleed 8px past the container's outer edge(s) into the page
+        // padding, so the wash keeps a cushion around the content while the
+        // content itself aligns with the container edges: leading icons flush
+        // with the tab bar / section headers / search box on the left,
+        // trailing action buttons flush with the header's Add button on the
+        // right. In the two-column layout each row is its cell width plus one
+        // outer bleed (sm), and sm:even moves the right column's bleed to the
+        // right side — column widths stay equal and the inter-column gap
+        // survives between washes.
+        "flex -ml-2 w-[calc(100%+1rem)] items-center rounded-lg hover:bg-canvas-hover sm:w-[calc(100%+0.5rem)] sm:even:ml-0",
+        item.installed && !item.enabled && "opacity-55",
+      )}
+    >
+      <button
+        type="button"
+        onClick={() => openDetail(item.id)}
+        // pl-2 is the wash's left cushion: on bleeding rows the icon lands
+        // exactly on the container edge; on right-column rows it insets the
+        // icon within the cell instead.
+        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 pl-2 pr-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+      >
+        <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted text-muted-foreground">
+          {item.iconUrl ? (
+            <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
+          ) : (
+            <Sparkles className="size-4" aria-hidden />
+          )}
+        </div>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-normal leading-snug text-foreground">
+            {item.displayName}
+          </span>
+          {item.description ? (
+            <span className="block truncate text-xs leading-snug text-muted-foreground">
+              {item.description}
+            </span>
+          ) : null}
+        </span>
+      </button>
+      <div className="shrink-0 pr-2">
+        {item.installed ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-8 shrink-0 self-center"
+                title={t("marketplace.moreActions")}
+              >
+                <Ellipsis className="size-4" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-40 p-0">
+              <div className="p-1">
+                <DropdownMenuItem className="gap-2" onSelect={() => handleToggleEnabled(item)}>
+                  <span>{item.enabled ? t("marketplace.disable") : t("marketplace.enable")}</span>
+                </DropdownMenuItem>
+              </div>
+              <DropdownMenuSeparator />
+              <div className="p-1">
+                <DropdownMenuItem
+                  variant="destructive"
+                  className="gap-2"
+                  onSelect={() => openUninstallDialog(item)}
+                >
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <span>{t("marketplace.uninstall")}</span>
+                </DropdownMenuItem>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : isInstallUnsupported(item) ? (
+          <Tooltip delayDuration={300} disableHoverableContent>
+            <TooltipTrigger>
+              <Button type="button" variant="outline" disabled className="shrink-0 self-center">
+                {t("marketplace.install")}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t("marketplace.httpLocalSourceInstallUnsupported")}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={installBusyIds.has(item.id)}
+            className="shrink-0 self-center"
+            onClick={() => handleInstall(item)}
+          >
+            {t("marketplace.install")}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <div
       data-spirit-surface="marketplace-shell"
-      className="flex min-h-0 min-w-0 flex-1 flex-col text-sm"
+      className="relative flex min-h-0 min-w-0 flex-1 flex-col text-sm"
     >
-      {detailExtensionId === null ? (
-        <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
-          <div className={cn("mx-auto w-full px-3 pb-12 pt-6 sm:pt-7", MARKETPLACE_LIST_W)}>
-            <div className="flex flex-col items-center gap-6">
-              <div className="flex w-full flex-col items-center gap-2">
-                <p
-                  className={cn(
-                    "text-center text-lg tracking-tight text-foreground",
-                    FONT_WEIGHT_MEDIUM,
-                  )}
-                >
-                  {t("marketplace.title")}
-                </p>
-                <div className="flex w-full max-w-sm items-center gap-1.5">
-                  <div
-                    className={cn(
-                      "relative min-w-0 flex-1",
-                      DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
-                    )}
-                  >
-                    <Search
-                      className="pointer-events-none absolute left-2 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
-                      aria-hidden
-                    />
-                    <Input
-                      value={searchText}
-                      onChange={(event) => setSearchText(event.target.value)}
-                      placeholder={t("marketplace.searchPlaceholder")}
-                      className="h-8 rounded-none border-0 bg-transparent pl-8 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="size-8 shrink-0"
-                    disabled={loadingCatalog || marketplaceBusy}
-                    title={t("marketplace.refreshCatalog")}
-                    onClick={() => {
-                      void refreshCatalog();
-                    }}
-                  >
-                    {loadingCatalog ? (
-                      <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                    ) : (
-                      <RefreshCw className="size-4" aria-hidden />
-                    )}
-                  </Button>
-                </div>
-              </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".zip,application/zip"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) {
+            return;
+          }
 
-              {listEmpty ? (
-                <p className="text-center text-sm text-muted-foreground">
-                  {loadingCatalog ? t("marketplace.loadingCatalog") : t("marketplace.noMatches")}
-                </p>
-              ) : (
-                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
-                  {filteredCatalog.map((item) => (
-                    <button
-                      key={item.extensionId}
-                      type="button"
-                      onClick={() => openDetail(item.extensionId)}
-                      className={cn(
-                        DESKTOP_ITEM_CARD_SURFACE,
-                        "relative isolate flex w-full items-center gap-3 overflow-hidden px-3 py-2.5 text-left",
-                        DESKTOP_OUTLINE_FILL_UNDERLAY,
-                        DESKTOP_ITEM_CARD_HOVER_BORDER,
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60",
-                      )}
-                    >
-                      {item.iconUrl ? (
-                        <img
-                          src={item.iconUrl}
-                          alt=""
-                          className="size-10 shrink-0 rounded-md border border-border/50 bg-muted object-cover"
-                        />
-                      ) : (
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted text-muted-foreground">
-                          <Sparkles className="size-4" aria-hidden />
-                        </div>
-                      )}
-                      <span className="min-w-0 flex-1 space-y-1">
-                        <span className="flex flex-wrap items-center gap-1.5">
-                          <span className="truncate font-normal text-foreground">
-                            {item.displayName}
-                          </span>
-                          {item.featured ? (
-                            <Badge variant="secondary" className="text-[10px] font-normal">
-                              {t("marketplace.featured")}
-                            </Badge>
-                          ) : null}
-                          <Badge
-                            variant={reviewStatusBadgeVariant(item.defaultReviewStatus)}
-                            className="text-[10px]"
-                          >
-                            {reviewStatusLabel(item.defaultReviewStatus)}
-                          </Badge>
-                        </span>
-                        <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                          {item.description}
-                        </span>
-                      </span>
-                    </button>
+          void (async () => {
+            try {
+              const archiveBase64 = await fileToBase64(file);
+              await onImportExtension({
+                archiveBase64,
+                fileName: file.name,
+              });
+            } catch {
+              /* runtimeError */
+            }
+          })();
+        }}
+      />
+
+      {detailExtensionId === null ? (
+        <>
+          <ScrollArea
+            ref={setListScrollRoot}
+            className="min-h-0 flex-1"
+            type="hover"
+            scrollHideDelay={450}
+            style={listScrollRootStyle}
+          >
+            {/* Shares the conversation message list's max width and gutter; the docking search header below uses the same to stay aligned */}
+            <div
+              className={cn(
+                "mx-auto w-full pb-8",
+                CONVERSATION_GUTTER_X,
+                CONVERSATION_MESSAGE_LIST_MAX_W,
+              )}
+            >
+              {/* The top gap and title scroll away; the search bar (overlay sibling of the
+                  ScrollArea) docks once they are consumed. The placeholder reserves its
+                  flow space. */}
+              <div className="h-8" aria-hidden />
+              <div ref={setTitleElement} className="space-y-1 pb-4">
+                <h1 className={cn("flex items-center gap-2", DESKTOP_PAGE_TITLE_CLASS)}>
+                  {t("marketplace.title")}
+                  {snapshot?.extensionsLoading ? (
+                    <LoaderCircle
+                      className="size-4 animate-spin text-muted-foreground"
+                      aria-label={t("common.loading")}
+                    />
+                  ) : null}
+                </h1>
+                <p className="text-sm text-muted-foreground">{t("marketplace.subtitle")}</p>
+              </div>
+              {/* Pin sentinel: when it scrolls above the viewport top, the search bar is
+                  docked (see useStickyHeaderPinned). */}
+              <div
+                ref={stickySentinelRef}
+                className="pointer-events-none h-px w-full -mb-px"
+                aria-hidden
+              />
+              <div aria-hidden style={{ height: headerHeight ?? 0 }} />
+              {/* Marketplace domain tabs: below the search box, scroll away with the title,
+                  horizontal scroll instead of wrapping. pt-6 gives the row the same 24px
+                  section rhythm the list uses below (the pinned band carries no bottom
+                  padding; its fade mask only softens the transition). The row hides
+                  entirely when no tab is visible (all sources empty). */}
+              {showAll ? (
+                <div
+                  className="flex items-center gap-1 overflow-x-auto whitespace-nowrap pb-3 pt-6"
+                  role="tablist"
+                  aria-label={t("marketplace.tabsLabel")}
+                >
+                  {/* The All tab is pinned first and is the page default; it is a
+                      pseudo source, so it carries no per-source context menu. */}
+                  <Toggle
+                    size="sm"
+                    pressed={resolvedActiveSourceId === "all"}
+                    onPressedChange={() => setActiveSourceId("all")}
+                    aria-label={t("marketplace.tabAll")}
+                  >
+                    {t("marketplace.tabAll")}
+                  </Toggle>
+                  {visibleSources.map((source) => (
+                    <MarketplaceSourceTab
+                      key={source.id}
+                      source={source}
+                      active={resolvedActiveSourceId === source.id}
+                      onSelect={setActiveSourceId}
+                      onRemove={handleRemoveSource}
+                    />
                   ))}
                 </div>
+              ) : null}
+
+              {listEmpty ? (
+                catalog.length === 0 ? (
+                  // With the tab bar hidden the card becomes the first content below
+                  // the docked search header, which carries no bottom gap of its
+                  // own — like the toggle row, the card brings its own top
+                  // whitespace instead.
+                  <EmptyCard className={showAll ? undefined : "mt-4"}>
+                    {t("marketplace.empty")}
+                  </EmptyCard>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("marketplace.noMatches")}</p>
+                )
+              ) : isFiltering ? (
+                // Search flattens to a single list: no sections, and zero
+                // results still surface as the noMatches state above.
+                <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                  {filteredExtensions.map(renderExtensionRow)}
+                </div>
+              ) : (
+                <>
+                  {hasSections ? (
+                    // The tab row's pb-3 plus this h-3 lands the first section
+                    // header one section-rhythm gap (24px) below the tab bar,
+                    // matching the breathing room between sections.
+                    <div className="h-3" aria-hidden />
+                  ) : null}
+                  {showFeaturedSection ? (
+                    // mb-6 steps above the page's mb-4 flow-gap rhythm: sections
+                    // read as separate blocks with breathing room between them.
+                    <MarketplaceCatalogSection
+                      ariaLabel={t("marketplace.featured")}
+                      title={t("marketplace.featured")}
+                      items={featuredExtensions}
+                      className="mb-6"
+                      renderRow={renderExtensionRow}
+                    />
+                  ) : null}
+                  {showCategorySections ? (
+                    categorySections.map((section) => {
+                      const sectionTitle = section.category
+                        ? formatTitleFromId(section.category, {
+                            casingOverrides: WELL_KNOWN_CASING_OVERRIDES,
+                          })
+                        : t("marketplace.other");
+                      return (
+                        <MarketplaceCatalogSection
+                          key={section.category ?? "other"}
+                          ariaLabel={sectionTitle}
+                          title={sectionTitle}
+                          items={section.items}
+                          className="mb-6 last:mb-0"
+                          renderRow={renderExtensionRow}
+                        />
+                      );
+                    })
+                  ) : restExtensions.length > 0 ? (
+                    // No category sections at all: the flat list is not
+                    // truncated — with nothing sectioned below it, a long list
+                    // hides nothing.
+                    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+                      {restExtensions.map(renderExtensionRow)}
+                    </div>
+                  ) : null}
+                </>
               )}
             </div>
+          </ScrollArea>
+          <div
+            ref={setHeaderElement}
+            className="absolute inset-x-0 top-0 z-20"
+            // Base position below the title; applies only while the dock animation is not
+            // running (list not overflowing) or as the pre-effect value. The WAAPI scroll
+            // animation overrides it on the compositor; the JS fallback listener overrides
+            // it on engines without ScrollTimeline support.
+            style={{ transform: `translateY(${headerDockOffset}px)` }}
+          >
+            <div
+              className={cn(
+                "mx-auto w-full",
+                CONVERSATION_GUTTER_X,
+                CONVERSATION_MESSAGE_LIST_MAX_W,
+                headerPinned && !useTranslucency ? "bg-background" : "bg-transparent",
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <div
+                  className={cn(
+                    "relative min-w-0 flex-1",
+                    DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL,
+                    "rounded-full",
+                  )}
+                >
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <Input
+                    value={searchText}
+                    onChange={(event) => setSearchText(event.target.value)}
+                    placeholder={t("marketplace.searchPlaceholder")}
+                    className={cn(DESKTOP_FORM_INPUT_INNER, "pl-9 pr-3.5")}
+                  />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1 rounded-full px-3.5"
+                      disabled={extensionsInstalling}
+                    >
+                      {extensionsInstalling ? (
+                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                      ) : null}
+                      {t("common.add")}
+                      <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-44 p-1">
+                    {onGenerateExtensionNavigate ? (
+                      <DropdownMenuItem
+                        className="gap-2"
+                        onSelect={() => onGenerateExtensionNavigate()}
+                      >
+                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        {t("marketplace.generateExtension")}
+                      </DropdownMenuItem>
+                    ) : null}
+                    <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
+                      <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      {t("marketplace.importExtension")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="gap-2">
+                        <Store className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        {t("marketplace.addMarketplace")}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="min-w-44 p-1">
+                        <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
+                          <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          {t("marketplace.addFromDisk")}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
+                          <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          {t("marketplace.addFromUrl")}
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
           </div>
-        </ScrollArea>
+        </>
+      ) : detailItem ? (
+        <MarketplaceDetailView
+          item={detailItem}
+          onBack={closeDetail}
+          itemActionBusy={installBusyIds.has(detailItem.id)}
+          installUnsupported={isInstallUnsupported(detailItem)}
+          onInstall={() => handleInstall(detailItem)}
+          onUpdate={() => handleUpdate(detailItem)}
+          onToggleEnabled={() => handleToggleEnabled(detailItem)}
+          onRequestUninstall={() => openUninstallDialog(detailItem)}
+          useTranslucency={useTranslucency}
+        />
       ) : (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}>
-            <div className={cn("mx-auto flex items-center px-3 py-2", MARKETPLACE_READING_W)}>
+            <div className="mx-auto flex items-center px-3 py-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -576,310 +877,201 @@ export function MarketplaceView({
               </Button>
             </div>
           </div>
-
-          {!selectedCatalog ? (
-            <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
-              {t("marketplace.extensionNotFound")}
-            </div>
-          ) : (
-            <ScrollArea className="min-h-0 flex-1" type="hover" scrollHideDelay={450}>
-              <div
-                className={cn("mx-auto w-full space-y-4 px-3 pb-12 pt-5", MARKETPLACE_READING_W)}
-              >
-                {/* Detail top bar: icon and text vertically centered; body compressed to a title row + single-line summary (author merged into the summary prefix) */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {selectedCatalog.iconUrl ? (
-                      <img
-                        src={selectedCatalog.iconUrl}
-                        alt=""
-                        className="size-11 shrink-0 rounded-md border border-border/50 bg-muted object-cover"
-                      />
-                    ) : (
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted text-muted-foreground">
-                        <Sparkles className="size-[18px]" aria-hidden />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <h2 className="text-base font-normal leading-snug tracking-tight text-foreground">
-                          {selectedCatalog.displayName}
-                        </h2>
-                        <Badge variant="outline" className="text-[10px] font-normal">
-                          {selectedCatalog.defaultChannel}
-                        </Badge>
-                        <Badge
-                          variant={reviewStatusBadgeVariant(selectedCatalog.defaultReviewStatus)}
-                          className="text-[10px]"
-                        >
-                          {reviewStatusLabel(selectedCatalog.defaultReviewStatus)}
-                        </Badge>
-                        {installedItem ? (
-                          <Badge variant="secondary" className="max-w-full truncate text-[10px]">
-                            {installedBadgeLabel(installedItem, selectedCatalog.defaultVersion)}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      <p className="text-sm leading-snug text-muted-foreground line-clamp-2">
-                        {selectedCatalog.author ? (
-                          <span className="text-muted-foreground">{selectedCatalog.author}</span>
-                        ) : null}
-                        {selectedCatalog.author ? (
-                          <span className="text-muted-foreground/70"> · </span>
-                        ) : null}
-                        {selectedCatalog.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 flex-col gap-2 sm:w-52 sm:items-end sm:self-center">
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full sm:w-auto"
-                      title={headerPrimaryTitle}
-                      disabled={headerPrimaryDisabled}
-                      onClick={handleHeaderPrimaryClick}
-                    >
-                      {marketplaceBusy ? (
-                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                      ) : installedItem ? (
-                        <ArrowLeftRight className="size-4" aria-hidden />
-                      ) : (
-                        <Download className="size-4" aria-hidden />
-                      )}
-                      {installedItem ? t("marketplace.switch") : t("marketplace.install")}
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Tabs: no full-width top divider, only the current item's bottom edge */}
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-1 pt-0.5">
-                    {(
-                      [
-                        ["readme", t("marketplace.tabReadme")],
-                        ["changelog", t("marketplace.tabChangelog")],
-                        ["versions", t("marketplace.tabVersions")],
-                      ] as const
-                    ).map(([tabId, label]) => (
-                      <button
-                        key={tabId}
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === tabId}
-                        className={cn(
-                          "rounded-md px-3 py-2 text-sm",
-                          activeTab === tabId
-                            ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
-                            : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
-                        )}
-                        onClick={() => setActiveTab(tabId)}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {activeTab === "readme" ? (
-                    <div className="rounded-lg border border-border/60 bg-background px-3 py-3">
-                      {loadingReadmeId === selectedCatalog.extensionId ? (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                          {t("common.loading")}
-                        </div>
-                      ) : selectedReadme ? (
-                        <MarkdownMessage content={selectedReadme} />
-                      ) : (
-                        <p className="text-sm text-muted-foreground">{t("marketplace.noReadme")}</p>
-                      )}
-                    </div>
-                  ) : null}
-
-                  {activeTab === "changelog" ? (
-                    <div className="space-y-2">
-                      {selectedDetail?.versions.some((version) => version.changelog) ? (
-                        selectedDetail.versions.map((version) =>
-                          version.changelog ? (
-                            <div
-                              key={version.version}
-                              className="rounded-lg border border-border/60 bg-background px-3 py-3"
-                            >
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs text-foreground">{version.version}</span>
-                                <Badge variant="outline" className="text-[10px]">
-                                  {version.channel}
-                                </Badge>
-                              </div>
-                              <p className="mt-2 text-sm leading-relaxed text-foreground">
-                                {version.changelog.summary}
-                              </p>
-                              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                                {version.changelog.body}
-                              </p>
-                            </div>
-                          ) : null,
-                        )
-                      ) : (
-                        <p className="text-sm text-muted-foreground">
-                          {t("marketplace.noChangelog")}
-                        </p>
-                      )}
-                    </div>
-                  ) : null}
-
-                  {activeTab === "versions" ? (
-                    <div className="space-y-2">
-                      {loadingDetailId === selectedCatalog.extensionId && !selectedDetail ? (
-                        <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
-                          <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                          {t("marketplace.loadingVersions")}
-                        </div>
-                      ) : selectedDetail ? (
-                        selectedDetail.versions.map((version) => {
-                          const desktopSupported = version.supportedHosts.includes("desktop");
-                          const installedHere = installedItem?.version === version.version;
-                          return (
-                            <div
-                              key={version.version}
-                              className="rounded-lg border border-border/60 bg-background px-3 py-3"
-                            >
-                              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="min-w-0 flex-1 space-y-2">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-xs text-foreground">
-                                      {version.version}
-                                    </span>
-                                    <Badge variant="outline" className="text-[10px]">
-                                      {version.channel}
-                                    </Badge>
-                                    <div className="flex flex-wrap gap-1">
-                                      {version.supportedHosts.map((host) => (
-                                        <Badge
-                                          key={host}
-                                          variant="outline"
-                                          className="text-[10px] font-normal"
-                                        >
-                                          {host}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                    {installedHere ? (
-                                      <Badge variant="secondary" className="text-[10px]">
-                                        {t("marketplace.installed")}
-                                      </Badge>
-                                    ) : null}
-                                    {!desktopSupported ? (
-                                      <Badge variant="destructive" className="text-[10px]">
-                                        {t("marketplace.unsupportedDesktop")}
-                                      </Badge>
-                                    ) : null}
-                                  </div>
-                                  {version.description ? (
-                                    <p className="text-sm leading-relaxed text-muted-foreground">
-                                      {version.description}
-                                    </p>
-                                  ) : null}
-                                </div>
-                                <div className="flex shrink-0 items-center justify-end sm:pl-2">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-8 text-xs"
-                                    title={
-                                      installedHere
-                                        ? t("marketplace.currentVersionInUse")
-                                        : t("marketplace.switchToVersion", {
-                                            version: version.version,
-                                          })
-                                    }
-                                    disabled={marketplaceBusy || !desktopSupported || installedHere}
-                                    onClick={() => {
-                                      void requestInstallVersion(version.version);
-                                    }}
-                                  >
-                                    {t("marketplace.switch")}
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </ScrollArea>
-          )}
-        </>
+          <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
+            {t("marketplace.extensionNotFound")}
+          </div>
+        </div>
       )}
 
+      <MarketplaceAddSourceDialog
+        open={addSourceOpen}
+        onOpenChange={setAddSourceOpen}
+        busy={extensionsBusy}
+        onSubmit={handleAddFromUrl}
+      />
+
       <Dialog
-        open={pendingInstall !== null}
+        open={reviewGateOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingInstall(null);
+            dismissReviewGate();
           }
         }}
       >
-        <DialogContent className="sm:max-w-lg" showCloseButton>
+        <DialogContent className="sm:max-w-md" showCloseButton>
           <DialogHeader>
-            <DialogTitle>{t("marketplace.confirmSwitchUnverified")}</DialogTitle>
+            <DialogTitle>{t("marketplace.reviewRequiredTitle")}</DialogTitle>
             <DialogDescription>
-              {pendingInstall
-                ? pendingInstall.reviewStatus === "revoked"
-                  ? t("marketplace.revokedExtensionWarning", {
-                      name: pendingInstall.displayName,
-                      version: pendingInstall.version,
-                    })
-                  : t("marketplace.unverifiedExtensionWarning", {
-                      name: pendingInstall.displayName,
-                      version: pendingInstall.version,
-                    })
-                : t("marketplace.notVerifiedStatus")}
+              {t(
+                reviewGate?.reviewStatus === "revoked"
+                  ? "marketplace.reviewRequiredRevoked"
+                  : "marketplace.reviewRequiredUnverified",
+                { name: reviewGate?.displayName ?? "" },
+              )}
             </DialogDescription>
           </DialogHeader>
-
-          <div
-            className={cn(
-              "rounded-md px-3 py-2 text-xs leading-relaxed",
-              pendingInstall?.reviewStatus === "revoked"
-                ? "border border-destructive/35 bg-destructive/10 text-destructive"
-                : "border border-border bg-muted/40 text-foreground",
-            )}
-          >
-            {t("marketplace.switchAdvice")}
-          </div>
-
           <DialogFooter>
             <DialogFooterActions>
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setPendingInstall(null)}
-                disabled={marketplaceBusy}
+                size="sm"
+                onClick={dismissReviewGate}
+                disabled={extensionsBusy}
               >
                 {t("common.cancel")}
               </Button>
               <Button
                 type="button"
                 size="sm"
+                disabled={extensionsBusy || !reviewGate}
                 onClick={() => {
-                  if (!pendingInstall) {
+                  const target = reviewGate;
+                  if (!target) {
                     return;
                   }
-                  void installSelectedVersion(true, {
-                    extensionId: pendingInstall.extensionId,
-                    version: pendingInstall.version,
+                  void runInstallAction(target.extensionId, async () => {
+                    try {
+                      await target.retry(true);
+                      dismissReviewGate();
+                    } catch {
+                      /* runtimeError */
+                    }
                   });
                 }}
-                disabled={marketplaceBusy}
               >
-                {marketplaceBusy ? (
+                {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {t("marketplace.reviewRequiredContinue")}
+              </Button>
+            </DialogFooterActions>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={removeSourceDialogOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            setRemoveSourceDialogOpen(true);
+          } else if (!extensionsBusy) {
+            dismissRemoveSourceDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!extensionsBusy}>
+          <DialogHeader>
+            <DialogTitle>{t("marketplace.removeMarketplaceTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("marketplace.removeMarketplaceConfirm", {
+                name: removeSourceTarget?.displayName ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogFooterActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (!extensionsBusy) {
+                    dismissRemoveSourceDialog();
+                  }
+                }}
+                disabled={extensionsBusy}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={extensionsBusy || !removeSourceTarget}
+                onClick={() => {
+                  const target = removeSourceTarget;
+                  if (!target) {
+                    return;
+                  }
+                  void (async () => {
+                    try {
+                      await onRemoveMarketplaceSource({ name: target.name });
+                      if (resolvedActiveSourceId === target.id) {
+                        setActiveSourceId("built-in");
+                      }
+                      dismissRemoveSourceDialog();
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {extensionsBusy ? (
                   <LoaderCircle className="size-4 animate-spin" aria-hidden />
                 ) : null}
-                {t("marketplace.continueSwitch")}
+                {t("marketplace.removeMarketplace")}
+              </Button>
+            </DialogFooterActions>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={uninstallDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            dismissUninstallDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton>
+          <DialogHeader>
+            <DialogTitle>{t("marketplace.uninstallExtension")}</DialogTitle>
+            <DialogDescription>
+              {t(
+                uninstallTarget?.sourceId === "built-in"
+                  ? "marketplace.uninstallBuiltInConfirm"
+                  : uninstallTarget?.sourceId === "personal"
+                    ? "marketplace.uninstallPersonalConfirm"
+                    : "marketplace.uninstallExtensionConfirm",
+                {
+                  name: uninstallTarget?.displayName ?? "",
+                },
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogFooterActions>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={dismissUninstallDialog}
+                disabled={extensionsBusy}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={extensionsBusy || !uninstallTarget}
+                onClick={() => {
+                  const target = uninstallTarget;
+                  if (!target) {
+                    return;
+                  }
+                  void (async () => {
+                    try {
+                      await onDeleteExtension({ id: target.id });
+                      dismissUninstallDialog();
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {t("marketplace.uninstall")}
               </Button>
             </DialogFooterActions>
           </DialogFooter>

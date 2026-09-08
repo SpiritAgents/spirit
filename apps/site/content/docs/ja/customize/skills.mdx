@@ -1,6 +1,6 @@
 ---
 title: スキル
-description: ユーザー、.spirit、.agents のスキルに加えて、組み込みの create-rule、create-skill、create-hook。
+description: ユーザー、.spirit、.agents のスキルに加えて、組み込みの create-rule、create-skill、create-hook、create-extension。
 ---
 
 スキルは `SKILL.md` を含むフォルダーです。Spirit はスキルを以下の 3 つの場所から発見します:
@@ -29,5 +29,6 @@ description: ユーザー、.spirit、.agents のスキルに加えて、組み�
 - `create-rule` — [ルール](./rules.mdx) の下書き
 - `create-skill` — [スキル](./skills.mdx) の下書き
 - `create-hook` — [フック](./hooks.mdx) の下書き
+- `create-extension` — [拡張機能](../develop/extensions.mdx) の下書き
 
-**設定 → スキル** でスキルを管理します。Git コミット/プッシュ/マージのチップはホスト UI であり、バンドルされたスキルではありません。[デスクトップ](../desktop.mdx) を参照してください。
+**設定 → スキル** でスキルを管理します。Git コミット/プッシュ/マージのチップはホスト UI であり、バンドルされたスキルではありません。[デスクトップ](../desktop.mdx) を参照してください。[拡張機能](../develop/extensions.mdx) に同梱された skills は、その拡張機能が有効なときだけ使え、この設定一覧には出ません。

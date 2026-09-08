@@ -1,6 +1,6 @@
 ---
 title: Skills
-description: 用户、.spirit、.agents 下的 Skill，以及内置的 create-rule、create-skill、create-hook。
+description: 用户、.spirit、.agents 下的 Skill，以及内置的 create-rule、create-skill、create-hook、create-extension。
 ---
 
 Skill 是带 `SKILL.md` 的文件夹。Spirit 从三处发现：
@@ -29,5 +29,6 @@ Skill 是带 `SKILL.md` 的文件夹。Spirit 从三处发现：
 - `create-rule` — 起草一条 [rule](./rules.mdx)
 - `create-skill` — 起草一个 [Skill](./skills.mdx)
 - `create-hook` — 起草一个 [hook](./hooks.mdx)
+- `create-extension` — 起草一个[扩展](../develop/extensions.mdx)
 
-在 **设置 → Skills** 管理。Git 的 commit / push / merge chip 是宿主 UI，不是内置 Skill。见 [Desktop](../desktop.mdx)。
+在 **设置 → Skills** 管理。Git 的 commit / push / merge chip 是宿主 UI，不是内置 Skill。见 [Desktop](../desktop.mdx)。[扩展](../develop/extensions.mdx) 捆绑的 skills 只在该扩展启用时可用，不出现在此设置列表。

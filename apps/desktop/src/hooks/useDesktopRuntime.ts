@@ -80,16 +80,19 @@ import type {
   DesktopCreateAutomationRequest,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DesktopMcpServerInspection,
   DesktopSnapshot,
+  AddMarketplaceSourceRequest,
+  RemoveMarketplaceSourceRequest,
+  DesktopMarketplaceInstallResult,
+  DesktopMarketplaceUpdateResult,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  UpdateExtensionRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
@@ -146,8 +149,8 @@ type BusyAction =
   | "skills"
   | "rules"
   | "extensions"
+  | "extensionsImport"
   | "lspInstall"
-  | "marketplace"
   | "git"
   | "automation";
 
@@ -2040,7 +2043,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      setBusyAction("extensions");
+      setBusyAction("extensionsImport");
       try {
         const next = await api.importExtension(request);
         applySnapshot(next);
@@ -2056,106 +2059,127 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
-  const listMarketplaceExtensions = useCallback(async (): Promise<
-    DesktopMarketplaceCatalogItem[]
-  > => {
-    if (!api) {
-      return [];
-    }
-
-    setBusyAction("marketplace");
-    try {
-      const items = await api.listMarketplaceExtensions();
-      setRuntimeError("");
-      return items;
-    } catch (error) {
-      const message = describeError(error);
-      setRuntimeError(message);
-      throw new Error(message, { cause: error });
-    } finally {
-      setBusyAction("");
-    }
-  }, [api]);
-
-  const getMarketplaceExtensionDetail = useCallback(
-    async (extensionId: string): Promise<DesktopMarketplaceDetail> => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-
-      setBusyAction("marketplace");
-      try {
-        const detail = await api.getMarketplaceExtensionDetail(extensionId);
-        setRuntimeError("");
-        return detail;
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api],
-  );
-
-  const getMarketplaceExtensionReadme = useCallback(
-    async (extensionId: string): Promise<string> => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-
-      setBusyAction("marketplace");
-      try {
-        const readme = await api.getMarketplaceExtensionReadme(extensionId);
-        setRuntimeError("");
-        return readme;
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api],
-  );
-
-  const prepareMarketplaceExtensionInstall = useCallback(
-    async (
-      request: PrepareMarketplaceExtensionInstallRequest,
-    ): Promise<DesktopMarketplacePreparedInstall> => {
-      if (!api) {
-        throw new Error(i18n.t("error.hostNotReady"));
-      }
-
-      setBusyAction("marketplace");
-      try {
-        const prepared = await api.prepareMarketplaceExtensionInstall(request);
-        setRuntimeError("");
-        return prepared;
-      } catch (error) {
-        const message = describeError(error);
-        setRuntimeError(message);
-        throw new Error(message, { cause: error });
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api],
-  );
-
-  const installMarketplaceExtension = useCallback(
-    async (request: InstallMarketplaceExtensionRequest) => {
+  const installBuiltInExtension = useCallback(
+    async (request: InstallBuiltInExtensionRequest) => {
       if (!api) {
         return;
       }
 
-      setBusyAction("marketplace");
+      setBusyAction("extensions");
       try {
-        const next = await api.installMarketplaceExtension(request);
+        const next = await api.installBuiltInExtension(request);
         applySnapshot(next);
         setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const addMarketplaceSource = useCallback(
+    async (request: AddMarketplaceSourceRequest): Promise<{ sourceId: string }> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.addMarketplaceSource(request);
+        applySnapshot(result.snapshot);
+        setRuntimeError("");
+        return { sourceId: result.sourceId ?? "" };
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const removeMarketplaceSource = useCallback(
+    async (request: RemoveMarketplaceSourceRequest) => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const next = await api.removeMarketplaceSource(request);
+        applySnapshot(next);
+        setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const installMarketplaceExtension = useCallback(
+    async (
+      request: InstallMarketplaceExtensionRequest,
+    ): Promise<DesktopMarketplaceInstallResult> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.installMarketplaceExtension(request);
+        if (result.status === "installed") {
+          applySnapshot(result.snapshot);
+          setRuntimeError("");
+          return { status: "installed" };
+        }
+        return {
+          status: "review-required",
+          extensionId: result.extensionId,
+          reviewStatus: result.reviewStatus,
+        };
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const updateExtension = useCallback(
+    async (request: UpdateExtensionRequest): Promise<DesktopMarketplaceUpdateResult> => {
+      if (!api) {
+        throw new Error("runtime not ready");
+      }
+
+      setBusyAction("extensions");
+      try {
+        const result = await api.updateExtension(request);
+        if (result.status === "updated") {
+          applySnapshot(result.snapshot);
+          setRuntimeError("");
+          return { status: "updated" };
+        }
+        if (result.status === "up-to-date") {
+          return { status: "up-to-date" };
+        }
+        return {
+          status: "review-required",
+          extensionId: result.extensionId,
+          reviewStatus: result.reviewStatus,
+        };
       } catch (error) {
         const message = describeError(error);
         setRuntimeError(message);
@@ -2176,6 +2200,28 @@ export function useDesktopRuntime() {
       setBusyAction("extensions");
       try {
         const next = await api.deleteExtension(request);
+        applySnapshot(next);
+        setRuntimeError("");
+      } catch (error) {
+        const message = describeError(error);
+        setRuntimeError(message);
+        throw new Error(message, { cause: error });
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot],
+  );
+
+  const setExtensionEnabled = useCallback(
+    async (request: SetExtensionEnabledRequest) => {
+      if (!api) {
+        return;
+      }
+
+      setBusyAction("extensions");
+      try {
+        const next = await api.setExtensionEnabled(request);
         applySnapshot(next);
         setRuntimeError("");
       } catch (error) {
@@ -3993,14 +4039,15 @@ export function useDesktopRuntime() {
     removeProviderModels,
     addMcpServer,
     importExtension,
-    listMarketplaceExtensions,
-    getMarketplaceExtensionDetail,
-    getMarketplaceExtensionReadme,
-    prepareMarketplaceExtensionInstall,
+    installBuiltInExtension,
+    addMarketplaceSource,
+    removeMarketplaceSource,
     installMarketplaceExtension,
+    updateExtension,
     createSkill,
     createRule,
     deleteExtension,
+    setExtensionEnabled,
     runExtension,
     updateExtensionSettings,
     updateExtensionSecret,

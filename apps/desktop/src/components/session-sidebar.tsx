@@ -165,7 +165,6 @@ export type SettingsSidebarTab =
   | "hooks"
   | "skills"
   | "rules"
-  | "extensions"
   | "dreams"
   | "integrations"
   | "developer";
@@ -1160,11 +1159,6 @@ const settingsConnectTabs: Array<{
     labelKey: "settings.integrations",
     icon: Link2,
   },
-  {
-    id: "extensions",
-    labelKey: "settings.extensions",
-    icon: Blocks,
-  },
   ...(isViteDev
     ? [
         {
@@ -1176,8 +1170,7 @@ const settingsConnectTabs: Array<{
     : []),
 ];
 
-const sidebarInteractionMotionClass =
-  "!transition-[opacity,transform,box-shadow] duration-150";
+const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Sidebar interactive items' default text/icon color; hover and selection return to sidebar-foreground */
 const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";

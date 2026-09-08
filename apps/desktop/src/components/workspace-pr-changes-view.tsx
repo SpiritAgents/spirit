@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,8 +19,10 @@ import {
 import { EditFileLineDeltaBadge } from "@/components/edit-file-line-delta-badge";
 import { WorkspacePrChangesFileTree } from "@/components/workspace-pr-changes-file-tree";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@/components/ui/animated-collapse";
+import { TEXT_LINK_CLASS } from "@/components/ui/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCollapsibleChildMount } from "@/hooks/use-collapsible-child-mount";
+import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-header-pinned";
 import { useTextSelectionActionMenu } from "@/hooks/use-text-selection-action-menu";
 import { buildPrChangedFilesTree } from "@/lib/pr-changed-files-tree";
 import { installContainedSelectAll } from "@/lib/contained-text-selection";
@@ -39,6 +42,7 @@ import {
   writePrChangesTreeWidthPx,
 } from "@/lib/layout-prefs";
 import { useWorkspaceToolsShellRowDividers } from "@/lib/use-workspace-tools-shell-row-dividers";
+import { useScrollTopBandOcclusion } from "@/lib/scroll-top-band-occlusion";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { PR_CHANGED_FILE_HEADER_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import { cn } from "@/lib/utils";
@@ -181,45 +185,8 @@ function PrChangesSelectionMenu({
   );
 }
 
-function scrollAreaViewport(root: ComponentRef<typeof ScrollArea> | null): HTMLElement | null {
-  return root?.querySelector("[data-radix-scroll-area-viewport]") ?? null;
-}
-
 /** Sticky file header when scrolled: opaque panel background (no backdrop blur). */
 const PR_STICKY_PINNED_HEADER_CLASS = "bg-background";
-
-function useStickyHeaderPinned(
-  sentinelRef: RefObject<HTMLElement | null>,
-  getScrollViewport: () => HTMLElement | null,
-  enabled: boolean,
-) {
-  const [pinned, setPinned] = useState(false);
-
-  useEffect(() => {
-    if (!enabled) {
-      setPinned(false);
-      return;
-    }
-
-    const sentinel = sentinelRef.current;
-    const root = getScrollViewport();
-    if (!sentinel || !root) {
-      setPinned(false);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setPinned(!entry.isIntersecting);
-      },
-      { root, threshold: [0] },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [enabled, getScrollViewport, sentinelRef]);
-
-  return pinned;
-}
 
 function PrChangedFileHeaderButton({
   displayPath,
@@ -274,6 +241,8 @@ function PrChangedFileCard({
   onOpenExternal,
   getScrollViewport,
   dividerAnchorRef,
+  useTranslucency,
+  onPinnedHeaderChange,
 }: {
   file: GitHubPullRequestChangedFile;
   open: boolean;
@@ -281,6 +250,8 @@ function PrChangedFileCard({
   onOpenExternal?: (url: string) => void;
   getScrollViewport: () => HTMLElement | null;
   dividerAnchorRef: RefObject<HTMLElement | null>;
+  useTranslucency: boolean;
+  onPinnedHeaderChange: (filename: string, headerElement: HTMLElement | null) => void;
 }) {
   const { t } = useTranslation();
   const mounted = useCollapsibleChildMount(open);
@@ -289,6 +260,14 @@ function PrChangedFileCard({
   const diffHostRef = useRef<HTMLDivElement>(null);
   const showExpandedChrome = open || mounted;
   const pinned = useStickyHeaderPinned(stickySentinelRef, getScrollViewport, showExpandedChrome);
+
+  // Report the pinned header so the parent can render its visible copy outside the masked
+  // scroll root and size the occlusion band. Layout effect: the overlay appears in the same
+  // commit as the pin, so content never flashes beneath the transparent header.
+  useLayoutEffect(() => {
+    onPinnedHeaderChange(file.filename, pinned ? stickyHeaderRef.current : null);
+    return () => onPinnedHeaderChange(file.filename, null);
+  }, [file.filename, onPinnedHeaderChange, pinned]);
   const displayPath =
     file.status === "renamed" && file.previousFilename
       ? `${file.previousFilename} → ${file.filename}`
@@ -342,7 +321,11 @@ function PrChangedFileCard({
           className={cn(
             "relative",
             showExpandedChrome && "sticky top-0 z-10",
-            showExpandedChrome && pinned ? PR_STICKY_PINNED_HEADER_CLASS : "bg-transparent",
+            // Translucency: the in-flow pinned header is clipped by the occlusion mask; the
+            // overlay copy (transparent) is what stays visible, so no opaque paint here.
+            showExpandedChrome && pinned && !useTranslucency
+              ? PR_STICKY_PINNED_HEADER_CLASS
+              : "bg-transparent",
           )}
         >
           <PrChangedFileHeaderButton
@@ -369,7 +352,7 @@ function PrChangedFileCard({
                 {file.blobUrl && onOpenExternal ? (
                   <button
                     type="button"
-                    className="text-foreground underline underline-offset-2 hover:text-sidebar-foreground/80"
+                    className={TEXT_LINK_CLASS}
                     onClick={() => onOpenExternal(file.blobUrl!)}
                   >
                     {t("workspace.prChangesViewOnGitHub")}
@@ -392,6 +375,8 @@ export type WorkspacePrChangesViewProps = {
   prStatus?: PullRequestChipStatus;
   onPrDiffAddToSession?: (attachment: PrDiffAttachment) => void;
   onOpenExternal?: (url: string) => void;
+  /** Windows Mica / macOS Vibrancy: pinned file headers become transparent + occlude content via mask. */
+  useTranslucency?: boolean;
   className?: string;
 };
 
@@ -403,11 +388,19 @@ export function WorkspacePrChangesView({
   prStatus = "open",
   onPrDiffAddToSession,
   onOpenExternal,
+  useTranslucency = false,
   className,
 }: WorkspacePrChangesViewProps) {
   const { t } = useTranslation();
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const cardsScrollRef = useRef<ComponentRef<typeof ScrollArea>>(null);
+  const [cardsScrollRoot, setCardsScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
+    null,
+  );
+  const setCardsScrollRef = useCallback((node: ComponentRef<typeof ScrollArea> | null) => {
+    cardsScrollRef.current = node;
+    setCardsScrollRoot(node);
+  }, []);
   const cardsListRef = useRef<HTMLDivElement>(null);
   const treeAsideRef = useRef<HTMLElement>(null);
   const treeDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -422,13 +415,74 @@ export function WorkspacePrChangesView({
 
   const getCardsScrollViewport = useCallback(() => scrollAreaViewport(cardsScrollRef.current), []);
 
-  useWorkspaceToolsShellRowDividers(cardsListRef, [files.length, hasMore, expandedFilenames.size], {
-    enabled: showFileList,
-    trailingDivider: !hasMore,
-    dividerAnchorRef: treeAsideRef,
-    dividerAnchorEdge: "right",
-    layoutWatchRef: treeAsideRef,
-  });
+  // Translucency pinned-header overlay: cards report their pinned in-flow headers; the visible
+  // header is rendered outside the scroll root (the occlusion mask clips every DOM descendant
+  // of the masked root, including the in-flow copies). When several sections report pinned,
+  // the last one in file order owns the viewport top (earlier sections have scrolled past).
+  const [pinnedHeaders, setPinnedHeaders] = useState<ReadonlyMap<string, HTMLElement>>(
+    () => new Map(),
+  );
+  const handlePinnedHeaderChange = useCallback(
+    (filename: string, headerElement: HTMLElement | null) => {
+      setPinnedHeaders((previous) => {
+        if (previous.get(filename) === (headerElement ?? undefined)) {
+          return previous;
+        }
+        const next = new Map(previous);
+        if (headerElement) {
+          next.set(filename, headerElement);
+        } else {
+          next.delete(filename);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+  const pinnedOverlayFile = useMemo(() => {
+    let chosen: GitHubPullRequestChangedFile | null = null;
+    for (const file of files) {
+      if (pinnedHeaders.has(file.filename)) {
+        chosen = file;
+      }
+    }
+    return chosen;
+  }, [files, pinnedHeaders]);
+  const pinnedOverlayElement = pinnedOverlayFile
+    ? (pinnedHeaders.get(pinnedOverlayFile.filename) ?? null)
+    : null;
+  const { occlusionStyle: cardsOcclusionStyle, bandHeight: pinnedHeaderBandHeight } =
+    useScrollTopBandOcclusion(
+      cardsScrollRoot,
+      pinnedOverlayElement,
+      useTranslucency && pinnedOverlayFile != null,
+    );
+
+  const setFileOpen = useCallback((filename: string, nextOpen: boolean) => {
+    setExpandedFilenames((previous) => {
+      const next = new Set(previous);
+      if (nextOpen) {
+        next.add(filename);
+      } else {
+        next.delete(filename);
+      }
+      return next;
+    });
+  }, []);
+
+  useWorkspaceToolsShellRowDividers(
+    cardsListRef,
+    [files.length, hasMore, expandedFilenames.size, pinnedHeaderBandHeight],
+    {
+      enabled: showFileList,
+      trailingDivider: !hasMore,
+      dividerAnchorRef: treeAsideRef,
+      dividerAnchorEdge: "right",
+      layoutWatchRef: treeAsideRef,
+      clipTopInsetPx:
+        useTranslucency && pinnedOverlayFile != null ? (pinnedHeaderBandHeight ?? 0) : 0,
+    },
+  );
 
   latestTreeWidthPxRef.current = treeWidthPx;
 
@@ -575,36 +629,50 @@ export function WorkspacePrChangesView({
           aria-hidden
         />
       </div>
-      <ScrollArea ref={cardsScrollRef} className="min-h-0 min-w-0 flex-1" type="auto">
-        <div ref={cardsListRef}>
-          {files.map((file) => (
-            <PrChangedFileCard
-              key={file.filename}
-              file={file}
-              open={expandedFilenames.has(file.filename)}
-              onOpenExternal={onOpenExternal}
-              getScrollViewport={getCardsScrollViewport}
-              dividerAnchorRef={treeAsideRef}
-              onOpenChange={(nextOpen) => {
-                setExpandedFilenames((previous) => {
-                  const next = new Set(previous);
-                  if (nextOpen) {
-                    next.add(file.filename);
-                  } else {
-                    next.delete(file.filename);
-                  }
-                  return next;
-                });
-              }}
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <ScrollArea
+          ref={setCardsScrollRef}
+          className="h-full min-h-0 w-full"
+          type="auto"
+          style={cardsOcclusionStyle}
+        >
+          <div ref={cardsListRef}>
+            {files.map((file) => (
+              <PrChangedFileCard
+                key={file.filename}
+                file={file}
+                open={expandedFilenames.has(file.filename)}
+                onOpenExternal={onOpenExternal}
+                getScrollViewport={getCardsScrollViewport}
+                dividerAnchorRef={treeAsideRef}
+                useTranslucency={useTranslucency}
+                onPinnedHeaderChange={handlePinnedHeaderChange}
+                onOpenChange={(nextOpen) => setFileOpen(file.filename, nextOpen)}
+              />
+            ))}
+            {hasMore ? (
+              <p className="px-3 py-2 text-xs text-muted-foreground/75 dark:text-muted-foreground/65">
+                {t("workspace.prChangesHasMore")}
+              </p>
+            ) : null}
+          </div>
+        </ScrollArea>
+        {useTranslucency && pinnedOverlayFile ? (
+          <div className="absolute inset-x-0 top-0 z-20">
+            <PrChangedFileHeaderButton
+              displayPath={
+                pinnedOverlayFile.status === "renamed" && pinnedOverlayFile.previousFilename
+                  ? `${pinnedOverlayFile.previousFilename} → ${pinnedOverlayFile.filename}`
+                  : pinnedOverlayFile.filename
+              }
+              open
+              additions={pinnedOverlayFile.additions}
+              deletions={pinnedOverlayFile.deletions}
+              onToggle={() => setFileOpen(pinnedOverlayFile.filename, false)}
             />
-          ))}
-          {hasMore ? (
-            <p className="px-3 py-2 text-xs text-muted-foreground/75 dark:text-muted-foreground/65">
-              {t("workspace.prChangesHasMore")}
-            </p>
-          ) : null}
-        </div>
-      </ScrollArea>
+          </div>
+        ) : null}
+      </div>
       <PrChangesSelectionMenu
         rootRef={cardsListRef}
         files={files}

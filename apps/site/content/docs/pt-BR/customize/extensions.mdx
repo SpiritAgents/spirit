@@ -1,0 +1,65 @@
+---
+title: Extensões
+description: Instale extensões de marketplaces, importe um pacote ZIP ou adicione seu próprio marketplace de extensões remoto.
+---
+
+Extensões adicionam capacidades ao Spirit — ferramentas, skills, hooks, servidores MCP e contribuições de interface. Elas são distribuídas por marketplaces de extensões:
+
+- **Integrado** — acompanha o aplicativo.
+- **Pessoal** — suas próprias importações: pacotes ZIP que você mesmo adicionou.
+- **Marketplaces de extensões remotos** — adicionados por você: um repositório Git, uma URL de índice HTTP ou um diretório local.
+
+No Desktop, a página **Extensões** da barra lateral mostra uma aba por marketplace, e a aba **Todos** combina todos os marketplaces em uma única lista. A CLI oferece os mesmos fluxos pelos comandos `spirit extension` e pela TUI `/extension marketplace`.
+
+## Instalar, atualizar e desinstalar
+
+No Desktop, abra **Extensões**, escolha uma extensão e selecione **Instalar**. Uma extensão instalada mostra um menu **Mais ações** com **Desativar** (desliga sem remover) e **Desinstalar**. Quando o marketplace publica uma versão mais recente, a página de detalhes mostra um botão **Atualizar**.
+
+Na CLI:
+
+```bash
+spirit extension list
+spirit extension install <name>
+spirit extension update <name>
+spirit extension remove <id>
+```
+
+`install` resolve `<name>` em todos os marketplaces adicionados. Se dois marketplaces oferecerem o mesmo nome, o comando falha e os lista — execute novamente com `--marketplace <name>` para escolher um. O mesmo nome instalado a partir de marketplaces diferentes coexiste: as instalações são isoladas por marketplace.
+
+Extensões integradas são atualizadas automaticamente com o aplicativo. Extensões pessoais (importadas) não têm uma fonte de onde puxar atualizações — importe novamente um ZIP mais recente.
+
+## Confirmação de revisão
+
+Instalar ou atualizar uma extensão cuja entrada no marketplace não é verificada — ou foi revogada — exige uma confirmação explícita. O Desktop mostra um diálogo **Revisar extensão**; a CLI pede `--review-acknowledged`, e a TUI mostra uma etapa de confirmação.
+
+## Importar uma extensão (ZIP)
+
+Um pacote ZIP é o canal alternativo autodeclarado: sem nenhum marketplace.
+
+- Desktop: página **Extensões** → **Adicionar** → **Importar extensão**, e escolha o arquivo ZIP.
+- CLI: `spirit extension import <archive>`.
+
+As importações chegam ao marketplace **Pessoal** como entradas não verificadas e passam pela mesma confirmação de revisão. Importar o mesmo nome novamente o sobrescreve, e desinstalar uma extensão importada também remove seu registro do marketplace Pessoal.
+
+## Adicionar um marketplace
+
+- Desktop: página **Extensões** → **Adicionar** → **Adicionar marketplace** → **Adicionar do disco** (um diretório local) ou **Adicionar de URL** (um repositório Git ou uma URL de índice HTTP).
+- CLI: `spirit extension marketplace add <url|path>`.
+
+Três formas de localizador:
+
+| Forma                          | Exemplo                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------ |
+| Diretório local                | `spirit extension marketplace add ./my-marketplace`                      |
+| Repositório Git (HTTPS ou SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
+| URL de índice HTTP             | `spirit extension marketplace add https://example.com`                   |
+
+URLs Git aceitam `--git-ref <tag|branch|commit>` para fixar uma ref; o padrão é o branch padrão do remoto. Uma URL de site simples resolve automaticamente para o seu `/.spirit/marketplace.json`.
+
+Gerencie os marketplaces adicionados com `spirit extension marketplace list` e `spirit extension marketplace remove <name>`. No Desktop, clique com o botão direito na aba de um marketplace para ver a ação de remoção.
+
+<Callout type="info">
+  As capacidades declaradas de uma extensão são endossadas pelo marketplace, não pelo pacote em si.
+  Adicionar um marketplace significa confiar na revisão do seu operador — adicione apenas fontes em
+  que você confia.
+</Callout>

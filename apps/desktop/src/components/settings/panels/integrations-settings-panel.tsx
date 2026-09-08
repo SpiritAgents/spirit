@@ -6,11 +6,13 @@ import { useTranslation } from "react-i18next";
 import { GitHubDeviceLoginDialog } from "@/components/github-device-login-dialog";
 import { GitHubMarkIcon } from "@/components/github-mark-icon";
 import { Button } from "@/components/ui/button";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { showDesktopErrorToast } from "@/lib/desktop-error-toast";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
+import { cn } from "@/lib/utils";
 import {
   useGitHubDeviceLogin,
   type GitHubDeviceLoginRuntime,
@@ -84,7 +86,7 @@ export function IntegrationsSettingsPanel({
         <p className="text-sm text-muted-foreground">{t("settings.integrationsDesktopOnly")}</p>
       ) : null}
 
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
         <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex flex-wrap items-center gap-2">

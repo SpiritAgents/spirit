@@ -8,8 +8,6 @@ import {
   type SetStateAction,
 } from "react";
 
-import { Settings2, Store } from "lucide-react";
-
 import { DesktopMacTrafficLights } from "@/components/desktop-mac-traffic-lights";
 import { DesktopConversationPreview } from "@/components/desktop-conversation-preview";
 import { DesktopModelsPreview } from "@/components/desktop-models-preview";
@@ -17,15 +15,9 @@ import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrom
 import { SessionSidebar, type SettingsSidebarTab } from "@/components/session-sidebar";
 import { SessionSidebarShell } from "@/components/session-sidebar-shell";
 import { WorkspaceToolsDock } from "@/components/workspace-tools-panel";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-  Empty,
-  EmptyHeader,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
+import { EmptyCard } from "@/components/ui/empty";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Messages } from "@/i18n/messages";
 import { useI18n } from "@/i18n/provider";
 import {
@@ -437,13 +429,9 @@ function createSession(workspaceRoot: string, label: string): SessionListItem {
 
 function PreviewSurfacePlaceholder({
   title,
-  description,
-  icon: Icon,
   baseToneClassName,
 }: {
   title: string;
-  description: string;
-  icon: typeof Settings2;
   baseToneClassName?: string;
 }) {
   return (
@@ -455,15 +443,7 @@ function PreviewSurfacePlaceholder({
       <div
         className={cn("mx-auto flex min-h-full w-full items-center px-3 py-12", CONVERSATION_MAX_W)}
       >
-        <Empty className="mx-auto max-w-sm">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <Icon className="size-4" aria-hidden />
-            </EmptyMedia>
-            <EmptyTitle>{title}</EmptyTitle>
-            <EmptyDescription>{description}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <EmptyCard className="w-full">{title}</EmptyCard>
       </div>
     </ScrollArea>
   );
@@ -1015,17 +995,13 @@ function SpiritDesktopWindowBody({
                     </div>
                   ) : (
                     <PreviewSurfacePlaceholder
-                      icon={Settings2}
                       title={messages.desktop.window.settingsPlaceholderTitle}
-                      description={messages.desktop.window.settingsPlaceholderDescription}
                       baseToneClassName={contentBaseToneClassName}
                     />
                   )
                 ) : (
                   <PreviewSurfacePlaceholder
-                    icon={Store}
                     title={messages.desktop.window.marketplacePlaceholderTitle}
-                    description={messages.desktop.window.marketplacePlaceholderDescription}
                     baseToneClassName={contentBaseToneClassName}
                   />
                 )}

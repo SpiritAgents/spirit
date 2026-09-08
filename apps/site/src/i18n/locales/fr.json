@@ -130,9 +130,7 @@
       "expandTools": "Développer les outils",
       "newSession": "Nouvelle session",
       "settingsPlaceholderTitle": "Vue des paramètres du bureau",
-      "settingsPlaceholderDescription": "Conserve la structure et la hiérarchie du premier écran de la surface des paramètres.",
-      "marketplacePlaceholderTitle": "Vue de la place de marché des extensions",
-      "marketplacePlaceholderDescription": "Conserve la structure et la hiérarchie du premier écran de la surface de la place de marché.",
+      "marketplacePlaceholderTitle": "Vue des extensions",
       "previewEditorOnlyTextError": "Seuls les fichiers texte peuvent être ouverts dans l'éditeur d'aperçu.",
       "hostStatus": "Aperçu Web Hero",
       "mcpReady": "MCP prêt"

@@ -11,14 +11,11 @@ import {
   inspectDesktopMcpServer,
 } from "./service-mcp.js";
 import { deleteDesktopHookEntry, saveDesktopHookEntry } from "./hooks.js";
-import {
-  toDesktopMarketplaceCatalogItem,
-  toDesktopMarketplaceDetail,
-  toDesktopMarketplacePreparedInstall,
-} from "./extensions.js";
+import { spiritDataDir } from "./storage.js";
 import { invalidateSharedUserMcpToolingCache } from "@spiritagent/agent-core";
 import i18n from "../lib/i18n-host.js";
 import type {
+  AddMarketplaceSourceRequest,
   AddMcpServerRequest,
   CreateRuleRequest,
   CreateSkillRequest,
@@ -27,23 +24,31 @@ import type {
   DeleteHookEntryRequest,
   DeleteRuleRequest,
   DeleteSkillRequest,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DesktopMcpServerInspection,
   DesktopSnapshot,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
   ImportExtensionRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  RemoveMarketplaceSourceRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   SubmitSkillSlashRequest,
+  UpdateExtensionRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
 } from "../types.js";
-import type {
-  HostExtensionEvent,
-  HostExtensionMarketplaceManager,
+import type { HostExtensionEvent } from "@spiritagent/host-internal";
+import {
+  addMarketplaceSource,
+  installBuiltInExtension,
+  installMarketplaceExtensionByName,
+  MarketplaceReviewAcknowledgementRequiredError,
+  removeMarketplaceSource,
+  updateExtensionById,
 } from "@spiritagent/host-internal";
 import type { LlmActiveSkill } from "@spiritagent/agent-core";
 import type { DesktopExtensionHostAdapter } from "./extension-host-adapter.js";
@@ -64,6 +69,7 @@ type HostExtensionManager = {
     manifest: { name: string; version: string };
   }>;
   remove(id: string): Promise<void>;
+  setEnabled(id: string, enabled: boolean): Promise<void>;
   run(input: { id: string; host: DesktopExtensionHostAdapter; logger: Console }): Promise<void>;
   setSettingsValues(input: {
     id: string;
@@ -101,7 +107,6 @@ export interface HostExtensionCommandContext {
     workspaceBinding: DesktopWorkspaceBinding,
   ): McpRefreshable;
   extensionManager(): HostExtensionManager;
-  marketplace(): HostExtensionMarketplaceManager;
   requireExtensionHostAdapter(): DesktopExtensionHostAdapter;
   refreshExtensionsList(): Promise<void>;
   refreshRuntime(): Promise<void>;
@@ -111,7 +116,16 @@ export interface HostExtensionCommandContext {
     event: HostExtensionEvent,
     options?: { targetExtensionIds?: readonly string[] },
   ): Promise<void>;
-  requireEnabledSkillEntry(skillName: string): HostMetadataSummary["skills"]["entries"][number];
+  requireEnabledSkillEntry(skillName: string): {
+    source: {
+      id: string;
+      scope: LlmActiveSkill["scope"];
+      name: string;
+      description: string;
+      path: string;
+    };
+    content: string;
+  };
   submitUserTurnAfterInitialized(
     text: string,
     options?: {
@@ -124,17 +138,6 @@ export interface HostExtensionCommandContext {
   /** Invalidates the snapshot-side list cache after the MCP / hooks config is written to disk. */
   invalidateConfigListCaches(): void;
   buildSnapshot(): DesktopSnapshot;
-}
-
-/** Marketplace catalog/detail/readme are read-only network I/O and must not hold runSerialized, to avoid blocking session navigation. */
-async function ensureInitializedForReadOnlyMarketplace(
-  ctx: HostExtensionCommandContext,
-): Promise<void> {
-  if (ctx.isInitialized()) {
-    await ctx.ensureInitialized(undefined, { fastPath: true });
-    return;
-  }
-  await ctx.runSerialized(() => ctx.ensureInitialized());
 }
 
 export async function createRuleCommand(
@@ -291,7 +294,6 @@ export async function importExtensionCommand(
       archiveBase64,
       ...(request.fileName?.trim() ? { fileName: request.fileName.trim() } : {}),
     });
-    await ctx.refreshExtensionsList();
     await ctx.refreshRuntimeAfterExtensionMutation();
     await ctx.dispatchExtensionEvent(
       {
@@ -308,88 +310,150 @@ export async function importExtensionCommand(
   });
 }
 
-export async function listMarketplaceExtensionsCommand(
+export async function installBuiltInExtensionCommand(
   ctx: HostExtensionCommandContext,
-): Promise<DesktopMarketplaceCatalogItem[]> {
-  await ensureInitializedForReadOnlyMarketplace(ctx);
-  const items = await ctx.marketplace().listCatalog();
-  return items.map((item) => toDesktopMarketplaceCatalogItem(item));
-}
+  request: InstallBuiltInExtensionRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
 
-export async function getMarketplaceExtensionDetailCommand(
-  ctx: HostExtensionCommandContext,
-  extensionId: string,
-): Promise<DesktopMarketplaceDetail> {
-  await ensureInitializedForReadOnlyMarketplace(ctx);
-  const trimmedId = extensionId.trim();
-  if (!trimmedId) {
-    throw new Error(i18n.t("error.extensionIdRequired"));
-  }
-
-  const detail = await ctx.marketplace().getDetail(trimmedId);
-  return toDesktopMarketplaceDetail(detail);
-}
-
-export async function getMarketplaceExtensionReadmeCommand(
-  ctx: HostExtensionCommandContext,
-  extensionId: string,
-): Promise<string> {
-  await ensureInitializedForReadOnlyMarketplace(ctx);
-  const trimmedId = extensionId.trim();
-  if (!trimmedId) {
-    throw new Error(i18n.t("error.extensionIdRequired"));
-  }
-
-  return ctx.marketplace().getReadme(trimmedId);
-}
-
-export async function prepareMarketplaceExtensionInstallCommand(
-  ctx: HostExtensionCommandContext,
-  request: PrepareMarketplaceExtensionInstallRequest,
-): Promise<DesktopMarketplacePreparedInstall> {
-  await ensureInitializedForReadOnlyMarketplace(ctx);
-  const extensionId = request.extensionId.trim();
-  if (!extensionId) {
-    throw new Error(i18n.t("error.extensionIdRequired"));
-  }
-
-  const prepared = await ctx.marketplace().prepareInstall({
-    extensionId,
-    ...(request.version?.trim() ? { version: request.version.trim() } : {}),
+    const installed = await installBuiltInExtension({
+      spiritDataDir: spiritDataDir(),
+      hostKind: "desktop",
+      extensionId: id,
+    });
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    await ctx.dispatchExtensionEvent(
+      {
+        type: "onExtensionInstalled",
+        detail: {
+          extensionId: installed.id,
+          name: installed.manifest.name,
+          version: installed.manifest.version,
+        },
+      },
+      { targetExtensionIds: [installed.id] },
+    );
+    return ctx.buildSnapshot();
   });
-  return toDesktopMarketplacePreparedInstall(prepared);
+}
+
+export async function addMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: AddMarketplaceSourceRequest,
+): Promise<MarketplaceSourceCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const locator = request.locator.trim();
+    if (!locator) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    const record = await addMarketplaceSource(
+      { spiritDataDir: spiritDataDir() },
+      locator,
+      request.ref?.trim() ? { ref: request.ref.trim() } : undefined,
+    );
+    await ctx.refreshExtensionsList();
+    return { snapshot: ctx.buildSnapshot(), sourceId: record.id };
+  });
+}
+
+export async function removeMarketplaceSourceCommand(
+  ctx: HostExtensionCommandContext,
+  request: RemoveMarketplaceSourceRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const name = request.name.trim();
+    if (!name) {
+      throw new Error(i18n.t("error.marketplaceSourceRequired"));
+    }
+    await removeMarketplaceSource({ spiritDataDir: spiritDataDir() }, name);
+    await ctx.refreshExtensionsList();
+    return ctx.buildSnapshot();
+  });
 }
 
 export async function installMarketplaceExtensionCommand(
   ctx: HostExtensionCommandContext,
   request: InstallMarketplaceExtensionRequest,
-): Promise<DesktopSnapshot> {
+): Promise<MarketplaceInstallCommandResult> {
   return ctx.runSerialized(async () => {
     await ctx.ensureInitialized();
-    const extensionId = request.extensionId.trim();
-    if (!extensionId) {
+    const name = request.name.trim();
+    if (!name) {
       throw new Error(i18n.t("error.extensionIdRequired"));
     }
-
-    const installed = await ctx.marketplace().install({
-      extensionId,
-      ...(request.version?.trim() ? { version: request.version.trim() } : {}),
-      ...(request.reviewAcknowledged === true ? { reviewAcknowledged: true } : {}),
-    });
-    await ctx.refreshExtensionsList();
-    await ctx.refreshRuntimeAfterExtensionMutation();
-    await ctx.dispatchExtensionEvent(
-      {
-        type: "onExtensionInstalled",
-        detail: {
-          extensionId: installed.id,
-          name: installed.manifest.name,
-          version: installed.manifest.version,
+    try {
+      const installed = await installMarketplaceExtensionByName(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        name,
+        {
+          ...(request.marketplace?.trim() ? { marketplace: request.marketplace.trim() } : {}),
+          reviewAcknowledged: request.reviewAcknowledged === true,
         },
-      },
-      { targetExtensionIds: [installed.id] },
-    );
-    return ctx.buildSnapshot();
+      );
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      await ctx.dispatchExtensionEvent(
+        {
+          type: "onExtensionInstalled",
+          detail: {
+            extensionId: installed.id,
+            name: installed.manifest.name,
+            version: installed.manifest.version,
+          },
+        },
+        { targetExtensionIds: [installed.id] },
+      );
+      return { status: "installed", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
+  });
+}
+
+export async function updateExtensionCommand(
+  ctx: HostExtensionCommandContext,
+  request: UpdateExtensionRequest,
+): Promise<MarketplaceUpdateCommandResult> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+    try {
+      const updated = await updateExtensionById(
+        { spiritDataDir: spiritDataDir(), hostKind: "desktop" },
+        id,
+        { reviewAcknowledged: request.reviewAcknowledged === true },
+      );
+      if (!updated) {
+        return { status: "up-to-date" };
+      }
+      await ctx.refreshRuntimeAfterExtensionMutation();
+      return { status: "updated", snapshot: ctx.buildSnapshot() };
+    } catch (error) {
+      if (error instanceof MarketplaceReviewAcknowledgementRequiredError) {
+        return {
+          status: "review-required",
+          extensionId: error.extensionId,
+          reviewStatus: error.reviewStatus,
+        };
+      }
+      throw error;
+    }
   });
 }
 
@@ -405,7 +469,23 @@ export async function deleteExtensionCommand(
     }
 
     await ctx.extensionManager().remove(id);
-    await ctx.refreshExtensionsList();
+    await ctx.refreshRuntimeAfterExtensionMutation();
+    return ctx.buildSnapshot();
+  });
+}
+
+export async function setExtensionEnabledCommand(
+  ctx: HostExtensionCommandContext,
+  request: SetExtensionEnabledRequest,
+): Promise<DesktopSnapshot> {
+  return ctx.runSerialized(async () => {
+    await ctx.ensureInitialized();
+    const id = request.id.trim();
+    if (!id) {
+      throw new Error(i18n.t("error.extensionIdRequired"));
+    }
+
+    await ctx.extensionManager().setEnabled(id, request.enabled);
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();
   });
@@ -446,7 +526,6 @@ export async function updateExtensionSettingsCommand(
       id,
       values: request.values,
     });
-    await ctx.refreshExtensionsList();
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();
   });
@@ -472,7 +551,6 @@ export async function updateExtensionSecretCommand(
       key,
       ...(request.value !== undefined ? { value: request.value } : {}),
     });
-    await ctx.refreshExtensionsList();
     await ctx.refreshRuntimeAfterExtensionMutation();
     return ctx.buildSnapshot();
   });

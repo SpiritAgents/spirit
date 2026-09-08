@@ -127,9 +127,7 @@
       "expandTools": "Развернуть инструменты",
       "newSession": "Новая сессия",
       "settingsPlaceholderTitle": "Просмотр настроек Desktop",
-      "settingsPlaceholderDescription": "Сохраняет структуру и иерархию первого экрана интерфейса настроек.",
-      "marketplacePlaceholderTitle": "Просмотр маркетплейса расширений",
-      "marketplacePlaceholderDescription": "Сохраняет структуру и иерархию первого экрана интерфейса маркетплейса.",
+      "marketplacePlaceholderTitle": "Просмотр расширений",
       "previewEditorOnlyTextError": "В предварительном редакторе можно открывать только текстовые файлы.",
       "hostStatus": "Предпросмотр Web Hero",
       "mcpReady": "MCP готов"

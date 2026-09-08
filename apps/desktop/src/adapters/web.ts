@@ -18,18 +18,19 @@ import type {
   DeleteHookEntryRequest,
   DeleteRuleRequest,
   DesktopDreamOverviewItem,
-  DesktopMarketplaceCatalogItem,
-  DesktopMarketplaceDetail,
-  DesktopMarketplacePreparedInstall,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
   DesktopSnapshot,
   ImportExtensionRequest,
-  InstallLspProviderRequest,
+  AddMarketplaceSourceRequest,
+  InstallBuiltInExtensionRequest,
   InstallMarketplaceExtensionRequest,
-  PrepareMarketplaceExtensionInstallRequest,
+  RemoveMarketplaceSourceRequest,
+  UpdateExtensionRequest,
+  InstallLspProviderRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
+  SetExtensionEnabledRequest,
   UpdateExtensionSecretRequest,
   UpdateExtensionSettingsRequest,
   PreviewModelsRequest,
@@ -58,6 +59,9 @@ import type {
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
   DesktopModelProvider,
+  MarketplaceInstallCommandResult,
+  MarketplaceSourceCommandResult,
+  MarketplaceUpdateCommandResult,
 } from "../types";
 
 const DEFAULT_HOST_URL = import.meta.env.VITE_SPIRIT_HOST_URL?.toString().trim() || "";
@@ -182,29 +186,26 @@ export function createWebHostApi(): HostApi {
     importExtension(request: ImportExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions", request);
     },
-    listMarketplaceExtensions() {
-      return get<DesktopMarketplaceCatalogItem[]>(baseUrl, "/api/marketplace/extensions");
+    installBuiltInExtension(request: InstallBuiltInExtensionRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/extensions/install-built-in", request);
     },
-    getMarketplaceExtensionDetail(extensionId: string) {
-      return post<DesktopMarketplaceDetail>(baseUrl, "/api/marketplace/extensions/detail", {
-        extensionId,
-      });
+    addMarketplaceSource(request: AddMarketplaceSourceRequest) {
+      return post<MarketplaceSourceCommandResult>(baseUrl, "/api/marketplaces/add", request);
     },
-    getMarketplaceExtensionReadme(extensionId: string) {
-      return post<string>(baseUrl, "/api/marketplace/extensions/readme", { extensionId });
-    },
-    prepareMarketplaceExtensionInstall(request: PrepareMarketplaceExtensionInstallRequest) {
-      return post<DesktopMarketplacePreparedInstall>(
-        baseUrl,
-        "/api/marketplace/extensions/prepare",
-        request,
-      );
+    removeMarketplaceSource(request: RemoveMarketplaceSourceRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/marketplaces/remove", request);
     },
     installMarketplaceExtension(request: InstallMarketplaceExtensionRequest) {
-      return post<DesktopSnapshot>(baseUrl, "/api/marketplace/extensions/install", request);
+      return post<MarketplaceInstallCommandResult>(baseUrl, "/api/extensions/install", request);
+    },
+    updateExtension(request: UpdateExtensionRequest) {
+      return post<MarketplaceUpdateCommandResult>(baseUrl, "/api/extensions/update", request);
     },
     deleteExtension(request: DeleteExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/remove", request);
+    },
+    setExtensionEnabled(request: SetExtensionEnabledRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/extensions/enabled", request);
     },
     runExtension(request: RunExtensionRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/extensions/run", request);

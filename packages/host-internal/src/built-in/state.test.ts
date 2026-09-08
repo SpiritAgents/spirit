@@ -32,23 +32,36 @@ test("ensureBuiltInSkills does not reseed after noteBuiltInSkillRemoved", async 
   }
 });
 
-test("installPreparedDirectory records installSource and remove notes built-in", async () => {
+test("installPreparedDirectory derives installSource from the dump sourceId and remove notes built-in", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-built-in-ext-source-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-built-in-ext-prepared-"));
   try {
     const packageDir = join(preparedRoot, "demo-ext");
-    await mkdir(packageDir, { recursive: true });
+    await mkdir(join(packageDir, ".spirit"), { recursive: true });
     await writeFile(
       join(packageDir, "package.json"),
       `${JSON.stringify(
         {
-          name: "@spiritagent/extension-built-in-source-demo",
+          name: "extension-built-in-source-demo",
           version: "0.0.1",
-          description: "installSource persistence fixture",
           main: "index.js",
-          spiritExtension: {
-            schemaVersion: 1,
-            displayName: "Built-in source demo",
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    await writeFile(
+      join(packageDir, ".spirit", "extension.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: 1,
+          name: "extension-built-in-source-demo",
+          version: "0.0.1",
+          sourceId: "built-in",
+          displayName: "Built-in source demo",
+          description: "installSource persistence fixture",
+          manifest: {
             supportedHosts: ["desktop"],
             activationEvents: ["onStartup"],
             requestedCapabilities: ["system-prompt"],
@@ -74,9 +87,9 @@ test("installPreparedDirectory records installSource and remove notes built-in",
       { spiritDataDir, hostKind: "desktop" },
       {
         preparedDirectoryPath: packageDir,
-        installSource: "built-in",
       },
     );
+    assert.equal(installed.id, "built-in/extension-built-in-source-demo");
     assert.equal(installed.installSource, "built-in");
 
     const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
@@ -86,6 +99,10 @@ test("installPreparedDirectory records installSource and remove notes built-in",
     assert.equal(match?.installSource, "built-in");
 
     await manager.remove(installed.id);
+    assert.equal(
+      (await manager.list()).some((item) => item.id === installed.id),
+      false,
+    );
     const state = await loadBuiltInState(spiritDataDir);
     assert.ok(state.removedExtensionIds.includes(installed.id));
 

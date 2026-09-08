@@ -54,10 +54,12 @@ import {
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import type { DesktopModelProvider, ProviderGroupV2 } from "@/types";
 import { modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
+import { cn } from "@/lib/utils";
 
 export function ModelsSettingsPanel({
   settings,
@@ -445,7 +447,7 @@ export function ModelsSettingsPanel({
 
       <div className="space-y-3">
         {models.length === 0 ? (
-          <div className="rounded-lg border border-border/40 bg-background/80 px-4 py-10 text-center">
+          <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "px-4 py-10 text-center")}>
             <p className="text-sm text-muted-foreground">{t("settings.noSavedModels")}</p>
           </div>
         ) : (
@@ -458,10 +460,7 @@ export function ModelsSettingsPanel({
               const groupHasKey = groupModels.some((m) => m.keyConfigured);
               const groupLabel = groupDisplayLabel(group);
               return (
-                <div
-                  key={group.id}
-                  className="overflow-hidden rounded-lg border border-border/40 bg-background/80"
-                >
+                <div key={group.id} className={cn(DESKTOP_CANVAS_CARD_SURFACE, "overflow-hidden")}>
                   <div className="flex items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{groupLabel}</span>

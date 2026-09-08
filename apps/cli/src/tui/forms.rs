@@ -91,8 +91,8 @@ impl TuiShell {
             | BottomFormKind::McpAdd
             | BottomFormKind::ModelAdd
             | BottomFormKind::HookAdd
-            | BottomFormKind::McpPrompt { .. }
-            | BottomFormKind::Extensions => self.cancel_bottom_form(),
+            | BottomFormKind::McpPrompt { .. } => self.cancel_bottom_form(),
+            BottomFormKind::Extensions => self.save_extensions_bottom_form(),
             BottomFormKind::Rules => self.save_rules_bottom_form(),
             BottomFormKind::Skills => self.save_skills_bottom_form(),
         }
@@ -516,6 +516,47 @@ impl TuiShell {
         }
     }
 
+    fn save_extensions_bottom_form(&mut self) {
+        let Some(form) = self.forms.active.as_ref() else {
+            return;
+        };
+
+        let changed: Vec<(String, bool)> = bottom_form::extensions_form_toggles(form)
+            .into_iter()
+            .filter(|(id, checked)| {
+                self.extension_entries()
+                    .iter()
+                    .find(|entry| entry.id == *id)
+                    .map(|entry| entry.enabled != *checked)
+                    .unwrap_or(false)
+            })
+            .collect();
+
+        for (id, enabled) in changed {
+            if let Err(err) = self.runtime.set_extension_enabled(&id, enabled) {
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!("tui.extensions.save_failed", err = err).into_owned(),
+                    tool_block: None,
+                });
+                return;
+            }
+        }
+
+        match self.refresh_extensions_from_disk() {
+            Ok(()) => {
+                self.forms.active = None;
+            }
+            Err(err) => {
+                self.messages.push(ChatMessage {
+                    role: MessageRole::Agent,
+                    content: t!("tui.extensions.refresh_failed", err = err).into_owned(),
+                    tool_block: None,
+                });
+            }
+        }
+    }
+
     fn save_skills_bottom_form(&mut self) {
         let Some(form) = self.forms.active.as_ref() else {
             return;
@@ -801,7 +842,6 @@ impl TuiShell {
     }
 
     pub fn open_rules_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_rules_form(&self.rule_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;
@@ -815,7 +855,6 @@ impl TuiShell {
     }
 
     pub fn open_skills_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_skills_form(&self.skill_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;
@@ -829,7 +868,6 @@ impl TuiShell {
     }
 
     pub fn open_extensions_form(&mut self) {
-        self.close_marketplace_view();
         self.forms.active = Some(bottom_form::new_extensions_form(&self.extension_entries));
         self.model_picker_active = false;
         self.language_picker_active = false;

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { DesktopFormInput, DesktopFormTextarea } from "@/components/ui/desktop-form-field";
 import { Label } from "@/components/ui/label";
+import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import type {
   CreateSkillRequest,
@@ -141,7 +142,7 @@ export function SkillsSettingsPanel({
         </div>
       </div>
 
-      <div className="divide-y divide-border/35 rounded-lg border border-border/40 bg-background/80">
+      <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
         {items.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
             {t("settings.noSkillsFound")}

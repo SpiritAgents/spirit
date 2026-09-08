@@ -1,6 +1,6 @@
 ---
 title: Skills
-description: User, .spirit, and .agents skills, plus built-in create-rule, create-skill, and create-hook.
+description: User, .spirit, and .agents skills, plus built-in create-rule, create-skill, create-hook, and create-extension.
 ---
 
 A Skill is a folder with a `SKILL.md`. Spirit discovers skills from three places:
@@ -29,5 +29,6 @@ These ship with Spirit (they are not files in your data directory):
 - `create-rule` — draft a [rule](./rules.mdx)
 - `create-skill` — draft a [Skill](./skills.mdx)
 - `create-hook` — draft a [hook](./hooks.mdx)
+- `create-extension` — draft an [extension](../develop/extensions.mdx)
 
-Manage skills in **Settings → Skills**. Git commit / push / merge chips are host UI, not bundled Skills. See [Desktop](../desktop.mdx).
+Manage skills in **Settings → Skills**. Git commit / push / merge chips are host UI, not bundled Skills. See [Desktop](../desktop.mdx). Skills bundled in an [extension](../develop/extensions.mdx) are available when that extension is enabled. They do not appear in this settings list.
