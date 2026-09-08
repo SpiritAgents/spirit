@@ -650,7 +650,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages for npm publish
-        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal --filter=@spiritagent/acp-server
+        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal --filter=@spiritagent/extension-toolkit --filter=@spiritagent/create-extension --filter=@spiritagent/acp-server
 
       - name: Publish npm packages
         run: |
@@ -665,16 +665,19 @@ jobs:
           # claim matching fails (often with a misleading error).
           # Workflow filename must be release.yml. Provenance needs matching repository.url.
           mkdir -p npm-publish-logs
-          # Dependency order: agent-core → host-internal → acp-server
+          # Dependency order: agent-core → host-internal → extension-toolkit → create-extension; acp-server stays last
           publish_one() {
             local dir="$1"
-            local name tarball tarball_path
+            local name version tarball tarball_path
             name="$(node -p "require('./${dir}/package.json').name")"
-            if pnpm view "${name}@${RELEASE_VERSION}" version >/dev/null 2>&1; then
-              echo "Already on npm: ${name}@${RELEASE_VERSION}; skipping."
+            # The extension packages version independently of the product release, so the
+            # already-published check reads each package's own version rather than RELEASE_VERSION.
+            version="$(node -p "require('./${dir}/package.json').version")"
+            if pnpm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "Already on npm: ${name}@${version}; skipping."
               return 0
             fi
-            echo "Packing ${name}@${RELEASE_VERSION} from ${dir}"
+            echo "Packing ${name}@${version} from ${dir}"
             # Publish a local tarball so pack failures are visible before OIDC upload.
             tarball="$(pnpm --dir "./${dir}" pack --pack-destination "../../npm-publish-logs" | tail -1)"
             tarball_path="./npm-publish-logs/$(basename "$tarball")"
@@ -692,7 +695,10 @@ jobs:
           }
           publish_one packages/agent-core
           publish_one packages/host-internal
+          publish_one packages/extension-toolkit
+          publish_one packages/create-extension
           publish_one packages/acp-server
+
 
   # After publish finishes, ensure the archival tag (X.Y.Z or prerelease) points at the built SHA.
   finalize-tag:
