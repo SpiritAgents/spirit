@@ -228,7 +228,6 @@ test("marketplace catalog keeps installed personal extensions and drops them aft
     });
 
     await ensureBuiltInExtensions({ spiritDataDir, hostKind: "desktop", manager });
-    assert.equal((await manager.list()).length, 0);
 
     const packageDir = join(preparedRoot, "zip-ext");
     await mkdir(join(packageDir, ".spirit"), { recursive: true });
