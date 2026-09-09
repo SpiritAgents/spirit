@@ -115,14 +115,17 @@ test("ensureBuiltInExtensions seeds defaultInstalled entries and skips opt-in an
       ["built-in/extension-fixture"],
     );
 
-    // Seeding is idempotent and honors the removal tombstone.
+    // Same-version ensure still recopies from the bundled registry.
     const again = await ensureBuiltInExtensions({
       spiritDataDir,
       hostKind: "desktop",
       manager,
       registryRoot: registry.root,
     });
-    assert.equal(again.length, 0);
+    assert.deepEqual(
+      again.map((item) => item.id),
+      ["built-in/extension-fixture"],
+    );
 
     await manager.remove("built-in/extension-fixture");
     const state = await loadBuiltInState(spiritDataDir);
@@ -140,7 +143,7 @@ test("ensureBuiltInExtensions seeds defaultInstalled entries and skips opt-in an
   }
 });
 
-test("ensureBuiltInExtensions auto-updates installed built-ins when the registry is newer", async () => {
+test("ensureBuiltInExtensions recopies installed built-ins from the registry", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-built-in-update-"));
   const registry = await makeFixtureRegistry("1.0.0");
   try {
@@ -169,14 +172,19 @@ test("ensureBuiltInExtensions auto-updates installed built-ins when the registry
     const content = await readFile(join(fixture!.directoryPath, "VERSION.txt"), "utf8");
     assert.equal(content.trim(), "1.1.0");
 
-    // Same version is not reinstalled.
-    const steady = await ensureBuiltInExtensions({
+    await writeFile(join(registry.root, "extensions/extension-fixture/VERSION.txt"), "1.1.0-hot\n");
+    const sameVersion = await ensureBuiltInExtensions({
       spiritDataDir,
       hostKind: "desktop",
       manager,
       registryRoot: registry.root,
     });
-    assert.equal(steady.length, 0);
+    assert.deepEqual(
+      sameVersion.map((item) => item.id),
+      ["built-in/extension-fixture"],
+    );
+    const hotContent = await readFile(join(fixture!.directoryPath, "VERSION.txt"), "utf8");
+    assert.equal(hotContent.trim(), "1.1.0-hot");
   } finally {
     await rm(spiritDataDir, { recursive: true, force: true });
     await rm(registry.root, { recursive: true, force: true });

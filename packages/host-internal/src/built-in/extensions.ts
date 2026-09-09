@@ -3,7 +3,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  isMarketplaceVersionNewer,
   MARKETPLACE_INDEX_FILE_NAME,
   MARKETPLACE_SPIRIT_DIR_NAME,
   parseMarketplaceIndexText,
@@ -102,10 +101,9 @@ export interface InstallBuiltInExtensionRequest {
 
 /**
  * Install every `defaultInstalled` entry of the built-in registry, and
- * auto-update already-installed built-in extensions when the app upgrade
- * shipped a newer entry version (no confirmation gate: the built-in source
- * is part of the app and trusted with it). Removal tombstones are honored
- * for seeding.
+ * reinstall already-installed built-ins from the bundled registry on every
+ * ensure (no version gate: built-in edits often keep the same version).
+ * Removal tombstones are honored for seeding.
  */
 export async function ensureBuiltInExtensions(
   request: EnsureBuiltInExtensionsRequest,
@@ -128,14 +126,15 @@ export async function ensureBuiltInExtensions(
     const id = composeExtensionId(source.id, entry.name);
     const installedItem = installedById.get(id);
     if (installedItem) {
-      if (isMarketplaceVersionNewer(entry.version, installedItem.manifest.version)) {
-        seeded.push(
-          await installMarketplaceExtensionEntry(
-            { spiritDataDir, hostKind },
-            { source, registryRoot, entry, replaceExisting: true },
-          ),
-        );
-      }
+      // Recopy even when the marketplace version is unchanged. Built-in
+      // edits (MCP server stubs, hints, assets) usually keep the same
+      // version, so a version gate would leave the installed tree stale.
+      seeded.push(
+        await installMarketplaceExtensionEntry(
+          { spiritDataDir, hostKind },
+          { source, registryRoot, entry, replaceExisting: true },
+        ),
+      );
       continue;
     }
     if (entry.defaultInstalled === false || removed.has(id.toLowerCase())) {
