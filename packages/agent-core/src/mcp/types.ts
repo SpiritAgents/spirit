@@ -91,12 +91,18 @@ export interface McpClientInfo {
   version: string;
 }
 
+export interface McpToolApprovalAnnotations {
+  readOnlyHint?: boolean;
+  openWorldHint?: boolean;
+}
+
 export interface McpToolIndexEntry {
   server: string;
   displayName: string;
   toolName: string;
   description: string;
   inputSchema: import("../ports.js").JsonValue;
+  annotations?: McpToolApprovalAnnotations;
 }
 
 export interface ToolAgentMcpToolCatalogToolEntry {

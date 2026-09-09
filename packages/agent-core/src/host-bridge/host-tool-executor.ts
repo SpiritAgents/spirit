@@ -49,6 +49,7 @@ import { McpService, type McpToolRequest } from "../mcp/service.js";
 import { TOOL_CALL_TOOL_NAME } from "../tool-gateway/definitions.js";
 import {
   authorizeLazyToolGatewayRequest,
+  resolveMcpToolCallApprovalAnnotations,
   type LazyToolGatewayApprovalLevel,
 } from "../tool-gateway/authorize.js";
 import { JsonRpcPeer } from "./framing.js";
@@ -280,7 +281,13 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       return { kind: "allowed" };
     }
     if (this.mcp.isLazyToolGatewayToolRequest(request)) {
-      return authorizeLazyToolGatewayRequest(request, this.approvalLevel);
+      return authorizeLazyToolGatewayRequest(
+        request,
+        this.approvalLevel,
+        resolveMcpToolCallApprovalAnnotations(request, (server, tool) =>
+          this.mcp.lookupToolApprovalAnnotations(server, tool),
+        ),
+      );
     }
     if (this.mcp.isToolRequest(request)) {
       await this.mcp.authorizeToolRequest(request);

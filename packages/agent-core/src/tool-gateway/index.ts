@@ -31,7 +31,12 @@ export {
 } from "./built-in-backend.js";
 export { createCompositeLazyToolGatewayBackend } from "./composite-backend.js";
 export { parseLazyToolGatewayArguments } from "./parse.js";
-export { authorizeLazyToolGatewayRequest, type LazyToolGatewayApprovalLevel } from "./authorize.js";
+export {
+  authorizeLazyToolGatewayRequest,
+  mcpToolCallSkipsApproval,
+  resolveMcpToolCallApprovalAnnotations,
+  type LazyToolGatewayApprovalLevel,
+} from "./authorize.js";
 export {
   LAZY_BUILT_IN_SERVER_DESKTOP,
   LAZY_TOOL_PROVIDER_BUILT_IN,

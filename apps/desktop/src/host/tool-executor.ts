@@ -31,6 +31,7 @@ import {
   TOOL_CALL_TOOL_NAME,
   isLazyToolGatewayToolName,
   authorizeLazyToolGatewayRequest,
+  resolveMcpToolCallApprovalAnnotations,
   buildLazyToolGatewayDefinitions,
   createBuiltInLazyToolGatewayBackendWithCall,
   createCompositeLazyToolGatewayBackend,
@@ -588,7 +589,13 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       }
     }
 
-    return authorizeLazyToolGatewayRequest(request, this.approvalLevel);
+    return authorizeLazyToolGatewayRequest(
+      request,
+      this.approvalLevel,
+      resolveMcpToolCallApprovalAnnotations(request, (server, tool) =>
+        this.mcp.lookupToolApprovalAnnotations(server, tool),
+      ),
+    );
   }
 
   private assertAllowedDreamToolRequest(request: DesktopToolRequest): void {

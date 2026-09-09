@@ -34,6 +34,7 @@ import {
   buildMcpToolCatalogSnapshot,
   findResourceIndexEntry,
 } from "./catalog-snapshot.js";
+import { parseMcpToolApprovalAnnotations } from "./approval-annotations.js";
 import { McpConfigError } from "./errors.js";
 import { McpRegistry } from "./registry.js";
 import type {
@@ -42,6 +43,7 @@ import type {
   McpServerConfig,
   McpServerRuntimeState,
   McpResourceIndexEntry,
+  McpToolApprovalAnnotations,
   McpToolIndexEntry,
   ResolvedMcpServerConfig,
   ResolvedMcpTransportConfig,
@@ -174,6 +176,13 @@ export class McpService {
       description: entry.description,
       inputSchema: entry.inputSchema,
     };
+  }
+
+  lookupToolApprovalAnnotations(
+    serverName: string,
+    toolName: string,
+  ): McpToolApprovalAnnotations | undefined {
+    return findToolIndexEntry(this.toolIndexStore, serverName, toolName)?.annotations;
   }
 
   isLazyToolGatewayToolRequest(
@@ -888,6 +897,7 @@ export class McpService {
               type: "object",
               additionalProperties: true,
             };
+        const annotations = parseMcpToolApprovalAnnotations(tool.annotations);
 
         indexEntries.push({
           server: server.name,
@@ -895,6 +905,7 @@ export class McpService {
           toolName: tool.name,
           description,
           inputSchema,
+          ...(annotations ? { annotations } : {}),
         });
       }
 

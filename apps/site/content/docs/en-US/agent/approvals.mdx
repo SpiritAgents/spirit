@@ -76,7 +76,7 @@ The approval prompt offers three choices:
 - **Always Allow** — append an exact-match `allow` rule (the verbatim command or canonical path) to `permission.shell` / `permission.read_file` in config.json. No wildcard inference.
 - **Deny** — refuse, with optional free-text guidance the model reads.
 
-MCP and built-in lazy-gateway tool approvals are one-shot; no remember is offered. Over [ACP](../acp.mdx), "allow always" is session-scoped and persisting to config.json is not exposed; session memory never overrides a `deny` rule.
+MCP and built-in lazy-gateway tool approvals are one-shot; no remember is offered. Under default and auto-approval, an MCP `tool_call` skips the prompt only when the tool declares `readOnlyHint: true` and `openWorldHint: false`. Missing hints follow the spec defaults (not read-only, open-world) and still ask, as do open-world read-only tools and built-in lazy-gateway calls. Over [ACP](../acp.mdx), "allow always" is session-scoped and persisting to config.json is not exposed; session memory never overrides a `deny` rule.
 
 ## Hooks tighten, never loosen
 

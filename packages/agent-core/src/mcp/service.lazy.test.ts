@@ -68,6 +68,37 @@ test("McpService toolDefinitionsJson returns gateway tools only when index is no
   );
 });
 
+test("McpService lookupToolApprovalAnnotations reads cached index hints", async () => {
+  const { McpService } = await import("./service.js");
+  const service = new McpService(process.cwd());
+  assert.equal(service.lookupToolApprovalAnnotations("demo", "ping"), undefined);
+
+  (service as unknown as { toolIndexStore: McpToolIndexEntry[] }).toolIndexStore = [
+    {
+      server: "demo",
+      displayName: "Demo",
+      toolName: "ping",
+      description: "Ping",
+      inputSchema: { type: "object" },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    {
+      server: "demo",
+      displayName: "Demo",
+      toolName: "search",
+      description: "Search",
+      inputSchema: { type: "object" },
+    },
+  ];
+
+  assert.deepEqual(service.lookupToolApprovalAnnotations("demo", "ping"), {
+    readOnlyHint: true,
+    openWorldHint: false,
+  });
+  assert.equal(service.lookupToolApprovalAnnotations("demo", "search"), undefined);
+  assert.equal(service.lookupToolApprovalAnnotations("demo", "missing"), undefined);
+});
+
 test("McpService toolDefinitionsJson returns fetch_mcp_resource when resource index is non-empty", async () => {
   const { McpService } = await import("./service.js");
   const { FETCH_MCP_RESOURCE_TOOL_NAME } = await import("../tool-gateway/fetch-mcp-resource.js");
