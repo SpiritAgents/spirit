@@ -82,7 +82,19 @@ export function isOpenAiGpt56OrLaterModel(modelId: string): boolean {
   return version.major === 5 && version.minor >= 6;
 }
 
-export function openAiGpt56SupportedReasoningEfforts(): readonly OpenAiGpt56ReasoningEffort[] {
+/** GPT-6 Astra rejects `reasoning.effort` value `none`. */
+export function isOpenAiGpt6AstraModel(modelId: string): boolean {
+  const resolved = resolveOpenAiModelIdForVersionCheck(modelId).trim().toLowerCase();
+  return /^gpt-6-astra(?:$|[-_])/.test(resolved);
+}
+
+export function openAiGpt56SupportedReasoningEfforts(
+  modelId?: string,
+): readonly OpenAiGpt56ReasoningEffort[] {
+  if (modelId && isOpenAiGpt6AstraModel(modelId)) {
+    return OPENAI_GPT56_REASONING_EFFORTS.filter((effort) => effort !== "none");
+  }
+
   return OPENAI_GPT56_REASONING_EFFORTS;
 }
 

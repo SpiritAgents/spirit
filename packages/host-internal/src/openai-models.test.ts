@@ -210,6 +210,37 @@ test("parseOpenAiCompatibleModelEntriesPayload infers max effort for direct gpt-
   ]);
 });
 
+test("parseOpenAiCompatibleModelEntriesPayload omits none effort for gpt-6-astra", () => {
+  const entries = parseOpenAiCompatibleModelEntriesPayload({
+    data: [{ id: "gpt-6-astra" }],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "gpt-6-astra",
+      supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    },
+  ]);
+});
+
+test("parseVercelAiGatewayModelEntriesPayload omits none effort for openai/gpt-6-astra", () => {
+  const entries = parseVercelAiGatewayModelEntriesPayload({
+    data: [
+      {
+        id: "openai/gpt-6-astra",
+        type: "language",
+      },
+    ],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "openai/gpt-6-astra",
+      supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    },
+  ]);
+});
+
 test("parseOpenAiCompatibleModelEntriesPayload leaves gpt-5.5 without gpt56 effort list", () => {
   const entries = parseOpenAiCompatibleModelEntriesPayload({
     data: [{ id: "gpt-5.5" }],

@@ -2147,6 +2147,19 @@ function attachGatewayMoonshotReasoningEfforts(
 
 const OPENAI_GPT56_REASONING_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
 
+function isListedOpenAiGpt6AstraModel(modelId: string): boolean {
+  const resolved = normalizeListedOpenAiModelIdForVersionCheck(modelId).toLowerCase();
+  return /^gpt-6-astra(?:$|[-_])/.test(resolved);
+}
+
+function listedOpenAiGpt56ReasoningEfforts(modelId: string): readonly string[] {
+  if (isListedOpenAiGpt6AstraModel(modelId)) {
+    return OPENAI_GPT56_REASONING_EFFORTS.filter((effort) => effort !== "none");
+  }
+
+  return OPENAI_GPT56_REASONING_EFFORTS;
+}
+
 function normalizeListedOpenAiModelIdForVersionCheck(modelId: string): string {
   const trimmed = modelId.trim();
   const lower = trimmed.toLowerCase();
@@ -2211,7 +2224,7 @@ function attachGatewayOpenAiGpt56ReasoningEfforts(
 
   return {
     ...modelEntry,
-    supportedReasoningEfforts: [...OPENAI_GPT56_REASONING_EFFORTS],
+    supportedReasoningEfforts: [...listedOpenAiGpt56ReasoningEfforts(modelEntry.id)],
   };
 }
 

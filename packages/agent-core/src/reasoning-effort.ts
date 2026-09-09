@@ -21,10 +21,14 @@ import {
   resolveRoutedAnthropicClaudeCapabilities,
 } from "./openai/routed-anthropic-claude-capabilities.js";
 import type { OpenAiTransportConfig } from "./openai/openai-compat.js";
-import { modelSupportsOpenAiGpt56ReasoningControls } from "./openai/gpt-reasoning-controls.js";
+import {
+  isOpenAiGpt6AstraModel,
+  modelSupportsOpenAiGpt56ReasoningControls,
+} from "./openai/gpt-reasoning-controls.js";
 
 export {
   isOpenAiGpt56OrLaterModel,
+  isOpenAiGpt6AstraModel,
   modelSupportsOpenAiGpt56ReasoningControls,
   modelSupportsReasoningModeControl,
   normalizeModelReasoningMode,
@@ -752,6 +756,9 @@ function resolveCompatibleModelReasoningEffort(
   }
 
   if (modelSupportsOpenAiGpt56ReasoningControls(context)) {
+    if (isOpenAiGpt6AstraModel(context?.model ?? "") && normalized === "none") {
+      return "default";
+    }
     const supportedEfforts = normalizeSupportedReasoningEfforts(context?.supportedEfforts);
     if (supportedEfforts && supportedEfforts.size > 0) {
       return (
@@ -960,13 +967,18 @@ function gpt56ReasoningEffortOptionsForContext(
   context?: ModelReasoningEffortContext,
 ): ReadonlyArray<ModelReasoningEffortOption<ModelReasoningEffort>> {
   const supportedEfforts = normalizeSupportedReasoningEfforts(context?.supportedEfforts);
-  if (supportedEfforts && supportedEfforts.size > 0) {
-    return GPT56_REASONING_EFFORT_OPTIONS.filter(
-      (option) => option.value === "default" || supportedEfforts.has(option.value),
-    );
+  const options =
+    supportedEfforts && supportedEfforts.size > 0
+      ? GPT56_REASONING_EFFORT_OPTIONS.filter(
+          (option) => option.value === "default" || supportedEfforts.has(option.value),
+        )
+      : GPT56_REASONING_EFFORT_OPTIONS;
+
+  if (isOpenAiGpt6AstraModel(context?.model ?? "")) {
+    return options.filter((option) => option.value !== "none");
   }
 
-  return GPT56_REASONING_EFFORT_OPTIONS;
+  return options;
 }
 
 function normalizeSupportedReasoningEfforts(

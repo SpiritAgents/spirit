@@ -3,7 +3,9 @@ import { test } from "vitest";
 
 import {
   isOpenAiGpt56OrLaterModel,
+  isOpenAiGpt6AstraModel,
   modelSupportsOpenAiGpt56ReasoningControls,
+  openAiGpt56SupportedReasoningEfforts,
   resolveModelReasoningMode,
 } from "./gpt-reasoning-controls.js";
 import {
@@ -65,6 +67,44 @@ test("resolveModelReasoningMode defaults to standard and only applies on gpt-5.6
     }),
     "standard",
   );
+});
+
+test("gpt-6-astra excludes none effort across routed openai model ids", () => {
+  assert.equal(isOpenAiGpt6AstraModel("gpt-6-astra"), true);
+  assert.equal(isOpenAiGpt6AstraModel("openai/gpt-6-astra"), true);
+  assert.equal(isOpenAiGpt6AstraModel("gpt-6"), false);
+  assert.equal(isOpenAiGpt6AstraModel("openai/gpt-5.6-sol"), false);
+  assert.deepEqual(openAiGpt56SupportedReasoningEfforts("openai/gpt-6-astra"), [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
+  assert.ok(openAiGpt56SupportedReasoningEfforts("gpt-5.6-sol").includes("none"));
+
+  const context = {
+    provider: "vercel-ai-gateway" as const,
+    model: "openai/gpt-6-astra",
+    transportKind: "open-responses" as const,
+  };
+
+  assert.ok(!modelReasoningEffortOptions(context).some((option) => option.value === "none"));
+  assert.ok(
+    !modelReasoningEffortOptions({
+      provider: "openai",
+      model: "gpt-6-astra",
+      transportKind: "open-responses",
+    }).some((option) => option.value === "none"),
+  );
+  assert.ok(
+    !modelReasoningEffortOptions({
+      ...context,
+      supportedEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    }).some((option) => option.value === "none"),
+  );
+  assert.equal(resolveModelReasoningEffortForContext("none", context), "default");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("none", context), undefined);
 });
 
 test("modelSupportsReasoningModeControl matches gpt-5.6 routed openai models", () => {
