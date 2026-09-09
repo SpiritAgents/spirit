@@ -258,7 +258,9 @@ export class SessionManager {
     private readonly callbacks: SessionManagerCallbacks,
   ) {
     this.spiritDataDir = spiritDataDir;
-    this.mcpRegistry = new McpRegistry(createExtensionMcpExtraConfigs(spiritDataDir, "cli"));
+    this.mcpRegistry = new McpRegistry(
+      createExtensionMcpExtraConfigs(spiritDataDir, ["cli", "desktop"]),
+    );
   }
 
   async createSession(params: CreateSessionParams): Promise<ServerSessionInfo> {

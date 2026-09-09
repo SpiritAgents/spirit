@@ -13,11 +13,19 @@ import {
  */
 export function createExtensionMcpExtraConfigs(
   spiritDataDir: string,
-  hostKind: "cli" | "desktop",
+  hostKind: "cli" | "desktop" | readonly ("cli" | "desktop")[],
 ): McpExtraConfigProvider {
+  const hostKinds = typeof hostKind === "string" ? [hostKind] : [...hostKind];
   return async () => {
-    const manager = createHostExtensionManager({ spiritDataDir, hostKind });
-    return (await collectEnabledExtensionInstructionContributions(await manager.list())).mcp;
+    const servers: Awaited<
+      ReturnType<typeof collectEnabledExtensionInstructionContributions>
+    >["mcp"]["servers"] = {};
+    for (const kind of hostKinds) {
+      const manager = createHostExtensionManager({ spiritDataDir, hostKind: kind });
+      const mcp = (await collectEnabledExtensionInstructionContributions(await manager.list())).mcp;
+      Object.assign(servers, mcp.servers);
+    }
+    return { servers };
   };
 }
 
