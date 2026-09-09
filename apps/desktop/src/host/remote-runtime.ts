@@ -136,6 +136,12 @@ async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClie
   return sharedClientPromise;
 }
 
+/** Ask the daemon to re-read extension MCP into every live session. */
+export async function notifyDesktopServerRefreshExtensions(dataDir: string): Promise<void> {
+  const client = await sharedDesktopServerClient(dataDir);
+  await client.call("host.refreshExtensions", {});
+}
+
 /** Close the process-wide daemon WebSocket so the server can idle-exit. */
 export async function closeSharedDesktopServerClient(): Promise<void> {
   const pending = sharedClientPromise;

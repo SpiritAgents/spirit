@@ -449,6 +449,7 @@ import {
   abortRemoteDesktopShell,
   closeRemoteDesktopRuntime,
   closeSharedDesktopServerClient,
+  notifyDesktopServerRefreshExtensions,
   createRemoteDesktopRuntime,
   disposeRemoteDesktopRuntime,
   ensureRemoteChildSessionArchivesFresh,
@@ -4181,6 +4182,7 @@ class DesktopHostService {
     const mcp = this.sharedMcpServiceForWorkspace(state.workspaceRoot, state.workspaceBinding);
     await mcp.refreshConfig();
     mcp.startBackgroundRefreshInBackground(true);
+    await notifyDesktopServerRefreshExtensions(spiritDataDir());
   }
 
   private invalidateExtensionWarmup(): void {

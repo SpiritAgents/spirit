@@ -154,6 +154,7 @@ test("host.checkPermission passes through config lint warnings", async () => {
 test("HOST_METHODS whitelists local marketplace catalog RPCs", () => {
   assert.ok(HOST_METHODS.has("host.listMarketplaceCatalog"));
   assert.ok(HOST_METHODS.has("host.installBuiltInExtension"));
+  assert.ok(HOST_METHODS.has("host.refreshExtensions"));
 });
 
 test("HOST_METHODS whitelists the multi-source marketplace RPCs", () => {

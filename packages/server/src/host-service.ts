@@ -300,6 +300,10 @@ export class HostService {
         });
         return Promise.all(items.map((item) => serializeListedMarketplaceCatalogItem(item)));
       }
+      case "host.refreshExtensions": {
+        await this.sessions.refreshExtensions();
+        return {};
+      }
       case "host.installBuiltInExtension": {
         const id = typeof params["id"] === "string" ? params["id"].trim() : "";
         if (!id) {
@@ -547,6 +551,7 @@ export const HOST_METHODS = new Set([
   "host.deleteHookEntry",
   "host.checkPermission",
   "host.listExtensions",
+  "host.refreshExtensions",
   "host.importExtension",
   "host.deleteExtension",
   "host.setExtensionEnabled",
