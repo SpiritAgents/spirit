@@ -193,6 +193,52 @@ Ignored.
   }
 });
 
+test("collector rewrites relative stdio entry scripts to absolute paths", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-collect-stdio-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-collect-stdio-prepared-"));
+  try {
+    const declaredDir = join(preparedRoot, "declared");
+    await writeExtensionPackage(declaredDir, {
+      name: "collect-stdio",
+      requestedCapabilities: ["mcp"],
+      contributes: { mcp: true },
+      files: {
+        "mcp.json": `${JSON.stringify({
+          servers: {
+            bundled: {
+              displayName: "Bundled",
+              type: "stdio",
+              command: "node",
+              args: ["server.mjs"],
+            },
+          },
+        })}\n`,
+        "server.mjs": "export {}\n",
+      },
+    });
+    await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: declaredDir },
+    );
+
+    const manager = createHostExtensionManager({ spiritDataDir, hostKind: "desktop" });
+    const listed = await manager.list();
+    const collected = await collectEnabledExtensionInstructionContributions(listed);
+    const bundled = collected.mcp.servers.bundled;
+    assert.equal(bundled?.transport.type, "stdio");
+    if (bundled?.transport.type === "stdio") {
+      const installed = listed.find((item) => item.id === "personal/collect-stdio");
+      assert.ok(installed);
+      assert.equal(bundled.transport.command, "node");
+      assert.equal(bundled.transport.cwd, resolve(installed.directoryPath));
+      assert.deepEqual(bundled.transport.args, [resolve(installed.directoryPath, "server.mjs")]);
+    }
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});
+
 test("collector keeps the first extension on mcp and skill name collisions", async () => {
   const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-collect-shadow-data-"));
   const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-collect-shadow-prepared-"));
