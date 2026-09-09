@@ -57,8 +57,14 @@ export interface HostExtensionContributedHook extends ResolvedHookDefinition {
   extensionId: string;
 }
 
+export interface HostExtensionMcpServerOwnership {
+  extensionId: string;
+  viewIds: string[];
+}
+
 export interface HostExtensionInstructionContributions {
   mcp: McpConfigFile;
+  mcpOwnership: Record<string, HostExtensionMcpServerOwnership>;
   hooks: HostExtensionContributedHook[];
   skills: HostExtensionContributedSkill[];
   rules: HostExtensionContributedRule[];
@@ -69,6 +75,7 @@ export async function collectEnabledExtensionInstructionContributions(
   log?: (message: string) => void,
 ): Promise<HostExtensionInstructionContributions> {
   const mcp: McpConfigFile = { servers: {} };
+  const mcpOwnership: Record<string, HostExtensionMcpServerOwnership> = {};
   const hooks: HostExtensionContributedHook[] = [];
   const skills: HostExtensionContributedSkill[] = [];
   const rules: HostExtensionContributedRule[] = [];
@@ -80,7 +87,7 @@ export async function collectEnabledExtensionInstructionContributions(
 
   for (const extension of ordered) {
     if (isDeclaredInstructionContribution(extension, "mcp")) {
-      await collectExtensionMcpContribution(extension, mcp, log);
+      await collectExtensionMcpContribution(extension, mcp, mcpOwnership, log);
     }
     if (isDeclaredInstructionContribution(extension, "hooks")) {
       await collectExtensionHooksContribution(extension, hooks, log);
@@ -93,7 +100,7 @@ export async function collectEnabledExtensionInstructionContributions(
     }
   }
 
-  return { mcp, hooks, skills, rules };
+  return { mcp, mcpOwnership, hooks, skills, rules };
 }
 
 export interface HostExtensionMcpContributionSummary {
@@ -127,7 +134,7 @@ export async function summarizeDeclaredExtensionContributionPoints(
 
   if (isDeclaredInstructionContribution(extension, "mcp")) {
     const mcp: McpConfigFile = { servers: {} };
-    await collectExtensionMcpContribution(extension, mcp, log);
+    await collectExtensionMcpContribution(extension, mcp, {}, log);
     summary.mcp = Object.entries(mcp.servers).map(([name, server]) => ({
       name,
       ...(server.displayName?.trim() ? { displayName: server.displayName.trim() } : {}),
@@ -190,6 +197,7 @@ export function extensionExposesModelContext(extension: HostInstalledExtension):
 async function collectExtensionMcpContribution(
   extension: HostInstalledExtension,
   merged: McpConfigFile,
+  ownership: Record<string, HostExtensionMcpServerOwnership>,
   log?: (message: string) => void,
 ): Promise<void> {
   const configPath = path.join(extension.directoryPath, EXTENSION_MCP_CONFIG_FILE_NAME);
@@ -211,6 +219,10 @@ async function collectExtensionMcpContribution(
     }
     try {
       merged.servers[name] = rewriteExtensionMcpServer(server, extension.directoryPath);
+      ownership[name] = {
+        extensionId: extension.id,
+        viewIds: (extension.manifest.contributes?.desktop?.views ?? []).map((view) => view.id),
+      };
     } catch (error) {
       log?.(
         `[extensions] skipped mcp server name=${name} extension=${extension.id} error=${describeError(error)}`,

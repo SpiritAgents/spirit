@@ -240,6 +240,8 @@ Si están declarados pero el archivo falta o es inválido, la instalación falla
 
 Estas contribuciones se superponen en la sesión cuando la extensión está habilitada. No aparecen en **Ajustes → MCPs | Hooks | Skills | Rules**. En un conflicto de nombres: espacio de trabajo > usuario > extensión.
 
+Durante `tools/call`, un MCP empaquetado puede enviar `spirit/ui/open` (`{ viewId, params }`) si el cliente declaró `experimental["spirit/ui"]`. Spirit solo abre una vista de la misma extensión en `contributes.desktop.views`. Los MCP de usuario/espacio de trabajo se rechazan. El diálogo bloquea esa llamada; `close(result)` vuelve en la misma petición. Un host sin ventana responde `{ "kind": "unavailable", "reason": "host-has-no-ui" }` y la herramienta debe degradarse.
+
 ### `settingsSchema`
 
 | Campo          | Descripción                                                          |
@@ -279,7 +281,7 @@ Desktop almacena secretos en el llavero del sistema. En la ruta del daemon de CL
 | Campo             | Descripción                                                                                             |
 | ----------------- | ------------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                              |
-| `host`            | API del host. Desktop implementa `showMessageBox`. CLI es `{}`                                          |
+| `host`            | API del host. Desktop implementa `showMessageBox` y `ui.open` / `ui.close`. CLI es `{}`                  |
 | `log`             | `(message: string) => void`                                                                             |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                             |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — las claves deben declararse en `secretSlots` |

@@ -26,6 +26,8 @@ Declare only what the extension uses; every declared file must exist and parse.
 | `desktop-ui`                          | Desktop CSS, a settings page, and precompiled single-file views          |
 | `cli-ui`                              | CLI TUI slot styling from a declarative hooks file                       |
 
+A bundled MCP server may send `spirit/ui/open` during `tools/call` for a view that same extension owns. CLI / headless hosts return `{ kind: "unavailable", reason: "host-has-no-ui" }`.
+
 Declaration-only capabilities (`approval-flow`, `questions-flow`, `settings`, `secret-storage`, `structured-results`) tune runtime behavior; see the reference.
 
 For bundled resource formats, the sibling skills create-skill, create-hook, and create-rule carry the authoring conventions — write the files into the extension's own layout (`skills/<name>/SKILL.md`, extension-root `hooks.json` and `rule.md`), not the managed workspace or user roots.

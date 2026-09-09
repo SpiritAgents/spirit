@@ -240,6 +240,8 @@ Relative `command`- und `cwd`-Werte beziehen sich auf den Erweiterungsstamm. Feh
 
 Diese Beiträge werden zur Laufzeit in die Sitzung gelegt, wenn die Erweiterung aktiviert ist. Sie erscheinen nicht unter **Einstellungen → MCPs | Hooks | Skills | Rules**. Bei Namenskonflikten gilt Workspace vor Benutzer vor Erweiterung.
 
+Während `tools/call` kann ein gebündelter MCP-Server `spirit/ui/open` (`{ viewId, params }`) senden, wenn der Client `experimental["spirit/ui"]` anbietet. Spirit öffnet nur Views derselben Erweiterung aus `contributes.desktop.views`. Benutzer- und Workspace-MCP werden abgelehnt. Der Dialog blockiert diesen `tools/call`; `close(result)` kehrt auf derselben Anfrage zurück. Hosts ohne Fenster antworten `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — das Tool sollte degradieren.
+
 ### `settingsSchema`
 
 | Feld           | Beschreibung                                                          |
@@ -279,7 +281,7 @@ Desktop speichert Geheimnisse im OS-Keyring. Beim CLI-Daemon-Pfad sind `secrets.
 | Feld              | Beschreibung                                                                                                 |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                   |
-| `host`            | Host-API. Desktop implementiert `showMessageBox`. CLI ist `{}`                                               |
+| `host`            | Host-API. Desktop implementiert `showMessageBox` und `ui.open` / `ui.close`. CLI ist `{}`                     |
 | `log`             | `(message: string) => void`                                                                                  |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                  |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — Schlüssel müssen in `secretSlots` deklariert sein |

@@ -51,6 +51,7 @@ import {
   SESSION_RENAME,
   SESSION_REPLY_PENDING_APPROVAL,
   SESSION_REPLY_PENDING_QUESTIONS,
+  SESSION_RESOLVE_EXTENSION_UI,
   SESSION_REPLY_TRUST,
   SESSION_RESET,
   SESSION_REPLACE_CONFIG,
@@ -74,6 +75,7 @@ import {
   SESSION_USER_TURN_SUBMITTED,
   SESSION_FILE_CHANGED,
   SESSION_TITLE_UPDATED,
+  SESSION_EXTENSION_UI_REQUESTED,
   SERVER_SET_LLM_CLIENT_VERSION,
   SERVER_SET_LLM_HTTP_VERSION,
   WORKSPACE_TRUST_REQUESTED,
@@ -112,6 +114,7 @@ const SESSION_METHODS = new Set([
   SESSION_POLL,
   SESSION_REPLY_PENDING_APPROVAL,
   SESSION_REPLY_PENDING_QUESTIONS,
+  SESSION_RESOLVE_EXTENSION_UI,
   SESSION_REPLY_TRUST,
   SESSION_REPLACE_FROM_ARCHIVE,
   SESSION_EXPORT_ARCHIVE,
@@ -353,6 +356,9 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
     broadcastTrustRequest: (sessionId, requestId, request) => {
       broadcast(WORKSPACE_TRUST_REQUESTED, { sessionId, requestId, request });
     },
+    broadcastExtensionUiRequested: (sessionId, request) => {
+      broadcast(SESSION_EXTENSION_UI_REQUESTED, { sessionId, ...request });
+    },
     broadcastFileChange: (sessionId, change) => {
       broadcast(SESSION_FILE_CHANGED, { sessionId, change });
     },
@@ -566,6 +572,16 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         const sessionId = readSessionId(params);
         requireAttachedToSession(clientState, sessionId);
         await sessionManager.replyPendingQuestions(sessionId, params["result"] as never);
+        return { ok: true };
+      }
+      case SESSION_RESOLVE_EXTENSION_UI: {
+        const sessionId = readSessionId(params);
+        requireAttachedToSession(clientState, sessionId);
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) {
+          throw new Error("missing requestId");
+        }
+        sessionManager.resolveExtensionUi(sessionId, requestId, params["result"]);
         return { ok: true };
       }
       case SESSION_SET_MODE: {

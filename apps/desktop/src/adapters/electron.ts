@@ -224,6 +224,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     replyWorkspaceCapabilityTrust(request) {
       return bridge.replyWorkspaceCapabilityTrust(request);
     },
+    resolveExtensionUi(request) {
+      return bridge.resolveExtensionUi(request);
+    },
     openPathInDefaultApp(absolutePath) {
       return bridge.openPathInDefaultApp(absolutePath);
     },

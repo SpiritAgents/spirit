@@ -240,6 +240,8 @@ my-extension/
 
 Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Hooks | Skills | Rules**. При конфликте имён: workspace > user > extension.
 
+Во время `tools/call` встроенный MCP может отправить `spirit/ui/open` (`{ viewId, params }`), если клиент объявил `experimental["spirit/ui"]`. Spirit открывает только view того же расширения из `contributes.desktop.views`. Пользовательский и workspace MCP отклоняются. Диалог блокирует этот вызов; `close(result)` возвращается в том же запросе. Хост без окна отвечает `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — инструмент должен деградировать.
+
 ### `settingsSchema`
 
 | Поле           | Описание                                                          |
@@ -279,7 +281,7 @@ Desktop хранит секреты в системной связке ключ�
 | Поле              | Описание                                                                                               |
 | ----------------- | ------------------------------------------------------------------------------------------------------ |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                             |
-| `host`            | API хоста. Desktop реализует `showMessageBox`. CLI — `{}`                                              |
+| `host`            | API хоста. Desktop реализует `showMessageBox` и `ui.open` / `ui.close`. CLI — `{}`                      |
 | `log`             | `(message: string) => void`                                                                            |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                            |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — ключи должны быть объявлены в `secretSlots` |

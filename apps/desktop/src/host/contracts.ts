@@ -91,6 +91,7 @@ export type HostCommandName =
   | "replyPendingApproval"
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"
+  | "resolveExtensionUi"
   | "resetSession"
   | "listSessions"
   | "openSession"

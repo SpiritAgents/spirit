@@ -228,6 +228,7 @@ export async function ensureInitializedCommand(
     extensionCss: state?.extensionCss ?? [],
     extensionInstructionContributions: state?.extensionInstructionContributions ?? {
       mcp: { servers: {} },
+      mcpOwnership: {},
       hooks: [],
       skills: [],
       rules: [],

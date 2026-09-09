@@ -240,6 +240,8 @@ my-extension/
 
 확장 프로그램이 켜져 있을 때만 세션에 overlay되며 **설정 → MCPs | Hooks | Skills | Rules** 목록에는 나타나지 않습니다. 이름 충돌은 workspace > user > extension입니다.
 
+`tools/call` 중에 클라이언트가 `experimental["spirit/ui"]`를 선언했다면 번들 MCP는 JSON-RPC `spirit/ui/open`(`{ viewId, params }`)을 보낼 수 있습니다. Spirit는 같은 확장의 `contributes.desktop.views`만 엽니다. 사용자/워크스페이스 MCP는 거부됩니다. Dialog는 해당 `tools/call`을 막고 `close(result)`는 같은 요청으로 돌아갑니다. 창이 없는 호스트는 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`를 반환하므로 도구가 직접 폴백해야 합니다.
+
 ### `settingsSchema`
 
 | 필드           | 설명                                                   |
@@ -279,7 +281,7 @@ Desktop은 OS 키링에 비밀을 저장합니다. CLI 데몬 경로에서는 `s
 | 필드              | 설명                                                                                               |
 | ----------------- | -------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                         |
-| `host`            | 호스트 API. Desktop은 `showMessageBox`를 구현합니다. CLI는 `{}`입니다.                             |
+| `host`            | 호스트 API. Desktop은 `showMessageBox`와 `ui.open` / `ui.close`를 구현합니다. CLI는 `{}`입니다.     |
 | `log`             | `(message: string) => void`                                                                        |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                        |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — 키는 `secretSlots`에서 선언해야 합니다. |

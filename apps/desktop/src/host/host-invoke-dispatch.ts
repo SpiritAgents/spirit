@@ -92,6 +92,7 @@ export interface HostCommandDelegate {
   replyWorkspaceCapabilityTrust(
     request: CommandPayloads["replyWorkspaceCapabilityTrust"]["request"],
   ): Promise<unknown>;
+  resolveExtensionUi(request: CommandPayloads["resolveExtensionUi"]["request"]): Promise<unknown>;
   resetSession(payload?: CommandPayloads["resetSession"]): Promise<unknown>;
   listSessions(): Promise<unknown>;
   openSession(
@@ -299,6 +300,7 @@ const hostCommandDispatch = {
   replyPendingQuestions: (host, payload) => host.replyPendingQuestions(payload.request),
   replyWorkspaceCapabilityTrust: (host, payload) =>
     host.replyWorkspaceCapabilityTrust(payload.request),
+  resolveExtensionUi: (host, payload) => host.resolveExtensionUi(payload.request),
   resetSession: (host, payload) =>
     host.resetSession(
       payload && typeof payload === "object"

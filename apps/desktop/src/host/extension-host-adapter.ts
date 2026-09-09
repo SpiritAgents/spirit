@@ -11,8 +11,14 @@ export interface DesktopExtensionMessageBoxRequest {
   type?: "none" | "info" | "error" | "question" | "warning";
 }
 
+export interface DesktopExtensionHostUi {
+  open(viewId: string, params?: unknown): Promise<unknown>;
+  close(): void;
+}
+
 export interface DesktopExtensionHostAdapter {
   showMessageBox(request: DesktopExtensionMessageBoxRequest): Promise<void>;
+  ui: DesktopExtensionHostUi;
 }
 
 let desktopExtensionHostAdapter: DesktopExtensionHostAdapter | undefined;

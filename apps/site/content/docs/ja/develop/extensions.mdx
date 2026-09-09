@@ -240,6 +240,8 @@ my-extension/
 
 拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | Hooks | Skills | Rules** には出ません。名前の衝突は workspace > user > extension です。
 
+`tools/call` 中、クライアントが `experimental["spirit/ui"]` を宣言していれば、同梱 MCP は JSON-RPC の `spirit/ui/open`（`{ viewId, params }`）を送れます。Spirit は同じ拡張の `contributes.desktop.views` だけを開きます。ユーザー / ワークスペース MCP は拒否されます。Dialog はその `tools/call` をブロックし、`close(result)` は同じリクエストに戻ります。ウィンドウのないホストは `{ "kind": "unavailable", "reason": "host-has-no-ui" }` を返し、ツール側でフォールバックします。
+
 ### `settingsSchema`
 
 | フィールド     | 説明                                                       |
@@ -279,7 +281,7 @@ my-extension/
 | フィールド        | 説明                                                                                                           |
 | ----------------- | -------------------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                     |
-| `host`            | ホストAPI。デスクトップは `showMessageBox` を実装します。CLIは `{}`                                            |
+| `host`            | ホストAPI。デスクトップは `showMessageBox` と `ui.open` / `ui.close` を実装します。CLIは `{}`                  |
 | `log`             | `(message: string) => void`                                                                                    |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                    |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — キーは `secretSlots` で宣言されている必要があります |

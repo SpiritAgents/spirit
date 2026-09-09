@@ -811,6 +811,8 @@ export default function App() {
               <ExtensionViewHost
                 extensionsList={snapshot?.extensionsList}
                 sessionKey={snapshot?.activeSession?.filePath}
+                hostRequest={snapshot?.pendingExtensionUi}
+                onHostResult={runtime.resolveExtensionUi}
               />
 
               <ActionPickerDialog

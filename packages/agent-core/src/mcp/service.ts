@@ -37,6 +37,11 @@ import {
 import { parseMcpToolApprovalAnnotations } from "./approval-annotations.js";
 import { McpConfigError } from "./errors.js";
 import { McpRegistry } from "./registry.js";
+import {
+  SPIRIT_UI_CALL_TOOL_TIMEOUT_MS,
+  type ExtensionMcpServerOwnership,
+  type McpUiOpener,
+} from "./spirit-ui.js";
 import type {
   McpCapabilityToggles,
   McpConfigFile,
@@ -107,7 +112,16 @@ export function invalidateSharedUserMcpToolingCache(): void {
   sharedUserMcpToolingCache = undefined;
 }
 
-export type McpExtraConfigProvider = () => McpConfigFile | Promise<McpConfigFile>;
+export interface McpExtraConfigFile extends McpConfigFile {
+  /** Extension MCP ownership; never written to user/workspace mcp.json. */
+  extensionServerOwnership?: Record<string, ExtensionMcpServerOwnership>;
+}
+
+export type McpExtraConfigProvider = () => McpExtraConfigFile | Promise<McpExtraConfigFile>;
+
+export interface McpCallToolOptions {
+  uiOpener?: McpUiOpener;
+}
 
 export interface McpServiceOptions {
   extraConfigs?: McpExtraConfigProvider;
@@ -129,6 +143,7 @@ export class McpService {
   private windowsEnvLookupPromise: Promise<EnvLookupStore> | undefined;
   private toolingRefreshPromise: Promise<void> | undefined;
   private toolingCacheInitialized = false;
+  private extensionServerOwnershipStore: Record<string, ExtensionMcpServerOwnership> = {};
 
   constructor(
     private readonly workspaceRootStore = process.cwd(),
@@ -193,8 +208,9 @@ export class McpService {
 
   async executeLazyToolGatewayToolRequest(
     request: import("../tool-gateway/types.js").LazyToolGatewayToolRequest,
+    options?: McpCallToolOptions,
   ): Promise<string> {
-    const backend = createMcpLazyToolGatewayBackend(this);
+    const backend = createMcpLazyToolGatewayBackend(this, options);
     return executeLazyToolGatewayCall(request.name, request.argumentsJson, backend);
   }
 
@@ -257,6 +273,11 @@ export class McpService {
         { includeWorkspace: this.includeWorkspaceConfig },
       );
       const raw = mergeMcpConfigFiles(extra, merged);
+      this.extensionServerOwnershipStore = retainUnoverlaidExtensionOwnership(
+        extra.extensionServerOwnership,
+        extra.servers,
+        merged.servers,
+      );
       const nextDigest = mcpConfigDigest(raw);
       const nextUserDigest = mcpConfigDigest(user);
       if (sharedUserMcpToolingCache && sharedUserMcpToolingCache.digest !== nextUserDigest) {
@@ -298,7 +319,7 @@ export class McpService {
     }
   }
 
-  private async loadExtraConfig(): Promise<McpConfigFile> {
+  private async loadExtraConfig(): Promise<McpExtraConfigFile> {
     const provider = this.serviceOptions.extraConfigs;
     if (!provider) {
       return { servers: {} };
@@ -417,37 +438,54 @@ export class McpService {
     }
   }
 
-  async callTool(serverName: string, toolName: string, argsJson?: string): Promise<JsonValue> {
+  async callTool(
+    serverName: string,
+    toolName: string,
+    argsJson?: string,
+    options?: McpCallToolOptions,
+  ): Promise<JsonValue> {
     const request = await this.createToolRequest(serverName, toolName, argsJson);
-    return this.callToolRequest(request);
+    return this.callToolRequest(request, options);
   }
 
-  async executeToolRequest(request: McpToolRequest): Promise<string> {
-    const result = await this.callToolRequest(request);
+  async executeToolRequest(request: McpToolRequest, options?: McpCallToolOptions): Promise<string> {
+    const result = await this.callToolRequest(request, options);
     return JSON.stringify(result, null, 2);
   }
 
-  async callToolRequest(request: McpToolRequest): Promise<JsonValue> {
+  lookupExtensionServerOwnership(serverName: string): ExtensionMcpServerOwnership | undefined {
+    return this.extensionServerOwnershipStore[serverName];
+  }
+
+  async callToolRequest(request: McpToolRequest, options?: McpCallToolOptions): Promise<JsonValue> {
     const server = await this.requireConnectableServer(request.server);
 
-    return this.withConnection(server, async (connection) => {
-      const capabilities = connection.serverCapabilities;
-      assertToolCapability(server, capabilities);
-      const argumentsValue = request.arguments;
-      let args: Record<string, unknown> | undefined;
-      if (isJsonRecord(argumentsValue)) {
-        args = argumentsValue;
-      } else if (argumentsValue !== null) {
-        throw new McpConfigError("MCP tool arguments must be a JSON object");
-      }
+    return this.withConnection(
+      server,
+      async (connection) => {
+        const capabilities = connection.serverCapabilities;
+        assertToolCapability(server, capabilities);
+        const argumentsValue = request.arguments;
+        let args: Record<string, unknown> | undefined;
+        if (isJsonRecord(argumentsValue)) {
+          args = argumentsValue;
+        } else if (argumentsValue !== null) {
+          throw new McpConfigError("MCP tool arguments must be a JSON object");
+        }
 
-      const result = await connection.callTool(request.toolName, args);
-      this.registry.clearServerError(server.name);
-      this.registry.setServerState(server.name, "ready", {
-        cachedTools: this.registry.get(server.name)?.cachedTools ?? 0,
-      });
-      return result as JsonValue;
-    });
+        const result = await connection.callTool(
+          request.toolName,
+          args,
+          options?.uiOpener ? { timeoutMs: SPIRIT_UI_CALL_TOOL_TIMEOUT_MS } : undefined,
+        );
+        this.registry.clearServerError(server.name);
+        this.registry.setServerState(server.name, "ready", {
+          cachedTools: this.registry.get(server.name)?.cachedTools ?? 0,
+        });
+        return result as JsonValue;
+      },
+      options,
+    );
   }
 
   async listServers(): Promise<JsonValue[]> {
@@ -688,9 +726,15 @@ export class McpService {
   private async withConnection<T>(
     server: ResolvedMcpServerConfig,
     operation: (connection: SdkMcpConnection) => Promise<T>,
+    options?: McpCallToolOptions,
   ): Promise<T> {
     this.registry.setServerState(server.name, "loading");
-    const connection = new SdkMcpConnection();
+    const connection = new SdkMcpConnection(undefined, {
+      ...(this.extensionServerOwnershipStore[server.name]
+        ? { ownership: this.extensionServerOwnershipStore[server.name] }
+        : {}),
+      ...(options?.uiOpener ? { opener: options.uiOpener } : {}),
+    });
 
     try {
       await connection.connect(server);
@@ -1006,6 +1050,20 @@ export class McpService {
       this.loadErrorStore = describeError(error);
     }
   }
+}
+
+function retainUnoverlaidExtensionOwnership(
+  ownership: Record<string, ExtensionMcpServerOwnership> | undefined,
+  extraServers: Record<string, McpServerConfig>,
+  overlaidServers: Record<string, McpServerConfig>,
+): Record<string, ExtensionMcpServerOwnership> {
+  const retained: Record<string, ExtensionMcpServerOwnership> = {};
+  for (const [name, entry] of Object.entries(ownership ?? {})) {
+    if (name in extraServers && !(name in overlaidServers)) {
+      retained[name] = entry;
+    }
+  }
+  return retained;
 }
 
 function mcpConfigDigest(config: McpConfigFile): string {

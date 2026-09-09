@@ -66,6 +66,12 @@ interface RemoteDesktopRuntimeInput {
     requestId: string,
     request: WorkspaceCapabilityTrustRequest,
   ) => void;
+  onExtensionUiRequested?: (request: {
+    requestId: string;
+    extensionId: string;
+    viewId: string;
+    params?: unknown;
+  }) => void;
   onRemoteUserTurnSubmitted?: (input: {
     text: string;
     explicitWorkspaceFiles: PendingWorkspaceFile[];
@@ -179,6 +185,7 @@ function buildRemoteDesktopRuntime(
     | "archive"
     | "onActivity"
     | "onWorkspaceCapabilityTrustRequested"
+    | "onExtensionUiRequested"
     | "onRemoteUserTurnSubmitted"
     | "onFileChange"
     | "onSessionTitleUpdated"
@@ -190,6 +197,7 @@ function buildRemoteDesktopRuntime(
     input.archive,
     input.onActivity,
     input.onWorkspaceCapabilityTrustRequested,
+    input.onExtensionUiRequested,
     input.onRemoteUserTurnSubmitted,
     input.onFileChange,
     input.onSessionTitleUpdated,
@@ -364,6 +372,12 @@ export class RemoteDesktopRuntime {
       requestId: string,
       request: WorkspaceCapabilityTrustRequest,
     ) => void,
+    private readonly onExtensionUiRequested?: (request: {
+      requestId: string;
+      extensionId: string;
+      viewId: string;
+      params?: unknown;
+    }) => void,
     private readonly onRemoteUserTurnSubmitted?: (input: {
       text: string;
       explicitWorkspaceFiles: PendingWorkspaceFile[];
@@ -836,6 +850,21 @@ export class RemoteDesktopRuntime {
         params["request"] as WorkspaceCapabilityTrustRequest,
       );
       this.onActivity?.();
+      return;
+    }
+    if (
+      method === "session.extensionUiRequested" &&
+      typeof params["requestId"] === "string" &&
+      typeof params["extensionId"] === "string" &&
+      typeof params["viewId"] === "string"
+    ) {
+      this.onExtensionUiRequested?.({
+        requestId: params["requestId"],
+        extensionId: params["extensionId"],
+        viewId: params["viewId"],
+        ...(params["params"] === undefined ? {} : { params: params["params"] }),
+      });
+      this.onActivity?.();
     }
   }
 
@@ -1105,6 +1134,18 @@ export async function runRemoteDesktopSessionEnd(
     return false;
   }
   await runtime.clientCall("session.runSessionEnd", { reason });
+  return true;
+}
+
+export async function replyRemoteExtensionUi(
+  runtime: unknown,
+  requestId: string,
+  result: unknown,
+): Promise<boolean> {
+  if (!(runtime instanceof RemoteDesktopRuntime)) {
+    return false;
+  }
+  await runtime.clientCall("session.resolveExtensionUi", { requestId, result });
   return true;
 }
 

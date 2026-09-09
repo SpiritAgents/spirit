@@ -28,6 +28,7 @@ import {
   JsonValue,
   McpService,
   McpStatusSnapshot,
+  type McpUiOpener,
   TOOL_CALL_TOOL_NAME,
   isLazyToolGatewayToolName,
   authorizeLazyToolGatewayRequest,
@@ -126,6 +127,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
   private imageGenerationAvailable = false;
   private videoGenerationAvailable = false;
   private approvalLevel: ApprovalLevel = "default";
+  private readonly mcpUiOpener: McpUiOpener | undefined;
 
   constructor(
     private readonly workspaceRoot: string,
@@ -142,9 +144,11 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       hostContributedToolsEnabled?: boolean;
       getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
       onAutomationCreated?: (definition: HostAutomationDefinition) => void;
+      mcpUiOpener?: McpUiOpener;
     } = {},
   ) {
     this.mcp = options.mcp ?? new McpService(workspaceRoot);
+    this.mcpUiOpener = options.mcpUiOpener;
     this.lsp = options.lsp;
     this.extensionToolDefinitions = [...(options.extensionToolDefinitions ?? [])];
     this.hostContributedToolsEnabled = options.hostContributedToolsEnabled === true;
@@ -376,7 +380,10 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     }
     if (this.mcp.isToolRequest(request as JsonValue)) {
       return createToolExecutionTextOutput(
-        await this.mcp.executeToolRequest(request as unknown as McpToolRequest),
+        await this.mcp.executeToolRequest(
+          request as unknown as McpToolRequest,
+          this.mcpUiOpener ? { uiOpener: this.mcpUiOpener } : undefined,
+        ),
       );
     }
 
@@ -542,7 +549,10 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
 
   private lazyToolGatewayBackend() {
     return createCompositeLazyToolGatewayBackend({
-      mcp: createMcpLazyToolGatewayBackend(this.mcp),
+      mcp: createMcpLazyToolGatewayBackend(
+        this.mcp,
+        this.mcpUiOpener ? { uiOpener: this.mcpUiOpener } : undefined,
+      ),
       builtIn: createBuiltInLazyToolGatewayBackendWithCall(
         this.builtInLazyToolIndex(),
         async (callRequest) => {

@@ -817,6 +817,21 @@ export interface ReplyWorkspaceCapabilityTrustRequest {
   decision: WorkspaceCapabilityTrustDecision;
 }
 
+export interface DesktopPendingExtensionUi {
+  requestId: string;
+  extensionId: string;
+  viewId: string;
+  params?: unknown;
+  title?: string;
+  width?: number;
+  height?: number;
+}
+
+export interface ResolveExtensionUiRequest {
+  requestId: string;
+  result: unknown;
+}
+
 export interface BeginSplitPaneSessionRequest {
   paneId: string;
   /** When true, only create the in-memory bundle; caller batches snapshot via syncSplitPaneSessions. */
@@ -1131,6 +1146,7 @@ export interface DesktopSnapshot {
   automationsList: DesktopAutomationListItem[];
   /** Workspace hooks trust gate; blocks sessionStart workspace hooks until the user decides. */
   pendingWorkspaceCapabilityTrust?: WorkspaceCapabilityTrustRequest;
+  pendingExtensionUi?: DesktopPendingExtensionUi;
 }
 
 /** Tail-replacement delta for one conversation message list (foreground or a split-pane projection). */

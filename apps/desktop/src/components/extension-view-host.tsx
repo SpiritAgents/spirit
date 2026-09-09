@@ -3,14 +3,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   buildExtensionViewSrcdoc,
+  extensionViewFileUrl,
   SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
   SPIRIT_EXTENSION_VIEW_THEME_MESSAGE,
 } from "@/lib/extension-view-frame";
@@ -19,6 +15,7 @@ import {
   closeOpenExtensionViewsForExtension,
   dismissOpenExtensionView,
   getOpenExtensionView,
+  openExtensionView,
   resolveOpenExtensionView,
   subscribeOpenExtensionView,
 } from "@/lib/extension-view-runtime";
@@ -26,20 +23,62 @@ import {
   collectHostDocumentChrome,
   collectHostStylesheetCssText,
 } from "@/lib/extension-view-tokens";
-import type { DesktopExtensionListItem } from "@/types";
+import type { DesktopExtensionListItem, DesktopPendingExtensionUi } from "@/types";
 
 export function ExtensionViewHost({
   extensionsList,
   sessionKey,
+  hostRequest,
+  onHostResult,
 }: {
   extensionsList?: readonly DesktopExtensionListItem[];
   sessionKey?: string | null;
+  hostRequest?: DesktopPendingExtensionUi | null;
+  onHostResult?: (requestId: string, result: unknown) => void;
 }) {
   const [openRequest, setOpenRequest] = useState(getOpenExtensionView);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previousSessionKey = useRef(sessionKey ?? null);
+  const hostOpenedRequestId = useRef<string | null>(null);
 
   useEffect(() => subscribeOpenExtensionView(() => setOpenRequest(getOpenExtensionView())), []);
+
+  useEffect(() => {
+    if (!hostRequest) {
+      const openedId = hostOpenedRequestId.current;
+      hostOpenedRequestId.current = null;
+      if (openedId) {
+        dismissOpenExtensionView(openedId);
+      }
+      return;
+    }
+    const existing = getOpenExtensionView();
+    if (existing?.requestId === hostRequest.requestId) {
+      return;
+    }
+    const requestId = hostRequest.requestId;
+    hostOpenedRequestId.current = requestId;
+    const view = extensionsList
+      ?.find((item) => item.id === hostRequest.extensionId)
+      ?.desktopViews?.find((entry) => entry.id === hostRequest.viewId);
+    void openExtensionView({
+      requestId,
+      extensionId: hostRequest.extensionId,
+      viewId: hostRequest.viewId,
+      viewUrl: extensionViewFileUrl(hostRequest.extensionId, hostRequest.viewId),
+      title: hostRequest.title ?? view?.title,
+      ...(hostRequest.width === undefined && view?.width === undefined
+        ? {}
+        : { width: hostRequest.width ?? view?.width }),
+      ...(hostRequest.height === undefined && view?.height === undefined
+        ? {}
+        : { height: hostRequest.height ?? view?.height }),
+      params: hostRequest.params,
+    }).then(
+      (result) => onHostResult?.(requestId, result),
+      () => onHostResult?.(requestId, { dismissed: true }),
+    );
+  }, [hostRequest, extensionsList, onHostResult]);
 
   useEffect(() => {
     const open = getOpenExtensionView();
@@ -97,7 +136,10 @@ export function ExtensionViewHost({
     };
 
     const observer = new MutationObserver(syncTheme);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class", "style"],
+    });
 
     const onMessage = (event: MessageEvent) => {
       if (event.source !== iframeRef.current?.contentWindow) {

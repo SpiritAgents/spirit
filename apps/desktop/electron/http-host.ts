@@ -848,6 +848,23 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/extension-ui") {
+    const requestId = typeof jsonBody?.requestId === "string" ? jsonBody.requestId : "";
+    if (!requestId) {
+      writeJson(request, response, 400, { error: "missing requestId" });
+      return;
+    }
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("resolveExtensionUi", {
+        request: { requestId, result: jsonBody?.result },
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/workspace-capability-trust") {
     const decision = jsonBody?.decision;
     if (decision !== "allowOnce" && decision !== "deny" && decision !== "alwaysTrust") {

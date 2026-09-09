@@ -240,6 +240,8 @@ Les `command` et `cwd` relatifs sont résolus par rapport à la racine de l'exte
 
 Ces contributions sont superposées dans la session lorsque l'extension est activée. Elles n'apparaissent pas dans **Paramètres → MCPs | Hooks | Skills | Rules**. En cas de conflit de nom : workspace > utilisateur > extension.
 
+Pendant `tools/call`, un MCP groupé peut envoyer `spirit/ui/open` (`{ viewId, params }`) si le client a déclaré `experimental["spirit/ui"]`. Spirit n'ouvre qu'une vue déclarée par la même extension dans `contributes.desktop.views`. Les MCP utilisateur / workspace sont refusés. La boîte de dialogue bloque cet appel ; `close(result)` revient sur la même requête. Un hôte sans fenêtre répond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — l'outil doit se dégrader.
+
 ### `settingsSchema`
 
 | Champ          | Description                                                       |
@@ -279,7 +281,7 @@ Desktop stocke les secrets dans le trousseau du système d'exploitation. Sur le 
 | Champ             | Description                                                                                                   |
 | ----------------- | ------------------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                    |
-| `host`            | API hôte. Desktop implémente `showMessageBox`. CLI est `{}`                                                   |
+| `host`            | API hôte. Desktop implémente `showMessageBox` et `ui.open` / `ui.close`. CLI est `{}`                         |
 | `log`             | `(message: string) => void`                                                                                   |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                   |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — les clés doivent être déclarées dans `secretSlots` |

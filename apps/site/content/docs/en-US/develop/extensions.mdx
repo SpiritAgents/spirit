@@ -240,6 +240,8 @@ Relative `command` and `cwd` values resolve against the extension root. If an MC
 
 These contributions overlay into the agent session when the extension is enabled. They do not appear in **Settings → MCPs | Hooks | Skills | Rules**. On a name conflict, workspace wins, then user, then extension.
 
+During `tools/call`, a bundled MCP server may send a JSON-RPC request `spirit/ui/open` with `{ viewId, params }` when the client advertised `experimental["spirit/ui"]`. Spirit only opens a view declared by the same extension in `contributes.desktop.views`. User and workspace MCP servers are rejected. The Dialog stays open while that `tools/call` is in flight; `close(result)` returns on the same request. Hosts without a window respond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — the tool should degrade.
+
 ### `settingsSchema`
 
 | Field          | Description                                                      |
@@ -279,7 +281,7 @@ Desktop stores secrets in the OS keyring. On the CLI daemon path, `secrets.set` 
 | Field             | Description                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                        |
-| `host`            | Host API. Desktop implements `showMessageBox`. CLI is `{}`                                        |
+| `host`            | Host API. Desktop implements `showMessageBox` and `ui.open` / `ui.close`. CLI is `{}`             |
 | `log`             | `(message: string) => void`                                                                       |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                       |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — keys must be declared in `secretSlots` |

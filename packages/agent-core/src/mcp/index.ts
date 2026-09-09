@@ -1,6 +1,7 @@
 export * from "./approval-annotations.js";
 export * from "./client.js";
 export * from "./config.js";
+export * from "./spirit-ui.js";
 export * from "./errors.js";
 export * from "./registry.js";
 export * from "./service.js";

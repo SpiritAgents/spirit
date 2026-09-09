@@ -449,6 +449,9 @@ export function createWebHostApi(): HostApi {
     ) {
       return post<DesktopSnapshot>(baseUrl, "/api/workspace-capability-trust", request);
     },
+    resolveExtensionUi(request: import("../types").ResolveExtensionUiRequest) {
+      return post<DesktopSnapshot>(baseUrl, "/api/extension-ui", request);
+    },
     openPathInDefaultApp() {
       return Promise.reject(new Error("openPathInDefaultApp is not available on web host"));
     },

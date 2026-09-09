@@ -240,6 +240,8 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | Skills | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
 
+在 `tools/call` 期間，若客戶端宣告了 `experimental["spirit/ui"]`，捆綁 MCP 可發出 JSON-RPC 請求 `spirit/ui/open`（`{ viewId, params }`）。Spirit 只開啟同一擴充功能在 `contributes.desktop.views` 宣告的 View；使用者/工作區 MCP 一律拒絕。Dialog 會擋住這次 `tools/call`，`close(result)` 的結果回到同一條請求。無視窗宿主回傳 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具應自行降級。
+
 ### `settingsSchema`
 
 | 欄位           | 說明                                                   |
@@ -279,7 +281,7 @@ Desktop 將秘密儲存在作業系統鑰匙圈中。在 CLI 守護程式路徑�
 | 欄位              | 說明                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------ |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                 |
-| `host`            | 主機 API。Desktop 實作 `showMessageBox`。CLI 為 `{}`                                       |
+| `host`            | 主機 API。Desktop 實作 `showMessageBox` 與 `ui.open` / `ui.close`。CLI 為 `{}`             |
 | `log`             | `(message: string) => void`                                                                |
 | `settings`        | `get(key)`、`getAll()`、`set(key, value)`、`setAll(values)`                                |
 | `secrets`         | `get(key)`、`has(key)`、`set(key, value)`、`delete(key)` — 金鑰必須在 `secretSlots` 中宣告 |

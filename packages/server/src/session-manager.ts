@@ -4,6 +4,9 @@ import type {
   HostToolDescriptionHint,
   JsonValue,
   LlmActiveSkill,
+  McpUiOpenRequest,
+  McpUiOpenResult,
+  McpUiOpener,
   PendingWorkspaceFile,
   RuntimeEvent,
   AgentMode,
@@ -145,6 +148,16 @@ export interface SessionManagerCallbacks {
     requestId: string,
     request: WorkspaceCapabilityTrustRequestPayload,
   ) => void;
+  /** Independent of RuntimeEvent — keeps tools/call in flight. */
+  broadcastExtensionUiRequested?: (
+    sessionId: string,
+    request: {
+      requestId: string;
+      extensionId: string;
+      viewId: string;
+      params?: unknown;
+    },
+  ) => void;
   /** Tool-written file change (clients keep rewind bookkeeping). */
   broadcastFileChange: (sessionId: string, change: unknown) => void;
   /** A host client pushed a new desktop timeline snapshot. */
@@ -247,6 +260,13 @@ export class SessionManager {
   /** sessionId → attached clientIds (refcount). */
   private readonly attachments = new Map<string, Set<string>>();
   private readonly pendingTrustRequests = new Map<string, PendingTrustRequest>();
+  private readonly pendingExtensionUi = new Map<
+    string,
+    {
+      sessionId: string;
+      resolve: (result: McpUiOpenResult) => void;
+    }
+  >();
   private readonly spiritDataDir: string;
   /** Shared per-workspace MCP services (also serve host.mcp* management RPCs). */
   readonly mcpRegistry: McpRegistry;
@@ -335,6 +355,7 @@ export class SessionManager {
       ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
     });
     await runtimeResult.setAgentMode(params.agentMode ?? "agent");
+    this.attachDesktopMcpUiOpener(sessionId, runtimeResult, params.hostKind);
 
     const info: ServerSessionInfo = {
       sessionId,
@@ -1090,6 +1111,7 @@ export class SessionManager {
     fresh.runtime.replaceHistory(history);
     fresh.setLoopEnabled(old.runtime.loopEnabled());
     await fresh.setAgentMode(session.createParams.agentMode ?? "agent");
+    this.attachDesktopMcpUiOpener(sessionId, fresh, session.createParams.hostKind);
     session.runtimeResult = fresh;
     session.info.model = fresh.transportConfig.model;
     await old.toolExecutor.disposeLsp();
@@ -1135,6 +1157,54 @@ export class SessionManager {
     // inFlight yet). Push again after continue so clients see the resumed busy edge —
     // same pattern as replyPendingQuestions.
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+  }
+
+  resolveExtensionUi(sessionId: string, requestId: string, result: unknown): void {
+    const pending = this.pendingExtensionUi.get(requestId);
+    if (!pending || pending.sessionId !== sessionId) {
+      return;
+    }
+    this.pendingExtensionUi.delete(requestId);
+    pending.resolve({ kind: "opened", result });
+  }
+
+  pendingExtensionUiSessionId(requestId: string): string | undefined {
+    return this.pendingExtensionUi.get(requestId)?.sessionId;
+  }
+
+  private attachDesktopMcpUiOpener(
+    sessionId: string,
+    runtimeResult: ServerRuntimeResult,
+    hostKind: ServerClientKind,
+  ): void {
+    if (hostKind !== "desktop") {
+      return;
+    }
+    runtimeResult.toolExecutor.setMcpUiOpener(this.createExtensionUiOpener(sessionId));
+  }
+
+  private createExtensionUiOpener(sessionId: string): McpUiOpener {
+    return (request: McpUiOpenRequest) =>
+      new Promise<McpUiOpenResult>((resolve) => {
+        const requestId = randomUUID();
+        this.pendingExtensionUi.set(requestId, { sessionId, resolve });
+        this.callbacks.broadcastExtensionUiRequested?.(sessionId, {
+          requestId,
+          extensionId: request.extensionId,
+          viewId: request.viewId,
+          ...(request.params === undefined ? {} : { params: request.params }),
+        });
+      });
+  }
+
+  private settleExtensionUiForSession(sessionId: string, result: McpUiOpenResult): void {
+    for (const [requestId, pending] of this.pendingExtensionUi) {
+      if (pending.sessionId !== sessionId) {
+        continue;
+      }
+      this.pendingExtensionUi.delete(requestId);
+      pending.resolve(result);
+    }
   }
 
   async replyPendingQuestions(
@@ -1214,6 +1284,10 @@ export class SessionManager {
       clearTimeout(pending.timer);
       pending.resolve("deny");
     }
+    for (const [requestId, pending] of this.pendingExtensionUi) {
+      this.pendingExtensionUi.delete(requestId);
+      pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
+    }
   }
 
   /** Re-read installed extensions into every live session (post install/remove). */
@@ -1238,6 +1312,7 @@ export class SessionManager {
       this.conversationIndex.delete(conversationKey);
     }
     this.attachments.delete(sessionId);
+    this.settleExtensionUiForSession(sessionId, { kind: "unavailable", reason: "host-has-no-ui" });
     session.turnGeneration += 1;
     session.queue = [];
     clearInterval(session.pump);
@@ -1262,6 +1337,10 @@ export class SessionManager {
       this.pendingTrustRequests.delete(requestId);
       clearTimeout(pending.timer);
       pending.resolve("deny");
+    }
+    for (const [requestId, pending] of this.pendingExtensionUi) {
+      this.pendingExtensionUi.delete(requestId);
+      pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
     await Promise.all(disposals);
   }

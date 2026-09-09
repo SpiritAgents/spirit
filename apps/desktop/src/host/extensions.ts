@@ -337,6 +337,30 @@ function mapDesktopViews(
   }));
 }
 
+export async function resolveEnabledExtensionViewOwner(
+  manager: HostExtensionManager,
+  viewId: string,
+): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
+  const listed = await manager.list();
+  const matches = listed.flatMap((item) => {
+    if (!item.enabled) {
+      return [];
+    }
+    const view = item.manifest.contributes?.desktop?.views?.find((entry) => entry.id === viewId);
+    return view ? [{ extensionId: item.id, view }] : [];
+  });
+  if (matches.length !== 1) {
+    return null;
+  }
+  const match = matches[0];
+  return {
+    extensionId: match.extensionId,
+    ...(match.view.title ? { title: match.view.title } : {}),
+    ...(match.view.width === undefined ? {} : { width: match.view.width }),
+    ...(match.view.height === undefined ? {} : { height: match.view.height }),
+  };
+}
+
 export async function resolveEnabledExtensionViewFile(
   manager: HostExtensionManager,
   extensionId: string,

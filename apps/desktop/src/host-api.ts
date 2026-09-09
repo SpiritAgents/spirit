@@ -234,6 +234,9 @@ export interface HostApi {
   replyWorkspaceCapabilityTrust(
     request: ReplyWorkspaceCapabilityTrustRequest,
   ): Promise<DesktopSnapshot>;
+  resolveExtensionUi(
+    request: import("./types").ResolveExtensionUiRequest,
+  ): Promise<DesktopSnapshot>;
   openPathInDefaultApp(absolutePath: string): Promise<void>;
   resetSession(): Promise<DesktopSnapshot>;
   listSessions(): Promise<SessionListItem[]>;

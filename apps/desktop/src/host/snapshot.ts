@@ -67,6 +67,7 @@ export interface BuildDesktopSnapshotInput {
   automationsList: DesktopAutomationListItem[];
   paneSessions?: DesktopSnapshot["paneSessions"];
   pendingWorkspaceCapabilityTrust?: DesktopSnapshot["pendingWorkspaceCapabilityTrust"];
+  pendingExtensionUi?: DesktopSnapshot["pendingExtensionUi"];
 }
 
 function snapshotProviderGroups(config: DesktopConfigFile): DesktopConfigFile["providerGroups"] {
@@ -200,6 +201,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
     ...(input.pendingWorkspaceCapabilityTrust
       ? { pendingWorkspaceCapabilityTrust: input.pendingWorkspaceCapabilityTrust }
       : {}),
+    ...(input.pendingExtensionUi ? { pendingExtensionUi: input.pendingExtensionUi } : {}),
   };
 }
 
