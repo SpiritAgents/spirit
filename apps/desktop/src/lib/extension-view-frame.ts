@@ -1,0 +1,81 @@
+import type { HostDocumentChrome } from "./extension-view-tokens.js";
+
+export const SPIRIT_EXTENSION_UI_ORIGIN = "spirit://extension-ui";
+export const SPIRIT_EXTENSION_UI_RUNTIME_URL = `${SPIRIT_EXTENSION_UI_ORIGIN}/runtime.js`;
+
+export const SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE = "spirit-extension-view-close";
+export const SPIRIT_EXTENSION_VIEW_THEME_MESSAGE = "spirit-extension-view-theme";
+
+export function extensionViewFileUrl(extensionId: string, viewId: string): string {
+  const params = new URLSearchParams({ extensionId, viewId });
+  return `${SPIRIT_EXTENSION_UI_ORIGIN}/view?${params.toString()}`;
+}
+
+export function buildExtensionViewSrcdoc(input: {
+  cssText: string;
+  chrome: HostDocumentChrome;
+  viewUrl: string;
+  params: unknown;
+}): string {
+  const paramsJson = JSON.stringify(input.params ?? null).replace(/</g, "\\u003c");
+  const cssText = input.cssText.replace(/<\/style/gi, "<\\/style");
+  const htmlClass = escapeHtmlAttribute(input.chrome.htmlClassName);
+  const htmlStyle = escapeHtmlAttribute(input.chrome.htmlStyle);
+  const viewUrl = JSON.stringify(input.viewUrl);
+  const runtimeUrl = JSON.stringify(SPIRIT_EXTENSION_UI_RUNTIME_URL);
+
+  return `<!doctype html>
+<html class="${htmlClass}" style="${htmlStyle}">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' ${SPIRIT_EXTENSION_UI_ORIGIN}; connect-src ${SPIRIT_EXTENSION_UI_ORIGIN};"
+    />
+    <style>${cssText}</style>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": ${runtimeUrl},
+          "react-dom": ${runtimeUrl},
+          "react-dom/client": ${runtimeUrl},
+          "react/jsx-runtime": ${runtimeUrl},
+          "@spirit/desktop-ui": ${runtimeUrl}
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module">
+      import { createElement } from "react";
+      import { createRoot } from "react-dom/client";
+      const { default: View } = await import(${viewUrl});
+      if (typeof View !== "function") {
+        throw new Error("Extension view must default-export function View({ params, close })");
+      }
+      const close = (result) => {
+        parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE}", result }, "*");
+      };
+      window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "${SPIRIT_EXTENSION_VIEW_THEME_MESSAGE}") {
+          document.documentElement.className = event.data.htmlClassName ?? "";
+          document.documentElement.setAttribute("style", event.data.htmlStyle ?? "");
+        }
+      });
+      createRoot(document.getElementById("root")).render(
+        createElement(View, { params: ${paramsJson}, close }),
+      );
+    </script>
+  </body>
+</html>
+`;
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}

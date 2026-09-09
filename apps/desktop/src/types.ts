@@ -477,6 +477,7 @@ export interface DesktopMarketplaceCatalogEntry {
   contributedTools?: DesktopExtensionContributedTool[];
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
+  desktopViews?: DesktopExtensionDesktopView[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -583,6 +584,14 @@ export interface DesktopExtensionDesktopSettingsPage {
   title?: string;
 }
 
+export interface DesktopExtensionDesktopView {
+  id: string;
+  path: string;
+  title?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface DesktopExtensionCliUiHookTokens {
   foreground?: string;
   border?: string;
@@ -658,6 +667,7 @@ export interface DesktopExtensionListItem {
   contributedTools?: DesktopExtensionContributedTool[];
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
+  desktopViews?: DesktopExtensionDesktopView[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];

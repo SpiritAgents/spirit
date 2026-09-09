@@ -1,7 +1,14 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { net, protocol } from "electron";
+
+import {
+  assertResolvedViewFilePath,
+  parseExtensionUiUrl,
+  SPIRIT_EXTENSION_UI_HOST,
+} from "./extension-ui-protocol.js";
 
 const SCHEME = "spirit";
 const GENERATED_HOST = "generated";
@@ -30,9 +37,17 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
   resolveManagedGeneratedAssetPath: ResolveManagedGeneratedAssetPath;
   videoPreviewMimeType: VideoPreviewMimeType;
   imagePreviewMimeType: ImagePreviewMimeType;
+  resolveExtensionUiRuntimePath: () => string;
+  resolveExtensionViewFile: (
+    extensionId: string,
+    viewId: string,
+  ) => Promise<{ filePath: string; extensionRoot: string } | null>;
 }): void {
   protocol.handle(SCHEME, async (request) => {
     const url = new URL(request.url);
+    if (url.hostname === SPIRIT_EXTENSION_UI_HOST) {
+      return handleExtensionUiRequest(url, deps);
+    }
     if (url.hostname !== GENERATED_HOST) {
       return new Response("Not Found", { status: 404 });
     }
@@ -74,4 +89,48 @@ export function installSpiritGeneratedAssetProtocolHandler(deps: {
       return new Response("Not Found", { status: 404 });
     }
   });
+}
+
+async function handleExtensionUiRequest(
+  url: URL,
+  deps: {
+    resolveExtensionUiRuntimePath: () => string;
+    resolveExtensionViewFile: (
+      extensionId: string,
+      viewId: string,
+    ) => Promise<{ filePath: string; extensionRoot: string } | null>;
+  },
+): Promise<Response> {
+  const parsed = parseExtensionUiUrl(url);
+  const headers = {
+    "Access-Control-Allow-Origin": "*",
+    "Cache-Control": "no-store",
+  };
+
+  if (parsed.kind === "invalid") {
+    return new Response(parsed.reason, { status: 400, headers });
+  }
+
+  try {
+    if (parsed.kind === "runtime") {
+      const body = await readFile(deps.resolveExtensionUiRuntimePath());
+      return new Response(body, {
+        status: 200,
+        headers: { ...headers, "Content-Type": "text/javascript; charset=utf-8" },
+      });
+    }
+
+    const resolved = await deps.resolveExtensionViewFile(parsed.extensionId, parsed.viewId);
+    if (!resolved) {
+      return new Response("Not Found", { status: 404, headers });
+    }
+    const filePath = assertResolvedViewFilePath(resolved.filePath, resolved.extensionRoot);
+    const body = await readFile(filePath);
+    return new Response(body, {
+      status: 200,
+      headers: { ...headers, "Content-Type": "text/javascript; charset=utf-8" },
+    });
+  } catch {
+    return new Response("Not Found", { status: 404, headers });
+  }
 }

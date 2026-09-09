@@ -474,6 +474,7 @@ import {
   buildDesktopMarketplaceCatalogEntries,
   collectDesktopExtensionCssLayers,
   collectExtensionSystemPrompts,
+  resolveEnabledExtensionViewFile,
 } from "./extensions.js";
 import {
   getDesktopExtensionHostAdapter,
@@ -4099,6 +4100,13 @@ class DesktopHostService {
     return this.hostExtensionManager;
   }
 
+  async resolveExtensionViewFile(
+    extensionId: string,
+    viewId: string,
+  ): Promise<{ filePath: string; extensionRoot: string } | null> {
+    return resolveEnabledExtensionViewFile(this.extensionManager(), extensionId, viewId);
+  }
+
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
     const state = this.requireState();
     const manager = this.extensionManager();
@@ -4765,6 +4773,13 @@ export async function invokeDesktopHostCommand(
   payload?: unknown,
 ): Promise<unknown> {
   return desktopHostService.invoke(command, payload);
+}
+
+export async function resolveDesktopExtensionViewFile(
+  extensionId: string,
+  viewId: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  return desktopHostService.resolveExtensionViewFile(extensionId, viewId);
 }
 
 export function subscribeDesktopDreamUpdates(

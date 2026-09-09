@@ -152,6 +152,7 @@ async function focusOrCreateSpiritDesktopWindows(): Promise<void> {
 
 import {
   invokeDesktopHostCommand,
+  resolveDesktopExtensionViewFile,
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -1094,6 +1095,8 @@ if (gotSpiritSingleInstanceLock) {
       resolveManagedGeneratedAssetPath,
       videoPreviewMimeType,
       imagePreviewMimeType,
+      resolveExtensionUiRuntimePath: () => path.join(rendererDistPath(), "extension-ui", "runtime.js"),
+      resolveExtensionViewFile: resolveDesktopExtensionViewFile,
     });
     bindSpiritProtocolActionHandlers({
       focusWindows: focusSpiritDesktopWindows,
