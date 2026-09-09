@@ -231,6 +231,9 @@ function rewriteExtensionMcpServer(
     ...server.transport,
     command: resolveExtensionStdioCommand(extensionRoot, server.transport.command),
     cwd: resolveExtensionStdioCwd(extensionRoot, server.transport.cwd),
+    ...(server.transport.args?.length
+      ? { args: rewriteExtensionStdioArgs(extensionRoot, server.transport.args) }
+      : {}),
   };
   return { ...server, transport };
 }
@@ -244,6 +247,23 @@ function resolveExtensionStdioCommand(extensionRoot: string, command: string): s
     return trimmed;
   }
   return resolveInsideExtensionRoot(extensionRoot, trimmed);
+}
+
+function rewriteExtensionStdioArgs(extensionRoot: string, args: string[]): string[] {
+  return args.map((arg) => resolveExtensionStdioArg(extensionRoot, arg));
+}
+
+function resolveExtensionStdioArg(extensionRoot: string, arg: string): string {
+  const trimmed = arg.trim();
+  if (!trimmed || trimmed.startsWith("-") || path.isAbsolute(trimmed)) {
+    return arg;
+  }
+  try {
+    const resolved = resolveInsideExtensionRoot(extensionRoot, trimmed);
+    return existsSync(resolved) ? resolved : arg;
+  } catch {
+    return arg;
+  }
 }
 
 function resolveExtensionStdioCwd(extensionRoot: string, cwd: string | undefined): string {

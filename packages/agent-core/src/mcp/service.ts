@@ -1127,13 +1127,23 @@ async function resolveRuntimeTransportConfig(
         ...resolvedOverrides,
       };
 
+      const requestedCwd =
+        transport.cwd === undefined ? undefined : resolveStdioCwd(workspaceRoot, transport.cwd);
+      const cwd = await firstExistingDirectory([requestedCwd, workspaceRoot]);
+      const args = await resolveStdioArgsAgainstCwd(transport.args, requestedCwd ?? cwd);
+      if (requestedCwd && requestedCwd !== cwd) {
+        console.error("[mcp-service] stdio.cwd.missing", {
+          requested: requestedCwd,
+          used: cwd,
+        });
+      }
+
       return {
         ...transport,
         command: await resolveStdioCommand(transport.command, env),
         env,
-        ...(transport.cwd === undefined
-          ? {}
-          : { cwd: resolveStdioCwd(workspaceRoot, transport.cwd) }),
+        args,
+        ...(cwd === undefined ? {} : { cwd }),
       };
     }
     case "http":
@@ -1187,6 +1197,40 @@ async function resolveCommandCandidate(path: string): Promise<string | undefined
 
 function resolveStdioCwd(workspaceRoot: string, cwd: string): string {
   return isAbsolute(cwd) ? cwd : join(workspaceRoot, cwd);
+}
+
+async function firstExistingDirectory(
+  candidates: Array<string | undefined>,
+): Promise<string | undefined> {
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+    if (await pathExists(candidate)) {
+      return candidate;
+    }
+  }
+  return undefined;
+}
+
+async function resolveStdioArgsAgainstCwd(
+  args: string[],
+  cwd: string | undefined,
+): Promise<string[]> {
+  if (!cwd) {
+    return args;
+  }
+
+  const resolved: string[] = [];
+  for (const arg of args) {
+    if (!arg || arg.startsWith("-") || isAbsolute(arg)) {
+      resolved.push(arg);
+      continue;
+    }
+    const candidate = join(cwd, arg);
+    resolved.push((await pathExists(candidate)) ? candidate : arg);
+  }
+  return resolved;
 }
 
 function inheritedProcessEnvironment(lookup: EnvLookupStore): Record<string, string> {

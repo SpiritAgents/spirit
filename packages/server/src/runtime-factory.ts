@@ -231,9 +231,6 @@ export async function createServerRuntime(
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
-  if (!isDreamCollector) {
-    mcpService.startBackgroundRefreshInBackground(false);
-  }
 
   // 2. Local tool service: real shell/file/web execution, noop management MCP
   //    adapter (MCP tool execution lives on the executor's McpService, same
@@ -249,6 +246,8 @@ export async function createServerRuntime(
       hostKind,
       manager: extensionManager,
     });
+    // After recopy so extension stdio cwd still exists when `node server.mjs` starts.
+    mcpService.startBackgroundRefreshInBackground(false);
   }
   let currentApprovalLevel = approvalLevel;
   const service = new NodeHostToolService(
