@@ -177,6 +177,13 @@ Requires `desktop-ui`.
 | `css[].path`   | Required. CSS file relative to the package root                        |
 | `css[].media`  | Optional. CSS media query                                              |
 | `settingsPage` | Optional. `true`, `{}`, or `{ title }` — adds a Desktop settings entry |
+| `views[].id`   | Required. Kebab-case id, unique within the extension                   |
+| `views[].path` | Required. Precompiled single-file ESM (`.js` / `.mjs`) relative to the package root. The host does not compile TSX. Relative imports 404 — the protocol only serves this file. |
+| `views[].title` | Optional. Dialog title                                                |
+| `views[].width` | Optional. Dialog width                                                |
+| `views[].height` | Optional. Dialog height                                              |
+
+Default export: `export default function View({ params, close })`. `close(result)` finishes the view. The host injects React and `@spirit/desktop-ui`.
 
 ### `contributes.cli`
 

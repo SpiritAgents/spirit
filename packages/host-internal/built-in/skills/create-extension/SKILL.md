@@ -23,7 +23,7 @@ Declare only what the extension uses; every declared file must exist and parse.
 | `hooks`                               | package-root `hooks.json` (agent hooks)                                  |
 | `tool-definitions` + `tool-execution` | model-callable tools declared in the manifest, implemented by `activate` |
 | `system-prompt`                       | system prompt fragment from `activate`                                   |
-| `desktop-ui`                          | Desktop CSS and a settings page                                          |
+| `desktop-ui`                          | Desktop CSS, a settings page, and precompiled single-file views          |
 | `cli-ui`                              | CLI TUI slot styling from a declarative hooks file                       |
 
 Declaration-only capabilities (`approval-flow`, `questions-flow`, `settings`, `secret-storage`, `structured-results`) tune runtime behavior; see the reference.

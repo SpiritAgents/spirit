@@ -410,3 +410,72 @@ test("undeclared instruction files are ignored and declared files install", asyn
     await rm(preparedRoot, { recursive: true, force: true });
   }
 });
+
+test("desktop views-only contributions parse and reject illegal view paths", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-views-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-views-prepared-"));
+  try {
+    const viewsOnlyDir = join(preparedRoot, "views-only");
+    await writeMinimalExtensionPackage(
+      viewsOnlyDir,
+      {
+        requestedCapabilities: ["desktop-ui"],
+        contributes: {
+          desktop: {
+            views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", width: 480 }],
+          },
+        },
+      },
+      {
+        "ui/enable.mjs": "export default function View({ close }) { close({}); }\n",
+      },
+    );
+    const installed = await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: viewsOnlyDir },
+    );
+    assert.deepEqual(installed.manifest.contributes?.desktop, {
+      views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", width: 480 }],
+    });
+
+    const sourcePathDir = join(preparedRoot, "tsx-path");
+    await writeMinimalExtensionPackage(sourcePathDir, {
+      requestedCapabilities: ["desktop-ui"],
+      contributes: {
+        desktop: { views: [{ id: "enable", path: "ui/enable.tsx" }] },
+      },
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: sourcePathDir },
+        ),
+      /precompiled \.js or \.mjs/,
+    );
+
+    const duplicateDir = join(preparedRoot, "duplicate-id");
+    await writeMinimalExtensionPackage(duplicateDir, {
+      requestedCapabilities: ["desktop-ui"],
+      contributes: {
+        desktop: {
+          views: [
+            { id: "enable", path: "ui/a.mjs" },
+            { id: "enable", path: "ui/b.mjs" },
+          ],
+        },
+      },
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: duplicateDir },
+        ),
+      /duplicate view id/,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});

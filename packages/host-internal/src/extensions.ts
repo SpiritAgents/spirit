@@ -163,9 +163,18 @@ export interface HostExtensionDesktopSettingsPageDefinition {
   title?: string;
 }
 
+export interface HostExtensionDesktopViewDefinition {
+  id: string;
+  path: string;
+  title?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface HostExtensionDesktopContributionSet {
   css?: HostExtensionDesktopCssDefinition[];
   settingsPage?: HostExtensionDesktopSettingsPageDefinition;
+  views?: HostExtensionDesktopViewDefinition[];
 }
 
 export const SUPPORTED_HOST_EXTENSION_CLI_UI_SLOTS = [
@@ -2215,13 +2224,15 @@ function optionalDesktopContributionSetField(
     value.settingsPage,
     `${fieldPrefix}.settingsPage`,
   );
-  if (css.length === 0 && !settingsPage) {
+  const views = optionalDesktopViewDefinitionsField(value.views, `${fieldPrefix}.views`);
+  if (css.length === 0 && !settingsPage && views.length === 0) {
     return undefined;
   }
 
   return {
     ...(css.length > 0 ? { css } : {}),
     ...(settingsPage ? { settingsPage } : {}),
+    ...(views.length > 0 ? { views } : {}),
   };
 }
 
@@ -2234,6 +2245,25 @@ function optionalDesktopCssDefinitionsField(
   }
 
   return value.map((entry, index) => parseDesktopCssDefinition(entry, index, fieldPrefix));
+}
+
+function optionalDesktopViewDefinitionsField(
+  value: unknown,
+  fieldPrefix: string,
+): HostExtensionDesktopViewDefinition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const views = value.map((entry, index) => parseDesktopViewDefinition(entry, index, fieldPrefix));
+  const seen = new Set<string>();
+  for (const view of views) {
+    if (seen.has(view.id)) {
+      throw new Error(`Extension field ${fieldPrefix} has a duplicate view id: ${view.id}`);
+    }
+    seen.add(view.id);
+  }
+  return views;
 }
 
 async function optionalCliContributionSetField(
@@ -2389,6 +2419,51 @@ function parseDesktopCssDefinition(
     path: cssPath,
     ...(media ? { media } : {}),
   };
+}
+
+function parseDesktopViewDefinition(
+  value: unknown,
+  index: number,
+  fieldPrefix: string,
+): HostExtensionDesktopViewDefinition {
+  if (!isRecord(value)) {
+    throw new Error(`Extension field ${fieldPrefix}[${index}] must be an object.`);
+  }
+
+  const id = stringField(value.id, `${fieldPrefix}[${index}].id`);
+  if (!EXTENSION_FIELD_KEY_PATTERN.test(id)) {
+    throw new Error(`Invalid extension view id: ${id}`);
+  }
+
+  const viewPath = stringField(value.path, `${fieldPrefix}[${index}].path`);
+  assertSafeRelativePath(viewPath, `${fieldPrefix}[${index}].path`);
+  if (!viewPath.endsWith(".js") && !viewPath.endsWith(".mjs")) {
+    throw new Error(
+      `Extension field ${fieldPrefix}[${index}].path must be a precompiled .js or .mjs module.`,
+    );
+  }
+
+  const title = optionalStringField(value.title);
+  const width = optionalPositiveNumberField(value.width, `${fieldPrefix}[${index}].width`);
+  const height = optionalPositiveNumberField(value.height, `${fieldPrefix}[${index}].height`);
+
+  return {
+    id,
+    path: viewPath,
+    ...(title ? { title } : {}),
+    ...(width === undefined ? {} : { width }),
+    ...(height === undefined ? {} : { height }),
+  };
+}
+
+function optionalPositiveNumberField(value: unknown, fieldName: string): number | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`Extension field ${fieldName} must be a positive number.`);
+  }
+  return value;
 }
 
 function optionalDesktopSettingsPageDefinitionField(

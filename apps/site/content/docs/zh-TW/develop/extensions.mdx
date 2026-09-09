@@ -177,6 +177,13 @@ my-extension/
 | `css[].path`   | 必填。相對於套件根目錄的 CSS 檔案                         |
 | `css[].media`  | 選填。CSS media query                                     |
 | `settingsPage` | 選填。`true`、`{}` 或 `{ title }` — 新增 Desktop 設定項目 |
+| `views[].id`   | 必填。kebab-case，同一擴充內唯一                                     |
+| `views[].path` | 必填。相對套件根目錄的預編譯單檔 ESM（`.js` / `.mjs`）。宿主不編譯 TSX。相對 import 會 404——protocol 只提供這一份檔案 |
+| `views[].title` | 選填。Dialog 標題                                                   |
+| `views[].width` | 選填。Dialog 寬度                                                   |
+| `views[].height` | 選填。Dialog 高度                                                  |
+
+預設匯出：`export default function View({ params, close })`。`close(result)` 結束 View。宿主注入 React 與 `@spirit/desktop-ui`。
 
 ### `contributes.cli`
 

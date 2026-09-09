@@ -78,6 +78,18 @@ test("desktop css and settings page merge into one desktop contribution", async 
   assert.ok(files["styles.css"]?.includes("My Ext"));
 });
 
+test("desktop views scaffold a single-file default export", async () => {
+  const { files } = await scaffold({ capabilities: ["desktop-views"] });
+
+  const dump = parseExtensionDumpText(files[".spirit/extension.json"] ?? "");
+  assert.deepEqual(dump.manifest.requestedCapabilities, ["desktop-ui"]);
+  assert.deepEqual(dump.manifest.contributes, {
+    desktop: { views: [{ id: "main", path: "ui/view.mjs", title: "View" }] },
+  });
+  assert.ok(files["ui/view.mjs"]?.includes("export default function View"));
+  assert.ok(files["ui/view.mjs"]?.includes("relative imports 404"));
+});
+
 test("system-prompt scaffolds the main module export", async () => {
   const { files } = await scaffold({ capabilities: ["system-prompt"] });
   assert.ok(files["index.mjs"]?.includes("export const systemPrompt"));

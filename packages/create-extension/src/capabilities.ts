@@ -13,6 +13,7 @@ export const INIT_CAPABILITY_IDS = [
   "tools",
   "desktop-css",
   "desktop-settings-page",
+  "desktop-views",
   "system-prompt",
 ] as const;
 
@@ -225,6 +226,28 @@ echo "session started with ${input.name}"
     files: () => ({}),
   },
   {
+    id: "desktop-views",
+    label: "Desktop views (contributes.desktop.views)",
+    requestedCapabilities: ["desktop-ui"],
+    contributes: () => ({
+      desktop: { views: [{ id: "main", path: "ui/view.mjs", title: "View" }] },
+    }),
+    files: () => ({
+      "ui/view.mjs": `/**
+ * Precompiled single-file Desktop view. The host imports the default export:
+ *   export default function View({ params, close })
+ * Bundle this file as one ESM module — relative imports 404.
+ * React and @spirit/desktop-ui are provided by the host import map.
+ */
+export default function View({ params, close }) {
+  void params;
+  void close;
+  return null;
+}
+`,
+    }),
+  },
+  {
     id: "system-prompt",
     label: "System prompt contribution (main module export)",
     requestedCapabilities: ["system-prompt"],
@@ -275,7 +298,7 @@ export function buildMainModule(
 
 /**
  * Merge contributes fragments from all selected capabilities. The desktop
- * contributions (css / settingsPage) share one `desktop` object.
+ * contributions (css / settingsPage / views) share one `desktop` object.
  */
 export function mergeContributes(
   capabilities: readonly InitCapabilityId[],

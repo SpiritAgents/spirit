@@ -177,6 +177,13 @@ Erfordert `desktop-ui`.
 | `css[].path`   | Erforderlich. CSS-Datei relativ zum Paketstamm                                         |
 | `css[].media`  | Optional. CSS-Medienabfrage                                                            |
 | `settingsPage` | Optional. `true`, `{}` oder `{ title }` – fügt einen Desktop-Einstellungseintrag hinzu |
+| `views[].id`   | Erforderlich. Kebab-case, innerhalb der Erweiterung eindeutig |
+| `views[].path` | Erforderlich. Vorkompilierte Einzeldatei-ESM (`.js` / `.mjs`) relativ zum Paketstamm. Der Host kompiliert kein TSX. Relative Imports liefern 404 — das Protokoll dient nur diese Datei aus. |
+| `views[].title` | Optional. Dialogtitel |
+| `views[].width` | Optional. Dialogbreite |
+| `views[].height` | Optional. Dialoghöhe |
+
+Default-Export: `export default function View({ params, close })`. `close(result)` beendet die View. Der Host injiziert React und `@spirit/desktop-ui`.
 
 ### `contributes.cli`
 

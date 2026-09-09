@@ -177,6 +177,13 @@ my-extension/
 | `css[].path`   | 필수. 패키지 루트 기준 CSS 파일                                            |
 | `css[].media`  | 선택 사항. CSS 미디어 쿼리                                                 |
 | `settingsPage` | 선택 사항. `true`, `{}` 또는 `{ title }` — Desktop 설정 항목을 추가합니다. |
+| `views[].id`   | 필수. kebab-case, 확장 내에서 고유 |
+| `views[].path` | 필수. 패키지 루트 기준 미리 컴파일된 단일 파일 ESM(`.js` / `.mjs`). 호스트는 TSX를 컴파일하지 않습니다. 상대 import는 404입니다. protocol은 이 파일만 제공합니다. |
+| `views[].title` | 선택 사항. Dialog 제목 |
+| `views[].width` | 선택 사항. Dialog 너비 |
+| `views[].height` | 선택 사항. Dialog 높이 |
+
+기본 내보내기: `export default function View({ params, close })`. `close(result)`가 View를 끝냅니다. 호스트가 React와 `@spirit/desktop-ui`를 주입합니다.
 
 ### `contributes.cli`
 

@@ -54,7 +54,7 @@ export type MarketplaceExtensionSource = string | MarketplaceNpmSource;
 
 /**
  * Registry-entry manifest (the runtime declaration). Deep per-field parsing
- * of tools / desktop / cli / settingsSchema / secretSlots runs at install
+ * of tools / desktop (css, settingsPage, views) / cli / settingsSchema / secretSlots runs at install
  * time in the host; the toolkit validates structure and declaration
  * consistency so registry CI can gate obviously broken entries.
  */
