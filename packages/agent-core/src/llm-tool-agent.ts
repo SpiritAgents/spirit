@@ -6,6 +6,7 @@ export {
   buildDreamsSystemMessage,
   buildLoopModeSystemMessage,
   buildExtensionsSystemMessage,
+  mergeEnabledExtensionSystemPrompts,
   buildRulesSystemMessage,
   buildSkillsCatalogSystemMessage,
   buildMcpCatalogSystemMessage,

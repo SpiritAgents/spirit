@@ -3,6 +3,7 @@ import path from "node:path";
 
 import {
   buildContributedHostToolDefinitions,
+  mergeEnabledExtensionSystemPrompts,
   type JsonObject,
   type JsonValue,
   type OpenAiExtensionSystemPrompt,
@@ -11,6 +12,7 @@ import {
   buildExtensionDumpFromEntry,
   buildHostExtensionManifestFromDump,
   collectHostExtensionContributedTools,
+  extensionExposesModelContext,
   installSourceForSourceId,
   summarizeDeclaredExtensionContributionPoints,
   type HostExtensionManager,
@@ -352,13 +354,25 @@ export async function collectExtensionSystemPrompts(
   manager: HostExtensionManager,
   host: unknown,
 ): Promise<OpenAiExtensionSystemPrompt[]> {
-  const collected = await manager.collectSystemPromptContributions({
-    host,
-    logger: console,
-  });
-  return collected.map((entry) => ({
-    extensionId: entry.extensionId,
-    extensionName: entry.extensionName,
-    content: entry.content,
-  }));
+  const [installed, collected] = await Promise.all([
+    manager.list(),
+    manager.collectSystemPromptContributions({
+      host,
+      logger: console,
+    }),
+  ]);
+  return mergeEnabledExtensionSystemPrompts(
+    installed
+      .filter((item) => extensionExposesModelContext(item))
+      .map((item) => ({
+        extensionId: item.id,
+        extensionName: item.manifest.displayName,
+        enabled: item.enabled,
+      })),
+    collected.map((entry) => ({
+      extensionId: entry.extensionId,
+      extensionName: entry.extensionName,
+      content: entry.content,
+    })),
+  );
 }

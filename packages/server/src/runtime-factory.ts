@@ -12,6 +12,7 @@ import {
   buildDreamCollectorSystemMessage,
   buildDreamHostToolDefinitions,
   buildExtensionsSystemMessage,
+  mergeEnabledExtensionSystemPrompts,
   buildLoopModeSystemMessage,
   buildMcpCatalogSystemMessage,
   buildProviderWebSearchPromptSection,
@@ -65,6 +66,7 @@ import {
   appendLspDiagnosticsAfterWriteIfNeeded,
   collectEnabledExtensionInstructionContributions,
   collectHostExtensionContributedTools,
+  extensionExposesModelContext,
   createHostExtensionManager,
   createHookRunner,
   createNoopMcpAdapter,
@@ -308,13 +310,22 @@ export async function createServerRuntime(
       ),
     );
     extensionSystemPrompts.push(
-      ...(
-        await extensionManager!.collectSystemPromptContributions({ host: {}, logger: console })
-      ).map((entry) => ({
-        extensionId: entry.extensionId,
-        extensionName: entry.extensionName,
-        content: entry.content,
-      })),
+      ...mergeEnabledExtensionSystemPrompts(
+        installedExtensions
+          .filter((item) => extensionExposesModelContext(item))
+          .map((item) => ({
+            extensionId: item.id,
+            extensionName: item.manifest.displayName,
+            enabled: item.enabled,
+          })),
+        (
+          await extensionManager!.collectSystemPromptContributions({ host: {}, logger: console })
+        ).map((entry) => ({
+          extensionId: entry.extensionId,
+          extensionName: entry.extensionName,
+          content: entry.content,
+        })),
+      ),
     );
   }
 
@@ -610,11 +621,20 @@ export async function createServerRuntime(
     });
     extensionSystemPrompts.length = 0;
     extensionSystemPrompts.push(
-      ...collected.map((entry) => ({
-        extensionId: entry.extensionId,
-        extensionName: entry.extensionName,
-        content: entry.content,
-      })),
+      ...mergeEnabledExtensionSystemPrompts(
+        installed
+          .filter((item) => extensionExposesModelContext(item))
+          .map((item) => ({
+            extensionId: item.id,
+            extensionName: item.manifest.displayName,
+            enabled: item.enabled,
+          })),
+        collected.map((entry) => ({
+          extensionId: entry.extensionId,
+          extensionName: entry.extensionName,
+          content: entry.content,
+        })),
+      ),
     );
     await applyExtensionInstructionOverlay();
     await mcpService.refreshConfig();

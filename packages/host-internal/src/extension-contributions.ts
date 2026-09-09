@@ -166,6 +166,27 @@ function isDeclaredInstructionContribution(
   );
 }
 
+/** Skills, rules, MCP, hooks, tools, or systemPrompt — not host-only UI such as desktop CSS. */
+export function extensionExposesModelContext(extension: HostInstalledExtension): boolean {
+  const capabilities = extension.manifest.requestedCapabilities ?? [];
+  if (capabilities.includes("system-prompt")) {
+    return true;
+  }
+  if (
+    capabilities.includes("tool-definitions") &&
+    capabilities.includes("tool-execution") &&
+    (extension.manifest.contributes?.tools?.length ?? 0) > 0
+  ) {
+    return true;
+  }
+  return (
+    isDeclaredInstructionContribution(extension, "mcp") ||
+    isDeclaredInstructionContribution(extension, "hooks") ||
+    isDeclaredInstructionContribution(extension, "skills") ||
+    isDeclaredInstructionContribution(extension, "rules")
+  );
+}
+
 async function collectExtensionMcpContribution(
   extension: HostInstalledExtension,
   merged: McpConfigFile,

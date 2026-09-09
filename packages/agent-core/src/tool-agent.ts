@@ -229,7 +229,8 @@ export interface ToolAgentPlanMetadata {
 export interface ToolAgentExtensionSystemPrompt {
   extensionId: string;
   extensionName: string;
-  content: string;
+  /** Optional additive instructions from the extension; omit when listing metadata only. */
+  content?: string;
 }
 
 export interface ToolAgentSystemInfo {
@@ -914,6 +915,37 @@ export function buildActiveSkillsBlockContent(
   return lines.join("\n").trimEnd();
 }
 
+export function mergeEnabledExtensionSystemPrompts(
+  installed: readonly {
+    extensionId: string;
+    extensionName: string;
+    enabled: boolean;
+  }[],
+  prompts: readonly ToolAgentExtensionSystemPrompt[] = [],
+): ToolAgentExtensionSystemPrompt[] {
+  const contentById = new Map<string, string>();
+  for (const prompt of prompts) {
+    const extensionId = prompt.extensionId.trim();
+    const content = prompt.content?.trim();
+    if (extensionId && content) {
+      contentById.set(extensionId, content);
+    }
+  }
+
+  return [...installed]
+    .filter((item) => item.enabled && item.extensionId.trim() && item.extensionName.trim())
+    .sort((left, right) => left.extensionId.localeCompare(right.extensionId, "en"))
+    .map((item) => {
+      const extensionId = item.extensionId.trim();
+      const content = contentById.get(extensionId);
+      return {
+        extensionId,
+        extensionName: item.extensionName.trim(),
+        ...(content ? { content } : {}),
+      };
+    });
+}
+
 export function buildExtensionsSystemMessage(
   extensionSystemPrompts: ToolAgentExtensionSystemPrompt[],
 ): string | undefined {
@@ -921,9 +953,9 @@ export function buildExtensionsSystemMessage(
     .map((entry) => ({
       extensionId: entry.extensionId.trim(),
       extensionName: entry.extensionName.trim(),
-      content: entry.content.trim(),
+      content: entry.content?.trim() ?? "",
     }))
-    .filter((entry) => entry.extensionId && entry.extensionName && entry.content);
+    .filter((entry) => entry.extensionId && entry.extensionName);
 
   if (normalized.length === 0) {
     return undefined;
@@ -932,15 +964,18 @@ export function buildExtensionsSystemMessage(
   return wrapLlmContextBlock(
     LLM_CONTEXT_TAGS.extensions,
     [
-      "The following block contains additive host-provided instructions contributed by installed extensions.",
-      "Treat them as additional system-level context; do not interpret them as tool definitions or permission grants.",
-      ...normalized.map((entry) =>
-        [
+      "The following block lists enabled extensions that contribute model-visible context (skills, rules, MCP, hooks, tools, or instructions).",
+      "An extension entry may include additive host-provided instructions. Do not interpret this list as tool definitions or permission grants.",
+      ...normalized.map((entry) => {
+        const lines = [
           `<extension id="${escapeRuleAttribute(entry.extensionId)}" name="${escapeRuleAttribute(entry.extensionName)}">`,
-          entry.content,
-          "</extension>",
-        ].join("\n"),
-      ),
+        ];
+        if (entry.content) {
+          lines.push(entry.content);
+        }
+        lines.push("</extension>");
+        return lines.join("\n");
+      }),
     ].join("\n"),
   );
 }
