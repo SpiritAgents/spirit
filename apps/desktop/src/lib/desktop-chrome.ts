@@ -243,7 +243,7 @@ export const DESKTOP_ITEM_CARD_SURFACE = cn(
   DESKTOP_OUTLINE_BORDER,
 );
 
-/** Grouped canvas card (settings sections, contribution groups, dream graph). */
+/** Grouped canvas card (settings sections, dream graph). */
 export const DESKTOP_CANVAS_CARD_SURFACE = cn(
   "rounded-lg border border-border/40 bg-background/80",
   DESKTOP_CONTENT_TRANSLUCENT_FILL,

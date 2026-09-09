@@ -65,4 +65,19 @@ describe("MarketplaceContributionGroups", () => {
     const { container } = render(<MarketplaceContributionGroups item={{}} />);
     expect(container.firstChild).toBeNull();
   });
+
+  test("capability rows sit on the page without a card surface", () => {
+    const { container, getByText } = render(
+      <MarketplaceContributionGroups
+        item={{
+          instructionContributions: {
+            skills: [{ name: "hello-loopback", description: "Demo skill." }],
+          },
+        }}
+      />,
+    );
+    expect(getByText("Hello Loopback")).toBeTruthy();
+    expect(container.querySelector(".rounded-lg")).toBeNull();
+    expect(container.querySelector(".divide-y")).toBeNull();
+  });
 });

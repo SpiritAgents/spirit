@@ -1,5 +1,6 @@
 // Capability groups for the extension detail page: everything the extension contributes,
 // grouped as MCPs / Rules / Hooks / Skills / Tools / Desktop with settings-style section labels.
+// Rows sit on the page background without a card surface, matching Information.
 
 import { useTranslation } from "react-i18next";
 
@@ -7,7 +8,6 @@ import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench, type LucideIcon } fr
 
 import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 
-import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
 import { cn } from "@/lib/utils";
@@ -169,9 +169,10 @@ export function MarketplaceContributionGroups({
         <section key={group.key} className="space-y-3">
           {/* Section labels match the marketplace list's section headers. */}
           <p className="text-base font-medium text-foreground">{group.label}</p>
-          <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35")}>
+          {/* Two-line + icon rows need more air than Information's single-line space-y-2. */}
+          <div className="space-y-4">
             {group.items.map((entry) => (
-              <div key={entry.key} className="flex items-center gap-3 px-4 py-3">
+              <div key={entry.key} className="flex items-center gap-3">
                 <entry.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <div className="min-w-0 flex-1">
                   <span
