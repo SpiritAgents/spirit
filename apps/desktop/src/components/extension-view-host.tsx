@@ -8,6 +8,7 @@ import {
   buildExtensionViewSrcdoc,
   extensionViewFileUrl,
   SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
+  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
   SPIRIT_EXTENSION_VIEW_THEME_MESSAGE,
 } from "@/lib/extension-view-frame";
 import {
@@ -23,6 +24,7 @@ import {
   collectHostDocumentChrome,
   collectHostStylesheetCssText,
 } from "@/lib/extension-view-tokens";
+import { cn } from "@/lib/utils";
 import type { DesktopExtensionListItem, DesktopPendingExtensionUi } from "@/types";
 
 export function ExtensionViewHost({
@@ -37,6 +39,7 @@ export function ExtensionViewHost({
   onHostResult?: (requestId: string, result: unknown) => void;
 }) {
   const [openRequest, setOpenRequest] = useState(getOpenExtensionView);
+  const [readyRequestId, setReadyRequestId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previousSessionKey = useRef(sessionKey ?? null);
   const hostOpenedRequestId = useRef<string | null>(null);
@@ -111,6 +114,7 @@ export function ExtensionViewHost({
       chrome: collectHostDocumentChrome(),
       viewUrl: openRequest.viewUrl,
       params: openRequest.params,
+      requestId: openRequest.requestId,
     });
   }, [openRequest]);
 
@@ -145,6 +149,12 @@ export function ExtensionViewHost({
       if (event.source !== iframeRef.current?.contentWindow) {
         return;
       }
+      if (event.data?.type === SPIRIT_EXTENSION_VIEW_READY_MESSAGE) {
+        if (event.data.requestId === openRequest.requestId) {
+          setReadyRequestId(event.data.requestId);
+        }
+        return;
+      }
       if (event.data?.type !== SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE) {
         return;
       }
@@ -157,7 +167,20 @@ export function ExtensionViewHost({
     };
   }, [openRequest]);
 
-  const open = openRequest !== null;
+  useEffect(() => {
+    if (!openRequest) {
+      return;
+    }
+    // The view signals readiness via SPIRIT_EXTENSION_VIEW_READY_MESSAGE. If the frame
+    // process dies or the view module never executes, no signal arrives and the pending
+    // tool call would hang with no visible dialog to dismiss; this timeout is the single
+    // fallback that opens the (possibly blank) dialog so the user can close it.
+    const timer = window.setTimeout(() => setReadyRequestId(openRequest.requestId), 3000);
+    return () => window.clearTimeout(timer);
+  }, [openRequest]);
+
+  const frameReady = openRequest !== null && readyRequestId === openRequest.requestId;
+  const open = openRequest !== null && frameReady;
   const width = openRequest?.width;
   const height = openRequest?.height;
 
@@ -165,13 +188,17 @@ export function ExtensionViewHost({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next && openRequest) {
+        // Only a visible dialog can be dismissed; while the view is still loading
+        // (force-mounted but hidden), outside clicks and Escape must not cancel it.
+        if (!next && openRequest && frameReady) {
           dismissOpenExtensionView(openRequest.requestId);
         }
       }}
     >
       <DialogContent
-        className="sm:max-w-lg"
+        className={cn("sm:max-w-lg", openRequest !== null && !frameReady && "hidden")}
+        overlayClassName={openRequest !== null && !frameReady ? "hidden" : undefined}
+        forceMount={(openRequest !== null) || undefined}
         style={{
           ...(width ? { width, maxWidth: width } : {}),
           ...(height ? { height } : {}),

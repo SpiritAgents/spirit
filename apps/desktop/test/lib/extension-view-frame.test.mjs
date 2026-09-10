@@ -9,6 +9,7 @@ import {
   extensionViewFileUrl,
   SPIRIT_EXTENSION_UI_RUNTIME_URL,
   SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
+  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
 } from "../../src/lib/extension-view-frame.ts";
 import {
   assertResolvedViewFilePath,
@@ -21,12 +22,15 @@ test("srcdoc injects live cssText and the View default-export contract", () => {
     chrome: { htmlClassName: "dark", htmlStyle: "font-family: Geist" },
     viewUrl: extensionViewFileUrl("built-in/demo", "main"),
     params: { step: 1 },
+    requestId: "test-request-id",
   });
 
   assert.match(html, /--foreground: black/);
   assert.match(html, /class="dark"/);
   assert.match(html, /default-export function View\(\{ params, close \}\)/);
   assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE));
+  assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_READY_MESSAGE));
+  assert.match(html, /test-request-id/);
   assert.match(html, new RegExp(SPIRIT_EXTENSION_UI_RUNTIME_URL.replaceAll("/", "\\/")));
   assert.doesNotMatch(html, /token-stylesheet\.css/);
 });

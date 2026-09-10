@@ -5,6 +5,7 @@ export const SPIRIT_EXTENSION_UI_RUNTIME_URL = `${SPIRIT_EXTENSION_UI_ORIGIN}/ru
 
 export const SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE = "spirit-extension-view-close";
 export const SPIRIT_EXTENSION_VIEW_THEME_MESSAGE = "spirit-extension-view-theme";
+export const SPIRIT_EXTENSION_VIEW_READY_MESSAGE = "spirit-extension-view-ready";
 
 export function extensionViewFileUrl(extensionId: string, viewId: string): string {
   const params = new URLSearchParams({ extensionId, viewId });
@@ -16,8 +17,10 @@ export function buildExtensionViewSrcdoc(input: {
   chrome: HostDocumentChrome;
   viewUrl: string;
   params: unknown;
+  requestId: string;
 }): string {
   const paramsJson = JSON.stringify(input.params ?? null).replace(/</g, "\\u003c");
+  const requestIdJson = JSON.stringify(input.requestId);
   const cssText = input.cssText.replace(/<\/style/gi, "<\\/style");
   const htmlClass = escapeHtmlAttribute(input.chrome.htmlClassName);
   const htmlStyle = escapeHtmlAttribute(input.chrome.htmlStyle);
@@ -50,22 +53,28 @@ export function buildExtensionViewSrcdoc(input: {
     <script type="module">
       import { createElement } from "react";
       import { createRoot } from "react-dom/client";
-      const { default: View } = await import(${viewUrl});
-      if (typeof View !== "function") {
-        throw new Error("Extension view must default-export function View({ params, close })");
-      }
-      const close = (result) => {
-        parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE}", result }, "*");
-      };
-      window.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "${SPIRIT_EXTENSION_VIEW_THEME_MESSAGE}") {
-          document.documentElement.className = event.data.htmlClassName ?? "";
-          document.documentElement.setAttribute("style", event.data.htmlStyle ?? "");
+      try {
+        const { default: View } = await import(${viewUrl});
+        if (typeof View !== "function") {
+          throw new Error("Extension view must default-export function View({ params, close })");
         }
-      });
-      createRoot(document.getElementById("root")).render(
-        createElement(View, { params: ${paramsJson}, close }),
-      );
+        const close = (result) => {
+          parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE}", result }, "*");
+        };
+        window.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "${SPIRIT_EXTENSION_VIEW_THEME_MESSAGE}") {
+            document.documentElement.className = event.data.htmlClassName ?? "";
+            document.documentElement.setAttribute("style", event.data.htmlStyle ?? "");
+          }
+        });
+        createRoot(document.getElementById("root")).render(
+          createElement(View, { params: ${paramsJson}, close }),
+        );
+        parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_READY_MESSAGE}", requestId: ${requestIdJson} }, "*");
+      } catch (error) {
+        parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_READY_MESSAGE}", requestId: ${requestIdJson}, error: String(error) }, "*");
+        throw error;
+      }
     </script>
   </body>
 </html>
