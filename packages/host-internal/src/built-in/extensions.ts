@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -100,25 +100,96 @@ export interface InstallBuiltInExtensionRequest {
 }
 
 /**
- * In-process serialization for built-in ensures. The recopy swap
- * (rename target→backup, then staged→target) is not safe against a concurrent
- * ensure in the same process: Desktop pump ticks and IPC commands that bypass
- * runSerialized both ensure, and interleaved renames fail with
- * ENOENT/ENOTEMPTY (observed: three overlapping ensures in one Desktop main
- * process). Serializing here — instead of relying on every caller to hold a
- * lock — also lets each ensure re-list installed state, so two racing ensures
- * over a not-yet-installed entry take fresh-install then recopy, rather than
- * the second one failing on "already exists". Cross-process ensures (daemon
- * session create vs Desktop) are not covered; that window is rare and short.
+ * Serialization for built-in ensures, at two scopes:
+ * - In-process (promise queue): Desktop pump ticks and IPC commands that
+ *   bypass runSerialized both ensure, and interleaved recopy renames fail
+ *   with ENOENT/ENOTEMPTY (observed: three overlapping ensures in one Desktop
+ *   main process). The queue also lets each ensure re-list installed state,
+ *   so two racing ensures over a not-yet-installed entry take fresh-install
+ *   then recopy, rather than the second one failing on "already exists".
+ * - Cross-process (mkdir lock): the Desktop host and the daemon share
+ *   `<dataDir>/extensions/<host>/` and both seed at startup. mkdir is atomic
+ *   across processes; the pid file lets a waiter break the lock when the
+ *   holder crashed mid-ensure. On timeout the ensure proceeds anyway: the
+ *   recopy is idempotent and a wedged lock must not block host startup.
  */
 let ensureBuiltInQueue: Promise<unknown> = Promise.resolve();
 
 export async function ensureBuiltInExtensions(
   request: EnsureBuiltInExtensionsRequest,
 ): Promise<readonly HostInstalledExtension[]> {
-  const run = ensureBuiltInQueue.then(() => ensureBuiltInExtensionsInner(request));
+  const run = ensureBuiltInQueue.then(async () => {
+    const release = await acquireBuiltInEnsureLock(
+      builtInEnsureLockDir(request.spiritDataDir, request.hostKind),
+    );
+    try {
+      return await ensureBuiltInExtensionsInner(request);
+    } finally {
+      await release();
+    }
+  });
   ensureBuiltInQueue = run.catch(() => undefined);
   return run;
+}
+
+const BUILT_IN_ENSURE_LOCK_RETRY_MS = 25;
+const BUILT_IN_ENSURE_LOCK_TIMEOUT_MS = 10_000;
+
+function builtInEnsureLockDir(spiritDataDir: string, hostKind: ExtensionHostKind): string {
+  // Outside extensions/: a lock dir inside the install tree would be scanned
+  // as a source directory when listing installed extensions.
+  return path.join(spiritDataDir, ".locks", `built-in-ensure-${hostKind}`);
+}
+
+async function acquireBuiltInEnsureLock(lockDir: string): Promise<() => Promise<void>> {
+  await mkdir(path.dirname(lockDir), { recursive: true });
+  const deadline = Date.now() + BUILT_IN_ENSURE_LOCK_TIMEOUT_MS;
+  for (;;) {
+    try {
+      // Non-recursive mkdir is the atomic acquire: it throws EEXIST while held.
+      await mkdir(lockDir);
+      await writeFile(path.join(lockDir, "pid"), String(process.pid), "utf8");
+      return async () => {
+        await rm(lockDir, { recursive: true, force: true });
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code !== "EEXIST") {
+        throw error;
+      }
+      const holderPid = await readBuiltInEnsureLockHolder(lockDir);
+      if (holderPid !== undefined && !isProcessAlive(holderPid)) {
+        // The holder crashed between acquire and release; break the stale lock.
+        await rm(lockDir, { recursive: true, force: true });
+        continue;
+      }
+      if (Date.now() >= deadline) {
+        return async () => {};
+      }
+      await new Promise((resolve) => setTimeout(resolve, BUILT_IN_ENSURE_LOCK_RETRY_MS));
+    }
+  }
+}
+
+async function readBuiltInEnsureLockHolder(lockDir: string): Promise<number | undefined> {
+  try {
+    const raw = await readFile(path.join(lockDir, "pid"), "utf8");
+    const pid = Number.parseInt(raw.trim(), 10);
+    return Number.isInteger(pid) && pid > 0 ? pid : undefined;
+  } catch {
+    // The holder creates the lock dir first and writes the pid file after; a
+    // missing pid file means the holder is mid-acquire, not stale.
+    return undefined;
+  }
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: alive but owned by another user; ESRCH: gone.
+    return (error as NodeJS.ErrnoException)?.code === "EPERM";
+  }
 }
 
 /**
