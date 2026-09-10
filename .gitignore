@@ -2,6 +2,7 @@
 **/node_modules/
 **/dist/
 **/dist-electron/
+/packages/host-internal/built-in/extensions/
 **/.turbo/
 **/.tsbuildinfo*
 **/*.tsbuildinfo
