@@ -9,6 +9,7 @@ import {
   extensionViewFileUrl,
   SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
   SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
+  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
   SPIRIT_EXTENSION_VIEW_THEME_MESSAGE,
 } from "@/lib/extension-view-frame";
 import {
@@ -40,6 +41,7 @@ export function ExtensionViewHost({
 }) {
   const [openRequest, setOpenRequest] = useState(getOpenExtensionView);
   const [readyRequestId, setReadyRequestId] = useState<string | null>(null);
+  const [frameHeight, setFrameHeight] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previousSessionKey = useRef(sessionKey ?? null);
   const hostOpenedRequestId = useRef<string | null>(null);
@@ -158,6 +160,16 @@ export function ExtensionViewHost({
         }
         return;
       }
+      if (event.data?.type === SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE) {
+        if (
+          event.data.requestId === openRequest.requestId &&
+          typeof event.data.height === "number" &&
+          Number.isFinite(event.data.height)
+        ) {
+          setFrameHeight(event.data.height);
+        }
+        return;
+      }
       if (event.data?.type !== SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE) {
         return;
       }
@@ -174,6 +186,8 @@ export function ExtensionViewHost({
     if (!openRequest) {
       return;
     }
+    setFrameHeight(null);
+    setReadyRequestId(null);
     // The view signals readiness via SPIRIT_EXTENSION_VIEW_READY_MESSAGE. If the frame
     // process dies or the view module never executes, no signal arrives and the pending
     // tool call would hang with no visible dialog to dismiss; this timeout is the single
@@ -207,7 +221,6 @@ export function ExtensionViewHost({
         forceMount={(openRequest !== null) || undefined}
         style={{
           ...(width ? { width, maxWidth: width } : {}),
-          ...(height ? { height } : {}),
         }}
         showCloseButton={showCloseButton}
         aria-describedby={undefined}
@@ -221,7 +234,11 @@ export function ExtensionViewHost({
             title={openRequest.title ?? openRequest.viewId}
             sandbox="allow-scripts"
             srcDoc={srcdoc}
-            className="h-full min-h-64 w-full rounded-lg border-0 bg-background"
+            className="w-full border-0 bg-background"
+            style={{
+              ...(frameHeight === null ? {} : { height: frameHeight }),
+              ...(height === undefined ? {} : { maxHeight: height, overflowY: "auto" }),
+            }}
           />
         ) : null}
       </DialogContent>

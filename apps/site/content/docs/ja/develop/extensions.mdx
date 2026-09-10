@@ -181,7 +181,7 @@ my-extension/
 | `views[].path` | 必須。パッケージルートからの事前コンパイル済み単一ファイル ESM（`.js` / `.mjs`）。ホストは TSX をコンパイルしません。相対 import は 404 になります。protocol はこのファイルだけを提供します。 |
 | `views[].title` | 任意。Dialog のタイトル |
 | `views[].width` | 任意。Dialog の幅 |
-| `views[].height` | 任意。Dialog の高さ |
+| `views[].height` | 任意。Dialog の最大高さ。省略すると内容に追従。超えると iframe 内でスクロール。 |
 | `views[].chrome` | 任意。Dialog のクローム：`default`（タイトル + 閉じる）、`close-only`（タイトルを隠し閉じるは残す）、`none`（両方非表示）。省略時は `default`。 |
 
 デフォルトエクスポート: `export default function View({ params, close })`。`close(result)` で View を終了します。ホストは React と `@spirit/desktop-ui` を注入します。

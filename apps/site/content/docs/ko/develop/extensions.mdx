@@ -181,7 +181,7 @@ my-extension/
 | `views[].path` | 필수. 패키지 루트 기준 미리 컴파일된 단일 파일 ESM(`.js` / `.mjs`). 호스트는 TSX를 컴파일하지 않습니다. 상대 import는 404입니다. protocol은 이 파일만 제공합니다. |
 | `views[].title` | 선택 사항. Dialog 제목 |
 | `views[].width` | 선택 사항. Dialog 너비 |
-| `views[].height` | 선택 사항. Dialog 높이 |
+| `views[].height` | 선택 사항. Dialog 최대 높이. 생략하면 내용에 맞춤. 더 높으면 iframe 안에서 스크롤. |
 | `views[].chrome` | 선택 사항. Dialog 크롬: `default`(제목 + 닫기), `close-only`(제목 숨김, 닫기 유지), `none`(둘 다 숨김). 생략 시 `default`. |
 
 기본 내보내기: `export default function View({ params, close })`. `close(result)`가 View를 끝냅니다. 호스트가 React와 `@spirit/desktop-ui`를 주입합니다.

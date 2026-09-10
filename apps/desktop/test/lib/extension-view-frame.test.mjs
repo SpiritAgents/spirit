@@ -10,6 +10,7 @@ import {
   SPIRIT_EXTENSION_UI_RUNTIME_URL,
   SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE,
   SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
+  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
 } from "../../src/lib/extension-view-frame.ts";
 import {
   assertResolvedViewFilePath,
@@ -30,6 +31,10 @@ test("srcdoc injects live cssText and the View default-export contract", () => {
   assert.match(html, /default-export function View\(\{ params, close \}\)/);
   assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE));
   assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_READY_MESSAGE));
+  assert.match(html, new RegExp(SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE));
+  assert.match(html, /ResizeObserver/);
+  assert.match(html, /getElementById\("root"\)/);
+  assert.match(html, /getBoundingClientRect\(\)\.height/);
   assert.match(html, /test-request-id/);
   assert.match(html, new RegExp(SPIRIT_EXTENSION_UI_RUNTIME_URL.replaceAll("/", "\\/")));
   assert.doesNotMatch(html, /token-stylesheet\.css/);

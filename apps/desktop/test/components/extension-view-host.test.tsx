@@ -7,6 +7,10 @@ import { afterEach, expect, test } from "vitest";
 
 import { ExtensionViewHost } from "@/components/extension-view-host";
 import {
+  SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
+  SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
+} from "@/lib/extension-view-frame";
+import {
   closeAllOpenExtensionViews,
   openExtensionView,
 } from "@/lib/extension-view-runtime";
@@ -81,4 +85,80 @@ test("none chrome hides the title visually and omits the close button", async ()
   expect(header?.classList.contains("sr-only")).toBe(true);
   expect(document.querySelector("[data-slot='dialog-title']")?.textContent).toBe("Demo View");
   expect(document.querySelector("[data-slot='dialog-close']")).toBeNull();
+});
+
+function dialogContentStyle(): CSSStyleDeclaration | undefined {
+  const content = document.querySelector("[data-slot='dialog-content']");
+  return content instanceof HTMLElement ? content.style : undefined;
+}
+
+function dispatchFrameMessage(iframe: HTMLIFrameElement, data: unknown): void {
+  act(() => {
+    window.dispatchEvent(
+      new MessageEvent("message", {
+        data,
+        source: iframe.contentWindow,
+      }),
+    );
+  });
+}
+
+test("omitted height hugs content and does not fix the dialog or iframe min-height", async () => {
+  renderOpenExtensionView();
+  await act(async () => {
+    render(<ExtensionViewHost />);
+  });
+  const iframe = document.querySelector("iframe");
+  expect(iframe).toBeTruthy();
+  expect(iframe?.className).not.toContain("min-h-64");
+  expect(iframe?.className).not.toContain("h-full");
+  expect(dialogContentStyle()?.height).toBe("");
+});
+
+test("declared height is an iframe max-height instead of a fixed dialog height", async () => {
+  act(() => {
+    void openExtensionView({
+      requestId: "req-max-height",
+      extensionId: "built-in/demo",
+      viewId: "main",
+      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      title: "Demo View",
+      height: 360,
+    });
+  });
+  await act(async () => {
+    render(<ExtensionViewHost />);
+  });
+  const iframe = document.querySelector("iframe");
+  expect(iframe?.style.maxHeight).toBe("360px");
+  expect(iframe?.style.overflowY).toBe("auto");
+  expect(dialogContentStyle()?.height).toBe("");
+});
+
+test("size messages from the iframe set the iframe height", async () => {
+  act(() => {
+    void openExtensionView({
+      requestId: "req-size",
+      extensionId: "built-in/demo",
+      viewId: "main",
+      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      title: "Demo View",
+    });
+  });
+  await act(async () => {
+    render(<ExtensionViewHost />);
+  });
+  const iframe = document.querySelector("iframe");
+  expect(iframe).toBeTruthy();
+  dispatchFrameMessage(iframe!, {
+    type: SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
+    requestId: "req-size",
+  });
+  expect(iframe?.style.height).toBe("");
+  dispatchFrameMessage(iframe!, {
+    type: SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
+    requestId: "req-size",
+    height: 280,
+  });
+  expect(iframe?.style.height).toBe("280px");
 });

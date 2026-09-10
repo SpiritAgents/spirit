@@ -181,7 +181,7 @@ my-extension/
 | `views[].path` | 必填。相对包根的预编译单文件 ESM（`.js` / `.mjs`）。宿主不编译 TSX。相对 import 会 404——protocol 只提供这一份文件 |
 | `views[].title` | 可选。Dialog 标题                                                   |
 | `views[].width` | 可选。Dialog 宽度                                                   |
-| `views[].height` | 可选。Dialog 高度                                                  |
+| `views[].height` | 可选。Dialog 高度上限。省略则随内容高度。内容更高时 iframe 内滚动。 |
 | `views[].chrome` | 可选。Dialog 外壳：`default`（标题 + 关闭）、`close-only`（隐藏标题、保留关闭）或 `none`（两者都隐藏）。省略等同 `default`。 |
 
 默认导出：`export default function View({ params, close })`。`close(result)` 结束 View。宿主注入 React 与 `@spirit/desktop-ui`。

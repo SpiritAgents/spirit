@@ -6,6 +6,7 @@ export const SPIRIT_EXTENSION_UI_RUNTIME_URL = `${SPIRIT_EXTENSION_UI_ORIGIN}/ru
 export const SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE = "spirit-extension-view-close";
 export const SPIRIT_EXTENSION_VIEW_THEME_MESSAGE = "spirit-extension-view-theme";
 export const SPIRIT_EXTENSION_VIEW_READY_MESSAGE = "spirit-extension-view-ready";
+export const SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE = "spirit-extension-view-size";
 
 export function extensionViewFileUrl(extensionId: string, viewId: string): string {
   const params = new URLSearchParams({ extensionId, viewId });
@@ -36,6 +37,7 @@ export function buildExtensionViewSrcdoc(input: {
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline' ${SPIRIT_EXTENSION_UI_ORIGIN}; connect-src ${SPIRIT_EXTENSION_UI_ORIGIN};"
     />
     <style>${cssText}</style>
+    <style>html,body{margin:0;height:auto;min-height:0}#root{display:block}</style>
     <script type="importmap">
       {
         "imports": {
@@ -67,10 +69,20 @@ export function buildExtensionViewSrcdoc(input: {
             document.documentElement.setAttribute("style", event.data.htmlStyle ?? "");
           }
         });
-        createRoot(document.getElementById("root")).render(
+        const root = document.getElementById("root");
+        createRoot(root).render(
           createElement(View, { params: ${paramsJson}, close }),
         );
+        // Ready means the View module rendered — same gate as before height
+        // reporting. Do not wait for ResizeObserver: the host keeps the
+        // force-mounted dialog display:none until ready, so the frame cannot
+        // layout and RO never fires (3s timeout deadlock).
         parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_READY_MESSAGE}", requestId: ${requestIdJson} }, "*");
+        const reportHeight = () => {
+          const height = Math.ceil(root.getBoundingClientRect().height);
+          parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE}", requestId: ${requestIdJson}, height }, "*");
+        };
+        new ResizeObserver(reportHeight).observe(root);
       } catch (error) {
         parent.postMessage({ type: "${SPIRIT_EXTENSION_VIEW_READY_MESSAGE}", requestId: ${requestIdJson}, error: String(error) }, "*");
         throw error;

@@ -181,7 +181,7 @@ Requires `desktop-ui`.
 | `views[].path` | Required. Precompiled single-file ESM (`.js` / `.mjs`) relative to the package root. The host does not compile TSX. Relative imports 404 — the protocol only serves this file. |
 | `views[].title` | Optional. Dialog title                                                |
 | `views[].width` | Optional. Dialog width                                                |
-| `views[].height` | Optional. Dialog height                                              |
+| `views[].height` | Optional. Max dialog height. Omit to hug the view. The iframe scrolls if the view is taller. |
 | `views[].chrome` | Optional. Dialog chrome: `default` (title + close), `close-only` (hide title, keep close), or `none` (hide both). Omit for `default`. |
 
 Default export: `export default function View({ params, close })`. `close(result)` finishes the view. The host injects React and `@spirit/desktop-ui`.
