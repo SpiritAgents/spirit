@@ -25,6 +25,7 @@ import {
   collectHostDocumentChrome,
   collectHostStylesheetCssText,
 } from "@/lib/extension-view-tokens";
+import { RADIX_OVERLAY_CLOSE_MS } from "@/lib/overlay-motion";
 import { cn } from "@/lib/utils";
 import type { DesktopExtensionListItem, DesktopPendingExtensionUi } from "@/types";
 
@@ -40,13 +41,45 @@ export function ExtensionViewHost({
   onHostResult?: (requestId: string, result: unknown) => void;
 }) {
   const [openRequest, setOpenRequest] = useState(getOpenExtensionView);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [readyRequestId, setReadyRequestId] = useState<string | null>(null);
   const [frameHeight, setFrameHeight] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previousSessionKey = useRef(sessionKey ?? null);
   const hostOpenedRequestId = useRef<string | null>(null);
+  const exitHoldTimer = useRef<number | null>(null);
 
-  useEffect(() => subscribeOpenExtensionView(() => setOpenRequest(getOpenExtensionView())), []);
+  useEffect(
+    () =>
+      subscribeOpenExtensionView(() => {
+        const next = getOpenExtensionView();
+        if (exitHoldTimer.current !== null) {
+          window.clearTimeout(exitHoldTimer.current);
+          exitHoldTimer.current = null;
+        }
+        if (!next) {
+          setDialogOpen(false);
+          // Keep the last request (and iframe) mounted through the Radix exit
+          // animation, matching delete-workspace: clear content after duration-100.
+          exitHoldTimer.current = window.setTimeout(() => {
+            exitHoldTimer.current = null;
+            setOpenRequest(null);
+          }, RADIX_OVERLAY_CLOSE_MS);
+          return;
+        }
+        setOpenRequest(next);
+      }),
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      if (exitHoldTimer.current !== null) {
+        window.clearTimeout(exitHoldTimer.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!hostRequest) {
@@ -197,7 +230,13 @@ export function ExtensionViewHost({
   }, [openRequest]);
 
   const frameReady = openRequest !== null && readyRequestId === openRequest.requestId;
-  const open = openRequest !== null && frameReady;
+
+  useEffect(() => {
+    if (frameReady) {
+      setDialogOpen(true);
+    }
+  }, [frameReady]);
+
   const width = openRequest?.width;
   const height = openRequest?.height;
   const chrome = openRequest?.chrome ?? "default";
@@ -206,7 +245,7 @@ export function ExtensionViewHost({
 
   return (
     <Dialog
-      open={open}
+      open={dialogOpen}
       onOpenChange={(next) => {
         // Only a visible dialog can be dismissed; while the view is still loading
         // (force-mounted but hidden), outside clicks and Escape must not cancel it.
