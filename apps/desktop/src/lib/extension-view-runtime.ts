@@ -1,3 +1,5 @@
+import type { DesktopExtensionDesktopViewChrome } from "@/types";
+
 export interface ExtensionViewOpenRequest {
   requestId: string;
   extensionId: string;
@@ -6,6 +8,7 @@ export interface ExtensionViewOpenRequest {
   title?: string;
   width?: number;
   height?: number;
+  chrome?: DesktopExtensionDesktopViewChrome;
   params?: unknown;
 }
 

@@ -479,3 +479,51 @@ test("desktop views-only contributions parse and reject illegal view paths", asy
     await rm(preparedRoot, { recursive: true, force: true });
   }
 });
+
+test("desktop views parse chrome modes and reject invalid values", async () => {
+  const spiritDataDir = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-data-"));
+  const preparedRoot = await mkdtemp(join(tmpdir(), "spirit-ext-view-chrome-prepared-"));
+  try {
+    const closeOnlyDir = join(preparedRoot, "close-only");
+    await writeMinimalExtensionPackage(
+      closeOnlyDir,
+      {
+        requestedCapabilities: ["desktop-ui"],
+        contributes: {
+          desktop: {
+            views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", chrome: "close-only" }],
+          },
+        },
+      },
+      {
+        "ui/enable.mjs": "export default function View({ close }) { close({}); }\n",
+      },
+    );
+    const installed = await installPreparedExtensionDirectory(
+      { spiritDataDir, hostKind: "desktop" },
+      { preparedDirectoryPath: closeOnlyDir },
+    );
+    assert.deepEqual(installed.manifest.contributes?.desktop, {
+      views: [{ id: "enable", path: "ui/enable.mjs", title: "Enable", chrome: "close-only" }],
+    });
+
+    const invalidDir = join(preparedRoot, "invalid-chrome");
+    await writeMinimalExtensionPackage(invalidDir, {
+      requestedCapabilities: ["desktop-ui"],
+      contributes: {
+        desktop: { views: [{ id: "enable", path: "ui/enable.mjs", chrome: "hidden" }] },
+      },
+    });
+    await assert.rejects(
+      () =>
+        installPreparedExtensionDirectory(
+          { spiritDataDir, hostKind: "desktop" },
+          { preparedDirectoryPath: invalidDir },
+        ),
+      /chrome has an invalid value/,
+    );
+  } finally {
+    await rm(spiritDataDir, { recursive: true, force: true });
+    await rm(preparedRoot, { recursive: true, force: true });
+  }
+});

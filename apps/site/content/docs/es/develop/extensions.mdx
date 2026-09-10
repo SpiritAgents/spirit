@@ -182,6 +182,7 @@ Requiere `desktop-ui`.
 | `views[].title` | Opcional. Título del diálogo |
 | `views[].width` | Opcional. Ancho del diálogo |
 | `views[].height` | Opcional. Alto del diálogo |
+| `views[].chrome` | Opcional. Chrome del diálogo: `default` (título + cerrar), `close-only` (ocultar título, mantener cerrar) o `none` (ocultar ambos). Omitir equivale a `default`. |
 
 Exportación por defecto: `export default function View({ params, close })`. `close(result)` cierra la vista. El host inyecta React y `@spirit/desktop-ui`.
 

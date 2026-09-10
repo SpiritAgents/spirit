@@ -182,6 +182,7 @@ my-extension/
 | `views[].title` | 選填。Dialog 標題                                                   |
 | `views[].width` | 選填。Dialog 寬度                                                   |
 | `views[].height` | 選填。Dialog 高度                                                  |
+| `views[].chrome` | 選填。Dialog 外殼：`default`（標題 + 關閉）、`close-only`（隱藏標題、保留關閉）或 `none`（兩者都隱藏）。省略等同 `default`。 |
 
 預設匯出：`export default function View({ params, close })`。`close(result)` 結束 View。宿主注入 React 與 `@spirit/desktop-ui`。
 

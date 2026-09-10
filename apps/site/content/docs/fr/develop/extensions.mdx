@@ -182,6 +182,7 @@ Requiert `desktop-ui`.
 | `views[].title` | Facultatif. Titre de la boîte de dialogue |
 | `views[].width` | Facultatif. Largeur de la boîte de dialogue |
 | `views[].height` | Facultatif. Hauteur de la boîte de dialogue |
+| `views[].chrome` | Facultatif. Chrome de la boîte de dialogue : `default` (titre + fermer), `close-only` (masquer le titre, garder fermer) ou `none` (masquer les deux). L'omission équivaut à `default`. |
 
 Export par défaut : `export default function View({ params, close })`. `close(result)` termine la vue. L'hôte injecte React et `@spirit/desktop-ui`.
 

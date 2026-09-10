@@ -182,6 +182,7 @@ my-extension/
 | `views[].title` | Необязательно. Заголовок диалога |
 | `views[].width` | Необязательно. Ширина диалога |
 | `views[].height` | Необязательно. Высота диалога |
+| `views[].chrome` | Необязательно. Оформление диалога: `default` (заголовок + закрыть), `close-only` (скрыть заголовок, оставить закрыть) или `none` (скрыть оба). Пропуск равносилен `default`. |
 
 Экспорт по умолчанию: `export default function View({ params, close })`. `close(result)` завершает view. Хост внедряет React и `@spirit/desktop-ui`.
 

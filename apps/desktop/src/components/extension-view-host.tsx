@@ -76,6 +76,9 @@ export function ExtensionViewHost({
       ...(hostRequest.height === undefined && view?.height === undefined
         ? {}
         : { height: hostRequest.height ?? view?.height }),
+      ...(hostRequest.chrome === undefined && view?.chrome === undefined
+        ? {}
+        : { chrome: hostRequest.chrome ?? view?.chrome }),
       params: hostRequest.params,
     }).then(
       (result) => onHostResult?.(requestId, result),
@@ -183,6 +186,9 @@ export function ExtensionViewHost({
   const open = openRequest !== null && frameReady;
   const width = openRequest?.width;
   const height = openRequest?.height;
+  const chrome = openRequest?.chrome ?? "default";
+  const hideTitle = chrome === "close-only" || chrome === "none";
+  const showCloseButton = chrome !== "none";
 
   return (
     <Dialog
@@ -203,9 +209,10 @@ export function ExtensionViewHost({
           ...(width ? { width, maxWidth: width } : {}),
           ...(height ? { height } : {}),
         }}
+        showCloseButton={showCloseButton}
         aria-describedby={undefined}
       >
-        <DialogHeader>
+        <DialogHeader className={hideTitle ? "sr-only" : undefined}>
           <DialogTitle>{openRequest?.title ?? openRequest?.viewId ?? "Extension"}</DialogTitle>
         </DialogHeader>
         {openRequest ? (

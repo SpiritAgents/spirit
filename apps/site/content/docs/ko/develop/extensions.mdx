@@ -182,6 +182,7 @@ my-extension/
 | `views[].title` | 선택 사항. Dialog 제목 |
 | `views[].width` | 선택 사항. Dialog 너비 |
 | `views[].height` | 선택 사항. Dialog 높이 |
+| `views[].chrome` | 선택 사항. Dialog 크롬: `default`(제목 + 닫기), `close-only`(제목 숨김, 닫기 유지), `none`(둘 다 숨김). 생략 시 `default`. |
 
 기본 내보내기: `export default function View({ params, close })`. `close(result)`가 View를 끝냅니다. 호스트가 React와 `@spirit/desktop-ui`를 주입합니다.
 

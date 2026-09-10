@@ -584,12 +584,15 @@ export interface DesktopExtensionDesktopSettingsPage {
   title?: string;
 }
 
+export type DesktopExtensionDesktopViewChrome = "default" | "close-only" | "none";
+
 export interface DesktopExtensionDesktopView {
   id: string;
   path: string;
   title?: string;
   width?: number;
   height?: number;
+  chrome?: DesktopExtensionDesktopViewChrome;
 }
 
 export interface DesktopExtensionCliUiHookTokens {
@@ -825,6 +828,7 @@ export interface DesktopPendingExtensionUi {
   title?: string;
   width?: number;
   height?: number;
+  chrome?: DesktopExtensionDesktopViewChrome;
 }
 
 export interface ResolveExtensionUiRequest {

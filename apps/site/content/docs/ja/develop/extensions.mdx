@@ -182,6 +182,7 @@ my-extension/
 | `views[].title` | 任意。Dialog のタイトル |
 | `views[].width` | 任意。Dialog の幅 |
 | `views[].height` | 任意。Dialog の高さ |
+| `views[].chrome` | 任意。Dialog のクローム：`default`（タイトル + 閉じる）、`close-only`（タイトルを隠し閉じるは残す）、`none`（両方非表示）。省略時は `default`。 |
 
 デフォルトエクスポート: `export default function View({ params, close })`。`close(result)` で View を終了します。ホストは React と `@spirit/desktop-ui` を注入します。
 

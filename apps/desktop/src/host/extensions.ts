@@ -334,6 +334,7 @@ function mapDesktopViews(
     ...(view.title ? { title: view.title } : {}),
     ...(view.width === undefined ? {} : { width: view.width }),
     ...(view.height === undefined ? {} : { height: view.height }),
+    ...(view.chrome ? { chrome: view.chrome } : {}),
   }));
 }
 

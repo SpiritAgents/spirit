@@ -182,6 +182,7 @@ Requires `desktop-ui`.
 | `views[].title` | Optional. Dialog title                                                |
 | `views[].width` | Optional. Dialog width                                                |
 | `views[].height` | Optional. Dialog height                                              |
+| `views[].chrome` | Optional. Dialog chrome: `default` (title + close), `close-only` (hide title, keep close), or `none` (hide both). Omit for `default`. |
 
 Default export: `export default function View({ params, close })`. `close(result)` finishes the view. The host injects React and `@spirit/desktop-ui`.
 

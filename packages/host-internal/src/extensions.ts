@@ -163,12 +163,22 @@ export interface HostExtensionDesktopSettingsPageDefinition {
   title?: string;
 }
 
+export const SUPPORTED_HOST_EXTENSION_DESKTOP_VIEW_CHROMES = [
+  "default",
+  "close-only",
+  "none",
+] as const;
+
+export type HostExtensionDesktopViewChrome =
+  (typeof SUPPORTED_HOST_EXTENSION_DESKTOP_VIEW_CHROMES)[number];
+
 export interface HostExtensionDesktopViewDefinition {
   id: string;
   path: string;
   title?: string;
   width?: number;
   height?: number;
+  chrome?: HostExtensionDesktopViewChrome;
 }
 
 export interface HostExtensionDesktopContributionSet {
@@ -2446,6 +2456,11 @@ function parseDesktopViewDefinition(
   const title = optionalStringField(value.title);
   const width = optionalPositiveNumberField(value.width, `${fieldPrefix}[${index}].width`);
   const height = optionalPositiveNumberField(value.height, `${fieldPrefix}[${index}].height`);
+  const chrome = optionalEnumField(
+    value.chrome,
+    `${fieldPrefix}[${index}].chrome`,
+    SUPPORTED_HOST_EXTENSION_DESKTOP_VIEW_CHROMES,
+  );
 
   return {
     id,
@@ -2453,6 +2468,7 @@ function parseDesktopViewDefinition(
     ...(title ? { title } : {}),
     ...(width === undefined ? {} : { width }),
     ...(height === undefined ? {} : { height }),
+    ...(chrome ? { chrome } : {}),
   };
 }
 
