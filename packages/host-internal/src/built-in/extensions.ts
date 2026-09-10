@@ -100,12 +100,34 @@ export interface InstallBuiltInExtensionRequest {
 }
 
 /**
+ * In-process serialization for built-in ensures. The recopy swap
+ * (rename target→backup, then staged→target) is not safe against a concurrent
+ * ensure in the same process: Desktop pump ticks and IPC commands that bypass
+ * runSerialized both ensure, and interleaved renames fail with
+ * ENOENT/ENOTEMPTY (observed: three overlapping ensures in one Desktop main
+ * process). Serializing here — instead of relying on every caller to hold a
+ * lock — also lets each ensure re-list installed state, so two racing ensures
+ * over a not-yet-installed entry take fresh-install then recopy, rather than
+ * the second one failing on "already exists". Cross-process ensures (daemon
+ * session create vs Desktop) are not covered; that window is rare and short.
+ */
+let ensureBuiltInQueue: Promise<unknown> = Promise.resolve();
+
+export async function ensureBuiltInExtensions(
+  request: EnsureBuiltInExtensionsRequest,
+): Promise<readonly HostInstalledExtension[]> {
+  const run = ensureBuiltInQueue.then(() => ensureBuiltInExtensionsInner(request));
+  ensureBuiltInQueue = run.catch(() => undefined);
+  return run;
+}
+
+/**
  * Install every `defaultInstalled` entry of the built-in registry, and
  * reinstall already-installed built-ins from the bundled registry on every
  * ensure (no version gate: built-in edits often keep the same version).
  * Removal tombstones are honored for seeding.
  */
-export async function ensureBuiltInExtensions(
+async function ensureBuiltInExtensionsInner(
   request: EnsureBuiltInExtensionsRequest,
 ): Promise<readonly HostInstalledExtension[]> {
   const { spiritDataDir, hostKind } = request;
