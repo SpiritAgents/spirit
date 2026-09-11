@@ -64,6 +64,15 @@ pnpm run build        # production build of TS packages + Desktop + site + CLI
 
 See [README.md — Development](README.md#development) and each app/package README for package-specific details.
 
+## Git hooks
+
+`pnpm install` at the repo root runs `prepare`, which sets local `core.hooksPath` to `.githooks`. The hooks check the index only and never rewrite files:
+
+- **pre-commit:** `oxlint --deny-warnings` on staged TypeScript under `packages` / `apps/desktop` / `apps/site`; `oxfmt --check` when staged files include TypeScript or docs (and other formattable staged paths that ride along); `cargo fmt --check` on staged `apps/cli` `.rs` files; invisible Unicode on staged blobs (`scripts/check-invisible-unicode.py --staged`)
+- **commit-msg:** if the first line already looks like `type:` / `type(scope):`, require a space after `:` and after each comma in a multi-scope list. Merge, revert, Chinese, and other free-form subjects are not rejected
+
+`git commit --no-verify` skips the hooks; use it only as an escape hatch. A Rust-only clone that never runs `pnpm install` can enable the same path with `git config core.hooksPath .githooks` or `node scripts/setup-git-hooks.mjs`.
+
 ## Making changes
 
 1. Fork the repository and create a feature branch from `main`
