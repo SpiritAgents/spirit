@@ -77,6 +77,11 @@ import {
   writeWorkspaceSidebarGroupOrder,
 } from "@/lib/layout-prefs";
 import { applyWorkspaceGroupOrder, workspaceGroupIdsInOrder } from "@/lib/workspace-sidebar-order";
+import { listVisibleSidebarSessions } from "@/lib/session-sidebar-visible-order";
+import {
+  registerSessionSidebarDigitShortcut,
+  unregisterSessionSidebarDigitShortcut,
+} from "@/lib/session-sidebar-digit-shortcut-bridge";
 import { useWorkspaceGroupReorder } from "@/hooks/use-workspace-group-reorder";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
@@ -1656,6 +1661,33 @@ function SessionSidebarInner({
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    registerSessionSidebarDigitShortcut({
+      resolveVisibleSessions() {
+        return listVisibleSidebarSessions({
+          workspaceGroups,
+          unboundSessions,
+          workspaceSectionExpanded,
+          noWorkspaceSectionExpanded,
+          collapsedWorkspaceIds,
+          visibleCountByWorkspaceGroupId,
+          unboundVisibleCount,
+        });
+      },
+    });
+    return () => {
+      unregisterSessionSidebarDigitShortcut();
+    };
+  }, [
+    collapsedWorkspaceIds,
+    noWorkspaceSectionExpanded,
+    unboundSessions,
+    unboundVisibleCount,
+    visibleCountByWorkspaceGroupId,
+    workspaceGroups,
+    workspaceSectionExpanded,
+  ]);
 
   const setWorkspaceSectionExpandedPersisted = useCallback((open: boolean) => {
     setWorkspaceSectionExpanded(open);

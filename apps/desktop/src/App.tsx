@@ -209,6 +209,15 @@ export default function App() {
     activeSessionReadOnly: conversation.activeSessionReadOnly,
   });
 
+  const handleSelectSession = useCallback(
+    (path: string) => {
+      surfaceNav.setLastNonSettingsSurface("conversation");
+      surfaceNav.setActiveSurface("conversation");
+      void runtime.openSession(path);
+    },
+    [runtime.openSession, surfaceNav.setActiveSurface, surfaceNav.setLastNonSettingsSurface],
+  );
+
   useDesktopKeyboardShortcuts({
     runtime,
     activeSurfaceRef: surfaceNav.activeSurfaceRef,
@@ -216,11 +225,14 @@ export default function App() {
     conversationAbortShortcutTargetRef,
     sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
     handleNewSession: surfaceNav.handleNewSession,
+    handleSelectSession,
     handleOpenSettings: surfaceNav.handleOpenSettings,
     handleCloseSettings: surfaceNav.handleCloseSettings,
     setActionPickerOpen: composer.setActionPickerOpen,
     setFilePickerOpen: composer.setFilePickerOpen,
     uiLayoutScaleApi: uiLayoutScale,
+    workspaceToolTabs: workspaceTools.workspaceToolTabs,
+    focusWorkspaceToolTab: workspaceTools.focusWorkspaceToolTab,
   });
 
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -467,11 +479,7 @@ export default function App() {
                         onNewSessionInWorkspace={(workspaceRoot) => {
                           void surfaceNav.handleNewSessionInWorkspace(workspaceRoot);
                         }}
-                        onSelectSession={(path) => {
-                          surfaceNav.setLastNonSettingsSurface("conversation");
-                          surfaceNav.setActiveSurface("conversation");
-                          void runtime.openSession(path);
-                        }}
+                        onSelectSession={handleSelectSession}
                         onOpenMarketplace={() => {
                           surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
                           surfaceNav.setLastNonSettingsSurface("marketplace");
