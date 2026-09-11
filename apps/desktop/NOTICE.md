@@ -132,7 +132,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - remarkjs/remark-gfm
 - **remark-parse** 11.0.0 — MIT
   - https://github.com/remarkjs/remark/tree/main/packages/remark-parse
-- **sharp** 0.35.3 — Apache-2.0
+- **sharp** 0.35.4 — Apache-2.0
   - https://github.com/lovell/sharp
 - **shiki** 3.23.0 — MIT
   - https://github.com/shikijs/shiki
@@ -387,7 +387,7 @@ limitations under the License.
 
 **Used by:**
 
-- sharp 0.35.3
+- sharp 0.35.4
 
 ```
 Apache License

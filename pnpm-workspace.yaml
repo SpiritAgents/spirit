@@ -15,6 +15,15 @@ overrides:
   # TODO: drop once electron-builder loosens its pinned plist 3.1.0 dependency;
   # 0.8.15 fixes GHSA-6gmq-8vp8-gcm6 within plist's declared ^0.8.8 range
   "@xmldom/xmldom": 0.8.15
+  # TODO: drop once electron-builder (26.15.3, already latest) refreshes its
+  # snapshot; app-builder-lib/builder-util declare js-yaml ^4.1.0
+  js-yaml: 4.3.2
+  # TODO: drop once @modelcontextprotocol/sdk (1.30.0, already latest) refreshes
+  # its snapshot; it declares hono ^4.11.4
+  hono: 4.13.7
+  # TODO: drop once wait-on (9.1.0, already latest) refreshes its snapshot;
+  # it declares joi ^18.2.3
+  joi: 18.2.8
 
 allowBuilds:
   electron: true

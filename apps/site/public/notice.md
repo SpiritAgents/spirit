@@ -97,7 +97,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/mdx-js/mdx
 - **@mermaid-js/parser** 1.2.0 — MIT
   - https://github.com/mermaid-js/mermaid
-- **@next/env** 16.3.1 — MIT
+- **@next/env** 16.3.4 — MIT
   - https://github.com/vercel/next.js
 - **@oxc-project/types** 0.143.0 — MIT
   - https://github.com/oxc-project/oxc
@@ -743,7 +743,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - vercel/ms
 - **nanoid** 3.3.18 — MIT
   - ai/nanoid
-- **next** 16.3.1 — MIT
+- **next** 16.3.4 — MIT
   - vercel/next.js
 - **next-themes** 0.4.6 — MIT
   - https://github.com/pacocoursey/next-themes
@@ -845,7 +845,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/npm/node-semver
 - **semver** 7.8.5 — ISC
   - https://github.com/npm/node-semver
-- **sharp** 0.35.3 — Apache-2.0
+- **sharp** 0.35.4 — Apache-2.0
   - https://github.com/lovell/sharp
 - **shiki** 4.4.3 — MIT
   - https://github.com/shikijs/shiki
@@ -2031,7 +2031,7 @@ limitations under the License.
 
 **Used by:**
 
-- sharp 0.35.3
+- sharp 0.35.4
 
 ```
 Apache License
@@ -6294,7 +6294,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
-- next 16.3.1
+- next 16.3.4
 
 ```
 The MIT License (MIT)
@@ -10517,7 +10517,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 For more information, please refer to <http://unlicense.org>
 ```
 
-### @next/env 16.3.1 — MIT
+### @next/env 16.3.4 — MIT
 
 _(No LICENSE file found under this package in node_modules; verify upstream.)_
 
