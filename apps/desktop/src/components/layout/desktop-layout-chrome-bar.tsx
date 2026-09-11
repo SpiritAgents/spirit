@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  LoaderCircle,
   MessageCircle,
   PanelRightClose,
   PanelRightOpen,
@@ -23,15 +22,7 @@ import { SessionSidebarToggleButton } from "@/components/layout/session-sidebar-
 import { SessionChromeBreadcrumb } from "@/components/session-chrome-breadcrumb";
 import type { SessionGitTooltipItem } from "@/components/session-list-git-tooltip";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -468,7 +459,7 @@ export function DesktopLayoutChromeBar({
           ) : null}
         </div>
       ) : null}
-      <Dialog
+      <AlertDialog
         open={deleteSessionDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -477,59 +468,25 @@ export function DesktopLayoutChromeBar({
             dismissDeleteSessionDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton={!deleteSessionBusy}>
-          <DialogHeader>
-            <DialogTitle>{t("sidebar.deleteSession")}</DialogTitle>
-            <DialogDescription>
-              {t("sidebar.deleteSessionConfirm", { name: trimmedDeleteSessionDisplayName })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!deleteSessionBusy) {
-                    dismissDeleteSessionDialog();
-                  }
-                }}
-                disabled={deleteSessionBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={deleteSessionBusy || !trimmedDeleteSessionPath || !onDeleteSession}
-                onClick={() => {
-                  if (!onDeleteSession) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onDeleteSession(trimmedDeleteSessionPath);
-                      dismissDeleteSessionDialog(() => {
-                        void onDeleteSessionOverlayClosed?.();
-                      });
-                    } catch {
-                      // Keep dialog open; runtime surfaces the error.
-                    }
-                  })();
-                }}
-              >
-                {deleteSessionBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("sidebar.deleteSessionConfirmTitle", { name: trimmedDeleteSessionDisplayName })}
+        description={t("sidebar.deleteSessionConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleteSessionBusy}
+        onConfirm={async () => {
+          if (!onDeleteSession) {
+            return;
+          }
+          try {
+            await onDeleteSession(trimmedDeleteSessionPath);
+            dismissDeleteSessionDialog(() => {
+              void onDeleteSessionOverlayClosed?.();
+            });
+          } catch {
+            // Keep dialog open; runtime surfaces the error.
+          }
+        }}
+      />
     </div>
   );
 }

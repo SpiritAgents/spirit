@@ -6,10 +6,10 @@ import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogFooterActions,
   DialogHeader,
@@ -203,62 +203,35 @@ export function RulesSettingsPanel({
         )}
       </div>
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("settings.deleteRule")}</DialogTitle>
-            <DialogDescription>
-              {t("settings.deleteRuleConfirm", {
-                name: deleteTarget ? ruleFileBaseName(deleteTarget.shortLabel) : "",
-                location: deleteTarget ? ruleLocationLabel(deleteTarget) : "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-                disabled={rulesBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={rulesBusy || !deleteTarget}
-                onClick={() => {
-                  const target = deleteTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onDeleteRule({ id: target.id });
-                      setDeleteTarget(null);
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {rulesBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("settings.deleteRuleConfirmTitle", {
+          name: deleteTarget ? ruleFileBaseName(deleteTarget.shortLabel) : "",
+        })}
+        description={t("settings.deleteRuleConfirmDescription", {
+          location: deleteTarget ? ruleLocationLabel(deleteTarget) : "",
+        })}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={rulesBusy}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          if (!target) {
+            return;
+          }
+          try {
+            await onDeleteRule({ id: target.id });
+            setDeleteTarget(null);
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
 
       <Dialog
         open={addDialogOpen}

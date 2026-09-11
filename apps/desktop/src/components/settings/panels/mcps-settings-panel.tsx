@@ -5,10 +5,10 @@ import { LoaderCircle } from "lucide-react";
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogFooterActions,
   DialogHeader,
@@ -325,59 +325,31 @@ export function McpsSettingsPanel({
         )}
       </div>
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("settings.deleteMcp")}</DialogTitle>
-            <DialogDescription>
-              {t("settings.deleteMcpConfirm", { name: deleteTarget?.name ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-                disabled={mcpsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={mcpsBusy || !deleteTarget}
-                onClick={() => {
-                  const target = deleteTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onDeleteMcpServer(target);
-                      setDeleteTarget(null);
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {mcpsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("settings.deleteMcpConfirmTitle", { name: deleteTarget?.name ?? "" })}
+        description={t("settings.deleteMcpConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={mcpsBusy}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          if (!target) {
+            return;
+          }
+          try {
+            await onDeleteMcpServer(target);
+            setDeleteTarget(null);
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
 
       <Dialog
         open={addDialogOpen}

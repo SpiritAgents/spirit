@@ -22,16 +22,8 @@ import {
   type WorkspaceExplorerContextTarget,
 } from "@/components/workspace-file-context-menu";
 import { ContextMenu, ContextMenuTrigger } from "@/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { desktopShellPlatform } from "@/lib/desktop-shell";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useHostApi } from "@/hooks/useHostApi";
@@ -47,6 +39,14 @@ import {
 import { evictRecordKeysUnderPrefix } from "@/lib/workspace-entry-path-sync";
 import { cn } from "@/lib/utils";
 import type { PlanSnapshot, WorkspaceExplorerEntry, WorkspaceExplorerListResult } from "@/types";
+
+function workspacePlatformKey(base: string): string {
+  const platform = desktopShellPlatform();
+  if (platform === "darwin" || platform === "win32" || platform === "linux") {
+    return `${base}.${platform}`;
+  }
+  return `${base}.linux`;
+}
 
 function describeError(error: unknown): string {
   if (error instanceof Error) {
@@ -1530,7 +1530,7 @@ export function WorkspaceFilesPanel({
         </ContextMenu>
       </div>
 
-      <Dialog
+      <AlertDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -1539,44 +1539,15 @@ export function WorkspaceFilesPanel({
             dismissDeleteDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("workspace.delete")}</DialogTitle>
-            <DialogDescription>
-              {t("workspace.deleteEntryConfirm", { name: deleteTarget?.name ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={deleteBusy}
-                onClick={() => {
-                  if (!deleteBusy) {
-                    dismissDeleteDialog();
-                  }
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={deleteBusy}
-                onClick={() => void handleConfirmMoveToTrash()}
-              >
-                {moveToTrashLabel}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("workspace.deleteEntryConfirmTitle", { name: deleteTarget?.name ?? "" })}
+        description={t(workspacePlatformKey("workspace.deleteEntryConfirmDescription"))}
+        confirmLabel={moveToTrashLabel}
+        cancelLabel={t("common.cancel")}
+        busy={deleteBusy}
+        onConfirm={() => handleConfirmMoveToTrash()}
+      />
 
-      <Dialog
+      <AlertDialog
         open={moveDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -1585,51 +1556,27 @@ export function WorkspaceFilesPanel({
             dismissMoveDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("workspace.move")}</DialogTitle>
-            <DialogDescription>
-              {t("workspace.moveEntryConfirm", {
-                name: moveTarget?.sourceName ?? "",
-                folder: moveTarget?.targetDirectoryLabel ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          {moveError ? (
-            <p className="text-sm text-destructive/90" role="alert">
-              {moveError}
-            </p>
-          ) : null}
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={moveBusy}
-                onClick={() => {
-                  if (!moveBusy) {
-                    dismissMoveDialog();
-                  }
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={moveBusy}
-                onClick={() => void handleConfirmMove()}
-              >
-                {t("workspace.move")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("workspace.moveEntryConfirmTitle", { name: moveTarget?.sourceName ?? "" })}
+        description={
+          <>
+            {t("workspace.moveEntryConfirmDescription", {
+              folder: moveTarget?.targetDirectoryLabel ?? "",
+            })}
+            {moveError ? (
+              <span className="mt-2 block text-destructive/90" role="alert">
+                {moveError}
+              </span>
+            ) : null}
+          </>
+        }
+        confirmLabel={t("workspace.move")}
+        cancelLabel={t("common.cancel")}
+        variant="default"
+        busy={moveBusy}
+        onConfirm={() => handleConfirmMove()}
+      />
 
-      <Dialog
+      <AlertDialog
         open={forceDeleteDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -1638,42 +1585,13 @@ export function WorkspaceFilesPanel({
             dismissForceDeleteDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("workspace.forceDelete")}</DialogTitle>
-            <DialogDescription>
-              {t("workspace.forceDeleteConfirm", { reason: forceDeleteReason })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={forceDeleteBusy}
-                onClick={() => {
-                  if (!forceDeleteBusy) {
-                    dismissForceDeleteDialog();
-                  }
-                }}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={forceDeleteBusy}
-                onClick={() => void handleForceDelete()}
-              >
-                {t("workspace.forceDelete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("workspace.forceDeleteConfirmTitle")}
+        description={t("workspace.forceDeleteConfirmDescription", { reason: forceDeleteReason })}
+        confirmLabel={t("workspace.forceDelete")}
+        cancelLabel={t("common.cancel")}
+        busy={forceDeleteBusy}
+        onConfirm={() => handleForceDelete()}
+      />
     </div>
   );
 }

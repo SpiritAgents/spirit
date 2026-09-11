@@ -32,6 +32,7 @@ import type { SettingsFormState, SettingsViewProps } from "@/components/settings
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -805,121 +806,65 @@ export function ModelsSettingsPanel({
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("settings.deleteModel")}</DialogTitle>
-            <DialogDescription>
-              {t("settings.deleteModelConfirm", { name: deleteTarget ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-                disabled={modelsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={modelsBusy || !deleteTarget}
-                onClick={() => {
-                  const name = deleteTarget;
-                  if (!name) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onRemoveModel(name);
-                      setDeleteTarget(null);
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {modelsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("settings.deleteModelConfirmTitle", { name: deleteTarget ?? "" })}
+        description={t("settings.deleteModelConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={modelsBusy}
+        onConfirm={async () => {
+          const name = deleteTarget;
+          if (!name) {
+            return;
+          }
+          try {
+            await onRemoveModel(name);
+            setDeleteTarget(null);
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
 
-      <Dialog
+      <AlertDialog
         open={deleteGroupTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteGroupTarget(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("settings.deleteProviderGroup")}</DialogTitle>
-            <DialogDescription>
-              {t("settings.deleteProviderGroupConfirm", {
-                provider: deleteGroupTarget
-                  ? configProviderGroups.find((group) => group.id === deleteGroupTarget)
-                    ? groupDisplayLabel(
-                        configProviderGroups.find((group) => group.id === deleteGroupTarget)!,
-                      )
-                    : deleteGroupTarget
-                  : "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteGroupTarget(null)}
-                disabled={modelsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={modelsBusy || !deleteGroupTarget}
-                onClick={() => {
-                  const groupId = deleteGroupTarget;
-                  if (!groupId) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onRemoveProviderModels(groupId);
-                      setDeleteGroupTarget(null);
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {modelsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.deleteGroup")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("settings.deleteProviderGroupConfirmTitle", {
+          provider: deleteGroupTarget
+            ? configProviderGroups.find((group) => group.id === deleteGroupTarget)
+              ? groupDisplayLabel(
+                  configProviderGroups.find((group) => group.id === deleteGroupTarget)!,
+                )
+              : deleteGroupTarget
+            : "",
+        })}
+        description={t("settings.deleteProviderGroupConfirmDescription")}
+        confirmLabel={t("settings.deleteGroup")}
+        cancelLabel={t("common.cancel")}
+        busy={modelsBusy}
+        onConfirm={async () => {
+          const groupId = deleteGroupTarget;
+          if (!groupId) {
+            return;
+          }
+          try {
+            await onRemoveProviderModels(groupId);
+            setDeleteGroupTarget(null);
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
 
       <Dialog
         open={providerDialogOpen}
