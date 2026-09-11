@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Fail if tracked UTF-8 files contain invisible Unicode.
 
+Default: scan git ls-files from the worktree. Pass --staged to scan
+index blobs (git show :path) for the ACMR cached diff instead.
+
 Banned ranges (no path or context exemptions):
 - Zero-width: U+200B-200F, U+00AD, U+FEFF, U+2060
 - Variation selectors: U+FE00-FE0F, U+E0100-E01EF
@@ -35,28 +38,31 @@ def repo_root():
     ).strip()
 
 
+def nul_split_paths(raw):
+    for chunk in raw.split(b"\0"):
+        if chunk:
+            yield chunk.decode("utf-8", "surrogateescape")
+
+
 def tracked_files(root):
     raw = subprocess.check_output(
         ["git", "-C", root, "ls-files", "-z"],
     )
-    for chunk in raw.split(b"\0"):
-        if chunk:
-            yield chunk.decode("utf-8", "surrogateescape")
+    return nul_split_paths(raw)
+
+
+def staged_files(root):
+    raw = subprocess.check_output(
+        ["git", "-C", root, "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"],
+    )
+    return nul_split_paths(raw)
 
 
 def format_codepoint(cp):
     return "U+%04X" % cp if cp <= 0xFFFF else "U+%06X" % cp
 
 
-def scan_file(root, relpath):
-    full = os.path.join(root, relpath)
-    try:
-        with open(full, "rb") as handle:
-            data = handle.read()
-    except OSError as exc:
-        print("%s: failed to read: %s" % (relpath, exc), file=sys.stderr)
-        return []
-
+def scan_bytes(relpath, data):
     if b"\x00" in data[:8192]:
         return []
     try:
@@ -73,11 +79,39 @@ def scan_file(root, relpath):
     return hits
 
 
+def scan_file(root, relpath):
+    full = os.path.join(root, relpath)
+    try:
+        with open(full, "rb") as handle:
+            data = handle.read()
+    except OSError as exc:
+        print("%s: failed to read: %s" % (relpath, exc), file=sys.stderr)
+        return None
+    return scan_bytes(relpath, data)
+
+
+def scan_staged(root, relpath):
+    try:
+        data = subprocess.check_output(
+            ["git", "-C", root, "show", ":%s" % relpath],
+        )
+    except subprocess.CalledProcessError as exc:
+        print("%s: failed to read staged blob: %s" % (relpath, exc), file=sys.stderr)
+        return None
+    return scan_bytes(relpath, data)
+
+
 def main():
+    staged = "--staged" in sys.argv[1:]
     root = repo_root()
     hits = []
-    for relpath in tracked_files(root):
-        hits.extend(scan_file(root, relpath))
+    paths = staged_files(root) if staged else tracked_files(root)
+    scan = scan_staged if staged else scan_file
+    for relpath in paths:
+        found = scan(root, relpath)
+        if found is None:
+            return 1
+        hits.extend(found)
 
     for path, line_no, col, code in hits:
         print("%s:%d:%d %s" % (path, line_no, col, code), file=sys.stderr)
