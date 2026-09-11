@@ -158,7 +158,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
     "build:tsc": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",

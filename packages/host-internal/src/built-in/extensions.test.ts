@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "vitest";
 
 import { parseMarketplaceIndexText } from "@spiritagent/extension-toolkit";
@@ -27,6 +29,19 @@ test("the shipped built-in registry is a valid marketplace.json (dogfood)", asyn
     "utf8",
   );
   assert.equal(parseMarketplaceIndexText(raw).name, "built-in");
+
+  const packagesRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+  for (const entry of index.extensions) {
+    const contentDir = join(resolveBuiltInRegistryRoot(), "extensions", entry.name);
+    const shippedPkgPath = join(contentDir, "package.json");
+    assert.ok(existsSync(shippedPkgPath), `${entry.name}/package.json`);
+    const sourcePkg = JSON.parse(
+      await readFile(join(packagesRoot, entry.name, "package.json"), "utf8"),
+    ) as { version: string };
+    const shippedPkg = JSON.parse(await readFile(shippedPkgPath, "utf8")) as { version: string };
+    assert.equal(entry.version, sourcePkg.version, entry.name);
+    assert.equal(shippedPkg.version, sourcePkg.version, entry.name);
+  }
 });
 
 interface FixtureRegistry {
