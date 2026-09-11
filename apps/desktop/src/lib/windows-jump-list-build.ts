@@ -1,8 +1,9 @@
 import type { SessionListItem } from "../types.js";
 import {
-  buildNewSessionProtocolUrl,
-  buildOpenSessionProtocolUrl,
-} from "./spirit-notification-protocol.js";
+  buildJumpListNewSessionLaunchArgs,
+  buildJumpListSessionLaunchArgs,
+  jumpListSessionFileNameFromPath,
+} from "./windows-launch-argv.js";
 
 export const JUMP_LIST_RECENT_LIMIT = 5;
 export const TRAY_RECENT_LIMIT = 5;
@@ -35,7 +36,10 @@ export function pickRecentSessions(
 export function pickRecentSessionsForJumpList(
   sessions: readonly SessionListItem[],
 ): SessionListItem[] {
-  return pickRecentSessions(sessions, JUMP_LIST_RECENT_LIMIT);
+  return pickRecentSessions(
+    sessions.filter((session) => jumpListSessionFileNameFromPath(session.path) !== null),
+    JUMP_LIST_RECENT_LIMIT,
+  );
 }
 
 export function truncateJumpListTitle(title: string, maxLength = JUMP_LIST_TITLE_MAX): string {
@@ -51,12 +55,12 @@ export function truncateJumpListTitle(title: string, maxLength = JUMP_LIST_TITLE
   return `${points.slice(0, maxLength - 1).join("")}…`;
 }
 
-export function buildJumpListLaunchArgs(protocolUrl: string, devMainScript?: string): string {
+export function buildJumpListLaunchArgs(launchArgs: string, devMainScript?: string): string {
   const script = devMainScript?.trim();
   if (script) {
-    return `"${script}" "${protocolUrl}"`;
+    return `"${script}" ${launchArgs}`;
   }
-  return protocolUrl;
+  return launchArgs;
 }
 
 export function buildWindowsJumpListCategories(input: {
@@ -75,14 +79,22 @@ export function buildWindowsJumpListCategories(input: {
     categories.push({
       type: "custom",
       name: input.recentLabel,
-      items: recentSessions.map((session) => ({
-        type: "task",
-        title: truncateJumpListTitle(session.displayName),
-        program: input.execPath,
-        args: buildJumpListLaunchArgs(buildOpenSessionProtocolUrl(session.path), devMainScript),
-        iconPath: input.iconPath,
-        iconIndex: 0,
-      })),
+      items: recentSessions.flatMap((session) => {
+        const fileName = jumpListSessionFileNameFromPath(session.path);
+        if (!fileName) {
+          return [];
+        }
+        return [
+          {
+            type: "task" as const,
+            title: truncateJumpListTitle(session.displayName),
+            program: input.execPath,
+            args: buildJumpListLaunchArgs(buildJumpListSessionLaunchArgs(fileName), devMainScript),
+            iconPath: input.iconPath,
+            iconIndex: 0,
+          },
+        ];
+      }),
     });
   }
 
@@ -93,7 +105,7 @@ export function buildWindowsJumpListCategories(input: {
         type: "task",
         title: input.newAgentLabel,
         program: input.execPath,
-        args: buildJumpListLaunchArgs(buildNewSessionProtocolUrl(), devMainScript),
+        args: buildJumpListLaunchArgs(buildJumpListNewSessionLaunchArgs(), devMainScript),
         iconPath: input.iconPath,
         iconIndex: 0,
       },

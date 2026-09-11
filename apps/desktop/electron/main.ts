@@ -34,12 +34,6 @@ import {
   installSpiritGeneratedAssetProtocolHandler,
   registerSpiritGeneratedAssetPrivilegedScheme,
 } from "./generated-asset-protocol.js";
-import {
-  bindSpiritNotificationProtocolHandlers,
-  handleSpiritNotificationProtocolArgv,
-  installSpiritNotificationProtocolRouting,
-  registerSpiritNotificationProtocolClient,
-} from "./notification-protocol.js";
 import { syncWindowsJumpList } from "./sync-windows-jump-list.js";
 import {
   bindMacOSDockMenuDeps,
@@ -94,8 +88,6 @@ import {
 } from "../src/lib/translucency.js";
 
 registerSpiritGeneratedAssetPrivilegedScheme();
-registerSpiritNotificationProtocolClient();
-installSpiritNotificationProtocolRouting();
 
 const gotSpiritSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSpiritSingleInstanceLock) {
@@ -106,8 +98,7 @@ if (!gotSpiritSingleInstanceLock) {
   setSpiritDataDirOverride(spiritDataDir);
 
   app.on("second-instance", (_event, argv) => {
-    const hadProtocol = handleSpiritNotificationProtocolArgv(argv);
-    if (!hadProtocol) {
+    if (!handleWindowsLaunchArgv(argv)) {
       focusSpiritDesktopWindows();
     }
   });
@@ -164,6 +155,7 @@ import {
   subscribeDesktopSessionListUpdates,
 } from "../src/host/service.js";
 import {
+  chatsDirPath,
   configFilePath,
   loadConfig,
   resolveConfiguredSpiritDataDir,
@@ -171,6 +163,10 @@ import {
   spiritDataDir,
   type DesktopWebHostConfigFile,
 } from "../src/host/storage.js";
+import {
+  parseWindowsLaunchArgv,
+  resolveJumpListSessionPath,
+} from "../src/lib/windows-launch-argv.js";
 import { setDesktopWebHostRuntimeStatus } from "../src/host/web-host-state.js";
 import { diffLiveSnapshots } from "../src/lib/live-update.js";
 import {
@@ -331,6 +327,23 @@ async function stopDesktopWebHostIfRunning(): Promise<void> {
     return;
   }
   await desktopWebHost.stop();
+}
+
+function handleWindowsLaunchArgv(argv: readonly string[]): boolean {
+  const parsed = parseWindowsLaunchArgv(argv);
+  if (!parsed) {
+    return false;
+  }
+  if (parsed.kind === "new-session") {
+    handleSpiritNewSessionRequest();
+    return true;
+  }
+  const resolved = resolveJumpListSessionPath(chatsDirPath(), parsed.fileName);
+  if (!resolved) {
+    return false;
+  }
+  void handleSpiritOpenSessionRequest(resolved);
+  return true;
 }
 
 async function handleSpiritOpenSessionFromProtocol(sessionPath: string): Promise<void> {
@@ -1123,12 +1136,7 @@ if (gotSpiritSingleInstanceLock) {
       focusWindows: focusSpiritDesktopWindows,
       openSession: handleSpiritOpenSessionFromProtocol,
     });
-    bindSpiritNotificationProtocolHandlers({
-      onFocus: focusSpiritDesktopWindows,
-      onNewSession: handleSpiritNewSessionRequest,
-      onOpenSession: handleSpiritOpenSessionRequest,
-    });
-    handleSpiritNotificationProtocolArgv(process.argv);
+    handleWindowsLaunchArgv(process.argv);
     registerWindowsToastActivationHandler();
     if (process.platform === "win32") {
       Menu.setApplicationMenu(null);
