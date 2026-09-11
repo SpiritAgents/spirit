@@ -196,7 +196,9 @@ export function isFocusInOpenWorkspaceToolsPanel(
     return false;
   }
   const element = target as { closest?: (selector: string) => unknown } | null;
-  return Boolean(element?.closest?.(WORKSPACE_PANEL_SURFACE_SELECTOR)) || workspacePanelRegionActive;
+  return (
+    Boolean(element?.closest?.(WORKSPACE_PANEL_SURFACE_SELECTOR)) || workspacePanelRegionActive
+  );
 }
 
 export type ModDigitShortcutAction = "session" | "tab";

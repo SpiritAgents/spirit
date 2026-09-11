@@ -489,10 +489,7 @@ test("resolveModDigitShortcutAction still fires when an INPUT is focused", () =>
 
 test("resolveModDigitShortcutAction routes to tab when last pointer was in the open panel", () => {
   setWorkspacePanelRegionActive(true);
-  assert.equal(
-    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: true }),
-    "tab",
-  );
+  assert.equal(resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: true }), "tab");
 });
 
 test("resolveModDigitShortcutAction ignores a stale panel pointer region when closed", () => {
@@ -511,4 +508,3 @@ test("resolveModDigitShortcutAction returns to session after pointer leaves the 
     "session",
   );
 });
-
