@@ -257,10 +257,8 @@ export function ExtensionViewHost({
       <DialogContent
         className={cn("sm:max-w-lg", openRequest !== null && !frameReady && "hidden")}
         overlayClassName={openRequest !== null && !frameReady ? "hidden" : undefined}
-        forceMount={(openRequest !== null) || undefined}
-        style={{
-          ...(width ? { width, maxWidth: width } : {}),
-        }}
+        forceMount={openRequest !== null || undefined}
+        style={width ? { width, maxWidth: width } : {}}
         showCloseButton={showCloseButton}
         aria-describedby={undefined}
       >

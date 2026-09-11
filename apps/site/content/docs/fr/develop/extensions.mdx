@@ -172,17 +172,17 @@ Le modèle ne voit pas `name` tel quel. L'hôte construit un nom d'invocation co
 
 Requiert `desktop-ui`.
 
-| Champ          | Description                                                                       |
-| -------------- | --------------------------------------------------------------------------------- |
-| `css[].path`   | Obligatoire. Fichier CSS relatif à la racine du package                           |
-| `css[].media`  | Facultatif. Requête média CSS                                                     |
-| `settingsPage` | Facultatif. `true`, `{}` ou `{ title }` — ajoute une entrée de paramètres Desktop |
-| `views[].id`   | Obligatoire. kebab-case, unique dans l'extension |
-| `views[].path` | Obligatoire. ESM précompilé en un seul fichier (`.js` / `.mjs`) relatif à la racine du package. L'hôte ne compile pas le TSX. Les imports relatifs renvoient 404 — le protocole ne sert que ce fichier. |
-| `views[].title` | Facultatif. Titre de la boîte de dialogue |
-| `views[].width` | Facultatif. Largeur de la boîte de dialogue |
-| `views[].height` | Facultatif. Hauteur maximale. L'omission épouse le contenu. Au-delà, l'iframe défile. |
-| `views[].chrome` | Facultatif. Chrome de la boîte de dialogue : `default` (titre + fermer), `close-only` (masquer le titre, garder fermer) ou `none` (masquer les deux). L'omission équivaut à `default`. |
+| Champ            | Description                                                                                                                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `css[].path`     | Obligatoire. Fichier CSS relatif à la racine du package                                                                                                                                                 |
+| `css[].media`    | Facultatif. Requête média CSS                                                                                                                                                                           |
+| `settingsPage`   | Facultatif. `true`, `{}` ou `{ title }` — ajoute une entrée de paramètres Desktop                                                                                                                       |
+| `views[].id`     | Obligatoire. kebab-case, unique dans l'extension                                                                                                                                                        |
+| `views[].path`   | Obligatoire. ESM précompilé en un seul fichier (`.js` / `.mjs`) relatif à la racine du package. L'hôte ne compile pas le TSX. Les imports relatifs renvoient 404 — le protocole ne sert que ce fichier. |
+| `views[].title`  | Facultatif. Titre de la boîte de dialogue                                                                                                                                                               |
+| `views[].width`  | Facultatif. Largeur de la boîte de dialogue                                                                                                                                                             |
+| `views[].height` | Facultatif. Hauteur maximale. L'omission épouse le contenu. Au-delà, l'iframe défile.                                                                                                                   |
+| `views[].chrome` | Facultatif. Chrome de la boîte de dialogue : `default` (titre + fermer), `close-only` (masquer le titre, garder fermer) ou `none` (masquer les deux). L'omission équivaut à `default`.                  |
 
 Export par défaut : `export default function View({ params, close })`. `close(result)` termine la vue. L'hôte injecte React et `@spirit/desktop-ui`.
 

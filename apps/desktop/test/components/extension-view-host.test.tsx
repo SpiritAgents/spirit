@@ -10,10 +10,7 @@ import {
   SPIRIT_EXTENSION_VIEW_READY_MESSAGE,
   SPIRIT_EXTENSION_VIEW_SIZE_MESSAGE,
 } from "@/lib/extension-view-frame";
-import {
-  closeAllOpenExtensionViews,
-  openExtensionView,
-} from "@/lib/extension-view-runtime";
+import { closeAllOpenExtensionViews, openExtensionView } from "@/lib/extension-view-runtime";
 
 afterEach(() => {
   closeAllOpenExtensionViews();

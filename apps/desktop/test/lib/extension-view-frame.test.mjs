@@ -45,7 +45,9 @@ test("protocol only serves runtime.js and a declared view identity", () => {
     kind: "runtime",
   });
   assert.deepEqual(
-    parseExtensionUiUrl(new URL("spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main")),
+    parseExtensionUiUrl(
+      new URL("spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main"),
+    ),
     { kind: "view", extensionId: "built-in/demo", viewId: "main" },
   );
   assert.equal(parseExtensionUiUrl(new URL("spirit://extension-ui/chunk.js")).kind, "invalid");

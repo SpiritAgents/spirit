@@ -12,7 +12,12 @@ if (!Array.isArray(index.extensions)) {
 
 const names = [];
 for (const [offset, entry] of index.extensions.entries()) {
-  if (entry === null || typeof entry !== "object" || typeof entry.name !== "string" || !entry.name) {
+  if (
+    entry === null ||
+    typeof entry !== "object" ||
+    typeof entry.name !== "string" ||
+    !entry.name
+  ) {
     throw new Error(`${indexPath} extensions[${offset}].name is missing`);
   }
   names.push(entry.name);
