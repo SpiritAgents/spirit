@@ -76,7 +76,6 @@ function handleApprovalActionIndex(index: number | undefined): void {
       }
     } finally {
       approvalActionInFlight = false;
-      focusMainWindow();
     }
   })();
 }

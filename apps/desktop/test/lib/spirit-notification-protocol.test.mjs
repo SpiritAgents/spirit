@@ -3,7 +3,6 @@ import { test } from "vitest";
 
 import {
   buildNewSessionProtocolUrl,
-  buildNotificationApprovalProtocolUrl,
   buildOpenSessionProtocolUrl,
   dispatchSpiritNotificationProtocolUrl,
   findSpiritNotificationProtocolUrl,
@@ -11,20 +10,58 @@ import {
   parseSpiritNotificationProtocolUrl,
 } from "../../src/lib/spirit-notification-protocol.ts";
 
-test("buildNotificationApprovalProtocolUrl encodes decision", () => {
+test("parseSpiritNotificationProtocolUrl ignores leftover approval URLs", () => {
   assert.equal(
-    buildNotificationApprovalProtocolUrl("allow", "spirit-approval"),
-    "spirit://notification-approval?decision=allow&tag=spirit-approval",
-  );
-});
-
-test("parseSpiritNotificationProtocolUrl reads approval decision", () => {
-  assert.deepEqual(
     parseSpiritNotificationProtocolUrl(
       "spirit://notification-approval?decision=deny&tag=spirit-approval",
     ),
-    { kind: "approval", decision: "deny" },
+    null,
   );
+  assert.equal(
+    parseSpiritNotificationProtocolUrl("spirit://notification-approval?decision=allow"),
+    null,
+  );
+});
+
+test("handleSpiritNotificationProtocolArgv ignores leftover approval URLs", () => {
+  let dispatched = false;
+  assert.equal(
+    handleSpiritNotificationProtocolArgv(
+      ["spirit.exe", "spirit://notification-approval?decision=allow"],
+      {
+        onFocus: () => {
+          dispatched = true;
+        },
+        onNewSession: () => {
+          dispatched = true;
+        },
+        onOpenSession: () => {
+          dispatched = true;
+        },
+      },
+    ),
+    false,
+  );
+  assert.equal(dispatched, false);
+});
+
+test("dispatchSpiritNotificationProtocolUrl does not approve leftover approval URLs", () => {
+  let dispatched = false;
+  assert.equal(
+    dispatchSpiritNotificationProtocolUrl("spirit://notification-approval?decision=allow", {
+      onFocus: () => {
+        dispatched = true;
+      },
+      onNewSession: () => {
+        dispatched = true;
+      },
+      onOpenSession: () => {
+        dispatched = true;
+      },
+    }),
+    false,
+  );
+  assert.equal(dispatched, false);
 });
 
 test("findSpiritNotificationProtocolUrl scans argv", () => {
@@ -69,7 +106,6 @@ test("parseSpiritNotificationProtocolUrl rejects open-session without path", () 
 test("handleSpiritNotificationProtocolArgv returns false when open-session path is missing", () => {
   let focusCount = 0;
   const handlers = {
-    onApproval: () => {},
     onFocus: () => {
       focusCount += 1;
     },
@@ -84,7 +120,6 @@ test("handleSpiritNotificationProtocolArgv returns false when open-session path 
 test("handleSpiritNotificationProtocolArgv returns true when new-session dispatches", () => {
   let newSessionCount = 0;
   const handlers = {
-    onApproval: () => {},
     onNewSession: () => {
       newSessionCount += 1;
     },

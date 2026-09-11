@@ -1124,7 +1124,6 @@ if (gotSpiritSingleInstanceLock) {
       openSession: handleSpiritOpenSessionFromProtocol,
     });
     bindSpiritNotificationProtocolHandlers({
-      onApproval: handleApprovalNotificationAction,
       onFocus: focusSpiritDesktopWindows,
       onNewSession: handleSpiritNewSessionRequest,
       onOpenSession: handleSpiritOpenSessionRequest,

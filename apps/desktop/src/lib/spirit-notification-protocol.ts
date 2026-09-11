@@ -1,17 +1,5 @@
 export const SPIRIT_NOTIFICATION_PROTOCOL = "spirit";
 
-export function buildNotificationApprovalProtocolUrl(
-  decision: "allow" | "deny",
-  tag?: string,
-): string {
-  const params = new URLSearchParams({ decision });
-  const trimmedTag = tag?.trim();
-  if (trimmedTag) {
-    params.set("tag", trimmedTag);
-  }
-  return `${SPIRIT_NOTIFICATION_PROTOCOL}://notification-approval?${params.toString()}`;
-}
-
 export function buildNotificationFocusProtocolUrl(tag?: string): string {
   const trimmedTag = tag?.trim();
   if (!trimmedTag) {
@@ -32,7 +20,6 @@ export function buildOpenSessionProtocolUrl(sessionPath: string): string {
 }
 
 export type SpiritNotificationProtocolAction =
-  | { kind: "approval"; decision: "allow" | "deny" }
   | { kind: "focus" }
   | { kind: "new-session" }
   | { kind: "open-session"; path: string };
@@ -47,10 +34,6 @@ export function parseSpiritNotificationProtocolUrl(
     }
     const host = url.hostname || url.pathname.replace(/^\/+/, "");
     if (host === "notification-approval") {
-      const decision = url.searchParams.get("decision");
-      if (decision === "allow" || decision === "deny") {
-        return { kind: "approval", decision };
-      }
       return null;
     }
     if (host === "notification-focus") {
@@ -77,7 +60,6 @@ export function findSpiritNotificationProtocolUrl(argv: readonly string[]): stri
 }
 
 export type SpiritNotificationProtocolHandlers = {
-  onApproval: (decision: "allow" | "deny") => void | Promise<void>;
   onFocus?: () => void;
   onNewSession?: () => void;
   onOpenSession?: (sessionPath: string) => void | Promise<void>;
@@ -91,10 +73,6 @@ export function dispatchSpiritNotificationProtocolUrl(
   const parsed = parseSpiritNotificationProtocolUrl(rawUrl);
   if (!parsed || !handlers) {
     return false;
-  }
-  if (parsed.kind === "approval") {
-    void handlers.onApproval(parsed.decision);
-    return true;
   }
   if (parsed.kind === "new-session") {
     handlers.onNewSession?.();
