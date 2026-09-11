@@ -13,7 +13,7 @@ test("escapeToastXml escapes reserved characters", () => {
   assert.equal(escapeToastXml(`a&b<c>d"e`), "a&amp;b&lt;c&gt;d&quot;e");
 });
 
-test("buildWindowsToastXml includes foreground action buttons", () => {
+test("buildWindowsToastXml uses background COM action arguments", () => {
   const xml = buildWindowsToastXml({
     title: "[Session] Pending",
     body: "line one\nline two",
@@ -23,11 +23,13 @@ test("buildWindowsToastXml includes foreground action buttons", () => {
       { type: "button", text: "Deny" },
     ],
   });
+  assert.match(xml, /<toast launch="type=click" activationType="background"/);
   assert.match(xml, /<action content="Allow"/);
-  assert.match(xml, /spirit:\/\/notification-approval\?decision=allow/);
+  assert.match(xml, /arguments="type=action&amp;action=0" activationType="background"/);
   assert.match(xml, /<action content="Deny"/);
-  assert.match(xml, /spirit:\/\/notification-approval\?decision=deny/);
-  assert.match(xml, /activationType="protocol"/);
+  assert.match(xml, /arguments="type=action&amp;action=1" activationType="background"/);
+  assert.doesNotMatch(xml, /spirit:\/\/notification-approval/);
+  assert.doesNotMatch(xml, /activationType="protocol"/);
 });
 
 test("shouldUseWindowsToastXml when actions present", () => {
@@ -52,6 +54,15 @@ test("parseWindowsToastActivation reads action index from arguments", () => {
       arguments: "type=action&actionIndex=1",
     }),
     { kind: "action", actionIndex: 1 },
+  );
+});
+
+test("parseWindowsToastActivation reads native action argument", () => {
+  assert.deepEqual(
+    parseWindowsToastActivation({
+      arguments: "type=action&action=0",
+    }),
+    { kind: "action", actionIndex: 0 },
   );
 });
 

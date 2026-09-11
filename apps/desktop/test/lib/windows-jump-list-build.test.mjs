@@ -9,7 +9,7 @@ import {
   pickRecentSessions,
   pickRecentSessionsForJumpList,
   truncateJumpListTitle,
-} from "../../dist-electron/src/lib/windows-jump-list-build.js";
+} from "../../src/lib/windows-jump-list-build.ts";
 
 function session(path, displayName, modifiedAtUnixMs) {
   return {
@@ -22,19 +22,37 @@ function session(path, displayName, modifiedAtUnixMs) {
 
 test("pickRecentSessionsForJumpList sorts by modifiedAt desc and caps at five", () => {
   const sessions = [
-    session("a", "A", 100),
-    session("b", "B", 300),
-    session("c", "C", 200),
-    session("d", "D", 500),
-    session("e", "E", 400),
-    session("f", "F", 600),
-    session("g", "G", 50),
+    session("/chats/chat-100.json", "A", 100),
+    session("/chats/chat-300.json", "B", 300),
+    session("/chats/chat-200.json", "C", 200),
+    session("/chats/chat-500.json", "D", 500),
+    session("/chats/chat-400.json", "E", 400),
+    session("/chats/chat-600.json", "F", 600),
+    session("/chats/chat-50.json", "G", 50),
   ];
   const picked = pickRecentSessionsForJumpList(sessions);
   assert.equal(picked.length, JUMP_LIST_RECENT_LIMIT);
   assert.deepEqual(
     picked.map((item) => item.path),
-    ["f", "d", "e", "b", "c"],
+    [
+      "/chats/chat-600.json",
+      "/chats/chat-500.json",
+      "/chats/chat-400.json",
+      "/chats/chat-300.json",
+      "/chats/chat-200.json",
+    ],
+  );
+});
+
+test("pickRecentSessionsForJumpList skips ephemeral and provisional paths", () => {
+  const picked = pickRecentSessionsForJumpList([
+    session("/chats/__provisional__/draft.json", "Draft", 300),
+    session("/chats/chat-1700000000.json", "Stable", 200),
+    session("ephemeral:debug", "Debug", 400),
+  ]);
+  assert.deepEqual(
+    picked.map((item) => item.path),
+    ["/chats/chat-1700000000.json"],
   );
 });
 
@@ -48,14 +66,14 @@ test("pickRecentSessions respects custom limit for tray more menu", () => {
   assert.equal(picked[9]?.path, "s2");
 });
 
-test("buildJumpListLaunchArgs uses protocol only when packaged", () => {
-  assert.equal(buildJumpListLaunchArgs("spirit://new-session"), "spirit://new-session");
-});
-
-test("buildJumpListLaunchArgs quotes dev main script and protocol url", () => {
+test("buildJumpListLaunchArgs prefixes the dev main script", () => {
+  assert.equal(buildJumpListLaunchArgs("--new-session"), "--new-session");
   assert.equal(
-    buildJumpListLaunchArgs("spirit://new-session", "D:\\Spirit\\apps\\desktop\\electron\\main.ts"),
-    '"D:\\Spirit\\apps\\desktop\\electron\\main.ts" "spirit://new-session"',
+    buildJumpListLaunchArgs(
+      '--session "chat-1700000000.json"',
+      "D:\\Spirit\\apps\\desktop\\electron\\main.ts",
+    ),
+    '"D:\\Spirit\\apps\\desktop\\electron\\main.ts" --session "chat-1700000000.json"',
   );
 });
 
@@ -70,14 +88,17 @@ test("buildWindowsJumpListCategories omits custom group when no sessions", () =>
   assert.equal(categories.length, 1);
   assert.equal(categories[0]?.type, "tasks");
   assert.equal(categories[0]?.items[0]?.title, "New Session");
-  assert.equal(categories[0]?.items[0]?.args, "spirit://new-session");
+  assert.equal(categories[0]?.items[0]?.args, "--new-session");
 });
 
 test("buildWindowsJumpListCategories builds recent custom group before tasks", () => {
   const categories = buildWindowsJumpListCategories({
     recentLabel: "Recent",
     newAgentLabel: "New Session",
-    sessions: [session("s1", "Chat One", 10), session("s2", "Chat Two", 20)],
+    sessions: [
+      session("C:\\Spirit\\chats\\chat-1.json", "Chat One", 10),
+      session("C:\\Spirit\\chats\\chat-2.json", "Chat Two", 20),
+    ],
     execPath: "C:\\Spirit.exe",
     iconPath: "C:\\Spirit.ico",
     devMainScript: "C:\\main.ts",
@@ -86,10 +107,11 @@ test("buildWindowsJumpListCategories builds recent custom group before tasks", (
   assert.equal(categories[0]?.type, "custom");
   assert.equal(categories[0]?.name, "Recent");
   assert.equal(categories[0]?.items.length, 2);
-  assert.match(categories[0]?.items[0]?.args ?? "", /"C:\\main.ts"/);
-  assert.match(categories[0]?.items[0]?.args ?? "", /open-session/);
+  assert.equal(categories[0]?.items[0]?.args, '"C:\\main.ts" --session "chat-2.json"');
+  assert.equal(categories[0]?.items[1]?.args, '"C:\\main.ts" --session "chat-1.json"');
   assert.equal(categories[1]?.type, "tasks");
   assert.equal(categories[1]?.items[0]?.title, "New Session");
+  assert.equal(categories[1]?.items[0]?.args, '"C:\\main.ts" --new-session');
 });
 
 test("truncateJumpListTitle shortens long display names", () => {

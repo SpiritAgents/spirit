@@ -1,8 +1,3 @@
-import {
-  buildNotificationApprovalProtocolUrl,
-  buildNotificationFocusProtocolUrl,
-} from "./spirit-notification-protocol.js";
-
 export type WindowsToastPayload = {
   title: string;
   body?: string;
@@ -38,22 +33,31 @@ function toastTextLines(payload: WindowsToastPayload): string[] {
   return lines.slice(0, TOAST_TEXT_LINE_MAX);
 }
 
-/** Build WinRT toast XML with explicit action buttons (Electron `actions` alone may not render on Windows). */
+function parseActionIndexParam(raw: string | null): number | undefined {
+  if (raw === null) {
+    return undefined;
+  }
+  const actionIndex = Number(raw);
+  if (!Number.isFinite(actionIndex) || actionIndex < 0) {
+    return undefined;
+  }
+  return actionIndex;
+}
+
+/** Build WinRT toast XML. Electron's high-level `actions` are hardcoded as foreground; approval toasts need background COM activation. */
 export function buildWindowsToastXml(payload: WindowsToastPayload): string {
   const textXml = toastTextLines(payload)
     .map((line) => `<text>${escapeToastXml(line)}</text>`)
     .join("");
-  const tag = payload.tag?.trim();
   const actionsXml = (payload.actions ?? [])
     .slice(0, TOAST_ACTION_MAX)
     .map((action, index) => {
-      const decision = index === 0 ? "allow" : "deny";
-      const protocolUrl = buildNotificationApprovalProtocolUrl(decision, tag);
-      return `<action content="${escapeToastXml(action.text)}" arguments="${escapeToastXml(protocolUrl)}" activationType="protocol" />`;
+      const argumentsValue = `type=action&action=${index}`;
+      return `<action content="${escapeToastXml(action.text)}" arguments="${escapeToastXml(argumentsValue)}" activationType="background" />`;
     })
     .join("");
-  const launch = escapeToastXml(buildNotificationFocusProtocolUrl(tag));
-  return `<toast launch="${launch}" activationType="protocol"><visual><binding template="ToastGeneric">${textXml}</binding></visual><actions>${actionsXml}</actions></toast>`;
+  const launch = escapeToastXml("type=click");
+  return `<toast launch="${launch}" activationType="background"><visual><binding template="ToastGeneric">${textXml}</binding></visual><actions>${actionsXml}</actions></toast>`;
 }
 
 export function shouldUseWindowsToastXml(payload: WindowsToastPayload): boolean {
@@ -87,9 +91,11 @@ export function parseWindowsToastActivation(
     typeof details.actionIndex === "number" && details.actionIndex >= 0
       ? details.actionIndex
       : undefined;
-  const fromArguments = params.get("actionIndex");
-  const actionIndex = fromDetails ?? (fromArguments !== null ? Number(fromArguments) : Number.NaN);
-  if (!Number.isFinite(actionIndex) || actionIndex < 0) {
+  const actionIndex =
+    fromDetails ??
+    parseActionIndexParam(params.get("action")) ??
+    parseActionIndexParam(params.get("actionIndex"));
+  if (actionIndex === undefined) {
     return { kind: "click" };
   }
   return { kind: "action", actionIndex };
