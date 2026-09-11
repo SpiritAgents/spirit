@@ -22,6 +22,7 @@ import { detectSupportedImageFile } from "@spiritagent/host-internal/image-file-
 import {
   registerDesktopNotifications,
   registerWindowsToastActivationHandler,
+  setApprovalNotificationHandler,
   showDesktopNotification,
   type DesktopNotificationPayload,
 } from "./desktop-notifications.js";
@@ -1124,6 +1125,8 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
 if (gotSpiritSingleInstanceLock) {
   app.whenReady().then(async () => {
+    setApprovalNotificationHandler(handleApprovalNotificationAction);
+    registerWindowsToastActivationHandler();
     installSpiritGeneratedAssetProtocolHandler({
       resolveManagedGeneratedAssetPath,
       videoPreviewMimeType,
@@ -1137,7 +1140,6 @@ if (gotSpiritSingleInstanceLock) {
       openSession: handleSpiritOpenSessionFromProtocol,
     });
     handleWindowsLaunchArgv(process.argv);
-    registerWindowsToastActivationHandler();
     if (process.platform === "win32") {
       Menu.setApplicationMenu(null);
     } else if (process.platform === "darwin") {
