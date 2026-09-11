@@ -17,7 +17,7 @@
   "type": "module",
   "scripts": {
     "build:deps": "pnpm exec turbo run build --filter=\"@spiritagent/desktop^...\"",
-    "ensure:dev-built": "node scripts/gen-brand-assets.mjs && pnpm exec turbo run build:electron --filter=@spiritagent/desktop && node scripts/ensure-pty-spawn-helper.mjs && node scripts/ensure-dev-electron-bundle.mjs",
+    "ensure:dev-built": "node scripts/gen-brand-assets.mjs && pnpm exec turbo run build:electron --filter=@spiritagent/desktop && node scripts/ensure-pty-spawn-helper.mjs && node scripts/ensure-dev-electron-bundle.mjs && pnpm run build:extension-ui",
     "postinstall": "node scripts/ensure-pty-spawn-helper.mjs",
     "dev": "pnpm run ensure:dev-built && concurrently -k -n electron,renderer \"pnpm run dev:electron:run\" \"pnpm run dev:renderer\"",
     "dev:renderer": "vite --strictPort --host 127.0.0.1 --port 1420",
@@ -29,7 +29,8 @@
     "build:host-internal": "pnpm exec turbo run build --filter=@spiritagent/host-internal",
     "build:app": "pnpm run build:deps && pnpm run build:renderer && pnpm run build:electron",
     "build": "pnpm run build:app",
-    "build:renderer": "tsc --noEmit && vite build",
+    "build:extension-ui": "vite build --config vite.extension-ui.config.ts",
+    "build:renderer": "tsc --noEmit && vite build && pnpm run build:extension-ui",
     "build:electron": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.cjs.json && node ./scripts/rename-preload-to-cjs.mjs",
     "dist": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.yml",
     "dist:dir": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.yml --dir",

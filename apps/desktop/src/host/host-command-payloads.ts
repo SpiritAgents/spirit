@@ -153,6 +153,7 @@ export type CommandPayloads = {
   replyPendingApproval: { request: ReplyPendingApprovalRequest };
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };
+  resolveExtensionUi: { request: import("../types.js").ResolveExtensionUiRequest };
   resetSession:
     | { activate?: boolean; clientHost?: import("../types.js").DesktopClientHost }
     | undefined;

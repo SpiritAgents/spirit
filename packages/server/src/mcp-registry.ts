@@ -20,12 +20,18 @@ export function createExtensionMcpExtraConfigs(
     const servers: Awaited<
       ReturnType<typeof collectEnabledExtensionInstructionContributions>
     >["mcp"]["servers"] = {};
+    const extensionServerOwnership: Awaited<
+      ReturnType<typeof collectEnabledExtensionInstructionContributions>
+    >["mcpOwnership"] = {};
     for (const kind of hostKinds) {
       const manager = createHostExtensionManager({ spiritDataDir, hostKind: kind });
-      const mcp = (await collectEnabledExtensionInstructionContributions(await manager.list())).mcp;
-      Object.assign(servers, mcp.servers);
+      const contributions = await collectEnabledExtensionInstructionContributions(
+        await manager.list(),
+      );
+      Object.assign(servers, contributions.mcp.servers);
+      Object.assign(extensionServerOwnership, contributions.mcpOwnership);
     }
-    return { servers };
+    return { servers, extensionServerOwnership };
   };
 }
 

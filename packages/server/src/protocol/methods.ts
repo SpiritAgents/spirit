@@ -38,6 +38,8 @@ export const SESSION_SET_APPROVAL_LEVEL = "session.setApprovalLevel";
 export const SESSION_REPLY_PENDING_APPROVAL = "session.replyPendingApproval";
 /** RPC: answer pending questions. */
 export const SESSION_REPLY_PENDING_QUESTIONS = "session.replyPendingQuestions";
+/** RPC: resolve a spirit/ui/open Dialog without yielding the turn. */
+export const SESSION_RESOLVE_EXTENSION_UI = "session.resolveExtensionUi";
 /** RPC: switch agent mode (agent | plan | ask | debug). */
 export const SESSION_SET_MODE = "session.setMode";
 /** RPC: toggle loop mode. */
@@ -117,6 +119,8 @@ export const SESSION_SNAPSHOT = "session.snapshot";
 export const SESSION_DESKTOP_TIMELINE_UPDATED = "session.desktopTimelineUpdated";
 /** Notification: hooks ask for workspace capability trust. */
 export const WORKSPACE_TRUST_REQUESTED = "workspace.trustRequested";
+/** Notification: extension MCP asked to open an owned Desktop view. Not a RuntimeEvent. */
+export const SESSION_EXTENSION_UI_REQUESTED = "session.extensionUiRequested";
 /** Notification: a tool wrote/changed a file (rewind bookkeeping). */
 export const SESSION_FILE_CHANGED = "session.fileChanged";
 /** Notification: LLM-generated display title for the first user turn. */

@@ -15,6 +15,7 @@ import {
   extensionExposesModelContext,
   installSourceForSourceId,
   summarizeDeclaredExtensionContributionPoints,
+  type HostExtensionDesktopViewDefinition,
   type HostExtensionManager,
   type HostInstalledExtension,
   type HostMarketplaceCatalogItem,
@@ -23,6 +24,7 @@ import {
 
 import type {
   DesktopExtensionCssLayer,
+  DesktopExtensionDesktopView,
   DesktopExtensionListItem,
   DesktopMarketplaceCatalogEntry,
 } from "../types.js";
@@ -98,6 +100,9 @@ export async function buildDesktopExtensionListItems(
                 ? { title: item.manifest.contributes.desktop.settingsPage.title }
                 : {},
             }
+          : {}),
+        ...(item.manifest.contributes?.desktop?.views?.length
+          ? { desktopViews: mapDesktopViews(item.manifest.contributes.desktop.views) }
           : {}),
         ...(item.manifest.contributes?.cli?.hooks?.length
           ? {
@@ -288,6 +293,9 @@ export async function buildDesktopMarketplaceCatalogEntries(
                 : {},
             }
           : {}),
+        ...(manifest.contributes?.desktop?.views?.length
+          ? { desktopViews: mapDesktopViews(manifest.contributes.desktop.views) }
+          : {}),
         ...(manifest.contributes?.cli?.hooks?.length
           ? {
               cliHooks: manifest.contributes.cli.hooks.map((hook) => ({
@@ -315,6 +323,60 @@ export async function buildDesktopMarketplaceCatalogEntries(
       } satisfies DesktopMarketplaceCatalogEntry;
     }),
   );
+}
+
+function mapDesktopViews(
+  views: readonly HostExtensionDesktopViewDefinition[],
+): DesktopExtensionDesktopView[] {
+  return views.map((view) => ({
+    id: view.id,
+    path: view.path,
+    ...(view.title ? { title: view.title } : {}),
+    ...(view.width === undefined ? {} : { width: view.width }),
+    ...(view.height === undefined ? {} : { height: view.height }),
+    ...(view.chrome ? { chrome: view.chrome } : {}),
+  }));
+}
+
+export async function resolveEnabledExtensionViewOwner(
+  manager: HostExtensionManager,
+  viewId: string,
+): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
+  const listed = await manager.list();
+  const matches = listed.flatMap((item) => {
+    if (!item.enabled) {
+      return [];
+    }
+    const view = item.manifest.contributes?.desktop?.views?.find((entry) => entry.id === viewId);
+    return view ? [{ extensionId: item.id, view }] : [];
+  });
+  if (matches.length !== 1) {
+    return null;
+  }
+  const match = matches[0];
+  return {
+    extensionId: match.extensionId,
+    ...(match.view.title ? { title: match.view.title } : {}),
+    ...(match.view.width === undefined ? {} : { width: match.view.width }),
+    ...(match.view.height === undefined ? {} : { height: match.view.height }),
+  };
+}
+
+export async function resolveEnabledExtensionViewFile(
+  manager: HostExtensionManager,
+  extensionId: string,
+  viewId: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  const listed = await manager.list();
+  const item = listed.find((entry) => entry.id === extensionId && entry.enabled);
+  const view = item?.manifest.contributes?.desktop?.views?.find((entry) => entry.id === viewId);
+  if (!item || !view) {
+    return null;
+  }
+  return {
+    filePath: path.join(item.directoryPath, ...view.path.split("/")),
+    extensionRoot: item.directoryPath,
+  };
 }
 
 export async function collectDesktopExtensionCssLayers(

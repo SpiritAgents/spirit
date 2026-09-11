@@ -1,4 +1,5 @@
 export * from "./schema.js";
+export * from "./desktop-ui.js";
 export * from "./semver.js";
 export * from "./paths.js";
 export * from "./icon.js";

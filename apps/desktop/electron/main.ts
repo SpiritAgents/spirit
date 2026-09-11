@@ -152,6 +152,10 @@ async function focusOrCreateSpiritDesktopWindows(): Promise<void> {
 
 import {
   invokeDesktopHostCommand,
+  resolveDesktopExtensionViewFile,
+  openDesktopHostExtensionUi,
+  closeDesktopHostExtensionUi,
+  resolveDesktopExtensionViewOwner,
   setDesktopGitHubFetchImplementation,
   setDesktopExtensionHostAdapter,
   shutdownDesktopHostService,
@@ -248,6 +252,23 @@ setDesktopExtensionHostAdapter({
     }
 
     await dialog.showMessageBox(options);
+  },
+  ui: {
+    async open(viewId, params) {
+      const owner = await resolveDesktopExtensionViewOwner(viewId);
+      if (!owner) {
+        throw new Error(`Unknown or ambiguous extension view: ${viewId}`);
+      }
+      const opened = await openDesktopHostExtensionUi({
+        extensionId: owner.extensionId,
+        viewId,
+        params,
+      });
+      return opened.kind === "opened" ? opened.result : opened;
+    },
+    close() {
+      closeDesktopHostExtensionUi();
+    },
   },
 });
 
@@ -1094,6 +1115,9 @@ if (gotSpiritSingleInstanceLock) {
       resolveManagedGeneratedAssetPath,
       videoPreviewMimeType,
       imagePreviewMimeType,
+      resolveExtensionUiRuntimePath: () =>
+        path.join(rendererDistPath(), "extension-ui", "runtime.js"),
+      resolveExtensionViewFile: resolveDesktopExtensionViewFile,
     });
     bindSpiritProtocolActionHandlers({
       focusWindows: focusSpiritDesktopWindows,

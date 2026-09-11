@@ -303,6 +303,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   replyWorkspaceCapabilityTrust(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "replyWorkspaceCapabilityTrust", { request });
   },
+  resolveExtensionUi(request: unknown) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveExtensionUi", { request });
+  },
   openPathInDefaultApp(absolutePath: string) {
     return ipcRenderer.invoke("desktop:invoke", "openPathInDefaultApp", { absolutePath });
   },

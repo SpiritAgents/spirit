@@ -3188,6 +3188,21 @@ export function useDesktopRuntime() {
     [api, applySnapshot],
   );
 
+  const resolveExtensionUi = useCallback(
+    async (requestId: string, result: unknown) => {
+      if (!api) {
+        return;
+      }
+      try {
+        const next = await api.resolveExtensionUi({ requestId, result });
+        applySnapshot(next);
+      } catch (error) {
+        setRuntimeError(describeError(error));
+      }
+    },
+    [api, applySnapshot],
+  );
+
   const replyWorkspaceCapabilityTrust = useCallback(
     async (decision: WorkspaceCapabilityTrustDecision) => {
       if (!api) {
@@ -4130,6 +4145,7 @@ export function useDesktopRuntime() {
     skipQuestions,
     submitApproval,
     replyWorkspaceCapabilityTrust,
+    resolveExtensionUi,
     submitQuestions,
   };
 }

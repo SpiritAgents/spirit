@@ -9,6 +9,14 @@ import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 
 import { DEFAULT_MCP_CLIENT_INFO } from "./config.js";
 import { McpConnectionError } from "./errors.js";
+import {
+  parseSpiritUiOpenParams,
+  resolveSpiritUiOpen,
+  SPIRIT_UI_EXPERIMENTAL_KEY,
+  SPIRIT_UI_OPEN_METHOD,
+  type ExtensionMcpServerOwnership,
+  type McpUiOpener,
+} from "./spirit-ui.js";
 import type {
   McpClientInfo,
   ResolvedMcpHttpTransportConfig,
@@ -27,16 +35,37 @@ export type McpCallToolResult = Awaited<ReturnType<Client["callTool"]>>;
 type McpSdkTransport = StdioClientTransport | StreamableHTTPClientTransport;
 type McpConnectTransport = Parameters<Client["connect"]>[0];
 
-export function createMcpSdkClient(clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO): Client {
-  return new Client(
+export function createMcpSdkClient(
+  clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO,
+  options?: {
+    onSpiritUiOpen?: (params: unknown) => Promise<Record<string, unknown>>;
+  },
+): Client {
+  const client = new Client(
     {
       name: clientInfo.name,
       version: clientInfo.version,
     },
     {
-      capabilities: {},
+      capabilities: {
+        experimental: {
+          [SPIRIT_UI_EXPERIMENTAL_KEY]: {},
+        },
+      },
     },
   );
+  // Protocol option, not Client constructor — set after construct so spirit/ui/open
+  // does not need a zod request schema from this isolated package.
+  client.fallbackRequestHandler = async (request) => {
+    if (request.method !== SPIRIT_UI_OPEN_METHOD) {
+      throw new Error(`Unsupported MCP request: ${request.method}`);
+    }
+    if (!options?.onSpiritUiOpen) {
+      return { kind: "unavailable", reason: "host-has-no-ui" };
+    }
+    return options.onSpiritUiOpen(request.params);
+  };
+  return client;
 }
 
 export class SdkMcpConnection {
@@ -46,8 +75,24 @@ export class SdkMcpConnection {
   private timeoutMsStore: number | undefined;
   private protocolVersionStore = LATEST_PROTOCOL_VERSION;
 
-  constructor(clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO) {
-    this.clientStore = createMcpSdkClient(clientInfo);
+  constructor(
+    clientInfo: McpClientInfo = DEFAULT_MCP_CLIENT_INFO,
+    private readonly spiritUi: {
+      ownership?: ExtensionMcpServerOwnership;
+      opener?: McpUiOpener;
+    } = {},
+  ) {
+    this.clientStore = createMcpSdkClient(clientInfo, {
+      onSpiritUiOpen: async (params) => {
+        const parsed = parseSpiritUiOpenParams(params);
+        return resolveSpiritUiOpen({
+          ownership: this.spiritUi.ownership,
+          opener: this.spiritUi.opener,
+          viewId: parsed.viewId,
+          ...(parsed.params === undefined ? {} : { params: parsed.params }),
+        });
+      },
+    });
   }
 
   get client(): Client {
@@ -138,19 +183,23 @@ export class SdkMcpConnection {
     );
   }
 
-  async callTool(name: string, args?: Record<string, unknown>): Promise<McpCallToolResult> {
+  async callTool(
+    name: string,
+    args?: Record<string, unknown>,
+    options?: { timeoutMs?: number },
+  ): Promise<McpCallToolResult> {
     return this.clientStore.callTool(
       {
         name,
         ...(args === undefined ? {} : { arguments: args }),
       },
       undefined,
-      this.requestOptions(),
+      this.requestOptions(options?.timeoutMs),
     );
   }
 
-  private requestOptions(): { timeout: number } | undefined {
-    return this.timeoutMsStore === undefined ? undefined : { timeout: this.timeoutMsStore };
+  private requestOptions(timeoutMs = this.timeoutMsStore): { timeout: number } | undefined {
+    return timeoutMs === undefined ? undefined : { timeout: timeoutMs };
   }
 }
 

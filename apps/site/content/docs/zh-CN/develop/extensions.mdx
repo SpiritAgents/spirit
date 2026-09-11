@@ -177,6 +177,14 @@ my-extension/
 | `css[].path`   | 必填。相对包根的 CSS 文件                                     |
 | `css[].media`  | 可选。CSS media query                                         |
 | `settingsPage` | 可选。`true`、`{}` 或 `{ title }` — 在 Desktop 设置中增加入口 |
+| `views[].id`   | 必填。kebab-case，同一扩展内唯一                                     |
+| `views[].path` | 必填。相对包根的预编译单文件 ESM（`.js` / `.mjs`）。宿主不编译 TSX。相对 import 会 404——protocol 只提供这一份文件 |
+| `views[].title` | 可选。Dialog 标题                                                   |
+| `views[].width` | 可选。Dialog 宽度                                                   |
+| `views[].height` | 可选。Dialog 高度上限。省略则随内容高度。内容更高时 iframe 内滚动。 |
+| `views[].chrome` | 可选。Dialog 外壳：`default`（标题 + 关闭）、`close-only`（隐藏标题、保留关闭）或 `none`（两者都隐藏）。省略等同 `default`。 |
+
+默认导出：`export default function View({ params, close })`。`close(result)` 结束 View。宿主注入 React 与 `@spirit/desktop-ui`。
 
 ### `contributes.cli`
 
@@ -233,6 +241,8 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCPs | Hooks | Skills | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
 
+在 `tools/call` 期间，捆绑 MCP 可以在客户端声明了 `experimental["spirit/ui"]` 时发出 JSON-RPC 请求 `spirit/ui/open`（`{ viewId, params }`）。Spirit 只打开同一扩展在 `contributes.desktop.views` 里声明的 View；用户/工作区 MCP 一律拒绝。Dialog 会挡住这次 `tools/call`，`close(result)` 的结果回到同一条请求。无窗口宿主返回 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具应自行降级。
+
 ### `settingsSchema`
 
 | 参数           | 说明                                                   |
@@ -272,7 +282,7 @@ Desktop 把密钥存在操作系统钥匙串。在 CLI daemon 路径上，`secre
 | 参数              | 说明                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                               |
-| `host`            | 宿主 API。Desktop 实现 `showMessageBox`。CLI 为 `{}`                                     |
+| `host`            | 宿主 API。Desktop 实现 `showMessageBox` 与 `ui.open` / `ui.close`。CLI 为 `{}`           |
 | `log`             | `(message: string) => void`                                                              |
 | `settings`        | `get(key)`、`getAll()`、`set(key, value)`、`setAll(values)`                              |
 | `secrets`         | `get(key)`、`has(key)`、`set(key, value)`、`delete(key)` — 键必须在 `secretSlots` 中声明 |

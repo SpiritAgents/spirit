@@ -20,6 +20,7 @@ type ContributionItem = Pick<
   | "contributedTools"
   | "desktopCss"
   | "desktopSettingsPage"
+  | "desktopViews"
   | "requestedCapabilities"
 >;
 
@@ -149,6 +150,13 @@ export function MarketplaceContributionGroups({
       key: "desktop:settings",
       icon: Monitor,
       title: t("sidebar.extensionSettings"),
+    });
+  }
+  if (item.desktopViews?.length) {
+    desktopItems.push({
+      key: "desktop:views",
+      icon: Monitor,
+      title: t("marketplace.contributionViewsTitle"),
     });
   }
   if (desktopItems.length > 0) {

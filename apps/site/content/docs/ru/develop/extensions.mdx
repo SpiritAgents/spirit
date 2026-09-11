@@ -177,6 +177,14 @@ my-extension/
 | `css[].path`   | Обязательно. CSS-файл относительно корня пакета                                    |
 | `css[].media`  | Необязательно. CSS media query                                                     |
 | `settingsPage` | Необязательно. `true`, `{}` или `{ title }` — добавляет запись в настройки Desktop |
+| `views[].id`   | Обязательно. kebab-case, уникален в расширении |
+| `views[].path` | Обязательно. Предкомпилированный однофайловый ESM (`.js` / `.mjs`) относительно корня пакета. Хост не компилирует TSX. Относительные import дают 404 — протокол отдаёт только этот файл. |
+| `views[].title` | Необязательно. Заголовок диалога |
+| `views[].width` | Необязательно. Ширина диалога |
+| `views[].height` | Необязательно. Максимальная высота. Пропуск — высота по содержимому. Если view выше, iframe прокручивается. |
+| `views[].chrome` | Необязательно. Оформление диалога: `default` (заголовок + закрыть), `close-only` (скрыть заголовок, оставить закрыть) или `none` (скрыть оба). Пропуск равносилен `default`. |
+
+Экспорт по умолчанию: `export default function View({ params, close })`. `close(result)` завершает view. Хост внедряет React и `@spirit/desktop-ui`.
 
 ### `contributes.cli`
 
@@ -233,6 +241,8 @@ my-extension/
 
 Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Hooks | Skills | Rules**. При конфликте имён: workspace > user > extension.
 
+Во время `tools/call` встроенный MCP может отправить `spirit/ui/open` (`{ viewId, params }`), если клиент объявил `experimental["spirit/ui"]`. Spirit открывает только view того же расширения из `contributes.desktop.views`. Пользовательский и workspace MCP отклоняются. Диалог блокирует этот вызов; `close(result)` возвращается в том же запросе. Хост без окна отвечает `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — инструмент должен деградировать.
+
 ### `settingsSchema`
 
 | Поле           | Описание                                                          |
@@ -272,7 +282,7 @@ Desktop хранит секреты в системной связке ключ�
 | Поле              | Описание                                                                                               |
 | ----------------- | ------------------------------------------------------------------------------------------------------ |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                             |
-| `host`            | API хоста. Desktop реализует `showMessageBox`. CLI — `{}`                                              |
+| `host`            | API хоста. Desktop реализует `showMessageBox` и `ui.open` / `ui.close`. CLI — `{}`                      |
 | `log`             | `(message: string) => void`                                                                            |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                            |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — ключи должны быть объявлены в `secretSlots` |

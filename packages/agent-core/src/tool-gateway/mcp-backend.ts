@@ -1,18 +1,21 @@
 import { McpConfigError } from "../mcp/errors.js";
-import type { McpService } from "../mcp/service.js";
+import type { McpCallToolOptions, McpService } from "../mcp/service.js";
 import type { JsonValue } from "../ports.js";
 import { TOOL_CALL_TOOL_NAME, TOOL_DESCRIBE_TOOL_NAME } from "./definitions.js";
 import { parseLazyToolGatewayArguments } from "./parse.js";
 import type { LazyToolGatewayBackend, LazyToolGatewayToolRequest } from "./types.js";
 
-export function createMcpLazyToolGatewayBackend(mcpService: McpService): LazyToolGatewayBackend {
+export function createMcpLazyToolGatewayBackend(
+  mcpService: McpService,
+  options?: McpCallToolOptions,
+): LazyToolGatewayBackend {
   return {
     describe: (request) => mcpService.describeTool(request.server, request.tool),
     call: async (request) => {
       const argsJson =
         request.arguments === undefined ? undefined : JSON.stringify(request.arguments);
       const mcpRequest = await mcpService.createToolRequest(request.server, request.tool, argsJson);
-      return mcpService.callToolRequest(mcpRequest);
+      return mcpService.callToolRequest(mcpRequest, options);
     },
   };
 }

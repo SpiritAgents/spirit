@@ -28,6 +28,8 @@ import {
   type RuntimeToolExecution,
   type SpiritLlmTransport,
   type LlmActiveSkill,
+  type McpUiOpenRequest,
+  type McpUiOpenResult,
 } from "@spiritagent/agent-core";
 import {
   buildStartImplementingUserTurn,
@@ -118,6 +120,8 @@ import type {
   ReplyPendingApprovalRequest,
   ReplyPendingQuestionsRequest,
   ReplyWorkspaceCapabilityTrustRequest,
+  DesktopPendingExtensionUi,
+  ResolveExtensionUiRequest,
   ForkSessionRequest,
   RememberWorkspaceRequest,
   ForgetWorkspaceRequest,
@@ -458,6 +462,7 @@ import {
   openRemoteDesktopRuntime,
   remoteDesktopSessionId,
   replyRemoteWorkspaceCapabilityTrust,
+  replyRemoteExtensionUi,
   remoteDesktopRuntimeNeedsProjection,
   runRemoteDesktopSessionEnd,
   runRemoteDesktopSessionStart,
@@ -474,6 +479,8 @@ import {
   buildDesktopMarketplaceCatalogEntries,
   collectDesktopExtensionCssLayers,
   collectExtensionSystemPrompts,
+  resolveEnabledExtensionViewFile,
+  resolveEnabledExtensionViewOwner,
 } from "./extensions.js";
 import {
   getDesktopExtensionHostAdapter,
@@ -690,6 +697,16 @@ class DesktopHostService {
     { signature: string; slice: PaneSessionSlice }
   >();
   private pendingWorkspaceCapabilityTrust: WorkspaceCapabilityTrustRequest | undefined;
+  private pendingExtensionUi: DesktopPendingExtensionUi | undefined;
+  private pendingExtensionUiWaiter:
+    | { requestId: string; resolve: (result: McpUiOpenResult) => void }
+    | undefined;
+  private pendingRemoteExtensionUi:
+    | {
+        requestId: string;
+        runtime: unknown;
+      }
+    | undefined;
   private pendingRemoteWorkspaceCapabilityTrust:
     | {
         requestId: string;
@@ -2399,6 +2416,64 @@ class DesktopHostService {
     return this.buildSnapshot();
   }
 
+  openLocalExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {
+    return new Promise((resolve) => {
+      const previous = this.pendingExtensionUiWaiter;
+      if (previous) {
+        previous.resolve({ kind: "opened", result: { dismissed: true } });
+      }
+      const previousRemote = this.pendingRemoteExtensionUi;
+      this.pendingRemoteExtensionUi = undefined;
+      if (previousRemote) {
+        void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
+          dismissed: true,
+        });
+      }
+      const requestId = crypto.randomUUID();
+      this.pendingExtensionUiWaiter = { requestId, resolve };
+      this.pendingExtensionUi = {
+        requestId,
+        extensionId: request.extensionId,
+        viewId: request.viewId,
+        ...(request.params === undefined ? {} : { params: request.params }),
+      };
+      this.emitLiveSnapshotUpdate();
+    });
+  }
+
+  dismissLocalExtensionUi(): void {
+    const waiter = this.pendingExtensionUiWaiter;
+    this.pendingExtensionUi = undefined;
+    this.pendingExtensionUiWaiter = undefined;
+    this.pendingRemoteExtensionUi = undefined;
+    if (waiter) {
+      waiter.resolve({ kind: "opened", result: { dismissed: true } });
+    }
+    this.emitLiveSnapshotUpdate();
+  }
+
+  async resolveExtensionUi(request: ResolveExtensionUiRequest): Promise<DesktopSnapshot> {
+    const pending = this.pendingExtensionUi;
+    if (!pending || pending.requestId !== request.requestId) {
+      return this.buildSnapshot();
+    }
+    this.pendingExtensionUi = undefined;
+    if (this.pendingExtensionUiWaiter?.requestId === request.requestId) {
+      this.pendingExtensionUiWaiter.resolve({ kind: "opened", result: request.result });
+      this.pendingExtensionUiWaiter = undefined;
+      this.pendingRemoteExtensionUi = undefined;
+      this.emitLiveSnapshotUpdate();
+      return this.buildSnapshot();
+    }
+    const remote = this.pendingRemoteExtensionUi;
+    this.pendingRemoteExtensionUi = undefined;
+    if (remote && remote.requestId === request.requestId) {
+      await replyRemoteExtensionUi(remote.runtime, request.requestId, request.result);
+    }
+    this.emitLiveSnapshotUpdate();
+    return this.buildSnapshot();
+  }
+
   async resetSession(options?: {
     activate?: boolean;
     clientHost?: DesktopClientHost;
@@ -2929,6 +3004,25 @@ class DesktopHostService {
       ) => {
         this.enqueueRemoteWorkspaceCapabilityTrust(requestId, request, bundle.runtime);
       },
+      onExtensionUiRequested: (request: DesktopPendingExtensionUi) => {
+        const previousRemote = this.pendingRemoteExtensionUi;
+        if (previousRemote && previousRemote.requestId !== request.requestId) {
+          void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
+            dismissed: true,
+          });
+        }
+        const previousLocal = this.pendingExtensionUiWaiter;
+        if (previousLocal) {
+          previousLocal.resolve({ kind: "opened", result: { dismissed: true } });
+          this.pendingExtensionUiWaiter = undefined;
+        }
+        this.pendingExtensionUi = request;
+        this.pendingRemoteExtensionUi = {
+          requestId: request.requestId,
+          runtime: bundle.runtime,
+        };
+        this.emitLiveSnapshotUpdate();
+      },
       onRemoteUserTurnSubmitted: (input: {
         text: string;
         explicitWorkspaceFiles: PendingWorkspaceFile[];
@@ -3035,7 +3129,10 @@ class DesktopHostService {
         const contributions = await collectEnabledExtensionInstructionContributions(
           await this.extensionManager().list(),
         );
-        return contributions.mcp;
+        return {
+          servers: contributions.mcp.servers,
+          extensionServerOwnership: contributions.mcpOwnership,
+        };
       },
     );
   }
@@ -3056,6 +3153,7 @@ class DesktopHostService {
     const lsp = await ensureLspServiceReady(this.sharedLspServiceForWorkspace(workspaceRoot));
     return new DesktopToolExecutor(workspaceRoot, {
       mcp: this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding),
+      mcpUiOpener: (request) => this.openLocalExtensionUi(request),
       ...(lsp ? { lsp } : {}),
       extensionToolDefinitions: buildDesktopExtensionToolDefinitions(extensions),
       fileChangeObserver: {
@@ -3765,6 +3863,7 @@ class DesktopHostService {
       ...(this.pendingWorkspaceCapabilityTrust
         ? { pendingWorkspaceCapabilityTrust: this.pendingWorkspaceCapabilityTrust }
         : {}),
+      ...(this.pendingExtensionUi ? { pendingExtensionUi: this.pendingExtensionUi } : {}),
     });
   }
 
@@ -4098,6 +4197,19 @@ class DesktopHostService {
 
   private extensionManager() {
     return this.hostExtensionManager;
+  }
+
+  async resolveExtensionViewFile(
+    extensionId: string,
+    viewId: string,
+  ): Promise<{ filePath: string; extensionRoot: string } | null> {
+    return resolveEnabledExtensionViewFile(this.extensionManager(), extensionId, viewId);
+  }
+
+  async resolveExtensionViewOwner(
+    viewId: string,
+  ): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
+    return resolveEnabledExtensionViewOwner(this.extensionManager(), viewId);
   }
 
   private async refreshExtensionsList(options?: { metadataOnly?: boolean }): Promise<void> {
@@ -4766,6 +4878,27 @@ export async function invokeDesktopHostCommand(
   payload?: unknown,
 ): Promise<unknown> {
   return desktopHostService.invoke(command, payload);
+}
+
+export async function resolveDesktopExtensionViewFile(
+  extensionId: string,
+  viewId: string,
+): Promise<{ filePath: string; extensionRoot: string } | null> {
+  return desktopHostService.resolveExtensionViewFile(extensionId, viewId);
+}
+
+export function openDesktopHostExtensionUi(request: McpUiOpenRequest): Promise<McpUiOpenResult> {
+  return desktopHostService.openLocalExtensionUi(request);
+}
+
+export function closeDesktopHostExtensionUi(): void {
+  desktopHostService.dismissLocalExtensionUi();
+}
+
+export async function resolveDesktopExtensionViewOwner(
+  viewId: string,
+): Promise<{ extensionId: string; title?: string; width?: number; height?: number } | null> {
+  return desktopHostService.resolveExtensionViewOwner(viewId);
 }
 
 export function subscribeDesktopDreamUpdates(

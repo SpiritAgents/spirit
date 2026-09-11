@@ -164,6 +164,9 @@ declare global {
     replyWorkspaceCapabilityTrust(
       request: import("./types").ReplyWorkspaceCapabilityTrustRequest,
     ): Promise<DesktopSnapshot>;
+    resolveExtensionUi(
+      request: import("./types").ResolveExtensionUiRequest,
+    ): Promise<DesktopSnapshot>;
     openPathInDefaultApp(absolutePath: string): Promise<void>;
     resetSession(): Promise<DesktopSnapshot>;
     listSessions(): Promise<SessionListItem[]>;

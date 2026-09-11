@@ -61,6 +61,16 @@ describe("MarketplaceContributionGroups", () => {
     expect(getByText("Read a file.")).toBeTruthy();
   });
 
+  test("desktop views render in the Desktop contribution group", () => {
+    const { getByText } = render(
+      <MarketplaceContributionGroups
+        item={{ desktopViews: [{ id: "enable", path: "ui/enable.mjs" }] }}
+      />,
+    );
+    expect(getByText("Desktop")).toBeTruthy();
+    expect(getByText("Views")).toBeTruthy();
+  });
+
   test("nothing declared and nothing resolved renders nothing", () => {
     const { container } = render(<MarketplaceContributionGroups item={{}} />);
     expect(container.firstChild).toBeNull();

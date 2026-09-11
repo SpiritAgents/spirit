@@ -142,6 +142,8 @@ Ignored.
     const collected = await collectEnabledExtensionInstructionContributions(listed);
 
     assert.equal(Object.keys(collected.mcp.servers).join(","), "bundled");
+    assert.equal(collected.mcpOwnership.bundled?.extensionId, "personal/collect-declared");
+    assert.deepEqual(collected.mcpOwnership.bundled?.viewIds, []);
     const bundled = collected.mcp.servers.bundled;
     assert.equal(bundled?.transport.type, "stdio");
     if (bundled?.transport.type === "stdio") {
@@ -329,6 +331,7 @@ test("overlay keeps user and workspace skills ahead of extension skills", async 
     ],
     {
       mcp: { servers: {} },
+      mcpOwnership: {},
       hooks: [],
       skills: [
         {

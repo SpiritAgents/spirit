@@ -45,7 +45,8 @@ import {
 } from "../lsp/tool-request.js";
 import type { LspDiagnosticsToolRequest } from "../lsp/types.js";
 import type { LspHostBindings, LspHostServiceInstance } from "./lsp-host-bindings.js";
-import { McpService, type McpToolRequest } from "../mcp/service.js";
+import { McpService, type McpCallToolOptions, type McpToolRequest } from "../mcp/service.js";
+import type { McpUiOpener } from "../mcp/spirit-ui.js";
 import { TOOL_CALL_TOOL_NAME } from "../tool-gateway/definitions.js";
 import {
   authorizeLazyToolGatewayRequest,
@@ -105,6 +106,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   private approvalLevel: LazyToolGatewayApprovalLevel = "default";
   private transportConfigForToolDefinitions: LlmTransportConfig | undefined;
   private hostToolDescriptionHints: HostToolDescriptionHint[] = [];
+  private mcpUiOpener: McpUiOpener | undefined;
 
   constructor(
     protected readonly peer: JsonRpcPeer,
@@ -184,6 +186,11 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
 
   setApprovalLevel(level: LazyToolGatewayApprovalLevel): void {
     this.approvalLevel = level;
+  }
+
+  /** Per-session UI opener passed into each callTool; never stored on the shared McpService. */
+  setMcpUiOpener(opener: McpUiOpener | undefined): void {
+    this.mcpUiOpener = opener;
   }
 
   setLspHostBindings(bindings: LspHostBindings | undefined): void {
@@ -327,7 +334,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     }
     if (this.mcp.isLazyToolGatewayToolRequest(request)) {
       return createToolExecutionTextOutput(
-        await this.mcp.executeLazyToolGatewayToolRequest(request),
+        await this.mcp.executeLazyToolGatewayToolRequest(request, this.mcpCallToolOptions()),
       );
     }
     if (this.mcp.isToolRequest(request)) {
@@ -490,7 +497,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
   }
 
   async callMcpTool(server: string, toolName: string, argsJson?: string): Promise<JsonValue> {
-    return this.mcp.callTool(server, toolName, argsJson);
+    return this.mcp.callTool(server, toolName, argsJson, this.mcpCallToolOptions());
   }
 
   async listMcpServers(): Promise<JsonValue[]> {
@@ -580,7 +587,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     const metadata = this.resolveRequestMetadata(request);
 
     try {
-      const output = await this.mcp.executeToolRequest(request);
+      const output = await this.mcp.executeToolRequest(request, this.mcpCallToolOptions());
       this.peer.notify("host.localToolExecuted", {
         request,
         output,
@@ -606,6 +613,10 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       });
       throw error;
     }
+  }
+
+  private mcpCallToolOptions(): McpCallToolOptions | undefined {
+    return this.mcpUiOpener ? { uiOpener: this.mcpUiOpener } : undefined;
   }
 
   private refreshMergedToolDefinitions(): void {

@@ -177,6 +177,14 @@ Requires `desktop-ui`.
 | `css[].path`   | Required. CSS file relative to the package root                        |
 | `css[].media`  | Optional. CSS media query                                              |
 | `settingsPage` | Optional. `true`, `{}`, or `{ title }` — adds a Desktop settings entry |
+| `views[].id`   | Required. Kebab-case id, unique within the extension                   |
+| `views[].path` | Required. Precompiled single-file ESM (`.js` / `.mjs`) relative to the package root. The host does not compile TSX. Relative imports 404 — the protocol only serves this file. |
+| `views[].title` | Optional. Dialog title                                                |
+| `views[].width` | Optional. Dialog width                                                |
+| `views[].height` | Optional. Max dialog height. Omit to hug the view. The iframe scrolls if the view is taller. |
+| `views[].chrome` | Optional. Dialog chrome: `default` (title + close), `close-only` (hide title, keep close), or `none` (hide both). Omit for `default`. |
+
+Default export: `export default function View({ params, close })`. `close(result)` finishes the view. The host injects React and `@spirit/desktop-ui`.
 
 ### `contributes.cli`
 
@@ -233,6 +241,8 @@ Relative `command` and `cwd` values resolve against the extension root. If an MC
 
 These contributions overlay into the agent session when the extension is enabled. They do not appear in **Settings → MCPs | Hooks | Skills | Rules**. On a name conflict, workspace wins, then user, then extension.
 
+During `tools/call`, a bundled MCP server may send a JSON-RPC request `spirit/ui/open` with `{ viewId, params }` when the client advertised `experimental["spirit/ui"]`. Spirit only opens a view declared by the same extension in `contributes.desktop.views`. User and workspace MCP servers are rejected. The Dialog stays open while that `tools/call` is in flight; `close(result)` returns on the same request. Hosts without a window respond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — the tool should degrade.
+
 ### `settingsSchema`
 
 | Field          | Description                                                      |
@@ -272,7 +282,7 @@ Desktop stores secrets in the OS keyring. On the CLI daemon path, `secrets.set` 
 | Field             | Description                                                                                       |
 | ----------------- | ------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                        |
-| `host`            | Host API. Desktop implements `showMessageBox`. CLI is `{}`                                        |
+| `host`            | Host API. Desktop implements `showMessageBox` and `ui.open` / `ui.close`. CLI is `{}`             |
 | `log`             | `(message: string) => void`                                                                       |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                       |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — keys must be declared in `secretSlots` |

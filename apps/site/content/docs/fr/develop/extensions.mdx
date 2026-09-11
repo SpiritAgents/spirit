@@ -177,6 +177,14 @@ Requiert `desktop-ui`.
 | `css[].path`   | Obligatoire. Fichier CSS relatif à la racine du package                           |
 | `css[].media`  | Facultatif. Requête média CSS                                                     |
 | `settingsPage` | Facultatif. `true`, `{}` ou `{ title }` — ajoute une entrée de paramètres Desktop |
+| `views[].id`   | Obligatoire. kebab-case, unique dans l'extension |
+| `views[].path` | Obligatoire. ESM précompilé en un seul fichier (`.js` / `.mjs`) relatif à la racine du package. L'hôte ne compile pas le TSX. Les imports relatifs renvoient 404 — le protocole ne sert que ce fichier. |
+| `views[].title` | Facultatif. Titre de la boîte de dialogue |
+| `views[].width` | Facultatif. Largeur de la boîte de dialogue |
+| `views[].height` | Facultatif. Hauteur maximale. L'omission épouse le contenu. Au-delà, l'iframe défile. |
+| `views[].chrome` | Facultatif. Chrome de la boîte de dialogue : `default` (titre + fermer), `close-only` (masquer le titre, garder fermer) ou `none` (masquer les deux). L'omission équivaut à `default`. |
+
+Export par défaut : `export default function View({ params, close })`. `close(result)` termine la vue. L'hôte injecte React et `@spirit/desktop-ui`.
 
 ### `contributes.cli`
 
@@ -233,6 +241,8 @@ Les `command` et `cwd` relatifs sont résolus par rapport à la racine de l'exte
 
 Ces contributions sont superposées dans la session lorsque l'extension est activée. Elles n'apparaissent pas dans **Paramètres → MCPs | Hooks | Skills | Rules**. En cas de conflit de nom : workspace > utilisateur > extension.
 
+Pendant `tools/call`, un MCP groupé peut envoyer `spirit/ui/open` (`{ viewId, params }`) si le client a déclaré `experimental["spirit/ui"]`. Spirit n'ouvre qu'une vue déclarée par la même extension dans `contributes.desktop.views`. Les MCP utilisateur / workspace sont refusés. La boîte de dialogue bloque cet appel ; `close(result)` revient sur la même requête. Un hôte sans fenêtre répond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — l'outil doit se dégrader.
+
 ### `settingsSchema`
 
 | Champ          | Description                                                       |
@@ -272,7 +282,7 @@ Desktop stocke les secrets dans le trousseau du système d'exploitation. Sur le 
 | Champ             | Description                                                                                                   |
 | ----------------- | ------------------------------------------------------------------------------------------------------------- |
 | `extension`       | `{ id, name, version, directoryPath, manifestPath, main }`                                                    |
-| `host`            | API hôte. Desktop implémente `showMessageBox`. CLI est `{}`                                                   |
+| `host`            | API hôte. Desktop implémente `showMessageBox` et `ui.open` / `ui.close`. CLI est `{}`                         |
 | `log`             | `(message: string) => void`                                                                                   |
 | `settings`        | `get(key)`, `getAll()`, `set(key, value)`, `setAll(values)`                                                   |
 | `secrets`         | `get(key)`, `has(key)`, `set(key, value)`, `delete(key)` — les clés doivent être déclarées dans `secretSlots` |

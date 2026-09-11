@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
 import { ActionPickerDialog } from "@/components/action-picker-dialog";
+import { ExtensionViewHost } from "@/components/extension-view-host";
 import { AutomationDetailView } from "@/components/automation-detail-view";
 import { AutomationsView } from "@/components/automations-view";
 import { ConversationPaneHost } from "@/components/conversation/conversation-pane-host";
@@ -806,6 +807,13 @@ export default function App() {
                   </ConversationSplitProvider>
                 </div>
               </div>
+
+              <ExtensionViewHost
+                extensionsList={snapshot?.extensionsList}
+                sessionKey={snapshot?.activeSession?.filePath}
+                hostRequest={snapshot?.pendingExtensionUi}
+                onHostResult={runtime.resolveExtensionUi}
+              />
 
               <ActionPickerDialog
                 open={composer.actionPickerOpen}

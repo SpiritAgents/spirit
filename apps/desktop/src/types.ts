@@ -477,6 +477,7 @@ export interface DesktopMarketplaceCatalogEntry {
   contributedTools?: DesktopExtensionContributedTool[];
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
+  desktopViews?: DesktopExtensionDesktopView[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   installed: boolean;
@@ -583,6 +584,17 @@ export interface DesktopExtensionDesktopSettingsPage {
   title?: string;
 }
 
+export type DesktopExtensionDesktopViewChrome = "default" | "close-only" | "none";
+
+export interface DesktopExtensionDesktopView {
+  id: string;
+  path: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  chrome?: DesktopExtensionDesktopViewChrome;
+}
+
 export interface DesktopExtensionCliUiHookTokens {
   foreground?: string;
   border?: string;
@@ -658,6 +670,7 @@ export interface DesktopExtensionListItem {
   contributedTools?: DesktopExtensionContributedTool[];
   desktopCss?: DesktopExtensionDesktopCssEntry[];
   desktopSettingsPage?: DesktopExtensionDesktopSettingsPage;
+  desktopViews?: DesktopExtensionDesktopView[];
   cliHooks?: DesktopExtensionCliUiHookEntry[];
   instructionContributions?: DesktopExtensionInstructionContributionSummary;
   settingsSchema?: DesktopExtensionSettingDefinition[];
@@ -805,6 +818,22 @@ export interface ReplyPendingQuestionsRequest {
 
 export interface ReplyWorkspaceCapabilityTrustRequest {
   decision: WorkspaceCapabilityTrustDecision;
+}
+
+export interface DesktopPendingExtensionUi {
+  requestId: string;
+  extensionId: string;
+  viewId: string;
+  params?: unknown;
+  title?: string;
+  width?: number;
+  height?: number;
+  chrome?: DesktopExtensionDesktopViewChrome;
+}
+
+export interface ResolveExtensionUiRequest {
+  requestId: string;
+  result: unknown;
 }
 
 export interface BeginSplitPaneSessionRequest {
@@ -1121,6 +1150,7 @@ export interface DesktopSnapshot {
   automationsList: DesktopAutomationListItem[];
   /** Workspace hooks trust gate; blocks sessionStart workspace hooks until the user decides. */
   pendingWorkspaceCapabilityTrust?: WorkspaceCapabilityTrustRequest;
+  pendingExtensionUi?: DesktopPendingExtensionUi;
 }
 
 /** Tail-replacement delta for one conversation message list (foreground or a split-pane projection). */
