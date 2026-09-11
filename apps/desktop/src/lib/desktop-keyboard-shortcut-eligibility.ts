@@ -154,6 +154,60 @@ export function resolveModBackslashSplitShortcutAction(
   return event.shiftKey ? "split-down" : "split-right";
 }
 
+const WORKSPACE_PANEL_SURFACE_SELECTOR = '[data-spirit-surface="workspace-panel"]';
+
+export type ModDigitIndex = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+export type ModDigitShortcutEvent = Pick<
+  KeyboardEventLike,
+  "defaultPrevented" | "shiftKey" | "altKey" | "code"
+> & {
+  modPressed: boolean;
+};
+
+/** Physical number-row Mod+1..9. Digit 9 is the 9th item, never "last". */
+export function parseModDigitIndex(event: ModDigitShortcutEvent): ModDigitIndex | null {
+  if (event.defaultPrevented || !event.modPressed || event.shiftKey || event.altKey) {
+    return null;
+  }
+  const match = /^Digit([1-9])$/.exec(event.code);
+  if (!match) {
+    return null;
+  }
+  return Number(match[1]) as ModDigitIndex;
+}
+
+export function isFocusInOpenWorkspaceToolsPanel(
+  target: EventTarget | null,
+  workspaceToolsOpen: boolean,
+): boolean {
+  if (!workspaceToolsOpen) {
+    return false;
+  }
+  const element = target as { closest?: (selector: string) => unknown } | null;
+  return Boolean(element?.closest?.(WORKSPACE_PANEL_SURFACE_SELECTOR));
+}
+
+export type ModDigitShortcutAction = "session" | "tab";
+
+export type ModDigitShortcutContext = {
+  workspaceToolsOpen: boolean;
+};
+
+/** Route Mod+1..9: open workspace panel focus → tab strip; otherwise sidebar sessions. */
+export function resolveModDigitShortcutAction(
+  event: ModDigitShortcutEvent & Pick<KeyboardEventLike, "target">,
+  context: ModDigitShortcutContext,
+): ModDigitShortcutAction | null {
+  if (parseModDigitIndex(event) == null) {
+    return null;
+  }
+  if (isFocusInOpenWorkspaceToolsPanel(event.target, context.workspaceToolsOpen)) {
+    return "tab";
+  }
+  return "session";
+}
+
 /** Escape returns from settings when no modal is open and focus is not in an editable field. */
 export function shouldTriggerSettingsEscapeShortcut(
   event: KeyboardEventLike,

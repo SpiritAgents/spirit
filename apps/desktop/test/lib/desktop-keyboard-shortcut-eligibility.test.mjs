@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  parseModDigitIndex,
   resolveModBackslashSplitShortcutAction,
   resolveModCommaSettingsShortcutAction,
+  resolveModDigitShortcutAction,
   resolveModPShortcutAction,
   resolveModTNewToolTabShortcutAction,
   shouldTriggerConversationAbortShortcut,
@@ -396,3 +398,86 @@ test("resolveModTNewToolTabShortcutAction ignores shift and alt modifiers", () =
     null,
   );
 });
+
+const panelSurfaceSelector = '[data-spirit-surface="workspace-panel"]';
+
+function digitEvent(overrides = {}) {
+  return {
+    defaultPrevented: false,
+    shiftKey: false,
+    altKey: false,
+    code: "Digit1",
+    modPressed: true,
+    target: { tagName: "DIV", closest: () => null },
+    ...overrides,
+  };
+}
+
+function targetClosest(matchedSelector) {
+  return {
+    tagName: "DIV",
+    closest: (selector) => (selector === matchedSelector ? {} : null),
+  };
+}
+
+test("parseModDigitIndex returns 1 and 9 for Digit1 and Digit9", () => {
+  assert.equal(parseModDigitIndex(digitEvent({ code: "Digit1" })), 1);
+  assert.equal(parseModDigitIndex(digitEvent({ code: "Digit9" })), 9);
+});
+
+test("parseModDigitIndex returns null for Digit0, missing mod, shift, and alt", () => {
+  assert.equal(parseModDigitIndex(digitEvent({ code: "Digit0" })), null);
+  assert.equal(parseModDigitIndex(digitEvent({ modPressed: false })), null);
+  assert.equal(parseModDigitIndex(digitEvent({ shiftKey: true })), null);
+  assert.equal(parseModDigitIndex(digitEvent({ altKey: true })), null);
+});
+
+test("resolveModDigitShortcutAction routes to session outside the workspace panel", () => {
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: true }),
+    "session",
+  );
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: false }),
+    "session",
+  );
+});
+
+test("resolveModDigitShortcutAction routes to tab when focus is in an open workspace panel", () => {
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent({ target: targetClosest(panelSurfaceSelector) }), {
+      workspaceToolsOpen: true,
+    }),
+    "tab",
+  );
+});
+
+test("resolveModDigitShortcutAction stays on session when the workspace panel is closed", () => {
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent({ target: targetClosest(panelSurfaceSelector) }), {
+      workspaceToolsOpen: false,
+    }),
+    "session",
+  );
+});
+
+test("resolveModDigitShortcutAction treats workspace-dock focus as session", () => {
+  assert.equal(
+    resolveModDigitShortcutAction(
+      digitEvent({ target: targetClosest('[data-spirit-surface="workspace-dock"]') }),
+      { workspaceToolsOpen: true },
+    ),
+    "session",
+  );
+});
+
+test("resolveModDigitShortcutAction still fires when an INPUT is focused", () => {
+  assert.equal(
+    resolveModDigitShortcutAction(
+      digitEvent({ target: { tagName: "INPUT", closest: () => null } }),
+      { workspaceToolsOpen: false },
+    ),
+    "session",
+  );
+});
+
