@@ -127,7 +127,7 @@ export const OPENAI_COMPATIBLE_REASONING_EFFORT_OPTIONS: ReadonlyArray<
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-  { value: "xhigh", label: "Xhigh" },
+  { value: "xhigh", label: "Extra High" },
 ];
 
 export const GPT56_REASONING_EFFORT_OPTIONS: ReadonlyArray<
@@ -138,7 +138,7 @@ export const GPT56_REASONING_EFFORT_OPTIONS: ReadonlyArray<
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-  { value: "xhigh", label: "Xhigh" },
+  { value: "xhigh", label: "Extra High" },
   { value: "max", label: "Max" },
 ];
 
@@ -217,7 +217,7 @@ export const ANTHROPIC_REASONING_EFFORT_OPTIONS: ReadonlyArray<
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-  { value: "xhigh", label: "Xhigh" },
+  { value: "xhigh", label: "Extra High" },
   { value: "max", label: "Max" },
 ];
 
