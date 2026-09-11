@@ -144,9 +144,9 @@
       "linux": "Icône de la barre d'état système"
     },
     "trayIconDescription": {
-      "win32": "Affiche une icône de statut dans la barre d'état système",
-      "darwin": "Affiche une icône de statut dans la barre de menu",
-      "linux": "Affiche une icône de statut dans la barre d'état système"
+      "win32": "Affiche Spirit dans la barre d'état système.",
+      "darwin": "Affiche Spirit dans la barre de menu.",
+      "linux": "Affiche Spirit dans la barre d'état système."
     },
     "appearance": "Apparence",
     "networks": "Réseaux",

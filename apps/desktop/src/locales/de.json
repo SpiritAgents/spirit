@@ -144,9 +144,9 @@
       "linux": "Taskleistensymbol"
     },
     "trayIconDescription": {
-      "win32": "Zeigt ein Statussymbol in der Taskleiste an",
-      "darwin": "Zeigt ein Statussymbol in der Menüleiste an",
-      "linux": "Zeigt ein Statussymbol im System Tray an"
+      "win32": "Spirit im System Tray anzeigen.",
+      "darwin": "Spirit in der Menüleiste anzeigen.",
+      "linux": "Spirit im System Tray anzeigen."
     },
     "appearance": "Aussehen",
     "networks": "Netzwerke",
