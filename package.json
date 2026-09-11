@@ -32,6 +32,7 @@
     "dev:desktop:web": "pnpm --filter @spiritagent/desktop dev:web",
     "dev:site": "pnpm --filter @spiritagent/site dev",
     "test": "turbo run test",
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "lint": "oxlint --deny-warnings packages apps/desktop apps/site",
     "lint:fix": "oxlint --fix packages apps/desktop apps/site",
     "format": "oxfmt --check packages apps/desktop apps/site",
