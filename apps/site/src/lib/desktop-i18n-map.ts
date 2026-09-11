@@ -82,8 +82,10 @@ const DESKTOP_FALLBACK_KEYS: Record<string, string> = {
   "sidebar.deleteSession": "sidebar.deleteSession",
   "sidebar.deleteWorkspace": "sidebar.deleteWorkspace",
   "sidebar.cannotDeleteBusySession": "sidebar.cannotDeleteBusySession",
-  "sidebar.deleteSessionConfirm": "sidebar.deleteSessionConfirm",
-  "sidebar.deleteWorkspaceConfirm": "sidebar.deleteWorkspaceConfirm_one",
+  "sidebar.deleteSessionConfirmTitle": "sidebar.deleteSessionConfirmTitle",
+  "sidebar.deleteSessionConfirmDescription": "sidebar.deleteSessionConfirmDescription",
+  "sidebar.deleteWorkspaceConfirmTitle": "sidebar.deleteWorkspaceConfirmTitle",
+  "sidebar.deleteWorkspaceConfirmDescription": "sidebar.deleteWorkspaceConfirmDescription",
   "sidebar.noWorkspaceSessions": "sidebar.noWorkspaceSessions",
   "sidebar.automations": "sidebar.automations",
   "sidebar.extensionSettings": "sidebar.extensionSettings",
@@ -131,6 +133,21 @@ function formatTranslation(template: string, params?: TranslationParams): string
   }, template);
 }
 
+function resolvePluralSuffix(
+  count: number | undefined,
+  locale: AppLocale,
+  desktopPath: string,
+  desktopPack: Record<string, unknown>,
+): string {
+  if (count == null) {
+    return "";
+  }
+  if (count === 0 && getByPath(desktopPack, `${desktopPath}_zero`)) {
+    return "_zero";
+  }
+  return `_${new Intl.PluralRules(locale).select(count)}`;
+}
+
 export function resolveDesktopTranslation(
   key: string,
   locale: AppLocale,
@@ -144,9 +161,15 @@ export function resolveDesktopTranslation(
   const messagePath = MESSAGE_PATHS[key];
   const fromMessages = messagePath ? getByPath(messages, messagePath) : undefined;
   const desktopPath = DESKTOP_FALLBACK_KEYS[key] ?? key;
+  const count = typeof params?.count === "number" ? params.count : undefined;
+  const desktopPack = getDesktopPack(locale);
+  const desktopEn = getDesktopPack("en-US");
+  const pluralSuffix = resolvePluralSuffix(count, locale, desktopPath, desktopPack);
   const fromDesktop =
-    getByPath(getDesktopPack(locale), desktopPath) ??
-    getByPath(getDesktopPack("en-US"), desktopPath);
+    (pluralSuffix ? getByPath(desktopPack, `${desktopPath}${pluralSuffix}`) : undefined) ??
+    getByPath(desktopPack, desktopPath) ??
+    (pluralSuffix ? getByPath(desktopEn, `${desktopPath}${pluralSuffix}`) : undefined) ??
+    getByPath(desktopEn, desktopPath);
   const template = fromMessages ?? fromDesktop ?? key.split(".").pop() ?? key;
   return formatTranslation(template, params);
 }

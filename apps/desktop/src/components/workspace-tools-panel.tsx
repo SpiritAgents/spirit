@@ -22,16 +22,8 @@ import {
   X,
 } from "lucide-react";
 import { NewToolTabShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1098,36 +1090,21 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         ) : null}
       </div>
 
-      <Dialog
+      <AlertDialog
         open={pendingCloseTabId !== null}
         onOpenChange={(open) => {
           if (!open) {
             setPendingCloseTabId(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("workspace.unsavedChangesCloseConfirm")}</DialogTitle>
-            <DialogDescription>{t("app.discardChangesWarning")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPendingCloseTabId(null)}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button type="button" size="sm" variant="destructive" onClick={handleConfirmCloseTab}>
-                {t("common.close")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("workspace.unsavedChangesCloseConfirmTitle")}
+        description={t("workspace.unsavedChangesCloseConfirmDescription")}
+        confirmLabel={t("common.close")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          handleConfirmCloseTab();
+        }}
+      />
     </>
   );
 });

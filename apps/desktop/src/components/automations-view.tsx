@@ -7,7 +7,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { LoaderCircle, Sparkles, Trash2 } from "lucide-react";
+import { Sparkles, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -27,15 +27,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { EmptyCard } from "@/components/ui/empty";
 import type { DesktopAutomationListItem, DesktopSnapshot } from "@/types";
 import { buildAutomationTriggerFormatLabels } from "@/lib/automation-trigger-i18n";
@@ -189,57 +181,27 @@ export function AutomationsView({
         </div>
       </div>
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("automations.deleteAutomation")}</DialogTitle>
-            <DialogDescription>
-              {t("automations.deleteAutomationConfirm", { name: deleteTarget?.title ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-                disabled={automationBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={automationBusy || !deleteTarget || !onDeleteAutomation}
-                onClick={() => {
-                  const target = deleteTarget;
-                  if (!target || !onDeleteAutomation) {
-                    return;
-                  }
-                  void (async () => {
-                    await onDeleteAutomation(target.id);
-                    setDeleteTarget(null);
-                  })();
-                }}
-              >
-                {automationBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("automations.deleteAutomationConfirmTitle", { name: deleteTarget?.title ?? "" })}
+        description={t("automations.deleteAutomationConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={automationBusy}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          if (!target || !onDeleteAutomation) {
+            return;
+          }
+          await onDeleteAutomation(target.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

@@ -27,7 +27,6 @@ import {
   Layers,
   Code2,
   Link2,
-  LoaderCircle,
   MoonStar,
   Network,
   Palette,
@@ -55,15 +54,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -2155,7 +2146,7 @@ function SessionSidebarInner({
         </div>
       ) : null}
 
-      <Dialog
+      <AlertDialog
         open={deleteSessionDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -2164,56 +2155,22 @@ function SessionSidebarInner({
             dismissDeleteSessionDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton={!deleteSessionBusy}>
-          <DialogHeader>
-            <DialogTitle>{t("sidebar.deleteSession")}</DialogTitle>
-            <DialogDescription>
-              {t("sidebar.deleteSessionConfirm", { name: deleteTarget?.displayName ?? "" })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!deleteSessionBusy) {
-                    dismissDeleteSessionDialog();
-                  }
-                }}
-                disabled={deleteSessionBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={deleteSessionBusy || !deleteTarget || !onDeleteSession}
-                onClick={() => {
-                  const target = deleteTarget;
-                  if (!target || !onDeleteSession) {
-                    return;
-                  }
-                  void (async () => {
-                    await onDeleteSession(target.path);
-                    dismissDeleteSessionDialog();
-                  })();
-                }}
-              >
-                {deleteSessionBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("sidebar.deleteSessionConfirmTitle", { name: deleteTarget?.displayName ?? "" })}
+        description={t("sidebar.deleteSessionConfirmDescription")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleteSessionBusy}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          if (!target || !onDeleteSession) {
+            return;
+          }
+          await onDeleteSession(target.path);
+          dismissDeleteSessionDialog();
+        }}
+      />
 
-      <Dialog
+      <AlertDialog
         open={deleteSectionDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -2222,84 +2179,46 @@ function SessionSidebarInner({
             dismissDeleteSectionDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton={!sectionDeleteBusy}>
-          <DialogHeader>
-            <DialogTitle>
-              {deleteSectionTarget === "workspace-section"
-                ? t("sidebar.deleteAllWorkspaces")
-                : t("sidebar.deleteAllNoWorkspaceSessions")}
-            </DialogTitle>
-            <DialogDescription>
-              {deleteSectionTarget === "workspace-section"
-                ? t("sidebar.deleteAllWorkspacesConfirm", {
-                    workspaceCount: workspaceGroups.length,
-                    sessionCount: workspaceSectionSessionCount,
-                  })
-                : t("sidebar.deleteAllNoWorkspaceSessionsConfirm", {
-                    count: unboundSessions.length,
-                  })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!sectionDeleteBusy) {
-                    dismissDeleteSectionDialog();
-                  }
-                }}
-                disabled={sectionDeleteBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={
-                  sectionDeleteBusy ||
-                  deleteSectionTarget === null ||
-                  (deleteSectionTarget === "workspace-section"
-                    ? !onDeleteWorkspace || workspaceGroups.length === 0
-                    : !onDeleteSession || unboundSessions.length === 0)
-                }
-                onClick={() => {
-                  const target = deleteSectionTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    if (target === "workspace-section") {
-                      if (!onDeleteWorkspace) {
-                        return;
-                      }
-                      for (const group of workspaceGroups) {
-                        await onDeleteWorkspace(group.rootPath ?? group.id);
-                      }
-                    } else if (onDeleteSession) {
-                      for (const session of unboundSessions) {
-                        await onDeleteSession(session.path);
-                      }
-                    }
-                    dismissDeleteSectionDialog();
-                  })();
-                }}
-              >
-                {sectionDeleteBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={
+          deleteSectionTarget === "workspace-section"
+            ? t("sidebar.deleteAllWorkspacesConfirmTitle")
+            : t("sidebar.deleteAllNoWorkspaceSessionsConfirmTitle")
+        }
+        description={
+          deleteSectionTarget === "workspace-section"
+            ? t("sidebar.deleteAllWorkspacesConfirmDescription", {
+                workspaceCount: workspaceGroups.length,
+                sessionCount: workspaceSectionSessionCount,
+              })
+            : t("sidebar.deleteAllNoWorkspaceSessionsConfirmDescription", {
+                count: unboundSessions.length,
+              })
+        }
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={sectionDeleteBusy}
+        onConfirm={async () => {
+          const target = deleteSectionTarget;
+          if (!target) {
+            return;
+          }
+          if (target === "workspace-section") {
+            if (!onDeleteWorkspace) {
+              return;
+            }
+            for (const group of workspaceGroups) {
+              await onDeleteWorkspace(group.rootPath ?? group.id);
+            }
+          } else if (onDeleteSession) {
+            for (const session of unboundSessions) {
+              await onDeleteSession(session.path);
+            }
+          }
+          dismissDeleteSectionDialog();
+        }}
+      />
 
-      <Dialog
+      <AlertDialog
         open={deleteWorkspaceDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -2308,57 +2227,24 @@ function SessionSidebarInner({
             dismissDeleteWorkspaceDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton={!deleteWorkspaceBusy}>
-          <DialogHeader>
-            <DialogTitle>{t("sidebar.deleteWorkspace")}</DialogTitle>
-            <DialogDescription>
-              {t("sidebar.deleteWorkspaceConfirm", {
-                name: deleteWorkspaceTarget?.label ?? "",
-                count: deleteWorkspaceTarget?.sessions.length ?? 0,
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!deleteWorkspaceBusy) {
-                    dismissDeleteWorkspaceDialog();
-                  }
-                }}
-                disabled={deleteWorkspaceBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={deleteWorkspaceBusy || !deleteWorkspaceTarget || !onDeleteWorkspace}
-                onClick={() => {
-                  const target = deleteWorkspaceTarget;
-                  if (!target || !onDeleteWorkspace) {
-                    return;
-                  }
-                  void (async () => {
-                    await onDeleteWorkspace(target.rootPath ?? target.id);
-                    dismissDeleteWorkspaceDialog();
-                  })();
-                }}
-              >
-                {deleteWorkspaceBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("sidebar.deleteWorkspaceConfirmTitle", {
+          name: deleteWorkspaceTarget?.label ?? "",
+        })}
+        description={t("sidebar.deleteWorkspaceConfirmDescription", {
+          count: deleteWorkspaceTarget?.sessions.length ?? 0,
+        })}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={deleteWorkspaceBusy}
+        onConfirm={async () => {
+          const target = deleteWorkspaceTarget;
+          if (!target || !onDeleteWorkspace) {
+            return;
+          }
+          await onDeleteWorkspace(target.rootPath ?? target.id);
+          dismissDeleteWorkspaceDialog();
+        }}
+      />
     </aside>
   );
 }

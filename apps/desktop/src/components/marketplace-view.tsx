@@ -22,16 +22,8 @@ import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
 import { MarketplaceDetailView } from "@/components/marketplace-detail-view";
 import { MarketplaceSourceTab } from "@/components/marketplace-source-tab";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -890,65 +882,41 @@ export function MarketplaceView({
         onSubmit={handleAddFromUrl}
       />
 
-      <Dialog
+      <AlertDialog
         open={reviewGateOpen}
         onOpenChange={(open) => {
           if (!open) {
             dismissReviewGate();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("marketplace.reviewRequiredTitle")}</DialogTitle>
-            <DialogDescription>
-              {t(
-                reviewGate?.reviewStatus === "revoked"
-                  ? "marketplace.reviewRequiredRevoked"
-                  : "marketplace.reviewRequiredUnverified",
-                { name: reviewGate?.displayName ?? "" },
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={dismissReviewGate}
-                disabled={extensionsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={extensionsBusy || !reviewGate}
-                onClick={() => {
-                  const target = reviewGate;
-                  if (!target) {
-                    return;
-                  }
-                  void runInstallAction(target.extensionId, async () => {
-                    try {
-                      await target.retry(true);
-                      dismissReviewGate();
-                    } catch {
-                      /* runtimeError */
-                    }
-                  });
-                }}
-              >
-                {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("marketplace.reviewRequiredContinue")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("marketplace.reviewRequiredTitle", { name: reviewGate?.displayName ?? "" })}
+        description={t(
+          reviewGate?.reviewStatus === "revoked"
+            ? "marketplace.reviewRequiredRevoked"
+            : "marketplace.reviewRequiredUnverified",
+          { name: reviewGate?.displayName ?? "" },
+        )}
+        confirmLabel={t("marketplace.reviewRequiredContinue")}
+        cancelLabel={t("common.cancel")}
+        variant="default"
+        busy={extensionsBusy}
+        onConfirm={async () => {
+          const target = reviewGate;
+          if (!target) {
+            return;
+          }
+          await runInstallAction(target.extensionId, async () => {
+            try {
+              await target.retry(true);
+              dismissReviewGate();
+            } catch {
+              /* runtimeError */
+            }
+          });
+        }}
+      />
 
-      <Dialog
+      <AlertDialog
         open={removeSourceDialogOpen}
         onOpenChange={(open) => {
           if (open) {
@@ -957,126 +925,68 @@ export function MarketplaceView({
             dismissRemoveSourceDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton={!extensionsBusy}>
-          <DialogHeader>
-            <DialogTitle>{t("marketplace.removeMarketplaceTitle")}</DialogTitle>
-            <DialogDescription>
-              {t("marketplace.removeMarketplaceConfirm", {
-                name: removeSourceTarget?.displayName ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!extensionsBusy) {
-                    dismissRemoveSourceDialog();
-                  }
-                }}
-                disabled={extensionsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={extensionsBusy || !removeSourceTarget}
-                onClick={() => {
-                  const target = removeSourceTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onRemoveMarketplaceSource({ name: target.name });
-                      if (resolvedActiveSourceId === target.id) {
-                        setActiveSourceId("built-in");
-                      }
-                      dismissRemoveSourceDialog();
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {extensionsBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" aria-hidden />
-                ) : null}
-                {t("marketplace.removeMarketplace")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("marketplace.removeMarketplaceConfirmTitle", {
+          name: removeSourceTarget?.displayName ?? "",
+        })}
+        description={t("marketplace.removeMarketplaceConfirmDescription")}
+        confirmLabel={t("marketplace.removeMarketplace")}
+        cancelLabel={t("common.cancel")}
+        busy={extensionsBusy}
+        onConfirm={async () => {
+          const target = removeSourceTarget;
+          if (!target) {
+            return;
+          }
+          try {
+            await onRemoveMarketplaceSource({ name: target.name });
+            if (resolvedActiveSourceId === target.id) {
+              setActiveSourceId("built-in");
+            }
+            dismissRemoveSourceDialog();
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
 
-      <Dialog
+      <AlertDialog
         open={uninstallDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
             dismissUninstallDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("marketplace.uninstallExtension")}</DialogTitle>
-            <DialogDescription>
-              {t(
-                uninstallTarget?.sourceId === "built-in"
-                  ? "marketplace.uninstallBuiltInConfirm"
-                  : uninstallTarget?.sourceId === "personal"
-                    ? "marketplace.uninstallPersonalConfirm"
-                    : "marketplace.uninstallExtensionConfirm",
-                {
-                  name: uninstallTarget?.displayName ?? "",
-                },
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={dismissUninstallDialog}
-                disabled={extensionsBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={extensionsBusy || !uninstallTarget}
-                onClick={() => {
-                  const target = uninstallTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await onDeleteExtension({ id: target.id });
-                      dismissUninstallDialog();
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {extensionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("marketplace.uninstall")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t(
+          uninstallTarget?.sourceId === "built-in"
+            ? "marketplace.uninstallBuiltInConfirmTitle"
+            : uninstallTarget?.sourceId === "personal"
+              ? "marketplace.uninstallPersonalConfirmTitle"
+              : "marketplace.uninstallExtensionConfirmTitle",
+          { name: uninstallTarget?.displayName ?? "" },
+        )}
+        description={t(
+          uninstallTarget?.sourceId === "built-in"
+            ? "marketplace.uninstallBuiltInConfirmDescription"
+            : uninstallTarget?.sourceId === "personal"
+              ? "marketplace.uninstallPersonalConfirmDescription"
+              : "marketplace.uninstallExtensionConfirmDescription",
+        )}
+        confirmLabel={t("marketplace.uninstall")}
+        cancelLabel={t("common.cancel")}
+        busy={extensionsBusy}
+        onConfirm={async () => {
+          const target = uninstallTarget;
+          if (!target) {
+            return;
+          }
+          try {
+            await onDeleteExtension({ id: target.id });
+            dismissUninstallDialog();
+          } catch {
+            /* runtimeError */
+          }
+        }}
+      />
     </div>
   );
 }

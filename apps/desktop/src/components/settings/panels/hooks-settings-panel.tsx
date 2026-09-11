@@ -4,10 +4,10 @@ import { LoaderCircle, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AlertDialog } from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogFooterActions,
   DialogHeader,
@@ -235,7 +235,7 @@ export function HooksSettingsPanel({
         )}
       </div>
 
-      <Dialog
+      <AlertDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -243,63 +243,38 @@ export function HooksSettingsPanel({
             setDeleteError(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("settings.deleteHook")}</DialogTitle>
-            <DialogDescription>
-              {t("settings.deleteHookConfirm", {
-                event: deleteTarget?.event ?? "",
-                command: deleteTarget?.command ?? "",
-              })}
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError ? <p className="text-xs text-destructive">{deleteError}</p> : null}
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteTarget(null)}
-                disabled={hooksBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                disabled={hooksBusy || !deleteTarget}
-                onClick={() => {
-                  const target = deleteTarget;
-                  if (!target) {
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      setDeleteError(null);
-                      await onDeleteHookEntry({
-                        scope: target.scope,
-                        event: target.event,
-                        index: target.index,
-                      });
-                      setDeleteTarget(null);
-                    } catch (error) {
-                      setDeleteError(
-                        error instanceof Error ? error.message : t("settings.hooksDeleteFailed"),
-                      );
-                    }
-                  })();
-                }}
-              >
-                {hooksBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("common.delete")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("settings.deleteHookConfirmTitle", { event: deleteTarget?.event ?? "" })}
+        description={
+          <>
+            {t("settings.deleteHookConfirmDescription")}
+            {deleteError ? (
+              <span className="mt-2 block text-destructive">{deleteError}</span>
+            ) : null}
+          </>
+        }
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        busy={hooksBusy}
+        onConfirm={async () => {
+          const target = deleteTarget;
+          if (!target) {
+            return;
+          }
+          try {
+            setDeleteError(null);
+            await onDeleteHookEntry({
+              scope: target.scope,
+              event: target.event,
+              index: target.index,
+            });
+            setDeleteTarget(null);
+          } catch (error) {
+            setDeleteError(
+              error instanceof Error ? error.message : t("settings.hooksDeleteFailed"),
+            );
+          }
+        }}
+      />
 
       <Dialog
         open={addDialogOpen}
