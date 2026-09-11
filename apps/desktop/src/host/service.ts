@@ -1770,8 +1770,9 @@ class DesktopHostService {
       );
       const rulesSystemPrompt = buildRulesSystemMessage(overlay.rules);
       const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(overlay.skills);
+      const toolExecutor = await this.ensureToolExecutor();
       const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
-        this.requireToolExecutor().mcpToolCatalogSnapshot(),
+        toolExecutor.mcpToolCatalogSnapshot(),
       );
       const agentModeSystemPrompt = buildAgentModeSystemMessage(state.metadata.planMetadata);
       const extensionsSystemPrompt = buildExtensionsSystemMessage(extensionSystemPrompts);
@@ -1784,7 +1785,7 @@ class DesktopHostService {
       const basicInfoSystemPrompt = buildBasicInfoSystemMessage(
         buildDesktopRuntimeBasicInfo(
           state.workspaceRoot,
-          this.requireToolExecutor(),
+          toolExecutor,
           gitBranchLabelForBasicInfo(state.git),
           this.activeBundle().activeSession?.filePath ?? this.activeBundle().id,
         ),
