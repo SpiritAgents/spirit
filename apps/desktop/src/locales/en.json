@@ -144,9 +144,9 @@
       "linux": "System Tray Icon"
     },
     "trayIconDescription": {
-      "win32": "Shows a status icon in the system tray",
-      "darwin": "Shows a status icon in the menu bar",
-      "linux": "Shows a status icon in the system tray"
+      "win32": "Show Spirit in system tray.",
+      "darwin": "Show Spirit in menu bar.",
+      "linux": "Show Spirit in system tray."
     },
     "appearance": "Appearance",
     "networks": "Networks",

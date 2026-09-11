@@ -144,9 +144,9 @@
       "linux": "Ícone da Bandeja do Sistema"
     },
     "trayIconDescription": {
-      "win32": "Mostra um ícone de status na bandeja do sistema",
-      "darwin": "Mostra um ícone de status na barra de menu",
-      "linux": "Mostra um ícone de status na bandeja do sistema"
+      "win32": "Mostra o Spirit na bandeja do sistema.",
+      "darwin": "Mostra o Spirit na barra de menu.",
+      "linux": "Mostra o Spirit na bandeja do sistema."
     },
     "appearance": "Aparência",
     "networks": "Redes",

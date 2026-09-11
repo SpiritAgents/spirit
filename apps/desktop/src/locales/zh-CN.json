@@ -144,9 +144,9 @@
       "linux": "系统托盘图标"
     },
     "trayIconDescription": {
-      "win32": "在系统托盘显示状态图标",
-      "darwin": "在菜单栏显示状态图标",
-      "linux": "在系统托盘显示状态图标"
+      "win32": "在系统托盘显示 Spirit。",
+      "darwin": "在菜单栏显示 Spirit。",
+      "linux": "在系统托盘显示 Spirit。"
     },
     "appearance": "外观",
     "networks": "网络",

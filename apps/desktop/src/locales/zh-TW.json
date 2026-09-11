@@ -144,9 +144,9 @@
       "linux": "系統匣圖示"
     },
     "trayIconDescription": {
-      "win32": "在系統匣顯示狀態圖示",
-      "darwin": "在選單列顯示狀態圖示",
-      "linux": "在系統匣顯示狀態圖示"
+      "win32": "在系統匣顯示 Spirit。",
+      "darwin": "在選單列顯示 Spirit。",
+      "linux": "在系統匣顯示 Spirit。"
     },
     "appearance": "外觀",
     "networks": "網路",

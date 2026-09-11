@@ -144,9 +144,9 @@
       "linux": "시스템 트레이 아이콘"
     },
     "trayIconDescription": {
-      "win32": "시스템 트레이에 상태 아이콘을 표시합니다",
-      "darwin": "메뉴 막대에 상태 아이콘을 표시합니다",
-      "linux": "시스템 트레이에 상태 아이콘을 표시합니다"
+      "win32": "시스템 트레이에 Spirit을 표시합니다.",
+      "darwin": "메뉴 막대에 Spirit을 표시합니다.",
+      "linux": "시스템 트레이에 Spirit을 표시합니다."
     },
     "appearance": "모양",
     "networks": "네트워크",
