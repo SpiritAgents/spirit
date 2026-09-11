@@ -92,7 +92,6 @@ export async function ensureInitializedCommand(
   applyLlmClientVersionFromApp();
   await ensureBuiltInSkills(spiritDataDir());
   await ensurePersonalMarketplace(spiritDataDir());
-  await ctx.seedBuiltInExtensions();
   const previousState = ctx.state();
   const previousBinding = normalizeWorkspaceBinding(
     previousState?.workspaceBinding ?? loadedConfig.workspaceBinding,
@@ -181,6 +180,12 @@ export async function ensureInitializedCommand(
     await ctx.refreshLspSnapshot();
     return;
   }
+
+  // Seed built-ins only on a full (re)initialization — first launch or a
+  // workspace/binding switch. Production built-in updates ship with app
+  // updates (which restart the host), so recopying on every ensure only
+  // churned the install tree (pump ticks ensure every 25ms while busy).
+  await ctx.seedBuiltInExtensions();
 
   const metadata = await loadHostMetadata(workspaceRoot, resolveDesktopAgentMode(config), {
     workspaceBinding,

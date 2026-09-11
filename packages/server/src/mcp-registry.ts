@@ -43,7 +43,8 @@ export class McpRegistry {
         true,
         this.extraConfigs ? { extraConfigs: this.extraConfigs } : {},
       );
-      service.startBackgroundRefreshInBackground(false);
+      // Refresh after ensureBuiltIn in createServerRuntime. Starting here
+      // races recopy: the child `node server.mjs` loses its cwd (uv_cwd).
       this.cache.set(key, service);
     }
     return service;

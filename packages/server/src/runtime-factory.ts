@@ -196,6 +196,14 @@ export interface ServerRuntimeResult {
  * real per-session McpService, LSP bindings, extensions, todos, hooks, and
  * transcript persistence.
  */
+/**
+ * Install trees this daemon process has already seeded, keyed by host kind +
+ * data dir. Built-in extensions only change with app updates (which restart
+ * the daemon), so recopy once per process per tree instead of on every
+ * session create / replaceConfig.
+ */
+const builtInSeededTrees = new Set<string>();
+
 function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
   if (isBedrockTransportConfig(config)) {
     return "bedrock";
@@ -231,9 +239,6 @@ export async function createServerRuntime(
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
-  if (!isDreamCollector) {
-    mcpService.startBackgroundRefreshInBackground(false);
-  }
 
   // 2. Local tool service: real shell/file/web execution, noop management MCP
   //    adapter (MCP tool execution lives on the executor's McpService, same
@@ -244,11 +249,18 @@ export async function createServerRuntime(
     await ensureBuiltInSkills(spiritDataDir);
     await ensurePersonalMarketplace(spiritDataDir);
     extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
-    await ensureBuiltInExtensions({
-      spiritDataDir,
-      hostKind,
-      manager: extensionManager,
-    });
+    const builtInTreeKey = `${hostKind}\n${spiritDataDir}`;
+    if (!builtInSeededTrees.has(builtInTreeKey)) {
+      await ensureBuiltInExtensions({
+        spiritDataDir,
+        hostKind,
+        manager: extensionManager,
+      });
+      builtInSeededTrees.add(builtInTreeKey);
+    }
+    // After the recopy (first session on this tree) so extension stdio cwd
+    // still exists when `node server.mjs` starts.
+    mcpService.startBackgroundRefreshInBackground(false);
   }
   let currentApprovalLevel = approvalLevel;
   const service = new NodeHostToolService(
