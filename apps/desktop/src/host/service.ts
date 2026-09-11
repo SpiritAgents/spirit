@@ -2421,6 +2421,13 @@ class DesktopHostService {
       if (previous) {
         previous.resolve({ kind: "opened", result: { dismissed: true } });
       }
+      const previousRemote = this.pendingRemoteExtensionUi;
+      this.pendingRemoteExtensionUi = undefined;
+      if (previousRemote) {
+        void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
+          dismissed: true,
+        });
+      }
       const requestId = crypto.randomUUID();
       this.pendingExtensionUiWaiter = { requestId, resolve };
       this.pendingExtensionUi = {
@@ -2997,6 +3004,17 @@ class DesktopHostService {
         this.enqueueRemoteWorkspaceCapabilityTrust(requestId, request, bundle.runtime);
       },
       onExtensionUiRequested: (request: DesktopPendingExtensionUi) => {
+        const previousRemote = this.pendingRemoteExtensionUi;
+        if (previousRemote && previousRemote.requestId !== request.requestId) {
+          void replyRemoteExtensionUi(previousRemote.runtime, previousRemote.requestId, {
+            dismissed: true,
+          });
+        }
+        const previousLocal = this.pendingExtensionUiWaiter;
+        if (previousLocal) {
+          previousLocal.resolve({ kind: "opened", result: { dismissed: true } });
+          this.pendingExtensionUiWaiter = undefined;
+        }
         this.pendingExtensionUi = request;
         this.pendingRemoteExtensionUi = {
           requestId: request.requestId,
