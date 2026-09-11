@@ -77,7 +77,7 @@ type DesktopModelsCopy = {
   savedKey: string;
   cannotDeleteCurrent: string;
   deleteAction: string;
-  deleteDialogTitle: string;
+  deleteDialogTitle(modelName: string): string;
   deleteDialogDescription(modelName: string): string;
   cancel: string;
   providerDialogTitle: string;

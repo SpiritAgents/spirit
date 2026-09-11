@@ -1332,10 +1332,10 @@ function SessionSidebarInner({
       >
         <DialogContent className="sm:max-w-md" showCloseButton>
           <DialogHeader>
-            <DialogTitle>{t("sidebar.deleteSession")}</DialogTitle>
-            <DialogDescription>
-              {t("sidebar.deleteSessionConfirm", { name: deleteTarget?.displayName ?? "" })}
-            </DialogDescription>
+            <DialogTitle>
+              {t("sidebar.deleteSessionConfirmTitle", { name: deleteTarget?.displayName ?? "" })}
+            </DialogTitle>
+            <DialogDescription>{t("sidebar.deleteSessionConfirmDescription")}</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col-reverse justify-end gap-2 pt-2 sm:flex-row">
             <Button
@@ -1382,10 +1382,13 @@ function SessionSidebarInner({
       >
         <DialogContent className="sm:max-w-md" showCloseButton>
           <DialogHeader>
-            <DialogTitle>{t("sidebar.deleteWorkspace")}</DialogTitle>
-            <DialogDescription>
-              {t("sidebar.deleteWorkspaceConfirm", {
+            <DialogTitle>
+              {t("sidebar.deleteWorkspaceConfirmTitle", {
                 name: deleteWorkspaceTarget?.label ?? "",
+              })}
+            </DialogTitle>
+            <DialogDescription>
+              {t("sidebar.deleteWorkspaceConfirmDescription", {
                 count: deleteWorkspaceTarget?.sessions.length ?? 0,
               })}
             </DialogDescription>

@@ -396,7 +396,9 @@ export function DesktopModelsPreview({
       >
         <WindowDialogContent className="sm:max-w-md" container={dialogContainer}>
           <WindowDialogHeader>
-            <WindowDialogTitle>{messages.desktop.models.deleteDialogTitle}</WindowDialogTitle>
+            <WindowDialogTitle>
+              {messages.desktop.models.deleteDialogTitle(deleteTarget ?? "")}
+            </WindowDialogTitle>
             <WindowDialogDescription>
               {messages.desktop.models.deleteDialogDescription(deleteTarget ?? "")}
             </WindowDialogDescription>
