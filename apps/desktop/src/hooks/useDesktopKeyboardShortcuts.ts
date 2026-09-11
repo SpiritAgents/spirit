@@ -1,7 +1,10 @@
-import { useEffect, type MutableRefObject } from "react";
+import { useEffect, useRef, type MutableRefObject } from "react";
 
 import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
-import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
+import {
+  useWorkspaceToolsChromeActions,
+  useWorkspaceToolsChromeOpen,
+} from "@/contexts/workspace-tools-chrome-context";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { resolveModelPickerToOpen } from "@/lib/model-picker-shortcut-bridge";
 import {
@@ -11,16 +14,21 @@ import {
 } from "@/lib/desktop-shell";
 import {
   isEditableShortcutTarget,
+  parseModDigitIndex,
   resolveModCommaSettingsShortcutAction,
   resolveModBackslashSplitShortcutAction,
+  resolveModDigitShortcutAction,
   resolveModPShortcutAction,
   resolveModTNewToolTabShortcutAction,
+  setWorkspacePanelRegionActive,
   shouldTriggerConversationAbortShortcut,
   shouldTriggerSettingsEscapeShortcut,
 } from "@/lib/desktop-keyboard-shortcut-eligibility";
+import { resolveVisibleSidebarSessionsForDigitShortcut } from "@/lib/session-sidebar-digit-shortcut-bridge";
 import { triggerWorkspaceNewToolTabShortcut } from "@/lib/workspace-new-tool-tab-shortcut-bridge";
 import { triggerSplitPaneShortcut } from "@/lib/split-pane-shortcut-bridge";
 import { resolveUiLayoutZoomShortcutAction } from "@/lib/ui-layout-scale";
+import type { WorkspaceToolTab } from "@/lib/workspace-tool-tabs";
 import type { AppSurface } from "@/hooks/useAppSurfaceNavigation";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
 
@@ -54,11 +62,14 @@ export type UseDesktopKeyboardShortcutsOptions = {
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef;
   sessionSidebarChromeApiRef: MutableRefObject<SessionSidebarChromeApi | null>;
   handleNewSession: () => void;
+  handleSelectSession: (path: string) => void;
   handleOpenSettings: () => void;
   handleCloseSettings: () => void;
   setActionPickerOpen: (open: boolean) => void;
   setFilePickerOpen: (open: boolean) => void;
   uiLayoutScaleApi: UiLayoutScaleShortcutApi;
+  workspaceToolTabs: readonly WorkspaceToolTab[];
+  focusWorkspaceToolTab: (tabId: string) => boolean;
 };
 
 export function useDesktopKeyboardShortcuts({
@@ -68,13 +79,21 @@ export function useDesktopKeyboardShortcuts({
   conversationAbortShortcutTargetRef,
   sessionSidebarChromeApiRef,
   handleNewSession,
+  handleSelectSession,
   handleOpenSettings,
   handleCloseSettings,
   setActionPickerOpen,
   setFilePickerOpen,
   uiLayoutScaleApi,
+  workspaceToolTabs,
+  focusWorkspaceToolTab,
 }: UseDesktopKeyboardShortcutsOptions) {
-  const { setOpen: setWorkspaceToolsOpen } = useWorkspaceToolsChromeActions();
+  const { toggle: toggleWorkspaceTools } = useWorkspaceToolsChromeActions();
+  const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
+  const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
+  workspaceToolsOpenRef.current = workspaceToolsOpen;
+  const workspaceToolTabsRef = useRef(workspaceToolTabs);
+  workspaceToolTabsRef.current = workspaceToolTabs;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) {
@@ -134,11 +153,11 @@ export function useDesktopKeyboardShortcuts({
       }
       event.preventDefault();
       event.stopPropagation();
-      setWorkspaceToolsOpen((current) => !current);
+      toggleWorkspaceTools();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [activeSurfaceRef, setWorkspaceToolsOpen]);
+  }, [activeSurfaceRef, toggleWorkspaceTools]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -318,6 +337,59 @@ export function useDesktopKeyboardShortcuts({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [setActionPickerOpen, setFilePickerOpen]);
+
+  // Cmd/Ctrl+1..9 — sessions by sidebar visual order, or workspace tabs when
+  // the last pointer/focus is inside the open right panel. Fires even in
+  // editable targets. Embedded Browser webview keys stay in the guest.
+  useEffect(() => {
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      setWorkspacePanelRegionActive(
+        target instanceof Element &&
+          Boolean(target.closest('[data-spirit-surface="workspace-panel"]')),
+      );
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      const eventLike = {
+        defaultPrevented: event.defaultPrevented,
+        shiftKey: event.shiftKey,
+        altKey: event.altKey,
+        code: event.code,
+        modPressed: isModShortcutPressed(event),
+        target: event.target,
+      };
+      const action = resolveModDigitShortcutAction(eventLike, {
+        workspaceToolsOpen: workspaceToolsOpenRef.current,
+      });
+      if (!action) {
+        return;
+      }
+      const index = parseModDigitIndex(eventLike);
+      if (index == null) {
+        return;
+      }
+      if (action === "tab") {
+        const tab = workspaceToolTabsRef.current[index - 1];
+        if (!tab || !focusWorkspaceToolTab(tab.id)) {
+          return;
+        }
+        event.preventDefault();
+        return;
+      }
+      const session = resolveVisibleSidebarSessionsForDigitShortcut()[index - 1];
+      if (!session) {
+        return;
+      }
+      handleSelectSession(session.path);
+      event.preventDefault();
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [focusWorkspaceToolTab, handleSelectSession]);
 
   // Cmd/Ctrl+= / - / 0 — UI layout zoom (macOS menu accelerator handles this; skip here).
   useEffect(() => {

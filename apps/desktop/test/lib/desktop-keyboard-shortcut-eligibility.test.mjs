@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
-import { test } from "vitest";
+import { afterEach, test } from "vitest";
 
 import {
   parseModDigitIndex,
+  resetWorkspacePanelRegionActiveForTests,
   resolveModBackslashSplitShortcutAction,
   resolveModCommaSettingsShortcutAction,
   resolveModDigitShortcutAction,
   resolveModPShortcutAction,
   resolveModTNewToolTabShortcutAction,
+  setWorkspacePanelRegionActive,
   shouldTriggerConversationAbortShortcut,
   shouldTriggerSettingsEscapeShortcut,
 } from "../../src/lib/desktop-keyboard-shortcut-eligibility.ts";
+
+afterEach(() => {
+  resetWorkspacePanelRegionActiveForTests();
+});
 
 const conversationContext = {
   activeSurface: "conversation",
@@ -477,6 +483,31 @@ test("resolveModDigitShortcutAction still fires when an INPUT is focused", () =>
       digitEvent({ target: { tagName: "INPUT", closest: () => null } }),
       { workspaceToolsOpen: false },
     ),
+    "session",
+  );
+});
+
+test("resolveModDigitShortcutAction routes to tab when last pointer was in the open panel", () => {
+  setWorkspacePanelRegionActive(true);
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: true }),
+    "tab",
+  );
+});
+
+test("resolveModDigitShortcutAction ignores a stale panel pointer region when closed", () => {
+  setWorkspacePanelRegionActive(true);
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: false }),
+    "session",
+  );
+});
+
+test("resolveModDigitShortcutAction returns to session after pointer leaves the panel", () => {
+  setWorkspacePanelRegionActive(true);
+  setWorkspacePanelRegionActive(false);
+  assert.equal(
+    resolveModDigitShortcutAction(digitEvent(), { workspaceToolsOpen: true }),
     "session",
   );
 });

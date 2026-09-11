@@ -156,6 +156,17 @@ export function resolveModBackslashSplitShortcutAction(
 
 const WORKSPACE_PANEL_SURFACE_SELECTOR = '[data-spirit-surface="workspace-panel"]';
 
+/** Last pointerdown was inside the open workspace panel (file tree clicks often leave focus on body). */
+let workspacePanelRegionActive = false;
+
+export function setWorkspacePanelRegionActive(active: boolean): void {
+  workspacePanelRegionActive = active;
+}
+
+export function resetWorkspacePanelRegionActiveForTests(): void {
+  workspacePanelRegionActive = false;
+}
+
 export type ModDigitIndex = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 export type ModDigitShortcutEvent = Pick<
@@ -185,7 +196,7 @@ export function isFocusInOpenWorkspaceToolsPanel(
     return false;
   }
   const element = target as { closest?: (selector: string) => unknown } | null;
-  return Boolean(element?.closest?.(WORKSPACE_PANEL_SURFACE_SELECTOR));
+  return Boolean(element?.closest?.(WORKSPACE_PANEL_SURFACE_SELECTOR)) || workspacePanelRegionActive;
 }
 
 export type ModDigitShortcutAction = "session" | "tab";

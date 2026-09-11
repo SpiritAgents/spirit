@@ -41,6 +41,17 @@ export type WorkspaceToolsChromeProviderProps = {
 };
 
 let workspaceToolsShellWidthTransitionClearTimer = 0;
+let focusWorkspaceToolsPanelOnOpen = false;
+
+function requestFocusWorkspaceToolsPanelOnOpen(): void {
+  focusWorkspaceToolsPanelOnOpen = true;
+}
+
+export function consumeFocusWorkspaceToolsPanelOnOpen(): boolean {
+  const requested = focusWorkspaceToolsPanelOnOpen;
+  focusWorkspaceToolsPanelOnOpen = false;
+  return requested;
+}
 
 function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean): void {
   const shell = document.getElementById("workspace-tools-panel-shell");
@@ -97,6 +108,9 @@ export function WorkspaceToolsChromeProvider({
 
   const toggle = useCallback(() => {
     const next = !openRef.current;
+    if (next) {
+      requestFocusWorkspaceToolsPanelOnOpen();
+    }
     applyWorkspaceToolsShellWidthImmediate(next);
     setOpenState(next);
   }, []);

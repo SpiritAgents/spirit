@@ -76,9 +76,11 @@ import {
   unregisterWorkspaceNewToolTabShortcut,
 } from "@/lib/workspace-new-tool-tab-shortcut-bridge";
 import {
+  consumeFocusWorkspaceToolsPanelOnOpen,
   useWorkspaceToolsChromeActions,
   useWorkspaceToolsChromeOpen,
 } from "@/contexts/workspace-tools-chrome-context";
+import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { WORKSPACE_TOOL_TABS_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
@@ -308,6 +310,14 @@ function WorkspaceToolsDockShell({
   const asideRef = useRef<HTMLElement>(null);
   const latestWidthPxRef = useRef(widthPx);
   latestWidthPxRef.current = widthPx;
+
+  useEffect(() => {
+    if (!open || !consumeFocusWorkspaceToolsPanelOnOpen()) {
+      return;
+    }
+    asideRef.current?.focus({ preventScroll: true });
+    setWorkspacePanelRegionActive(true);
+  }, [open]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
 
@@ -449,9 +459,10 @@ function WorkspaceToolsDockShell({
         <aside
           id="workspace-tools-panel"
           ref={asideRef}
+          tabIndex={-1}
           data-spirit-surface="workspace-panel"
           className={cn(
-            "flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden text-foreground",
+            "flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden text-foreground outline-none",
             desktopTranslucencyTintClass(useTranslucency),
           )}
           style={{ width: widthPx }}
