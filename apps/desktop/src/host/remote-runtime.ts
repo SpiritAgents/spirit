@@ -138,8 +138,14 @@ async function sharedDesktopServerClient(dataDir: string): Promise<ServerRpcClie
 
 /** Ask the daemon to re-read extension MCP into every live session. */
 export async function notifyDesktopServerRefreshExtensions(dataDir: string): Promise<void> {
-  const client = await sharedDesktopServerClient(dataDir);
-  await client.call("host.refreshExtensions", {});
+  try {
+    const client = await sharedDesktopServerClient(dataDir);
+    await client.call("host.refreshExtensions", {});
+  } catch (error) {
+    // Local extension mutation already succeeded; a down or unreachable daemon
+    // must not fail install/enable/remove or skip the remaining local refresh.
+    console.warn("[desktop-host] notifyDesktopServerRefreshExtensions failed", error);
+  }
 }
 
 /** Close the process-wide daemon WebSocket so the server can idle-exit. */
