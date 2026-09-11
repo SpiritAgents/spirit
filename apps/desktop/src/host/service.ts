@@ -701,6 +701,12 @@ class DesktopHostService {
   private pendingExtensionUiWaiter:
     | { requestId: string; resolve: (result: McpUiOpenResult) => void }
     | undefined;
+  private pendingRemoteExtensionUi:
+    | {
+        requestId: string;
+        runtime: unknown;
+      }
+    | undefined;
   private pendingRemoteWorkspaceCapabilityTrust:
     | {
         requestId: string;
@@ -2431,6 +2437,7 @@ class DesktopHostService {
     const waiter = this.pendingExtensionUiWaiter;
     this.pendingExtensionUi = undefined;
     this.pendingExtensionUiWaiter = undefined;
+    this.pendingRemoteExtensionUi = undefined;
     if (waiter) {
       waiter.resolve({ kind: "opened", result: { dismissed: true } });
     }
@@ -2446,10 +2453,15 @@ class DesktopHostService {
     if (this.pendingExtensionUiWaiter?.requestId === request.requestId) {
       this.pendingExtensionUiWaiter.resolve({ kind: "opened", result: request.result });
       this.pendingExtensionUiWaiter = undefined;
+      this.pendingRemoteExtensionUi = undefined;
       this.emitLiveSnapshotUpdate();
       return this.buildSnapshot();
     }
-    await replyRemoteExtensionUi(this.activeBundle().runtime, request.requestId, request.result);
+    const remote = this.pendingRemoteExtensionUi;
+    this.pendingRemoteExtensionUi = undefined;
+    if (remote && remote.requestId === request.requestId) {
+      await replyRemoteExtensionUi(remote.runtime, request.requestId, request.result);
+    }
     this.emitLiveSnapshotUpdate();
     return this.buildSnapshot();
   }
@@ -2986,6 +2998,10 @@ class DesktopHostService {
       },
       onExtensionUiRequested: (request: DesktopPendingExtensionUi) => {
         this.pendingExtensionUi = request;
+        this.pendingRemoteExtensionUi = {
+          requestId: request.requestId,
+          runtime: bundle.runtime,
+        };
         this.emitLiveSnapshotUpdate();
       },
       onRemoteUserTurnSubmitted: (input: {
