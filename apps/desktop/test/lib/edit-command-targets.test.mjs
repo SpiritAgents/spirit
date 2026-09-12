@@ -151,6 +151,8 @@ test("resolveFocusedEditTarget treats a focused textual input as native", () => 
   assert.equal(state.canPaste, true);
   assert.equal(state.canSelectAll, true);
   assert.equal(state.canDictate, true);
+  assert.equal(state.canUndo, true);
+  assert.equal(state.canRedo, true);
 });
 
 test("resolveFocusedEditTarget routes a focused shell-tool xterm to its terminal adapter", () => {

@@ -223,17 +223,6 @@ export function resolveFocusedEditTarget(
   return { kind: "none" };
 }
 
-function queryCommandEnabled(command: "undo" | "redo"): boolean {
-  if (typeof document === "undefined" || typeof document.queryCommandEnabled !== "function") {
-    return false;
-  }
-  try {
-    return document.queryCommandEnabled(command);
-  } catch {
-    return false;
-  }
-}
-
 function nativeHasSelection(element: HTMLElement, selection: Selection | null): boolean {
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
     const start = element.selectionStart;
@@ -257,8 +246,10 @@ function queryNativeSource(
   return {
     kind: "native",
     editable: isNativeTextEditableElement(element),
-    canUndo: queryCommandEnabled("undo"),
-    canRedo: queryCommandEnabled("redo"),
+    // Chromium queryCommandEnabled("undo"|"redo") does not track per-input stacks; execCommand still
+    // applies the field's own history, so the menu follows editable rather than that API.
+    canUndo: true,
+    canRedo: true,
     hasSelection: nativeHasSelection(element, selection),
     clipboardHasText,
   };
