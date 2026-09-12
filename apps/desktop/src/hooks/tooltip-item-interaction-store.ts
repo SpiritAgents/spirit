@@ -93,3 +93,25 @@ export function isTooltipItemHighlighted(registrationId: string, itemId: string)
 export function getTooltipAnchorSlot(): TooltipSwitchSlotKey | null {
   return anchorSlot;
 }
+
+let contentHostRevision = 0;
+const contentHostListeners = new Set<() => void>();
+
+export function subscribeTooltipContentHostRevision(listener: () => void): () => void {
+  contentHostListeners.add(listener);
+  return () => {
+    contentHostListeners.delete(listener);
+  };
+}
+
+export function getTooltipContentHostRevision(): number {
+  return contentHostRevision;
+}
+
+/** TooltipContent children live in a ref; bump so the portaled host re-reads render(). */
+export function bumpTooltipContentHostRevision(): void {
+  contentHostRevision += 1;
+  for (const listener of contentHostListeners) {
+    listener();
+  }
+}

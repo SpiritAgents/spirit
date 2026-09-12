@@ -411,17 +411,11 @@ export function ModelPickerMenu({
                   providerLabel={providerLabel}
                   onReasoningEffortChange={(modelRef, effort) => {
                     onModelReasoningEffortSelect?.(modelRef, effort);
-                    dismissOpenListTooltip();
                     onModelSelect(modelRef);
-                    setModelFilter("");
-                    setModelMenuOpen(false);
                   }}
                   onReasoningModeChange={(modelRef, mode) => {
                     onModelReasoningModeSelect?.(modelRef, mode);
-                    dismissOpenListTooltip();
                     onModelSelect(modelRef);
-                    setModelFilter("");
-                    setModelMenuOpen(false);
                   }}
                   onThinkingEnabledChange={(modelRef, enabled) => {
                     onModelThinkingEnabledSelect?.(modelRef, enabled);

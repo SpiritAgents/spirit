@@ -190,6 +190,13 @@ export function isEventTargetWithinTooltipCompanionOverlays(target: EventTarget 
   return TOOLTIP_COMPANION_OVERLAY_SELECTORS.some((selector) => target.closest(selector) !== null);
 }
 
+function isClientPointWithinElement(element: Element, clientX: number, clientY: number): boolean {
+  const rect = element.getBoundingClientRect();
+  return (
+    clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom
+  );
+}
+
 export function isPointerOverTooltipCompanionOverlays(clientX: number, clientY: number): boolean {
   const nodes =
     typeof document.elementsFromPoint === "function"
@@ -200,6 +207,16 @@ export function isPointerOverTooltipCompanionOverlays(clientX: number, clientY: 
   for (const node of nodes) {
     if (isEventTargetWithinTooltipCompanionOverlays(node)) {
       return true;
+    }
+  }
+  // Radix Select DismissableLayer sets body (and the detail tooltip) to pointer-events:none
+  // while open. elementsFromPoint then only returns <html>, so hover-close would fire as
+  // soon as the pointer leaves select-content even when it is still over the tooltip.
+  for (const selector of TOOLTIP_COMPANION_OVERLAY_SELECTORS) {
+    for (const element of document.querySelectorAll(selector)) {
+      if (isClientPointWithinElement(element, clientX, clientY)) {
+        return true;
+      }
     }
   }
   return false;
