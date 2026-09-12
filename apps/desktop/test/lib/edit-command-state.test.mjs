@@ -5,6 +5,7 @@ import {
   classifyEditFocus,
   deriveEditCommandState,
   DISABLED_EDIT_COMMAND_STATE,
+  editCommandDisabled,
   editCommandStateKey,
   isEditCommand,
   parseEditCommandState,
@@ -38,6 +39,23 @@ test("parseEditCommandState accepts a complete flag object", () => {
   assert.deepEqual(parseEditCommandState(state), state);
   assert.equal(parseEditCommandState({ ...state, canUndo: "yes" }), null);
   assert.equal(parseEditCommandState(null), null);
+});
+
+test("editCommandDisabled mirrors each can* flag for the title-bar menu", () => {
+  const state = {
+    canUndo: true,
+    canRedo: false,
+    canCut: true,
+    canCopy: false,
+    canPaste: true,
+    canSelectAll: false,
+  };
+  assert.equal(editCommandDisabled(state, "undo"), false);
+  assert.equal(editCommandDisabled(state, "redo"), true);
+  assert.equal(editCommandDisabled(state, "cut"), false);
+  assert.equal(editCommandDisabled(state, "copy"), true);
+  assert.equal(editCommandDisabled(state, "paste"), false);
+  assert.equal(editCommandDisabled(state, "selectAll"), true);
 });
 
 test("isEditCommand accepts only the six menu commands", () => {

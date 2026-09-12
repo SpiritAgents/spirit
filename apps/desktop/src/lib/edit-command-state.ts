@@ -118,6 +118,23 @@ export function classifyEditFocus(probe: EditFocusProbe): EditCommandSourceKind 
   return "none";
 }
 
+export function editCommandDisabled(state: EditCommandState, command: EditCommand): boolean {
+  switch (command) {
+    case "undo":
+      return !state.canUndo;
+    case "redo":
+      return !state.canRedo;
+    case "cut":
+      return !state.canCut;
+    case "copy":
+      return !state.canCopy;
+    case "paste":
+      return !state.canPaste;
+    case "selectAll":
+      return !state.canSelectAll;
+  }
+}
+
 export function deriveEditCommandState(source: EditCommandSource): EditCommandState {
   if (source.kind === "none") {
     return { ...DISABLED_EDIT_COMMAND_STATE };
