@@ -22,9 +22,12 @@ function availableLanguagesSection(): string {
 }
 
 export function GET() {
-  return new Response(`${withFullDocsPointer(llms(source).index(DEFAULT_LOCALE))}\n\n${availableLanguagesSection()}`, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
+  return new Response(
+    `${withFullDocsPointer(llms(source).index(DEFAULT_LOCALE))}\n\n${availableLanguagesSection()}`,
+    {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+      },
     },
-  });
+  );
 }
