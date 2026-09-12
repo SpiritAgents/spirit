@@ -48,6 +48,7 @@ export type ResolvedEditTarget =
 
 const adapters = new Set<RegisteredEditAdapter>();
 const changeListeners = new Set<() => void>();
+let pinnedTarget: ResolvedEditTarget = { kind: "none" };
 
 export function subscribeEditCommandTargetsChanged(listener: () => void): () => void {
   changeListeners.add(listener);
@@ -74,6 +75,7 @@ export function registerEditCommandTarget(adapter: RegisteredEditAdapter): () =>
 export function resetEditCommandTargetsForTests(): void {
   adapters.clear();
   changeListeners.clear();
+  pinnedTarget = { kind: "none" };
 }
 
 export function readEditClipboardText(): string {
@@ -281,6 +283,9 @@ export function queryFocusedEditCommandSource(options?: {
         : window.getSelection()
       : options.selection;
   const target = resolveFocusedEditTarget(activeElement, selection);
+  if (options?.activeElement === undefined) {
+    pinIfPresent(target);
+  }
 
   if (target.kind === "none") {
     return {
@@ -423,8 +428,26 @@ function dispatchReadonlyEditCommand(root: HTMLElement | null, command: EditComm
   }
 }
 
-export function dispatchEditCommand(command: EditCommand): boolean {
-  const target = resolveFocusedEditTarget();
+function pinIfPresent(target: ResolvedEditTarget): void {
+  if (target.kind !== "none") {
+    pinnedTarget = target;
+  }
+}
+
+function pinnedTargetStillValid(target: ResolvedEditTarget): boolean {
+  if (target.kind === "lexical" || target.kind === "monaco" || target.kind === "terminal") {
+    return adapters.has(target.adapter);
+  }
+  if (target.kind === "native") {
+    return target.element.isConnected;
+  }
+  if (target.kind === "readonly") {
+    return target.root == null || target.root.isConnected;
+  }
+  return false;
+}
+
+function dispatchResolvedEditCommand(target: ResolvedEditTarget, command: EditCommand): boolean {
   if (target.kind === "none") {
     return false;
   }
@@ -438,6 +461,18 @@ export function dispatchEditCommand(command: EditCommand): boolean {
   }
   target.adapter.dispatch(command);
   return true;
+}
+
+export function dispatchEditCommand(command: EditCommand): boolean {
+  const current = resolveFocusedEditTarget();
+  if (current.kind !== "none") {
+    pinnedTarget = current;
+    return dispatchResolvedEditCommand(current, command);
+  }
+  if (pinnedTargetStillValid(pinnedTarget)) {
+    return dispatchResolvedEditCommand(pinnedTarget, command);
+  }
+  return false;
 }
 
 export function emptyEditCommandState(): EditCommandState {

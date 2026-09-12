@@ -96,6 +96,43 @@ test("resolveFocusedEditTarget routes composer contenteditable to a lexical adap
   );
 });
 
+test("dispatchEditCommand uses the last focused adapter after the menu steals focus", () => {
+  const root = document.createElement("div");
+  root.className = "monaco-editor";
+  const textarea = document.createElement("textarea");
+  root.append(textarea);
+  document.body.append(root);
+  textarea.focus();
+
+  let dispatched = "";
+  registerEditCommandTarget({
+    kind: "monaco",
+    root,
+    hasTextFocus: () => document.activeElement === textarea,
+    query: () => ({
+      editable: true,
+      canUndo: true,
+      canRedo: false,
+      hasSelection: true,
+    }),
+    dispatch: (command) => {
+      dispatched = command;
+    },
+  });
+
+  queryFocusedEditCommandState({ clipboardHasText: true });
+  const decoy = document.createElement("button");
+  document.body.append(decoy);
+  decoy.focus();
+
+  assert.equal(
+    resolveFocusedEditTarget(document.activeElement, window.getSelection()).kind,
+    "none",
+  );
+  assert.equal(dispatchEditCommand("copy"), true);
+  assert.equal(dispatched, "copy");
+});
+
 test("resolveFocusedEditTarget treats a focused textual input as native", () => {
   const input = document.createElement("input");
   input.type = "text";
