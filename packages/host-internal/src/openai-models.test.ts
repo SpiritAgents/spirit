@@ -15,6 +15,7 @@ import {
   parseArkModelEntriesPayload,
   parseXiaomiModelEntriesPayload,
   parseMinimaxModelEntriesPayload,
+  parseStepfunModelEntriesPayload,
   parseMeituanModelDetailPayload,
   parseTencentTokenHubModelEntriesPayload,
   parseMistralModelEntriesPayload,
@@ -796,6 +797,59 @@ test("parseOpenAiCompatibleModelEntriesPayload without provider omits minimax mu
   });
 
   assert.deepEqual(entries, [{ id: "MiniMax-M3" }]);
+});
+
+test("parseStepfunModelEntriesPayload marks vision models for image and video input", () => {
+  const entries = parseStepfunModelEntriesPayload({
+    object: "list",
+    data: [
+      { id: "step-3.7-flash", object: "model" },
+      { id: "step-1o-turbo-vision", object: "model" },
+      { id: "step-2-mini", object: "model" },
+      { id: "step-1x-medium", object: "model" },
+      { id: "step-2x-large", object: "model" },
+      { id: "step-image-edit-2", object: "model" },
+    ],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "step-3.7-flash",
+      supportsImageInput: true,
+      supportsVideoInput: true,
+    },
+    {
+      id: "step-1o-turbo-vision",
+      supportsImageInput: true,
+      supportsVideoInput: true,
+    },
+    { id: "step-2-mini" },
+    { id: "step-1x-medium", supportsImageGeneration: true },
+    { id: "step-2x-large", supportsImageGeneration: true },
+    { id: "step-image-edit-2", supportsImageGeneration: true },
+  ]);
+});
+
+test("parseOpenAiCompatibleModelEntriesPayload routes stepfun provider to stepfun parser", () => {
+  const entries = parseOpenAiCompatibleModelEntriesPayload(
+    {
+      object: "list",
+      data: [
+        { id: "step-3.7-flash", object: "model" },
+        { id: "step-2-mini", object: "model" },
+      ],
+    },
+    "stepfun",
+  );
+
+  assert.deepEqual(entries, [
+    {
+      id: "step-3.7-flash",
+      supportsImageInput: true,
+      supportsVideoInput: true,
+    },
+    { id: "step-2-mini" },
+  ]);
 });
 
 test("parseOpenAiCompatibleModelEntriesPayload marks deepseek-v4-flash-vision-exp as image input", () => {
