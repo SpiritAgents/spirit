@@ -31,7 +31,7 @@
     "build": "pnpm run build:app",
     "build:extension-ui": "vite build --config vite.extension-ui.config.ts",
     "build:renderer": "tsc --noEmit && vite build && pnpm run build:extension-ui",
-    "build:electron": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.cjs.json && node ./scripts/rename-preload-to-cjs.mjs",
+    "build:electron": "tsc -p tsconfig.electron.json && tsc -p tsconfig.preload.cjs.json && node ./scripts/rename-preload-to-cjs.mjs && node ./scripts/build-native-appkit.mjs",
     "dist": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.yml",
     "dist:dir": "node scripts/gen-brand-assets.mjs && node scripts/ensure-packaged-ripgrep.mjs && pnpm run build:app && electron-builder --config electron-builder.yml --dir",
     "test": "pnpm run test:lib && pnpm run test:host",

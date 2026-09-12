@@ -8,6 +8,7 @@ import {
   type EditCommand,
   type EditCommandState,
 } from "../src/lib/edit-command-state.js";
+import { setStartDictationMenuEnabled } from "./macos-appkit.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 
 const isDevChrome = Boolean(process.env.VITE_DEV_SERVER_URL) || !app.isPackaged;
@@ -388,6 +389,7 @@ function buildLinuxApplicationMenuTemplate(): Electron.MenuItemConstructorOption
 function attachEditMenuWillShow(menu: Electron.Menu): void {
   const edit = menu.getMenuItemById("edit-menu");
   edit?.submenu?.on("menu-will-show", () => {
+    setStartDictationMenuEnabled(lastEditCommandState.canDictate);
     requestEditCommandStateRefresh();
   });
 }
@@ -441,6 +443,7 @@ export function applyEditCommandStateToMenu(state: EditCommandState): void {
       item.enabled = enabled;
     }
   }
+  setStartDictationMenuEnabled(state.canDictate);
 }
 
 export function rememberEditCommandState(value: unknown): EditCommandState | null {

@@ -55,6 +55,7 @@ test("resolveFocusedEditTarget prefers a focused monaco adapter", () => {
     canCopy: true,
     canPaste: true,
     canSelectAll: true,
+    canDictate: true,
   });
   assert.equal(dispatchEditCommand("undo"), true);
   assert.equal(dispatched, "undo");
@@ -90,6 +91,7 @@ test("resolveFocusedEditTarget routes composer contenteditable to a lexical adap
       canCopy: false,
       canPaste: false,
       canSelectAll: true,
+      canDictate: true,
     },
   );
 });
@@ -111,4 +113,5 @@ test("resolveFocusedEditTarget treats a focused textual input as native", () => 
   assert.equal(state.canCut, true);
   assert.equal(state.canPaste, true);
   assert.equal(state.canSelectAll, true);
+  assert.equal(state.canDictate, true);
 });

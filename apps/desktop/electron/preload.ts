@@ -68,6 +68,7 @@ type EditCommandState = {
   canCopy: boolean;
   canPaste: boolean;
   canSelectAll: boolean;
+  canDictate: boolean;
 };
 
 const EDIT_COMMANDS = new Set<EditCommand>(["undo", "redo", "cut", "copy", "paste", "selectAll"]);

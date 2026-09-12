@@ -9,6 +9,7 @@ export type EditCommandState = {
   canCopy: boolean;
   canPaste: boolean;
   canSelectAll: boolean;
+  canDictate: boolean;
 };
 
 export type EditCommandSourceKind =
@@ -43,6 +44,7 @@ export const DISABLED_EDIT_COMMAND_STATE: EditCommandState = {
   canCopy: false,
   canPaste: false,
   canSelectAll: false,
+  canDictate: false,
 };
 
 export const EDIT_MENU_ITEM_IDS = {
@@ -73,7 +75,8 @@ export function parseEditCommandState(value: unknown): EditCommandState | null {
     !isBooleanFlag(record.canCut) ||
     !isBooleanFlag(record.canCopy) ||
     !isBooleanFlag(record.canPaste) ||
-    !isBooleanFlag(record.canSelectAll)
+    !isBooleanFlag(record.canSelectAll) ||
+    !isBooleanFlag(record.canDictate)
   ) {
     return null;
   }
@@ -84,6 +87,7 @@ export function parseEditCommandState(value: unknown): EditCommandState | null {
     canCopy: record.canCopy,
     canPaste: record.canPaste,
     canSelectAll: record.canSelectAll,
+    canDictate: record.canDictate,
   };
 }
 
@@ -95,6 +99,7 @@ export function editCommandStateKey(state: EditCommandState): string {
     state.canCopy ? "1" : "0",
     state.canPaste ? "1" : "0",
     state.canSelectAll ? "1" : "0",
+    state.canDictate ? "1" : "0",
   ].join("");
 }
 
@@ -154,6 +159,7 @@ export function deriveEditCommandState(source: EditCommandSource): EditCommandSt
       canCopy: source.hasSelection,
       canPaste: source.clipboardHasText,
       canSelectAll: true,
+      canDictate: true,
     };
   }
 
@@ -164,5 +170,6 @@ export function deriveEditCommandState(source: EditCommandSource): EditCommandSt
     canCopy: source.hasSelection,
     canPaste: source.editable && source.clipboardHasText,
     canSelectAll: true,
+    canDictate: source.editable,
   };
 }

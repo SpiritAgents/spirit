@@ -35,6 +35,7 @@ test("parseEditCommandState accepts a complete flag object", () => {
     canCopy: true,
     canPaste: false,
     canSelectAll: true,
+    canDictate: true,
   };
   assert.deepEqual(parseEditCommandState(state), state);
   assert.equal(parseEditCommandState({ ...state, canUndo: "yes" }), null);
@@ -49,6 +50,7 @@ test("editCommandDisabled mirrors each can* flag for the title-bar menu", () => 
     canCopy: false,
     canPaste: true,
     canSelectAll: false,
+    canDictate: true,
   };
   assert.equal(editCommandDisabled(state, "undo"), false);
   assert.equal(editCommandDisabled(state, "redo"), true);
@@ -76,6 +78,7 @@ test("editCommandStateKey is stable for identical flags", () => {
       canCopy: false,
       canPaste: false,
       canSelectAll: false,
+      canDictate: false,
     }),
   );
   assert.notEqual(
@@ -147,6 +150,7 @@ test("deriveEditCommandState enables undo redo cut copy paste for an editable ed
       canCopy: true,
       canPaste: true,
       canSelectAll: true,
+      canDictate: true,
     });
   }
 });
@@ -168,6 +172,7 @@ test("deriveEditCommandState requires history before undo or redo", () => {
       canCopy: false,
       canPaste: true,
       canSelectAll: true,
+      canDictate: true,
     },
   );
 });
@@ -189,6 +194,7 @@ test("deriveEditCommandState requires a selection for cut and copy", () => {
       canCopy: false,
       canPaste: false,
       canSelectAll: true,
+      canDictate: true,
     },
   );
 });
@@ -210,6 +216,7 @@ test("deriveEditCommandState disables cut and paste when the target is read-only
       canCopy: true,
       canPaste: false,
       canSelectAll: true,
+      canDictate: false,
     },
   );
 });
@@ -227,6 +234,7 @@ test("deriveEditCommandState treats readonly surfaces as copy-only", () => {
       canCopy: true,
       canPaste: false,
       canSelectAll: true,
+      canDictate: false,
     },
   );
   assert.deepEqual(
@@ -245,6 +253,7 @@ test("deriveEditCommandState treats readonly surfaces as copy-only", () => {
       canCopy: false,
       canPaste: false,
       canSelectAll: true,
+      canDictate: false,
     },
   );
 });
@@ -266,6 +275,7 @@ test("deriveEditCommandState treats terminals as copy and paste only", () => {
       canCopy: true,
       canPaste: true,
       canSelectAll: true,
+      canDictate: true,
     },
   );
   assert.deepEqual(
@@ -284,6 +294,7 @@ test("deriveEditCommandState treats terminals as copy and paste only", () => {
       canCopy: false,
       canPaste: false,
       canSelectAll: true,
+      canDictate: true,
     },
   );
 });
