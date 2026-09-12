@@ -66,7 +66,9 @@ function ToolCallDetailScrollPre({ children }: { children: string }) {
         event.stopPropagation();
       }}
     >
-      <pre className={toolCallDetailPreClass}>{children}</pre>
+      <pre data-spirit-selectable="text" className={toolCallDetailPreClass}>
+        {children}
+      </pre>
     </ScrollArea>
   );
 }

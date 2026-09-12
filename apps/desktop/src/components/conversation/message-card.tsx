@@ -363,7 +363,12 @@ function MessageCardImpl({
           turnErrorSurface ? (
             <TurnErrorMessageCard content={message.content} retry={message.aux?.turnErrorRetry} />
           ) : subagentStatusSurface ? (
-            <p className="text-sm leading-relaxed text-muted-foreground">{message.content}</p>
+            <p
+              data-spirit-selectable="text"
+              className="text-sm leading-relaxed text-muted-foreground"
+            >
+              {message.content}
+            </p>
           ) : (
             <div data-spirit-surface="message-bubble">
               <AgentMarkdownMessage

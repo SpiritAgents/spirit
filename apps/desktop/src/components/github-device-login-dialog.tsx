@@ -52,7 +52,10 @@ export function GitHubDeviceLoginDialog({
         <div className="flex min-h-[10rem] flex-col items-center justify-center py-2 text-center">
           {challenge ? (
             <div className="space-y-4">
-              <p className={cn("text-3xl tracking-widest text-foreground", FONT_WEIGHT_MEDIUM)}>
+              <p
+                data-spirit-selectable="text"
+                className={cn("text-3xl tracking-widest text-foreground", FONT_WEIGHT_MEDIUM)}
+              >
                 {challenge.userCode}
               </p>
               <p className="text-xs text-muted-foreground">
@@ -76,7 +79,11 @@ export function GitHubDeviceLoginDialog({
           ) : null}
         </div>
 
-        {error ? <p className="text-center text-sm text-destructive">{error}</p> : null}
+        {error ? (
+          <p data-spirit-selectable="text" className="text-center text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
 
         <DialogFooter>
           <DialogFooterActions>

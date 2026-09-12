@@ -87,7 +87,10 @@ export function WorkspaceCapabilityTrustDialog({
                         }}
                       >
                         <div className="font-medium text-foreground">{hook.event}</div>
-                        <div className="break-all font-mono text-[0.65rem] text-muted-foreground">
+                        <div
+                          data-spirit-selectable="text"
+                          className="break-all font-mono text-[0.65rem] text-muted-foreground"
+                        >
                           {hook.command}
                         </div>
                       </button>

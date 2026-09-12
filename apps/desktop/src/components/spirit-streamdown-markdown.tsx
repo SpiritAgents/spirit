@@ -127,23 +127,24 @@ export function SpiritStreamdownMarkdown({
   ]);
 
   return (
-    <Streamdown
-      data-spirit-markdown-root
-      className={markdownMessageRootClassName(tone, className, size)}
-      mode={streaming ? "streaming" : "static"}
-      plugins={streamdownPlugins}
-      remarkPlugins={remarkPlugins}
-      components={components}
-      urlTransform={streamdownUrlTransform}
-      rehypePlugins={streamdownRehypePlugins}
-      controls={spiritStreamdownControls}
-      lineNumbers={false}
-      parseIncompleteMarkdown={streaming}
-      isAnimating={isAnimating}
-      animated={animated}
-      BlockComponent={BlockComponent}
-    >
-      {content}
-    </Streamdown>
+    <div data-spirit-markdown-root data-spirit-selectable="text" className="min-w-0">
+      <Streamdown
+        className={markdownMessageRootClassName(tone, className, size)}
+        mode={streaming ? "streaming" : "static"}
+        plugins={streamdownPlugins}
+        remarkPlugins={remarkPlugins}
+        components={components}
+        urlTransform={streamdownUrlTransform}
+        rehypePlugins={streamdownRehypePlugins}
+        controls={spiritStreamdownControls}
+        lineNumbers={false}
+        parseIncompleteMarkdown={streaming}
+        isAnimating={isAnimating}
+        animated={animated}
+        BlockComponent={BlockComponent}
+      >
+        {content}
+      </Streamdown>
+    </div>
   );
 }

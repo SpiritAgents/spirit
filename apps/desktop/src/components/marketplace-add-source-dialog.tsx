@@ -121,7 +121,11 @@ export function MarketplaceAddSourceDialog({
               />
             </div>
           ) : null}
-          {error ? <p className="text-xs text-destructive">{error}</p> : null}
+          {error ? (
+            <p data-spirit-selectable="text" className="text-xs text-destructive">
+              {error}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
           <DialogFooterActions>

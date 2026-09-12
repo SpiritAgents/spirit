@@ -162,17 +162,23 @@ export function NetworksSettingsPanel({
                 <span className="text-foreground">
                   {settings.webHostEnabled ? webHostStatus : t("settings.webHostClosed")}
                 </span>
-                {settings.webHostEnabled ? ` · ${webHostUrl}` : null}
+                {settings.webHostEnabled ? (
+                  <span data-spirit-selectable="text">{` · ${webHostUrl}`}</span>
+                ) : null}
               </p>
               {webHost?.status.error ? (
-                <p className="break-words text-destructive">{webHost.status.error}</p>
+                <p data-spirit-selectable="text" className="break-words text-destructive">
+                  {webHost.status.error}
+                </p>
               ) : null}
               <p>
                 {t("settings.pairing")}
                 {webHost?.config.paired ? t("settings.pairingDone") : t("settings.pairingPending")}
               </p>
               {webHost?.status.pairingCode ? (
-                <p className="font-mono text-foreground">{webHost.status.pairingCode}</p>
+                <p data-spirit-selectable="text" className="font-mono text-foreground">
+                  {webHost.status.pairingCode}
+                </p>
               ) : null}
               {settings.webHostEnabled && webHost?.config.paired && onResetWebHostPairing ? (
                 <div className="mt-3 flex justify-end">

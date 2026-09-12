@@ -301,7 +301,9 @@ function AutomationListRow({
       </div>
       <p className="text-xs text-muted-foreground">{triggerLabel}</p>
       {item.githubPollError ? (
-        <p className="text-xs text-destructive">{item.githubPollError}</p>
+        <p data-spirit-selectable="text" className="text-xs text-destructive">
+          {item.githubPollError}
+        </p>
       ) : null}
     </button>
   );
