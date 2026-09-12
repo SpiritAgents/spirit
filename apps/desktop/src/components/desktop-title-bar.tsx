@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
+import { useEditCommandState } from "@/contexts/edit-command-state-context";
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
+import { editCommandDisabled, type EditCommand } from "@/lib/edit-command-state";
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionSidebarShellRightInsetPx } from "@/hooks/useSessionSidebarShellRightInsetPx";
 import { spiritAgentTitleBarIconSrc } from "@/lib/brand-icon";
@@ -53,6 +55,74 @@ const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-sidebar-acti
 
 function execWindowAction(action: string): void {
   void window.spiritDesktop?.executeWindowAction(action);
+}
+
+const TITLE_BAR_EDIT_SHORTCUTS: Record<EditCommand, string> = {
+  undo: "Ctrl+Z",
+  redo: "Ctrl+Y",
+  cut: "Ctrl+X",
+  copy: "Ctrl+C",
+  paste: "Ctrl+V",
+  selectAll: "Ctrl+A",
+};
+
+function TitleBarEditMenu() {
+  const { t } = useTranslation();
+  const { state, dispatch, flush } = useEditCommandState();
+  return (
+    <MenubarMenu>
+      <MenubarTrigger
+        className={TITLE_BAR_MENUBAR_TRIGGER_CLASS}
+        onPointerDown={() => flush(true)}
+        onFocus={() => flush(true)}
+      >
+        {t("titleBar.edit")}
+      </MenubarTrigger>
+      <MenubarContent>
+        <MenubarItem
+          disabled={editCommandDisabled(state, "undo")}
+          onSelect={() => dispatch("undo")}
+        >
+          {t("titleBar.undo")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.undo}</MenubarShortcut>
+        </MenubarItem>
+        <MenubarItem
+          disabled={editCommandDisabled(state, "redo")}
+          onSelect={() => dispatch("redo")}
+        >
+          {t("titleBar.redo")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.redo}</MenubarShortcut>
+        </MenubarItem>
+        <MenubarSeparator />
+        <MenubarItem disabled={editCommandDisabled(state, "cut")} onSelect={() => dispatch("cut")}>
+          {t("titleBar.cut")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.cut}</MenubarShortcut>
+        </MenubarItem>
+        <MenubarItem
+          disabled={editCommandDisabled(state, "copy")}
+          onSelect={() => dispatch("copy")}
+        >
+          {t("titleBar.copy")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.copy}</MenubarShortcut>
+        </MenubarItem>
+        <MenubarItem
+          disabled={editCommandDisabled(state, "paste")}
+          onSelect={() => dispatch("paste")}
+        >
+          {t("titleBar.paste")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.paste}</MenubarShortcut>
+        </MenubarItem>
+        <MenubarSeparator />
+        <MenubarItem
+          disabled={editCommandDisabled(state, "selectAll")}
+          onSelect={() => dispatch("selectAll")}
+        >
+          {t("titleBar.selectAll")}
+          <MenubarShortcut>{TITLE_BAR_EDIT_SHORTCUTS.selectAll}</MenubarShortcut>
+        </MenubarItem>
+      </MenubarContent>
+    </MenubarMenu>
+  );
 }
 
 function TitleBarAppIcon({ useTranslucency }: { useTranslucency: boolean }) {
@@ -121,38 +191,7 @@ function TitleBarMenuCluster({
           </MenubarContent>
         </MenubarMenu>
 
-        <MenubarMenu>
-          <MenubarTrigger className={TITLE_BAR_MENUBAR_TRIGGER_CLASS}>
-            {t("titleBar.edit")}
-          </MenubarTrigger>
-          <MenubarContent>
-            <MenubarItem onSelect={() => document.execCommand("undo")}>
-              {t("titleBar.undo")}
-              <MenubarShortcut>Ctrl+Z</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem onSelect={() => document.execCommand("redo")}>
-              {t("titleBar.redo")}
-              <MenubarShortcut>Ctrl+Y</MenubarShortcut>
-            </MenubarItem>
-            <MenubarSeparator />
-            <MenubarItem onSelect={() => document.execCommand("cut")}>
-              {t("titleBar.cut")}
-              <MenubarShortcut>Ctrl+X</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem onSelect={() => document.execCommand("copy")}>
-              {t("titleBar.copy")}
-              <MenubarShortcut>Ctrl+C</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem onSelect={() => document.execCommand("paste")}>
-              {t("titleBar.paste")}
-              <MenubarShortcut>Ctrl+V</MenubarShortcut>
-            </MenubarItem>
-            <MenubarItem onSelect={() => document.execCommand("selectAll")}>
-              {t("titleBar.selectAll")}
-              <MenubarShortcut>Ctrl+A</MenubarShortcut>
-            </MenubarItem>
-          </MenubarContent>
-        </MenubarMenu>
+        <TitleBarEditMenu />
 
         <MenubarMenu>
           <MenubarTrigger className={TITLE_BAR_MENUBAR_TRIGGER_CLASS}>

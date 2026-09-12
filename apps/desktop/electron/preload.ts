@@ -60,6 +60,56 @@ ipcRenderer.on("desktop:ui-layout-zoom", (_event, action: unknown) => {
   pendingUiLayoutZoomFromMain = action;
 });
 
+type EditCommand = "undo" | "redo" | "cut" | "copy" | "paste" | "selectAll";
+type EditCommandState = {
+  canUndo: boolean;
+  canRedo: boolean;
+  canCut: boolean;
+  canCopy: boolean;
+  canPaste: boolean;
+  canSelectAll: boolean;
+  canDictate: boolean;
+};
+
+const EDIT_COMMANDS = new Set<EditCommand>(["undo", "redo", "cut", "copy", "paste", "selectAll"]);
+
+function isEditCommand(value: unknown): value is EditCommand {
+  return typeof value === "string" && EDIT_COMMANDS.has(value as EditCommand);
+}
+
+const editCommandSubscribers = new Set<(command: EditCommand) => void>();
+let pendingEditCommandFromMain: EditCommand | null = null;
+
+function dispatchEditCommandToSubscribers(command: EditCommand): void {
+  for (const callback of editCommandSubscribers) {
+    callback(command);
+  }
+}
+
+ipcRenderer.on("desktop:edit-command", (_event, command: unknown) => {
+  if (!isEditCommand(command)) {
+    return;
+  }
+  if (editCommandSubscribers.size > 0) {
+    dispatchEditCommandToSubscribers(command);
+    return;
+  }
+  pendingEditCommandFromMain = command;
+});
+
+const editCommandStateRequestSubscribers = new Set<() => void>();
+let pendingEditCommandStateRequest = false;
+
+ipcRenderer.on("desktop:request-edit-command-state", () => {
+  if (editCommandStateRequestSubscribers.size > 0) {
+    for (const callback of editCommandStateRequestSubscribers) {
+      callback();
+    }
+    return;
+  }
+  pendingEditCommandStateRequest = true;
+});
+
 contextBridge.exposeInMainWorld("spiritDesktop", {
   platform: process.platform,
   /** Fire-and-forget uncaught error report (installed by the renderer itself, main world). */
@@ -845,6 +895,30 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
     }
     return () => {
       uiLayoutZoomSubscribers.delete(callback);
+    };
+  },
+  syncEditCommandState(state: EditCommandState) {
+    ipcRenderer.send("desktop:sync-edit-command-state", state);
+  },
+  subscribeEditCommand(callback: (command: EditCommand) => void) {
+    editCommandSubscribers.add(callback);
+    if (pendingEditCommandFromMain) {
+      const pending = pendingEditCommandFromMain;
+      pendingEditCommandFromMain = null;
+      callback(pending);
+    }
+    return () => {
+      editCommandSubscribers.delete(callback);
+    };
+  },
+  subscribeEditCommandStateRequest(callback: () => void) {
+    editCommandStateRequestSubscribers.add(callback);
+    if (pendingEditCommandStateRequest) {
+      pendingEditCommandStateRequest = false;
+      callback();
+    }
+    return () => {
+      editCommandStateRequestSubscribers.delete(callback);
     };
   },
 });

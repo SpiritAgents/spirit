@@ -31,6 +31,7 @@ asarUnpack:
   - node_modules/node-pty/**/*
   - node_modules/koffi/**/*
   - node_modules/@napi-rs/keyring/**/*
+  - dist-electron/native/**/*
   - node_modules/@vscode/ripgrep/**/*
   - node_modules/@vscode/ripgrep-*/**/*
 npmRebuild: true

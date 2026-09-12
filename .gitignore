@@ -13,6 +13,7 @@
 /apps/desktop/build/icon.ico
 /apps/desktop/build/icon.icns
 /apps/desktop/.dev-electron/
+/apps/desktop/native/appkit/build/
 /apps/desktop/build/background.png
 /apps/desktop/build/background@2x.png
 /apps/desktop/build/tray/

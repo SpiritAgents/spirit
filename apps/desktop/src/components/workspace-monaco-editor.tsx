@@ -10,6 +10,27 @@ import { ensureMonacoShikiReady, isMonacoShikiReady } from "@/lib/monaco-shiki";
 import { monacoLanguageId } from "@/lib/monaco-language";
 import { applySpiritMonacoEditorTheme, syncMonacoThemeFromDocument } from "@/lib/monaco-theme";
 import { useMonacoCodeCompletion } from "@/hooks/use-monaco-code-completion";
+import {
+  notifyEditCommandTargetsChanged,
+  readEditClipboardText,
+  registerEditCommandTarget,
+  writeEditClipboardText,
+} from "@/lib/edit-command-targets";
+import { readMonacoSelectionText } from "@/hooks/use-monaco-selection-action-menu";
+
+// monaco.d.ts ITextModel omits canUndo/canRedo even though the runtime text model implements them.
+type MonacoUndoModel = {
+  canUndo?: () => boolean;
+  canRedo?: () => boolean;
+};
+
+function monacoModelCanUndo(model: monaco.editor.ITextModel | null): boolean {
+  return model != null && (model as MonacoUndoModel).canUndo?.() === true;
+}
+
+function monacoModelCanRedo(model: monaco.editor.ITextModel | null): boolean {
+  return model != null && (model as MonacoUndoModel).canRedo?.() === true;
+}
 
 export type WorkspaceMonacoEditorHandle = {
   /** Writes the current buffer to disk; clears the dirty marker on success. */
@@ -188,6 +209,8 @@ export const WorkspaceMonacoEditor = forwardRef<
     let obs: MutationObserver | null = null;
     let dirtyDisposable: monaco.IDisposable | null = null;
     let editor: monaco.editor.IStandaloneCodeEditor | null = null;
+    const editCommandDisposables: monaco.IDisposable[] = [];
+    let unregisterEditCommand: (() => void) | undefined;
 
     void (async () => {
       try {
@@ -232,6 +255,66 @@ export const WorkspaceMonacoEditor = forwardRef<
         const value = editor!.getValue();
         onTextChangeRef.current?.(value);
         onDirtyChangeRef.current?.(value !== baselineRef.current);
+        notifyEditCommandTargetsChanged();
+      });
+      editCommandDisposables.push(
+        editor.onDidChangeCursorSelection(() => {
+          notifyEditCommandTargetsChanged();
+        }),
+        editor.onDidFocusEditorText(() => {
+          notifyEditCommandTargetsChanged();
+        }),
+        editor.onDidBlurEditorText(() => {
+          notifyEditCommandTargetsChanged();
+        }),
+      );
+      unregisterEditCommand = registerEditCommandTarget({
+        kind: "monaco",
+        root: containerRef.current ?? editor.getContainerDomNode(),
+        hasTextFocus: () => editor!.hasTextFocus(),
+        query: () => {
+          const model = editor!.getModel();
+          const selection = editor!.getSelection();
+          return {
+            editable: !editor!.getOption(monaco.editor.EditorOption.readOnly),
+            canUndo: monacoModelCanUndo(model),
+            canRedo: monacoModelCanRedo(model),
+            hasSelection: Boolean(selection && !selection.isEmpty()),
+          };
+        },
+        dispatch: (command) => {
+          if (command === "undo") {
+            editor!.trigger("menu", "undo", null);
+            return;
+          }
+          if (command === "redo") {
+            editor!.trigger("menu", "redo", null);
+            return;
+          }
+          if (command === "selectAll") {
+            void editor!.getAction("editor.action.selectAll")?.run();
+            return;
+          }
+          const model = editor!.getModel();
+          const selection = editor!.getSelection();
+          if (!model || !selection) {
+            return;
+          }
+          if (command === "copy" || command === "cut") {
+            writeEditClipboardText(readMonacoSelectionText(editor!));
+            if (command === "cut" && !editor!.getOption(monaco.editor.EditorOption.readOnly)) {
+              editor!.executeEdits("edit-menu", [
+                { range: selection, text: "", forceMoveMarkers: true },
+              ]);
+            }
+            return;
+          }
+          if (command === "paste" && !editor!.getOption(monaco.editor.EditorOption.readOnly)) {
+            editor!.executeEdits("edit-menu", [
+              { range: selection, text: readEditClipboardText(), forceMoveMarkers: true },
+            ]);
+          }
+        },
       });
 
       if (!readOnly) {
@@ -254,6 +337,10 @@ export const WorkspaceMonacoEditor = forwardRef<
       disposed = true;
       obs?.disconnect();
       dirtyDisposable?.dispose();
+      for (const disposable of editCommandDisposables) {
+        disposable.dispose();
+      }
+      unregisterEditCommand?.();
       searchDecorationsRef.current?.clear();
       searchDecorationsRef.current = null;
       onEditorReadyRef.current?.(null);

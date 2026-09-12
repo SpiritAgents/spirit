@@ -22,6 +22,7 @@ import {
 } from "@/lib/composer-lexical/commands";
 import { ComposerCommandsPlugin } from "@/lib/composer-lexical/plugins/composer-commands-plugin";
 import { ComposerClipboardPlugin } from "@/lib/composer-lexical/plugins/composer-clipboard-plugin";
+import { ComposerEditCommandPlugin } from "@/lib/composer-lexical/plugins/composer-edit-command-plugin";
 import { ComposerNoInlineFormatPlugin } from "@/lib/composer-lexical/plugins/composer-no-inline-format-plugin";
 import { SlashSelectionPlugin } from "@/lib/composer-lexical/plugins/slash-selection-plugin";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
@@ -1234,6 +1235,7 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
           ErrorBoundary={LexicalErrorBoundary}
         />
         <HistoryPlugin />
+        <ComposerEditCommandPlugin />
         <ComposerNoInlineFormatPlugin />
         <ComposerOnChangePlugin
           skipEditorSyncRef={skipEditorSyncRef}

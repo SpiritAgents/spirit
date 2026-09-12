@@ -391,6 +391,11 @@ declare global {
     subscribeNewSession(callback: () => void): () => void;
     subscribeOpenSettings(callback: () => void): () => void;
     subscribeUiLayoutZoom(callback: (action: "in" | "out" | "reset") => void): () => void;
+    syncEditCommandState(state: import("./lib/edit-command-state").EditCommandState): void;
+    subscribeEditCommand(
+      callback: (command: import("./lib/edit-command-state").EditCommand) => void,
+    ): () => void;
+    subscribeEditCommandStateRequest(callback: () => void): () => void;
   }
 
   interface Window {
