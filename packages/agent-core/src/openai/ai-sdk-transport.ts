@@ -147,6 +147,7 @@ import {
 } from "./openai-multimodal-messages.js";
 import { resolveXiaomiVideoUrlsInOpenAiMessages } from "./xiaomi-video-messages.js";
 import { resolveDeepInfraVideoUrlsInOpenAiMessages } from "./deepinfra-video-messages.js";
+import { resolveStepfunVideoUrlsInOpenAiMessages } from "./stepfun-video-messages.js";
 import { normalizeMoonshotApiBase } from "./moonshot-files.js";
 import {
   buildMoonshotFormulaTraceToolEntries,
@@ -2053,6 +2054,7 @@ async function resolveOpenAiCompatibleVideoInputsInMessages(
   await resolveMoonshotVideoUrlsInOpenAiMessages(config, messages, assetRoot);
   resolveXiaomiVideoUrlsInOpenAiMessages(config, messages, assetRoot);
   resolveDeepInfraVideoUrlsInOpenAiMessages(config, messages, assetRoot);
+  await resolveStepfunVideoUrlsInOpenAiMessages(config, messages, assetRoot);
 }
 
 function prepareMoonshotChatCompletionRequest(
@@ -2076,7 +2078,7 @@ function clearMoonshotChatCompletionRequest(config: OpenAiTransportConfig): void
 function usesOpenAiCompatibleVideoMessageStash(
   vendor: OpenAiTransportConfig["llmVendor"],
 ): boolean {
-  return vendor === "xiaomi" || vendor === "deepinfra";
+  return vendor === "xiaomi" || vendor === "deepinfra" || vendor === "stepfun";
 }
 
 function normalizeMessagesForRequest(

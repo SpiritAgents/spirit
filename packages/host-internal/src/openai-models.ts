@@ -287,6 +287,8 @@ const STEPFUN_IMAGE_GENERATION_MODEL_IDS = new Set([
   "step-1x-medium",
 ]);
 
+const STEPFUN_VISION_MODEL_IDS = new Set(["step-3.7-flash", "step-1o-turbo-vision"]);
+
 export function parseStepfunModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
   if (typeof body !== "object" || body === null || !("data" in body)) {
     return [];
@@ -306,8 +308,10 @@ export function parseStepfunModelEntriesPayload(body: unknown): ProviderListedMo
       continue;
     }
     const trimmedId = id.trim();
+    const isVision = STEPFUN_VISION_MODEL_IDS.has(trimmedId);
     entries.push({
       id: trimmedId,
+      ...(isVision ? { supportsImageInput: true, supportsVideoInput: true } : {}),
       ...(STEPFUN_IMAGE_GENERATION_MODEL_IDS.has(trimmedId)
         ? { supportsImageGeneration: true }
         : {}),
