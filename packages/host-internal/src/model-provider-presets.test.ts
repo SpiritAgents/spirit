@@ -478,6 +478,8 @@ test("resolveProviderConnectApiBase resolves alibaba token plan without site or 
 });
 
 test("resolveProviderConnectApiBase resolves stepfun standard and step plan endpoints", () => {
+  assert.equal(providerSupportsSiteSelection("stepfun"), true);
+  assert.equal(defaultProviderConnectSite("stepfun"), "intl");
   assert.equal(
     resolveProviderConnectApiBase("stepfun", "openai-compatible"),
     "https://api.stepfun.com/v1",
@@ -500,5 +502,53 @@ test("resolveProviderConnectApiBase resolves stepfun standard and step plan endp
   assert.equal(
     resolveProviderConnectApiBase("stepfun", "anthropic", { stepfunBillingMode: "step-plan" }),
     "https://api.stepfun.com/step_plan",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "openai-compatible", { site: "cn" }),
+    "https://api.stepfun.com/v1",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "anthropic", { site: "cn" }),
+    "https://api.stepfun.com",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "openai-compatible", { site: "intl" }),
+    "https://api.stepfun.ai/v1",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "open-responses", { site: "intl" }),
+    "https://api.stepfun.ai/v1",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "anthropic", { site: "intl" }),
+    "https://api.stepfun.ai",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "openai-compatible", {
+      site: "intl",
+      stepfunBillingMode: "step-plan",
+    }),
+    "https://api.stepfun.ai/step_plan/v1",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "open-responses", {
+      site: "intl",
+      stepfunBillingMode: "step-plan",
+    }),
+    "https://api.stepfun.ai/step_plan/v1",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "anthropic", {
+      site: "intl",
+      stepfunBillingMode: "step-plan",
+    }),
+    "https://api.stepfun.ai/step_plan",
+  );
+  assert.equal(
+    resolveProviderConnectApiBase("stepfun", "openai-compatible", {
+      site: "cn",
+      stepfunBillingMode: "step-plan",
+    }),
+    "https://api.stepfun.com/step_plan/v1",
   );
 });
