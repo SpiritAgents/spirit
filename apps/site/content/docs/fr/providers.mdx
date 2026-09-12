@@ -235,11 +235,14 @@ Discutez après l'importation. Les autres capacités suivent le catalogue.
 
 ### StepFun
 
-Créez une clé API sur la [plateforme StepFun](https://platform.stepfun.com). Notes sur le plan Step : [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+Créez une clé API sur la [plateforme StepFun Chine](https://platform.stepfun.com) ou la [plateforme internationale](https://platform.stepfun.ai). Notes sur le plan Step : [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-**API Chat Completions** fixe. Base par défaut : `https://api.stepfun.com/v1`.
+**API Chat Completions** fixe.
 
-**Step Plan** bascule sur `https://api.stepfun.com/step_plan/v1`.
+- **International** (par défaut) — `https://api.stepfun.ai/v1`
+- **Chine** — `https://api.stepfun.com/v1`
+
+**Step Plan** conserve le chemin `/step_plan/v1` et ne change que l’hôte (`api.stepfun.com` vs `api.stepfun.ai`).
 
 Discutez après l'importation. Le raisonnement suit le modèle.
 

@@ -72,6 +72,10 @@
     "zhipuAi": "Zhipu AI",
     "alibaba": "Alibaba",
     "stepfun": "StepFun",
+    "stepfunSite": {
+      "cn": "China",
+      "intl": "International"
+    },
     "minimax": "MiniMax",
     "minimaxSite": {
       "cn": "China",
