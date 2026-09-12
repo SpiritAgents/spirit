@@ -363,6 +363,7 @@ export class RemoteDesktopRuntime {
   private readonly childPendingAux = new Map<string, PendingAssistantAux>();
   private archiveRefreshPromise: Promise<void> | undefined;
   private readonly unsubscribe: () => void;
+  private notificationListenerDropped = false;
   private readonly pendingLocalClientTurnIds = new Set<string>();
   private mutationTail: Promise<void> = Promise.resolve();
   private mutationError: unknown;
@@ -418,17 +419,25 @@ export class RemoteDesktopRuntime {
     await this.refreshArchive();
   }
 
-  /** Drop notification subscription only; keeps daemon attachment (wrapper swap). */
-  async dispose(): Promise<void> {
-    await this.awaitMutations();
-    await this.timelinePushTail;
+  private dropNotificationListener(): void {
+    if (this.notificationListenerDropped) {
+      return;
+    }
+    this.notificationListenerDropped = true;
     this.unsubscribe();
   }
 
-  async close(): Promise<void> {
+  /** Drop notification subscription only; keeps daemon attachment (wrapper swap). */
+  async dispose(): Promise<void> {
+    this.dropNotificationListener();
     await this.awaitMutations();
     await this.timelinePushTail;
-    this.unsubscribe();
+  }
+
+  async close(): Promise<void> {
+    this.dropNotificationListener();
+    await this.awaitMutations();
+    await this.timelinePushTail;
     await this.client.call("session.detach", { sessionId: this.sessionId });
   }
 
