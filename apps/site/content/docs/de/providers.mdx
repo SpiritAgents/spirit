@@ -235,11 +235,14 @@ Chat nach dem Import. Weitere Fähigkeiten folgen dem Katalog.
 
 ### StepFun
 
-Erstellen Sie einen API-Schlüssel auf der [StepFun-Plattform](https://platform.stepfun.com). Step-Plan-Hinweise: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+Erstellen Sie einen API-Schlüssel auf der [StepFun-China-Plattform](https://platform.stepfun.com) oder der [internationalen Plattform](https://platform.stepfun.ai). Step-Plan-Hinweise: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-Festgelegt: **Chat-Completions-API**. Standard-Basis: `https://api.stepfun.com/v1`.
+Festgelegt: **Chat-Completions-API**.
 
-**Step Plan** wechselt zu `https://api.stepfun.com/step_plan/v1`.
+- **International** (Standard) — `https://api.stepfun.ai/v1`
+- **China** — `https://api.stepfun.com/v1`
+
+**Step Plan** behält den Pfad `/step_plan/v1` und ändert nur den Host (`api.stepfun.com` vs. `api.stepfun.ai`).
 
 Chat nach dem Import. Das Denken folgt dem Modell.
 

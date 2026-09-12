@@ -235,11 +235,14 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 ### StepFun
 
-[StepFun 플랫폼](https://platform.stepfun.com)에서 API 키를 생성하세요. Step Plan 참고: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+[StepFun 중국 사이트](https://platform.stepfun.com) 또는 [국제 사이트](https://platform.stepfun.ai)에서 API 키를 생성하세요. Step Plan 참고: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-고정됨 **Chat Completions API**. 기본 베이스: `https://api.stepfun.com/v1`.
+고정됨 **Chat Completions API**.
 
-**Step Plan**은 `https://api.stepfun.com/step_plan/v1`로 전환됩니다.
+- **국제** (기본) — `https://api.stepfun.ai/v1`
+- **중국** — `https://api.stepfun.com/v1`
+
+**Step Plan**은 `/step_plan/v1` 경로를 유지하고 호스트만 바꿉니다 (`api.stepfun.com` vs `api.stepfun.ai`).
 
 가져온 후 채팅하세요. 추론은 모델을 따릅니다.
 

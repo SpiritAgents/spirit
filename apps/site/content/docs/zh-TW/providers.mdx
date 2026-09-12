@@ -235,11 +235,14 @@ Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指�
 
 ### StepFun
 
-在 [StepFun 平台](https://platform.stepfun.com) 建立 API 金鑰。Step Plan 注意事項：[Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
+在 [StepFun 中國站](https://platform.stepfun.com) 或 [國際站](https://platform.stepfun.ai) 建立 API 金鑰。Step Plan 注意事項：[Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
 
-固定為 **Chat Completions API**。預設基礎位址：`https://api.stepfun.com/v1`。
+固定為 **Chat Completions API**。
 
-**Step Plan** 切換至 `https://api.stepfun.com/step_plan/v1`。
+- **國際站**（預設）— `https://api.stepfun.ai/v1`
+- **中國站** — `https://api.stepfun.com/v1`
+
+**Step Plan** 只更換 host（`api.stepfun.com` 與 `api.stepfun.ai`），路徑仍為 `/step_plan/v1`。
 
 匯入後即可聊天。推理能力依模型而定。
 

@@ -287,9 +287,6 @@ pub(crate) fn model_add_alibaba_site_requires_workspace_id(site: &str) -> bool {
 const ALIBABA_TOKEN_PLAN_COMPATIBLE_API_BASE: &str =
     "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
 
-/// Aligned with `stepfunStepPlan.compatibleApiBase` in `model-provider-presets.json`.
-const STEPFUN_STEP_PLAN_COMPATIBLE_API_BASE: &str = "https://api.stepfun.com/step_plan/v1";
-
 /// Aligned with `zAiGlmCodingPlan.compatibleApiBase` in `model-provider-presets.json`.
 const Z_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE: &str = "https://api.z.ai/api/coding/paas/v4";
 
@@ -297,24 +294,35 @@ const Z_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE: &str = "https://api.z.ai/api/cod
 const ZHIPU_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE: &str =
     "https://open.bigmodel.cn/api/coding/paas/v4";
 
+/// Aligned with `providerSiteSelection.stepfun` in `model-provider-presets.json`.
+pub(crate) fn model_add_stepfun_site_id_from_choice(selected: usize) -> &'static str {
+    if selected == 0 { "cn" } else { "intl" }
+}
+
 pub(crate) fn model_add_stepfun_api_base(
     transport_kind: ModelTransportKind,
     step_plan: bool,
+    site: Option<&str>,
 ) -> Option<String> {
+    let origin = match site.unwrap_or("cn").trim().to_ascii_lowercase().as_str() {
+        "cn" => "https://api.stepfun.com",
+        "intl" => "https://api.stepfun.ai",
+        _ => return None,
+    };
     if step_plan {
         return match transport_kind {
-            ModelTransportKind::Anthropic => Some("https://api.stepfun.com/step_plan".to_string()),
+            ModelTransportKind::Anthropic => Some(format!("{origin}/step_plan")),
             ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-                Some(STEPFUN_STEP_PLAN_COMPATIBLE_API_BASE.to_string())
+                Some(format!("{origin}/step_plan/v1"))
             }
             _ => None,
         };
     }
 
     match transport_kind {
-        ModelTransportKind::Anthropic => Some("https://api.stepfun.com".to_string()),
+        ModelTransportKind::Anthropic => Some(origin.to_string()),
         ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-            Some("https://api.stepfun.com/v1".to_string())
+            Some(format!("{origin}/v1"))
         }
         _ => None,
     }
@@ -488,7 +496,11 @@ pub(crate) fn resolve_profile_api_base(profile: &crate::model_registry::ModelPro
 
     if profile.provider == Some(ModelProvider::Stepfun) {
         let step_plan = profile.stepfun_billing_mode().as_deref() == Some("step-plan");
-        if let Some(base) = model_add_stepfun_api_base(profile.transport_kind(), step_plan) {
+        if let Some(base) = model_add_stepfun_api_base(
+            profile.transport_kind(),
+            step_plan,
+            profile.provider_site().as_deref(),
+        ) {
             return base;
         }
     }
@@ -575,6 +587,9 @@ fn resolve_site_api_base(
         }
         crate::model_registry::ModelProvider::KimiCode => {
             model_add_kimi_code_site_api_base(site, transport_kind)
+        }
+        crate::model_registry::ModelProvider::Stepfun => {
+            model_add_stepfun_api_base(transport_kind, false, Some(site))
         }
         _ => None,
     }
@@ -800,6 +815,34 @@ mod tests {
         assert_eq!(
             resolve_profile_api_base(&profile),
             "https://api.kimi.com/coding/v1"
+        );
+    }
+
+    #[test]
+    fn stepfun_api_base_resolves_site_and_step_plan() {
+        assert_eq!(
+            super::model_add_stepfun_api_base(ModelTransportKind::OpenAiCompatible, false, None)
+                .as_deref(),
+            Some("https://api.stepfun.com/v1")
+        );
+        assert_eq!(
+            super::model_add_stepfun_api_base(ModelTransportKind::Anthropic, false, Some("intl"))
+                .as_deref(),
+            Some("https://api.stepfun.ai")
+        );
+        assert_eq!(
+            super::model_add_stepfun_api_base(
+                ModelTransportKind::OpenAiCompatible,
+                true,
+                Some("intl")
+            )
+            .as_deref(),
+            Some("https://api.stepfun.ai/step_plan/v1")
+        );
+        assert_eq!(
+            super::model_add_stepfun_api_base(ModelTransportKind::Anthropic, true, Some("cn"))
+                .as_deref(),
+            Some("https://api.stepfun.com/step_plan")
         );
     }
 

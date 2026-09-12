@@ -182,6 +182,21 @@
           "apiBase": "https://tokenhub-intl.tencentmaas.com/v1"
         }
       }
+    },
+    "stepfun": {
+      "defaultSite": "intl",
+      "sites": {
+        "cn": {
+          "labelKey": "providers.stepfunSite.cn",
+          "fallbackLabel": "China",
+          "apiBase": "https://api.stepfun.com/v1"
+        },
+        "intl": {
+          "labelKey": "providers.stepfunSite.intl",
+          "fallbackLabel": "International",
+          "apiBase": "https://api.stepfun.ai/v1"
+        }
+      }
     }
   },
   "alibabaTokenPlan": {

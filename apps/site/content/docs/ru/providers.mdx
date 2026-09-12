@@ -235,11 +235,14 @@ Spirit импортирует каталог моделей и позволяе�
 
 ### StepFun
 
-Создайте API-ключ на [платформе StepFun](https://platform.stepfun.com). Примечания по Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+Создайте API-ключ на [китайской платформе StepFun](https://platform.stepfun.com) или на [международной платформе](https://platform.stepfun.ai). Примечания по Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-Исправлен **Chat Completions API**. Базовая ссылка по умолчанию: `https://api.stepfun.com/v1`.
+Исправлен **Chat Completions API**.
 
-**Step Plan** переключается на `https://api.stepfun.com/step_plan/v1`.
+- **Международный** (по умолчанию) — `https://api.stepfun.ai/v1`
+- **Китай** — `https://api.stepfun.com/v1`
+
+**Step Plan** сохраняет путь `/step_plan/v1` и меняет только хост (`api.stepfun.com` или `api.stepfun.ai`).
 
 Чат после импорта. Рассуждения следуют модели.
 

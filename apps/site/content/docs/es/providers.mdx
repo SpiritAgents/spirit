@@ -235,11 +235,14 @@ Chatea después de la importación. Otras capacidades siguen el catálogo.
 
 ### StepFun
 
-Crea una clave de API en la [plataforma StepFun](https://platform.stepfun.com). Notas del Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+Crea una clave de API en la [plataforma StepFun China](https://platform.stepfun.com) o en la [plataforma internacional](https://platform.stepfun.ai). Notas del Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-**API de Chat Completions** fija. Base predeterminada: `https://api.stepfun.com/v1`.
+**API de Chat Completions** fija.
 
-**Step Plan** cambia a `https://api.stepfun.com/step_plan/v1`.
+- **Internacional** (predeterminado) — `https://api.stepfun.ai/v1`
+- **China** — `https://api.stepfun.com/v1`
+
+**Step Plan** mantiene la ruta `/step_plan/v1` y solo cambia el host (`api.stepfun.com` vs `api.stepfun.ai`).
 
 Chatea después de la importación. El razonamiento sigue al modelo.
 

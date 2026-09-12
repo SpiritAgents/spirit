@@ -235,11 +235,14 @@ Chat after import. Other capabilities follow the catalog.
 
 ### StepFun
 
-Create an API key on the [StepFun platform](https://platform.stepfun.com). Step Plan notes: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
+Create an API key on the [StepFun China platform](https://platform.stepfun.com) or the [International platform](https://platform.stepfun.ai). Step Plan notes: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
 
-Fixed **Chat Completions API**. Default base: `https://api.stepfun.com/v1`.
+Fixed **Chat Completions API**.
 
-**Step Plan** switches to `https://api.stepfun.com/step_plan/v1`.
+- **International** (default) — `https://api.stepfun.ai/v1`
+- **China** — `https://api.stepfun.com/v1`
+
+**Step Plan** keeps the `/step_plan/v1` path and only changes the host (`api.stepfun.com` vs `api.stepfun.ai`).
 
 Chat after import. Reasoning follows the model.
 

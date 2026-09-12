@@ -27,6 +27,15 @@ test("shouldUseStepfunWebSearch matches stepfun vendor and api base", () => {
   );
   assert.equal(
     shouldUseStepfunWebSearch({
+      transportKind: "anthropic",
+      apiKey: "k",
+      model: "step-3.7-flash",
+      baseUrl: "https://api.stepfun.ai",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldUseStepfunWebSearch({
       transportKind: "openai-compatible",
       apiKey: "k",
       model: "kimi-k2.5",

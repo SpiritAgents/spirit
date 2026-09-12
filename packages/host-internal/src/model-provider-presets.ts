@@ -166,7 +166,7 @@ export interface ResolveProviderConnectApiBaseOptions {
   customApiBaseTrimmed?: string;
   /** Alibaba Token Plan: fixed cn-beijing endpoint; site/workspace are ignored. */
   billingMode?: AlibabaBillingMode;
-  /** StepFun Step Plan: fixed step_plan endpoint. */
+  /** StepFun Step Plan: step_plan path on the selected site host. */
   stepfunBillingMode?: StepfunBillingMode;
   /** Z.ai GLM Coding Plan: fixed coding/paas endpoint. */
   zAiBillingMode?: GlmCodingPlanBillingMode;
@@ -744,20 +744,35 @@ function resolveTransportApiBaseForProviderSite(
     if (siteUrl.origin === transportUrl.origin) {
       return transportBase;
     }
-    return `${siteUrl.origin}${transportUrl.pathname}`;
+    const pathname = transportUrl.pathname === "/" ? "" : transportUrl.pathname;
+    return `${siteUrl.origin}${pathname}`;
   } catch {
     return undefined;
   }
 }
 
-/** StepFun Step Plan: fixed step_plan compatible base; Anthropic / Open Responses derived by transport. */
+/** StepFun Step Plan: step_plan path on the selected site host; no site keeps the .com fallback. */
 export function resolveStepfunStepPlanConnectApiBase(
   transportKind: ProviderModelTransportKind,
+  site?: ProviderConnectSiteId,
 ): string {
+  const origin = resolveStepfunStepPlanOrigin(site);
   if (transportKind === "anthropic") {
-    return "https://api.stepfun.com/step_plan";
+    return `${origin}/step_plan`;
   }
-  return STEPFUN_STEP_PLAN_COMPATIBLE_API_BASE;
+  return `${origin}/step_plan/v1`;
+}
+
+function resolveStepfunStepPlanOrigin(site?: ProviderConnectSiteId): string {
+  const standardBase = site ? resolveProviderConnectSiteApiBase("stepfun", site) : undefined;
+  if (standardBase) {
+    try {
+      return new URL(standardBase).origin;
+    } catch {
+      // Invalid configured site base; fall back to the China Step Plan host.
+    }
+  }
+  return new URL(STEPFUN_STEP_PLAN_COMPATIBLE_API_BASE).origin;
 }
 
 /** Z.ai GLM Coding Plan: fixed coding/paas OpenAI-compatible endpoint. */
@@ -885,7 +900,7 @@ export function resolveProviderConnectApiBase(
   }
 
   if (provider === "stepfun" && stepfunBillingMode === "step-plan") {
-    return resolveStepfunStepPlanConnectApiBase(transportKind);
+    return resolveStepfunStepPlanConnectApiBase(transportKind, site);
   }
 
   if (provider === "z-ai" && zAiBillingMode === "glm-coding-plan") {

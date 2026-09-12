@@ -235,11 +235,14 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 ### 阶跃星辰
 
-在 [阶跃星辰平台](https://platform.stepfun.com) 创建 API Key。套餐说明见 [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
+在 [阶跃星辰中国站](https://platform.stepfun.com) 或 [国际站](https://platform.stepfun.ai) 创建 API Key。套餐说明见 [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
 
-固定 **Chat Completions API**。默认 Base：`https://api.stepfun.com/v1`。
+固定 **Chat Completions API**。
 
-**Step Plan** 会改到 `https://api.stepfun.com/step_plan/v1`。
+- **国际站**（默认）— `https://api.stepfun.ai/v1`
+- **中国站** — `https://api.stepfun.com/v1`
+
+**Step Plan** 只换 host（`api.stepfun.com` 与 `api.stepfun.ai`），路径仍是 `/step_plan/v1`。
 
 导入后即可对话。推理跟模型走。
 

@@ -1,12 +1,13 @@
 import type { JsonObject } from "../ports.js";
 import { isJsonObject } from "../tool-agent.js";
+import { isStepfunApiHostname } from "./stepfun-api-hosts.js";
 
 const STEPFUN_ANTHROPIC_EFFORTS = new Set(["low", "medium", "high"]);
 
 function isStepfunAnthropicApiUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.hostname === "api.stepfun.com" && parsed.pathname.includes("/messages");
+    return isStepfunApiHostname(parsed.hostname) && parsed.pathname.includes("/messages");
   } catch {
     return false;
   }

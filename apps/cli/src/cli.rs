@@ -16,7 +16,8 @@ use crate::{
         model_add_kimi_code_api_base, model_add_kimi_code_site_api_base,
         model_add_minimax_site_api_base, model_add_moonshot_site_api_base,
         model_add_preset_api_base_by_provider, model_add_siliconflow_site_api_base,
-        model_add_tencent_tokenhub_site_api_base, validate_azure_resource_name,
+        model_add_stepfun_api_base, model_add_tencent_tokenhub_site_api_base,
+        validate_azure_resource_name,
     },
     model_registry::{
         AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelProvider, ModelRef,
@@ -322,6 +323,16 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                             alibaba_workspace_id.as_deref().unwrap_or(""),
                             transport_kind,
                         )
+                    {
+                        return base;
+                    }
+                    if provider == Some(ModelProvider::Stepfun)
+                        && let Some(site) = provider_site
+                            .as_deref()
+                            .map(str::trim)
+                            .filter(|value| !value.is_empty())
+                        && let Some(base) =
+                            model_add_stepfun_api_base(transport_kind, false, Some(site))
                     {
                         return base;
                     }

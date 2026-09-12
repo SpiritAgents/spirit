@@ -235,11 +235,14 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 ### StepFun
 
-[StepFun プラットフォーム](https://platform.stepfun.com) で API キーを作成します。Step Plan の注記: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
+[StepFun 中国サイト](https://platform.stepfun.com) または [国際サイト](https://platform.stepfun.ai) で API キーを作成します。Step Plan の注記: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
 
-固定 **Chat Completions API**。デフォルトのベース: `https://api.stepfun.com/v1`。
+固定 **Chat Completions API**。
 
-**Step Plan** は `https://api.stepfun.com/step_plan/v1` に切り替えます。
+- **インターナショナル**（デフォルト）— `https://api.stepfun.ai/v1`
+- **中国** — `https://api.stepfun.com/v1`
+
+**Step Plan** はパス `/step_plan/v1` を維持し、ホストだけを切り替えます（`api.stepfun.com` と `api.stepfun.ai`）。
 
 インポート後にチャット。推論はモデルに従います。
 

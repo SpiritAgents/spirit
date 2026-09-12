@@ -22,8 +22,9 @@ use crate::{
         model_add_provider_at_choice_index, model_add_provider_id_at_choice_index,
         model_add_requires_manual_single_provider, model_add_siliconflow_site_api_base,
         model_add_siliconflow_site_id_from_choice, model_add_stepfun_api_base,
-        model_add_tencent_tokenhub_site_api_base, model_add_tencent_tokenhub_site_id_from_choice,
-        model_add_z_ai_api_base, model_add_zhipu_ai_api_base,
+        model_add_stepfun_site_id_from_choice, model_add_tencent_tokenhub_site_api_base,
+        model_add_tencent_tokenhub_site_id_from_choice, model_add_z_ai_api_base,
+        model_add_zhipu_ai_api_base,
     },
     model_registry::{ModelProvider, ModelTransportKind},
     rules::{RuleEntry, RuleScope},
@@ -532,6 +533,20 @@ fn model_add_stepfun_billing_mode_field(selected: usize) -> BottomFormFieldView 
     }
 }
 
+fn model_add_stepfun_site_field(selected: usize) -> BottomFormFieldView {
+    BottomFormFieldView {
+        label: t!("form.model.field.site.label").into_owned(),
+        help: String::new(),
+        editor: BottomFormFieldEditorView::Choice {
+            options: vec![
+                t!("form.model.provider.stepfun.site.cn").into_owned(),
+                t!("form.model.provider.stepfun.site.intl").into_owned(),
+            ],
+            selected: selected.min(1),
+        },
+    }
+}
+
 fn model_add_glm_coding_plan_billing_mode_field(selected: usize) -> BottomFormFieldView {
     BottomFormFieldView {
         label: t!("form.model.field.glm_coding_plan_billing_mode.label").into_owned(),
@@ -998,6 +1013,16 @@ fn sync_model_add_form_fields(form: &mut BottomFormView) {
     } else {
         0
     };
+    let stepfun_site_selected = if provider_idx == model_add_stepfun_provider_index() {
+        match form.fields.get(3).map(|f| &f.editor) {
+            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
+                (*selected).min(1)
+            }
+            _ => 1,
+        }
+    } else {
+        1
+    };
     let glm_coding_plan_billing_selected = if provider_idx == model_add_z_ai_provider_index()
         || provider_idx == model_add_zhipu_ai_provider_index()
     {
@@ -1175,6 +1200,7 @@ fn sync_model_add_form_fields(form: &mut BottomFormView) {
                 model_add_provider_field(provider_idx),
                 model_add_mode_field_preset(),
                 model_add_stepfun_billing_mode_field(stepfun_billing_selected),
+                model_add_stepfun_site_field(stepfun_site_selected),
                 model_add_api_key_field(api_key_raw),
             ]
         } else if provider_idx == model_add_z_ai_provider_index()
@@ -2133,11 +2159,19 @@ pub(crate) fn parse_model_add_connection(
             }
             _ => 0,
         };
+        let site_selected = match form.fields.get(3).map(|f| &f.editor) {
+            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
+                (*selected).min(1)
+            }
+            _ => 1,
+        };
+        let site = model_add_stepfun_site_id_from_choice(site_selected);
+        provider_site = Some(site.to_string());
         let step_plan = billing_selected == 1;
         if step_plan {
             stepfun_billing_mode = Some("step-plan".to_string());
         }
-        model_add_stepfun_api_base(transport_kind, step_plan)
+        model_add_stepfun_api_base(transport_kind, step_plan, Some(site))
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::ZAi {
         let billing_selected = match form.fields.get(2).map(|f| &f.editor) {
@@ -3238,14 +3272,20 @@ mod tests {
             *selected = stepfun_idx;
         }
         sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 4);
+        assert_eq!(form.fields.len(), 5);
         if let Some(f) = form.fields.get_mut(2)
             && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
         {
             *selected = 1;
         }
         sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
+        if let Some(f) = form.fields.get_mut(3)
+            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
+        {
+            *selected = 0;
+        }
+        sync_model_add_form_fields(&mut form);
+        form.selected_field = 4;
         insert_text(&mut form, "sk-stepfun");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
@@ -3254,6 +3294,66 @@ mod tests {
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun");
+        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
+        assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
+    }
+
+    #[test]
+    fn model_add_form_parses_stepfun_international_connection() {
+        let mut form = new_model_add_form();
+        let stepfun_idx = model_add_stepfun_provider_index();
+        if let Some(f) = form.fields.get_mut(0)
+            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
+        {
+            *selected = stepfun_idx;
+        }
+        sync_model_add_form_fields(&mut form);
+        assert_eq!(form.fields.len(), 5);
+        form.selected_field = 4;
+        insert_text(&mut form, "sk-stepfun-intl");
+
+        let parsed = parse_model_add_connection(&form).expect("parse");
+        assert_eq!(parsed.provider, ModelProvider::Stepfun);
+        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
+        assert!(parsed.bulk);
+        assert_eq!(parsed.api_base, "https://api.stepfun.ai/v1");
+        assert_eq!(parsed.api_key, "sk-stepfun-intl");
+        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
+        assert_eq!(parsed.stepfun_billing_mode, None);
+    }
+
+    #[test]
+    fn model_add_form_parses_stepfun_international_step_plan_connection() {
+        let mut form = new_model_add_form();
+        let stepfun_idx = model_add_stepfun_provider_index();
+        if let Some(f) = form.fields.get_mut(0)
+            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
+        {
+            *selected = stepfun_idx;
+        }
+        sync_model_add_form_fields(&mut form);
+        if let Some(f) = form.fields.get_mut(2)
+            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
+        {
+            *selected = 1;
+        }
+        sync_model_add_form_fields(&mut form);
+        if let Some(f) = form.fields.get_mut(3)
+            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
+        {
+            *selected = 1;
+        }
+        sync_model_add_form_fields(&mut form);
+        form.selected_field = 4;
+        insert_text(&mut form, "sk-stepfun-intl-plan");
+
+        let parsed = parse_model_add_connection(&form).expect("parse");
+        assert_eq!(parsed.provider, ModelProvider::Stepfun);
+        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
+        assert!(parsed.bulk);
+        assert_eq!(parsed.api_base, "https://api.stepfun.ai/step_plan/v1");
+        assert_eq!(parsed.api_key, "sk-stepfun-intl-plan");
+        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
     }
 

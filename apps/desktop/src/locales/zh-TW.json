@@ -72,6 +72,10 @@
     "zhipuAi": "智譜 AI",
     "alibaba": "阿里巴巴",
     "stepfun": "StepFun",
+    "stepfunSite": {
+      "cn": "中國站",
+      "intl": "國際站"
+    },
     "minimax": "MiniMax",
     "minimaxSite": {
       "cn": "中國站",

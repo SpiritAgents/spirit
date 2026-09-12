@@ -6,6 +6,7 @@ import { createMiniMax } from "@ai-sdk/minimax";
 
 import { getLlmFetch } from "../llm-fetch.js";
 import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
+import { isStepfunApiHostname } from "../stepfun/stepfun-api-hosts.js";
 import { createStepfunAnthropicAwareFetch } from "../stepfun/stepfun-anthropic-fetch.js";
 import { createMeituanAnthropicAwareFetch } from "../meituan/meituan-anthropic-fetch.js";
 import {
@@ -522,7 +523,7 @@ function isStepfunAnthropicBaseUrl(baseUrl: string | undefined): boolean {
     return false;
   }
   try {
-    return new URL(baseUrl).hostname === "api.stepfun.com";
+    return isStepfunApiHostname(new URL(baseUrl).hostname);
   } catch {
     return false;
   }
