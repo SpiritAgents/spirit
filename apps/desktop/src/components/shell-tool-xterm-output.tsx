@@ -5,6 +5,11 @@ import { Terminal } from "@xterm/xterm";
 
 import "@xterm/xterm/css/xterm.css";
 
+import {
+  notifyEditCommandTargetsChanged,
+  registerEditCommandTarget,
+  writeEditClipboardText,
+} from "@/lib/edit-command-targets";
 import { readShellToolMonochromeTheme, stripAnsiSgrSequences } from "@/lib/shell-tool-xterm-theme";
 import { cn } from "@/lib/utils";
 
@@ -171,9 +176,37 @@ export function ShellToolXtermOutput({
     });
     host.addEventListener("wheel", onWheel, { passive: true });
 
+    const selectionDisposable = term.onSelectionChange(() => {
+      notifyEditCommandTargetsChanged();
+    });
+    const unregisterEditCommand = registerEditCommandTarget({
+      kind: "terminal",
+      root: host,
+      query: () => ({
+        editable: false,
+        canUndo: false,
+        canRedo: false,
+        hasSelection: term.hasSelection(),
+      }),
+      dispatch: (command) => {
+        if (command === "copy") {
+          const selected = term.getSelection();
+          if (selected) {
+            writeEditClipboardText(selected);
+          }
+          return;
+        }
+        if (command === "selectAll") {
+          term.selectAll();
+        }
+      },
+    });
+
     return () => {
       writeGenerationRef.current += 1;
       host.removeEventListener("wheel", onWheel);
+      unregisterEditCommand();
+      selectionDisposable.dispose();
       scrollDisposable.dispose();
       themeObserver.disconnect();
       resizeObserver.disconnect();

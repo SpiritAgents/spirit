@@ -152,3 +152,43 @@ test("resolveFocusedEditTarget treats a focused textual input as native", () => 
   assert.equal(state.canSelectAll, true);
   assert.equal(state.canDictate, true);
 });
+
+test("resolveFocusedEditTarget routes a focused shell-tool xterm to its terminal adapter", () => {
+  const root = document.createElement("div");
+  root.className = "shell-tool-xterm";
+  const textarea = document.createElement("textarea");
+  root.append(textarea);
+  document.body.append(root);
+  textarea.focus();
+
+  let dispatched = "";
+  registerEditCommandTarget({
+    kind: "terminal",
+    root,
+    query: () => ({
+      editable: false,
+      canUndo: false,
+      canRedo: false,
+      hasSelection: true,
+    }),
+    dispatch: (command) => {
+      dispatched = command;
+    },
+  });
+
+  assert.equal(
+    resolveFocusedEditTarget(document.activeElement, window.getSelection()).kind,
+    "terminal",
+  );
+  assert.deepEqual(queryFocusedEditCommandState({ clipboardHasText: true }), {
+    canUndo: false,
+    canRedo: false,
+    canCut: false,
+    canCopy: true,
+    canPaste: false,
+    canSelectAll: true,
+    canDictate: false,
+  });
+  assert.equal(dispatchEditCommand("copy"), true);
+  assert.equal(dispatched, "copy");
+});

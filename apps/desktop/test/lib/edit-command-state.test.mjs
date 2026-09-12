@@ -298,3 +298,25 @@ test("deriveEditCommandState treats terminals as copy and paste only", () => {
     },
   );
 });
+
+test("deriveEditCommandState disables paste and dictation for a read-only terminal", () => {
+  assert.deepEqual(
+    deriveEditCommandState({
+      kind: "terminal",
+      editable: false,
+      canUndo: false,
+      canRedo: false,
+      hasSelection: true,
+      clipboardHasText: true,
+    }),
+    {
+      canUndo: false,
+      canRedo: false,
+      canCut: false,
+      canCopy: true,
+      canPaste: false,
+      canSelectAll: true,
+      canDictate: false,
+    },
+  );
+});

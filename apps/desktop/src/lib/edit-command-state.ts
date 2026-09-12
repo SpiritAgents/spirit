@@ -157,9 +157,9 @@ export function deriveEditCommandState(source: EditCommandSource): EditCommandSt
     return {
       ...DISABLED_EDIT_COMMAND_STATE,
       canCopy: source.hasSelection,
-      canPaste: source.clipboardHasText,
+      canPaste: source.editable && source.clipboardHasText,
       canSelectAll: true,
-      canDictate: true,
+      canDictate: source.editable,
     };
   }
 
