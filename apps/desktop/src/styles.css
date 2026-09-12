@@ -392,6 +392,41 @@ html.spirit-theme-switching *::after {
   transition: none !important;
 }
 
+/*
+ * Electron workbench: chrome is unselectable by default (VS Code model).
+ * Browser host never has html.spirit-desktop-native (index.html / useDesktopShellEffects).
+ * user-select inherits, so Radix portals in #spirit-ui-scale-root are covered.
+ * Existing select-none utilities (Button, menu items, diff gutter, chips must stay off
+ * select-none) still win on the element that sets them.
+ */
+html.spirit-desktop-native {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.spirit-desktop-native
+  :is(
+    input,
+    textarea,
+    select,
+    [contenteditable="true"],
+    [data-spirit-selectable="text"],
+    [data-spirit-surface="message-bubble"],
+    [data-spirit-surface="composer-surface"],
+    [data-spirit-surface="turn-error-card"],
+    [data-spirit-surface="pending-approval-card"],
+    [data-spirit-surface="pending-questions-card"],
+    [data-spirit-markdown-root],
+    .monaco-editor,
+    .workspace-terminal-xterm,
+    .shell-tool-xterm,
+    .xterm,
+    .unified-diff-code
+  ) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* On Desktop with native window-level translucent material enabled: make the root layers transparent so the host window can draw the system material; the Web version stays opaque. */
 html.spirit-desktop-native.spirit-desktop-translucency,
 html.spirit-desktop-native.spirit-desktop-translucency body,

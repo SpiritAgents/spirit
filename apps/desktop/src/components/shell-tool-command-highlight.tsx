@@ -38,6 +38,7 @@ export function ShellToolCommandHighlight({ command }: { command: string }) {
 
   return (
     <pre
+      data-spirit-selectable="text"
       className={cn(
         "min-w-0 flex-1 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed",
         "bg-transparent p-0 text-muted-foreground",
