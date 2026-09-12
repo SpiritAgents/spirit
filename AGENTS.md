@@ -71,6 +71,12 @@ EOF
 )"
 ```
 
+## Pull Requests That Close Issues
+
+- Apply this only when the PR is intended to close an Issue. Do not add a closer on unrelated PRs.
+- After the description body (Summary, Test plan, and any other sections), end the PR description with a standalone last line: `Closed #N` or `Fixed #N`, where `N` is the Issue number. Leave a blank line above it.
+- Do not embed the closing keyword in the title, Summary, or Test plan.
+
 ## General Conventions
 
 - Run repo-local tools (`tsx`, `tsc`, `oxfmt`, `oxlint`, etc.) via `pnpm exec`, never `npx` — `npx` may hit the network; `pnpm exec` resolves from workspace `node_modules/.bin`.
