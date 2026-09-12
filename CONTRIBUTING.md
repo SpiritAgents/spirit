@@ -147,7 +147,7 @@ Small wording fixes, spelling, or non-model-visible refactors usually do not nee
 ## Pull requests
 
 - Use a clear title and description: **what** changed, **why**, and **how you tested it**
-- Link the related Issue for larger changes
+- When the PR is meant to close an Issue, end the description with a standalone last line `Closed #N` or `Fixed #N` (blank line above it). See [AGENTS.md](AGENTS.md#pull-requests-that-close-issues)
 - Keep the diff focused — unrelated cleanups belong in a separate PR
 - Respond to review feedback in a timely way
 
