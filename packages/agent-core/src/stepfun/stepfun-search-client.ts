@@ -1,6 +1,7 @@
 import { getLlmFetch } from "../llm-fetch.js";
+import { resolveStepfunV1Url } from "./stepfun-api-hosts.js";
 
-export const STEPFUN_SEARCH_URL = "https://api.stepfun.com/v1/search";
+export const STEPFUN_SEARCH_URL = resolveStepfunV1Url(undefined, "/search");
 
 type StepfunSearchResult = {
   url?: string;
@@ -48,6 +49,7 @@ export async function invokeStepfunSearch(
   apiKey: string,
   body: { query: string; n?: number },
   fetchImpl: typeof fetch = getLlmFetch(),
+  baseUrl?: string,
 ): Promise<StepfunSearchInvokeResult> {
   const query = body.query.trim();
   if (!query) {
@@ -68,7 +70,7 @@ export async function invokeStepfunSearch(
   }
 
   try {
-    const response = await fetchImpl(STEPFUN_SEARCH_URL, {
+    const response = await fetchImpl(resolveStepfunV1Url(baseUrl, "/search"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${trimmedKey}`,

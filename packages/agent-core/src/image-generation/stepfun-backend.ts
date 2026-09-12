@@ -1,6 +1,7 @@
 import { getLlmFetch } from "../llm-fetch.js";
 import type { OpenAiImageGenerationConfig } from "../openai/openai-compat.js";
 import { normalizeGeneratedImageMarkdownRef } from "../openai/ai-sdk-transport.js";
+import { resolveStepfunV1Url } from "../stepfun/stepfun-api-hosts.js";
 import type {
   GeneratedImageFile,
   GeneratedImageSaveRequest,
@@ -9,7 +10,11 @@ import type {
 } from "../ports.js";
 import { createLlmMessageContentFromTextAndImages } from "../ports.js";
 
-export const STEPFUN_IMAGE_GENERATION_URL = "https://api.stepfun.com/v1/images/generations";
+export const STEPFUN_IMAGE_GENERATION_URL = resolveStepfunV1Url(undefined, "/images/generations");
+
+function resolveStepfunImageGenerationUrl(config: OpenAiImageGenerationConfig): string {
+  return resolveStepfunV1Url(config.baseUrl, "/images/generations");
+}
 
 interface StepfunImageGenerationResponse {
   data?: Array<{ url?: string; b64_json?: string }>;
@@ -45,7 +50,8 @@ async function requestStepfunImage(
   responseFormat: "b64_json" | "url",
 ): Promise<StepfunImageGenerationResponse> {
   const mappedSize = mapStepfunImageSize(config.model, request.size);
-  const createResponse = await getLlmFetch()(STEPFUN_IMAGE_GENERATION_URL, {
+  const createUrl = resolveStepfunImageGenerationUrl(config);
+  const createResponse = await getLlmFetch()(createUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.apiKey}`,
@@ -75,7 +81,7 @@ export async function generateStepfunImage(
   console.error("[agent-core][generate-image] request.start", {
     adapter: "stepfun",
     model: config.model,
-    createUrl: STEPFUN_IMAGE_GENERATION_URL,
+    createUrl: resolveStepfunImageGenerationUrl(config),
     size: request.size,
     mappedSize: mapStepfunImageSize(config.model, request.size),
   });

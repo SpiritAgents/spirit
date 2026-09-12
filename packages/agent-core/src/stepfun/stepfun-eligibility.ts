@@ -1,4 +1,5 @@
 import type { LlmTransportConfig } from "../provider-config.js";
+import { isStepfunApiHostname } from "./stepfun-api-hosts.js";
 
 function isStepfunApiBase(baseUrl: string | undefined): boolean {
   const trimmed = baseUrl?.trim();
@@ -7,7 +8,7 @@ function isStepfunApiBase(baseUrl: string | undefined): boolean {
   }
 
   try {
-    return new URL(trimmed).hostname === "api.stepfun.com";
+    return isStepfunApiHostname(new URL(trimmed).hostname);
   } catch {
     return false;
   }

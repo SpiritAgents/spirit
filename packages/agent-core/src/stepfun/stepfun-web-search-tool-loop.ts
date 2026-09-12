@@ -49,6 +49,7 @@ export async function executeStepfunWebSearchToolCall(
     apiKey,
     { query, ...(n !== undefined ? { n } : {}) },
     fetchImpl,
+    (config as { baseUrl?: string }).baseUrl,
   );
 
   if (searchResult.kind === "failed") {

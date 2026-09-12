@@ -32,7 +32,7 @@ There is only one core principle:
 ## Kimi Code / StepFun / Z.ai Managed `web_search` (non-Formula)
 
 - **Kimi Code** (`llmVendor: kimi-code` or `api.kimi.com`): `agent-core` injects a local `web_search` function schema; on execution it `POST https://api.kimi.com/coding/v1/search` (body `text_query`) and writes the result back into the tool message.
-- **StepFun** (`llmVendor: stepfun` or `api.stepfun.com`): same kind of managed tool; on execution it hits the fixed `https://api.stepfun.com/v1/search` (optional `n`).
+- **StepFun** (`llmVendor: stepfun` or `api.stepfun.com` / `api.stepfun.ai`): same kind of managed tool; on execution it posts to `{origin}/v1/search` derived from the configured base (optional `n`).
 - **Z.ai / Zhipu AI** (`llmVendor: z-ai` / `zhipu-ai`, or `api.z.ai` / `open.bigmodel.cn`): same kind of managed tool; on execution it posts to `{baseUrl}/web_search` (works on both the PaaS and Coding Plan bases) with `search_engine` + `search_query` and optional `count` (1-50). Z.ai always uses `search-prime`; Zhipu AI uses `search_std` plus the required `search_intent: false`.
 - **Do not** register an executable `web_search` in `host-internal`; execution stays in `agent-core` (`kimi-code/`, `stepfun/`, `zai/`), via the managed provider turn handler.
 - UI: expandable preview (shares `_spiritUi` with StepFun, no `suppressExpand`).
