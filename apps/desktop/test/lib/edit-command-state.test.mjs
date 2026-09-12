@@ -7,6 +7,7 @@ import {
   DISABLED_EDIT_COMMAND_STATE,
   editCommandStateKey,
   isEditCommand,
+  parseEditCommandState,
 } from "../../src/lib/edit-command-state.ts";
 
 const emptyProbe = {
@@ -24,6 +25,20 @@ const editableSource = {
   hasSelection: true,
   clipboardHasText: true,
 };
+
+test("parseEditCommandState accepts a complete flag object", () => {
+  const state = {
+    canUndo: true,
+    canRedo: false,
+    canCut: true,
+    canCopy: true,
+    canPaste: false,
+    canSelectAll: true,
+  };
+  assert.deepEqual(parseEditCommandState(state), state);
+  assert.equal(parseEditCommandState({ ...state, canUndo: "yes" }), null);
+  assert.equal(parseEditCommandState(null), null);
+});
 
 test("isEditCommand accepts only the six menu commands", () => {
   assert.equal(isEditCommand("undo"), true);

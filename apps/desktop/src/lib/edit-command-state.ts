@@ -45,8 +45,46 @@ export const DISABLED_EDIT_COMMAND_STATE: EditCommandState = {
   canSelectAll: false,
 };
 
+export const EDIT_MENU_ITEM_IDS = {
+  undo: "edit-undo",
+  redo: "edit-redo",
+  cut: "edit-cut",
+  copy: "edit-copy",
+  paste: "edit-paste",
+  selectAll: "edit-select-all",
+} as const;
+
 export function isEditCommand(value: unknown): value is EditCommand {
   return typeof value === "string" && (EDIT_COMMANDS as readonly string[]).includes(value);
+}
+
+function isBooleanFlag(value: unknown): value is boolean {
+  return value === true || value === false;
+}
+
+export function parseEditCommandState(value: unknown): EditCommandState | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    !isBooleanFlag(record.canUndo) ||
+    !isBooleanFlag(record.canRedo) ||
+    !isBooleanFlag(record.canCut) ||
+    !isBooleanFlag(record.canCopy) ||
+    !isBooleanFlag(record.canPaste) ||
+    !isBooleanFlag(record.canSelectAll)
+  ) {
+    return null;
+  }
+  return {
+    canUndo: record.canUndo,
+    canRedo: record.canRedo,
+    canCut: record.canCut,
+    canCopy: record.canCopy,
+    canPaste: record.canPaste,
+    canSelectAll: record.canSelectAll,
+  };
 }
 
 export function editCommandStateKey(state: EditCommandState): string {

@@ -2,6 +2,10 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 
+import {
+  notifyEditCommandTargetsChanged,
+  registerEditCommandTarget,
+} from "@/lib/edit-command-targets";
 import { configureWorkspaceTerminalLinks } from "@/lib/workspace-terminal-links";
 import { attachWorkspaceTerminalResizeObserver } from "@/lib/workspace-terminal-resize";
 import { readTerminalThemeFromDocument, trackTerminalTheme } from "@/lib/workspace-terminal-theme";
@@ -122,6 +126,45 @@ export function createWorkspaceTerminalSession(
   const webglAddon = loadWorkspaceTerminalWebgl(term);
   fitAddon.fit();
 
+  const selectionDisposable = term.onSelectionChange(() => {
+    notifyEditCommandTargetsChanged();
+  });
+  const unregisterEditCommand = registerEditCommandTarget({
+    kind: "terminal",
+    root: container,
+    query: () => ({
+      editable: true,
+      canUndo: false,
+      canRedo: false,
+      hasSelection: term.hasSelection(),
+    }),
+    dispatch: (command) => {
+      if (command === "copy") {
+        const selected = term.getSelection();
+        if (selected) {
+          writeClipboard(selected);
+        }
+        return;
+      }
+      if (command === "paste") {
+        const sync = readClipboardSync();
+        if (sync != null) {
+          term.paste(sync);
+          return;
+        }
+        void navigator.clipboard.readText().then((text) => {
+          if (text) {
+            term.paste(text);
+          }
+        });
+        return;
+      }
+      if (command === "selectAll") {
+        term.selectAll();
+      }
+    },
+  });
+
   resizeController = attachWorkspaceTerminalResizeObserver({
     container,
     terminal: term,
@@ -185,6 +228,8 @@ export function createWorkspaceTerminalSession(
   const teardown = (): void => {
     sessionAlive = false;
     container.removeEventListener("contextmenu", onContextMenu, true);
+    selectionDisposable.dispose();
+    unregisterEditCommand();
     unsubPty?.();
     unsubPty = undefined;
     resizeController?.dispose();
@@ -210,12 +255,6 @@ export function createWorkspaceTerminalSession(
       if (created.ok) {
         void bridge.ptyKill(created.id);
       }
-      container.removeEventListener("contextmenu", onContextMenu, true);
-      unsubPty?.();
-      resizeController?.dispose();
-      resizeController = undefined;
-      disposeTerminal();
-      activePtyId = null;
       return;
     }
 

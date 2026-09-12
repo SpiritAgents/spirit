@@ -7,7 +7,6 @@ import { fileURLToPath } from "node:url";
 import {
   BrowserWindow,
   IpcMainInvokeEvent,
-  Menu,
   app,
   clipboard,
   dialog,
@@ -173,7 +172,8 @@ import { diffLiveSnapshots } from "../src/lib/live-update.js";
 import {
   type ApplicationMenuSection,
   popupApplicationMenuSection,
-  setMacOSApplicationMenu,
+  rememberEditCommandState,
+  setDesktopApplicationMenu,
 } from "./application-menu.js";
 import {
   createDesktopHttpHost,
@@ -1140,11 +1140,7 @@ if (gotSpiritSingleInstanceLock) {
       openSession: handleSpiritOpenSessionFromProtocol,
     });
     handleWindowsLaunchArgv(process.argv);
-    if (process.platform === "win32") {
-      Menu.setApplicationMenu(null);
-    } else if (process.platform === "darwin") {
-      setMacOSApplicationMenu();
-    }
+    setDesktopApplicationMenu();
 
     registerGitHubDeviceLoginRunners({
       begin: () => beginGitHubDeviceLoginInElectron(),
@@ -1552,8 +1548,8 @@ if (gotSpiritSingleInstanceLock) {
       } catch {
         // ignore i18n errors
       }
-      if (process.platform === "darwin") {
-        setMacOSApplicationMenu();
+      if (process.platform !== "win32") {
+        setDesktopApplicationMenu();
       }
       refreshWindowsJumpList();
       refreshStatusTray();
@@ -1709,6 +1705,10 @@ if (gotSpiritSingleInstanceLock) {
         return getAppAwayFromUser();
       },
     );
+
+    ipcMain.on("desktop:sync-edit-command-state", (_event, payload: unknown) => {
+      rememberEditCommandState(payload);
+    });
 
     ipcMain.handle(
       "desktop:sync-attention-pending",
