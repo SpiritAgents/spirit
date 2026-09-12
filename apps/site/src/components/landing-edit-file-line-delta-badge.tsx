@@ -9,16 +9,23 @@ type SlideDirection = "up" | "down" | "none";
 function AnimatedCount({ value, className }: { value: number; className: string }) {
   const previousRef = useRef(value);
   const [direction, setDirection] = useState<SlideDirection>("none");
+  const [columns, setColumns] = useState<{ char: string; changed: boolean }[]>(() =>
+    Array.from(String(value), (char) => ({ char, changed: false })),
+  );
 
   useLayoutEffect(() => {
     const previous = previousRef.current;
-    if (value > previous) {
-      setDirection("up");
-    } else if (value < previous) {
-      setDirection("down");
-    } else {
-      setDirection("none");
+    if (value === previous) {
+      return;
     }
+    const previousChars = String(previous).split("");
+    const nextChars = String(value).split("");
+    const offset = nextChars.length - previousChars.length;
+    const alignedPrevious = nextChars.map((_, index) => previousChars[index - offset] ?? "");
+    setDirection(value > previous ? "up" : "down");
+    setColumns(
+      nextChars.map((char, index) => ({ char, changed: char !== alignedPrevious[index] })),
+    );
     previousRef.current = value;
   }, [value]);
 
@@ -30,16 +37,20 @@ function AnimatedCount({ value, className }: { value: number; className: string 
       )}
       aria-hidden
     >
-      <span
-        key={value}
-        className={cn(
-          "inline-block",
-          direction === "up" && "spirit-edit-delta-slide-up",
-          direction === "down" && "spirit-edit-delta-slide-down",
-        )}
-      >
-        {value}
-      </span>
+      {columns.map((column, index) => (
+        <span key={index} className="inline-block">
+          <span
+            key={column.char}
+            className={cn(
+              "inline-block",
+              column.changed && direction === "up" && "spirit-edit-delta-slide-up",
+              column.changed && direction === "down" && "spirit-edit-delta-slide-down",
+            )}
+          >
+            {column.char}
+          </span>
+        </span>
+      ))}
     </span>
   );
 }
