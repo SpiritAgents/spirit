@@ -7,9 +7,12 @@ import { useSyncExternalStore } from "react";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 
 import {
+  bumpTooltipContentHostRevision,
+  getTooltipContentHostRevision,
   isTooltipAnchorSlot,
   isTooltipItemHighlighted,
   isTooltipPointerHighlightSlot,
+  subscribeTooltipContentHostRevision,
   subscribeTooltipItemInteraction,
 } from "@/hooks/tooltip-item-interaction-store";
 import { useGlobalTooltipSwitch } from "@/hooks/use-global-tooltip-switch";
@@ -261,6 +264,11 @@ function composeElementRef<T>(forwardedRef: React.Ref<T> | undefined, node: T): 
 
 function GlobalTooltipContentHost() {
   const global = useTooltipGlobalContext();
+  useSyncExternalStore(
+    subscribeTooltipContentHostRevision,
+    getTooltipContentHostRevision,
+    getTooltipContentHostRevision,
+  );
   const lastRegistrationIdRef = React.useRef<string | null>(null);
 
   if (global.activeRegistrationId) {
@@ -890,6 +898,9 @@ function TooltipContent({
   childrenRef.current = children;
   const resolveClassNameRef = React.useRef(resolveClassName);
   resolveClassNameRef.current = resolveClassName;
+  React.useLayoutEffect(() => {
+    bumpTooltipContentHostRevision();
+  });
 
   React.useEffect(() => {
     const render = (activeItem: unknown) => {
