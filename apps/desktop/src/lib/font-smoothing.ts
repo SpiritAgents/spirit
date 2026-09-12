@@ -5,7 +5,12 @@ export const FONT_SMOOTHING_STORAGE_KEY = "spirit-desktop-font-smoothing" as con
 
 export const FONT_SMOOTHING_CLASS = "spirit-font-smoothing" as const;
 
-/** macOS defaults on; other platforms stay off until explicitly enabled. */
+/**
+ * macOS desktop defaults on; other platforms stay off until explicitly enabled.
+ * iOS / iPadOS are not macOS desktop (`isMacDesktopPlatform`): they already use
+ * grayscale antialiasing, so `-webkit-font-smoothing: antialiased` does not change
+ * rendering and the Settings row must stay hidden.
+ */
 export function defaultFontSmoothing(): boolean {
   return isMacDesktopPlatform();
 }
