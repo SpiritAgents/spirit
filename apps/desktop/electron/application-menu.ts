@@ -131,7 +131,30 @@ function editMenuItems(win?: BrowserWindow): Electron.MenuItemConstructorOptions
         sendEditCommand("selectAll", win);
       },
     },
+    ...macOSEditMenuSystemBeacons(),
   ];
+}
+
+/**
+ * AppKit injects Autofill / Start Dictation / Emoji & Symbols only when the Edit
+ * menu contains items whose action is a first-responder selector (copy:, paste:, …).
+ * Custom click items do not use those selectors, so the system block disappears.
+ * Hidden role items restore the selectors without a second visible Cut/Copy row
+ * and without taking accelerators from the contextual items above.
+ */
+function macOSEditMenuSystemBeacons(): Electron.MenuItemConstructorOptions[] {
+  if (process.platform !== "darwin") {
+    return [];
+  }
+  const beacon = (
+    role: "cut" | "copy" | "paste" | "selectAll",
+  ): Electron.MenuItemConstructorOptions => ({
+    role,
+    visible: false,
+    registerAccelerator: false,
+    acceleratorWorksWhenHidden: false,
+  });
+  return [beacon("cut"), beacon("copy"), beacon("paste"), beacon("selectAll")];
 }
 
 function viewMenuItems(win?: BrowserWindow): Electron.MenuItemConstructorOptions[] {
