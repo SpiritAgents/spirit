@@ -329,6 +329,9 @@ export class SessionRegistry {
   }
 
   clear(): void {
+    for (const bundle of this.bundles.values()) {
+      this.onEvict?.(bundle);
+    }
     this.bundles.clear();
     this.activeId = undefined;
   }

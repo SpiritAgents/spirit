@@ -616,6 +616,8 @@ class DesktopHostService {
   });
   /** Active bundle runtime mirror for legacy call sites; use `bundle.runtime` in session ticks. */
   private runtime: DesktopHostRuntime | undefined;
+  /** One refresh at a time so parallel opens cannot leak extra WS listeners for the same daemon session. */
+  private runtimeRefreshTail: Promise<void> = Promise.resolve();
   private toolExecutor: DesktopToolExecutor | undefined;
   private initialized = false;
   private lastRuntimeError = "";
@@ -2948,7 +2950,23 @@ class DesktopHostService {
     );
   }
 
+  private enqueueRuntimeRefresh(work: () => Promise<void>): Promise<void> {
+    const queued = this.runtimeRefreshTail.then(work, work);
+    this.runtimeRefreshTail = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    return queued;
+  }
+
   private async refreshRuntimeForBundle(
+    bundle: SessionBundle,
+    options: { inferencePreferenceOnly?: boolean } = {},
+  ): Promise<void> {
+    return this.enqueueRuntimeRefresh(() => this.refreshRuntimeForBundleExclusive(bundle, options));
+  }
+
+  private async refreshRuntimeForBundleExclusive(
     bundle: SessionBundle,
     options: { inferencePreferenceOnly?: boolean } = {},
   ): Promise<void> {
