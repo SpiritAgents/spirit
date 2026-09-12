@@ -824,7 +824,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   data-workspace-new-tool-tab=""
                   aria-label={t("workspace.newToolTab")}
                   className={cn(
-                    "mb-1 size-7 shrink-0 rounded-full p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                    "mb-1 size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
                     "aria-expanded:bg-canvas-hover aria-expanded:text-sidebar-foreground aria-expanded:hover:bg-canvas-hover",
                     instantHoverMotionClass,
                   )}
