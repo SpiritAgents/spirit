@@ -74,15 +74,50 @@ export function syncLaunchSplashChromeToDocument(phase: "running" | "leaving" | 
   root.classList.toggle("spirit-launch-splash-exiting", phase === "leaving");
 }
 
-/** Whether the current host is macOS (platform value injected by the Electron preload). */
+/**
+ * iPhone / iPad / iPod, including iPadOS 13+ which spoofs a Macintosh desktop UA.
+ * Distinguished from macOS by `maxTouchPoints`: macOS browsers report 0 even with a
+ * trackpad, while iPad reports a multi-touch screen.
+ */
+function isIosOrIpadOsNavigator(): boolean {
+  if (typeof navigator === "undefined") {
+    return false;
+  }
+  if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+    return true;
+  }
+  return /Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1;
+}
+
+/** Web fallback when Electron preload did not inject a platform: macOS desktop only. */
+function isMacOsDesktopNavigator(): boolean {
+  if (typeof navigator === "undefined" || isIosOrIpadOsNavigator()) {
+    return false;
+  }
+  if (/Mac/i.test(navigator.platform)) {
+    return true;
+  }
+  return /Macintosh|Mac OS X/i.test(navigator.userAgent);
+}
+
+/**
+ * Whether the current host is macOS desktop (not iOS / iPadOS).
+ * Prefers Electron preload `platform === "darwin"`; when preload is absent (Web),
+ * falls back to `navigator.platform` / UA and rejects iPhone, iPad, and iPadOS 13+
+ * desktop-mode Macintosh UA.
+ */
 export function isMacDesktopPlatform(): boolean {
-  return desktopShellPlatform() === "darwin";
+  const platform = desktopShellPlatform();
+  if (platform !== undefined) {
+    return platform === "darwin";
+  }
+  return isMacOsDesktopNavigator();
 }
 
 /**
  * Format a shortcut label for the current platform.
- * - macOS: `mod` → `⌘`, joined without separators (e.g. `⌘N`)
- * - Windows / Linux: `mod` → `Ctrl`, joined with `+` (e.g. `Ctrl+N`)
+ * - macOS desktop: `mod` → `⌘`, joined without separators (e.g. `⌘N`)
+ * - Windows / Linux / iOS / iPadOS: `mod` → `Ctrl`, joined with `+` (e.g. `Ctrl+N`)
  */
 export function shortcutLabel(key: string): string {
   const letter = key.toUpperCase();
@@ -120,7 +155,7 @@ export function modSlashShortcutLabel(): string {
 
 type KeyboardModifierState = Pick<KeyboardEvent, "altKey" | "ctrlKey" | "metaKey">;
 
-/** Whether the platform primary shortcut modifier (⌘ on macOS, Ctrl elsewhere) is held. */
+/** Whether the platform primary shortcut modifier (⌘ on macOS desktop, Ctrl elsewhere) is held. */
 export function isModShortcutPressed(event: KeyboardModifierState): boolean {
   return isMacDesktopPlatform() ? event.metaKey : event.ctrlKey;
 }

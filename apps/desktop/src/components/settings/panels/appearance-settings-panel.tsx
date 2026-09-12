@@ -146,6 +146,7 @@ export function AppearanceSettingsPanel({
               triggerClassName={appearanceSelectTriggerClassName}
             />
           </SettingsRow>
+          {/* macOS desktop only: iOS / iPadOS already use grayscale AA, so this CSS toggle is a no-op. */}
           {isMacDesktopPlatform() ? (
             <SettingsRow
               label={t("settings.fontSmoothing")}
