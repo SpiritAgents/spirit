@@ -89,7 +89,7 @@ pub fn is_subagent_status_surface_text(text: &str) -> bool {
     }
 
     let without_spinner = strip_subagent_spinner_prefix(normalized);
-    if without_spinner == "Thinking..." || without_spinner == "Compressing..." {
+    if without_spinner == "Thinking…" || without_spinner == "Compressing…" {
         return true;
     }
     if without_spinner.ends_with(": Running") || without_spinner.ends_with("： Running") {
@@ -141,7 +141,7 @@ pub fn is_subagent_status_surface_text(text: &str) -> bool {
 
 pub fn parse_pending_subagent_status_text(text: &str) -> Option<String> {
     let status = strip_subagent_spinner_prefix(text);
-    if status.is_empty() || status == "Thinking..." || status == "Compressing..." {
+    if status.is_empty() || status == "Thinking…" || status == "Compressing…" {
         return None;
     }
     if !is_subagent_status_surface_text(&status) {

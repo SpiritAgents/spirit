@@ -112,7 +112,7 @@ test("ensureAfterToolsThinkingPlaceholderRow seeds pending row after terminal pr
   assert.deepEqual(
     buildVisibleMessageSnapshots({
       messages,
-      livePendingAux: { kind: "thinking", statusText: "| Thinking..." },
+      livePendingAux: { kind: "thinking", statusText: "| Thinking…" },
       rewind: createDesktopRewindMetadata(),
     }).map(rowToken),
     [

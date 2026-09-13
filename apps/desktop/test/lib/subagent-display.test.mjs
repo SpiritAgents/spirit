@@ -45,19 +45,19 @@ test("isSubagentStatusSurfaceText rejects assistant prose with colons", () => {
 });
 
 test("isGenericPendingThinkingStatusText detects runtime spinner placeholders", () => {
-  assert.equal(isGenericPendingThinkingStatusText("| Thinking..."), true);
+  assert.equal(isGenericPendingThinkingStatusText("| Thinking…"), true);
   assert.equal(isGenericPendingThinkingStatusText("Need to inspect README.md first."), false);
 });
 
 test("isGenericPendingCompactionStatusText detects runtime spinner placeholders", () => {
-  assert.equal(isGenericPendingCompactionStatusText("| Compressing..."), true);
-  assert.equal(isGenericPendingCompactionStatusText("/ Compressing..."), true);
+  assert.equal(isGenericPendingCompactionStatusText("| Compressing…"), true);
+  assert.equal(isGenericPendingCompactionStatusText("/ Compressing…"), true);
   assert.equal(isGenericPendingCompactionStatusText("## Context compressed"), false);
 });
 
 test("parsePendingSubagentStatusText only accepts subagent runtime status", () => {
   assert.equal(parsePendingSubagentStatusText("| Review auth: Running"), "Review auth: Running");
-  assert.equal(parsePendingSubagentStatusText("/ Thinking..."), undefined);
+  assert.equal(parsePendingSubagentStatusText("/ Thinking…"), undefined);
   assert.equal(parsePendingSubagentStatusText("| 用户想回退：删除未跟踪文件"), undefined);
 });
 

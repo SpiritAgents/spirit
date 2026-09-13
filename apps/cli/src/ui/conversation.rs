@@ -370,10 +370,10 @@ pub(in crate::ui) fn pending_aux_status_label(
     animate: bool,
 ) -> String {
     let stripped = strip_subagent_spinner_prefix(&pending_aux.status_text);
-    let body = if stripped.is_empty() || stripped == "Thinking..." || stripped == "Compressing..." {
+    let body = if stripped.is_empty() || stripped == "Thinking…" || stripped == "Compressing…" {
         match pending_aux.kind {
-            AssistantAuxKind::Compressing => "Compressing...".to_string(),
-            AssistantAuxKind::Thinking => "Thinking...".to_string(),
+            AssistantAuxKind::Compressing => "Compressing…".to_string(),
+            AssistantAuxKind::Thinking => "Thinking…".to_string(),
         }
     } else {
         stripped
