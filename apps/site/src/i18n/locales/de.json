@@ -117,7 +117,7 @@
       "apiKeyLabel": "API-Schlüssel",
       "apiKeyPlaceholder": "Schlüssel eingeben",
       "addThisModel": "Dieses Modell hinzufügen",
-      "adding": "Wird hinzugefügt...",
+      "adding": "Wird hinzugefügt…",
       "customConnectionTitle": "Benutzerdefinierte Verbindung",
       "connectProviderTitle": "Anbieter verbinden"
     },
@@ -246,7 +246,7 @@
     "copyInstall": "Installationsbefehl kopieren",
     "copied": "Kopiert",
     "comingSoonJoke": "Demnächst™",
-    "listingInProgress": "Wird gelistet...",
+    "listingInProgress": "Wird gelistet…",
     "cliLogoTitle": "Spirit",
     "cliUserMessage": "Überprüfe auth.ts und behebe den Session-Refresh-Bug.",
     "cliAssistantMessage": "Ich werde auth.ts inspizieren und den fehlerhaften Session-Check patchen.",
