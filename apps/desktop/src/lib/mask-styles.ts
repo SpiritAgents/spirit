@@ -1,11 +1,5 @@
 import type { CSSProperties } from "react";
 
-/** Horizontal end fade-out (workspace tab close button, etc.): slightly stronger than the default 50%, with the solid zone limited to near the X. */
-export const maskFadeHorizontalEnd: CSSProperties = {
-  maskImage: "linear-gradient(to right, transparent 0%, black 42%)",
-  WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 42%)",
-};
-
 /**
  * Session list static inset. Top is the remainder after the nav group's own
  * `pb-1.5` (same step as the nav `gap`); bottom stays the sole gap above Settings.

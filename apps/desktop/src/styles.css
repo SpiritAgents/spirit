@@ -16,6 +16,16 @@
    added specificity so hover/focus utilities still win over the translucent base. */
 @custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
+/* Fade title content before the close icon, leaving the tab's translucent background intact. */
+@utility workspace-tab-title-fade {
+  mask-image: linear-gradient(
+    to right,
+    black 0%,
+    black calc(100% - 3rem),
+    transparent calc(100% - 0.75rem)
+  );
+}
+
 @property --sidebar-mask-top-alpha {
   syntax: "<number>";
   inherits: false;

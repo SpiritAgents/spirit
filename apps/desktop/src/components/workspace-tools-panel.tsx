@@ -53,7 +53,6 @@ import {
   desktopTranslucencyTintClass,
   desktopTranslucencyWorkspaceTabSelectedClass,
 } from "@/lib/desktop-translucency-surface";
-import { maskFadeHorizontalEnd } from "@/lib/mask-styles";
 import {
   WORKSPACE_TOOLS_MIN_WIDTH_PX,
   computeWorkspaceToolsMaxWidthPx,
@@ -749,7 +748,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 >
                   <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
                   {displayTitle ? (
-                    <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade">
                       <span className="truncate">{displayTitle}</span>
                       {item.tabDirty ? (
                         <span
@@ -794,11 +793,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   {displayTitle ? (
                     <button
                       type="button"
-                      className={cn(
-                        "absolute inset-y-0 right-0 hidden w-8 items-center justify-end rounded-tr-md pr-1 outline-none group-hover/tab:flex",
-                        selected ? "bg-background" : "bg-canvas-hover",
-                      )}
-                      style={maskFadeHorizontalEnd}
+                      className="absolute inset-y-0 right-0 hidden w-8 items-center justify-end rounded-tr-md bg-transparent pr-1 outline-none group-hover/tab:flex"
                       aria-label={t("workspace.closeTab", { label })}
                       onClick={(event) => {
                         event.stopPropagation();
