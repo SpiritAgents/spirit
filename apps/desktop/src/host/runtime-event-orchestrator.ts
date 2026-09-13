@@ -443,8 +443,8 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "update-pending-assistant-compaction") {
-        this.options.assistantMessages.updatePendingAssistantAux("compressing", event.text);
-        this.options.messageTimeline?.()?.updatePendingAssistantAux("compressing", event.text);
+        this.options.assistantMessages.updatePendingAssistantAux("compacting", event.text);
+        this.options.messageTimeline?.()?.updatePendingAssistantAux("compacting", event.text);
         continue;
       }
       if (event.kind === "assistant-chunk") {

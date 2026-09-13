@@ -1109,7 +1109,7 @@ export function shouldHideEmptyPendingAssistantSnapshot(
     return false;
   }
 
-  // Keep the pending row visible while runtime reports thinking/compressing so the
+  // Keep the pending row visible while runtime reports thinking/compacting so the
   // conversation UI can show the Thinking label before detailText is synced.
   if (isLivePendingReasoningAux(livePendingAux)) {
     // Hide the blank line only when a later tool exists and the Thinking placeholder UI would be suppressed, avoiding a pb-3 ghost placeholder.

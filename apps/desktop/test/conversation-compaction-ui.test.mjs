@@ -16,15 +16,15 @@ test("shouldShowAssistantCompactionCollapsible shows Compacting placeholder befo
 
   assert.equal(
     shouldShowAssistantCompactionCollapsible(message, {
-      kind: "compressing",
-      statusText: "| Compressing…",
+      kind: "compacting",
+      statusText: "| Compacting…",
     }),
     true,
   );
   assert.equal(
     assistantCompactionLive(message, {
-      kind: "compressing",
-      statusText: "| Compressing…",
+      kind: "compacting",
+      statusText: "| Compacting…",
     }),
     true,
   );
@@ -36,7 +36,7 @@ test("shouldShowAssistantCompactionCollapsible shows finalized compaction summar
     role: "assistant",
     content: "",
     pending: false,
-    aux: { compaction: "## Context compressed\n\n- dropped 3 turns" },
+    aux: { compaction: "## Context compacted\n\n- dropped 3 turns" },
   };
 
   assert.equal(shouldShowAssistantCompactionCollapsible(message, undefined), true);

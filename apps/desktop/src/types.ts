@@ -1769,7 +1769,7 @@ export interface PendingQuestionsSnapshot {
 }
 
 export interface PendingAssistantAux {
-  kind: "thinking" | "compressing";
+  kind: "thinking" | "compacting";
   statusText: string;
   detailText?: string;
 }

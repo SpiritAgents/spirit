@@ -99,7 +99,7 @@ export type SettingsViewProps = {
   onGenerateRuleNavigate?: () => void;
   /** Hooks page "Generate Hooks": returns to the main conversation area and inserts a create-hook Chip. */
   onGenerateHookNavigate?: () => void;
-  /** Developer page: plays the context-compression UI demo in the conversation area (no model call). */
+  /** Developer page: plays the context-compaction UI demo in the conversation area (no model call). */
   onStartCompactionUiDemo?: () => void;
   /** Developer page: loads an extremely long message list performance demo in the conversation area (no model call). */
   onStartLongConversationListDemo?: () => void;

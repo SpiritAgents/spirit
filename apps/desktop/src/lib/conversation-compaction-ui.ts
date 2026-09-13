@@ -41,7 +41,7 @@ function isLiveCompactionPlaceholderMessage(
     message.content.trim() ||
     message.tool ||
     !isLivePendingReasoningAux(pendingAuxState) ||
-    pendingAuxState?.kind !== "compressing"
+    pendingAuxState?.kind !== "compacting"
   ) {
     return false;
   }
