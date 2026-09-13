@@ -7,7 +7,6 @@ import {
   DESKTOP_TRANSLUCENCY_BROWSER_TINT_CLASS,
   DESKTOP_TRANSLUCENCY_CONTENT_TINT_CLASS,
   DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS,
-  DESKTOP_TRANSLUCENCY_WORKSPACE_TAB_SELECTED_TINT_CLASS,
   DESKTOP_FILES_DETAIL_PREVIEW_TINT_CLASS,
   desktopComposerChipSurfaceClass,
   desktopComposerSurfaceBackdropClass,
@@ -16,7 +15,6 @@ import {
   desktopTranslucencyTerminalTintClass,
   desktopTranslucencyTintClass,
   desktopTranslucencyTintInnerClass,
-  desktopTranslucencyWorkspaceTabSelectedClass,
   desktopFullscreenOverlayTintClass,
 } from "../../src/lib/desktop-translucency-surface.ts";
 
@@ -52,14 +50,6 @@ test("desktopTranslucencyTerminalTintClass keeps high opacity for readability", 
     DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS,
   );
   assert.match(DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS, /\/87$/);
-});
-
-test("desktopTranslucencyWorkspaceTabSelectedClass uses light tint when translucency is on", () => {
-  assert.equal(desktopTranslucencyWorkspaceTabSelectedClass(false), "bg-background");
-  assert.equal(
-    desktopTranslucencyWorkspaceTabSelectedClass(true),
-    DESKTOP_TRANSLUCENCY_WORKSPACE_TAB_SELECTED_TINT_CLASS,
-  );
 });
 
 test("desktopTranslucencyFileDetailSurfaceClass avoids stacking tint under translucency", () => {

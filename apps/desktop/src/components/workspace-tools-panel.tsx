@@ -19,7 +19,6 @@ import {
   Globe,
   Plus,
   Terminal,
-  X,
 } from "lucide-react";
 import { NewToolTabShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
 import { AlertDialog } from "@/components/ui/alert-dialog";
@@ -41,6 +40,7 @@ import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
 import { WorkspaceGitTab } from "@/components/workspace-git-tab";
 import { WorkspacePrTab } from "@/components/workspace-pr-tab";
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
+import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_LIST_ITEM,
@@ -49,10 +49,7 @@ import {
   DESKTOP_PANE_SPLIT_LINE_CLASS,
   instantHoverMotionClass,
 } from "@/lib/desktop-chrome";
-import {
-  desktopTranslucencyTintClass,
-  desktopTranslucencyWorkspaceTabSelectedClass,
-} from "@/lib/desktop-translucency-surface";
+import { desktopTranslucencyTintClass } from "@/lib/desktop-translucency-surface";
 import {
   WORKSPACE_TOOLS_MIN_WIDTH_PX,
   computeWorkspaceToolsMaxWidthPx,
@@ -715,14 +712,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
 
   return (
     <>
-      <div ref={toolTabsBarRef} className="flex shrink-0 items-end gap-0 pt-1.5 pb-0 pl-1 pr-1">
+      <div ref={toolTabsBarRef} className="flex shrink-0 items-center gap-1 px-1 py-1.5">
         <ScrollArea
           scrollbars="horizontal"
           type="hover"
           scrollHideDelay={450}
           className="min-h-0 min-w-0 flex-1 self-stretch"
         >
-          <div role="tablist" aria-label={t("workspace.toolTabs")} className="flex items-end gap-0">
+          <div
+            role="tablist"
+            aria-label={t("workspace.toolTabs")}
+            className="flex items-center gap-1"
+          >
             {tabs.map((item) => {
               const meta = TAB_KIND_META[item.kind];
               const displayTitle = item.tabTitle;
@@ -732,78 +733,16 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                 item.kind === "pr" && item.prStatus
                   ? resolvePrTabStatusIcon(item.prStatus)
                   : (filesTabIcon ?? meta.icon);
-              const selected = item.id === activeTabId;
-              const label = workspaceToolTabLabel(item.kind, tabs, item.id, t);
-              const renderTabButton = () => (
-                <button
-                  type="button"
-                  role="tab"
-                  id={`workspace-tool-tab-${item.id}`}
-                  aria-selected={selected}
-                  aria-controls={`workspace-tool-panel-${item.id}`}
-                  tabIndex={selected ? 0 : -1}
-                  aria-label={displayTitle ? undefined : label}
-                  className="flex min-w-0 flex-1 items-center gap-1 rounded-t-md bg-transparent py-2 pl-2 pr-2 text-xs font-normal outline-none"
-                  onClick={() => onActiveTabIdChange(item.id)}
-                >
-                  <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
-                  {displayTitle ? (
-                    <span className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade">
-                      <span className="truncate">{displayTitle}</span>
-                      {item.tabDirty ? (
-                        <span
-                          className="size-1.5 shrink-0 rounded-full bg-muted-foreground"
-                          role="status"
-                          aria-label={t("workspace.unsavedChangesIndicator")}
-                        />
-                      ) : null}
-                    </span>
-                  ) : null}
-                </button>
-              );
               return (
-                <div
+                <WorkspaceToolTabChip
                   key={item.id}
-                  className={cn(
-                    "group/tab relative flex shrink-0 items-stretch rounded-t-md border border-transparent",
-                    displayTitle ? "max-w-[9rem]" : "max-w-[3rem]",
-                    selected
-                      ? cn(
-                          "border-border/40 text-foreground shadow-sm",
-                          useTranslucency
-                            ? cn(
-                                "border-b-transparent",
-                                desktopTranslucencyWorkspaceTabSelectedClass(useTranslucency),
-                              )
-                            : "border-b-background bg-background",
-                        )
-                      : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
-                  )}
-                >
-                  {displayTitle ? (
-                    renderTabButton()
-                  ) : (
-                    <Tooltip delayDuration={300} disableHoverableContent>
-                      <TooltipTrigger asChild>{renderTabButton()}</TooltipTrigger>
-                      <TooltipContent side="bottom" sideOffset={4}>
-                        {label}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                  {displayTitle ? (
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 hidden w-8 items-center justify-end rounded-tr-md bg-transparent pr-1 outline-none group-hover/tab:flex"
-                      aria-label={t("workspace.closeTab", { label })}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleCloseTab(item.id);
-                      }}
-                    >
-                      <X className="size-3 opacity-70" aria-hidden />
-                    </button>
-                  ) : null}
-                </div>
+                  tab={item}
+                  icon={Icon}
+                  label={workspaceToolTabLabel(item.kind, tabs, item.id, t)}
+                  selected={item.id === activeTabId}
+                  onSelect={onActiveTabIdChange}
+                  onClose={handleCloseTab}
+                />
               );
             })}
           </div>
@@ -819,7 +758,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   data-workspace-new-tool-tab=""
                   aria-label={t("workspace.newToolTab")}
                   className={cn(
-                    "mb-1 size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                    "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
                     "aria-expanded:bg-canvas-hover aria-expanded:text-sidebar-foreground aria-expanded:hover:bg-canvas-hover",
                     instantHoverMotionClass,
                   )}

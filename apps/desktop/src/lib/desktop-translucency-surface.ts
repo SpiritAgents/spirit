@@ -51,9 +51,6 @@ export const DESKTOP_TRANSLUCENCY_BROWSER_TINT_CLASS = "bg-background/80";
 /** Workspace terminal: keeps higher opacity for ANSI legibility. */
 export const DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS = "bg-background/87";
 
-/** Selected tab of the workspace panel: blends into the panel background. */
-export const DESKTOP_TRANSLUCENCY_WORKSPACE_TAB_SELECTED_TINT_CLASS = "bg-background/60";
-
 /** File detail preview area (translucency off): light tint to distinguish it from the file tree. */
 export const DESKTOP_FILES_DETAIL_PREVIEW_TINT_CLASS = "bg-background/30";
 
@@ -90,13 +87,6 @@ export function desktopTranslucencyBrowserTintClass(useTranslucency: boolean): s
 /** Workspace integrated terminal container. */
 export function desktopTranslucencyTerminalTintClass(useTranslucency: boolean): string {
   return useTranslucency ? DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS : SOLID_BACKGROUND_CLASS;
-}
-
-/** Selected tab of the workspace panel: light tint under translucency to blend into the panel background. */
-export function desktopTranslucencyWorkspaceTabSelectedClass(useTranslucency: boolean): string {
-  return useTranslucency
-    ? DESKTOP_TRANSLUCENCY_WORKSPACE_TAB_SELECTED_TINT_CLASS
-    : SOLID_BACKGROUND_CLASS;
 }
 
 /** File detail preview/edit slot: transparent under translucency to avoid stacking darker with the panel tint, light tint otherwise. */
