@@ -37,7 +37,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: clippy
+          components: clippy, rustfmt
 
       - name: Cache Cargo
         uses: actions/cache@v4
@@ -70,6 +70,9 @@ jobs:
 
       - name: Build CLI
         run: cargo build -p spirit
+
+      - name: Check CLI formatting
+        run: cargo fmt -p spirit --check
 
       - name: Clippy CLI (deny warnings)
         run: cargo clippy --all-targets -p spirit -- -D warnings

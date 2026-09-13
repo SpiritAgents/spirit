@@ -119,7 +119,7 @@ Every push runs the [Verify workflow](.github/workflows/verify.yml):
 
 - `pnpm turbo run build` (TypeScript packages, Desktop, and site)
 - `pnpm exec oxlint --deny-warnings packages apps/desktop apps/site` and `pnpm exec oxfmt --check packages apps/desktop apps/site`
-- `cargo build`, `cargo clippy -D warnings`, and `cargo test` for the CLI
+- `cargo build`, `cargo fmt --check`, `cargo clippy -D warnings`, and `cargo test` for the CLI
 
 Before opening a PR, run locally when relevant:
 
@@ -130,6 +130,7 @@ pnpm run format      # oxfmt --check packages apps/desktop apps/site
 pnpm run lint:fix && pnpm run format:fix  # before commit
 pnpm --filter @spiritagent/agent-core test   # if you changed agent-core
 cargo test -p spirit                   # if you changed the CLI
+cargo fmt -p spirit --check
 cargo clippy -p spirit -- -D warnings
 pnpm run eval:compare                        # if you changed model-visible agent-core behavior
 ```
