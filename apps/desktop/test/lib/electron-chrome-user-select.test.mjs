@@ -29,7 +29,6 @@ test("Electron content canvases restore user-select: text", () => {
     '[contenteditable="true"]',
     '[data-spirit-selectable="text"]',
     '[data-spirit-surface="message-bubble"]',
-    '[data-spirit-surface="composer-surface"]',
     "[data-spirit-markdown-root]",
     ".monaco-editor",
     ".workspace-terminal-xterm",
@@ -37,4 +36,9 @@ test("Electron content canvases restore user-select: text", () => {
   ]) {
     assert.match(selectors, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.doesNotMatch(
+    selectors,
+    /\[data-spirit-surface="composer-surface"\]/,
+    "composer-surface chrome must inherit user-select: none; input is contenteditable",
+  );
 });

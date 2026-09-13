@@ -398,6 +398,9 @@ html.spirit-theme-switching *::after {
  * user-select inherits, so Radix portals in #spirit-ui-scale-root are covered.
  * Existing select-none utilities (Button, menu items, diff gutter, chips must stay off
  * select-none) still win on the element that sets them.
+ * Composer chrome (model picker, insert, send) must inherit none: restoring the whole
+ * [data-spirit-surface="composer-surface"] made those triggers selectable. The Lexical
+ * field is already covered by [contenteditable="true"].
  */
 html.spirit-desktop-native {
   -webkit-user-select: none;
@@ -412,7 +415,6 @@ html.spirit-desktop-native
     [contenteditable="true"],
     [data-spirit-selectable="text"],
     [data-spirit-surface="message-bubble"],
-    [data-spirit-surface="composer-surface"],
     [data-spirit-surface="turn-error-card"],
     [data-spirit-surface="pending-approval-card"],
     [data-spirit-surface="pending-questions-card"],
