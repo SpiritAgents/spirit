@@ -282,7 +282,7 @@ export function ComposerSurface({
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
               onModelReasoningModeSelect={onModelReasoningModeSelect}
               onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
-              triggerClassName={cn("max-w-[min(12rem,100%)]", DESKTOP_COMPOSER_GHOST_HOVER)}
+              triggerClassName={DESKTOP_COMPOSER_GHOST_HOVER}
               menuContentClassName="z-[100]"
             />
           </div>
