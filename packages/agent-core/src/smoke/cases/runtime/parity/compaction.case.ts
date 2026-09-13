@@ -111,8 +111,8 @@ export async function runCompactionCase(): Promise<RuntimeParityCaseResult> {
     throw new Error("polling compact smoke should stay busy during auto compaction.");
   }
   const compactAux = pollingCompactRuntime.pendingAuxState();
-  if (!compactAux || compactAux.kind !== "compressing") {
-    throw new Error("polling compact smoke did not expose the compressing aux state.");
+  if (!compactAux || compactAux.kind !== "compacting") {
+    throw new Error("polling compact smoke did not expose the compacting aux state.");
   }
   if (pollingCompactRuntime.takeCompletedTurnResult()) {
     throw new Error(

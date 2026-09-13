@@ -68,7 +68,7 @@ impl InputSuggestion {
 #[serde(rename_all = "lowercase")]
 pub enum AssistantAuxKind {
     Thinking,
-    Compressing,
+    Compacting,
 }
 
 #[derive(Clone, Debug, Default)]

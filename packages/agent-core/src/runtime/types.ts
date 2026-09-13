@@ -308,11 +308,11 @@ export type PendingWorkspaceFile =
   | PendingWorkspaceImageFile
   | PendingWorkspaceVideoFile;
 
-export type AssistantAuxKind = "thinking" | "compressing";
+export type AssistantAuxKind = "thinking" | "compacting";
 
 export interface PendingAssistantAux {
   kind: AssistantAuxKind;
-  /** Subagent/runtime status. Empty for generic thinking/compressing; hosts draw chrome. */
+  /** Subagent/runtime status. Empty for generic thinking/compacting; hosts draw chrome. */
   statusText: string;
   detailText?: string;
 }

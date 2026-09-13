@@ -236,7 +236,7 @@ export class DesktopAssistantMessageStateMachine {
     );
   }
 
-  updatePendingAssistantAux(kind: "thinking" | "compressing", text: string): void {
+  updatePendingAssistantAux(kind: "thinking" | "compacting", text: string): void {
     const normalized = text.trim();
     const existingIndex = this.findPendingAssistantMessageIndex();
     const message =
@@ -254,7 +254,7 @@ export class DesktopAssistantMessageStateMachine {
         : currentAux?.thinking
           ? { thinking: currentAux.thinking }
           : {}),
-      ...(kind === "compressing"
+      ...(kind === "compacting"
         ? normalized
           ? { compaction: text }
           : {}

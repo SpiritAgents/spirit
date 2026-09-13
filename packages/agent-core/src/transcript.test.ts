@@ -96,10 +96,10 @@ test("buildCompactHistorySystemPrompt includes filled transcript section example
   );
   assert.ok(
     prompt.includes(
-      `Transcript directory path for this compression (use this exact path on the transcript line): ${path}`,
+      `Transcript directory path for this compaction (use this exact path on the transcript line): ${path}`,
     ),
   );
-  const exampleBlock = prompt.split("Transcript directory path for this compression")[0] ?? "";
+  const exampleBlock = prompt.split("Transcript directory path for this compaction")[0] ?? "";
   assert.doesNotMatch(exampleBlock, /\/Users\//);
   assert.match(prompt, /Do not output only the path/);
 });

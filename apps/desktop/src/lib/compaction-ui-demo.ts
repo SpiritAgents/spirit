@@ -28,8 +28,8 @@ export function buildCompactionDemoPendingAux(
 ): PendingAssistantAux {
   const frame = compactionDemoSpinnerFrame(tick);
   return {
-    kind: "compressing",
-    statusText: `${frame} Compressing…`,
+    kind: "compacting",
+    statusText: `${frame} Compacting…`,
     ...(detailText ? { detailText } : {}),
   };
 }
@@ -63,7 +63,7 @@ export function buildCompactionDemoMessages(input: {
         role: "assistant",
         content: "",
         pending: true,
-        aux: { compaction: `${compactionDemoSpinnerFrame(input.tick)} Compressing…` },
+        aux: { compaction: `${compactionDemoSpinnerFrame(input.tick)} Compacting…` },
       },
     ];
   }

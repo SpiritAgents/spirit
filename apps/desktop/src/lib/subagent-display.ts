@@ -11,7 +11,7 @@ function isParentSubagentCompletionSurfaceText(text: string): boolean {
 const SUBAGENT_SPINNER_PREFIX = /^[|/\\-]\s+/;
 
 /** Progress tail after `title:` on the subagent status line (streaming English fragments included). */
-const SUBAGENT_STATUS_TAIL_PREFIX = /^(The|Sub|Sp|Thinking|Compressing|Running|Awaiting)\b/u;
+const SUBAGENT_STATUS_TAIL_PREFIX = /^(The|Sub|Sp|Thinking|Compacting|Running|Awaiting)\b/u;
 
 /** Colon is part of an emoticon (e.g. `:)`), not a `label: status` separator. */
 function isEmoticonColon(text: string, colonIdx: number): boolean {
@@ -37,11 +37,11 @@ export function stripSubagentSpinnerPrefix(text: string): string {
   return text.trim().replace(SUBAGENT_SPINNER_PREFIX, "").trim();
 }
 
-/** Runtime `pendingAuxState()` for main-thread thinking/compressing (not subagent status lines). */
+/** Runtime `pendingAuxState()` for main-thread thinking/compacting (not subagent status lines). */
 export function isLivePendingReasoningAux(pendingAux: PendingAssistantAux | undefined): boolean {
   return Boolean(
     pendingAux &&
-    (pendingAux.kind === "thinking" || pendingAux.kind === "compressing") &&
+    (pendingAux.kind === "thinking" || pendingAux.kind === "compacting") &&
     !parsePendingSubagentStatusText(pendingAux.statusText),
   );
 }
@@ -56,14 +56,14 @@ export function isGenericPendingThinkingStatusText(text: string | undefined): bo
   return withoutSpinner === "Thinking…";
 }
 
-/** Placeholder compaction aux before summary text arrives (e.g. `| Compressing…`). */
+/** Placeholder compaction aux before summary text arrives (e.g. `| Compacting…`). */
 export function isGenericPendingCompactionStatusText(text: string | undefined): boolean {
   const normalized = text?.trim();
   if (!normalized) {
     return false;
   }
   const withoutSpinner = stripSubagentSpinnerPrefix(normalized);
-  return withoutSpinner === "Compressing…";
+  return withoutSpinner === "Compacting…";
 }
 
 function isSubagentRuntimeStatusTail(after: string): boolean {
@@ -112,7 +112,7 @@ export function isSubagentStatusSurfaceText(text: string | undefined): boolean {
 
   const withoutSpinner = stripSubagentSpinnerPrefix(normalized);
 
-  if (withoutSpinner === "Thinking…" || withoutSpinner === "Compressing…") {
+  if (withoutSpinner === "Thinking…" || withoutSpinner === "Compacting…") {
     return true;
   }
   if (/:\s*Running\s*$/u.test(withoutSpinner)) {
@@ -217,7 +217,7 @@ export function parsePendingSubagentStatusText(text: string | undefined): string
   }
 
   const status = stripSubagentSpinnerPrefix(text);
-  if (!status || status === "Thinking…" || status === "Compressing…") {
+  if (!status || status === "Thinking…" || status === "Compacting…") {
     return undefined;
   }
 

@@ -697,8 +697,8 @@ export class RemoteDesktopRuntime {
     const compaction = this.compactionTextStore.trim();
     if (compaction) {
       return {
-        kind: "compressing",
-        statusText: `${frame} Compressing…`,
+        kind: "compacting",
+        statusText: `${frame} Compacting…`,
         detailText: compaction,
       };
     }
@@ -716,10 +716,10 @@ export class RemoteDesktopRuntime {
       return undefined;
     }
 
-    const kind = snapshotAux?.kind === "compressing" ? "compressing" : "thinking";
+    const kind = snapshotAux?.kind === "compacting" ? "compacting" : "thinking";
     return {
       kind,
-      statusText: kind === "thinking" ? `${frame} Thinking…` : `${frame} Compressing…`,
+      statusText: kind === "thinking" ? `${frame} Thinking…` : `${frame} Compacting…`,
     };
   }
 

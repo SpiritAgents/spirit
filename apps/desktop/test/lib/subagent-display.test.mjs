@@ -50,9 +50,9 @@ test("isGenericPendingThinkingStatusText detects runtime spinner placeholders", 
 });
 
 test("isGenericPendingCompactionStatusText detects runtime spinner placeholders", () => {
-  assert.equal(isGenericPendingCompactionStatusText("| Compressing…"), true);
-  assert.equal(isGenericPendingCompactionStatusText("/ Compressing…"), true);
-  assert.equal(isGenericPendingCompactionStatusText("## Context compressed"), false);
+  assert.equal(isGenericPendingCompactionStatusText("| Compacting…"), true);
+  assert.equal(isGenericPendingCompactionStatusText("/ Compacting…"), true);
+  assert.equal(isGenericPendingCompactionStatusText("## Context compacted"), false);
 });
 
 test("parsePendingSubagentStatusText only accepts subagent runtime status", () => {

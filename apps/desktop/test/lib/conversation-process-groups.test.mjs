@@ -38,7 +38,7 @@ test("isProcessEligibleMetaMessage accepts tools and standalone thinking", () =>
       role: "assistant",
       content: "",
       pending: false,
-      aux: { compaction: "compressed context" },
+      aux: { compaction: "compacted context" },
     }),
     false,
   );
@@ -167,7 +167,7 @@ test("buildConversationRenderItems supports body then tools then body in one tur
       role: "assistant",
       content: "",
       pending: false,
-      aux: { compaction: "compressed context" },
+      aux: { compaction: "compacted context" },
     },
     { id: 5, role: "assistant", content: "Second answer.", pending: false },
   ];
@@ -195,7 +195,7 @@ test("buildConversationRenderItems keeps compaction as standalone message", () =
       role: "assistant",
       content: "",
       pending: false,
-      aux: { compaction: "## Context compressed\n\n- summary" },
+      aux: { compaction: "## Context compacted\n\n- summary" },
     },
     { id: 3, role: "assistant", content: "Continued.", pending: false },
   ];

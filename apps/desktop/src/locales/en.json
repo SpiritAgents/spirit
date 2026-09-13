@@ -280,7 +280,7 @@
     "readFileFailed": "Failed to read file.",
     "removeCapability": "Remove {{label}}",
     "compactionDemoTitle": "UI Demo · Context Compaction",
-    "compactionDemoDescription": "Simulate context-triggered compaction in the chat area: Compressing animation, Compaction summary streaming, and compressed assistant reply (no model call, not written to session).",
+    "compactionDemoDescription": "Simulate context-triggered compaction in the chat area: Compacting animation, Compaction summary streaming, and compacted assistant reply (no model call, not written to session).",
     "longConversationListDemoTitle": "Perf Demo · Long Conversation List",
     "longConversationListDemoDescription": "Load {{turnCount}} turns in the chat area: user messages, Thought blocks, process tool groups (read/grep/glob/shell/patch), and assistant body markdown (no model call, not written to session).",
     "demoInConversation": "Demo in Conversation",
@@ -806,7 +806,7 @@
     "closePane": "Close",
     "conversationPaneMenu": "Conversation pane menu",
     "compactionDemo": "Context Compaction UI Demo",
-    "compactionDemoDescription": "Simulate Compressing → Compaction summary → Compacted reply (not written to session)",
+    "compactionDemoDescription": "Simulate Compacting → Compaction summary → Compacted reply (not written to session)",
     "longConversationListDemo": "Long Conversation List Perf Demo",
     "longConversationListDemoDescription": "Static multi-turn list for scroll and render profiling (not written to session)",
     "longConversationListDemoStats": "{{turnCount}} turns · {{messageCount}} messages · {{toolCount}} tools",
@@ -1500,16 +1500,16 @@
     "thought_other": "{{count}} Thoughts"
   },
   "demo": {
-    "compactionUserText": "Please continue implementing the Desktop connection wizard: automatically compress history when context approaches the limit, and retain the most recent round of tool results.",
-    "compactionSummary": "## Context compressed\n\n- User requested implementation of connection wizard and context compression related UI.\n- Discussed OpenAI Responses API, transportKind and provider presets.\n- Discarded earlier 8 tool outputs and 3 rounds of chat (~42k tokens), retaining current task and recent read_file results.",
-    "compactionAssistantReply": "Continuing based on the compressed context: I will add a \"Context Compression\" style demo entry in Settings and check the spacing between the Compaction block and subsequent assistant replies."
+    "compactionUserText": "Please continue implementing the Desktop connection wizard: automatically compact history when context approaches the limit, and retain the most recent round of tool results.",
+    "compactionSummary": "## Context compacted\n\n- User requested implementation of connection wizard and context compaction related UI.\n- Discussed OpenAI Responses API, transportKind and provider presets.\n- Discarded earlier 8 tool outputs and 3 rounds of chat (~42k tokens), retaining current task and recent read_file results.",
+    "compactionAssistantReply": "Continuing based on the compacted context: I will add a \"Context Compaction\" style demo entry in Settings and check the spacing between the Compaction block and subsequent assistant replies."
   },
   "slash": {
     "createRule": "Create or tighten a rule file in natural language (default .spirit/rule.md)",
     "createSkill": "Create or tighten a SKILL.md in natural language",
     "exportSession": "Export current session llm_history and full API request traces and open automatically",
     "startImplementing": "Read the active Spirit plan and start implementing",
-    "compact": "Proactively compress current session context history",
+    "compact": "Proactively compact current session context history",
     "fork": "Fork the session at the latest assistant message into a new chat",
     "sideChat": "Follow up in a temporary chat",
     "loop": "Enable autonomous loop until finish_task or remove the chip with Backspace",

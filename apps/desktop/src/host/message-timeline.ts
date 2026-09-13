@@ -313,7 +313,7 @@ export class DesktopMessageTimeline {
   }
 
   updatePendingAssistantAux(
-    kind: "thinking" | "compressing",
+    kind: "thinking" | "compacting",
     text: string,
   ): ConversationMessageSnapshot {
     this.markMutated();
@@ -325,7 +325,7 @@ export class DesktopMessageTimeline {
       ...(row.aux?.compaction ? { compaction: row.aux.compaction } : {}),
       ...(row.aux?.finishTaskNotice ? { finishTaskNotice: row.aux.finishTaskNotice } : {}),
       ...(kind === "thinking" && normalized ? { thinking: text } : {}),
-      ...(kind === "compressing" && normalized ? { compaction: text } : {}),
+      ...(kind === "compacting" && normalized ? { compaction: text } : {}),
     } satisfies MessageAuxSnapshot;
     if (!normalized) {
       if (kind === "thinking") {
@@ -415,7 +415,7 @@ export class DesktopMessageTimeline {
     return rowToMessage(target);
   }
 
-  hasFinalizedAuxInActiveSegment(kind: "thinking" | "compressing", text: string): boolean {
+  hasFinalizedAuxInActiveSegment(kind: "thinking" | "compacting", text: string): boolean {
     const segment = this.activeSegment();
     const normalized = text.trim();
     if (!segment || !normalized) {
@@ -1958,7 +1958,7 @@ function hasRowAux(row: DesktopTimelineRow): boolean {
 }
 
 function isPendingSegmentRowsLogStage(stage: string): boolean {
-  return stage === "update-pending-thinking" || stage === "update-pending-compressing";
+  return stage === "update-pending-thinking" || stage === "update-pending-compacting";
 }
 
 function trimPendingSegmentRowsLogMsByKey(map: Map<string, number>, maxEntries: number): void {

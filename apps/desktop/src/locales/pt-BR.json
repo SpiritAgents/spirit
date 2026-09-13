@@ -280,7 +280,7 @@
     "readFileFailed": "Falha ao ler arquivo.",
     "removeCapability": "Remover {{label}}",
     "compactionDemoTitle": "Demo de UI · Compactação de Contexto",
-    "compactionDemoDescription": "Simula compactação acionada por contexto na área de chat: Animação de compressão, resumo de compactação em streaming e resposta compactada do assistente (sem chamada de modelo, não gravada na sessão).",
+    "compactionDemoDescription": "Simula compactação acionada por contexto na área de chat: Animação de compactação, resumo de compactação em streaming e resposta compactada do assistente (sem chamada de modelo, não gravada na sessão).",
     "longConversationListDemoTitle": "Demo de Performance · Lista Longa de Conversas",
     "longConversationListDemoDescription": "Carrega {{turnCount}} turnos na área de chat: mensagens do usuário, blocos de pensamento, grupos de ferramentas de processo (read/grep/glob/shell/patch) e corpo do assistente em markdown (sem chamada de modelo, não gravado na sessão).",
     "demoInConversation": "Demo na Conversa",
@@ -806,7 +806,7 @@
     "closePane": "Fechar",
     "conversationPaneMenu": "Menu do painel de conversa",
     "compactionDemo": "Demonstração da UI de Compactação de Contexto",
-    "compactionDemoDescription": "Simular Compressão → Resumo da Compactação → Resposta compactada (não gravada na sessão)",
+    "compactionDemoDescription": "Simular Compactação → Resumo da Compactação → Resposta compactada (não gravada na sessão)",
     "longConversationListDemo": "Demonstração de Desempenho de Lista Longa de Conversas",
     "longConversationListDemoDescription": "Lista estática de várias etapas para perfil de rolagem e renderização (não gravada na sessão)",
     "longConversationListDemoStats": "{{turnCount}} turnos · {{messageCount}} mensagens · {{toolCount}} ferramentas",
@@ -1500,16 +1500,16 @@
     "thought_other": "{{count}} Pensamentos"
   },
   "demo": {
-    "compactionUserText": "Continue implementando o assistente de conexão Desktop: comprima automaticamente o histórico quando o contexto se aproximar do limite e mantenha os resultados da rodada mais recente de ferramentas.",
-    "compactionSummary": "## Contexto compactado\n\n- O usuário solicitou a implementação do assistente de conexão e da UI relacionada à compressão de contexto.\n- Discutiu OpenAI Responses API, transportKind e presets de provedores.\n- Descartadas 8 saídas de ferramentas anteriores e 3 rodadas de chat (~42k tokens), mantendo a tarefa atual e os resultados recentes de read_file.",
-    "compactionAssistantReply": "Continuando com base no contexto compactado: adicionarei uma entrada de demonstração de \"Compressão de Contexto\" nas Configurações e verificarei o espaçamento entre o bloco de compactação e as respostas subsequentes do assistente."
+    "compactionUserText": "Continue implementando o assistente de conexão Desktop: compacte automaticamente o histórico quando o contexto se aproximar do limite e mantenha os resultados da rodada mais recente de ferramentas.",
+    "compactionSummary": "## Contexto compactado\n\n- O usuário solicitou a implementação do assistente de conexão e da UI relacionada à compactação de contexto.\n- Discutiu OpenAI Responses API, transportKind e presets de provedores.\n- Descartadas 8 saídas de ferramentas anteriores e 3 rodadas de chat (~42k tokens), mantendo a tarefa atual e os resultados recentes de read_file.",
+    "compactionAssistantReply": "Continuando com base no contexto compactado: adicionarei uma entrada de demonstração de \"Compactação de Contexto\" nas Configurações e verificarei o espaçamento entre o bloco de compactação e as respostas subsequentes do assistente."
   },
   "slash": {
     "createRule": "Criar ou ajustar um arquivo de regras em linguagem natural (padrão .spirit/rule.md)",
     "createSkill": "Criar ou ajustar um SKILL.md em linguagem natural",
     "exportSession": "Exportar o histórico llm_history da sessão atual e traces completos de requisições à API e abrir automaticamente",
     "startImplementing": "Ler o plano Spirit ativo e começar a implementar",
-    "compact": "Comprimir proativamente o histórico de contexto da sessão atual",
+    "compact": "Compactar proativamente o histórico de contexto da sessão atual",
     "fork": "Bifurcar a sessão na última mensagem do assistente em um novo chat",
     "sideChat": "Acompanhar em um chat temporário",
     "loop": "Ativar loop autônomo até finish_task ou remover o chip com Backspace",
