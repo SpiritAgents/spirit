@@ -4746,7 +4746,7 @@ class DesktopHostService {
       return await work();
     } finally {
       release?.();
-      // Sole choke point: every command that makes a session busy (sending a message, approval resume, queue, automation...)
+      // Sole choke point: every command that makes a session busy (sending a message, approval resume, queue, automation…)
       // funnels through runSerialized, so this is where the pump is ensured to start.
       this.sessionPump.ensureRunning();
     }

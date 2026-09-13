@@ -418,7 +418,7 @@ pub(in crate::ui) fn summarize_pending_images(paths: &[String], max_width: usize
     }
 
     if line.is_empty() {
-        return truncate_to_width("[img] ...", max_width);
+        return truncate_to_width("[img] …", max_width);
     }
 
     if remaining > 0 {
@@ -466,7 +466,7 @@ pub(in crate::ui) fn summarize_pending_mcp_resources(
     }
 
     if line.is_empty() {
-        return truncate_to_width("[mcp] ...", max_width);
+        return truncate_to_width("[mcp] …", max_width);
     }
 
     if remaining > 0 {

@@ -99,7 +99,7 @@ pub(in crate::ui) fn build_history_render_result(
 
     if skipped > 0 {
         lines.push(Line::from(vec![
-            Span::styled("... ", Style::default().fg(Color::DarkGray)),
+            Span::styled("… ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 t!("ui.history.skipped_messages", count = skipped).into_owned(),
                 Style::default()
