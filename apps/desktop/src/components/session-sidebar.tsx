@@ -40,7 +40,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { sidebarSessionsScrollTopGapClass } from "@/lib/mask-styles";
+import { SCROLL_EDGE_FADE_PX, sidebarSessionsScrollInsetClass } from "@/lib/mask-styles";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AnimatedCollapse,
@@ -1201,8 +1201,7 @@ function readSidebarScrollEdgeFades(viewport: HTMLElement): SidebarScrollEdgeFad
   };
 }
 
-const SIDEBAR_SCROLL_MASK =
-  "linear-gradient(to bottom, rgb(0 0 0 / var(--sidebar-mask-top-alpha)) 0, black 2rem, black calc(100% - 2rem), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)";
+const SIDEBAR_SCROLL_MASK = `linear-gradient(to bottom, rgb(0 0 0 / var(--sidebar-mask-top-alpha)) 0, black ${SCROLL_EDGE_FADE_PX}px, black calc(100% - ${SCROLL_EDGE_FADE_PX}px), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)`;
 
 function sidebarScrollAreaMaskStyle(top: boolean, bottom: boolean): React.CSSProperties {
   return {
@@ -1722,7 +1721,10 @@ function SessionSidebarInner({
         </div>
       ) : (
         <div
-          className={cn("flex flex-col gap-1.5 px-1.5 pt-2.5", narrow && "shrink-0 items-center")}
+          className={cn(
+            "flex flex-col gap-1.5 pb-1.5 px-1.5 pt-2.5",
+            narrow && "shrink-0 items-center",
+          )}
         >
           <Button
             type="button"
@@ -1811,7 +1813,6 @@ function SessionSidebarInner({
         ref={scrollFadeRegionRef}
         className={cn(
           "relative min-h-0 w-full min-w-0 flex-1 overflow-hidden",
-          !settingsMode && sidebarSessionsScrollTopGapClass,
           !settingsMode && narrow && "hidden min-h-0 flex-none",
         )}
         aria-hidden={!settingsMode && narrow}
@@ -1915,13 +1916,12 @@ function SessionSidebarInner({
               ) : null}
             </nav>
           ) : (
-            <div className="min-w-0 px-1.5 pb-1.5">
+            <div className={cn("min-w-0 px-1.5", sidebarSessionsScrollInsetClass)}>
               {workspaceGroups.length > 0 ? (
                 <SidebarSectionCollapsible
                   label={t("sidebar.workspace")}
                   expanded={workspaceSectionExpanded}
                   disabled={disabled}
-                  headerClassName="pt-2"
                   onOpenChange={setWorkspaceSectionExpandedPersisted}
                   contextMenu={
                     canDeleteWorkspace
@@ -2098,7 +2098,7 @@ function SessionSidebarInner({
       </div>
 
       {!settingsMode ? (
-        <div className={cn("shrink-0 p-2", narrow && "mt-auto flex flex-col items-center py-2")}>
+        <div className={cn("shrink-0 px-2 pb-2", narrow && "mt-auto flex flex-col items-center")}>
           {narrow ? (
             <Tooltip delayDuration={300} disableHoverableContent>
               <TooltipTrigger asChild>
