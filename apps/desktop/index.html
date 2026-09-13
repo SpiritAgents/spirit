@@ -7,7 +7,7 @@
     <title>Spirit</title>
     <script>
       (function () {
-        if (!/\bElectron\//.test(navigator.userAgent)) return;
+        if (!window.spiritDesktop) return;
         var root = document.documentElement;
         root.classList.add("spirit-desktop-native", "spirit-launch-splash-active");
         var translucency = true;

@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   ctrlLetterShortcutKbdKeys,
+  isElectronChrome,
   isMacDesktopPlatform,
   isModAltShortcutPressed,
   isModShortcutPressed,
@@ -115,6 +116,23 @@ test("isMacDesktopPlatform falls back to Web macOS desktop and rejects iOS / iPa
     },
     () => {
       assert.equal(isMacDesktopPlatform(), false);
+    },
+  );
+});
+
+test("isElectronChrome is true only when Spirit preload injected spiritDesktop", () => {
+  withDesktopPlatform("darwin", () => {
+    assert.equal(isElectronChrome(), true);
+  });
+  withWebNavigator(
+    {
+      platform: "MacIntel",
+      userAgent:
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Electron/38.0.0 Safari/537.36",
+      maxTouchPoints: 0,
+    },
+    () => {
+      assert.equal(isElectronChrome(), false);
     },
   );
 });

@@ -22,14 +22,9 @@ export function isNativeTranslucencySupported(): boolean {
   return isNativeTranslucencyPlatform(desktopShellPlatform());
 }
 
+/** True only in the Spirit Electron window (preload injects `window.spiritDesktop`). */
 export function isElectronChrome(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  if (window.spiritDesktop) {
-    return true;
-  }
-  return typeof navigator !== "undefined" && /\bElectron\//.test(navigator.userAgent);
+  return typeof window !== "undefined" && Boolean(window.spiritDesktop);
 }
 
 /** Aligned with Electron's `readTranslucencyFromDisk`; used to avoid wrongly enabling the translucency transparent layer before the first-paint snapshot is ready. */
