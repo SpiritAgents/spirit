@@ -318,7 +318,7 @@ export function buildCrashPageHtml(
   }
   h1 {
     margin: 0;
-    /* Matches the empty-session greeting ("Let's build."): text-3xl + font-medium + tracking-tight. */
+    /* Matches the doodle ("Let's build."): text-3xl + font-medium + tracking-tight. */
     font-size: 30px;
     font-weight: 500;
     letter-spacing: -0.025em;

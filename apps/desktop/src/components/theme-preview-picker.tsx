@@ -135,7 +135,7 @@ function ThemePreviewCard({
 }
 
 /**
- * Mini mock of the main UI's empty-conversation view: sidebar + centered greeting skeleton bar +
+ * Mini mock of the main UI's empty-conversation view: sidebar + centered doodle skeleton bar +
  * bottom input bar.
  * Fixed palette (no dark: variants) so the preview is not affected by the document-level .dark
  * class; the brand colors are pure white/black, and skeleton bars uniformly use black/white alpha

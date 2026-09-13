@@ -96,7 +96,7 @@ export type ConversationListSectionProps = {
 
 export type ComposerDockSectionProps = {
   composerDockRef: Ref<HTMLDivElement | null>;
-  emptySessionGreeting: string;
+  doodleText: string;
   showWorkspaceBindingControls: boolean;
   paneSessionPath?: string;
   useIsolatedPaneWorkspace?: boolean;
@@ -699,7 +699,7 @@ export function ConversationView({
               <ComposerDock
                 ref={composerDock.composerDockRef}
                 isEmptySession={isEmptySession}
-                emptySessionGreeting={composerDock.emptySessionGreeting}
+                doodleText={composerDock.doodleText}
                 showWorkspaceBindingControls={composerDock.showWorkspaceBindingControls}
                 paneSessionPath={composerDock.paneSessionPath}
                 useIsolatedPaneWorkspace={composerDock.useIsolatedPaneWorkspace}

@@ -765,7 +765,7 @@
     "diagramZoomReset": "Сбросить масштаб и положение",
     "typeMessage": "Введите сообщение…",
     "emptyMessage": "Пустое сообщение",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "Начнём.",
       "letsBuild": "Давайте строить.",
       "doSomethingIn": "Выполнить действие в {{workspace}}?"

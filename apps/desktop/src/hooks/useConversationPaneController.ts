@@ -261,7 +261,7 @@ export function useConversationPaneController({
 
   const composerDock: ComposerDockSectionProps = {
     composerDockRef: conversation.composerDockRef,
-    emptySessionGreeting: conversation.emptySessionGreeting,
+    doodleText: conversation.doodleText,
     showWorkspaceBindingControls: paneShowWorkspaceBindingControls,
     paneSessionPath: useIsolatedPane ? sessionPath : undefined,
     useIsolatedPaneWorkspace: useIsolatedPane,

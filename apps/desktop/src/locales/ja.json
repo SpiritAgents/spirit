@@ -761,7 +761,7 @@
     "diagramZoomReset": "ズームとパンをリセット",
     "typeMessage": "メッセージを入力…",
     "emptyMessage": "空のメッセージ",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "何かを始めましょう。",
       "letsBuild": "作りましょう。",
       "doSomethingIn": "{{workspace}}で何かしますか？"

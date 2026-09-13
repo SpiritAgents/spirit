@@ -761,7 +761,7 @@
     "diagramZoomReset": "Réinitialiser le zoom et le déplacement",
     "typeMessage": "Tapez un message…",
     "emptyMessage": "Message vide",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "Commencez quelque chose.",
       "letsBuild": "Construisons.",
       "doSomethingIn": "Faire quelque chose dans {{workspace}} ?"

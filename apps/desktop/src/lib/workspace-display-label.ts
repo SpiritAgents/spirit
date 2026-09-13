@@ -28,7 +28,7 @@ function deriveWorkspaceLabel(workspaceRoot: string): string {
   return lastSlash >= 0 ? normalized.slice(lastSlash + 1) || normalized : normalized;
 }
 
-/** Display label for greeting interpolation; null when no workspace is bound. */
+/** Display label for doodle interpolation; null when no workspace is bound. */
 export function resolveWorkspaceDisplayLabel(
   workspaceRoot: string,
   workspaceBinding: DesktopSnapshot["workspaceBinding"],

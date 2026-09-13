@@ -37,10 +37,10 @@ import { clearGitHubAutomationRepositoriesCache } from "@/lib/github-automation-
 import { isSubagentToolCallPending } from "@/lib/subagent-viewer-pending";
 import { resolveWorkspaceDisplayLabel } from "@/lib/workspace-display-label";
 import {
-  beginEmptySessionGreetingNavigation,
-  cancelEmptySessionGreetingNavigation,
-  commitEmptySessionGreetingNavigation,
-} from "@/lib/empty-session-greeting";
+  beginDoodleNavigation,
+  cancelDoodleNavigation,
+  commitDoodleNavigation,
+} from "@/lib/doodle";
 import { readSessionSplitBinding } from "@/lib/session-split-binding";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
 import { collectPaneSessionPaths } from "@/lib/conversation-split-layout";
@@ -398,7 +398,7 @@ function webPollRequestForSnapshot(
   return sessionPath ? { sessionPath } : undefined;
 }
 
-function snapshotIncludesWorkspaceGreetingVariants(
+function snapshotIncludesWorkspaceDoodleVariants(
   snapshot:
     | Pick<DesktopSnapshot, "workspaceRoot" | "workspaceBinding" | "availableWorkspaces">
     | null
@@ -471,8 +471,8 @@ export function useDesktopRuntime() {
   const appliedComposerSessionKeyRef = useRef("");
   const sessionNavigationGenerationRef = useRef(0);
   const [sessionNavigationGeneration, setSessionNavigationGeneration] = useState(0);
-  const [navigationGreetingVariant, setNavigationGreetingVariant] = useState<
-    import("@/lib/empty-session-greeting").EmptySessionGreetingVariantId | null
+  const [navigationDoodleVariant, setNavigationDoodleVariant] = useState<
+    import("@/lib/doodle").DoodleVariantId | null
   >(null);
   const busyActionRef = useRef<BusyAction>("");
   const paneWorkspaceBusySessionPathRef = useRef<string | null>(null);
@@ -502,17 +502,17 @@ export function useDesktopRuntime() {
     return next;
   }, []);
 
-  const beginNavigationEmptySessionGreeting = useCallback((navGeneration: number) => {
-    const variant = beginEmptySessionGreetingNavigation(navGeneration, {
-      includeWorkspaceVariants: snapshotIncludesWorkspaceGreetingVariants(snapshotRef.current),
+  const beginNavigationDoodle = useCallback((navGeneration: number) => {
+    const variant = beginDoodleNavigation(navGeneration, {
+      includeWorkspaceVariants: snapshotIncludesWorkspaceDoodleVariants(snapshotRef.current),
     });
-    setNavigationGreetingVariant(variant);
+    setNavigationDoodleVariant(variant);
     return variant;
   }, []);
 
-  const finishNavigationEmptySessionGreeting = useCallback((navGeneration: number) => {
-    cancelEmptySessionGreetingNavigation(navGeneration);
-    setNavigationGreetingVariant(null);
+  const finishNavigationDoodle = useCallback((navGeneration: number) => {
+    cancelDoodleNavigation(navGeneration);
+    setNavigationDoodleVariant(null);
   }, []);
 
   const sessionUiKey = useCallback(
@@ -3861,13 +3861,13 @@ export function useDesktopRuntime() {
       }
 
       const navGeneration = advanceSessionNavigationGeneration();
-      beginNavigationEmptySessionGreeting(navGeneration);
+      beginNavigationDoodle(navGeneration);
       setBusyAction("reset");
       try {
         stashSessionUi(snapshotRef.current);
         const next = await api.resetSession();
         if (navGeneration !== sessionNavigationGenerationRef.current) {
-          finishNavigationEmptySessionGreeting(navGeneration);
+          finishNavigationDoodle(navGeneration);
           return false;
         }
         if (isRemoteWebHostClient(api.kind)) {
@@ -3875,8 +3875,8 @@ export function useDesktopRuntime() {
         }
         applySnapshot(next, { navGeneration });
         restoreSessionUi(next);
-        commitEmptySessionGreetingNavigation(navGeneration, next.composerSessionKey);
-        setNavigationGreetingVariant(null);
+        commitDoodleNavigation(navGeneration, next.composerSessionKey);
+        setNavigationDoodleVariant(null);
         if (options?.composerSeed !== undefined) {
           applyComposerSeed(options.composerSeed, next);
         }
@@ -3884,7 +3884,7 @@ export function useDesktopRuntime() {
         void refreshSessions();
         return true;
       } catch (error) {
-        finishNavigationEmptySessionGreeting(navGeneration);
+        finishNavigationDoodle(navGeneration);
         setRuntimeError(describeError(error));
         return false;
       } finally {
@@ -3898,8 +3898,8 @@ export function useDesktopRuntime() {
       advanceSessionNavigationGeneration,
       applyComposerSeed,
       applySnapshot,
-      beginNavigationEmptySessionGreeting,
-      finishNavigationEmptySessionGreeting,
+      beginNavigationDoodle,
+      finishNavigationDoodle,
       refreshSessions,
       restoreSessionUi,
       stashSessionUi,
@@ -4087,7 +4087,7 @@ export function useDesktopRuntime() {
     openSession,
     releaseSessionNavigationBusy,
     sessionNavigationGeneration,
-    navigationGreetingVariant,
+    navigationDoodleVariant,
     beginSplitPaneSession,
     beginSideChatPaneSession,
     forkSessionIntoSideChat,

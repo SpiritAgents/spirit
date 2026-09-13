@@ -3,10 +3,10 @@ import type { CSSProperties } from "react";
 import type { TFunction } from "i18next";
 
 import {
-  normalizeEmptySessionGreetingSessionKey,
-  resolveEmptySessionGreeting,
-  resolveEmptySessionGreetingVariantForSession,
-} from "@/lib/empty-session-greeting";
+  normalizeDoodleSessionKey,
+  resolveDoodle,
+  resolveDoodleVariantForSession,
+} from "@/lib/doodle";
 import { resolveWorkspaceDisplayLabel } from "@/lib/workspace-display-label";
 import { resolveConversationListScopeKey } from "@/lib/conversation-list-scope";
 import { buildConversationRenderItems } from "@/lib/conversation-process-groups";
@@ -145,20 +145,20 @@ export function useConversationViewState({
       ),
     [snapshot?.availableWorkspaces, snapshot?.workspaceBinding, snapshot?.workspaceRoot, language],
   );
-  const includeWorkspaceGreetingVariants = workspaceDisplayLabel !== null;
-  const emptySessionGreeting = useMemo(() => {
-    const sessionKey = normalizeEmptySessionGreetingSessionKey(composerSessionKey);
-    const navigationVariant = runtime.navigationGreetingVariant;
+  const includeWorkspaceDoodleVariants = workspaceDisplayLabel !== null;
+  const doodleText = useMemo(() => {
+    const sessionKey = normalizeDoodleSessionKey(composerSessionKey);
+    const navigationVariant = runtime.navigationDoodleVariant;
     const variantId =
       navigationVariant ??
-      resolveEmptySessionGreetingVariantForSession(sessionKey, {
-        includeWorkspaceVariants: includeWorkspaceGreetingVariants,
+      resolveDoodleVariantForSession(sessionKey, {
+        includeWorkspaceVariants: includeWorkspaceDoodleVariants,
       });
-    return resolveEmptySessionGreeting(t, variantId, workspaceDisplayLabel);
+    return resolveDoodle(t, variantId, workspaceDisplayLabel);
   }, [
     composerSessionKey,
-    includeWorkspaceGreetingVariants,
-    runtime.navigationGreetingVariant,
+    includeWorkspaceDoodleVariants,
+    runtime.navigationDoodleVariant,
     workspaceDisplayLabel,
     t,
     language,
@@ -395,7 +395,7 @@ export function useConversationViewState({
     continueBusy,
     conversationAbortShortcutEligibleRef,
     startImplementingDisabled,
-    emptySessionGreeting,
+    doodleText,
     handleOpenSubagentViewer,
   };
 }

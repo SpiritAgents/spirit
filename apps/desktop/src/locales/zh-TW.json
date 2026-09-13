@@ -761,7 +761,7 @@
     "diagramZoomReset": "重設縮放與平移",
     "typeMessage": "輸入訊息…",
     "emptyMessage": "空訊息",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "開始做些事。",
       "letsBuild": "讓我們來打造。",
       "doSomethingIn": "在 {{workspace}} 中做些什麼？"

@@ -761,7 +761,7 @@
     "diagramZoomReset": "확대/축소 및 이동 초기화",
     "typeMessage": "메시지를 입력하세요…",
     "emptyMessage": "빈 메시지",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "무언가 시작해 보세요.",
       "letsBuild": "함께 만들어 봅시다.",
       "doSomethingIn": "{{workspace}}에서 작업을 해볼까요?"

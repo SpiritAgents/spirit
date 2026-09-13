@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { ApprovalLevelMenu } from "@/components/approval-level-menu";
 import { BranchSelectMenu } from "@/components/branch-select-menu";
 import { ComposerSurface } from "@/components/composer/composer-surface";
+import { Doodle } from "@/components/conversation/doodle";
 import { ComposerChangesCard } from "@/components/composer-changes-card";
 import { ComposerContextUsageRing } from "@/components/composer-context-usage-ring";
 import { ComposerScrollToBottomButton } from "@/components/composer-scroll-to-bottom-button";
@@ -50,7 +51,6 @@ import { normalizePaneSessionPathKey } from "@/lib/pane-desktop-snapshot";
 import { shouldShowComposerChangesCard } from "@/lib/composer-changes-card-visibility";
 import { viewportLengthToScaleRootLocal } from "@/lib/ui-layout-scale";
 import type { ComposerLocalFileAttachmentView } from "@/lib/local-file-attachments";
-import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 import { useComposerSuggestionAnchor } from "@/hooks/use-composer-suggestion-anchor";
 import type { DesktopSnapshot } from "@/types";
@@ -60,7 +60,7 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 
 export type ComposerDockProps = {
   isEmptySession: boolean;
-  emptySessionGreeting: string;
+  doodleText: string;
   showWorkspaceBindingControls: boolean;
   paneSessionPath?: string;
   useIsolatedPaneWorkspace?: boolean;
@@ -149,7 +149,7 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
 export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(function ComposerDock(
   {
     isEmptySession,
-    emptySessionGreeting,
+    doodleText,
     showWorkspaceBindingControls,
     paneSessionPath,
     useIsolatedPaneWorkspace = false,
@@ -426,19 +426,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
           isEmptySession ? CONVERSATION_MAX_W : CONVERSATION_MESSAGE_LIST_MAX_W,
         )}
       >
-        {isEmptySession ? (
-          <div data-spirit-surface="conversation-empty">
-            <p
-              className={cn(
-                "mb-6 text-center text-2xl tracking-tight text-foreground sm:text-3xl",
-                FONT_WEIGHT_MEDIUM,
-              )}
-              data-testid="empty-session-greeting"
-            >
-              {emptySessionGreeting}
-            </p>
-          </div>
-        ) : null}
+        {isEmptySession ? <Doodle>{doodleText}</Doodle> : null}
         <div className="space-y-2">
           {showWorkspaceBindingControls ? (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5">

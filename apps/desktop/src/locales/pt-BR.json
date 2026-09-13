@@ -761,7 +761,7 @@
     "diagramZoomReset": "Redefinir Zoom e Pan",
     "typeMessage": "Digite uma mensagem…",
     "emptyMessage": "Mensagem vazia",
-    "emptySessionGreeting": {
+    "doodle": {
       "startSomething": "Comece algo.",
       "letsBuild": "Vamos construir.",
       "doSomethingIn": "Fazer algo em {{workspace}}?"
