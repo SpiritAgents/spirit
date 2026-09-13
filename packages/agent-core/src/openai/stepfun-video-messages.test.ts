@@ -16,14 +16,14 @@ const MINIMAL_MP4_HEADER = Buffer.from([
 ]);
 
 function stepfunConfig(
-  capabilities: OpenAiTransportConfig["modelCapabilities"],
+  capabilities?: NonNullable<OpenAiTransportConfig["modelCapabilities"]>,
 ): OpenAiTransportConfig {
   return {
     apiKey: "test-key",
     baseUrl: "https://api.stepfun.com/v1",
     model: "step-3.7-flash",
     llmVendor: "stepfun",
-    modelCapabilities: capabilities,
+    ...(capabilities ? { modelCapabilities: capabilities } : {}),
   };
 }
 

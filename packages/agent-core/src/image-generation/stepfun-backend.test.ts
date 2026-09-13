@@ -26,7 +26,7 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
   try {
     await generateStepfunImage(
       { apiKey: "test-key", model: "step-1x-medium" },
-      { prompt: "a red circle" },
+      { prompt: "a red circle", size: "1024x1024" },
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
@@ -35,7 +35,7 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
     );
     await generateStepfunImage(
       { apiKey: "test-key", model: "step-1x-medium", baseUrl: "https://api.stepfun.ai/v1" },
-      { prompt: "a red circle" },
+      { prompt: "a red circle", size: "1024x1024" },
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
