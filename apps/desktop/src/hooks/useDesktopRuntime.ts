@@ -1503,7 +1503,7 @@ export function useDesktopRuntime() {
     }
 
     // A delta that cannot be applied (stale base revision after renderer-side skips, fresh
-    // bootstrap still in flight, ...) must trigger exactly one full-snapshot resync.
+    // bootstrap still in flight, …) must trigger exactly one full-snapshot resync.
     let resyncInFlight = false;
     const resyncFromFullSnapshot = () => {
       if (resyncInFlight) {

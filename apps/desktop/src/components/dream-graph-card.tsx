@@ -219,7 +219,7 @@ function DreamInfoNode({ data }: NodeProps<Node<DreamNodeData>>) {
                         variant="outline"
                         className="cursor-default text-[10px] text-muted-foreground"
                       >
-                        ...
+                        …
                       </Badge>
                     </HoverCardTrigger>
                     <HoverCardContent align="start" className="w-[18rem]">

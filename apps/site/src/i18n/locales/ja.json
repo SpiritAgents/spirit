@@ -117,7 +117,7 @@
       "apiKeyLabel": "APIキー",
       "apiKeyPlaceholder": "キーを入力",
       "addThisModel": "このモデルを追加",
-      "adding": "追加中...",
+      "adding": "追加中…",
       "customConnectionTitle": "カスタム接続",
       "connectProviderTitle": "プロバイダーに接続"
     },
@@ -246,7 +246,7 @@
     "copyInstall": "インストールコマンドをコピー",
     "copied": "コピーしました",
     "comingSoonJoke": "近日公開™",
-    "listingInProgress": "一覧表示中...",
+    "listingInProgress": "一覧表示中…",
     "cliLogoTitle": "Spirit",
     "cliUserMessage": "auth.ts を確認して、セッション更新のバグを修正してください。",
     "cliAssistantMessage": "auth.ts を調べて、失敗するセッションチェックを修正します。",

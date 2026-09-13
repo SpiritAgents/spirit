@@ -622,7 +622,7 @@ export function lastAssistantPlainTextInHistory(
 /**
  * From the "last user message" up to the first `tool`, take the **first** non-empty assistant body.
  * On the OpenAI path, tool results are usually not in `history()`'s LlmMessages; using the "last" assistant
- * would wrongly pick the post-tool final text, overwriting/mismatching the prefix already shown during streaming (e.g. "OK, let me check...").
+ * would wrongly pick the post-tool final text, overwriting/mismatching the prefix already shown during streaming (e.g. "OK, let me check…").
  */
 export function assistantPrefixBeforeFirstToolInCurrentTurn(
   hist: ReadonlyArray<{ role: string; content: string | LlmMessageContent }>,

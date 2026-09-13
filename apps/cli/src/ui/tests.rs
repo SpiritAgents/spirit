@@ -1198,13 +1198,13 @@ fn pending_thinking_detail_is_hidden_when_aux_details_collapsed() {
     app.pending_assistant_msg_index = Some(0);
     app.pending_aux = Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "Thinking...".to_string(),
+        status_text: "Thinking…".to_string(),
         detail_text: Some("Check the current render branch first.".to_string()),
     });
 
     let lines = render_text_lines(render_message_lines(&app, &app.messages[0], 0));
 
-    assert!(lines.iter().any(|line| line.contains("Thinking...")));
+    assert!(lines.iter().any(|line| line.contains("Thinking…")));
     assert!(
         lines
             .iter()
@@ -1227,13 +1227,13 @@ fn pending_thinking_detail_is_visible_when_aux_details_expanded() {
     app.pending_assistant_msg_index = Some(0);
     app.pending_aux = Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "Thinking...".to_string(),
+        status_text: "Thinking…".to_string(),
         detail_text: Some("Check the current render branch first.".to_string()),
     });
 
     let lines = render_text_lines(render_message_lines(&app, &app.messages[0], 0));
 
-    assert!(lines.iter().any(|line| line.contains("Thinking...")));
+    assert!(lines.iter().any(|line| line.contains("Thinking…")));
     assert!(
         lines
             .iter()
@@ -1254,15 +1254,11 @@ fn pending_thinking_spinner_is_drawn_by_cli_ui() {
 
     app.thinking_spinner_index = 0;
     let lines_pipe = render_text_lines(render_message_lines(&app, &app.messages[0], 0));
-    assert!(lines_pipe.iter().any(|line| line.contains("| Thinking...")));
+    assert!(lines_pipe.iter().any(|line| line.contains("| Thinking…")));
 
     app.thinking_spinner_index = 1;
     let lines_slash = render_text_lines(render_message_lines(&app, &app.messages[0], 0));
-    assert!(
-        lines_slash
-            .iter()
-            .any(|line| line.contains("/ Thinking..."))
-    );
+    assert!(lines_slash.iter().any(|line| line.contains("/ Thinking…")));
 }
 
 #[test]
@@ -1303,13 +1299,13 @@ fn standalone_pending_aux_hides_detail_when_collapsed() {
     app.pending_assistant_msg_index = None;
     app.pending_aux = Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "| Thinking...".to_string(),
+        status_text: "| Thinking…".to_string(),
         detail_text: Some("Keep waiting for the sub-session to return.".to_string()),
     });
 
     let lines = render_text_lines(build_history_lines(&app, 120));
 
-    assert!(lines.iter().any(|line| line.contains("Thinking...")));
+    assert!(lines.iter().any(|line| line.contains("Thinking…")));
     assert!(
         lines
             .iter()
@@ -1359,7 +1355,7 @@ fn persisted_subagent_status_wins_over_generic_pending_thinking() {
     app.pending_assistant_msg_index = Some(1);
     app.pending_aux = Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "| Thinking...".to_string(),
+        status_text: "| Thinking…".to_string(),
         detail_text: Some("Keep waiting for the parent session to wrap up.".to_string()),
     });
     app.persisted_standalone_pending_aux = Some(PendingAssistantAux {
@@ -1376,7 +1372,7 @@ fn persisted_subagent_status_wins_over_generic_pending_thinking() {
         .expect("status line exists");
     let thinking_idx = lines
         .iter()
-        .position(|line| line.contains("Thinking..."))
+        .position(|line| line.contains("Thinking…"))
         .expect("thinking line exists");
 
     assert!(status_idx < thinking_idx);
@@ -1396,7 +1392,7 @@ fn persisted_subagent_status_renders_before_parent_streaming_reply() {
     app.pending_assistant_msg_index = Some(1);
     app.pending_aux = Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "| Thinking...".to_string(),
+        status_text: "| Thinking…".to_string(),
         detail_text: Some("The parent session is still organizing the summary.".to_string()),
     });
     app.persisted_standalone_pending_aux = Some(PendingAssistantAux {
@@ -1413,7 +1409,7 @@ fn persisted_subagent_status_renders_before_parent_streaming_reply() {
         .expect("status line exists");
     let thinking_idx = lines
         .iter()
-        .position(|line| line.contains("Thinking..."))
+        .position(|line| line.contains("Thinking…"))
         .expect("thinking line exists");
     let parent_idx = lines
         .iter()
@@ -1547,13 +1543,13 @@ fn persisted_subagent_status_renders_as_separate_message_before_parent_reply_aft
 fn subagent_pending_aux_detail_is_hidden_when_aux_details_collapsed() {
     let view = build_subagent_detail_view(Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "| Thinking...".to_string(),
+        status_text: "| Thinking…".to_string(),
         detail_text: Some("Check the sub-session's current progress first.".to_string()),
     }));
 
     let lines = render_text_lines(build_subagent_history_lines(&view, false, 0));
 
-    assert!(lines.iter().any(|line| line.contains("Thinking...")));
+    assert!(lines.iter().any(|line| line.contains("Thinking…")));
     assert!(
         lines
             .iter()
@@ -1565,13 +1561,13 @@ fn subagent_pending_aux_detail_is_hidden_when_aux_details_collapsed() {
 fn subagent_pending_aux_detail_is_visible_when_aux_details_expanded() {
     let view = build_subagent_detail_view(Some(PendingAssistantAux {
         kind: AssistantAuxKind::Thinking,
-        status_text: "| Thinking...".to_string(),
+        status_text: "| Thinking…".to_string(),
         detail_text: Some("Check the sub-session's current progress first.".to_string()),
     }));
 
     let lines = render_text_lines(build_subagent_history_lines(&view, true, 0));
 
-    assert!(lines.iter().any(|line| line.contains("Thinking...")));
+    assert!(lines.iter().any(|line| line.contains("Thinking…")));
     assert!(
         lines
             .iter()

@@ -440,7 +440,7 @@ fn derive_session_display_name(messages: &[ConversationMessageSnapshot]) -> Opti
         .trim();
     let truncated = seed.chars().take(28).collect::<String>();
     Some(if seed.chars().count() > 28 {
-        format!("{}...", truncated)
+        format!("{}…", truncated)
     } else {
         seed.to_string()
     })

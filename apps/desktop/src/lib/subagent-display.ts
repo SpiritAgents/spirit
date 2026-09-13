@@ -46,24 +46,24 @@ export function isLivePendingReasoningAux(pendingAux: PendingAssistantAux | unde
   );
 }
 
-/** Runtime `pendingAuxState().statusText` while no `detailText` yet (e.g. `| Thinking...`). */
+/** Runtime `pendingAuxState().statusText` while no `detailText` yet (e.g. `| Thinking…`). */
 export function isGenericPendingThinkingStatusText(text: string | undefined): boolean {
   const normalized = text?.trim();
   if (!normalized) {
     return false;
   }
   const withoutSpinner = stripSubagentSpinnerPrefix(normalized);
-  return withoutSpinner === "Thinking...";
+  return withoutSpinner === "Thinking…";
 }
 
-/** Placeholder compaction aux before summary text arrives (e.g. `| Compressing...`). */
+/** Placeholder compaction aux before summary text arrives (e.g. `| Compressing…`). */
 export function isGenericPendingCompactionStatusText(text: string | undefined): boolean {
   const normalized = text?.trim();
   if (!normalized) {
     return false;
   }
   const withoutSpinner = stripSubagentSpinnerPrefix(normalized);
-  return withoutSpinner === "Compressing...";
+  return withoutSpinner === "Compressing…";
 }
 
 function isSubagentRuntimeStatusTail(after: string): boolean {
@@ -112,7 +112,7 @@ export function isSubagentStatusSurfaceText(text: string | undefined): boolean {
 
   const withoutSpinner = stripSubagentSpinnerPrefix(normalized);
 
-  if (withoutSpinner === "Thinking..." || withoutSpinner === "Compressing...") {
+  if (withoutSpinner === "Thinking…" || withoutSpinner === "Compressing…") {
     return true;
   }
   if (/:\s*Running\s*$/u.test(withoutSpinner)) {
@@ -217,7 +217,7 @@ export function parsePendingSubagentStatusText(text: string | undefined): string
   }
 
   const status = stripSubagentSpinnerPrefix(text);
-  if (!status || status === "Thinking..." || status === "Compressing...") {
+  if (!status || status === "Thinking…" || status === "Compressing…") {
     return undefined;
   }
 

@@ -1561,7 +1561,7 @@ mod tests {
     fn standalone_subagent_status_aux_detection_ignores_generic_spinner_text() {
         assert!(!is_standalone_subagent_status_aux(&PendingAssistantAux {
             kind: AssistantAuxKind::Thinking,
-            status_text: "| Thinking...".to_string(),
+            status_text: "| Thinking…".to_string(),
             detail_text: Some("Still working".to_string()),
         }));
     }

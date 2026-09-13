@@ -17,14 +17,14 @@ test("shouldShowAssistantCompactionCollapsible shows Compacting placeholder befo
   assert.equal(
     shouldShowAssistantCompactionCollapsible(message, {
       kind: "compressing",
-      statusText: "| Compressing...",
+      statusText: "| Compressing…",
     }),
     true,
   );
   assert.equal(
     assistantCompactionLive(message, {
       kind: "compressing",
-      statusText: "| Compressing...",
+      statusText: "| Compressing…",
     }),
     true,
   );

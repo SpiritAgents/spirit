@@ -680,7 +680,7 @@ export class RemoteDesktopRuntime {
 
   /**
    * Daemon pushes session.snapshot only at approval/turn boundaries, not on
-   * begin-assistant-response. Synthesize the live Thinking... aux locally so
+   * begin-assistant-response. Synthesize the live Thinking… aux locally so
    * empty pending assistant rows stay visible until thinking chunks arrive.
    */
   private synthesizeLocalPendingAux(
@@ -698,7 +698,7 @@ export class RemoteDesktopRuntime {
     if (compaction) {
       return {
         kind: "compressing",
-        statusText: `${frame} Compressing...`,
+        statusText: `${frame} Compressing…`,
         detailText: compaction,
       };
     }
@@ -707,7 +707,7 @@ export class RemoteDesktopRuntime {
     if (thinking) {
       return {
         kind: "thinking",
-        statusText: `${frame} Thinking...`,
+        statusText: `${frame} Thinking…`,
         detailText: thinking,
       };
     }
@@ -719,7 +719,7 @@ export class RemoteDesktopRuntime {
     const kind = snapshotAux?.kind === "compressing" ? "compressing" : "thinking";
     return {
       kind,
-      statusText: kind === "thinking" ? `${frame} Thinking...` : `${frame} Compressing...`,
+      statusText: kind === "thinking" ? `${frame} Thinking…` : `${frame} Compressing…`,
     };
   }
 

@@ -463,7 +463,7 @@ test("shouldHideEmptyPendingAssistantSnapshot keeps live thinking rows visible",
   assert.equal(
     shouldHideEmptyPendingAssistantSnapshot(emptyPending, {
       kind: "thinking",
-      statusText: "| Thinking...",
+      statusText: "| Thinking…",
     }),
     false,
   );
@@ -496,7 +496,7 @@ test("shouldHideEmptyPendingAssistantSnapshot hides ghost row when tool follows"
   assert.equal(
     shouldHideEmptyPendingAssistantSnapshot(
       messages[1],
-      { kind: "thinking", statusText: "| Thinking..." },
+      { kind: "thinking", statusText: "| Thinking…" },
       messages,
       1,
     ),
@@ -531,7 +531,7 @@ test("shouldHideEmptyPendingAssistantSnapshot keeps pending row between tool bat
   assert.equal(
     shouldHideEmptyPendingAssistantSnapshot(
       messages[2],
-      { kind: "thinking", statusText: "| Thinking..." },
+      { kind: "thinking", statusText: "| Thinking…" },
       messages,
       2,
     ),

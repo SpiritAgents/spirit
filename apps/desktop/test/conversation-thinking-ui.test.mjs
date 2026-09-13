@@ -149,7 +149,7 @@ test("shouldShowAssistantThinkingCollapsible hides placeholder when tool follows
       messages[1],
       {
         kind: "thinking",
-        statusText: "| Thinking...",
+        statusText: "| Thinking…",
       },
       messages,
       1,
@@ -200,7 +200,7 @@ test("shouldShowAssistantThinkingCollapsible hides placeholder while a tool is s
       messages[3],
       {
         kind: "thinking",
-        statusText: "| Thinking...",
+        statusText: "| Thinking…",
       },
       messages,
       3,
@@ -238,7 +238,7 @@ test("shouldShowAssistantThinkingCollapsible keeps placeholder between tool batc
       messages[2],
       {
         kind: "thinking",
-        statusText: "| Thinking...",
+        statusText: "| Thinking…",
       },
       messages,
       2,

@@ -786,7 +786,7 @@ test("remove-pending after terminal web_search seeds after-tools Thinking placeh
   assert.deepEqual(
     buildVisibleMessageSnapshots({
       messages: timelineMessages,
-      livePendingAux: { kind: "thinking", statusText: "| Thinking..." },
+      livePendingAux: { kind: "thinking", statusText: "| Thinking…" },
       rewind: createDesktopRewindMetadata(),
     }).map(rowToken),
     [
@@ -1199,7 +1199,7 @@ test("interleaved built-in web_search shows Thinking placeholder after last term
   const showThinking = pendingAfterAllTools
     ? shouldShowAssistantThinkingCollapsible(
         pendingAfterAllTools,
-        { kind: "thinking", statusText: "| Thinking..." },
+        { kind: "thinking", statusText: "| Thinking…" },
         timelineMessages,
         timelineMessages.indexOf(pendingAfterAllTools),
       )
@@ -1253,7 +1253,7 @@ test("sequential web_search clears Thinking placeholder during next preview and 
   const showThinking = pendingAfterWs2
     ? shouldShowAssistantThinkingCollapsible(
         pendingAfterWs2,
-        { kind: "thinking", statusText: "| Thinking..." },
+        { kind: "thinking", statusText: "| Thinking…" },
         timelineMessages,
         timelineMessages.indexOf(pendingAfterWs2),
       )
@@ -1298,7 +1298,7 @@ test("sequential web_search clears Thinking placeholder during next preview and 
   const showThinkingAfterTerminal = pendingAfterAllTools
     ? shouldShowAssistantThinkingCollapsible(
         pendingAfterAllTools,
-        { kind: "thinking", statusText: "| Thinking..." },
+        { kind: "thinking", statusText: "| Thinking…" },
         afterTerminalMessages,
         afterTerminalMessages.indexOf(pendingAfterAllTools),
       )
