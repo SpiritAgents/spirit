@@ -370,9 +370,9 @@ pub(in crate::ui) fn pending_aux_status_label(
     animate: bool,
 ) -> String {
     let stripped = strip_subagent_spinner_prefix(&pending_aux.status_text);
-    let body = if stripped.is_empty() || stripped == "Thinking…" || stripped == "Compressing…" {
+    let body = if stripped.is_empty() || stripped == "Thinking…" || stripped == "Compacting…" {
         match pending_aux.kind {
-            AssistantAuxKind::Compressing => "Compressing…".to_string(),
+            AssistantAuxKind::Compacting => "Compacting…".to_string(),
             AssistantAuxKind::Thinking => "Thinking…".to_string(),
         }
     } else {
@@ -390,7 +390,7 @@ pub(in crate::ui) fn pending_aux_status_style(kind: AssistantAuxKind) -> Style {
         AssistantAuxKind::Thinking => Style::default()
             .fg(Color::Yellow)
             .add_modifier(Modifier::ITALIC),
-        AssistantAuxKind::Compressing => {
+        AssistantAuxKind::Compacting => {
             assistant_message_prefix_style().add_modifier(Modifier::ITALIC)
         }
     };
@@ -404,14 +404,14 @@ pub(in crate::ui) fn pending_aux_status_style(kind: AssistantAuxKind) -> Style {
 pub(in crate::ui) fn assistant_aux_title(kind: AssistantAuxKind) -> String {
     match kind {
         AssistantAuxKind::Thinking => t!("ui.aux.thinking").into_owned(),
-        AssistantAuxKind::Compressing => t!("ui.aux.compacting").into_owned(),
+        AssistantAuxKind::Compacting => t!("ui.aux.compacting").into_owned(),
     }
 }
 
 pub(in crate::ui) fn assistant_aux_title_style(kind: AssistantAuxKind) -> Style {
     let base = match kind {
         AssistantAuxKind::Thinking => Style::default().fg(Color::DarkGray),
-        AssistantAuxKind::Compressing => subtle_aux_text_style(),
+        AssistantAuxKind::Compacting => subtle_aux_text_style(),
     };
 
     patch_style_foreground(
@@ -423,7 +423,7 @@ pub(in crate::ui) fn assistant_aux_title_style(kind: AssistantAuxKind) -> Style 
 pub(in crate::ui) fn assistant_aux_body_style(kind: AssistantAuxKind) -> Style {
     let base = match kind {
         AssistantAuxKind::Thinking => Style::default().fg(Color::DarkGray),
-        AssistantAuxKind::Compressing => subtle_aux_text_style(),
+        AssistantAuxKind::Compacting => subtle_aux_text_style(),
     };
 
     patch_style_foreground(
@@ -608,7 +608,7 @@ pub(in crate::ui) fn render_message_lines(
     let stored_compaction_text = stored_aux
         .and_then(|aux| aux.compaction.as_deref())
         .filter(|value| !value.trim().is_empty())
-        .filter(|_| !matches!(pending_aux, Some(aux) if aux.kind == AssistantAuxKind::Compressing));
+        .filter(|_| !matches!(pending_aux, Some(aux) if aux.kind == AssistantAuxKind::Compacting));
     let embedded_thinking_text = if msg.role == MessageRole::Agent && app.show_aux_details {
         embedded_thinking
             .as_deref()
@@ -655,12 +655,12 @@ pub(in crate::ui) fn render_message_lines(
 
     if let Some(compaction_text) = stored_compaction_text {
         push_message_line(vec![Span::styled(
-            assistant_aux_title(AssistantAuxKind::Compressing),
-            assistant_aux_title_style(AssistantAuxKind::Compressing),
+            assistant_aux_title(AssistantAuxKind::Compacting),
+            assistant_aux_title_style(AssistantAuxKind::Compacting),
         )]);
         render_aux_text_lines(
             &mut push_message_line,
-            AssistantAuxKind::Compressing,
+            AssistantAuxKind::Compacting,
             compaction_text,
         );
     }

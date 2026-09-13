@@ -48,7 +48,7 @@ fn is_subagent_runtime_status_tail(after: &str) -> bool {
         || tail.starts_with("Sub")
         || tail.starts_with("Sp")
         || tail.starts_with("Thinking")
-        || tail.starts_with("Compressing")
+        || tail.starts_with("Compacting")
         || tail.starts_with("Running")
         || tail.starts_with("Awaiting")
         || tail.starts_with("正在")
@@ -89,7 +89,7 @@ pub fn is_subagent_status_surface_text(text: &str) -> bool {
     }
 
     let without_spinner = strip_subagent_spinner_prefix(normalized);
-    if without_spinner == "Thinking…" || without_spinner == "Compressing…" {
+    if without_spinner == "Thinking…" || without_spinner == "Compacting…" {
         return true;
     }
     if without_spinner.ends_with(": Running") || without_spinner.ends_with("： Running") {
@@ -141,7 +141,7 @@ pub fn is_subagent_status_surface_text(text: &str) -> bool {
 
 pub fn parse_pending_subagent_status_text(text: &str) -> Option<String> {
     let status = strip_subagent_spinner_prefix(text);
-    if status.is_empty() || status == "Thinking…" || status == "Compressing…" {
+    if status.is_empty() || status == "Thinking…" || status == "Compacting…" {
         return None;
     }
     if !is_subagent_status_surface_text(&status) {
