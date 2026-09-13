@@ -63,13 +63,6 @@ export function SessionSidebarShell({
     [minWidthPx, maxWidthPx],
   );
 
-  useEffect(() => {
-    if (widthPx <= maxWidthPx) {
-      return;
-    }
-    setWidthPx(clampWidth(widthPx));
-  }, [clampWidth, maxWidthPx, setWidthPx, widthPx]);
-
   const onResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();

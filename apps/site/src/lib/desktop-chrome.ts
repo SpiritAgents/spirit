@@ -198,9 +198,15 @@ export function computeSessionSidebarMaxWidthPx(): number {
   if (typeof window === "undefined") {
     return SESSION_SIDEBAR_MAX_WIDTH_PX;
   }
-  return Math.min(
-    SESSION_SIDEBAR_MAX_WIDTH_PX,
-    Math.round(window.innerWidth * SESSION_SIDEBAR_VIEWPORT_MAX_RATIO),
+  // The viewport ratio only shrinks the drag-time upper bound; never let it drop
+  // below the minimum width, or every clamp caller would compress the sidebar
+  // under its own floor on narrow windows.
+  return Math.max(
+    SESSION_SIDEBAR_MIN_WIDTH_PX,
+    Math.min(
+      SESSION_SIDEBAR_MAX_WIDTH_PX,
+      Math.round(window.innerWidth * SESSION_SIDEBAR_VIEWPORT_MAX_RATIO),
+    ),
   );
 }
 
