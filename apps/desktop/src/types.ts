@@ -101,7 +101,7 @@ export interface UpdateConfigRequest {
   agentMode?: DesktopAgentMode;
   /** @deprecated Use agentMode. */
   planMode?: boolean;
-  /** Absent means no change to the saved Desktop Web remote access config. */
+  /** Absent means no change to the saved Desktop Web remote control config. */
   webHost?: DesktopWebHostConfigUpdate;
   /** Absent means no change to the saved dreams config. */
   dreams?: DesktopDreamConfigUpdate;

@@ -90,11 +90,11 @@ export function NetworksSettingsPanel({
       </div>
 
       <div className="space-y-3">
-        <p className="text-xs text-muted-foreground">{t("settings.remoteAccessSection")}</p>
+        <p className="text-xs text-muted-foreground">{t("settings.remoteControlSection")}</p>
         <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           <SettingsRow
-            label={t("settings.webRemoteAccess")}
-            description={t("settings.webRemoteAccessDescription")}
+            label={t("settings.webRemoteControl")}
+            description={t("settings.webRemoteControlDescription")}
             htmlFor="settings-web-host-enabled"
           >
             <div className="flex items-center justify-end gap-3">
