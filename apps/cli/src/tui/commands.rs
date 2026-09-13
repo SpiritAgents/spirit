@@ -1441,7 +1441,7 @@ fn truncate_rewind_preview(input: &str) -> String {
     }
 
     let mut out = chars.into_iter().take(48).collect::<String>();
-    out.push_str("…");
+    out.push('…');
     out
 }
 
