@@ -84,7 +84,7 @@ ${COMPACT_HISTORY_TRANSCRIPT_OUTPUT_SECTION}`;
 const SESSION_TRANSCRIPT_HARD_REQUIREMENT = `6. The [Transcript] section must contain exactly three lines: the section title, then the transcript directory absolute path alone on the next line, then this exact guidance sentence on the following line: ${SESSION_TRANSCRIPT_READ_FILE_GUIDANCE} Do not output only the path.`;
 
 export const COMPACT_HISTORY_TRIGGER_USER_PROMPT =
-  "Output the compression summary now. Follow the system message template exactly; do not call tools or ask questions.";
+  "Output the compaction summary now. Follow the system message template exactly; do not call tools or ask questions.";
 
 function buildCompactHistorySystemPromptCore(includeTranscriptSection: boolean): string {
   const hardRequirements = [
@@ -97,7 +97,7 @@ function buildCompactHistorySystemPromptCore(includeTranscriptSection: boolean):
   ];
 
   return [
-    "Compress the conversation in the messages that follow into a reusable system summary for later turns.",
+    "Compact the conversation in the messages that follow into a reusable system summary for later turns.",
     "",
     "Hard requirements:",
     ...hardRequirements,
@@ -127,7 +127,7 @@ export function buildCompactHistorySystemPrompt(transcriptDirPath?: string): str
     SESSION_TRANSCRIPT_EXAMPLE_DIR_PATH,
     SESSION_TRANSCRIPT_READ_FILE_GUIDANCE,
     "",
-    `Transcript directory path for this compression (use this exact path on the transcript line): ${normalizedPath}`,
+    `Transcript directory path for this compaction (use this exact path on the transcript line): ${normalizedPath}`,
   ].join("\n");
 }
 

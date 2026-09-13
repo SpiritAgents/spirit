@@ -333,7 +333,7 @@ export function currentAuxKind<Config, State, ToolRequest>(
   runtime: StreamingRuntime<Config, State, ToolRequest>,
 ): AssistantAuxKind | undefined {
   if (runtime.pendingHistoryCompaction) {
-    return "compressing";
+    return "compacting";
   }
 
   if (

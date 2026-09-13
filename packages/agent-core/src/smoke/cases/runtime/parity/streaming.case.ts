@@ -990,8 +990,8 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
   await flushMicrotasks(4);
   await streamingCompactionRuntime.poll();
   const streamingCompactionAux = streamingCompactionRuntime.pendingAuxState();
-  if (!streamingCompactionAux || streamingCompactionAux.kind !== "compressing") {
-    throw new Error("streaming compact smoke did not enter the compressing aux state.");
+  if (!streamingCompactionAux || streamingCompactionAux.kind !== "compacting") {
+    throw new Error("streaming compact smoke did not enter the compacting aux state.");
   }
 
   streamingCompactionTransport.finishCompaction();

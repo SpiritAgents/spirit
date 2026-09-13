@@ -3998,7 +3998,7 @@ function normalizeSubagentStatusProgress(
     !normalized ||
     normalized === title ||
     normalized === "Thinking…" ||
-    normalized === "Compressing…"
+    normalized === "Compacting…"
   ) {
     return undefined;
   }

@@ -162,8 +162,8 @@ export async function runManualToolsCase(): Promise<RuntimeParityCaseResult> {
   await flushMicrotasks(4);
   await manualCompactionRuntime.poll();
   const manualCompactionAux = manualCompactionRuntime.pendingAuxState();
-  if (!manualCompactionAux || manualCompactionAux.kind !== "compressing") {
-    throw new Error("manual compaction smoke did not expose the compressing aux state.");
+  if (!manualCompactionAux || manualCompactionAux.kind !== "compacting") {
+    throw new Error("manual compaction smoke did not expose the compacting aux state.");
   }
   if (manualCompactionRuntime.takeCompletedManualHistoryCompactionResult()) {
     throw new Error(
