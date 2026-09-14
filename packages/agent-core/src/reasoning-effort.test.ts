@@ -427,3 +427,35 @@ test("deepseek v4 open-responses maps reasoning effort for transport context", (
     undefined,
   );
 });
+
+test("Kimi Code think_efforts default_effort is used as the model default", () => {
+  const context = {
+    provider: "kimi-code" as const,
+    model: "kimi-for-coding",
+    transportKind: "openai-compatible" as const,
+    supportedEfforts: ["low", "high", "max"],
+    defaultEffort: "max" as const,
+  };
+
+  assert.equal(defaultModelReasoningEffort(context), "max");
+  assert.deepEqual(
+    modelReasoningEffortOptions(context).map((option) => option.value),
+    ["default", "low", "high", "max"],
+  );
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("max", context), "max");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext(undefined, context), "max");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("default", context), undefined);
+});
+
+test("Kimi Code without think_efforts still omits reasoning_effort by default", () => {
+  const context = {
+    provider: "kimi-code" as const,
+    model: "kimi-for-coding-highspeed",
+    transportKind: "openai-compatible" as const,
+    supportedEfforts: ["minimal", "low", "medium", "high"],
+  };
+
+  assert.equal(defaultModelReasoningEffort(context), "default");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("max", context), "high");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext(undefined, context), undefined);
+});

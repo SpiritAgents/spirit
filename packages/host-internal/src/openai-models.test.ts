@@ -262,6 +262,20 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
         supports_image_in: true,
         supports_video_in: true,
         supports_thinking_type: "only",
+        think_efforts: {
+          support: true,
+          valid_efforts: ["low", "high", "max"],
+          default_effort: "max",
+        },
+      },
+      {
+        id: "kimi-for-coding-highspeed",
+        display_name: "K2.7 Code Highspeed",
+        context_length: 262144,
+        supports_reasoning: true,
+        supports_image_in: true,
+        supports_video_in: true,
+        supports_thinking_type: "only",
       },
     ],
   });
@@ -273,9 +287,44 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
       supportsImageInput: true,
       supportsVideoInput: true,
       supportsReasoning: true,
+      supportedReasoningEfforts: ["low", "high", "max"],
+      defaultReasoningEffort: "max",
+      contextLength: 262144,
+      supportsThinkingType: "only",
+    },
+    {
+      id: "kimi-for-coding-highspeed",
+      displayName: "K2.7 Code Highspeed",
+      supportsImageInput: true,
+      supportsVideoInput: true,
+      supportsReasoning: true,
       supportedReasoningEfforts: moonshotSupportedReasoningEfforts(true),
       contextLength: 262144,
       supportsThinkingType: "only",
+    },
+  ]);
+});
+
+test("parseKimiCodeModelEntriesPayload ignores think_efforts when support is not true", () => {
+  const entries = parseKimiCodeModelEntriesPayload({
+    data: [
+      {
+        id: "k3",
+        supports_reasoning: true,
+        think_efforts: {
+          support: false,
+          valid_efforts: ["low", "high", "max"],
+          default_effort: "high",
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "k3",
+      supportsReasoning: true,
+      supportedReasoningEfforts: moonshotSupportedReasoningEfforts(true, "k3"),
     },
   ]);
 });

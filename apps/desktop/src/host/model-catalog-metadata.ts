@@ -121,6 +121,7 @@ export function previewModelCatalogForTransport(input: {
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
     ...resolvePreviewSupportedReasoningEffortsForEntry(input.provider, entry),
+    ...resolvePreviewDefaultReasoningEffortForEntry(entry),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
     ...(entry.maxCompletionTokens !== undefined
       ? { maxCompletionTokens: entry.maxCompletionTokens }
@@ -169,6 +170,7 @@ export function previewCatalogMapForTransport(input: {
               ),
             }
           : {}),
+        ...resolvePreviewDefaultReasoningEffortForEntry(entry),
         ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
         ...(entry.maxCompletionTokens !== undefined
           ? { maxCompletionTokens: entry.maxCompletionTokens }
@@ -238,7 +240,8 @@ function resolvePreviewSupportedReasoningEffortsForEntry(
   entry: ProviderListedModelEntry,
 ): { supportedReasoningEfforts?: DesktopModelReasoningEffort[] } {
   // The catalog cache may still hold the K2.x minimal/low/medium/high values; K3 uses the fixed documented tiers.
-  if (isMoonshotKimiK3CatalogModelId(entry.id)) {
+  // Kimi Code lists efforts via think_efforts; do not apply the Moonshot kimi-k3 override.
+  if (provider !== "kimi-code" && isMoonshotKimiK3CatalogModelId(entry.id)) {
     return {
       supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
         moonshotK3SupportedReasoningEfforts(),
@@ -289,4 +292,24 @@ function normalizePreviewSupportedReasoningEfforts(
     normalized.push(effort);
   }
   return normalized;
+}
+
+function resolvePreviewDefaultReasoningEffortForEntry(
+  entry: Pick<ProviderListedModelEntry, "defaultReasoningEffort">,
+): { defaultReasoningEffort?: DesktopModelReasoningEffort } {
+  const effort = normalizePreviewDefaultReasoningEffort(entry.defaultReasoningEffort);
+  return effort !== undefined ? { defaultReasoningEffort: effort } : {};
+}
+
+function normalizePreviewDefaultReasoningEffort(
+  value: string | undefined,
+): DesktopModelReasoningEffort | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const effort = value.trim().toLowerCase();
+  if (!effort || effort === "default") {
+    return undefined;
+  }
+  return effort;
 }

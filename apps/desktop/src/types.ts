@@ -234,6 +234,8 @@ export interface PreviewModelCatalogEntry {
   pricing?: PreviewModelCatalogPricing;
   capabilities?: DesktopModelCapability[];
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  /** Kimi Code `think_efforts.default_effort` when present. */
+  defaultReasoningEffort?: DesktopModelReasoningEffort;
   contextLength?: number;
   maxCompletionTokens?: number;
   supportsThinkingType?: "only";
