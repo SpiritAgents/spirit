@@ -56,11 +56,24 @@ import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import type { DesktopModelProvider, ProviderGroupV2 } from "@/types";
 import { modelRefsEqual } from "@spiritagent/host-internal/config-v2";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
+import { isElectronChrome } from "@/lib/desktop-shell";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
+
+/**
+ * Settings catalog-info tooltip is read-only. The model picker list tooltip hosts
+ * Thinking / Reasoning effort controls and must stay hoverable.
+ *
+ * Electron chrome cannot select overlay text (`html.spirit-desktop-native`), so
+ * keeping this overlay hoverable only delays close. Web can select, and catalog
+ * details are long enough that moving onto the tooltip to copy is useful.
+ */
+function disableHoverableSettingsModelInfo(): boolean {
+  return isElectronChrome();
+}
 
 export function ModelsSettingsPanel({
   settings,
@@ -491,6 +504,7 @@ export function ModelsSettingsPanel({
                     <Tooltip<SettingsModelProfile>
                       getItemId={(model) => modelRefKey(settingsModelRef(model))}
                       delayDuration={300}
+                      disableHoverableContent={disableHoverableSettingsModelInfo()}
                     >
                       <Tooltip.Zone className="divide-y divide-border/35">
                         {groupModels.map((model) => {
