@@ -43,7 +43,19 @@ test("uploadMinimaxVideoFile posts multipart with purpose=video_understanding an
     setLlmFetchTransportOverrideForTests(async (input, init) => {
       capturedUrl = String(input);
       capturedBody = init?.body as FormData;
-      return new Response(JSON.stringify({ file_id: "file-xyz789" }), { status: 200 });
+      return new Response(
+        JSON.stringify({
+          file: {
+            file_id: 413560385741067,
+            bytes: MINIMAL_MP4_HEADER.length,
+            created_at: 1782521293,
+            filename: "clip.mp4",
+            purpose: "video_understanding",
+          },
+          base_resp: { status_code: 0, status_msg: "success" },
+        }),
+        { status: 200 },
+      );
     });
 
     const url = await uploadMinimaxVideoFile(
@@ -51,7 +63,7 @@ test("uploadMinimaxVideoFile posts multipart with purpose=video_understanding an
       videoPath,
     );
 
-    assert.equal(url, "mm_file://file-xyz789");
+    assert.equal(url, "mm_file://413560385741067");
     assert.equal(capturedUrl, "https://api.minimax.io/v1/files/upload");
     assert.equal(capturedBody?.get("purpose"), "video_understanding");
     assert.ok(capturedBody?.get("file"));
@@ -60,47 +72,10 @@ test("uploadMinimaxVideoFile posts multipart with purpose=video_understanding an
       { apiKey: "test-key", baseUrl: "https://api.minimax.io/anthropic/v1" },
       videoPath,
     );
-    assert.equal(cached, "mm_file://file-xyz789");
+    assert.equal(cached, "mm_file://413560385741067");
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
     configureLlmClientVersion("0.1.0");
-    clearMinimaxVideoUploadCache();
-    await rm(workspaceRoot, { recursive: true, force: true });
-  }
-});
-
-test("uploadMinimaxVideoFile reads nested numeric file.file_id from MiniMax CN response", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-minimax-upload-nested-"));
-
-  try {
-    const videoPath = join(workspaceRoot, "clip.mp4");
-    await writeFile(videoPath, MINIMAL_MP4_HEADER);
-    clearMinimaxVideoUploadCache();
-    setLlmFetchTransportOverrideForTests(
-      async () =>
-        new Response(
-          JSON.stringify({
-            file: {
-              file_id: 413560385741067,
-              bytes: MINIMAL_MP4_HEADER.length,
-              created_at: 1782521293,
-              filename: "clip.mp4",
-              purpose: "video_understanding",
-            },
-            base_resp: { status_code: 0, status_msg: "success" },
-          }),
-          { status: 200 },
-        ),
-    );
-
-    const url = await uploadMinimaxVideoFile(
-      { apiKey: "test-key", baseUrl: "https://api.minimaxi.com/v1" },
-      videoPath,
-    );
-
-    assert.equal(url, "mm_file://413560385741067");
-  } finally {
-    setLlmFetchTransportOverrideForTests(undefined);
     clearMinimaxVideoUploadCache();
     await rm(workspaceRoot, { recursive: true, force: true });
   }

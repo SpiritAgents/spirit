@@ -21,7 +21,8 @@ test("resolveMinimaxVideoInAnthropicMessages uploads local video_url to mm_file 
     clearMinimaxVideoUploadCache();
     configureLlmClientVersion("1.2.3");
     setLlmFetchTransportOverrideForTests(
-      async () => new Response(JSON.stringify({ file_id: "file-video-1" }), { status: 200 }),
+      async () =>
+        new Response(JSON.stringify({ file: { file_id: 413560385741067 } }), { status: 200 }),
     );
 
     const messages = [
@@ -50,7 +51,7 @@ test("resolveMinimaxVideoInAnthropicMessages uploads local video_url to mm_file 
 
     const part = (messages[0] as { content: Array<{ video_url: { url: string } }> }).content[0];
     assert.ok(part);
-    assert.equal(part.video_url.url, "mm_file://file-video-1");
+    assert.equal(part.video_url.url, "mm_file://413560385741067");
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
     configureLlmClientVersion("0.1.0");

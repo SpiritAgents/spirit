@@ -81,9 +81,8 @@ export async function uploadMinimaxVideoFile(
 }
 
 /**
- * The MiniMax Files API actually returns `{ file: { file_id: <number> } }`, with file_id as a number nested under file.
+ * MiniMax Files API: `{ file: { file_id: <int64> } }`. `file.file_id` is the unique identifier.
  * Docs: https://platform.minimaxi.com/docs/api-reference/file-management-upload
- * Top-level file_id/id are accepted only as a fallback; both string and number are supported.
  */
 function readMinimaxUploadedFileId(payload: unknown): string | undefined {
   if (typeof payload !== "object" || payload === null) {
@@ -91,17 +90,12 @@ function readMinimaxUploadedFileId(payload: unknown): string | undefined {
   }
   const root = payload as Record<string, unknown>;
   const file =
-    typeof root.file === "object" && root.file !== null
+    typeof root.file === "object" && root.file !== null && !Array.isArray(root.file)
       ? (root.file as Record<string, unknown>)
       : undefined;
-  const candidates: unknown[] = [file?.file_id, file?.id, root.file_id, root.id];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      return candidate.trim();
-    }
-    if (typeof candidate === "number" && Number.isFinite(candidate)) {
-      return String(candidate);
-    }
+  const fileId = file?.file_id;
+  if (typeof fileId === "number" && Number.isFinite(fileId)) {
+    return String(fileId);
   }
   return undefined;
 }
