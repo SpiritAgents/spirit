@@ -339,7 +339,10 @@ export function ModelPickerMenu({
             {t("app.noMatches")}
           </p>
         ) : null}
-        <Tooltip<ModelPickerItem> getItemId={(model) => model.name} delayDuration={0}>
+        <Tooltip<ModelPickerItem>
+          getItemId={(model) => modelRefKey(modelPickerItemRef(model))}
+          delayDuration={0}
+        >
           <Tooltip.Zone>
             {filteredModelGroups.length === 0
               ? null

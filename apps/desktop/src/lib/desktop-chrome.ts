@@ -314,9 +314,17 @@ export const DESKTOP_OVERLAY_LIST_DETAIL_LABEL = DESKTOP_OVERLAY_GROUP_LABEL_CLA
 
 export const DESKTOP_OVERLAY_LIST_ITEM = "px-2 py-1.5";
 
+export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT =
+  "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50";
+
+export const DESKTOP_OVERLAY_LIST_ITEM_FOCUS =
+  "focus:bg-overlay-hover focus:text-accent-foreground";
+
 /** Long-list DropdownMenuItem primitive; shared by overlay list items such as model / workspace / approval */
-export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM =
-  "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none focus:bg-overlay-hover focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50";
+export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
+  DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
+);
 
 /** Selected row fill: same wash as overlay item hover (`--overlay-hover`) */
 export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED = "bg-overlay-hover text-accent-foreground";
