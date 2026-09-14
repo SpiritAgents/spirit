@@ -228,3 +228,12 @@ test("deepseek-v4-flash-vision-exp declares image input; other V4 models do not"
   assert.equal(flash.hasExplicitCapabilities, true);
   assert.equal(flash.capabilities.imageInput, undefined);
 });
+
+test("Kimi Code without catalog capabilities treats media as unsupported", () => {
+  const profile = resolveOpenAiModelCompatibilityProfile({
+    llmVendor: "kimi-code",
+    model: "k3",
+  });
+  assert.equal(profile.hasExplicitCapabilities, true);
+  assert.deepEqual(profile.capabilities, {});
+});

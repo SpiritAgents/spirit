@@ -30,7 +30,7 @@ export async function uploadOpenAiCompatibleVideoFile(
   }
 
   const metadata = await stat(absolutePath);
-  const cacheKey = `${absolutePath}\0${metadata.mtimeMs}`;
+  const cacheKey = `${apiBase}\0${absolutePath}\0${metadata.mtimeMs}`;
   const cached = uploadCache.get(cacheKey);
   if (cached) {
     return cached;

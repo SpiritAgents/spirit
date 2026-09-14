@@ -83,6 +83,142 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages uploads local video_url reference
   }
 });
 
+test("resolveMoonshotVideoUrlsInOpenAiMessages uploads Kimi Code local video_url references", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-kimi-code-resolve-"));
+  const videoPath = join(workspaceRoot, "clip.mp4");
+  let uploadCount = 0;
+  try {
+    await writeFile(videoPath, MINIMAL_MP4_HEADER);
+    clearMoonshotVideoUploadCache();
+
+    setLlmFetchTransportOverrideForTests(async (input) => {
+      uploadCount += 1;
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : (input as Request).url;
+      assert.equal(url, "https://api.kimi.com/coding/v1/files");
+      return new Response(JSON.stringify({ id: "file_xyz789" }), { status: 200 });
+    });
+
+    const messages = [
+      llmMessageToOpenAiMessage(
+        {
+          role: "user",
+          content: [createLlmVideoContentPart(videoPath)],
+        },
+        workspaceRoot,
+      ),
+    ];
+
+    await resolveMoonshotVideoUrlsInOpenAiMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.kimi.com/coding/v1",
+        model: "k3",
+        llmVendor: "kimi-code",
+        modelCapabilities: { videoInput: true },
+      },
+      messages,
+      workspaceRoot,
+    );
+
+    const content = (messages[0] as { content: Array<{ video_url: { url: string } }> }).content;
+    assert.equal(content[0]?.video_url.url, "ms://file_xyz789");
+    assert.equal(uploadCount, 1);
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+    clearMoonshotVideoUploadCache();
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveMoonshotVideoUrlsInOpenAiMessages skips Kimi Code upload without videoInput", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-kimi-code-resolve-off-"));
+  const videoPath = join(workspaceRoot, "clip.mp4");
+  let uploadCount = 0;
+  try {
+    await writeFile(videoPath, MINIMAL_MP4_HEADER);
+    clearMoonshotVideoUploadCache();
+    setLlmFetchTransportOverrideForTests(async () => {
+      uploadCount += 1;
+      return new Response(JSON.stringify({ id: "file_xyz789" }), { status: 200 });
+    });
+
+    const messages = [
+      llmMessageToOpenAiMessage(
+        {
+          role: "user",
+          content: [createLlmVideoContentPart(videoPath)],
+        },
+        workspaceRoot,
+      ),
+    ];
+    const before = JSON.stringify(messages);
+
+    await resolveMoonshotVideoUrlsInOpenAiMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.kimi.com/coding/v1",
+        model: "k3",
+        llmVendor: "kimi-code",
+        modelCapabilities: {},
+      },
+      messages,
+      workspaceRoot,
+    );
+
+    assert.equal(JSON.stringify(messages), before);
+    assert.equal(uploadCount, 0);
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+    clearMoonshotVideoUploadCache();
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveMoonshotVideoUrlsInOpenAiMessages leaves Kimi Code remote video URLs unchanged", async () => {
+  let uploadCount = 0;
+  setLlmFetchTransportOverrideForTests(async () => {
+    uploadCount += 1;
+    return new Response(JSON.stringify({ id: "file_xyz789" }), { status: 200 });
+  });
+
+  const messages = [
+    {
+      role: "user",
+      content: [
+        { type: "video_url", video_url: { url: "ms://file_already" } },
+        { type: "video_url", video_url: { url: "https://example.com/video.mp4" } },
+        { type: "video_url", video_url: { url: "data:video/mp4;base64,AAAA" } },
+      ],
+    },
+  ];
+
+  try {
+    await resolveMoonshotVideoUrlsInOpenAiMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.kimi.com/coding/v1",
+        model: "k3",
+        llmVendor: "kimi-code",
+        modelCapabilities: { videoInput: true },
+      },
+      messages,
+    );
+
+    const content = (messages[0] as { content: Array<{ video_url: { url: string } }> }).content;
+    assert.equal(content[0]?.video_url.url, "ms://file_already");
+    assert.equal(content[1]?.video_url.url, "https://example.com/video.mp4");
+    assert.equal(content[2]?.video_url.url, "data:video/mp4;base64,AAAA");
+    assert.equal(uploadCount, 0);
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+});
+
 test("resolveXiaomiVideoUrlsInOpenAiMessages embeds local video as data URL base64", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-xiaomi-resolve-"));
   const videoPath = join(workspaceRoot, "clip.mp4");

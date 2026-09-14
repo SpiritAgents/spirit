@@ -193,7 +193,7 @@ export function resolveOpenAiModelCompatibilityProfile(
     };
   }
 
-  if (config.llmVendor === "moonshot-ai") {
+  if (config.llmVendor === "moonshot-ai" || config.llmVendor === "kimi-code") {
     return {
       hasExplicitCapabilities: true,
       capabilities: {},
