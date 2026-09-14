@@ -95,13 +95,13 @@ export function llmMessageToOpenAiMessage(message: LlmMessage, assetRoot: string
   };
 }
 
-/** Moonshot AI: uploads local video paths via the Files API (purpose=video) and rewrites them as ms:// references. */
+/** Moonshot AI / Kimi Code: uploads local video paths via the Files API (purpose=video) and rewrites them as ms:// references. */
 export async function resolveMoonshotVideoUrlsInOpenAiMessages(
   config: OpenAiTransportConfig,
   messages: JsonValue[],
   assetRoot = process.cwd(),
 ): Promise<void> {
-  if (config.llmVendor !== "moonshot-ai") {
+  if (config.llmVendor !== "moonshot-ai" && config.llmVendor !== "kimi-code") {
     return;
   }
 

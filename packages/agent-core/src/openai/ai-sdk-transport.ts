@@ -2078,7 +2078,9 @@ function clearMoonshotChatCompletionRequest(config: OpenAiTransportConfig): void
 function usesOpenAiCompatibleVideoMessageStash(
   vendor: OpenAiTransportConfig["llmVendor"],
 ): boolean {
-  return vendor === "xiaomi" || vendor === "deepinfra" || vendor === "stepfun";
+  return (
+    vendor === "xiaomi" || vendor === "deepinfra" || vendor === "stepfun" || vendor === "kimi-code"
+  );
 }
 
 function normalizeMessagesForRequest(
