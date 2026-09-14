@@ -13,6 +13,7 @@ function slotsEqual(a: TooltipSwitchSlotKey | null, b: TooltipSwitchSlotKey | nu
 let anchorSlot: TooltipSwitchSlotKey | null = null;
 let pointerHighlightSlot: TooltipSwitchSlotKey | null = null;
 let activeHighlightSlot: TooltipSwitchSlotKey | null = null;
+let keyboardInput = false;
 const listeners = new Set<() => void>();
 
 function notify(): void {
@@ -52,8 +53,24 @@ export function setTooltipActiveHighlightSlot(slot: TooltipSwitchSlotKey | null)
   notify();
 }
 
+export function isTooltipKeyboardInput(): boolean {
+  return keyboardInput;
+}
+
+export function setTooltipKeyboardInput(value: boolean): void {
+  if (keyboardInput === value) {
+    return;
+  }
+  keyboardInput = value;
+  notify();
+}
+
 export function clearTooltipItemInteractionSlots(): void {
   let changed = false;
+  if (keyboardInput) {
+    keyboardInput = false;
+    changed = true;
+  }
   if (anchorSlot !== null) {
     anchorSlot = null;
     changed = true;
@@ -83,11 +100,8 @@ export function isTooltipPointerHighlightSlot(registrationId: string, itemId: st
 }
 
 export function isTooltipItemHighlighted(registrationId: string, itemId: string): boolean {
-  return (
-    isTooltipPointerHighlightSlot(registrationId, itemId) ||
-    (activeHighlightSlot?.registrationId === registrationId &&
-      activeHighlightSlot.itemId === itemId)
-  );
+  const slot = pointerHighlightSlot ?? activeHighlightSlot;
+  return slot?.registrationId === registrationId && slot.itemId === itemId;
 }
 
 export function getTooltipAnchorSlot(): TooltipSwitchSlotKey | null {

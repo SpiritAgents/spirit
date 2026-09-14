@@ -4,18 +4,20 @@
  */
 import * as React from "react";
 import { useSyncExternalStore } from "react";
-import { Tooltip as TooltipPrimitive } from "radix-ui";
+import { Popover as PopoverPrimitive, Slot, Tooltip as TooltipPrimitive } from "radix-ui";
 
 import {
   bumpTooltipContentHostRevision,
   getTooltipContentHostRevision,
   isTooltipAnchorSlot,
   isTooltipItemHighlighted,
+  isTooltipKeyboardInput,
   isTooltipPointerHighlightSlot,
   subscribeTooltipContentHostRevision,
   subscribeTooltipItemInteraction,
 } from "@/hooks/tooltip-item-interaction-store";
 import { useGlobalTooltipSwitch } from "@/hooks/use-global-tooltip-switch";
+import { isEventTargetWithinTooltipCompanionOverlays } from "@/hooks/tooltip-switch-registry";
 import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW_LG } from "@/lib/desktop-chrome";
 import { getUiLayoutPortalContainer, viewportPointToScaleRootLocal } from "@/lib/ui-layout-scale";
 import { cn } from "@/lib/utils";
@@ -67,7 +69,7 @@ type TooltipStableActionsValue = Pick<
   | "dismissIfOpen"
   | "dismissActiveItem"
   | "onTriggerPointerDown"
-  | "registerActiveAnchorElement"
+  | "registerTriggerElement"
 >;
 
 type TooltipStableRegistrationValue = Pick<
@@ -103,11 +105,18 @@ const TooltipRegistrationContext = React.createContext<TooltipRegistrationContex
   null,
 );
 
-/** DropdownMenuItem reads this to keep Radix hover/focus styling while item tooltip is open. */
-const TooltipItemMenuHighlightContext = React.createContext(false);
+/** Null leaves ordinary menu items under Radix's focus handling. */
+const TooltipItemMenuHighlightContext = React.createContext<{
+  highlighted: boolean;
+  pointer: boolean;
+} | null>(null);
 
-export function useOptionalTooltipItemMenuHighlight(): boolean {
+export function useOptionalTooltipItemMenuHighlight() {
   return React.useContext(TooltipItemMenuHighlightContext);
+}
+
+export function useTooltipKeyboardInput(): boolean {
+  return useSyncExternalStore(subscribeTooltipItemInteraction, isTooltipKeyboardInput, () => false);
 }
 
 function useTooltipGlobalContext(): TooltipGlobalContextValue {
@@ -254,12 +263,16 @@ function tooltipContentStateAttribute(
   return openKind === "delayed" ? "delayed-open" : "instant-open";
 }
 
-function composeElementRef<T>(forwardedRef: React.Ref<T> | undefined, node: T): void {
+function composeElementRef<T>(forwardedRef: React.Ref<T> | undefined, node: T | null) {
   if (typeof forwardedRef === "function") {
-    forwardedRef(node);
+    return forwardedRef(node);
   } else if (forwardedRef) {
     forwardedRef.current = node;
   }
+}
+
+function tooltipContentId(registrationId: string): string {
+  return `spirit-tooltip-${registrationId}`;
 }
 
 function GlobalTooltipContentHost() {
@@ -306,9 +319,11 @@ function GlobalTooltipContentHost() {
 
   if (lingerExitPosition !== null && lingerExitLocal !== null) {
     return (
-      <TooltipPrimitive.Portal container={getUiLayoutPortalContainer()}>
+      <PopoverPrimitive.Portal container={getUiLayoutPortalContainer()}>
         <div
           ref={global.contentRef}
+          id={registrationId ? tooltipContentId(registrationId) : undefined}
+          role="tooltip"
           data-slot="tooltip-content"
           data-state={dataState}
           style={{
@@ -323,21 +338,37 @@ function GlobalTooltipContentHost() {
         >
           {renderedChildren}
         </div>
-      </TooltipPrimitive.Portal>
+      </PopoverPrimitive.Portal>
     );
   }
 
   return (
-    <TooltipPrimitive.Portal container={getUiLayoutPortalContainer()}>
-      <TooltipPrimitive.Content
+    <PopoverPrimitive.Portal container={getUiLayoutPortalContainer()}>
+      <PopoverPrimitive.Content
         ref={global.contentRef}
+        id={registrationId ? tooltipContentId(registrationId) : undefined}
+        role="tooltip"
         data-slot="tooltip-content"
         data-state={dataState}
-        side={contentRegistration.side}
+        side={contentRegistration.side ?? "top"}
         align={contentRegistration.align}
         sideOffset={contentRegistration.sideOffset ?? 0}
         collisionPadding={contentRegistration.collisionPadding}
         className={contentClassName}
+        style={
+          {
+            "--radix-tooltip-content-transform-origin":
+              "var(--radix-popover-content-transform-origin)",
+          } as React.CSSProperties
+        }
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        onCloseAutoFocus={(event) => event.preventDefault()}
+        onFocusOutside={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => {
+          if (isEventTargetWithinTooltipCompanionOverlays(event.target)) {
+            event.preventDefault();
+          }
+        }}
         onEscapeKeyDown={(event) => {
           contentRegistration.onEscapeKeyDown?.(event);
           global.dismissActiveItem();
@@ -346,8 +377,8 @@ function GlobalTooltipContentHost() {
         onPointerEnter={global.onContentPointerEnter}
       >
         {renderedChildren}
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
+      </PopoverPrimitive.Content>
+    </PopoverPrimitive.Portal>
   );
 }
 
@@ -423,23 +454,12 @@ function TooltipProvider({
       if (globallyOpen && isActiveRegistration && !wasNotifiedOpen) {
         prevOpenByRegistrationRef.current.set(registrationId, true);
         onOpenChange(true);
-      } else if (!globallyOpen && wasNotifiedOpen) {
+      } else if ((!globallyOpen || !isActiveRegistration) && wasNotifiedOpen) {
         prevOpenByRegistrationRef.current.set(registrationId, false);
         onOpenChange(false);
       }
     }
   }, [globalSwitch.activeRegistrationId, globalSwitch.open]);
-
-  const handleRadixOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      if (!nextOpen && globalSwitch.open) {
-        // Radix fires onOpenChange(false) when TooltipTrigger remounts during instant-switch
-        // while the global switch still has an active item. Ignore the spurious close.
-        return;
-      }
-    },
-    [globalSwitch.open],
-  );
 
   const globalContextValue = React.useMemo(
     (): TooltipGlobalContextValue => ({
@@ -460,8 +480,7 @@ function TooltipProvider({
       dismissIfOpen: () => globalSwitchRef.current.dismissIfOpen(),
       dismissActiveItem: () => globalSwitchRef.current.dismissActiveItem(),
       onTriggerPointerDown: (...args) => globalSwitchRef.current.onTriggerPointerDown(...args),
-      registerActiveAnchorElement: (...args) =>
-        globalSwitchRef.current.registerActiveAnchorElement(...args),
+      registerTriggerElement: (...args) => globalSwitchRef.current.registerTriggerElement(...args),
     }),
     [],
   );
@@ -490,15 +509,20 @@ function TooltipProvider({
       <TooltipGlobalContext.Provider value={globalContextValue}>
         <TooltipStableActionsContext.Provider value={stableActionsValue}>
           <TooltipStableRegistrationContext.Provider value={stableRegistrationValue}>
-            <TooltipPrimitive.Root
+            <PopoverPrimitive.Root
               data-slot="tooltip-root-global"
               open={effectiveOpen}
-              onOpenChange={handleRadixOpenChange}
-              delayDuration={0}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) {
+                  globalSwitch.dismissActiveItem();
+                }
+              }}
             >
               {children}
+              {/* A virtual anchor keeps trigger rows mounted while the shared detail changes. */}
+              <PopoverPrimitive.Anchor virtualRef={globalSwitch.anchorRef} />
               <GlobalTooltipContentHost />
-            </TooltipPrimitive.Root>
+            </PopoverPrimitive.Root>
           </TooltipStableRegistrationContext.Provider>
         </TooltipStableActionsContext.Provider>
       </TooltipGlobalContext.Provider>
@@ -530,7 +554,6 @@ function TooltipRoot<TItem = TooltipSwitchItem>({
   children,
   ...props
 }: TooltipProps<TItem>) {
-  void openProp;
   void props;
 
   const registrationId = React.useId();
@@ -545,21 +568,26 @@ function TooltipRoot<TItem = TooltipSwitchItem>({
       closeDelayMs,
       anchorLingerMs,
       disableHoverableContent,
+      disabled: openProp === false,
     });
     stableRegistration.registerOpenChange(registrationId, onOpenChange);
-    return () => {
-      stableRegistration.unregisterTriggerZone(registrationId);
-      stableRegistration.unregisterContent(registrationId);
-      stableRegistration.registerOpenChange(registrationId, undefined);
-    };
   }, [
     anchorLingerMs,
     closeDelayMs,
     disableHoverableContent,
     onOpenChange,
+    openProp,
     registrationId,
     stableRegistration,
   ]);
+
+  React.useEffect(() => {
+    return () => {
+      stableRegistration.unregisterTriggerZone(registrationId);
+      stableRegistration.unregisterContent(registrationId);
+      stableRegistration.registerOpenChange(registrationId, undefined);
+    };
+  }, [registrationId, stableRegistration]);
 
   const registrationValue = React.useMemo(
     (): TooltipRegistrationContextValue<TItem> => ({
@@ -635,96 +663,102 @@ type TooltipItemProps<TItem> = {
   className?: string;
 };
 
-function resolveConnectedOpenTooltipTrigger(): HTMLElement | null {
-  const candidate = document.querySelector(
-    '[data-slot="tooltip-trigger"][data-state="delayed-open"], [data-slot="tooltip-trigger"][data-state="instant-open"]',
+function useTooltipElementRegistration<TItem>(
+  item: TItem | null,
+  registration: TooltipRegistrationContextValue<TItem> | null,
+  actions: TooltipStableActionsValue | null,
+) {
+  const itemRef = React.useRef(item);
+  itemRef.current = item;
+  const registrationId = registration?.registrationId;
+  const itemId = registration && item !== null ? registration.getItemId(item) : null;
+  const openDelayMs = registration?.openDelayMs ?? 0;
+
+  const registerElement = React.useCallback(
+    (element: HTMLElement | null) => {
+      if (!element || !actions || registrationId === undefined) {
+        return;
+      }
+      return actions.registerTriggerElement(element, {
+        registrationId,
+        itemId,
+        getItem: () => itemRef.current,
+        openDelayMs,
+      });
+    },
+    [actions, itemId, openDelayMs, registrationId],
   );
-  return candidate instanceof HTMLElement ? candidate : null;
+  const isAnchor = useSyncExternalStore(
+    subscribeTooltipItemInteraction,
+    () =>
+      registrationId !== undefined && itemId !== null
+        ? isTooltipAnchorSlot(registrationId, itemId)
+        : false,
+    () => false,
+  );
+  return { registerElement, isAnchor, registrationId, itemId };
 }
 
 function TooltipItem<TItem>({ item, children, className }: TooltipItemProps<TItem>) {
   const actions = useOptionalTooltipStableActions();
   const registration = useOptionalTooltipRegistrationContext<TItem>();
-  const rowRef = React.useRef<HTMLDivElement | null>(null);
-  const registrationId = registration?.registrationId;
-  const resolvedItemId = registration && item !== null ? registration.getItemId(item) : null;
-  const isAnchor = useSyncExternalStore(
-    subscribeTooltipItemInteraction,
-    () =>
-      registrationId !== undefined && resolvedItemId !== null
-        ? isTooltipAnchorSlot(registrationId, resolvedItemId)
-        : false,
-    () => false,
+  const { registerElement, isAnchor, registrationId, itemId } = useTooltipElementRegistration(
+    item,
+    registration,
+    actions,
   );
   const isHighlighted = useSyncExternalStore(
     subscribeTooltipItemInteraction,
     () =>
-      registrationId !== undefined && resolvedItemId !== null
-        ? isTooltipItemHighlighted(registrationId, resolvedItemId)
+      registrationId !== undefined && itemId !== null
+        ? isTooltipItemHighlighted(registrationId, itemId)
         : false,
     () => false,
   );
-
-  React.useLayoutEffect(() => {
-    if (!isAnchor || registrationId === undefined || !actions) {
-      return;
-    }
-    const anchor =
-      rowRef.current?.isConnected === true ? rowRef.current : resolveConnectedOpenTooltipTrigger();
-    if (anchor) {
-      actions.registerActiveAnchorElement(anchor);
-    }
-  }, [actions, isAnchor, registrationId, resolvedItemId]);
+  const isPointerHover = useSyncExternalStore(
+    subscribeTooltipItemInteraction,
+    () =>
+      registrationId !== undefined && itemId !== null
+        ? isTooltipPointerHighlightSlot(registrationId, itemId)
+        : false,
+    () => false,
+  );
+  const menuHighlight = React.useMemo(
+    () => ({ highlighted: isHighlighted, pointer: isPointerHover }),
+    [isHighlighted, isPointerHover],
+  );
 
   if (!registration || !actions) {
     return children;
   }
+  const triggerProps =
+    item !== null
+      ? actions.getTriggerProps(
+          registration.registrationId,
+          item,
+          registration.getItemId,
+          registration.openDelayMs,
+        )
+      : null;
 
-  const rowClassName = cn("flex w-full min-w-0", className);
-  const { getItemId, openDelayMs } = registration;
-
-  if (item === null) {
-    return (
-      <div className={rowClassName} onPointerEnter={actions.dismissIfOpen}>
+  return (
+    <TooltipItemMenuHighlightContext.Provider value={item !== null ? menuHighlight : null}>
+      <div
+        ref={registerElement}
+        data-slot="tooltip-trigger"
+        aria-describedby={isAnchor ? tooltipContentId(registration.registrationId) : undefined}
+        className={cn("flex w-full min-w-0", className)}
+        onPointerEnter={triggerProps?.onPointerEnter}
+        onPointerDown={() => {
+          if (itemId !== null) {
+            actions.onTriggerPointerDown(registration.registrationId, itemId);
+          }
+        }}
+      >
         {children}
       </div>
-    );
-  }
-
-  const { onPointerEnter } = actions.getTriggerProps(
-    registration.registrationId,
-    item,
-    getItemId,
-    openDelayMs,
-  );
-  const rowWrapper = (
-    <div
-      ref={rowRef}
-      className={rowClassName}
-      onPointerEnter={onPointerEnter}
-      onPointerDown={() => {
-        if (resolvedItemId !== null) {
-          actions.onTriggerPointerDown(registration.registrationId, resolvedItemId);
-        }
-      }}
-    >
-      {children}
-    </div>
-  );
-
-  const highlightedRow = (
-    <TooltipItemMenuHighlightContext.Provider value={isHighlighted}>
-      {isAnchor ? (
-        <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild>
-          {rowWrapper}
-        </TooltipPrimitive.Trigger>
-      ) : (
-        rowWrapper
-      )}
     </TooltipItemMenuHighlightContext.Provider>
   );
-
-  return highlightedRow;
 }
 TooltipItem.displayName = "TooltipItem";
 
@@ -736,135 +770,93 @@ function TooltipTrigger({
   item: itemProp,
   asChild = false,
   children,
+  ref,
+  className,
+  onPointerEnter: onPointerEnterProp,
+  onPointerDown: onPointerDownProp,
   ...props
 }: TooltipTriggerProps) {
-  const global = useOptionalTooltipGlobalContext();
+  const actions = useOptionalTooltipStableActions();
   const registration = useOptionalTooltipRegistrationContext();
   const autoId = React.useId();
   const switchItem = React.useMemo(
     (): TooltipSwitchItem => itemProp ?? { id: autoId },
     [autoId, itemProp],
   );
-  const triggerElementRef = React.useRef<HTMLElement | null>(null);
-  const pointerRegistrationId = registration?.registrationId ?? "";
-  const pointerItemId = registration ? registration.getItemId(switchItem) : "";
+  const { registerElement, isAnchor, registrationId, itemId } = useTooltipElementRegistration(
+    switchItem,
+    registration,
+    actions,
+  );
   const isPointerHover = useSyncExternalStore(
     subscribeTooltipItemInteraction,
     () =>
-      pointerRegistrationId !== "" && pointerItemId !== ""
-        ? isTooltipPointerHighlightSlot(pointerRegistrationId, pointerItemId)
+      registrationId !== undefined && itemId !== null
+        ? isTooltipPointerHighlightSlot(registrationId, itemId)
         : false,
     () => false,
   );
+  const composedRef = React.useCallback(
+    (element: HTMLElement | null) => {
+      const unregister = registerElement(element);
+      const cleanupForwardedRef = composeElementRef(ref as React.Ref<HTMLElement>, element);
+      return () => {
+        unregister?.();
+        if (typeof cleanupForwardedRef === "function") {
+          cleanupForwardedRef();
+        } else {
+          composeElementRef(ref as React.Ref<HTMLElement>, null);
+        }
+      };
+    },
+    [ref, registerElement],
+  );
 
-  React.useLayoutEffect(() => {
-    if (!global || !registration) {
-      return;
-    }
-    const { registrationId, getItemId } = registration;
-    const itemId = getItemId(switchItem);
-    const anchorIsActive = global.isAnchorSlot(registrationId, itemId);
-    if (!anchorIsActive) {
-      return;
-    }
-    const anchor =
-      triggerElementRef.current?.isConnected === true
-        ? triggerElementRef.current
-        : resolveConnectedOpenTooltipTrigger();
-    if (anchor) {
-      triggerElementRef.current = anchor;
-      global.registerActiveAnchorElement(anchor);
-    }
-  }, [global, registration, switchItem, global?.open]);
-
-  if (!global || !registration) {
+  if (!actions || !registration) {
     return (
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild={asChild} {...props}>
+      <TooltipPrimitive.Trigger
+        ref={ref}
+        data-slot="tooltip-trigger"
+        asChild={asChild}
+        className={className}
+        onPointerEnter={onPointerEnterProp}
+        onPointerDown={onPointerDownProp}
+        {...props}
+      >
         {children}
       </TooltipPrimitive.Trigger>
     );
   }
 
-  const { registrationId, getItemId, openDelayMs } = registration;
-  const { onPointerEnter } = global.getTriggerProps(
-    registrationId,
+  const { onPointerEnter } = actions.getTriggerProps(
+    registration.registrationId,
     switchItem,
-    getItemId,
-    openDelayMs,
+    registration.getItemId,
+    registration.openDelayMs,
   );
-  const itemId = getItemId(switchItem);
-  const isAnchor = global.isAnchorSlot(registrationId, itemId);
-
-  const attachTriggerPointerHandlers = (child: React.ReactElement<Record<string, unknown>>) =>
-    React.cloneElement(child, {
-      ...(isPointerHover ? { "data-pointer-hover": "" } : {}),
-      ref: (node: HTMLElement | null) => {
-        triggerElementRef.current = node;
-        if (node?.isConnected) {
-          global.registerTriggerElement(registrationId, node);
-          if (isAnchor) {
-            global.registerActiveAnchorElement(node);
-          }
-        }
-        composeElementRef(child.props.ref as React.Ref<HTMLElement> | undefined, node);
-      },
-      onPointerEnter: (event: React.PointerEvent) => {
+  const Component = asChild ? Slot.Root : "span";
+  return (
+    <Component
+      {...props}
+      ref={composedRef}
+      data-slot="tooltip-trigger"
+      data-pointer-hover={isPointerHover ? "" : undefined}
+      aria-describedby={isAnchor ? tooltipContentId(registration.registrationId) : undefined}
+      className={cn(!asChild && "inline-flex min-w-0", className)}
+      onPointerEnter={(event) => {
         onPointerEnter(event);
-        const prior = child.props.onPointerEnter;
-        if (typeof prior === "function") {
-          prior(event);
-        }
-      },
-      onPointerDown: (event: React.PointerEvent) => {
-        global.onTriggerPointerDown(registrationId, itemId);
-        const prior = child.props.onPointerDown;
-        if (typeof prior === "function") {
-          prior(event);
-        }
-      },
-    });
-
-  if (asChild) {
-    const child = React.Children.only(children) as React.ReactElement<Record<string, unknown>>;
-    const childWithHandlers = attachTriggerPointerHandlers(child);
-    if (isAnchor) {
-      return (
-        <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...props}>
-          {childWithHandlers}
-        </TooltipPrimitive.Trigger>
-      );
-    }
-    return childWithHandlers;
-  }
-
-  const rowWrapper = (
-    <span
-      className="inline-flex min-w-0"
-      ref={(node) => {
-        triggerElementRef.current = node;
-        if (node) {
-          global.registerTriggerElement(registrationId, node);
-        }
+        onPointerEnterProp?.(event as React.PointerEvent<HTMLButtonElement>);
       }}
-      onPointerEnter={onPointerEnter}
-      onPointerDown={() => global.onTriggerPointerDown(registrationId, itemId)}
+      onPointerDown={(event) => {
+        if (itemId !== null) {
+          actions.onTriggerPointerDown(registration.registrationId, itemId);
+        }
+        onPointerDownProp?.(event as React.PointerEvent<HTMLButtonElement>);
+      }}
     >
       {children}
-    </span>
+    </Component>
   );
-
-  if (isAnchor) {
-    // asChild: merge into the wrapper span instead of rendering Radix's default
-    // <button>, which is not disabled and would match the global pointer-cursor
-    // rule when wrapping non-interactive/disabled content.
-    return (
-      <TooltipPrimitive.Trigger data-slot="tooltip-trigger" asChild {...props}>
-        {rowWrapper}
-      </TooltipPrimitive.Trigger>
-    );
-  }
-
-  return rowWrapper;
 }
 
 type TooltipContentProps = Omit<

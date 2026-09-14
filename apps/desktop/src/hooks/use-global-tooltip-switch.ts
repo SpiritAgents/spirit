@@ -9,10 +9,12 @@ import {
 } from "react";
 
 import {
+  clearTooltipItemInteractionSlots,
   isTooltipAnchorSlot,
   isTooltipItemHighlighted,
   setTooltipActiveHighlightSlot,
   setTooltipAnchorSlot,
+  setTooltipKeyboardInput,
   setTooltipPointerHighlightSlot,
 } from "@/hooks/tooltip-item-interaction-store";
 import {
@@ -24,19 +26,12 @@ import {
 import {
   GlobalTooltipSwitchStateModel,
   TOOLTIP_SWITCH_CONTENT_LINGER_MS,
+  isEventTargetWithinTooltipCompanionOverlays,
   isPointerOverTooltipCompanionOverlays,
-  isWithinGlobalTooltipRelatedTarget,
   tooltipSwitchSlotKey,
   tooltipSwitchSlotsEqual,
   type TooltipSwitchSlotKey,
 } from "@/hooks/tooltip-switch-registry";
-
-function isDomNode(target: EventTarget | null): target is Node {
-  if (target === null || typeof target !== "object") {
-    return false;
-  }
-  return "nodeType" in target && typeof (target as Node).contains === "function";
-}
 
 export type TooltipSwitchOpenKind = "closed" | "delayed" | "instant";
 
@@ -58,21 +53,37 @@ export type TooltipLingerContentScreenRect = {
   left: number;
 };
 
+export type TooltipTriggerRegistration = {
+  registrationId: string;
+  itemId: string | null;
+  getItem: () => unknown | null;
+  openDelayMs: number;
+};
+
+type PointerTarget = TooltipTriggerRegistration & { element: HTMLElement };
+type RegistrationTiming = {
+  closeDelayMs?: number;
+  anchorLingerMs?: number;
+  disableHoverableContent?: boolean;
+  disabled?: boolean;
+};
+type ClientPoint = { clientX: number; clientY: number };
+
 export type UseGlobalTooltipSwitchResult = {
   open: boolean;
   openKind: TooltipSwitchOpenKind;
   anchorSlot: TooltipSwitchSlotKey | null;
+  anchorRef: RefObject<HTMLElement | null>;
   contentActiveItem: unknown | null;
   activeRegistrationId: string | null;
   contentRef: RefObject<HTMLDivElement | null>;
   registerTriggerZone: (registrationId: string, zone: HTMLDivElement | null) => void;
   unregisterTriggerZone: (registrationId: string) => void;
-  registerTriggerElement: (registrationId: string, element: HTMLElement | null) => void;
-  registerActiveAnchorElement: (element: HTMLElement | null) => void;
-  setRegistrationTiming: (
-    registrationId: string,
-    timing: { closeDelayMs?: number; anchorLingerMs?: number; disableHoverableContent?: boolean },
-  ) => void;
+  registerTriggerElement: (
+    element: HTMLElement,
+    registration: TooltipTriggerRegistration,
+  ) => () => void;
+  setRegistrationTiming: (registrationId: string, timing: RegistrationTiming) => void;
   getTriggerProps: <TItem>(
     registrationId: string,
     item: TItem,
@@ -94,110 +105,59 @@ export type UseGlobalTooltipSwitchResult = {
 };
 
 export function useGlobalTooltipSwitch({
-  defaultOpenDelayMs: _defaultOpenDelayMs = DEFAULT_ANCHORED_ITEM_SWITCH_OPEN_DELAY_MS,
+  defaultOpenDelayMs = DEFAULT_ANCHORED_ITEM_SWITCH_OPEN_DELAY_MS,
   defaultCloseDelayMs = DEFAULT_ANCHORED_ITEM_SWITCH_CLOSE_DELAY_MS,
   defaultAnchorLingerMs = DEFAULT_ANCHORED_ITEM_SWITCH_ANCHOR_LINGER_MS,
 }: UseGlobalTooltipSwitchOptions = {}): UseGlobalTooltipSwitchResult {
-  const [activeSlot, setActiveSlot] = useState<GlobalTooltipSwitchStateModel["activeSlot"]>(null);
+  const [activeSlot, setActiveSlot] = useState<TooltipSwitchSlotKey | null>(null);
   const [activeItem, setActiveItem] = useState<unknown | null>(null);
-  const [lingerAnchorSlot, setLingerAnchorSlot] =
-    useState<GlobalTooltipSwitchStateModel["lingerAnchorSlot"]>(null);
-  const [lingerActiveItem, setLingerActiveItem] =
-    useState<GlobalTooltipSwitchStateModel["lingerActiveItem"]>(null);
+  const [lingerAnchorSlot, setLingerAnchorSlot] = useState<TooltipSwitchSlotKey | null>(null);
+  const [lingerActiveItem, setLingerActiveItem] = useState<unknown | null>(null);
   const [openKind, setOpenKind] = useState<TooltipSwitchOpenKind>("closed");
+  const [lingerAnchorScreenRect, setLingerAnchorScreenRect] =
+    useState<TooltipLingerAnchorScreenRect | null>(null);
+  const [lingerContentScreenRect, setLingerContentScreenRect] =
+    useState<TooltipLingerContentScreenRect | null>(null);
 
   const hoverOpenTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const hoverCloseTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lingerClearTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const lingerContentClearTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const activeItemRef = useRef<unknown | null>(null);
-  const activeSlotRef = useRef<GlobalTooltipSwitchStateModel["activeSlot"]>(null);
-  const pointerSlotRef = useRef<GlobalTooltipSwitchStateModel["pointerSlot"]>(null);
-  const triggerZonesRef = useRef<Map<string, HTMLDivElement | null>>(new Map());
-  const triggerElementsRef = useRef<Map<string, HTMLElement | null>>(new Map());
-  const lastEnterTargetByRegistrationRef = useRef<Map<string, HTMLElement>>(new Map());
-  const activeAnchorElementRef = useRef<HTMLElement | null>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const openDelayByRegistrationRef = useRef<Map<string, number>>(new Map());
-  const closeDelayByRegistrationRef = useRef<Map<string, number>>(new Map());
-  const anchorLingerByRegistrationRef = useRef<Map<string, number>>(new Map());
-  const disableHoverableContentByRegistrationRef = useRef<Map<string, boolean>>(new Map());
-  const pointerDismissedRegistrationsRef = useRef<Set<string>>(new Set());
+  const activeSlotRef = useRef<TooltipSwitchSlotKey | null>(null);
+  const pointerSlotRef = useRef<TooltipSwitchSlotKey | null>(null);
+  const pendingTargetRef = useRef<{ target: PointerTarget; ready: boolean } | null>(null);
   const lingerActiveItemRef = useRef<unknown | null>(null);
-  const [lingerAnchorScreenRect, setLingerAnchorScreenRect] =
-    useState<TooltipLingerAnchorScreenRect | null>(null);
-  const [lingerContentScreenRect, setLingerContentScreenRect] =
-    useState<TooltipLingerContentScreenRect | null>(null);
+  const anchorRef = useRef<HTMLElement | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const triggerElementsRef = useRef(new Map<HTMLElement, TooltipTriggerRegistration>());
+  const triggerZonesRef = useRef(new Map<string, HTMLDivElement>());
+  const timingRef = useRef(new Map<string, RegistrationTiming>());
+  const pointerDismissedRegistrationsRef = useRef(new Set<string>());
+  const pointerRef = useRef<ClientPoint | null>(null);
+  const keyboardInputRef = useRef(false);
+  const reconcileFrameRef = useRef<number | null>(null);
+  const reconcileRef = useRef<() => void>(() => {});
 
-  activeItemRef.current = activeItem;
-  activeSlotRef.current = activeSlot;
-  lingerActiveItemRef.current = lingerActiveItem;
-
-  const applyActiveSlot = useCallback((slot: GlobalTooltipSwitchStateModel["activeSlot"]) => {
-    activeSlotRef.current = slot;
-    setActiveSlot(slot);
-    setTooltipAnchorSlot(slot);
-    setTooltipActiveHighlightSlot(slot);
-  }, []);
-
-  const applyPointerSlot = useCallback((slot: GlobalTooltipSwitchStateModel["pointerSlot"]) => {
-    pointerSlotRef.current = slot;
-    setTooltipPointerHighlightSlot(slot);
-  }, []);
-
-  const clearPointerSlot = useCallback(() => {
-    pointerSlotRef.current = null;
-    setTooltipPointerHighlightSlot(null);
-  }, []);
-
-  const setRegistrationTiming = useCallback(
-    (
-      registrationId: string,
-      timing: { closeDelayMs?: number; anchorLingerMs?: number; disableHoverableContent?: boolean },
-    ) => {
-      if (timing.closeDelayMs !== undefined) {
-        closeDelayByRegistrationRef.current.set(registrationId, timing.closeDelayMs);
-      }
-      if (timing.anchorLingerMs !== undefined) {
-        anchorLingerByRegistrationRef.current.set(registrationId, timing.anchorLingerMs);
-      }
-      if (timing.disableHoverableContent !== undefined) {
-        disableHoverableContentByRegistrationRef.current.set(
-          registrationId,
-          timing.disableHoverableContent,
-        );
-      }
-    },
-    [],
-  );
-
-  const isRegistrationHoverableContent = useCallback((registrationId: string | null) => {
-    if (!registrationId) {
-      return true;
+  const schedulePointerReconcile = useCallback(() => {
+    if (
+      reconcileFrameRef.current !== null ||
+      (!activeSlotRef.current && (!pointerRef.current || keyboardInputRef.current))
+    ) {
+      return;
     }
-    return !(disableHoverableContentByRegistrationRef.current.get(registrationId) ?? false);
+    reconcileFrameRef.current = requestAnimationFrame(() => {
+      reconcileFrameRef.current = null;
+      reconcileRef.current();
+    });
   }, []);
-
-  const model = useMemo(() => {
-    const next = new GlobalTooltipSwitchStateModel();
-    next.activeSlot = activeSlot;
-    next.activeItem = activeItem;
-    next.pointerSlot = pointerSlotRef.current;
-    next.lingerAnchorSlot = lingerAnchorSlot;
-    next.lingerActiveItem = lingerActiveItem;
-    return next;
-  }, [activeItem, activeSlot, lingerActiveItem, lingerAnchorSlot]);
-
-  const open = model.open;
-  const anchorSlot = model.anchorSlot;
-  const contentActiveItem = model.contentActiveItem;
-  const activeRegistrationId = activeSlot?.registrationId ?? null;
 
   const clearHoverOpenTimer = useCallback(() => {
     if (hoverOpenTimerRef.current !== undefined) {
       clearTimeout(hoverOpenTimerRef.current);
       hoverOpenTimerRef.current = undefined;
     }
+    pendingTargetRef.current = null;
   }, []);
 
   const clearHoverCloseTimer = useCallback(() => {
@@ -207,309 +167,296 @@ export function useGlobalTooltipSwitch({
     }
   }, []);
 
-  const getCloseDelayMs = useCallback(
-    (registrationId: string | null) => {
-      if (!registrationId) {
-        return defaultCloseDelayMs;
-      }
-      return closeDelayByRegistrationRef.current.get(registrationId) ?? defaultCloseDelayMs;
-    },
-    [defaultCloseDelayMs],
-  );
+  const clearPointerHighlight = useCallback(() => {
+    pointerSlotRef.current = null;
+    setTooltipPointerHighlightSlot(null);
+    setTooltipActiveHighlightSlot(null);
+  }, []);
 
-  const getAnchorLingerMs = useCallback(
-    (registrationId: string | null) => {
-      if (!registrationId) {
-        return defaultAnchorLingerMs;
-      }
-      return anchorLingerByRegistrationRef.current.get(registrationId) ?? defaultAnchorLingerMs;
-    },
-    [defaultAnchorLingerMs],
-  );
+  const clearLinger = useCallback(() => {
+    if (lingerClearTimerRef.current !== undefined) {
+      clearTimeout(lingerClearTimerRef.current);
+      lingerClearTimerRef.current = undefined;
+    }
+    if (lingerContentClearTimerRef.current !== undefined) {
+      clearTimeout(lingerContentClearTimerRef.current);
+      lingerContentClearTimerRef.current = undefined;
+    }
+    lingerActiveItemRef.current = null;
+    setLingerAnchorSlot(null);
+    setLingerActiveItem(null);
+    setLingerAnchorScreenRect(null);
+    setLingerContentScreenRect(null);
+  }, []);
 
-  const commitClose = useCallback(
-    (closingRegistrationId: string | null) => {
-      const closingItem = activeItemRef.current;
-      const closingSlot = activeSlotRef.current;
-      const anchorEl = activeAnchorElementRef.current;
-      const anchorRectSnapshot = anchorEl?.isConnected ? anchorEl.getBoundingClientRect() : null;
-      if (anchorRectSnapshot) {
-        setLingerAnchorScreenRect({
-          top: anchorRectSnapshot.top,
-          left: anchorRectSnapshot.left,
-          width: anchorRectSnapshot.width,
-          height: anchorRectSnapshot.height,
-        });
-      }
-      const contentRectSnapshot = contentRef.current?.isConnected
-        ? contentRef.current.getBoundingClientRect()
-        : null;
-      if (contentRectSnapshot) {
-        setLingerContentScreenRect({
-          top: contentRectSnapshot.top,
-          left: contentRectSnapshot.left,
-        });
-      }
-      clearHoverOpenTimer();
-      clearPointerSlot();
-      setLingerAnchorSlot(closingSlot);
-      setLingerActiveItem(closingItem);
-      activeSlotRef.current = null;
-      setActiveSlot(null);
-      setActiveItem(null);
-      setOpenKind("closed");
-      setTooltipActiveHighlightSlot(null);
-      setTooltipAnchorSlot(closingSlot);
-      // Keep the anchor until linger ends, so Popper does not drift to (0,0) during the exit animation
-      const anchorLingerMs = getAnchorLingerMs(closingRegistrationId);
-      if (lingerClearTimerRef.current !== undefined) {
-        clearTimeout(lingerClearTimerRef.current);
-      }
-      lingerClearTimerRef.current = setTimeout(() => {
-        lingerClearTimerRef.current = undefined;
-        setLingerAnchorSlot(null);
-        setLingerAnchorScreenRect(null);
-        activeAnchorElementRef.current = null;
-        setTooltipAnchorSlot(null);
-      }, anchorLingerMs);
+  const commitClose = useCallback(() => {
+    clearHoverOpenTimer();
+    clearHoverCloseTimer();
+    clearPointerHighlight();
+    const closingSlot = activeSlotRef.current;
+    if (!closingSlot) {
+      return;
+    }
+    const closingItem = activeItemRef.current;
+    const anchorRect = anchorRef.current?.isConnected
+      ? anchorRef.current.getBoundingClientRect()
+      : null;
+    const contentRect = contentRef.current?.getBoundingClientRect();
+    setLingerAnchorScreenRect(
+      anchorRect
+        ? {
+            top: anchorRect.top,
+            left: anchorRect.left,
+            width: anchorRect.width,
+            height: anchorRect.height,
+          }
+        : null,
+    );
+    setLingerContentScreenRect(
+      contentRect ? { top: contentRect.top, left: contentRect.left } : null,
+    );
+    activeSlotRef.current = null;
+    activeItemRef.current = null;
+    lingerActiveItemRef.current = closingItem;
+    setActiveSlot(null);
+    setActiveItem(null);
+    setLingerAnchorSlot(closingSlot);
+    setLingerActiveItem(closingItem);
+    setOpenKind("closed");
+    setTooltipAnchorSlot(closingSlot);
 
-      if (lingerContentClearTimerRef.current !== undefined) {
-        clearTimeout(lingerContentClearTimerRef.current);
-      }
-      lingerContentClearTimerRef.current = setTimeout(() => {
-        lingerContentClearTimerRef.current = undefined;
-        setLingerActiveItem(null);
-        setLingerContentScreenRect(null);
-      }, TOOLTIP_SWITCH_CONTENT_LINGER_MS);
-    },
-    [clearHoverOpenTimer, clearPointerSlot, getAnchorLingerMs],
-  );
+    const anchorLingerMs =
+      timingRef.current.get(closingSlot.registrationId)?.anchorLingerMs ?? defaultAnchorLingerMs;
+    lingerClearTimerRef.current = setTimeout(() => {
+      lingerClearTimerRef.current = undefined;
+      anchorRef.current = null;
+      setLingerAnchorSlot(null);
+      setLingerAnchorScreenRect(null);
+      setTooltipAnchorSlot(null);
+    }, anchorLingerMs);
+    lingerContentClearTimerRef.current = setTimeout(() => {
+      lingerContentClearTimerRef.current = undefined;
+      lingerActiveItemRef.current = null;
+      setLingerActiveItem(null);
+      setLingerContentScreenRect(null);
+    }, TOOLTIP_SWITCH_CONTENT_LINGER_MS);
+  }, [clearHoverCloseTimer, clearHoverOpenTimer, clearPointerHighlight, defaultAnchorLingerMs]);
 
   const scheduleHoverClose = useCallback(() => {
     clearHoverOpenTimer();
-    clearHoverCloseTimer();
-    const closingRegistrationId = activeSlot?.registrationId ?? null;
-    if (!activeItemRef.current || !closingRegistrationId) {
-      clearPointerSlot();
+    if (!activeSlotRef.current || hoverCloseTimerRef.current !== undefined) {
       return;
     }
-    const closeDelayMs = getCloseDelayMs(closingRegistrationId);
-    hoverCloseTimerRef.current = setTimeout(() => {
-      hoverCloseTimerRef.current = undefined;
-      commitClose(closingRegistrationId);
-    }, closeDelayMs);
-  }, [activeSlot, clearHoverCloseTimer, clearHoverOpenTimer, commitClose, getCloseDelayMs]);
+    const closeDelayMs =
+      timingRef.current.get(activeSlotRef.current.registrationId)?.closeDelayMs ??
+      defaultCloseDelayMs;
+    hoverCloseTimerRef.current = setTimeout(commitClose, closeDelayMs);
+  }, [clearHoverOpenTimer, commitClose, defaultCloseDelayMs]);
 
-  const onContentPointerEnter = useCallback(() => {
-    const registrationId = activeSlotRef.current?.registrationId ?? null;
-    if (!isRegistrationHoverableContent(registrationId)) {
-      scheduleHoverClose();
-      return;
-    }
-    clearHoverCloseTimer();
-  }, [clearHoverCloseTimer, isRegistrationHoverableContent, scheduleHoverClose]);
+  const isRegistrationHoverableContent = useCallback((registrationId: string | null) => {
+    return !registrationId || !timingRef.current.get(registrationId)?.disableHoverableContent;
+  }, []);
 
-  const dismissActiveItem = useCallback(() => {
-    const closingRegistrationId = activeSlot?.registrationId ?? null;
-    clearHoverOpenTimer();
-    clearHoverCloseTimer();
-    if (!activeItemRef.current || !closingRegistrationId) {
-      clearPointerSlot();
-      return;
-    }
-    commitClose(closingRegistrationId);
-  }, [activeSlot, clearHoverCloseTimer, clearHoverOpenTimer, commitClose]);
+  const activateTarget = useCallback(
+    (target: PointerTarget & { itemId: string }, item: unknown, kind: TooltipSwitchOpenKind) => {
+      const slot = tooltipSwitchSlotKey(target.registrationId, target.itemId);
+      clearLinger();
+      anchorRef.current = target.element;
+      activeSlotRef.current = slot;
+      activeItemRef.current = item;
+      setActiveSlot(slot);
+      setActiveItem(item);
+      setOpenKind(kind);
+      setTooltipAnchorSlot(slot);
+      setTooltipActiveHighlightSlot(slot);
+    },
+    [clearLinger],
+  );
 
-  const cancelPendingOpen = useCallback(() => {
-    clearHoverOpenTimer();
-    clearPointerSlot();
-  }, [clearHoverOpenTimer, clearPointerSlot]);
-
-  const dismissIfOpen = useCallback(() => {
-    if (activeItemRef.current !== null) {
-      dismissActiveItem();
-      return;
-    }
-    cancelPendingOpen();
-  }, [cancelPendingOpen, dismissActiveItem]);
-
-  const onTriggerPointerDown = useCallback(
-    (registrationId: string, itemId: string) => {
-      clearHoverOpenTimer();
+  const enterTarget = useCallback(
+    (target: PointerTarget) => {
+      const item = target.getItem();
+      if (
+        target.itemId === null ||
+        item === null ||
+        timingRef.current.get(target.registrationId)?.disabled ||
+        pointerDismissedRegistrationsRef.current.has(target.registrationId)
+      ) {
+        clearPointerHighlight();
+        scheduleHoverClose();
+        return;
+      }
+      const resolvedTarget = { ...target, itemId: target.itemId };
+      const slot = tooltipSwitchSlotKey(target.registrationId, target.itemId);
+      pointerSlotRef.current = slot;
+      setTooltipPointerHighlightSlot(slot);
       clearHoverCloseTimer();
-      const active = activeSlotRef.current;
       if (
-        activeItemRef.current !== null &&
-        active !== null &&
-        active.registrationId === registrationId &&
-        active.itemId === itemId
+        tooltipSwitchSlotsEqual(activeSlotRef.current, slot) &&
+        anchorRef.current === target.element
       ) {
-        pointerDismissedRegistrationsRef.current.add(registrationId);
-        commitClose(registrationId);
         return;
       }
-      const pointer = pointerSlotRef.current;
-      if (
-        pointer !== null &&
-        pointer.registrationId === registrationId &&
-        pointer.itemId === itemId
-      ) {
-        clearPointerSlot();
-      }
-    },
-    [clearHoverCloseTimer, clearHoverOpenTimer, commitClose],
-  );
-
-  const isRelatedTarget = useCallback(
-    (target: EventTarget | null) => {
-      if (isDomNode(target) && activeAnchorElementRef.current?.contains(target)) {
-        return true;
-      }
-      const registrationId = activeSlotRef.current?.registrationId ?? null;
-      return isWithinGlobalTooltipRelatedTarget(target, {
-        triggerZones: triggerZonesRef.current.values(),
-        triggerElements: triggerElementsRef.current.values(),
-        content: isRegistrationHoverableContent(registrationId) ? contentRef.current : null,
-      });
-    },
-    [isRegistrationHoverableContent],
-  );
-
-  const registerActiveAnchorElement = useCallback((element: HTMLElement | null) => {
-    activeAnchorElementRef.current = element;
-    const active = activeSlotRef.current;
-    if (element && active) {
-      lastEnterTargetByRegistrationRef.current.set(active.registrationId, element);
-      triggerElementsRef.current.set(active.registrationId, element);
-    }
-  }, []);
-
-  const notePointerEnterTarget = useCallback((registrationId: string, element: HTMLElement) => {
-    lastEnterTargetByRegistrationRef.current.set(registrationId, element);
-    triggerElementsRef.current.set(registrationId, element);
-  }, []);
-
-  const reapplyCachedTriggerElement = useCallback((registrationId: string) => {
-    const cached = lastEnterTargetByRegistrationRef.current.get(registrationId);
-    if (cached) {
-      triggerElementsRef.current.set(registrationId, cached);
-    }
-  }, []);
-
-  const isTargetWithinRegistration = useCallback((registrationId: string, target: Node) => {
-    const cached = lastEnterTargetByRegistrationRef.current.get(registrationId);
-    if (cached?.contains(target)) {
-      return true;
-    }
-    const triggerEl = triggerElementsRef.current.get(registrationId);
-    if (triggerEl?.contains(target)) {
-      return true;
-    }
-    const zone = triggerZonesRef.current.get(registrationId);
-    return zone?.contains(target) ?? false;
-  }, []);
-
-  const reaffirmActiveRegistrationTrigger = useCallback(
-    (event: PointerEvent) => {
-      const active = activeSlotRef.current;
-      if (!active || activeItemRef.current === null || !isDomNode(event.target)) {
-        return;
-      }
-      const anchor = activeAnchorElementRef.current;
-      if (anchor?.isConnected && anchor.contains(event.target)) {
-        triggerElementsRef.current.set(active.registrationId, anchor);
-        lastEnterTargetByRegistrationRef.current.set(active.registrationId, anchor);
-        return;
-      }
-      if (isTargetWithinRegistration(active.registrationId, event.target)) {
-        reapplyCachedTriggerElement(active.registrationId);
-      }
-    },
-    [isTargetWithinRegistration, reapplyCachedTriggerElement],
-  );
-
-  const handleItemPointerEnter = useCallback(
-    <TItem>(
-      registrationId: string,
-      item: TItem,
-      getItemId: (item: TItem) => string,
-      openDelayMs: number,
-    ) => {
-      const itemId = getItemId(item);
-      if (pointerDismissedRegistrationsRef.current.has(registrationId)) {
-        return;
-      }
-      openDelayByRegistrationRef.current.set(registrationId, openDelayMs);
-      const hadDisplayedContent =
-        activeItemRef.current !== null || lingerActiveItemRef.current !== null;
-      clearHoverCloseTimer();
-      if (lingerClearTimerRef.current !== undefined) {
-        clearTimeout(lingerClearTimerRef.current);
-        lingerClearTimerRef.current = undefined;
-      }
-      if (lingerContentClearTimerRef.current !== undefined) {
-        clearTimeout(lingerContentClearTimerRef.current);
-        lingerContentClearTimerRef.current = undefined;
-      }
-      setLingerAnchorSlot(null);
-      setLingerActiveItem(null);
-      setLingerAnchorScreenRect(null);
-      setLingerContentScreenRect(null);
-
-      const slot = tooltipSwitchSlotKey(registrationId, itemId);
-      applyPointerSlot(slot);
-
-      if (
-        activeItemRef.current !== null &&
-        activeSlotRef.current !== null &&
-        tooltipSwitchSlotsEqual(activeSlotRef.current, slot)
-      ) {
-        clearHoverCloseTimer();
-        reapplyCachedTriggerElement(registrationId);
-        return;
-      }
-
-      if (activeItemRef.current !== null) {
+      if (activeItemRef.current !== null || lingerActiveItemRef.current !== null) {
         clearHoverOpenTimer();
-        applyActiveSlot(slot);
-        setActiveItem(item);
-        setOpenKind("instant");
-        reapplyCachedTriggerElement(registrationId);
+        activateTarget(resolvedTarget, item, "instant");
         return;
       }
-
-      if (hadDisplayedContent) {
-        clearHoverOpenTimer();
-        applyActiveSlot(slot);
-        setActiveItem(item);
-        setOpenKind("instant");
-        reapplyCachedTriggerElement(registrationId);
+      const pending = pendingTargetRef.current;
+      if (
+        pending?.target.element === target.element &&
+        pending.target.registrationId === target.registrationId &&
+        pending.target.itemId === target.itemId
+      ) {
+        if (pending.ready) {
+          clearHoverOpenTimer();
+          activateTarget(resolvedTarget, item, "delayed");
+        }
         return;
       }
-
       clearHoverOpenTimer();
+      if (target.openDelayMs === 0) {
+        activateTarget(resolvedTarget, item, "delayed");
+        return;
+      }
+      const nextPending = { target, ready: false };
+      pendingTargetRef.current = nextPending;
       hoverOpenTimerRef.current = setTimeout(() => {
         hoverOpenTimerRef.current = undefined;
-        const pointer = pointerSlotRef.current;
-        if (!pointer || !tooltipSwitchSlotKey(registrationId, itemId)) {
-          return;
-        }
-        if (pointer.registrationId !== registrationId || pointer.itemId !== itemId) {
-          return;
-        }
-        applyActiveSlot(slot);
-        setActiveItem(item);
-        setOpenKind("delayed");
-        reapplyCachedTriggerElement(registrationId);
-      }, openDelayMs);
+        nextPending.ready = true;
+        schedulePointerReconcile();
+      }, target.openDelayMs ?? defaultOpenDelayMs);
     },
     [
-      applyActiveSlot,
-      applyPointerSlot,
+      activateTarget,
       clearHoverCloseTimer,
       clearHoverOpenTimer,
-      reapplyCachedTriggerElement,
+      clearPointerHighlight,
+      defaultOpenDelayMs,
+      scheduleHoverClose,
+      schedulePointerReconcile,
     ],
+  );
+
+  const reconcilePointer = useCallback(() => {
+    const active = activeSlotRef.current;
+    const anchor = anchorRef.current;
+    const anchorRegistration = anchor ? triggerElementsRef.current.get(anchor) : undefined;
+    // A virtualized or filtered-out source can disappear while its detail is hovered.
+    if (
+      active &&
+      (!anchor?.isConnected ||
+        anchorRegistration?.registrationId !== active.registrationId ||
+        anchorRegistration.itemId !== active.itemId)
+    ) {
+      commitClose();
+    }
+    const point = pointerRef.current;
+    if (!point || keyboardInputRef.current) {
+      return;
+    }
+    // Scrolling can move a different row under a stationary pointer before boundary
+    // events arrive. Native hit-testing also respects clipping, portals and UI scale.
+    const hit = document.elementFromPoint(point.clientX, point.clientY);
+    for (const registrationId of pointerDismissedRegistrationsRef.current) {
+      if (!hit || !triggerZonesRef.current.get(registrationId)?.contains(hit)) {
+        pointerDismissedRegistrationsRef.current.delete(registrationId);
+      }
+    }
+    let element: Element | null = hit;
+    while (element) {
+      const registration = triggerElementsRef.current.get(element as HTMLElement);
+      if (registration) {
+        enterTarget({ ...registration, element: element as HTMLElement });
+        return;
+      }
+      element = element.parentElement;
+    }
+    pointerSlotRef.current = null;
+    setTooltipPointerHighlightSlot(null);
+    const currentActive = activeSlotRef.current;
+    if (
+      currentActive &&
+      isRegistrationHoverableContent(currentActive.registrationId) &&
+      (contentRef.current?.contains(hit) ||
+        isPointerOverTooltipCompanionOverlays(point.clientX, point.clientY))
+    ) {
+      clearHoverOpenTimer();
+      clearHoverCloseTimer();
+      setTooltipActiveHighlightSlot(currentActive);
+      return;
+    }
+    setTooltipActiveHighlightSlot(null);
+    scheduleHoverClose();
+  }, [
+    clearHoverCloseTimer,
+    clearHoverOpenTimer,
+    commitClose,
+    enterTarget,
+    isRegistrationHoverableContent,
+    scheduleHoverClose,
+  ]);
+  reconcileRef.current = reconcilePointer;
+
+  const recordPointer = useCallback(
+    (event: ClientPoint & { pointerType?: string }, explicitPointerInput = false) => {
+      if (event.pointerType === "touch") {
+        pointerRef.current = null;
+        commitClose();
+        return;
+      }
+      const previous = pointerRef.current;
+      const moved =
+        !previous || previous.clientX !== event.clientX || previous.clientY !== event.clientY;
+      pointerRef.current = { clientX: event.clientX, clientY: event.clientY };
+      // Keyboard scrolling may itself cause boundary events at unchanged coordinates.
+      if (moved || explicitPointerInput) {
+        keyboardInputRef.current = false;
+        setTooltipKeyboardInput(false);
+      }
+      schedulePointerReconcile();
+    },
+    [commitClose, schedulePointerReconcile],
+  );
+
+  const registerTriggerElement = useCallback(
+    (element: HTMLElement, registration: TooltipTriggerRegistration) => {
+      triggerElementsRef.current.set(element, registration);
+      schedulePointerReconcile();
+      return () => {
+        if (triggerElementsRef.current.get(element) === registration) {
+          triggerElementsRef.current.delete(element);
+          schedulePointerReconcile();
+        }
+      };
+    },
+    [schedulePointerReconcile],
+  );
+
+  const registerTriggerZone = useCallback((registrationId: string, zone: HTMLDivElement | null) => {
+    if (zone) {
+      triggerZonesRef.current.set(registrationId, zone);
+    } else {
+      triggerZonesRef.current.delete(registrationId);
+    }
+  }, []);
+
+  const unregisterTriggerZone = useCallback(
+    (registrationId: string) => {
+      triggerZonesRef.current.delete(registrationId);
+      timingRef.current.delete(registrationId);
+      pointerDismissedRegistrationsRef.current.delete(registrationId);
+      schedulePointerReconcile();
+    },
+    [schedulePointerReconcile],
+  );
+
+  const setRegistrationTiming = useCallback(
+    (registrationId: string, timing: RegistrationTiming) => {
+      timingRef.current.set(registrationId, timing);
+      schedulePointerReconcile();
+    },
+    [schedulePointerReconcile],
   );
 
   const getTriggerProps = useCallback(
@@ -517,171 +464,146 @@ export function useGlobalTooltipSwitch({
       registrationId: string,
       item: TItem,
       getItemId: (item: TItem) => string,
-      openDelayMs: number,
+      _openDelayMs: number,
     ): AnchoredItemSwitchTriggerProps => {
       const itemId = getItemId(item);
       return {
         onPointerEnter: (event?: ReactPointerEvent) => {
-          const enterTarget = event?.currentTarget;
-          if (enterTarget instanceof HTMLElement) {
-            notePointerEnterTarget(registrationId, enterTarget);
+          if (event) {
+            recordPointer(event);
+          } else {
+            schedulePointerReconcile();
           }
-          handleItemPointerEnter(registrationId, item, getItemId, openDelayMs);
         },
         isHighlighted: isTooltipItemHighlighted(registrationId, itemId),
         isAnchor: isTooltipAnchorSlot(registrationId, itemId),
       };
     },
-    [handleItemPointerEnter, notePointerEnterTarget],
+    [recordPointer, schedulePointerReconcile],
   );
 
   const onTriggerZonePointerLeave = useCallback(
-    (registrationId: string, event: ReactPointerEvent<HTMLDivElement>) => {
-      const related = event.relatedTarget;
-      if (isDomNode(related)) {
-        if (isRelatedTarget(related)) {
-          return;
-        }
-        const triggerEl = triggerElementsRef.current.get(registrationId);
-        if (triggerEl?.contains(related)) {
-          return;
-        }
-        const cachedEnter = lastEnterTargetByRegistrationRef.current.get(registrationId);
-        if (cachedEnter?.contains(related)) {
-          return;
-        }
-      }
-      clearHoverOpenTimer();
-      clearPointerSlot();
-      pointerDismissedRegistrationsRef.current.delete(registrationId);
+    (_registrationId: string, _event: ReactPointerEvent<HTMLDivElement>) => {
+      schedulePointerReconcile();
     },
-    [clearHoverOpenTimer, clearPointerSlot, isRelatedTarget],
+    [schedulePointerReconcile],
   );
 
-  const registerTriggerZone = useCallback((registrationId: string, zone: HTMLDivElement | null) => {
-    triggerZonesRef.current.set(registrationId, zone);
-  }, []);
-
-  const registerTriggerElement = useCallback(
-    (registrationId: string, element: HTMLElement | null) => {
-      if (element) {
-        triggerElementsRef.current.set(registrationId, element);
-      } else {
-        triggerElementsRef.current.delete(registrationId);
-      }
+  const onTriggerPointerDown = useCallback(
+    (registrationId: string, _itemId: string) => {
+      pointerDismissedRegistrationsRef.current.add(registrationId);
+      commitClose();
     },
-    [],
+    [commitClose],
   );
 
-  const unregisterTriggerZone = useCallback((registrationId: string) => {
-    triggerZonesRef.current.delete(registrationId);
-    triggerElementsRef.current.delete(registrationId);
-    lastEnterTargetByRegistrationRef.current.delete(registrationId);
-    openDelayByRegistrationRef.current.delete(registrationId);
-    closeDelayByRegistrationRef.current.delete(registrationId);
-    anchorLingerByRegistrationRef.current.delete(registrationId);
-    disableHoverableContentByRegistrationRef.current.delete(registrationId);
-  }, []);
-
-  const isAnchorSlot = useCallback(
-    (registrationId: string, itemId: string) => isTooltipAnchorSlot(registrationId, itemId),
-    [],
-  );
-
-  useEffect(() => {
-    const cancelPendingOpenOnPointerLeave = (event: PointerEvent) => {
-      if (hoverOpenTimerRef.current === undefined) {
-        return;
-      }
-      const pointer = pointerSlotRef.current;
-      if (!pointer) {
-        return;
-      }
-      const target = event.target;
-      if (!isDomNode(target)) {
-        cancelPendingOpen();
-        return;
-      }
-      const cachedEnter = lastEnterTargetByRegistrationRef.current.get(pointer.registrationId);
-      if (cachedEnter?.contains(target)) {
-        return;
-      }
-      cancelPendingOpen();
-    };
-    document.addEventListener("pointermove", cancelPendingOpenOnPointerLeave, true);
-    return () => document.removeEventListener("pointermove", cancelPendingOpenOnPointerLeave, true);
-  }, [cancelPendingOpen]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
+  const onContentPointerEnter = useCallback(() => {
+    const active = activeSlotRef.current;
+    if (active && isRegistrationHoverableContent(active.registrationId)) {
+      clearHoverCloseTimer();
+      setTooltipActiveHighlightSlot(active);
     }
-    const handleDocumentPointerMove = (event: PointerEvent) => {
-      reaffirmActiveRegistrationTrigger(event);
-      const registrationId = activeSlotRef.current?.registrationId ?? null;
-      const hoverableContent = isRegistrationHoverableContent(registrationId);
-      const isRelated =
-        (isDomNode(event.target) && activeAnchorElementRef.current?.contains(event.target)) ||
-        isWithinGlobalTooltipRelatedTarget(event.target, {
-          triggerZones: triggerZonesRef.current.values(),
-          triggerElements: triggerElementsRef.current.values(),
-          content: hoverableContent ? contentRef.current : null,
-        }) ||
-        (hoverableContent && isPointerOverTooltipCompanionOverlays(event.clientX, event.clientY));
-      if (isRelated) {
-        clearHoverCloseTimer();
+  }, [clearHoverCloseTimer, isRegistrationHoverableContent]);
+
+  useEffect(() => {
+    const handlePointer = (event: PointerEvent) => recordPointer(event);
+    const handleWheel = (event: WheelEvent) => recordPointer(event, true);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) {
         return;
       }
-      if (hoverCloseTimerRef.current === undefined) {
+      keyboardInputRef.current = true;
+      setTooltipKeyboardInput(true);
+      if (isEventTargetWithinTooltipCompanionOverlays(event.target)) {
+        clearHoverOpenTimer();
+      } else {
+        commitClose();
+      }
+    };
+    const handlePointerOut = (event: PointerEvent) => {
+      if (event.relatedTarget === null) {
+        pointerRef.current = null;
+        pointerDismissedRegistrationsRef.current.clear();
+        clearPointerHighlight();
         scheduleHoverClose();
       }
     };
-    document.addEventListener("pointermove", handleDocumentPointerMove, true);
-    return () => document.removeEventListener("pointermove", handleDocumentPointerMove, true);
+    const handleWindowBlur = () => {
+      pointerRef.current = null;
+      pointerDismissedRegistrationsRef.current.clear();
+      commitClose();
+    };
+    document.addEventListener("pointermove", handlePointer, true);
+    document.addEventListener("pointerover", handlePointer, true);
+    document.addEventListener("pointerout", handlePointerOut, true);
+    document.addEventListener("wheel", handleWheel, { capture: true, passive: true });
+    document.addEventListener("scroll", schedulePointerReconcile, { capture: true, passive: true });
+    document.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("blur", handleWindowBlur);
+    return () => {
+      document.removeEventListener("pointermove", handlePointer, true);
+      document.removeEventListener("pointerover", handlePointer, true);
+      document.removeEventListener("pointerout", handlePointerOut, true);
+      document.removeEventListener("wheel", handleWheel, true);
+      document.removeEventListener("scroll", schedulePointerReconcile, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
   }, [
-    clearHoverCloseTimer,
-    isRegistrationHoverableContent,
-    open,
-    reaffirmActiveRegistrationTrigger,
+    clearHoverOpenTimer,
+    clearPointerHighlight,
+    commitClose,
+    recordPointer,
     scheduleHoverClose,
+    schedulePointerReconcile,
   ]);
 
   useEffect(() => {
     return () => {
-      if (hoverOpenTimerRef.current !== undefined) {
-        clearTimeout(hoverOpenTimerRef.current);
-      }
-      if (hoverCloseTimerRef.current !== undefined) {
-        clearTimeout(hoverCloseTimerRef.current);
-      }
+      clearHoverOpenTimer();
+      clearHoverCloseTimer();
       if (lingerClearTimerRef.current !== undefined) {
         clearTimeout(lingerClearTimerRef.current);
       }
       if (lingerContentClearTimerRef.current !== undefined) {
         clearTimeout(lingerContentClearTimerRef.current);
       }
+      if (reconcileFrameRef.current !== null) {
+        cancelAnimationFrame(reconcileFrameRef.current);
+        reconcileFrameRef.current = null;
+      }
+      clearTooltipItemInteractionSlots();
     };
-  }, []);
+  }, [clearHoverCloseTimer, clearHoverOpenTimer]);
+
+  const model = useMemo(() => {
+    const next = new GlobalTooltipSwitchStateModel();
+    next.activeSlot = activeSlot;
+    next.activeItem = activeItem;
+    next.lingerAnchorSlot = lingerAnchorSlot;
+    next.lingerActiveItem = lingerActiveItem;
+    return next;
+  }, [activeItem, activeSlot, lingerActiveItem, lingerAnchorSlot]);
 
   return {
-    open,
+    open: model.open,
     openKind,
-    anchorSlot,
-    contentActiveItem,
-    activeRegistrationId,
+    anchorSlot: model.anchorSlot,
+    anchorRef,
+    contentActiveItem: model.contentActiveItem,
+    activeRegistrationId: activeSlot?.registrationId ?? null,
     contentRef,
     registerTriggerZone,
     unregisterTriggerZone,
     registerTriggerElement,
-    registerActiveAnchorElement,
     setRegistrationTiming,
     getTriggerProps,
     onTriggerZonePointerLeave,
-    dismissActiveItem,
-    dismissIfOpen,
+    dismissActiveItem: commitClose,
+    dismissIfOpen: commitClose,
     onTriggerPointerDown,
     isRegistrationHoverableContent,
-    isAnchorSlot,
+    isAnchorSlot: isTooltipAnchorSlot,
     onContentPointerEnter,
     lingerAnchorScreenRect,
     lingerContentScreenRect,

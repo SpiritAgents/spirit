@@ -3,12 +3,16 @@ import { Check, ChevronRight } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import {
-  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
+  DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "@/lib/desktop-chrome";
 import { isEventTargetWithinTooltipCompanionOverlays } from "@/hooks/tooltip-switch-registry";
-import { useOptionalTooltipItemMenuHighlight } from "@/components/ui/tooltip";
+import {
+  useOptionalTooltipItemMenuHighlight,
+  useTooltipKeyboardInput,
+} from "@/components/ui/tooltip";
 import { getUiLayoutPortalContainer } from "@/lib/ui-layout-scale";
 import { radixAnchoredOverlayMotion } from "@/lib/overlay-motion";
 import { cn } from "@/lib/utils";
@@ -128,24 +132,54 @@ function DropdownMenuContent({
 function DropdownMenuItem({
   className,
   variant = "default",
+  ref,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   variant?: "default" | "destructive";
 }) {
   const tooltipMenuHighlight = useOptionalTooltipItemMenuHighlight();
+  const keyboardInput = useTooltipKeyboardInput();
+  const itemRef = React.useRef<HTMLDivElement | null>(null);
+  const showFocusHighlight = tooltipMenuHighlight === null || keyboardInput;
+  const pointerHighlighted = tooltipMenuHighlight?.pointer === true && !keyboardInput;
+  const composedRef = React.useCallback(
+    (element: HTMLDivElement | null) => {
+      itemRef.current = element;
+      if (typeof ref === "function") {
+        return ref(element);
+      }
+      if (ref) {
+        ref.current = element;
+      }
+    },
+    [ref],
+  );
+
+  React.useLayoutEffect(() => {
+    if (pointerHighlighted && !props.disabled) {
+      // Match Radix's pointer focus when scrolling changes the hovered row, without
+      // scrolling it back into view or stealing focus while the detail is hovered.
+      itemRef.current?.focus({ preventScroll: true });
+    }
+  }, [pointerHighlighted, props.disabled]);
 
   return (
     <DropdownMenuPrimitive.Item
+      ref={composedRef}
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
+        showFocusHighlight && DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
+        variant === "destructive" && "text-destructive [&_svg]:text-destructive",
         variant === "destructive" &&
-          "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20 [&_svg]:text-destructive",
+          showFocusHighlight &&
+          "focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
         className,
-        tooltipMenuHighlight &&
-          variant !== "destructive" &&
-          "!bg-overlay-hover text-accent-foreground",
+        tooltipMenuHighlight?.highlighted &&
+          (variant === "destructive"
+            ? "!bg-destructive/10 dark:!bg-destructive/20"
+            : "!bg-overlay-hover text-accent-foreground"),
       )}
       {...props}
     />
