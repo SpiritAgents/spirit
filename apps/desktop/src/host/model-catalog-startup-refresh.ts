@@ -226,6 +226,9 @@ export function mergeNewCatalogModelsIntoConfig(
         ...(catalogEntry?.supportedReasoningEfforts !== undefined
           ? { supportedEfforts: catalogEntry.supportedReasoningEfforts }
           : {}),
+        ...(catalogEntry?.defaultReasoningEffort
+          ? { defaultEffort: catalogEntry.defaultReasoningEffort }
+          : {}),
       }),
     };
     if (catalogEntry?.supportedReasoningEfforts !== undefined) {

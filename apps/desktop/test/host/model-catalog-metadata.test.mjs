@@ -624,6 +624,15 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
         contextLength: 262144,
         supportsThinkingType: "only",
       },
+      {
+        id: "k3",
+        displayName: "K3",
+        supportsImageInput: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+        defaultReasoningEffort: "high",
+        contextLength: 262144,
+        supportsThinkingType: "only",
+      },
     ],
   });
 
@@ -633,6 +642,15 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
       displayName: "K2.7 Code",
       capabilities: ["chat", "image", "video"],
       supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+      contextLength: 262144,
+      supportsThinkingType: "only",
+    },
+    {
+      id: "k3",
+      displayName: "K3",
+      capabilities: ["chat", "image"],
+      supportedReasoningEfforts: ["low", "high", "max"],
+      defaultReasoningEffort: "high",
       contextLength: 262144,
       supportsThinkingType: "only",
     },

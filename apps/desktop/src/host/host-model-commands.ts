@@ -1184,6 +1184,9 @@ export async function addProviderModelsCommand(
             ...(catalogEntry?.supportedReasoningEfforts !== undefined
               ? { supportedEfforts: catalogEntry.supportedReasoningEfforts }
               : {}),
+            ...(catalogEntry?.defaultReasoningEffort
+              ? { defaultEffort: catalogEntry.defaultReasoningEffort }
+              : {}),
             ...(catalogEntry?.supportsThinkingType
               ? { supportsThinkingType: catalogEntry.supportsThinkingType }
               : {}),
@@ -1216,6 +1219,7 @@ export async function addProviderModelsCommand(
       toAdd.push(entry);
     }
 
+    const firstCatalogEntry = catalogEntries.get(uniqueIds[0] ?? "");
     const scopeProfile: ModelProfileSnapshot = {
       groupId,
       name: uniqueIds[0] ?? "",
@@ -1226,6 +1230,12 @@ export async function addProviderModelsCommand(
           ? { provider: reasoningProviderForTransport(provider, transportKind) }
           : {}),
         model: uniqueIds[0] ?? "",
+        ...(firstCatalogEntry?.supportedReasoningEfforts !== undefined
+          ? { supportedEfforts: firstCatalogEntry.supportedReasoningEfforts }
+          : {}),
+        ...(firstCatalogEntry?.defaultReasoningEffort
+          ? { defaultEffort: firstCatalogEntry.defaultReasoningEffort }
+          : {}),
       }),
       ...(transportKind === "anthropic" ||
       transportKind === "open-responses" ||
@@ -1447,6 +1457,9 @@ export async function addModelCommand(
           model: name,
           ...(catalogEntry?.supportedReasoningEfforts !== undefined
             ? { supportedEfforts: catalogEntry.supportedReasoningEfforts }
+            : {}),
+          ...(catalogEntry?.defaultReasoningEffort
+            ? { defaultEffort: catalogEntry.defaultReasoningEffort }
             : {}),
           ...(catalogEntry?.supportsThinkingType
             ? { supportsThinkingType: catalogEntry.supportsThinkingType }

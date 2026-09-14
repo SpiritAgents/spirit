@@ -275,6 +275,9 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const supportedReasoningEfforts = normalizeCachedSupportedReasoningEfforts(
       record.supportedReasoningEfforts,
     );
+    const defaultReasoningEffort = normalizeCachedDefaultReasoningEffort(
+      record.defaultReasoningEffort,
+    );
     const contextLength =
       typeof record.contextLength === "number" &&
       Number.isFinite(record.contextLength) &&
@@ -296,6 +299,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(pricing !== undefined ? { pricing } : {}),
       ...(capabilities !== undefined ? { capabilities } : {}),
       ...(supportedReasoningEfforts !== undefined ? { supportedReasoningEfforts } : {}),
+      ...(defaultReasoningEffort !== undefined ? { defaultReasoningEffort } : {}),
       ...(contextLength !== undefined ? { contextLength } : {}),
       ...(supportsThinkingType !== undefined ? { supportsThinkingType } : {}),
       ...(supportsThinkingSwitch !== undefined ? { supportsThinkingSwitch } : {}),
@@ -462,6 +466,19 @@ function normalizeCachedSupportedReasoningEfforts(
   return normalized;
 }
 
+function normalizeCachedDefaultReasoningEffort(
+  value: unknown,
+): DesktopModelReasoningEffort | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const effort = value.trim().toLowerCase();
+  if (!effort || effort === "default") {
+    return undefined;
+  }
+  return effort;
+}
+
 function clonePreviewModelCatalog(
   entries: readonly PreviewModelCatalogEntry[],
 ): PreviewModelCatalogEntry[] {
@@ -473,6 +490,9 @@ function clonePreviewModelCatalog(
     ...(entry.capabilities ? { capabilities: [...entry.capabilities] } : {}),
     ...(entry.supportedReasoningEfforts !== undefined
       ? { supportedReasoningEfforts: [...entry.supportedReasoningEfforts] }
+      : {}),
+    ...(entry.defaultReasoningEffort !== undefined
+      ? { defaultReasoningEffort: entry.defaultReasoningEffort }
       : {}),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
     ...(entry.supportsThinkingType !== undefined

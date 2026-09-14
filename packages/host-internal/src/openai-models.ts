@@ -64,6 +64,8 @@ export interface ProviderListedModelEntry {
   contextLength?: number;
   maxCompletionTokens?: number;
   supportedReasoningEfforts?: string[];
+  /** Kimi Code `think_efforts.default_effort` when `think_efforts.support` is true. */
+  defaultReasoningEffort?: string;
   /** Hugging Face Hub media models: Inference Providers routing hint (optional for backend use). */
   inferenceProvider?: string;
   /** DeepInfra `is_partner`: partner models (data forwarded to third parties); kept as catalog metadata only in this first version, not filtered. */
@@ -366,7 +368,7 @@ export function parseMoonshotModelEntriesPayload(body: unknown): ProviderListedM
   return entries;
 }
 
-/** Kimi Code `GET /v1/models`: Moonshot-shaped traits + `display_name` + `supports_thinking_type`. */
+/** Kimi Code `GET /v1/models`: Moonshot-shaped traits + `display_name` + `supports_thinking_type` + `think_efforts`. */
 export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
   if (typeof body !== "object" || body === null || !("data" in body)) {
     return [];
@@ -403,6 +405,14 @@ export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedM
     const supportsReasoning = readBooleanModelTrait(record, "supports_reasoning");
     if (supportsReasoning !== undefined) {
       modelEntry.supportsReasoning = supportsReasoning;
+    }
+    const thinkEfforts = readKimiCodeThinkEfforts(record);
+    if (thinkEfforts) {
+      modelEntry.supportedReasoningEfforts = thinkEfforts.validEfforts;
+      if (thinkEfforts.defaultEffort) {
+        modelEntry.defaultReasoningEffort = thinkEfforts.defaultEffort;
+      }
+    } else if (supportsReasoning !== undefined) {
       modelEntry.supportedReasoningEfforts = moonshotSupportedReasoningEfforts(
         supportsReasoning,
         id.trim(),
@@ -429,6 +439,67 @@ function readKimiCodeSupportsThinkingType(
     return "only";
   }
   return undefined;
+}
+
+function readKimiCodeThinkEfforts(
+  record: Record<string, unknown>,
+): { validEfforts: string[]; defaultEffort?: string } | undefined {
+  const raw = record.think_efforts;
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return undefined;
+  }
+  const thinkEfforts = raw as Record<string, unknown>;
+  if (thinkEfforts.support !== true) {
+    return undefined;
+  }
+
+  const validEfforts = readKimiCodeValidReasoningEfforts(thinkEfforts.valid_efforts);
+  if (validEfforts.length === 0) {
+    return undefined;
+  }
+
+  const defaultEffort = readKimiCodeDefaultReasoningEffort(
+    thinkEfforts.default_effort,
+    validEfforts,
+  );
+  return {
+    validEfforts,
+    ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+  };
+}
+
+function readKimiCodeValidReasoningEfforts(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const seen = new Set<string>();
+  const efforts: string[] = [];
+  for (const item of value) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    const effort = item.trim().toLowerCase();
+    if (!effort || effort === "default" || seen.has(effort)) {
+      continue;
+    }
+    seen.add(effort);
+    efforts.push(effort);
+  }
+  return efforts;
+}
+
+function readKimiCodeDefaultReasoningEffort(
+  value: unknown,
+  validEfforts: readonly string[],
+): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const effort = value.trim().toLowerCase();
+  if (!effort || effort === "default" || !validEfforts.includes(effort)) {
+    return undefined;
+  }
+  return effort;
 }
 
 export type SiliconFlowModelListKind = "chat" | "image" | "video";
@@ -3098,6 +3169,9 @@ function dedupeProviderListedModelEntries(
       ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
       ...(entry.supportedReasoningEfforts !== undefined
         ? { supportedReasoningEfforts: [...entry.supportedReasoningEfforts] }
+        : {}),
+      ...(entry.defaultReasoningEffort !== undefined
+        ? { defaultReasoningEffort: entry.defaultReasoningEffort }
         : {}),
       ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
     });

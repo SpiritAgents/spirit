@@ -115,6 +115,8 @@ export interface ModelReasoningEffortContext {
   supportsThinkingType?: ModelSupportsThinkingType;
   /** Catalog flag: the model supports the `thinking.type` switch (e.g. Meituan LongCat). */
   supportsThinkingSwitch?: boolean;
+  /** Kimi Code `think_efforts.default_effort`; used instead of omitting reasoning_effort. */
+  defaultEffort?: ModelReasoningEffort;
 }
 
 export const DEFAULT_MODEL_REASONING_EFFORT: OpenAiCompatibleReasoningEffort = "medium";
@@ -290,7 +292,7 @@ export function defaultModelReasoningEffort(
   }
 
   if (isKimiCodeReasoningEffortModel(context)) {
-    return "default";
+    return kimiCodeDefaultReasoningEffort(context);
   }
 
   if (isXaiReasoningEffortModel(context)) {
@@ -354,7 +356,7 @@ export function modelReasoningEffortOptions(
 
   if (isKimiCodeReasoningEffortModel(context)) {
     if (context?.supportedEfforts !== undefined) {
-      return moonshotReasoningEffortOptionsForSupportedEfforts(context.supportedEfforts);
+      return kimiCodeReasoningEffortOptionsForSupportedEfforts(context.supportedEfforts);
     }
     return MOONSHOT_REASONING_EFFORT_OPTIONS;
   }
@@ -658,14 +660,28 @@ function resolveCompatibleModelReasoningEffort(
 
   if (isKimiCodeReasoningEffortModel(context)) {
     const supportedEfforts = normalizeSupportedReasoningEfforts(context?.supportedEfforts);
+    const fallback = kimiCodeDefaultReasoningEffort(context);
     switch (normalized) {
       case "none":
         return "default";
       case "xhigh":
+        if (supportedEfforts?.has("max")) {
+          return "max";
+        }
+        if (!supportedEfforts || supportedEfforts.has("high")) {
+          return "high";
+        }
+        return fallback;
       case "max":
-        return "high";
+        if (supportedEfforts?.has("max")) {
+          return "max";
+        }
+        if (!supportedEfforts || supportedEfforts.has("high")) {
+          return "high";
+        }
+        return fallback;
       default:
-        return moonshotReasoningEffortValueForContext(normalized, supportedEfforts) ?? "default";
+        return kimiCodeReasoningEffortValueForContext(normalized, supportedEfforts) ?? fallback;
     }
   }
 
@@ -870,6 +886,53 @@ function moonshotReasoningEffortOptionsForSupportedEfforts(
 ): ReadonlyArray<ModelReasoningEffortOption<ModelReasoningEffort>> {
   const supported = normalizeSupportedReasoningEfforts(supportedEfforts) ?? new Set<string>();
   return MOONSHOT_REASONING_EFFORT_OPTIONS.filter(
+    (option) => option.value === "default" || supported.has(option.value),
+  );
+}
+
+const KIMI_CODE_REASONING_EFFORT_OPTIONS: ReadonlyArray<
+  ModelReasoningEffortOption<ModelReasoningEffort>
+> = dedupeReasoningEffortOptions([
+  ...MOONSHOT_REASONING_EFFORT_OPTIONS,
+  ...MOONSHOT_K3_REASONING_EFFORT_OPTIONS,
+]);
+
+const KIMI_CODE_REASONING_EFFORT_VALUES = new Set<string>(
+  KIMI_CODE_REASONING_EFFORT_OPTIONS.map((option) => option.value),
+);
+
+function kimiCodeDefaultReasoningEffort(
+  context?: ModelReasoningEffortContext,
+): ModelReasoningEffort {
+  const catalogDefault = normalizeModelReasoningEffort(context?.defaultEffort);
+  if (!catalogDefault || catalogDefault === "default") {
+    return "default";
+  }
+  const supported = normalizeSupportedReasoningEfforts(context?.supportedEfforts);
+  if (supported && !supported.has(catalogDefault)) {
+    return "default";
+  }
+  return catalogDefault;
+}
+
+function kimiCodeReasoningEffortValueForContext(
+  normalized: ModelReasoningEffort,
+  supportedEfforts?: ReadonlySet<string>,
+): ModelReasoningEffort | undefined {
+  if (!KIMI_CODE_REASONING_EFFORT_VALUES.has(normalized)) {
+    return undefined;
+  }
+  if (!supportedEfforts) {
+    return MOONSHOT_REASONING_EFFORT_VALUES.has(normalized) ? normalized : undefined;
+  }
+  return normalized === "default" || supportedEfforts.has(normalized) ? normalized : undefined;
+}
+
+function kimiCodeReasoningEffortOptionsForSupportedEfforts(
+  supportedEfforts: readonly ModelReasoningEffort[],
+): ReadonlyArray<ModelReasoningEffortOption<ModelReasoningEffort>> {
+  const supported = normalizeSupportedReasoningEfforts(supportedEfforts) ?? new Set<string>();
+  return KIMI_CODE_REASONING_EFFORT_OPTIONS.filter(
     (option) => option.value === "default" || supported.has(option.value),
   );
 }
