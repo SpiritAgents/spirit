@@ -27,6 +27,8 @@ export type EditCommandSource = {
   canRedo: boolean;
   hasSelection: boolean;
   clipboardHasText: boolean;
+  clipboardHasImage: boolean;
+  clipboardHasFile: boolean;
 };
 
 export type EditFocusProbe = {
@@ -168,7 +170,12 @@ export function deriveEditCommandState(source: EditCommandSource): EditCommandSt
     canRedo: source.editable && source.canRedo,
     canCut: source.editable && source.hasSelection,
     canCopy: source.hasSelection,
-    canPaste: source.editable && source.clipboardHasText,
+    // The composer also accepts image/file clipboards (attached via its paste pipeline);
+    // monaco, native inputs, and terminals insert text only.
+    canPaste:
+      source.editable &&
+      (source.clipboardHasText ||
+        (source.kind === "lexical" && (source.clipboardHasImage || source.clipboardHasFile))),
     canSelectAll: true,
     canDictate: source.editable,
   };

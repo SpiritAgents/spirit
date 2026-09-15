@@ -98,8 +98,53 @@ export function writeEditClipboardText(text: string): void {
   }
 }
 
-export function readEditClipboardHasText(): boolean {
-  return readEditClipboardText().length > 0;
+export type EditClipboardContent = {
+  hasText: boolean;
+  hasImage: boolean;
+  hasFile: boolean;
+};
+
+export function readEditClipboardContent(): EditClipboardContent {
+  try {
+    const content = window.spiritDesktop?.readClipboardContentKinds?.();
+    if (content) {
+      return {
+        hasText: content.hasText === true,
+        hasImage: content.hasImage === true,
+        hasFile: content.hasFile === true,
+      };
+    }
+  } catch {
+    // fall through to the text-only probe
+  }
+  return { hasText: readEditClipboardText().length > 0, hasImage: false, hasFile: false };
+}
+
+function clipboardSourceFlags(content: EditClipboardContent) {
+  return {
+    clipboardHasText: content.hasText,
+    clipboardHasImage: content.hasImage,
+    clipboardHasFile: content.hasFile,
+  };
+}
+
+function resolveEditClipboardContent(options?: {
+  clipboardHasText?: boolean;
+  clipboardHasImage?: boolean;
+  clipboardHasFile?: boolean;
+}): EditClipboardContent {
+  if (
+    options?.clipboardHasText !== undefined ||
+    options?.clipboardHasImage !== undefined ||
+    options?.clipboardHasFile !== undefined
+  ) {
+    return {
+      hasText: options.clipboardHasText ?? false,
+      hasImage: options.clipboardHasImage ?? false,
+      hasFile: options.clipboardHasFile ?? false,
+    };
+  }
+  return readEditClipboardContent();
 }
 
 export function isNativeTextEditableElement(element: HTMLElement | null): boolean {
@@ -241,7 +286,7 @@ function nativeHasSelection(element: HTMLElement, selection: Selection | null): 
 function queryNativeSource(
   element: HTMLElement,
   selection: Selection | null,
-  clipboardHasText: boolean,
+  clipboardContent: EditClipboardContent,
 ): EditCommandSource {
   return {
     kind: "native",
@@ -251,16 +296,18 @@ function queryNativeSource(
     canUndo: true,
     canRedo: true,
     hasSelection: nativeHasSelection(element, selection),
-    clipboardHasText,
+    ...clipboardSourceFlags(clipboardContent),
   };
 }
 
 export function queryFocusedEditCommandSource(options?: {
   clipboardHasText?: boolean;
+  clipboardHasImage?: boolean;
+  clipboardHasFile?: boolean;
   activeElement?: Element | null;
   selection?: Selection | null;
 }): EditCommandSource {
-  const clipboardHasText = options?.clipboardHasText ?? readEditClipboardHasText();
+  const clipboardContent = resolveEditClipboardContent(options);
   const activeElement =
     options?.activeElement === undefined
       ? typeof document === "undefined"
@@ -285,12 +332,12 @@ export function queryFocusedEditCommandSource(options?: {
       canUndo: false,
       canRedo: false,
       hasSelection: false,
-      clipboardHasText,
+      ...clipboardSourceFlags(clipboardContent),
     };
   }
 
   if (target.kind === "native") {
-    return queryNativeSource(target.element, selection, clipboardHasText);
+    return queryNativeSource(target.element, selection, clipboardContent);
   }
 
   if (target.kind === "readonly") {
@@ -302,14 +349,14 @@ export function queryFocusedEditCommandSource(options?: {
       hasSelection: Boolean(
         selection && !selection.isCollapsed && readPlainSelectionText(selection),
       ),
-      clipboardHasText,
+      ...clipboardSourceFlags(clipboardContent),
     };
   }
 
   const queried = target.adapter.query();
   return {
     kind: target.kind,
-    clipboardHasText,
+    ...clipboardSourceFlags(clipboardContent),
     ...queried,
   };
 }

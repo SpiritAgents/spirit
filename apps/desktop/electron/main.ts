@@ -1710,6 +1710,12 @@ if (gotSpiritSingleInstanceLock) {
       rememberEditCommandState(payload);
     });
 
+    // The composer paste pipeline (image attachments, rich segments) only runs on a real
+    // ClipboardEvent, so the Edit-menu paste routes back through Chromium's native paste.
+    ipcMain.on("desktop:paste-into-focused-content", (event) => {
+      event.sender.paste();
+    });
+
     ipcMain.handle(
       "desktop:sync-attention-pending",
       (

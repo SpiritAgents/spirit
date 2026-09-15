@@ -94,6 +94,14 @@ test("resolveFocusedEditTarget routes composer contenteditable to a lexical adap
       canDictate: true,
     },
   );
+  assert.equal(
+    queryFocusedEditCommandState({ clipboardHasImage: true, activeElement: editable }).canPaste,
+    true,
+  );
+  assert.equal(
+    queryFocusedEditCommandState({ clipboardHasFile: true, activeElement: editable }).canPaste,
+    true,
+  );
 });
 
 test("dispatchEditCommand uses the last focused adapter after the menu steals focus", () => {

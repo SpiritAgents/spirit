@@ -25,6 +25,8 @@ const editableSource = {
   canRedo: true,
   hasSelection: true,
   clipboardHasText: true,
+  clipboardHasImage: false,
+  clipboardHasFile: false,
 };
 
 test("parseEditCommandState accepts a complete flag object", () => {
@@ -164,6 +166,8 @@ test("deriveEditCommandState requires history before undo or redo", () => {
       canRedo: false,
       hasSelection: false,
       clipboardHasText: true,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,
@@ -177,6 +181,59 @@ test("deriveEditCommandState requires history before undo or redo", () => {
   );
 });
 
+test("deriveEditCommandState enables composer paste for image and file clipboards", () => {
+  const base = {
+    editable: true,
+    canUndo: false,
+    canRedo: false,
+    hasSelection: false,
+    clipboardHasText: false,
+  };
+  assert.equal(
+    deriveEditCommandState({
+      kind: "lexical",
+      ...base,
+      clipboardHasImage: true,
+      clipboardHasFile: false,
+    }).canPaste,
+    true,
+  );
+  assert.equal(
+    deriveEditCommandState({
+      kind: "lexical",
+      ...base,
+      clipboardHasImage: false,
+      clipboardHasFile: true,
+    }).canPaste,
+    true,
+  );
+  assert.equal(
+    deriveEditCommandState({
+      kind: "lexical",
+      ...base,
+      editable: false,
+      clipboardHasImage: true,
+      clipboardHasFile: true,
+    }).canPaste,
+    false,
+  );
+});
+
+test("deriveEditCommandState keeps non-composer targets text-only for paste", () => {
+  const base = {
+    editable: true,
+    canUndo: false,
+    canRedo: false,
+    hasSelection: false,
+    clipboardHasText: false,
+    clipboardHasImage: true,
+    clipboardHasFile: true,
+  };
+  for (const kind of ["monaco", "native", "terminal"]) {
+    assert.equal(deriveEditCommandState({ kind, ...base }).canPaste, false);
+  }
+});
+
 test("deriveEditCommandState requires a selection for cut and copy", () => {
   assert.deepEqual(
     deriveEditCommandState({
@@ -186,6 +243,8 @@ test("deriveEditCommandState requires a selection for cut and copy", () => {
       canRedo: false,
       hasSelection: false,
       clipboardHasText: false,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: true,
@@ -208,6 +267,8 @@ test("deriveEditCommandState disables cut and paste when the target is read-only
       canRedo: true,
       hasSelection: true,
       clipboardHasText: true,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,
@@ -245,6 +306,8 @@ test("deriveEditCommandState treats readonly surfaces as copy-only", () => {
       canRedo: false,
       hasSelection: false,
       clipboardHasText: true,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,
@@ -267,6 +330,8 @@ test("deriveEditCommandState treats terminals as copy and paste only", () => {
       canRedo: true,
       hasSelection: true,
       clipboardHasText: true,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,
@@ -286,6 +351,8 @@ test("deriveEditCommandState treats terminals as copy and paste only", () => {
       canRedo: false,
       hasSelection: false,
       clipboardHasText: false,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,
@@ -308,6 +375,8 @@ test("deriveEditCommandState disables paste and dictation for a read-only termin
       canRedo: false,
       hasSelection: true,
       clipboardHasText: true,
+      clipboardHasImage: false,
+      clipboardHasFile: false,
     }),
     {
       canUndo: false,

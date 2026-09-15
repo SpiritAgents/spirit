@@ -725,6 +725,18 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   writeClipboardText(text: string) {
     clipboard.writeText(text);
   },
+  readClipboardContentKinds(): { hasText: boolean; hasImage: boolean; hasFile: boolean } {
+    const formats = clipboard.availableFormats();
+    return {
+      hasText: clipboard.readText().length > 0,
+      hasImage: formats.some((format) => format.startsWith("image/")),
+      // Chromium normalizes OS file-copy flavors (NSFilenamesPboardType, CF_HDROP, …) to text/uri-list.
+      hasFile: formats.includes("text/uri-list"),
+    };
+  },
+  pasteIntoFocusedContent() {
+    ipcRenderer.send("desktop:paste-into-focused-content");
+  },
   ptySubscribe(callbacks: {
     onData: (payload: { id: string; data: string }) => void;
     onExit: (payload: { id: string; exitCode: number; signal?: number }) => void;

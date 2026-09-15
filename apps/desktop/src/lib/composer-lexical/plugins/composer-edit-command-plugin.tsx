@@ -61,6 +61,14 @@ function dispatchLexicalEditCommand(editor: LexicalEditor, command: EditCommand)
     return;
   }
   if (command === "paste") {
+    // Route through Chromium's native paste so the composer paste pipeline (plain-text
+    // segments, image attachments) sees a real ClipboardEvent; insertRawText here could
+    // only ever insert text and silently dropped image clipboards.
+    const bridge = window.spiritDesktop;
+    if (bridge?.pasteIntoFocusedContent) {
+      bridge.pasteIntoFocusedContent();
+      return;
+    }
     const text = readEditClipboardText();
     if (!text) {
       return;

@@ -363,6 +363,8 @@ declare global {
     subscribeBrowserGuestF12(callback: (payload: { tabId: string }) => void): () => void;
     readClipboardText(): string;
     writeClipboardText(text: string): void;
+    readClipboardContentKinds(): { hasText: boolean; hasImage: boolean; hasFile: boolean };
+    pasteIntoFocusedContent(): void;
     showNotification(
       request: import("./lib/desktop-notification-types.js").DesktopShowNotificationRequest,
     ): Promise<boolean>;
