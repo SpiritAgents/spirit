@@ -41,7 +41,7 @@
   "devDependencies": {
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
-    "turbo": "2.10.12",
+    "turbo": "2.10.13",
     "yaml": "^2.9.0"
   },
   "engines": {

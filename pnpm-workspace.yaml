@@ -32,3 +32,12 @@ allowBuilds:
   koffi: true
   node-pty: true
   sharp: true
+
+minimumReleaseAgeExclude:
+  - '@turbo/darwin-64@2.10.13'
+  - '@turbo/darwin-arm64@2.10.13'
+  - '@turbo/linux-64@2.10.13'
+  - '@turbo/linux-arm64@2.10.13'
+  - '@turbo/windows-64@2.10.13'
+  - '@turbo/windows-arm64@2.10.13'
+  - turbo@2.10.13
