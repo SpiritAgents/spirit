@@ -62,9 +62,9 @@ export function WorkspaceToolTabChip({
       data-slot="workspace-tool-tab-chip"
       data-state={selected ? "on" : "off"}
       className={cn(
-        toggleVariants({ variant: "default" }),
-        "group/tab relative shrink-0 items-stretch p-0 text-xs text-muted-foreground",
-        displayTitle ? "max-w-[9rem]" : "w-8",
+        toggleVariants({ variant: "default", size: "sm" }),
+        "group/tab relative shrink-0 items-stretch rounded-lg p-0 text-xs text-muted-foreground",
+        displayTitle ? "max-w-[9rem]" : "size-7",
       )}
     >
       {displayTitle ? (

@@ -59,4 +59,40 @@ describe("WorkspaceToolTabChip", () => {
     expect(onSelect).toHaveBeenCalledExactlyOnceWith("empty-files");
     expect(tab.getAttribute("aria-selected")).toBe("true");
   });
+
+  test("icon-only and titled tabs share the chrome icon-button hover size", () => {
+    const { getByRole, rerender } = render(
+      <TooltipProvider>
+        <WorkspaceToolTabChip
+          tab={{ id: "empty-files", kind: "files" }}
+          icon={FileText}
+          label="Files"
+          selected={false}
+          onSelect={vi.fn()}
+          onClose={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+    const iconOnlyChip = getByRole("tab", { name: "Files" }).closest(
+      "[data-slot='workspace-tool-tab-chip']",
+    );
+    expect(iconOnlyChip?.className.split(/\s+/)).toContain("size-7");
+
+    rerender(
+      <WorkspaceToolTabChip
+        tab={{ id: "file-tab", kind: "files", tabTitle: "notes.md" }}
+        icon={FileText}
+        label="Files"
+        selected={false}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    const titledChip = getByRole("tab", { name: "notes.md" }).closest(
+      "[data-slot='workspace-tool-tab-chip']",
+    );
+    const titledClasses = titledChip?.className.split(/\s+/) ?? [];
+    expect(titledClasses).toEqual(expect.arrayContaining(["h-7"]));
+    expect(titledClasses).not.toContain("h-8");
+  });
 });

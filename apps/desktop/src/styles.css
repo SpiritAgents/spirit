@@ -268,9 +268,10 @@ html.spirit-desktop-darwin {
      size-3.5 icons; pad the row so the 14px glyph top matches the lights, not the 28px box. */
   --spirit-macos-titlebar-chrome-top: 1rem;
   --spirit-macos-titlebar-control-pad: calc((1.75rem - 0.875rem) / 2);
-  --spirit-macos-titlebar-inset: calc(
-    var(--spirit-macos-titlebar-chrome-top) - var(--spirit-macos-titlebar-control-pad) + 1.75rem
+  --spirit-macos-titlebar-chrome-pad-top: calc(
+    var(--spirit-macos-titlebar-chrome-top) - var(--spirit-macos-titlebar-control-pad)
   );
+  --spirit-macos-titlebar-inset: calc(var(--spirit-macos-titlebar-chrome-pad-top) + 1.75rem);
   /* Width occupied by the hiddenInset traffic lights (about 16px margin + three buttons + spacing) */
   --spirit-macos-traffic-lights-inset-left: 4.875rem;
   /* Sidebar toggle: right edge of the traffic lights + small gap (used for fixed pinning; does not change the drag region geometry) */
@@ -279,7 +280,7 @@ html.spirit-desktop-darwin {
   );
 }
 
-/* Only the sidebar shifts down to avoid the top-left traffic lights; the main-area top bar shares the title bar's height and row */
+/* Only the sidebar shifts down to avoid the top-left traffic lights; the main-area chrome shares the title bar's height and row */
 html.spirit-desktop-darwin #session-sidebar-panel {
   position: relative;
   padding-top: var(--spirit-macos-titlebar-inset);
@@ -306,9 +307,7 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
   display: flex;
   box-sizing: border-box;
   height: var(--spirit-macos-titlebar-inset);
-  padding-top: calc(
-    var(--spirit-macos-titlebar-chrome-top) - var(--spirit-macos-titlebar-control-pad)
-  );
+  padding-top: var(--spirit-macos-titlebar-chrome-pad-top);
   align-items: flex-start;
 }
 
@@ -316,25 +315,35 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
 html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] {
   -webkit-app-region: drag;
   transition: padding-left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/*
+ * Conversation chrome and the tools tab row share hiddenInset top padding so size-7
+ * controls line up across the split. Chrome stays at --spirit-macos-titlebar-inset
+ * (pad + control, flush with conversation). The tab row sits on a divider, so it
+ * repeats that pad below the controls to match the window-edge gap above.
+ */
+html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"],
+html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] {
   box-sizing: border-box;
-  height: var(--spirit-macos-titlebar-inset);
-  padding-top: calc(
-    var(--spirit-macos-titlebar-chrome-top) - var(--spirit-macos-titlebar-control-pad)
-  );
+  padding-top: var(--spirit-macos-titlebar-chrome-pad-top);
   align-items: flex-start;
 }
 
-html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] button,
-html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] a {
-  -webkit-app-region: no-drag;
+html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] {
+  height: var(--spirit-macos-titlebar-inset);
 }
 
-html.spirit-desktop-darwin [data-spirit-surface="workspace-panel"] > div:first-child {
+html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] {
+  height: calc(var(--spirit-macos-titlebar-inset) + var(--spirit-macos-titlebar-chrome-pad-top));
+  padding-bottom: var(--spirit-macos-titlebar-chrome-pad-top);
   -webkit-app-region: drag;
 }
 
-html.spirit-desktop-darwin [data-spirit-surface="workspace-panel"] > div:first-child button,
-html.spirit-desktop-darwin [data-spirit-surface="workspace-panel"] > div:first-child a {
+html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] button,
+html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] a,
+html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] button,
+html.spirit-desktop-darwin [data-spirit-surface="workspace-tool-tabs"] a {
   -webkit-app-region: no-drag;
 }
 
@@ -379,10 +388,12 @@ html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen #session-sidebar-pan
 
 /*
  * Fullscreen zeros --spirit-macos-titlebar-inset so the sidebar loses the traffic-light
- * safe area. layout-chrome reuses that token as its height, which would collapse the
- * title row to 0 and let conversation-stage cover the overflowing buttons.
+ * safe area. layout-chrome and the tools tab row reuse that token as height, which would
+ * collapse those rows to 0 and let conversation-stage cover the overflowing buttons.
  */
-html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen [data-spirit-surface="layout-chrome"] {
+html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen [data-spirit-surface="layout-chrome"],
+html.spirit-desktop-darwin.spirit-desktop-darwin-fullscreen
+  [data-spirit-surface="workspace-tool-tabs"] {
   height: 2rem;
 }
 
