@@ -100,7 +100,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 
 - `type` and optional `scope` in English (e.g. `feat(desktop)`, `fix(agent-core)`)
 - **Subject and body in English**; subject is one line, no trailing period
-- Body is optional; if present, use a `-` bullet list, one item per line
+- Body is optional; if present, use whichever format fits the change: a `-` bullet list (one item per line) for summary-style key points, or continuous prose paragraphs when the change needs its rationale explained
 
 Example:
 
