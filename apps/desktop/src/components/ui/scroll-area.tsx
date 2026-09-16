@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Scroll Area"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/scroll-area.tsx).
+// Modifications by N123999:
+// - Viewport table-layout override, scrollbars prop, and hover-type defaults.
+
 import * as React from "react";
 import { Corner, Root, Scrollbar, Thumb, Viewport } from "@radix-ui/react-scroll-area";
 

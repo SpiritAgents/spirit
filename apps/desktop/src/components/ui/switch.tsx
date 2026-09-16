@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Switch"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/switch.tsx).
+// Modifications by N123999:
+// - Extra sm size and larger hit-area inset.
+
 import * as React from "react";
 import { Switch as SwitchPrimitive } from "radix-ui";
 

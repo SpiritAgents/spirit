@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Sonner"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/sonner.tsx).
+// Modifications by N123999:
+// - App theme hook, --font-sans, and cn-toast classNames.
+
 import { useTheme } from "@/hooks/useTheme";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {

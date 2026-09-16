@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Input"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/input.tsx).
+// Modifications by N123999:
+// - Desktop outline border; no hover/focus brightening (caret signals state).
+
 import * as React from "react";
 
 import { DESKTOP_OUTLINE_BORDER } from "@/lib/desktop-chrome";

@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Checkbox"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/checkbox.tsx).
+// Modifications by N123999:
+// - Desktop outline border, hit-area inset, and hover/focus wash.
+
 import * as React from "react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 
