@@ -1,11 +1,16 @@
 import { WorkspaceToolsDock } from "@/components/workspace-tools-panel";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
+import {
+  useWorkspaceToolsChromeMaximized,
+  useWorkspaceToolsChromeWidthFlight,
+} from "@/contexts/workspace-tools-chrome-context";
 import type { useComposerController } from "@/hooks/useComposerController";
 import type { useConversationViewState } from "@/hooks/useConversationViewState";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
 import { useFocusedPaneComposerInsertCallbacks } from "@/lib/focused-pane-composer-insert";
 import type { DesktopSnapshot } from "@/types";
+import { cn } from "@/lib/utils";
 
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type ConversationViewState = ReturnType<typeof useConversationViewState>;
@@ -33,6 +38,8 @@ export function ConversationWorkspaceToolsDock({
   onOpenIntegrationsSettings,
 }: ConversationWorkspaceToolsDockProps) {
   const split = useConversationSplit();
+  const maximized = useWorkspaceToolsChromeMaximized();
+  const widthFlight = useWorkspaceToolsChromeWidthFlight();
   const composerInsert = useFocusedPaneComposerInsertCallbacks(split.getFocusedPaneComposerInsert, {
     handleBrowserElementPicked: composer.handleBrowserElementPicked,
     handlePrDiffAddToSession: composer.handlePrDiffAddToSession,
@@ -43,8 +50,16 @@ export function ConversationWorkspaceToolsDock({
     handleMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
   });
 
+  // Settled maximized: the wrapper (the conversation row's direct flex item) takes the full row
+  // width so the shell's 100% resolves against a definite containing block and the conversation
+  // column is squeezed to 0. Mid-flight the wrapper stays content-sized to track the shell's
+  // animating px width.
+  const wrapperFullWidth = maximized && widthFlight === null;
   return (
-    <div data-spirit-surface="workspace-dock" className="flex min-h-0 shrink-0">
+    <div
+      data-spirit-surface="workspace-dock"
+      className={cn("flex min-h-0 shrink-0", wrapperFullWidth && "w-full")}
+    >
       <WorkspaceToolsDock
         useTranslucency={useTranslucency}
         workspaceRoot={snapshot?.workspaceRoot ?? ""}
