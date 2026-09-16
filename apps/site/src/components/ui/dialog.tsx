@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Dialog"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/dialog.tsx).
+// Modifications by N123999:
+// - Open-state context, createPortal overlay exit timing, and project typography.
+
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { Dialog as DialogPrimitive } from "radix-ui";

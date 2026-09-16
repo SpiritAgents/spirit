@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Input"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/input.tsx).
+// Modifications by N123999:
+// - h-8 / rounded-lg sizing.
+
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
