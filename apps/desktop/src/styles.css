@@ -44,6 +44,10 @@
   initial-value: 1;
 }
 
+/* Theme token names come from shadcn/ui init (including --sidebar,
+   --sidebar-foreground, --sidebar-primary, --sidebar-accent,
+   --sidebar-border, --sidebar-ring). Color values below and the rest of
+   this file are project-owned. */
 :root {
   --background: oklch(1 0 0);
   /* Default body text color (non-emphasis state); sidebar interaction default see --sidebar-action-foreground */
