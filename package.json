@@ -1,5 +1,5 @@
 {
-  "name": "@spiritagent/dev-root",
+  "name": "@spiritagent/monorepo",
   "private": true,
   "license": "MIT",
   "repository": {
