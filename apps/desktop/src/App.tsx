@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
+import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import { ActionPickerDialog } from "@/components/action-picker-dialog";
 import { ExtensionViewHost } from "@/components/extension-view-host";
 import { AutomationDetailView } from "@/components/automation-detail-view";
@@ -153,6 +154,22 @@ export default function App() {
     composerAutomationApiRef,
   });
 
+  const { dismissForNewSession: dismissWorkspaceToolsForNewSession } =
+    useWorkspaceToolsChromeActions();
+  // Every new-session path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
+  // these wrappers so a full-screen tools panel never lingers into the new session's space.
+  const handleNewSession = useCallback(() => {
+    dismissWorkspaceToolsForNewSession();
+    surfaceNav.handleNewSession();
+  }, [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSession]);
+  const handleNewSessionInWorkspace = useCallback(
+    (workspaceRoot: string) => {
+      dismissWorkspaceToolsForNewSession();
+      void surfaceNav.handleNewSessionInWorkspace(workspaceRoot);
+    },
+    [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSessionInWorkspace],
+  );
+
   const conversation = useConversationViewState({
     runtime,
     snapshot,
@@ -194,7 +211,7 @@ export default function App() {
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewSession: surfaceNav.handleNewSession,
+    handleNewSession,
     setActiveSurface: surfaceNav.setActiveSurface,
     setLastNonSettingsSurface: surfaceNav.setLastNonSettingsSurface,
     onBeginSideChat: () => {
@@ -225,7 +242,7 @@ export default function App() {
     conversationAbortShortcutEligibleRef: conversation.conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
     sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
-    handleNewSession: surfaceNav.handleNewSession,
+    handleNewSession,
     handleSelectSession,
     handleOpenSettings: surfaceNav.handleOpenSettings,
     handleCloseSettings: surfaceNav.handleCloseSettings,
@@ -477,10 +494,8 @@ export default function App() {
                           userHomeDirectory={snapshot?.userHomeDirectory ?? null}
                           sessions={runtime.sessions}
                           activeFilePath={sidebarActiveFilePath}
-                          onNewSession={surfaceNav.handleNewSession}
-                          onNewSessionInWorkspace={(workspaceRoot) => {
-                            void surfaceNav.handleNewSessionInWorkspace(workspaceRoot);
-                          }}
+                          onNewSession={handleNewSession}
+                          onNewSessionInWorkspace={handleNewSessionInWorkspace}
                           onSelectSession={handleSelectSession}
                           onOpenMarketplace={() => {
                             surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
@@ -790,7 +805,7 @@ export default function App() {
                                     }
                                     sessionNavigationBusy={sessionNavigationBusy}
                                     newSessionBusy={newSessionBusy}
-                                    onNewSession={surfaceNav.handleNewSession}
+                                    onNewSession={handleNewSession}
                                     deleteSessionBusy={sessionNavigationBusy}
                                     onDeleteSession={(path) => runtime.deleteSession(path)}
                                     renameSessionBusy={sessionNavigationBusy}

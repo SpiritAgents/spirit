@@ -143,7 +143,6 @@ export function DesktopLayoutChromeBar({
     toggle: onToggleWorkspaceTools,
     fullScreen: workspaceToolsFullScreen,
     chromePinned: workspaceToolsChromePinned,
-    dismissForNewSession: dismissWorkspaceToolsForNewSession,
     registerNewSessionChrome,
   } = useWorkspaceToolsChrome();
   const darwinElectron = isDarwinElectronShell();
@@ -230,15 +229,6 @@ export function DesktopLayoutChromeBar({
       afterClose?.();
     });
   }, []);
-
-  const handleNewSessionClick = useCallback(() => {
-    // New session = new space: while full screen, collapse the tools panel instantly (no reverse
-    // animation) so the old space's tools do not linger; workspace-level tabs stay untouched.
-    if (workspaceToolsFullScreen) {
-      dismissWorkspaceToolsForNewSession();
-    }
-    onNewSession?.();
-  }, [dismissWorkspaceToolsForNewSession, onNewSession, workspaceToolsFullScreen]);
 
   useEffect(() => {
     if (!onNewSession || !showSessionSidebarToggle) {
@@ -336,7 +326,7 @@ export function DesktopLayoutChromeBar({
                       variant="ghost"
                       size="icon"
                       className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                      onClick={handleNewSessionClick}
+                      onClick={onNewSession}
                       disabled={newSessionBusy}
                       tabIndex={sessionSidebarOpen ? -1 : undefined}
                       aria-label={t("sidebar.newSession")}
