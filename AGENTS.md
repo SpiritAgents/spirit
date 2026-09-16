@@ -1,5 +1,13 @@
 # Spirit — Project Guidelines
 
+## Repository
+
+- Host: GitHub (`github.com`)
+- Slug: `SpiritAgents/spirit`
+- URL: https://github.com/SpiritAgents/spirit
+
+Use this exact owner/name for `gh`, GitHub search, clone URLs, and issue/PR links. Do not invent nearby slugs.
+
 ## Layering and Specialized Guides
 
 - Capability and host boundary: `.github/instructions/agent-core-host-boundary.instructions.md`
