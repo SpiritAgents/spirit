@@ -4,6 +4,7 @@ import {
   modAltLetterShortcutKbdKeys,
   modCommaShortcutKbdKeys,
   modLetterShortcutKbdKeys,
+  modShiftLetterShortcutKbdKeys,
 } from "@/lib/desktop-shell";
 
 export function SessionSidebarShortcutKbd() {
@@ -74,6 +75,26 @@ export function WorkspaceToolsShortcutKbd() {
           <Kbd>Alt</Kbd>
           <span>+</span>
           <Kbd>B</Kbd>
+        </>
+      )}
+    </KbdGroup>
+  );
+}
+
+export function WorkspaceToolsMaximizeShortcutKbd() {
+  const keys = modShiftLetterShortcutKbdKeys("M");
+
+  return (
+    <KbdGroup>
+      {isMacDesktopPlatform() ? (
+        keys.map((key) => <Kbd key={key}>{key}</Kbd>)
+      ) : (
+        <>
+          <Kbd>Ctrl</Kbd>
+          <span>+</span>
+          <Kbd>Shift</Kbd>
+          <span>+</span>
+          <Kbd>M</Kbd>
         </>
       )}
     </KbdGroup>

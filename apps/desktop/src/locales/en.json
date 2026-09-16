@@ -1062,6 +1062,8 @@
     "toolTabs": "Tool Tabs",
     "closeTab": "Close {{label}} tab",
     "newToolTab": "New Tool Tab",
+    "maximizeTools": "Maximize Tools",
+    "restoreTools": "Restore Tools",
     "noOpenTabs": "No open tabs.",
     "filePickerTitle": "Open File",
     "filePickerDescription": "Search workspace files or enter an absolute path to open any file.",

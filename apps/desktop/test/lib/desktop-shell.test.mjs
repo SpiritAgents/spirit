@@ -15,6 +15,7 @@ import {
   modLetterShortcutKbdKeys,
   modShiftBackslashShortcutKbdKeys,
   modShiftBackslashShortcutLabel,
+  modShiftLetterShortcutKbdKeys,
   modSlashShortcutKbdKeys,
   modSlashShortcutLabel,
   settingsShortcutLabel,
@@ -195,6 +196,18 @@ test("modAltLetterShortcutKbdKeys returns alt-mod letter shortcut chips per plat
   });
   withDesktopPlatform("linux", () => {
     assert.deepEqual(modAltLetterShortcutKbdKeys("b"), ["Ctrl", "Alt", "B"]);
+  });
+});
+
+test("modShiftLetterShortcutKbdKeys returns shift-mod letter shortcut chips per platform", () => {
+  withDesktopPlatform("darwin", () => {
+    assert.deepEqual(modShiftLetterShortcutKbdKeys("m"), ["⇧", "⌘", "M"]);
+  });
+  withDesktopPlatform("win32", () => {
+    assert.deepEqual(modShiftLetterShortcutKbdKeys("m"), ["Ctrl", "Shift", "M"]);
+  });
+  withDesktopPlatform("linux", () => {
+    assert.deepEqual(modShiftLetterShortcutKbdKeys("m"), ["Ctrl", "Shift", "M"]);
   });
 });
 
