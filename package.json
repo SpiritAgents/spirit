@@ -6,6 +6,9 @@
     "type": "git",
     "url": "git+https://github.com/SpiritAgents/spirit.git"
   },
+  "bugs": {
+    "url": "https://github.com/SpiritAgents/spirit/issues"
+  },
   "scripts": {
     "build:agent-core": "turbo run build --filter=@spiritagent/agent-core",
     "build:host-internal": "turbo run build --filter=@spiritagent/host-internal",
