@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Badge"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/badge.tsx).
+// Modifications by N123999:
+// - Desktop typography token, extra ghost/link variants, and pill radius.
+
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";

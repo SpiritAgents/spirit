@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Context Menu"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/context-menu.tsx).
+// Modifications by N123999:
+// - Desktop overlay list tokens, origin-aware motion, and layout-scale portal.
+
 import * as React from "react";
 import { Fragment } from "react";
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui";

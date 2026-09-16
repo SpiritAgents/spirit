@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Tooltip"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/tooltip.tsx).
+// Modifications by N123999:
+// - Essentially rewritten on the shadcn Tooltip primitive (global switch, Popover mix-in).
+
 /**
  * Tooltip instant-switch is coordinated globally by TooltipProvider.
  * Each `<Tooltip>` registers triggers and content; no manual merging is required.

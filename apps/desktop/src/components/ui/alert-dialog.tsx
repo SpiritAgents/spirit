@@ -1,3 +1,13 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Alert Dialog"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx).
+// Modifications by N123999:
+// - Collapsed the compound API into a single controlled AlertDialog with busy/confirm props.
+// - Desktop overlay chrome, layout-scale portal, and footer action layout.
+
 import * as React from "react";
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import { LoaderCircle } from "lucide-react";

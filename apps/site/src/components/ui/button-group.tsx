@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Button Group"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/button-group.tsx).
+// Modifications by N123999:
+// - Project typography token and rounded-lg join geometry.
+
 import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 

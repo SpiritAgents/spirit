@@ -1,3 +1,12 @@
+// Copyright (c) 2023 shadcn
+// Copyright (c) 2026 N123999
+// SPDX-License-Identifier: MIT
+//
+// Derived from shadcn/ui "Breadcrumb"
+// (https://github.com/shadcn-ui/ui/blob/main/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx).
+// Modifications by N123999:
+// - None material; formatting and project import paths only.
+
 import * as React from "react";
 import { Slot } from "radix-ui";
 
