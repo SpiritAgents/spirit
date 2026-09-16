@@ -175,6 +175,25 @@ test("toggle from full screen lands on the dock even when entered from collapsed
   expect(shell.style.width).toBe("0px");
 });
 
+test("toggle during the exit flight supersedes it and still releases the pin at settle", async () => {
+  renderHarness();
+  mockRowWidth(1000);
+  const shell = shellElement();
+  await enterFullScreenAndSettle();
+
+  // Start the exit-to-collapsed flight, then reopen docked mid-flight.
+  act(() => latestApi.current?.toggleFullScreen());
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: true });
+
+  act(() => latestApi.current?.toggle());
+  expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: true });
+  expect(shell.style.width).toBe(`calc(${1 + DOCKED_WIDTH_PX}px)`);
+
+  // The superseding open/close animation inherits the flight-clearing settle.
+  await waitForFlightSettle();
+  expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: false });
+});
+
 test("dismissForNewSession collapses instantly with no reverse flight", async () => {
   renderHarness();
   mockRowWidth(1000);

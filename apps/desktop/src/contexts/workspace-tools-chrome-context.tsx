@@ -95,7 +95,7 @@ function scheduleShellWidthTransitionSettle(shell: HTMLElement, onSettle: () => 
   }, WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION_MS + 20);
 }
 
-function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean): void {
+function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean, onSettle: () => void): void {
   const shell = getWorkspaceToolsShell();
   const aside = document.getElementById("workspace-tools-panel");
   if (!shell || !aside) {
@@ -117,7 +117,10 @@ function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean): void {
     split.style.width = splitWidth;
   }
 
-  scheduleShellWidthTransitionSettle(shell, () => {});
+  // This animation supersedes any in-flight full-screen flight and re-arms the shared settle
+  // timer, so it must inherit the flight-clearing settle — otherwise the orphaned flight state
+  // would keep chromePinned/fillMode stuck on after the panel lands docked.
+  scheduleShellWidthTransitionSettle(shell, onSettle);
 }
 
 /** The conversation row (dock wrapper's parent) is the flex container the full-screen shell fills. */
@@ -239,10 +242,10 @@ export function WorkspaceToolsChromeProvider({
         exitFullScreen(false);
         return;
       }
-      applyWorkspaceToolsShellWidthImmediate(next);
+      applyWorkspaceToolsShellWidthImmediate(next, settleFlight);
       setOpenState(next);
     },
-    [exitFullScreen],
+    [exitFullScreen, settleFlight],
   );
 
   const toggle = useCallback(() => {
@@ -256,18 +259,18 @@ export function WorkspaceToolsChromeProvider({
     if (next) {
       requestFocusWorkspaceToolsPanelOnOpen();
     }
-    applyWorkspaceToolsShellWidthImmediate(next);
+    applyWorkspaceToolsShellWidthImmediate(next, settleFlight);
     setOpenState(next);
-  }, [exitFullScreen]);
+  }, [exitFullScreen, settleFlight]);
 
   const openTools = useCallback(() => {
     if (fullScreenRef.current || openRef.current) {
       // Already open (docked or full screen); never rewrite the full-screen 100% width.
       return;
     }
-    applyWorkspaceToolsShellWidthImmediate(true);
+    applyWorkspaceToolsShellWidthImmediate(true, settleFlight);
     setOpenState(true);
-  }, []);
+  }, [settleFlight]);
 
   const toggleFullScreen = useCallback(() => {
     if (fullScreenRef.current) {
