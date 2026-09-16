@@ -1062,6 +1062,8 @@
     "toolTabs": "ツールタブ",
     "closeTab": "{{label}}タブを閉じる",
     "newToolTab": "新しいツールタブ",
+    "enterFullScreen": "フルスクリーンにする",
+    "exitFullScreen": "フルスクリーンを解除",
     "noOpenTabs": "開いているタブはありません。",
     "filePickerTitle": "ファイルを開く",
     "filePickerDescription": "ワークスペースのファイルを検索するか、絶対パスを入力してファイルを開きます。",

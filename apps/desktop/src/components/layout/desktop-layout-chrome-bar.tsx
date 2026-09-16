@@ -138,7 +138,13 @@ export function DesktopLayoutChromeBar({
 }) {
   const { t } = useTranslation();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
-  const { open: workspaceToolsOpen, toggle: onToggleWorkspaceTools } = useWorkspaceToolsChrome();
+  const {
+    open: workspaceToolsOpen,
+    toggle: onToggleWorkspaceTools,
+    fullScreen: workspaceToolsFullScreen,
+    chromePinned: workspaceToolsChromePinned,
+    registerNewSessionChrome,
+  } = useWorkspaceToolsChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinFullScreen = useDarwinWindowFullscreen(darwinElectron);
   const pinSidebarToggleOnDarwin = darwinElectron && !darwinFullScreen;
@@ -224,6 +230,13 @@ export function DesktopLayoutChromeBar({
     });
   }, []);
 
+  useEffect(() => {
+    if (!onNewSession || !showSessionSidebarToggle) {
+      return;
+    }
+    return registerNewSessionChrome();
+  }, [onNewSession, registerNewSessionChrome, showSessionSidebarToggle]);
+
   return (
     <div
       role="toolbar"
@@ -266,13 +279,22 @@ export function DesktopLayoutChromeBar({
               <SessionSidebarToggleButton />
             </div>
           ) : (
-            <SessionSidebarToggleButton className="mr-1" />
+            // Win/Linux (and macOS window fullscreen): while the tools panel is full screen this
+            // wrapper fixed-pins the toggle above the panel (see styles.css); in-flow otherwise.
+            <div
+              data-workspace-tools-pinned-sidebar-toggle={
+                workspaceToolsChromePinned ? "" : undefined
+              }
+              className="mr-1"
+            >
+              <SessionSidebarToggleButton />
+            </div>
           )
         ) : null}
         {showSessionSidebarToggle && pinSidebarToggleOnDarwin ? (
           <div
             className={cn(
-              "shrink-0 overflow-hidden",
+              "h-7 shrink-0 overflow-hidden",
               DESKTOP_SHELL_LAYOUT_TRANSITION,
               sessionSidebarOpen ? "mr-0 w-0" : "mr-1 w-7",
             )}
@@ -280,55 +302,92 @@ export function DesktopLayoutChromeBar({
           />
         ) : null}
         {onNewSession && showSessionSidebarToggle ? (
-          <div
-            className={cn(
-              "shrink-0 overflow-hidden",
-              DESKTOP_SHELL_LAYOUT_TRANSITION,
-              sessionSidebarOpen
-                ? "pointer-events-none mr-0 w-0 opacity-0"
-                : "mr-1 w-7 opacity-100",
-            )}
-            aria-hidden={sessionSidebarOpen}
-          >
-            <Tooltip delayDuration={300} disableHoverableContent>
-              <TooltipTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                  onClick={onNewSession}
-                  disabled={newSessionBusy}
-                  tabIndex={sessionSidebarOpen ? -1 : undefined}
-                  aria-label={t("sidebar.newSession")}
-                >
-                  <Plus className="size-3.5" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="center" sideOffset={4}>
-                {t("sidebar.newSession")} <NewSessionShortcutKbd />
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          // While the tools panel is full screen the outer wrapper fixed-pins the button above the
+          // panel (see styles.css). position:fixed takes the inner width slot out of the leading
+          // flex, so an in-flow ghost keeps the breadcrumb from snapping into that gap on frame 1.
+          <>
+            <div
+              data-workspace-tools-pinned-new-session={workspaceToolsChromePinned ? "" : undefined}
+            >
+              <div
+                className={cn(
+                  "shrink-0 overflow-hidden",
+                  DESKTOP_SHELL_LAYOUT_TRANSITION,
+                  sessionSidebarOpen
+                    ? "pointer-events-none mr-0 w-0 opacity-0"
+                    : "mr-1 w-7 opacity-100",
+                )}
+                aria-hidden={sessionSidebarOpen}
+              >
+                <Tooltip delayDuration={300} disableHoverableContent>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
+                      onClick={onNewSession}
+                      disabled={newSessionBusy}
+                      tabIndex={sessionSidebarOpen ? -1 : undefined}
+                      aria-label={t("sidebar.newSession")}
+                    >
+                      <Plus className="size-3.5" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center" sideOffset={4}>
+                    {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+            {workspaceToolsChromePinned && !sessionSidebarOpen ? (
+              <div
+                className={cn(
+                  "mr-1 h-7 w-7 shrink-0 overflow-hidden",
+                  DESKTOP_SHELL_LAYOUT_TRANSITION,
+                )}
+                aria-hidden
+              />
+            ) : null}
+          </>
         ) : null}
         {trimmedSessionTitle || renamingTitle ? (
-          <SessionChromeBreadcrumb
-            sessionTitle={trimmedSessionTitle || trimmedRenameSessionDisplayName}
-            sessionTitleSuffix={sessionTitleSuffix}
-            sessionTooltip={sessionTooltip}
-            subagentPromptText={subagentPromptText}
-            onExitSubagentViewer={onExitSubagentViewer}
-            renaming={renamingTitle}
-            renameValue={renameValue}
-            onRenameValueChange={setRenameValue}
-            onRenameCommit={() => void handleRenameCommit()}
-            onRenameCancel={handleRenameCancel}
-            onRenameStart={canRenameTitle ? handleRenameStart : undefined}
-          />
+          // The full-screen tools panel covers the conversation column; fade the breadcrumb out for
+          // the same 300ms instead of letting the column's overflow clip it mid-flight.
+          <div
+            className={cn(
+              "flex min-w-0 flex-1 items-center",
+              "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+              workspaceToolsFullScreen && "pointer-events-none opacity-0",
+            )}
+          >
+            <SessionChromeBreadcrumb
+              sessionTitle={trimmedSessionTitle || trimmedRenameSessionDisplayName}
+              sessionTitleSuffix={sessionTitleSuffix}
+              sessionTooltip={sessionTooltip}
+              subagentPromptText={subagentPromptText}
+              onExitSubagentViewer={onExitSubagentViewer}
+              renaming={renamingTitle}
+              renameValue={renameValue}
+              onRenameValueChange={setRenameValue}
+              onRenameCommit={() => void handleRenameCommit()}
+              onRenameCancel={handleRenameCancel}
+              onRenameStart={canRenameTitle ? handleRenameStart : undefined}
+            />
+          </div>
         ) : null}
       </div>
       {showTrailingActions ? (
-        <div className="flex shrink-0 items-center gap-1" data-no-pane-drag>
+        // Covered by the full-screen tools panel: fade the pane menu and workspace toggle out with
+        // the same 300ms curve (and keep them unfocusable) until the reverse flight starts.
+        <div
+          className={cn(
+            "flex shrink-0 items-center gap-1",
+            "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            workspaceToolsFullScreen && "pointer-events-none opacity-0",
+          )}
+          data-no-pane-drag
+        >
           {showSplitMenu ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

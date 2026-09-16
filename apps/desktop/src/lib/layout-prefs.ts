@@ -2,6 +2,7 @@ import {
   SESSION_SIDEBAR_MIN_WIDTH_PX,
   computeSessionSidebarMaxWidthPx,
 } from "@/lib/desktop-chrome";
+import { flushDesktopRendererStorage } from "@/lib/desktop-renderer-storage";
 
 const SESSION_SIDEBAR_WIDTH_STORAGE_KEY = "spirit-desktop-session-sidebar-width-px";
 
@@ -173,6 +174,29 @@ export function writeWorkspaceToolsWidthPx(
     return;
   }
   writeWorkspaceToolsWidthRatio(widthPx / viewportWidthPx, viewportWidthPx);
+}
+
+const WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY = "spirit-desktop-workspace-tools-fullscreen";
+const WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY =
+  "spirit-desktop-workspace-tools-fullscreen-restore-open";
+
+export function readWorkspaceToolsFullScreen(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY, false);
+}
+
+export function writeWorkspaceToolsFullScreen(fullScreen: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY, fullScreen);
+  flushDesktopRendererStorage();
+}
+
+/** Restore snapshot of `open` taken when entering full screen; only meaningful while full screen. */
+export function readWorkspaceToolsFullScreenRestoreOpen(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY, true);
+}
+
+export function writeWorkspaceToolsFullScreenRestoreOpen(open: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY, open);
+  flushDesktopRendererStorage();
 }
 
 const PR_CHANGES_TREE_WIDTH_STORAGE_KEY = "spirit-desktop-pr-changes-tree-width-px";

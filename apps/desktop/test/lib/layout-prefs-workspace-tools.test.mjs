@@ -3,8 +3,12 @@ import { test } from "vitest";
 
 import {
   computeWorkspaceToolsMaxWidthPx,
+  readWorkspaceToolsFullScreen,
+  readWorkspaceToolsFullScreenRestoreOpen,
   readWorkspaceToolsWidthPx,
   readWorkspaceToolsWidthRatio,
+  writeWorkspaceToolsFullScreen,
+  writeWorkspaceToolsFullScreenRestoreOpen,
   writeWorkspaceToolsWidthPx,
   writeWorkspaceToolsWidthRatio,
   WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO,
@@ -13,6 +17,8 @@ import {
 
 const RATIO_KEY = "spirit-desktop-workspace-tools-width-ratio";
 const LEGACY_PX_KEY = "spirit-desktop-workspace-tools-width-px";
+const FULLSCREEN_KEY = "spirit-desktop-workspace-tools-fullscreen";
+const FULLSCREEN_RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-fullscreen-restore-open";
 
 function withLocalStorage(run) {
   const previous = globalThis.localStorage;
@@ -77,5 +83,27 @@ test("readWorkspaceToolsWidthPx clamps to min and max", () => {
 test("default ratio is used when no prefs exist", () => {
   withLocalStorage(() => {
     assert.equal(readWorkspaceToolsWidthRatio(1200), WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO);
+  });
+});
+
+test("workspace tools full-screen pref defaults to false and round-trips", () => {
+  withLocalStorage((store) => {
+    assert.equal(readWorkspaceToolsFullScreen(), false);
+    writeWorkspaceToolsFullScreen(true);
+    assert.equal(store.get(FULLSCREEN_KEY), "true");
+    assert.equal(readWorkspaceToolsFullScreen(), true);
+    writeWorkspaceToolsFullScreen(false);
+    assert.equal(readWorkspaceToolsFullScreen(), false);
+  });
+});
+
+test("workspace tools full-screen restore-open pref defaults to docked and round-trips", () => {
+  withLocalStorage((store) => {
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), true);
+    writeWorkspaceToolsFullScreenRestoreOpen(false);
+    assert.equal(store.get(FULLSCREEN_RESTORE_OPEN_KEY), "false");
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), false);
+    writeWorkspaceToolsFullScreenRestoreOpen(true);
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), true);
   });
 });

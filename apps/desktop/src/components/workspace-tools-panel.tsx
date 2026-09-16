@@ -17,10 +17,15 @@ import {
   GitPullRequestClosed,
   GitPullRequestDraft,
   Globe,
+  Maximize2,
+  Minimize2,
   Plus,
   Terminal,
 } from "lucide-react";
-import { NewToolTabShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
+import {
+  NewToolTabShortcutKbd,
+  WorkspaceToolsFullScreenShortcutKbd,
+} from "@/components/layout/desktop-shortcut-kbds";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,10 +71,16 @@ import {
 import {
   consumeFocusWorkspaceToolsPanelOnOpen,
   useWorkspaceToolsChromeActions,
+  useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeOpen,
+  useWorkspaceToolsChromeWidthFlight,
+  useWorkspaceToolsNewSessionChrome,
 } from "@/contexts/workspace-tools-chrome-context";
+import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
+import { isDarwinElectronShell } from "@/lib/desktop-shell";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
+import { useDarwinWindowFullscreen } from "@/hooks/useDarwinWindowFullscreen";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { WORKSPACE_TOOL_TABS_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import type { EditorFileTarget, WorkspaceEditorViewMode } from "@/lib/workspace-editor-navigation";
@@ -292,6 +303,11 @@ function WorkspaceToolsDockShell({
 }) {
   const { t } = useTranslation();
   const open = useWorkspaceToolsChromeOpen();
+  const fullScreen = useWorkspaceToolsChromeFullScreen();
+  const widthFlight = useWorkspaceToolsChromeWidthFlight();
+  // Fill mode: split/aside track the shell's (possibly animating) width instead of fixed px, so
+  // full-screen flights and the settled 100% state never show a full shell with underfilled content.
+  const fillMode = fullScreen || widthFlight !== null;
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
@@ -305,7 +321,7 @@ function WorkspaceToolsDockShell({
     }
     asideRef.current?.focus({ preventScroll: true });
     setWorkspacePanelRegionActive(true);
-  }, [open]);
+  }, [open, fullScreen]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
 
@@ -353,6 +369,11 @@ function WorkspaceToolsDockShell({
 
   const onResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      // No docked-width dragging while full screen or mid-flight; the full-screen width is never
+      // written back to the docked ratio.
+      if (fillMode) {
+        return;
+      }
       event.preventDefault();
       onResizingChange(true);
       dragRef.current = { startX: event.clientX, startWidth: widthPx };
@@ -360,13 +381,13 @@ function WorkspaceToolsDockShell({
       applyDragWidthPx(widthPx);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [applyDragWidthPx, onResizingChange, widthPx],
+    [applyDragWidthPx, fillMode, onResizingChange, widthPx],
   );
 
   const onResizePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
-      if (!drag) {
+      if (!drag || fillMode) {
         return;
       }
       const delta = drag.startX - event.clientX;
@@ -374,7 +395,7 @@ function WorkspaceToolsDockShell({
       latestWidthPxRef.current = next;
       applyDragWidthPx(next);
     },
-    [applyDragWidthPx, clampWidth],
+    [applyDragWidthPx, clampWidth, fillMode],
   );
 
   const endResize = useCallback(
@@ -394,7 +415,14 @@ function WorkspaceToolsDockShell({
     [onResizingChange, onWidthPxChange],
   );
 
-  const shellWidth = workspaceToolsShellWidthWhenOpen(open, widthPx);
+  // Full screen: the enter flight transitions between definite px endpoints (a percentage would be
+  // cyclic against the content-sized dock wrapper), then settles to 100% so window resizes follow.
+  const enterFlightPx = widthFlight?.kind === "enter" ? widthFlight.targetPx : null;
+  const shellWidth = fullScreen
+    ? enterFlightPx !== null
+      ? `${enterFlightPx}px`
+      : "100%"
+    : workspaceToolsShellWidthWhenOpen(open, widthPx);
 
   return (
     <div
@@ -403,7 +431,7 @@ function WorkspaceToolsDockShell({
       className={cn(
         // Viewport zoom changes widthPx proportionally: do not attach a permanent width
         // transition to the shell, otherwise resizing the window lags behind.
-        // Expand/collapse is handled by applyWorkspaceToolsShellWidthImmediate, which temporarily
+        // Expand/collapse/full-screen is handled by the chrome context, which temporarily
         // writes a transition before changing the width.
         "flex h-full min-h-0 shrink-0 flex-row self-stretch overflow-hidden",
         className,
@@ -414,10 +442,11 @@ function WorkspaceToolsDockShell({
         ref={splitRef}
         data-workspace-tools-split
         className={cn(
-          "relative flex h-full min-h-0 shrink-0 flex-row self-stretch",
+          "relative flex h-full min-h-0 flex-row self-stretch",
+          fillMode ? "min-w-0 flex-1" : "shrink-0",
           !open && "pointer-events-none select-none",
         )}
-        style={{ width: workspaceToolsShellWidthExpression(widthPx) }}
+        style={{ width: fillMode ? undefined : workspaceToolsShellWidthExpression(widthPx) }}
         aria-hidden={!open}
         inert={!open}
       >
@@ -426,8 +455,15 @@ function WorkspaceToolsDockShell({
           aria-orientation="vertical"
           aria-label={t("workspace.resizeToolsWidth")}
           className={cn(
-            "group relative z-10 w-px shrink-0 cursor-col-resize touch-none select-none",
+            "group z-10 shrink-0 cursor-col-resize touch-none select-none",
             "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
+            "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            // fillMode: overlay the panel's left edge so the 1px slot does not sit next to the
+            // sidebar hairline. opacity-0 still leaves an in-flow w-px hole that shows the
+            // window material under translucency and reads as a thicker divider.
+            fillMode ? "absolute inset-y-0 left-0 w-px" : "relative w-px",
+            fullScreen && "opacity-0",
+            fillMode && "pointer-events-none",
             desktopTranslucencyTintClass(useTranslucency),
           )}
           onPointerDown={onResizePointerDown}
@@ -450,10 +486,11 @@ function WorkspaceToolsDockShell({
           tabIndex={-1}
           data-spirit-surface="workspace-panel"
           className={cn(
-            "flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden text-foreground outline-none",
+            "flex h-full min-h-0 min-w-0 flex-col overflow-hidden text-foreground outline-none",
+            fillMode ? "flex-1" : "shrink-0",
             desktopTranslucencyTintClass(useTranslucency),
           )}
-          style={{ width: widthPx }}
+          style={{ width: fillMode ? undefined : widthPx }}
           aria-label={t("workspace.workspaceTools")}
         >
           <WorkspaceToolsDockContent {...contentProps} />
@@ -530,8 +567,13 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   isResizing,
 }: WorkspaceToolsDockContentProps) {
   const { t } = useTranslation();
-  const { openTools } = useWorkspaceToolsChromeActions();
+  const { openTools, toggleFullScreen } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
+  const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
+  const hasNewSessionChrome = useWorkspaceToolsNewSessionChrome();
+  const { open: sessionSidebarOpen } = useSessionSidebarChrome();
+  const darwinElectron = isDarwinElectronShell();
+  const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
   workspaceToolsOpenRef.current = workspaceToolsOpen;
   const gitHubAuthConnected = useGitHubAuthConnected(getGitHubAuthStatus, prTabEnabled);
@@ -710,12 +752,34 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
+  // While full screen, the pinned conversation chrome (new session, and on Win/Linux the sidebar
+  // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
+  // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
+  // on fullScreen (not chromePinned) so the inset retracts during the exit flight — the strict
+  // reverse — while the pins themselves hold until the flight settles. The margin-left
+  // transition lives in styles.css. Sidebar open on macOS windowed: the pinned cluster floats
+  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-session
+  // button, so the plus slot is not reserved.
+  const plusSlot = !sessionSidebarOpen && hasNewSessionChrome;
+  const toolTabsPaddingLeft = !workspaceToolsFullScreen
+    ? undefined
+    : darwinElectron && !darwinWindowFullscreen
+      ? sessionSidebarOpen
+        ? undefined
+        : plusSlot
+          ? "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 4rem)"
+          : "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 2rem)"
+      : plusSlot
+        ? "4.5rem"
+        : "2.5rem";
+
   return (
     <>
       <div
         ref={toolTabsBarRef}
         data-spirit-surface="workspace-tool-tabs"
         className="flex h-8 shrink-0 items-center gap-1 px-1"
+        style={toolTabsPaddingLeft ? { marginLeft: toolTabsPaddingLeft } : undefined}
       >
         <ScrollArea
           scrollbars="horizontal"
@@ -751,6 +815,39 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             })}
           </div>
         </ScrollArea>
+        <Tooltip delayDuration={300} disableHoverableContent>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-workspace-tools-fullscreen-toggle=""
+              aria-label={
+                workspaceToolsFullScreen
+                  ? t("workspace.exitFullScreen")
+                  : t("workspace.enterFullScreen")
+              }
+              aria-pressed={workspaceToolsFullScreen}
+              onClick={toggleFullScreen}
+              className={cn(
+                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                instantHoverMotionClass,
+              )}
+            >
+              {workspaceToolsFullScreen ? (
+                <Minimize2 className="size-3.5" aria-hidden />
+              ) : (
+                <Maximize2 className="size-3.5" aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            {workspaceToolsFullScreen
+              ? t("workspace.exitFullScreen")
+              : t("workspace.enterFullScreen")}{" "}
+            <WorkspaceToolsFullScreenShortcutKbd />
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenu modal open={addToolTabMenuOpen} onOpenChange={setAddToolTabMenuOpen}>
           <Tooltip delayDuration={300} disableHoverableContent>
             <TooltipTrigger asChild>

@@ -1062,6 +1062,8 @@
     "toolTabs": "Onglets d'outils",
     "closeTab": "Fermer l'onglet {{label}}",
     "newToolTab": "Nouvel onglet d'outil",
+    "enterFullScreen": "Passer en Plein Écran",
+    "exitFullScreen": "Quitter le Plein Écran",
     "noOpenTabs": "Aucun onglet ouvert.",
     "filePickerTitle": "Ouvrir un fichier",
     "filePickerDescription": "Rechercher des fichiers de l'espace de travail ou entrer un chemin absolu pour ouvrir un fichier.",

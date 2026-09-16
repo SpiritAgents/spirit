@@ -1062,6 +1062,8 @@
     "toolTabs": "Tool-Registerkarten",
     "closeTab": "Registerkarte {{label}} schließen",
     "newToolTab": "Neuer Tool-Tab",
+    "enterFullScreen": "Vollbildmodus starten",
+    "exitFullScreen": "Vollbildmodus beenden",
     "noOpenTabs": "Keine offenen Tabs.",
     "filePickerTitle": "Datei öffnen",
     "filePickerDescription": "Durchsuchen Sie Workspace-Dateien oder geben Sie einen absoluten Pfad ein, um eine beliebige Datei zu öffnen.",

@@ -311,6 +311,71 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
   align-items: flex-start;
 }
 
+/*
+ * Workspace tools full screen: the conversation column is squeezed to 0 and clips its chrome bar,
+ * so the new-session button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
+ * panel from the first enter-full-screen frame through the exit settle. The sidebar open/close
+ * width/opacity rule lives on the inner wrapper and still composes with the fixed positioning.
+ * macOS windowed: pin the new-session button in the same slot it occupies in-flow
+ * (traffic-lights inset + toggle spacer w-7+mr-1). Using the toggle-inset token would sit 0.125rem
+ * to the right of that slot and jump the button on the first full-screen frame.
+ */
+html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
+  [data-workspace-tools-pinned-new-session] {
+  position: fixed;
+  top: 0;
+  left: calc(var(--spirit-macos-traffic-lights-inset-left) + 2rem);
+  z-index: 50;
+  display: flex;
+  box-sizing: border-box;
+  height: var(--spirit-macos-titlebar-inset);
+  padding-top: var(--spirit-macos-titlebar-chrome-pad-top);
+  align-items: flex-start;
+}
+
+/*
+ * Win/Linux (and macOS fullscreen, where the darwin toggle pin falls back to in-flow): pin both
+ * buttons at the main content's top-left. top:auto keeps the in-flow vertical position inside the
+ * h-8 bar; left tracks the sidebar shell width so the pair hugs the panel's left edge and follows
+ * sidebar open/close on the same 300ms curve.
+ */
+html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-sidebar-toggle],
+html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggle] {
+  position: fixed;
+  left: calc(var(--spirit-session-sidebar-shell-width, 0px) + 0.5rem);
+  z-index: 50;
+  transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-session],
+html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] {
+  position: fixed;
+  left: calc(var(--spirit-session-sidebar-shell-width, 0px) + 2.5rem);
+  z-index: 50;
+  transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-sidebar-toggle],
+  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggle],
+  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-session],
+  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] {
+    transition: none;
+  }
+}
+
+/* The tools tab row's left margin makes room for the pinned chrome cluster, on the width flight's curve.
+ * Margin (not padding) keeps -webkit-app-region: drag from covering the fixed-pinned buttons. */
+[data-spirit-surface="workspace-tool-tabs"] {
+  transition: margin-left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-spirit-surface="workspace-tool-tabs"] {
+    transition: none;
+  }
+}
+
 /* Top bar blank area is draggable; only buttons/links are no-drag (same as the Windows custom-drawn title bar) */
 html.spirit-desktop-darwin [data-spirit-surface="layout-chrome"] {
   -webkit-app-region: drag;
