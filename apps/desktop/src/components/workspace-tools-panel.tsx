@@ -17,10 +17,15 @@ import {
   GitPullRequestClosed,
   GitPullRequestDraft,
   Globe,
+  Maximize2,
+  Minimize2,
   Plus,
   Terminal,
 } from "lucide-react";
-import { NewToolTabShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
+import {
+  NewToolTabShortcutKbd,
+  WorkspaceToolsMaximizeShortcutKbd,
+} from "@/components/layout/desktop-shortcut-kbds";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -554,8 +559,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   isResizing,
 }: WorkspaceToolsDockContentProps) {
   const { t } = useTranslation();
-  const { openTools } = useWorkspaceToolsChromeActions();
+  const { openTools, toggleMaximized } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
+  const workspaceToolsMaximized = useWorkspaceToolsChromeMaximized();
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
   workspaceToolsOpenRef.current = workspaceToolsOpen;
   const gitHubAuthConnected = useGitHubAuthConnected(getGitHubAuthStatus, prTabEnabled);
@@ -775,6 +781,35 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
             })}
           </div>
         </ScrollArea>
+        <Tooltip delayDuration={300} disableHoverableContent>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              data-workspace-tools-maximize-toggle=""
+              aria-label={
+                workspaceToolsMaximized ? t("workspace.restoreTools") : t("workspace.maximizeTools")
+              }
+              aria-pressed={workspaceToolsMaximized}
+              onClick={toggleMaximized}
+              className={cn(
+                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                instantHoverMotionClass,
+              )}
+            >
+              {workspaceToolsMaximized ? (
+                <Minimize2 className="size-3.5" aria-hidden />
+              ) : (
+                <Maximize2 className="size-3.5" aria-hidden />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            {workspaceToolsMaximized ? t("workspace.restoreTools") : t("workspace.maximizeTools")}{" "}
+            <WorkspaceToolsMaximizeShortcutKbd />
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenu modal open={addToolTabMenuOpen} onOpenChange={setAddToolTabMenuOpen}>
           <Tooltip delayDuration={300} disableHoverableContent>
             <TooltipTrigger asChild>

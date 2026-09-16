@@ -1062,6 +1062,8 @@
     "toolTabs": "工具分頁",
     "closeTab": "關閉 {{label}} 分頁",
     "newToolTab": "新增工具分頁",
+    "maximizeTools": "最大化工具",
+    "restoreTools": "還原工具",
     "noOpenTabs": "無開啟的分頁。",
     "filePickerTitle": "開啟檔案",
     "filePickerDescription": "搜尋工作區檔案或輸入絕對路徑以開啟任何檔案。",

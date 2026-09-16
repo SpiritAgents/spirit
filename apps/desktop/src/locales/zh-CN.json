@@ -1059,6 +1059,8 @@
     "toolTabs": "工具分页",
     "closeTab": "关闭{{label}}选项卡",
     "newToolTab": "新建工具选项卡",
+    "maximizeTools": "最大化工具区",
+    "restoreTools": "还原工具区",
     "noOpenTabs": "暂无打开的选项卡。",
     "filePickerTitle": "打开文件",
     "filePickerDescription": "在工作区中搜索文件，或输入绝对路径打开任意文件。",
