@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse as parseYaml } from "yaml";
+import { parseAllDocuments } from "yaml";
 
 const PINNED_SHADCN_UI_MIT = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -147,7 +147,15 @@ function hashContent(text) {
  * into each package's NOTICE.
  */
 function loadLockfile(workspaceRoot) {
-  return parseYaml(readFileSync(path.join(workspaceRoot, "pnpm-lock.yaml"), "utf8"));
+  const documents = parseAllDocuments(readFileSync(path.join(workspaceRoot, "pnpm-lock.yaml"), "utf8"))
+    .map((doc) => doc.toJSON())
+    .filter((doc) => doc && typeof doc === "object");
+  // pnpm 12 prepends a packageManagerDependencies document; the project graph is last.
+  const lockfile = documents.findLast((doc) => doc.settings) ?? documents.at(-1);
+  if (!lockfile) {
+    throw new Error("pnpm-lock.yaml produced no YAML documents");
+  }
+  return lockfile;
 }
 
 /** Posix-style importer key for the package, e.g. "apps/site". */

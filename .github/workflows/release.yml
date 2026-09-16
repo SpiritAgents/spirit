@@ -32,7 +32,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -87,7 +87,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -252,7 +252,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -499,7 +499,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -565,7 +565,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -696,7 +696,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 11.24.0
+          version: 12.4.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

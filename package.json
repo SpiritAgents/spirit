@@ -1,13 +1,13 @@
 {
   "name": "@spiritagent/monorepo",
   "private": true,
+  "bugs": {
+    "url": "https://github.com/SpiritAgents/spirit/issues"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SpiritAgents/spirit.git"
-  },
-  "bugs": {
-    "url": "https://github.com/SpiritAgents/spirit/issues"
   },
   "scripts": {
     "build:agent-core": "turbo run build --filter=@spiritagent/agent-core",
@@ -49,5 +49,5 @@
   "engines": {
     "node": ">=24"
   },
-  "packageManager": "pnpm@11.24.0"
+  "packageManager": "pnpm@12.4.2"
 }

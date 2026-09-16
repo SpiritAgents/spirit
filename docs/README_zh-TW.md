@@ -176,7 +176,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 
 ## 開發
 
-**環境需求：** Node.js 24+、pnpm 11+（透過 `corepack enable` 啟用）。建置 CLI 需要 Rust 工具鏈。
+**環境需求：** Node.js 24+、pnpm 12+（透過 `corepack enable` 啟用）。建置 CLI 需要 Rust 工具鏈。
 
 | 命令                       | 說明                                                                    |
 | -------------------------- | ----------------------------------------------------------------------- |

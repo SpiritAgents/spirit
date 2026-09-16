@@ -16,7 +16,7 @@ pnpm run dev:site
 
 Equivalent: `pnpm --filter @spiritagent/site dev`.
 
-**Requirements:** Node.js 24+ (see repo-root `.nvmrc`), pnpm 11+.
+**Requirements:** Node.js 24+ (see repo-root `.nvmrc`), pnpm 12+.
 
 ## Vercel
 
