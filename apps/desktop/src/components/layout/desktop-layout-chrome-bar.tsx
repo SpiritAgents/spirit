@@ -141,7 +141,7 @@ export function DesktopLayoutChromeBar({
   const {
     open: workspaceToolsOpen,
     toggle: onToggleWorkspaceTools,
-    maximized: workspaceToolsMaximized,
+    fullScreen: workspaceToolsFullScreen,
     chromePinned: workspaceToolsChromePinned,
     dismissForNewSession: dismissWorkspaceToolsForNewSession,
     registerNewSessionChrome,
@@ -232,13 +232,13 @@ export function DesktopLayoutChromeBar({
   }, []);
 
   const handleNewSessionClick = useCallback(() => {
-    // New session = new space: while maximized, collapse the tools panel instantly (no reverse
+    // New session = new space: while full screen, collapse the tools panel instantly (no reverse
     // animation) so the old space's tools do not linger; workspace-level tabs stay untouched.
-    if (workspaceToolsMaximized) {
+    if (workspaceToolsFullScreen) {
       dismissWorkspaceToolsForNewSession();
     }
     onNewSession?.();
-  }, [dismissWorkspaceToolsForNewSession, onNewSession, workspaceToolsMaximized]);
+  }, [dismissWorkspaceToolsForNewSession, onNewSession, workspaceToolsFullScreen]);
 
   useEffect(() => {
     if (!onNewSession || !showSessionSidebarToggle) {
@@ -289,8 +289,8 @@ export function DesktopLayoutChromeBar({
               <SessionSidebarToggleButton />
             </div>
           ) : (
-            // Win/Linux (and macOS fullscreen): while the tools panel is maximized this wrapper
-            // fixed-pins the toggle above the panel (see styles.css); in-flow otherwise.
+            // Win/Linux (and macOS window fullscreen): while the tools panel is full screen this
+            // wrapper fixed-pins the toggle above the panel (see styles.css); in-flow otherwise.
             <div
               data-workspace-tools-pinned-sidebar-toggle={
                 workspaceToolsChromePinned ? "" : undefined
@@ -312,7 +312,7 @@ export function DesktopLayoutChromeBar({
           />
         ) : null}
         {onNewSession && showSessionSidebarToggle ? (
-          // While the tools panel is maximized the outer wrapper fixed-pins the button above the
+          // While the tools panel is full screen the outer wrapper fixed-pins the button above the
           // panel (see styles.css). position:fixed takes the inner width slot out of the leading
           // flex, so an in-flow ghost keeps the breadcrumb from snapping into that gap on frame 1.
           <>
@@ -362,13 +362,13 @@ export function DesktopLayoutChromeBar({
           </>
         ) : null}
         {trimmedSessionTitle || renamingTitle ? (
-          // The maximized tools panel covers the conversation column; fade the breadcrumb out for
+          // The full-screen tools panel covers the conversation column; fade the breadcrumb out for
           // the same 300ms instead of letting the column's overflow clip it mid-flight.
           <div
             className={cn(
               "flex min-w-0 flex-1 items-center",
               "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-              workspaceToolsMaximized && "pointer-events-none opacity-0",
+              workspaceToolsFullScreen && "pointer-events-none opacity-0",
             )}
           >
             <SessionChromeBreadcrumb
@@ -388,13 +388,13 @@ export function DesktopLayoutChromeBar({
         ) : null}
       </div>
       {showTrailingActions ? (
-        // Covered by the maximized tools panel: fade the pane menu and workspace toggle out with
+        // Covered by the full-screen tools panel: fade the pane menu and workspace toggle out with
         // the same 300ms curve (and keep them unfocusable) until the reverse flight starts.
         <div
           className={cn(
             "flex shrink-0 items-center gap-1",
             "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-            workspaceToolsMaximized && "pointer-events-none opacity-0",
+            workspaceToolsFullScreen && "pointer-events-none opacity-0",
           )}
           data-no-pane-drag
         >

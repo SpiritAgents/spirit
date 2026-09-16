@@ -10,13 +10,13 @@ import {
 } from "react";
 
 import {
-  readWorkspaceToolsMaximized,
-  readWorkspaceToolsMaximizedRestoreOpen,
+  readWorkspaceToolsFullScreen,
+  readWorkspaceToolsFullScreenRestoreOpen,
   readWorkspaceToolsWidthPx,
   workspaceToolsShellWidthExpression,
   workspaceToolsShellWidthWhenOpen,
-  writeWorkspaceToolsMaximized,
-  writeWorkspaceToolsMaximizedRestoreOpen,
+  writeWorkspaceToolsFullScreen,
+  writeWorkspaceToolsFullScreenRestoreOpen,
 } from "@/lib/layout-prefs";
 import { prefersReducedMotion } from "@/lib/reduce-motion";
 
@@ -25,7 +25,7 @@ const WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION = "width 300ms cubic-bezier(0.22, 1
 const WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION_MS = 300;
 
 /**
- * In-flight maximized width animation. "enter" carries the measured conversation-row width so the
+ * In-flight full-screen width animation. "enter" carries the measured conversation-row width so the
  * shell transitions between definite px endpoints before settling to 100% (a percentage width on
  * the shell would be cyclic while the dock wrapper is still content-sized mid-flight).
  */
@@ -35,22 +35,22 @@ type WorkspaceToolsChromeActions = {
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
   toggle(): void;
   openTools(): void;
-  toggleMaximized(): void;
+  toggleFullScreen(): void;
   dismissForNewSession(): void;
   registerNewSessionChrome(): () => void;
 };
 
 const WorkspaceToolsChromeOpenContext = createContext(false);
-const WorkspaceToolsChromeMaximizedContext = createContext(false);
+const WorkspaceToolsChromeFullScreenContext = createContext(false);
 const WorkspaceToolsChromeFlightContext = createContext<WorkspaceToolsWidthFlight | null>(null);
 const WorkspaceToolsChromeActionsContext = createContext<WorkspaceToolsChromeActions | null>(null);
 const WorkspaceToolsNewSessionChromeContext = createContext(false);
 
 export type WorkspaceToolsChromeApi = {
   open: boolean;
-  maximized: boolean;
+  fullScreen: boolean;
   toggle(): void;
-  toggleMaximized(): void;
+  toggleFullScreen(): void;
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
   dismissForNewSession(): void;
 };
@@ -120,7 +120,7 @@ function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean): void {
   scheduleShellWidthTransitionSettle(shell, () => {});
 }
 
-/** The conversation row (dock wrapper's parent) is the flex container the maximized shell fills. */
+/** The conversation row (dock wrapper's parent) is the flex container the full-screen shell fills. */
 function measureWorkspaceToolsRowWidthPx(shell: HTMLElement): number | null {
   const row = shell.parentElement?.parentElement;
   if (!row) {
@@ -130,7 +130,7 @@ function measureWorkspaceToolsRowWidthPx(shell: HTMLElement): number | null {
   return width > 0 ? width : null;
 }
 
-function applyEnterMaximizedFlight(targetPx: number, onSettle: () => void): void {
+function applyEnterFullScreenFlight(targetPx: number, onSettle: () => void): void {
   const shell = getWorkspaceToolsShell();
   if (!shell) {
     return;
@@ -140,7 +140,7 @@ function applyEnterMaximizedFlight(targetPx: number, onSettle: () => void): void
   scheduleShellWidthTransitionSettle(shell, onSettle);
 }
 
-function applyExitMaximizedFlight(targetWidth: string, onSettle: () => void): void {
+function applyExitFullScreenFlight(targetWidth: string, onSettle: () => void): void {
   const shell = getWorkspaceToolsShell();
   if (!shell) {
     return;
@@ -160,25 +160,25 @@ export function WorkspaceToolsChromeProvider({
   children,
   apiRef,
 }: WorkspaceToolsChromeProviderProps) {
-  const [maximized, setMaximizedState] = useState(readWorkspaceToolsMaximized);
-  const [open, setOpenState] = useState(() => readWorkspaceToolsMaximized());
+  const [fullScreen, setFullScreenState] = useState(readWorkspaceToolsFullScreen);
+  const [open, setOpenState] = useState(() => readWorkspaceToolsFullScreen());
   const [flight, setFlight] = useState<WorkspaceToolsWidthFlight | null>(null);
   const [newSessionChromeCount, setNewSessionChromeCount] = useState(0);
   const openRef = useRef(open);
   openRef.current = open;
-  const maximizedRef = useRef(maximized);
-  maximizedRef.current = maximized;
-  /** Restore snapshot of `open` taken when entering maximized; consumed by any exit path. */
-  const restoreOpenRef = useRef(readWorkspaceToolsMaximizedRestoreOpen());
+  const fullScreenRef = useRef(fullScreen);
+  fullScreenRef.current = fullScreen;
+  /** Restore snapshot of `open` taken when entering full screen; consumed by any exit path. */
+  const restoreOpenRef = useRef(readWorkspaceToolsFullScreenRestoreOpen());
 
   const settleFlight = useCallback(() => {
     setFlight(null);
   }, []);
 
-  const exitMaximized = useCallback(
+  const exitFullScreen = useCallback(
     (toOpen: boolean) => {
       restoreOpenRef.current = false;
-      maximizedRef.current = false;
+      fullScreenRef.current = false;
       openRef.current = toOpen;
       if (prefersReducedMotion()) {
         clearShellWidthTransitionTimer();
@@ -187,7 +187,7 @@ export function WorkspaceToolsChromeProvider({
         const shell = getWorkspaceToolsShell();
         if (shell) {
           setFlight({ kind: "exit" });
-          applyExitMaximizedFlight(
+          applyExitFullScreenFlight(
             workspaceToolsShellWidthWhenOpen(toOpen, readWorkspaceToolsWidthPx()),
             settleFlight,
           );
@@ -195,20 +195,20 @@ export function WorkspaceToolsChromeProvider({
           setFlight(null);
         }
       }
-      setMaximizedState(false);
+      setFullScreenState(false);
       setOpenState(toOpen);
-      writeWorkspaceToolsMaximized(false);
+      writeWorkspaceToolsFullScreen(false);
     },
     [settleFlight],
   );
 
-  const enterMaximized = useCallback(() => {
+  const enterFullScreen = useCallback(() => {
     const wasOpen = openRef.current;
     restoreOpenRef.current = wasOpen;
-    writeWorkspaceToolsMaximized(true);
-    writeWorkspaceToolsMaximizedRestoreOpen(wasOpen);
+    writeWorkspaceToolsFullScreen(true);
+    writeWorkspaceToolsFullScreenRestoreOpen(wasOpen);
     requestFocusWorkspaceToolsPanelOnOpen();
-    maximizedRef.current = true;
+    fullScreenRef.current = true;
     openRef.current = true;
     if (prefersReducedMotion()) {
       clearShellWidthTransitionTimer();
@@ -218,12 +218,12 @@ export function WorkspaceToolsChromeProvider({
       const rowWidthPx = shell ? measureWorkspaceToolsRowWidthPx(shell) : null;
       if (shell && rowWidthPx !== null) {
         setFlight({ kind: "enter", targetPx: rowWidthPx });
-        applyEnterMaximizedFlight(rowWidthPx, settleFlight);
+        applyEnterFullScreenFlight(rowWidthPx, settleFlight);
       } else {
         setFlight(null);
       }
     }
-    setMaximizedState(true);
+    setFullScreenState(true);
     setOpenState(true);
   }, [settleFlight]);
 
@@ -234,22 +234,22 @@ export function WorkspaceToolsChromeProvider({
       if (next === current) {
         return;
       }
-      if (maximizedRef.current) {
-        // Only reachable as setOpen(false) from maximized: collapse from fullscreen to 0 in one flight.
-        exitMaximized(false);
+      if (fullScreenRef.current) {
+        // Only reachable as setOpen(false) from full screen: collapse from fullscreen to 0 in one flight.
+        exitFullScreen(false);
         return;
       }
       applyWorkspaceToolsShellWidthImmediate(next);
       setOpenState(next);
     },
-    [exitMaximized],
+    [exitFullScreen],
   );
 
   const toggle = useCallback(() => {
-    if (maximizedRef.current) {
-      // Cmd/Ctrl+Alt+B from maximized only drops back to the dock (open=true), even when the
-      // maximize gesture started from collapsed; a second press collapses as usual.
-      exitMaximized(true);
+    if (fullScreenRef.current) {
+      // Cmd/Ctrl+Alt+B from full screen only drops back to the dock (open=true), even when the
+      // full-screen gesture started from collapsed; a second press collapses as usual.
+      exitFullScreen(true);
       return;
     }
     const next = !openRef.current;
@@ -258,30 +258,30 @@ export function WorkspaceToolsChromeProvider({
     }
     applyWorkspaceToolsShellWidthImmediate(next);
     setOpenState(next);
-  }, [exitMaximized]);
+  }, [exitFullScreen]);
 
   const openTools = useCallback(() => {
-    if (maximizedRef.current || openRef.current) {
-      // Already open (docked or maximized); never rewrite the maximized 100% width.
+    if (fullScreenRef.current || openRef.current) {
+      // Already open (docked or full screen); never rewrite the full-screen 100% width.
       return;
     }
     applyWorkspaceToolsShellWidthImmediate(true);
     setOpenState(true);
   }, []);
 
-  const toggleMaximized = useCallback(() => {
-    if (maximizedRef.current) {
-      exitMaximized(restoreOpenRef.current);
+  const toggleFullScreen = useCallback(() => {
+    if (fullScreenRef.current) {
+      exitFullScreen(restoreOpenRef.current);
       return;
     }
-    enterMaximized();
-  }, [enterMaximized, exitMaximized]);
+    enterFullScreen();
+  }, [enterFullScreen, exitFullScreen]);
 
   const dismissForNewSession = useCallback(() => {
     // A new session is a new space: collapse the panel instantly (no reverse animation) so the old
     // space's tools do not linger. Workspace-level tabs are left untouched.
     restoreOpenRef.current = false;
-    maximizedRef.current = false;
+    fullScreenRef.current = false;
     openRef.current = false;
     clearShellWidthTransitionTimer();
     const shell = getWorkspaceToolsShell();
@@ -289,9 +289,9 @@ export function WorkspaceToolsChromeProvider({
       shell.style.removeProperty("transition");
     }
     setFlight(null);
-    setMaximizedState(false);
+    setFullScreenState(false);
     setOpenState(false);
-    writeWorkspaceToolsMaximized(false);
+    writeWorkspaceToolsFullScreen(false);
   }, []);
 
   const registerNewSessionChrome = useCallback(() => {
@@ -304,29 +304,36 @@ export function WorkspaceToolsChromeProvider({
       setOpen,
       toggle,
       openTools,
-      toggleMaximized,
+      toggleFullScreen,
       dismissForNewSession,
       registerNewSessionChrome,
     }),
-    [dismissForNewSession, openTools, registerNewSessionChrome, setOpen, toggle, toggleMaximized],
+    [dismissForNewSession, openTools, registerNewSessionChrome, setOpen, toggle, toggleFullScreen],
   );
 
   useEffect(() => {
     if (apiRef) {
-      apiRef.current = { open, maximized, toggle, toggleMaximized, setOpen, dismissForNewSession };
+      apiRef.current = {
+        open,
+        fullScreen,
+        toggle,
+        toggleFullScreen,
+        setOpen,
+        dismissForNewSession,
+      };
     }
-  }, [apiRef, open, maximized, setOpen, toggle, toggleMaximized, dismissForNewSession]);
+  }, [apiRef, open, fullScreen, setOpen, toggle, toggleFullScreen, dismissForNewSession]);
 
   return (
     <WorkspaceToolsChromeActionsContext.Provider value={actions}>
       <WorkspaceToolsChromeOpenContext.Provider value={open}>
-        <WorkspaceToolsChromeMaximizedContext.Provider value={maximized}>
+        <WorkspaceToolsChromeFullScreenContext.Provider value={fullScreen}>
           <WorkspaceToolsChromeFlightContext.Provider value={flight}>
             <WorkspaceToolsNewSessionChromeContext.Provider value={newSessionChromeCount > 0}>
               {children}
             </WorkspaceToolsNewSessionChromeContext.Provider>
           </WorkspaceToolsChromeFlightContext.Provider>
-        </WorkspaceToolsChromeMaximizedContext.Provider>
+        </WorkspaceToolsChromeFullScreenContext.Provider>
       </WorkspaceToolsChromeOpenContext.Provider>
     </WorkspaceToolsChromeActionsContext.Provider>
   );
@@ -336,8 +343,8 @@ export function useWorkspaceToolsChromeOpen(): boolean {
   return useContext(WorkspaceToolsChromeOpenContext);
 }
 
-export function useWorkspaceToolsChromeMaximized(): boolean {
-  return useContext(WorkspaceToolsChromeMaximizedContext);
+export function useWorkspaceToolsChromeFullScreen(): boolean {
+  return useContext(WorkspaceToolsChromeFullScreenContext);
 }
 
 export function useWorkspaceToolsChromeWidthFlight(): WorkspaceToolsWidthFlight | null {
@@ -361,35 +368,35 @@ export function useWorkspaceToolsChromeActions(): WorkspaceToolsChromeActions {
 /** Top-bar button: needs both open and toggle. */
 export function useWorkspaceToolsChrome(): {
   open: boolean;
-  maximized: boolean;
-  /** True from the first maximize frame through the exit settle, so pinned chrome holds for the strict reverse animation. */
+  fullScreen: boolean;
+  /** True from the first full-screen frame through the exit settle, so pinned chrome holds for the strict reverse animation. */
   chromePinned: boolean;
   setOpen: WorkspaceToolsChromeActions["setOpen"];
   toggle: WorkspaceToolsChromeActions["toggle"];
   openTools: WorkspaceToolsChromeActions["openTools"];
-  toggleMaximized: WorkspaceToolsChromeActions["toggleMaximized"];
+  toggleFullScreen: WorkspaceToolsChromeActions["toggleFullScreen"];
   dismissForNewSession: WorkspaceToolsChromeActions["dismissForNewSession"];
   registerNewSessionChrome: WorkspaceToolsChromeActions["registerNewSessionChrome"];
 } {
   const open = useWorkspaceToolsChromeOpen();
-  const maximized = useWorkspaceToolsChromeMaximized();
+  const fullScreen = useWorkspaceToolsChromeFullScreen();
   const flight = useWorkspaceToolsChromeWidthFlight();
   const {
     setOpen,
     toggle,
     openTools,
-    toggleMaximized,
+    toggleFullScreen,
     dismissForNewSession,
     registerNewSessionChrome,
   } = useWorkspaceToolsChromeActions();
   return {
     open,
-    maximized,
-    chromePinned: maximized || flight !== null,
+    fullScreen,
+    chromePinned: fullScreen || flight !== null,
     setOpen,
     toggle,
     openTools,
-    toggleMaximized,
+    toggleFullScreen,
     dismissForNewSession,
     registerNewSessionChrome,
   };

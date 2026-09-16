@@ -176,26 +176,26 @@ export function writeWorkspaceToolsWidthPx(
   writeWorkspaceToolsWidthRatio(widthPx / viewportWidthPx, viewportWidthPx);
 }
 
-const WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY = "spirit-desktop-workspace-tools-maximized";
-const WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY =
-  "spirit-desktop-workspace-tools-maximized-restore-open";
+const WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY = "spirit-desktop-workspace-tools-fullscreen";
+const WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY =
+  "spirit-desktop-workspace-tools-fullscreen-restore-open";
 
-export function readWorkspaceToolsMaximized(): boolean {
-  return readStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY, false);
+export function readWorkspaceToolsFullScreen(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY, false);
 }
 
-export function writeWorkspaceToolsMaximized(maximized: boolean): void {
-  writeStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY, maximized);
+export function writeWorkspaceToolsFullScreen(fullScreen: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_STORAGE_KEY, fullScreen);
   flushDesktopRendererStorage();
 }
 
-/** Restore snapshot of `open` taken when entering maximized; only meaningful while maximized. */
-export function readWorkspaceToolsMaximizedRestoreOpen(): boolean {
-  return readStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY, true);
+/** Restore snapshot of `open` taken when entering full screen; only meaningful while full screen. */
+export function readWorkspaceToolsFullScreenRestoreOpen(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY, true);
 }
 
-export function writeWorkspaceToolsMaximizedRestoreOpen(open: boolean): void {
-  writeStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY, open);
+export function writeWorkspaceToolsFullScreenRestoreOpen(open: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_FULLSCREEN_RESTORE_OPEN_STORAGE_KEY, open);
   flushDesktopRendererStorage();
 }
 

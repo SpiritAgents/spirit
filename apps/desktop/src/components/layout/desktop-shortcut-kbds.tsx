@@ -81,7 +81,7 @@ export function WorkspaceToolsShortcutKbd() {
   );
 }
 
-export function WorkspaceToolsMaximizeShortcutKbd() {
+export function WorkspaceToolsFullScreenShortcutKbd() {
   const keys = modShiftLetterShortcutKbdKeys("M");
 
   return (

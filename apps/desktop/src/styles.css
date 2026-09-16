@@ -312,13 +312,13 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
 }
 
 /*
- * Workspace tools maximized: the conversation column is squeezed to 0 and clips its chrome bar,
+ * Workspace tools full screen: the conversation column is squeezed to 0 and clips its chrome bar,
  * so the new-session button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
- * fullscreen panel from the first maximize frame through the exit settle. The sidebar open/close
+ * panel from the first enter-full-screen frame through the exit settle. The sidebar open/close
  * width/opacity rule lives on the inner wrapper and still composes with the fixed positioning.
  * macOS windowed: pin the new-session button in the same slot it occupies in-flow
  * (traffic-lights inset + toggle spacer w-7+mr-1). Using the toggle-inset token would sit 0.125rem
- * to the right of that slot and jump the button on the first maximized frame.
+ * to the right of that slot and jump the button on the first full-screen frame.
  */
 html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
   [data-workspace-tools-pinned-new-session] {

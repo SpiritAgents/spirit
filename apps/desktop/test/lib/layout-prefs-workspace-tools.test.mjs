@@ -3,12 +3,12 @@ import { test } from "vitest";
 
 import {
   computeWorkspaceToolsMaxWidthPx,
-  readWorkspaceToolsMaximized,
-  readWorkspaceToolsMaximizedRestoreOpen,
+  readWorkspaceToolsFullScreen,
+  readWorkspaceToolsFullScreenRestoreOpen,
   readWorkspaceToolsWidthPx,
   readWorkspaceToolsWidthRatio,
-  writeWorkspaceToolsMaximized,
-  writeWorkspaceToolsMaximizedRestoreOpen,
+  writeWorkspaceToolsFullScreen,
+  writeWorkspaceToolsFullScreenRestoreOpen,
   writeWorkspaceToolsWidthPx,
   writeWorkspaceToolsWidthRatio,
   WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO,
@@ -17,8 +17,8 @@ import {
 
 const RATIO_KEY = "spirit-desktop-workspace-tools-width-ratio";
 const LEGACY_PX_KEY = "spirit-desktop-workspace-tools-width-px";
-const MAXIMIZED_KEY = "spirit-desktop-workspace-tools-maximized";
-const MAXIMIZED_RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-maximized-restore-open";
+const FULLSCREEN_KEY = "spirit-desktop-workspace-tools-fullscreen";
+const FULLSCREEN_RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-fullscreen-restore-open";
 
 function withLocalStorage(run) {
   const previous = globalThis.localStorage;
@@ -86,24 +86,24 @@ test("default ratio is used when no prefs exist", () => {
   });
 });
 
-test("workspace tools maximized pref defaults to false and round-trips", () => {
+test("workspace tools full-screen pref defaults to false and round-trips", () => {
   withLocalStorage((store) => {
-    assert.equal(readWorkspaceToolsMaximized(), false);
-    writeWorkspaceToolsMaximized(true);
-    assert.equal(store.get(MAXIMIZED_KEY), "true");
-    assert.equal(readWorkspaceToolsMaximized(), true);
-    writeWorkspaceToolsMaximized(false);
-    assert.equal(readWorkspaceToolsMaximized(), false);
+    assert.equal(readWorkspaceToolsFullScreen(), false);
+    writeWorkspaceToolsFullScreen(true);
+    assert.equal(store.get(FULLSCREEN_KEY), "true");
+    assert.equal(readWorkspaceToolsFullScreen(), true);
+    writeWorkspaceToolsFullScreen(false);
+    assert.equal(readWorkspaceToolsFullScreen(), false);
   });
 });
 
-test("workspace tools maximized restore-open pref defaults to docked and round-trips", () => {
+test("workspace tools full-screen restore-open pref defaults to docked and round-trips", () => {
   withLocalStorage((store) => {
-    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), true);
-    writeWorkspaceToolsMaximizedRestoreOpen(false);
-    assert.equal(store.get(MAXIMIZED_RESTORE_OPEN_KEY), "false");
-    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), false);
-    writeWorkspaceToolsMaximizedRestoreOpen(true);
-    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), true);
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), true);
+    writeWorkspaceToolsFullScreenRestoreOpen(false);
+    assert.equal(store.get(FULLSCREEN_RESTORE_OPEN_KEY), "false");
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), false);
+    writeWorkspaceToolsFullScreenRestoreOpen(true);
+    assert.equal(readWorkspaceToolsFullScreenRestoreOpen(), true);
   });
 });
