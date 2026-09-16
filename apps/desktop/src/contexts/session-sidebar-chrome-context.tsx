@@ -58,8 +58,8 @@ export function SessionSidebarChromeProvider({
   }, [apiRef, open, openSidebar, toggle]);
 
   useEffect(() => {
-    // The workspace-tools maximized pin (Win/Linux + macOS fullscreen) anchors its fixed left
-    // offset to the main content's left edge, i.e. the sidebar shell's current width.
+    // The workspace-tools full-screen pin (Win/Linux + macOS window fullscreen) anchors its
+    // fixed left offset to the main content's left edge, i.e. the sidebar shell's current width.
     document.documentElement.style.setProperty(
       "--spirit-session-sidebar-shell-width",
       sessionSidebarShellWidth(open, widthPx),

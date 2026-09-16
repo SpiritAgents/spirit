@@ -1,7 +1,7 @@
 import { WorkspaceToolsDock } from "@/components/workspace-tools-panel";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
 import {
-  useWorkspaceToolsChromeMaximized,
+  useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeWidthFlight,
 } from "@/contexts/workspace-tools-chrome-context";
 import type { useComposerController } from "@/hooks/useComposerController";
@@ -38,7 +38,7 @@ export function ConversationWorkspaceToolsDock({
   onOpenIntegrationsSettings,
 }: ConversationWorkspaceToolsDockProps) {
   const split = useConversationSplit();
-  const maximized = useWorkspaceToolsChromeMaximized();
+  const fullScreen = useWorkspaceToolsChromeFullScreen();
   const widthFlight = useWorkspaceToolsChromeWidthFlight();
   const composerInsert = useFocusedPaneComposerInsertCallbacks(split.getFocusedPaneComposerInsert, {
     handleBrowserElementPicked: composer.handleBrowserElementPicked,
@@ -50,11 +50,11 @@ export function ConversationWorkspaceToolsDock({
     handleMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
   });
 
-  // Settled maximized: the wrapper (the conversation row's direct flex item) takes the full row
+  // Settled full screen: the wrapper (the conversation row's direct flex item) takes the full row
   // width so the shell's 100% resolves against a definite containing block and the conversation
   // column is squeezed to 0. Mid-flight the wrapper stays content-sized to track the shell's
   // animating px width.
-  const wrapperFullWidth = maximized && widthFlight === null;
+  const wrapperFullWidth = fullScreen && widthFlight === null;
   return (
     <div
       data-spirit-surface="workspace-dock"

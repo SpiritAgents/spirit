@@ -88,7 +88,7 @@ export function useDesktopKeyboardShortcuts({
   workspaceToolTabs,
   focusWorkspaceToolTab,
 }: UseDesktopKeyboardShortcutsOptions) {
-  const { toggle: toggleWorkspaceTools, toggleMaximized: toggleWorkspaceToolsMaximized } =
+  const { toggle: toggleWorkspaceTools, toggleFullScreen: toggleWorkspaceToolsFullScreen } =
     useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
@@ -160,7 +160,7 @@ export function useDesktopKeyboardShortcuts({
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
   }, [activeSurfaceRef, toggleWorkspaceTools]);
 
-  // Cmd/Ctrl+Shift+M — maximize/restore the workspace tools panel. Registered in the renderer
+  // Cmd/Ctrl+Shift+M — enter/exit workspace tools full screen. Registered in the renderer
   // (not the Electron View menu) and limited to the conversation surface; Esc never exits.
   // Capture phase pairs with the Cmd+Opt+B handler above.
   useEffect(() => {
@@ -179,11 +179,11 @@ export function useDesktopKeyboardShortcuts({
       }
       event.preventDefault();
       event.stopPropagation();
-      toggleWorkspaceToolsMaximized();
+      toggleWorkspaceToolsFullScreen();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", onKeyDown, { capture: true });
-  }, [activeSurfaceRef, toggleWorkspaceToolsMaximized]);
+  }, [activeSurfaceRef, toggleWorkspaceToolsFullScreen]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

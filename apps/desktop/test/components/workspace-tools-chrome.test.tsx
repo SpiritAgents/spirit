@@ -8,18 +8,18 @@ import { beforeEach, expect, test } from "vitest";
 import {
   WorkspaceToolsChromeProvider,
   useWorkspaceToolsChrome,
-  useWorkspaceToolsChromeMaximized,
+  useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
 } from "@/contexts/workspace-tools-chrome-context";
 import { workspaceToolsShellWidthWhenOpen } from "@/lib/layout-prefs";
 
-const MAXIMIZED_KEY = "spirit-desktop-workspace-tools-maximized";
-const RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-maximized-restore-open";
+const FULLSCREEN_KEY = "spirit-desktop-workspace-tools-fullscreen";
+const RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-fullscreen-restore-open";
 /** Matches the real panel's docked width for deterministic width expressions. */
 const DOCKED_WIDTH_PX = 420;
 
-type ChromeSnapshot = { open: boolean; maximized: boolean; pinned: boolean };
+type ChromeSnapshot = { open: boolean; fullScreen: boolean; pinned: boolean };
 
 const latestApi: { current: ReturnType<typeof useWorkspaceToolsChrome> | null } = {
   current: null,
@@ -28,10 +28,10 @@ const latestApi: { current: ReturnType<typeof useWorkspaceToolsChrome> | null } 
 /** Mirrors the shell width logic of WorkspaceToolsDockShell so assertions see React commits. */
 function FakeShell() {
   const open = useWorkspaceToolsChromeOpen();
-  const maximized = useWorkspaceToolsChromeMaximized();
+  const fullScreen = useWorkspaceToolsChromeFullScreen();
   const flight = useWorkspaceToolsChromeWidthFlight();
   const enterFlightPx = flight?.kind === "enter" ? flight.targetPx : null;
-  const width = maximized
+  const width = fullScreen
     ? enterFlightPx !== null
       ? `${enterFlightPx}px`
       : "100%"
@@ -56,7 +56,7 @@ function ChromeProbe() {
     <output data-testid="chrome">
       {JSON.stringify({
         open: chrome.open,
-        maximized: chrome.maximized,
+        fullScreen: chrome.fullScreen,
         pinned: chrome.chromePinned,
       })}
     </output>
@@ -107,8 +107,8 @@ async function waitForFlightSettle() {
   });
 }
 
-async function enterMaximizedAndSettle() {
-  act(() => latestApi.current?.toggleMaximized());
+async function enterFullScreenAndSettle() {
+  act(() => latestApi.current?.toggleFullScreen());
   await waitForFlightSettle();
 }
 
@@ -117,61 +117,61 @@ beforeEach(() => {
   latestApi.current = null;
 });
 
-test("toggleMaximized from collapsed flies to fullscreen in one segment and persists the snapshot", async () => {
+test("toggleFullScreen from collapsed flies to fullscreen in one segment and persists the snapshot", async () => {
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
 
-  act(() => latestApi.current?.toggleMaximized());
+  act(() => latestApi.current?.toggleFullScreen());
 
-  expect(chromeState()).toEqual({ open: true, maximized: true, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: true, pinned: true });
   // Single segment: the shell aims straight at the row width, never at a docked intermediate.
   expect(shell.style.width).toBe("1000px");
-  expect(localStorage.getItem(MAXIMIZED_KEY)).toBe("true");
+  expect(localStorage.getItem(FULLSCREEN_KEY)).toBe("true");
   expect(localStorage.getItem(RESTORE_OPEN_KEY)).toBe("false");
 
   await waitForFlightSettle();
   expect(shell.style.width).toBe("100%");
   expect(shell.style.transition).toBe("");
-  expect(chromeState()).toEqual({ open: true, maximized: true, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: true, pinned: true });
 });
 
-test("toggleMaximized from settled maximized reverses to the collapsed snapshot", async () => {
+test("toggleFullScreen from settled full screen reverses to the collapsed snapshot", async () => {
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
-  await enterMaximizedAndSettle();
+  await enterFullScreenAndSettle();
 
-  act(() => latestApi.current?.toggleMaximized());
+  act(() => latestApi.current?.toggleFullScreen());
 
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: true });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: true });
   expect(shell.style.width).toBe("0px");
-  expect(localStorage.getItem(MAXIMIZED_KEY)).toBe("false");
+  expect(localStorage.getItem(FULLSCREEN_KEY)).toBe("false");
 
   await waitForFlightSettle();
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
 });
 
-test("toggle from maximized lands on the dock even when maximized from collapsed", async () => {
+test("toggle from full screen lands on the dock even when entered from collapsed", async () => {
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
-  await enterMaximizedAndSettle();
+  await enterFullScreenAndSettle();
 
   act(() => latestApi.current?.toggle());
 
-  expect(chromeState()).toEqual({ open: true, maximized: false, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: true });
   // jsdom folds calc(1px + 420px) to calc(421px) when assigning inline styles.
   expect(shell.style.width).toBe(`calc(${1 + DOCKED_WIDTH_PX}px)`);
-  expect(localStorage.getItem(MAXIMIZED_KEY)).toBe("false");
+  expect(localStorage.getItem(FULLSCREEN_KEY)).toBe("false");
 
   await waitForFlightSettle();
-  expect(chromeState()).toEqual({ open: true, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: false });
 
   // A second toggle collapses as usual.
   act(() => latestApi.current?.toggle());
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
   expect(shell.style.width).toBe("0px");
 });
 
@@ -179,46 +179,46 @@ test("dismissForNewSession collapses instantly with no reverse flight", async ()
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
-  await enterMaximizedAndSettle();
+  await enterFullScreenAndSettle();
 
   act(() => latestApi.current?.dismissForNewSession());
 
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
   expect(shell.style.width).toBe("0px");
   expect(shell.style.transition).toBe("");
-  expect(localStorage.getItem(MAXIMIZED_KEY)).toBe("false");
+  expect(localStorage.getItem(FULLSCREEN_KEY)).toBe("false");
 });
 
-test("setOpen(true) and openTools while maximized never rewrite the fullscreen width", async () => {
+test("setOpen(true) and openTools while full screen never rewrite the fullscreen width", async () => {
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
-  await enterMaximizedAndSettle();
+  await enterFullScreenAndSettle();
   expect(shell.style.width).toBe("100%");
 
   act(() => latestApi.current?.setOpen(true));
-  expect(chromeState()).toEqual({ open: true, maximized: true, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: true, pinned: true });
   expect(shell.style.width).toBe("100%");
 
   act(() => latestApi.current?.openTools());
-  expect(chromeState()).toEqual({ open: true, maximized: true, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: true, pinned: true });
   expect(shell.style.width).toBe("100%");
 });
 
-test("persisted maximized mounts directly settled and keeps the restore snapshot", async () => {
-  localStorage.setItem(MAXIMIZED_KEY, "true");
+test("persisted full screen mounts directly settled and keeps the restore snapshot", async () => {
+  localStorage.setItem(FULLSCREEN_KEY, "true");
   localStorage.setItem(RESTORE_OPEN_KEY, "false");
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
 
-  expect(chromeState()).toEqual({ open: true, maximized: true, pinned: true });
+  expect(chromeState()).toEqual({ open: true, fullScreen: true, pinned: true });
   expect(shell.style.width).toBe("100%");
   expect(shell.style.transition).toBe("");
 
   // The restore snapshot still drives the reverse flight after a restart.
-  act(() => latestApi.current?.toggleMaximized());
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: true });
+  act(() => latestApi.current?.toggleFullScreen());
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: true });
   await waitForFlightSettle();
-  expect(chromeState()).toEqual({ open: false, maximized: false, pinned: false });
+  expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
 });
