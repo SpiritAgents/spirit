@@ -1,5 +1,5 @@
 {
-  "name": "@spiritagent/dev-root",
+  "name": "@spiritagent/monorepo",
   "private": true,
   "description": "Spirit — root scripts for TS build + Rust CLI",
   "license": "MIT",
