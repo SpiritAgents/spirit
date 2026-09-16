@@ -1,7 +1,6 @@
 {
   "name": "@spiritagent/dev-root",
   "private": true,
-  "description": "Spirit — root scripts for TS build + Rust CLI",
   "license": "MIT",
   "repository": {
     "type": "git",
