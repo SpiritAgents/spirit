@@ -176,7 +176,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 
 ## Development
 
-**Requirements:** Node.js 24+, pnpm 11+ (enable via `corepack enable`). Rust toolchain required for CLI builds.
+**Requirements:** Node.js 24+, pnpm 12+ (enable via `corepack enable`). Rust toolchain required for CLI builds.
 
 | Command                    | Description                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------ |

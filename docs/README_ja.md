@@ -176,7 +176,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 
 ## 開発
 
-**要件：** Node.js 24+、pnpm 11+（`corepack enable` で有効化）。CLI ビルドには Rust ツールチェーン。
+**要件：** Node.js 24+、pnpm 12+（`corepack enable` で有効化）。CLI ビルドには Rust ツールチェーン。
 
 | コマンド                   | 説明                                                                      |
 | -------------------------- | ------------------------------------------------------------------------- |

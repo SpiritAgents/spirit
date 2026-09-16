@@ -176,7 +176,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 
 ## 개발
 
-**요구 사항:** Node.js 24+, pnpm 11+(`corepack enable`로 활성화). CLI 빌드에는 Rust 툴체인 필요.
+**요구 사항:** Node.js 24+, pnpm 12+(`corepack enable`로 활성화). CLI 빌드에는 Rust 툴체인 필요.
 
 | 명령                       | 설명                                                                       |
 | -------------------------- | -------------------------------------------------------------------------- |
