@@ -339,7 +339,7 @@ import {
 } from "./active-model-sync.js";
 import { findModelRefByName, resolveModelProfile } from "./model-config-access.js";
 import { deleteSessionCommand, type SessionDeleteContext } from "./session-delete.js";
-import { modelRefKey, modelRefsEqual } from "@spiritagent/host-internal";
+import { modelRefKey, modelRefsEqual, tryResolveTransportConfig } from "@spiritagent/host-internal";
 import type { ModelRef } from "../types.js";
 import { renameSessionCommand, type SessionRenameContext } from "./session-rename.js";
 import {
@@ -3072,7 +3072,11 @@ class DesktopHostService {
       if (bundle.id === this.sessionRegistry.activeSessionId()) {
         this.runtime = runtime;
       }
-      this.activeApiKeyConfigured = true;
+      this.activeApiKeyConfigured = tryResolveTransportConfig({
+        workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
+        spiritDataDir: spiritDataDir(),
+        modelRef: effectiveActiveModel,
+      }).ok;
       this.lastRuntimeError = "";
       await this.refreshTodoSnapshotForBundle(bundle);
       bundle.runtimeActivationSignature = this.runtimeActivationSignature(bundle);

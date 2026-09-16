@@ -1173,6 +1173,11 @@ impl AppConfig {
         self.resolve_model_profile(&self.active_model)
     }
 
+    pub fn has_sendable_active_model(&self) -> bool {
+        self.active_model_profile()
+            .is_some_and(|profile| !profile.name.trim().is_empty())
+    }
+
     pub fn active_provider_group_mut(&mut self) -> Option<&mut ProviderGroup> {
         let group_id = self.active_model.group_id.clone();
         self.find_provider_group_mut(&group_id)
@@ -2949,5 +2954,38 @@ mod tests {
         assert_eq!(active.name, "gpt-4o-mini");
         assert_eq!(active.api_base, "https://api.openai.com/v1");
         assert_eq!(active.provider, Some(ModelProvider::Openai));
+    }
+
+    #[test]
+    fn has_sendable_active_model_is_false_without_a_profile() {
+        let cfg = AppConfig::default();
+        assert!(!cfg.has_sendable_active_model());
+    }
+
+    #[test]
+    fn has_sendable_active_model_is_true_with_a_named_profile() {
+        let mut cfg = AppConfig::default();
+        cfg.add_model_to_group(
+            "openai",
+            ModelProvider::Openai,
+            "https://api.openai.com/v1".to_string(),
+            ProviderGroupConnectDraft::default(),
+            ModelEntry {
+                name: "gpt-4o-mini".to_string(),
+                reasoning_effort: Some("medium".to_string()),
+                reasoning_mode: None,
+                thinking_enabled: None,
+                supported_reasoning_efforts: None,
+                capabilities: Some(vec!["chat".to_string()]),
+                context_length: None,
+                supports_thinking_type: None,
+                supports_thinking_switch: None,
+            },
+        );
+        cfg.active_model = ModelRef {
+            group_id: "openai".to_string(),
+            name: "gpt-4o-mini".to_string(),
+        };
+        assert!(cfg.has_sendable_active_model());
     }
 }

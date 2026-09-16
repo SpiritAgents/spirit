@@ -518,6 +518,7 @@ tui.shell.background_disconnected: "The shell background task ended unexpectedly
 tui.model_picker.switch_saved_fail: "Switched models, but failed to save config: %{err}"
 tui.model_picker.switch_success: "Switched current model to: %{model}"
 tui.model_picker.empty: "No models available. Add one with `/model add` first (or the one-liner `/model add <name> <api_base> <api_key>`)."
+tui.send.no_active_model: "No active model configured. Add one with `/model add` first."
 tui.model.list: "Current model: %{current}\nModels: %{list}"
 tui.model.use_usage: "Usage: `/model use <name>`"
 tui.model.switch_save_failed: "Switched models, but failed to save config: %{err}"

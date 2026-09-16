@@ -663,6 +663,10 @@ export class SessionManager {
   }
 
   private async startTurn(session: ServerSession, turn: QueuedUserTurn): Promise<void> {
+    const unconfiguredReason = session.runtimeResult.unconfiguredReason;
+    if (unconfiguredReason) {
+      throw new Error(unconfiguredReason);
+    }
     const { runtime } = session.runtimeResult;
     await session.runtimeResult.toolExecutor.refreshCaches();
     session.turnActive = true;

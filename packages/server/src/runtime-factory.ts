@@ -82,7 +82,8 @@ import {
   readGitBranchLabelForBasicInfo,
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
-  resolveTransportConfig,
+  tryResolveTransportConfig,
+  unconfiguredTransportConfig,
   type ApprovalLevel,
   type HostDreamScope,
   type HostDreamSourceSessionRef,
@@ -155,6 +156,11 @@ export interface ServerRuntimeResult {
   toolExecutor: HostToolExecutorProxy;
   mcpService: McpService;
   transportConfig: LlmTransportConfig;
+  /**
+   * Present when the session booted without a resolvable model/credentials.
+   * CLI/Desktop can still open; turns fail with this reason instead of calling the LLM.
+   */
+  unconfiguredReason?: string;
   enabledRules: LlmEnabledRule[];
   enabledSkillCatalog: LlmEnabledSkillCatalogEntry[];
   /** Mutable array reference — turn handlers read it, slash activation mutates it. */
@@ -224,11 +230,15 @@ export async function createServerRuntime(
     throw new Error("dream-collector session requires dreamScope");
   }
 
-  const transportConfig = resolveTransportConfig({
+  const resolvedTransport = tryResolveTransportConfig({
     workspaceRoot,
     spiritDataDir,
     ...(options.modelRef ? { modelRef: options.modelRef } : {}),
   });
+  const unconfiguredReason = resolvedTransport.ok ? undefined : resolvedTransport.error;
+  const transportConfig = resolvedTransport.ok
+    ? resolvedTransport.config
+    : unconfiguredTransportConfig(workspaceRoot);
   await ensureTranscriptSessionDir(spiritDataDir, sessionKey);
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
@@ -658,6 +668,7 @@ export async function createServerRuntime(
     toolExecutor,
     mcpService,
     transportConfig,
+    ...(unconfiguredReason ? { unconfiguredReason } : {}),
     enabledRules,
     enabledSkillCatalog,
     activeSkills,

@@ -238,7 +238,7 @@ function daemonSessionModelDiffersFromRef(
 ): boolean {
   const profile = loadModelProfile(spiritDataDir, requested);
   if (!profile) {
-    return true;
+    return daemonModel.trim() !== "";
   }
   return profile.name !== daemonModel;
 }

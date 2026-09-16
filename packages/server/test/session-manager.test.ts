@@ -366,4 +366,38 @@ describe("SessionManager", () => {
       await manager.shutdown();
     });
   });
+
+  it("creates a session without an active model and rejects turns until setup", async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), "spirit-server-session-nomodel-"));
+    writeFileSync(
+      join(dataDir, "config.json"),
+      JSON.stringify({
+        schemaVersion: 2,
+        providerGroups: [],
+        activeModel: { groupId: "", name: "" },
+      }),
+    );
+    const manager = new SessionManager(dataDir, {
+      broadcastRuntimeEvent: () => {},
+      broadcastTurnFinished: () => {},
+      broadcastSnapshot: () => {},
+      broadcastTrustRequest: () => {},
+      broadcastFileChange: () => {},
+    });
+
+    const created = await manager.createSession({
+      workspaceRoot: tmpdir(),
+      hostKind: "cli",
+    });
+    assert.ok(created.sessionId.startsWith("sess_"));
+    assert.equal(created.model, "");
+
+    await assert.rejects(
+      manager.submitUserTurn(created.sessionId, { text: "hello" }),
+      /No active model configured/,
+    );
+
+    await manager.closeSession(created.sessionId);
+    await manager.shutdown();
+  });
 });

@@ -517,6 +517,7 @@ tui.shell.background_disconnected: "Фоновая задача оболочки
 tui.model_picker.switch_saved_fail: "Модель переключена, но сохранить конфиг не удалось: %{err}"
 tui.model_picker.switch_success: "Текущая модель переключена на: %{model}"
 tui.model_picker.empty: "Нет доступных моделей. Сначала добавьте одну с помощью `/model add` (или одной строкой `/model add <name> <api_base> <api_key>`)."
+tui.send.no_active_model: "Активная модель не настроена. Сначала добавьте одну с помощью `/model add`."
 tui.model.list: "Текущая модель: %{current}\nМодели: %{list}"
 tui.model.use_usage: "Использование: `/model use <name>`"
 tui.model.switch_save_failed: "Модель переключена, но не удалось сохранить: %{err}"

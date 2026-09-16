@@ -6,6 +6,7 @@ import {
   resolvePendingQuestionsSessionPath,
   resolvePendingQuestionsSnapshot,
 } from "@/lib/pane-pending-turn-routing";
+import { resolvePaneCanSend } from "@/lib/pane-conversation-controls";
 import i18n, { getStoredLanguagePreference } from "@/lib/i18n";
 import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translucency";
 
@@ -3914,11 +3915,7 @@ export function useDesktopRuntime() {
       !snapshot.conversation.pendingToolApproval &&
       !snapshot.conversation.pendingQuestions;
     return {
-      canSend:
-        !!snapshot?.runtimeReady &&
-        !snapshot.conversation.isBusy &&
-        !snapshot.conversation.pendingToolApproval &&
-        !snapshot.conversation.pendingQuestions,
+      canSend: resolvePaneCanSend(snapshot),
       canEnqueueWhileBusy,
       canInterrupt: canEnqueueWhileBusy,
       hostStatus: hostError

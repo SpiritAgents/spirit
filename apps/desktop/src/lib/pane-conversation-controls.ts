@@ -17,6 +17,7 @@ export function resolvePaneCanInterrupt(snapshot: DesktopSnapshot | null | undef
 export function resolvePaneCanSend(snapshot: DesktopSnapshot | null | undefined): boolean {
   return Boolean(
     snapshot?.runtimeReady &&
+    snapshot.config.activeApiKeyConfigured &&
     !snapshot.conversation.isBusy &&
     !snapshot.conversation.pendingToolApproval &&
     !snapshot.conversation.pendingQuestions,

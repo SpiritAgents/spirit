@@ -426,6 +426,12 @@ impl TuiShell {
             return;
         }
 
+        if !trimmed_message.starts_with('/') && !self.runtime.config().has_sendable_active_model() {
+            self.scroll_history_to_bottom();
+            self.push_agent_message(t!("tui.send.no_active_model").into_owned());
+            return;
+        }
+
         self.scroll_history_to_bottom();
 
         if self.runtime.is_busy() {
@@ -482,7 +488,10 @@ impl TuiShell {
             let workspace_root = self.app_paths.workspace_root();
             let runtime_turn =
                 user_turn_text_for_mode(&workspace_root, self.input.mode, &raw_message);
-            let _ = self.submit_runtime_user_turn(runtime_turn, None);
+            if self.submit_runtime_user_turn(runtime_turn, None).is_err() {
+                self.refresh_suggestions();
+                return;
+            }
         }
 
         self.set_input(String::new());

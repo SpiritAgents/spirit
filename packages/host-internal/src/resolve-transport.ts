@@ -21,7 +21,7 @@ import {
   resolveStoredApiKeyForProfile,
 } from "./credentials/index.js";
 import type { SpiritModelCapability, SpiritModelProfile } from "./credentials/types.js";
-import type { ModelRef } from "./config-v2.js";
+import { isEmptyModelRef, type ModelRef } from "./config-v2.js";
 import { resolveProfileApiBase, resolveSetupTransportKind } from "./provider-setup.js";
 
 export interface ResolveTransportContext {
@@ -285,16 +285,40 @@ function buildTransportFromProfile(
   };
 }
 
+export const NO_ACTIVE_MODEL_ERROR = "No active model configured. Run provider setup first.";
+
+export type ResolveTransportResult =
+  | { ok: true; config: LlmTransportConfig }
+  | { ok: false; error: string };
+
 /**
- * Resolves LLM transport from shared Spirit config + keyring. Hosts call this
- * in-process so secrets never cross an IPC/WS boundary.
+ * Placeholder transport so CLI/Desktop can boot without a model. Turns must
+ * still fail with the unresolved setup error rather than calling the LLM.
  */
-export function resolveTransportConfig(context: ResolveTransportContext): LlmTransportConfig {
-  const profile = context.modelRef
-    ? loadModelProfile(context.spiritDataDir, context.modelRef)
+export function unconfiguredTransportConfig(workspaceRoot: string): LlmTransportConfig {
+  return {
+    transportKind: "openai-compatible",
+    apiKey: "",
+    model: "",
+    workspaceRoot,
+  };
+}
+
+/**
+ * Resolves LLM transport from shared Spirit config + keyring without throwing
+ * for expected setup gaps (no model, missing key). Unexpected profile errors
+ * from `buildTransportFromProfile` still throw.
+ */
+export function tryResolveTransportConfig(
+  context: ResolveTransportContext,
+): ResolveTransportResult {
+  const modelRef =
+    context.modelRef && !isEmptyModelRef(context.modelRef) ? context.modelRef : undefined;
+  const profile = modelRef
+    ? loadModelProfile(context.spiritDataDir, modelRef)
     : loadActiveModelProfile(context.spiritDataDir);
   if (!profile) {
-    throw new Error("No active model configured. Run provider setup first.");
+    return { ok: false, error: NO_ACTIVE_MODEL_ERROR };
   }
 
   const apiKey = resolveStoredApiKeyForProfile(profile) ?? "";
@@ -304,15 +328,33 @@ export function resolveTransportConfig(context: ResolveTransportContext): LlmTra
       vertex.apiKey?.trim() || (vertex.clientEmail?.trim() && vertex.privateKey?.trim()),
     );
     if (!hasVertex) {
-      throw new Error(`No Vertex credentials found for model "${profile.name}". Run setup again.`);
+      return {
+        ok: false,
+        error: `No Vertex credentials found for model "${profile.name}". Run setup again.`,
+      };
     }
   } else if (
     !apiKey.trim() &&
     profile.provider !== "amazon-bedrock" &&
     profile.provider !== "custom"
   ) {
-    throw new Error(`No API key found for model "${profile.name}". Run setup again.`);
+    return {
+      ok: false,
+      error: `No API key found for model "${profile.name}". Run setup again.`,
+    };
   }
 
-  return buildTransportFromProfile(profile, apiKey, context.workspaceRoot);
+  return { ok: true, config: buildTransportFromProfile(profile, apiKey, context.workspaceRoot) };
+}
+
+/**
+ * Resolves LLM transport from shared Spirit config + keyring. Hosts call this
+ * in-process so secrets never cross an IPC/WS boundary.
+ */
+export function resolveTransportConfig(context: ResolveTransportContext): LlmTransportConfig {
+  const result = tryResolveTransportConfig(context);
+  if (!result.ok) {
+    throw new Error(result.error);
+  }
+  return result.config;
 }

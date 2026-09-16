@@ -373,6 +373,7 @@ export function useComposerController({
     runtime.busyAction !== "session" &&
     !pendingApproval &&
     !pendingQuestions &&
+    snapshot?.config.activeApiKeyConfigured === true &&
     (isPaneIsolated
       ? resolvePaneCanSend(snapshot) || conversationInterruptible
       : runtime.summary.canSend || conversationInterruptible) &&

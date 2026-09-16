@@ -517,6 +517,7 @@ tui.shell.background_disconnected: "La tarea en segundo plano del shell terminó
 tui.model_picker.switch_saved_fail: "Modelos cambiados, pero falló al guardar la configuración: %{err}"
 tui.model_picker.switch_success: "Modelo actual cambiado a: %{model}"
 tui.model_picker.empty: "No hay modelos disponibles. Añada uno con `/model add` primero (o en una línea `/model add <name> <api_base> <api_key>`)."
+tui.send.no_active_model: "No hay un modelo activo configurado. Añada uno con `/model add`."
 tui.model.list: "Modelo actual: %{current}\nModelos: %{list}"
 tui.model.use_usage: "Uso: `/model use <name>`"
 tui.model.switch_save_failed: "Modelo cambiado, pero error al guardar: %{err}"

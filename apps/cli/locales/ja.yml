@@ -517,6 +517,7 @@ tui.shell.background_disconnected: "シェルのバックグラウンドタス�
 tui.model_picker.switch_saved_fail: "モデルを切り替えましたが、設定の保存に失敗しました: %{err}"
 tui.model_picker.switch_success: "現在のモデルを切り替えました: %{model}"
 tui.model_picker.empty: "利用可能なモデルがありません。先に `/model add` で追加してください（または一行で `/model add <name> <api_base> <api_key>`）。"
+tui.send.no_active_model: "有効なモデルが設定されていません。先に `/model add` で追加してください。"
 tui.model.list: "現在のモデル: %{current}\nモデル一覧: %{list}"
 tui.model.use_usage: "使用法: `/model use <name>`"
 tui.model.switch_save_failed: "切り替えましたが、保存に失敗しました: %{err}"
