@@ -3,8 +3,12 @@ import { test } from "vitest";
 
 import {
   computeWorkspaceToolsMaxWidthPx,
+  readWorkspaceToolsMaximized,
+  readWorkspaceToolsMaximizedRestoreOpen,
   readWorkspaceToolsWidthPx,
   readWorkspaceToolsWidthRatio,
+  writeWorkspaceToolsMaximized,
+  writeWorkspaceToolsMaximizedRestoreOpen,
   writeWorkspaceToolsWidthPx,
   writeWorkspaceToolsWidthRatio,
   WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO,
@@ -13,6 +17,8 @@ import {
 
 const RATIO_KEY = "spirit-desktop-workspace-tools-width-ratio";
 const LEGACY_PX_KEY = "spirit-desktop-workspace-tools-width-px";
+const MAXIMIZED_KEY = "spirit-desktop-workspace-tools-maximized";
+const MAXIMIZED_RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-maximized-restore-open";
 
 function withLocalStorage(run) {
   const previous = globalThis.localStorage;
@@ -77,5 +83,27 @@ test("readWorkspaceToolsWidthPx clamps to min and max", () => {
 test("default ratio is used when no prefs exist", () => {
   withLocalStorage(() => {
     assert.equal(readWorkspaceToolsWidthRatio(1200), WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO);
+  });
+});
+
+test("workspace tools maximized pref defaults to false and round-trips", () => {
+  withLocalStorage((store) => {
+    assert.equal(readWorkspaceToolsMaximized(), false);
+    writeWorkspaceToolsMaximized(true);
+    assert.equal(store.get(MAXIMIZED_KEY), "true");
+    assert.equal(readWorkspaceToolsMaximized(), true);
+    writeWorkspaceToolsMaximized(false);
+    assert.equal(readWorkspaceToolsMaximized(), false);
+  });
+});
+
+test("workspace tools maximized restore-open pref defaults to docked and round-trips", () => {
+  withLocalStorage((store) => {
+    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), true);
+    writeWorkspaceToolsMaximizedRestoreOpen(false);
+    assert.equal(store.get(MAXIMIZED_RESTORE_OPEN_KEY), "false");
+    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), false);
+    writeWorkspaceToolsMaximizedRestoreOpen(true);
+    assert.equal(readWorkspaceToolsMaximizedRestoreOpen(), true);
   });
 });

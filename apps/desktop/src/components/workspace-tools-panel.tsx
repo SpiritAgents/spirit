@@ -66,7 +66,9 @@ import {
 import {
   consumeFocusWorkspaceToolsPanelOnOpen,
   useWorkspaceToolsChromeActions,
+  useWorkspaceToolsChromeMaximized,
   useWorkspaceToolsChromeOpen,
+  useWorkspaceToolsChromeWidthFlight,
 } from "@/contexts/workspace-tools-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
@@ -292,6 +294,11 @@ function WorkspaceToolsDockShell({
 }) {
   const { t } = useTranslation();
   const open = useWorkspaceToolsChromeOpen();
+  const maximized = useWorkspaceToolsChromeMaximized();
+  const widthFlight = useWorkspaceToolsChromeWidthFlight();
+  // Fill mode: split/aside track the shell's (possibly animating) width instead of fixed px, so
+  // maximize flights and the settled 100% state never show a full shell with underfilled content.
+  const fillMode = maximized || widthFlight !== null;
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
@@ -305,7 +312,7 @@ function WorkspaceToolsDockShell({
     }
     asideRef.current?.focus({ preventScroll: true });
     setWorkspacePanelRegionActive(true);
-  }, [open]);
+  }, [open, maximized]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
 
@@ -353,6 +360,11 @@ function WorkspaceToolsDockShell({
 
   const onResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      // No docked-width dragging while maximized or mid-flight; the maximized width is never
+      // written back to the docked ratio.
+      if (fillMode) {
+        return;
+      }
       event.preventDefault();
       onResizingChange(true);
       dragRef.current = { startX: event.clientX, startWidth: widthPx };
@@ -360,13 +372,13 @@ function WorkspaceToolsDockShell({
       applyDragWidthPx(widthPx);
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [applyDragWidthPx, onResizingChange, widthPx],
+    [applyDragWidthPx, fillMode, onResizingChange, widthPx],
   );
 
   const onResizePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const drag = dragRef.current;
-      if (!drag) {
+      if (!drag || fillMode) {
         return;
       }
       const delta = drag.startX - event.clientX;
@@ -374,7 +386,7 @@ function WorkspaceToolsDockShell({
       latestWidthPxRef.current = next;
       applyDragWidthPx(next);
     },
-    [applyDragWidthPx, clampWidth],
+    [applyDragWidthPx, clampWidth, fillMode],
   );
 
   const endResize = useCallback(
@@ -394,7 +406,14 @@ function WorkspaceToolsDockShell({
     [onResizingChange, onWidthPxChange],
   );
 
-  const shellWidth = workspaceToolsShellWidthWhenOpen(open, widthPx);
+  // Maximized: the enter flight transitions between definite px endpoints (a percentage would be
+  // cyclic against the content-sized dock wrapper), then settles to 100% so window resizes follow.
+  const enterFlightPx = widthFlight?.kind === "enter" ? widthFlight.targetPx : null;
+  const shellWidth = maximized
+    ? enterFlightPx !== null
+      ? `${enterFlightPx}px`
+      : "100%"
+    : workspaceToolsShellWidthWhenOpen(open, widthPx);
 
   return (
     <div
@@ -403,7 +422,7 @@ function WorkspaceToolsDockShell({
       className={cn(
         // Viewport zoom changes widthPx proportionally: do not attach a permanent width
         // transition to the shell, otherwise resizing the window lags behind.
-        // Expand/collapse is handled by applyWorkspaceToolsShellWidthImmediate, which temporarily
+        // Expand/collapse/maximize is handled by the chrome context, which temporarily
         // writes a transition before changing the width.
         "flex h-full min-h-0 shrink-0 flex-row self-stretch overflow-hidden",
         className,
@@ -414,10 +433,11 @@ function WorkspaceToolsDockShell({
         ref={splitRef}
         data-workspace-tools-split
         className={cn(
-          "relative flex h-full min-h-0 shrink-0 flex-row self-stretch",
+          "relative flex h-full min-h-0 flex-row self-stretch",
+          fillMode ? "min-w-0 flex-1" : "shrink-0",
           !open && "pointer-events-none select-none",
         )}
-        style={{ width: workspaceToolsShellWidthExpression(widthPx) }}
+        style={{ width: fillMode ? undefined : workspaceToolsShellWidthExpression(widthPx) }}
         aria-hidden={!open}
         inert={!open}
       >
@@ -428,6 +448,9 @@ function WorkspaceToolsDockShell({
           className={cn(
             "group relative z-10 w-px shrink-0 cursor-col-resize touch-none select-none",
             "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
+            "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            maximized && "opacity-0",
+            fillMode && "pointer-events-none",
             desktopTranslucencyTintClass(useTranslucency),
           )}
           onPointerDown={onResizePointerDown}
@@ -450,10 +473,11 @@ function WorkspaceToolsDockShell({
           tabIndex={-1}
           data-spirit-surface="workspace-panel"
           className={cn(
-            "flex h-full min-h-0 min-w-0 shrink-0 flex-col overflow-hidden text-foreground outline-none",
+            "flex h-full min-h-0 min-w-0 flex-col overflow-hidden text-foreground outline-none",
+            fillMode ? "flex-1" : "shrink-0",
             desktopTranslucencyTintClass(useTranslucency),
           )}
-          style={{ width: widthPx }}
+          style={{ width: fillMode ? undefined : widthPx }}
           aria-label={t("workspace.workspaceTools")}
         >
           <WorkspaceToolsDockContent {...contentProps} />

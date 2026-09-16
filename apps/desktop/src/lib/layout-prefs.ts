@@ -2,6 +2,7 @@ import {
   SESSION_SIDEBAR_MIN_WIDTH_PX,
   computeSessionSidebarMaxWidthPx,
 } from "@/lib/desktop-chrome";
+import { flushDesktopRendererStorage } from "@/lib/desktop-renderer-storage";
 
 const SESSION_SIDEBAR_WIDTH_STORAGE_KEY = "spirit-desktop-session-sidebar-width-px";
 
@@ -173,6 +174,29 @@ export function writeWorkspaceToolsWidthPx(
     return;
   }
   writeWorkspaceToolsWidthRatio(widthPx / viewportWidthPx, viewportWidthPx);
+}
+
+const WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY = "spirit-desktop-workspace-tools-maximized";
+const WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY =
+  "spirit-desktop-workspace-tools-maximized-restore-open";
+
+export function readWorkspaceToolsMaximized(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY, false);
+}
+
+export function writeWorkspaceToolsMaximized(maximized: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_STORAGE_KEY, maximized);
+  flushDesktopRendererStorage();
+}
+
+/** Restore snapshot of `open` taken when entering maximized; only meaningful while maximized. */
+export function readWorkspaceToolsMaximizedRestoreOpen(): boolean {
+  return readStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY, true);
+}
+
+export function writeWorkspaceToolsMaximizedRestoreOpen(open: boolean): void {
+  writeStoredBoolean(WORKSPACE_TOOLS_MAXIMIZED_RESTORE_OPEN_STORAGE_KEY, open);
+  flushDesktopRendererStorage();
 }
 
 const PR_CHANGES_TREE_WIDTH_STORAGE_KEY = "spirit-desktop-pr-changes-tree-width-px";
