@@ -278,8 +278,12 @@ export function WorkspaceToolsChromeProvider({
   }, [enterFullScreen, exitFullScreen]);
 
   const dismissForNewSession = useCallback(() => {
-    // A new session is a new space: collapse the panel instantly (no reverse animation) so the old
-    // space's tools do not linger. Workspace-level tabs are left untouched.
+    // A new session is a new space: a full-screen panel collapses instantly (no reverse animation)
+    // so the old space's tools do not linger. A docked panel is workspace-level and stays open, so
+    // callers can invoke this on every new-session path without checking the state first.
+    if (!fullScreenRef.current) {
+      return;
+    }
     restoreOpenRef.current = false;
     fullScreenRef.current = false;
     openRef.current = false;
