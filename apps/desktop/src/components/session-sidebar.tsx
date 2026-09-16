@@ -535,9 +535,12 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                     workspaceRowHovered || plusTooltipAnchorLocked
                       ? "inline-flex"
                       : "hidden group-has-[button:focus-visible]/workspace-row:inline-flex",
+                    // Keep the trigger in-flow as the tooltip close-animation anchor.
+                    // Use visibility, not opacity: sidebarInteractionMotionClass
+                    // transitions opacity and would fade this button on hide/reshow.
                     plusTooltipAnchorLocked &&
                       !workspaceRowHovered &&
-                      "pointer-events-none opacity-0",
+                      "pointer-events-none invisible",
                     sidebarItemDefaultTextClass,
                     sidebarInteractionMotionClass,
                     sidebarItemHoverClass(translucency),
