@@ -37,12 +37,14 @@ type WorkspaceToolsChromeActions = {
   openTools(): void;
   toggleMaximized(): void;
   dismissForNewSession(): void;
+  registerNewSessionChrome(): () => void;
 };
 
 const WorkspaceToolsChromeOpenContext = createContext(false);
 const WorkspaceToolsChromeMaximizedContext = createContext(false);
 const WorkspaceToolsChromeFlightContext = createContext<WorkspaceToolsWidthFlight | null>(null);
 const WorkspaceToolsChromeActionsContext = createContext<WorkspaceToolsChromeActions | null>(null);
+const WorkspaceToolsNewSessionChromeContext = createContext(false);
 
 export type WorkspaceToolsChromeApi = {
   open: boolean;
@@ -161,6 +163,7 @@ export function WorkspaceToolsChromeProvider({
   const [maximized, setMaximizedState] = useState(readWorkspaceToolsMaximized);
   const [open, setOpenState] = useState(() => readWorkspaceToolsMaximized());
   const [flight, setFlight] = useState<WorkspaceToolsWidthFlight | null>(null);
+  const [newSessionChromeCount, setNewSessionChromeCount] = useState(0);
   const openRef = useRef(open);
   openRef.current = open;
   const maximizedRef = useRef(maximized);
@@ -291,6 +294,11 @@ export function WorkspaceToolsChromeProvider({
     writeWorkspaceToolsMaximized(false);
   }, []);
 
+  const registerNewSessionChrome = useCallback(() => {
+    setNewSessionChromeCount((count) => count + 1);
+    return () => setNewSessionChromeCount((count) => count - 1);
+  }, []);
+
   const actions = useMemo(
     () => ({
       setOpen,
@@ -298,8 +306,9 @@ export function WorkspaceToolsChromeProvider({
       openTools,
       toggleMaximized,
       dismissForNewSession,
+      registerNewSessionChrome,
     }),
-    [dismissForNewSession, openTools, setOpen, toggle, toggleMaximized],
+    [dismissForNewSession, openTools, registerNewSessionChrome, setOpen, toggle, toggleMaximized],
   );
 
   useEffect(() => {
@@ -313,7 +322,9 @@ export function WorkspaceToolsChromeProvider({
       <WorkspaceToolsChromeOpenContext.Provider value={open}>
         <WorkspaceToolsChromeMaximizedContext.Provider value={maximized}>
           <WorkspaceToolsChromeFlightContext.Provider value={flight}>
-            {children}
+            <WorkspaceToolsNewSessionChromeContext.Provider value={newSessionChromeCount > 0}>
+              {children}
+            </WorkspaceToolsNewSessionChromeContext.Provider>
           </WorkspaceToolsChromeFlightContext.Provider>
         </WorkspaceToolsChromeMaximizedContext.Provider>
       </WorkspaceToolsChromeOpenContext.Provider>
@@ -331,6 +342,10 @@ export function useWorkspaceToolsChromeMaximized(): boolean {
 
 export function useWorkspaceToolsChromeWidthFlight(): WorkspaceToolsWidthFlight | null {
   return useContext(WorkspaceToolsChromeFlightContext);
+}
+
+export function useWorkspaceToolsNewSessionChrome(): boolean {
+  return useContext(WorkspaceToolsNewSessionChromeContext);
 }
 
 export function useWorkspaceToolsChromeActions(): WorkspaceToolsChromeActions {
@@ -354,12 +369,19 @@ export function useWorkspaceToolsChrome(): {
   openTools: WorkspaceToolsChromeActions["openTools"];
   toggleMaximized: WorkspaceToolsChromeActions["toggleMaximized"];
   dismissForNewSession: WorkspaceToolsChromeActions["dismissForNewSession"];
+  registerNewSessionChrome: WorkspaceToolsChromeActions["registerNewSessionChrome"];
 } {
   const open = useWorkspaceToolsChromeOpen();
   const maximized = useWorkspaceToolsChromeMaximized();
   const flight = useWorkspaceToolsChromeWidthFlight();
-  const { setOpen, toggle, openTools, toggleMaximized, dismissForNewSession } =
-    useWorkspaceToolsChromeActions();
+  const {
+    setOpen,
+    toggle,
+    openTools,
+    toggleMaximized,
+    dismissForNewSession,
+    registerNewSessionChrome,
+  } = useWorkspaceToolsChromeActions();
   return {
     open,
     maximized,
@@ -369,5 +391,6 @@ export function useWorkspaceToolsChrome(): {
     openTools,
     toggleMaximized,
     dismissForNewSession,
+    registerNewSessionChrome,
   };
 }

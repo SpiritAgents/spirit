@@ -144,6 +144,7 @@ export function DesktopLayoutChromeBar({
     maximized: workspaceToolsMaximized,
     chromePinned: workspaceToolsChromePinned,
     dismissForNewSession: dismissWorkspaceToolsForNewSession,
+    registerNewSessionChrome,
   } = useWorkspaceToolsChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinFullScreen = useDarwinWindowFullscreen(darwinElectron);
@@ -239,6 +240,13 @@ export function DesktopLayoutChromeBar({
     onNewSession?.();
   }, [dismissWorkspaceToolsForNewSession, onNewSession, workspaceToolsMaximized]);
 
+  useEffect(() => {
+    if (!onNewSession || !showSessionSidebarToggle) {
+      return;
+    }
+    return registerNewSessionChrome();
+  }, [onNewSession, registerNewSessionChrome, showSessionSidebarToggle]);
+
   return (
     <div
       role="toolbar"
@@ -296,7 +304,7 @@ export function DesktopLayoutChromeBar({
         {showSessionSidebarToggle && pinSidebarToggleOnDarwin ? (
           <div
             className={cn(
-              "shrink-0 overflow-hidden",
+              "h-7 shrink-0 overflow-hidden",
               DESKTOP_SHELL_LAYOUT_TRANSITION,
               sessionSidebarOpen ? "mr-0 w-0" : "mr-1 w-7",
             )}
@@ -305,42 +313,53 @@ export function DesktopLayoutChromeBar({
         ) : null}
         {onNewSession && showSessionSidebarToggle ? (
           // While the tools panel is maximized the outer wrapper fixed-pins the button above the
-          // panel (see styles.css); the inner wrapper keeps the sidebar open/close width/opacity
-          // rule, which still composes with the fixed positioning.
-          <div
-            data-workspace-tools-pinned-new-session={workspaceToolsChromePinned ? "" : undefined}
-          >
+          // panel (see styles.css). position:fixed takes the inner width slot out of the leading
+          // flex, so an in-flow ghost keeps the breadcrumb from snapping into that gap on frame 1.
+          <>
             <div
-              className={cn(
-                "shrink-0 overflow-hidden",
-                DESKTOP_SHELL_LAYOUT_TRANSITION,
-                sessionSidebarOpen
-                  ? "pointer-events-none mr-0 w-0 opacity-0"
-                  : "mr-1 w-7 opacity-100",
-              )}
-              aria-hidden={sessionSidebarOpen}
+              data-workspace-tools-pinned-new-session={workspaceToolsChromePinned ? "" : undefined}
             >
-              <Tooltip delayDuration={300} disableHoverableContent>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                    onClick={handleNewSessionClick}
-                    disabled={newSessionBusy}
-                    tabIndex={sessionSidebarOpen ? -1 : undefined}
-                    aria-label={t("sidebar.newSession")}
-                  >
-                    <Plus className="size-3.5" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top" align="center" sideOffset={4}>
-                  {t("sidebar.newSession")} <NewSessionShortcutKbd />
-                </TooltipContent>
-              </Tooltip>
+              <div
+                className={cn(
+                  "shrink-0 overflow-hidden",
+                  DESKTOP_SHELL_LAYOUT_TRANSITION,
+                  sessionSidebarOpen
+                    ? "pointer-events-none mr-0 w-0 opacity-0"
+                    : "mr-1 w-7 opacity-100",
+                )}
+                aria-hidden={sessionSidebarOpen}
+              >
+                <Tooltip delayDuration={300} disableHoverableContent>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
+                      onClick={handleNewSessionClick}
+                      disabled={newSessionBusy}
+                      tabIndex={sessionSidebarOpen ? -1 : undefined}
+                      aria-label={t("sidebar.newSession")}
+                    >
+                      <Plus className="size-3.5" aria-hidden />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center" sideOffset={4}>
+                    {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
+            {workspaceToolsChromePinned && !sessionSidebarOpen ? (
+              <div
+                className={cn(
+                  "mr-1 h-7 w-7 shrink-0 overflow-hidden",
+                  DESKTOP_SHELL_LAYOUT_TRANSITION,
+                )}
+                aria-hidden
+              />
+            ) : null}
+          </>
         ) : null}
         {trimmedSessionTitle || renamingTitle ? (
           // The maximized tools panel covers the conversation column; fade the breadcrumb out for

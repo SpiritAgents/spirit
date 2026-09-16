@@ -74,6 +74,7 @@ import {
   useWorkspaceToolsChromeMaximized,
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
+  useWorkspaceToolsNewSessionChrome,
 } from "@/contexts/workspace-tools-chrome-context";
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
@@ -454,9 +455,13 @@ function WorkspaceToolsDockShell({
           aria-orientation="vertical"
           aria-label={t("workspace.resizeToolsWidth")}
           className={cn(
-            "group relative z-10 w-px shrink-0 cursor-col-resize touch-none select-none",
+            "group z-10 shrink-0 cursor-col-resize touch-none select-none",
             "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
             "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+            // fillMode: overlay the panel's left edge so the 1px slot does not sit next to the
+            // sidebar hairline. opacity-0 still leaves an in-flow w-px hole that shows the
+            // window material under translucency and reads as a thicker divider.
+            fillMode ? "absolute inset-y-0 left-0 w-px" : "relative w-px",
             maximized && "opacity-0",
             fillMode && "pointer-events-none",
             desktopTranslucencyTintClass(useTranslucency),
@@ -565,6 +570,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const { openTools, toggleMaximized } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsMaximized = useWorkspaceToolsChromeMaximized();
+  const hasNewSessionChrome = useWorkspaceToolsNewSessionChrome();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
@@ -747,20 +753,25 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   );
 
   // While maximized, the pinned conversation chrome (new session, and on Win/Linux the sidebar
-  // toggle) floats over the tab row's left edge; grow the padding to clear it. Keyed on maximized
-  // (not chromePinned) so the padding retracts during the exit flight — the strict reverse —
-  // while the pins themselves hold until the flight settles. The padding-left transition lives in
-  // styles.css. Sidebar open on macOS windowed: the pinned cluster floats over the sidebar, not
-  // the panel, so no extra padding.
+  // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
+  // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
+  // on maximized (not chromePinned) so the inset retracts during the exit flight — the strict
+  // reverse — while the pins themselves hold until the flight settles. The margin-left
+  // transition lives in styles.css. Sidebar open on macOS windowed: the pinned cluster floats
+  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-session
+  // button, so the plus slot is not reserved.
+  const plusSlot = !sessionSidebarOpen && hasNewSessionChrome;
   const toolTabsPaddingLeft = !workspaceToolsMaximized
     ? undefined
     : darwinElectron && !darwinWindowFullscreen
       ? sessionSidebarOpen
         ? undefined
-        : "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 4rem)"
-      : sessionSidebarOpen
-        ? "2.5rem"
-        : "4.5rem";
+        : plusSlot
+          ? "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 4rem)"
+          : "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 2rem)"
+      : plusSlot
+        ? "4.5rem"
+        : "2.5rem";
 
   return (
     <>
@@ -768,7 +779,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         ref={toolTabsBarRef}
         data-spirit-surface="workspace-tool-tabs"
         className="flex h-8 shrink-0 items-center gap-1 px-1"
-        style={toolTabsPaddingLeft ? { paddingLeft: toolTabsPaddingLeft } : undefined}
+        style={toolTabsPaddingLeft ? { marginLeft: toolTabsPaddingLeft } : undefined}
       >
         <ScrollArea
           scrollbars="horizontal"

@@ -745,7 +745,10 @@ export default function App() {
                           aria-hidden={surfaceNav.settingsMode}
                         >
                           <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
-                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <div
+                              data-spirit-surface="conversation-main-column"
+                              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                            >
                               <ConversationSplitRoot
                                 useTranslucency={useContentTranslucency}
                                 renderPane={(pane) => (

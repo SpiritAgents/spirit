@@ -316,13 +316,15 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
  * so the new-session button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
  * fullscreen panel from the first maximize frame through the exit settle. The sidebar open/close
  * width/opacity rule lives on the inner wrapper and still composes with the fixed positioning.
- * macOS windowed: pin the new-session button right of the always-pinned sidebar toggle slot.
+ * macOS windowed: pin the new-session button in the same slot it occupies in-flow
+ * (traffic-lights inset + toggle spacer w-7+mr-1). Using the toggle-inset token would sit 0.125rem
+ * to the right of that slot and jump the button on the first maximized frame.
  */
 html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
   [data-workspace-tools-pinned-new-session] {
   position: fixed;
   top: 0;
-  left: calc(var(--spirit-macos-sidebar-toggle-inset-left) + 2rem);
+  left: calc(var(--spirit-macos-traffic-lights-inset-left) + 2rem);
   z-index: 50;
   display: flex;
   box-sizing: border-box;
@@ -362,9 +364,10 @@ html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] 
   }
 }
 
-/* The tools tab row's left padding makes room for the pinned chrome cluster, on the width flight's curve */
+/* The tools tab row's left margin makes room for the pinned chrome cluster, on the width flight's curve.
+ * Margin (not padding) keeps -webkit-app-region: drag from covering the fixed-pinned buttons. */
 [data-spirit-surface="workspace-tool-tabs"] {
-  transition: padding-left 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: margin-left 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
