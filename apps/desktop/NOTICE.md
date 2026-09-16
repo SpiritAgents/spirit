@@ -5284,7 +5284,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ## Copied UI
 
-Inlined styles from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. This is not an npm package listed above.
+Vendored components and inlined Tailwind variants from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. See per-file copyright headers in source. This is not an npm package listed above.
 
 ```
 MIT License
