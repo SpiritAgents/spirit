@@ -75,8 +75,11 @@ import {
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
 } from "@/contexts/workspace-tools-chrome-context";
+import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
+import { isDarwinElectronShell } from "@/lib/desktop-shell";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
+import { useDarwinWindowFullscreen } from "@/hooks/useDarwinWindowFullscreen";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { WORKSPACE_TOOL_TABS_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import type { EditorFileTarget, WorkspaceEditorViewMode } from "@/lib/workspace-editor-navigation";
@@ -562,6 +565,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const { openTools, toggleMaximized } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsMaximized = useWorkspaceToolsChromeMaximized();
+  const { open: sessionSidebarOpen } = useSessionSidebarChrome();
+  const darwinElectron = isDarwinElectronShell();
+  const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
   const workspaceToolsOpenRef = useRef(workspaceToolsOpen);
   workspaceToolsOpenRef.current = workspaceToolsOpen;
   const gitHubAuthConnected = useGitHubAuthConnected(getGitHubAuthStatus, prTabEnabled);
@@ -740,12 +746,29 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
+  // While maximized, the pinned conversation chrome (new session, and on Win/Linux the sidebar
+  // toggle) floats over the tab row's left edge; grow the padding to clear it. Keyed on maximized
+  // (not chromePinned) so the padding retracts during the exit flight — the strict reverse —
+  // while the pins themselves hold until the flight settles. The padding-left transition lives in
+  // styles.css. Sidebar open on macOS windowed: the pinned cluster floats over the sidebar, not
+  // the panel, so no extra padding.
+  const toolTabsPaddingLeft = !workspaceToolsMaximized
+    ? undefined
+    : darwinElectron && !darwinWindowFullscreen
+      ? sessionSidebarOpen
+        ? undefined
+        : "calc(var(--spirit-macos-sidebar-toggle-inset-left) + 4rem)"
+      : sessionSidebarOpen
+        ? "2.5rem"
+        : "4.5rem";
+
   return (
     <>
       <div
         ref={toolTabsBarRef}
         data-spirit-surface="workspace-tool-tabs"
         className="flex h-8 shrink-0 items-center gap-1 px-1"
+        style={toolTabsPaddingLeft ? { paddingLeft: toolTabsPaddingLeft } : undefined}
       >
         <ScrollArea
           scrollbars="horizontal"

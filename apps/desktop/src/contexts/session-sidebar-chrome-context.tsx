@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { sessionSidebarShellWidth } from "@/lib/desktop-chrome";
 import { readSessionSidebarWidthPx } from "@/lib/layout-prefs";
 
 type SessionSidebarChromeContextValue = {
@@ -55,6 +56,15 @@ export function SessionSidebarChromeProvider({
       apiRef.current = { open, openSidebar, toggle };
     }
   }, [apiRef, open, openSidebar, toggle]);
+
+  useEffect(() => {
+    // The workspace-tools maximized pin (Win/Linux + macOS fullscreen) anchors its fixed left
+    // offset to the main content's left edge, i.e. the sidebar shell's current width.
+    document.documentElement.style.setProperty(
+      "--spirit-session-sidebar-shell-width",
+      sessionSidebarShellWidth(open, widthPx),
+    );
+  }, [open, widthPx]);
 
   const value = useMemo(
     () => ({
