@@ -106,6 +106,58 @@
       "types": "./dist/toggle-group.d.ts",
       "default": "./dist/toggle-group.js"
     },
+    "./overlay-motion": {
+      "types": "./dist/overlay-motion.d.ts",
+      "default": "./dist/overlay-motion.js"
+    },
+    "./portal": {
+      "types": "./dist/portal.d.ts",
+      "default": "./dist/portal.js"
+    },
+    "./alert-dialog": {
+      "types": "./dist/alert-dialog.d.ts",
+      "default": "./dist/alert-dialog.js"
+    },
+    "./command": {
+      "types": "./dist/command.d.ts",
+      "default": "./dist/command.js"
+    },
+    "./context-menu": {
+      "types": "./dist/context-menu.d.ts",
+      "default": "./dist/context-menu.js"
+    },
+    "./dialog": {
+      "types": "./dist/dialog.d.ts",
+      "default": "./dist/dialog.js"
+    },
+    "./dropdown-menu": {
+      "types": "./dist/dropdown-menu.d.ts",
+      "default": "./dist/dropdown-menu.js"
+    },
+    "./hover-card": {
+      "types": "./dist/hover-card.d.ts",
+      "default": "./dist/hover-card.js"
+    },
+    "./menubar": {
+      "types": "./dist/menubar.d.ts",
+      "default": "./dist/menubar.js"
+    },
+    "./popover": {
+      "types": "./dist/popover.d.ts",
+      "default": "./dist/popover.js"
+    },
+    "./scroll-area": {
+      "types": "./dist/scroll-area.d.ts",
+      "default": "./dist/scroll-area.js"
+    },
+    "./select": {
+      "types": "./dist/select.d.ts",
+      "default": "./dist/select.js"
+    },
+    "./sonner": {
+      "types": "./dist/sonner.d.ts",
+      "default": "./dist/sonner.js"
+    },
     "./theme.css": "./src/theme.css"
   },
   "publishConfig": {
@@ -121,9 +173,11 @@
     "@types/react-dom": "19.2.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "cmdk": "1.1.1",
     "radix-ui": "1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "sonner": "2.0.7",
     "tailwind-merge": "3.6.0",
     "typescript": "5.9.3"
   },
@@ -131,9 +185,11 @@
     "@radix-ui/react-scroll-area": ">=1.2.0",
     "class-variance-authority": ">=0.7.0",
     "clsx": ">=2.0.0",
+    "cmdk": ">=1.0.0",
     "radix-ui": ">=1.4.0",
     "react": ">=18",
     "react-dom": ">=18",
+    "sonner": ">=2.0.0",
     "tailwind-merge": ">=3.0.0"
   },
   "peerDependenciesMeta": {

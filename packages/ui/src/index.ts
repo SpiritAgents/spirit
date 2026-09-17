@@ -3,6 +3,15 @@
 
 export { cn } from "./cn.js";
 export * from "./chrome.js";
+export {
+  RADIX_OVERLAY_CLOSE_MS,
+  modalContentMotion,
+  modalOverlayMotion,
+  radixAnchoredOverlayMotion,
+  runAfterRadixOverlayClose,
+  type RadixAnchoredOverlayKind,
+} from "./overlay-motion.js";
+export { UiPortalProvider, useUiPortalContainer, type UiPortalContainerGetter } from "./portal.js";
 export { Badge, badgeVariants } from "./badge.js";
 export {
   Breadcrumb,
@@ -59,3 +68,83 @@ export {
 export { Textarea } from "./textarea.js";
 export { Toggle, toggleVariants } from "./toggle.js";
 export { ToggleGroup, ToggleGroupItem } from "./toggle-group.js";
+export { AlertDialog, type AlertDialogProps } from "./alert-dialog.js";
+export {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogFooterActions,
+  DialogHeader,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+  DialogTrigger,
+} from "./dialog.js";
+export {
+  ContextMenu,
+  ContextMenuCheckboxItem,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuPortal,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSectionItems,
+  ContextMenuSeparator,
+  ContextMenuShortcut,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+  type ContextMenuSectionItem,
+} from "./context-menu.js";
+export {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "./dropdown-menu.js";
+export { HoverCard, HoverCardContent, HoverCardTrigger } from "./hover-card.js";
+export {
+  Menubar,
+  MenubarCheckboxItem,
+  MenubarContent,
+  MenubarGroup,
+  MenubarItem,
+  MenubarLabel,
+  MenubarMenu,
+  MenubarRadioGroup,
+  MenubarRadioItem,
+  MenubarSeparator,
+  MenubarShortcut,
+  MenubarSub,
+  MenubarSubContent,
+  MenubarSubTrigger,
+  MenubarTrigger,
+} from "./menubar.js";
+export { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "./popover.js";
+export { ScrollArea, ScrollBar } from "./scroll-area.js";
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "./select.js";
