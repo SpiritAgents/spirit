@@ -2,41 +2,76 @@
 // SPDX-License-Identifier: MIT
 
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
-import type { ComponentProps } from "react";
+import { forwardRef, type ComponentProps, type CSSProperties } from "react";
 
 import { cn } from "./cn.js";
 
-export function ScrollArea({
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof ScrollAreaPrimitive.Root>) {
+type ScrollAreaScrollbarMode = "vertical" | "horizontal" | "both";
+
+export const ScrollArea = forwardRef<
+  HTMLDivElement,
+  ComponentProps<typeof ScrollAreaPrimitive.Root> & {
+    scrollbars?: ScrollAreaScrollbarMode;
+    viewportClassName?: string;
+    viewportStyle?: CSSProperties;
+  }
+>(function ScrollArea(
+  {
+    className,
+    children,
+    type = "hover",
+    scrollHideDelay = 500,
+    scrollbars = "vertical",
+    viewportClassName,
+    viewportStyle,
+    ...props
+  },
+  ref,
+) {
+  const viewportChildClass =
+    scrollbars === "horizontal"
+      ? "[&>div]:!block [&>div]:!min-h-0 [&>div]:min-w-0 [&>div]:!w-max"
+      : scrollbars === "both"
+        ? "[&>div]:!block [&>div]:!min-h-0 [&>div]:min-w-0 [&>div]:!w-max [&>div]:min-h-full"
+        : "[&>div]:!block [&>div]:!min-h-0 [&>div]:min-w-0 [&>div]:w-full";
+
   return (
     <ScrollAreaPrimitive.Root
+      ref={ref}
       data-slot="scroll-area"
+      type={type}
+      scrollHideDelay={scrollHideDelay}
       className={cn("relative overflow-hidden", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
         data-radix-scroll-area-viewport
         data-slot="scroll-area-viewport"
-        className="size-full rounded-[inherit] outline-none"
+        className={cn(
+          "size-full min-h-0 min-w-0 rounded-[inherit] [display:block] outline-none",
+          viewportChildClass,
+          viewportClassName,
+        )}
+        style={viewportStyle}
       >
         {children}
       </ScrollAreaPrimitive.Viewport>
-      <ScrollBar />
+      {scrollbars === "vertical" || scrollbars === "both" ? <ScrollBar /> : null}
+      {scrollbars === "horizontal" || scrollbars === "both" ? (
+        <ScrollBar orientation="horizontal" />
+      ) : null}
       <ScrollAreaPrimitive.Corner />
     </ScrollAreaPrimitive.Root>
   );
-}
+});
 
-export function ScrollBar({
-  className,
-  orientation = "vertical",
-  ...props
-}: ComponentProps<typeof ScrollAreaPrimitive.Scrollbar>) {
+export const ScrollBar = forwardRef<
+  HTMLDivElement,
+  ComponentProps<typeof ScrollAreaPrimitive.Scrollbar>
+>(function ScrollBar({ className, orientation = "vertical", ...props }, ref) {
   return (
     <ScrollAreaPrimitive.Scrollbar
+      ref={ref}
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
@@ -50,4 +85,4 @@ export function ScrollBar({
       <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-border" />
     </ScrollAreaPrimitive.Scrollbar>
   );
-}
+});
