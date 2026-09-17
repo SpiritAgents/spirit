@@ -101,7 +101,7 @@ export function ComposerInsertMenu({
               className={cn(
                 DESKTOP_COMPOSER_GHOST_HOVER,
                 "size-7 shrink-0 rounded-full p-0 text-muted-foreground shadow-none",
-                "hover:text-sidebar-foreground aria-expanded:text-sidebar-foreground",
+                "hover:text-chrome-emphasis aria-expanded:text-chrome-emphasis",
                 instantHoverMotionClass,
               )}
             >

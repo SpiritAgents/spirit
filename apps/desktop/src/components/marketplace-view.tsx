@@ -859,7 +859,7 @@ export function MarketplaceView({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "-ml-2 h-8 gap-1 text-muted-foreground hover:text-sidebar-foreground",
+                  "-ml-2 h-8 gap-1 text-muted-foreground hover:text-chrome-emphasis",
                   instantHoverMotionClass,
                 )}
                 onClick={closeDetail}

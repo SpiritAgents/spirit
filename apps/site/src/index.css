@@ -11,13 +11,13 @@
    overlays live outside the marker and stay solid. */
 @custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
-@property --sidebar-mask-top-alpha {
+@property --chrome-mask-top-alpha {
   syntax: "<number>";
   inherits: false;
   initial-value: 1;
 }
 
-@property --sidebar-mask-bottom-alpha {
+@property --chrome-mask-bottom-alpha {
   syntax: "<number>";
   inherits: false;
   initial-value: 1;
@@ -67,18 +67,13 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: #2b2b2b;
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-  --sidebar-action-foreground: #2b2b2b;
-  --sidebar-item-foreground: oklch(0.42 0 0);
-  --sidebar-list-foreground: oklch(0.4 0 0);
-  --sidebar-faint-foreground: oklch(0.5 0 0);
+  --chrome-background: oklch(0.985 0 0);
+  --chrome-emphasis: #2b2b2b;
+  --chrome-border: oklch(0.922 0 0);
+  --chrome-label: #2b2b2b;
+  --chrome-secondary-label: oklch(0.42 0 0);
+  --chrome-tertiary-label: oklch(0.4 0 0);
+  --chrome-quaternary-label: oklch(0.5 0 0);
   --site-muted: rgb(0 0 0 / 50%);
   --dialog-panel-border: color-mix(in oklab, var(--border) 40%, transparent);
   --git-action-split: oklch(0.58 0 0);
@@ -149,19 +144,14 @@ body {
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, sans-serif;
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-action-foreground: var(--sidebar-action-foreground);
-  --color-sidebar-item-foreground: var(--sidebar-item-foreground);
-  --color-sidebar-list-foreground: var(--sidebar-list-foreground);
-  --color-sidebar-faint-foreground: var(--sidebar-faint-foreground);
+  --color-chrome-border: var(--chrome-border);
+  --color-chrome-emphasis: var(--chrome-emphasis);
+  --color-chrome-label: var(--chrome-label);
+  --color-chrome-secondary-label: var(--chrome-secondary-label);
+  --color-chrome-tertiary-label: var(--chrome-tertiary-label);
+  --color-chrome-quaternary-label: var(--chrome-quaternary-label);
   --color-site-muted: var(--site-muted);
-  --color-sidebar: var(--sidebar);
+  --color-chrome-background: var(--chrome-background);
   --color-dialog-panel-border: var(--dialog-panel-border);
   --color-git-action-split: var(--git-action-split);
   --color-chart-5: var(--chart-5);
@@ -266,18 +256,13 @@ body {
   --chart-4: #525252;
   --chart-5: #3f3f3f;
   --radius: 0.5rem;
-  --sidebar: #000000;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #181818;
-  --sidebar-accent-foreground: #d4d4d4;
-  --sidebar-border: #272727;
-  --sidebar-ring: #3f3f3f;
-  --sidebar-action-foreground: #d4d4d4;
-  --sidebar-item-foreground: #a3a3a3;
-  --sidebar-list-foreground: #717171;
-  --sidebar-faint-foreground: #525252;
+  --chrome-background: #000000;
+  --chrome-emphasis: #ffffff;
+  --chrome-border: #272727;
+  --chrome-label: #d4d4d4;
+  --chrome-secondary-label: #a3a3a3;
+  --chrome-tertiary-label: #717171;
+  --chrome-quaternary-label: #525252;
   --site-muted: rgb(255 255 255 / 50%);
   --dialog-panel-border: #272727;
   --git-action-split: #3f3f3f;

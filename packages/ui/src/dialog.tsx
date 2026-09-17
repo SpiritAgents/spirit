@@ -80,7 +80,7 @@ export function DialogContent({
         {showCloseButton ? (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground outline-none hover:bg-canvas-hover hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground outline-none hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <CloseIcon />
             <span className="sr-only">Close</span>

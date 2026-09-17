@@ -790,7 +790,7 @@ export function WorkspacePrTab({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-sidebar-foreground",
+                    "h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-chrome-emphasis",
                     instantHoverMotionClass,
                   )}
                   onClick={handleBackToList}

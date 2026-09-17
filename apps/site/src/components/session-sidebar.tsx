@@ -247,7 +247,7 @@ type WorkspaceSessionGroupCollapsibleProps = {
 };
 
 const sidebarSectionHeaderTriggerClass =
-  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/40";
+  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const sidebarSectionChevronClass =
   "hidden size-3 shrink-0 text-muted-foreground/55 transition-transform duration-150 group-hover:inline-flex group-focus-visible:inline-flex";
@@ -318,7 +318,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
           "group flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2.5 text-left text-sm",
           "outline-none",
           sidebarInteractionMotionClass,
-          "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+          "focus-visible:ring-2 focus-visible:ring-ring/40",
           sidebarItemDefaultTextClass,
           sessionRowHoverClass(translucency),
         )}
@@ -390,10 +390,10 @@ function SessionListLoadMore({
       disabled={disabled}
       onClick={onLoadMore}
       className={cn(
-        "w-full py-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none",
+        "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
         nested ? "pr-2.5 pl-8" : "px-2.5",
-        "rounded-md hover:text-sidebar-foreground/75 focus-visible:text-sidebar-foreground/75",
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+        "rounded-md hover:text-chrome-emphasis/75 focus-visible:text-chrome-emphasis/75",
+        "focus-visible:ring-2 focus-visible:ring-ring/40",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -456,7 +456,7 @@ const SessionListRow = memo(function SessionListRow({
       className={cn(
         "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
         sidebarInteractionMotionClass,
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+        "focus-visible:ring-2 focus-visible:ring-ring/40",
         nested
           ? "py-2 pr-2.5 pl-2.5 gap-2"
           : hasIndicator
@@ -648,23 +648,23 @@ function WorkspaceListNav({
 const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Default text/icon color for sidebar interactive items; hover and selected states return to sidebar-foreground */
-const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";
+const sidebarItemDefaultTextClass = "text-chrome-label";
 
-const sidebarItemActiveTextClass = "!text-sidebar-foreground";
+const sidebarItemActiveTextClass = "!text-chrome-emphasis";
 
 const sidebarMenuHoverClass = cn(
   "hover:!bg-accent focus-visible:!bg-accent",
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 const sidebarSessionListHoverClass = sidebarMenuHoverClass;
 
-const sidebarSelectedHoverClass = cn("hover:!bg-secondary hover:!text-sidebar-foreground");
+const sidebarSelectedHoverClass = cn("hover:!bg-secondary hover:!text-chrome-emphasis");
 
 /** Translucency transparent shell: selected/hover use a translucent fill so a solid secondary does not block the system material */
 const sidebarTranslucencyMenuHoverClass = cn(
   "hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] dark:hover:!bg-white/[0.06]",
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 const SIDEBAR_SCROLL_EDGE_THRESHOLD_PX = 1;
@@ -683,15 +683,15 @@ function readSidebarScrollEdgeFades(viewport: HTMLElement): SidebarScrollEdgeFad
 }
 
 const SIDEBAR_SCROLL_MASK =
-  "linear-gradient(to bottom, rgb(0 0 0 / var(--sidebar-mask-top-alpha)) 0, black 2rem, black calc(100% - 2rem), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)";
+  "linear-gradient(to bottom, rgb(0 0 0 / var(--chrome-mask-top-alpha)) 0, black 2rem, black calc(100% - 2rem), rgb(0 0 0 / var(--chrome-mask-bottom-alpha)) 100%)";
 
 function sidebarScrollAreaMaskStyle(top: boolean, bottom: boolean): React.CSSProperties {
   return {
-    "--sidebar-mask-top-alpha": top ? "0" : "1",
-    "--sidebar-mask-bottom-alpha": bottom ? "0" : "1",
+    "--chrome-mask-top-alpha": top ? "0" : "1",
+    "--chrome-mask-bottom-alpha": bottom ? "0" : "1",
     maskImage: SIDEBAR_SCROLL_MASK,
     WebkitMaskImage: SIDEBAR_SCROLL_MASK,
-    transition: "--sidebar-mask-top-alpha 150ms, --sidebar-mask-bottom-alpha 150ms",
+    transition: "--chrome-mask-top-alpha 150ms, --chrome-mask-bottom-alpha 150ms",
   } as React.CSSProperties;
 }
 
@@ -1040,8 +1040,8 @@ function SessionSidebarInner({
   return (
     <aside
       className={cn(
-        "flex h-full w-full min-w-0 flex-col overflow-hidden text-sidebar-item-foreground",
-        translucency ? "bg-transparent" : "bg-sidebar",
+        "flex h-full w-full min-w-0 flex-col overflow-hidden text-chrome-secondary-label",
+        translucency ? "bg-transparent" : "bg-chrome-background",
         className,
       )}
       data-narrow={narrow || undefined}
@@ -1088,7 +1088,7 @@ function SessionSidebarInner({
             <SquarePen className="size-3.5" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
-              <span className="ml-auto text-[0.65rem] text-sidebar-item-foreground" aria-hidden>
+              <span className="ml-auto text-[0.65rem] text-chrome-secondary-label" aria-hidden>
                 {newSessionShortcutLabel}
               </span>
             )}

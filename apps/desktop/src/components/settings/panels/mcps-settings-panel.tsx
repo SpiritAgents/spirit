@@ -382,7 +382,7 @@ export function McpsSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       createScope === opt.scope
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={mcpsBusy}
                     title={opt.hint}
@@ -413,7 +413,7 @@ export function McpsSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       transportType === value
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={mcpsBusy}
                     onClick={() => setTransportType(value)}

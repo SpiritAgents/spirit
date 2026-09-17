@@ -830,7 +830,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               aria-pressed={workspaceToolsFullScreen}
               onClick={toggleFullScreen}
               className={cn(
-                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
                 instantHoverMotionClass,
               )}
             >
@@ -859,8 +859,8 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   data-workspace-new-tool-tab=""
                   aria-label={t("workspace.newToolTab")}
                   className={cn(
-                    "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
-                    "aria-expanded:bg-canvas-hover aria-expanded:text-sidebar-foreground aria-expanded:hover:bg-canvas-hover",
+                    "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
+                    "aria-expanded:bg-canvas-hover aria-expanded:text-chrome-emphasis aria-expanded:hover:bg-canvas-hover",
                     instantHoverMotionClass,
                   )}
                 >

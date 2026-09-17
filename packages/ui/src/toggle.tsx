@@ -11,8 +11,8 @@ import { cn } from "./cn.js";
 export const toggleVariants = cva(
   cn(
     "inline-flex items-center justify-center gap-1 rounded-md font-normal text-sm outline-none select-none",
-    "hover:bg-canvas-hover hover:text-sidebar-foreground",
-    "data-[state=on]:bg-canvas-hover data-[state=on]:text-sidebar-foreground",
+    "hover:bg-canvas-hover hover:text-chrome-emphasis",
+    "data-[state=on]:bg-canvas-hover data-[state=on]:text-chrome-emphasis",
     "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50",
     "disabled:pointer-events-none disabled:opacity-50",
     instantHoverMotionClass,

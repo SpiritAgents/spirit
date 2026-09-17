@@ -62,7 +62,7 @@ export function ModelCapabilitiesCombobox({
                         role="button"
                         tabIndex={-1}
                         aria-label={t("settings.removeCapability", { label })}
-                        className="rounded-sm text-muted-foreground hover:text-sidebar-foreground"
+                        className="rounded-sm text-muted-foreground hover:text-chrome-emphasis"
                         onPointerDown={(event) => {
                           event.preventDefault();
                           event.stopPropagation();

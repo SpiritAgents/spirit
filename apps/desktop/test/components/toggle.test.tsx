@@ -15,7 +15,7 @@ describe("Toggle", () => {
     expect(button.getAttribute("data-state")).toBe("on");
     expect(button.getAttribute("aria-pressed")).toBe("true");
     // The selected text highlight must come from the on state, not hover.
-    expect(button.className).toContain("data-[state=on]:text-sidebar-foreground");
+    expect(button.className).toContain("data-[state=on]:text-chrome-emphasis");
   });
 
   test("unpressed toggle renders data-state off", () => {

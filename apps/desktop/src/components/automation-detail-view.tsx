@@ -78,7 +78,7 @@ function AutomationDetailTabs({
               "rounded-md px-3 py-2 text-sm",
               activeTab === id
                 ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
-                : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
+                : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
             )}
             onClick={() => onTabChange(id)}
           >
@@ -160,7 +160,7 @@ export function AutomationDetailView({
             <button
               type="button"
               onClick={onBack}
-              className="font-normal text-muted-foreground transition-colors hover:text-sidebar-foreground"
+              className="font-normal text-muted-foreground transition-colors hover:text-chrome-emphasis"
             >
               {t("automations.detailBack")}
             </button>

@@ -837,8 +837,8 @@ function SpiritDesktopWindowBody({
         useTranslucency
           ? "bg-transparent"
           : heroBaseTone
-            ? "bg-sidebar dark:bg-[#000000]"
-            : "bg-sidebar dark:bg-[#0a0a0a]",
+            ? "bg-chrome-background dark:bg-[#000000]"
+            : "bg-chrome-background dark:bg-[#0a0a0a]",
         className,
       )}
     >

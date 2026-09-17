@@ -13,31 +13,31 @@ export const DESKTOP_SHELL_LAYOUT_TRANSITION =
   "transition-[width,margin,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 /** Top-bar default text/icon color, aligned with the sidebar `sidebarItemDefaultTextClass` */
-export const DESKTOP_CHROME_MUTED_TEXT = "text-sidebar-action-foreground";
+export const DESKTOP_CHROME_MUTED_TEXT = "text-chrome-label";
 
 /** Top-bar session title hover: text color only, no translucent fill */
 export const DESKTOP_SESSION_TITLE_HOVER_CLASS = cn(
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
   instantHoverMotionClass,
 );
 
 /** Top-bar hover/focus/current-item text color, aligned with the sidebar `sidebarItemActiveTextClass` */
-export const DESKTOP_CHROME_ACTIVE_TEXT = "text-sidebar-foreground";
+export const DESKTOP_CHROME_ACTIVE_TEXT = "text-chrome-emphasis";
 
 /** ghost defaults to bg-muted when aria-expanded; top-bar icon buttons need a fully transparent background */
 export const DESKTOP_CHROME_TOGGLE_ICON_BTN = cn(
   "electron-no-drag size-7 shrink-0 bg-transparent",
   DESKTOP_CHROME_MUTED_TEXT,
-  "hover:bg-foreground/[0.06] hover:text-sidebar-foreground focus-visible:bg-foreground/[0.06] focus-visible:text-sidebar-foreground",
+  "hover:bg-foreground/[0.06] hover:text-chrome-emphasis focus-visible:bg-foreground/[0.06] focus-visible:text-chrome-emphasis",
   "dark:hover:bg-white/[0.06] dark:focus-visible:bg-white/[0.06]",
-  "aria-expanded:bg-transparent dark:aria-expanded:bg-transparent aria-expanded:text-sidebar-action-foreground",
-  "aria-expanded:hover:bg-foreground/[0.06] aria-expanded:hover:text-sidebar-foreground dark:aria-expanded:hover:bg-white/[0.06]",
+  "aria-expanded:bg-transparent dark:aria-expanded:bg-transparent aria-expanded:text-chrome-label",
+  "aria-expanded:hover:bg-foreground/[0.06] aria-expanded:hover:text-chrome-emphasis dark:aria-expanded:hover:bg-white/[0.06]",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,
 );
 
 export const DESKTOP_CHROME_COMMIT_BTN = cn(
-  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-foreground/[0.06] hover:text-sidebar-foreground dark:hover:bg-foreground/10",
+  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-foreground/[0.06] hover:text-chrome-emphasis dark:hover:bg-foreground/10",
   FONT_WEIGHT_NORMAL,
   instantHoverMotionClass,
 );
