@@ -62,7 +62,7 @@ export const DESKTOP_OVERLAY_LIST_WIDTH =
 
 export const DESKTOP_OVERLAY_LIST_CONTENT = "max-h-none overflow-hidden p-0 text-xs";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
   "overflow-hidden rounded-md bg-background",
@@ -71,7 +71,7 @@ export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
 );
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2 py-1.5 text-xs shadow-none";
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
   DESKTOP_OVERLAY_LIST_FILTER_INPUT,
