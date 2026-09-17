@@ -779,9 +779,6 @@ importers:
       '@radix-ui/react-scroll-area':
         specifier: '>=1.2.0'
         version: 1.2.18(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      radix-ui:
-        specifier: '>=1.4.0'
-        version: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@types/react':
         specifier: 19.2.18
@@ -795,6 +792,9 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
+      radix-ui:
+        specifier: 1.6.7
+        version: 1.6.7(@types/react-dom@19.2.4(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react:
         specifier: 19.2.8
         version: 19.2.8
