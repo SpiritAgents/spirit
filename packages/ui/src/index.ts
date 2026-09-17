@@ -11,7 +11,13 @@ export {
   runAfterRadixOverlayClose,
   type RadixAnchoredOverlayKind,
 } from "./overlay-motion.js";
-export { UiPortalProvider, useUiPortalContainer, type UiPortalContainerGetter } from "./portal.js";
+export {
+  UiPortalProvider,
+  useUiPortalContainer,
+  useUiPortalLocalPoint,
+  type UiPortalContainerGetter,
+  type UiPortalLocalPoint,
+} from "./portal.js";
 export { Badge, badgeVariants } from "./badge.js";
 export {
   Breadcrumb,
@@ -148,3 +154,19 @@ export {
   SelectTrigger,
   SelectValue,
 } from "./select.js";
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipItem,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipZone,
+  useOptionalTooltipContext,
+  useOptionalTooltipGlobalContext,
+  useOptionalTooltipItemMenuHighlight,
+  useOptionalTooltipStableActions,
+  useTooltipContext,
+  useTooltipItemHighlighted,
+  useTooltipKeyboardInput,
+  useTooltipTriggerProps,
+} from "./tooltip.js";

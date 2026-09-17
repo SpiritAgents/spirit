@@ -158,6 +158,26 @@
       "types": "./dist/sonner.d.ts",
       "default": "./dist/sonner.js"
     },
+    "./tooltip": {
+      "types": "./dist/tooltip.d.ts",
+      "default": "./dist/tooltip.js"
+    },
+    "./hooks/tooltip-switch-registry": {
+      "types": "./dist/hooks/tooltip-switch-registry.d.ts",
+      "default": "./dist/hooks/tooltip-switch-registry.js"
+    },
+    "./hooks/tooltip-item-interaction-store": {
+      "types": "./dist/hooks/tooltip-item-interaction-store.d.ts",
+      "default": "./dist/hooks/tooltip-item-interaction-store.js"
+    },
+    "./hooks/use-global-tooltip-switch": {
+      "types": "./dist/hooks/use-global-tooltip-switch.d.ts",
+      "default": "./dist/hooks/use-global-tooltip-switch.js"
+    },
+    "./hooks/use-anchored-item-switch": {
+      "types": "./dist/hooks/use-anchored-item-switch.d.ts",
+      "default": "./dist/hooks/use-anchored-item-switch.js"
+    },
     "./theme.css": "./src/theme.css"
   },
   "publishConfig": {
