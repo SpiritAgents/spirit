@@ -178,6 +178,34 @@
       "types": "./dist/hooks/use-anchored-item-switch.d.ts",
       "default": "./dist/hooks/use-anchored-item-switch.js"
     },
+    "./hooks/use-collapsible-child-mount": {
+      "types": "./dist/hooks/use-collapsible-child-mount.d.ts",
+      "default": "./dist/hooks/use-collapsible-child-mount.js"
+    },
+    "./collapsible-animation": {
+      "types": "./dist/collapsible-animation.d.ts",
+      "default": "./dist/collapsible-animation.js"
+    },
+    "./empty": {
+      "types": "./dist/empty.d.ts",
+      "default": "./dist/empty.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "default": "./dist/link.js"
+    },
+    "./desktop-form-field": {
+      "types": "./dist/desktop-form-field.d.ts",
+      "default": "./dist/desktop-form-field.js"
+    },
+    "./animated-collapse": {
+      "types": "./dist/animated-collapse.d.ts",
+      "default": "./dist/animated-collapse.js"
+    },
+    "./filtered-overlay-menu": {
+      "types": "./dist/filtered-overlay-menu.d.ts",
+      "default": "./dist/filtered-overlay-menu.js"
+    },
     "./theme.css": "./src/theme.css"
   },
   "publishConfig": {
