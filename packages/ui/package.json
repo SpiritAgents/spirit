@@ -26,6 +26,86 @@
       "types": "./dist/cn.d.ts",
       "default": "./dist/cn.js"
     },
+    "./chrome": {
+      "types": "./dist/chrome.d.ts",
+      "default": "./dist/chrome.js"
+    },
+    "./badge": {
+      "types": "./dist/badge.d.ts",
+      "default": "./dist/badge.js"
+    },
+    "./breadcrumb": {
+      "types": "./dist/breadcrumb.d.ts",
+      "default": "./dist/breadcrumb.js"
+    },
+    "./button": {
+      "types": "./dist/button.d.ts",
+      "default": "./dist/button.js"
+    },
+    "./button-group": {
+      "types": "./dist/button-group.d.ts",
+      "default": "./dist/button-group.js"
+    },
+    "./card": {
+      "types": "./dist/card.d.ts",
+      "default": "./dist/card.js"
+    },
+    "./checkbox": {
+      "types": "./dist/checkbox.d.ts",
+      "default": "./dist/checkbox.js"
+    },
+    "./input": {
+      "types": "./dist/input.d.ts",
+      "default": "./dist/input.js"
+    },
+    "./input-group": {
+      "types": "./dist/input-group.d.ts",
+      "default": "./dist/input-group.js"
+    },
+    "./kbd": {
+      "types": "./dist/kbd.d.ts",
+      "default": "./dist/kbd.js"
+    },
+    "./label": {
+      "types": "./dist/label.d.ts",
+      "default": "./dist/label.js"
+    },
+    "./radio-group": {
+      "types": "./dist/radio-group.d.ts",
+      "default": "./dist/radio-group.js"
+    },
+    "./separator": {
+      "types": "./dist/separator.d.ts",
+      "default": "./dist/separator.js"
+    },
+    "./skeleton": {
+      "types": "./dist/skeleton.d.ts",
+      "default": "./dist/skeleton.js"
+    },
+    "./spinner": {
+      "types": "./dist/spinner.d.ts",
+      "default": "./dist/spinner.js"
+    },
+    "./switch": {
+      "types": "./dist/switch.d.ts",
+      "default": "./dist/switch.js"
+    },
+    "./table": {
+      "types": "./dist/table.d.ts",
+      "default": "./dist/table.js"
+    },
+    "./textarea": {
+      "types": "./dist/textarea.d.ts",
+      "default": "./dist/textarea.js"
+    },
+    "./toggle": {
+      "types": "./dist/toggle.d.ts",
+      "default": "./dist/toggle.js"
+    },
+    "./toggle-group": {
+      "types": "./dist/toggle-group.d.ts",
+      "default": "./dist/toggle-group.js"
+    },
     "./theme.css": "./src/theme.css"
   },
   "publishConfig": {
@@ -41,6 +121,7 @@
     "@types/react-dom": "19.2.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
+    "radix-ui": "1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "tailwind-merge": "3.6.0",
