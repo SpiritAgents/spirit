@@ -37,7 +37,12 @@ import {
 } from "./hooks/tooltip-item-interaction-store.js";
 import { isEventTargetWithinTooltipCompanionOverlays } from "./hooks/tooltip-switch-registry.js";
 import { useGlobalTooltipSwitch } from "./hooks/use-global-tooltip-switch.js";
-import { useUiPortalContainer, useUiPortalLocalPoint } from "./portal.js";
+import {
+  UiPortalProvider,
+  useUiPortalContainer,
+  useUiPortalLocalPoint,
+  type UiPortalContainerGetter,
+} from "./portal.js";
 
 type TooltipSwitchItem = { id: string };
 type TooltipContentAppearance = "compact" | "detail";
@@ -401,11 +406,14 @@ export function TooltipProvider({
   delayDuration = 300,
   skipDelayDuration = 300,
   disableHoverableContent = false,
+  getPortalContainer,
   children,
   ...props
 }: ComponentProps<typeof TooltipPrimitive.Provider> & {
   delayDuration?: number;
+  getPortalContainer?: UiPortalContainerGetter;
 }) {
+  const inheritedToLocalPoint = useUiPortalLocalPoint();
   const globalSwitch = useGlobalTooltipSwitch({ defaultOpenDelayMs: delayDuration });
   const contentRegistryRef = useRef(new Map<string, TooltipContentRegistration>());
   const lingerContentRegistryRef = useRef(new Map<string, TooltipContentRegistration>());
@@ -512,7 +520,7 @@ export function TooltipProvider({
     [registerContent, registerOpenChange, unregisterContent],
   );
 
-  return (
+  const tree = (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
       delayDuration={0}
@@ -540,6 +548,16 @@ export function TooltipProvider({
         </TooltipStableActionsContext.Provider>
       </TooltipGlobalContext.Provider>
     </TooltipPrimitive.Provider>
+  );
+
+  if (!getPortalContainer) {
+    return tree;
+  }
+
+  return (
+    <UiPortalProvider getContainer={getPortalContainer} toLocalPoint={inheritedToLocalPoint}>
+      {tree}
+    </UiPortalProvider>
   );
 }
 

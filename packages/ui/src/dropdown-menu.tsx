@@ -2,11 +2,13 @@
 // SPDX-License-Identifier: MIT
 
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
-import type { ComponentProps } from "react";
+import { useCallback, useLayoutEffect, useRef, type ComponentProps, type Ref } from "react";
 
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
   DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
   DESKTOP_OVERLAY_LIST_WIDTH,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
@@ -15,6 +17,7 @@ import { cn } from "./cn.js";
 import { CheckIcon, ChevronRightIcon } from "./icons.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
+import { useOptionalTooltipItemMenuHighlight, useTooltipKeyboardInput } from "./tooltip.js";
 
 export function DropdownMenu(props: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -80,22 +83,57 @@ export function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  ref,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Item> & {
   inset?: boolean;
   variant?: "default" | "destructive";
+  ref?: Ref<HTMLDivElement>;
 }) {
+  const tooltipMenuHighlight = useOptionalTooltipItemMenuHighlight();
+  const keyboardInput = useTooltipKeyboardInput();
+  const itemRef = useRef<HTMLDivElement | null>(null);
+  const showFocusHighlight = tooltipMenuHighlight === null || keyboardInput;
+  const pointerHighlighted = tooltipMenuHighlight?.pointer === true && !keyboardInput;
+  const composedRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      itemRef.current = element;
+      if (typeof ref === "function") {
+        ref(element);
+        return;
+      }
+      if (ref) {
+        ref.current = element;
+      }
+    },
+    [ref],
+  );
+
+  useLayoutEffect(() => {
+    if (pointerHighlighted && !props.disabled) {
+      itemRef.current?.focus({ preventScroll: true });
+    }
+  }, [pointerHighlighted, props.disabled]);
+
   return (
     <DropdownMenuPrimitive.Item
+      ref={composedRef}
       data-slot="dropdown-menu-item"
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
+        showFocusHighlight && DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
         inset && "pl-8",
+        variant === "destructive" && "text-destructive [&_svg]:text-destructive",
         variant === "destructive" &&
-          "text-destructive focus:text-destructive [&_svg]:text-destructive",
+          showFocusHighlight &&
+          "focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
         className,
+        tooltipMenuHighlight?.highlighted &&
+          (variant === "destructive"
+            ? "!bg-destructive/10 dark:!bg-destructive/20"
+            : "!bg-overlay-hover text-accent-foreground"),
       )}
       {...props}
     />

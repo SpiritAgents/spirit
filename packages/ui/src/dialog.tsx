@@ -54,13 +54,19 @@ export function DialogContent({
   className,
   children,
   showCloseButton = true,
+  overlayClassName,
+  forceMount,
   ...props
-}: ComponentProps<typeof DialogPrimitive.Content> & { showCloseButton?: boolean }) {
+}: ComponentProps<typeof DialogPrimitive.Content> & {
+  showCloseButton?: boolean;
+  overlayClassName?: string;
+}) {
   return (
-    <DialogPortal>
-      <DialogOverlay />
+    <DialogPortal {...(forceMount === undefined ? {} : { forceMount })}>
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        {...(forceMount === undefined ? {} : { forceMount })}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground",
           DESKTOP_OVERLAY_EDGE,
