@@ -1,4 +1,4 @@
-/** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion (Radix popover exit animation). */
+/** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion. */
 export const TOOLTIP_SWITCH_CONTENT_LINGER_MS = 100;
 
 const ANCHORED_ITEM_SWITCH_RELATED_OVERLAY_SELECTOR = '[data-slot="select-content"]';
