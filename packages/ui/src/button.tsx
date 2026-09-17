@@ -32,7 +32,7 @@ export const buttonVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost: cn(
-          "hover:bg-canvas-hover hover:text-sidebar-foreground aria-expanded:bg-canvas-hover aria-expanded:text-sidebar-foreground",
+          "hover:bg-canvas-hover hover:text-chrome-emphasis aria-expanded:bg-canvas-hover aria-expanded:text-chrome-emphasis",
           instantHoverMotionClass,
         ),
         destructive:

@@ -36,7 +36,7 @@ export const DESKTOP_INSTANT_HOVER_OVERLAY = cn(
 /** Ghost icon/compact button: sidebar-sourced translucent hover + brighter text color */
 export const DESKTOP_INSTANT_HOVER_GHOST_BTN = cn(
   DESKTOP_INSTANT_HOVER_OVERLAY,
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground aria-expanded:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis aria-expanded:!text-chrome-emphasis",
 );
 
 /** In-place item highlight (Read File tool card): brighten text/icons, no wash overlay */
@@ -91,7 +91,7 @@ export const DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS =
   "bg-black/5 transition-colors group-hover:bg-black/10 dark:bg-white/5 dark:group-hover:bg-white/9";
 
 /** Default title-bar text/icon color, aligned with the sidebar's `sidebarItemDefaultTextClass` */
-export const DESKTOP_CHROME_MUTED_TEXT = "text-sidebar-action-foreground";
+export const DESKTOP_CHROME_MUTED_TEXT = "text-chrome-label";
 
 /** Inline session-title rename input: ghost, borderless, text color matches the sidebar/title-bar session name */
 export const SESSION_TITLE_RENAME_INPUT_CLASS = cn(
@@ -102,20 +102,20 @@ export const SESSION_TITLE_RENAME_INPUT_CLASS = cn(
 
 /** Title-bar session title hover: only the text color brightens, no translucent underlay */
 export const DESKTOP_SESSION_TITLE_HOVER_CLASS = cn(
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
   instantHoverMotionClass,
 );
 
 /** Title-bar hover/focus/current-item text color, aligned with the sidebar's `sidebarItemActiveTextClass` */
-export const DESKTOP_CHROME_ACTIVE_TEXT = "text-sidebar-foreground";
+export const DESKTOP_CHROME_ACTIVE_TEXT = "text-chrome-emphasis";
 
 /** ghost expanded uses `--canvas-hover`; title-bar icon buttons stay transparent until hover */
 export const DESKTOP_CHROME_TOGGLE_ICON_BTN = cn(
   "electron-no-drag size-7 shrink-0 bg-transparent",
   DESKTOP_CHROME_MUTED_TEXT,
-  "hover:bg-canvas-hover hover:text-sidebar-foreground focus-visible:bg-canvas-hover focus-visible:text-sidebar-foreground",
-  "aria-expanded:bg-transparent aria-expanded:text-sidebar-action-foreground",
-  "aria-expanded:hover:bg-canvas-hover aria-expanded:hover:text-sidebar-foreground",
+  "hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:bg-canvas-hover focus-visible:text-chrome-emphasis",
+  "aria-expanded:bg-transparent aria-expanded:text-chrome-label",
+  "aria-expanded:hover:bg-canvas-hover aria-expanded:hover:text-chrome-emphasis",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,
 );
@@ -127,7 +127,7 @@ export const DESKTOP_FILES_EXPLORER_TOOLBAR_ICON_BTN = cn(
 );
 
 export const DESKTOP_CHROME_COMMIT_BTN = cn(
-  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-canvas-hover hover:text-sidebar-foreground",
+  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-canvas-hover hover:text-chrome-emphasis",
   FONT_WEIGHT_NORMAL,
   instantHoverMotionClass,
 );
@@ -252,13 +252,10 @@ export const DESKTOP_CANVAS_CARD_SURFACE = cn(
 export const DESKTOP_ITEM_CARD_HOVER_BORDER = DESKTOP_OUTLINE_BORDER_HOVER;
 
 /** Outline button: Outline hover + brighter label */
-export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(
-  DESKTOP_OUTLINE_HOVER,
-  "hover:text-sidebar-foreground",
-);
+export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(DESKTOP_OUTLINE_HOVER, "hover:text-chrome-emphasis");
 export const DESKTOP_OUTLINE_BUTTON_FOCUSED = DESKTOP_OUTLINE_FOCUSED;
 export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
-  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-sidebar-foreground";
+  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-chrome-emphasis";
 
 /** Select trigger: slightly smaller ring, consistent with the shadcn Select default */
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =

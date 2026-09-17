@@ -68,7 +68,7 @@ export function CommandInput({
         <button
           type="button"
           aria-label={backLabel}
-          className="rounded-md p-1 text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground"
+          className="rounded-md p-1 text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis"
           onClick={onBack}
         >
           <ChevronRightIcon className="rotate-180" />

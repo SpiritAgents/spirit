@@ -306,13 +306,13 @@ type WorkspaceSessionGroupCollapsibleProps = {
 };
 
 const sidebarSectionHeaderTriggerClass =
-  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/40";
+  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const sidebarSectionChevronClass =
   "hidden size-3 shrink-0 text-muted-foreground/55 transition-transform duration-150 group-hover:inline-flex group-focus-visible:inline-flex";
 
 const sidebarItemShortcutClass =
-  "ml-auto hidden text-[0.65rem] text-sidebar-item-foreground group-hover:inline group-focus-visible:inline";
+  "ml-auto hidden text-[0.65rem] text-chrome-secondary-label group-hover:inline group-focus-visible:inline";
 
 type SidebarSectionContextMenuConfig = {
   ariaLabel: string;
@@ -471,7 +471,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
               "flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden px-2.5 text-left text-sm",
               "bg-transparent outline-none hover:bg-transparent focus-visible:bg-transparent",
               sidebarInteractionMotionClass,
-              "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+              "focus-visible:ring-2 focus-visible:ring-ring/40",
             )}
             title={group.rootPath ?? group.label}
             data-workspace-path={group.rootPath ?? group.id}
@@ -644,10 +644,10 @@ function SessionListLoadMore({
       disabled={disabled}
       onClick={onLoadMore}
       className={cn(
-        "w-full py-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none",
+        "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
         nested ? "pr-2.5 pl-8" : "px-2.5",
-        "rounded-md hover:text-sidebar-foreground/75 focus-visible:text-sidebar-foreground/75",
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+        "rounded-md hover:text-chrome-emphasis/75 focus-visible:text-chrome-emphasis/75",
+        "focus-visible:ring-2 focus-visible:ring-ring/40",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -738,7 +738,7 @@ const SessionListRow = memo(function SessionListRow({
   const rowClassName = cn(
     "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
     sidebarInteractionMotionClass,
-    "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+    "focus-visible:ring-2 focus-visible:ring-ring/40",
     nested ? "py-2 pr-2.5 pl-2.5 gap-2" : hasIndicator ? "h-8 pr-2.5 pl-2.5 gap-2" : "h-8 px-2.5",
     selected
       ? sessionRowSelectedClass(translucency)
@@ -1172,21 +1172,21 @@ const settingsConnectTabs: Array<{
 const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Sidebar interactive items' default text/icon color; hover and selection return to sidebar-foreground */
-const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";
+const sidebarItemDefaultTextClass = "text-chrome-label";
 
-const sidebarItemActiveTextClass = "!text-sidebar-foreground";
+const sidebarItemActiveTextClass = "!text-chrome-emphasis";
 
 /** Sidebar menu/session row hover: a unified semi-transparent wash, so nested buttons no longer stack a solid accent */
 const sidebarMenuHoverClass = cn(
   "hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 /** Sidebar menu/session row selected: the same semi-transparent wash as hover, not deepened by selection */
 const sidebarMenuSelectedClass = cn(
   "!bg-canvas-hover hover:!bg-canvas-hover focus-visible:!bg-canvas-hover",
   sidebarItemActiveTextClass,
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 const SIDEBAR_SCROLL_EDGE_THRESHOLD_PX = 1;
@@ -1204,15 +1204,15 @@ function readSidebarScrollEdgeFades(viewport: HTMLElement): SidebarScrollEdgeFad
   };
 }
 
-const SIDEBAR_SCROLL_MASK = `linear-gradient(to bottom, rgb(0 0 0 / var(--sidebar-mask-top-alpha)) 0, black ${SCROLL_EDGE_FADE_PX}px, black calc(100% - ${SCROLL_EDGE_FADE_PX}px), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)`;
+const SIDEBAR_SCROLL_MASK = `linear-gradient(to bottom, rgb(0 0 0 / var(--chrome-mask-top-alpha)) 0, black ${SCROLL_EDGE_FADE_PX}px, black calc(100% - ${SCROLL_EDGE_FADE_PX}px), rgb(0 0 0 / var(--chrome-mask-bottom-alpha)) 100%)`;
 
 function sidebarScrollAreaMaskStyle(top: boolean, bottom: boolean): React.CSSProperties {
   return {
-    "--sidebar-mask-top-alpha": top ? "0" : "1",
-    "--sidebar-mask-bottom-alpha": bottom ? "0" : "1",
+    "--chrome-mask-top-alpha": top ? "0" : "1",
+    "--chrome-mask-bottom-alpha": bottom ? "0" : "1",
     maskImage: SIDEBAR_SCROLL_MASK,
     WebkitMaskImage: SIDEBAR_SCROLL_MASK,
-    transition: "--sidebar-mask-top-alpha 150ms, --sidebar-mask-bottom-alpha 150ms",
+    transition: "--chrome-mask-top-alpha 150ms, --chrome-mask-bottom-alpha 150ms",
   } as React.CSSProperties;
 }
 
@@ -1695,8 +1695,8 @@ function SessionSidebarInner({
   return (
     <aside
       className={cn(
-        "flex h-full w-full min-w-0 flex-col overflow-hidden text-sidebar-item-foreground",
-        translucency ? "bg-transparent" : "bg-sidebar",
+        "flex h-full w-full min-w-0 flex-col overflow-hidden text-chrome-secondary-label",
+        translucency ? "bg-transparent" : "bg-chrome-background",
         className,
       )}
       data-narrow={narrow || undefined}
@@ -1880,7 +1880,7 @@ function SessionSidebarInner({
                 <>
                   <div className="h-2" aria-hidden />
                   {narrow ? null : (
-                    <p className="px-2.5 pb-1 text-[0.65rem] text-sidebar-item-foreground">
+                    <p className="px-2.5 pb-1 text-[0.65rem] text-chrome-secondary-label">
                       {t("sidebar.extensionSettings")}
                     </p>
                   )}

@@ -36,7 +36,7 @@ function pathBasename(rel: string): string {
 }
 
 const SEARCH_OPTION_TOGGLE_BTN = cn(
-  "electron-no-drag size-7 shrink-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+  "electron-no-drag size-7 shrink-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
   "aria-pressed:bg-canvas-hover aria-pressed:text-foreground aria-pressed:hover:bg-canvas-hover",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,

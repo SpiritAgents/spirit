@@ -7,11 +7,11 @@ import { cn } from "./cn.js";
 
 /** Inline text link on a default surface. */
 export const TEXT_LINK_CLASS =
-  "text-foreground underline underline-offset-2 hover:text-sidebar-foreground/80";
+  "text-foreground underline underline-offset-2 hover:text-chrome-emphasis/80";
 
 /** Inline text link in muted running text. */
 export const TEXT_LINK_MUTED_CLASS =
-  "text-muted-foreground underline underline-offset-2 hover:text-sidebar-foreground/80";
+  "text-muted-foreground underline underline-offset-2 hover:text-chrome-emphasis/80";
 
 /** Inline text link inside a popover / tooltip surface. */
 export const TEXT_LINK_POPOVER_CLASS =

@@ -50,8 +50,8 @@ const TITLE_BAR_ICON_PX = 14;
 /** Mica title-bar dark-background mark (the artwork inside `logo-dark.svg` is smaller, restoring the 20px used before migrating to the transparent mark) */
 const TITLE_BAR_ICON_TRANSLUCENCY_PX = 20;
 
-/** Matches the sidebar interactive items' default text color (`text-sidebar-action-foreground`) */
-const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-sidebar-action-foreground";
+/** Matches the sidebar interactive items' default text color (`text-chrome-label`) */
+const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-chrome-label";
 
 function execWindowAction(action: string): void {
   void window.spiritDesktop?.executeWindowAction(action);

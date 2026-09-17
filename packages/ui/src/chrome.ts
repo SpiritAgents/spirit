@@ -22,15 +22,12 @@ export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OU
 
 export const DESKTOP_OUTLINE_FOCUSED = "focus:border-outline-border-hover focus:bg-outline-fill";
 
-export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(
-  DESKTOP_OUTLINE_HOVER,
-  "hover:text-sidebar-foreground",
-);
+export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(DESKTOP_OUTLINE_HOVER, "hover:text-chrome-emphasis");
 
 export const DESKTOP_OUTLINE_BUTTON_FOCUSED = DESKTOP_OUTLINE_FOCUSED;
 
 export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
-  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-sidebar-foreground";
+  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-chrome-emphasis";
 
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =
   "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50";

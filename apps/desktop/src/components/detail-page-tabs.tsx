@@ -100,7 +100,7 @@ export function DetailPageTabs<T extends string>({
                   tabButtonClassBySize[size],
                   selected
                     ? "font-normal text-foreground underline decoration-foreground/80"
-                    : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
+                    : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
                 )}
                 onClick={() => onTabChange(id)}
               >

@@ -320,7 +320,7 @@ function WorkspaceFilesExplorerToolbar({
           {showStartImplementing ? (
             <button
               type="button"
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground enabled:hover:bg-canvas-hover enabled:hover:text-sidebar-foreground disabled:opacity-50"
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground enabled:hover:bg-canvas-hover enabled:hover:text-chrome-emphasis disabled:opacity-50"
               disabled={startImplementingDisabled}
               aria-label={t("workspace.startImplementing")}
               title={t("workspace.startImplementing")}

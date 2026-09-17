@@ -96,5 +96,5 @@ export function desktopTranslucencyFileDetailSurfaceClass(useTranslucency: boole
 
 /** Windows custom-drawn title bar: sidebar-matched tint on the leading segment under translucency, solid sidebar color otherwise. */
 export function desktopTranslucencyTitleBarTintClass(useTranslucency: boolean): string {
-  return useTranslucency ? DESKTOP_TRANSLUCENCY_TITLE_BAR_TINT_CLASS : "bg-sidebar";
+  return useTranslucency ? DESKTOP_TRANSLUCENCY_TITLE_BAR_TINT_CLASS : "bg-chrome-background";
 }

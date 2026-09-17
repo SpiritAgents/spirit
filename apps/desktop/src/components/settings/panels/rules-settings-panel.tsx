@@ -264,7 +264,7 @@ export function RulesSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       createRootKind === opt.kind
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={rulesBusy}
                     title={opt.hint}

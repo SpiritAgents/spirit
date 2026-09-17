@@ -58,7 +58,7 @@ export function MarketplaceInformationSection({ item }: { item: DesktopMarketpla
             {href ? (
               <button
                 type="button"
-                className="text-foreground underline underline-offset-2 hover:text-sidebar-foreground/80"
+                className="text-foreground underline underline-offset-2 hover:text-chrome-emphasis/80"
                 onClick={() => void window.spiritDesktop?.openExternalUrl(href)}
               >
                 {value}

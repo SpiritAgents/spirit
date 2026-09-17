@@ -7,9 +7,9 @@ import type { CSSProperties } from "react";
  */
 export const sidebarSessionsScrollInsetClass = "pt-4 pb-6";
 
-/** List bottom-edge fade-out: shares `--sidebar-mask-bottom-alpha` and the 150ms transition with session-sidebar. */
+/** List bottom-edge fade-out: shares `--chrome-mask-bottom-alpha` and the 150ms transition with session-sidebar. */
 const LIST_BOTTOM_SCROLL_FADE_MASK =
-  "linear-gradient(to bottom, black calc(100% - 56px), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)";
+  "linear-gradient(to bottom, black calc(100% - 56px), rgb(0 0 0 / var(--chrome-mask-bottom-alpha)) 100%)";
 
 /** The bottom-edge fade-out is visible when `hasMoreBelow` is true; it fades away when scrolled to the bottom. */
 export function bottomScrollFadeMaskStyle(
@@ -17,10 +17,10 @@ export function bottomScrollFadeMaskStyle(
   options?: { animate?: boolean },
 ): CSSProperties {
   return {
-    "--sidebar-mask-bottom-alpha": hasMoreBelow ? "0" : "1",
+    "--chrome-mask-bottom-alpha": hasMoreBelow ? "0" : "1",
     maskImage: LIST_BOTTOM_SCROLL_FADE_MASK,
     WebkitMaskImage: LIST_BOTTOM_SCROLL_FADE_MASK,
-    ...(options?.animate !== false ? { transition: "--sidebar-mask-bottom-alpha 150ms" } : {}),
+    ...(options?.animate !== false ? { transition: "--chrome-mask-bottom-alpha 150ms" } : {}),
   } as CSSProperties;
 }
 
