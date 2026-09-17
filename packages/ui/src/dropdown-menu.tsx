@@ -53,7 +53,10 @@ export function DropdownMenuContent({
   className,
   sideOffset = 4,
   ...props
-}: ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  onOpenAutoFocus?: (event: Event) => void;
+  onEntryFocus?: (event: Event) => void;
+}) {
   const portalContainer = useUiPortalContainer();
   return (
     <DropdownMenuPrimitive.Portal container={portalContainer}>
