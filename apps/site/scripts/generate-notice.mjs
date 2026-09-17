@@ -10,6 +10,5 @@ await generateNotice({
   productionOnly: true,
   recursive: true,
   excludePlatformSpecificPackages: true,
-  includeShadcnUiCopiedNotice: true,
   extraNoticePaths: [path.join(pkgRoot, "public", "notice.md")],
 });

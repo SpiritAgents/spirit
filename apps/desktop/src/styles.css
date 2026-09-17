@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "./styles/shadcn-variants.css";
 @import "@fontsource-variable/geist";
 @source "../node_modules/streamdown/dist/*.js";
 @source "../node_modules/@streamdown/code/dist/*.js";
@@ -44,10 +43,6 @@
   initial-value: 1;
 }
 
-/* Theme token names come from shadcn/ui init (including --sidebar,
-   --sidebar-foreground, --sidebar-primary, --sidebar-accent,
-   --sidebar-border, --sidebar-ring). Color values below and the rest of
-   this file are project-owned. */
 :root {
   --background: oklch(1 0 0);
   /* Default body text color (non-emphasis state); sidebar interaction default see --sidebar-action-foreground */
@@ -149,7 +144,7 @@ html.dark,
   --muted-foreground: #a1a1a1;
   --accent: #181818;
   --accent-foreground: #d4d4d4;
-  /* shadcn neutral dark default destructive (do not use Void gray or the :root light red) */
+  /* Neutral dark default destructive (do not use Void gray or the :root light red) */
   --destructive: oklch(0.704 0.191 22.216);
   --border: #272727;
   --input: #272727;
