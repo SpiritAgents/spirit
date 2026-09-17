@@ -106,14 +106,14 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(19rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
 
 /** Matches the PendingApprovalCard guidance input: thin-bordered shell, inner Input without ring */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL =
   "overflow-hidden rounded-md border border-input bg-transparent focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20";
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2 py-1.5 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
 
 /** ghost: transparent background matching the popover; overrides the Input base dark:bg-input/30 */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(

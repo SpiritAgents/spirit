@@ -212,7 +212,7 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(14rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
 
 /** Outline rest fill / hover wash (Input, Outline button, item cards and rows) */
 export const DESKTOP_OUTLINE_FILL = "bg-outline-fill";
@@ -269,7 +269,7 @@ export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
 );
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2 py-1.5 text-xs shadow-none";
 
 /** ghost: transparent background consistent with popover; overrides the Input base class rest/hover/focus fill */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
