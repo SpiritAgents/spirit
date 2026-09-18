@@ -1,13 +1,13 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
 import { Button } from "./button.js";
 import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW_LG } from "./chrome.js";
 import { cn } from "./cn.js";
-import { CloseIcon } from "./icons.js";
 import { modalContentMotion, modalOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 
@@ -68,7 +68,7 @@ export function DialogContent({
         data-slot="dialog-content"
         {...(forceMount === undefined ? {} : { forceMount })}
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground sm:max-w-sm",
           DESKTOP_OVERLAY_EDGE,
           DESKTOP_OVERLAY_SHADOW_LG,
           modalContentMotion,
@@ -78,13 +78,16 @@ export function DialogContent({
       >
         {children}
         {showCloseButton ? (
-          <DialogPrimitive.Close
-            data-slot="dialog-close"
-            className="absolute top-3 right-3 rounded-md p-1 text-muted-foreground outline-none hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <CloseIcon />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
+          <DialogClose asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="absolute top-2 right-2 text-muted-foreground"
+            >
+              <X className="size-3.5" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </DialogClose>
         ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
@@ -93,11 +96,7 @@ export function DialogContent({
 
 export function DialogHeader({ className, ...props }: ComponentProps<"div">) {
   return (
-    <div
-      data-slot="dialog-header"
-      className={cn("flex flex-col gap-1.5 pr-6", className)}
-      {...props}
-    />
+    <div data-slot="dialog-header" className={cn("flex flex-col gap-2", className)} {...props} />
   );
 }
 
@@ -153,7 +152,7 @@ export function DialogTitle({ className, ...props }: ComponentProps<typeof Dialo
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-sm font-medium text-foreground", className)}
+      className={cn("font-heading text-base font-normal leading-none", className)}
       {...props}
     />
   );
@@ -166,7 +165,10 @@ export function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-xs text-muted-foreground", className)}
+      className={cn(
+        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-2 *:[a]:hover:text-chrome-emphasis/80",
+        className,
+      )}
       {...props}
     />
   );

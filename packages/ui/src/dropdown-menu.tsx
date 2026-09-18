@@ -1,6 +1,7 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Check, ChevronRight } from "lucide-react";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { useCallback, useLayoutEffect, useRef, type ComponentProps, type Ref } from "react";
 
@@ -14,10 +15,20 @@ import {
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
-import { CheckIcon, ChevronRightIcon } from "./icons.js";
+import { isEventTargetWithinTooltipCompanionOverlays } from "./hooks/tooltip-switch-registry.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 import { useOptionalTooltipItemMenuHighlight, useTooltipKeyboardInput } from "./tooltip.js";
+
+function preventDropdownDismissForTooltipCompanion(event: {
+  target: EventTarget | null;
+  preventDefault(): void;
+}): void {
+  if (!isEventTargetWithinTooltipCompanionOverlays(event.target)) {
+    return;
+  }
+  event.preventDefault();
+}
 
 export function DropdownMenu(props: ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -55,6 +66,9 @@ export function DropdownMenuRadioGroup(
 export function DropdownMenuContent({
   className,
   sideOffset = 4,
+  onPointerDownOutside,
+  onInteractOutside,
+  onFocusOutside,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Content> & {
   onOpenAutoFocus?: (event: Event) => void;
@@ -74,6 +88,18 @@ export function DropdownMenuContent({
           className,
         )}
         {...props}
+        onPointerDownOutside={(event) => {
+          preventDropdownDismissForTooltipCompanion(event);
+          onPointerDownOutside?.(event);
+        }}
+        onInteractOutside={(event) => {
+          preventDropdownDismissForTooltipCompanion(event);
+          onInteractOutside?.(event);
+        }}
+        onFocusOutside={(event) => {
+          preventDropdownDismissForTooltipCompanion(event);
+          onFocusOutside?.(event);
+        }}
       />
     </DropdownMenuPrimitive.Portal>
   );
@@ -155,7 +181,7 @@ export function DropdownMenuCheckboxItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <CheckIcon />
+          <Check className="size-3.5" />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -246,7 +272,7 @@ export function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <ChevronRight className="ml-auto size-3.5" />
     </DropdownMenuPrimitive.SubTrigger>
   );
 }
@@ -255,17 +281,20 @@ export function DropdownMenuSubContent({
   className,
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.SubContent>) {
+  const portalContainer = useUiPortalContainer();
   return (
-    <DropdownMenuPrimitive.SubContent
-      data-slot="dropdown-menu-sub-content"
-      className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
-        DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
-        "z-50",
-        radixAnchoredOverlayMotion("dropdown-menu"),
-        className,
-      )}
-      {...props}
-    />
+    <DropdownMenuPrimitive.Portal container={portalContainer}>
+      <DropdownMenuPrimitive.SubContent
+        data-slot="dropdown-menu-sub-content"
+        className={cn(
+          DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
+          "z-50",
+          radixAnchoredOverlayMotion("dropdown-menu"),
+          className,
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
   );
 }

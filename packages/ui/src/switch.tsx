@@ -11,7 +11,7 @@ export function Switch({ className, ...props }: ComponentProps<typeof SwitchPrim
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer inline-flex h-5 w-8 shrink-0 cursor-pointer items-center rounded-full border border-transparent bg-input outline-none transition-colors",
+        "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border border-transparent bg-input p-px outline-none transition-colors",
         "data-checked:bg-primary",
         "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
@@ -21,7 +21,7 @@ export function Switch({ className, ...props }: ComponentProps<typeof SwitchPrim
     >
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
-        className="pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-transform data-checked:translate-x-3 data-unchecked:translate-x-0"
+        className="pointer-events-none block size-4 rounded-full bg-background shadow-sm transition-[translate,transform,background-color] duration-150 data-checked:translate-x-4 data-unchecked:translate-x-0 dark:data-unchecked:bg-primary"
       />
     </SwitchPrimitive.Root>
   );

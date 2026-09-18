@@ -1,6 +1,7 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Check, ChevronRight } from "lucide-react";
 import { Menubar as MenubarPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
@@ -10,7 +11,6 @@ import {
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
-import { CheckIcon, ChevronRightIcon } from "./icons.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 
@@ -136,7 +136,7 @@ export function MenubarCheckboxItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
-          <CheckIcon />
+          <Check className="size-3.5" />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -181,7 +181,7 @@ export function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <ChevronRight className="ml-auto size-3.5" />
     </MenubarPrimitive.SubTrigger>
   );
 }

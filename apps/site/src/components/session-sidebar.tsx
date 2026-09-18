@@ -1150,7 +1150,7 @@ function SessionSidebarInner({
         aria-hidden={!settingsMode && narrow}
       >
         <ScrollArea
-          className="h-full min-h-0 min-w-0"
+          className="h-full min-h-0"
           type="hover"
           scrollHideDelay={450}
           style={sidebarScrollAreaMaskStyle(scrollEdgeFades.top, scrollEdgeFades.bottom)}

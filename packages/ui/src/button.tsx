@@ -20,7 +20,8 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
+        default:
+          "bg-primary text-primary-foreground transition-none hover:bg-[color-mix(in_oklab,var(--primary)_90%,white)] dark:hover:bg-[color-mix(in_oklab,var(--primary)_90%,black)]",
         outline: cn(
           "bg-background transition-none",
           DESKTOP_CONTENT_TRANSLUCENT_FILL,

@@ -1,21 +1,38 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import type { CSSProperties } from "react";
 import { Toaster as SonnerToaster, type ToasterProps } from "sonner";
 
+import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW } from "./chrome.js";
 import { cn } from "./cn.js";
 
-export function Toaster({ className, ...props }: ToasterProps) {
+export function Toaster({
+  className,
+  theme = "system",
+  style,
+  toastOptions,
+  ...props
+}: ToasterProps) {
   return (
     <SonnerToaster
-      className={cn("toaster", className)}
+      theme={theme}
+      className={cn("toaster group", className)}
+      style={
+        {
+          fontFamily: "var(--font-sans)",
+          "--normal-bg": "var(--popover)",
+          "--normal-text": "var(--popover-foreground)",
+          "--normal-border": "color-mix(in oklab, var(--border) 80%, transparent)",
+          "--border-radius": "var(--radius)",
+          ...style,
+        } as CSSProperties
+      }
       toastOptions={{
+        ...toastOptions,
         classNames: {
-          toast:
-            "border border-border/80 bg-popover text-popover-foreground shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)]",
-          description: "text-muted-foreground",
-          actionButton: "bg-primary text-primary-foreground",
-          cancelButton: "bg-muted text-muted-foreground",
+          ...toastOptions?.classNames,
+          toast: cn(DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW, toastOptions?.classNames?.toast),
         },
       }}
       {...props}

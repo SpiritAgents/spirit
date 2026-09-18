@@ -51,7 +51,7 @@ import type { ToolBlockSnapshot } from "@/types";
 const summaryClass = "text-xs leading-relaxed text-muted-foreground";
 
 const toolCallDetailScrollAreaClass =
-  "w-full min-w-0 rounded-md border border-border/20 bg-muted/15 pr-2 [&>[data-radix-scroll-area-viewport]]:max-h-96 [&>[data-radix-scroll-area-viewport]]:overscroll-contain";
+  "w-full rounded-md border border-border/20 bg-muted/15 pr-2 [&>[data-radix-scroll-area-viewport]]:max-h-96 [&>[data-radix-scroll-area-viewport]]:overscroll-contain";
 
 const toolCallDetailPreClass =
   "whitespace-pre-wrap break-words p-2 font-mono text-xs leading-relaxed text-muted-foreground";

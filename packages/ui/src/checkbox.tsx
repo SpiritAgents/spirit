@@ -1,25 +1,12 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Check } from "lucide-react";
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
 import { DESKTOP_OUTLINE_BORDER } from "./chrome.js";
 import { cn } from "./cn.js";
-
-function CheckMark() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden className="size-3.5">
-      <path
-        d="M3.5 8.5 6.5 11.5 12.5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.75"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 export function Checkbox({ className, ...props }: ComponentProps<typeof CheckboxPrimitive.Root>) {
   return (
@@ -39,7 +26,7 @@ export function Checkbox({ className, ...props }: ComponentProps<typeof Checkbox
         data-slot="checkbox-indicator"
         className="flex items-center justify-center text-current"
       >
-        <CheckMark />
+        <Check className="size-3.5" />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
   );
