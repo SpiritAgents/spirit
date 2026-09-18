@@ -72,8 +72,8 @@
   --chrome-emphasis: #2b2b2b;
   --chrome-border: oklch(0.922 0 0);
   --chrome-label: #2b2b2b;
-  /* Opaque oklch(0.42) over chrome-background ≈ 58% black; keep that gray, but let canvas show through */
-  --chrome-secondary-label: color-mix(in oklab, black 58%, transparent);
+  /* Softer than the first 58/73 translucent mix; 50/60 keeps the two sides on the same step */
+  --chrome-secondary-label: color-mix(in oklab, black 50%, transparent);
   --chrome-tertiary-label: oklch(0.4 0 0);
   --chrome-quaternary-label: oklch(0.5 0 0);
   --site-muted: rgb(0 0 0 / 50%);
@@ -261,8 +261,7 @@ body {
   --chrome-emphasis: #ffffff;
   --chrome-border: #272727;
   --chrome-label: #d4d4d4;
-  /* Opaque #a3a3a3 over black ≈ 73% white in oklab; same reading, but translucent */
-  --chrome-secondary-label: color-mix(in oklab, white 73%, transparent);
+  --chrome-secondary-label: color-mix(in oklab, white 60%, transparent);
   --chrome-tertiary-label: #717171;
   --chrome-quaternary-label: #525252;
   --site-muted: rgb(255 255 255 / 50%);
