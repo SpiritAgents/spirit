@@ -11,7 +11,6 @@ import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
   DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
-  DESKTOP_OVERLAY_LIST_WIDTH,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
@@ -82,8 +81,8 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         className={cn(
           DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
-          DESKTOP_OVERLAY_LIST_WIDTH,
-          "z-50",
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
+          "z-50 overflow-hidden p-1",
           radixAnchoredOverlayMotion("dropdown-menu"),
           className,
         )}
@@ -236,7 +235,7 @@ export function DropdownMenuSeparator({
   return (
     <DropdownMenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border/60", className)}
+      className={cn("-mx-1 my-1 h-px bg-outline-border", className)}
       {...props}
     />
   );
@@ -289,7 +288,7 @@ export function DropdownMenuSubContent({
         className={cn(
           DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
           DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
-          "z-50",
+          "z-50 p-1",
           radixAnchoredOverlayMotion("dropdown-menu"),
           className,
         )}

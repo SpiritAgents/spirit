@@ -4,7 +4,7 @@
 import { Popover as PopoverPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
-import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_LIST_SHELL } from "./chrome.js";
+import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW_LG } from "./chrome.js";
 import { cn } from "./cn.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
@@ -35,9 +35,9 @@ export function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          DESKTOP_OVERLAY_LIST_SHELL,
           DESKTOP_OVERLAY_EDGE,
-          "z-50 bg-popover p-2 text-xs text-popover-foreground",
+          DESKTOP_OVERLAY_SHADOW_LG,
+          "z-50 w-80 rounded-xl bg-popover p-0 text-sm text-popover-foreground backdrop-blur-sm",
           radixAnchoredOverlayMotion("popover"),
           className,
         )}

@@ -23,7 +23,14 @@ export function ToggleGroup({
   return (
     <ToggleGroupPrimitive.Root
       data-slot="toggle-group"
-      className={cn("flex w-fit items-center gap-1", className)}
+      data-variant={variant}
+      data-size={size}
+      className={cn(
+        "flex w-fit items-center rounded-lg",
+        "data-[variant=outline]:[&_[data-slot=toggle-group-item]]:border-l-0",
+        "data-[variant=outline]:[&_[data-slot=toggle-group-item]:first-child]:border-l",
+        className,
+      )}
       {...props}
     >
       <ToggleGroupVariantContext.Provider value={{ variant, size }}>
@@ -48,6 +55,7 @@ export function ToggleGroupItem({
           variant: variant ?? context.variant,
           size: size ?? context.size,
         }),
+        "rounded-none first:rounded-l-lg last:rounded-r-lg focus:z-10",
         className,
       )}
       {...props}

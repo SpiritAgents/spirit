@@ -11,11 +11,12 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
     <textarea
       data-slot="textarea"
       className={cn(
-        "min-h-16 w-full min-w-0 resize-none rounded-md bg-background px-2.5 py-2 text-sm outline-none",
+        "field-sizing-content min-h-16 w-full min-w-0 rounded-lg bg-background px-2.5 py-2 text-sm outline-none",
         DESKTOP_CONTENT_TRANSLUCENT_FILL,
         DESKTOP_OUTLINE_BORDER,
         "placeholder:text-muted-foreground",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        "disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
+        "aria-invalid:border-destructive",
         className,
       )}
       {...props}

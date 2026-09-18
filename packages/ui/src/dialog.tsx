@@ -116,7 +116,7 @@ export function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "flex rounded-b-xl border-t border-border/40 bg-muted/50",
+        "flex rounded-b-xl border-t border-outline-border bg-muted/50",
         inset ? "mx-0 mb-0 gap-3 px-6 py-4" : "-mx-4 -mb-4 gap-2 p-4",
         layout === "split"
           ? "flex-col sm:flex-row sm:items-center sm:justify-between"

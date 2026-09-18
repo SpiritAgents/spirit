@@ -31,13 +31,13 @@ export const buttonVariants = cva(
           DESKTOP_OUTLINE_BUTTON_EXPANDED,
         ),
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground transition-none hover:bg-[color-mix(in_oklab,var(--secondary)_98%,black)] dark:hover:bg-[color-mix(in_oklab,var(--secondary)_98%,white)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost: cn(
           "hover:bg-canvas-hover hover:text-chrome-emphasis aria-expanded:bg-canvas-hover aria-expanded:text-chrome-emphasis",
           instantHoverMotionClass,
         ),
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+          "bg-destructive/10 text-destructive transition-none hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-foreground underline-offset-4 hover:underline",
       },
       size: {
@@ -75,6 +75,7 @@ export function Button({
   return (
     <Comp
       data-slot="button"
+      data-variant={variant}
       className={cn(buttonVariants({ variant, size }), className)}
       {...props}
     />

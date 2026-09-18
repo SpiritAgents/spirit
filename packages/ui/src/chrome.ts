@@ -20,7 +20,8 @@ export const DESKTOP_OUTLINE_FILL_HOVER = "hover:bg-outline-fill";
 
 export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OUTLINE_FILL_HOVER);
 
-export const DESKTOP_OUTLINE_FOCUSED = "focus:border-outline-border-hover focus:bg-outline-fill";
+export const DESKTOP_OUTLINE_FOCUSED =
+  "focus-visible:border-outline-border-hover focus-visible:bg-outline-fill";
 
 export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(DESKTOP_OUTLINE_HOVER, "hover:text-chrome-emphasis");
 

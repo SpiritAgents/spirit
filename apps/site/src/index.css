@@ -48,6 +48,7 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
+  --skeleton-shimmer: color-mix(in oklab, white 78%, transparent);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
@@ -71,12 +72,12 @@
   --chrome-emphasis: #2b2b2b;
   --chrome-border: oklch(0.922 0 0);
   --chrome-label: #2b2b2b;
-  --chrome-secondary-label: oklch(0.42 0 0);
+  /* Opaque oklch(0.42) over chrome-background ≈ 58% black; keep that gray, but let canvas show through */
+  --chrome-secondary-label: color-mix(in oklab, black 58%, transparent);
   --chrome-tertiary-label: oklch(0.4 0 0);
   --chrome-quaternary-label: oklch(0.5 0 0);
   --site-muted: rgb(0 0 0 / 50%);
   --dialog-panel-border: color-mix(in oklab, var(--border) 40%, transparent);
-  --git-action-split: oklch(0.58 0 0);
   /* Glass Logo: black-alpha glass in light mode (white alpha is invisible on a white background) */
   --spirit-glass-fill-0: rgba(0, 0, 0, 0.06);
   --spirit-glass-fill-40: rgba(0, 0, 0, 0.018);
@@ -153,7 +154,6 @@ body {
   --color-site-muted: var(--site-muted);
   --color-chrome-background: var(--chrome-background);
   --color-dialog-panel-border: var(--dialog-panel-border);
-  --color-git-action-split: var(--git-action-split);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -237,6 +237,7 @@ body {
   --secondary-foreground: #d4d4d4;
   --muted: #181818;
   --muted-foreground: #a1a1a1;
+  --skeleton-shimmer: color-mix(in oklab, white 18%, transparent);
   --accent: #181818;
   --accent-foreground: #d4d4d4;
   --destructive: oklch(0.704 0.191 22.216);
@@ -260,12 +261,12 @@ body {
   --chrome-emphasis: #ffffff;
   --chrome-border: #272727;
   --chrome-label: #d4d4d4;
-  --chrome-secondary-label: #a3a3a3;
+  /* Opaque #a3a3a3 over black ≈ 73% white in oklab; same reading, but translucent */
+  --chrome-secondary-label: color-mix(in oklab, white 73%, transparent);
   --chrome-tertiary-label: #717171;
   --chrome-quaternary-label: #525252;
   --site-muted: rgb(255 255 255 / 50%);
   --dialog-panel-border: #272727;
-  --git-action-split: #3f3f3f;
   --spirit-glass-fill-0: rgba(255, 255, 255, 0.16);
   --spirit-glass-fill-40: rgba(255, 255, 255, 0.04);
   --spirit-glass-fill-100: rgba(220, 230, 255, 0.02);

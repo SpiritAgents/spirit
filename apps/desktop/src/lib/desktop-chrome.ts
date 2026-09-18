@@ -135,9 +135,9 @@ export const DESKTOP_CHROME_COMMIT_BTN = cn(
 /** Primary button of the Git changes area (ButtonGroup segment, paired with `size="xs"`); `border-r-0` prevents the transparent right border from stacking on the divider and looking too thick */
 export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
 
-/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); `!bg-*` overrides the Separator default bg-border / bg-input */
+/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
 export const DESKTOP_GIT_ACTION_SPLIT = cn(
-  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-border-0 !bg-[var(--git-action-split)] !p-0",
+  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
 );
 
 /** Dropdown trigger on the right side of the Git ButtonGroup */
@@ -229,8 +229,9 @@ export const DESKTOP_OUTLINE_FILL_HOVER = "hover:bg-outline-fill";
 /** Hover: wash + `--outline-border-hover` so the edge stays readable */
 export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OUTLINE_FILL_HOVER);
 
-/** Mouse-click focus: keep the hover border, no ring */
-export const DESKTOP_OUTLINE_FOCUSED = "focus:border-outline-border-hover focus:bg-outline-fill";
+/** Keyboard focus: hover border/fill. Mouse click does not keep the wash. */
+export const DESKTOP_OUTLINE_FOCUSED =
+  "focus-visible:border-outline-border-hover focus-visible:bg-outline-fill";
 
 /** Card hover wash when replacing `background-color` would punch through translucency */
 export const DESKTOP_OUTLINE_FILL_UNDERLAY =

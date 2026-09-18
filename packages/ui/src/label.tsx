@@ -11,7 +11,9 @@ export function Label({ className, ...props }: ComponentProps<typeof LabelPrimit
     <LabelPrimitive.Root
       data-slot="label"
       className={cn(
-        "text-sm font-normal leading-none text-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "flex cursor-pointer items-center gap-2 text-sm font-normal leading-none text-foreground select-none",
+        "group-data-disabled:pointer-events-none group-data-disabled:opacity-50",
+        "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className,
       )}
       {...props}

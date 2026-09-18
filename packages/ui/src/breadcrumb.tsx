@@ -1,6 +1,7 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { ChevronRight } from "lucide-react";
 import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
 
@@ -14,7 +15,7 @@ export function BreadcrumbList({ className, ...props }: ComponentProps<"ol">) {
   return (
     <ol
       data-slot="breadcrumb-list"
-      className={cn("flex flex-wrap items-center gap-1 text-sm text-muted-foreground", className)}
+      className={cn("flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground", className)}
       {...props}
     />
   );
@@ -39,7 +40,7 @@ export function BreadcrumbLink({
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn("transition-colors hover:text-foreground", className)}
+      className={cn("hover:text-chrome-emphasis", className)}
       {...props}
     />
   );
@@ -52,7 +53,7 @@ export function BreadcrumbPage({ className, ...props }: ComponentProps<"span">) 
       role="link"
       aria-disabled
       aria-current="page"
-      className={cn("text-foreground", className)}
+      className={cn("font-normal text-foreground", className)}
       {...props}
     />
   );
@@ -64,10 +65,10 @@ export function BreadcrumbSeparator({ className, children, ...props }: Component
       data-slot="breadcrumb-separator"
       role="presentation"
       aria-hidden
-      className={cn("text-muted-foreground", className)}
+      className={cn("text-muted-foreground [&>svg]:size-3.5", className)}
       {...props}
     >
-      {children ?? <span>/</span>}
+      {children ?? <ChevronRight />}
     </li>
   );
 }
@@ -78,7 +79,7 @@ export function BreadcrumbEllipsis({ className, ...props }: ComponentProps<"span
       data-slot="breadcrumb-ellipsis"
       role="presentation"
       aria-hidden
-      className={cn("flex size-6 items-center justify-center", className)}
+      className={cn("flex size-5 items-center justify-center", className)}
       {...props}
     >
       …
