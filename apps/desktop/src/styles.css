@@ -664,11 +664,12 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     @apply font-sans;
   }
 
-  /* Pointer cursor on clickable controls: only applies when "show pointer on hover" is enabled; disabled keeps not-allowed */
+  /* Pointer cursor on clickable controls: only applies when "show pointer on hover" is enabled; disabled keeps not-allowed.
+     cmdk always writes data-disabled="true"|"false"; treat "false" as enabled, same as the data-disabled variant. */
   html.spirit-clickable-pointer button:not(:disabled),
   html.spirit-clickable-pointer [role="button"]:not([aria-disabled="true"]),
-  html.spirit-clickable-pointer [role="menuitem"]:not([data-disabled]),
-  html.spirit-clickable-pointer [role="option"]:not([data-disabled]),
+  html.spirit-clickable-pointer [role="menuitem"]:not([data-disabled]:not([data-disabled="false"])),
+  html.spirit-clickable-pointer [role="option"]:not([data-disabled]:not([data-disabled="false"])),
   html.spirit-clickable-pointer [role="tab"]:not([aria-disabled="true"]),
   html.spirit-clickable-pointer [role="switch"]:not([aria-disabled="true"]),
   html.spirit-clickable-pointer [role="checkbox"]:not([aria-disabled="true"]),
@@ -721,8 +722,8 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
 
   button:disabled,
   [role="button"][aria-disabled="true"],
-  [role="menuitem"][data-disabled],
-  [role="option"][data-disabled],
+  [role="menuitem"][data-disabled]:not([data-disabled="false"]),
+  [role="option"][data-disabled]:not([data-disabled="false"]),
   [role="tab"][aria-disabled="true"],
   [role="switch"][aria-disabled="true"],
   [role="checkbox"][aria-disabled="true"],
@@ -1060,7 +1061,7 @@ html.spirit-clickable-pointer :is(.workspace-terminal-xterm, .shell-tool-xterm) 
 /* When the pointer preference is off, override @layer utilities' cursor-pointer (including variants like enabled:cursor-pointer) */
 html:not(.spirit-clickable-pointer)
   :is(.cursor-pointer, [class*="cursor-pointer"]):not(:disabled):not([aria-disabled="true"]):not(
-    [data-disabled]
+    [data-disabled]:not([data-disabled="false"])
   ) {
   cursor: default;
 }

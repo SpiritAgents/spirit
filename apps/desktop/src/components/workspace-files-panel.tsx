@@ -1499,7 +1499,7 @@ export function WorkspaceFilesPanel({
                   className="flex min-h-0 min-w-0 flex-1 flex-col"
                   onMouseDownCapture={handleScrollAreaMouseDownCapture}
                 >
-                  <ScrollArea className="min-h-0 min-w-0 flex-1" type="auto">
+                  <ScrollArea className="min-h-0 flex-1" type="auto">
                     <div
                       ref={explorerTreeRef}
                       role="tree"

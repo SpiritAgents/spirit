@@ -2,18 +2,19 @@
 // SPDX-License-Identifier: MIT
 
 import { Command as CommandPrimitive } from "cmdk";
+import { Check, ChevronLeft, Search } from "lucide-react";
 import type { ComponentProps } from "react";
 
+import { Button } from "./button.js";
 import { cn } from "./cn.js";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./dialog.js";
-import { ChevronRightIcon } from "./icons.js";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog.js";
 
 export function Command({ className, ...props }: ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
       data-slot="command"
       className={cn(
-        "flex h-full w-full flex-col overflow-hidden bg-transparent text-popover-foreground",
+        "flex h-full w-full flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground",
         className,
       )}
       {...props}
@@ -36,15 +37,15 @@ export function CommandDialog({
 }) {
   return (
     <Dialog {...props}>
+      <DialogHeader className="sr-only">
+        {title ? <DialogTitle>{title}</DialogTitle> : null}
+        {description ? <DialogDescription>{description}</DialogDescription> : null}
+      </DialogHeader>
       <DialogContent
-        className={cn("overflow-hidden p-0", className)}
+        className={cn("overflow-hidden rounded-xl p-0", className)}
         showCloseButton={false}
         {...(onEscapeKeyDown === undefined ? {} : { onEscapeKeyDown })}
       >
-        {title ? <DialogTitle className="sr-only">{title}</DialogTitle> : null}
-        {description ? (
-          <DialogDescription className="sr-only">{description}</DialogDescription>
-        ) : null}
         {children}
       </DialogContent>
     </Dialog>
@@ -63,21 +64,28 @@ export function CommandInput({
   backLabel?: string;
 }) {
   return (
-    <div className="flex items-center gap-1 border-b border-border/40 px-2">
+    <div
+      data-slot="command-input-wrapper"
+      className="-mx-1 -mt-1 flex h-11 items-center gap-2 border-b border-border/60 px-3"
+    >
       {showBack ? (
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon-xs"
+          className="-ml-1 size-7 shrink-0 text-muted-foreground"
           aria-label={backLabel}
-          className="rounded-md p-1 text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis"
           onClick={onBack}
         >
-          <ChevronRightIcon className="rotate-180" />
-        </button>
-      ) : null}
+          <ChevronLeft className="size-4" />
+        </Button>
+      ) : (
+        <Search className="size-4 shrink-0 opacity-50" aria-hidden />
+      )}
       <CommandPrimitive.Input
         data-slot="command-input"
         className={cn(
-          "h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground",
+          "h-11 w-full cursor-text bg-transparent text-sm outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}
         {...props}
@@ -90,7 +98,10 @@ export function CommandList({ className, ...props }: ComponentProps<typeof Comma
   return (
     <CommandPrimitive.List
       data-slot="command-list"
-      className={cn("max-h-80 overflow-y-auto p-1", className)}
+      className={cn(
+        "no-scrollbar max-h-72 scroll-py-1 overflow-x-hidden overflow-y-auto pt-1 outline-none",
+        className,
+      )}
       {...props}
     />
   );
@@ -103,7 +114,7 @@ export function CommandEmpty({
   return (
     <CommandPrimitive.Empty
       data-slot="command-empty"
-      className={cn("px-2 py-6 text-center text-xs text-muted-foreground", className)}
+      className={cn("py-6 text-center text-sm", className)}
       {...props}
     />
   );
@@ -117,7 +128,7 @@ export function CommandGroup({
     <CommandPrimitive.Group
       data-slot="command-group"
       className={cn(
-        "overflow-hidden p-1 text-popover-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:text-muted-foreground",
+        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-normal **:[[cmdk-group-heading]]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -132,22 +143,29 @@ export function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn("-mx-1 my-1 h-px bg-border/60", className)}
+      className={cn("-mx-1 h-px bg-border", className)}
       {...props}
     />
   );
 }
 
-export function CommandItem({ className, ...props }: ComponentProps<typeof CommandPrimitive.Item>) {
+export function CommandItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof CommandPrimitive.Item>) {
   return (
     <CommandPrimitive.Item
       data-slot="command-item"
       className={cn(
-        "relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-overlay-hover data-[selected=true]:text-accent-foreground",
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-lg data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-overlay-hover data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
         className,
       )}
       {...props}
-    />
+    >
+      {children}
+      <Check className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
+    </CommandPrimitive.Item>
   );
 }
 
@@ -155,7 +173,10 @@ export function CommandShortcut({ className, ...props }: ComponentProps<"span">)
   return (
     <span
       data-slot="command-shortcut"
-      className={cn("ml-auto text-[11px] tracking-wide text-muted-foreground", className)}
+      className={cn(
+        "ml-auto text-xs tracking-widest text-muted-foreground group-data-selected/command-item:text-foreground",
+        className,
+      )}
       {...props}
     />
   );

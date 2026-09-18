@@ -124,6 +124,9 @@ export const DESKTOP_SELECT_CONTENT = cn(
   "relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] overflow-hidden",
 );
 
+export const DESKTOP_SELECT_SCROLL_AREA =
+  "max-h-[min(24rem,var(--radix-select-content-available-height))] [&>[data-radix-scroll-area-viewport]]:max-h-[min(24rem,var(--radix-select-content-available-height))] [&>[data-radix-scroll-area-viewport]]:overscroll-contain";
+
 export const DESKTOP_SELECT_TRIGGER = cn(
   "flex h-8 min-h-8 w-full min-w-0 cursor-pointer items-center justify-between gap-2 rounded-md bg-background px-2.5 py-1 text-sm outline-none",
   DESKTOP_CONTENT_TRANSLUCENT_FILL,

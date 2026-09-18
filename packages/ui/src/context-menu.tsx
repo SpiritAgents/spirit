@@ -1,6 +1,7 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Check, ChevronRight } from "lucide-react";
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 
@@ -11,7 +12,6 @@ import {
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
-import { CheckIcon, ChevronRightIcon } from "./icons.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 
@@ -98,9 +98,10 @@ export function ContextMenuItem({
       data-variant={variant}
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         inset && "pl-8",
         variant === "destructive" &&
-          "text-destructive focus:text-destructive [&_svg]:text-destructive",
+          "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20 [&_svg]:text-destructive",
         className,
       )}
       {...props}
@@ -117,13 +118,17 @@ export function ContextMenuCheckboxItem({
   return (
     <ContextMenuPrimitive.CheckboxItem
       data-slot="context-menu-checkbox-item"
-      className={cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8", className)}
+      className={cn(
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 pr-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        className,
+      )}
       {...(checked === undefined ? {} : { checked })}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
-          <CheckIcon />
+          <Check className="size-3.5" />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -139,7 +144,11 @@ export function ContextMenuRadioItem({
   return (
     <ContextMenuPrimitive.RadioItem
       data-slot="context-menu-radio-item"
-      className={cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8", className)}
+      className={cn(
+        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+        "gap-1.5 pr-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        className,
+      )}
       {...props}
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
@@ -207,14 +216,14 @@ export function ContextMenuSubTrigger({
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
         DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
-        "data-open:bg-overlay-hover",
+        "gap-1.5 data-open:bg-overlay-hover [&_svg]:pointer-events-none [&_svg]:shrink-0",
         inset && "pl-8",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="ml-auto" />
+      <ChevronRight className="ml-auto size-3.5" />
     </ContextMenuPrimitive.SubTrigger>
   );
 }

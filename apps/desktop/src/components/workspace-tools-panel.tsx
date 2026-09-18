@@ -785,7 +785,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
           scrollbars="horizontal"
           type="hover"
           scrollHideDelay={450}
-          className="min-h-0 min-w-0 flex-1 self-stretch"
+          className="min-h-0 flex-1 self-stretch"
         >
           <div
             role="tablist"

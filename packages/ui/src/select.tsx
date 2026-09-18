@@ -1,19 +1,23 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Check, ChevronDown } from "lucide-react";
 import { Select as SelectPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
 import {
+  DESKTOP_OVERLAY_LIST_LIST_PADDING,
   DESKTOP_SELECT_CONTENT,
   DESKTOP_SELECT_ITEM,
   DESKTOP_SELECT_LABEL,
+  DESKTOP_SELECT_SCROLL_AREA,
   DESKTOP_SELECT_TRIGGER,
+  stopOverlayScrollPropagation,
 } from "./chrome.js";
 import { cn } from "./cn.js";
-import { CheckIcon, ChevronDownIcon } from "./icons.js";
 import { radixAnchoredOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
+import { ScrollArea } from "./scroll-area.js";
 
 export function Select(props: ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
@@ -40,7 +44,7 @@ export function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-3 text-muted-foreground" />
+        <ChevronDown className="size-4 opacity-60" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -62,11 +66,28 @@ export function SelectContent({
           DESKTOP_SELECT_CONTENT,
           "z-50",
           radixAnchoredOverlayMotion("select"),
+          position === "popper" &&
+            "min-w-[var(--radix-select-trigger-width)] data-side=bottom:translate-y-1 data-side=top:-translate-y-1",
           className,
         )}
         {...props}
       >
-        <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+        <ScrollArea
+          type="always"
+          className={DESKTOP_SELECT_SCROLL_AREA}
+          onWheel={stopOverlayScrollPropagation}
+          onTouchMove={stopOverlayScrollPropagation}
+        >
+          <SelectPrimitive.Viewport
+            className={cn(
+              DESKTOP_OVERLAY_LIST_LIST_PADDING,
+              "overflow-visible",
+              position === "popper" && "w-full min-w-[var(--radix-select-trigger-width)]",
+            )}
+          >
+            {children}
+          </SelectPrimitive.Viewport>
+        </ScrollArea>
       </SelectPrimitive.Content>
     </SelectPrimitive.Portal>
   );
@@ -95,7 +116,7 @@ export function SelectItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <CheckIcon />
+          <Check className="size-3.5" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
@@ -110,7 +131,7 @@ export function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("-mx-1 my-1 h-px bg-border/60", className)}
+      className={cn("-mx-1 my-1 h-px bg-border", className)}
       {...props}
     />
   );

@@ -41,7 +41,7 @@ export const ScrollArea = forwardRef<
       data-slot="scroll-area"
       type={type}
       scrollHideDelay={scrollHideDelay}
-      className={cn("relative overflow-hidden", className)}
+      className={cn("relative min-w-0 overflow-hidden", className)}
       {...props}
     >
       <ScrollAreaPrimitive.Viewport
@@ -60,7 +60,7 @@ export const ScrollArea = forwardRef<
       {scrollbars === "horizontal" || scrollbars === "both" ? (
         <ScrollBar orientation="horizontal" />
       ) : null}
-      <ScrollAreaPrimitive.Corner />
+      <ScrollAreaPrimitive.Corner className="bg-transparent" />
     </ScrollAreaPrimitive.Root>
   );
 });
@@ -75,14 +75,14 @@ export const ScrollBar = forwardRef<
       data-slot="scroll-area-scrollbar"
       orientation={orientation}
       className={cn(
-        "flex touch-none select-none p-px transition-colors",
-        orientation === "vertical" && "h-full w-2 border-l border-l-transparent",
-        orientation === "horizontal" && "h-2 flex-col border-t border-t-transparent",
+        "flex touch-none select-none p-px transition-[opacity,colors] duration-150",
+        orientation === "vertical" && "h-full w-1.5 border-l border-l-transparent",
+        orientation === "horizontal" && "h-1.5 flex-col border-t border-t-transparent",
         className,
       )}
       {...props}
     >
-      <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-border" />
+      <ScrollAreaPrimitive.Thumb className="relative flex-1 rounded-full bg-foreground/12 dark:bg-foreground/10" />
     </ScrollAreaPrimitive.Scrollbar>
   );
 });

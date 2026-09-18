@@ -228,7 +228,7 @@ export function createMarkdownMessageComponents(
       </code>
     ),
     pre: ({ className, children, ...props }: HTMLAttributes<HTMLPreElement>) => (
-      <ScrollArea scrollbars="horizontal" className="mb-2 max-w-full min-w-0 last:mb-0">
+      <ScrollArea scrollbars="horizontal" className="mb-2 max-w-full last:mb-0">
         <pre
           className={cn(
             "w-max min-w-full rounded-md border p-3 font-mono leading-relaxed",
@@ -244,7 +244,7 @@ export function createMarkdownMessageComponents(
       </ScrollArea>
     ),
     table: ({ className, children, ...props }: HTMLAttributes<HTMLTableElement>) => (
-      <ScrollArea scrollbars="horizontal" className="my-2 max-w-full min-w-0 last:mb-0">
+      <ScrollArea scrollbars="horizontal" className="my-2 max-w-full last:mb-0">
         <table
           className={cn(
             "w-max min-w-full border-collapse border border-border/50 text-sm",

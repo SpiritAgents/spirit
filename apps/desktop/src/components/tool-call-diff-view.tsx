@@ -75,7 +75,7 @@ export function ToolCallDiffView({
       ref={scrollAreaRef}
       type="always"
       scrollbars="both"
-      className="h-[min(420px,50vh)] min-h-[120px] w-full min-w-0 rounded-md border border-border/20 bg-background pr-2 [&>[data-radix-scroll-area-viewport]]:h-full [&>[data-radix-scroll-area-viewport]]:overscroll-contain"
+      className="h-[min(420px,50vh)] min-h-[120px] w-full rounded-md border border-border/20 bg-background pr-2 [&>[data-radix-scroll-area-viewport]]:h-full [&>[data-radix-scroll-area-viewport]]:overscroll-contain"
       data-tool-diff-path={relativePath}
       onWheel={(event) => {
         event.stopPropagation();
