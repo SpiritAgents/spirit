@@ -14,7 +14,7 @@ export function RadioGroup({
   return (
     <RadioGroupPrimitive.Root
       data-slot="radio-group"
-      className={cn("grid gap-2", className)}
+      className={cn("grid w-full gap-2", className)}
       {...props}
     />
   );
@@ -28,17 +28,19 @@ export function RadioGroupItem({
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
       className={cn(
-        "aspect-square size-4 rounded-full bg-background outline-none",
+        "relative flex aspect-square size-4 shrink-0 cursor-pointer items-center justify-center rounded-full bg-background outline-none",
         DESKTOP_OUTLINE_BORDER,
-        "data-checked:border-primary",
-        "focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50",
+        "after:absolute after:-inset-x-3 after:-inset-y-2",
+        "data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
+        "hover:not-data-checked:border-border hover:not-data-checked:bg-canvas-hover",
+        "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
       )}
       {...props}
     >
       <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <span className="size-2 rounded-full bg-primary" />
+        <span className="size-2 rounded-full bg-primary-foreground" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   );

@@ -75,7 +75,7 @@ export function AlertDialog({
               </AlertDialogPrimitive.Description>
             )}
           </div>
-          <div className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t border-border/40 bg-muted/50 p-4 sm:flex-row sm:justify-end">
+          <div className="-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t border-outline-border bg-muted/50 p-4 sm:flex-row sm:justify-end">
             <AlertDialogPrimitive.Cancel asChild>
               <Button type="button" variant="outline" size="sm" disabled={busy}>
                 {cancelLabel}

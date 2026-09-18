@@ -45,9 +45,9 @@ export const DESKTOP_CHROME_COMMIT_BTN = cn(
 /** Git changes section primary button (ButtonGroup segment, with `size="xs"`); `border-r-0` avoids the transparent right border looking too thick over the separator */
 export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
 
-/** Git ButtonGroup middle divider (`ButtonGroupSeparator`); `!bg-*` overrides the Separator defaults bg-border / bg-input */
+/** Git ButtonGroup middle divider (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
 export const DESKTOP_GIT_ACTION_SPLIT = cn(
-  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-border-0 !bg-[var(--git-action-split)] !p-0",
+  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
 );
 
 /** Git ButtonGroup right-side dropdown trigger */

@@ -12,11 +12,13 @@ import { Textarea } from "./textarea.js";
 export function InputGroup({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
+      role="group"
       data-slot="input-group"
       className={cn(
-        "flex w-full min-w-0 items-stretch overflow-hidden rounded-md bg-background",
+        "flex h-8 w-full min-w-0 items-center overflow-hidden rounded-lg bg-background",
         DESKTOP_CONTENT_TRANSLUCENT_FILL,
         DESKTOP_OUTLINE_BORDER,
+        "has-[>textarea]:h-auto",
         className,
       )}
       {...props}
@@ -28,7 +30,10 @@ export function InputGroupAddon({ className, ...props }: ComponentProps<"div">) 
   return (
     <div
       data-slot="input-group-addon"
-      className={cn("flex items-center px-2 text-muted-foreground", className)}
+      className={cn(
+        "flex items-center justify-center gap-2 px-2 text-sm text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );
@@ -38,7 +43,7 @@ export function InputGroupText({ className, ...props }: ComponentProps<"span">) 
   return (
     <span
       data-slot="input-group-text"
-      className={cn("text-xs text-muted-foreground", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   );
