@@ -48,7 +48,7 @@ export const DESKTOP_OVERLAY_SHADOW = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)] 
 
 export const DESKTOP_OVERLAY_SHADOW_LG = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)] dark:shadow-lg";
 
-export const DESKTOP_OVERLAY_EDGE = "border border-border/80";
+export const DESKTOP_OVERLAY_EDGE = "border border-border/80 dark:border-border/60";
 
 export const DESKTOP_OVERLAY_LIST_SHELL = cn("min-w-0 rounded-lg ring-0", DESKTOP_OVERLAY_SHADOW);
 

@@ -131,7 +131,7 @@ html.dark,
   --foreground: #e4e4e4;
   --card: #090909;
   --card-foreground: #d4d4d4;
-  --popover: #090909;
+  --popover: #000000;
   --popover-foreground: #d4d4d4;
   --primary: #ffffff;
   --primary-foreground: #000000;
@@ -154,7 +154,7 @@ html.dark,
   --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
   --control-border: var(--outline-border);
   --canvas-hover: color-mix(in oklab, white 6%, transparent);
-  --overlay-hover: color-mix(in oklab, var(--foreground) 6%, var(--popover));
+  --overlay-hover: color-mix(in oklab, var(--foreground) 18%, var(--popover));
   --ring: #3f3f3f;
   --chart-1: #e4e4e4;
   --chart-2: #a1a1a1;
