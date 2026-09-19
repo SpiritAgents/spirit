@@ -8,7 +8,7 @@ import type { ComponentProps } from "react";
 import { cn } from "./cn.js";
 
 export const badgeVariants = cva(
-  "inline-flex w-fit items-center gap-1 rounded-md border border-transparent px-1.5 py-0.5 font-normal text-xs leading-none",
+  "inline-flex h-5 w-fit shrink-0 items-center justify-center gap-1 overflow-hidden rounded-4xl border border-transparent px-2 py-0.5 font-normal text-xs leading-none whitespace-nowrap [&>svg]:size-3",
   {
     variants: {
       variant: {
@@ -16,7 +16,7 @@ export const badgeVariants = cva(
         secondary: "bg-secondary text-secondary-foreground",
         destructive: "bg-destructive/10 text-destructive dark:bg-destructive/20",
         outline: "border-outline-border bg-background text-foreground",
-        ghost: "text-muted-foreground",
+        ghost: "",
       },
     },
     defaultVariants: {
