@@ -203,18 +203,21 @@ export function MenubarSubContent({
   className,
   ...props
 }: ComponentProps<typeof MenubarPrimitive.SubContent>) {
+  const portalContainer = useUiPortalContainer();
   return (
-    <MenubarPrimitive.SubContent
-      data-slot="menubar-sub-content"
-      className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
-        DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
-        "z-50 p-1",
-        radixAnchoredOverlayMotion("menubar"),
-        className,
-      )}
-      {...props}
-    />
+    <MenubarPrimitive.Portal container={portalContainer}>
+      <MenubarPrimitive.SubContent
+        data-slot="menubar-sub-content"
+        className={cn(
+          DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+          DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
+          "z-50 p-1",
+          radixAnchoredOverlayMotion("menubar"),
+          className,
+        )}
+        {...props}
+      />
+    </MenubarPrimitive.Portal>
   );
 }
 
