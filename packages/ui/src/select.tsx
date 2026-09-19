@@ -7,6 +7,7 @@ import type { ComponentProps } from "react";
 
 import {
   DESKTOP_OVERLAY_LIST_LIST_PADDING,
+  DESKTOP_OVERLAY_MENU_SEPARATOR,
   DESKTOP_SELECT_CONTENT,
   DESKTOP_SELECT_ITEM,
   DESKTOP_SELECT_LABEL,
@@ -131,7 +132,7 @@ export function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("-mx-1 my-1 h-px bg-outline-border", className)}
+      className={cn(DESKTOP_OVERLAY_MENU_SEPARATOR, className)}
       {...props}
     />
   );

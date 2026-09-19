@@ -212,7 +212,11 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(14rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER =
+  "shrink-0 border-b border-outline-border p-1 pr-1.5";
+
+/** Menu rule: inset from the item row so it does not meet the overlay chrome. */
+export const DESKTOP_OVERLAY_MENU_SEPARATOR = "mx-1 my-1 h-px bg-outline-border";
 
 /** Outline rest fill / hover wash (Input, Outline button, item cards and rows) */
 export const DESKTOP_OUTLINE_FILL = "bg-outline-fill";

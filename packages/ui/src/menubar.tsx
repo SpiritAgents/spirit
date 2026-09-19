@@ -10,6 +10,7 @@ import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
   DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
+  DESKTOP_OVERLAY_MENU_SEPARATOR,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
@@ -113,7 +114,7 @@ export function MenubarSeparator({
   return (
     <MenubarPrimitive.Separator
       data-slot="menubar-separator"
-      className={cn("-mx-1 my-1 h-px bg-outline-border", className)}
+      className={cn(DESKTOP_OVERLAY_MENU_SEPARATOR, className)}
       {...props}
     />
   );

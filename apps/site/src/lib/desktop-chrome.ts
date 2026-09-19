@@ -106,7 +106,8 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(19rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER =
+  "shrink-0 border-b border-outline-border p-1 pr-1.5";
 
 /** Matches the PendingApprovalCard guidance input: thin-bordered shell, inner Input without ring */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL =
