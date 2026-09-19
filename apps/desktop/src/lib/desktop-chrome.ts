@@ -158,8 +158,8 @@ export const DESKTOP_OVERLAY_SHADOW = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:sha
 /** Overlay shadow: light-mode diffuse + dark-mode keeps lg (Tooltip / Popover / HoverCard, etc.) */
 export const DESKTOP_OVERLAY_SHADOW_LG = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:shadow-lg");
 
-/** Overlay panel edge: same 1px `--border` at 80% as Dropdown */
-export const DESKTOP_OVERLAY_EDGE = "border border-border/80";
+/** Overlay panel edge: 80% `--border` in light, 60% in dark */
+export const DESKTOP_OVERLAY_EDGE = "border border-border/80 dark:border-border/60";
 
 /** Ctrl+P / Ctrl+Shift+P command palette list icons and titles: slightly muted in light mode, brightened in dark mode */
 export const DESKTOP_COMMAND_PALETTE_ITEM_TONE = "opacity-70 dark:opacity-90";
