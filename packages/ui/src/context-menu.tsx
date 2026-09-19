@@ -216,7 +216,7 @@ export function ContextMenuSubTrigger({
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
         DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
-        "gap-1.5 data-open:bg-overlay-hover [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "gap-1.5 data-open:bg-overlay-hover [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         inset && "pl-8",
         className,
       )}
