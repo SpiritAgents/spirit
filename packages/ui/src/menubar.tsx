@@ -9,6 +9,7 @@ import {
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
 } from "./chrome.js";
 import { cn } from "./cn.js";
@@ -68,7 +69,7 @@ export function MenubarContent({
         className={cn(
           DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
           DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
-          "z-50 min-w-36 p-1",
+          "z-50 overflow-hidden p-1",
           radixAnchoredOverlayMotion("menubar"),
           className,
         )}
@@ -94,8 +95,8 @@ export function MenubarItem({
       data-variant={variant}
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
-        "gap-1.5 rounded-md px-1.5 py-1 text-sm [&_svg:not([class*='size-'])]:size-4",
-        inset && "pl-7",
+        "gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        inset && "pl-8",
         variant === "destructive" &&
           "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20 [&_svg]:text-destructive",
         className,
@@ -122,7 +123,7 @@ export function MenubarShortcut({ className, ...props }: ComponentProps<"span">)
   return (
     <span
       data-slot="menubar-shortcut"
-      className={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)}
+      className={cn("ml-auto text-[11px] tracking-wide text-muted-foreground", className)}
       {...props}
     />
   );
@@ -137,17 +138,13 @@ export function MenubarCheckboxItem({
   return (
     <MenubarPrimitive.CheckboxItem
       data-slot="menubar-checkbox-item"
-      className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
-        "gap-1.5 py-1 pr-1.5 pl-7 text-sm",
-        className,
-      )}
+      className={cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8", className)}
       {...(checked === undefined ? {} : { checked })}
       {...props}
     >
-      <span className="absolute left-1.5 flex size-4 items-center justify-center">
+      <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
-          <Check className="size-4" />
+          <Check className="size-3.5" />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -163,14 +160,10 @@ export function MenubarRadioItem({
   return (
     <MenubarPrimitive.RadioItem
       data-slot="menubar-radio-item"
-      className={cn(
-        DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
-        "gap-1.5 py-1 pr-1.5 pl-7 text-sm",
-        className,
-      )}
+      className={cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8", className)}
       {...props}
     >
-      <span className="absolute left-1.5 flex size-4 items-center justify-center">
+      <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
           <span className="size-1.5 rounded-full bg-current" />
         </MenubarPrimitive.ItemIndicator>
@@ -194,13 +187,14 @@ export function MenubarSubTrigger({
       data-slot="menubar-sub-trigger"
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
-        "gap-1.5 rounded-md px-1.5 py-1 text-sm data-open:bg-overlay-hover",
+        DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
+        "data-open:bg-overlay-hover data-open:text-accent-foreground",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRight className="ml-auto size-4" />
+      <ChevronRight className="ml-auto size-3.5" />
     </MenubarPrimitive.SubTrigger>
   );
 }
@@ -215,7 +209,7 @@ export function MenubarSubContent({
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
         DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
-        "z-50 min-w-32 p-1",
+        "z-50 p-1",
         radixAnchoredOverlayMotion("menubar"),
         className,
       )}
@@ -231,7 +225,10 @@ export function MenubarLabel({
   return (
     <MenubarPrimitive.Label
       data-slot="menubar-label"
-      className={cn("px-1.5 py-1 text-sm", className)}
+      className={cn(
+        "px-2 py-1.5 text-[11px] font-normal tracking-wide text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );
