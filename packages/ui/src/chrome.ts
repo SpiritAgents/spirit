@@ -118,7 +118,10 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
 
 export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED = "bg-overlay-hover text-accent-foreground";
 
-export const DESKTOP_SELECT_ITEM = cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8");
+export const DESKTOP_SELECT_ITEM = cn(
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  "pr-8 [&>span:not(.absolute)]:inline-flex [&>span:not(.absolute)]:items-center [&>span:not(.absolute)]:gap-1.5",
+);
 
 export const DESKTOP_SELECT_CONTENT = cn(
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
@@ -136,7 +139,7 @@ export const DESKTOP_SELECT_TRIGGER = cn(
   DESKTOP_OUTLINE_FOCUSED,
   DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT,
   "disabled:cursor-not-allowed disabled:opacity-50",
-  "data-placeholder:text-muted-foreground [&>span]:line-clamp-1",
+  "data-placeholder:text-muted-foreground [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
 );
 
 export const DESKTOP_SELECT_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;
