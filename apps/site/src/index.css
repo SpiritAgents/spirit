@@ -47,7 +47,7 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: color-mix(in oklab, black 50%, transparent);
   --skeleton-shimmer: color-mix(in oklab, white 78%, transparent);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
@@ -236,7 +236,7 @@ body {
   --secondary: #181818;
   --secondary-foreground: #d4d4d4;
   --muted: #181818;
-  --muted-foreground: #a1a1a1;
+  --muted-foreground: color-mix(in oklab, white 60%, transparent);
   --skeleton-shimmer: color-mix(in oklab, white 18%, transparent);
   --accent: #181818;
   --accent-foreground: #d4d4d4;
