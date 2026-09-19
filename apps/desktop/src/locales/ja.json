@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "{{workspace}} に新規セッション",
     "extensions": "拡張機能",
     "automations": "自動化",
-    "workspace": "ワークスペース",
+    "workspaces": "ワークスペース",
     "noWorkspaceSessions": "ワークスペースなし",
     "settingsTabsAria": "設定タブ",
     "extensionSettings": "拡張機能の設定",

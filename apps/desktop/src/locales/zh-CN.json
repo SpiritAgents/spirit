@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "在 {{workspace}} 新建会话",
     "extensions": "扩展",
     "automations": "自动化",
-    "workspace": "工作区",
+    "workspaces": "工作区",
     "noWorkspaceSessions": "无工作区",
     "settingsTabsAria": "设置页签",
     "extensionSettings": "扩展设置",

@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "在 {{workspace}} 中開始新工作階段",
     "extensions": "擴充功能",
     "automations": "自動化",
-    "workspace": "工作區",
+    "workspaces": "工作區",
     "noWorkspaceSessions": "無工作區",
     "settingsTabsAria": "設定分頁",
     "extensionSettings": "擴充功能設定",

@@ -35,7 +35,7 @@ const defaultMessages = {
       workspaceSessionsAria: "Workspace sessions",
       settingsNavSidebarAria: "Settings navigation sidebar",
       sessionsSidebarAria: "Sessions sidebar",
-      workspaceHeading: "Workspace",
+      workspacesHeading: "Workspaces",
       settingsHeading: "Settings",
     },
     conversation: {

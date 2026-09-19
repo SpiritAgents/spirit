@@ -1195,7 +1195,7 @@ function SessionSidebarInner({
             <div className="min-w-0 px-1.5 pb-1.5">
               {workspaceGroups.length > 0 ? (
                 <SidebarSectionCollapsible
-                  label={t("sidebar.workspace")}
+                  label={t("sidebar.workspaces")}
                   expanded={workspaceSectionExpanded}
                   disabled={disabled}
                   headerClassName="pt-2"

@@ -162,7 +162,7 @@ type DesktopSessionSidebarCopy = {
   pageNavigation: string;
   newSession: string;
   extensionsButton: string;
-  workspaceHeading: string;
+  workspacesHeading: string;
   settingsTabsAria: string;
   workspaceSessionsAria: string;
   settingsButton: string;

@@ -51,7 +51,7 @@ const MESSAGE_PATHS: Record<string, string> = {
   "sidebar.workspaceSessionsAria": "desktop.sessionSidebar.workspaceSessionsAria",
   "sidebar.settingsNavAria": "desktop.sessionSidebar.settingsNavSidebarAria",
   "sidebar.sessionNavAria": "desktop.sessionSidebar.sessionsSidebarAria",
-  "sidebar.workspace": "desktop.sessionSidebar.workspaceHeading",
+  "sidebar.workspaces": "desktop.sessionSidebar.workspacesHeading",
   "sidebar.resizeWidth": "desktop.tools.resizeAria",
   "composer.planChipLabel": "desktop.conversation.plan",
   "composer.askChipLabel": "desktop.conversation.agent",
