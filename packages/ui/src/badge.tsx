@@ -5,6 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
 
+import { DESKTOP_CONTENT_TRANSLUCENT_FILL, DESKTOP_OUTLINE_BORDER } from "./chrome.js";
 import { cn } from "./cn.js";
 
 export const badgeVariants = cva(
@@ -15,7 +16,11 @@ export const badgeVariants = cva(
         default: "bg-primary text-primary-foreground",
         secondary: "bg-secondary text-secondary-foreground",
         destructive: "bg-destructive/10 text-destructive dark:bg-destructive/20",
-        outline: "border-outline-border bg-background text-foreground",
+        outline: cn(
+          "bg-background text-foreground",
+          DESKTOP_CONTENT_TRANSLUCENT_FILL,
+          DESKTOP_OUTLINE_BORDER,
+        ),
         ghost: "",
       },
     },
