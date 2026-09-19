@@ -3529,7 +3529,7 @@ export function useDesktopRuntime() {
     [api, applySnapshot, refreshSessions],
   );
 
-  const deleteWorkspace = useCallback(
+  const removeWorkspace = useCallback(
     async (workspacePath: string) => {
       if (!api?.forgetWorkspace) {
         return;
@@ -4094,7 +4094,7 @@ export function useDesktopRuntime() {
     closeSplitPaneSession,
     deleteSession,
     renameSession,
-    deleteWorkspace,
+    removeWorkspace,
     listWorkspaceFileReferenceSuggestions,
     primeWorkspaceFileReferenceIndex,
     getWorkspaceFileReferenceIndex,

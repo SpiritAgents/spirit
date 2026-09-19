@@ -529,9 +529,9 @@ export default function App() {
                           onRenameSession={(path, displayName) =>
                             runtime.renameSession(path, displayName)
                           }
-                          deleteWorkspaceBusy={sessionNavigationBusy}
-                          onDeleteWorkspace={(workspacePath) =>
-                            runtime.deleteWorkspace(workspacePath)
+                          removeWorkspaceBusy={sessionNavigationBusy}
+                          onRemoveWorkspace={(workspacePath) =>
+                            runtime.removeWorkspace(workspacePath)
                           }
                           unseenCompletedSessionPaths={runtime.unseenCompletedSessionPaths}
                         />

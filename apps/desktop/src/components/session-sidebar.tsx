@@ -144,8 +144,8 @@ type SessionSidebarProps = {
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
-  deleteWorkspaceBusy?: boolean;
-  onDeleteWorkspace?: (workspacePath: string) => void | Promise<void>;
+  removeWorkspaceBusy?: boolean;
+  onRemoveWorkspace?: (workspacePath: string) => void | Promise<void>;
   disabled?: boolean;
   /** Shows a blue dot after a background session completes and before the user opens it. */
   unseenCompletedSessionPaths?: ReadonlySet<string>;
@@ -317,9 +317,10 @@ const sidebarItemShortcutClass =
 
 type SidebarSectionContextMenuConfig = {
   ariaLabel: string;
+  itemLabel: string;
   disabled?: boolean;
   disabledTitle?: string;
-  onRequestDelete(): void;
+  onSelect(): void;
 };
 
 type SidebarSectionCollapsibleProps = {
@@ -341,7 +342,6 @@ function SidebarSectionCollapsible({
   contextMenu,
   children,
 }: SidebarSectionCollapsibleProps) {
-  const { t } = useTranslation();
   const headerTrigger = (
     <AnimatedCollapseTrigger
       disabled={disabled}
@@ -377,11 +377,11 @@ function SidebarSectionCollapsible({
               disabled={contextMenu.disabled}
               title={contextMenu.disabled ? contextMenu.disabledTitle : undefined}
               onSelect={() => {
-                contextMenu.onRequestDelete();
+                contextMenu.onSelect();
               }}
             >
               <Trash2 aria-hidden />
-              {t("common.delete")}
+              {contextMenu.itemLabel}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -937,38 +937,38 @@ function SessionListNav({
 }
 
 type WorkspaceListNavProps = {
-  canDeleteWorkspace: boolean;
+  canRemoveWorkspace: boolean;
   canRenameSession: boolean;
   canDeleteSession: boolean;
   contextMenuWorkspaceGroup: SessionWorkspaceGroup | null;
   contextMenuWorkspaceGroupRef: RefObject<SessionWorkspaceGroup | null>;
   contextMenuSession: SessionListItem | null;
   contextMenuSessionRef: RefObject<SessionListItem | null>;
-  deleteWorkspaceBusy?: boolean;
+  removeWorkspaceBusy?: boolean;
   renameSessionBusy?: boolean;
   deleteSessionBusy?: boolean;
   onContextMenuCapture(event: MouseEvent<HTMLElement>): void;
   onContextMenuCloseAutoFocus(event: Event): void;
-  onRequestDeleteWorkspace(group: SessionWorkspaceGroup): void;
+  onRequestRemoveWorkspace(group: SessionWorkspaceGroup): void;
   onRequestRenameSession(session: SessionListItem): void;
   onRequestDeleteSession(session: SessionListItem): void;
   children: ReactNode;
 };
 
 function WorkspaceListNav({
-  canDeleteWorkspace,
+  canRemoveWorkspace,
   canRenameSession,
   canDeleteSession,
   contextMenuWorkspaceGroup,
   contextMenuWorkspaceGroupRef,
   contextMenuSession,
   contextMenuSessionRef,
-  deleteWorkspaceBusy,
+  removeWorkspaceBusy,
   renameSessionBusy,
   deleteSessionBusy,
   onContextMenuCapture,
   onContextMenuCloseAutoFocus,
-  onRequestDeleteWorkspace,
+  onRequestRemoveWorkspace,
   onRequestRenameSession,
   onRequestDeleteSession,
   children,
@@ -979,7 +979,7 @@ function WorkspaceListNav({
   const canRevealInExplorer = kind === "electron" && hostReady && api != null;
 
   const canShowMenu =
-    canDeleteWorkspace || canRenameSession || canDeleteSession || canRevealInExplorer;
+    canRemoveWorkspace || canRenameSession || canDeleteSession || canRevealInExplorer;
 
   const inner = (
     <div className="min-w-0" onContextMenuCapture={canShowMenu ? onContextMenuCapture : undefined}>
@@ -999,7 +999,7 @@ function WorkspaceListNav({
   const sessionBusy = sessionTarget?.isBusy === true;
   const showRevealInExplorer =
     isWorkspaceTarget && canRevealInExplorer && Boolean(workspaceTarget?.rootPath);
-  const showDeleteWorkspace = isWorkspaceTarget && canDeleteWorkspace;
+  const showRemoveWorkspace = isWorkspaceTarget && canRemoveWorkspace;
 
   // Do not clear target in onOpenChange(false): the Content is still mounted while the Radix exit
   // animation (duration-100) runs, and clearing it immediately would flip isWorkspaceTarget to
@@ -1026,20 +1026,20 @@ function WorkspaceListNav({
             {revealInExplorerLabel}
           </ContextMenuItem>
         ) : null}
-        {showRevealInExplorer && showDeleteWorkspace ? <ContextMenuSeparator /> : null}
-        {showDeleteWorkspace ? (
+        {showRevealInExplorer && showRemoveWorkspace ? <ContextMenuSeparator /> : null}
+        {showRemoveWorkspace ? (
           <ContextMenuItem
             variant="destructive"
-            disabled={deleteWorkspaceBusy}
+            disabled={removeWorkspaceBusy}
             onSelect={() => {
               const group = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
               if (group) {
-                onRequestDeleteWorkspace(group);
+                onRequestRemoveWorkspace(group);
               }
             }}
           >
             <Trash2 aria-hidden />
-            {t("common.delete")}
+            {t("common.remove")}
           </ContextMenuItem>
         ) : null}
         {!isWorkspaceTarget && canRenameSession ? (
@@ -1271,8 +1271,8 @@ function SessionSidebarInner({
   onDeleteSession,
   renameSessionBusy = false,
   onRenameSession,
-  deleteWorkspaceBusy = false,
-  onDeleteWorkspace,
+  removeWorkspaceBusy = false,
+  onRemoveWorkspace,
   disabled,
   unseenCompletedSessionPaths,
 }: SessionSidebarProps) {
@@ -1331,14 +1331,14 @@ function SessionSidebarInner({
   const [unboundVisibleCount, setUnboundVisibleCount] = useState(SIDEBAR_SESSION_PAGE_SIZE);
   const [deleteTarget, setDeleteTarget] = useState<SessionListItem | null>(null);
   const [deleteSessionDialogOpen, setDeleteSessionDialogOpen] = useState(false);
-  const [deleteWorkspaceTarget, setDeleteWorkspaceTarget] = useState<SessionWorkspaceGroup | null>(
+  const [removeWorkspaceTarget, setRemoveWorkspaceTarget] = useState<SessionWorkspaceGroup | null>(
     null,
   );
-  const [deleteWorkspaceDialogOpen, setDeleteWorkspaceDialogOpen] = useState(false);
-  const [deleteSectionTarget, setDeleteSectionTarget] = useState<
+  const [removeWorkspaceDialogOpen, setRemoveWorkspaceDialogOpen] = useState(false);
+  const [sectionBulkTarget, setSectionBulkTarget] = useState<
     "workspace-section" | "no-workspace-section" | null
   >(null);
-  const [deleteSectionDialogOpen, setDeleteSectionDialogOpen] = useState(false);
+  const [sectionBulkDialogOpen, setSectionBulkDialogOpen] = useState(false);
   const [contextMenuSession, setContextMenuSession] = useState<SessionListItem | null>(null);
   const contextMenuSessionRef = useRef<SessionListItem | null>(null);
   const [contextMenuWorkspaceGroup, setContextMenuWorkspaceGroup] =
@@ -1363,7 +1363,7 @@ function SessionSidebarInner({
   }, [sessions]);
   const canDeleteSession = Boolean(onDeleteSession) && !disabled;
   const canRenameSession = Boolean(onRenameSession) && !disabled;
-  const canDeleteWorkspace = Boolean(onDeleteWorkspace) && !disabled;
+  const canRemoveWorkspace = Boolean(onRemoveWorkspace) && !disabled;
   const workspaceSectionSessionCount = useMemo(
     () => workspaceGroups.reduce((total, group) => total + group.sessions.length, 0),
     [workspaceGroups],
@@ -1376,7 +1376,7 @@ function SessionSidebarInner({
     () => unboundSessions.some((session) => session.isBusy),
     [unboundSessions],
   );
-  const sectionDeleteBusy = deleteSessionBusy || deleteWorkspaceBusy;
+  const sectionBulkBusy = deleteSessionBusy || removeWorkspaceBusy;
 
   const dismissDeleteSessionDialog = useCallback(() => {
     setDeleteSessionDialogOpen(false);
@@ -1385,17 +1385,17 @@ function SessionSidebarInner({
     });
   }, []);
 
-  const dismissDeleteWorkspaceDialog = useCallback(() => {
-    setDeleteWorkspaceDialogOpen(false);
+  const dismissRemoveWorkspaceDialog = useCallback(() => {
+    setRemoveWorkspaceDialogOpen(false);
     runAfterRadixOverlayClose(() => {
-      setDeleteWorkspaceTarget(null);
+      setRemoveWorkspaceTarget(null);
     });
   }, []);
 
-  const dismissDeleteSectionDialog = useCallback(() => {
-    setDeleteSectionDialogOpen(false);
+  const dismissSectionBulkDialog = useCallback(() => {
+    setSectionBulkDialogOpen(false);
     runAfterRadixOverlayClose(() => {
-      setDeleteSectionTarget(null);
+      setSectionBulkTarget(null);
     });
   }, []);
 
@@ -1439,9 +1439,9 @@ function SessionSidebarInner({
     [sessionByPath, workspaceGroupById],
   );
 
-  const handleWorkspaceContextMenuDelete = useCallback((group: SessionWorkspaceGroup) => {
-    setDeleteWorkspaceTarget(group);
-    setDeleteWorkspaceDialogOpen(true);
+  const handleWorkspaceContextMenuRemove = useCallback((group: SessionWorkspaceGroup) => {
+    setRemoveWorkspaceTarget(group);
+    setRemoveWorkspaceDialogOpen(true);
     runAfterRadixOverlayClose(() => {
       contextMenuWorkspaceGroupRef.current = null;
       setContextMenuWorkspaceGroup(null);
@@ -1532,14 +1532,14 @@ function SessionSidebarInner({
   const handleContextMenuCloseAutoFocus = useCallback(
     (event: Event) => {
       const dialogOwnsFocus =
-        deleteSessionDialogOpen || deleteWorkspaceDialogOpen || deleteSectionDialogOpen;
+        deleteSessionDialogOpen || removeWorkspaceDialogOpen || sectionBulkDialogOpen;
       if (!pendingRenameFocusPathRef.current && !dialogOwnsFocus) {
         return;
       }
       event.preventDefault();
       pendingRenameFocusPathRef.current = null;
     },
-    [deleteSectionDialogOpen, deleteSessionDialogOpen, deleteWorkspaceDialogOpen],
+    [sectionBulkDialogOpen, deleteSessionDialogOpen, removeWorkspaceDialogOpen],
   );
 
   const isSessionSelected = (sessionPath: string) =>
@@ -1934,35 +1934,36 @@ function SessionSidebarInner({
                   disabled={disabled}
                   onOpenChange={setWorkspaceSectionExpandedPersisted}
                   contextMenu={
-                    canDeleteWorkspace
+                    canRemoveWorkspace
                       ? {
                           ariaLabel: t("sidebar.sectionActions"),
-                          disabled: sectionDeleteBusy || workspaceSectionHasBusySession,
+                          itemLabel: t("common.remove"),
+                          disabled: sectionBulkBusy || workspaceSectionHasBusySession,
                           disabledTitle: workspaceSectionHasBusySession
-                            ? t("sidebar.cannotDeleteBusyInSection")
+                            ? t("sidebar.cannotRemoveBusyInSection")
                             : undefined,
-                          onRequestDelete: () => {
-                            setDeleteSectionTarget("workspace-section");
-                            setDeleteSectionDialogOpen(true);
+                          onSelect: () => {
+                            setSectionBulkTarget("workspace-section");
+                            setSectionBulkDialogOpen(true);
                           },
                         }
                       : undefined
                   }
                 >
                   <WorkspaceListNav
-                    canDeleteWorkspace={canDeleteWorkspace}
+                    canRemoveWorkspace={canRemoveWorkspace}
                     canRenameSession={canRenameSession}
                     canDeleteSession={canDeleteSession}
                     contextMenuWorkspaceGroup={contextMenuWorkspaceGroup}
                     contextMenuWorkspaceGroupRef={contextMenuWorkspaceGroupRef}
                     contextMenuSession={contextMenuSession}
                     contextMenuSessionRef={contextMenuSessionRef}
-                    deleteWorkspaceBusy={deleteWorkspaceBusy}
+                    removeWorkspaceBusy={removeWorkspaceBusy}
                     renameSessionBusy={renameSessionBusy}
                     deleteSessionBusy={deleteSessionBusy}
                     onContextMenuCapture={handleWorkspaceContextMenuCapture}
                     onContextMenuCloseAutoFocus={handleContextMenuCloseAutoFocus}
-                    onRequestDeleteWorkspace={handleWorkspaceContextMenuDelete}
+                    onRequestRemoveWorkspace={handleWorkspaceContextMenuRemove}
                     onRequestRenameSession={handleRenameStartFromMenu}
                     onRequestDeleteSession={handleContextMenuDelete}
                   >
@@ -2047,13 +2048,14 @@ function SessionSidebarInner({
                       canDeleteSession
                         ? {
                             ariaLabel: t("sidebar.sectionActions"),
-                            disabled: sectionDeleteBusy || noWorkspaceSectionHasBusySession,
+                            itemLabel: t("common.delete"),
+                            disabled: sectionBulkBusy || noWorkspaceSectionHasBusySession,
                             disabledTitle: noWorkspaceSectionHasBusySession
                               ? t("sidebar.cannotDeleteBusyInSection")
                               : undefined,
-                            onRequestDelete: () => {
-                              setDeleteSectionTarget("no-workspace-section");
-                              setDeleteSectionDialogOpen(true);
+                            onSelect: () => {
+                              setSectionBulkTarget("no-workspace-section");
+                              setSectionBulkDialogOpen(true);
                             },
                           }
                         : undefined
@@ -2181,22 +2183,22 @@ function SessionSidebarInner({
       />
 
       <AlertDialog
-        open={deleteSectionDialogOpen}
+        open={sectionBulkDialogOpen}
         onOpenChange={(open) => {
           if (open) {
-            setDeleteSectionDialogOpen(true);
-          } else if (!sectionDeleteBusy) {
-            dismissDeleteSectionDialog();
+            setSectionBulkDialogOpen(true);
+          } else if (!sectionBulkBusy) {
+            dismissSectionBulkDialog();
           }
         }}
         title={
-          deleteSectionTarget === "workspace-section"
-            ? t("sidebar.deleteAllWorkspacesConfirmTitle")
+          sectionBulkTarget === "workspace-section"
+            ? t("sidebar.removeAllWorkspacesConfirmTitle")
             : t("sidebar.deleteAllNoWorkspaceSessionsConfirmTitle")
         }
         description={
-          deleteSectionTarget === "workspace-section"
-            ? t("sidebar.deleteAllWorkspacesConfirmDescription", {
+          sectionBulkTarget === "workspace-section"
+            ? t("sidebar.removeAllWorkspacesConfirmDescription", {
                 workspaceCount: workspaceGroups.length,
                 sessionCount: workspaceSectionSessionCount,
               })
@@ -2204,55 +2206,57 @@ function SessionSidebarInner({
                 count: unboundSessions.length,
               })
         }
-        confirmLabel={t("common.delete")}
+        confirmLabel={
+          sectionBulkTarget === "workspace-section" ? t("common.remove") : t("common.delete")
+        }
         cancelLabel={t("common.cancel")}
-        busy={sectionDeleteBusy}
+        busy={sectionBulkBusy}
         onConfirm={async () => {
-          const target = deleteSectionTarget;
+          const target = sectionBulkTarget;
           if (!target) {
             return;
           }
           if (target === "workspace-section") {
-            if (!onDeleteWorkspace) {
+            if (!onRemoveWorkspace) {
               return;
             }
             for (const group of workspaceGroups) {
-              await onDeleteWorkspace(group.rootPath ?? group.id);
+              await onRemoveWorkspace(group.rootPath ?? group.id);
             }
           } else if (onDeleteSession) {
             for (const session of unboundSessions) {
               await onDeleteSession(session.path);
             }
           }
-          dismissDeleteSectionDialog();
+          dismissSectionBulkDialog();
         }}
       />
 
       <AlertDialog
-        open={deleteWorkspaceDialogOpen}
+        open={removeWorkspaceDialogOpen}
         onOpenChange={(open) => {
           if (open) {
-            setDeleteWorkspaceDialogOpen(true);
-          } else if (!deleteWorkspaceBusy) {
-            dismissDeleteWorkspaceDialog();
+            setRemoveWorkspaceDialogOpen(true);
+          } else if (!removeWorkspaceBusy) {
+            dismissRemoveWorkspaceDialog();
           }
         }}
-        title={t("sidebar.deleteWorkspaceConfirmTitle", {
-          name: deleteWorkspaceTarget?.label ?? "",
+        title={t("sidebar.removeWorkspaceConfirmTitle", {
+          name: removeWorkspaceTarget?.label ?? "",
         })}
-        description={t("sidebar.deleteWorkspaceConfirmDescription", {
-          count: deleteWorkspaceTarget?.sessions.length ?? 0,
+        description={t("sidebar.removeWorkspaceConfirmDescription", {
+          count: removeWorkspaceTarget?.sessions.length ?? 0,
         })}
-        confirmLabel={t("common.delete")}
+        confirmLabel={t("common.remove")}
         cancelLabel={t("common.cancel")}
-        busy={deleteWorkspaceBusy}
+        busy={removeWorkspaceBusy}
         onConfirm={async () => {
-          const target = deleteWorkspaceTarget;
-          if (!target || !onDeleteWorkspace) {
+          const target = removeWorkspaceTarget;
+          if (!target || !onRemoveWorkspace) {
             return;
           }
-          await onDeleteWorkspace(target.rootPath ?? target.id);
-          dismissDeleteWorkspaceDialog();
+          await onRemoveWorkspace(target.rootPath ?? target.id);
+          dismissRemoveWorkspaceDialog();
         }}
       />
     </aside>
