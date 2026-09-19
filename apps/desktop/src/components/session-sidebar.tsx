@@ -1527,13 +1527,18 @@ function SessionSidebarInner({
     [handleRenameStart],
   );
 
-  const handleContextMenuCloseAutoFocus = useCallback((event: Event) => {
-    if (!pendingRenameFocusPathRef.current) {
-      return;
-    }
-    event.preventDefault();
-    pendingRenameFocusPathRef.current = null;
-  }, []);
+  const handleContextMenuCloseAutoFocus = useCallback(
+    (event: Event) => {
+      const dialogOwnsFocus =
+        deleteSessionDialogOpen || deleteWorkspaceDialogOpen || deleteSectionDialogOpen;
+      if (!pendingRenameFocusPathRef.current && !dialogOwnsFocus) {
+        return;
+      }
+      event.preventDefault();
+      pendingRenameFocusPathRef.current = null;
+    },
+    [deleteSectionDialogOpen, deleteSessionDialogOpen, deleteWorkspaceDialogOpen],
+  );
 
   const isSessionSelected = (sessionPath: string) =>
     !marketplaceActive &&

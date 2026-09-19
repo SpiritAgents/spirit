@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import { Button } from "./button.js";
 import { DESKTOP_OVERLAY_EDGE, DESKTOP_OVERLAY_SHADOW_LG } from "./chrome.js";
@@ -10,6 +10,29 @@ import { cn } from "./cn.js";
 import { modalContentMotion, modalOverlayMotion } from "./overlay-motion.js";
 import { Spinner } from "./spinner.js";
 import { useUiPortalContainer } from "./portal.js";
+
+const ALERT_DIALOG_INTERACTIVE_SELECTOR = "button, a, input, textarea, select, [contenteditable]";
+
+function shouldSubmitAlertDialogPrimary(
+  content: HTMLElement,
+  event: KeyboardEvent<HTMLDivElement>,
+  busy: boolean,
+): boolean {
+  if (event.key !== "Enter" || event.repeat || busy) {
+    return false;
+  }
+  if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) {
+    return false;
+  }
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || active === content) {
+    return true;
+  }
+  if (!content.contains(active)) {
+    return false;
+  }
+  return active.closest(ALERT_DIALOG_INTERACTIVE_SELECTOR) === null;
+}
 
 export type AlertDialogProps = {
   open: boolean;
@@ -60,6 +83,20 @@ export function AlertDialog({
             DESKTOP_OVERLAY_SHADOW_LG,
             modalContentMotion,
           )}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            const content = event.currentTarget;
+            if (content instanceof HTMLElement) {
+              content.focus({ preventScroll: true });
+            }
+          }}
+          onKeyDown={(event) => {
+            if (!shouldSubmitAlertDialogPrimary(event.currentTarget, event, busy)) {
+              return;
+            }
+            event.preventDefault();
+            void onConfirm();
+          }}
         >
           <div data-slot="alert-dialog-header" className="flex flex-col gap-2">
             <AlertDialogPrimitive.Title className="font-heading text-base font-normal leading-none">
@@ -83,6 +120,7 @@ export function AlertDialog({
             </AlertDialogPrimitive.Cancel>
             <Button
               type="button"
+              data-slot="alert-dialog-action"
               size="sm"
               variant={variant === "destructive" ? "destructive" : "default"}
               disabled={busy}
