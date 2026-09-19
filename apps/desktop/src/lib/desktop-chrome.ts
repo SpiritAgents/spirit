@@ -328,7 +328,10 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
 export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED = "bg-overlay-hover text-accent-foreground";
 
 /** Select dropdown item: same density as DropdownMenuItem + right-side space for the ItemIndicator */
-export const DESKTOP_SELECT_ITEM = cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8");
+export const DESKTOP_SELECT_ITEM = cn(
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  "pr-8 [&>span:not(.absolute)]:inline-flex [&>span:not(.absolute)]:items-center [&>span:not(.absolute)]:gap-1.5",
+);
 
 /** Select dropdown panel: same shell as Dropdown; scrolling is handled by the Radix Viewport while the outer layer stays overflow-hidden */
 export const DESKTOP_SELECT_CONTENT = cn(
@@ -347,7 +350,7 @@ export const DESKTOP_SELECT_TRIGGER = cn(
   DESKTOP_OUTLINE_FOCUSED,
   DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT,
   "disabled:cursor-not-allowed disabled:opacity-50",
-  "data-placeholder:text-muted-foreground [&>span]:line-clamp-1",
+  "data-placeholder:text-muted-foreground [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
 );
 
 export const DESKTOP_SELECT_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;
