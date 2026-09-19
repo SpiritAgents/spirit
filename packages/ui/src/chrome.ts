@@ -63,7 +63,11 @@ export const DESKTOP_OVERLAY_LIST_WIDTH =
 
 export const DESKTOP_OVERLAY_LIST_CONTENT = "max-h-none overflow-hidden p-0 text-xs";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1 pr-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER =
+  "shrink-0 border-b border-outline-border p-1 pr-1.5";
+
+/** Menu rule: inset from the item row so it does not meet the overlay chrome. */
+export const DESKTOP_OVERLAY_MENU_SEPARATOR = "mx-1 my-1 h-px bg-outline-border";
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
   "overflow-hidden rounded-md bg-background",

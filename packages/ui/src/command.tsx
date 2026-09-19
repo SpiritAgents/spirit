@@ -6,6 +6,7 @@ import { Check, ChevronLeft, Search } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { Button } from "./button.js";
+import { DESKTOP_OVERLAY_MENU_SEPARATOR } from "./chrome.js";
 import { cn } from "./cn.js";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog.js";
 
@@ -128,7 +129,7 @@ export function CommandGroup({
     <CommandPrimitive.Group
       data-slot="command-group"
       className={cn(
-        "overflow-hidden p-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-normal **:[[cmdk-group-heading]]:text-muted-foreground",
+        "overflow-hidden py-1 text-foreground **:[[cmdk-group-heading]]:px-2 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-xs **:[[cmdk-group-heading]]:font-normal **:[[cmdk-group-heading]]:text-muted-foreground",
         className,
       )}
       {...props}
@@ -143,7 +144,7 @@ export function CommandSeparator({
   return (
     <CommandPrimitive.Separator
       data-slot="command-separator"
-      className={cn("-mx-1 h-px bg-outline-border", className)}
+      className={cn(DESKTOP_OVERLAY_MENU_SEPARATOR, className)}
       {...props}
     />
   );
