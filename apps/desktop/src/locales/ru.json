@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "Новая сессия в {{workspace}}",
     "extensions": "Расширения",
     "automations": "Автоматизации",
-    "workspace": "Рабочее пространство",
+    "workspaces": "Рабочие пространства",
     "noWorkspaceSessions": "Без рабочего пространства",
     "settingsTabsAria": "Вкладки настроек",
     "extensionSettings": "Настройки расширений",

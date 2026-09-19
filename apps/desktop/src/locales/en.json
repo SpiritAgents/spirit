@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "New Session in {{workspace}}",
     "extensions": "Extensions",
     "automations": "Automations",
-    "workspace": "Workspace",
+    "workspaces": "Workspaces",
     "noWorkspaceSessions": "No Workspace",
     "settingsTabsAria": "Settings Tabs",
     "extensionSettings": "Extension Settings",

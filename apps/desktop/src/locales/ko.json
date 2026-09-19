@@ -509,7 +509,7 @@
     "newSessionInWorkspace": "{{workspace}}에 새 세션",
     "extensions": "확장",
     "automations": "자동화",
-    "workspace": "작업공간",
+    "workspaces": "작업공간",
     "noWorkspaceSessions": "작업공간 없음",
     "settingsTabsAria": "설정 탭",
     "extensionSettings": "확장 설정",
