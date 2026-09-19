@@ -55,6 +55,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { AlertDialog } from "@/components/ui/alert-dialog";
+import { useRevealInExplorerLabel } from "@/components/workspace-file-context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -973,11 +974,12 @@ function WorkspaceListNav({
   children,
 }: WorkspaceListNavProps) {
   const { t } = useTranslation();
+  const revealInExplorerLabel = useRevealInExplorerLabel();
   const { api, kind, ready: hostReady } = useHostApi();
-  const canOpenWorkspaceDirectory = kind === "electron" && hostReady && api != null;
+  const canRevealInExplorer = kind === "electron" && hostReady && api != null;
 
   const canShowMenu =
-    canDeleteWorkspace || canRenameSession || canDeleteSession || canOpenWorkspaceDirectory;
+    canDeleteWorkspace || canRenameSession || canDeleteSession || canRevealInExplorer;
 
   const inner = (
     <div className="min-w-0" onContextMenuCapture={canShowMenu ? onContextMenuCapture : undefined}>
@@ -995,8 +997,8 @@ function WorkspaceListNav({
   const workspaceTarget = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
   const sessionTarget = contextMenuSession ?? contextMenuSessionRef.current;
   const sessionBusy = sessionTarget?.isBusy === true;
-  const showOpenWorkspaceDirectory =
-    isWorkspaceTarget && canOpenWorkspaceDirectory && Boolean(workspaceTarget?.rootPath);
+  const showRevealInExplorer =
+    isWorkspaceTarget && canRevealInExplorer && Boolean(workspaceTarget?.rootPath);
   const showDeleteWorkspace = isWorkspaceTarget && canDeleteWorkspace;
 
   // Do not clear target in onOpenChange(false): the Content is still mounted while the Radix exit
@@ -1010,7 +1012,7 @@ function WorkspaceListNav({
         aria-label={isWorkspaceTarget ? t("sidebar.workspaceActions") : t("sidebar.sessionActions")}
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
-        {showOpenWorkspaceDirectory ? (
+        {showRevealInExplorer ? (
           <ContextMenuItem
             onSelect={() => {
               const group = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
@@ -1021,10 +1023,10 @@ function WorkspaceListNav({
             }}
           >
             <FolderOpen aria-hidden />
-            {t("sidebar.openWorkspaceDirectory")}
+            {revealInExplorerLabel}
           </ContextMenuItem>
         ) : null}
-        {showOpenWorkspaceDirectory && showDeleteWorkspace ? <ContextMenuSeparator /> : null}
+        {showRevealInExplorer && showDeleteWorkspace ? <ContextMenuSeparator /> : null}
         {showDeleteWorkspace ? (
           <ContextMenuItem
             variant="destructive"
