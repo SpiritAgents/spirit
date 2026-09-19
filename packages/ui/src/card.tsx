@@ -3,7 +3,7 @@
 
 import type { ComponentProps } from "react";
 
-import { DESKTOP_OUTLINE_BORDER } from "./chrome.js";
+import { DESKTOP_CONTENT_TRANSLUCENT_FILL, DESKTOP_OUTLINE_BORDER } from "./chrome.js";
 import { cn } from "./cn.js";
 
 export function Card({ className, ...props }: ComponentProps<"div">) {
@@ -11,7 +11,8 @@ export function Card({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-4 overflow-hidden rounded-xl bg-card py-4 text-sm text-card-foreground",
+        "flex flex-col gap-4 overflow-hidden rounded-xl bg-background/80 py-4 text-sm text-card-foreground",
+        DESKTOP_CONTENT_TRANSLUCENT_FILL,
         DESKTOP_OUTLINE_BORDER,
         className,
       )}
