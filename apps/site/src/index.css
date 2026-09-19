@@ -233,7 +233,7 @@ body {
   --popover-foreground: #d4d4d4;
   --primary: #ffffff;
   --primary-foreground: #000000;
-  --secondary: #181818;
+  --secondary: color-mix(in oklab, white 9%, transparent);
   --secondary-foreground: #d4d4d4;
   --muted: #181818;
   --muted-foreground: color-mix(in oklab, white 60%, transparent);
