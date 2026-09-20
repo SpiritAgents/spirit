@@ -1,15 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@spiritagent/ui/theme.css";
 @import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
+@import "@spiritagent/ui/theme.css";
 @import "@fontsource-variable/geist";
 @source "../../../packages/ui/src";
-
-@custom-variant dark (&:is(.dark *));
-/* All-mode content translucency (app-shell marker): canvas surfaces only — portaled
-   overlays live outside the marker and stay solid. */
-@custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
 @property --chrome-mask-top-alpha {
   syntax: "<number>";
@@ -36,48 +31,7 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: #2b2b2b;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: color-mix(in oklab, black 50%, transparent);
-  --skeleton-shimmer: color-mix(in oklab, white 78%, transparent);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --outline-border: color-mix(in oklab, var(--border) 60%, transparent);
-  --outline-border-hover: var(--border);
-  --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
-  --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
-  --control-border: var(--outline-border);
-  --canvas-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
-  --overlay-hover: color-mix(in oklab, var(--foreground) 3%, var(--popover));
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --chrome-background: oklch(0.985 0 0);
-  --chrome-emphasis: #2b2b2b;
-  --chrome-border: oklch(0.922 0 0);
-  --chrome-label: #2b2b2b;
-  /* Softer than the first 58/73 translucent mix; 50/60 keeps the two sides on the same step */
-  --chrome-secondary-label: color-mix(in oklab, black 50%, transparent);
-  --chrome-tertiary-label: oklch(0.4 0 0);
-  --chrome-quaternary-label: oklch(0.5 0 0);
   --site-muted: rgb(0 0 0 / 50%);
-  --dialog-panel-border: color-mix(in oklab, var(--border) 40%, transparent);
   /* Glass Logo: black-alpha glass in light mode (white alpha is invisible on a white background) */
   --spirit-glass-fill-0: rgba(0, 0, 0, 0.06);
   --spirit-glass-fill-40: rgba(0, 0, 0, 0.018);
@@ -145,52 +99,7 @@ body {
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, sans-serif;
-  --color-chrome-border: var(--chrome-border);
-  --color-chrome-emphasis: var(--chrome-emphasis);
-  --color-chrome-label: var(--chrome-label);
-  --color-chrome-secondary-label: var(--chrome-secondary-label);
-  --color-chrome-tertiary-label: var(--chrome-tertiary-label);
-  --color-chrome-quaternary-label: var(--chrome-quaternary-label);
   --color-site-muted: var(--site-muted);
-  --color-chrome-background: var(--chrome-background);
-  --color-dialog-panel-border: var(--dialog-panel-border);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-outline-border: var(--outline-border);
-  --color-outline-border-hover: var(--outline-border-hover);
-  --color-outline-fill: var(--outline-fill);
-  --color-content-translucent-fill: var(--content-translucent-fill);
-  --color-control-border: var(--control-border);
-  --color-canvas-hover: var(--canvas-hover);
-  --color-overlay-hover: var(--overlay-hover);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-background: var(--background);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
   --ease-collapsible-expand: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-collapsible-collapse: cubic-bezier(0.4, 0, 0.2, 1);
   --animate-spirit-collapsible-down: spirit-collapsible-down 280ms var(--ease-collapsible-expand);
@@ -223,49 +132,12 @@ body {
   --spirit-collapsible-content-height: 0px;
 }
 
+html.dark,
 .dark,
 [data-spirit-theme="dark"] {
-  --background: #000000;
+  /* Web body uses pure white. Desktop / embedded preview use #e4e4e4, which looks washed-out on the web. */
   --foreground: #ffffff;
-  --card: #090909;
-  --card-foreground: #d4d4d4;
-  --popover: #000000;
-  --popover-foreground: #d4d4d4;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: color-mix(in oklab, white 9%, transparent);
-  --secondary-foreground: #d4d4d4;
-  --muted: #181818;
-  --muted-foreground: color-mix(in oklab, white 60%, transparent);
-  --skeleton-shimmer: color-mix(in oklab, white 18%, transparent);
-  --accent: #181818;
-  --accent-foreground: #d4d4d4;
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: #272727;
-  --input: #272727;
-  --outline-border: color-mix(in oklab, var(--border) 60%, transparent);
-  --outline-border-hover: color-mix(in oklab, var(--border) 80%, transparent);
-  --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
-  --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
-  --control-border: var(--outline-border);
-  --canvas-hover: color-mix(in oklab, white 6%, transparent);
-  --overlay-hover: color-mix(in oklab, var(--foreground) 18%, var(--popover));
-  --ring: #3f3f3f;
-  --chart-1: #e4e4e4;
-  --chart-2: #a1a1a1;
-  --chart-3: #717171;
-  --chart-4: #525252;
-  --chart-5: #3f3f3f;
-  --radius: 0.5rem;
-  --chrome-background: #000000;
-  --chrome-emphasis: #ffffff;
-  --chrome-border: #272727;
-  --chrome-label: #d4d4d4;
-  --chrome-secondary-label: color-mix(in oklab, white 60%, transparent);
-  --chrome-tertiary-label: #717171;
-  --chrome-quaternary-label: #525252;
   --site-muted: rgb(255 255 255 / 50%);
-  --dialog-panel-border: #272727;
   --spirit-glass-fill-0: rgba(255, 255, 255, 0.16);
   --spirit-glass-fill-40: rgba(255, 255, 255, 0.04);
   --spirit-glass-fill-100: rgba(220, 230, 255, 0.02);
