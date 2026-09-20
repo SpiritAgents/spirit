@@ -102,7 +102,7 @@ export function MessageTurnActions({
                     onCopy();
                   }}
                 >
-                  <Copy className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <Copy className="size-3.5 shrink-0" aria-hidden />
                   <span>{t("common.copy")}</span>
                 </DropdownMenuItem>
               ) : null}
@@ -114,7 +114,7 @@ export function MessageTurnActions({
                     onFork();
                   }}
                 >
-                  <GitFork className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  <GitFork className="size-3.5 shrink-0" aria-hidden />
                   <span>{t("app.forkChat")}</span>
                 </DropdownMenuItem>
               ) : null}

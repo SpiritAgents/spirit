@@ -184,7 +184,7 @@ export function WorkspaceSelectorMenu({
                 onSelect={onAddWorkspace}
                 className={cn("gap-1.5", DESKTOP_OVERLAY_LIST_ACTION_ITEM)}
               >
-                <FolderPlus className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                <FolderPlus className="size-3 shrink-0" aria-hidden />
                 <span>{t("app.addWorkspace")}</span>
               </DropdownMenuItem>
             ) : null}
@@ -197,7 +197,7 @@ export function WorkspaceSelectorMenu({
                   workspaceBinding === "none" && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <MessageCircle className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                <MessageCircle className="size-3 shrink-0" aria-hidden />
                 <span>{t("app.noWorkspace")}</span>
               </DropdownMenuItem>
             ) : null}

@@ -87,7 +87,7 @@ export function WorkLocationMenu({
                   workLocation === option && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <Icon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <Icon className="size-3.5 shrink-0" aria-hidden />
                 <span className="min-w-0 truncate">{workLocationLabel(option)}</span>
               </DropdownMenuItem>
             );

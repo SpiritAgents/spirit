@@ -415,32 +415,23 @@ export function DesktopLayoutChromeBar({
                 <div className="p-1">
                   {showSideChat ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onSideChat?.()}>
-                      <MessageCircle
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                        aria-hidden
-                      />
+                      <MessageCircle className="size-3.5 shrink-0" aria-hidden />
                       <span>{t("app.sideChat")}</span>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplit?.()}>
-                    <SquareSplitHorizontal
-                      className="size-3.5 shrink-0 text-muted-foreground"
-                      aria-hidden
-                    />
+                    <SquareSplitHorizontal className="size-3.5 shrink-0" aria-hidden />
                     <span>{t("app.splitRight")}</span>
                     <DropdownMenuShortcut>{splitRightShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplitVertical?.()}>
-                    <SquareSplitVertical
-                      className="size-3.5 shrink-0 text-muted-foreground"
-                      aria-hidden
-                    />
+                    <SquareSplitVertical className="size-3.5 shrink-0" aria-hidden />
                     <span>{t("app.splitDown")}</span>
                     <DropdownMenuShortcut>{splitDownShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   {showClosePane ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onClosePane?.()}>
-                      <X className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      <X className="size-3.5 shrink-0" aria-hidden />
                       <span>{t("app.closePane")}</span>
                     </DropdownMenuItem>
                   ) : null}
@@ -458,7 +449,7 @@ export function DesktopLayoutChromeBar({
                           handleRenameStart();
                         }}
                       >
-                        <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Pencil className="size-3.5 shrink-0" aria-hidden />
                         <span>{t("sidebar.renameSession")}</span>
                       </DropdownMenuItem>
                     </div>
