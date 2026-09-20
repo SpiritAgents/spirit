@@ -110,17 +110,24 @@ export const DESKTOP_OVERLAY_LIST_GROUP_LABEL =
 export const DESKTOP_OVERLAY_LIST_ITEM = "px-2 py-1.5";
 
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT =
-  "relative flex w-full cursor-pointer select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5";
+  "relative flex w-full cursor-pointer select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:text-muted-foreground";
 
 export const DESKTOP_OVERLAY_LIST_ITEM_FOCUS =
-  "focus:bg-overlay-hover focus:text-accent-foreground";
+  "focus:bg-overlay-hover focus:text-accent-foreground focus:[&_svg]:text-inherit focus:[&_[data-slot$='-shortcut']]:text-inherit focus:[&_[data-slot='kbd']]:text-inherit";
 
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
   DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
 );
 
-export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED = "bg-overlay-hover text-accent-foreground";
+export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED =
+  "bg-overlay-hover text-accent-foreground [&_svg]:text-inherit [&_[data-slot$='-shortcut']]:text-inherit [&_[data-slot='kbd']]:text-inherit";
+
+export const DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE =
+  "text-destructive [&_svg]:text-destructive [&_[data-slot$='-shortcut']]:text-muted-foreground [&_[data-slot='kbd']]:text-muted-foreground data-[variant=destructive]:focus:[&_[data-slot$='-shortcut']]:text-muted-foreground data-[variant=destructive]:focus:[&_[data-slot='kbd']]:text-muted-foreground";
+
+export const DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS =
+  "focus:bg-destructive/10 focus:text-destructive focus:[&_svg]:text-destructive dark:focus:bg-destructive/20";
 
 export const DESKTOP_SELECT_ITEM = cn(
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,

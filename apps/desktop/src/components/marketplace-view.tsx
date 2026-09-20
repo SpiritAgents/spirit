@@ -808,26 +808,26 @@ export function MarketplaceView({
                         className="gap-2"
                         onSelect={() => onGenerateExtensionNavigate()}
                       >
-                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Sparkles className="size-3.5 shrink-0" aria-hidden />
                         {t("marketplace.generateExtension")}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
-                      <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      <Blocks className="size-3.5 shrink-0" aria-hidden />
                       {t("marketplace.importExtension")}
                     </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger className="gap-2">
-                        <Store className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Store className="size-3.5 shrink-0" aria-hidden />
                         {t("marketplace.addMarketplace")}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="min-w-44 p-1">
                         <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
-                          <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <Folder className="size-3.5 shrink-0" aria-hidden />
                           {t("marketplace.addFromDisk")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
-                          <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <Globe className="size-3.5 shrink-0" aria-hidden />
                           {t("marketplace.addFromUrl")}
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>

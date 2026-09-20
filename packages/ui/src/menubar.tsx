@@ -9,6 +9,8 @@ import {
   DESKTOP_OUTLINE_BORDER,
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE,
+  DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS,
   DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
   DESKTOP_OVERLAY_MENU_SEPARATOR,
   DESKTOP_OVERLAY_SHORT_MENU_MIN_WIDTH,
@@ -99,7 +101,7 @@ export function MenubarItem({
         "gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         inset && "pl-8",
         variant === "destructive" &&
-          "text-destructive focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20 [&_svg]:text-destructive",
+          cn(DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE, DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS),
         className,
       )}
       {...props}
@@ -189,7 +191,7 @@ export function MenubarSubTrigger({
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
         DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
-        "data-open:bg-overlay-hover data-open:text-accent-foreground",
+        "data-open:bg-overlay-hover data-open:text-accent-foreground data-open:[&_svg]:text-inherit data-open:[&_[data-slot$='-shortcut']]:text-inherit",
         className,
       )}
       {...props}

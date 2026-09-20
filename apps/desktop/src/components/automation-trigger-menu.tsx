@@ -132,7 +132,7 @@ export function AutomationTriggerMenu({
                       disabled={disabled || !githubConnected}
                       className="gap-2"
                     >
-                      <GitHubMarkIcon className="size-3.5 shrink-0 text-muted-foreground/80" />
+                      <GitHubMarkIcon className="size-3.5 shrink-0" />
                       {t("automations.trigger.github")}
                     </DropdownMenuSubTrigger>
                   </span>
@@ -152,7 +152,7 @@ export function AutomationTriggerMenu({
             ) : (
               <>
                 <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
-                  <GitHubMarkIcon className="size-3.5 shrink-0 text-muted-foreground/80" />
+                  <GitHubMarkIcon className="size-3.5 shrink-0" />
                   {t("automations.trigger.github")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
@@ -175,7 +175,7 @@ export function AutomationTriggerMenu({
           </DropdownMenuSub>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
-              <Clock className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+              <Clock className="size-3.5 shrink-0" aria-hidden />
               {t("automations.trigger.time")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent

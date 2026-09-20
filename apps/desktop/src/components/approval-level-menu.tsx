@@ -135,7 +135,7 @@ export function ApprovalLevelMenu({
                   approvalLevel === option.value && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <OptionIcon className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+                <OptionIcon className="size-3.5 shrink-0" aria-hidden />
                 {option.label}
               </DropdownMenuItem>
             );

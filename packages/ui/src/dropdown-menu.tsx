@@ -9,6 +9,8 @@ import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
   DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
+  DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE,
+  DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS,
   DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
   DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
   DESKTOP_OVERLAY_MENU_SEPARATOR,
@@ -151,15 +153,15 @@ export function DropdownMenuItem({
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT,
         showFocusHighlight && DESKTOP_OVERLAY_LIST_ITEM_FOCUS,
         inset && "pl-8",
-        variant === "destructive" && "text-destructive [&_svg]:text-destructive",
+        variant === "destructive" && DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE,
         variant === "destructive" &&
           showFocusHighlight &&
-          "focus:bg-destructive/10 focus:text-destructive dark:focus:bg-destructive/20",
+          DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS,
         className,
         tooltipMenuHighlight?.highlighted &&
           (variant === "destructive"
             ? "!bg-destructive/10 dark:!bg-destructive/20"
-            : "!bg-overlay-hover text-accent-foreground"),
+            : "!bg-overlay-hover text-accent-foreground [&_svg]:text-inherit"),
       )}
       {...props}
     />
@@ -265,7 +267,7 @@ export function DropdownMenuSubTrigger({
       className={cn(
         DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
         DESKTOP_OVERLAY_LIST_SUB_TRIGGER,
-        "data-open:bg-overlay-hover data-open:text-accent-foreground",
+        "data-open:bg-overlay-hover data-open:text-accent-foreground data-open:[&_svg]:text-inherit data-open:[&_[data-slot$='-shortcut']]:text-inherit",
         inset && "pl-8",
         className,
       )}

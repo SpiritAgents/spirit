@@ -91,14 +91,11 @@ export function WorkspaceFileReferenceMenu({
               {...getItemPointerHandlers(index)}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <MessageCircle className="size-3.5 shrink-0" aria-hidden />
                 <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
                   {t("composer.atReference.sessions")}
                 </span>
-                <ChevronRight
-                  className="ml-auto size-3.5 shrink-0 text-muted-foreground"
-                  aria-hidden
-                />
+                <ChevronRight className="ml-auto size-3.5 shrink-0" aria-hidden />
               </div>
             </ComposerSuggestionMenuItem>
           );
@@ -114,7 +111,7 @@ export function WorkspaceFileReferenceMenu({
             {...getItemPointerHandlers(index)}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-              <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <MessageCircle className="size-3.5 shrink-0" aria-hidden />
               <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
                 {item.title}
               </span>
