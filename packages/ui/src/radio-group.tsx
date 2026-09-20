@@ -33,7 +33,7 @@ export function RadioGroupItem({
         DESKTOP_OUTLINE_BORDER,
         "after:absolute after:-inset-x-3 after:-inset-y-2",
         "data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
-        "hover:not-data-checked:border-outline-border-hover hover:not-data-checked:bg-outline-fill",
+        "enabled:hover:not-data-checked:border-outline-border-hover enabled:hover:not-data-checked:bg-outline-fill",
         "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,
