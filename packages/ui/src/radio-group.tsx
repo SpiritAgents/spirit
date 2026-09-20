@@ -28,7 +28,7 @@ export function RadioGroupItem({
     <RadioGroupPrimitive.Item
       data-slot="radio-group-item"
       className={cn(
-        "relative flex aspect-square size-4 shrink-0 cursor-pointer items-center justify-center rounded-full bg-background outline-none",
+        "peer relative flex aspect-square size-4 shrink-0 cursor-pointer items-center justify-center rounded-full bg-background outline-none",
         "content-translucent:not-data-checked:bg-content-translucent-fill",
         DESKTOP_OUTLINE_BORDER,
         "after:absolute after:-inset-x-3 after:-inset-y-2",
