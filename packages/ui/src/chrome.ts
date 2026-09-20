@@ -1,8 +1,8 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 //
-// Desktop chrome class recipes used by shared primitives. Token values stay in
-// each app; these strings are the visual source (desktop outline / hover / overlay).
+// Desktop chrome class recipes used by shared primitives. Token values live in
+// theme.css; these strings are the visual source (desktop outline / hover / overlay).
 
 import { cn } from "./cn.js";
 
