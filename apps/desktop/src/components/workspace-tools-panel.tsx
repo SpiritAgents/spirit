@@ -1,3 +1,4 @@
+import { Globe } from "@spiritagent/icons/globe";
 import { Plus } from "@spiritagent/icons/plus";
 import {
   memo,
@@ -17,7 +18,6 @@ import {
   GitPullRequest,
   GitPullRequestClosed,
   GitPullRequestDraft,
-  Globe,
   Maximize2,
   Minimize2,
   Terminal,
