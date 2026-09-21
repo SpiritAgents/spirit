@@ -1,7 +1,8 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import type { WorkLocationKind } from "@spiritagent/host-internal/work-location";
 import type { LucideIcon } from "lucide-react";
-import { ChevronDown, GitFork, Monitor } from "lucide-react";
+import { GitFork, Monitor } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {

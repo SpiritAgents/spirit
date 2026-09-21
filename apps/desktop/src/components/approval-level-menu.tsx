@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
-import { Brain, ChevronDown, ShieldBan, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Brain, ShieldBan, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {

@@ -1,3 +1,4 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -5,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
   Blocks,
-  ChevronDown,
   Ellipsis,
   Folder,
   Globe,
