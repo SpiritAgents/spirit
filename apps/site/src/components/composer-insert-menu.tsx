@@ -1,7 +1,8 @@
+import { Plus } from "@spiritagent/icons/plus";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/typography";
 
-import { AtSign, File, Plus } from "lucide-react";
+import { AtSign, File } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
