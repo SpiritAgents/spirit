@@ -45,6 +45,10 @@
       "types": "./dist/icons/compose.d.ts",
       "default": "./dist/icons/compose.js"
     },
+    "./copy": {
+      "types": "./dist/icons/copy.d.ts",
+      "default": "./dist/icons/copy.js"
+    },
     "./gear": {
       "types": "./dist/icons/gear.d.ts",
       "default": "./dist/icons/gear.js"
