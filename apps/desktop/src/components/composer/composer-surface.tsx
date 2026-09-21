@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useMemo,
   useState,
@@ -9,7 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowUp, LoaderCircle, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import {
   ComposerAbortShortcutKbd,

@@ -1,7 +1,8 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Check, Copy, Download, LoaderCircle, X } from "lucide-react";
+import { Check, Copy, Download, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";

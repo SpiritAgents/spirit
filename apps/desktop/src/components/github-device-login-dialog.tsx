@@ -1,4 +1,5 @@
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";

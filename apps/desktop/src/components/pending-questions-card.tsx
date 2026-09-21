@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
 
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";

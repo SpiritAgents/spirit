@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,7 +9,6 @@ import {
   Ellipsis,
   Folder,
   Globe,
-  LoaderCircle,
   Search,
   Sparkles,
   Store,

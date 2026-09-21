@@ -1,6 +1,7 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
