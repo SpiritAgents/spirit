@@ -439,6 +439,9 @@ importers:
       '@shikijs/themes':
         specifier: ^4.3.1
         version: 4.4.3
+      '@spiritagent/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../../packages/ui
