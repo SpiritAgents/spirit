@@ -1,7 +1,8 @@
+import { X } from "@spiritagent/icons/x";
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { File, X } from "lucide-react";
+import { File } from "lucide-react";
 
 import {
   LOCAL_IMAGE_FLOATING_ACTION_BUTTON_CLASS,

@@ -1,7 +1,8 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { X } from "lucide-react";
+import { X } from "@spiritagent/icons/x";
+
 import { useTranslation } from "react-i18next";
 
 import {

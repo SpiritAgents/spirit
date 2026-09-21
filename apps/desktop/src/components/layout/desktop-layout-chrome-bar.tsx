@@ -1,3 +1,4 @@
+import { X } from "@spiritagent/icons/x";
 import { Pencil } from "@spiritagent/icons/pencil";
 import { Plus } from "@spiritagent/icons/plus";
 import { SidebarRight } from "@spiritagent/icons/sidebar-right";
@@ -11,7 +12,6 @@ import {
   SquareSplitHorizontal,
   SquareSplitVertical,
   Trash2,
-  X,
 } from "lucide-react";
 
 import {
