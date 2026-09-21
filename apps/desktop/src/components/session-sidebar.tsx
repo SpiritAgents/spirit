@@ -1,3 +1,4 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
   useCallback,
@@ -21,7 +22,6 @@ import {
   BookText,
   Bot,
   ArrowLeft,
-  ChevronRight,
   FolderClosed,
   FolderOpen,
   Layers,

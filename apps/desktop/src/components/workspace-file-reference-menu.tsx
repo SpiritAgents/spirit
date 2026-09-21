@@ -1,6 +1,7 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
 
 import { ComposerSuggestionMenuItem } from "@/components/composer-suggestion-menu-item";
 import { useComposerSuggestionMenuHighlight } from "@/hooks/useComposerSuggestionMenuHighlight";

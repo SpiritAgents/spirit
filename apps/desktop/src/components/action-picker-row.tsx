@@ -1,4 +1,5 @@
-import { ChevronRight, Languages, Palette, SquarePen } from "lucide-react";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { Languages, Palette, SquarePen } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_COMMAND_PALETTE_ITEM_TONE } from "@/lib/desktop-chrome";

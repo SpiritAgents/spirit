@@ -1,6 +1,7 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ChevronRight, Square } from "lucide-react";
+import { Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { EditFileLineDeltaBadge } from "@/components/edit-file-line-delta-badge";
