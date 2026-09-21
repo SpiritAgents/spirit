@@ -49,6 +49,10 @@
       "types": "./dist/icons/copy.d.ts",
       "default": "./dist/icons/copy.js"
     },
+    "./ellipsis": {
+      "types": "./dist/icons/ellipsis.d.ts",
+      "default": "./dist/icons/ellipsis.js"
+    },
     "./gear": {
       "types": "./dist/icons/gear.d.ts",
       "default": "./dist/icons/gear.js"
