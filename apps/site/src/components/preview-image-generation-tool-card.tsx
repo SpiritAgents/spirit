@@ -1,7 +1,8 @@
+import { X } from "@spiritagent/icons/x";
 import { useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { Maximize2, X } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
