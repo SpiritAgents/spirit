@@ -65,6 +65,10 @@
       "types": "./dist/icons/loader-circle.d.ts",
       "default": "./dist/icons/loader-circle.js"
     },
+    "./pencil": {
+      "types": "./dist/icons/pencil.d.ts",
+      "default": "./dist/icons/pencil.js"
+    },
     "./plus": {
       "types": "./dist/icons/plus.d.ts",
       "default": "./dist/icons/plus.js"
