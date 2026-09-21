@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useMemo,
   type ClipboardEvent as ReactClipboardEvent,
@@ -6,7 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 
-import { ArrowUp, LoaderCircle, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import {
   ComposerAbortShortcutKbd,

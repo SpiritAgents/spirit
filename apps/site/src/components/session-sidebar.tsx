@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
@@ -19,7 +20,6 @@ import {
   FolderClosed,
   FolderOpen,
   Layers,
-  LoaderCircle,
   MoonStar,
   Package,
   Palette,
