@@ -1,7 +1,8 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight, Folder } from "lucide-react";
+import { Folder } from "lucide-react";
 
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
 

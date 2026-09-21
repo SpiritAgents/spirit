@@ -1,6 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useRef, useState } from "react";
 
-import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AgentMarkdownMessage } from "@/components/agent-markdown-message";

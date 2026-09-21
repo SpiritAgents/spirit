@@ -1,16 +1,9 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  Check,
-  ChevronRight,
-  CircleX,
-  Eye,
-  GitCommit,
-  GitPullRequest,
-  MessageSquare,
-} from "lucide-react";
+import { Check, CircleX, Eye, GitCommit, GitPullRequest, MessageSquare } from "lucide-react";
 
 import { ReviewCommentHunkView } from "@/components/review-comment-hunk-view";
 import { WorkspacePrMarkdown } from "@/components/workspace-pr-markdown";
