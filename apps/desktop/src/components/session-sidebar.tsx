@@ -1,3 +1,4 @@
+import { Plus } from "@spiritagent/icons/plus";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
@@ -32,7 +33,6 @@ import {
   Palette,
   Pencil,
   Plug,
-  Plus,
   SquarePen,
   Settings,
   Sparkles,

@@ -1,3 +1,4 @@
+import { Plus } from "@spiritagent/icons/plus";
 import {
   memo,
   useCallback,
@@ -19,7 +20,6 @@ import {
   Globe,
   Maximize2,
   Minimize2,
-  Plus,
   Terminal,
 } from "lucide-react";
 import {

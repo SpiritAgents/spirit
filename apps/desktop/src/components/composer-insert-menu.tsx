@@ -1,7 +1,8 @@
+import { Plus } from "@spiritagent/icons/plus";
 import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { AtSign, File, Plus } from "lucide-react";
+import { AtSign, File } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
