@@ -1,3 +1,4 @@
+import { Pencil } from "@spiritagent/icons/pencil";
 import { Plus } from "@spiritagent/icons/plus";
 import { SidebarRight } from "@spiritagent/icons/sidebar-right";
 import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
@@ -6,7 +7,6 @@ import { useTranslation } from "react-i18next";
 
 import {
   MessageCircle,
-  Pencil,
   MoreHorizontal,
   SquareSplitHorizontal,
   SquareSplitVertical,

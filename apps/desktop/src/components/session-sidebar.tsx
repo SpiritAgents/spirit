@@ -1,3 +1,4 @@
+import { Pencil } from "@spiritagent/icons/pencil";
 import { Plus } from "@spiritagent/icons/plus";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
@@ -31,7 +32,6 @@ import {
   MoonStar,
   Network,
   Palette,
-  Pencil,
   Plug,
   SquarePen,
   Settings,
