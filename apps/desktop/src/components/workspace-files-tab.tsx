@@ -1,3 +1,4 @@
+import { Search } from "@spiritagent/icons/search";
 import {
   useCallback,
   useEffect,
@@ -10,7 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type * as Monaco from "monaco-editor";
 
-import { Eye, ListTree, Play, Search, SquarePen } from "lucide-react";
+import { Eye, ListTree, Play, SquarePen } from "lucide-react";
 
 import { MarkdownMessage } from "@/components/markdown-message";
 import { Button } from "@/components/ui/button";
