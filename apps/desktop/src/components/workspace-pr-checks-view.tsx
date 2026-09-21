@@ -1,7 +1,8 @@
+import { Check } from "@spiritagent/icons/check";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useRef, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, Circle, X } from "lucide-react";
+import { Circle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
