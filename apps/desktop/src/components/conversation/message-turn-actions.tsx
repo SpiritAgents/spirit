@@ -1,6 +1,7 @@
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
 import { Copy } from "@spiritagent/icons/copy";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { GitFork, MoreHorizontal, Play } from "lucide-react";
+import { GitFork, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,7 @@ export function MessageTurnActions({
               )}
               aria-label={t("app.messageActions")}
             >
-              <MoreHorizontal className="size-3.5 text-muted-foreground" aria-hidden />
+              <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-40 p-0">

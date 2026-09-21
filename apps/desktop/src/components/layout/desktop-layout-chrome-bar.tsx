@@ -1,3 +1,4 @@
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
 import { X } from "@spiritagent/icons/x";
 import { Pencil } from "@spiritagent/icons/pencil";
 import { Plus } from "@spiritagent/icons/plus";
@@ -6,13 +7,7 @@ import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapse
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  MessageCircle,
-  MoreHorizontal,
-  SquareSplitHorizontal,
-  SquareSplitVertical,
-  Trash2,
-} from "lucide-react";
+import { MessageCircle, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "lucide-react";
 
 import {
   NewSessionShortcutKbd,
@@ -398,7 +393,7 @@ export function DesktopLayoutChromeBar({
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
                   aria-label={t("app.conversationPaneMenu")}
                 >
-                  <MoreHorizontal className="size-3.5 text-muted-foreground" aria-hidden />
+                  <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
