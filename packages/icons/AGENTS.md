@@ -20,7 +20,7 @@ To add an icon: add one `icons/<name>.svg` + `icons/<name>.json` pair, then run 
 - File names are kebab-case (`loader-circle`, `sidebar-left-collapsed`); component names are the PascalCase form (`LoaderCircle`, `SidebarLeftCollapsed`).
 - Name by our own semantics, not another library's: `gear` (not settings), `compose` (not square-pen), `x` (not close).
 - Variant suffixes: `-collapsed`, `-outline`, …
-- `<name>.json` holds `{"tags": [...]}` — search keywords; English and Chinese terms are both welcome.
+- `<name>.json` holds `{"tags": [...]}` — search keywords; English terms only. Localized tags require a real localization mechanism, which is future work — do not add per-language tags by hand.
 
 ## Source Conventions (enforced by `scripts/verify-icons.mjs`)
 
