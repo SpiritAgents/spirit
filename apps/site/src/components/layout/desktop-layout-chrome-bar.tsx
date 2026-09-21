@@ -1,8 +1,8 @@
+import { Plus } from "@spiritagent/icons/plus";
 import { SidebarLeft } from "@spiritagent/icons/sidebar-left";
 import { SidebarLeftCollapsed } from "@spiritagent/icons/sidebar-left-collapsed";
 import { SidebarRight } from "@spiritagent/icons/sidebar-right";
 import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
-import { Plus } from "lucide-react";
 
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import {
