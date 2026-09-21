@@ -1,6 +1,7 @@
+import { X } from "@spiritagent/icons/x";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 import type { MermaidConfig } from "mermaid";
 import type { CustomRendererProps } from "streamdown";
 

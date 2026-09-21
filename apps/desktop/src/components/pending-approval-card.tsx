@@ -1,5 +1,6 @@
+import { X } from "@spiritagent/icons/x";
 import { Check } from "@spiritagent/icons/check";
-import { CornerDownLeft, MessageSquareText, ShieldCheck, X } from "lucide-react";
+import { CornerDownLeft, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
