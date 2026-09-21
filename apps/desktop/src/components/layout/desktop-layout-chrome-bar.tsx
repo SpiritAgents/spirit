@@ -1,10 +1,10 @@
+import { SidebarRight } from "@spiritagent/icons/sidebar-right";
+import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
   MessageCircle,
-  PanelRightClose,
-  PanelRightOpen,
   Pencil,
   Plus,
   MoreHorizontal,
@@ -491,9 +491,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <PanelRightClose className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden />
                   ) : (
-                    <PanelRightOpen className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden />
                   )}
                 </Button>
               </TooltipTrigger>

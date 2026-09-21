@@ -234,6 +234,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../../packages/host-internal
+      '@spiritagent/icons':
+        specifier: workspace:*
+        version: link:../../packages/icons
       '@spiritagent/server':
         specifier: workspace:*
         version: link:../../packages/server
