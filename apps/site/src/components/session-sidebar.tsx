@@ -1,3 +1,4 @@
+import { Compose } from "@spiritagent/icons/compose";
 import { Gear } from "@spiritagent/icons/gear";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
@@ -27,7 +28,6 @@ import {
   Plug,
   SlidersHorizontal,
   Sparkles,
-  SquarePen,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -1085,7 +1085,7 @@ function SessionSidebarInner({
             disabled={disabled || newSessionBusy}
             onClick={onNewSession}
           >
-            <SquarePen className="size-3.5" aria-hidden />
+            <Compose className="size-3.5" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
               <span className="ml-auto text-[0.65rem] text-chrome-secondary-label" aria-hidden>
