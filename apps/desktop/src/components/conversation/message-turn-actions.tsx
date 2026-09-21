@@ -1,5 +1,6 @@
+import { Copy } from "@spiritagent/icons/copy";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
-import { Copy, GitFork, MoreHorizontal, Play } from "lucide-react";
+import { GitFork, MoreHorizontal, Play } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
