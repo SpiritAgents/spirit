@@ -1,7 +1,8 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useMemo, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDown, GitMerge, LoaderCircle, Upload } from "lucide-react";
+import { ChevronDown, GitMerge, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";

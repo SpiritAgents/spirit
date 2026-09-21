@@ -1,8 +1,8 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/lib/i18n";
-import { LoaderCircle } from "lucide-react";
 import {
   Background,
   type Edge,

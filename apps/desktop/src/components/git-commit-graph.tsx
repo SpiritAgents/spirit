@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useCallback,
   useEffect,
@@ -10,7 +11,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { Check, Copy, GitCommit, LoaderCircle } from "lucide-react";
+import { Check, Copy, GitCommit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
