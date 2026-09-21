@@ -1,3 +1,4 @@
+import { Gear } from "@spiritagent/icons/gear";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
@@ -24,7 +25,6 @@ import {
   Package,
   Palette,
   Plug,
-  Settings,
   SlidersHorizontal,
   Sparkles,
   SquarePen,
@@ -1316,7 +1316,7 @@ function SessionSidebarInner({
             )}
             onClick={onOpenSettings}
           >
-            <Settings className="size-4" aria-hidden />
+            <Gear className="size-4" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("settings.title")}</span>
           </Button>
         </div>
