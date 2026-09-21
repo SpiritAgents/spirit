@@ -1,3 +1,4 @@
+import { Compose } from "@spiritagent/icons/compose";
 import { Gear } from "@spiritagent/icons/gear";
 import { Pencil } from "@spiritagent/icons/pencil";
 import { Plus } from "@spiritagent/icons/plus";
@@ -34,7 +35,6 @@ import {
   Network,
   Palette,
   Plug,
-  SquarePen,
   Sparkles,
   Trash2,
   type LucideIcon,
@@ -1764,7 +1764,7 @@ function SessionSidebarInner({
             }}
             onDragEnd={() => split?.clearSidebarSessionDrag()}
           >
-            <SquarePen className="size-3.5" aria-hidden />
+            <Compose className="size-3.5" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
               <span className={sidebarItemShortcutClass} aria-hidden>
