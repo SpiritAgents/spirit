@@ -1,19 +1,10 @@
+import { Search } from "@spiritagent/icons/search";
 import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  ArrowLeft,
-  Blocks,
-  Ellipsis,
-  Folder,
-  Globe,
-  Search,
-  Sparkles,
-  Store,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Blocks, Ellipsis, Folder, Globe, Sparkles, Store, Trash2 } from "lucide-react";
 
 import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
