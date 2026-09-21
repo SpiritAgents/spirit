@@ -57,6 +57,10 @@
       "types": "./dist/icons/gear.d.ts",
       "default": "./dist/icons/gear.js"
     },
+    "./globe": {
+      "types": "./dist/icons/globe.d.ts",
+      "default": "./dist/icons/globe.js"
+    },
     "./loader-circle": {
       "types": "./dist/icons/loader-circle.d.ts",
       "default": "./dist/icons/loader-circle.js"
