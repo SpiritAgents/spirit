@@ -1,7 +1,8 @@
+import { Globe } from "@spiritagent/icons/globe";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { FileText, GitBranch, Globe, Terminal } from "lucide-react";
+import { FileText, GitBranch, Terminal } from "lucide-react";
 
 import { WorkspaceBrowserPreviewTab } from "@/components/workspace-browser-preview-tab";
 import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
