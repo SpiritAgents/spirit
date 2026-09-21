@@ -1,3 +1,4 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
   useCallback,
@@ -15,7 +16,6 @@ import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import {
   Bot,
   ArrowLeft,
-  ChevronRight,
   FolderClosed,
   FolderOpen,
   Layers,
