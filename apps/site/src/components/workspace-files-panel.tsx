@@ -1,9 +1,9 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useCallback, useEffect, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import {
   Brackets,
-  ChevronDown,
   ChevronRight,
   Database,
   File,
