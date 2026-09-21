@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 
 import { workspaceExplorerIcon } from "@/lib/workspace-explorer-icon";
 import type { LandingEditorTreeNode } from "@/lib/landing-code-completion-demo-script";
