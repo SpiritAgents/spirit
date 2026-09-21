@@ -1,7 +1,8 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { Check } from "lucide-react";
+import { Check } from "@spiritagent/icons/check";
+
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 
