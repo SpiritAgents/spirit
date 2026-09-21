@@ -1,5 +1,6 @@
+import { Check } from "@spiritagent/icons/check";
 import { useTranslation } from "react-i18next";
-import { Check, ShieldCheck, X } from "lucide-react";
+import { ShieldCheck, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
