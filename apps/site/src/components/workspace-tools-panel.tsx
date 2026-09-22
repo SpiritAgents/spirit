@@ -330,7 +330,11 @@ export function WorkspaceToolsDock({
                       className={`flex min-w-0 flex-1 items-center gap-1 rounded-t-md bg-transparent py-2 pl-2 pr-2 text-xs ${FONT_WEIGHT_NORMAL} outline-none`}
                       onClick={() => setActiveDesignTabId(item.id)}
                     >
-                      <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                      <Icon
+                        className="size-3.5 shrink-0 opacity-80"
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                       {displayTitle ? (
                         <span className="truncate">{protectBrandTokens(displayTitle)}</span>
                       ) : null}
@@ -368,7 +372,7 @@ export function WorkspaceToolsDock({
                   )}
                   onClick={() => setLegacyTab(item.id)}
                 >
-                  <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                  <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
                   <span className="truncate">{toolsCopy[item.labelKey]}</span>
                 </button>
               );

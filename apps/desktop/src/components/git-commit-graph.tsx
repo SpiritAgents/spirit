@@ -501,9 +501,9 @@ function CommitGraphRowDetail({ row }: { row: GitCommitGraphRow }) {
           aria-label={copied ? t("workspace.git.copiedSha") : t("workspace.git.copySha")}
         >
           {copied ? (
-            <Check className="size-[11px]" aria-hidden />
+            <Check className="size-[11px]" aria-hidden strokeWidth={1.75} />
           ) : (
-            <Copy className="size-[11px]" aria-hidden />
+            <Copy className="size-[11px]" aria-hidden strokeWidth={1.75} />
           )}
         </button>
       </div>
@@ -634,7 +634,7 @@ export function GitCommitGraph({
           className,
         )}
       >
-        <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+        <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
         {t("workspace.git.loadingHistory")}
       </div>
     );
@@ -709,7 +709,7 @@ export function GitCommitGraph({
         >
           {loadingMore ? (
             <>
-              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
               {t("workspace.git.loadingMoreHistory")}
             </>
           ) : hasMore && onLoadMore ? (

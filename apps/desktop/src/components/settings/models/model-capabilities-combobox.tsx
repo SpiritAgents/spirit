@@ -74,7 +74,7 @@ export function ModelCapabilitiesCombobox({
                           toggleCapability(option.value, false);
                         }}
                       >
-                        <X className="size-3" aria-hidden />
+                        <X className="size-3" aria-hidden strokeWidth={1.75} />
                       </span>
                     </span>
                   );
@@ -83,7 +83,7 @@ export function ModelCapabilitiesCombobox({
                 <span className="px-1 text-muted-foreground">{t("settings.selectCapability")}</span>
               )}
             </span>
-            <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden />
+            <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
           </button>
         </DropdownMenuTrigger>
       </div>

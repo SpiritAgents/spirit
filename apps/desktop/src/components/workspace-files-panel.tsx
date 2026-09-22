@@ -361,7 +361,7 @@ function ExplorerCreateRow({
   const skipBlurCommitRef = useRef(false);
   const icon =
     kind === "dir" ? (
-      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden strokeWidth={1.75} />
     ) : (
       <WorkspaceFileIcon name="untitled.txt" className={EXPLORER_ROW_ICON_CLASS} />
     );
@@ -1143,7 +1143,7 @@ export function WorkspaceFilesPanel({
           title={plan.path}
         >
           <span className="inline-block size-3.5 shrink-0" aria-hidden />
-          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden />
+          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 truncate">Plan</span>
         </button>
       </li>
@@ -1312,9 +1312,17 @@ export function WorkspaceFilesPanel({
                   leading={EXPLORER_ROW_LEADING_SPACER}
                   icon={
                     open ? (
-                      <ChevronDown className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronDown
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     ) : (
-                      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronRight
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     )
                   }
                   dropHighlight={dragOverDirectory === dirRel}
@@ -1407,9 +1415,17 @@ export function WorkspaceFilesPanel({
                     }}
                   >
                     {rootOpen ? (
-                      <ChevronDown className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronDown
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     ) : (
-                      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronRight
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     )}
                     <span className="min-w-0 truncate">{rootLabel}</span>
                   </button>
@@ -1438,7 +1454,7 @@ export function WorkspaceFilesPanel({
                               handleCreateStart("file");
                             }}
                           >
-                            <FilePlus className="size-3" aria-hidden />
+                            <FilePlus className="size-3" aria-hidden strokeWidth={1.75} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent
@@ -1473,7 +1489,7 @@ export function WorkspaceFilesPanel({
                               handleCreateStart("dir");
                             }}
                           >
-                            <FolderPlus className="size-3" aria-hidden />
+                            <FolderPlus className="size-3" aria-hidden strokeWidth={1.75} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent

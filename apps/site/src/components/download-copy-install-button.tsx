@@ -204,9 +204,9 @@ export function DownloadCopyInstallButton({ className }: DownloadCopyInstallButt
       }}
     >
       {copied ? (
-        <Check className="size-3.5 shrink-0" aria-hidden />
+        <Check className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
       ) : (
-        <Copy className="size-3.5 shrink-0" aria-hidden />
+        <Copy className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
       )}
       <span
         ref={viewportRef}

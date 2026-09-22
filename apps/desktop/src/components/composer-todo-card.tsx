@@ -114,6 +114,7 @@ export function ComposerTodoCard({
             "size-4 shrink-0 text-muted-foreground transition-transform duration-300",
             expanded ? "rotate-180" : "rotate-0",
           )}
+          strokeWidth={1.75}
         />
       </button>
       <div
@@ -157,7 +158,12 @@ function StatusIcon({ status }: { status: "pending" | "in-progress" | "completed
     return <Check className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" strokeWidth={2.5} />;
   }
   if (status === "in-progress") {
-    return <LoaderCircle className="mt-0.5 size-3.5 shrink-0 animate-spin text-foreground/80" />;
+    return (
+      <LoaderCircle
+        className="mt-0.5 size-3.5 shrink-0 animate-spin text-foreground/80"
+        strokeWidth={1.75}
+      />
+    );
   }
   return <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/55" strokeWidth={1.5} />;
 }

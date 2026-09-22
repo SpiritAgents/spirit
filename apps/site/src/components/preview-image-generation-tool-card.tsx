@@ -98,7 +98,7 @@ export function PreviewImageGenerationToolCard({ tool }: { tool: ToolBlockSnapsh
               title={copy.viewLargeImage}
               aria-label={copy.viewLargeImage}
             >
-              <Maximize2 className="size-4" aria-hidden />
+              <Maximize2 className="size-4" aria-hidden strokeWidth={1.75} />
             </Button>
           </div>
         ) : null}
@@ -126,7 +126,7 @@ export function PreviewImageGenerationToolCard({ tool }: { tool: ToolBlockSnapsh
                   title={copy.closeImagePreview}
                   aria-label={copy.closeImagePreview}
                 >
-                  <X className="size-4" aria-hidden />
+                  <X className="size-4" aria-hidden strokeWidth={1.75} />
                 </Button>
               </DialogClose>
               {/* oxlint-disable-next-line nextjs/no-img-element */}

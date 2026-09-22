@@ -21,6 +21,7 @@ export function BrowserElementChip({ attachment, className }: BrowserElementChip
       <PenTool
         className={cn("size-[10px] shrink-0", BROWSER_ELEMENT_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       {`<${attachment.tagName}>`}
     </span>

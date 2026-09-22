@@ -75,7 +75,7 @@ export function SpiritDownloadButton({
         {...props}
       >
         <Link href={localizedPath("/download")}>
-          <Download className={cn("size-3.5", iconClassName)} aria-hidden />
+          <Download className={cn("size-3.5", iconClassName)} aria-hidden strokeWidth={1.75} />
           {children ?? messages.common.download}
         </Link>
       </Button>
@@ -90,7 +90,7 @@ export function SpiritDownloadButton({
       {...props}
     >
       <a href={platformState.href} rel="noopener noreferrer">
-        <Download className={cn("size-3.5", iconClassName)} aria-hidden />
+        <Download className={cn("size-3.5", iconClassName)} aria-hidden strokeWidth={1.75} />
         {children ?? platformState.label}
       </a>
     </Button>

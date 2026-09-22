@@ -149,7 +149,7 @@ export function MenubarCheckboxItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <MenubarPrimitive.ItemIndicator>
-          <Check className="size-3.5" />
+          <Check className="size-3.5" strokeWidth={1.75} />
         </MenubarPrimitive.ItemIndicator>
       </span>
       {children}
@@ -199,7 +199,7 @@ export function MenubarSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRight className="ml-auto size-3.5" />
+      <ChevronRight className="ml-auto size-3.5" strokeWidth={1.75} />
     </MenubarPrimitive.SubTrigger>
   );
 }

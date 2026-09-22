@@ -183,9 +183,17 @@ export function FontSelect({
                 {currentLabel}
               </span>
               {effectiveLoading ? (
-                <LoaderCircle className="size-4 shrink-0 animate-spin opacity-60" aria-hidden />
+                <LoaderCircle
+                  className="size-4 shrink-0 animate-spin opacity-60"
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
               ) : (
-                <ChevronDown className="size-4 shrink-0 opacity-60" aria-hidden />
+                <ChevronDown
+                  className="size-4 shrink-0 opacity-60"
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
               )}
             </button>
           </FilteredOverlayMenuTrigger>

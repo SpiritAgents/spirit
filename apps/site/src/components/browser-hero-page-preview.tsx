@@ -154,7 +154,7 @@ export function BrowserHeroPagePreview({
           <span
             className={`inline-flex h-7 items-center gap-1 rounded-full bg-primary px-3 text-[11px] ${FONT_WEIGHT_NORMAL} text-primary-foreground`}
           >
-            <Download className="size-3" aria-hidden />
+            <Download className="size-3" aria-hidden strokeWidth={1.75} />
             {messages.common.download}
           </span>
         </div>

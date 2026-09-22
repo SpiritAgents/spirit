@@ -98,7 +98,7 @@ function ComposerLocalFileCard({
           />
         ) : (
           <div className="flex size-full items-center justify-center text-muted-foreground">
-            <File className="size-5 shrink-0" aria-hidden />
+            <File className="size-5 shrink-0" aria-hidden strokeWidth={1.75} />
           </div>
         )}
         {removable ? (
@@ -118,7 +118,7 @@ function ComposerLocalFileCard({
               }}
               aria-label={t("composer.removeAttachment", { name: attachment.name })}
             >
-              <X className="size-3" aria-hidden />
+              <X className="size-3" aria-hidden strokeWidth={1.75} />
             </Button>
           </div>
         ) : null}

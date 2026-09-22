@@ -81,10 +81,10 @@ export function CommandInput({
           aria-label={backLabel}
           onClick={onBack}
         >
-          <ChevronLeft className="size-4" />
+          <ChevronLeft className="size-4" strokeWidth={1.75} />
         </Button>
       ) : (
-        <Search className="size-4 shrink-0 opacity-50" aria-hidden />
+        <Search className="size-4 shrink-0 opacity-50" aria-hidden strokeWidth={1.75} />
       )}
       <CommandPrimitive.Input
         data-slot="command-input"
@@ -168,7 +168,10 @@ export function CommandItem({
       {...props}
     >
       {children}
-      <Check className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100" />
+      <Check
+        className="ml-auto opacity-0 group-has-data-[slot=command-shortcut]/command-item:hidden group-data-[checked=true]/command-item:opacity-100"
+        strokeWidth={1.75}
+      />
     </CommandPrimitive.Item>
   );
 }

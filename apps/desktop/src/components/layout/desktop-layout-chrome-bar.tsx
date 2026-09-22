@@ -326,7 +326,7 @@ export function DesktopLayoutChromeBar({
                       tabIndex={sessionSidebarOpen ? -1 : undefined}
                       aria-label={t("sidebar.newSession")}
                     >
-                      <Plus className="size-3.5" aria-hidden />
+                      <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center" sideOffset={4}>
@@ -393,7 +393,11 @@ export function DesktopLayoutChromeBar({
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
                   aria-label={t("app.conversationPaneMenu")}
                 >
-                  <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden />
+                  <Ellipsis
+                    className="size-3.5 text-muted-foreground"
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -410,23 +414,31 @@ export function DesktopLayoutChromeBar({
                 <div className="p-1">
                   {showSideChat ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onSideChat?.()}>
-                      <MessageCircle className="size-3.5 shrink-0" aria-hidden />
+                      <MessageCircle className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       <span>{t("app.sideChat")}</span>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplit?.()}>
-                    <SquareSplitHorizontal className="size-3.5 shrink-0" aria-hidden />
+                    <SquareSplitHorizontal
+                      className="size-3.5 shrink-0"
+                      aria-hidden
+                      strokeWidth={1.75}
+                    />
                     <span>{t("app.splitRight")}</span>
                     <DropdownMenuShortcut>{splitRightShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplitVertical?.()}>
-                    <SquareSplitVertical className="size-3.5 shrink-0" aria-hidden />
+                    <SquareSplitVertical
+                      className="size-3.5 shrink-0"
+                      aria-hidden
+                      strokeWidth={1.75}
+                    />
                     <span>{t("app.splitDown")}</span>
                     <DropdownMenuShortcut>{splitDownShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   {showClosePane ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onClosePane?.()}>
-                      <X className="size-3.5 shrink-0" aria-hidden />
+                      <X className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       <span>{t("app.closePane")}</span>
                     </DropdownMenuItem>
                   ) : null}
@@ -444,7 +456,7 @@ export function DesktopLayoutChromeBar({
                           handleRenameStart();
                         }}
                       >
-                        <Pencil className="size-3.5 shrink-0" aria-hidden />
+                        <Pencil className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         <span>{t("sidebar.renameSession")}</span>
                       </DropdownMenuItem>
                     </div>
@@ -463,7 +475,7 @@ export function DesktopLayoutChromeBar({
                           setDeleteSessionDialogOpen(true);
                         }}
                       >
-                        <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                        <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         <span>{t("common.delete")}</span>
                       </DropdownMenuItem>
                     </div>
@@ -486,9 +498,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <SidebarRight className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden strokeWidth={1.75} />
                   ) : (
-                    <SidebarRightCollapsed className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
                   )}
                 </Button>
               </TooltipTrigger>

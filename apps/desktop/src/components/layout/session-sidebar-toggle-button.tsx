@@ -29,9 +29,9 @@ export function SessionSidebarToggleButton({ className }: { className?: string }
           {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
         >
           {sessionSidebarOpen ? (
-            <SidebarLeft className="size-3.5" aria-hidden />
+            <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
           ) : (
-            <SidebarLeftCollapsed className="size-3.5" aria-hidden />
+            <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
           )}
         </Button>
       </TooltipTrigger>

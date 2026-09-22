@@ -164,7 +164,11 @@ function BrowserNewTabPage({ onNavigate }: { onNavigate(url: string): void }) {
           disabled={scanning}
           onClick={handleRefresh}
         >
-          <RefreshCw className={cn("size-3.5", scanning && "animate-spin")} aria-hidden />
+          <RefreshCw
+            className={cn("size-3.5", scanning && "animate-spin")}
+            aria-hidden
+            strokeWidth={1.75}
+          />
           {t("workspace.browserRefreshPorts")}
         </Button>
       </div>
@@ -669,7 +673,7 @@ export function WorkspaceBrowserTab({
           disabled={navDisabled}
           onClick={handleGoBack}
         >
-          <ArrowLeft className="size-3.5" aria-hidden />
+          <ArrowLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Button
           type="button"
@@ -680,7 +684,7 @@ export function WorkspaceBrowserTab({
           disabled={showNewTab ? !lastVisitedUrl : !canGoForward}
           onClick={handleGoForward}
         >
-          <ArrowRight className="size-3.5" aria-hidden />
+          <ArrowRight className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Button
           type="button"
@@ -691,7 +695,7 @@ export function WorkspaceBrowserTab({
           disabled={navDisabled}
           onClick={handleReload}
         >
-          <RefreshCw className="size-3.5" aria-hidden />
+          <RefreshCw className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Input
           value={addressDraft}
@@ -719,7 +723,7 @@ export function WorkspaceBrowserTab({
             aria-pressed={isPickerActive}
             onClick={() => setIsPickerActive((v) => !v)}
           >
-            <PenTool className="size-3.5" aria-hidden />
+            <PenTool className="size-3.5" aria-hidden strokeWidth={1.75} />
           </Button>
         ) : null}
       </div>

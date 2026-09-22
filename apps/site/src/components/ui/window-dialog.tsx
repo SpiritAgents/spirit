@@ -152,7 +152,7 @@ function WindowDialogContent({
               size="icon-sm"
               onClick={() => onOpenChange(false)}
             >
-              <X />
+              <X strokeWidth={1.75} />
               <span className="sr-only">Close</span>
             </Button>
           ) : null}

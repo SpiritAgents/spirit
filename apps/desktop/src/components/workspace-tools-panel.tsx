@@ -835,9 +835,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               )}
             >
               {workspaceToolsFullScreen ? (
-                <Minimize2 className="size-3.5" aria-hidden />
+                <Minimize2 className="size-3.5" aria-hidden strokeWidth={1.75} />
               ) : (
-                <Maximize2 className="size-3.5" aria-hidden />
+                <Maximize2 className="size-3.5" aria-hidden strokeWidth={1.75} />
               )}
             </Button>
           </TooltipTrigger>
@@ -864,7 +864,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     instantHoverMotionClass,
                   )}
                 >
-                  <Plus className="size-3.5" aria-hidden />
+                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
@@ -912,7 +912,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     handleAddTab(kind);
                   }}
                 >
-                  <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <Icon
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                   <span className="min-w-0 flex-1 truncate">{t(meta.labelKey)}</span>
                 </DropdownMenuItem>
               );

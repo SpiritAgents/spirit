@@ -9,7 +9,7 @@ export function ComposerSendEnterKbd() {
 
   return (
     <Kbd aria-label={t("composer.sendEnterKey")}>
-      <CornerDownLeft className="size-3" aria-hidden />
+      <CornerDownLeft className="size-3" aria-hidden strokeWidth={1.75} />
     </Kbd>
   );
 }

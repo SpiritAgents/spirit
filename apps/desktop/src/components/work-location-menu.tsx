@@ -65,9 +65,17 @@ export function WorkLocationMenu({
                 "text-muted-foreground",
               )}
             >
-              <TriggerIcon className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+              <TriggerIcon
+                className="size-3.5 shrink-0 text-muted-foreground/80"
+                aria-hidden
+                strokeWidth={1.75}
+              />
               <span className="min-w-0 truncate">{label}</span>
-              <ChevronDown className="size-3 shrink-0 text-muted-foreground/80" aria-hidden />
+              <ChevronDown
+                className="size-3 shrink-0 text-muted-foreground/80"
+                aria-hidden
+                strokeWidth={1.75}
+              />
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>
@@ -88,7 +96,7 @@ export function WorkLocationMenu({
                   workLocation === option && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <Icon className="size-3.5 shrink-0" aria-hidden />
+                <Icon className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span className="min-w-0 truncate">{workLocationLabel(option)}</span>
               </DropdownMenuItem>
             );

@@ -13,6 +13,7 @@ export function Spinner({ className, ...props }: ComponentProps<typeof LoaderCir
       data-slot="spinner"
       aria-hidden={props["aria-label"] ? undefined : true}
       className={cn("size-4 animate-spin", className)}
+      strokeWidth={1.75}
       {...props}
     />
   );

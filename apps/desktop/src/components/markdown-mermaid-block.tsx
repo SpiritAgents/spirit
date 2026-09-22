@@ -63,7 +63,7 @@ function MermaidPreviewDialog({
               title={closeLabel}
               aria-label={closeLabel}
             >
-              <X className="size-4" aria-hidden />
+              <X className="size-4" aria-hidden strokeWidth={1.75} />
               <span className="sr-only">{closeLabel}</span>
             </Button>
           </DialogClose>
@@ -126,7 +126,7 @@ export function MarkdownMermaidBlock({
             title={expandLabel}
             aria-label={expandLabel}
           >
-            <Maximize2 className="size-4" aria-hidden />
+            <Maximize2 className="size-4" aria-hidden strokeWidth={1.75} />
           </Button>
         </div>
         <div className="min-w-0">

@@ -79,7 +79,7 @@ export function MarketplaceCatalogSection({
                         aria-hidden
                       />
                     ) : (
-                      <Sparkles className="size-1.5" aria-hidden />
+                      <Sparkles className="size-1.5" aria-hidden strokeWidth={1.75} />
                     )}
                   </span>
                 ))}

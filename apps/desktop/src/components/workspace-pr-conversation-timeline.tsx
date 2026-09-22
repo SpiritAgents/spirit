@@ -130,7 +130,7 @@ export function PrConversationTimelineNode({
           size === "compact" ? "size-2" : "size-2.5",
           iconClassName ?? "text-muted-foreground",
         )}
-        strokeWidth={2}
+        strokeWidth={1.75}
       />
     </div>
   );
@@ -319,6 +319,7 @@ function ReviewFileThreadCard({ thread }: { thread: GitHubPullRequestConversatio
                 open && "rotate-90",
               )}
               aria-hidden
+              strokeWidth={1.75}
             />
             <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground/75 dark:text-muted-foreground/65">
               {thread.path}

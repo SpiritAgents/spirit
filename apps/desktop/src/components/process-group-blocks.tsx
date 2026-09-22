@@ -84,6 +84,7 @@ function ProcessGroupReasoningBlock({
             open && "rotate-90",
           )}
           aria-hidden
+          strokeWidth={1.75}
         />
       </AnimatedCollapseTrigger>
       <AnimatedCollapseContent className="min-w-0">

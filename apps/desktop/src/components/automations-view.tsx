@@ -133,7 +133,7 @@ export function AutomationsView({
                 title={t("automations.generateTooltip")}
                 onClick={onGenerateAutomation}
               >
-                <Sparkles className="size-3.5 shrink-0" aria-hidden />
+                <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 {t("automations.generate")}
               </Button>
               <Button
@@ -253,7 +253,7 @@ function AutomationListNav({
             }
           }}
         >
-          <Trash2 aria-hidden />
+          <Trash2 aria-hidden strokeWidth={1.75} />
           {t("automations.deleteAutomation")}
         </ContextMenuItem>
       </ContextMenuContent>

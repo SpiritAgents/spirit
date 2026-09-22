@@ -177,7 +177,7 @@ export function HooksSettingsPanel({
               title={t("settings.generateHookTooltip")}
               onClick={() => onGenerateHookNavigate()}
             >
-              <Sparkles className="size-3.5 shrink-0" aria-hidden />
+              <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("settings.generateHook")}
             </Button>
           ) : null}
@@ -403,7 +403,9 @@ export function HooksSettingsPanel({
                 disabled={hooksBusy || !command.trim()}
                 onClick={() => void handleCreate()}
               >
-                {hooksBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {hooksBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.save")}
               </Button>
             </DialogFooterActions>

@@ -126,6 +126,7 @@ export function ProcessCardCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>

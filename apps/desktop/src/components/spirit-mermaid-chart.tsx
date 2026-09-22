@@ -153,7 +153,7 @@ function MermaidPanZoom({
             title={zoomInLabel}
             aria-label={zoomInLabel}
           >
-            <ZoomIn className="size-4" aria-hidden />
+            <ZoomIn className="size-4" aria-hidden strokeWidth={1.75} />
           </button>
           <button
             type="button"
@@ -163,7 +163,7 @@ function MermaidPanZoom({
             title={zoomOutLabel}
             aria-label={zoomOutLabel}
           >
-            <ZoomOut className="size-4" aria-hidden />
+            <ZoomOut className="size-4" aria-hidden strokeWidth={1.75} />
           </button>
           <button
             type="button"
@@ -172,7 +172,7 @@ function MermaidPanZoom({
             title={zoomResetLabel}
             aria-label={zoomResetLabel}
           >
-            <RotateCcw className="size-4" aria-hidden />
+            <RotateCcw className="size-4" aria-hidden strokeWidth={1.75} />
           </button>
         </div>
       ) : null}

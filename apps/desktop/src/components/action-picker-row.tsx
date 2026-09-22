@@ -25,7 +25,11 @@ type ActionPickerRowProps = {
 function SlashCommandIcon({ kind }: { kind: SkillSlashSuggestionKind }) {
   const Icon = SLASH_SUGGESTION_ICONS[kind];
   return (
-    <Icon className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)} aria-hidden />
+    <Icon
+      className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+      aria-hidden
+      strokeWidth={1.75}
+    />
   );
 }
 
@@ -50,6 +54,7 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
         <Compose
           className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
           aria-hidden
+          strokeWidth={1.75}
         />
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
       </div>
@@ -60,7 +65,11 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     const Icon = item.kind === "theme-menu" ? Palette : Languages;
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        <Icon className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)} aria-hidden />
+        <Icon
+          className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+          aria-hidden
+          strokeWidth={1.75}
+        />
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
         {currentValueLabel ? (
           <span className={actionPickerMetaClass}>{currentValueLabel}</span>
@@ -68,6 +77,7 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
         <ChevronRight
           className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
           aria-hidden
+          strokeWidth={1.75}
         />
       </div>
     );

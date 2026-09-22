@@ -153,7 +153,7 @@ export function PendingQuestionsCard({
               disabled={questionsBusy || currentIndex <= 0}
               onClick={() => setCurrentIndex((index) => Math.max(index - 1, 0))}
             >
-              <ChevronLeft />
+              <ChevronLeft strokeWidth={1.75} />
               <span className="sr-only">{t("app.previousQuestion")}</span>
             </Button>
             <Button
@@ -168,7 +168,7 @@ export function PendingQuestionsCard({
               disabled={questionsBusy || currentIndex >= questions.length - 1}
               onClick={() => setCurrentIndex((index) => Math.min(index + 1, questions.length - 1))}
             >
-              <ChevronRight />
+              <ChevronRight strokeWidth={1.75} />
               <span className="sr-only">{t("app.nextQuestion")}</span>
             </Button>
           </div>
@@ -247,7 +247,9 @@ export function PendingQuestionsCard({
             disabled={questionsBusy}
             onClick={handleContinue}
           >
-            {questionsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {questionsBusy ? (
+              <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+            ) : null}
             {t("app.continue")}
           </Button>
         </div>

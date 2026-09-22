@@ -133,7 +133,7 @@ export function ContextMenuCheckboxItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <ContextMenuPrimitive.ItemIndicator>
-          <Check className="size-3.5" />
+          <Check className="size-3.5" strokeWidth={1.75} />
         </ContextMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -228,7 +228,7 @@ export function ContextMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRight className="ml-auto size-3.5" />
+      <ChevronRight className="ml-auto size-3.5" strokeWidth={1.75} />
     </ContextMenuPrimitive.SubTrigger>
   );
 }

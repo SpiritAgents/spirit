@@ -47,7 +47,7 @@ export function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDown className="size-4 opacity-60" />
+        <ChevronDown className="size-4 opacity-60" strokeWidth={1.75} />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   );
@@ -119,7 +119,7 @@ export function SelectItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Check className="size-3.5" />
+          <Check className="size-3.5" strokeWidth={1.75} />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

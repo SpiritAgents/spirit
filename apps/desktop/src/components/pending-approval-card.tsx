@@ -78,13 +78,13 @@ export function PendingApprovalCard({
             onClick={() => onSubmitApproval({ kind: "allow" })}
             disabled={approveBusy}
           >
-            <Check data-icon="inline-start" />
+            <Check data-icon="inline-start" strokeWidth={1.75} />
             {t("app.allow")}
             <Kbd
               aria-label={t("composer.sendEnterKey")}
               className="ml-auto h-auto min-w-0 shrink-0 bg-transparent px-0 text-inherit opacity-70"
             >
-              <CornerDownLeft className="size-3" aria-hidden />
+              <CornerDownLeft className="size-3" aria-hidden strokeWidth={1.75} />
             </Kbd>
           </Button>
           <Button
@@ -94,7 +94,7 @@ export function PendingApprovalCard({
             onClick={() => onSubmitApproval({ kind: "allow", remember: "config" })}
             disabled={approveBusy || !pendingApproval.rememberTarget}
           >
-            <ShieldCheck data-icon="inline-start" />
+            <ShieldCheck data-icon="inline-start" strokeWidth={1.75} />
             {t("app.alwaysAllow")}
           </Button>
           <Button
@@ -104,7 +104,7 @@ export function PendingApprovalCard({
             onClick={() => onSubmitApproval({ kind: "deny" })}
             disabled={approveBusy}
           >
-            <X data-icon="inline-start" />
+            <X data-icon="inline-start" strokeWidth={1.75} />
             {t("app.deny")}
           </Button>
         </div>
@@ -127,7 +127,7 @@ export function PendingApprovalCard({
             }
             disabled={approveBusy || approvalGuidance.trim().length === 0}
           >
-            <MessageSquareText />
+            <MessageSquareText strokeWidth={1.75} />
             <span className="sr-only">{t("app.sendGuidance")}</span>
           </Button>
         </div>

@@ -244,7 +244,11 @@ export function MessageQuoteChip({ attachment }: { attachment: MessageQuoteAttac
       aria-label={formatMessageQuoteChipLabel(attachment.selectedText)}
     >
       <ChipIcon className={MESSAGE_QUOTE_CHIP_ICON_CLASS}>
-        <MessageCircleMore className={WORKSPACE_FILE_ICON_CHIP_CLASS} aria-hidden />
+        <MessageCircleMore
+          className={WORKSPACE_FILE_ICON_CHIP_CLASS}
+          aria-hidden
+          strokeWidth={1.75}
+        />
       </ChipIcon>
       <NavigableChipLabel
         target={{

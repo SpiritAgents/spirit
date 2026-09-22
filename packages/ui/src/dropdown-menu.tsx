@@ -185,7 +185,7 @@ export function DropdownMenuCheckboxItem({
     >
       <span className="absolute right-2 flex size-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <Check className="size-3.5" />
+          <Check className="size-3.5" strokeWidth={1.75} />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}
@@ -276,7 +276,7 @@ export function DropdownMenuSubTrigger({
       {...props}
     >
       {children}
-      <ChevronRight className="ml-auto size-3.5" />
+      <ChevronRight className="ml-auto size-3.5" strokeWidth={1.75} />
     </DropdownMenuPrimitive.SubTrigger>
   );
 }

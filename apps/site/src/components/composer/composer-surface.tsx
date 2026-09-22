@@ -221,7 +221,7 @@ export function ComposerSurface({
                 {showAbortButton ? (
                   <Square className="size-3.5" strokeWidth={2.4} aria-hidden />
                 ) : busy ? (
-                  <LoaderCircle className="size-3.5 animate-spin" />
+                  <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
                 ) : (
                   <ArrowUp className="size-3.5" strokeWidth={2.25} aria-hidden />
                 )}

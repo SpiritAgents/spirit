@@ -76,9 +76,9 @@ export function DesktopLayoutChromeBar({
               {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
             >
               {sessionSidebarOpen ? (
-                <SidebarLeft className="size-3.5" aria-hidden />
+                <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
               ) : (
-                <SidebarLeftCollapsed className="size-3.5" aria-hidden />
+                <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
               )}
             </Button>
           </TooltipTrigger>
@@ -110,7 +110,7 @@ export function DesktopLayoutChromeBar({
                   tabIndex={sessionSidebarOpen ? -1 : undefined}
                   aria-label={t("sidebar.newSession")}
                 >
-                  <Plus className="size-3.5" aria-hidden />
+                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
@@ -143,9 +143,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <SidebarRight className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden strokeWidth={1.75} />
                   ) : (
-                    <SidebarRightCollapsed className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
                   )}
                 </Button>
               </TooltipTrigger>

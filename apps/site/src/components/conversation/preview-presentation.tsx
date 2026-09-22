@@ -95,6 +95,7 @@ function AssistantThinkingCollapsible({ message }: { message: ConversationMessag
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>
@@ -231,6 +232,7 @@ function PreviewToolCallCard({ tool }: { tool: ToolBlockSnapshot }) {
             open && "rotate-90",
           )}
           aria-hidden
+          strokeWidth={1.75}
         />
       </button>
       <AnimatedCollapseContent className="min-w-0">

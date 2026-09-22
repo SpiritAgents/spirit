@@ -181,7 +181,11 @@ export function MarketplaceContributionGroups({
           <div className="space-y-4">
             {group.items.map((entry) => (
               <div key={entry.key} className="flex items-center gap-3">
-                <entry.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <entry.icon
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
                 <div className="min-w-0 flex-1">
                   <span
                     className={cn(

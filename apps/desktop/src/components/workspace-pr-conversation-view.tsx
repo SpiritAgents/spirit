@@ -78,7 +78,7 @@ export function WorkspacePrConversationView({
           >
             {loadingMore ? (
               <>
-                <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
                 {t("workspace.prConversationLoadingMore")}
               </>
             ) : hasMore && onLoadMore ? (
