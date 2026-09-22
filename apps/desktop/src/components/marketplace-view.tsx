@@ -501,7 +501,7 @@ export function MarketplaceView({
           {item.iconUrl ? (
             <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
           ) : (
-            <Sparkles className="size-4" aria-hidden />
+            <Sparkles className="size-4" aria-hidden strokeWidth={1.75} />
           )}
         </div>
         <span className="min-w-0 flex-1">
@@ -526,7 +526,7 @@ export function MarketplaceView({
                 className="size-8 shrink-0 self-center"
                 title={t("marketplace.moreActions")}
               >
-                <Ellipsis className="size-4" aria-hidden />
+                <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-40 p-0">
@@ -542,7 +542,7 @@ export function MarketplaceView({
                   className="gap-2"
                   onSelect={() => openUninstallDialog(item)}
                 >
-                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span>{t("marketplace.uninstall")}</span>
                 </DropdownMenuItem>
               </div>
@@ -631,6 +631,7 @@ export function MarketplaceView({
                     <LoaderCircle
                       className="size-4 animate-spin text-muted-foreground"
                       aria-label={t("common.loading")}
+                      strokeWidth={1.75}
                     />
                   ) : null}
                 </h1>
@@ -772,6 +773,7 @@ export function MarketplaceView({
                   <Search
                     className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
                     aria-hidden
+                    strokeWidth={1.75}
                   />
                   <Input
                     value={searchText}
@@ -789,10 +791,14 @@ export function MarketplaceView({
                       disabled={extensionsInstalling}
                     >
                       {extensionsInstalling ? (
-                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                        <LoaderCircle
+                          className="size-4 animate-spin"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : null}
                       {t("common.add")}
-                      <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+                      <ChevronDown className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-44 p-1">
@@ -801,26 +807,26 @@ export function MarketplaceView({
                         className="gap-2"
                         onSelect={() => onGenerateExtensionNavigate()}
                       >
-                        <Sparkles className="size-3.5 shrink-0" aria-hidden />
+                        <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         {t("marketplace.generateExtension")}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
-                      <Blocks className="size-3.5 shrink-0" aria-hidden />
+                      <Blocks className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       {t("marketplace.importExtension")}
                     </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger className="gap-2">
-                        <Store className="size-3.5 shrink-0" aria-hidden />
+                        <Store className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         {t("marketplace.addMarketplace")}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="min-w-44 p-1">
                         <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
-                          <Folder className="size-3.5 shrink-0" aria-hidden />
+                          <Folder className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                           {t("marketplace.addFromDisk")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
-                          <Globe className="size-3.5 shrink-0" aria-hidden />
+                          <Globe className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                           {t("marketplace.addFromUrl")}
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
@@ -857,7 +863,7 @@ export function MarketplaceView({
                 )}
                 onClick={closeDetail}
               >
-                <ArrowLeft className="size-4" aria-hidden />
+                <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
                 {t("common.back")}
               </Button>
             </div>

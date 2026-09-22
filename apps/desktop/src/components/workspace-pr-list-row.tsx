@@ -32,15 +32,15 @@ function PullRequestListIcon({ item }: { item: GitHubPullRequestListItem }) {
   const iconClass = cn("size-4 shrink-0", resolvePullRequestIconClass(item));
 
   if (item.merged) {
-    return <GitPullRequest className={iconClass} aria-hidden />;
+    return <GitPullRequest className={iconClass} aria-hidden strokeWidth={1.75} />;
   }
   if (item.draft) {
-    return <GitPullRequestDraft className={iconClass} aria-hidden />;
+    return <GitPullRequestDraft className={iconClass} aria-hidden strokeWidth={1.75} />;
   }
   if (item.state === "open") {
-    return <GitPullRequest className={iconClass} aria-hidden />;
+    return <GitPullRequest className={iconClass} aria-hidden strokeWidth={1.75} />;
   }
-  return <GitPullRequestClosed className={iconClass} aria-hidden />;
+  return <GitPullRequestClosed className={iconClass} aria-hidden strokeWidth={1.75} />;
 }
 
 export function WorkspacePrListRow({ item, onSelect }: WorkspacePrListRowProps) {

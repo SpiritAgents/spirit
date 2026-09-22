@@ -152,7 +152,11 @@ export function AgentsSettingsPanel({
                 >
                   {lspInstallBusy ? (
                     <>
-                      <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                      <LoaderCircle
+                        className="size-3.5 animate-spin"
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                       {t("settings.lspInstalling")}
                     </>
                   ) : (
@@ -249,7 +253,9 @@ export function AgentsSettingsPanel({
                   });
                 }}
               >
-                {lspInstallBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {lspInstallBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("settings.lspInstallConfirmAction")}
               </Button>
             </DialogFooterActions>

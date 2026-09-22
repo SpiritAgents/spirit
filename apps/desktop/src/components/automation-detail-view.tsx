@@ -164,7 +164,11 @@ export function AutomationDetailView({
             >
               {t("automations.detailBack")}
             </button>
-            <ChevronRight className="size-3.5 text-muted-foreground/70" aria-hidden />
+            <ChevronRight
+              className="size-3.5 text-muted-foreground/70"
+              aria-hidden
+              strokeWidth={1.75}
+            />
             <span className={cn(FONT_WEIGHT_MEDIUM, "text-foreground")}>
               {definition?.title ?? listFallback?.title ?? automationId}
             </span>

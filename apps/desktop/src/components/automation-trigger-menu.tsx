@@ -108,7 +108,11 @@ export function AutomationTriggerMenu({
           )}
         >
           <span className="min-w-0 truncate">{label}</span>
-          <ChevronDown className="size-3 shrink-0 text-muted-foreground/80" aria-hidden />
+          <ChevronDown
+            className="size-3 shrink-0 text-muted-foreground/80"
+            aria-hidden
+            strokeWidth={1.75}
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -176,7 +180,7 @@ export function AutomationTriggerMenu({
           </DropdownMenuSub>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
-              <Clock className="size-3.5 shrink-0" aria-hidden />
+              <Clock className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("automations.trigger.time")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent

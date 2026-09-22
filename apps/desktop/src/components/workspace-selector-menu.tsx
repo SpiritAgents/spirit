@@ -168,7 +168,11 @@ export function WorkspaceSelectorMenu({
                 <span ref={triggerLabelRef} className="min-w-0 truncate">
                   {currentWorkspaceLabel}
                 </span>
-                <ChevronDown className="size-3 shrink-0 text-muted-foreground/80" aria-hidden />
+                <ChevronDown
+                  className="size-3 shrink-0 text-muted-foreground/80"
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
               </button>
             </FilteredOverlayMenuTrigger>
           </TooltipTrigger>
@@ -185,7 +189,7 @@ export function WorkspaceSelectorMenu({
                 onSelect={onAddWorkspace}
                 className={cn("gap-1.5", DESKTOP_OVERLAY_LIST_ACTION_ITEM)}
               >
-                <FolderPlus className="size-3 shrink-0" aria-hidden />
+                <FolderPlus className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span>{t("app.addWorkspace")}</span>
               </DropdownMenuItem>
             ) : null}
@@ -198,7 +202,7 @@ export function WorkspaceSelectorMenu({
                   workspaceBinding === "none" && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <MessageCircle className="size-3 shrink-0" aria-hidden />
+                <MessageCircle className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span>{t("app.noWorkspace")}</span>
               </DropdownMenuItem>
             ) : null}

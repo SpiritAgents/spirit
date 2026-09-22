@@ -113,7 +113,7 @@ export function WorkspaceCapabilityTrustDialog({
               disabled={busy}
               onClick={() => onReply("deny")}
             >
-              <X data-icon="inline-start" />
+              <X data-icon="inline-start" strokeWidth={1.75} />
               {t("workspaceTrust.deny")}
             </Button>
             <Button
@@ -123,11 +123,11 @@ export function WorkspaceCapabilityTrustDialog({
               disabled={busy}
               onClick={() => onReply("alwaysTrust")}
             >
-              <ShieldCheck data-icon="inline-start" />
+              <ShieldCheck data-icon="inline-start" strokeWidth={1.75} />
               {t("workspaceTrust.alwaysTrust")}
             </Button>
             <Button type="button" size="sm" disabled={busy} onClick={() => onReply("allowOnce")}>
-              <Check data-icon="inline-start" />
+              <Check data-icon="inline-start" strokeWidth={1.75} />
               {t("workspaceTrust.allowOnce")}
             </Button>
           </DialogFooterActions>

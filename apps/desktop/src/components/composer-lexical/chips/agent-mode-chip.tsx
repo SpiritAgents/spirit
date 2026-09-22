@@ -38,7 +38,11 @@ function PlanIcon() {
 function AskIcon() {
   return (
     <ChipIcon>
-      <MessageCircleQuestionMark size={COMPOSER_PILL_CHIP_ICON_SIZE_PX} aria-hidden />
+      <MessageCircleQuestionMark
+        size={COMPOSER_PILL_CHIP_ICON_SIZE_PX}
+        aria-hidden
+        strokeWidth={1.75}
+      />
     </ChipIcon>
   );
 }
@@ -46,7 +50,7 @@ function AskIcon() {
 function DebugIcon() {
   return (
     <ChipIcon>
-      <Bug size={COMPOSER_PILL_CHIP_ICON_SIZE_PX} aria-hidden />
+      <Bug size={COMPOSER_PILL_CHIP_ICON_SIZE_PX} aria-hidden strokeWidth={1.75} />
     </ChipIcon>
   );
 }

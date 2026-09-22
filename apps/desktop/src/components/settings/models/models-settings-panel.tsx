@@ -812,7 +812,9 @@ export function ModelsSettingsPanel({
                   })();
                 }}
               >
-                {modelsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {modelsBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.save")}
               </Button>
             </DialogFooterActions>

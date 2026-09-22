@@ -156,7 +156,7 @@ export function GitChangesSection({
       <div className="relative min-h-0 flex-1">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted-foreground">
-            <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+            <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
             {t("workspace.git.loadingChanges")}
           </div>
         ) : null}

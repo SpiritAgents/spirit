@@ -85,7 +85,7 @@ export function DialogContent({
               size="icon-sm"
               className="absolute top-2 right-2 text-muted-foreground"
             >
-              <X className="size-3.5" />
+              <X className="size-3.5" strokeWidth={1.75} />
               <span className="sr-only">Close</span>
             </Button>
           </DialogClose>

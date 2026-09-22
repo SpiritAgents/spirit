@@ -57,7 +57,7 @@ export function WebHostPairingGate({
             />
           </div>
           <Button type="button" className="w-full" disabled={busy} onClick={submit}>
-            {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
             {t("app.pair")}
           </Button>
         </CardContent>

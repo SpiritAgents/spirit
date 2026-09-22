@@ -23,7 +23,7 @@ export function SessionReferenceChip({ path, title }: SessionReferenceChipProps)
       aria-label={label}
     >
       <ChipIcon className={WORKSPACE_FILE_CHIP_ICON_CLASS}>
-        <MessageCircle className={WORKSPACE_FILE_ICON_CHIP_CLASS} aria-hidden />
+        <MessageCircle className={WORKSPACE_FILE_ICON_CHIP_CLASS} aria-hidden strokeWidth={1.75} />
       </ChipIcon>
       <NavigableChipLabel target={{ kind: "sessionReference", transcriptPath: path }}>
         {label}

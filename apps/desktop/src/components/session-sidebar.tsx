@@ -352,6 +352,7 @@ function SidebarSectionCollapsible({
         <ChevronRight
           className={cn(sidebarSectionChevronClass, expanded && "rotate-90")}
           aria-hidden
+          strokeWidth={1.75}
         />
       </span>
     </AnimatedCollapseTrigger>
@@ -380,7 +381,7 @@ function SidebarSectionCollapsible({
                 contextMenu.onSelect();
               }}
             >
-              <Trash2 aria-hidden />
+              <Trash2 aria-hidden strokeWidth={1.75} />
               {contextMenu.itemLabel}
             </ContextMenuItem>
           </ContextMenuContent>
@@ -487,6 +488,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                       : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
                   )}
                   aria-hidden
+                  strokeWidth={1.75}
                 />
               ) : (
                 <FolderClosed
@@ -497,6 +499,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                       : "group-hover/workspace-row:hidden group-has-[button:focus-visible]/workspace-row:hidden",
                   )}
                   aria-hidden
+                  strokeWidth={1.75}
                 />
               )}
               <ChevronRight
@@ -508,6 +511,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                   expanded && "rotate-90",
                 )}
                 aria-hidden
+                strokeWidth={1.75}
               />
             </span>
             <span className={cn("truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}>{group.label}</span>
@@ -563,7 +567,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                   }}
                   onDragEnd={() => split?.clearSidebarSessionDrag()}
                 >
-                  <Plus className="size-3.5" aria-hidden />
+                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent
@@ -910,7 +914,7 @@ function SessionListNav({
               }
             }}
           >
-            <Pencil aria-hidden />
+            <Pencil aria-hidden strokeWidth={1.75} />
             {t("sidebar.renameSession")}
           </ContextMenuItem>
         ) : null}
@@ -927,7 +931,7 @@ function SessionListNav({
               }
             }}
           >
-            <Trash2 aria-hidden />
+            <Trash2 aria-hidden strokeWidth={1.75} />
             {t("common.delete")}
           </ContextMenuItem>
         ) : null}
@@ -1022,7 +1026,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <FolderOpen aria-hidden />
+            <FolderOpen aria-hidden strokeWidth={1.75} />
             {revealInExplorerLabel}
           </ContextMenuItem>
         ) : null}
@@ -1038,7 +1042,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Trash2 aria-hidden />
+            <Trash2 aria-hidden strokeWidth={1.75} />
             {t("common.remove")}
           </ContextMenuItem>
         ) : null}
@@ -1053,7 +1057,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Pencil aria-hidden />
+            <Pencil aria-hidden strokeWidth={1.75} />
             {t("sidebar.renameSession")}
           </ContextMenuItem>
         ) : null}
@@ -1072,7 +1076,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Trash2 aria-hidden />
+            <Trash2 aria-hidden strokeWidth={1.75} />
             {t("common.delete")}
           </ContextMenuItem>
         ) : null}
@@ -1725,7 +1729,7 @@ function SessionSidebarInner({
             )}
             onClick={onBackToSessions}
           >
-            <ArrowLeft className="size-4" aria-hidden />
+            <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("common.back")}</span>
           </Button>
         </div>
@@ -1764,7 +1768,7 @@ function SessionSidebarInner({
             }}
             onDragEnd={() => split?.clearSidebarSessionDrag()}
           >
-            <Compose className="size-3.5" aria-hidden />
+            <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
               <span className={sidebarItemShortcutClass} aria-hidden>
@@ -1790,7 +1794,7 @@ function SessionSidebarInner({
             disabled={disabled}
             onClick={onOpenMarketplace}
           >
-            <Blocks className="size-3.5" aria-hidden />
+            <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
           </Button>
           {onOpenAutomations ? (
@@ -1812,7 +1816,7 @@ function SessionSidebarInner({
               disabled={disabled}
               onClick={onOpenAutomations}
             >
-              <Bot className="size-3.5" aria-hidden />
+              <Bot className="size-3.5" aria-hidden strokeWidth={1.75} />
               <span className={cn(narrow && "sr-only")}>{t("sidebar.automations")}</span>
             </Button>
           ) : null}
@@ -1874,7 +1878,7 @@ function SessionSidebarInner({
                           narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
                         )}
                       >
-                        <Icon className="size-3.5" aria-hidden />
+                        <Icon className="size-3.5" aria-hidden strokeWidth={1.75} />
                         <span className={cn("min-w-0 truncate", narrow && "sr-only")}>
                           {t(tab.labelKey)}
                         </span>
@@ -1915,7 +1919,7 @@ function SessionSidebarInner({
                           narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
                         )}
                       >
-                        <Blocks className="size-3.5" aria-hidden />
+                        <Blocks className="size-3.5" aria-hidden strokeWidth={1.75} />
                         <span className={cn("min-w-0 truncate", narrow && "sr-only")}>
                           {item.label}
                         </span>
@@ -2127,7 +2131,7 @@ function SessionSidebarInner({
                   onClick={onOpenSettings}
                   aria-label={t("settings.title")}
                 >
-                  <Gear className="size-4" aria-hidden />
+                  <Gear className="size-4" aria-hidden strokeWidth={1.75} />
                   <span className="sr-only">{t("settings.title")}</span>
                 </Button>
               </TooltipTrigger>
@@ -2148,7 +2152,7 @@ function SessionSidebarInner({
               )}
               onClick={onOpenSettings}
             >
-              <Gear className="size-4" aria-hidden />
+              <Gear className="size-4" aria-hidden strokeWidth={1.75} />
               <span>{t("settings.title")}</span>
               <span className={sidebarItemShortcutClass} aria-hidden>
                 {settingsShortcutLabelText}

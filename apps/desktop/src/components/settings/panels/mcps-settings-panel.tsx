@@ -94,7 +94,7 @@ function McpRuntimeBadge({ state }: { state: McpServerRuntimeBadgeState }) {
 
   return (
     <Badge variant="outline" className="gap-1.5">
-      <LoaderCircle className="size-3 animate-spin" aria-hidden />
+      <LoaderCircle className="size-3 animate-spin" aria-hidden strokeWidth={1.75} />
       {i18n.t("common.loading")}
     </Badge>
   );
@@ -491,7 +491,9 @@ export function McpsSettingsPanel({
                   })();
                 }}
               >
-                {mcpsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {mcpsBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.create")}
               </Button>
             </DialogFooterActions>

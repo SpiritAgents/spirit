@@ -245,7 +245,7 @@ function WorkspaceFilesExplorerToolbar({
               aria-expanded={fileTreeOpen}
               aria-pressed={fileTreeOpen && !fileSearchOpen}
             >
-              <ListTree className="size-3.5" aria-hidden />
+              <ListTree className="size-3.5" aria-hidden strokeWidth={1.75} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
@@ -263,7 +263,7 @@ function WorkspaceFilesExplorerToolbar({
               aria-label={fileSearchTooltip}
               aria-pressed={fileSearchOpen && fileTreeOpen}
             >
-              <Search className="size-3.5" aria-hidden />
+              <Search className="size-3.5" aria-hidden strokeWidth={1.75} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
@@ -296,7 +296,7 @@ function WorkspaceFilesExplorerToolbar({
                 title={t("workspace.markdownPreview")}
                 disabled={!docReady}
               >
-                <Eye aria-hidden />
+                <Eye aria-hidden strokeWidth={1.75} />
                 {t("workspace.preview")}
               </Toggle>
               <Toggle
@@ -314,7 +314,7 @@ function WorkspaceFilesExplorerToolbar({
                 }
                 disabled={!docReady || docReadOnly}
               >
-                <Compose aria-hidden />
+                <Compose aria-hidden strokeWidth={1.75} />
                 {t("workspace.edit")}
               </Toggle>
             </div>
@@ -328,7 +328,7 @@ function WorkspaceFilesExplorerToolbar({
               title={t("workspace.startImplementing")}
               onClick={onStartImplementing}
             >
-              <Play className="size-3.5" aria-hidden />
+              <Play className="size-3.5" aria-hidden strokeWidth={1.75} />
             </button>
           ) : null}
         </div>

@@ -177,7 +177,7 @@ export function LocalImagePreviewDialog({
                 title={t("app.closeImagePreview")}
                 aria-label={t("app.closeImagePreview")}
               >
-                <X className="size-4" aria-hidden />
+                <X className="size-4" aria-hidden strokeWidth={1.75} />
                 <span className="sr-only">{t("app.closeImagePreview")}</span>
               </Button>
             </DialogClose>
@@ -198,9 +198,9 @@ export function LocalImagePreviewDialog({
                 aria-label={copied ? t("app.imageCopied") : t("app.copyImage")}
               >
                 {copied ? (
-                  <Check className="size-4" aria-hidden />
+                  <Check className="size-4" aria-hidden strokeWidth={1.75} />
                 ) : (
-                  <Copy className="size-4" aria-hidden />
+                  <Copy className="size-4" aria-hidden strokeWidth={1.75} />
                 )}
               </Button>
               {onSave ? (
@@ -215,9 +215,9 @@ export function LocalImagePreviewDialog({
                   aria-label={t("app.downloadImage")}
                 >
                   {saving ? (
-                    <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                    <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
                   ) : (
-                    <Download className="size-4" aria-hidden />
+                    <Download className="size-4" aria-hidden strokeWidth={1.75} />
                   )}
                 </Button>
               ) : null}

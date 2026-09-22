@@ -32,6 +32,7 @@ export function renderWorkspaceDirectoryIconMarkup(
     createElement(Folder, {
       className: workspaceDirectoryIconClassName(colorMode, className),
       "aria-hidden": true,
+      strokeWidth: 1.75,
     }),
   ).trim();
 }

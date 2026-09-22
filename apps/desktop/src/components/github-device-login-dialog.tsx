@@ -71,12 +71,16 @@ export function GitHubDeviceLoginDialog({
                   aria-label={t("settings.integrationsOpenDevicePage")}
                   onClick={() => onOpenDevicePage(challenge.verificationUri)}
                 >
-                  <ExternalLink className="size-4" aria-hidden />
+                  <ExternalLink className="size-4" aria-hidden strokeWidth={1.75} />
                 </Button>
               ) : null}
             </div>
           ) : loading ? (
-            <LoaderCircle className="size-8 animate-spin text-muted-foreground" aria-hidden />
+            <LoaderCircle
+              className="size-8 animate-spin text-muted-foreground"
+              aria-hidden
+              strokeWidth={1.75}
+            />
           ) : null}
         </div>
 

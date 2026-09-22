@@ -21,7 +21,7 @@ export function makeDebugChipNode(doc: Document, label = "Debug"): HTMLElement {
   icon.setAttribute("height", String(COMPOSER_PILL_CHIP_ICON_SIZE_PX));
   icon.setAttribute("fill", "none");
   icon.setAttribute("stroke", "currentColor");
-  icon.setAttribute("stroke-width", "2");
+  icon.setAttribute("stroke-width", "1.75");
   icon.setAttribute("stroke-linecap", "round");
   icon.setAttribute("stroke-linejoin", "round");
   icon.setAttribute("aria-hidden", "true");

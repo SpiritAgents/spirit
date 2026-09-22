@@ -249,7 +249,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.matchCase")}
                   onClick={() => setCaseSensitive((value) => !value)}
                 >
-                  <CaseSensitive className="size-3.5" aria-hidden />
+                  <CaseSensitive className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -267,7 +267,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.matchWholeWord")}
                   onClick={() => setWholeWord((value) => !value)}
                 >
-                  <WholeWord className="size-3.5" aria-hidden />
+                  <WholeWord className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -285,7 +285,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.useRegex")}
                   onClick={() => setIsRegexp((value) => !value)}
                 >
-                  <Regex className="size-3.5" aria-hidden />
+                  <Regex className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -346,12 +346,24 @@ export function WorkspaceFilesSearchPanel({
                       onClick={() => toggleExpanded(row.normalizedPath)}
                     >
                       {expandedPaths.has(row.normalizedPath) ? (
-                        <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
+                        <ChevronDown
+                          className="size-3 shrink-0 opacity-70"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : (
-                        <ChevronRight className="size-3 shrink-0 opacity-70" aria-hidden />
+                        <ChevronRight
+                          className="size-3 shrink-0 opacity-70"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       )}
                       {PlanTabIcon ? (
-                        <PlanTabIcon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                        <PlanTabIcon
+                          className="size-3.5 shrink-0 opacity-80"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : (
                         <WorkspaceFileIcon name={headerName} className="opacity-80" />
                       )}

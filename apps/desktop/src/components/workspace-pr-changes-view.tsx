@@ -220,6 +220,7 @@ function PrChangedFileHeaderButton({
           open && "rotate-90",
         )}
         aria-hidden
+        strokeWidth={1.75}
       />
       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
         <span className="min-w-0 truncate text-xs leading-relaxed text-foreground">

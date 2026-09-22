@@ -130,7 +130,7 @@ export function RulesSettingsPanel({
               title={t("settings.generateRuleTooltip")}
               onClick={() => onGenerateRuleNavigate()}
             >
-              <Sparkles className="size-3.5 shrink-0" aria-hidden />
+              <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("settings.generateRule")}
             </Button>
           ) : null}
@@ -323,7 +323,9 @@ export function RulesSettingsPanel({
                   })();
                 }}
               >
-                {rulesBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {rulesBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.create")}
               </Button>
             </DialogFooterActions>

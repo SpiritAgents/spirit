@@ -114,7 +114,7 @@ export function IntegrationsSettingsPanel({
                 aria-busy="true"
                 aria-label={t("settings.integrationsGitHubChecking")}
               >
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
               </Button>
             ) : authStatus.connected ? (
               <Button
@@ -125,7 +125,9 @@ export function IntegrationsSettingsPanel({
                 disabled={loadingAuth}
                 onClick={handleDisconnect}
               >
-                {loadingAuth ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
+                {loadingAuth ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
+                ) : null}
                 {t("settings.integrationsGitHubDisconnect")}
               </Button>
             ) : (

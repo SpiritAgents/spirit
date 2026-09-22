@@ -101,6 +101,7 @@ EOF
 
 - Run repo-local tools (`tsx`, `tsc`, `oxfmt`, `oxlint`, etc.) via `pnpm exec`, never `npx` — `npx` may hit the network; `pnpm exec` resolves from workspace `node_modules/.bin`.
 - Prefer cross-platform compatibility (including Windows branches and conditional compilation).
+- Icon stroke width: call sites rendering an icon component from `@spiritagent/icons` or `lucide-react` must pass `strokeWidth={1.75}` explicitly (JSX or `createElement` alike). An icon that needs a different weight must declare that value explicitly at the call site, which marks it as intentional; never rely on the library default (2). Do not override icon stroke width via CSS — a CSS rule beats the `stroke-width` presentation attribute and would clobber intentional per-call-site values.
 - User-visible UI copy uses Title Case for short label-style text (labels, buttons, dialog titles, settings entries, menu items, etc.): capitalize the first and last word and all major words; short words (≤3 letters) are capitalized when they are content words (verbs, nouns, adverbs — e.g. `Log In`, `Sign Out`) and kept lowercase when they are function words (such as `at` / `in` / `for` / `of` / `to` / `on`) in the middle.
 - Full sentences (confirmation prompts, descriptions, toast/notification messages, etc.) use Sentence case: capitalize only the first word and proper nouns.
 - Brand names and proper nouns keep their canonical casing (e.g. `GitHub`, `macOS`, `GLM Coding Plan`) under both rules above.

@@ -29,7 +29,7 @@ export function PrTestPlanProgress({ progress, className }: PrTestPlanProgressPr
           className,
         )}
       >
-        <ListChecks className="size-3 shrink-0" aria-hidden />
+        <ListChecks className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
         {t("workspace.prListTasksCount", { count: total })}
       </span>
     );

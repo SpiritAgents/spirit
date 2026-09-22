@@ -42,7 +42,7 @@ export function WorkspaceToolTabChip({
       )}
       onClick={() => onSelect(tab.id)}
     >
-      <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+      <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
       {displayTitle ? (
         <span className="flex min-w-0 flex-auto items-center gap-1.5 overflow-hidden group-hover/tab:workspace-tab-title-fade">
           <span className="truncate">{displayTitle}</span>
@@ -88,7 +88,7 @@ export function WorkspaceToolTabChip({
             onClose(tab.id);
           }}
         >
-          <X className="size-3 opacity-70" aria-hidden />
+          <X className="size-3 opacity-70" aria-hidden strokeWidth={1.75} />
         </button>
       ) : null}
     </div>

@@ -317,7 +317,7 @@ export function ComposerSurface({
                 ) : showEnqueueWhileBusy || !busy ? (
                   <ArrowUp className="size-3" strokeWidth={2.25} aria-hidden />
                 ) : (
-                  <LoaderCircle className="size-3 animate-spin" />
+                  <LoaderCircle className="size-3 animate-spin" strokeWidth={1.75} />
                 )}
               </Button>
             );

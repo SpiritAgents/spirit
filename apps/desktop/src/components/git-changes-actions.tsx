@@ -55,14 +55,14 @@ export function buildGitChangesMenuItems(input: {
     if (id === "push") {
       return {
         id,
-        icon: <Upload className="size-3 shrink-0 opacity-80" aria-hidden />,
+        icon: <Upload className="size-3 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />,
         label: input.labels.push,
         onSelect: input.onPush,
       };
     }
     return {
       id,
-      icon: <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden />,
+      icon: <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />,
       label: input.mergeFlashMerged ? input.labels.merged : input.labels.merge,
       onSelect: input.onMerge,
     };
@@ -125,7 +125,9 @@ export function GitChangesActions({
     return null;
   }
 
-  const busyIcon = gitBusy ? <LoaderCircle className="size-3 animate-spin" aria-hidden /> : null;
+  const busyIcon = gitBusy ? (
+    <LoaderCircle className="size-3 animate-spin" aria-hidden strokeWidth={1.75} />
+  ) : null;
 
   if (!hasChanges) {
     return (
@@ -173,7 +175,7 @@ export function GitChangesActions({
                 disabled={gitBusy}
                 className={cn(DESKTOP_GIT_ACTION_MENU_TRIGGER, instantHoverMotionClass)}
               >
-                <ChevronDown className="size-3" aria-hidden />
+                <ChevronDown className="size-3" aria-hidden strokeWidth={1.75} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent

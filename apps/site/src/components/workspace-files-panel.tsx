@@ -229,13 +229,13 @@ export function WorkspaceFilesPanel({
                     onClick={() => onOpenFile(childRel)}
                   >
                     <span className="inline-block w-4 shrink-0" aria-hidden />
-                    <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                    <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
                     <span className="min-w-0 truncate">{entry.name}</span>
                   </button>
                 ) : (
                   <div className={fileClassName} style={{ paddingLeft: `${depth * 12 + 4}px` }}>
                     <span className="inline-block w-4 shrink-0" aria-hidden />
-                    <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                    <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
                     <span className="min-w-0 truncate text-muted-foreground">{entry.name}</span>
                   </div>
                 )}
@@ -256,11 +256,19 @@ export function WorkspaceFilesPanel({
                 onClick={() => onToggleDir(childRel)}
               >
                 {open ? (
-                  <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
+                  <ChevronDown
+                    className="size-3.5 shrink-0 opacity-60"
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                 ) : (
-                  <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
+                  <ChevronRight
+                    className="size-3.5 shrink-0 opacity-60"
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                 )}
-                <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
                 <span className={`min-w-0 truncate ${FONT_WEIGHT_NORMAL}`}>{entry.name}</span>
               </button>
               {open ? <div className="min-w-0">{renderDirBody(childRel, depth + 1)}</div> : null}
@@ -286,7 +294,7 @@ export function WorkspaceFilesPanel({
           onClick={() => onOpenPlan?.()}
           title={plan.path}
         >
-          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden />
+          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 truncate">{plan.path.split(/[/\\]/u).pop() ?? plan.path}</span>
         </button>
       ) : null}
@@ -300,11 +308,11 @@ export function WorkspaceFilesPanel({
         onClick={() => setRootOpen((open) => !open)}
       >
         {rootOpen ? (
-          <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
+          <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
         ) : (
-          <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
+          <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
         )}
-        <Folder className="size-3.5 shrink-0 opacity-70" aria-hidden />
+        <Folder className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
         <span className="min-w-0 truncate">{rootLabel}</span>
       </button>
       {rootOpen ? (

@@ -132,7 +132,7 @@ export function MarketplaceAddSourceDialog({
               {t("common.cancel")}
             </Button>
             <Button type="button" size="sm" onClick={submit} disabled={busy}>
-              {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+              {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
               {t("marketplace.addMarketplace")}
             </Button>
           </DialogFooterActions>

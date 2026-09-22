@@ -95,11 +95,19 @@ function SessionListGitTooltipPanel({ item }: { item: SessionGitTooltipItem }) {
   return (
     <>
       <div className="flex min-w-0 max-w-full items-center gap-1.5">
-        <GitBranch className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+        <GitBranch
+          className="size-3.5 shrink-0 text-muted-foreground/80"
+          aria-hidden
+          strokeWidth={1.75}
+        />
         <span className="min-w-0 truncate">{item.gitBranch}</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <LocationIcon className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+        <LocationIcon
+          className="size-3.5 shrink-0 text-muted-foreground/80"
+          aria-hidden
+          strokeWidth={1.75}
+        />
         <span>{locationLabel}</span>
       </div>
     </>

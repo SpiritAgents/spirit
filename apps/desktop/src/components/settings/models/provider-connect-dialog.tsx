@@ -1229,7 +1229,7 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
@@ -1249,9 +1249,9 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy || previewBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" />
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : (
-                  <RefreshCw className="size-4" />
+                  <RefreshCw className="size-4" strokeWidth={1.75} />
                 )}
                 {t("settings.addProvider")}
               </Button>
@@ -1277,7 +1277,7 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
@@ -1298,7 +1298,9 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("settings.addProvider")}
               </Button>
             ) : null}
@@ -1317,7 +1319,7 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
@@ -1342,7 +1344,9 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("settings.addProvider")}
               </Button>
             ) : null}
@@ -1367,7 +1371,7 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
@@ -1393,7 +1397,7 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
@@ -1416,7 +1420,9 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("settings.addProvider")}
               </Button>
             ) : null}

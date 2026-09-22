@@ -378,7 +378,11 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
               >
                 {loadingMore ? (
                   <>
-                    <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                    <LoaderCircle
+                      className="size-3.5 animate-spin"
+                      aria-hidden
+                      strokeWidth={1.75}
+                    />
                     {t("workspace.prListLoadingMore")}
                   </>
                 ) : hasMore ? (
@@ -405,6 +409,7 @@ export const WorkspacePrListView = forwardRef<WorkspacePrListViewHandle, Workspa
             <Search
               className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground"
               aria-hidden
+              strokeWidth={1.75}
             />
             <Input
               value={searchInput}

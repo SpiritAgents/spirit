@@ -59,7 +59,7 @@ export function MarketplaceSourceTab({
       <ContextMenuTrigger className="inline-flex">{tab}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem variant="destructive" onSelect={() => onRemove(source)}>
-          <X aria-hidden />
+          <X aria-hidden strokeWidth={1.75} />
           {t("marketplace.removeMarketplace")}
         </ContextMenuItem>
       </ContextMenuContent>

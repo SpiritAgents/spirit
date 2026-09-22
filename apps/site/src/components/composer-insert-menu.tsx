@@ -63,7 +63,7 @@ export function ComposerInsertMenu({
             instantHoverMotionClass,
           )}
         >
-          <Plus className="size-3.5" aria-hidden />
+          <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -90,7 +90,11 @@ export function ComposerInsertMenu({
             onInsertWorkspaceReference();
           }}
         >
-          <AtSign className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <AtSign
+            className="size-4 shrink-0 text-muted-foreground"
+            aria-hidden
+            strokeWidth={1.75}
+          />
           <span className="min-w-0 flex-1 truncate">{t("composer.insertWorkspaceFile")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -104,7 +108,7 @@ export function ComposerInsertMenu({
             void onPickLocalFile();
           }}
         >
-          <File className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <File className="size-4 shrink-0 text-muted-foreground" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 flex-1 truncate">{t("composer.selectLocalFile")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem

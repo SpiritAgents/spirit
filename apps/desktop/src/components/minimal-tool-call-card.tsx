@@ -598,6 +598,7 @@ export function MinimalToolCallCard({
           open && "rotate-90",
         )}
         aria-hidden
+        strokeWidth={1.75}
       />
     </button>
   );
@@ -690,6 +691,7 @@ export function MinimalToolCallCard({
             open && "rotate-90",
           )}
           aria-hidden
+          strokeWidth={1.75}
         />
       </button>
     </div>
@@ -749,6 +751,7 @@ export function MinimalToolCallCard({
           open && "rotate-90",
         )}
         aria-hidden
+        strokeWidth={1.75}
       />
     </button>
   );

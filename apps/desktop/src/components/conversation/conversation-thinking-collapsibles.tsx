@@ -136,6 +136,7 @@ export function AssistantThinkingCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>
@@ -227,6 +228,7 @@ export function AssistantCompactionCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>

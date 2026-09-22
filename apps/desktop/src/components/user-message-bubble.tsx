@@ -98,6 +98,7 @@ function ElementCard({
       <PenTool
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, BROWSER_ELEMENT_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel
         target={{
@@ -148,6 +149,7 @@ function SessionReferenceCard({ path, title }: { path: string; title: string }) 
       <MessageCircle
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, WORKSPACE_FILE_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel target={{ kind: "sessionReference", transcriptPath: path }}>
         {label}
@@ -199,7 +201,11 @@ function PrDiffCard({
       })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
     >
-      <Icon className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, PR_DIFF_CHIP_ICON_CLASS)} aria-hidden />
+      <Icon
+        className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, PR_DIFF_CHIP_ICON_CLASS)}
+        aria-hidden
+        strokeWidth={1.75}
+      />
       <NavigableChipLabel
         target={{
           kind: "prDiff",
@@ -234,6 +240,7 @@ function TerminalCard({
       <Terminal
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, TERMINAL_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel
         target={{
@@ -268,6 +275,7 @@ function FileSnippetCard({
       <FileText
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, FILE_SNIPPET_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel
         target={{
@@ -299,6 +307,7 @@ function MessageQuoteCard({
       <MessageCircleMore
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, MESSAGE_QUOTE_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel
         target={{
@@ -336,6 +345,7 @@ function GitCommitCard({
       <GitCommit
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, GIT_COMMIT_CHIP_ICON_CLASS)}
         aria-hidden
+        strokeWidth={1.75}
       />
       <NavigableChipLabel
         target={{

@@ -69,7 +69,7 @@ export function BreadcrumbSeparator({ className, children, ...props }: Component
       className={cn("text-muted-foreground [&>svg]:size-3.5", className)}
       {...props}
     >
-      {children ?? <ChevronRight />}
+      {children ?? <ChevronRight strokeWidth={1.75} />}
     </li>
   );
 }

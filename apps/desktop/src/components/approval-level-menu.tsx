@@ -106,11 +106,13 @@ export function ApprovalLevelMenu({
               <TriggerIcon
                 className={cn("size-3.5 shrink-0", approvalLevelTriggerIconClass(approvalLevel))}
                 aria-hidden
+                strokeWidth={1.75}
               />
               <span className="min-w-0 truncate">{label}</span>
               <ChevronDown
                 className={cn("size-3 shrink-0", approvalLevelChevronClass(approvalLevel))}
                 aria-hidden
+                strokeWidth={1.75}
               />
             </button>
           </DropdownMenuTrigger>
@@ -136,7 +138,7 @@ export function ApprovalLevelMenu({
                   approvalLevel === option.value && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <OptionIcon className="size-3.5 shrink-0" aria-hidden />
+                <OptionIcon className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 {option.label}
               </DropdownMenuItem>
             );

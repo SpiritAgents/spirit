@@ -97,7 +97,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
   if (detail.draft) {
     return (
       <Badge className={GITHUB_PR_DRAFT_BADGE_CLASS}>
-        <GitPullRequestDraft className="size-3 shrink-0" aria-hidden />
+        <GitPullRequestDraft className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
         {t("workspace.prDraft")}
       </Badge>
     );
@@ -106,7 +106,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
   if (detail.state === "open") {
     return (
       <Badge className={GITHUB_PR_OPEN_BADGE_CLASS}>
-        <GitPullRequest className="size-3 shrink-0" aria-hidden />
+        <GitPullRequest className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
         {t("workspace.prOpen")}
       </Badge>
     );
@@ -114,7 +114,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
 
   return (
     <Badge variant="secondary" className="gap-1">
-      <GitPullRequestClosed className="size-3 shrink-0" aria-hidden />
+      <GitPullRequestClosed className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
       {t("workspace.prClosed")}
     </Badge>
   );
@@ -309,7 +309,7 @@ export function WorkspacePrDetailView({
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {detail.merged ? (
                   <Badge className={GITHUB_PR_MERGED_BADGE_CLASS}>
-                    <GitPullRequest className="size-3 shrink-0" aria-hidden />
+                    <GitPullRequest className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
                     {t("workspace.prMerged")}
                   </Badge>
                 ) : (
@@ -321,6 +321,7 @@ export function WorkspacePrDetailView({
                   <ArrowRight
                     className={cn("size-2.5 shrink-0", toolCardSecondaryTextClass)}
                     aria-hidden
+                    strokeWidth={1.75}
                   />
                   <span>{detail.baseRef}</span>
                 </span>

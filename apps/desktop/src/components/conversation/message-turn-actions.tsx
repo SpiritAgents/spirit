@@ -73,9 +73,13 @@ export function MessageTurnActions({
           disabled={continueBusy}
         >
           {continueBusy ? (
-            <LoaderCircle className="size-3.5 animate-spin text-muted-foreground" aria-hidden />
+            <LoaderCircle
+              className="size-3.5 animate-spin text-muted-foreground"
+              aria-hidden
+              strokeWidth={1.75}
+            />
           ) : (
-            <Play className="size-3.5 text-muted-foreground" aria-hidden />
+            <Play className="size-3.5 text-muted-foreground" aria-hidden strokeWidth={1.75} />
           )}
         </Button>
       ) : null}
@@ -92,7 +96,7 @@ export function MessageTurnActions({
               )}
               aria-label={t("app.messageActions")}
             >
-              <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden />
+              <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden strokeWidth={1.75} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-40 p-0">
@@ -105,7 +109,7 @@ export function MessageTurnActions({
                     onCopy();
                   }}
                 >
-                  <Copy className="size-3.5 shrink-0" aria-hidden />
+                  <Copy className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span>{t("common.copy")}</span>
                 </DropdownMenuItem>
               ) : null}
@@ -117,7 +121,7 @@ export function MessageTurnActions({
                     onFork();
                   }}
                 >
-                  <GitFork className="size-3.5 shrink-0" aria-hidden />
+                  <GitFork className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span>{t("app.forkChat")}</span>
                 </DropdownMenuItem>
               ) : null}

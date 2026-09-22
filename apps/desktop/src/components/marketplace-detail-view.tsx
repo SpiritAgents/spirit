@@ -76,7 +76,7 @@ export function MarketplaceDetailView({
             )}
             onClick={onBack}
           >
-            <ArrowLeft className="size-4" aria-hidden />
+            <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
             {t("common.back")}
           </Button>
         </div>
@@ -97,7 +97,7 @@ export function MarketplaceDetailView({
                 {item.iconUrl ? (
                   <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
                 ) : (
-                  <Sparkles className="size-[18px]" aria-hidden />
+                  <Sparkles className="size-[18px]" aria-hidden strokeWidth={1.75} />
                 )}
               </div>
               <div className="min-w-0 flex-1 space-y-1">
@@ -132,7 +132,7 @@ export function MarketplaceDetailView({
                         className="size-8 shrink-0 self-center"
                         title={t("marketplace.moreActions")}
                       >
-                        <Ellipsis className="size-4" aria-hidden />
+                        <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-40 p-0">
@@ -150,7 +150,7 @@ export function MarketplaceDetailView({
                           className="gap-2"
                           onSelect={onRequestUninstall}
                         >
-                          <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                          <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                           <span>{t("marketplace.uninstall")}</span>
                         </DropdownMenuItem>
                       </div>
