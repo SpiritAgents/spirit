@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useEffect, useState } from "react";
 
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { GitHubDeviceLoginDialog } from "@/components/github-device-login-dialog";

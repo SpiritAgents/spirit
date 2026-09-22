@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search } from "@spiritagent/icons/search";
 import { useSearchContext } from "fumadocs-ui/contexts/search";
 
 import { Kbd } from "@/components/ui/kbd";

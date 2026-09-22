@@ -1,3 +1,4 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   useCallback,
   useEffect,
@@ -9,7 +10,6 @@ import {
   type RefObject,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
 
 import { ReviewCommentHunkView } from "@/components/review-comment-hunk-view";
 import {

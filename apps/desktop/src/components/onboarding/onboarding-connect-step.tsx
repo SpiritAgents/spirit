@@ -1,6 +1,6 @@
+import { Search } from "@spiritagent/icons/search";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Search } from "lucide-react";
 
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
 import {

@@ -1,3 +1,5 @@
+import { Globe } from "@spiritagent/icons/globe";
+import { Plus } from "@spiritagent/icons/plus";
 import {
   memo,
   useCallback,
@@ -16,10 +18,8 @@ import {
   GitPullRequest,
   GitPullRequestClosed,
   GitPullRequestDraft,
-  Globe,
   Maximize2,
   Minimize2,
-  Plus,
   Terminal,
 } from "lucide-react";
 import {

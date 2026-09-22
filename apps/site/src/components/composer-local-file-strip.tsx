@@ -1,8 +1,9 @@
+import { X } from "@spiritagent/icons/x";
 import { useState } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { File, X } from "lucide-react";
+import { File } from "lucide-react";
 
 import type { ComposerLocalFileAttachmentView } from "../lib/local-file-attachments.js";
 

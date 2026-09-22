@@ -1,8 +1,9 @@
 // Extension detail page backed by the marketplace catalog entry (registry data + install state).
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
 
 import { useTranslation } from "react-i18next";
 
-import { ArrowLeft, Ellipsis, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, Sparkles, Trash2 } from "lucide-react";
 
 import { MarketplaceContributionGroups } from "@/components/marketplace-contribution-groups";
 import { MarketplaceInformationSection } from "@/components/marketplace-information-section";

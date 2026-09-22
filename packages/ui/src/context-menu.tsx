@@ -1,7 +1,9 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { Check, ChevronRight } from "lucide-react";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { Check } from "@spiritagent/icons/check";
+
 import { ContextMenu as ContextMenuPrimitive } from "radix-ui";
 import { Fragment, type ComponentProps, type ReactNode } from "react";
 

@@ -1,6 +1,6 @@
+import { ChevronLeft } from "@spiritagent/icons/chevron-left";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft } from "lucide-react";
 import { appendPullRequestChecksPages } from "@spiritagent/host-internal/github-pull-request-checks-pages";
 import { appendPullRequestConversationPages } from "@spiritagent/host-internal/github-pull-request-conversation-pages";
 

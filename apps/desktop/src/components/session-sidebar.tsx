@@ -1,3 +1,8 @@
+import { Compose } from "@spiritagent/icons/compose";
+import { Gear } from "@spiritagent/icons/gear";
+import { Pencil } from "@spiritagent/icons/pencil";
+import { Plus } from "@spiritagent/icons/plus";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
   useCallback,
@@ -21,7 +26,6 @@ import {
   BookText,
   Bot,
   ArrowLeft,
-  ChevronRight,
   FolderClosed,
   FolderOpen,
   Layers,
@@ -30,11 +34,7 @@ import {
   MoonStar,
   Network,
   Palette,
-  Pencil,
   Plug,
-  Plus,
-  SquarePen,
-  Settings,
   Sparkles,
   Trash2,
   type LucideIcon,
@@ -1089,7 +1089,7 @@ const settingsPrimaryTabs: Array<{
   {
     id: "general",
     labelKey: "settings.general",
-    icon: Settings,
+    icon: Gear,
   },
   {
     id: "appearance",
@@ -1764,7 +1764,7 @@ function SessionSidebarInner({
             }}
             onDragEnd={() => split?.clearSidebarSessionDrag()}
           >
-            <SquarePen className="size-3.5" aria-hidden />
+            <Compose className="size-3.5" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
               <span className={sidebarItemShortcutClass} aria-hidden>
@@ -2127,7 +2127,7 @@ function SessionSidebarInner({
                   onClick={onOpenSettings}
                   aria-label={t("settings.title")}
                 >
-                  <Settings className="size-4" aria-hidden />
+                  <Gear className="size-4" aria-hidden />
                   <span className="sr-only">{t("settings.title")}</span>
                 </Button>
               </TooltipTrigger>
@@ -2148,7 +2148,7 @@ function SessionSidebarInner({
               )}
               onClick={onOpenSettings}
             >
-              <Settings className="size-4" aria-hidden />
+              <Gear className="size-4" aria-hidden />
               <span>{t("settings.title")}</span>
               <span className={sidebarItemShortcutClass} aria-hidden>
                 {settingsShortcutLabelText}

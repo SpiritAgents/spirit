@@ -1,7 +1,8 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+
 import { Slot } from "radix-ui";
 import type { ComponentProps } from "react";
 

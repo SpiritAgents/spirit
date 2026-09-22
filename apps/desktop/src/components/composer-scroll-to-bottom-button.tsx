@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 

@@ -1,5 +1,6 @@
+import { X } from "@spiritagent/icons/x";
 import { useTranslation } from "react-i18next";
-import { ChevronsUpDown, X } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 import {
   DropdownMenu,

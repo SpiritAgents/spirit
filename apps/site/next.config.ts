@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@spiritagent/ui"],
+  transpilePackages: ["@spiritagent/ui", "@spiritagent/icons"],
   async rewrites() {
     return [
       {

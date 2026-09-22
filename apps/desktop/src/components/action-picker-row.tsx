@@ -1,4 +1,6 @@
-import { ChevronRight, Languages, Palette, SquarePen } from "lucide-react";
+import { Compose } from "@spiritagent/icons/compose";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { Languages, Palette } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_COMMAND_PALETTE_ITEM_TONE } from "@/lib/desktop-chrome";
@@ -45,7 +47,7 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
   if (isNewSessionAction(item)) {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        <SquarePen
+        <Compose
           className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
           aria-hidden
         />
