@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useState, type ReactNode } from "react";
 
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { SettingsFormState } from "@/components/settings/types";

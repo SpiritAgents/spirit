@@ -1,7 +1,8 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useMemo, useState } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 
-import { ChevronDown, FolderPlus, MessageSquareText } from "lucide-react";
+import { FolderPlus, MessageSquareText } from "lucide-react";
 
 import {
   FilteredOverlayMenu,

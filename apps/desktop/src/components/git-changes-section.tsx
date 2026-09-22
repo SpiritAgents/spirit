@@ -1,8 +1,7 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import type { CSSProperties } from "react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-
-import { LoaderCircle } from "lucide-react";
 
 import { GitChangesActions } from "@/components/git-changes-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";

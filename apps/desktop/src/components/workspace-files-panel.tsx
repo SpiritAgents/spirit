@@ -1,3 +1,5 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import {
   Fragment,
   useCallback,
@@ -12,7 +14,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDown, ChevronRight, FilePlus, FolderPlus, ListTodo } from "lucide-react";
+import { FilePlus, FolderPlus, ListTodo } from "lucide-react";
 
 import { WORKSPACE_REFERENCE_DIRECTORY_SUFFIX } from "@spiritagent/host-internal/workspace-file-reference-query";
 

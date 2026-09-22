@@ -1,6 +1,6 @@
+import { Copy } from "@spiritagent/icons/copy";
+import { Check } from "@spiritagent/icons/check";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";

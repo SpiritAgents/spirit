@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, FolderPlus, MessageCircle } from "lucide-react";
+import { FolderPlus, MessageCircle } from "lucide-react";
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import {

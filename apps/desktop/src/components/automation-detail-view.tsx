@@ -1,6 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
 
 import { AutomationHistoryTable } from "@/components/automation-history-table";
 import { AutomationSettingsPanel } from "@/components/automation-settings-panel";

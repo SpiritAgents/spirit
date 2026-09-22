@@ -1,3 +1,5 @@
+import { Search } from "@spiritagent/icons/search";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   forwardRef,
   useCallback,
@@ -8,7 +10,6 @@ import {
   type ComponentRef,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DetailPageTabs } from "@/components/detail-page-tabs";

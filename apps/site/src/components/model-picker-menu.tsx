@@ -1,6 +1,6 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
-import { ChevronDown } from "lucide-react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import {

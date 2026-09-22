@@ -1,18 +1,13 @@
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
+import { X } from "@spiritagent/icons/x";
+import { Pencil } from "@spiritagent/icons/pencil";
+import { Plus } from "@spiritagent/icons/plus";
+import { SidebarRight } from "@spiritagent/icons/sidebar-right";
+import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  MessageCircle,
-  PanelRightClose,
-  PanelRightOpen,
-  Pencil,
-  Plus,
-  MoreHorizontal,
-  SquareSplitHorizontal,
-  SquareSplitVertical,
-  Trash2,
-  X,
-} from "lucide-react";
+import { MessageCircle, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "lucide-react";
 
 import {
   NewSessionShortcutKbd,
@@ -398,7 +393,7 @@ export function DesktopLayoutChromeBar({
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
                   aria-label={t("app.conversationPaneMenu")}
                 >
-                  <MoreHorizontal className="size-3.5 text-muted-foreground" aria-hidden />
+                  <Ellipsis className="size-3.5 text-muted-foreground" aria-hidden />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -491,9 +486,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <PanelRightClose className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden />
                   ) : (
-                    <PanelRightOpen className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden />
                   )}
                 </Button>
               </TooltipTrigger>

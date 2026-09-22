@@ -1,7 +1,9 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { Check, ChevronRight } from "lucide-react";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { Check } from "@spiritagent/icons/check";
+
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { useCallback, useLayoutEffect, useRef, type ComponentProps, type Ref } from "react";
 

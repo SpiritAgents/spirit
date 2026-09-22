@@ -1,7 +1,9 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
+import { Check } from "@spiritagent/icons/check";
+
 import { Select as SelectPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 

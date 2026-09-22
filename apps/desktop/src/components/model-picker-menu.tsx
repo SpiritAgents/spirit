@@ -1,7 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
 
 import {
   ModelPickerInspectorPanel,

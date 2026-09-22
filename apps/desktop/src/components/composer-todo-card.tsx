@@ -1,5 +1,8 @@
+import { Check } from "@spiritagent/icons/check";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Circle, LoaderCircle } from "lucide-react";
+import { Circle } from "lucide-react";
 
 import type { ConversationTodoSnapshot } from "@/types";
 import {

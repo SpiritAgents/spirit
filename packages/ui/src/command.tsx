@@ -1,8 +1,11 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
+import { Search } from "@spiritagent/icons/search";
+import { ChevronLeft } from "@spiritagent/icons/chevron-left";
+import { Check } from "@spiritagent/icons/check";
+
 import { Command as CommandPrimitive } from "cmdk";
-import { Check, ChevronLeft, Search } from "lucide-react";
 import type { ComponentProps } from "react";
 
 import { Button } from "./button.js";

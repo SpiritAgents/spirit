@@ -1,7 +1,9 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useCallback, useEffect, useMemo, useRef, useState, memo, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CaseSensitive, ChevronDown, ChevronRight, Regex, WholeWord } from "lucide-react";
+import { CaseSensitive, Regex, WholeWord } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

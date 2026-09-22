@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
 
 import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
 import {

@@ -1,6 +1,6 @@
+import { X } from "@spiritagent/icons/x";
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { XIcon } from "lucide-react";
 
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import { cn } from "@/lib/utils";
@@ -152,7 +152,7 @@ function WindowDialogContent({
               size="icon-sm"
               onClick={() => onOpenChange(false)}
             >
-              <XIcon />
+              <X />
               <span className="sr-only">Close</span>
             </Button>
           ) : null}

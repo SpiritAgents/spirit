@@ -1,6 +1,7 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import {
   connectTransportOptionSummary,

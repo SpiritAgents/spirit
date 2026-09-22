@@ -1,4 +1,5 @@
-import { X, type LucideIcon } from "lucide-react";
+import { X } from "@spiritagent/icons/x";
+import { type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { toggleVariants } from "@/components/ui/toggle";

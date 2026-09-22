@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState, useEffect, useRef, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { AutomationTimeScheduleOptions } from "@/components/automation-schedule-menu";
 import { GitHubConnectTooltipContent } from "@/components/github-sign-in-prompt";

@@ -1,7 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
-
-import { ChevronRight } from "lucide-react";
 
 import { PreviewImageGenerationToolCard } from "@/components/preview-image-generation-tool-card";
 import { BrowserElementChip } from "@/components/browser-element-chip";

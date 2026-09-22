@@ -1,7 +1,8 @@
 // Copyright (c) 2026 N123999
 // SPDX-License-Identifier: MIT
 
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+
 import type { ComponentProps } from "react";
 
 import { cn } from "./cn.js";

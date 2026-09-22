@@ -1,7 +1,10 @@
+import { Plus } from "@spiritagent/icons/plus";
+import { SidebarLeft } from "@spiritagent/icons/sidebar-left";
+import { SidebarLeftCollapsed } from "@spiritagent/icons/sidebar-left-collapsed";
+import { SidebarRight } from "@spiritagent/icons/sidebar-right";
+import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
+
 import { useTranslation } from "@/lib/desktop-preview-i18n";
-
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus } from "lucide-react";
-
 import {
   NewSessionShortcutKbd,
   SessionSidebarShortcutKbd,
@@ -73,9 +76,9 @@ export function DesktopLayoutChromeBar({
               {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
             >
               {sessionSidebarOpen ? (
-                <PanelLeftClose className="size-3.5" aria-hidden />
+                <SidebarLeft className="size-3.5" aria-hidden />
               ) : (
-                <PanelLeftOpen className="size-3.5" aria-hidden />
+                <SidebarLeftCollapsed className="size-3.5" aria-hidden />
               )}
             </Button>
           </TooltipTrigger>
@@ -140,9 +143,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <PanelRightClose className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden />
                   ) : (
-                    <PanelRightOpen className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden />
                   )}
                 </Button>
               </TooltipTrigger>

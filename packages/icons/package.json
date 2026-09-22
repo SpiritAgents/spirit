@@ -1,0 +1,129 @@
+{
+  "name": "@spiritagent/icons",
+  "version": "1.0.0-alpha.0",
+  "description": "Spirit Icons — React icon components for Spirit desktop and site",
+  "license": "CC-BY-4.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpiritAgents/spirit.git",
+    "directory": "packages/icons"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./check": {
+      "types": "./dist/icons/check.d.ts",
+      "default": "./dist/icons/check.js"
+    },
+    "./chevron-down": {
+      "types": "./dist/icons/chevron-down.d.ts",
+      "default": "./dist/icons/chevron-down.js"
+    },
+    "./chevron-left": {
+      "types": "./dist/icons/chevron-left.d.ts",
+      "default": "./dist/icons/chevron-left.js"
+    },
+    "./chevron-right": {
+      "types": "./dist/icons/chevron-right.d.ts",
+      "default": "./dist/icons/chevron-right.js"
+    },
+    "./chevron-up": {
+      "types": "./dist/icons/chevron-up.d.ts",
+      "default": "./dist/icons/chevron-up.js"
+    },
+    "./compose": {
+      "types": "./dist/icons/compose.d.ts",
+      "default": "./dist/icons/compose.js"
+    },
+    "./copy": {
+      "types": "./dist/icons/copy.d.ts",
+      "default": "./dist/icons/copy.js"
+    },
+    "./ellipsis": {
+      "types": "./dist/icons/ellipsis.d.ts",
+      "default": "./dist/icons/ellipsis.js"
+    },
+    "./gear": {
+      "types": "./dist/icons/gear.d.ts",
+      "default": "./dist/icons/gear.js"
+    },
+    "./globe": {
+      "types": "./dist/icons/globe.d.ts",
+      "default": "./dist/icons/globe.js"
+    },
+    "./loader-circle": {
+      "types": "./dist/icons/loader-circle.d.ts",
+      "default": "./dist/icons/loader-circle.js"
+    },
+    "./pencil": {
+      "types": "./dist/icons/pencil.d.ts",
+      "default": "./dist/icons/pencil.js"
+    },
+    "./plus": {
+      "types": "./dist/icons/plus.d.ts",
+      "default": "./dist/icons/plus.js"
+    },
+    "./search": {
+      "types": "./dist/icons/search.d.ts",
+      "default": "./dist/icons/search.js"
+    },
+    "./sidebar-left": {
+      "types": "./dist/icons/sidebar-left.d.ts",
+      "default": "./dist/icons/sidebar-left.js"
+    },
+    "./sidebar-left-collapsed": {
+      "types": "./dist/icons/sidebar-left-collapsed.d.ts",
+      "default": "./dist/icons/sidebar-left-collapsed.js"
+    },
+    "./sidebar-right": {
+      "types": "./dist/icons/sidebar-right.d.ts",
+      "default": "./dist/icons/sidebar-right.js"
+    },
+    "./sidebar-right-collapsed": {
+      "types": "./dist/icons/sidebar-right-collapsed.d.ts",
+      "default": "./dist/icons/sidebar-right-collapsed.js"
+    },
+    "./spirit": {
+      "types": "./dist/icons/spirit.d.ts",
+      "default": "./dist/icons/spirit.js"
+    },
+    "./spirit-outline": {
+      "types": "./dist/icons/spirit-outline.d.ts",
+      "default": "./dist/icons/spirit-outline.js"
+    },
+    "./x": {
+      "types": "./dist/icons/x.d.ts",
+      "default": "./dist/icons/x.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node scripts/build-icons.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "node scripts/build-icons.mjs && tsc -p tsconfig.json --noEmit",
+    "test": "node scripts/verify-icons.mjs",
+    "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "react": "19.2.8",
+    "typescript": "5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

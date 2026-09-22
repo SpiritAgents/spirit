@@ -1,3 +1,7 @@
+import { Compose } from "@spiritagent/icons/compose";
+import { Gear } from "@spiritagent/icons/gear";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
   memo,
   useCallback,
@@ -15,19 +19,15 @@ import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import {
   Bot,
   ArrowLeft,
-  ChevronRight,
   FolderClosed,
   FolderOpen,
   Layers,
-  LoaderCircle,
   MoonStar,
   Package,
   Palette,
   Plug,
-  Settings,
   SlidersHorizontal,
   Sparkles,
-  SquarePen,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -1085,7 +1085,7 @@ function SessionSidebarInner({
             disabled={disabled || newSessionBusy}
             onClick={onNewSession}
           >
-            <SquarePen className="size-3.5" aria-hidden />
+            <Compose className="size-3.5" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
             {!narrow && (
               <span className="ml-auto text-[0.65rem] text-chrome-secondary-label" aria-hidden>
@@ -1316,7 +1316,7 @@ function SessionSidebarInner({
             )}
             onClick={onOpenSettings}
           >
-            <Settings className="size-4" aria-hidden />
+            <Gear className="size-4" aria-hidden />
             <span className={cn(narrow && "sr-only")}>{t("settings.title")}</span>
           </Button>
         </div>
