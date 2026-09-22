@@ -1729,7 +1729,7 @@ function SessionSidebarInner({
             )}
             onClick={onBackToSessions}
           >
-            <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
+            <ArrowLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("common.back")}</span>
           </Button>
         </div>
@@ -2131,7 +2131,7 @@ function SessionSidebarInner({
                   onClick={onOpenSettings}
                   aria-label={t("settings.title")}
                 >
-                  <Gear className="size-4" aria-hidden strokeWidth={1.75} />
+                  <Gear className="size-3.5" aria-hidden strokeWidth={1.75} />
                   <span className="sr-only">{t("settings.title")}</span>
                 </Button>
               </TooltipTrigger>
@@ -2152,7 +2152,7 @@ function SessionSidebarInner({
               )}
               onClick={onOpenSettings}
             >
-              <Gear className="size-4" aria-hidden strokeWidth={1.75} />
+              <Gear className="size-3.5" aria-hidden strokeWidth={1.75} />
               <span>{t("settings.title")}</span>
               <span className={sidebarItemShortcutClass} aria-hidden>
                 {settingsShortcutLabelText}
