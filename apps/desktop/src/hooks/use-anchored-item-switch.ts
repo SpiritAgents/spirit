@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from "react";
 
-/** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion (Radix popover exit animation). */
+/** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion. */
 const ANCHORED_ITEM_SWITCH_CONTENT_LINGER_MS = 100;
 
 export const DEFAULT_ANCHORED_ITEM_SWITCH_OPEN_DELAY_MS = 400;

@@ -82,7 +82,7 @@ function hasOpenDialogInDocument(): boolean {
   if (typeof document === "undefined") {
     return false;
   }
-  // Radix Dialog (see dialog.tsx / overlay-motion.ts) uses data-open for the open state, not data-state.
+  // Radix Dialog uses data-open for the open state, not data-state.
   return document.querySelector('[data-slot="dialog-content"][data-open]') !== null;
 }
 
