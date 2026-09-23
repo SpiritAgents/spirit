@@ -1,6 +1,8 @@
 import { Compose } from "@spiritagent/icons/compose";
 import { Gear } from "@spiritagent/icons/gear";
 import { Pencil } from "@spiritagent/icons/pencil";
+import { Pin } from "@spiritagent/icons/pin";
+import { PinSlash } from "@spiritagent/icons/pin-slash";
 import { Plus } from "@spiritagent/icons/plus";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import {
@@ -146,6 +148,7 @@ type SessionSidebarProps = {
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   removeWorkspaceBusy?: boolean;
   onRemoveWorkspace?: (workspacePath: string) => void | Promise<void>;
   disabled?: boolean;
@@ -860,6 +863,7 @@ type SessionListNavProps = {
   onContextMenuOpenChange(open: boolean): void;
   onContextMenuCloseAutoFocus(event: Event): void;
   onRequestRename(session: SessionListItem): void;
+  onRequestTogglePin(session: SessionListItem): void;
   onRequestDelete(session: SessionListItem): void;
   children: ReactNode;
 };
@@ -876,6 +880,7 @@ function SessionListNav({
   onContextMenuOpenChange,
   onContextMenuCloseAutoFocus,
   onRequestRename,
+  onRequestTogglePin,
   onRequestDelete,
   children,
 }: SessionListNavProps) {
@@ -897,6 +902,11 @@ function SessionListNav({
   }
 
   const busy = (contextMenuSession ?? contextMenuSessionRef.current)?.isBusy === true;
+  const togglePinTarget = contextMenuSessionRef.current ?? contextMenuSession;
+  const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
+  const togglePinLabel = togglePinTargetPinned
+    ? t("sidebar.unpinSession")
+    : t("sidebar.pinSession");
 
   return (
     <ContextMenu onOpenChange={onContextMenuOpenChange}>
@@ -906,19 +916,43 @@ function SessionListNav({
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
         {canRenameSession ? (
-          <ContextMenuItem
-            disabled={renameSessionBusy || busy}
-            title={busy ? t("sidebar.cannotRenameBusyChat") : undefined}
-            onSelect={() => {
-              const session = contextMenuSessionRef.current ?? contextMenuSession;
-              if (session) {
-                onRequestRename(session);
-              }
-            }}
-          >
-            <Pencil aria-hidden strokeWidth={1.75} />
-            {t("sidebar.renameSession")}
-          </ContextMenuItem>
+          <>
+            <Tooltip delayDuration={300} disableHoverableContent>
+              <TooltipTrigger asChild>
+                <ContextMenuItem
+                  onSelect={() => {
+                    const session = contextMenuSessionRef.current ?? contextMenuSession;
+                    if (session) {
+                      onRequestTogglePin(session);
+                    }
+                  }}
+                >
+                  {togglePinTargetPinned ? (
+                    <PinSlash aria-hidden strokeWidth={1.75} />
+                  ) : (
+                    <Pin aria-hidden strokeWidth={1.75} />
+                  )}
+                  {togglePinLabel}
+                </ContextMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {togglePinLabel}
+              </TooltipContent>
+            </Tooltip>
+            <ContextMenuItem
+              disabled={renameSessionBusy || busy}
+              title={busy ? t("sidebar.cannotRenameBusyChat") : undefined}
+              onSelect={() => {
+                const session = contextMenuSessionRef.current ?? contextMenuSession;
+                if (session) {
+                  onRequestRename(session);
+                }
+              }}
+            >
+              <Pencil aria-hidden strokeWidth={1.75} />
+              {t("sidebar.renameSession")}
+            </ContextMenuItem>
+          </>
         ) : null}
         {canRenameSession && canDeleteSession ? <ContextMenuSeparator /> : null}
         {canDeleteSession ? (
@@ -957,6 +991,7 @@ type WorkspaceListNavProps = {
   onContextMenuCloseAutoFocus(event: Event): void;
   onRequestRemoveWorkspace(group: SessionWorkspaceGroup): void;
   onRequestRenameSession(session: SessionListItem): void;
+  onRequestTogglePin(session: SessionListItem): void;
   onRequestDeleteSession(session: SessionListItem): void;
   children: ReactNode;
 };
@@ -976,6 +1011,7 @@ function WorkspaceListNav({
   onContextMenuCloseAutoFocus,
   onRequestRemoveWorkspace,
   onRequestRenameSession,
+  onRequestTogglePin,
   onRequestDeleteSession,
   children,
 }: WorkspaceListNavProps) {
@@ -1003,6 +1039,11 @@ function WorkspaceListNav({
   const workspaceTarget = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
   const sessionTarget = contextMenuSession ?? contextMenuSessionRef.current;
   const sessionBusy = sessionTarget?.isBusy === true;
+  const togglePinTarget = contextMenuSessionRef.current ?? contextMenuSession;
+  const togglePinTargetPinned = typeof togglePinTarget?.pinnedAtUnixMs === "number";
+  const togglePinLabel = togglePinTargetPinned
+    ? t("sidebar.unpinSession")
+    : t("sidebar.pinSession");
   const showRevealInExplorer =
     isWorkspaceTarget && canRevealInExplorer && Boolean(workspaceTarget?.rootPath);
   const showRemoveWorkspace = isWorkspaceTarget && canRemoveWorkspace;
@@ -1049,19 +1090,43 @@ function WorkspaceListNav({
           </ContextMenuItem>
         ) : null}
         {!isWorkspaceTarget && canRenameSession ? (
-          <ContextMenuItem
-            disabled={renameSessionBusy || sessionBusy}
-            title={sessionBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
-            onSelect={() => {
-              const session = contextMenuSessionRef.current ?? contextMenuSession;
-              if (session) {
-                onRequestRenameSession(session);
-              }
-            }}
-          >
-            <Pencil aria-hidden strokeWidth={1.75} />
-            {t("sidebar.renameSession")}
-          </ContextMenuItem>
+          <>
+            <Tooltip delayDuration={300} disableHoverableContent>
+              <TooltipTrigger asChild>
+                <ContextMenuItem
+                  onSelect={() => {
+                    const session = contextMenuSessionRef.current ?? contextMenuSession;
+                    if (session) {
+                      onRequestTogglePin(session);
+                    }
+                  }}
+                >
+                  {togglePinTargetPinned ? (
+                    <PinSlash aria-hidden strokeWidth={1.75} />
+                  ) : (
+                    <Pin aria-hidden strokeWidth={1.75} />
+                  )}
+                  {togglePinLabel}
+                </ContextMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {togglePinLabel}
+              </TooltipContent>
+            </Tooltip>
+            <ContextMenuItem
+              disabled={renameSessionBusy || sessionBusy}
+              title={sessionBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
+              onSelect={() => {
+                const session = contextMenuSessionRef.current ?? contextMenuSession;
+                if (session) {
+                  onRequestRenameSession(session);
+                }
+              }}
+            >
+              <Pencil aria-hidden strokeWidth={1.75} />
+              {t("sidebar.renameSession")}
+            </ContextMenuItem>
+          </>
         ) : null}
         {!isWorkspaceTarget && canRenameSession && canDeleteSession ? (
           <ContextMenuSeparator />
@@ -1277,6 +1342,7 @@ function SessionSidebarInner({
   onDeleteSession,
   renameSessionBusy = false,
   onRenameSession,
+  onTogglePinSession,
   removeWorkspaceBusy = false,
   onRemoveWorkspace,
   disabled,
@@ -1556,6 +1622,16 @@ function SessionSidebarInner({
       setContextMenuSession(null);
     },
     [handleRenameStart],
+  );
+
+  const handleTogglePin = useCallback(
+    (session: SessionListItem) => {
+      if (!onTogglePinSession) {
+        return;
+      }
+      void onTogglePinSession(session.path, typeof session.pinnedAtUnixMs !== "number");
+    },
+    [onTogglePinSession],
   );
 
   const handleContextMenuCloseAutoFocus = useCallback(
@@ -1999,6 +2075,7 @@ function SessionSidebarInner({
                   onContextMenuOpenChange={handleContextMenuOpenChange}
                   onContextMenuCloseAutoFocus={handleContextMenuCloseAutoFocus}
                   onRequestRename={handleRenameStartFromMenu}
+                  onRequestTogglePin={handleTogglePin}
                   onRequestDelete={handleContextMenuDelete}
                 >
                   <SidebarSectionCollapsible
@@ -2091,6 +2168,7 @@ function SessionSidebarInner({
                     onContextMenuCloseAutoFocus={handleContextMenuCloseAutoFocus}
                     onRequestRemoveWorkspace={handleWorkspaceContextMenuRemove}
                     onRequestRenameSession={handleRenameStartFromMenu}
+                    onRequestTogglePin={handleTogglePin}
                     onRequestDeleteSession={handleContextMenuDelete}
                   >
                     {workspaceGroups.map((group) => {
@@ -2159,6 +2237,7 @@ function SessionSidebarInner({
                 onContextMenuOpenChange={handleContextMenuOpenChange}
                 onContextMenuCloseAutoFocus={handleContextMenuCloseAutoFocus}
                 onRequestRename={handleRenameStartFromMenu}
+                onRequestTogglePin={handleTogglePin}
                 onRequestDelete={handleContextMenuDelete}
               >
                 {showUnbound ? (

@@ -1,6 +1,8 @@
 import { Ellipsis } from "@spiritagent/icons/ellipsis";
 import { X } from "@spiritagent/icons/x";
 import { Pencil } from "@spiritagent/icons/pencil";
+import { Pin } from "@spiritagent/icons/pin";
+import { PinSlash } from "@spiritagent/icons/pin-slash";
 import { Plus } from "@spiritagent/icons/plus";
 import { SidebarRight } from "@spiritagent/icons/sidebar-right";
 import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
@@ -89,6 +91,8 @@ export function DesktopLayoutChromeBar({
   renameSessionDisplayName,
   renameSessionBusy = false,
   onRenameSession,
+  sessionPinned = false,
+  onTogglePinSession,
 }: {
   useTranslucency: boolean;
   showSessionSidebarToggle?: boolean;
@@ -130,6 +134,8 @@ export function DesktopLayoutChromeBar({
   renameSessionDisplayName?: string | null;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  sessionPinned?: boolean;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
@@ -161,6 +167,7 @@ export function DesktopLayoutChromeBar({
     Boolean(onRenameSession) &&
     Boolean(trimmedRenameSessionPath) &&
     !trimmedSubagentPromptText;
+  const togglePinLabel = sessionPinned ? t("sidebar.unpinSession") : t("sidebar.pinSession");
 
   const handleRenameCancel = useCallback(() => {
     setRenamingTitle(false);
@@ -445,6 +452,32 @@ export function DesktopLayoutChromeBar({
                   <>
                     <DropdownMenuSeparator />
                     <div className="p-1">
+                      {onTogglePinSession ? (
+                        <Tooltip delayDuration={300} disableHoverableContent>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuItem
+                              className="gap-2"
+                              onSelect={() => {
+                                void onTogglePinSession(trimmedRenameSessionPath, !sessionPinned);
+                              }}
+                            >
+                              {sessionPinned ? (
+                                <PinSlash
+                                  className="size-3.5 shrink-0"
+                                  aria-hidden
+                                  strokeWidth={1.75}
+                                />
+                              ) : (
+                                <Pin className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+                              )}
+                              <span>{togglePinLabel}</span>
+                            </DropdownMenuItem>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" sideOffset={8}>
+                            {togglePinLabel}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
                       <DropdownMenuItem
                         className="gap-2"
                         disabled={renameSessionBusy || conversationBusy}
