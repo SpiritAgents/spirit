@@ -69,6 +69,10 @@
       "types": "./dist/icons/pencil.d.ts",
       "default": "./dist/icons/pencil.js"
     },
+    "./pin": {
+      "types": "./dist/icons/pin.d.ts",
+      "default": "./dist/icons/pin.js"
+    },
     "./plus": {
       "types": "./dist/icons/plus.d.ts",
       "default": "./dist/icons/plus.js"
