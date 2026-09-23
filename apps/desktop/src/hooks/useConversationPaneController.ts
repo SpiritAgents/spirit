@@ -39,10 +39,10 @@ export type UseConversationPaneControllerOptions = {
   hideStaleConversationMessages: boolean;
   showWorkspaceBindingControls: boolean;
   sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
+  newChatBusy: boolean;
   splitPaneCount: number;
   layoutNavigationPending: boolean;
-  onNewSession?: () => void;
+  onNewChat?: () => void;
   onBeginSideChat?: () => void;
   workspaceTools: WorkspaceTools;
   onOpenIntegrationsSettings: () => void;
@@ -65,10 +65,10 @@ export function useConversationPaneController({
   hideStaleConversationMessages,
   showWorkspaceBindingControls: _showWorkspaceBindingControls,
   sessionNavigationBusy: _sessionNavigationBusy,
-  newSessionBusy,
+  newChatBusy,
   splitPaneCount,
   layoutNavigationPending,
-  onNewSession,
+  onNewChat,
   onBeginSideChat,
   workspaceTools,
   onOpenIntegrationsSettings: _onOpenIntegrationsSettings,
@@ -109,11 +109,11 @@ export function useConversationPaneController({
       subagentViewActive: paneSubagentViewActive,
       compactionDemoActive: paneCompactionDemoActive,
       longConversationListDemoActive: paneLongConversationListDemoActive,
-      newSessionBusy: isFocused && splitPaneCount <= 1 ? newSessionBusy : false,
+      newChatBusy: isFocused && splitPaneCount <= 1 ? newChatBusy : false,
     });
   }, [
     isFocused,
-    newSessionBusy,
+    newChatBusy,
     paneCompactionDemoActive,
     paneLongConversationListDemoActive,
     paneMissingSliceDuringNav,
@@ -179,7 +179,7 @@ export function useConversationPaneController({
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewSession: onNewSession ?? (() => {}),
+    handleNewChat: onNewChat ?? (() => {}),
     setActiveSurface: () => {},
     setLastNonSettingsSurface: () => {},
     paneSessionPath: useIsolatedPane ? sessionPath : undefined,
@@ -311,7 +311,7 @@ export function useConversationPaneController({
     onSubmitComposerMessage: composer.submitComposerMessage,
     onComposerAgentModeChange: composer.handleComposerAgentModeChange,
     composerRichInputRef: composer.composerRichInputRef,
-    onMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
+    onMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
     onComposerKeyDown: composer.handleComposerKeyDown,
     onComposerCursorCodeUnitsChange: composer.setComposerCursorCodeUnits,
     onInsertFileReferenceTrigger: composer.insertFileReferenceTrigger,
@@ -329,21 +329,21 @@ export function useConversationPaneController({
   const composerInsertHandlers = useMemo(
     () => ({
       handleBrowserElementPicked: composer.handleBrowserElementPicked,
-      handlePrDiffAddToSession: composer.handlePrDiffAddToSession,
-      handleGitCommitAddToSession: composer.handleGitCommitAddToSession,
-      handleTerminalAddToSession: composer.handleTerminalAddToSession,
-      handleFileSnippetAddToSession: composer.handleFileSnippetAddToSession,
-      handleWorkspaceFileAddToSession: composer.handleWorkspaceFileAddToSession,
-      handleMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
+      handlePrDiffAddToChat: composer.handlePrDiffAddToChat,
+      handleGitCommitAddToChat: composer.handleGitCommitAddToChat,
+      handleTerminalAddToChat: composer.handleTerminalAddToChat,
+      handleFileSnippetAddToChat: composer.handleFileSnippetAddToChat,
+      handleWorkspaceFileAddToChat: composer.handleWorkspaceFileAddToChat,
+      handleMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
     }),
     [
       composer.handleBrowserElementPicked,
-      composer.handleFileSnippetAddToSession,
-      composer.handleGitCommitAddToSession,
-      composer.handleMessageQuoteAddToSession,
-      composer.handlePrDiffAddToSession,
-      composer.handleTerminalAddToSession,
-      composer.handleWorkspaceFileAddToSession,
+      composer.handleFileSnippetAddToChat,
+      composer.handleGitCommitAddToChat,
+      composer.handleMessageQuoteAddToChat,
+      composer.handlePrDiffAddToChat,
+      composer.handleTerminalAddToChat,
+      composer.handleWorkspaceFileAddToChat,
     ],
   );
 

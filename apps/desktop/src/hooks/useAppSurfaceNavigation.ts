@@ -34,7 +34,7 @@ export type UseAppSurfaceNavigationOptions = {
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
   sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
+  newChatBusy: boolean;
   t: TFunction;
   composerAutomationApiRef?: MutableRefObject<FocusedPaneComposerControls | null>;
 };
@@ -47,7 +47,7 @@ export function useAppSurfaceNavigation({
   compactionDemoActive,
   longConversationListDemoActive,
   sessionNavigationBusy,
-  newSessionBusy,
+  newChatBusy,
   t,
   composerAutomationApiRef,
 }: UseAppSurfaceNavigationOptions) {
@@ -75,12 +75,12 @@ export function useAppSurfaceNavigation({
       shouldClearConversationSnapshotStale({
         activeSurface,
         sessionNavigationBusy,
-        newSessionBusy,
+        newChatBusy,
       })
     ) {
       setConversationSnapshotStale(false);
     }
-  }, [activeSurface, newSessionBusy, sessionNavigationBusy]);
+  }, [activeSurface, newChatBusy, sessionNavigationBusy]);
 
   const settingsMode = activeSurface === "settings";
   const marketplaceMode = activeSurface === "marketplace";
@@ -93,7 +93,7 @@ export function useAppSurfaceNavigation({
     conversationSnapshotStale,
     activeSurface,
     sessionNavigationBusy,
-    newSessionBusy,
+    newChatBusy,
   });
   const hideStaleConversationMessages = shouldHideStaleConversationMessages({
     suppressStaleConversation,
@@ -104,11 +104,11 @@ export function useAppSurfaceNavigation({
     subagentViewActive,
     compactionDemoActive,
     longConversationListDemoActive,
-    newSessionBusy,
+    newChatBusy,
   });
   const showWorkspaceBindingControls = isEmptySession;
 
-  const handleNewSession = useCallback(() => {
+  const handleNewChat = useCallback(() => {
     if (runtime.busyAction === "reset") {
       return;
     }
@@ -117,7 +117,7 @@ export function useAppSurfaceNavigation({
     void runtime.resetSession();
   }, [runtime]);
 
-  const handleNewSessionInWorkspace = useCallback(
+  const handleNewChatInWorkspace = useCallback(
     async (workspaceRoot: string) => {
       const trimmed = workspaceRoot.trim();
       if (!trimmed) {
@@ -229,8 +229,8 @@ export function useAppSurfaceNavigation({
     hideStaleConversationMessages,
     isEmptySession,
     showWorkspaceBindingControls,
-    handleNewSession,
-    handleNewSessionInWorkspace,
+    handleNewChat,
+    handleNewChatInWorkspace,
     handleGenerateAutomation,
     handlePrefillComposerSkillChip,
     handleOpenSettings,

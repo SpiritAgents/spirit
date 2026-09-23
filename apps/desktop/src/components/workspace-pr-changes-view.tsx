@@ -106,16 +106,16 @@ function PrChangesSelectionMenu({
   files,
   prUrl,
   prStatus,
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   files: GitHubPullRequestChangedFile[];
   prUrl: string;
   prStatus: PullRequestChipStatus;
-  onPrDiffAddToSession?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onPrDiffAddToSession && prUrl);
+  const enabled = Boolean(onPrDiffAddToChat && prUrl);
   const { open, setOpen, anchor, dismiss } = useTextSelectionActionMenu({
     enabled,
     rootRef,
@@ -123,10 +123,10 @@ function PrChangesSelectionMenu({
     readSelectionText: readDiffSelectionText,
   });
 
-  const handleAddToSession = useCallback(() => {
+  const handleAddToChat = useCallback(() => {
     const root = rootRef.current;
     const selection = typeof window !== "undefined" ? window.getSelection() : null;
-    if (!root || !selection || !onPrDiffAddToSession) {
+    if (!root || !selection || !onPrDiffAddToChat) {
       dismiss();
       return;
     }
@@ -166,10 +166,10 @@ function PrChangesSelectionMenu({
       diffText,
       status: prStatus,
     };
-    onPrDiffAddToSession(attachment);
+    onPrDiffAddToChat(attachment);
     dismiss();
     selection.removeAllRanges();
-  }, [dismiss, files, onPrDiffAddToSession, prStatus, prUrl, rootRef]);
+  }, [dismiss, files, onPrDiffAddToChat, prStatus, prUrl, rootRef]);
 
   if (!enabled) {
     return null;
@@ -178,8 +178,8 @@ function PrChangesSelectionMenu({
   return (
     <TextSelectionActionMenu open={open} anchor={anchor} onOpenChange={setOpen}>
       <TextSelectionActionMenuItem
-        label={t("workspace.addSelectionToSession")}
-        onSelect={handleAddToSession}
+        label={t("workspace.addSelectionToChat")}
+        onSelect={handleAddToChat}
       />
     </TextSelectionActionMenu>
   );
@@ -374,7 +374,7 @@ export type WorkspacePrChangesViewProps = {
   hasMore?: boolean;
   prUrl?: string;
   prStatus?: PullRequestChipStatus;
-  onPrDiffAddToSession?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
   onOpenExternal?: (url: string) => void;
   /** Windows Mica / macOS Vibrancy: pinned file headers become transparent + occlude content via mask. */
   useTranslucency?: boolean;
@@ -387,7 +387,7 @@ export function WorkspacePrChangesView({
   hasMore = false,
   prUrl = "",
   prStatus = "open",
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
   onOpenExternal,
   useTranslucency = false,
   className,
@@ -679,7 +679,7 @@ export function WorkspacePrChangesView({
         files={files}
         prUrl={prUrl}
         prStatus={prStatus}
-        onPrDiffAddToSession={onPrDiffAddToSession}
+        onPrDiffAddToChat={onPrDiffAddToChat}
       />
     </div>
   );

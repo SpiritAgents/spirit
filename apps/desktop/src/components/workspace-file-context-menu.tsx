@@ -46,7 +46,7 @@ export type WorkspaceFileContextMenuContentProps = {
   onReveal?: (target: WorkspaceExplorerContextTarget) => void;
   onRename?: (target: WorkspaceExplorerContextTarget) => void;
   onDelete?: (target: WorkspaceExplorerContextTarget) => void;
-  onAddToSession?: (target: WorkspaceExplorerContextTarget) => void;
+  onAddToChat?: (target: WorkspaceExplorerContextTarget) => void;
   onCloseAutoFocus?: (event: Event) => void;
 };
 
@@ -59,7 +59,7 @@ export function WorkspaceFileContextMenuContent({
   onReveal,
   onRename,
   onDelete,
-  onAddToSession,
+  onAddToChat,
   onCloseAutoFocus,
 }: WorkspaceFileContextMenuContentProps) {
   const { t } = useTranslation();
@@ -90,7 +90,7 @@ export function WorkspaceFileContextMenuContent({
     });
   }
 
-  if (onAddToSession) {
+  if (onAddToChat) {
     menuItems.push({
       section: "session",
       item: (
@@ -98,11 +98,11 @@ export function WorkspaceFileContextMenuContent({
           onSelect={() => {
             const entry = targetRef.current ?? target;
             if (entry) {
-              onAddToSession(entry);
+              onAddToChat(entry);
             }
           }}
         >
-          {t("workspace.addFileToSession")}
+          {t("workspace.addFileToChat")}
         </ContextMenuItem>
       ),
     });

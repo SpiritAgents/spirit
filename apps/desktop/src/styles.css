@@ -204,15 +204,15 @@ html.spirit-desktop-darwin [data-darwin-pinned-sidebar-toggle] {
 
 /*
  * Workspace tools full screen: the conversation column is squeezed to 0 and clips its chrome bar,
- * so the new-session button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
+ * so the new-chat button (and on Win/Linux the sidebar toggle) is fixed-pinned above the
  * panel from the first enter-full-screen frame through the exit settle. The sidebar open/close
  * width/opacity rule lives on the inner wrapper and still composes with the fixed positioning.
- * macOS windowed: pin the new-session button in the same slot it occupies in-flow
+ * macOS windowed: pin the new-chat button in the same slot it occupies in-flow
  * (traffic-lights inset + toggle spacer w-7+mr-1). Using the toggle-inset token would sit 0.125rem
  * to the right of that slot and jump the button on the first full-screen frame.
  */
 html.spirit-desktop-darwin:not(.spirit-desktop-darwin-fullscreen)
-  [data-workspace-tools-pinned-new-session] {
+  [data-workspace-tools-pinned-new-chat] {
   position: fixed;
   top: 0;
   left: calc(var(--spirit-macos-traffic-lights-inset-left) + 2rem);
@@ -238,8 +238,8 @@ html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggl
   transition: left 300ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-session],
-html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] {
+html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-chat],
+html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-chat] {
   position: fixed;
   left: calc(var(--spirit-session-sidebar-shell-width, 0px) + 2.5rem);
   z-index: 50;
@@ -249,8 +249,8 @@ html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] 
 @media (prefers-reduced-motion: reduce) {
   html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-sidebar-toggle],
   html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-sidebar-toggle],
-  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-session],
-  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-session] {
+  html:not(.spirit-desktop-darwin) [data-workspace-tools-pinned-new-chat],
+  html.spirit-desktop-darwin-fullscreen [data-workspace-tools-pinned-new-chat] {
     transition: none;
   }
 }

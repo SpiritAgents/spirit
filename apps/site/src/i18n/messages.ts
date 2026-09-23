@@ -115,7 +115,7 @@ type DesktopWindowCopy = {
   previewEditorOnlyTextError: string;
   hostStatus: string;
   mcpReady: string;
-  newSession: string;
+  newChat: string;
 };
 
 type DesktopCommitCopy = {
@@ -160,7 +160,7 @@ type DesktopSessionSidebarCopy = {
   back: string;
   settingsHeading: string;
   pageNavigation: string;
-  newSession: string;
+  newChat: string;
   extensionsButton: string;
   workspacesHeading: string;
   settingsTabsAria: string;

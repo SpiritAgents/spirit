@@ -61,7 +61,7 @@ export type UseDesktopKeyboardShortcutsOptions = {
   conversationAbortShortcutEligibleRef: MutableRefObject<boolean>;
   conversationAbortShortcutTargetRef?: ConversationAbortShortcutTargetRef;
   sessionSidebarChromeApiRef: MutableRefObject<SessionSidebarChromeApi | null>;
-  handleNewSession: () => void;
+  handleNewChat: () => void;
   handleSelectSession: (path: string) => void;
   handleOpenSettings: () => void;
   handleCloseSettings: () => void;
@@ -78,7 +78,7 @@ export function useDesktopKeyboardShortcuts({
   conversationAbortShortcutEligibleRef,
   conversationAbortShortcutTargetRef,
   sessionSidebarChromeApiRef,
-  handleNewSession,
+  handleNewChat,
   handleSelectSession,
   handleOpenSettings,
   handleCloseSettings,
@@ -277,19 +277,19 @@ export function useDesktopKeyboardShortcuts({
         return;
       }
       event.preventDefault();
-      handleNewSession();
+      handleNewChat();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleNewSession]);
+  }, [handleNewChat]);
 
   useEffect(() => {
     const bridge = window.spiritDesktop;
     if (!bridge?.subscribeNewSession) {
       return;
     }
-    return bridge.subscribeNewSession(handleNewSession);
-  }, [handleNewSession]);
+    return bridge.subscribeNewSession(handleNewChat);
+  }, [handleNewChat]);
 
   // Cmd/Ctrl+, — open settings (macOS menu accelerator handles this; skip here).
   useEffect(() => {

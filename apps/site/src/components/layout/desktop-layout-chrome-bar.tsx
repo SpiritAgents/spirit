@@ -6,7 +6,7 @@ import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapse
 
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import {
-  NewSessionShortcutKbd,
+  NewChatShortcutKbd,
   SessionSidebarShortcutKbd,
   WorkspaceToolsShortcutKbd,
 } from "@/components/layout/desktop-shortcut-kbds";
@@ -30,8 +30,8 @@ export function DesktopLayoutChromeBar({
   sessionTitle,
   subagentPromptText,
   onExitSubagentViewer,
-  onNewSession,
-  newSessionBusy = false,
+  onNewChat,
+  newChatBusy = false,
 }: {
   useTranslucency: boolean;
   baseToneClassName?: string;
@@ -41,8 +41,8 @@ export function DesktopLayoutChromeBar({
   sessionTitle?: string | null;
   subagentPromptText?: string | null;
   onExitSubagentViewer?: () => void;
-  onNewSession?: () => void;
-  newSessionBusy?: boolean;
+  onNewChat?: () => void;
+  newChatBusy?: boolean;
 }) {
   const { t } = useTranslation();
   const { open: sessionSidebarOpen, toggle: onToggleSessionSidebar } = useSessionSidebarChrome();
@@ -87,7 +87,7 @@ export function DesktopLayoutChromeBar({
             <SessionSidebarShortcutKbd />
           </TooltipContent>
         </Tooltip>
-        {onNewSession ? (
+        {onNewChat ? (
           <div
             className={cn(
               "shrink-0 overflow-hidden",
@@ -105,16 +105,16 @@ export function DesktopLayoutChromeBar({
                   variant="ghost"
                   size="icon"
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                  onClick={onNewSession}
-                  disabled={newSessionBusy}
+                  onClick={onNewChat}
+                  disabled={newChatBusy}
                   tabIndex={sessionSidebarOpen ? -1 : undefined}
-                  aria-label={t("sidebar.newSession")}
+                  aria-label={t("sidebar.newChat")}
                 >
                   <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                {t("sidebar.newChat")} <NewChatShortcutKbd />
               </TooltipContent>
             </Tooltip>
           </div>

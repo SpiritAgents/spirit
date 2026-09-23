@@ -121,15 +121,15 @@
       "mcps": "MCPs",
       "appearance": "Appearance",
       "settingsNavSidebarAria": "Settings Navigation Sidebar",
-      "sessionsSidebarAria": "Sessions and Settings Sidebar",
+      "sessionsSidebarAria": "Chats and Settings Sidebar",
       "back": "Back",
       "settingsHeading": "Settings",
       "pageNavigation": "Page navigation",
-      "newSession": "New Session",
+      "newChat": "New Chat",
       "extensionsButton": "Extensions",
       "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Settings Tabs",
-      "workspaceSessionsAria": "Workspace Sessions",
+      "workspaceSessionsAria": "Workspace Chats",
       "settingsButton": "Settings"
     },
     "conversation": {
@@ -233,7 +233,7 @@
       "previewEditorOnlyTextError": "Only text files in the preview editor can be opened.",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newSession": "New Session"
+      "newChat": "New Chat"
     },
     "commit": {
       "modeCommit": "Commit",

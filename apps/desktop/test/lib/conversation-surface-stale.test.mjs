@@ -20,7 +20,7 @@ test("shouldClearConversationSnapshotStale clears on settled conversation surfac
     shouldClearConversationSnapshotStale({
       activeSurface: "marketplace",
       sessionNavigationBusy: false,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     false,
   );
@@ -28,7 +28,7 @@ test("shouldClearConversationSnapshotStale clears on settled conversation surfac
     shouldClearConversationSnapshotStale({
       activeSurface: "conversation",
       sessionNavigationBusy: true,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     false,
   );
@@ -36,7 +36,7 @@ test("shouldClearConversationSnapshotStale clears on settled conversation surfac
     shouldClearConversationSnapshotStale({
       activeSurface: "conversation",
       sessionNavigationBusy: false,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     true,
   );
@@ -47,7 +47,7 @@ test("shouldSuppressStaleConversation suppresses only stale in-flight conversati
     conversationSnapshotStale: true,
     activeSurface: "conversation",
     sessionNavigationBusy: false,
-    newSessionBusy: true,
+    newChatBusy: true,
   };
   assert.equal(shouldSuppressStaleConversation(base), true);
   assert.equal(
@@ -58,7 +58,7 @@ test("shouldSuppressStaleConversation suppresses only stale in-flight conversati
   assert.equal(
     shouldSuppressStaleConversation({
       ...base,
-      newSessionBusy: false,
+      newChatBusy: false,
       sessionNavigationBusy: false,
     }),
     false,
@@ -72,7 +72,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
-      newSessionBusy: true,
+      newChatBusy: true,
     }),
     true,
   );
@@ -82,7 +82,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     false,
   );
@@ -92,7 +92,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     true,
   );
@@ -102,7 +102,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: true,
-      newSessionBusy: false,
+      newChatBusy: false,
     }),
     false,
   );

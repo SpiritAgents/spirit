@@ -70,7 +70,7 @@ import i18n from "@/lib/desktop-preview-i18n";
 import type { SessionListItem } from "@/types/spirit-desktop";
 
 /** Platform shortcut hint, computed at module load (the platform never changes at runtime). */
-const newSessionShortcutLabel = shortcutLabel("N");
+const newChatShortcutLabel = shortcutLabel("N");
 
 function samePath(a: string, b: string): boolean {
   return a.replace(/\\/g, "/").toLowerCase() === b.replace(/\\/g, "/").toLowerCase();
@@ -86,7 +86,7 @@ type SessionSidebarProps = {
   sessions: SessionListItem[];
   activeFilePath: string | null;
   onSelectSession: (path: string) => void;
-  onNewSession: () => void;
+  onNewChat: () => void;
   onOpenMarketplace?: () => void;
   onOpenAutomations?: () => void;
   onOpenSettings: () => void;
@@ -103,7 +103,7 @@ type SessionSidebarProps = {
   onExtensionSettingsChange?: (extensionId: string) => void;
   /** Windows Mica: the sidebar needs translucency + blur so content behind the window does not bleed through and smear */
   translucency?: boolean;
-  newSessionBusy?: boolean;
+  newChatBusy?: boolean;
   sessionNavigationBusy?: boolean;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
@@ -738,7 +738,7 @@ function SessionSidebarInner({
   sessions,
   activeFilePath,
   onSelectSession,
-  onNewSession,
+  onNewChat,
   onOpenMarketplace,
   onOpenAutomations,
   onOpenSettings,
@@ -751,7 +751,7 @@ function SessionSidebarInner({
   onSettingsTabChange,
   onExtensionSettingsChange: _onExtensionSettingsChange,
   translucency,
-  newSessionBusy = false,
+  newChatBusy = false,
   sessionNavigationBusy = false,
   deleteSessionBusy = false,
   onDeleteSession,
@@ -922,7 +922,7 @@ function SessionSidebarInner({
   const isSessionSelected = (sessionPath: string) =>
     !marketplaceActive &&
     !automationsActive &&
-    !newSessionBusy &&
+    !newChatBusy &&
     !sessionNavigationBusy &&
     activeFilePath !== null &&
     samePath(sessionPath, activeFilePath);
@@ -1084,14 +1084,14 @@ function SessionSidebarInner({
               sidebarItemHoverClass(translucency),
               narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
             )}
-            disabled={disabled || newSessionBusy}
-            onClick={onNewSession}
+            disabled={disabled || newChatBusy}
+            onClick={onNewChat}
           >
             <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
+            <span className={cn(narrow && "sr-only")}>{t("sidebar.newChat")}</span>
             {!narrow && (
               <span className="ml-auto text-[0.65rem] text-chrome-secondary-label" aria-hidden>
-                {newSessionShortcutLabel}
+                {newChatShortcutLabel}
               </span>
             )}
           </Button>

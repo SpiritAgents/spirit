@@ -468,7 +468,7 @@ export function ConversationSplitProvider({
         const pendingQuote = pendingPaneMessageQuotesRef.current.get(paneId);
         if (pendingQuote) {
           pendingPaneMessageQuotesRef.current.delete(paneId);
-          handlers.handleMessageQuoteAddToSession(pendingQuote);
+          handlers.handleMessageQuoteAddToChat(pendingQuote);
         }
       } else {
         paneComposerInsertRegistryRef.current.delete(paneId);
@@ -1027,7 +1027,7 @@ export function ConversationSplitProvider({
         ? paneComposerInsertRegistryRef.current.get(candidateId)
         : undefined;
       if (candidateId && candidateId !== paneId && candidateLeaf && candidateHandlers) {
-        candidateHandlers.handleMessageQuoteAddToSession(attachment);
+        candidateHandlers.handleMessageQuoteAddToChat(attachment);
         focusPane(candidateId, candidateLeaf.sessionPath);
         return;
       }

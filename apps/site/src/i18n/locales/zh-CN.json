@@ -121,15 +121,15 @@
       "mcps": "MCPs",
       "appearance": "外观",
       "settingsNavSidebarAria": "设置导航侧栏",
-      "sessionsSidebarAria": "会话与设置侧栏",
+      "sessionsSidebarAria": "对话与设置侧栏",
       "back": "返回",
       "settingsHeading": "设置",
       "pageNavigation": "页面导航",
-      "newSession": "新会话",
+      "newChat": "新对话",
       "extensionsButton": "扩展",
       "workspacesHeading": "工作区",
       "settingsTabsAria": "设置页签",
-      "workspaceSessionsAria": "工作区会话",
+      "workspaceSessionsAria": "工作区对话",
       "settingsButton": "设置"
     },
     "conversation": {
@@ -230,7 +230,7 @@
       "previewEditorOnlyTextError": "仅为预览中的文本文件启用编辑器。",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newSession": "新会话"
+      "newChat": "新对话"
     },
     "commit": {
       "modeCommit": "提交",

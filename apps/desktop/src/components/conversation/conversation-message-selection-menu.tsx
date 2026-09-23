@@ -51,17 +51,17 @@ export function ConversationMessageSelectionMenu({
   rootRef,
   quoteSessionPath,
   quoteOrigin,
-  onMessageQuoteAddToSession,
+  onMessageQuoteAddToChat,
   onMessageQuoteAddToSideChat,
 }: {
   rootRef: RefObject<HTMLElement | null>;
   quoteSessionPath?: string;
   quoteOrigin?: QuoteChipOrigin;
-  onMessageQuoteAddToSession?: (attachment: MessageQuoteAttachment) => void;
+  onMessageQuoteAddToChat?: (attachment: MessageQuoteAttachment) => void;
   onMessageQuoteAddToSideChat?: (attachment: MessageQuoteAttachment) => void;
 }) {
   const { t } = useTranslation();
-  const enabled = Boolean(onMessageQuoteAddToSession);
+  const enabled = Boolean(onMessageQuoteAddToChat);
   const { open, setOpen, anchor, selectionText, dismiss } = useTextSelectionActionMenu({
     enabled,
     rootRef,
@@ -84,9 +84,9 @@ export function ConversationMessageSelectionMenu({
     [dismiss, quoteOrigin, quoteSessionPath, selectionText],
   );
 
-  const handleAddToSession = useCallback(() => {
-    confirmSelection(onMessageQuoteAddToSession);
-  }, [confirmSelection, onMessageQuoteAddToSession]);
+  const handleAddToChat = useCallback(() => {
+    confirmSelection(onMessageQuoteAddToChat);
+  }, [confirmSelection, onMessageQuoteAddToChat]);
 
   const handleAddToSideChat = useCallback(() => {
     confirmSelection(onMessageQuoteAddToSideChat);
@@ -105,14 +105,14 @@ export function ConversationMessageSelectionMenu({
       {onMessageQuoteAddToSideChat ? (
         <TextSelectionActionMenuSegmentedItems
           segments={[
-            { label: t("workspace.addSelectionToSession"), onSelect: handleAddToSession },
+            { label: t("workspace.addSelectionToChat"), onSelect: handleAddToChat },
             { label: t("workspace.addSelectionToSideChat"), onSelect: handleAddToSideChat },
           ]}
         />
       ) : (
         <TextSelectionActionMenuItem
-          label={t("workspace.addSelectionToSession")}
-          onSelect={handleAddToSession}
+          label={t("workspace.addSelectionToChat")}
+          onSelect={handleAddToChat}
         />
       )}
     </TextSelectionActionMenu>

@@ -382,8 +382,8 @@ export type WorkspaceFilesTabProps = {
   ) => void;
   /** Currently open workspace-relative path; undefined when no workspace file is selected */
   onFilesWorkspacePathChange?: (relativePath: string | undefined) => void;
-  onFileSnippetAddToSession?: (attachment: FileSnippetAttachment) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string) => void;
+  onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
+  onWorkspaceFileAddToChat?: (relativePath: string) => void;
   gitRevision?: number;
   workspaceContentInvalidation?: WorkspaceContentInvalidation;
   useTranslucency?: boolean;
@@ -420,8 +420,8 @@ export function WorkspaceFilesTab({
   onOpenWorkspaceFile,
   onOpenWorkspaceFileInNewTab,
   onFilesWorkspacePathChange,
-  onFileSnippetAddToSession,
-  onWorkspaceFileAddToSession,
+  onFileSnippetAddToChat,
+  onWorkspaceFileAddToChat,
   gitRevision,
   workspaceContentInvalidation,
   useTranslucency = false,
@@ -1015,7 +1015,7 @@ export function WorkspaceFilesTab({
   }, [draftText, doc?.readOnly, isPreviewVisible, savedText]);
 
   const selectionEnabled =
-    doc?.status === "ready" && Boolean(onFileSnippetAddToSession && selectedPath);
+    doc?.status === "ready" && Boolean(onFileSnippetAddToChat && selectedPath);
 
   const onToggleMarkdownViewMode = useCallback((value: string) => {
     if (value === "preview" || value === "edit") {
@@ -1235,7 +1235,7 @@ export function WorkspaceFilesTab({
                       : current,
                   );
                 }}
-                onWorkspaceFileAddToSession={onWorkspaceFileAddToSession}
+                onWorkspaceFileAddToChat={onWorkspaceFileAddToChat}
               />
             </div>
             {searchWorkspaceContent ? (
@@ -1340,7 +1340,7 @@ export function WorkspaceFilesTab({
                       <FileDomSelectionMenu
                         rootRef={previewRootRef}
                         filePath={selectedPath}
-                        onFileSnippetAddToSession={onFileSnippetAddToSession}
+                        onFileSnippetAddToChat={onFileSnippetAddToChat}
                       />
                     ) : null}
                   </>
@@ -1369,7 +1369,7 @@ export function WorkspaceFilesTab({
                         containerRef={monacoContainerRef}
                         editor={monacoEditor}
                         filePath={selectedPath}
-                        onFileSnippetAddToSession={onFileSnippetAddToSession}
+                        onFileSnippetAddToChat={onFileSnippetAddToChat}
                       />
                     ) : null}
                   </div>

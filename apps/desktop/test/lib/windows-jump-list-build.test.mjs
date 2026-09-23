@@ -80,21 +80,21 @@ test("buildJumpListLaunchArgs prefixes the dev main script", () => {
 test("buildWindowsJumpListCategories omits custom group when no sessions", () => {
   const categories = buildWindowsJumpListCategories({
     recentLabel: "Recent",
-    newAgentLabel: "New Session",
+    newAgentLabel: "New Chat",
     sessions: [],
     execPath: "C:\\Spirit.exe",
     iconPath: "C:\\Spirit.ico",
   });
   assert.equal(categories.length, 1);
   assert.equal(categories[0]?.type, "tasks");
-  assert.equal(categories[0]?.items[0]?.title, "New Session");
+  assert.equal(categories[0]?.items[0]?.title, "New Chat");
   assert.equal(categories[0]?.items[0]?.args, "--new-session");
 });
 
 test("buildWindowsJumpListCategories builds recent custom group before tasks", () => {
   const categories = buildWindowsJumpListCategories({
     recentLabel: "Recent",
-    newAgentLabel: "New Session",
+    newAgentLabel: "New Chat",
     sessions: [
       session("C:\\Spirit\\chats\\chat-1.json", "Chat One", 10),
       session("C:\\Spirit\\chats\\chat-2.json", "Chat Two", 20),
@@ -110,7 +110,7 @@ test("buildWindowsJumpListCategories builds recent custom group before tasks", (
   assert.equal(categories[0]?.items[0]?.args, '"C:\\main.ts" --session "chat-2.json"');
   assert.equal(categories[0]?.items[1]?.args, '"C:\\main.ts" --session "chat-1.json"');
   assert.equal(categories[1]?.type, "tasks");
-  assert.equal(categories[1]?.items[0]?.title, "New Session");
+  assert.equal(categories[1]?.items[0]?.title, "New Chat");
   assert.equal(categories[1]?.items[0]?.args, '"C:\\main.ts" --new-session');
 });
 

@@ -194,13 +194,13 @@ test("toggle during the exit flight supersedes it and still releases the pin at 
   expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: false });
 });
 
-test("dismissForNewSession collapses instantly with no reverse flight", async () => {
+test("dismissForNewChat collapses instantly with no reverse flight", async () => {
   renderHarness();
   mockRowWidth(1000);
   const shell = shellElement();
   await enterFullScreenAndSettle();
 
-  act(() => latestApi.current?.dismissForNewSession());
+  act(() => latestApi.current?.dismissForNewChat());
 
   expect(chromeState()).toEqual({ open: false, fullScreen: false, pinned: false });
   expect(shell.style.width).toBe("0px");
