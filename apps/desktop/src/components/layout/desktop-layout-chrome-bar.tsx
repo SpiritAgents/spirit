@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import { MessageCircle, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "lucide-react";
 
 import {
-  NewSessionShortcutKbd,
+  NewChatShortcutKbd,
   WorkspaceToolsShortcutKbd,
 } from "@/components/layout/desktop-shortcut-kbds";
 import { SessionSidebarToggleButton } from "@/components/layout/session-sidebar-toggle-button";
@@ -66,8 +66,8 @@ export function DesktopLayoutChromeBar({
   sessionTooltip,
   subagentPromptText,
   onExitSubagentViewer,
-  onNewSession,
-  newSessionBusy = false,
+  onNewChat,
+  newChatBusy = false,
   onSplit,
   onSideChat,
   onSplitVertical,
@@ -101,8 +101,8 @@ export function DesktopLayoutChromeBar({
   sessionTooltip?: SessionGitTooltipItem | null;
   subagentPromptText?: string | null;
   onExitSubagentViewer?: () => void;
-  onNewSession?: () => void;
-  newSessionBusy?: boolean;
+  onNewChat?: () => void;
+  newChatBusy?: boolean;
   onSplit?: () => void;
   onSideChat?: () => void;
   onSplitVertical?: () => void;
@@ -138,7 +138,7 @@ export function DesktopLayoutChromeBar({
     toggle: onToggleWorkspaceTools,
     fullScreen: workspaceToolsFullScreen,
     chromePinned: workspaceToolsChromePinned,
-    registerNewSessionChrome,
+    registerNewChatChrome,
   } = useWorkspaceToolsChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinFullScreen = useDarwinWindowFullscreen(darwinElectron);
@@ -226,11 +226,11 @@ export function DesktopLayoutChromeBar({
   }, []);
 
   useEffect(() => {
-    if (!onNewSession || !showSessionSidebarToggle) {
+    if (!onNewChat || !showSessionSidebarToggle) {
       return;
     }
-    return registerNewSessionChrome();
-  }, [onNewSession, registerNewSessionChrome, showSessionSidebarToggle]);
+    return registerNewChatChrome();
+  }, [onNewChat, registerNewChatChrome, showSessionSidebarToggle]);
 
   return (
     <div
@@ -296,14 +296,12 @@ export function DesktopLayoutChromeBar({
             aria-hidden
           />
         ) : null}
-        {onNewSession && showSessionSidebarToggle ? (
+        {onNewChat && showSessionSidebarToggle ? (
           // While the tools panel is full screen the outer wrapper fixed-pins the button above the
           // panel (see styles.css). position:fixed takes the inner width slot out of the leading
           // flex, so an in-flow ghost keeps the breadcrumb from snapping into that gap on frame 1.
           <>
-            <div
-              data-workspace-tools-pinned-new-session={workspaceToolsChromePinned ? "" : undefined}
-            >
+            <div data-workspace-tools-pinned-new-chat={workspaceToolsChromePinned ? "" : undefined}>
               <div
                 className={cn(
                   "shrink-0 overflow-hidden",
@@ -321,16 +319,16 @@ export function DesktopLayoutChromeBar({
                       variant="ghost"
                       size="icon"
                       className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                      onClick={onNewSession}
-                      disabled={newSessionBusy}
+                      onClick={onNewChat}
+                      disabled={newChatBusy}
                       tabIndex={sessionSidebarOpen ? -1 : undefined}
-                      aria-label={t("sidebar.newSession")}
+                      aria-label={t("sidebar.newChat")}
                     >
                       <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center" sideOffset={4}>
-                    {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                    {t("sidebar.newChat")} <NewChatShortcutKbd />
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -450,7 +448,7 @@ export function DesktopLayoutChromeBar({
                       <DropdownMenuItem
                         className="gap-2"
                         disabled={renameSessionBusy || conversationBusy}
-                        title={conversationBusy ? t("sidebar.cannotRenameBusySession") : undefined}
+                        title={conversationBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
                         onSelect={() => {
                           pendingRenameFocusRef.current = true;
                           handleRenameStart();
@@ -470,7 +468,7 @@ export function DesktopLayoutChromeBar({
                         variant="destructive"
                         className="gap-2"
                         disabled={deleteSessionBusy || conversationBusy}
-                        title={conversationBusy ? t("sidebar.cannotDeleteBusySession") : undefined}
+                        title={conversationBusy ? t("sidebar.cannotDeleteBusyChat") : undefined}
                         onSelect={() => {
                           setDeleteSessionDialogOpen(true);
                         }}

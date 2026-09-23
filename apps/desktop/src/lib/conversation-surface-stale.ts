@@ -16,10 +16,10 @@ export function shouldMarkConversationSnapshotStale(
 export function shouldClearConversationSnapshotStale(input: {
   activeSurface: ConversationActiveSurface;
   sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
+  newChatBusy: boolean;
 }): boolean {
   return (
-    input.activeSurface === "conversation" && !input.sessionNavigationBusy && !input.newSessionBusy
+    input.activeSurface === "conversation" && !input.sessionNavigationBusy && !input.newChatBusy
   );
 }
 
@@ -28,12 +28,12 @@ export function shouldSuppressStaleConversation(input: {
   conversationSnapshotStale: boolean;
   activeSurface: ConversationActiveSurface;
   sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
+  newChatBusy: boolean;
 }): boolean {
   return (
     input.conversationSnapshotStale &&
     input.activeSurface === "conversation" &&
-    (input.sessionNavigationBusy || input.newSessionBusy)
+    (input.sessionNavigationBusy || input.newChatBusy)
   );
 }
 
@@ -42,7 +42,7 @@ export function resolveEffectiveEmptySession(input: {
   subagentViewActive: boolean;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
-  newSessionBusy: boolean;
+  newChatBusy: boolean;
 }): boolean {
   if (
     input.compactionDemoActive ||
@@ -51,7 +51,7 @@ export function resolveEffectiveEmptySession(input: {
   ) {
     return false;
   }
-  if (input.newSessionBusy || input.sessionMessageCount === 0) {
+  if (input.newChatBusy || input.sessionMessageCount === 0) {
     return true;
   }
   return false;

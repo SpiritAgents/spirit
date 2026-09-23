@@ -65,7 +65,7 @@ export type WorkspacePrDetailViewProps = {
   onOpenExternal: (url: string) => void;
   onMerge?: (method: GitHubPullRequestMergeMethod) => void;
   onMarkReady?: () => void;
-  onPrDiffAddToSession?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
   /** Windows Mica / macOS Vibrancy: forwarded to the changes view's pinned-header occlusion. */
   useTranslucency?: boolean;
   className?: string;
@@ -142,7 +142,7 @@ export function WorkspacePrDetailView({
   onOpenExternal,
   onMerge,
   onMarkReady,
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
   useTranslucency = false,
   className,
 }: WorkspacePrDetailViewProps) {
@@ -416,7 +416,7 @@ export function WorkspacePrDetailView({
             hasMore={changesHasMore}
             prUrl={detail.url}
             prStatus={resolvePullRequestChipStatus(detail)}
-            onPrDiffAddToSession={onPrDiffAddToSession}
+            onPrDiffAddToChat={onPrDiffAddToChat}
             onOpenExternal={onOpenExternal}
             useTranslucency={useTranslucency}
             className="h-full min-h-0"

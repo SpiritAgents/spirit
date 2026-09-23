@@ -46,8 +46,8 @@ export type ConversationPaneHostProps = {
   hideStaleConversationMessages: boolean;
   showWorkspaceBindingControls: boolean;
   sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
-  onNewSession?: () => void;
+  newChatBusy: boolean;
+  onNewChat?: () => void;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
@@ -208,8 +208,8 @@ export function ConversationPaneHost({
         sidebarSessionDragActive={sidebarSessionDragActive}
         subagentViewActive={pane.subagentViewActive}
         onExitSubagentViewer={pane.onExitSubagentViewer}
-        onNewSession={controllerInput.onNewSession}
-        newSessionBusy={controllerInput.newSessionBusy}
+        onNewChat={controllerInput.onNewChat}
+        newChatBusy={controllerInput.newChatBusy}
         showDeleteSession={!pane.paneIsEmptySession && Boolean(controllerInput.onDeleteSession)}
         deleteSessionPath={sessionPath}
         deleteSessionDisplayName={pane.paneSnapshot?.activeSession?.displayName ?? null}

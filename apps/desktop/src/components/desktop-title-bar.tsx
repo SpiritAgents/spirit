@@ -175,7 +175,7 @@ function TitleBarMenuCluster({
           </MenubarTrigger>
           <MenubarContent>
             <MenubarItem onSelect={() => void window.spiritDesktop?.resetSession()}>
-              {t("titleBar.newSession")}
+              {t("titleBar.newChat")}
               <MenubarShortcut>Ctrl+N</MenubarShortcut>
             </MenubarItem>
             <MenubarSeparator />

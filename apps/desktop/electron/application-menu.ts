@@ -221,7 +221,7 @@ function appMenuItems(): Electron.MenuItemConstructorOptions[] {
 function linuxFileMenuItems(): Electron.MenuItemConstructorOptions[] {
   return [
     {
-      label: menuLabel("newSession"),
+      label: menuLabel("newChat"),
       accelerator: "Control+N",
       click: () => {
         sendNewSession();
@@ -248,7 +248,7 @@ function buildSectionTemplate(
     case "file":
       return [
         {
-          label: menuLabel("newSession"),
+          label: menuLabel("newChat"),
           click: () => {
             sendNewSession(win);
           },
@@ -317,7 +317,7 @@ function buildMacOSApplicationMenuTemplate(): Electron.MenuItemConstructorOption
       label: menuLabel("file"),
       submenu: [
         {
-          label: menuLabel("newSession"),
+          label: menuLabel("newChat"),
           accelerator: "Command+N",
           click: () => {
             sendNewSession();

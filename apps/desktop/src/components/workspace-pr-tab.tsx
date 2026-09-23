@@ -134,7 +134,7 @@ export type WorkspacePrTabProps = {
   prRevealEnabled?: boolean;
   prRevealNonce?: number;
   prRevealRequest?: GitHubPullRequestRevealRequest | null;
-  onPrDiffAddToSession?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
   /** Windows Mica / macOS Vibrancy: forwarded to the detail view's changes tab. */
   useTranslucency?: boolean;
   /** Called when the current PR detail title changes ("PR #XXX" in detail view, undefined when back to the list or on load failure) */
@@ -163,7 +163,7 @@ export function WorkspacePrTab({
   prRevealEnabled = false,
   prRevealNonce = 0,
   prRevealRequest = null,
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
   useTranslucency = false,
   onTitleChange,
   onPrStatusChange,
@@ -821,7 +821,7 @@ export function WorkspacePrTab({
                 onOpenExternal={openExternalUrl}
                 onMerge={handleMergePullRequest}
                 onMarkReady={handleMarkPullRequestReady}
-                onPrDiffAddToSession={onPrDiffAddToSession}
+                onPrDiffAddToChat={onPrDiffAddToChat}
                 useTranslucency={useTranslucency}
                 className="min-h-0 flex-1"
               />

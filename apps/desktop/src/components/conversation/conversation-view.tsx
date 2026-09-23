@@ -149,7 +149,7 @@ export type ComposerDockSectionProps = {
   onSubmitComposerMessage: () => void;
   onComposerAgentModeChange: (mode: DesktopAgentMode) => void;
   composerRichInputRef: RefObject<ComposerRichInputHandle | null>;
-  onMessageQuoteAddToSession: (attachment: MessageQuoteAttachment) => void;
+  onMessageQuoteAddToChat: (attachment: MessageQuoteAttachment) => void;
   onComposerKeyDown: (event: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   onComposerCursorCodeUnitsChange: (selectionStart: number) => void;
   onInsertFileReferenceTrigger: () => void;
@@ -181,8 +181,8 @@ export type ConversationViewProps = {
   snapshot: DesktopSnapshot | null;
   subagentViewActive: boolean;
   onExitSubagentViewer: (() => void) | undefined;
-  onNewSession: (() => void) | undefined;
-  newSessionBusy: boolean;
+  onNewChat: (() => void) | undefined;
+  newChatBusy: boolean;
   compactionDemoActive: boolean;
   onCompactionDemoStop: () => void;
   longConversationListDemoActive: boolean;
@@ -248,8 +248,8 @@ export function ConversationView({
   snapshot,
   subagentViewActive,
   onExitSubagentViewer,
-  onNewSession,
-  newSessionBusy,
+  onNewChat,
+  newChatBusy,
   compactionDemoActive,
   onCompactionDemoStop,
   longConversationListDemoActive,
@@ -476,8 +476,8 @@ export function ConversationView({
           sessionTooltip={sessionTooltip}
           subagentPromptText={subagentViewActive ? snapshot?.subagentViewer?.promptText : null}
           onExitSubagentViewer={onExitSubagentViewer}
-          onNewSession={isEmptySession ? undefined : onNewSession}
-          newSessionBusy={newSessionBusy}
+          onNewChat={isEmptySession ? undefined : onNewChat}
+          newChatBusy={newChatBusy}
           showDeleteSession={showDeleteSession}
           deleteSessionPath={deleteSessionPath}
           deleteSessionDisplayName={deleteSessionDisplayName}
@@ -690,7 +690,7 @@ export function ConversationView({
               rootRef={conversationScrollBodyRef}
               quoteSessionPath={quoteSessionPath}
               quoteOrigin={quoteOrigin}
-              onMessageQuoteAddToSession={composerDock.onMessageQuoteAddToSession}
+              onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
               onMessageQuoteAddToSideChat={
                 showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
               }

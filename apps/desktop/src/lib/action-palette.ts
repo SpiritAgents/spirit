@@ -9,18 +9,18 @@ import type { ThemePreference } from "@/lib/theme";
 
 export type ActionPaletteTranslate = (key: string) => string;
 
-export type ActionPaletteGroup = "session" | "mode" | "appearance";
+export type ActionPaletteGroup = "chat" | "mode" | "appearance";
 
 export type ActionPaletteView = "root" | "theme" | "locale";
 
 export const ACTION_PALETTE_GROUP_ORDER: readonly ActionPaletteGroup[] = [
-  "session",
+  "chat",
   "mode",
   "appearance",
 ] as const;
 
 export const ACTION_PALETTE_GROUP_LABEL_KEYS: Record<ActionPaletteGroup, string> = {
-  session: "actionPalette.group.session",
+  chat: "actionPalette.group.chat",
   mode: "actionPalette.group.mode",
   appearance: "actionPalette.group.appearance",
 };
@@ -31,11 +31,11 @@ const THEME_OPTION_DEFS: ReadonlyArray<{ value: ThemePreference; labelKey: strin
   { value: "dark", labelKey: "settings.themeDark" },
 ];
 
-export type NewSessionActionPaletteItem = {
-  id: "action:new-session";
-  kind: "new-session";
-  group: "session";
-  labelKey: "sidebar.newSession";
+export type NewChatActionPaletteItem = {
+  id: "action:new-chat";
+  kind: "new-chat";
+  group: "chat";
+  labelKey: "sidebar.newChat";
 };
 
 export type ThemeMenuActionPaletteItem = {
@@ -67,22 +67,22 @@ export type LocaleOptionActionPaletteItem = {
 };
 
 export type SlashActionPaletteItem = SkillSlashSuggestion & {
-  group: "session" | "mode";
+  group: "chat" | "mode";
 };
 
 export type ActionPaletteItem =
-  | NewSessionActionPaletteItem
+  | NewChatActionPaletteItem
   | SlashActionPaletteItem
   | ThemeMenuActionPaletteItem
   | LocaleMenuActionPaletteItem
   | ThemeOptionActionPaletteItem
   | LocaleOptionActionPaletteItem;
 
-const NEW_SESSION_ITEM: NewSessionActionPaletteItem = {
-  id: "action:new-session",
-  kind: "new-session",
-  group: "session",
-  labelKey: "sidebar.newSession",
+const NEW_CHAT_ITEM: NewChatActionPaletteItem = {
+  id: "action:new-chat",
+  kind: "new-chat",
+  group: "chat",
+  labelKey: "sidebar.newChat",
 };
 
 const THEME_MENU_ITEM: ThemeMenuActionPaletteItem = {
@@ -101,12 +101,12 @@ const LOCALE_MENU_ITEM: LocaleMenuActionPaletteItem = {
 
 const MODE_SLASH_KINDS = new Set<SkillSlashSuggestion["kind"]>(["loop", "plan", "ask", "debug"]);
 
-function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "session" | "mode" {
-  return MODE_SLASH_KINDS.has(kind) ? "mode" : "session";
+function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "chat" | "mode" {
+  return MODE_SLASH_KINDS.has(kind) ? "mode" : "chat";
 }
 
 const ROOT_ITEMS: ActionPaletteItem[] = [
-  NEW_SESSION_ITEM,
+  NEW_CHAT_ITEM,
   ...STATIC_SLASH_COMMANDS.map((command): SlashActionPaletteItem => ({
     ...command,
     group: slashPaletteGroup(command.kind),
@@ -170,7 +170,7 @@ function withEnglishSearchText(localized: string, englishKey: string): string {
 }
 
 function actionPaletteSearchText(item: ActionPaletteItem, t: ActionPaletteTranslate): string {
-  if (item.kind === "new-session" || item.kind === "theme-menu" || item.kind === "locale-menu") {
+  if (item.kind === "new-chat" || item.kind === "theme-menu" || item.kind === "locale-menu") {
     return withEnglishSearchText(t(item.labelKey), item.labelKey);
   }
 
@@ -239,8 +239,8 @@ export function groupActionPaletteRootItems(
   })).filter((entry) => entry.items.length > 0);
 }
 
-export function isNewSessionAction(item: ActionPaletteItem): item is NewSessionActionPaletteItem {
-  return item.kind === "new-session";
+export function isNewChatAction(item: ActionPaletteItem): item is NewChatActionPaletteItem {
+  return item.kind === "new-chat";
 }
 
 export function isAppearanceMenuAction(

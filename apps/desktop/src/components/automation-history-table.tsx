@@ -107,7 +107,7 @@ export function AutomationHistoryTable({ runs, onOpenSession }: AutomationHistor
               key={row.id}
               className={cn("cursor-pointer", DESKTOP_OUTLINE_FILL_HOVER, instantHoverMotionClass)}
               onClick={() => onOpenSession(row.original.sessionPath)}
-              title={t("automations.openSession")}
+              title={t("automations.openChat")}
             >
               {row.getVisibleCells().map((cell) => (
                 <TableCell

@@ -74,7 +74,7 @@ import {
   useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
-  useWorkspaceToolsNewSessionChrome,
+  useWorkspaceToolsNewChatChrome,
 } from "@/contexts/workspace-tools-chrome-context";
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
@@ -166,15 +166,15 @@ export type WorkspaceToolsDockProps = {
   onTabsChange: Dispatch<SetStateAction<WorkspaceToolTab[]>>;
   onActiveTabIdChange(id: string): void;
   onBrowserElementPicked?: WorkspaceBrowserTabProps["onElementPicked"];
-  onPrDiffAddToSession?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
-  onTerminalAddToSession?: (
+  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onTerminalAddToChat?: (
     attachment: import("@/lib/terminal-snippet-attachment").TerminalSnippetAttachment,
   ) => void;
-  onFileSnippetAddToSession?: (
+  onFileSnippetAddToChat?: (
     attachment: import("@/lib/file-snippet-attachment").FileSnippetAttachment,
   ) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string, sourceTabId?: string) => void;
-  onGitCommitAddToSession?: (
+  onWorkspaceFileAddToChat?: (relativePath: string, sourceTabId?: string) => void;
+  onGitCommitAddToChat?: (
     attachment: import("@/lib/git-commit-attachment").GitCommitAttachment,
   ) => void;
   onBrowserOpenInNewTab?: WorkspaceBrowserTabProps["onOpenUrlInNewTab"];
@@ -535,11 +535,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   onTabsChange,
   onActiveTabIdChange,
   onBrowserElementPicked,
-  onPrDiffAddToSession,
-  onTerminalAddToSession,
-  onFileSnippetAddToSession,
-  onWorkspaceFileAddToSession,
-  onGitCommitAddToSession,
+  onPrDiffAddToChat,
+  onTerminalAddToChat,
+  onFileSnippetAddToChat,
+  onWorkspaceFileAddToChat,
+  onGitCommitAddToChat,
   onBrowserOpenInNewTab,
   browserTabEnabled = false,
   prTabEnabled = false,
@@ -570,7 +570,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const { openTools, toggleFullScreen } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
-  const hasNewSessionChrome = useWorkspaceToolsNewSessionChrome();
+  const hasNewChatChrome = useWorkspaceToolsNewChatChrome();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
@@ -752,15 +752,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
-  // While full screen, the pinned conversation chrome (new session, and on Win/Linux the sidebar
+  // While full screen, the pinned conversation chrome (new chat, and on Win/Linux the sidebar
   // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
   // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
   // on fullScreen (not chromePinned) so the inset retracts during the exit flight — the strict
   // reverse — while the pins themselves hold until the flight settles. The margin-left
   // transition lives in styles.css. Sidebar open on macOS windowed: the pinned cluster floats
-  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-session
+  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-chat
   // button, so the plus slot is not reserved.
-  const plusSlot = !sessionSidebarOpen && hasNewSessionChrome;
+  const plusSlot = !sessionSidebarOpen && hasNewChatChrome;
   const toolTabsPaddingLeft = !workspaceToolsFullScreen
     ? undefined
     : darwinElectron && !darwinWindowFullscreen
@@ -1017,15 +1017,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     onFilesWorkspacePathChange={(path) =>
                       handleTabFilesWorkspacePathChange(item.id, path)
                     }
-                    onFileSnippetAddToSession={
-                      onFileSnippetAddToSession
+                    onFileSnippetAddToChat={
+                      onFileSnippetAddToChat
                         ? (attachment) =>
-                            onFileSnippetAddToSession({ ...attachment, sourceTabId: item.id })
+                            onFileSnippetAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
-                    onWorkspaceFileAddToSession={
-                      onWorkspaceFileAddToSession
-                        ? (relativePath) => onWorkspaceFileAddToSession(relativePath, item.id)
+                    onWorkspaceFileAddToChat={
+                      onWorkspaceFileAddToChat
+                        ? (relativePath) => onWorkspaceFileAddToChat(relativePath, item.id)
                         : undefined
                     }
                     useTranslucency={useTranslucency}
@@ -1040,10 +1040,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                       useTranslucency={useTranslucency}
                       onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                       terminalDisplayName={workspaceTerminalChipDisplayName(item, tabs, t)}
-                      onTerminalAddToSession={
-                        onTerminalAddToSession
+                      onTerminalAddToChat={
+                        onTerminalAddToChat
                           ? (attachment) =>
-                              onTerminalAddToSession({ ...attachment, sourceTabId: item.id })
+                              onTerminalAddToChat({ ...attachment, sourceTabId: item.id })
                           : undefined
                       }
                       suspendTerminalResize={isResizing}
@@ -1090,10 +1090,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     prRevealEnabled={prRevealEnabled}
                     prRevealNonce={prRevealEnabled ? prRevealNonce : 0}
                     prRevealRequest={prRevealEnabled ? prRevealRequest : null}
-                    onPrDiffAddToSession={
-                      onPrDiffAddToSession
-                        ? (attachment) =>
-                            onPrDiffAddToSession({ ...attachment, sourceTabId: item.id })
+                    onPrDiffAddToChat={
+                      onPrDiffAddToChat
+                        ? (attachment) => onPrDiffAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
                     useTranslucency={useTranslucency}
@@ -1111,10 +1110,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     readGitHistory={readGitHistory}
                     readGitCommitMessage={readGitCommitMessage}
                     submitGitChip={submitGitChip}
-                    onGitCommitAddToSession={
-                      onGitCommitAddToSession
+                    onGitCommitAddToChat={
+                      onGitCommitAddToChat
                         ? (attachment) =>
-                            onGitCommitAddToSession({ ...attachment, sourceTabId: item.id })
+                            onGitCommitAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
                     onOpenChangedFile={onOpenWorkspaceFile}

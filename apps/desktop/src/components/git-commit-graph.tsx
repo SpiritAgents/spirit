@@ -115,8 +115,8 @@ export type GitCommitGraphProps = {
   loadingMore?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
-  onAddCommitToSession?: (commit: GitCommitRecord) => void;
-  addCommitToSessionDisabled?: boolean;
+  onAddCommitToChat?: (commit: GitCommitRecord) => void;
+  addCommitToChatDisabled?: boolean;
   error?: string;
   className?: string;
 };
@@ -549,8 +549,8 @@ export function GitCommitGraph({
   loadingMore = false,
   hasMore = false,
   onLoadMore,
-  onAddCommitToSession,
-  addCommitToSessionDisabled = false,
+  onAddCommitToChat,
+  addCommitToChatDisabled = false,
   error,
   className,
 }: GitCommitGraphProps) {
@@ -665,7 +665,7 @@ export function GitCommitGraph({
   const graphBody = (
     <div
       className="relative min-w-0 pr-1"
-      onContextMenuCapture={onAddCommitToSession ? handleCommitContextMenuCapture : undefined}
+      onContextMenuCapture={onAddCommitToChat ? handleCommitContextMenuCapture : undefined}
     >
       <CommitGraphGutter rows={rows} graphWidth={graphWidth} />
       <Tooltip<GitCommitGraphRow> getItemId={(row) => row.commit.oid}>
@@ -730,14 +730,14 @@ export function GitCommitGraph({
 
   return (
     <ScrollArea ref={scrollAreaRef} className={cn("min-h-0 flex-1", className)}>
-      {onAddCommitToSession ? (
+      {onAddCommitToChat ? (
         <ContextMenu>
           <ContextMenuTrigger asChild>{graphBody}</ContextMenuTrigger>
           <WorkspaceGitCommitContextMenuContent
             commit={commitContextMenuTarget}
             commitRef={commitContextMenuTargetRef}
-            onAddToSession={onAddCommitToSession}
-            addToSessionDisabled={addCommitToSessionDisabled}
+            onAddToChat={onAddCommitToChat}
+            addToChatDisabled={addCommitToChatDisabled}
           />
         </ContextMenu>
       ) : (

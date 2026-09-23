@@ -23,7 +23,7 @@ export function SessionSidebarShortcutKbd() {
   );
 }
 
-export function NewSessionShortcutKbd() {
+export function NewChatShortcutKbd() {
   const keys = modLetterShortcutKbdKeys("N");
 
   return (

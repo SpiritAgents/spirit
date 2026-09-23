@@ -51,7 +51,7 @@ import {
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
-  isNewSessionAction,
+  isNewChatAction,
   isThemeOptionAction,
   type ActionPaletteItem,
 } from "@/lib/action-palette";
@@ -104,7 +104,7 @@ export type UseComposerControllerOptions = {
   pendingApproval: DesktopSnapshot["conversation"]["pendingToolApproval"];
   pendingQuestions: ReturnType<typeof useDesktopRuntime>["pendingQuestions"];
   conversationInterruptible: boolean;
-  handleNewSession: () => void;
+  handleNewChat: () => void;
   setActiveSurface: (
     surface: "conversation" | "settings" | "marketplace" | "automations" | "automation-detail",
   ) => void;
@@ -126,7 +126,7 @@ export function useComposerController({
   pendingApproval,
   pendingQuestions,
   conversationInterruptible,
-  handleNewSession,
+  handleNewChat,
   setActiveSurface,
   setLastNonSettingsSurface,
   paneSessionPath,
@@ -796,7 +796,7 @@ export function useComposerController({
       if (!runtime.busyAction) {
         return false;
       }
-      if (isNewSessionAction(item)) {
+      if (isNewChatAction(item)) {
         return true;
       }
       return (
@@ -815,8 +815,8 @@ export function useComposerController({
         return;
       }
       ensureConversationSurface();
-      if (isNewSessionAction(item)) {
-        handleNewSession();
+      if (isNewChatAction(item)) {
+        handleNewChat();
         return;
       }
       if (item.kind === "loop") {
@@ -858,7 +858,7 @@ export function useComposerController({
       applySideChatSlash,
       applySlashSuggestion,
       ensureConversationSurface,
-      handleNewSession,
+      handleNewChat,
       runtime,
     ],
   );
@@ -1008,12 +1008,12 @@ export function useComposerController({
     [attachLocalFilePath],
   );
 
-  const handlePrDiffAddToSession = useCallback((attachment: PrDiffAttachment) => {
+  const handlePrDiffAddToChat = useCallback((attachment: PrDiffAttachment) => {
     composerRichInputRef.current?.insertPrDiffAttachment(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleGitCommitAddToSession = useCallback(
+  const handleGitCommitAddToChat = useCallback(
     (attachment: GitCommitAttachment) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertGitCommitAttachment(attachment);
@@ -1022,22 +1022,22 @@ export function useComposerController({
     [ensureConversationSurface],
   );
 
-  const handleTerminalAddToSession = useCallback((attachment: TerminalSnippetAttachment) => {
+  const handleTerminalAddToChat = useCallback((attachment: TerminalSnippetAttachment) => {
     composerRichInputRef.current?.insertTerminalSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleFileSnippetAddToSession = useCallback((attachment: FileSnippetAttachment) => {
+  const handleFileSnippetAddToChat = useCallback((attachment: FileSnippetAttachment) => {
     composerRichInputRef.current?.insertFileSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleMessageQuoteAddToSession = useCallback((attachment: MessageQuoteAttachment) => {
+  const handleMessageQuoteAddToChat = useCallback((attachment: MessageQuoteAttachment) => {
     composerRichInputRef.current?.insertMessageQuote(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleWorkspaceFileAddToSession = useCallback(
+  const handleWorkspaceFileAddToChat = useCallback(
     (relativePath: string, sourceTabId?: string) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertWorkspaceFileAtCaret(relativePath, sourceTabId);
@@ -1512,12 +1512,12 @@ export function useComposerController({
     insertSkillTriggerFromPalette,
     removeLocalFileAttachment,
     handleBrowserElementPicked,
-    handlePrDiffAddToSession,
-    handleGitCommitAddToSession,
-    handleTerminalAddToSession,
-    handleFileSnippetAddToSession,
-    handleMessageQuoteAddToSession,
-    handleWorkspaceFileAddToSession,
+    handlePrDiffAddToChat,
+    handleGitCommitAddToChat,
+    handleTerminalAddToChat,
+    handleFileSnippetAddToChat,
+    handleMessageQuoteAddToChat,
+    handleWorkspaceFileAddToChat,
     pickLocalFileFromPalette,
     handleComposerPaste,
     handleComposerDragOver,

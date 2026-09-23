@@ -51,7 +51,7 @@ export async function deleteSessionCommand(
 
     const resolvedPath = path.resolve(trimmed);
     if (ctx.bundleRuntimeIsBusy(resolvedPath)) {
-      throw new Error(i18n.t("error.cannotDeleteBusySession"));
+      throw new Error(i18n.t("error.cannotDeleteBusyChat"));
     }
 
     const state = ctx.requireState();

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
-  isNewSessionAction,
+  isNewChatAction,
   isSlashActionPaletteItem,
   isThemeOptionAction,
   type ActionPaletteItem,
@@ -48,7 +48,7 @@ const actionPickerMetaClass = cn(
 export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProps) {
   const { t } = useTranslation();
 
-  if (isNewSessionAction(item)) {
+  if (isNewChatAction(item)) {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Compose

@@ -261,7 +261,7 @@ export function useConversationViewState({
     subagentViewActive,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
-    newSessionBusy: false,
+    newChatBusy: false,
   });
   const { ref: composerDockRef, heightPx: composerDockHeightPx } =
     useElementBoxHeight<HTMLDivElement>(composerLayoutHero);

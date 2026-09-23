@@ -179,7 +179,7 @@ export type WorkspaceFilesPanelProps = {
   onWorkspaceEntryMoved?: (oldRelativePath: string, newRelativePath: string) => void;
   /** Notifies the parent to close the editor after a workspace entry is deleted. */
   onWorkspaceEntryDeleted?: (relativePath: string) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string) => void;
+  onWorkspaceFileAddToChat?: (relativePath: string) => void;
   /** Git status revision; refreshes the file tree's ignore-tinting cache when it changes. */
   gitRevision?: number;
 };
@@ -445,7 +445,7 @@ export function WorkspaceFilesPanel({
   onWorkspaceEntryRenamed,
   onWorkspaceEntryMoved,
   onWorkspaceEntryDeleted,
-  onWorkspaceFileAddToSession,
+  onWorkspaceFileAddToChat,
   gitRevision,
 }: WorkspaceFilesPanelProps) {
   const { t } = useTranslation();
@@ -888,14 +888,14 @@ export function WorkspaceFilesPanel({
     onWorkspaceEntryDeleted,
   ]);
 
-  const handleAddToSession = useCallback(
+  const handleAddToChat = useCallback(
     (target: WorkspaceExplorerContextTarget) => {
       const normalized = target.relativePath.replace(/\\/g, "/");
       const path =
         target.kind === "dir" ? `${normalized}${WORKSPACE_REFERENCE_DIRECTORY_SUFFIX}` : normalized;
-      onWorkspaceFileAddToSession?.(path);
+      onWorkspaceFileAddToChat?.(path);
     },
-    [onWorkspaceFileAddToSession],
+    [onWorkspaceFileAddToChat],
   );
 
   const handleConfirmMove = useCallback(async () => {
@@ -1542,7 +1542,7 @@ export function WorkspaceFilesPanel({
             onReveal={handleReveal}
             onRename={handleRenameStartFromMenu}
             onDelete={handleDeleteRequest}
-            onAddToSession={onWorkspaceFileAddToSession ? handleAddToSession : undefined}
+            onAddToChat={onWorkspaceFileAddToChat ? handleAddToChat : undefined}
             onCloseAutoFocus={handleFileContextMenuCloseAutoFocus}
           />
         </ContextMenu>

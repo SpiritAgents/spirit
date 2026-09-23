@@ -9,7 +9,7 @@ import {
 import { STATIC_SLASH_COMMANDS } from "../../src/lib/skill-slash.ts";
 
 const EN_LABELS = {
-  "sidebar.newSession": "New Session",
+  "sidebar.newChat": "New Chat",
   "slash.createSkill": "Create or refine a SKILL.md with natural language",
   "slash.exportSession": "Export llm_history and API trace",
   "slash.compact": "Compact the current session context",
@@ -36,7 +36,7 @@ const EN_LABELS = {
 };
 
 const ZH_LABELS = {
-  "sidebar.newSession": "新会话",
+  "sidebar.newChat": "新对话",
   "actionPalette.theme": "主题",
   "actionPalette.language": "语言",
   "settings.themeSystem": "跟随系统",
@@ -65,8 +65,8 @@ function tZh(key) {
 
 test("buildActionPaletteItems returns grouped root items including appearance menus", () => {
   const items = buildActionPaletteItems("", tEn);
-  assert.equal(items[0]?.kind, "new-session");
-  assert.equal(items[0]?.group, "session");
+  assert.equal(items[0]?.kind, "new-chat");
+  assert.equal(items[0]?.group, "chat");
   assert.equal(items.length, 1 + STATIC_SLASH_COMMANDS.length + 2);
   assert.ok(items.some((item) => item.kind === "theme-menu"));
   assert.ok(items.some((item) => item.kind === "locale-menu"));
@@ -82,10 +82,10 @@ test("buildActionPaletteItems returns grouped root items including appearance me
   const modeItem = items.find((item) => item.kind === "plan");
   assert.equal(modeItem?.group, "mode");
   const sessionItem = items.find((item) => item.kind === "compact");
-  assert.equal(sessionItem?.group, "session");
+  assert.equal(sessionItem?.group, "chat");
 });
 
-test("groupActionPaletteRootItems preserves session mode appearance order", () => {
+test("groupActionPaletteRootItems preserves chat mode appearance order", () => {
   const items = buildActionPaletteItems("", tEn);
   const grouped = groupActionPaletteRootItems(items);
   assert.deepEqual(
@@ -104,9 +104,9 @@ test("buildActionPaletteItems filters compact by prefix", () => {
   );
 });
 
-test("buildActionPaletteItems matches localized new session label", () => {
-  const items = buildActionPaletteItems("新会话", tZh);
-  assert.ok(items.some((item) => item.kind === "new-session"));
+test("buildActionPaletteItems matches localized new chat label", () => {
+  const items = buildActionPaletteItems("新对话", tZh);
+  assert.ok(items.some((item) => item.kind === "new-chat"));
 });
 
 test("buildActionPaletteItems matches slash description text", () => {
@@ -119,7 +119,7 @@ test("buildActionPaletteItems theme view only returns theme options", () => {
   assert.ok(items.length >= 3);
   assert.ok(items.every((item) => item.kind === "theme-option"));
   assert.equal(
-    items.some((item) => item.kind === "new-session"),
+    items.some((item) => item.kind === "new-chat"),
     false,
   );
 });
@@ -180,9 +180,7 @@ test("buildActionPaletteItems root search matches appearance menu labels", () =>
 
 test("buildActionPaletteItems matches English labels under Chinese UI", () => {
   assert.ok(buildActionPaletteItems("theme", tZh).some((item) => item.kind === "theme-menu"));
-  assert.ok(
-    buildActionPaletteItems("new session", tZh).some((item) => item.kind === "new-session"),
-  );
+  assert.ok(buildActionPaletteItems("new chat", tZh).some((item) => item.kind === "new-chat"));
   assert.ok(buildActionPaletteItems("language", tZh).some((item) => item.kind === "locale-menu"));
 });
 

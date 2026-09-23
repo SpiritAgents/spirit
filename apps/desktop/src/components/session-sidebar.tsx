@@ -99,7 +99,7 @@ import {
 } from "@/components/session-list-git-tooltip";
 
 /** Platform shortcut hint, computed at module load (the platform does not change at runtime). */
-const newSessionShortcutLabel = shortcutLabel("N");
+const newChatShortcutLabel = shortcutLabel("N");
 const settingsShortcutLabelText = settingsShortcutLabel();
 
 function describeRenameError(error: unknown): string {
@@ -120,8 +120,8 @@ type SessionSidebarProps = {
   sessions: SessionListItem[];
   activeFilePath: string | null;
   onSelectSession: (path: string) => void;
-  onNewSession: () => void;
-  onNewSessionInWorkspace?: (workspaceRoot: string) => void;
+  onNewChat: () => void;
+  onNewChatInWorkspace?: (workspaceRoot: string) => void;
   onOpenMarketplace?: () => void;
   onOpenAutomations?: () => void;
   onOpenSettings: () => void;
@@ -138,7 +138,7 @@ type SessionSidebarProps = {
   onExtensionSettingsChange?: (extensionId: string) => void;
   /** Windows Mica: the sidebar needs translucency + blur so content behind the window does not show through and look smeared */
   translucency?: boolean;
-  newSessionBusy?: boolean;
+  newChatBusy?: boolean;
   sessionNavigationBusy?: boolean;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
@@ -287,8 +287,8 @@ type WorkspaceSessionGroupCollapsibleProps = {
   onOpenChange(open: boolean): void;
   onSelectSession(path: string): void;
   onLoadMore(): void;
-  onNewSessionInWorkspace?: (workspaceRoot: string) => void;
-  newSessionBusy?: boolean;
+  onNewChatInWorkspace?: (workspaceRoot: string) => void;
+  newChatBusy?: boolean;
   renamingSessionPath?: string | null;
   renameValue?: string;
   onRenameValueChange?: (value: string) => void;
@@ -406,8 +406,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
   onOpenChange,
   onSelectSession,
   onLoadMore,
-  onNewSessionInWorkspace,
-  newSessionBusy = false,
+  onNewChatInWorkspace,
+  newChatBusy = false,
   renamingSessionPath = null,
   renameValue = "",
   onRenameValueChange,
@@ -425,8 +425,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
   const { t } = useTranslation();
   const split = useOptionalConversationSplit();
   const workspaceRoot = group.rootPath?.trim() ?? "";
-  const workspaceNewSessionDragEnabled =
-    Boolean(split) && Boolean(workspaceRoot) && !disabled && !newSessionBusy;
+  const workspaceNewChatDragEnabled =
+    Boolean(split) && Boolean(workspaceRoot) && !disabled && !newChatBusy;
   const [workspaceRowHovered, setWorkspaceRowHovered] = useState(false);
   const [plusTooltipAnchorLocked, setPlusTooltipAnchorLocked] = useState(false);
   const showWorkspaceRowHoverChrome = workspaceRowHovered || isDragging || isPressing;
@@ -516,7 +516,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
             </span>
             <span className={cn("truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}>{group.label}</span>
           </AnimatedCollapseTrigger>
-          {onNewSessionInWorkspace && workspaceRoot ? (
+          {onNewChatInWorkspace && workspaceRoot ? (
             <Tooltip
               delayDuration={300}
               disableHoverableContent
@@ -533,8 +533,8 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                   type="button"
                   variant="ghost"
                   size="icon"
-                  data-workspace-new-session=""
-                  draggable={workspaceNewSessionDragEnabled}
+                  data-workspace-new-chat=""
+                  draggable={workspaceNewChatDragEnabled}
                   className={cn(
                     "mr-0.5 size-6 shrink-0",
                     workspaceRowHovered || plusTooltipAnchorLocked
@@ -550,11 +550,11 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                     sidebarInteractionMotionClass,
                     sidebarItemHoverClass(translucency),
                   )}
-                  disabled={disabled || newSessionBusy}
-                  aria-label={t("sidebar.newSessionInWorkspace", { workspace: group.label })}
-                  onClick={() => onNewSessionInWorkspace(workspaceRoot)}
+                  disabled={disabled || newChatBusy}
+                  aria-label={t("sidebar.newChatInWorkspace", { workspace: group.label })}
+                  onClick={() => onNewChatInWorkspace(workspaceRoot)}
                   onDragStart={(event) => {
-                    if (!split || !workspaceNewSessionDragEnabled) {
+                    if (!split || !workspaceNewChatDragEnabled) {
                       event.preventDefault();
                       return;
                     }
@@ -583,7 +583,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                   setPlusTooltipAnchorLocked(false);
                 }}
               >
-                {t("sidebar.newSessionInWorkspace", { workspace: group.label })}
+                {t("sidebar.newChatInWorkspace", { workspace: group.label })}
               </TooltipContent>
             </Tooltip>
           ) : null}
@@ -900,13 +900,13 @@ function SessionListNav({
     <ContextMenu onOpenChange={onContextMenuOpenChange}>
       <ContextMenuTrigger asChild>{nav}</ContextMenuTrigger>
       <ContextMenuContent
-        aria-label={t("sidebar.sessionActions")}
+        aria-label={t("sidebar.chatActions")}
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
         {canRenameSession ? (
           <ContextMenuItem
             disabled={renameSessionBusy || busy}
-            title={busy ? t("sidebar.cannotRenameBusySession") : undefined}
+            title={busy ? t("sidebar.cannotRenameBusyChat") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -923,7 +923,7 @@ function SessionListNav({
           <ContextMenuItem
             variant="destructive"
             disabled={deleteSessionBusy || busy}
-            title={busy ? t("sidebar.cannotDeleteBusySession") : undefined}
+            title={busy ? t("sidebar.cannotDeleteBusyChat") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -1013,7 +1013,7 @@ function WorkspaceListNav({
     <ContextMenu>
       <ContextMenuTrigger asChild>{inner}</ContextMenuTrigger>
       <ContextMenuContent
-        aria-label={isWorkspaceTarget ? t("sidebar.workspaceActions") : t("sidebar.sessionActions")}
+        aria-label={isWorkspaceTarget ? t("sidebar.workspaceActions") : t("sidebar.chatActions")}
         onCloseAutoFocus={onContextMenuCloseAutoFocus}
       >
         {showRevealInExplorer ? (
@@ -1049,7 +1049,7 @@ function WorkspaceListNav({
         {!isWorkspaceTarget && canRenameSession ? (
           <ContextMenuItem
             disabled={renameSessionBusy || sessionBusy}
-            title={sessionBusy ? t("sidebar.cannotRenameBusySession") : undefined}
+            title={sessionBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -1068,7 +1068,7 @@ function WorkspaceListNav({
           <ContextMenuItem
             variant="destructive"
             disabled={deleteSessionBusy || sessionBusy}
-            title={sessionBusy ? t("sidebar.cannotDeleteBusySession") : undefined}
+            title={sessionBusy ? t("sidebar.cannotDeleteBusyChat") : undefined}
             onSelect={() => {
               const session = contextMenuSessionRef.current ?? contextMenuSession;
               if (session) {
@@ -1255,8 +1255,8 @@ function SessionSidebarInner({
   sessions,
   activeFilePath,
   onSelectSession,
-  onNewSession,
-  onNewSessionInWorkspace,
+  onNewChat,
+  onNewChatInWorkspace,
   onOpenMarketplace,
   onOpenAutomations,
   onOpenSettings,
@@ -1269,7 +1269,7 @@ function SessionSidebarInner({
   onSettingsTabChange,
   onExtensionSettingsChange,
   translucency,
-  newSessionBusy = false,
+  newChatBusy = false,
   sessionNavigationBusy = false,
   deleteSessionBusy = false,
   onDeleteSession,
@@ -1549,20 +1549,19 @@ function SessionSidebarInner({
   const isSessionSelected = (sessionPath: string) =>
     !marketplaceActive &&
     !automationsActive &&
-    !newSessionBusy &&
+    !newChatBusy &&
     activeFilePath !== null &&
     samePath(sessionPath, activeFilePath);
 
   const isActiveSessionInSidebar =
     activeFilePath !== null && sessions.some((session) => samePath(session.path, activeFilePath));
 
-  const newSessionNavActive =
+  const newChatNavActive =
     !marketplaceActive &&
     !automationsActive &&
     !sessionNavigationBusy &&
-    (newSessionBusy || !isActiveSessionInSidebar);
-  const newSessionDragEnabled =
-    Boolean(split) && !disabled && !(newSessionBusy && !newSessionNavActive);
+    (newChatBusy || !isActiveSessionInSidebar);
+  const newChatDragEnabled = Boolean(split) && !disabled && !(newChatBusy && !newChatNavActive);
 
   useEffect(() => {
     if (!activeFilePath) {
@@ -1712,7 +1711,7 @@ function SessionSidebarInner({
       )}
       data-narrow={narrow || undefined}
       id="session-sidebar-panel"
-      aria-label={settingsMode ? t("sidebar.settingsNavAria") : t("sidebar.sessionNavAria")}
+      aria-label={settingsMode ? t("sidebar.settingsNavAria") : t("sidebar.chatNavAria")}
     >
       {settingsMode ? (
         <div className={cn("flex flex-col gap-2 px-1.5 pt-2.5", narrow && "items-center")}>
@@ -1742,23 +1741,23 @@ function SessionSidebarInner({
         >
           <Button
             type="button"
-            variant={sidebarNavButtonVariant(translucency, newSessionNavActive)}
+            variant={sidebarNavButtonVariant(translucency, newChatNavActive)}
             size={narrow ? "icon" : "sm"}
-            aria-current={newSessionNavActive ? "page" : undefined}
-            draggable={newSessionDragEnabled}
+            aria-current={newChatNavActive ? "page" : undefined}
+            draggable={newChatDragEnabled}
             className={cn(
               "text-xs",
               sidebarItemDefaultTextClass,
               sidebarInteractionMotionClass,
-              newSessionNavActive
+              newChatNavActive
                 ? sidebarItemSelectedClass(translucency)
                 : sidebarItemHoverClass(translucency),
               narrow ? "size-8 shrink-0" : "group h-8 w-full justify-start gap-2",
             )}
-            disabled={disabled || (newSessionBusy && !newSessionNavActive)}
-            onClick={onNewSession}
+            disabled={disabled || (newChatBusy && !newChatNavActive)}
+            onClick={onNewChat}
             onDragStart={(event) => {
-              if (!split || !newSessionDragEnabled) {
+              if (!split || !newChatDragEnabled) {
                 event.preventDefault();
                 return;
               }
@@ -1769,10 +1768,10 @@ function SessionSidebarInner({
             onDragEnd={() => split?.clearSidebarSessionDrag()}
           >
             <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
+            <span className={cn(narrow && "sr-only")}>{t("sidebar.newChat")}</span>
             {!narrow && (
               <span className={sidebarItemShortcutClass} aria-hidden>
-                {newSessionShortcutLabel}
+                {newChatShortcutLabel}
               </span>
             )}
           </Button>
@@ -1999,8 +1998,8 @@ function SessionSidebarInner({
                           onLoadMore={() =>
                             loadMoreWorkspaceGroupSessions(group.id, group.sessions.length)
                           }
-                          onNewSessionInWorkspace={onNewSessionInWorkspace}
-                          newSessionBusy={newSessionBusy}
+                          onNewChatInWorkspace={onNewChatInWorkspace}
+                          newChatBusy={newChatBusy}
                           renamingSessionPath={renamingSessionPath}
                           renameValue={renameValue}
                           onRenameValueChange={setRenameValue}
@@ -2028,7 +2027,7 @@ function SessionSidebarInner({
                 <div className="h-2" aria-hidden />
               ) : null}
               <SessionListNav
-                ariaLabel={t("sidebar.workspaceSessionsAria")}
+                ariaLabel={t("sidebar.workspaceChatsAria")}
                 canRenameSession={canRenameSession}
                 canDeleteSession={canDeleteSession}
                 contextMenuSession={contextMenuSession}
@@ -2198,15 +2197,15 @@ function SessionSidebarInner({
         title={
           sectionBulkTarget === "workspace-section"
             ? t("sidebar.removeAllWorkspacesConfirmTitle")
-            : t("sidebar.deleteAllNoWorkspaceSessionsConfirmTitle")
+            : t("sidebar.deleteAllNoWorkspaceChatsConfirmTitle")
         }
         description={
           sectionBulkTarget === "workspace-section"
             ? t("sidebar.removeAllWorkspacesConfirmDescription", {
                 workspaceCount: workspaceGroups.length,
-                sessionCount: workspaceSectionSessionCount,
+                chatCount: workspaceSectionSessionCount,
               })
-            : t("sidebar.deleteAllNoWorkspaceSessionsConfirmDescription", {
+            : t("sidebar.deleteAllNoWorkspaceChatsConfirmDescription", {
                 count: unboundSessions.length,
               })
         }

@@ -114,7 +114,7 @@ export default function App() {
   const subagentViewActive = subagentViewer.active && Boolean(snapshot?.subagentViewer);
   const sessionMessages = snapshot?.conversation.messages ?? [];
   const sessionNavigationBusy = runtime.busyAction === "session";
-  const newSessionBusy = runtime.busyAction === "reset";
+  const newChatBusy = runtime.busyAction === "reset";
   const conversationNavigationPending = sessionNavigationBusy || runtime.layoutNavigationPending;
   const activeFilePath =
     runtime.hostKind === "web"
@@ -149,25 +149,24 @@ export default function App() {
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
     sessionNavigationBusy,
-    newSessionBusy,
+    newChatBusy,
     t,
     composerAutomationApiRef,
   });
 
-  const { dismissForNewSession: dismissWorkspaceToolsForNewSession } =
-    useWorkspaceToolsChromeActions();
-  // Every new-session path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
-  // these wrappers so a full-screen tools panel never lingers into the new session's space.
-  const handleNewSession = useCallback(() => {
-    dismissWorkspaceToolsForNewSession();
-    surfaceNav.handleNewSession();
-  }, [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSession]);
-  const handleNewSessionInWorkspace = useCallback(
+  const { dismissForNewChat: dismissWorkspaceToolsForNewChat } = useWorkspaceToolsChromeActions();
+  // Every new-chat path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
+  // these wrappers so a full-screen tools panel never lingers into the new chat's space.
+  const handleNewChat = useCallback(() => {
+    dismissWorkspaceToolsForNewChat();
+    surfaceNav.handleNewChat();
+  }, [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChat]);
+  const handleNewChatInWorkspace = useCallback(
     (workspaceRoot: string) => {
-      dismissWorkspaceToolsForNewSession();
-      void surfaceNav.handleNewSessionInWorkspace(workspaceRoot);
+      dismissWorkspaceToolsForNewChat();
+      void surfaceNav.handleNewChatInWorkspace(workspaceRoot);
     },
-    [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSessionInWorkspace],
+    [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChatInWorkspace],
   );
 
   const conversation = useConversationViewState({
@@ -211,7 +210,7 @@ export default function App() {
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewSession,
+    handleNewChat,
     setActiveSurface: surfaceNav.setActiveSurface,
     setLastNonSettingsSurface: surfaceNav.setLastNonSettingsSurface,
     onBeginSideChat: () => {
@@ -242,7 +241,7 @@ export default function App() {
     conversationAbortShortcutEligibleRef: conversation.conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
     sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
-    handleNewSession,
+    handleNewChat,
     handleSelectSession,
     handleOpenSettings: surfaceNav.handleOpenSettings,
     handleCloseSettings: surfaceNav.handleCloseSettings,
@@ -328,7 +327,7 @@ export default function App() {
     !surfaceNav.settingsMode &&
     !sessionNavigationBusy &&
     !runtime.layoutNavigationPending &&
-    !newSessionBusy &&
+    !newChatBusy &&
     !shellUnderlayHidden;
 
   const handleOnboardingDone = useCallback(() => {
@@ -494,8 +493,8 @@ export default function App() {
                           userHomeDirectory={snapshot?.userHomeDirectory ?? null}
                           sessions={runtime.sessions}
                           activeFilePath={sidebarActiveFilePath}
-                          onNewSession={handleNewSession}
-                          onNewSessionInWorkspace={handleNewSessionInWorkspace}
+                          onNewChat={handleNewChat}
+                          onNewChatInWorkspace={handleNewChatInWorkspace}
                           onSelectSession={handleSelectSession}
                           onOpenMarketplace={() => {
                             surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
@@ -521,7 +520,7 @@ export default function App() {
                           }}
                           onExtensionSettingsChange={(id) => surfaceNav.setExtensionSettingsId(id)}
                           translucency={useTranslucency}
-                          newSessionBusy={newSessionBusy}
+                          newChatBusy={newChatBusy}
                           sessionNavigationBusy={sessionNavigationBusy}
                           deleteSessionBusy={sessionNavigationBusy}
                           onDeleteSession={(path) => runtime.deleteSession(path)}
@@ -804,8 +803,8 @@ export default function App() {
                                       surfaceNav.showWorkspaceBindingControls
                                     }
                                     sessionNavigationBusy={sessionNavigationBusy}
-                                    newSessionBusy={newSessionBusy}
-                                    onNewSession={handleNewSession}
+                                    newChatBusy={newChatBusy}
+                                    onNewChat={handleNewChat}
                                     deleteSessionBusy={sessionNavigationBusy}
                                     onDeleteSession={(path) => runtime.deleteSession(path)}
                                     renameSessionBusy={sessionNavigationBusy}
