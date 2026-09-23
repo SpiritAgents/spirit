@@ -177,6 +177,7 @@ export type CommandPayloads = {
   checkoutPaneGitBranch: { request: CheckoutPaneGitBranchRequest };
   deleteSession: { path: string };
   renameSession: { path: string; displayName: string };
+  setSessionPinned: { path: string; pinned: boolean };
   listWorkspaceFileReferenceSuggestions: { request: QueryWorkspaceFileReferenceSuggestionsRequest };
   requestCodeCompletion: { request: RequestCodeCompletionRequest };
   abortCodeCompletion: undefined;

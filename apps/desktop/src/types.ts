@@ -968,6 +968,8 @@ export interface SessionListItem {
   modifiedAtUnixMs: number;
   workspaceRoot: string;
   gitBranch?: string;
+  /** Unix ms when the session was pinned; absent when the session is not pinned. */
+  pinnedAtUnixMs?: number;
   kind?: "stored" | "ephemeral";
   readOnly?: boolean;
   /** Absolute path to transcripts/.../transcript.json for this chat (deterministic from chat path). */
