@@ -73,6 +73,10 @@
       "types": "./dist/icons/pin.d.ts",
       "default": "./dist/icons/pin.js"
     },
+    "./pin-slash": {
+      "types": "./dist/icons/pin-slash.d.ts",
+      "default": "./dist/icons/pin-slash.js"
+    },
     "./plus": {
       "types": "./dist/icons/plus.d.ts",
       "default": "./dist/icons/plus.js"
