@@ -528,6 +528,9 @@ export default function App() {
                           onRenameSession={(path, displayName) =>
                             runtime.renameSession(path, displayName)
                           }
+                          onTogglePinSession={(path, pinned) =>
+                            runtime.setSessionPinned(path, pinned)
+                          }
                           removeWorkspaceBusy={sessionNavigationBusy}
                           onRemoveWorkspace={(workspacePath) =>
                             runtime.removeWorkspace(workspacePath)
@@ -810,6 +813,9 @@ export default function App() {
                                     renameSessionBusy={sessionNavigationBusy}
                                     onRenameSession={(path, displayName) =>
                                       runtime.renameSession(path, displayName)
+                                    }
+                                    onTogglePinSession={(path, pinned) =>
+                                      runtime.setSessionPinned(path, pinned)
                                     }
                                     workspaceTools={workspaceTools}
                                     onOpenIntegrationsSettings={openIntegrationsSettings}
