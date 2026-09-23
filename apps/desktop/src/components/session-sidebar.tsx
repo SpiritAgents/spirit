@@ -60,10 +60,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Spinner } from "@/components/ui/spinner";
 import {
   readSidebarNoWorkspaceSectionExpanded,
+  readSidebarPinnedSectionExpanded,
   readSidebarWorkspaceSectionExpanded,
   readWorkspaceSidebarExpandedById,
   readWorkspaceSidebarGroupOrder,
   writeSidebarNoWorkspaceSectionExpanded,
+  writeSidebarPinnedSectionExpanded,
   writeSidebarWorkspaceSectionExpanded,
   writeWorkspaceSidebarExpandedById,
   writeWorkspaceSidebarGroupOrder,
@@ -1290,9 +1292,28 @@ function SessionSidebarInner({
     }
   }, [settingsMode, settingsTab, onSettingsTabChange]);
 
+  const { pinnedSessions, unpinnedSessions } = useMemo(() => {
+    const pinned: SessionListItem[] = [];
+    const unpinned: SessionListItem[] = [];
+    for (const session of sessions) {
+      if (typeof session.pinnedAtUnixMs === "number") {
+        pinned.push(session);
+      } else {
+        unpinned.push(session);
+      }
+    }
+    pinned.sort((left, right) => {
+      const pinnedOrder = (right.pinnedAtUnixMs ?? 0) - (left.pinnedAtUnixMs ?? 0);
+      if (pinnedOrder !== 0) {
+        return pinnedOrder;
+      }
+      return right.modifiedAtUnixMs - left.modifiedAtUnixMs;
+    });
+    return { pinnedSessions: pinned, unpinnedSessions: unpinned };
+  }, [sessions]);
   const { bound, unbound } = useMemo(
-    () => partitionSessionsForSidebar(sessions, userHomeDirectory),
-    [sessions, userHomeDirectory],
+    () => partitionSessionsForSidebar(unpinnedSessions, userHomeDirectory),
+    [unpinnedSessions, userHomeDirectory],
   );
   const builtWorkspaceGroups = useMemo(
     () => buildWorkspaceGroups(bound, undefined),
@@ -1329,10 +1350,14 @@ function SessionSidebarInner({
   const [noWorkspaceSectionExpanded, setNoWorkspaceSectionExpanded] = useState(
     readSidebarNoWorkspaceSectionExpanded,
   );
+  const [pinnedSectionExpanded, setPinnedSectionExpanded] = useState(
+    readSidebarPinnedSectionExpanded,
+  );
   const [visibleCountByWorkspaceGroupId, setVisibleCountByWorkspaceGroupId] = useState<
     Record<string, number>
   >({});
   const [unboundVisibleCount, setUnboundVisibleCount] = useState(SIDEBAR_SESSION_PAGE_SIZE);
+  const [pinnedVisibleCount, setPinnedVisibleCount] = useState(SIDEBAR_SESSION_PAGE_SIZE);
   const [deleteTarget, setDeleteTarget] = useState<SessionListItem | null>(null);
   const [deleteSessionDialogOpen, setDeleteSessionDialogOpen] = useState(false);
   const [removeWorkspaceTarget, setRemoveWorkspaceTarget] = useState<SessionWorkspaceGroup | null>(
@@ -1567,6 +1592,14 @@ function SessionSidebarInner({
     if (!activeFilePath) {
       return;
     }
+    const pinnedIndex = pinnedSessions.findIndex((session) =>
+      samePath(session.path, activeFilePath),
+    );
+    if (pinnedIndex >= 0) {
+      const needed = visibleCountForSessionIndex(pinnedIndex);
+      setPinnedVisibleCount((current) => (current >= needed ? current : needed));
+      return;
+    }
     const unboundIndex = unboundSessions.findIndex((session) =>
       samePath(session.path, activeFilePath),
     );
@@ -1590,7 +1623,7 @@ function SessionSidebarInner({
       });
       return;
     }
-  }, [activeFilePath, unboundSessions, workspaceGroups]);
+  }, [activeFilePath, pinnedSessions, unboundSessions, workspaceGroups]);
 
   const loadMoreWorkspaceGroupSessions = useCallback((groupId: string, total: number) => {
     setVisibleCountByWorkspaceGroupId((current) => {
@@ -1607,6 +1640,12 @@ function SessionSidebarInner({
       Math.min(current + SIDEBAR_SESSION_PAGE_SIZE, unboundSessions.length),
     );
   }, [unboundSessions.length]);
+
+  const loadMorePinnedSessions = useCallback(() => {
+    setPinnedVisibleCount((current) =>
+      Math.min(current + SIDEBAR_SESSION_PAGE_SIZE, pinnedSessions.length),
+    );
+  }, [pinnedSessions.length]);
 
   useEffect(() => {
     const suppressScrollFade = !settingsMode && narrow;
@@ -1650,9 +1689,11 @@ function SessionSidebarInner({
     extensionSettingsId,
     extensionSettingsItems.length,
     sessions.length,
+    pinnedSessions.length,
     workspaceGroups.length,
     unboundSessions.length,
     collapsedWorkspaceIds,
+    pinnedSectionExpanded,
     workspaceSectionExpanded,
     noWorkspaceSectionExpanded,
   ]);
@@ -1669,12 +1710,15 @@ function SessionSidebarInner({
     registerSessionSidebarDigitShortcut({
       resolveVisibleSessions() {
         return listVisibleSidebarSessions({
+          pinnedSessions,
           workspaceGroups,
           unboundSessions,
+          pinnedSectionExpanded,
           workspaceSectionExpanded,
           noWorkspaceSectionExpanded,
           collapsedWorkspaceIds,
           visibleCountByWorkspaceGroupId,
+          pinnedVisibleCount,
           unboundVisibleCount,
         });
       },
@@ -1685,6 +1729,9 @@ function SessionSidebarInner({
   }, [
     collapsedWorkspaceIds,
     noWorkspaceSectionExpanded,
+    pinnedSectionExpanded,
+    pinnedSessions,
+    pinnedVisibleCount,
     unboundSessions,
     unboundVisibleCount,
     visibleCountByWorkspaceGroupId,
@@ -1701,6 +1748,15 @@ function SessionSidebarInner({
     setNoWorkspaceSectionExpanded(open);
     writeSidebarNoWorkspaceSectionExpanded(open);
   }, []);
+
+  const setPinnedSectionExpandedPersisted = useCallback((open: boolean) => {
+    setPinnedSectionExpanded(open);
+    writeSidebarPinnedSectionExpanded(open);
+  }, []);
+
+  const showPinned = pinnedSessions.length > 0;
+  const showWorkspaces = workspaceGroups.length > 0;
+  const showUnbound = unboundSessions.length > 0;
 
   return (
     <aside
@@ -1930,7 +1986,74 @@ function SessionSidebarInner({
             </nav>
           ) : (
             <div className={cn("min-w-0 px-1.5", sidebarSessionsScrollInsetClass)}>
-              {workspaceGroups.length > 0 ? (
+              {showPinned ? (
+                <SessionListNav
+                  ariaLabel={t("sidebar.pinned")}
+                  canRenameSession={canRenameSession}
+                  canDeleteSession={canDeleteSession}
+                  contextMenuSession={contextMenuSession}
+                  contextMenuSessionRef={contextMenuSessionRef}
+                  renameSessionBusy={renameSessionBusy}
+                  deleteSessionBusy={deleteSessionBusy}
+                  onSessionContextMenuCapture={handleSessionContextMenuCapture}
+                  onContextMenuOpenChange={handleContextMenuOpenChange}
+                  onContextMenuCloseAutoFocus={handleContextMenuCloseAutoFocus}
+                  onRequestRename={handleRenameStartFromMenu}
+                  onRequestDelete={handleContextMenuDelete}
+                >
+                  <SidebarSectionCollapsible
+                    label={t("sidebar.pinned")}
+                    expanded={pinnedSectionExpanded}
+                    disabled={disabled}
+                    onOpenChange={setPinnedSectionExpandedPersisted}
+                  >
+                    <SessionListGitTooltip>
+                      <SessionListGitTooltip.Zone className="flex min-w-0 flex-col gap-0.5">
+                        {pinnedSessions.slice(0, pinnedVisibleCount).map((session) => (
+                          <SessionListGitTooltip.Row key={session.path} session={session}>
+                            <SessionListRow
+                              sessionPath={session.path}
+                              displayName={session.displayName}
+                              gitBranch={session.gitBranch}
+                              isBusy={session.isBusy}
+                              isBlocked={session.isBlocked}
+                              showCompletedUnseen={
+                                unseenCompletedSessionPaths?.has(session.path) === true
+                              }
+                              nested={false}
+                              selected={isSessionSelected(session.path)}
+                              disabled={disabled}
+                              translucency={translucency}
+                              onSelectPath={onSelectSession}
+                              renaming={renamingSessionPath === session.path}
+                              renameValue={
+                                renamingSessionPath === session.path ? renameValue : undefined
+                              }
+                              onRenameValueChange={setRenameValue}
+                              onRenameCommit={() => void handleRenameCommit()}
+                              onRenameCancel={handleRenameCancel}
+                              onRenameStart={
+                                canRenameSession && !session.isBusy
+                                  ? () => handleRenameStart(session)
+                                  : undefined
+                              }
+                            />
+                          </SessionListGitTooltip.Row>
+                        ))}
+                        <SessionListLoadMore
+                          hiddenCount={pinnedSessions.length - pinnedVisibleCount}
+                          disabled={disabled}
+                          onLoadMore={loadMorePinnedSessions}
+                        />
+                      </SessionListGitTooltip.Zone>
+                    </SessionListGitTooltip>
+                  </SidebarSectionCollapsible>
+                </SessionListNav>
+              ) : null}
+              {showPinned && (showWorkspaces || showUnbound) ? (
+                <div className="h-2" aria-hidden />
+              ) : null}
+              {showWorkspaces ? (
                 <SidebarSectionCollapsible
                   label={t("sidebar.workspaces")}
                   expanded={workspaceSectionExpanded}
@@ -2023,9 +2146,7 @@ function SessionSidebarInner({
                   </WorkspaceListNav>
                 </SidebarSectionCollapsible>
               ) : null}
-              {unboundSessions.length > 0 && workspaceGroups.length > 0 ? (
-                <div className="h-2" aria-hidden />
-              ) : null}
+              {showWorkspaces && showUnbound ? <div className="h-2" aria-hidden /> : null}
               <SessionListNav
                 ariaLabel={t("sidebar.workspaceChatsAria")}
                 canRenameSession={canRenameSession}
@@ -2040,7 +2161,7 @@ function SessionSidebarInner({
                 onRequestRename={handleRenameStartFromMenu}
                 onRequestDelete={handleContextMenuDelete}
               >
-                {unboundSessions.length > 0 ? (
+                {showUnbound ? (
                   <SidebarSectionCollapsible
                     label={t("sidebar.noWorkspaceSessions")}
                     expanded={noWorkspaceSectionExpanded}

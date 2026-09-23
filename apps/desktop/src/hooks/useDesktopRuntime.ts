@@ -3529,6 +3529,27 @@ export function useDesktopRuntime() {
     [api, applySnapshot, refreshSessions],
   );
 
+  const setSessionPinned = useCallback(
+    async (path: string, pinned: boolean) => {
+      if (!api) {
+        return;
+      }
+      setBusyAction("session");
+      try {
+        const next = await api.setSessionPinned(path, pinned);
+        applySnapshot(next);
+        setRuntimeError("");
+        void refreshSessions();
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        throw error;
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot, refreshSessions],
+  );
+
   const removeWorkspace = useCallback(
     async (workspacePath: string) => {
       if (!api?.forgetWorkspace) {
@@ -4094,6 +4115,7 @@ export function useDesktopRuntime() {
     closeSplitPaneSession,
     deleteSession,
     renameSession,
+    setSessionPinned,
     removeWorkspace,
     listWorkspaceFileReferenceSuggestions,
     primeWorkspaceFileReferenceIndex,
