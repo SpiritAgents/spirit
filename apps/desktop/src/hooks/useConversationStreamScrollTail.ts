@@ -137,7 +137,8 @@ export function useConversationStreamScrollTail({
     // and the scrollTop-decrease version); after wrongly turning off follow, the content RO no longer
     // re-pins, the "jump up after streaming ends".
     // Current rules (release is always anchored to user input):
-    // - wheel up → release;
+    // - wheel up → release, but only when the viewport can actually scroll; a short
+    //   transcript with scrollHeight === clientHeight never leaves the bottom;
     // - pointer down outside the viewport (Radix scrollbar drag) → release;
     // - middle-button down inside the viewport (Windows auto-scroll, subsequent scrolling has no wheel events) → release;
     // - scrollTop decreasing during pointerdown / touchstart inside the viewport (touch drag, text
@@ -164,6 +165,9 @@ export function useConversationStreamScrollTail({
     let touchDragStartY = 0;
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY < 0) {
+        if (viewport.scrollHeight - viewport.clientHeight <= 0) {
+          return;
+        }
         setStickToBottom(false);
       }
     };
