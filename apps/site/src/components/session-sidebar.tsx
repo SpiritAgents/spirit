@@ -2,6 +2,7 @@ import { Compose } from "@spiritagent/icons/compose";
 import { Gear } from "@spiritagent/icons/gear";
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { X } from "@spiritagent/icons/x";
 import {
   memo,
   useCallback,
@@ -622,7 +623,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Trash2 aria-hidden strokeWidth={1.75} />
+            <X aria-hidden strokeWidth={1.75} />
             {t("common.remove")}
           </ContextMenuItem>
         ) : null}
