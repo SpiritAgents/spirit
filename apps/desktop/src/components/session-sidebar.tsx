@@ -81,7 +81,6 @@ import {
 import { useWorkspaceGroupReorder } from "@/hooks/use-workspace-group-reorder";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
-import { prefersReducedMotion } from "@/lib/reduce-motion";
 import { isViteDev } from "@/lib/vite-dev";
 import { cn } from "@/lib/utils";
 import { SettingsShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
@@ -527,13 +526,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
             <Tooltip
               delayDuration={300}
               disableHoverableContent
-              onOpenChange={(open) => {
-                if (open) {
-                  setPlusTooltipAnchorLocked(true);
-                } else if (prefersReducedMotion()) {
-                  setPlusTooltipAnchorLocked(false);
-                }
-              }}
+              onOpenChange={setPlusTooltipAnchorLocked}
             >
               <TooltipTrigger asChild>
                 <Button
@@ -547,9 +540,10 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                     workspaceRowHovered || plusTooltipAnchorLocked
                       ? "inline-flex"
                       : "hidden group-has-[button:focus-visible]/workspace-row:inline-flex",
-                    // Keep the trigger in-flow as the tooltip close-animation anchor.
-                    // Use visibility, not opacity: sidebarInteractionMotionClass
-                    // transitions opacity and would fade this button on hide/reshow.
+                    // Keep the trigger mounted in-flow while the tooltip is open
+                    // so the floating content keeps its anchor. Use visibility, not
+                    // opacity: sidebarInteractionMotionClass transitions opacity
+                    // and would fade this button on hide/reshow.
                     plusTooltipAnchorLocked &&
                       !workspaceRowHovered &&
                       "pointer-events-none invisible",
@@ -577,19 +571,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                   <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent
-                side="bottom"
-                sideOffset={4}
-                onAnimationEnd={(event) => {
-                  if (event.target !== event.currentTarget) {
-                    return;
-                  }
-                  if (event.currentTarget.getAttribute("data-state") !== "closed") {
-                    return;
-                  }
-                  setPlusTooltipAnchorLocked(false);
-                }}
-              >
+              <TooltipContent side="bottom" sideOffset={4}>
                 {t("sidebar.newChatInWorkspace", { workspace: group.label })}
               </TooltipContent>
             </Tooltip>
