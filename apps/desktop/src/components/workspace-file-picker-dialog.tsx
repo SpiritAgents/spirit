@@ -148,7 +148,7 @@ export function WorkspaceFilePickerDialog({
             >
               <WorkspaceFileIcon
                 path={absolutePathCandidate}
-                className={DESKTOP_COMMAND_PALETTE_ITEM_TONE}
+                className={cn("text-popover-foreground", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
               />
               <span
                 className={cn(

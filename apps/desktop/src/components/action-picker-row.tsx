@@ -26,7 +26,7 @@ function SlashCommandIcon({ kind }: { kind: SkillSlashSuggestionKind }) {
   const Icon = SLASH_SUGGESTION_ICONS[kind];
   return (
     <Icon
-      className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+      className={cn("size-3.5 shrink-0 text-popover-foreground", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
       aria-hidden
       strokeWidth={1.75}
     />
@@ -52,7 +52,10 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Compose
-          className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+          className={cn(
+            "size-3.5 shrink-0 text-popover-foreground",
+            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+          )}
           aria-hidden
           strokeWidth={1.75}
         />
@@ -66,7 +69,10 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Icon
-          className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+          className={cn(
+            "size-3.5 shrink-0 text-popover-foreground",
+            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+          )}
           aria-hidden
           strokeWidth={1.75}
         />
@@ -75,7 +81,10 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
           <span className={actionPickerMetaClass}>{currentValueLabel}</span>
         ) : null}
         <ChevronRight
-          className={cn("size-3.5 shrink-0", DESKTOP_COMMAND_PALETTE_ITEM_TONE)}
+          className={cn(
+            "size-3.5 shrink-0 text-popover-foreground",
+            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+          )}
           aria-hidden
           strokeWidth={1.75}
         />
