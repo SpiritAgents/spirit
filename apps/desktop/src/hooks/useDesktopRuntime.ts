@@ -143,6 +143,7 @@ type BusyAction =
   | "questions"
   | "reset"
   | "session"
+  | "session-mutation"
   | "models"
   | "modelsPreview"
   | "mcps"
@@ -696,6 +697,7 @@ export function useDesktopRuntime() {
     if (
       busyAction === "bootstrap" ||
       busyAction === "session" ||
+      busyAction === "session-mutation" ||
       busyAction === "reset" ||
       snapshot?.activeSession?.readOnly
     ) {
@@ -746,7 +748,9 @@ export function useDesktopRuntime() {
 
       if (
         options?.navGeneration === undefined &&
-        (busyActionRef.current === "session" || busyActionRef.current === "reset")
+        (busyActionRef.current === "session" ||
+          busyActionRef.current === "session-mutation" ||
+          busyActionRef.current === "reset")
       ) {
         return;
       }
@@ -1544,6 +1548,7 @@ export function useDesktopRuntime() {
         Boolean(nextPath) &&
         prevPath !== nextPath &&
         busyActionRef.current !== "session" &&
+        busyActionRef.current !== "session-mutation" &&
         prevPath &&
         nextPath &&
         !isProvisionalSessionPromotion(prevPath, nextPath);
@@ -3486,7 +3491,7 @@ export function useDesktopRuntime() {
       acknowledgeSessionAttention(path);
       const navGeneration = sessionNavigationGenerationRef.current + 1;
       sessionNavigationGenerationRef.current = navGeneration;
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         const next = await api.deleteSession(path);
         if (navGeneration !== sessionNavigationGenerationRef.current) {
@@ -3513,7 +3518,7 @@ export function useDesktopRuntime() {
       if (!api) {
         return;
       }
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         const next = await api.renameSession(path, displayName);
         applySnapshot(next);
@@ -3534,7 +3539,7 @@ export function useDesktopRuntime() {
       if (!api) {
         return;
       }
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         const next = await api.setSessionPinned(path, pinned);
         applySnapshot(next);
@@ -3567,7 +3572,7 @@ export function useDesktopRuntime() {
           .toLowerCase();
         return groupingRoot === normalizedTarget;
       });
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         for (const session of workspaceSessions) {
           acknowledgeSessionAttention(session.path);
