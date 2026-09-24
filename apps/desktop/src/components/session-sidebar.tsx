@@ -836,7 +836,7 @@ const SessionListRow = memo(function SessionListRow({
           event.stopPropagation();
           onRenameStart();
         }}
-        className="flex min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent px-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="flex h-full min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent px-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         {leading}
         <span
