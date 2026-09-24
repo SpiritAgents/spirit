@@ -291,6 +291,7 @@ type WorkspaceSessionGroupCollapsibleProps = {
   isSessionSelected(path: string): boolean;
   onOpenChange(open: boolean): void;
   onSelectSession(path: string): void;
+  onTogglePinSession?(session: SessionListItem): void;
   onLoadMore(): void;
   onNewChatInWorkspace?: (workspaceRoot: string) => void;
   newChatBusy?: boolean;
@@ -410,6 +411,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
   isSessionSelected,
   onOpenChange,
   onSelectSession,
+  onTogglePinSession,
   onLoadMore,
   onNewChatInWorkspace,
   newChatBusy = false,
@@ -610,7 +612,9 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                     selected={isSessionSelected(session.path)}
                     disabled={disabled}
                     translucency={translucency}
+                    pinned={typeof session.pinnedAtUnixMs === "number"}
                     onSelectPath={onSelectSession}
+                    onTogglePin={onTogglePinSession ? () => onTogglePinSession(session) : undefined}
                     renaming={renamingSessionPath === session.path}
                     renameValue={renamingSessionPath === session.path ? renameValue : undefined}
                     onRenameValueChange={onRenameValueChange}
@@ -693,7 +697,9 @@ type SessionListRowProps = {
   selected: boolean;
   disabled?: boolean;
   translucency?: boolean;
+  pinned?: boolean;
   onSelectPath(path: string): void;
+  onTogglePin?: () => void;
   renaming?: boolean;
   renameValue?: string;
   onRenameValueChange?: (value: string) => void;
@@ -713,7 +719,9 @@ const SessionListRow = memo(function SessionListRow({
   selected,
   disabled,
   translucency,
+  pinned = false,
   onSelectPath,
+  onTogglePin,
   renaming = false,
   renameValue = "",
   onRenameValueChange,
@@ -726,9 +734,12 @@ const SessionListRow = memo(function SessionListRow({
   const gitTooltipContext = useOptionalSessionListGitTooltipContext();
   const renameInputRef = useRef<HTMLInputElement>(null);
   const skipBlurCommitRef = useRef(false);
+  const [sessionRowHovered, setSessionRowHovered] = useState(false);
+  const [pinTooltipAnchorLocked, setPinTooltipAnchorLocked] = useState(false);
   const sessionDragEnabled = Boolean(split) && !disabled && !isBusy && !renaming;
   const hasIndicator = (isBusy && !isBlocked) || (!selected && (isBlocked || showCompletedUnseen));
   const showGitTooltip = Boolean(gitBranch?.trim()) && gitTooltipContext !== null;
+  const pinToggleLabel = pinned ? t("sidebar.unpinSession") : t("sidebar.pinSession");
 
   useLayoutEffect(() => {
     if (!renaming) {
@@ -821,33 +832,83 @@ const SessionListRow = memo(function SessionListRow({
   }
 
   return (
-    <button
-      type="button"
+    <div
       data-session-path={sessionPath}
-      disabled={disabled}
-      draggable={sessionDragEnabled}
-      aria-current={selected ? "true" : undefined}
-      onClick={() => onSelectPath(sessionPath)}
-      onDragStart={handleSessionDragStart}
-      onDragEnd={handleSessionDragEnd}
-      onDoubleClick={(event) => {
-        if (!onRenameStart || disabled || isBusy) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        onRenameStart();
-      }}
       className={rowClassName}
+      onMouseEnter={() => setSessionRowHovered(true)}
+      onMouseLeave={() => setSessionRowHovered(false)}
     >
-      {leading}
-      <span
-        className={cn("min-w-0 flex-1 basis-0 truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}
-        title={showGitTooltip ? undefined : displayName}
+      <button
+        type="button"
+        disabled={disabled}
+        draggable={sessionDragEnabled}
+        aria-current={selected ? "true" : undefined}
+        onClick={() => onSelectPath(sessionPath)}
+        onDragStart={handleSessionDragStart}
+        onDragEnd={handleSessionDragEnd}
+        onDoubleClick={(event) => {
+          if (!onRenameStart || disabled || isBusy) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          onRenameStart();
+        }}
+        className="flex min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
-        {displayName}
-      </span>
-    </button>
+        {leading}
+        <span
+          className={cn("min-w-0 flex-1 basis-0 truncate", DESKTOP_SIDEBAR_TEXT_CLASS)}
+          title={showGitTooltip ? undefined : displayName}
+        >
+          {displayName}
+        </span>
+      </button>
+      {onTogglePin ? (
+        <Tooltip
+          delayDuration={300}
+          disableHoverableContent
+          onOpenChange={setPinTooltipAnchorLocked}
+        >
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              draggable={false}
+              className={cn(
+                "mr-0.5 size-6 shrink-0",
+                sessionRowHovered || pinTooltipAnchorLocked
+                  ? "inline-flex"
+                  : "hidden group-hover:inline-flex group-has-[button:focus-visible]:inline-flex",
+                // Keep the trigger mounted in-flow while the tooltip is open
+                // so the floating content keeps its anchor. Use visibility, not
+                // opacity: sidebarInteractionMotionClass transitions opacity
+                // and would fade this button on hide/reshow.
+                pinTooltipAnchorLocked && !sessionRowHovered && "pointer-events-none invisible",
+                sidebarItemDefaultTextClass,
+                sidebarInteractionMotionClass,
+                sidebarItemHoverClass(translucency),
+              )}
+              aria-label={pinToggleLabel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onTogglePin();
+              }}
+            >
+              {pinned ? (
+                <PinSlash className="size-3.5" aria-hidden strokeWidth={1.75} />
+              ) : (
+                <Pin className="size-3.5" aria-hidden strokeWidth={1.75} />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={4}>
+            {pinToggleLabel}
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+    </div>
   );
 });
 
@@ -2101,7 +2162,11 @@ function SessionSidebarInner({
                               selected={isSessionSelected(session.path)}
                               disabled={disabled}
                               translucency={translucency}
+                              pinned={typeof session.pinnedAtUnixMs === "number"}
                               onSelectPath={onSelectSession}
+                              onTogglePin={
+                                onTogglePinSession ? () => handleTogglePin(session) : undefined
+                              }
                               renaming={renamingSessionPath === session.path}
                               renameValue={
                                 renamingSessionPath === session.path ? renameValue : undefined
@@ -2196,6 +2261,7 @@ function SessionSidebarInner({
                             setWorkspaceGroupExpanded(group.id, open);
                           }}
                           onSelectSession={onSelectSession}
+                          onTogglePinSession={handleTogglePin}
                           onLoadMore={() =>
                             loadMoreWorkspaceGroupSessions(group.id, group.sessions.length)
                           }
@@ -2281,7 +2347,11 @@ function SessionSidebarInner({
                               selected={isSessionSelected(session.path)}
                               disabled={disabled}
                               translucency={translucency}
+                              pinned={typeof session.pinnedAtUnixMs === "number"}
                               onSelectPath={onSelectSession}
+                              onTogglePin={
+                                onTogglePinSession ? () => handleTogglePin(session) : undefined
+                              }
                               renaming={renamingSessionPath === session.path}
                               renameValue={
                                 renamingSessionPath === session.path ? renameValue : undefined
