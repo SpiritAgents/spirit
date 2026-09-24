@@ -1,6 +1,7 @@
 import { Compose } from "@spiritagent/icons/compose";
 import { Gear } from "@spiritagent/icons/gear";
 import { Pencil } from "@spiritagent/icons/pencil";
+import { X } from "@spiritagent/icons/x";
 import { Pin } from "@spiritagent/icons/pin";
 import { PinSlash } from "@spiritagent/icons/pin-slash";
 import { Plus } from "@spiritagent/icons/plus";
@@ -323,6 +324,7 @@ const sidebarItemShortcutClass =
 type SidebarSectionContextMenuConfig = {
   ariaLabel: string;
   itemLabel: string;
+  icon?: ReactNode;
   disabled?: boolean;
   disabledTitle?: string;
   onSelect(): void;
@@ -386,7 +388,7 @@ function SidebarSectionCollapsible({
                 contextMenu.onSelect();
               }}
             >
-              <Trash2 aria-hidden strokeWidth={1.75} />
+              {contextMenu.icon ?? <Trash2 aria-hidden strokeWidth={1.75} />}
               {contextMenu.itemLabel}
             </ContextMenuItem>
           </ContextMenuContent>
@@ -1128,7 +1130,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Trash2 aria-hidden strokeWidth={1.75} />
+            <X aria-hidden strokeWidth={1.75} />
             {t("common.remove")}
           </ContextMenuItem>
         ) : null}
@@ -2188,6 +2190,7 @@ function SessionSidebarInner({
                       ? {
                           ariaLabel: t("sidebar.sectionActions"),
                           itemLabel: t("common.remove"),
+                          icon: <X aria-hidden strokeWidth={1.75} />,
                           disabled: sectionBulkBusy || workspaceSectionHasBusySession,
                           disabledTitle: workspaceSectionHasBusySession
                             ? t("sidebar.cannotRemoveBusyInSection")
