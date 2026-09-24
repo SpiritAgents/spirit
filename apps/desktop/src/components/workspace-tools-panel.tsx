@@ -912,11 +912,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     handleAddTab(kind);
                   }}
                 >
-                  <Icon
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                    strokeWidth={1.75}
-                  />
+                  <Icon className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span className="min-w-0 flex-1 truncate">{t(meta.labelKey)}</span>
                 </DropdownMenuItem>
               );

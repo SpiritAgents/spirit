@@ -101,11 +101,7 @@ export function EmptyStateWorkspaceSelector({
               onSelect={onAddWorkspace}
               className={cn("gap-1.5", DESKTOP_OVERLAY_LIST_ACTION_ITEM)}
             >
-              <FolderPlus
-                className="size-3 shrink-0 text-muted-foreground"
-                aria-hidden
-                strokeWidth={1.75}
-              />
+              <FolderPlus className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
               <span>{t("app.addWorkspace")}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -116,11 +112,7 @@ export function EmptyStateWorkspaceSelector({
                 workspaceBinding === "none" && "bg-accent/40",
               )}
             >
-              <MessageSquareText
-                className="size-3 shrink-0 text-muted-foreground"
-                aria-hidden
-                strokeWidth={1.75}
-              />
+              <MessageSquareText className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
               <span>{t("app.noWorkspace")}</span>
             </DropdownMenuItem>
           </>
