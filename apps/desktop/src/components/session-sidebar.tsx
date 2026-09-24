@@ -641,6 +641,10 @@ function SessionListLoadMore({
       type="button"
       disabled={disabled}
       onClick={onLoadMore}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       className={cn(
         "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
         nested ? "pr-2.5 pl-8" : "px-2.5",
