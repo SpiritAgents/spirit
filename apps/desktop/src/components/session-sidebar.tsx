@@ -962,28 +962,21 @@ function SessionListNav({
       >
         {canRenameSession ? (
           <>
-            <Tooltip delayDuration={300} disableHoverableContent>
-              <TooltipTrigger asChild>
-                <ContextMenuItem
-                  onSelect={() => {
-                    const session = contextMenuSessionRef.current ?? contextMenuSession;
-                    if (session) {
-                      onRequestTogglePin(session);
-                    }
-                  }}
-                >
-                  {togglePinTargetPinned ? (
-                    <PinSlash aria-hidden strokeWidth={1.75} />
-                  ) : (
-                    <Pin aria-hidden strokeWidth={1.75} />
-                  )}
-                  {togglePinLabel}
-                </ContextMenuItem>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                {togglePinLabel}
-              </TooltipContent>
-            </Tooltip>
+            <ContextMenuItem
+              onSelect={() => {
+                const session = contextMenuSessionRef.current ?? contextMenuSession;
+                if (session) {
+                  onRequestTogglePin(session);
+                }
+              }}
+            >
+              {togglePinTargetPinned ? (
+                <PinSlash aria-hidden strokeWidth={1.75} />
+              ) : (
+                <Pin aria-hidden strokeWidth={1.75} />
+              )}
+              {togglePinLabel}
+            </ContextMenuItem>
             <ContextMenuItem
               disabled={renameSessionBusy || busy}
               title={busy ? t("sidebar.cannotRenameBusyChat") : undefined}
@@ -1136,28 +1129,21 @@ function WorkspaceListNav({
         ) : null}
         {!isWorkspaceTarget && canRenameSession ? (
           <>
-            <Tooltip delayDuration={300} disableHoverableContent>
-              <TooltipTrigger asChild>
-                <ContextMenuItem
-                  onSelect={() => {
-                    const session = contextMenuSessionRef.current ?? contextMenuSession;
-                    if (session) {
-                      onRequestTogglePin(session);
-                    }
-                  }}
-                >
-                  {togglePinTargetPinned ? (
-                    <PinSlash aria-hidden strokeWidth={1.75} />
-                  ) : (
-                    <Pin aria-hidden strokeWidth={1.75} />
-                  )}
-                  {togglePinLabel}
-                </ContextMenuItem>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                {togglePinLabel}
-              </TooltipContent>
-            </Tooltip>
+            <ContextMenuItem
+              onSelect={() => {
+                const session = contextMenuSessionRef.current ?? contextMenuSession;
+                if (session) {
+                  onRequestTogglePin(session);
+                }
+              }}
+            >
+              {togglePinTargetPinned ? (
+                <PinSlash aria-hidden strokeWidth={1.75} />
+              ) : (
+                <Pin aria-hidden strokeWidth={1.75} />
+              )}
+              {togglePinLabel}
+            </ContextMenuItem>
             <ContextMenuItem
               disabled={renameSessionBusy || sessionBusy}
               title={sessionBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
