@@ -742,7 +742,7 @@ const SessionListRow = memo(function SessionListRow({
     "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
     sidebarInteractionMotionClass,
     "focus-visible:ring-2 focus-visible:ring-ring/40",
-    nested || hasIndicator ? "h-8 pr-2.5 pl-2.5 gap-2" : "h-8 px-2.5",
+    "h-8",
     selected
       ? sessionRowSelectedClass(translucency)
       : cn(
@@ -793,7 +793,7 @@ const SessionListRow = memo(function SessionListRow({
 
   if (renaming) {
     return (
-      <div data-session-path={sessionPath} className={rowClassName}>
+      <div data-session-path={sessionPath} className={cn(rowClassName, "gap-2 px-2.5")}>
         {leading}
         <input
           ref={renameInputRef}
@@ -836,7 +836,7 @@ const SessionListRow = memo(function SessionListRow({
           event.stopPropagation();
           onRenameStart();
         }}
-        className="flex min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="flex min-w-0 flex-1 basis-0 items-center gap-2 bg-transparent px-2.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
         {leading}
         <span
