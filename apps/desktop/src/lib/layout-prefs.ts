@@ -474,6 +474,7 @@ export function writeWorkspaceSidebarExpandedById(value: WorkspaceSidebarExpande
 const SIDEBAR_WORKSPACE_SECTION_EXPANDED_KEY = "spirit-desktop-sidebar-workspace-section-expanded";
 const SIDEBAR_NO_WORKSPACE_SECTION_EXPANDED_KEY =
   "spirit-desktop-sidebar-no-workspace-section-expanded";
+const SIDEBAR_PINNED_SECTION_EXPANDED_KEY = "spirit-desktop-sidebar-pinned-section-expanded";
 
 function readStoredBoolean(key: string, fallback: boolean): boolean {
   try {
@@ -518,6 +519,14 @@ export function readSidebarNoWorkspaceSectionExpanded(): boolean {
 
 export function writeSidebarNoWorkspaceSectionExpanded(expanded: boolean): void {
   writeStoredBoolean(SIDEBAR_NO_WORKSPACE_SECTION_EXPANDED_KEY, expanded);
+}
+
+export function readSidebarPinnedSectionExpanded(): boolean {
+  return readStoredBoolean(SIDEBAR_PINNED_SECTION_EXPANDED_KEY, true);
+}
+
+export function writeSidebarPinnedSectionExpanded(expanded: boolean): void {
+  writeStoredBoolean(SIDEBAR_PINNED_SECTION_EXPANDED_KEY, expanded);
 }
 
 const WORKSPACE_SIDEBAR_GROUP_ORDER_STORAGE_KEY = "spirit-desktop-workspace-sidebar-group-order";

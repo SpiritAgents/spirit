@@ -517,6 +517,9 @@ export function createWebHostApi(): HostApi {
     renameSession(path: string, displayName: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/sessions/rename", { path, displayName });
     },
+    setSessionPinned(path: string, pinned: boolean) {
+      return post<DesktopSnapshot>(baseUrl, "/api/sessions/pin", { path, pinned });
+    },
     listWorkspaceFileReferenceSuggestions(request: QueryWorkspaceFileReferenceSuggestionsRequest) {
       return post<WorkspaceFileReferenceSuggestionsResponse>(
         baseUrl,

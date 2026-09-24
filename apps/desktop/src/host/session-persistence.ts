@@ -78,6 +78,7 @@ export async function persistDesktopSessionBundle(
     savedAtUnixMs,
     sessionDisplayName: activeSession.displayName,
     sessionTitleSource,
+    ...(bundle.pinnedAtUnixMs ? { pinnedAtUnixMs: bundle.pinnedAtUnixMs } : {}),
     workspaceRoot: input.workspaceRoot,
     gitBranch: input.gitBranch,
     ...(bundle.activePlanPath ? { activePlanPath: bundle.activePlanPath } : {}),

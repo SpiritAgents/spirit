@@ -205,6 +205,7 @@ declare global {
     ): Promise<DesktopSnapshot>;
     deleteSession(path: string): Promise<DesktopSnapshot>;
     renameSession(path: string, displayName: string): Promise<DesktopSnapshot>;
+    setSessionPinned(path: string, pinned: boolean): Promise<DesktopSnapshot>;
     listWorkspaceFileReferenceSuggestions(
       request: QueryWorkspaceFileReferenceSuggestionsRequest,
     ): Promise<WorkspaceFileReferenceSuggestionsResponse>;

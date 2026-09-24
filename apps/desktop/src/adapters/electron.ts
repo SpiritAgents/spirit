@@ -281,6 +281,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     renameSession(path, displayName) {
       return bridge.renameSession(path, displayName);
     },
+    setSessionPinned(path, pinned) {
+      return bridge.setSessionPinned(path, pinned);
+    },
     listWorkspaceFileReferenceSuggestions(request) {
       return bridge.listWorkspaceFileReferenceSuggestions(request);
     },

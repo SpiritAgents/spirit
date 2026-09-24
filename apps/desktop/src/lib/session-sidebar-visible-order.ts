@@ -7,13 +7,16 @@ export type SidebarVisibleSessionGroup<T> = {
 };
 
 export type ListVisibleSidebarSessionsInput<T> = {
+  pinnedSessions: readonly T[];
   workspaceGroups: readonly SidebarVisibleSessionGroup<T>[];
   unboundSessions: readonly T[];
+  pinnedSectionExpanded: boolean;
   workspaceSectionExpanded: boolean;
   noWorkspaceSectionExpanded: boolean;
   /** Existing sidebar semantics: `[id] !== false` means the group is expanded. */
   collapsedWorkspaceIds: Record<string, boolean>;
   visibleCountByWorkspaceGroupId: Record<string, number>;
+  pinnedVisibleCount: number;
   unboundVisibleCount: number;
   pageSize?: number;
 };
@@ -25,6 +28,10 @@ export type ListVisibleSidebarSessionsInput<T> = {
 export function listVisibleSidebarSessions<T>(input: ListVisibleSidebarSessionsInput<T>): T[] {
   const pageSize = input.pageSize ?? SIDEBAR_SESSION_PAGE_SIZE;
   const visible: T[] = [];
+
+  if (input.pinnedSectionExpanded) {
+    visible.push(...input.pinnedSessions.slice(0, input.pinnedVisibleCount));
+  }
 
   if (input.workspaceSectionExpanded) {
     for (const group of input.workspaceGroups) {

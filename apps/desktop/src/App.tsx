@@ -114,6 +114,7 @@ export default function App() {
   const subagentViewActive = subagentViewer.active && Boolean(snapshot?.subagentViewer);
   const sessionMessages = snapshot?.conversation.messages ?? [];
   const sessionNavigationBusy = runtime.busyAction === "session";
+  const sessionMutationBusy = runtime.busyAction === "session-mutation";
   const newChatBusy = runtime.busyAction === "reset";
   const conversationNavigationPending = sessionNavigationBusy || runtime.layoutNavigationPending;
   const activeFilePath =
@@ -522,13 +523,16 @@ export default function App() {
                           translucency={useTranslucency}
                           newChatBusy={newChatBusy}
                           sessionNavigationBusy={sessionNavigationBusy}
-                          deleteSessionBusy={sessionNavigationBusy}
+                          deleteSessionBusy={sessionMutationBusy}
                           onDeleteSession={(path) => runtime.deleteSession(path)}
-                          renameSessionBusy={sessionNavigationBusy}
+                          renameSessionBusy={sessionMutationBusy}
                           onRenameSession={(path, displayName) =>
                             runtime.renameSession(path, displayName)
                           }
-                          removeWorkspaceBusy={sessionNavigationBusy}
+                          onTogglePinSession={(path, pinned) =>
+                            runtime.setSessionPinned(path, pinned)
+                          }
+                          removeWorkspaceBusy={sessionMutationBusy}
                           onRemoveWorkspace={(workspacePath) =>
                             runtime.removeWorkspace(workspacePath)
                           }
@@ -805,11 +809,14 @@ export default function App() {
                                     sessionNavigationBusy={sessionNavigationBusy}
                                     newChatBusy={newChatBusy}
                                     onNewChat={handleNewChat}
-                                    deleteSessionBusy={sessionNavigationBusy}
+                                    deleteSessionBusy={sessionMutationBusy}
                                     onDeleteSession={(path) => runtime.deleteSession(path)}
-                                    renameSessionBusy={sessionNavigationBusy}
+                                    renameSessionBusy={sessionMutationBusy}
                                     onRenameSession={(path, displayName) =>
                                       runtime.renameSession(path, displayName)
+                                    }
+                                    onTogglePinSession={(path, pinned) =>
+                                      runtime.setSessionPinned(path, pinned)
                                     }
                                     workspaceTools={workspaceTools}
                                     onOpenIntegrationsSettings={openIntegrationsSettings}

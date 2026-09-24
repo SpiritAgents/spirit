@@ -738,6 +738,9 @@ function normalizeStoredSession(parsed: Partial<StoredDesktopSession>): StoredDe
     parsed.sessionTitleSource === "manual"
       ? { sessionTitleSource: parsed.sessionTitleSource }
       : {}),
+    ...(normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs)
+      ? { pinnedAtUnixMs: normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs) }
+      : {}),
     ...(resolveStoredWorkspaceRoot(parsed.workspaceRoot)
       ? { workspaceRoot: resolveStoredWorkspaceRoot(parsed.workspaceRoot) }
       : {}),
@@ -790,6 +793,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           ? (parsed.desktopMessageTimeline as PersistedDesktopTimelineTurnSnapshot[])
           : undefined;
         const gitBranch = normalizeGitBranch(parsed.gitBranch);
+        const pinnedAtUnixMs = normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs);
         const modifiedAtUnixMs =
           typeof parsed.savedAtUnixMs === "number"
             ? parsed.savedAtUnixMs
@@ -802,6 +806,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           workspaceRoot:
             resolveStoredWorkspaceRoot(parsed.workspaceRoot) ?? discoverWorkspaceRoot(),
           ...(gitBranch ? { gitBranch } : {}),
+          ...(pinnedAtUnixMs ? { pinnedAtUnixMs } : {}),
           modifiedAtUnixMs,
           transcriptPath: resolveSessionTranscriptFilePath(spiritDataDir(), path.resolve(filePath)),
         } satisfies SessionListItem;
@@ -873,6 +878,10 @@ function defaultConfig(): DesktopConfigFile {
 
 function normalizeGitBranch(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizePinnedAtUnixMs(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 export function defaultWebHostConfig(): DesktopWebHostConfigFile {
