@@ -453,30 +453,23 @@ export function DesktopLayoutChromeBar({
                     <DropdownMenuSeparator />
                     <div className="p-1">
                       {onTogglePinSession ? (
-                        <Tooltip delayDuration={300} disableHoverableContent>
-                          <TooltipTrigger asChild>
-                            <DropdownMenuItem
-                              className="gap-2"
-                              onSelect={() => {
-                                void onTogglePinSession(trimmedRenameSessionPath, !sessionPinned);
-                              }}
-                            >
-                              {sessionPinned ? (
-                                <PinSlash
-                                  className="size-3.5 shrink-0"
-                                  aria-hidden
-                                  strokeWidth={1.75}
-                                />
-                              ) : (
-                                <Pin className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
-                              )}
-                              <span>{togglePinLabel}</span>
-                            </DropdownMenuItem>
-                          </TooltipTrigger>
-                          <TooltipContent side="left" sideOffset={8}>
-                            {togglePinLabel}
-                          </TooltipContent>
-                        </Tooltip>
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onSelect={() => {
+                            void onTogglePinSession(trimmedRenameSessionPath, !sessionPinned);
+                          }}
+                        >
+                          {sessionPinned ? (
+                            <PinSlash
+                              className="size-3.5 shrink-0"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : (
+                            <Pin className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+                          )}
+                          <span>{togglePinLabel}</span>
+                        </DropdownMenuItem>
                       ) : null}
                       <DropdownMenuItem
                         className="gap-2"
