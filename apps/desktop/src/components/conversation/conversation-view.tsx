@@ -223,6 +223,8 @@ export type ConversationViewProps = {
   renameSessionDisplayName?: string | null;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  sessionPinned?: boolean;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   paneId?: string;
   onPaneFocus?: () => void;
   onPaneDragStart?: (paneId: string) => void;
@@ -285,6 +287,8 @@ export function ConversationView({
   renameSessionDisplayName,
   renameSessionBusy = false,
   onRenameSession,
+  sessionPinned = false,
+  onTogglePinSession,
   paneId,
   onPaneFocus,
   onPaneDragStart,
@@ -490,6 +494,8 @@ export function ConversationView({
           renameSessionDisplayName={renameSessionDisplayName}
           renameSessionBusy={renameSessionBusy}
           onRenameSession={onRenameSession}
+          sessionPinned={sessionPinned}
+          onTogglePinSession={onTogglePinSession}
         />
         {showDropTargets
           ? (() => {

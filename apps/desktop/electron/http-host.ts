@@ -1410,6 +1410,19 @@ async function handleApiRequest({
     return;
   }
 
+  if (request.method === "POST" && pathname === "/api/sessions/pin") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("setSessionPinned", {
+        path: typeof jsonBody?.path === "string" ? jsonBody.path : "",
+        pinned: jsonBody?.pinned === true,
+      }),
+    );
+    return;
+  }
+
   if (request.method === "POST" && pathname === "/api/workspace/explorer") {
     writeJson(
       request,

@@ -45,6 +45,10 @@ struct ChatFile {
     workspace_root: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     git_branch: Option<String>,
+    // Desktop owns `pinnedAtUnixMs` (sidebar pinned chats); the CLI never reads or
+    // displays it and only preserves it across overwrite saves (see save_chat).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pinned_at_unix_ms: Option<u128>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -197,6 +201,20 @@ fn file_mtime_unix_ms(path: &Path) -> u128 {
         .unwrap_or(0)
 }
 
+fn read_existing_pinned_at_unix_ms(path: &Path) -> Option<u128> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct PinnedMeta {
+        #[serde(default)]
+        pinned_at_unix_ms: Option<u128>,
+    }
+
+    let raw = fs::read_to_string(path).ok()?;
+    serde_json::from_str::<PinnedMeta>(&raw)
+        .ok()?
+        .pinned_at_unix_ms
+}
+
 pub struct SaveChatParams<'a> {
     pub path_arg: Option<&'a str>,
     pub messages: &'a [(String, String)],
@@ -246,6 +264,9 @@ pub fn save_chat(params: SaveChatParams<'_>) -> Result<PathBuf> {
         ));
     }
     let workspace_root = current_workspace_root();
+    // save_chat rebuilds ChatFile from scratch, so inherit the desktop-owned pinned
+    // state from the file being overwritten instead of silently dropping it.
+    let pinned_at_unix_ms = read_existing_pinned_at_unix_ms(&path);
 
     let file = ChatFile {
         chat_schema_version: CHAT_SCHEMA_VERSION,
@@ -286,6 +307,7 @@ pub fn save_chat(params: SaveChatParams<'_>) -> Result<PathBuf> {
         git_branch: workspace_root
             .as_ref()
             .and_then(|path| detect_git_branch(path)),
+        pinned_at_unix_ms,
     };
 
     let content = serde_json::to_string_pretty(&file)?;
@@ -689,6 +711,59 @@ mod tests {
         assert_eq!(loaded.session_title_source.as_deref(), Some("llm"));
 
         let _ = fs::remove_file(saved);
+    }
+
+    #[test]
+    fn save_chat_preserves_pinned_at_unix_ms_on_overwrite() {
+        let file_path = test_file_path("pinned-preserve");
+        let desktop_messages = vec![ConversationMessageSnapshot {
+            id: 1,
+            role: ConversationMessageRole::User,
+            content: "hello from pinned preserve test".to_string(),
+            tool: None,
+            aux: None,
+            pending: false,
+        }];
+        let messages = vec![(
+            "user".to_string(),
+            "hello from pinned preserve test".to_string(),
+        )];
+        let save = || {
+            save_chat(SaveChatParams {
+                path_arg: Some(file_path.to_string_lossy().as_ref()),
+                messages: &messages,
+                assistant_aux: &[],
+                llm_history: &[],
+                loop_enabled: false,
+                approval_level: "default",
+                subagent_sessions: &[],
+                rewind: None,
+                desktop_messages: Some(&desktop_messages),
+                session_display_name_override: None,
+                session_title_source: None,
+            })
+            .expect("save chat")
+        };
+
+        let saved = save();
+        let raw = fs::read_to_string(&saved).expect("read saved chat");
+        let mut parsed: Value = serde_json::from_str(&raw).expect("parse saved chat json");
+        assert!(parsed.get("pinnedAtUnixMs").is_none());
+
+        // Desktop pins the chat out of band; a CLI overwrite must keep the field.
+        parsed["pinnedAtUnixMs"] = json!(1_720_000_000_000u64);
+        fs::write(
+            &saved,
+            serde_json::to_string_pretty(&parsed).expect("serialize pinned json"),
+        )
+        .expect("write pinned chat");
+
+        let resaved = save();
+        let raw = fs::read_to_string(&resaved).expect("read resaved chat");
+        let parsed: Value = serde_json::from_str(&raw).expect("parse resaved chat json");
+        assert_eq!(parsed["pinnedAtUnixMs"], json!(1_720_000_000_000u64));
+
+        let _ = fs::remove_file(resaved);
     }
 
     #[test]

@@ -58,6 +58,53 @@ test("buildStoredDesktopSession and restoreStoredSessionState roundtrip contextU
   assert.deepEqual(restored.contextUsage, contextUsage);
 });
 
+test("buildStoredDesktopSession and restoreStoredSessionState roundtrip pinnedAtUnixMs", () => {
+  const pinnedAtUnixMs = 1735689600000;
+  let nextMessageId = 1;
+  const timeline = new DesktopMessageTimeline({
+    allocateMessageId: () => nextMessageId++,
+  });
+  timeline.beginUserTurn("hello");
+  const stored = buildStoredDesktopSession({
+    llmHistory: [],
+    sessionDisplayName: "hello",
+    workspaceRoot: "D:/Spirit",
+    desktopMessageTimeline: timeline.snapshot(),
+    rewind: createDesktopRewindMetadata(),
+    loopEnabled: false,
+    approvalLevel: "default",
+    pinnedAtUnixMs,
+  });
+
+  assert.equal(stored.pinnedAtUnixMs, pinnedAtUnixMs);
+
+  const restored = restoreStoredSessionState({
+    filePath: "D:/Spirit/test-session.json",
+    loaded: stored,
+  });
+
+  assert.equal(restored.pinnedAtUnixMs, pinnedAtUnixMs);
+
+  const unpinned = buildStoredDesktopSession({
+    llmHistory: [],
+    sessionDisplayName: "hello",
+    workspaceRoot: "D:/Spirit",
+    desktopMessageTimeline: timeline.snapshot(),
+    rewind: createDesktopRewindMetadata(),
+    loopEnabled: false,
+    approvalLevel: "default",
+  });
+
+  assert.equal("pinnedAtUnixMs" in unpinned, false);
+
+  const restoredUnpinned = restoreStoredSessionState({
+    filePath: "D:/Spirit/test-session.json",
+    loaded: unpinned,
+  });
+
+  assert.equal("pinnedAtUnixMs" in restoredUnpinned, false);
+});
+
 test("sessionListActivityFromBundle maps runtime busy states", () => {
   assert.deepEqual(sessionListActivityFromBundle(undefined), {});
 

@@ -3,7 +3,10 @@ import { useCallback, useEffect } from "react";
 import { ConversationView } from "@/components/conversation/conversation-view";
 import { ComposerChipNavigateProvider } from "@/contexts/composer-chip-navigate-context";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
-import { isSideChatPaneProvisionalSessionPath } from "@/lib/session-path-kind";
+import {
+  isSideChatPaneProvisionalSessionPath,
+  normalizeSessionPathKey,
+} from "@/lib/session-path-kind";
 import { canBeginSideChat } from "@/lib/fork-eligibility";
 import { findLastForkableAssistantMessageId } from "@/lib/fork-session-utils";
 import { useConversationPaneController } from "@/hooks/useConversationPaneController";
@@ -52,6 +55,7 @@ export type ConversationPaneHostProps = {
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   workspaceTools: WorkspaceTools;
   onOpenIntegrationsSettings: () => void;
   onCompactionDemoStop: () => void;
@@ -160,6 +164,22 @@ export function ConversationPaneHost({
     [controllerInput.onRenameSession],
   );
 
+  const handleTogglePinSession = useCallback(
+    async (path: string, pinned: boolean) => {
+      if (controllerInput.onTogglePinSession) {
+        await controllerInput.onTogglePinSession(path, pinned);
+      }
+    },
+    [controllerInput.onTogglePinSession],
+  );
+
+  const paneSessionPathKey = normalizeSessionPathKey(sessionPath);
+  const sessionPinned = controllerInput.runtime.sessions.some(
+    (session) =>
+      normalizeSessionPathKey(session.path) === paneSessionPathKey &&
+      typeof session.pinnedAtUnixMs === "number",
+  );
+
   const showSideChat =
     !pane.paneIsEmptySession &&
     Boolean(findLastForkableAssistantMessageId(pane.paneSnapshot?.conversation.messages ?? [])) &&
@@ -224,6 +244,8 @@ export function ConversationPaneHost({
         renameSessionDisplayName={pane.paneSnapshot?.activeSession?.displayName ?? null}
         renameSessionBusy={controllerInput.renameSessionBusy}
         onRenameSession={handleRenameSession}
+        sessionPinned={sessionPinned}
+        onTogglePinSession={controllerInput.onTogglePinSession ? handleTogglePinSession : undefined}
         compactionDemoActive={pane.compactionDemoActive}
         onCompactionDemoStop={controllerInput.onCompactionDemoStop}
         longConversationListDemoActive={pane.longConversationListDemoActive}

@@ -342,6 +342,7 @@ import { deleteSessionCommand, type SessionDeleteContext } from "./session-delet
 import { modelRefKey, modelRefsEqual, tryResolveTransportConfig } from "@spiritagent/host-internal";
 import type { ModelRef } from "../types.js";
 import { renameSessionCommand, type SessionRenameContext } from "./session-rename.js";
+import { setSessionPinnedCommand, type SessionPinContext } from "./session-pin.js";
 import {
   finishSessionActivationCommand,
   isBundleRuntimeFresh,
@@ -2834,6 +2835,18 @@ class DesktopHostService {
 
   async renameSession(filePath: string, displayName: string): Promise<DesktopSnapshot> {
     return renameSessionCommand(this.sessionRenameContext(), filePath, displayName);
+  }
+
+  async setSessionPinned(filePath: string, pinned: boolean): Promise<DesktopSnapshot> {
+    return setSessionPinnedCommand(this.sessionPinContext(), filePath, pinned);
+  }
+
+  private sessionPinContext(): SessionPinContext {
+    return {
+      ...this.sessionActivationContext(),
+      notifySessionListUpdated: () => this.notifySessionListUpdated(),
+      emitLiveSnapshotUpdate: () => this.emitLiveSnapshotUpdate(),
+    };
   }
 
   private sessionRenameContext(): SessionRenameContext {

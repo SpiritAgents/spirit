@@ -426,6 +426,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   renameSession(path: string, displayName: string) {
     return ipcRenderer.invoke("desktop:invoke", "renameSession", { path, displayName });
   },
+  setSessionPinned(path: string, pinned: boolean) {
+    return ipcRenderer.invoke("desktop:invoke", "setSessionPinned", { path, pinned });
+  },
   listWorkspaceFileReferenceSuggestions(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "listWorkspaceFileReferenceSuggestions", {
       request,

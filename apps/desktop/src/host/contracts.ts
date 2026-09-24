@@ -109,6 +109,7 @@ export type HostCommandName =
   | "checkoutPaneGitBranch"
   | "deleteSession"
   | "renameSession"
+  | "setSessionPinned"
   | "listWorkspaceFileReferenceSuggestions"
   | "requestCodeCompletion"
   | "abortCodeCompletion"
@@ -154,6 +155,7 @@ export interface StoredDesktopSession {
   savedAtUnixMs: number;
   sessionDisplayName?: string;
   sessionTitleSource?: SessionTitleSource;
+  pinnedAtUnixMs?: number;
   workspaceRoot?: string;
   gitBranch?: string;
   activePlanPath?: string;

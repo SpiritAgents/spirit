@@ -85,6 +85,8 @@ export interface SessionBundle {
   activePlanPath?: string;
   /** Tracks whether the sidebar title is seed-truncated or LLM-generated. */
   sessionTitleSource?: SessionTitleSource;
+  /** Unix ms when the session was pinned; drives sidebar Pinned grouping. Absent when unpinned. */
+  pinnedAtUnixMs?: number;
   contextUsage?: ConversationContextUsageSnapshot;
   /** Composer direct image/video generation running in the background; drives snapshot.isBusy together with runtime.isBusy. */
   directMediaTurnInFlight?: boolean;
@@ -176,6 +178,7 @@ export function sessionBundleFromRestored(
     conversationRevision: 0,
     ...(restored.activePlanPath ? { activePlanPath: restored.activePlanPath } : {}),
     ...(restored.sessionTitleSource ? { sessionTitleSource: restored.sessionTitleSource } : {}),
+    ...(restored.pinnedAtUnixMs ? { pinnedAtUnixMs: restored.pinnedAtUnixMs } : {}),
     ...(restored.contextUsage ? { contextUsage: { ...restored.contextUsage } } : {}),
     subagentDesktopMessagesBySessionId: restored.subagentDesktopMessagesBySessionId
       ? new Map(
@@ -216,6 +219,7 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.conversationRevision = 0;
   bundle.activePlanPath = undefined;
   bundle.sessionTitleSource = undefined;
+  bundle.pinnedAtUnixMs = undefined;
   bundle.contextUsage = undefined;
   bundle.directMediaTurnInFlight = false;
   bundle.pendingWorktreeBootstrap = undefined;

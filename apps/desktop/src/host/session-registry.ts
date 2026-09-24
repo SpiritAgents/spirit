@@ -366,6 +366,7 @@ export class SessionRegistry {
     bundle.approvalLevel = restored.approvalLevel;
     bundle.activeModel = restored.activeModel;
     bundle.sessionTitleSource = restored.sessionTitleSource;
+    bundle.pinnedAtUnixMs = restored.pinnedAtUnixMs;
     bundle.rewind = restored.rewind;
     bundle.rewindWarnings = [];
     bundle.messageIdCounter =

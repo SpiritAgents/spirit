@@ -98,6 +98,7 @@ export interface RestoredSessionState {
   activeModel?: ModelRef;
   activePlanPath?: string;
   sessionTitleSource?: SessionTitleSource;
+  pinnedAtUnixMs?: number;
   contextUsage?: ConversationContextUsageSnapshot;
   subagentDesktopMessagesBySessionId?: Map<string, ConversationMessageSnapshot[]>;
   queuedUserTurns?: QueuedUserTurn[];
@@ -223,6 +224,7 @@ export function restoreStoredSessionState(input: {
     input.loaded.sessionTitleSource === "manual"
       ? { sessionTitleSource: input.loaded.sessionTitleSource }
       : {}),
+    ...(input.loaded.pinnedAtUnixMs ? { pinnedAtUnixMs: input.loaded.pinnedAtUnixMs } : {}),
     ...(input.loaded.contextUsage ? { contextUsage: { ...input.loaded.contextUsage } } : {}),
     ...(input.loaded.subagentDesktopTimelines
       ? {
@@ -243,6 +245,7 @@ export function buildStoredDesktopSession(input: {
   savedAtUnixMs?: number;
   sessionDisplayName: string;
   sessionTitleSource?: SessionTitleSource;
+  pinnedAtUnixMs?: number;
   workspaceRoot: string;
   gitBranch?: string;
   activePlanPath?: string;
@@ -272,6 +275,7 @@ export function buildStoredDesktopSession(input: {
     savedAtUnixMs: input.savedAtUnixMs ?? Date.now(),
     sessionDisplayName: input.sessionDisplayName,
     ...(input.sessionTitleSource ? { sessionTitleSource: input.sessionTitleSource } : {}),
+    ...(input.pinnedAtUnixMs ? { pinnedAtUnixMs: input.pinnedAtUnixMs } : {}),
     workspaceRoot: input.workspaceRoot,
     ...(input.gitBranch ? { gitBranch: input.gitBranch } : {}),
     ...(input.automationId ? { automationId: input.automationId } : {}),
