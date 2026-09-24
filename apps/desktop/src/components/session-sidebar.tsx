@@ -760,7 +760,7 @@ const SessionListRow = memo(function SessionListRow({
     "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
     sidebarInteractionMotionClass,
     "focus-visible:ring-2 focus-visible:ring-ring/40",
-    nested ? "py-2 pr-2.5 pl-2.5 gap-2" : hasIndicator ? "h-8 pr-2.5 pl-2.5 gap-2" : "h-8 px-2.5",
+    nested || hasIndicator ? "h-8 pr-2.5 pl-2.5 gap-2" : "h-8 px-2.5",
     selected
       ? sessionRowSelectedClass(translucency)
       : cn(
