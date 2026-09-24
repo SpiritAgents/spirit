@@ -57,7 +57,7 @@ export function WorkspaceFileReferenceMenu({
               onClick={onBack}
               {...getItemPointerHandlers(index)}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-muted-foreground">
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
                 <ChevronLeft className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
                   {t("composer.atReference.back")}

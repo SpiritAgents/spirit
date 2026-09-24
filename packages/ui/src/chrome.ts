@@ -110,7 +110,7 @@ export const DESKTOP_OVERLAY_LIST_GROUP_LABEL =
 export const DESKTOP_OVERLAY_LIST_ITEM = "px-2 py-1.5";
 
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT =
-  "relative flex w-full cursor-pointer select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 [&_svg]:text-muted-foreground";
+  "relative flex w-full cursor-pointer select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5";
 
 export const DESKTOP_OVERLAY_LIST_ITEM_FOCUS =
   "focus:bg-overlay-hover focus:text-accent-foreground focus:[&_svg]:text-inherit focus:[&_[data-slot$='-shortcut']]:text-inherit focus:[&_[data-slot='kbd']]:text-inherit";

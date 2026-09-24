@@ -31,7 +31,7 @@ type ComposerInsertMenuProps = {
 function SlashBadge() {
   return (
     <span
-      className={`inline-flex size-4 shrink-0 items-center justify-center rounded-sm bg-muted/65 text-[10px] ${FONT_WEIGHT_MEDIUM} text-muted-foreground`}
+      className={`inline-flex size-4 shrink-0 items-center justify-center rounded-sm bg-muted/65 text-[10px] ${FONT_WEIGHT_MEDIUM}`}
     >
       /
     </span>
@@ -90,11 +90,7 @@ export function ComposerInsertMenu({
             onInsertWorkspaceReference();
           }}
         >
-          <AtSign
-            className="size-4 shrink-0 text-muted-foreground"
-            aria-hidden
-            strokeWidth={1.75}
-          />
+          <AtSign className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 flex-1 truncate">{t("composer.insertWorkspaceFile")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -108,7 +104,7 @@ export function ComposerInsertMenu({
             void onPickLocalFile();
           }}
         >
-          <File className="size-4 shrink-0 text-muted-foreground" aria-hidden strokeWidth={1.75} />
+          <File className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 flex-1 truncate">{t("composer.selectLocalFile")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem
