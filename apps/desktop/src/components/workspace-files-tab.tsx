@@ -1,5 +1,6 @@
 import { Compose } from "@spiritagent/icons/compose";
 import { Search } from "@spiritagent/icons/search";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   useCallback,
   useEffect,
@@ -481,6 +482,7 @@ export function WorkspaceFilesTab({
   workspaceContentInvalidationRef.current = workspaceContentInvalidation;
 
   latestFileTreeWidthPxRef.current = fileTreeWidthPx;
+  const fileTreeDragCursor = useDragResizeCursor();
 
   const maxFileTreeWidthPx = useMemo(
     () =>
@@ -522,9 +524,17 @@ export function WorkspaceFilesTab({
       event.preventDefault();
       setIsResizingFileTree(true);
       fileTreeDragRef.current = { startX: event.clientX, startWidth: fileTreeWidthPx };
+      fileTreeDragCursor.start(
+        resizeCursor(
+          fileTreeWidthPx,
+          WORKSPACE_FILES_TREE_MIN_WIDTH_PX,
+          maxFileTreeWidthPx,
+          "right",
+        ),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [fileTreeWidthPx],
+    [fileTreeDragCursor, fileTreeWidthPx, maxFileTreeWidthPx],
   );
 
   const onFileTreeResizePointerMove = useCallback(
@@ -535,28 +545,35 @@ export function WorkspaceFilesTab({
       }
       const delta = event.clientX - drag.startX;
       const next = clampFileTreeWidth(drag.startWidth + delta);
+      fileTreeDragCursor.update(
+        resizeCursor(next, WORKSPACE_FILES_TREE_MIN_WIDTH_PX, maxFileTreeWidthPx, "right"),
+      );
       latestFileTreeWidthPxRef.current = next;
       setFileTreeWidthPx(next);
     },
-    [clampFileTreeWidth],
+    [clampFileTreeWidth, fileTreeDragCursor, maxFileTreeWidthPx],
   );
 
-  const endFileTreeResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingFileTree(false);
-    if (fileTreeDragRef.current) {
-      const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
-      writeWorkspaceFilesTreeWidthPx(
-        latestFileTreeWidthPxRef.current,
-        containerWidth > 0 ? containerWidth : undefined,
-      );
-    }
-    fileTreeDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+  const endFileTreeResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      fileTreeDragCursor.end();
+      setIsResizingFileTree(false);
+      if (fileTreeDragRef.current) {
+        const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
+        writeWorkspaceFilesTreeWidthPx(
+          latestFileTreeWidthPxRef.current,
+          containerWidth > 0 ? containerWidth : undefined,
+        );
+      }
+      fileTreeDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [fileTreeDragCursor],
+  );
 
   useEffect(() => {
     const prev = prevSelectedEntryRef.current;
@@ -1263,9 +1280,17 @@ export function WorkspaceFilesTab({
             aria-orientation="vertical"
             aria-label={t("workspace.resizeFileTreeWidth")}
             className={cn(
-              "group relative z-10 -ml-px w-1 shrink-0 cursor-col-resize touch-none select-none self-stretch",
+              "group relative z-10 -ml-px w-1 shrink-0 touch-none select-none self-stretch",
               "before:absolute before:inset-y-0 before:-right-1 before:w-3 before:content-['']",
             )}
+            style={{
+              cursor: resizeCursor(
+                fileTreeWidthPx,
+                WORKSPACE_FILES_TREE_MIN_WIDTH_PX,
+                maxFileTreeWidthPx,
+                "right",
+              ),
+            }}
             onPointerDown={onFileTreeResizePointerDown}
             onPointerMove={onFileTreeResizePointerMove}
             onPointerUp={endFileTreeResize}

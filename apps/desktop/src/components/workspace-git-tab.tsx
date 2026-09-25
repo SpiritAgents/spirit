@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
 import { GitChangesSection } from "@/components/git-changes-section";
 import { GitCommitGraph } from "@/components/git-commit-graph";
@@ -87,6 +88,7 @@ export function WorkspaceGitTab({
   const historyHeaderRef = useRef<HTMLDivElement>(null);
   const latestChangesPaneHeightPxRef = useRef<number | null>(null);
   const [changesPaneHeightPx, setChangesPaneHeightPx] = useState<number | null>(null);
+  const splitDragCursor = useDragResizeCursor();
   latestChangesPaneHeightPxRef.current = changesPaneHeightPx;
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
@@ -167,9 +169,17 @@ export function WorkspaceGitTab({
           containerHeight * readGitChangesPaneRatio(containerHeight || undefined),
         );
       splitDragRef.current = { startY: event.clientY, startHeight };
+      splitDragCursor.start(
+        resizeCursor(
+          startHeight,
+          GIT_CHANGES_MIN_PX,
+          containerHeight - GIT_HISTORY_MIN_PX - GIT_HISTORY_HEADER_PX - GIT_SPLITTER_PX,
+          "down",
+        ),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [changesPaneHeightPx, clampChangesPaneHeight],
+    [changesPaneHeightPx, clampChangesPaneHeight, splitDragCursor],
   );
 
   const onSplitResizePointerMove = useCallback(
@@ -180,28 +190,38 @@ export function WorkspaceGitTab({
       }
       const delta = event.clientY - drag.startY;
       const next = clampChangesPaneHeight(drag.startHeight + delta);
+      const max =
+        (splitContainerRef.current?.clientHeight ?? 0) -
+        GIT_HISTORY_MIN_PX -
+        GIT_HISTORY_HEADER_PX -
+        GIT_SPLITTER_PX;
+      splitDragCursor.update(resizeCursor(next, GIT_CHANGES_MIN_PX, max, "down"));
       latestChangesPaneHeightPxRef.current = next;
       setChangesPaneHeightPx(next);
     },
-    [clampChangesPaneHeight],
+    [clampChangesPaneHeight, splitDragCursor],
   );
 
-  const endSplitResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingSplit(false);
-    if (splitDragRef.current) {
-      const container = splitContainerRef.current;
-      const height = latestChangesPaneHeightPxRef.current;
-      if (container && container.clientHeight > 0 && height !== null) {
-        writeGitChangesPaneRatio(height / container.clientHeight, container.clientHeight);
+  const endSplitResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      splitDragCursor.end();
+      setIsResizingSplit(false);
+      if (splitDragRef.current) {
+        const container = splitContainerRef.current;
+        const height = latestChangesPaneHeightPxRef.current;
+        if (container && container.clientHeight > 0 && height !== null) {
+          writeGitChangesPaneRatio(height / container.clientHeight, container.clientHeight);
+        }
       }
-    }
-    splitDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+      splitDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [splitDragCursor],
+  );
 
   const needsPush = gitSnapshot?.needsPush === true;
   const hasChanges = gitSnapshot?.hasChanges === true;
@@ -399,9 +419,20 @@ export function WorkspaceGitTab({
         aria-orientation="horizontal"
         aria-label={t("workspace.git.resizeChangesHistory")}
         className={cn(
-          "group relative z-10 h-1 shrink-0 cursor-row-resize touch-none select-none",
+          "group relative z-10 h-1 shrink-0 touch-none select-none",
           "before:absolute before:inset-x-0 before:-top-1 before:h-3 before:content-['']",
         )}
+        style={{
+          cursor: resizeCursor(
+            changesPaneHeightPx ?? GIT_CHANGES_MIN_PX,
+            GIT_CHANGES_MIN_PX,
+            (splitContainerRef.current?.clientHeight ?? 0) -
+              GIT_HISTORY_MIN_PX -
+              GIT_HISTORY_HEADER_PX -
+              GIT_SPLITTER_PX,
+            "down",
+          ),
+        }}
         onPointerDown={onSplitResizePointerDown}
         onPointerMove={onSplitResizePointerMove}
         onPointerUp={endSplitResize}

@@ -1,5 +1,6 @@
 import { Globe } from "@spiritagent/icons/globe";
 import { Plus } from "@spiritagent/icons/plus";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   memo,
   useCallback,
@@ -309,6 +310,7 @@ function WorkspaceToolsDockShell({
   // full-screen flights and the settled 100% state never show a full shell with underfilled content.
   const fillMode = fullScreen || widthFlight !== null;
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const dragCursor = useDragResizeCursor();
   const shellRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
@@ -379,9 +381,10 @@ function WorkspaceToolsDockShell({
       dragRef.current = { startX: event.clientX, startWidth: widthPx };
       latestWidthPxRef.current = widthPx;
       applyDragWidthPx(widthPx);
+      dragCursor.start(resizeCursor(widthPx, minWidthPx, maxWidthPx, "left"));
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [applyDragWidthPx, fillMode, onResizingChange, widthPx],
+    [applyDragWidthPx, dragCursor, fillMode, maxWidthPx, minWidthPx, onResizingChange, widthPx],
   );
 
   const onResizePointerMove = useCallback(
@@ -392,14 +395,16 @@ function WorkspaceToolsDockShell({
       }
       const delta = drag.startX - event.clientX;
       const next = clampWidth(drag.startWidth + delta);
+      dragCursor.update(resizeCursor(next, minWidthPx, maxWidthPx, "left"));
       latestWidthPxRef.current = next;
       applyDragWidthPx(next);
     },
-    [applyDragWidthPx, clampWidth, fillMode],
+    [applyDragWidthPx, clampWidth, dragCursor, fillMode, maxWidthPx, minWidthPx],
   );
 
   const endResize = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      dragCursor.end();
       onResizingChange(false);
       if (dragRef.current) {
         onWidthPxChange(latestWidthPxRef.current);
@@ -412,7 +417,7 @@ function WorkspaceToolsDockShell({
         // Already released or no capture
       }
     },
-    [onResizingChange, onWidthPxChange],
+    [dragCursor, onResizingChange, onWidthPxChange],
   );
 
   // Full screen: the enter flight transitions between definite px endpoints (a percentage would be
@@ -455,7 +460,7 @@ function WorkspaceToolsDockShell({
           aria-orientation="vertical"
           aria-label={t("workspace.resizeToolsWidth")}
           className={cn(
-            "group z-10 shrink-0 cursor-col-resize touch-none select-none",
+            "group z-10 shrink-0 touch-none select-none",
             "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
             "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             // fillMode: overlay the panel's left edge so the 1px slot does not sit next to the
@@ -466,6 +471,7 @@ function WorkspaceToolsDockShell({
             fillMode && "pointer-events-none",
             desktopTranslucencyTintClass(useTranslucency),
           )}
+          style={{ cursor: resizeCursor(widthPx, minWidthPx, maxWidthPx, "left") }}
           onPointerDown={onResizePointerDown}
           onPointerMove={onResizePointerMove}
           onPointerUp={endResize}

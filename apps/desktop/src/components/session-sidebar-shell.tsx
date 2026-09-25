@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
 import {
   DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS,
@@ -36,6 +37,7 @@ export function SessionSidebarShell({
   const { open, widthPx, setWidthPx } = useSessionSidebarChrome();
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const dragCursor = useDragResizeCursor();
   const latestWidthPxRef = useRef(widthPx);
   latestWidthPxRef.current = widthPx;
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeSessionSidebarMaxWidthPx);
@@ -68,9 +70,10 @@ export function SessionSidebarShell({
       event.preventDefault();
       setIsResizing(true);
       dragRef.current = { startX: event.clientX, startWidth: widthPx };
+      dragCursor.start(resizeCursor(widthPx, minWidthPx, maxWidthPx, "right"));
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [widthPx],
+    [dragCursor, maxWidthPx, minWidthPx, widthPx],
   );
 
   const onResizePointerMove = useCallback(
@@ -81,24 +84,29 @@ export function SessionSidebarShell({
       }
       const delta = event.clientX - drag.startX;
       const next = clampWidth(drag.startWidth + delta);
+      dragCursor.update(resizeCursor(next, minWidthPx, maxWidthPx, "right"));
       latestWidthPxRef.current = next;
       setWidthPx(next);
     },
-    [clampWidth, setWidthPx],
+    [clampWidth, dragCursor, maxWidthPx, minWidthPx, setWidthPx],
   );
 
-  const endResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizing(false);
-    if (dragRef.current) {
-      writeSessionSidebarWidthPx(latestWidthPxRef.current);
-    }
-    dragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+  const endResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      dragCursor.end();
+      setIsResizing(false);
+      if (dragRef.current) {
+        writeSessionSidebarWidthPx(latestWidthPxRef.current);
+      }
+      dragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [dragCursor],
+  );
 
   const shellWidth = sessionSidebarShellWidth(open, widthPx);
   const innerWidth = `calc(0.25rem + ${widthPx}px)`;
@@ -123,9 +131,10 @@ export function SessionSidebarShell({
         aria-hidden={!open}
         className={cn(
           "group absolute inset-y-0 right-0 z-10 w-1 touch-none select-none",
-          open ? "cursor-col-resize" : "pointer-events-none",
+          !open && "pointer-events-none",
           "before:absolute before:inset-y-0 before:-right-1 before:w-3 before:content-['']",
         )}
+        style={{ cursor: resizeCursor(widthPx, minWidthPx, maxWidthPx, "right") }}
         onPointerDown={onResizePointerDown}
         onPointerMove={onResizePointerMove}
         onPointerUp={endResize}

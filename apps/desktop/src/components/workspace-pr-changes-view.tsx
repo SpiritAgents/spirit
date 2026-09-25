@@ -1,4 +1,5 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   useCallback,
   useEffect,
@@ -486,6 +487,7 @@ export function WorkspacePrChangesView({
   );
 
   latestTreeWidthPxRef.current = treeWidthPx;
+  const treeDragCursor = useDragResizeCursor();
 
   const maxTreeWidthPx = useMemo(
     () =>
@@ -526,9 +528,12 @@ export function WorkspacePrChangesView({
       event.preventDefault();
       setIsResizingTree(true);
       treeDragRef.current = { startX: event.clientX, startWidth: treeWidthPx };
+      treeDragCursor.start(
+        resizeCursor(treeWidthPx, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [treeWidthPx],
+    [maxTreeWidthPx, treeDragCursor, treeWidthPx],
   );
 
   const onTreeResizePointerMove = useCallback(
@@ -539,28 +544,35 @@ export function WorkspacePrChangesView({
       }
       const delta = event.clientX - drag.startX;
       const next = clampTreeWidth(drag.startWidth + delta);
+      treeDragCursor.update(
+        resizeCursor(next, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+      );
       latestTreeWidthPxRef.current = next;
       setTreeWidthPx(next);
     },
-    [clampTreeWidth],
+    [clampTreeWidth, maxTreeWidthPx, treeDragCursor],
   );
 
-  const endTreeResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingTree(false);
-    if (treeDragRef.current) {
-      const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
-      writePrChangesTreeWidthPx(
-        latestTreeWidthPxRef.current,
-        containerWidth > 0 ? containerWidth : undefined,
-      );
-    }
-    treeDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+  const endTreeResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      treeDragCursor.end();
+      setIsResizingTree(false);
+      if (treeDragRef.current) {
+        const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
+        writePrChangesTreeWidthPx(
+          latestTreeWidthPxRef.current,
+          containerWidth > 0 ? containerWidth : undefined,
+        );
+      }
+      treeDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [treeDragCursor],
+  );
 
   const navigateToFile = useCallback((filename: string) => {
     setExpandedFilenames((previous) => {
@@ -617,9 +629,12 @@ export function WorkspacePrChangesView({
         aria-orientation="vertical"
         aria-label={t("workspace.prChangesResizeTreeWidth")}
         className={cn(
-          "group relative z-10 -ml-px w-1 shrink-0 cursor-col-resize touch-none select-none self-stretch",
+          "group relative z-10 -ml-px w-1 shrink-0 touch-none select-none self-stretch",
           "before:absolute before:inset-y-0 before:-right-1 before:w-3 before:content-['']",
         )}
+        style={{
+          cursor: resizeCursor(treeWidthPx, PR_CHANGES_TREE_MIN_WIDTH_PX, maxTreeWidthPx, "right"),
+        }}
         onPointerDown={onTreeResizePointerDown}
         onPointerMove={onTreeResizePointerMove}
         onPointerUp={endTreeResize}

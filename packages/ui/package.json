@@ -30,6 +30,10 @@
       "types": "./dist/chrome.d.ts",
       "default": "./dist/chrome.js"
     },
+    "./resize-cursor": {
+      "types": "./dist/resize-cursor.d.ts",
+      "default": "./dist/resize-cursor.js"
+    },
     "./badge": {
       "types": "./dist/badge.d.ts",
       "default": "./dist/badge.js"
