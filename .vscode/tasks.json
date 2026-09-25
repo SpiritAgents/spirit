@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Desktop",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:desktop"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Site",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:site"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Start CLI",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:cli"],
+      "problemMatcher": []
+    }
+  ]
+}
