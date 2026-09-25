@@ -38,6 +38,42 @@ labels: bug
 - Spirit version: <!-- e.g. 0.1.0, or commit hash for dev builds -->
 - Install source: <!-- packaged build / built from source / pnpm dev -->
 
+## Current Facts
+
+<!-- Optional: verified code-level facts that frame the bug — the relevant files
+     with `path:line` references, configuration, and what the code does today.
+     Delete the section if not applicable. -->
+
+-
+
+## Root Cause
+
+<!-- Optional: the confirmed cause. When the cause is unconfirmed, retitle this
+     section "Leading Hypothesis" and state the most likely explanation; link
+     upstream issues / PRs when an upstream package is involved.
+     Delete the section if not applicable. -->
+
+## Investigation Plan
+
+<!-- Optional: numbered steps to confirm the root cause, such as a minimal
+     repro or version / behavior diffs. Delete the section if not applicable. -->
+
+1.
+
+## Proposal
+
+<!-- Optional: a concrete fix approach with file pointers and existing patterns
+     to reuse. Delete the section if not applicable. -->
+
+-
+
+## Acceptance
+
+<!-- Optional: verifiable outcomes as a checklist. Delete the section if not
+     applicable. -->
+
+- [ ]
+
 ## Additional Context
 
 <!-- Anything else: when it started, whether it is intermittent, workarounds you found. -->
