@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import glyphBlackUrl from "@spiritagent/brand/assets/glyph-black.svg?url";
+import glyphWhiteUrl from "@spiritagent/brand/assets/glyph-white.svg?url";
+import logoDarkUrl from "@spiritagent/brand/assets/logo-dark.svg?url";
+import sharp from "sharp";
 import { test } from "vitest";
+
+import { spiritAgentBrandIconSrc, spiritAgentTitleBarIconSrc } from "../src/lib/brand-icon.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = join(__dirname, "..");
@@ -45,6 +51,40 @@ test("about dialog message is Spirit without Desktop/MVP", async () => {
   assert.match(source, /message:\s*PRODUCT_DISPLAY_NAME/);
   assert.doesNotMatch(source, /message:\s*'Spirit Agent Desktop/);
   assert.doesNotMatch(source, /Desktop MVP/);
+});
+
+test("glass title-bar branding stays dark while monochrome glyphs follow the UI theme", () => {
+  assert.equal(spiritAgentTitleBarIconSrc(false, true), spiritAgentTitleBarIconSrc(true, true));
+  assert.equal(spiritAgentTitleBarIconSrc(false, true), logoDarkUrl);
+  assert.equal(spiritAgentBrandIconSrc(false), glyphBlackUrl);
+  assert.equal(spiritAgentBrandIconSrc(true), glyphWhiteUrl);
+});
+
+test("glass brand masters retain opaque canvases and visible details at small sizes", async () => {
+  const brandAssets = join(desktopRoot, "../../packages/brand/assets");
+  const logoFiles = (await readdir(brandAssets)).filter((filename) =>
+    ["logo-light.svg", "logo-dark.svg"].includes(filename),
+  );
+  for (const filename of logoFiles) {
+    const source = join(brandAssets, filename);
+    const background = filename === "logo-light.svg" ? 255 : 0;
+    for (const size of [16, 24, 32, 64, 512]) {
+      const { data, info } = await sharp(source)
+        .resize(size, size)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      assert.equal(info.width, size);
+      assert.equal(info.height, size);
+      assert.deepEqual([...data.subarray(0, 4)], [background, background, background, 255]);
+      let maxContrast = 0;
+      for (let offset = 0; offset < data.length; offset += info.channels) {
+        assert.equal(data[offset + 3], 255);
+        maxContrast = Math.max(maxContrast, Math.abs(data[offset] - background));
+      }
+      assert.ok(maxContrast >= 40, `${filename} at ${size}px lost its glass outline`);
+    }
+  }
 });
 
 test("apps/desktop has no forbidden product-name strings outside README", async () => {
