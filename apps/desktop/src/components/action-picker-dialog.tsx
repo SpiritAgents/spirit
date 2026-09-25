@@ -11,6 +11,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useCommandListWheelHover } from "@/hooks/use-command-list-wheel-hover";
 import { useTheme } from "@/hooks/useTheme";
 import {
   ACTION_PALETTE_GROUP_LABEL_KEYS,
@@ -58,6 +59,7 @@ export function ActionPickerDialog({
   const [view, setView] = useState<ActionPaletteView>("root");
   const [commandValue, setCommandValue] = useState("");
   const [localePreference, setLocalePreference] = useState(getStoredLanguagePreference);
+  const commandListWheelHoverRef = useCommandListWheelHover();
 
   useEffect(() => {
     if (open) {
@@ -225,7 +227,7 @@ export function ActionPickerDialog({
             goBackToRoot();
           }}
         />
-        <CommandList className="max-h-96">
+        <CommandList ref={commandListWheelHoverRef} className="max-h-96">
           {view === "root"
             ? groupedRootItems.map(({ group, items: groupItems }) => (
                 <CommandGroup key={group} heading={t(ACTION_PALETTE_GROUP_LABEL_KEYS[group])}>

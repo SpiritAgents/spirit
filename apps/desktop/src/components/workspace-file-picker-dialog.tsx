@@ -15,6 +15,7 @@ import {
   normalizeAbsolutePathInput,
   toWorkspaceFileReferenceQueryInput,
 } from "@/lib/file-picker-path";
+import { useCommandListWheelHover } from "@/hooks/use-command-list-wheel-hover";
 import {
   DESKTOP_COMMAND_PALETTE_ITEM_CLASS,
   DESKTOP_COMMAND_PALETTE_ITEM_TONE,
@@ -51,6 +52,7 @@ export function WorkspaceFilePickerDialog({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [absolutePathExists, setAbsolutePathExists] = useState<boolean | null>(null);
   const absoluteStatRequestIdRef = useRef(0);
+  const commandListWheelHoverRef = useCommandListWheelHover();
 
   useEffect(() => {
     if (open) {
@@ -138,7 +140,7 @@ export function WorkspaceFilePickerDialog({
           onValueChange={setQuery}
           placeholder={t("workspace.filePickerPlaceholder")}
         />
-        <CommandList className="max-h-96">
+        <CommandList ref={commandListWheelHoverRef} className="max-h-96">
           {absolutePathCandidate && absolutePathExists !== false && showAbsolutePathIcon ? (
             <CommandItem
               key={`absolute:${absolutePathCandidate}`}
