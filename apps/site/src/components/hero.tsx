@@ -2,7 +2,7 @@ import { LandingVisibleDesktopWindow } from "@/components/landing-visible-deskto
 import { SiteGradientBackground } from "@/components/site-gradient-background";
 import { SpiritDownloadButton } from "@/components/spirit-download-button";
 import { useI18n } from "@/i18n/provider";
-import { heroShowsDesignModeWindow } from "@/lib/hero-desktop-variant";
+import { useHeroShowsDesignModeWindow } from "@/lib/hero-desktop-variant";
 import {
   HERO_DESKTOP_WINDOW_FRAME_CLASS,
   LANDING_DESKTOP_WINDOW_VIEWPORT_CLASS,
@@ -13,6 +13,7 @@ import { FONT_WEIGHT_MEDIUM } from "@/lib/typography";
 
 export function Hero() {
   const { messages } = useI18n();
+  const heroShowsDesignModeWindow = useHeroShowsDesignModeWindow();
 
   return (
     <section
