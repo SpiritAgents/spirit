@@ -8,11 +8,13 @@ export const metadata: Metadata = {
       {
         url: "/favicon.svg",
         type: "image/svg+xml",
+        sizes: "any",
         media: "(prefers-color-scheme: light)",
       },
       {
         url: "/favicon-dark.svg",
         type: "image/svg+xml",
+        sizes: "any",
         media: "(prefers-color-scheme: dark)",
       },
     ],
