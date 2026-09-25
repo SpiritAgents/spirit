@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
 import { ArrowLeft, ArrowRight, PenTool, RefreshCw } from "lucide-react";
 
@@ -236,7 +237,8 @@ export function WorkspaceBrowserTab({
   const [isPickerActive, setIsPickerActive] = useState(false);
   const [devtoolsOpen, setDevtoolsOpen] = useState(false);
   const [devtoolsWidthPx, setDevtoolsWidthPx] = useState(readStoredDevtoolsWidthPx);
-  const [isDevtoolsResizing, setIsDevtoolsResizing] = useState(false);
+  const [pageSlotWidthPx, setPageSlotWidthPx] = useState(0);
+  const devtoolsDragCursor = useDragResizeCursor();
   const devtoolsDragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [currentPageUrl, setCurrentPageUrl] = useState<string | undefined>(browserUrl);
   const onElementPickedRef = useRef(onElementPicked);
@@ -406,6 +408,7 @@ export function WorkspaceBrowserTab({
 
     const clampWidth = () => {
       const totalWidth = Math.round(slot.getBoundingClientRect().width);
+      setPageSlotWidthPx(totalWidth);
       if (totalWidth < 1) {
         return;
       }
@@ -573,16 +576,24 @@ export function WorkspaceBrowserTab({
         : Math.max(DEVTOOLS_MIN_WIDTH_PX, Math.round(nextWidthPx));
     setDevtoolsWidthPx(clamped);
     writeStoredDevtoolsWidthPx(clamped);
+    return clamped;
   }, []);
+
+  const maxDevtoolsWidthPx = Math.max(
+    DEVTOOLS_MIN_WIDTH_PX,
+    pageSlotWidthPx - DEVTOOLS_MIN_WIDTH_PX - DEVTOOLS_SPLITTER_WIDTH_PX,
+  );
 
   const onDevtoolsResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       event.preventDefault();
-      setIsDevtoolsResizing(true);
       devtoolsDragRef.current = { startX: event.clientX, startWidth: devtoolsWidthPx };
+      devtoolsDragCursor.start(
+        resizeCursor(devtoolsWidthPx, DEVTOOLS_MIN_WIDTH_PX, maxDevtoolsWidthPx, "left"),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [devtoolsWidthPx],
+    [devtoolsDragCursor, devtoolsWidthPx, maxDevtoolsWidthPx],
   );
 
   const onDevtoolsResizePointerMove = useCallback(
@@ -592,27 +603,36 @@ export function WorkspaceBrowserTab({
         return;
       }
       const delta = drag.startX - event.clientX;
-      applyDevtoolsWidth(drag.startWidth + delta);
+      const next = applyDevtoolsWidth(drag.startWidth + delta);
+      const totalWidth = pageSlotRef.current?.getBoundingClientRect().width ?? 0;
+      const max = Math.max(
+        DEVTOOLS_MIN_WIDTH_PX,
+        totalWidth - DEVTOOLS_MIN_WIDTH_PX - DEVTOOLS_SPLITTER_WIDTH_PX,
+      );
+      devtoolsDragCursor.update(resizeCursor(next, DEVTOOLS_MIN_WIDTH_PX, max, "left"));
     },
-    [applyDevtoolsWidth],
+    [applyDevtoolsWidth, devtoolsDragCursor],
   );
 
-  const endDevtoolsResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsDevtoolsResizing(false);
-    devtoolsDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // Already released or no capture
-    }
-  }, []);
+  const endDevtoolsResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      devtoolsDragCursor.end();
+      devtoolsDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Already released or no capture
+      }
+    },
+    [devtoolsDragCursor],
+  );
 
   useEffect(() => {
     if (!devtoolsOpen) {
-      setIsDevtoolsResizing(false);
+      devtoolsDragCursor.end();
       devtoolsDragRef.current = null;
     }
-  }, [devtoolsOpen]);
+  }, [devtoolsDragCursor, devtoolsOpen]);
 
   useEffect(() => {
     if (!isActive || showNewTab || !canEmbed) {
@@ -770,11 +790,18 @@ export function WorkspaceBrowserTab({
                   aria-orientation="vertical"
                   aria-label={t("workspace.browserResizeDevtoolsWidth")}
                   className={cn(
-                    "electron-no-drag group absolute top-0 bottom-0 z-20 w-1 cursor-col-resize touch-none select-none",
+                    "electron-no-drag group absolute top-0 bottom-0 z-20 w-1 touch-none select-none",
                     "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
-                    isDevtoolsResizing && "cursor-col-resize",
                   )}
-                  style={{ right: devtoolsWidthPx }}
+                  style={{
+                    right: devtoolsWidthPx,
+                    cursor: resizeCursor(
+                      devtoolsWidthPx,
+                      DEVTOOLS_MIN_WIDTH_PX,
+                      maxDevtoolsWidthPx,
+                      "left",
+                    ),
+                  }}
                   onPointerDown={onDevtoolsResizePointerDown}
                   onPointerMove={onDevtoolsResizePointerMove}
                   onPointerUp={endDevtoolsResize}
