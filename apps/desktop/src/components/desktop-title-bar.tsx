@@ -44,11 +44,11 @@ function titleBarSurfaceClass(useTranslucency: boolean, withBorder: boolean) {
   );
 }
 
-/** Transparent-background title-bar mark (the brand glyph SVG canvas is large, so 14px looks close to the old 20px favicon) */
+/** Transparent glyph fills its canvas, so its painted height is approximately 14px. */
 const TITLE_BAR_ICON_PX = 14;
 
-/** Mica title-bar dark-background mark (the artwork inside `logo-dark.svg` is smaller, restoring the 20px used before migrating to the transparent mark) */
-const TITLE_BAR_ICON_TRANSLUCENCY_PX = 20;
+/** Glass glyph height is 156.635 * 2.08 / 512 of the canvas; 24px preserves the old ~15px painted height. */
+const TITLE_BAR_ICON_TRANSLUCENCY_PX = 24;
 
 /** Matches the sidebar interactive items' default text color (`text-chrome-label`) */
 const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-chrome-label";
