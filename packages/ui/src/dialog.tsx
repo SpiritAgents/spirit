@@ -12,6 +12,15 @@ import { cn } from "./cn.js";
 import { modalContentMotion, modalOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 
+export const dialogOverlayClassName = cn("fixed inset-0 z-50 bg-black/40", modalOverlayMotion);
+
+export const dialogContentClassName = cn(
+  "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground sm:max-w-sm",
+  DESKTOP_OVERLAY_EDGE,
+  DESKTOP_OVERLAY_SHADOW_LG,
+  modalContentMotion,
+);
+
 export function Dialog(props: ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
@@ -45,7 +54,7 @@ export function DialogOverlay({
   return (
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
-      className={cn("fixed inset-0 z-50 bg-black/40", modalOverlayMotion, className)}
+      className={cn(dialogOverlayClassName, className)}
       {...props}
     />
   );
@@ -68,13 +77,7 @@ export function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         {...(forceMount === undefined ? {} : { forceMount })}
-        className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground sm:max-w-sm",
-          DESKTOP_OVERLAY_EDGE,
-          DESKTOP_OVERLAY_SHADOW_LG,
-          modalContentMotion,
-          className,
-        )}
+        className={cn(dialogContentClassName, className)}
         {...props}
       >
         {children}

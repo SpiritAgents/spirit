@@ -1,16 +1,12 @@
 import { X } from "@spiritagent/icons/x";
+import { dialogContentClassName, dialogOverlayClassName } from "@spiritagent/ui/dialog";
+import { RADIX_OVERLAY_CLOSE_MS } from "@spiritagent/ui/overlay-motion";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
-const WINDOW_DIALOG_ANIMATION_MS = 100;
-const WINDOW_DIALOG_OVERLAY_TOKENS =
-  "duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:fill-mode-forwards";
-const WINDOW_DIALOG_CONTENT_TOKENS =
-  "duration-100 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:fill-mode-forwards";
 
 type WindowDialogContextValue = {
   open: boolean;
@@ -55,7 +51,7 @@ function WindowDialog({
     setState("closed");
     const timeoutId = window.setTimeout(() => {
       setPresent(false);
-    }, WINDOW_DIALOG_ANIMATION_MS);
+    }, RADIX_OVERLAY_CLOSE_MS);
 
     return () => window.clearTimeout(timeoutId);
   }, [open]);
@@ -114,9 +110,7 @@ function WindowDialogContent({
         data-state={state}
         data-slot="window-dialog-overlay"
         aria-hidden="true"
-        className={cn(
-          `absolute inset-0 isolate z-40 bg-black/10 backdrop-blur-xs ${WINDOW_DIALOG_OVERLAY_TOKENS}`,
-        )}
+        className={cn(dialogOverlayClassName, "absolute isolate z-40")}
         onPointerDown={(event) => {
           if (event.button !== 0) {
             return;
@@ -126,37 +120,31 @@ function WindowDialogContent({
         }}
       />
       <div
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
         data-state={state}
+        data-slot="window-dialog-content"
         className={cn(
-          "pointer-events-none absolute top-1/2 left-1/2 z-50 w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 sm:max-w-sm",
+          dialogContentClassName,
+          "absolute max-h-[calc(100%-2rem)] overflow-y-auto text-sm outline-none",
+          className,
         )}
+        onClick={(event) => event.stopPropagation()}
       >
-        <div
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={titleId}
-          aria-describedby={descriptionId}
-          data-state={state}
-          data-slot="window-dialog-content"
-          className={cn(
-            `pointer-events-auto grid max-h-[calc(100%-2rem)] w-full gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none ${WINDOW_DIALOG_CONTENT_TOKENS}`,
-            className,
-          )}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {children}
-          {showCloseButton ? (
-            <Button
-              variant="ghost"
-              className="absolute top-2 right-2"
-              size="icon-sm"
-              onClick={() => onOpenChange(false)}
-            >
-              <X strokeWidth={1.75} />
-              <span className="sr-only">Close</span>
-            </Button>
-          ) : null}
-        </div>
+        {children}
+        {showCloseButton ? (
+          <Button
+            variant="ghost"
+            className="absolute top-2 right-2 text-muted-foreground"
+            size="icon-sm"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="size-3.5" strokeWidth={1.75} />
+            <span className="sr-only">Close</span>
+          </Button>
+        ) : null}
       </div>
     </>,
     container,

@@ -113,7 +113,7 @@ export function PreviewImageGenerationToolCard({ tool }: { tool: ToolBlockSnapsh
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
         <DialogContent
           showCloseButton={false}
-          className="w-auto max-w-none gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none [&+[data-slot=dialog-overlay]]:bg-background/40 [&+[data-slot=dialog-overlay]]:backdrop-blur-md"
+          className="w-auto max-w-none gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
         >
           {previewSrc ? (
             <div className="pointer-events-auto relative inline-flex max-h-[calc(100dvh-2rem)] max-w-[calc(100dvw-2rem)] items-center justify-center overflow-hidden rounded-[1.1rem] border border-border/45">
