@@ -65,6 +65,8 @@ pnpm run dev:desktop
 
 This builds shared packages (`agent-core`, `host-internal`, `server`), starts the Vite renderer on `http://127.0.0.1:1420`, and launches Electron.
 
+While it runs, workspace package edits apply without a manual rebuild: the renderer resolves `@spiritagent/ui`, `@spiritagent/icons`, and the renderer-consumed subpaths of `agent-core`/`host-internal` directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `apps/desktop/vite.config.ts`), while Electron main-process code (`electron/`, `src/host/`) and the main-process packages rebuild via watch tasks and restart the app automatically. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
+
 From `apps/desktop` (after `pnpm install` at the repo root):
 
 ```bash

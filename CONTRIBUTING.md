@@ -54,6 +54,8 @@ pnpm run dev:cli      # CLI with TUI
 pnpm run build        # production build of TS packages + Desktop + site + CLI
 ```
 
+During `pnpm run dev:desktop`, package source edits need no manual rebuild: renderer-consumed packages are served from their TypeScript sources (HMR), and Electron main-process changes rebuild via watch tasks and restart the app automatically.
+
 | Command                     | Description                              |
 | --------------------------- | ---------------------------------------- |
 | `pnpm run dev:desktop:web`  | Desktop renderer with browser web host   |
