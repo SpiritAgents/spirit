@@ -64,6 +64,7 @@ export const WORKSPACE_TOOLS_DEFAULT_WIDTH_PX = 420;
 export const WORKSPACE_TOOLS_RESIZE_SEPARATOR_PX = 1;
 export const WORKSPACE_TOOLS_VIEWPORT_MAX_WIDTH_RATIO = 0.62;
 export const WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO = WORKSPACE_TOOLS_DEFAULT_WIDTH_PX / 1200;
+export const WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY = "--spirit-workspace-tools-width";
 
 export function computeWorkspaceToolsMaxWidthPx(
   viewportWidthPx = typeof window !== "undefined" ? window.innerWidth : 1200,
@@ -79,7 +80,7 @@ function clampWorkspaceToolsWidthRatio(ratio: number, viewportWidthPx: number): 
   return Math.min(WORKSPACE_TOOLS_VIEWPORT_MAX_WIDTH_RATIO, Math.max(min, ratio));
 }
 
-function readStoredWorkspaceToolsWidthRatio(viewportWidthPx: number): number | null {
+function readStoredWorkspaceToolsWidthRatio(): number | null {
   try {
     if (typeof localStorage === "undefined") {
       return null;
@@ -87,7 +88,7 @@ function readStoredWorkspaceToolsWidthRatio(viewportWidthPx: number): number | n
     const raw = localStorage.getItem(WORKSPACE_TOOLS_WIDTH_RATIO_STORAGE_KEY);
     const parsed = raw ? Number.parseFloat(raw) : Number.NaN;
     if (Number.isFinite(parsed)) {
-      return clampWorkspaceToolsWidthRatio(parsed, viewportWidthPx);
+      return Math.min(WORKSPACE_TOOLS_VIEWPORT_MAX_WIDTH_RATIO, Math.max(0, parsed));
     }
   } catch {
     // ignore
@@ -112,18 +113,18 @@ function writeStoredWorkspaceToolsWidthRatio(ratio: number, viewportWidthPx: num
 export function readWorkspaceToolsWidthRatio(
   viewportWidthPx = typeof window !== "undefined" ? window.innerWidth : 1200,
 ): number {
-  const storedRatio = readStoredWorkspaceToolsWidthRatio(viewportWidthPx);
+  const storedRatio = readStoredWorkspaceToolsWidthRatio();
   if (storedRatio !== null) {
     return storedRatio;
   }
 
   try {
     if (typeof localStorage === "undefined") {
-      return clampWorkspaceToolsWidthRatio(WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO, viewportWidthPx);
+      return WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO;
     }
     const legacyRaw = localStorage.getItem(WORKSPACE_TOOLS_WIDTH_STORAGE_KEY);
     if (legacyRaw === null) {
-      return clampWorkspaceToolsWidthRatio(WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO, viewportWidthPx);
+      return WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO;
     }
     const legacyMax = computeWorkspaceToolsMaxWidthPx(viewportWidthPx);
     const legacyPx = readStoredPositiveInt(
@@ -139,7 +140,7 @@ export function readWorkspaceToolsWidthRatio(
     writeStoredWorkspaceToolsWidthRatio(migratedRatio, viewportWidthPx);
     return migratedRatio;
   } catch {
-    return clampWorkspaceToolsWidthRatio(WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO, viewportWidthPx);
+    return WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO;
   }
 }
 
@@ -158,12 +159,25 @@ export function readWorkspaceToolsWidthPx(
   return clampInt(Math.round(viewportWidthPx * ratio), WORKSPACE_TOOLS_MIN_WIDTH_PX, max);
 }
 
-export function workspaceToolsShellWidthExpression(widthPx: number): string {
-  return `calc(${WORKSPACE_TOOLS_RESIZE_SEPARATOR_PX}px + ${widthPx}px)`;
+export function workspaceToolsWidthExpression(
+  widthRatio: number,
+  minWidthPx = WORKSPACE_TOOLS_MIN_WIDTH_PX,
+  maxWidthPx?: number,
+): string {
+  const maxWidth =
+    maxWidthPx === undefined
+      ? `round(nearest, ${WORKSPACE_TOOLS_VIEWPORT_MAX_WIDTH_RATIO * 100}vw, 1px)`
+      : `${maxWidthPx}px`;
+  return `min(${maxWidth}, max(${minWidthPx}px, round(nearest, ${widthRatio * 100}vw, 1px)))`;
 }
 
-export function workspaceToolsShellWidthWhenOpen(open: boolean, widthPx: number): string {
-  return open ? workspaceToolsShellWidthExpression(widthPx) : "0px";
+export function workspaceToolsShellWidthExpression(width: number | string): string {
+  const innerWidth = typeof width === "number" ? `${width}px` : width;
+  return `calc(${WORKSPACE_TOOLS_RESIZE_SEPARATOR_PX}px + ${innerWidth})`;
+}
+
+export function workspaceToolsShellWidthWhenOpen(open: boolean, width: number | string): string {
+  return open ? workspaceToolsShellWidthExpression(width) : "0px";
 }
 
 export function writeWorkspaceToolsWidthPx(

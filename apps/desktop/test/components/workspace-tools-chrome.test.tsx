@@ -3,6 +3,7 @@
 import "./setup";
 
 import { act, render, screen } from "@testing-library/react";
+import type { CSSProperties } from "react";
 import { beforeEach, expect, test } from "vitest";
 
 import {
@@ -12,12 +13,17 @@ import {
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
 } from "@/contexts/workspace-tools-chrome-context";
-import { workspaceToolsShellWidthWhenOpen } from "@/lib/layout-prefs";
+import {
+  WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY,
+  workspaceToolsShellWidthWhenOpen,
+  workspaceToolsWidthExpression,
+} from "@/lib/layout-prefs";
 
 const FULLSCREEN_KEY = "spirit-desktop-workspace-tools-fullscreen";
 const RESTORE_OPEN_KEY = "spirit-desktop-workspace-tools-fullscreen-restore-open";
-/** Matches the real panel's docked width for deterministic width expressions. */
-const DOCKED_WIDTH_PX = 420;
+/** Matches the real panel's ratio-backed width expressions. */
+const DOCKED_WIDTH = `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`;
+const DOCKED_SHELL_WIDTH = workspaceToolsShellWidthWhenOpen(true, DOCKED_WIDTH);
 
 type ChromeSnapshot = { open: boolean; fullScreen: boolean; pinned: boolean };
 
@@ -35,11 +41,19 @@ function FakeShell() {
     ? enterFlightPx !== null
       ? `${enterFlightPx}px`
       : "100%"
-    : workspaceToolsShellWidthWhenOpen(open, DOCKED_WIDTH_PX);
+    : workspaceToolsShellWidthWhenOpen(open, DOCKED_WIDTH);
   return (
     <div data-testid="row">
       <div data-spirit-surface="workspace-dock">
-        <div id="workspace-tools-panel-shell" style={{ width }}>
+        <div
+          id="workspace-tools-panel-shell"
+          style={
+            {
+              width,
+              [WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY]: workspaceToolsWidthExpression(0.35),
+            } as CSSProperties
+          }
+        >
           <div data-workspace-tools-split>
             <aside id="workspace-tools-panel" />
           </div>
@@ -117,6 +131,23 @@ beforeEach(() => {
   latestApi.current = null;
 });
 
+test("opening immediately uses the live CSS width before the React commit", () => {
+  renderHarness();
+  const shell = shellElement();
+  const width = workspaceToolsWidthExpression(0.5);
+  shell.style.setProperty(WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY, width);
+  let immediateWidth: string | undefined;
+
+  act(() => {
+    latestApi.current?.setOpen(true);
+    immediateWidth = shell.style.width;
+  });
+
+  expect(immediateWidth).toBe(DOCKED_SHELL_WIDTH);
+  expect(shell.style.width).toBe(DOCKED_SHELL_WIDTH);
+  expect(shell.style.getPropertyValue(WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY)).toBe(width);
+});
+
 test("toggleFullScreen from collapsed flies to fullscreen in one segment and persists the snapshot", async () => {
   renderHarness();
   mockRowWidth(1000);
@@ -162,8 +193,7 @@ test("toggle from full screen lands on the dock even when entered from collapsed
   act(() => latestApi.current?.toggle());
 
   expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: true });
-  // jsdom folds calc(1px + 420px) to calc(421px) when assigning inline styles.
-  expect(shell.style.width).toBe(`calc(${1 + DOCKED_WIDTH_PX}px)`);
+  expect(shell.style.width).toBe(DOCKED_SHELL_WIDTH);
   expect(localStorage.getItem(FULLSCREEN_KEY)).toBe("false");
 
   await waitForFlightSettle();
@@ -187,7 +217,7 @@ test("toggle during the exit flight supersedes it and still releases the pin at 
 
   act(() => latestApi.current?.toggle());
   expect(chromeState()).toEqual({ open: true, fullScreen: false, pinned: true });
-  expect(shell.style.width).toBe(`calc(${1 + DOCKED_WIDTH_PX}px)`);
+  expect(shell.style.width).toBe(DOCKED_SHELL_WIDTH);
 
   // The superseding open/close animation inherits the flight-clearing settle.
   await waitForFlightSettle();

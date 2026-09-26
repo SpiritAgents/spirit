@@ -1,4 +1,4 @@
-import { clipboard, contextBridge, ipcRenderer, webUtils } from "electron";
+import { clipboard, contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
 const newSessionSubscribers = new Set<() => void>();
 let pendingNewSessionFromMain = false;
@@ -614,6 +614,12 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   },
   syncTrafficLightPosition(position: { x: number; y: number }) {
     return ipcRenderer.invoke("desktop:sync-traffic-light-position", position);
+  },
+  setUiLayoutScale(scale: number) {
+    // Apply synchronously via webFrame so the zoom lands in the same task as the keypress
+    // while persistence to the launch-time cache remains fire-and-forget.
+    webFrame.setZoomFactor(scale);
+    ipcRenderer.send("desktop:persist-ui-layout-scale", scale);
   },
   popupApplicationMenu(
     section: "file" | "edit" | "view" | "window" | "help",

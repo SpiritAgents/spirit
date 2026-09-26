@@ -1,9 +1,7 @@
 import { flushDesktopRendererStorage } from "./desktop-renderer-storage";
 
 export const UI_LAYOUT_SCALE_STORAGE_KEY = "spirit-desktop-ui-layout-scale" as const;
-export const SPIRIT_UI_LAYOUT_SCALE_VAR = "--spirit-ui-layout-scale" as const;
 export const UI_LAYOUT_SCALE_ROOT_ID = "spirit-ui-scale-root" as const;
-export const UI_LAYOUT_SCALED_BODY_CLASS = "spirit-ui-layout-scaled" as const;
 export const DEFAULT_UI_LAYOUT_SCALE = 1;
 export const UI_LAYOUT_SCALE_MIN = 0.8;
 export const UI_LAYOUT_SCALE_MAX = 1.25;
@@ -45,12 +43,12 @@ export function setStoredUiLayoutScale(scale: number): void {
 }
 
 /*
- * macOS traffic lights: the native cluster is 54×14px and does not follow CSS layout scale.
+ * macOS traffic lights: the native cluster is 54×14px and does not follow page zoom.
  * Electron hiddenInset defaults to (12, 11), which sits tighter to the frame than Apple apps
  * and places the red button left of the sidebar item icons.
  * At scale=1, origin (16, 16) matches typical Apple chrome inset and puts the red button on
  * the same vertical axis as those icons (container px-1.5 + sm button px-2.5 + size-3.5/2).
- * After scaling, x keeps that red-button/icon alignment; y scales the top inset.
+ * After zooming, x keeps that red-button/icon alignment; y scales the top inset.
  */
 const DARWIN_TRAFFIC_LIGHTS_BUTTON_SIZE = 14;
 /** Sidebar item icon center at scale=1. */
@@ -68,9 +66,9 @@ export function computeDarwinTrafficLightPosition(scale: number): { x: number; y
 let darwinTrafficLightSyncFrame: number | null = null;
 
 /**
- * After CSS scaling is written to the DOM, layout paints on the next frame.
+ * After the zoom is written to the webContents, layout paints on the next frame.
  * Native setWindowButtonPosition is deferred to the same rAF so traffic lights
- * move with the scaled chrome instead of jumping first.
+ * move with the zoomed chrome instead of jumping first.
  * A single pending rAF also coalesces duplicate updater/useLayoutEffect calls within the same keypress.
  */
 function syncDarwinTrafficLightPosition(scale: number): void {
@@ -90,18 +88,6 @@ function syncDarwinTrafficLightPosition(scale: number): void {
   });
 }
 
-function shouldApplyWin32TitleBarCounterZoom(): boolean {
-  if (typeof window === "undefined" || typeof navigator === "undefined") {
-    return false;
-  }
-  const electron = Boolean(window.spiritDesktop) || /\bElectron\//.test(navigator.userAgent);
-  if (!electron) {
-    return false;
-  }
-  // Aligned with isWin32ElectronShell: preload platform first, otherwise UA fallback
-  return window.spiritDesktop?.platform === "win32" || /Windows/i.test(navigator.userAgent);
-}
-
 function getScaleRoot(): HTMLElement | null {
   if (typeof document === "undefined") {
     return null;
@@ -109,129 +95,30 @@ function getScaleRoot(): HTMLElement | null {
   return document.getElementById(UI_LAYOUT_SCALE_ROOT_ID);
 }
 
-/** Radix overlays must be portaled into the same scale root as the main UI, otherwise a body transform offsets fixed positioning. */
+/** Radix overlays are portaled into the scale root so they share the app shell's stacking and clipping context. */
 export function getUiLayoutPortalContainer(): HTMLElement | undefined {
   return getScaleRoot() ?? undefined;
 }
 
-export function getCurrentUiLayoutScale(): number {
-  if (typeof document === "undefined") {
-    return DEFAULT_UI_LAYOUT_SCALE;
-  }
-  const raw = getComputedStyle(document.documentElement)
-    .getPropertyValue(SPIRIT_UI_LAYOUT_SCALE_VAR)
-    .trim();
-  const parsed = raw ? Number.parseFloat(raw) : DEFAULT_UI_LAYOUT_SCALE;
-  return Number.isFinite(parsed) ? parsed : DEFAULT_UI_LAYOUT_SCALE;
-}
-
-/** Whether the scale root carries a transform (`.spirit-ui-layout-scaled`); without a transform, fixed elements inside it use viewport coordinates. */
-export function isUiLayoutScaleTransformActive(): boolean {
-  const scaleRoot = getScaleRoot();
-  if (!scaleRoot) {
-    return false;
-  }
-  return scaleRoot.classList.contains(UI_LAYOUT_SCALED_BODY_CLASS);
-}
-
-/** Viewport coordinates → position:fixed local coordinates inside the scale root (conversion only needed when the transform is active). */
-export function viewportPointToScaleRootLocal(
-  viewportTop: number,
-  viewportLeft: number,
-): { top: number; left: number } {
-  const scaleRoot = getScaleRoot();
-  const isScaled = isUiLayoutScaleTransformActive();
-  if (!scaleRoot || !isScaled) {
-    return { top: viewportTop, left: viewportLeft };
-  }
-  const scale = getCurrentUiLayoutScale();
-  const scaleRootRect = scaleRoot.getBoundingClientRect();
-  return {
-    top: (viewportTop - scaleRootRect.top) / scale,
-    left: (viewportLeft - scaleRootRect.left) / scale,
-  };
-}
-
-export type ViewportBox = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-/** Viewport rect → fixed anchor box inside the scale root (custom Radix triggers must use the same conversion as tooltip). */
-export function viewportRectToScaleRootLocal(rect: ViewportBox): ViewportBox {
-  if (!isUiLayoutScaleTransformActive()) {
-    return rect;
-  }
-  const scale = getCurrentUiLayoutScale();
-  const { top, left } = viewportPointToScaleRootLocal(rect.top, rect.left);
-  return {
-    left,
-    top,
-    width: Math.max(rect.width / scale, 1),
-    height: Math.max(rect.height / scale, 1),
-  };
-}
-
-/** getBoundingClientRect deltas / edge lengths within the same scale root → local CSS lengths (for shell divider positioning). */
-export function viewportLengthToScaleRootLocal(length: number): number {
-  if (!isUiLayoutScaleTransformActive()) {
-    return length;
-  }
-  return length / getCurrentUiLayoutScale();
-}
-
-function syncWin32ChromeClass(root: HTMLElement): void {
-  root.classList.toggle("spirit-desktop-win32", shouldApplyWin32TitleBarCounterZoom());
-}
-
 let lastAppliedUiLayoutScale: number | null = null;
-let pendingUiLayoutScaleResizeFrame: number | null = null;
 
-function scheduleUiLayoutScaleResize(): void {
+/**
+ * Applies the UI layout zoom via the native Chromium page zoom (webFrame.setZoomFactor in the
+ * preload), which lands in the same task as the keypress and re-rasterizes canvas content
+ * (xterm WebGL renderer, Monaco minimap, image previews) at the zoomed resolution. A CSS
+ * transform scale would instead bitmap-scale canvases and blur them while DOM text stays sharp.
+ */
+export function applyUiLayoutScale(scale: number): void {
   if (typeof window === "undefined") {
     return;
   }
-  if (pendingUiLayoutScaleResizeFrame !== null) {
-    return;
-  }
-  pendingUiLayoutScaleResizeFrame = window.requestAnimationFrame(() => {
-    pendingUiLayoutScaleResizeFrame = null;
-    window.dispatchEvent(new Event("resize"));
-  });
-}
-
-export function applyUiLayoutScaleToDocument(scale: number): void {
-  if (typeof document === "undefined") {
-    return;
-  }
-
   const normalized = clampUiLayoutScale(scale);
-  const root = document.documentElement;
-  const scaleRoot = getScaleRoot();
-
-  syncWin32ChromeClass(root);
-
-  if (!scaleRoot) {
-    return;
-  }
-
   if (lastAppliedUiLayoutScale === normalized) {
     return;
   }
-
-  syncDarwinTrafficLightPosition(normalized);
-
-  if (normalized === DEFAULT_UI_LAYOUT_SCALE) {
-    root.style.removeProperty(SPIRIT_UI_LAYOUT_SCALE_VAR);
-    scaleRoot.classList.remove(UI_LAYOUT_SCALED_BODY_CLASS);
-  } else {
-    root.style.setProperty(SPIRIT_UI_LAYOUT_SCALE_VAR, String(normalized));
-    scaleRoot.classList.add(UI_LAYOUT_SCALED_BODY_CLASS);
-  }
   lastAppliedUiLayoutScale = normalized;
-  scheduleUiLayoutScaleResize();
+  syncDarwinTrafficLightPosition(normalized);
+  void window.spiritDesktop?.setUiLayoutScale(normalized);
 }
 
 export function stepUiLayoutScale(current: number, direction: "in" | "out"): number {

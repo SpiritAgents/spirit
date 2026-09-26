@@ -1,5 +1,3 @@
-import { viewportLengthToScaleRootLocal } from "@/lib/ui-layout-scale";
-
 export const CONVERSATION_SPLIT_SHELL_SELECTOR = "[data-conversation-split-shell]";
 export const CONVERSATION_SPLIT_SHELL_DIVIDER_ATTR = "data-spirit-conversation-split-shell-divider";
 
@@ -7,9 +5,9 @@ export function getConversationSplitShell(): HTMLElement | null {
   return document.querySelector<HTMLElement>(CONVERSATION_SPLIT_SHELL_SELECTOR);
 }
 
-/** Absolute positioning inside the shell must use local lengths, not raw getBoundingClientRect viewport deltas. */
+/** getBoundingClientRect deltas are already local CSS px under native Chromium page zoom. */
 export function conversationSplitShellLocalLength(delta: number): number {
-  return viewportLengthToScaleRootLocal(delta);
+  return delta;
 }
 
 /** Inset of the split container within the shell; both horizontal and vertical lines are clipped to it so nesting never paints outside the container. */

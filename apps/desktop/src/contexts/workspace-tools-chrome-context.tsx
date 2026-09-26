@@ -12,7 +12,7 @@ import {
 import {
   readWorkspaceToolsFullScreen,
   readWorkspaceToolsFullScreenRestoreOpen,
-  readWorkspaceToolsWidthPx,
+  WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY,
   workspaceToolsShellWidthExpression,
   workspaceToolsShellWidthWhenOpen,
   writeWorkspaceToolsFullScreen,
@@ -97,21 +97,16 @@ function scheduleShellWidthTransitionSettle(shell: HTMLElement, onSettle: () => 
 
 function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean, onSettle: () => void): void {
   const shell = getWorkspaceToolsShell();
-  const aside = document.getElementById("workspace-tools-panel");
-  if (!shell || !aside) {
+  if (!shell) {
     return;
   }
-  const widthRaw = aside.style.width;
-  const widthPx =
-    widthRaw && widthRaw.endsWith("px")
-      ? Number.parseInt(widthRaw, 10)
-      : readWorkspaceToolsWidthPx();
-  const splitWidth = workspaceToolsShellWidthExpression(widthPx);
+  const dockedWidth = `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`;
+  const splitWidth = workspaceToolsShellWidthExpression(dockedWidth);
 
-  // Only open/close uses the width transition; when viewport scaling changes the ratio, the React side keeps no transition to avoid lagging behind window dragging.
+  // Only open/close uses a width transition; docked viewport changes resolve through CSS.
   const reduceMotion = prefersReducedMotion();
   shell.style.transition = reduceMotion ? "none" : WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION;
-  shell.style.width = workspaceToolsShellWidthWhenOpen(nextOpen, widthPx);
+  shell.style.width = workspaceToolsShellWidthWhenOpen(nextOpen, dockedWidth);
   const split = shell.querySelector("[data-workspace-tools-split]");
   if (split instanceof HTMLElement) {
     split.style.width = splitWidth;
@@ -191,7 +186,7 @@ export function WorkspaceToolsChromeProvider({
         if (shell) {
           setFlight({ kind: "exit" });
           applyExitFullScreenFlight(
-            workspaceToolsShellWidthWhenOpen(toOpen, readWorkspaceToolsWidthPx()),
+            workspaceToolsShellWidthWhenOpen(toOpen, `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`),
             settleFlight,
           );
         } else {

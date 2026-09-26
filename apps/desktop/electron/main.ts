@@ -704,6 +704,35 @@ function trafficLightPositionCachePath(): string {
   return path.join(app.getPath("userData"), "traffic-light-position.json");
 }
 
+/**
+ * UI layout zoom cache: the zoom value lives in renderer localStorage, which the main process
+ * cannot read at window construction time. The renderer persists it on every change via
+ * `desktop:persist-ui-layout-scale`, and the next launch applies it to the webContents right after
+ * load, while the window is still hidden behind the launch splash.
+ * Keep the bounds in sync with UI_LAYOUT_SCALE_MIN/MAX in src/lib/ui-layout-scale.ts.
+ */
+function uiLayoutScaleCachePath(): string {
+  return path.join(app.getPath("userData"), "ui-layout-scale.json");
+}
+
+function clampUiLayoutScaleValue(scale: number): number {
+  return Math.min(1.25, Math.max(0.8, scale));
+}
+
+function readUiLayoutScaleFromDisk(): number {
+  try {
+    const parsed = JSON.parse(readFileSync(uiLayoutScaleCachePath(), "utf8")) as {
+      scale?: unknown;
+    };
+    if (typeof parsed.scale === "number" && Number.isFinite(parsed.scale)) {
+      return clampUiLayoutScaleValue(parsed.scale);
+    }
+  } catch {
+    // First launch or missing cache: default zoom 1
+  }
+  return 1;
+}
+
 function readTrafficLightPositionFromDisk(): { x: number; y: number } | undefined {
   try {
     const parsed = JSON.parse(readFileSync(trafficLightPositionCachePath(), "utf8")) as {
@@ -1042,6 +1071,13 @@ async function createMainWindow(): Promise<BrowserWindow> {
     await window.loadURL(DEV_SERVER_URL);
   } else {
     await window.loadFile(path.join(rendererDistPath(), "index.html"));
+  }
+
+  // Native Chromium page zoom re-rasterizes canvas content (terminal WebGL, Monaco) at the
+  // zoomed resolution; applied before the window is revealed so no unzoomed frame shows.
+  const storedUiLayoutScale = readUiLayoutScaleFromDisk();
+  if (storedUiLayoutScale !== 1) {
+    window.webContents.setZoomFactor(storedUiLayoutScale);
   }
 
   await syncBrowserWindowFrameFromRendererStorage(window);
@@ -1529,6 +1565,18 @@ if (gotSpiritSingleInstanceLock) {
         });
       },
     );
+
+    // The renderer applies the zoom synchronously via webFrame; the main process only persists
+    // it so the next launch can set the zoom before the window is revealed.
+    ipcMain.on("desktop:persist-ui-layout-scale", (_event, scale: unknown) => {
+      if (typeof scale !== "number" || !Number.isFinite(scale)) {
+        return;
+      }
+      const clamped = clampUiLayoutScaleValue(scale);
+      writeFile(uiLayoutScaleCachePath(), JSON.stringify({ scale: clamped })).catch((err) => {
+        console.error("[spirit-desktop] persist ui layout scale failed", err);
+      });
+    });
 
     // Preload forwards uncaught renderer errors/rejections (with stacks) for the crash page log.
     ipcMain.on("desktop:renderer-error", (_event, report: RendererErrorReport) => {

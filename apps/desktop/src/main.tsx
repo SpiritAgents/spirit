@@ -24,13 +24,7 @@ import {
   startReduceMotionSystemListener,
 } from "./lib/reduce-motion";
 import { applyThemeToDocument, getStoredTheme } from "./lib/theme";
-import {
-  DEFAULT_UI_LAYOUT_SCALE,
-  getStoredUiLayoutScale,
-  getUiLayoutPortalContainer,
-  SPIRIT_UI_LAYOUT_SCALE_VAR,
-  viewportPointToScaleRootLocal,
-} from "./lib/ui-layout-scale";
+import { getUiLayoutPortalContainer } from "./lib/ui-layout-scale";
 import "katex/dist/katex.min.css";
 import "streamdown/styles.css";
 import "./styles.css";
@@ -44,13 +38,6 @@ if (typeof document !== "undefined") {
   applyClickablePointerCursorToDocument(getStoredClickablePointerCursor());
   applyReduceMotionToDocument(getStoredReduceMotion());
   startReduceMotionSystemListener();
-  const initialUiLayoutScale = getStoredUiLayoutScale();
-  if (initialUiLayoutScale !== DEFAULT_UI_LAYOUT_SCALE) {
-    document.documentElement.style.setProperty(
-      SPIRIT_UI_LAYOUT_SCALE_VAR,
-      String(initialUiLayoutScale),
-    );
-  }
 }
 
 const rootElement = document.getElementById("app");
@@ -62,10 +49,7 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <ThemeProvider>
-      <UiPortalProvider
-        getContainer={getUiLayoutPortalContainer}
-        toLocalPoint={viewportPointToScaleRootLocal}
-      >
+      <UiPortalProvider getContainer={getUiLayoutPortalContainer}>
         <Toaster position="bottom-right" />
         <TooltipProvider delayDuration={300} getPortalContainer={getUiLayoutPortalContainer}>
           <WorkspaceToolsChromeProvider>

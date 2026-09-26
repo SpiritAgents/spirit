@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react";
 
 import {
-  applyUiLayoutScaleToDocument,
+  applyUiLayoutScale,
   DEFAULT_UI_LAYOUT_SCALE,
   getStoredUiLayoutScale,
   setStoredUiLayoutScale,
@@ -14,7 +14,7 @@ export function useUiLayoutScale() {
   const applyScale = useCallback((next: number) => {
     scaleRef.current = next;
     setStoredUiLayoutScale(next);
-    applyUiLayoutScaleToDocument(next);
+    applyUiLayoutScale(next);
   }, []);
 
   const setScale = useCallback(

@@ -122,8 +122,8 @@ export function ConversationWorkspaceToolsDock({
         mergeGitHubPullRequest={runtime.mergeGitHubPullRequest}
         markGitHubPullRequestReady={runtime.markGitHubPullRequestReady}
         codeCompletionEnabled={snapshot?.codeCompletion?.userEnabled !== false}
-        widthPx={workspaceTools.workspaceToolsWidthPx}
-        onWidthPxChange={workspaceTools.setWorkspaceToolsWidthPx}
+        widthRatio={workspaceTools.workspaceToolsWidthRatio}
+        onWidthRatioChange={workspaceTools.setWorkspaceToolsWidthRatio}
         gitSnapshot={snapshot?.git}
         workspaceContentInvalidation={snapshot?.workspaceContentInvalidation}
         gitChipBusy={composer.gitChipBusy}
