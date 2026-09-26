@@ -70,7 +70,7 @@ import {
 } from "@spiritagent/host-internal/workspace-file-reference-query";
 import { tryHandleDesktopWorkspaceLink } from "@/lib/workspace-navigation-link";
 import { tryHandleMarkdownWorkspaceLink } from "@/lib/markdown-workspace-link";
-import { applyUiLayoutScaleToDocument, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";
+import { applyUiLayoutScale, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";
 import {
   resolveLaunchSplashActive,
   resolveOnboardingCompletedKnown,
@@ -339,7 +339,7 @@ export default function App() {
   }, [runtime.saveSettingsPatch]);
 
   useLayoutEffect(() => {
-    applyUiLayoutScaleToDocument(uiLayoutScale.scale);
+    applyUiLayoutScale(uiLayoutScale.scale);
   }, [uiLayoutScale.scale]);
 
   useLayoutEffect(() => {

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { normalizeBrowserUrl } from "@/lib/browser-url";
-import { readWorkspaceToolsWidthPx } from "@/lib/layout-prefs";
+import { readWorkspaceToolsWidthRatio } from "@/lib/layout-prefs";
 import {
   addWorkspaceToolTab,
   createInitialWorkspaceToolsState,
@@ -76,30 +76,9 @@ export function useWorkspaceToolsController({
   const [workspaceFileRevealDirectoryOnly, setWorkspaceFileRevealDirectoryOnly] = useState(false);
   const [workspaceFileRevealLine, setWorkspaceFileRevealLine] = useState<number | null>(null);
   const [workspaceFileRevealColumn, setWorkspaceFileRevealColumn] = useState<number | null>(null);
-  const [workspaceToolsWidthPx, setWorkspaceToolsWidthPx] = useState(readWorkspaceToolsWidthPx);
-
-  useEffect(() => {
-    // Resize events fire continuously during dragging; read the width ratio from localStorage after rAF
-    // frame coalescing, avoiding a synchronous storage read on every resize (the stored value updates as
-    // the splitter is dragged, so caching only the first value is not enough).
-    let frame = 0;
-    const onResize = () => {
-      if (frame !== 0) {
-        return;
-      }
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        setWorkspaceToolsWidthPx(readWorkspaceToolsWidthPx());
-      });
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      if (frame !== 0) {
-        window.cancelAnimationFrame(frame);
-      }
-      window.removeEventListener("resize", onResize);
-    };
-  }, []);
+  const [workspaceToolsWidthRatio, setWorkspaceToolsWidthRatio] = useState(
+    readWorkspaceToolsWidthRatio,
+  );
   const [workspacePrRevealNonce, setWorkspacePrRevealNonce] = useState(0);
   const [workspacePrRevealTargetId, setWorkspacePrRevealTargetId] = useState<string | null>(null);
   const [workspacePrRevealRequest, setWorkspacePrRevealRequest] =
@@ -479,8 +458,8 @@ export function useWorkspaceToolsController({
     setWorkspaceToolTabs,
     activeWorkspaceToolTabId,
     setActiveWorkspaceToolTabId,
-    workspaceToolsWidthPx,
-    setWorkspaceToolsWidthPx,
+    workspaceToolsWidthRatio,
+    setWorkspaceToolsWidthRatio,
     browserTabEnabled,
     prTabEnabled,
     workspaceFilesPlanRevealNonce,

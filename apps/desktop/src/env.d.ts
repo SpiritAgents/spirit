@@ -316,6 +316,8 @@ declare global {
     syncLanguage(lang: string): Promise<void>;
     /** macOS: syncs the native traffic-light position after UI scaling so it stays aligned with the toggle button. */
     syncTrafficLightPosition(position: { x: number; y: number }): Promise<void>;
+    /** Applies the UI layout zoom synchronously (webFrame) and persists it for the next launch. */
+    setUiLayoutScale(scale: number): void;
     popupApplicationMenu(
       section: "file" | "edit" | "view" | "window" | "help",
       clientX: number,

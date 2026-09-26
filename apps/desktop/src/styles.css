@@ -127,22 +127,6 @@ body {
   height: 100%;
 }
 
-/*
- * height:100% on a flex child cannot reliably compensate for zoom; use dvh to compute the layout box explicitly.
- * The Windows title bar (2rem) sits outside the scale root, so the available height is 100dvh - 2rem.
- */
-#spirit-ui-scale-root.spirit-ui-layout-scaled {
-  flex: none;
-  transform: scale(var(--spirit-ui-layout-scale));
-  transform-origin: top left;
-  width: calc(100vw / var(--spirit-ui-layout-scale));
-  height: calc(100dvh / var(--spirit-ui-layout-scale));
-}
-
-html.spirit-desktop-win32 #spirit-ui-scale-root.spirit-ui-layout-scaled {
-  height: calc((100dvh - 2rem) / var(--spirit-ui-layout-scale));
-}
-
 /* Electron Windows custom-drawn title bar: drag regions and clickable menus are mutually exclusive */
 .electron-drag {
   -webkit-app-region: drag;
