@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 
-import { Terminal } from "lucide-react";
 import { iconNames } from "lucide-react/dynamic";
 import * as spiritIcons from "@spiritagent/icons";
 
@@ -10,14 +9,14 @@ export type TaskIconComponent = ComponentType<{
 }>;
 
 /**
- * Pure icon resolution (no rendering): Spirit Icons first, then Lucide by kebab name,
- * falling back to a terminal glyph. The row component renders spirit components directly
- * and lucide matches through DynamicIcon.
+ * Pure icon resolution (no rendering): Spirit Icons first, then Lucide by kebab name.
+ * Tasks that declare no `icon.id` (or an unresolvable one) get no icon at all. The row
+ * component renders spirit components directly and lucide matches through DynamicIcon.
  */
 export type TaskIconResolution =
   | { kind: "spirit"; component: TaskIconComponent }
   | { kind: "lucide"; name: string }
-  | { kind: "fallback"; component: TaskIconComponent };
+  | { kind: "none" };
 
 const lucideIconNames: readonly string[] = iconNames;
 
@@ -52,5 +51,5 @@ export function resolveTaskIcon(iconId?: string): TaskIconResolution {
       return { kind: "lucide", name: kebab };
     }
   }
-  return { kind: "fallback", component: Terminal };
+  return { kind: "none" };
 }
