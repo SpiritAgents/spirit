@@ -2,12 +2,15 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  evaluateWorkspaceTasksTrustGate,
   loadTaskFiles,
   resolveWorkspaceTasks,
+  type LoadedTaskFile,
   type ResolveWorkspaceTasksResult,
   type ResolvedTask,
   type TaskPlatform,
   type TaskVariableContext,
+  type WorkspaceTasksTrustGateResult,
 } from "@spiritagent/host-internal";
 import {
   defaultShellForPty,
@@ -22,6 +25,11 @@ export interface TasksCommandContext {
   workspaceRoot?: string;
 }
 
+export interface TaskFilesWithTrust {
+  files: LoadedTaskFile[];
+  gate: WorkspaceTasksTrustGateResult;
+}
+
 export interface TaskRunResolver {
   resolveTaskForRun(
     input: TasksCommandContext & { key: string },
@@ -29,6 +37,8 @@ export interface TaskRunResolver {
   resolveTaskByLabel(
     input: TasksCommandContext & { label: string },
   ): Promise<DesktopResolveTaskForRunResult>;
+  /** Drops cached resolutions (file content changed or a trust decision was applied). */
+  invalidate(): void;
 }
 
 export async function listTaskMenuItemsCommand(
@@ -36,6 +46,33 @@ export async function listTaskMenuItemsCommand(
 ): Promise<DesktopTaskMenuItem[]> {
   const result = await loadAndResolveTasks(context);
   return result.menuItems;
+}
+
+// The trust verdict is evaluated on every load (never cached): workspace-controlled
+// sources drop out entirely until the workspace content hash is allowed.
+export async function evaluateAndFilterTaskFiles(
+  context: TasksCommandContext,
+): Promise<TaskFilesWithTrust> {
+  const files = await loadTaskFiles({
+    ...(context.workspaceRoot !== undefined ? { workspaceRoot: context.workspaceRoot } : {}),
+    spiritDataDir: spiritDataDir(),
+  });
+  const gate = await evaluateWorkspaceTasksTrustGate({
+    spiritDataDir: spiritDataDir(),
+    workspaceRoot: context.workspaceRoot,
+    files,
+  });
+  if (gate.status === "allow") {
+    return { files, gate };
+  }
+  return { files: files.filter((file) => file.sourceKind === "user"), gate };
+}
+
+export function resolveTaskMenuItems(
+  context: TasksCommandContext,
+  files: LoadedTaskFile[],
+): DesktopTaskMenuItem[] {
+  return resolveTaskFiles(context, files).menuItems;
 }
 
 // Tasks with runOptions.reevaluateOnRerun === false resolve once and reuse that first
@@ -76,16 +113,23 @@ export function createTaskRunResolver(): TaskRunResolver {
       }
       return finish(task);
     },
+    invalidate() {
+      cachedByKey.clear();
+    },
   };
 }
 
 async function loadAndResolveTasks(
   context: TasksCommandContext,
 ): Promise<ResolveWorkspaceTasksResult> {
-  const files = await loadTaskFiles({
-    ...(context.workspaceRoot !== undefined ? { workspaceRoot: context.workspaceRoot } : {}),
-    spiritDataDir: spiritDataDir(),
-  });
+  const { files } = await evaluateAndFilterTaskFiles(context);
+  return resolveTaskFiles(context, files);
+}
+
+function resolveTaskFiles(
+  context: TasksCommandContext,
+  files: LoadedTaskFile[],
+): ResolveWorkspaceTasksResult {
   const variableContext: TaskVariableContext = {
     ...(context.workspaceRoot !== undefined ? { workspaceFolder: context.workspaceRoot } : {}),
     cwd: process.cwd(),
@@ -122,7 +166,7 @@ function currentTaskPlatform(): TaskPlatform {
 }
 
 /** Env var `SPIRIT_DESKTOP_TASKS_DEBUG`: logs per-task hidden reasons (rule ids) on every resolve. */
-function tasksDebugEnabled(): boolean {
+export function tasksDebugEnabled(): boolean {
   const raw = process.env.SPIRIT_DESKTOP_TASKS_DEBUG?.trim().toLowerCase() ?? "";
   return raw === "1" || raw === "true" || raw === "on" || raw === "yes";
 }
