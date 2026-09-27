@@ -613,7 +613,7 @@ async function loadDesktopPlanSnapshot(
   }
 }
 
-class DesktopHostService {
+export class DesktopHostService {
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly extensionStateStore = createDesktopExtensionStateStore({
