@@ -43,9 +43,9 @@ Comportamiento por campo, evaluado después de la combinación: valores predeter
 | `options.cwd`                                  | Compatible     | Directorio de trabajo del proceso                                                                                                                                                                                                                                          |
 | `options.env`                                  | Compatible     | Variables de entorno adicionales, combinadas sobre el entorno del host                                                                                                                                                                                                     |
 | `options.shell`                                | Compatible     | `{ executable, args }` — shell usado para las tareas `shell` en lugar del shell de terminal predeterminado                                                                                                                                                                 |
-| `windows` / `osx` / `linux` (nivel de tarea)   | Compatible     | Reemplazos de `{ command, args, options }` para el SO actual. Un `problemMatcher` dentro del bloque del SO actual también oculta la tarea                                                                                                                                  |
+| `windows` / `osx` / `linux` (nivel de tarea)   | Compatible     | Reemplazos de `{ command, args, options }` para el SO actual.                                                                                                                                                                                                              |
 | `windows` / `osx` / `linux` (nivel de archivo) | Compatible     | La misma forma, actuando como la capa predeterminada específica del SO para cada tarea del archivo                                                                                                                                                                         |
-| Valores predeterminados a nivel de archivo     | Compatible     | Solo `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` pueden actuar como valores predeterminados a nivel de archivo. Un `problemMatcher` a nivel de archivo oculta todas las tareas del archivo                                       |
+| Valores predeterminados a nivel de archivo     | Compatible     | Solo `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` pueden actuar como valores predeterminados a nivel de archivo.                                                                                                                  |
 | `isBackground`                                 | Compatible     | La salida cuenta como terminación por el usuario, nunca como fallo. Otra tarea que dependa de ella se oculta (ver más abajo)                                                                                                                                               |
 | `promptOnClose`                                | Compatible     | Cerrar la pestaña mientras el proceso sigue vivo pide confirmación                                                                                                                                                                                                         |
 | `dependsOn`                                    | Compatible     | Una cadena de etiqueta o un arreglo de cadenas de etiquetas. La forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta la tarea                                                                                                                                         |
@@ -66,22 +66,21 @@ Comportamiento por campo, evaluado después de la combinación: valores predeter
 
 ### Presentación
 
-| Campo                               | Comportamiento  | Notas                                                                                        |
-| ----------------------------------- | --------------- | -------------------------------------------------------------------------------------------- |
-| `presentation.echo`                 | Compatible      | Escribe la línea de comandos en la terminal antes de la salida del proceso                   |
-| `presentation.reveal`               | Compatible      | `always` (predeterminado), `silent` o `never` — consulta [Ejecutar tareas](#ejecutar-tareas) |
-| `presentation.focus`                | Compatible      | Implica reveal y mueve el foco del teclado a la terminal                                     |
-| `presentation.panel`                | Compatible      | `shared` (predeterminado), `dedicated` o `new` — política de reutilización de terminales     |
-| `presentation.clear`                | Compatible      | Limpia la terminal antes de una nueva ejecución que la reutilice                             |
-| `presentation.close`                | Compatible      | Cierra la pestaña automáticamente cuando el proceso termina                                  |
-| `presentation.preserveTerminalName` | Compatible      | Mantiene la etiqueta de la tarea como título de la pestaña en lugar del título del proceso   |
-| `presentation.revealProblems`       | Oculta la tarea | Depende de la detección de problemas, que Spirit no ejecuta                                  |
-| `presentation.showReuseMessage`     | Ignorado        | Puramente presentacional                                                                     |
-| `presentation.group`                | Ignorado        | La agrupación de terminales está fuera del alcance                                           |
+| Campo                               | Comportamiento | Notas                                                                                        |
+| ----------------------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | Compatible     | Escribe la línea de comandos en la terminal antes de la salida del proceso                   |
+| `presentation.reveal`               | Compatible     | `always` (predeterminado), `silent` o `never` — consulta [Ejecutar tareas](#ejecutar-tareas) |
+| `presentation.focus`                | Compatible     | Implica reveal y mueve el foco del teclado a la terminal                                     |
+| `presentation.panel`                | Compatible     | `shared` (predeterminado), `dedicated` o `new` — política de reutilización de terminales     |
+| `presentation.clear`                | Compatible     | Limpia la terminal antes de una nueva ejecución que la reutilice                             |
+| `presentation.close`                | Compatible     | Cierra la pestaña automáticamente cuando el proceso termina                                  |
+| `presentation.preserveTerminalName` | Compatible     | Mantiene la etiqueta de la tarea como título de la pestaña en lugar del título del proceso   |
+| `presentation.showReuseMessage`     | Ignorado       | Puramente presentacional                                                                     |
+| `presentation.group`                | Ignorado       | La agrupación de terminales está fuera del alcance                                           |
 
 ### Campos ignorados
 
-Llevar estos campos nunca oculta una tarea: `group` (agrupación build/test), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. El arreglo `inputs` a nivel de archivo simplemente no se lee — pero una _referencia_ `${input:*}` dentro de una tarea sí oculta esa tarea (consulta [Variables](#variables)).
+Llevar estos campos nunca oculta una tarea: `problemMatcher` (cualquier forma, en cualquier nivel), `presentation.revealProblems`, `group` (agrupación build/test), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. El arreglo `inputs` a nivel de archivo simplemente no se lee — pero una _referencia_ `${input:*}` dentro de una tarea sí oculta esa tarea (consulta [Variables](#variables)).
 
 ## Variables
 
@@ -104,8 +103,6 @@ Una tarea que no puede ejecutarse exactamente como está configurada se oculta p
 
 | Regla                        | Motivo                                                                                               |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `problemMatcher`             | Spirit no analiza la salida de comandos en busca de problemas                                        |
-| `revealProblems`             | Depende de la detección de problemas                                                                 |
 | `unsupportedVariable`        | Sustituir un valor adivinado ejecutaría un comando distinto del configurado                          |
 | `runOn`                      | Nada se ejecuta nunca automáticamente — las tareas solo se inician con un clic explícito             |
 | `dependsOnObjectForm`        | Las entradas de dependencia con tipo de extensión no son ejecutables                                 |
@@ -131,7 +128,7 @@ Las tareas solo se inician con un clic explícito en la paleta — nada se ejecu
 - **Límite de instancias** — `runOptions.instanceLimit` es `1` de forma predeterminada. Iniciar otra instancia por encima del límite pregunta: **Nueva instancia en paralelo**, **Terminar instancia anterior** o **Cancelar**.
 - **Reutilización de terminales** — solo se reutilizan terminales de tareas que ya terminaron. `panel: "shared"` y `panel: "dedicated"` reutilizan la terminal inactiva propia de esta tarea cuando existe una (el pool es por tarea) y abren una pestaña nueva en caso contrario; `panel: "new"` siempre abre una pestaña nueva.
 - **Echo** — con `presentation.echo` (activado de forma predeterminada) la línea de comandos se escribe en la terminal antes de la salida del proceso.
-- **Reveal** — `always` (predeterminado) expande el panel de herramientas al iniciar; `silent` lo mantiene cerrado al iniciar y lo expande solo cuando la tarea termina con código distinto de cero; `never` nunca lo expande automáticamente. `focus: true` implica reveal y además mueve el foco del teclado a la terminal.
+- **Reveal** — `always` (predeterminado) expande el panel de herramientas al iniciar; `silent` lo mantiene cerrado al iniciar y lo expande solo cuando la tarea termina con código distinto de cero; `never` nunca lo expande automáticamente. `focus: true` implica reveal y además mueve el foco del teclado a la terminal. Ten en cuenta dos desviaciones de VS Code: `reveal: "silent"` solo se expande con un código de salida distinto de cero (Spirit no tiene una ruta de activación por problem matcher), y `presentation.revealProblems` no tiene ningún efecto: ni suprime ni dispara la revelación del terminal.
 - **Clear** — `presentation.clear` limpia la terminal antes de una nueva ejecución que la reutilice.
 - **Close** — `presentation.close` cierra la pestaña automáticamente al terminar, sea cual sea el código de salida.
 - **Conservar el nombre de la terminal** — `presentation.preserveTerminalName` mantiene la etiqueta de la tarea como título de la pestaña; de lo contrario, el título del proceso en ejecución lo reemplaza.

@@ -40,7 +40,7 @@ test("listTaskMenuItemsCommand projects the menu and omits hidden and hide-flagg
           detail: "Builds everything",
           icon: { id: "gear" },
         },
-        { label: "with-matcher", command: "make", problemMatcher: "$gcc" },
+        { label: "with-var", command: "echo ${file}" },
         { label: "helper", command: "echo helper", hide: true },
         { label: "npm-task", type: "npm", script: "test" },
       ],

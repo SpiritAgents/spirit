@@ -43,9 +43,9 @@ Spirit 任务是自己的一套系统，不是 VS Code Tasks。它读取严格 J
 | `options.cwd`                         | 支持 | 进程的工作目录                                                                                                                                                                      |
 | `options.env`                         | 支持 | 额外的环境变量，合并覆盖在宿主环境之上                                                                                                                                              |
 | `options.shell`                       | 支持 | `{ executable, args }`——`shell` 任务使用的 shell，代替默认终端 shell                                                                                                                |
-| `windows` / `osx` / `linux`（任务级） | 支持 | 当前 OS 的 `{ command, args, options }` 覆盖。当前 OS 块内带 `problemMatcher` 也会隐藏该任务                                                                                        |
+| `windows` / `osx` / `linux`（任务级） | 支持 | 当前 OS 的 `{ command, args, options }` 覆盖。                                                                                                                                      |
 | `windows` / `osx` / `linux`（文件级） | 支持 | 形状相同，作为文件内每个任务的 OS 特定默认层                                                                                                                                        |
-| 文件级默认值                          | 支持 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可以作为文件级默认值。文件级 `problemMatcher` 会隐藏文件内所有任务                       |
+| 文件级默认值                          | 支持 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可以作为文件级默认值。                                                                   |
 | `isBackground`                        | 支持 | 退出视为用户终止，永远不算失败。依赖它的其他任务会被隐藏（见下文）                                                                                                                  |
 | `promptOnClose`                       | 支持 | 进程还活着时关闭标签页会要求确认                                                                                                                                                    |
 | `dependsOn`                           | 支持 | 一个 label 字符串，或 label 字符串数组。对象形式（`{ "type": … }`、`{ "task": … }`）会隐藏该任务                                                                                    |
@@ -66,22 +66,21 @@ Spirit 任务是自己的一套系统，不是 VS Code Tasks。它读取严格 J
 
 ### 展示
 
-| 字段                                | 行为     | 备注                                                           |
-| ----------------------------------- | -------- | -------------------------------------------------------------- |
-| `presentation.echo`                 | 支持     | 在进程输出之前把命令行写入终端                                 |
-| `presentation.reveal`               | 支持     | `always`（默认）、`silent` 或 `never`——见[运行任务](#运行任务) |
-| `presentation.focus`                | 支持     | 隐含 reveal，并把键盘焦点移进终端                              |
-| `presentation.panel`                | 支持     | `shared`（默认）、`dedicated` 或 `new`——终端复用策略           |
-| `presentation.clear`                | 支持     | 重跑并复用终端之前先清空终端                                   |
-| `presentation.close`                | 支持     | 进程退出时自动关闭标签页                                       |
-| `presentation.preserveTerminalName` | 支持     | 标签页标题保持为任务 label，而不是进程标题                     |
-| `presentation.revealProblems`       | 隐藏任务 | 依赖问题匹配，Spirit 不做问题匹配                              |
-| `presentation.showReuseMessage`     | 忽略     | 纯展示用途                                                     |
-| `presentation.group`                | 忽略     | 终端分组不在支持范围内                                         |
+| 字段                                | 行为 | 备注                                                           |
+| ----------------------------------- | ---- | -------------------------------------------------------------- |
+| `presentation.echo`                 | 支持 | 在进程输出之前把命令行写入终端                                 |
+| `presentation.reveal`               | 支持 | `always`（默认）、`silent` 或 `never`——见[运行任务](#运行任务) |
+| `presentation.focus`                | 支持 | 隐含 reveal，并把键盘焦点移进终端                              |
+| `presentation.panel`                | 支持 | `shared`（默认）、`dedicated` 或 `new`——终端复用策略           |
+| `presentation.clear`                | 支持 | 重跑并复用终端之前先清空终端                                   |
+| `presentation.close`                | 支持 | 进程退出时自动关闭标签页                                       |
+| `presentation.preserveTerminalName` | 支持 | 标签页标题保持为任务 label，而不是进程标题                     |
+| `presentation.showReuseMessage`     | 忽略 | 纯展示用途                                                     |
+| `presentation.group`                | 忽略 | 终端分组不在支持范围内                                         |
 
 ### 被忽略的字段
 
-带上这些字段永远不会隐藏任务：`group`（build/test 分组）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。文件级 `inputs` 数组完全不会被读取——但任务内的 `${input:*}` _引用_ 会隐藏该任务（见[变量](#变量)）。
+带上这些字段永远不会隐藏任务：`problemMatcher`（任何形式、任何层级）、`presentation.revealProblems`、`group`（build/test 分组）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。文件级 `inputs` 数组完全不会被读取——但任务内的 `${input:*}` _引用_ 会隐藏该任务（见[变量](#变量)）。
 
 ## 变量
 
@@ -104,8 +103,6 @@ Spirit 任务是自己的一套系统，不是 VS Code Tasks。它读取严格 J
 
 | 规则                         | 原因                                                         |
 | ---------------------------- | ------------------------------------------------------------ |
-| `problemMatcher`             | Spirit 不解析命令输出中的问题                                |
-| `revealProblems`             | 依赖问题匹配                                                 |
 | `unsupportedVariable`        | 用猜测的值替换会运行与配置不同的命令                         |
 | `runOn`                      | 任何东西都不会自动运行——任务只能由明确点击启动               |
 | `dependsOnObjectForm`        | 扩展类型的依赖条目无法运行                                   |
@@ -131,7 +128,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - **实例限制** — `runOptions.instanceLimit` 默认为 `1`。超过限制再启动实例会询问：**新建并行实例**、**终止旧实例** 或 **取消**。
 - **终端复用** — 只有已退出任务的终端会被复用。`panel: "shared"` 和 `panel: "dedicated"` 都会在本任务自己的空闲终端存在时复用它（复用池按任务划分），否则打开新标签页；`panel: "new"` 总是打开全新标签页。
 - **回显** — `presentation.echo`（默认开）会在进程输出之前把命令行写入终端。
-- **显示** — `always`（默认）在启动时展开工具面板；`silent` 启动时保持关闭，只在任务非零退出时展开；`never` 永不自动展开。`focus: true` 隐含 reveal，并额外把键盘焦点移进终端。
+- **显示** — `always`（默认）在启动时展开工具面板；`silent` 启动时保持关闭，只在任务非零退出时展开；`never` 永不自动展开。`focus: true` 隐含 reveal，并额外把键盘焦点移进终端。注意与 VS Code 的两处差异：`reveal: "silent"` 只在退出码非零时展开（Spirit 没有 problemMatcher 触发路径）；`presentation.revealProblems` 完全无效——既不抑制也不触发终端显示。
 - **清空** — `presentation.clear` 在重跑并复用终端之前清空终端。
 - **关闭** — `presentation.close` 在退出时自动关闭标签页，不管退出码是什么。
 - **保留终端名** — `presentation.preserveTerminalName` 让标签页标题保持为任务 label；否则会被运行中进程的标题替换。

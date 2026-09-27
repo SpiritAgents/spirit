@@ -138,12 +138,6 @@ function firstPerTaskRule(
   if (task.command === undefined) {
     return "invalidTask";
   }
-  if (task.hasProblemMatcher) {
-    return "problemMatcher";
-  }
-  if (task.presentation.hasRevealProblems) {
-    return "revealProblems";
-  }
   const strings = collectTaskVariableStrings(task.command, task.args, task.options);
   if (findUnsupportedTaskVariable(strings) !== undefined) {
     return "unsupportedVariable";

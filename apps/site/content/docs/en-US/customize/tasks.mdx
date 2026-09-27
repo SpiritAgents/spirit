@@ -43,9 +43,9 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 | `options.cwd`                            | Supported | Working directory of the process                                                                                                                                                                                                        |
 | `options.env`                            | Supported | Extra environment variables, merged over the host environment                                                                                                                                                                           |
 | `options.shell`                          | Supported | `{ executable, args }` — shell used for `shell` tasks instead of the default terminal shell                                                                                                                                             |
-| `windows` / `osx` / `linux` (task level) | Supported | `{ command, args, options }` overrides for the current OS. A `problemMatcher` inside the current OS's block also hides the task                                                                                                         |
+| `windows` / `osx` / `linux` (task level) | Supported | `{ command, args, options }` overrides for the current OS                                                                                                                                                                               |
 | `windows` / `osx` / `linux` (file level) | Supported | Same shape, acting as the OS-specific default layer for every task in the file                                                                                                                                                          |
-| File-level defaults                      | Supported | Only `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` may act as file-level defaults. A file-level `problemMatcher` hides every task in the file                                                   |
+| File-level defaults                      | Supported | Only `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` may act as file-level defaults                                                                                                               |
 | `isBackground`                           | Supported | Exit counts as user termination, never as failure. Another task depending on it is hidden (see below)                                                                                                                                   |
 | `promptOnClose`                          | Supported | Closing the tab while the process is alive asks for confirmation                                                                                                                                                                        |
 | `dependsOn`                              | Supported | A label string, or an array of label strings. The object form (`{ "type": … }`, `{ "task": … }`) hides the task                                                                                                                         |
@@ -66,22 +66,21 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 
 ### Presentation
 
-| Field                               | Behavior   | Notes                                                                          |
-| ----------------------------------- | ---------- | ------------------------------------------------------------------------------ |
-| `presentation.echo`                 | Supported  | Writes the command line into the terminal before process output                |
-| `presentation.reveal`               | Supported  | `always` (default), `silent`, or `never` — see [Running tasks](#running-tasks) |
-| `presentation.focus`                | Supported  | Implies reveal and moves keyboard focus into the terminal                      |
-| `presentation.panel`                | Supported  | `shared` (default), `dedicated`, or `new` — terminal reuse policy              |
-| `presentation.clear`                | Supported  | Clears the terminal before a rerun that reuses it                              |
-| `presentation.close`                | Supported  | Closes the tab automatically when the process exits                            |
-| `presentation.preserveTerminalName` | Supported  | Keeps the task label as the tab title instead of the process title             |
-| `presentation.revealProblems`       | Hides task | Depends on problem matching, which Spirit does not run                         |
-| `presentation.showReuseMessage`     | Ignored    | Purely presentational                                                          |
-| `presentation.group`                | Ignored    | Terminal grouping is out of scope                                              |
+| Field                               | Behavior  | Notes                                                                          |
+| ----------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| `presentation.echo`                 | Supported | Writes the command line into the terminal before process output                |
+| `presentation.reveal`               | Supported | `always` (default), `silent`, or `never` — see [Running tasks](#running-tasks) |
+| `presentation.focus`                | Supported | Implies reveal and moves keyboard focus into the terminal                      |
+| `presentation.panel`                | Supported | `shared` (default), `dedicated`, or `new` — terminal reuse policy              |
+| `presentation.clear`                | Supported | Clears the terminal before a rerun that reuses it                              |
+| `presentation.close`                | Supported | Closes the tab automatically when the process exits                            |
+| `presentation.preserveTerminalName` | Supported | Keeps the task label as the tab title instead of the process title             |
+| `presentation.showReuseMessage`     | Ignored   | Purely presentational                                                          |
+| `presentation.group`                | Ignored   | Terminal grouping is out of scope                                              |
 
 ### Ignored fields
 
-Carrying these never hides a task: `group` (build/test grouping), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. The file-level `inputs` array is simply not read — but a `${input:*}` _reference_ inside a task hides that task (see [Variables](#variables)).
+Carrying these never hides a task: `problemMatcher` (any form, at any level), `presentation.revealProblems`, `group` (build/test grouping), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. The file-level `inputs` array is simply not read — but a `${input:*}` _reference_ inside a task hides that task (see [Variables](#variables)).
 
 ## Variables
 
@@ -104,8 +103,6 @@ A task that cannot run exactly as configured is hidden entirely rather than run 
 
 | Rule                         | Rationale                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `problemMatcher`             | Spirit does not parse command output for problems                                    |
-| `revealProblems`             | Depends on problem matching                                                          |
 | `unsupportedVariable`        | Substituting a guessed value would run a different command than configured           |
 | `runOn`                      | Nothing ever auto-runs — tasks start only from an explicit click                     |
 | `dependsOnObjectForm`        | Extension-typed dependency entries are not runnable                                  |
@@ -131,7 +128,7 @@ Tasks start only from an explicit click in the palette — nothing ever runs on 
 - **Instance limit** — `runOptions.instanceLimit` defaults to `1`. Starting another instance past the limit asks: **New Parallel Instance**, **Terminate Old Instance**, or **Cancel**.
 - **Terminal reuse** — only terminals of exited tasks are ever reused. `panel: "shared"` and `panel: "dedicated"` both reuse this task's own idle terminal when one exists (the pool is per task) and open a new tab otherwise; `panel: "new"` always opens a fresh tab.
 - **Echo** — with `presentation.echo` (default on) the command line is written into the terminal before the process output.
-- **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal.
+- **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal. Note two VS Code deviations: `reveal: "silent"` reveals only on a non-zero exit code (Spirit has no problem-matcher trigger path), and `presentation.revealProblems` has no effect at all — it neither suppresses nor triggers a terminal reveal.
 - **Clear** — `presentation.clear` clears the terminal before a rerun that reuses it.
 - **Close** — `presentation.close` closes the tab automatically on exit, whatever the exit code.
 - **Preserve terminal name** — `presentation.preserveTerminalName` keeps the task label as the tab title; otherwise the running process's title replaces it.

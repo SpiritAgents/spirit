@@ -72,12 +72,13 @@ test("normalizeTaskEntry parses a fully specified task", () => {
     clear: true,
     close: true,
     preserveTerminalName: true,
-    hasRevealProblems: true,
   });
   assert.equal(task.iconId, "gear");
   assert.equal(task.detail, "Builds everything");
   assert.equal(task.hide, true);
-  assert.equal(task.hasProblemMatcher, true);
+  // problemMatcher and presentation.revealProblems are tolerated but never carried.
+  assert.equal("hasProblemMatcher" in task, false);
+  assert.equal("hasRevealProblems" in task.presentation, false);
 });
 
 test("normalizeTaskEntry skips items with a missing or empty label", () => {
@@ -163,7 +164,7 @@ test("normalizeTaskEntry applies runOptions defaults and rejects invalid values"
   );
 });
 
-test("normalizeTaskEntry maps OS blocks to platforms and records problemMatcher presence", () => {
+test("normalizeTaskEntry maps OS blocks to platforms and ignores block problemMatchers", () => {
   const task = normalizeTaskEntry({
     label: "a",
     command: "make",
@@ -172,16 +173,13 @@ test("normalizeTaskEntry maps OS blocks to platforms and records problemMatcher 
     linux: { options: { env: { OS: "linux" } } },
   });
   assert.ok(task);
-  assert.deepEqual(task.os.win32, { command: "build.cmd", args: ["/c"], hasProblemMatcher: false });
+  assert.deepEqual(task.os.win32, { command: "build.cmd", args: ["/c"] });
   assert.deepEqual(task.os.darwin, {
     options: { cwd: "/mac" },
-    hasProblemMatcher: true,
   });
   assert.deepEqual(task.os.linux, {
     options: { env: { OS: "linux" } },
-    hasProblemMatcher: false,
   });
-  assert.equal(task.hasProblemMatcher, false);
 });
 
 test("normalizeTaskFile keeps only supported file-level defaults", () => {
@@ -212,12 +210,10 @@ test("normalizeTaskFile keeps only supported file-level defaults", () => {
     options: { cwd: "/global" },
     isBackground: true,
     promptOnClose: true,
-    presentation: { reveal: "never", hasRevealProblems: false },
-    hasProblemMatcher: true,
+    presentation: { reveal: "never" },
   });
   assert.deepEqual(file.osDefaults.win32, {
     command: "global-windows",
-    hasProblemMatcher: false,
   });
   assert.equal(file.tasks.length, 1);
 });

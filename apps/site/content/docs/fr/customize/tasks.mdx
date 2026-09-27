@@ -43,9 +43,9 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 | `options.cwd`                                | Pris en charge | Répertoire de travail du processus                                                                                                                                                                                                                                       |
 | `options.env`                                | Pris en charge | Variables d'environnement supplémentaires, fusionnées par-dessus l'environnement de l'hôte                                                                                                                                                                               |
 | `options.shell`                              | Pris en charge | `{ executable, args }` — shell utilisé pour les tâches `shell` à la place du shell de terminal par défaut                                                                                                                                                                |
-| `windows` / `osx` / `linux` (niveau tâche)   | Pris en charge | Remplacements `{ command, args, options }` pour l'OS courant. Un `problemMatcher` dans le bloc de l'OS courant masque aussi la tâche                                                                                                                                     |
+| `windows` / `osx` / `linux` (niveau tâche)   | Pris en charge | Remplacements `{ command, args, options }` pour l'OS courant.                                                                                                                                                                                                            |
 | `windows` / `osx` / `linux` (niveau fichier) | Pris en charge | Même forme, servant de couche de valeurs par défaut spécifiques à l'OS pour chaque tâche du fichier                                                                                                                                                                      |
-| Valeurs par défaut au niveau du fichier      | Pris en charge | Seuls `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose` et `presentation` peuvent servir de valeurs par défaut au niveau du fichier. Un `problemMatcher` au niveau du fichier masque toutes les tâches du fichier                                    |
+| Valeurs par défaut au niveau du fichier      | Pris en charge | Seuls `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose` et `presentation` peuvent servir de valeurs par défaut au niveau du fichier.                                                                                                                 |
 | `isBackground`                               | Pris en charge | La sortie compte comme une terminaison par l'utilisateur, jamais comme un échec. Une autre tâche qui en dépend est masquée (voir ci-dessous)                                                                                                                             |
 | `promptOnClose`                              | Pris en charge | Fermer l'onglet alors que le processus est encore actif demande une confirmation                                                                                                                                                                                         |
 | `dependsOn`                                  | Pris en charge | Une chaîne de label, ou un tableau de chaînes de labels. La forme objet (`{ "type": … }`, `{ "task": … }`) masque la tâche                                                                                                                                               |
@@ -66,22 +66,21 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 
 ### Présentation
 
-| Champ                               | Comportement    | Notes                                                                                    |
-| ----------------------------------- | --------------- | ---------------------------------------------------------------------------------------- |
-| `presentation.echo`                 | Pris en charge  | Écrit la ligne de commande dans le terminal avant la sortie du processus                 |
-| `presentation.reveal`               | Pris en charge  | `always` (par défaut), `silent` ou `never` — voir [Exécution des tâches](#running-tasks) |
-| `presentation.focus`                | Pris en charge  | Implique reveal et déplace le focus clavier dans le terminal                             |
-| `presentation.panel`                | Pris en charge  | `shared` (par défaut), `dedicated` ou `new` — politique de réutilisation du terminal     |
-| `presentation.clear`                | Pris en charge  | Efface le terminal avant une réexécution qui le réutilise                                |
-| `presentation.close`                | Pris en charge  | Ferme automatiquement l'onglet à la sortie du processus                                  |
-| `presentation.preserveTerminalName` | Pris en charge  | Conserve le label de la tâche comme titre d'onglet au lieu du titre du processus         |
-| `presentation.revealProblems`       | Masque la tâche | Dépend de la détection de problèmes, que Spirit n'exécute pas                            |
-| `presentation.showReuseMessage`     | Ignoré          | Purement présentationnel                                                                 |
-| `presentation.group`                | Ignoré          | Le regroupement de terminaux est hors de portée                                          |
+| Champ                               | Comportement   | Notes                                                                                    |
+| ----------------------------------- | -------------- | ---------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | Pris en charge | Écrit la ligne de commande dans le terminal avant la sortie du processus                 |
+| `presentation.reveal`               | Pris en charge | `always` (par défaut), `silent` ou `never` — voir [Exécution des tâches](#running-tasks) |
+| `presentation.focus`                | Pris en charge | Implique reveal et déplace le focus clavier dans le terminal                             |
+| `presentation.panel`                | Pris en charge | `shared` (par défaut), `dedicated` ou `new` — politique de réutilisation du terminal     |
+| `presentation.clear`                | Pris en charge | Efface le terminal avant une réexécution qui le réutilise                                |
+| `presentation.close`                | Pris en charge | Ferme automatiquement l'onglet à la sortie du processus                                  |
+| `presentation.preserveTerminalName` | Pris en charge | Conserve le label de la tâche comme titre d'onglet au lieu du titre du processus         |
+| `presentation.showReuseMessage`     | Ignoré         | Purement présentationnel                                                                 |
+| `presentation.group`                | Ignoré         | Le regroupement de terminaux est hors de portée                                          |
 
 ### Champs ignorés
 
-Porter ces champs ne masque jamais une tâche : `group` (regroupement build/test), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. Le tableau `inputs` au niveau du fichier n'est tout simplement pas lu — mais une _référence_ `${input:*}` à l'intérieur d'une tâche masque cette tâche (voir [Variables](#variables)).
+Porter ces champs ne masque jamais une tâche : `problemMatcher` (toute forme, à tout niveau), `presentation.revealProblems`, `group` (regroupement build/test), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. Le tableau `inputs` au niveau du fichier n'est tout simplement pas lu — mais une _référence_ `${input:*}` à l'intérieur d'une tâche masque cette tâche (voir [Variables](#variables)).
 
 ## Variables
 
@@ -104,8 +103,6 @@ Une tâche qui ne peut pas s'exécuter exactement comme configurée est entière
 
 | Règle                        | Motif                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `problemMatcher`             | Spirit n'analyse pas la sortie des commandes pour y détecter des problèmes                                          |
-| `revealProblems`             | Dépend de la détection de problèmes                                                                                 |
 | `unsupportedVariable`        | Substituer une valeur devinée exécuterait une commande différente de celle configurée                               |
 | `runOn`                      | Rien ne s'exécute jamais automatiquement — les tâches ne démarrent que sur un clic explicite                        |
 | `dependsOnObjectForm`        | Les entrées de dépendance typées par une extension ne sont pas exécutables                                          |
@@ -131,7 +128,7 @@ Les tâches ne démarrent que sur un clic explicite dans la palette — rien ne 
 - **Limite d'instances** — `runOptions.instanceLimit` vaut `1` par défaut. Démarrer une instance de plus au-delà de la limite demande : **Nouvelle instance parallèle**, **Terminer l'ancienne instance** ou **Annuler**.
 - **Réutilisation du terminal** — seuls les terminaux de tâches terminées sont réutilisés. `panel: "shared"` et `panel: "dedicated"` réutilisent tous deux le terminal inactif propre à cette tâche lorsqu'il existe (le pool est propre à chaque tâche) et ouvrent un nouvel onglet sinon ; `panel: "new"` ouvre toujours un onglet neuf.
 - **Écho** — avec `presentation.echo` (activé par défaut), la ligne de commande est écrite dans le terminal avant la sortie du processus.
-- **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal.
+- **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal. Notez deux écarts avec VS Code : `reveal: "silent"` ne se déploie que sur un code de sortie non nul (Spirit n'a pas de déclencheur par problem matcher), et `presentation.revealProblems` n'a aucun effet — il ne supprime ni ne déclenche l'affichage du terminal.
 - **Effacement** — `presentation.clear` efface le terminal avant une réexécution qui le réutilise.
 - **Fermeture** — `presentation.close` ferme automatiquement l'onglet à la sortie, quel que soit le code de sortie.
 - **Préservation du nom du terminal** — `presentation.preserveTerminalName` conserve le label de la tâche comme titre d'onglet ; sinon, le titre du processus en cours le remplace.

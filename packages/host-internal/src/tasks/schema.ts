@@ -46,10 +46,6 @@ export interface TaskPresentation {
   preserveTerminalName?: boolean;
 }
 
-export interface NormalizedTaskPresentation extends TaskPresentation {
-  hasRevealProblems: boolean;
-}
-
 export type TaskDependsOrder = "parallel" | "sequence";
 
 export type TaskRunOn = "default" | "folderOpen" | "worktreeCreated";
@@ -77,7 +73,6 @@ export interface NormalizedTaskOsOverride {
   command?: TaskCommandValue;
   args?: TaskArgValue[];
   options?: TaskOptions;
-  hasProblemMatcher: boolean;
 }
 
 export interface NormalizedTask {
@@ -93,11 +88,10 @@ export interface NormalizedTask {
   dependsOn: NormalizedTaskDependsOn;
   dependsOrder: TaskDependsOrder;
   runOptions: TaskRunOptions;
-  presentation: NormalizedTaskPresentation;
+  presentation: TaskPresentation;
   iconId?: string;
   detail?: string;
   hide?: boolean;
-  hasProblemMatcher: boolean;
 }
 
 export interface NormalizedTaskFileDefaults {
@@ -107,8 +101,7 @@ export interface NormalizedTaskFileDefaults {
   options?: TaskOptions;
   isBackground?: boolean;
   promptOnClose?: boolean;
-  presentation?: NormalizedTaskPresentation;
-  hasProblemMatcher: boolean;
+  presentation?: TaskPresentation;
 }
 
 export interface NormalizedTaskFile {
@@ -129,11 +122,10 @@ export interface MergedTask {
   dependsOn: NormalizedTaskDependsOn;
   dependsOrder: TaskDependsOrder;
   runOptions: TaskRunOptions;
-  presentation: NormalizedTaskPresentation;
+  presentation: TaskPresentation;
   iconId?: string;
   detail?: string;
   hide?: boolean;
-  hasProblemMatcher: boolean;
 }
 
 export interface ResolvedTaskRunOptions {
@@ -180,8 +172,6 @@ export interface TaskMenuItem {
 
 export type TaskHiddenRule =
   | "invalidTask"
-  | "problemMatcher"
-  | "revealProblems"
   | "unsupportedVariable"
   | "unresolvableWorkspaceVariable"
   | "runOn"
@@ -241,7 +231,6 @@ export function normalizeTaskEntry(value: unknown): NormalizedTask | undefined {
     dependsOrder: record.dependsOrder === "sequence" ? "sequence" : "parallel",
     runOptions: normalizeTaskRunOptions(record.runOptions),
     presentation: normalizeTaskPresentation(record.presentation),
-    hasProblemMatcher: record.problemMatcher !== undefined,
   };
   const type = normalizeTaskType(record.type);
   if (type !== undefined) {
@@ -279,9 +268,7 @@ export function normalizeTaskEntry(value: unknown): NormalizedTask | undefined {
 }
 
 function normalizeFileDefaults(record: Record<string, unknown>): NormalizedTaskFileDefaults {
-  const defaults: NormalizedTaskFileDefaults = {
-    hasProblemMatcher: record.problemMatcher !== undefined,
-  };
+  const defaults: NormalizedTaskFileDefaults = {};
   const type = normalizeTaskType(record.type);
   if (type !== undefined) {
     defaults.type = type;
@@ -334,9 +321,7 @@ function normalizeOsOverride(value: unknown): NormalizedTaskOsOverride | undefin
     return undefined;
   }
   const record = value as Record<string, unknown>;
-  const block: NormalizedTaskOsOverride = {
-    hasProblemMatcher: record.problemMatcher !== undefined,
-  };
+  const block: NormalizedTaskOsOverride = {};
   const command = normalizeTaskCommand(record.command);
   if (command !== undefined) {
     block.command = command;
@@ -349,12 +334,7 @@ function normalizeOsOverride(value: unknown): NormalizedTaskOsOverride | undefin
   if (options !== undefined) {
     block.options = options;
   }
-  if (
-    block.command === undefined &&
-    block.args === undefined &&
-    block.options === undefined &&
-    !block.hasProblemMatcher
-  ) {
+  if (block.command === undefined && block.args === undefined && block.options === undefined) {
     return undefined;
   }
   return block;
@@ -451,8 +431,8 @@ export function normalizeTaskOptions(value: unknown): TaskOptions | undefined {
   return options;
 }
 
-export function normalizeTaskPresentation(value: unknown): NormalizedTaskPresentation {
-  const presentation: NormalizedTaskPresentation = { hasRevealProblems: false };
+export function normalizeTaskPresentation(value: unknown): TaskPresentation {
+  const presentation: TaskPresentation = {};
   if (!isPlainObject(value)) {
     return presentation;
   }
@@ -478,7 +458,6 @@ export function normalizeTaskPresentation(value: unknown): NormalizedTaskPresent
   if (typeof record.preserveTerminalName === "boolean") {
     presentation.preserveTerminalName = record.preserveTerminalName;
   }
-  presentation.hasRevealProblems = record.revealProblems !== undefined;
   return presentation;
 }
 
