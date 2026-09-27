@@ -61,12 +61,19 @@ test("escape quoting backslashes whitespace and quote chars without wrapping", (
   assert.equal(buildShellCommandLine({ value: "", quoting: "escape" }, []), '""');
 });
 
-test("plain string commands and args default to strong quoting", () => {
+test("plain-string commands pass to the shell verbatim, shell syntax included", () => {
+  assert.equal(buildShellCommandLine("sleep 60", []), "sleep 60");
+  assert.equal(buildShellCommandLine("exit 1", []), "exit 1");
+  assert.equal(buildShellCommandLine("echo hello > out.txt", []), "echo hello > out.txt");
+  assert.equal(buildShellCommandLine("a | b", []), "a | b");
+});
+
+test("plain-string args still default to strong quoting", () => {
   assert.equal(buildShellCommandLine("make", ["build dir", "all"]), 'make "build dir" all');
 });
 
-test("string array command joins its elements with spaces", () => {
-  assert.equal(buildShellCommandLine(["make", "build dir"], ["all"]), 'make "build dir" all');
+test("string array command joins its elements verbatim with a single space", () => {
+  assert.equal(buildShellCommandLine(["make", "build dir"], ["all"]), "make build dir all");
 });
 
 test("mixed arg forms apply per-arg quoting", () => {

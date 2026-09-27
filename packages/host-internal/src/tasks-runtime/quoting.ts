@@ -18,11 +18,12 @@ export interface TaskInvocation {
 export function buildShellCommandLine(command: TaskCommandValue, args: TaskArgValue[]): string {
   const parts: string[] = [];
   if (typeof command === "string") {
-    parts.push(quoteStrong(command));
+    // VS Code semantics: a plain-string command IS already the command line (raw shell
+    // syntax allowed) and passes to the shell verbatim; quoting applies to args and to
+    // the {value, quoting} object form — use that form to control command quoting.
+    parts.push(command);
   } else if (Array.isArray(command)) {
-    for (const element of command) {
-      parts.push(quoteStrong(element));
-    }
+    parts.push(...command);
   } else {
     parts.push(quoteValue(command.value, command.quoting));
   }
