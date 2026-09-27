@@ -26,6 +26,8 @@ export type CreateWorkspaceTaskTerminalOptions = {
   container: HTMLElement;
   bridge: WorkspaceTerminalPtyBridge;
   onTitleChange?: (title: string | undefined) => void;
+  /** Localized exit line written into the buffer when a process exits (same key as the interactive terminal). */
+  exitedMessage: (exitCode: number) => string;
   /** Pauses fit during continuous layout changes such as sidebar dragging. */
   isResizeSuspended?: () => boolean;
 };
@@ -55,7 +57,7 @@ export type WorkspaceTaskTerminalSession = {
 export function createWorkspaceTaskTerminalSession(
   options: CreateWorkspaceTaskTerminalOptions,
 ): WorkspaceTaskTerminalSession {
-  const { container, bridge, onTitleChange, isResizeSuspended } = options;
+  const { container, bridge, onTitleChange, exitedMessage, isResizeSuspended } = options;
 
   let sessionAlive = true;
   let activePtyId: string | null = null;
@@ -113,6 +115,7 @@ export function createWorkspaceTaskTerminalSession(
     onExit: (payload) => {
       if (payload.id === activePtyId) {
         activePtyId = null;
+        term.write(`\r\n\x1b[90m[${exitedMessage(payload.exitCode)}]\x1b[0m\r\n`);
         const settle = settleExit;
         settleExit = undefined;
         settle?.(payload.exitCode);

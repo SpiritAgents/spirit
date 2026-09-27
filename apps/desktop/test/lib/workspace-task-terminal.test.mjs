@@ -76,7 +76,11 @@ function createFakeBridge() {
 function createSession(bridge) {
   const container = document.createElement("div");
   document.body.appendChild(container);
-  const session = createWorkspaceTaskTerminalSession({ container, bridge });
+  const session = createWorkspaceTaskTerminalSession({
+    container,
+    bridge,
+    exitedMessage: (exitCode) => `Exited with code ${exitCode}`,
+  });
   const writes = [];
   const originalWrite = session.terminal.write.bind(session.terminal);
   session.terminal.write = (data, callback) => {
@@ -84,6 +88,10 @@ function createSession(bridge) {
     return originalWrite(data, callback);
   };
   return { session, writes, container };
+}
+
+function exitLineWrites(writes) {
+  return writes.filter((data) => typeof data === "string" && data.includes("Exited with code"));
 }
 
 const INVOCATION = { file: "/bin/echo", args: ["hello"] };
@@ -229,5 +237,62 @@ test("kill terminates the pty but keeps the xterm and settles start via the exit
   assert.equal(bridge.created.length, 2);
   bridge.emitExit("pty-2", 0);
   assert.equal(await second, 0);
+  session.dispose();
+});
+
+test("exit writes a blank line and the exit line with the real code", async () => {
+  const bridge = createFakeBridge();
+  const { session, writes } = createSession(bridge);
+  const exitPromise = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  bridge.emitExit("pty-1", 3);
+  assert.equal(await exitPromise, 3);
+  assert.deepEqual(exitLineWrites(writes), ["\r\n\x1b[90m[Exited with code 3]\x1b[0m\r\n"]);
+  session.dispose();
+});
+
+test("kill prints the exit line exactly once via the real exit event", async () => {
+  const bridge = createFakeBridge();
+  const { session, writes } = createSession(bridge);
+  const exitPromise = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  session.kill();
+  bridge.emitExit("pty-1", 143);
+  assert.equal(await exitPromise, 143);
+  assert.deepEqual(exitLineWrites(writes), ["\r\n\x1b[90m[Exited with code 143]\x1b[0m\r\n"]);
+  session.dispose();
+});
+
+test("dispose settles the pending start without printing anything", async () => {
+  const bridge = createFakeBridge();
+  const { session, writes } = createSession(bridge);
+  const exitPromise = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  session.dispose();
+  assert.equal(await exitPromise, 0);
+  assert.deepEqual(exitLineWrites(writes), []);
+});
+
+test("two sequential runs print the exit line exactly once each", async () => {
+  const bridge = createFakeBridge();
+  const { session, writes } = createSession(bridge);
+
+  const first = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  bridge.emitExit("pty-1", 0);
+  assert.equal(await first, 0);
+
+  const second = session.respawn(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  bridge.emitExit("pty-2", 2);
+  assert.equal(await second, 2);
+
+  assert.deepEqual(exitLineWrites(writes), [
+    "\r\n\x1b[90m[Exited with code 0]\x1b[0m\r\n",
+    "\r\n\x1b[90m[Exited with code 2]\x1b[0m\r\n",
+  ]);
   session.dispose();
 });

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 import "@xterm/xterm/css/xterm.css";
 
@@ -28,11 +29,16 @@ export function WorkspaceTaskTerminalTab({
   const containerRef = useRef<HTMLDivElement>(null);
   const onTitleChangeRef = useRef(onTitleChange);
   const suspendResizeRef = useRef(suspendTerminalResize);
+  const { t } = useTranslation();
+  const tRef = useRef(t);
   useEffect(() => {
     onTitleChangeRef.current = onTitleChange;
   });
   useEffect(() => {
     suspendResizeRef.current = suspendTerminalResize;
+  });
+  useEffect(() => {
+    tRef.current = t;
   });
 
   useEffect(() => {
@@ -45,6 +51,7 @@ export function WorkspaceTaskTerminalTab({
       container: el,
       bridge,
       onTitleChange: (title) => onTitleChangeRef.current?.(title),
+      exitedMessage: (exitCode) => tRef.current("workspace.terminalExited", { exitCode }),
       isResizeSuspended: () => suspendResizeRef.current,
     });
     registerTaskTerminal(tabId, { session, taskKey, running: false });
