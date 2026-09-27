@@ -152,6 +152,7 @@ export type CommandPayloads = {
   setAutomationEnabled: { automationId: string; enabled: boolean };
   listTaskMenuItems: undefined;
   resolveTaskForRun: { key: string };
+  resolveTaskByLabel: { label: string };
   replyPendingApproval: { request: ReplyPendingApprovalRequest };
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };

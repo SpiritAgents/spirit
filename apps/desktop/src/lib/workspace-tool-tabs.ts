@@ -143,12 +143,14 @@ export function addWorkspaceToolTab(
 /** Task tabs are created only by the task coordinator, never from the manual "+" menu. */
 export function addWorkspaceTaskTab(
   tabs: readonly WorkspaceToolTab[],
-  input: { taskKey: string; label: string },
+  input: { taskKey: string; label: string; pinnedTitle?: boolean },
 ): { tabs: WorkspaceToolTab[]; activeId: string } {
   const tab = createWorkspaceToolTab("task");
   tab.taskKey = input.taskKey;
   tab.tabTitle = input.label;
-  tab.pinnedTitle = true;
+  if (input.pinnedTitle === true) {
+    tab.pinnedTitle = true;
+  }
   return { tabs: [...tabs, tab], activeId: tab.id };
 }
 

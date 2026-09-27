@@ -323,6 +323,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   resolveTaskForRun(key: string) {
     return ipcRenderer.invoke("desktop:invoke", "resolveTaskForRun", { key });
   },
+  resolveTaskByLabel(label: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskByLabel", { label });
+  },
   tasksSubscribe(callback: (items: unknown) => void) {
     const onTasksUpdate = (_event: Electron.IpcRendererEvent, items: unknown) => {
       callback(items);

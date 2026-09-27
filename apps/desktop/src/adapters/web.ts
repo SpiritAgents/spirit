@@ -435,6 +435,9 @@ export function createWebHostApi(): HostApi {
     resolveTaskForRun() {
       return Promise.resolve({ status: "unsupported" as const });
     },
+    resolveTaskByLabel() {
+      return Promise.resolve({ status: "unsupported" as const });
+    },
     subscribeTasksUpdates() {
       return () => {};
     },

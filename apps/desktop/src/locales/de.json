@@ -907,6 +907,7 @@
     "browserPlaceholder": "Browser-Tab wird geladen…",
     "browserElectronOnly": "Browser ist nur in der Electron Desktop-Version verfügbar.",
     "prTab": "Pull Request",
+    "taskTab": "Task",
     "prElectronOnly": "Pull Requests sind nur in der Electron Desktop-Version verfügbar.",
     "prGitHubAuthChecking": "GitHub-Verbindung wird überprüft…",
     "prGitHubConnectLink": "Verbinden",
@@ -1096,8 +1097,10 @@
     "group": {
       "chat": "Chat",
       "mode": "Modus",
+      "workspace": "Arbeitsbereich",
       "appearance": "Erscheinungsbild"
     },
+    "runTask": "Task ausführen",
     "theme": "Design",
     "language": "Sprache",
     "back": "Zurück"

@@ -1097,8 +1097,10 @@
     "group": {
       "chat": "Chat",
       "mode": "Mode",
+      "workspace": "Workspace",
       "appearance": "Appearance"
     },
+    "runTask": "Run Task",
     "theme": "Theme",
     "language": "Language",
     "back": "Back"

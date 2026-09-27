@@ -44,6 +44,8 @@ export type WorkspaceTaskTerminalSession = {
   ) => Promise<number>;
   clear: () => void;
   focus: () => void;
+  /** Kills the live pty but keeps the xterm; the real exit event still settles start(). */
+  kill: () => void;
   isRunning: () => boolean;
   dispose: () => void;
 };
@@ -184,6 +186,13 @@ export function createWorkspaceTaskTerminalSession(
     respawn: start,
     clear: () => term.clear(),
     focus: () => term.focus(),
+    kill: () => {
+      // Keep activePtyId: the exit event delivered after the kill clears it and settles
+      // the pending start() promise.
+      if (activePtyId !== null) {
+        void bridge.ptyKill(activePtyId);
+      }
+    },
     isRunning: () => activePtyId !== null,
     dispose,
   };

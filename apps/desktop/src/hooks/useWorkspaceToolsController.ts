@@ -56,6 +56,8 @@ export function useWorkspaceToolsController({
   activeWorkspaceToolTabIdRef.current = activeWorkspaceToolTabId;
   const workspaceToolTabsRef = useRef(workspaceToolTabs);
   workspaceToolTabsRef.current = workspaceToolTabs;
+  const getWorkspaceToolTabs = useCallback(() => workspaceToolTabsRef.current, []);
+  const getActiveWorkspaceToolTabId = useCallback(() => activeWorkspaceToolTabIdRef.current, []);
   const workspaceToolsHostSyncedRef = useRef<typeof runtime.hostKind | null>(null);
   const browserTabEnabled = runtime.hostKind === "electron";
   const prTabEnabled = runtime.hostKind === "electron";
@@ -458,6 +460,8 @@ export function useWorkspaceToolsController({
     setWorkspaceToolTabs,
     activeWorkspaceToolTabId,
     setActiveWorkspaceToolTabId,
+    getWorkspaceToolTabs,
+    getActiveWorkspaceToolTabId,
     workspaceToolsWidthRatio,
     setWorkspaceToolsWidthRatio,
     browserTabEnabled,

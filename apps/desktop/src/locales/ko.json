@@ -907,6 +907,7 @@
     "browserPlaceholder": "브라우저 탭 로딩 중…",
     "browserElectronOnly": "브라우저는 Electron 데스크톱 버전에서만 사용할 수 있습니다.",
     "prTab": "Pull Request",
+    "taskTab": "작업",
     "prElectronOnly": "Pull Request는 Electron 데스크톱 버전에서만 사용할 수 있습니다.",
     "prGitHubAuthChecking": "GitHub 연결 확인 중…",
     "prGitHubConnectLink": "연결",
@@ -1096,8 +1097,10 @@
     "group": {
       "chat": "채팅",
       "mode": "모드",
+      "workspace": "작업 공간",
       "appearance": "외관"
     },
+    "runTask": "작업 실행",
     "theme": "테마",
     "language": "언어",
     "back": "뒤로"

@@ -26,6 +26,9 @@ export interface TaskRunResolver {
   resolveTaskForRun(
     input: TasksCommandContext & { key: string },
   ): Promise<DesktopResolveTaskForRunResult>;
+  resolveTaskByLabel(
+    input: TasksCommandContext & { label: string },
+  ): Promise<DesktopResolveTaskForRunResult>;
 }
 
 export async function listTaskMenuItemsCommand(
@@ -39,6 +42,19 @@ export async function listTaskMenuItemsCommand(
 // resolution for every later rerun; all other tasks resolve fresh per call.
 export function createTaskRunResolver(): TaskRunResolver {
   const cachedByKey = new Map<string, { task: ResolvedTask; defaultShell: TaskShellDefinition }>();
+
+  const finish = (task: ResolvedTask): DesktopResolveTaskForRunResult => {
+    const cached = cachedByKey.get(task.key);
+    if (cached !== undefined) {
+      return { status: "ok", task: cached.task, defaultShell: cached.defaultShell };
+    }
+    const defaultShell = defaultTaskShell();
+    if (task.runOptions.reevaluateOnRerun === false) {
+      cachedByKey.set(task.key, { task, defaultShell });
+    }
+    return { status: "ok", task, defaultShell };
+  };
+
   return {
     async resolveTaskForRun(input) {
       const cached = cachedByKey.get(input.key);
@@ -50,11 +66,15 @@ export function createTaskRunResolver(): TaskRunResolver {
       if (task === undefined) {
         return { status: "notFound" };
       }
-      const defaultShell = defaultTaskShell();
-      if (task.runOptions.reevaluateOnRerun === false) {
-        cachedByKey.set(input.key, { task, defaultShell });
+      return finish(task);
+    },
+    async resolveTaskByLabel(input) {
+      const result = await loadAndResolveTasks(input);
+      const task = result.tasks.find((candidate) => candidate.label === input.label);
+      if (task === undefined) {
+        return { status: "notFound" };
       }
-      return { status: "ok", task, defaultShell };
+      return finish(task);
     },
   };
 }

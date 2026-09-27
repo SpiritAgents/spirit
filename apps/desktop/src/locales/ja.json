@@ -907,6 +907,7 @@
     "browserPlaceholder": "ブラウザタブ読み込み中…",
     "browserElectronOnly": "ブラウザは Electron デスクトップ版でのみ利用可能です。",
     "prTab": "プルリクエスト",
+    "taskTab": "タスク",
     "prElectronOnly": "プルリクエストは Electron デスクトップ版でのみ利用可能です。",
     "prGitHubAuthChecking": "GitHub 接続を確認中…",
     "prGitHubConnectLink": "接続",
@@ -1096,8 +1097,10 @@
     "group": {
       "chat": "チャット",
       "mode": "モード",
+      "workspace": "ワークスペース",
       "appearance": "外観"
     },
+    "runTask": "タスクを実行",
     "theme": "テーマ",
     "language": "言語",
     "back": "戻る"
