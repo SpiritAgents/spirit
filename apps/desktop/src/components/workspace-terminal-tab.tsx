@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import "@xterm/xterm/css/xterm.css";
 
 import { Button } from "@/components/ui/button";
+import { WorkspaceTerminalContextMenu } from "@/components/workspace-terminal-context-menu";
 import { TerminalSelectionMenu } from "@/components/workspace-terminal-selection-menu";
 import { createWorkspaceTerminalSession } from "@/lib/workspace-xterm";
 import { desktopTranslucencyTerminalTintClass } from "@/lib/desktop-translucency-surface";
@@ -131,14 +132,16 @@ export function WorkspaceTerminalTab({
           </div>
         </div>
       ) : null}
-      <div
-        ref={containerRef}
-        className={cn(
-          "workspace-terminal-xterm min-h-0 min-w-0 flex-1 overflow-hidden",
-          desktopTranslucencyTerminalTintClass(useTranslucency),
-          embedError ? "hidden" : "block",
-        )}
-      />
+      <WorkspaceTerminalContextMenu terminal={terminal}>
+        <div
+          ref={containerRef}
+          className={cn(
+            "workspace-terminal-xterm min-h-0 min-w-0 flex-1 overflow-hidden",
+            desktopTranslucencyTerminalTintClass(useTranslucency),
+            embedError ? "hidden" : "block",
+          )}
+        />
+      </WorkspaceTerminalContextMenu>
       <TerminalSelectionMenu
         containerRef={containerRef}
         terminal={terminal}
