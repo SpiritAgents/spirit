@@ -83,6 +83,8 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopApprovalDecision,
@@ -365,6 +367,12 @@ import {
   setAutomationEnabledCommand,
   updateAutomationCommand,
 } from "./host-automation-commands.js";
+import {
+  createTaskRunResolver,
+  listTaskMenuItemsCommand,
+  type TaskRunResolver,
+} from "./host-tasks-commands.js";
+import { TasksWatcher } from "./tasks-watcher.js";
 import {
   clearAssistantContinuationMarkers as clearAssistantContinuationMarkersFromService,
   latestContinuableAssistantMessage as latestContinuableAssistantMessageFromService,
@@ -657,6 +665,11 @@ class DesktopHostService {
   private readonly dreamUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly automationUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly sessionListUpdateListeners = new Set<() => void>();
+  private readonly tasksUpdateListeners = new Set<(items: DesktopTaskMenuItem[]) => void>();
+  private readonly taskRunResolver: TaskRunResolver = createTaskRunResolver();
+  private readonly tasksWatcher = new TasksWatcher(() => {
+    void this.refreshTasksFromDisk();
+  });
   private subagentViewerTargetToolCallId: string | null = null;
   private gitRefreshInFlight: Promise<void> | null = null;
   private workspaceContentInvalidation: WorkspaceContentInvalidation | undefined;
@@ -1555,6 +1568,14 @@ class DesktopHostService {
     this.startAutomationSchedulerMonitorIfNeeded();
     return () => {
       this.automationUpdateListeners.delete(listener);
+    };
+  }
+
+  subscribeTasksUpdates(listener: (items: DesktopTaskMenuItem[]) => void): () => void {
+    this.tasksUpdateListeners.add(listener);
+    this.syncTasksWatcher();
+    return () => {
+      this.tasksUpdateListeners.delete(listener);
     };
   }
 
@@ -2510,6 +2531,17 @@ class DesktopHostService {
     return getAutomationCommand(automationId);
   }
 
+  async listTaskMenuItems(): Promise<DesktopTaskMenuItem[]> {
+    return listTaskMenuItemsCommand({ workspaceRoot: this.state?.workspaceRoot });
+  }
+
+  async resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskForRun({
+      workspaceRoot: this.state?.workspaceRoot,
+      key,
+    });
+  }
+
   async createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot> {
     return this.runSerialized(async () => {
       await createAutomationCommand(request);
@@ -3417,6 +3449,24 @@ class DesktopHostService {
     }
   }
 
+  private syncTasksWatcher(): void {
+    this.tasksWatcher.sync({
+      workspaceRoot: this.state?.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
+    });
+  }
+
+  private async refreshTasksFromDisk(): Promise<void> {
+    const items = await listTaskMenuItemsCommand({ workspaceRoot: this.state?.workspaceRoot });
+    this.emitTasksUpdate(items);
+  }
+
+  private emitTasksUpdate(items: DesktopTaskMenuItem[]): void {
+    for (const listener of this.tasksUpdateListeners) {
+      listener(items);
+    }
+  }
+
   private setDreamCollectorStatus(next: DesktopDreamCollectorSnapshot): void {
     if (sameDreamCollectorSnapshot(this.dreamCollectorStatus, next)) {
       return;
@@ -4084,6 +4134,7 @@ class DesktopHostService {
     state.workspaceRoot = resolved;
     state.git = applyGitRevision(await readWorkspaceGitSnapshot(resolved), 0, { reset: true });
     bundle.workspaceRoot = resolved;
+    this.syncTasksWatcher();
     await this.syncPlanStateForBundle(bundle);
 
     if (options?.deferHeavyWork) {
@@ -4156,6 +4207,7 @@ class DesktopHostService {
     bundle.workspaceRoot = home;
     bundle.workspaceBinding = "none";
     bundle.scopedGit = undefined;
+    this.syncTasksWatcher();
 
     state.config = {
       ...state.config,
@@ -4880,6 +4932,7 @@ class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
       if (!bundle.activeSession || bundle.activeSession.kind === "ephemeral") {
         continue;
@@ -4950,6 +5003,12 @@ export function subscribeDesktopAutomationsUpdates(
 
 export function subscribeDesktopSessionListUpdates(listener: () => void): () => void {
   return desktopHostService.subscribeSessionListUpdates(listener);
+}
+
+export function subscribeDesktopTasksUpdates(
+  listener: (items: DesktopTaskMenuItem[]) => void,
+): () => void {
+  return desktopHostService.subscribeTasksUpdates(listener);
 }
 
 export async function shutdownDesktopHostService(): Promise<void> {

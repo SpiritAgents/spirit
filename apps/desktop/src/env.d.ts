@@ -152,6 +152,11 @@ declare global {
     ): Promise<DesktopSnapshot>;
     deleteAutomation(automationId: string): Promise<DesktopSnapshot>;
     setAutomationEnabled(automationId: string, enabled: boolean): Promise<DesktopSnapshot>;
+    listTaskMenuItems(): Promise<import("./types.js").DesktopTaskMenuItem[]>;
+    resolveTaskForRun(key: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    tasksSubscribe(
+      callback: (items: import("./types.js").DesktopTaskMenuItem[]) => void,
+    ): () => void;
     dreamSubscribe(callback: (update: DesktopLiveUpdate) => void): () => void;
     automationsSubscribe(callback: (snapshot: DesktopSnapshot) => void): () => void;
     sessionListSubscribe(callback: () => void): () => void;

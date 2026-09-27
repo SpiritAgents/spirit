@@ -206,6 +206,15 @@ export async function createElectronHostApi(): Promise<HostApi> {
     setAutomationEnabled(automationId, enabled) {
       return bridge.setAutomationEnabled(automationId, enabled);
     },
+    listTaskMenuItems() {
+      return bridge.listTaskMenuItems();
+    },
+    resolveTaskForRun(key) {
+      return bridge.resolveTaskForRun(key);
+    },
+    subscribeTasksUpdates(callback) {
+      return bridge.tasksSubscribe(callback);
+    },
     subscribeDreamUpdates(callback) {
       return bridge.dreamSubscribe(callback);
     },

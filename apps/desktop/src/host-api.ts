@@ -19,6 +19,8 @@ import type {
   DeleteRuleRequest,
   DesktopAutomationDetail,
   DesktopAutomationListItem,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopCreateAutomationRequest,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
@@ -229,6 +231,9 @@ export interface HostApi {
   subscribeDreamUpdates?(callback: (update: DesktopLiveUpdate) => void): () => void;
   subscribeAutomationsUpdates?(callback: (snapshot: DesktopSnapshot) => void): () => void;
   subscribeSessionListUpdates?(callback: () => void): () => void;
+  listTaskMenuItems(): Promise<DesktopTaskMenuItem[]>;
+  resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult>;
+  subscribeTasksUpdates?(callback: (items: DesktopTaskMenuItem[]) => void): () => void;
   replyPendingApproval(request: ReplyPendingApprovalRequest): Promise<DesktopSnapshot>;
   replyPendingQuestions(request: ReplyPendingQuestionsRequest): Promise<DesktopSnapshot>;
   replyWorkspaceCapabilityTrust(

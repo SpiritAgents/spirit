@@ -79,6 +79,7 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopMcpServerInspection,
@@ -459,6 +460,7 @@ export function useDesktopRuntime() {
   const [paneSendBusySessionPath, setPaneSendBusySessionPath] = useState<string | null>(null);
   const [layoutNavigationPending, setLayoutNavigationPendingState] = useState(false);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [taskMenuItems, setTaskMenuItems] = useState<DesktopTaskMenuItem[]>([]);
   const [unseenCompletedSessionPaths, setUnseenCompletedSessionPaths] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -1579,6 +1581,37 @@ export function useDesktopRuntime() {
       void refreshSessions();
     });
   }, [api, applySnapshot, refreshSessions]);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    let cancelled = false;
+    api
+      .listTaskMenuItems()
+      .then((items) => {
+        if (!cancelled) {
+          setTaskMenuItems(items);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskMenuItems([]);
+        }
+      });
+    if (!api.subscribeTasksUpdates) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const unsubscribe = api.subscribeTasksUpdates((items) => {
+      setTaskMenuItems(items);
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [api, snapshot?.workspaceRoot]);
 
   useEffect(() => {
     if (!api?.subscribeSessionListUpdates) {
@@ -4033,6 +4066,7 @@ export function useDesktopRuntime() {
     setAutomationEnabled,
     runtimeError,
     sessions,
+    taskMenuItems,
     unseenCompletedSessionPaths,
     settings,
     snapshot,
