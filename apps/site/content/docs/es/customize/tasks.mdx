@@ -27,6 +27,20 @@ Las tres fuentes se combinan en un solo espacio de nombres. Cuando varias fuente
 
 `.vscode/tasks.json` se analiza con tolerancia, porque los archivos del mundo real son JSONC: se aceptan comentarios `//` y `/* */` y comas finales. Los archivos propios de Spirit son JSON estricto — un comentario invalida el archivo.
 
+## Confianza en el espacio de trabajo
+
+Los archivos de tareas del espacio de trabajo llegan con el repositorio, así que son datos no confiables: `.spirit/tasks.json` y `.vscode/tasks.json` solo se cargan después de que apruebes el contenido del espacio de trabajo. El `tasks.json` a nivel de usuario (directorio de datos de Spirit) es implícitamente confiable y siempre se carga.
+
+Cuando Spirit Desktop detecta archivos de tareas del espacio de trabajo (o un cambio en ellos), pregunta una vez: el diálogo lista las tareas que estarán disponibles con sus comandos, y al hacer clic en una entrada se abre el archivo de origen. Si los hooks del espacio de trabajo también necesitan aprobación, ambas listas aparecen en un solo diálogo combinado.
+
+- **Permitir una vez** — las tareas se cargan solo para esta sesión.
+- **Confiar siempre** — se recuerda para este contenido exacto del archivo.
+- **Denegar** — las tareas del espacio de trabajo siguen sin estar disponibles; la denegación se recuerda para ese contenido exacto en esta sesión.
+
+Editar cualquiera de los archivos vuelve a preguntar (la aprobación está ligada al hash del contenido). Para recuperarte de una denegación, edita el archivo (se te volverá a preguntar) o reinicia la app.
+
+Esta barrera es el prerrequisito estructural de cualquier futuro disparador de ejecución automática (`runOn`), que hoy sigue deshabilitado.
+
 ## Campos
 
 Comportamiento por campo, evaluado después de la combinación: valores predeterminados a nivel de archivo < bloque de SO a nivel de archivo < tarea < bloque de SO a nivel de tarea.
