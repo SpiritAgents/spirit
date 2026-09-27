@@ -1089,10 +1089,9 @@
     "forceDeleteConfirmDescription": "Não foi possível mover para o lixo: {{reason}}. Esta ação não pode ser desfeita."
   },
   "task": {
-    "instanceLimitTitle": "Tarefa já em execução",
-    "instanceLimitDescription": "“{{label}}” já está em execução. Iniciar uma nova instância paralela ou encerrar a instância em execução e substituí-la?",
-    "instanceLimitNew": "Nova instância paralela",
-    "instanceLimitReplace": "Encerrar instância antiga",
+    "instanceLimitTitle": "“{{label}}” já está em execução.",
+    "instanceLimitDescription": "Substituir encerrará a instância selecionada e iniciará uma nova.",
+    "instanceLimitReplace": "Substituir",
     "terminateConfirmTitle": "Encerrar tarefa?",
     "terminateConfirmDescription": "“{{label}}” ainda está em execução. Fechar a aba e encerrá-la?",
     "terminateConfirmAction": "Encerrar"

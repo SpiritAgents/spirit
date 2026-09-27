@@ -1089,10 +1089,9 @@
     "forceDeleteConfirmDescription": "No se pudo mover a la papelera: {{reason}}. Esta acción no se puede deshacer."
   },
   "task": {
-    "instanceLimitTitle": "Tarea ya en ejecución",
-    "instanceLimitDescription": "«{{label}}» ya se está ejecutando. ¿Iniciar una nueva instancia en paralelo o terminar la instancia en ejecución y reemplazarla?",
-    "instanceLimitNew": "Nueva instancia en paralelo",
-    "instanceLimitReplace": "Terminar instancia anterior",
+    "instanceLimitTitle": "«{{label}}» ya se está ejecutando.",
+    "instanceLimitDescription": "Reemplazar terminará la instancia seleccionada e iniciará una nueva.",
+    "instanceLimitReplace": "Reemplazar",
     "terminateConfirmTitle": "¿Terminar tarea?",
     "terminateConfirmDescription": "«{{label}}» sigue en ejecución. ¿Cerrar la pestaña y terminarla?",
     "terminateConfirmAction": "Terminar"

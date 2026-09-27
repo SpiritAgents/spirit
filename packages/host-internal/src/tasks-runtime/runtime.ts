@@ -1,5 +1,5 @@
 import type { ResolvedTask } from "../tasks/public.js";
-import { TaskInstanceRegistry } from "./instances.js";
+import { TaskInstanceRegistry, type ActiveTaskInstance } from "./instances.js";
 import { TaskTerminalPool, type TaskTerminalClaim } from "./pool.js";
 import {
   computeExitIntent,
@@ -23,8 +23,13 @@ export interface TaskRunHost {
   }): Promise<TaskProcessHandle>;
   waitForExit(handle: TaskProcessHandle): Promise<number>;
   terminate(handle: TaskProcessHandle): Promise<void>;
-  promptInstanceLimit(task: ResolvedTask, active: number): Promise<"new" | "replace" | "cancel">;
+  promptInstanceLimit(
+    task: ResolvedTask,
+    activeInstances: ActiveTaskInstance[],
+  ): Promise<TaskInstanceLimitChoice>;
 }
+
+export type TaskInstanceLimitChoice = { kind: "replace"; instanceKey: string } | { kind: "cancel" };
 
 export type TaskRunOutcome =
   | { status: "completed"; exitCode: number; exitIntent: TaskExitIntent; terminalId: string }
@@ -109,26 +114,24 @@ export class TaskRunCoordinator {
   private async acquireForMainTask(
     task: ResolvedTask,
   ): Promise<{ instanceKey: string } | { outcome: TaskRunOutcome }> {
-    let limit = task.runOptions.instanceLimit;
     for (;;) {
-      const acquired = this.instances.tryAcquire(task.key, limit);
+      const acquired = this.instances.tryAcquire(task.key, task.runOptions.instanceLimit);
       if (acquired.status === "acquired") {
         return { instanceKey: acquired.instanceKey };
       }
-      const choice = await this.options.host.promptInstanceLimit(task, acquired.active.length);
-      if (choice === "cancel") {
+      const choice = await this.options.host.promptInstanceLimit(task, acquired.active);
+      if (choice.kind === "cancel") {
         return { outcome: { status: "cancelled" } };
       }
-      if (choice === "new") {
-        // The user explicitly chose a parallel instance, so the limit no longer applies.
-        limit = acquired.active.length + 1;
-        continue;
+      // The selected instance may have exited meanwhile; terminating is then a no-op and
+      // the next acquire simply takes the freed slot.
+      if (
+        this.instances
+          .activeInstances(task.key)
+          .some((entry) => entry.instanceKey === choice.instanceKey)
+      ) {
+        await this.terminateInstance(choice.instanceKey);
       }
-      const oldest = this.instances.oldestActive(task.key);
-      if (oldest === undefined) {
-        return { outcome: { status: "error", message: `No active instance of "${task.label}".` } };
-      }
-      await this.terminateInstance(oldest);
     }
   }
 

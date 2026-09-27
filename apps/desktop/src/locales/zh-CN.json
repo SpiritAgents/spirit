@@ -1086,10 +1086,9 @@
     "forceDeleteConfirmDescription": "无法移到回收站：{{reason}}。此操作无法撤销。"
   },
   "task": {
-    "instanceLimitTitle": "任务已在运行",
-    "instanceLimitDescription": "“{{label}}”已在运行。要启动新的并行实例，或终止正在运行的实例并替换它吗？",
-    "instanceLimitNew": "新建并行实例",
-    "instanceLimitReplace": "终止旧实例",
+    "instanceLimitTitle": "“{{label}}”已在运行。",
+    "instanceLimitDescription": "替换将终止所选实例，并启动新实例。",
+    "instanceLimitReplace": "替换",
     "terminateConfirmTitle": "终止任务？",
     "terminateConfirmDescription": "“{{label}}”仍在运行。关闭分页并终止它吗？",
     "terminateConfirmAction": "终止"

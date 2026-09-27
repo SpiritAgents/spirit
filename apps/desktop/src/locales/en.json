@@ -1089,10 +1089,9 @@
     "forceDeleteConfirmDescription": "Could not move to trash: {{reason}}. This cannot be undone."
   },
   "task": {
-    "instanceLimitTitle": "Task Already Running",
-    "instanceLimitDescription": "“{{label}}” is already running. Start a new parallel instance, or terminate the running instance and replace it?",
-    "instanceLimitNew": "New Parallel Instance",
-    "instanceLimitReplace": "Terminate Old Instance",
+    "instanceLimitTitle": "“{{label}}” is already running.",
+    "instanceLimitDescription": "Replace terminates the selected instance and starts a new one.",
+    "instanceLimitReplace": "Replace",
     "terminateConfirmTitle": "Terminate Task?",
     "terminateConfirmDescription": "“{{label}}” is still running. Close the tab and terminate it?",
     "terminateConfirmAction": "Terminate"

@@ -1093,10 +1093,9 @@
     "forceDeleteConfirmDescription": "Не удалось переместить в корзину: {{reason}}. Это действие необратимо."
   },
   "task": {
-    "instanceLimitTitle": "Задача уже запущена",
-    "instanceLimitDescription": "«{{label}}» уже запущена. Запустить новый параллельный экземпляр или завершить текущий и заменить его?",
-    "instanceLimitNew": "Новый параллельный экземпляр",
-    "instanceLimitReplace": "Завершить старый экземпляр",
+    "instanceLimitTitle": "«{{label}}» уже запущена.",
+    "instanceLimitDescription": "Заменить завершит выбранный экземпляр и запустит новый.",
+    "instanceLimitReplace": "Заменить",
     "terminateConfirmTitle": "Завершить задачу?",
     "terminateConfirmDescription": "«{{label}}» ещё выполняется. Закрыть вкладку и завершить её?",
     "terminateConfirmAction": "Завершить"

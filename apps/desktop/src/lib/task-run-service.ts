@@ -1,6 +1,7 @@
 import type { ResolvedTask } from "@spiritagent/host-internal/tasks";
 import {
   TaskRunCoordinator,
+  type ActiveTaskInstance,
   type TaskInvocation,
   type TaskLaunchIntent,
   type TaskProcessHandle,
@@ -39,11 +40,19 @@ export type TaskRunServiceDeps = {
 
 type TaskShellPair = { executable: string; args: string[] };
 
-export type TaskInstanceLimitChoice = "new" | "replace" | "cancel";
+export type TaskInstanceLimitChoice = { kind: "replace"; instanceKey: string } | { kind: "cancel" };
+
+export interface TaskInstanceLimitPromptInstance {
+  instanceKey: string;
+  /** 1 for the first concurrent instance (base key), 2, 3, … for parallel ones. */
+  instance: number;
+  /** ISO timestamp for display timers. */
+  startedAt: string;
+}
 
 export type TaskInstanceLimitPrompt = {
   task: ResolvedTask;
-  active: number;
+  activeInstances: TaskInstanceLimitPromptInstance[];
   resolve: (choice: TaskInstanceLimitChoice) => void;
 };
 
@@ -271,14 +280,25 @@ class DesktopTaskRunHost implements TaskRunHost {
     getTaskTerminal(handle.terminalId)?.session.kill();
   }
 
-  async promptInstanceLimit(task: ResolvedTask, active: number): Promise<TaskInstanceLimitChoice> {
+  async promptInstanceLimit(
+    task: ResolvedTask,
+    activeInstances: ActiveTaskInstance[],
+  ): Promise<TaskInstanceLimitChoice> {
     // One prompt at a time: a second limit hit while the dialog is open cancels the new
     // run immediately rather than queueing behind the open dialog.
     if (pendingInstanceLimitPrompt !== undefined) {
-      return "cancel";
+      return { kind: "cancel" };
     }
     return new Promise<TaskInstanceLimitChoice>((resolve) => {
-      pendingInstanceLimitPrompt = { task, active, resolve };
+      pendingInstanceLimitPrompt = {
+        task,
+        activeInstances: activeInstances.map((entry) => ({
+          instanceKey: entry.instanceKey,
+          instance: entry.instance,
+          startedAt: new Date(entry.startedAt).toISOString(),
+        })),
+        resolve,
+      };
       notifyInstanceLimitPromptListeners();
     });
   }

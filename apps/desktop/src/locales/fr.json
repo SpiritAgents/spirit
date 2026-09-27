@@ -1089,10 +1089,9 @@
     "forceDeleteConfirmDescription": "Impossible de déplacer vers la corbeille : {{reason}}. Cette action est irréversible."
   },
   "task": {
-    "instanceLimitTitle": "Tâche déjà en cours",
-    "instanceLimitDescription": "« {{label}} » est déjà en cours d'exécution. Démarrer une nouvelle instance parallèle, ou terminer l'instance en cours et la remplacer ?",
-    "instanceLimitNew": "Nouvelle instance parallèle",
-    "instanceLimitReplace": "Terminer l'ancienne instance",
+    "instanceLimitTitle": "« {{label}} » est déjà en cours d'exécution.",
+    "instanceLimitDescription": "Remplacer terminera l'instance sélectionnée et démarrera une nouvelle instance.",
+    "instanceLimitReplace": "Remplacer",
     "terminateConfirmTitle": "Terminer la tâche ?",
     "terminateConfirmDescription": "« {{label}} » est encore en cours. Fermer l'onglet et la terminer ?",
     "terminateConfirmAction": "Terminer"

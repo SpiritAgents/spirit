@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { ResolvedTask } from "../tasks/public.js";
+import type { ActiveTaskInstance } from "./instances.js";
 import type { TaskTerminalClaim } from "./pool.js";
 import type { TaskLaunchIntent } from "./presentation.js";
 import type { TaskInvocation } from "./quoting.js";
-import { TaskRunCoordinator, type TaskProcessHandle, type TaskRunHost } from "./runtime.js";
+import {
+  TaskRunCoordinator,
+  type TaskInstanceLimitChoice,
+  type TaskProcessHandle,
+  type TaskRunHost,
+} from "./runtime.js";
 
 interface StartRequest {
   task: ResolvedTask;
@@ -19,8 +25,10 @@ class FakeHost implements TaskRunHost {
   readonly started: StartRequest[] = [];
   readonly terminated: string[] = [];
   readonly terminalIds: string[] = [];
-  readonly promptCalls: { task: ResolvedTask; active: number }[] = [];
-  promptChoice: "new" | "replace" | "cancel" = "cancel";
+  readonly promptCalls: { task: ResolvedTask; activeInstances: ActiveTaskInstance[] }[] = [];
+  promptAnswer: (activeInstances: ActiveTaskInstance[]) => TaskInstanceLimitChoice = () => ({
+    kind: "cancel",
+  });
   private readonly exits = new Map<
     string,
     { promise: Promise<number>; resolve: (code: number) => void }
@@ -48,9 +56,12 @@ class FakeHost implements TaskRunHost {
     return Promise.resolve();
   }
 
-  promptInstanceLimit(task: ResolvedTask, active: number): Promise<"new" | "replace" | "cancel"> {
-    this.promptCalls.push({ task, active });
-    return Promise.resolve(this.promptChoice);
+  promptInstanceLimit(
+    task: ResolvedTask,
+    activeInstances: ActiveTaskInstance[],
+  ): Promise<TaskInstanceLimitChoice> {
+    this.promptCalls.push({ task, activeInstances });
+    return Promise.resolve(this.promptAnswer(activeInstances));
   }
 
   resolveExit(terminalId: string, code: number): void {
@@ -269,58 +280,95 @@ test("an already-active dependency is awaited instead of restarted", async () =>
   assert.equal((await runB).status, "completed");
 });
 
-test("instance limit prompt cancel starts nothing new", async () => {
+test("instance limit prompt receives the ordered active instances with numbers and stamps", async () => {
   const task = makeTask("build");
   const { host, coordinator } = setup([task]);
-  host.promptChoice = "cancel";
+  const before = Date.now();
   const first = coordinator.run(task);
   await tick();
   const second = coordinator.run(task);
   assert.equal((await second).status, "cancelled");
-  assert.deepEqual(
-    host.promptCalls.map((call) => call.active),
-    [1],
-  );
+  assert.equal(host.promptCalls.length, 1);
+  const active = host.promptCalls[0]!.activeInstances;
+  assert.equal(active.length, 1);
+  assert.equal(active[0]!.instanceKey, task.key);
+  assert.equal(active[0]!.instance, 1);
+  assert.ok(active[0]!.startedAt >= before && active[0]!.startedAt <= Date.now());
   assert.equal(host.started.length, 1);
   assert.equal(coordinator.activeInstanceCount(task.key), 1);
   host.resolveExit("term-1", 0);
   await first;
 });
 
-test("instance limit prompt new allocates a parallel instance regardless of the limit", async () => {
+test("instance limit prompt never offers a way past the limit", async () => {
   const task = makeTask("build");
   const { host, coordinator } = setup([task]);
-  host.promptChoice = "new";
+  host.promptAnswer = () => ({ kind: "cancel" });
+  const first = coordinator.run(task);
+  await tick();
+  const second = coordinator.run(task);
+  assert.equal((await second).status, "cancelled");
+  assert.equal(coordinator.activeInstanceCount(task.key), 1);
+  host.resolveExit("term-1", 0);
+  await first;
+});
+
+test("instance limit replace terminates the selected instance, not the oldest", async () => {
+  const task = makeTask("build", {
+    runOptions: { reevaluateOnRerun: true, instanceLimit: 2 },
+  });
+  const { host, coordinator } = setup([task]);
   const first = coordinator.run(task);
   await tick();
   const second = coordinator.run(task);
   await tick();
   assert.equal(host.started.length, 2);
-  assert.equal(host.started[1]!.instanceKey, `${task.key}|2`);
+
+  // Third run exceeds the limit; the prompt lists both instances in start order.
+  host.promptAnswer = (activeInstances) => ({
+    kind: "replace",
+    instanceKey: activeInstances[1]!.instanceKey,
+  });
+  const third = coordinator.run(task);
+  await tick();
+  assert.equal(host.promptCalls.length, 1);
+  assert.deepEqual(
+    host.promptCalls[0]!.activeInstances.map((entry) => entry.instanceKey),
+    [task.key, `${task.key}|2`],
+  );
+  // The second (selected) instance is terminated; the oldest keeps running.
+  assert.deepEqual(host.terminated, ["term-2"]);
+  assert.equal(host.started.length, 3);
+  assert.equal(host.started[2]!.instanceKey, `${task.key}|2`);
   assert.equal(coordinator.activeInstanceCount(task.key), 2);
+
   host.resolveExit("term-1", 0);
-  host.resolveExit("term-2", 0);
+  host.resolveExit(host.terminalIds[2]!, 0);
   assert.equal((await first).status, "completed");
   assert.equal((await second).status, "completed");
+  assert.equal((await third).status, "completed");
   assert.equal(coordinator.activeInstanceCount(task.key), 0);
 });
 
-test("instance limit prompt replace terminates the oldest instance first", async () => {
+test("instance limit replace is a graceful no-op when the selected instance already exited", async () => {
   const task = makeTask("build");
   const { host, coordinator } = setup([task]);
-  host.promptChoice = "replace";
   const first = coordinator.run(task);
   await tick();
+
+  // The instance exits between the over-limit check and the prompt answer.
+  host.promptAnswer = () => {
+    host.resolveExit("term-1", 0);
+    return { kind: "replace", instanceKey: task.key };
+  };
   const second = coordinator.run(task);
   await tick();
-  assert.deepEqual(host.terminated, ["term-1"]);
+  assert.equal(host.terminated.length, 0);
   assert.equal(host.started.length, 2);
   assert.equal(host.started[1]!.instanceKey, task.key);
-  // The first run's exit offered term-1 back to the pool, so the replacement reuses it.
   host.resolveExit(host.terminalIds[1]!, 0);
-  assert.equal((await first).status, "completed");
-  assert.equal((await second).status, "completed");
-  assert.equal(coordinator.activeInstanceCount(task.key), 0);
+  await first;
+  await second;
 });
 
 test("an idle terminal of the same key is reused for the next run", async () => {
