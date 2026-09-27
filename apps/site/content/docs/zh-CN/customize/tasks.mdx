@@ -33,27 +33,27 @@ Spirit 任务是自己的一套系统，不是 VS Code Tasks。它读取严格 J
 
 ### 核心字段
 
-| 字段                                  | 行为 | 备注                                                                                                                                                          |
-| ------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`                               | 必填 | 没有非空 label 的条目会被整个丢弃——不会进菜单，也不会进依赖图                                                                                                 |
-| `type`                                | 支持 | `shell`（默认）或 `process`。其他任何字符串（`npm`、`grunt`、…）都是扩展定制条目，会被完全忽略：不隐藏、不列出，同级条目不受影响                              |
-| `command`                             | 支持 | `string`、`string[]` 或 `{ value, quoting }`。合并后 command 缺失的任务会被隐藏——`shell` 任务也一样（比 VS Code 更严格）                                      |
-| `args`                                | 支持 | 由 `string` 或 `{ value, quoting }` 组成的数组                                                                                                                |
-| `quoting`                             | 支持 | `escape`、`strong`（默认）或 `weak`；非法值回落到 `strong`。作用于 shell 命令行                                                                               |
-| `options.cwd`                         | 支持 | 进程的工作目录                                                                                                                                                |
-| `options.env`                         | 支持 | 额外的环境变量，合并覆盖在宿主环境之上                                                                                                                        |
-| `options.shell`                       | 支持 | `{ executable, args }`——`shell` 任务使用的 shell，代替默认终端 shell                                                                                          |
-| `windows` / `osx` / `linux`（任务级） | 支持 | 当前 OS 的 `{ command, args, options }` 覆盖。当前 OS 块内带 `problemMatcher` 也会隐藏该任务                                                                  |
-| `windows` / `osx` / `linux`（文件级） | 支持 | 形状相同，作为文件内每个任务的 OS 特定默认层                                                                                                                  |
-| 文件级默认值                          | 支持 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可以作为文件级默认值。文件级 `problemMatcher` 会隐藏文件内所有任务 |
-| `isBackground`                        | 支持 | 退出视为用户终止，永远不算失败。依赖它的其他任务会被隐藏（见下文）                                                                                            |
-| `promptOnClose`                       | 支持 | 进程还活着时关闭标签页会要求确认                                                                                                                              |
-| `dependsOn`                           | 支持 | 一个 label 字符串，或 label 字符串数组。对象形式（`{ "type": … }`、`{ "task": … }`）会隐藏该任务                                                              |
-| `dependsOrder`                        | 支持 | `parallel`（默认）或 `sequence`                                                                                                                               |
-| `detail`                              | 支持 | 在命令面板列表中显示在 label 旁边                                                                                                                             |
-| `icon.id`                             | 支持 | 菜单图标：先找 Spirit Icons，再找 Lucide，找不到就用终端字形兜底                                                                                              |
-| `icon.color`                          | 忽略 | 纯展示用途                                                                                                                                                    |
-| `hide`                                | 支持 | 从命令面板列表隐藏，但仍可解析——该任务可以作为 `dependsOn` 依赖运行                                                                                           |
+| 字段                                  | 行为 | 备注                                                                                                                                                                                |
+| ------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                               | 必填 | 没有非空 label 的条目会被整个丢弃——不会进菜单，也不会进依赖图                                                                                                                       |
+| `type`                                | 支持 | `shell`（默认）或 `process`。其他任何字符串（`npm`、`grunt`、…）都是扩展定制条目，会被完全忽略：不隐藏、不列出，同级条目不受影响                                                    |
+| `command`                             | 支持 | `string`、`string[]` 或 `{ value, quoting }`。合并后 command 缺失的任务会被隐藏——`shell` 任务也一样（比 VS Code 更严格）                                                            |
+| `args`                                | 支持 | 由 `string` 或 `{ value, quoting }` 组成的数组                                                                                                                                      |
+| `quoting`                             | 支持 | `escape`、`strong`（默认）或 `weak`；非法值回落到 `strong`。仅作用于 `args` 和对象形式 `{ value, quoting }`；纯字符串形式的 `command` 会原样传给 shell，因此可以包含原生 shell 语法 |
+| `options.cwd`                         | 支持 | 进程的工作目录                                                                                                                                                                      |
+| `options.env`                         | 支持 | 额外的环境变量，合并覆盖在宿主环境之上                                                                                                                                              |
+| `options.shell`                       | 支持 | `{ executable, args }`——`shell` 任务使用的 shell，代替默认终端 shell                                                                                                                |
+| `windows` / `osx` / `linux`（任务级） | 支持 | 当前 OS 的 `{ command, args, options }` 覆盖。当前 OS 块内带 `problemMatcher` 也会隐藏该任务                                                                                        |
+| `windows` / `osx` / `linux`（文件级） | 支持 | 形状相同，作为文件内每个任务的 OS 特定默认层                                                                                                                                        |
+| 文件级默认值                          | 支持 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可以作为文件级默认值。文件级 `problemMatcher` 会隐藏文件内所有任务                       |
+| `isBackground`                        | 支持 | 退出视为用户终止，永远不算失败。依赖它的其他任务会被隐藏（见下文）                                                                                                                  |
+| `promptOnClose`                       | 支持 | 进程还活着时关闭标签页会要求确认                                                                                                                                                    |
+| `dependsOn`                           | 支持 | 一个 label 字符串，或 label 字符串数组。对象形式（`{ "type": … }`、`{ "task": … }`）会隐藏该任务                                                                                    |
+| `dependsOrder`                        | 支持 | `parallel`（默认）或 `sequence`                                                                                                                                                     |
+| `detail`                              | 支持 | 在命令面板列表中显示在 label 旁边                                                                                                                                                   |
+| `icon.id`                             | 支持 | 菜单图标：先找 Spirit Icons，再找 Lucide，找不到就用终端字形兜底                                                                                                                    |
+| `icon.color`                          | 忽略 | 纯展示用途                                                                                                                                                                          |
+| `hide`                                | 支持 | 从命令面板列表隐藏，但仍可解析——该任务可以作为 `dependsOn` 依赖运行                                                                                                                 |
 
 ### 运行选项
 
