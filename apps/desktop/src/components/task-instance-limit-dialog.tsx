@@ -17,6 +17,7 @@ import {
   resolveTaskInstanceLimitPrompt,
   subscribeTaskInstanceLimitPrompt,
   type TaskInstanceLimitChoice,
+  type TaskInstanceLimitPrompt,
   type TaskInstanceLimitPromptInstance,
 } from "@/lib/task-run-service";
 import { useElapsedDuration } from "@/lib/use-elapsed-duration";
@@ -24,12 +25,24 @@ import { cn } from "@/lib/utils";
 
 /** Bridges the coordinator's synchronous instance-limit prompt into React state. */
 export function TaskInstanceLimitDialog() {
-  const [prompt, setPrompt] = useState(() => getTaskInstanceLimitPrompt());
+  // Visibility and payload are decoupled so the content (label, instance list)
+  // survives the close animation instead of blanking the moment the prompt
+  // resolves — the same pattern as the sidebar delete dialog.
+  const [prompt, setPrompt] = useState<TaskInstanceLimitPrompt | undefined>(() =>
+    getTaskInstanceLimitPrompt(),
+  );
+  const [open, setOpen] = useState(() => prompt !== undefined);
 
   useEffect(
     () =>
       subscribeTaskInstanceLimitPrompt(() => {
-        setPrompt(getTaskInstanceLimitPrompt());
+        const next = getTaskInstanceLimitPrompt();
+        if (next) {
+          setPrompt(next);
+          setOpen(true);
+        } else {
+          setOpen(false);
+        }
       }),
     [],
   );
@@ -40,9 +53,9 @@ export function TaskInstanceLimitDialog() {
 
   return (
     <Dialog
-      open={prompt !== undefined}
-      onOpenChange={(open) => {
-        if (!open) {
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
           choose({ kind: "cancel" });
         }
       }}

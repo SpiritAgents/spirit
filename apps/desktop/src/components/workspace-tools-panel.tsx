@@ -605,7 +605,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     () => new Set(),
   );
   const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
-  const [pendingTaskCloseTabId, setPendingTaskCloseTabId] = useState<string | null>(null);
+  const [pendingTaskClose, setPendingTaskClose] = useState<{ tabId: string; label: string } | null>(
+    null,
+  );
+  const [taskCloseDialogOpen, setTaskCloseDialogOpen] = useState(false);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 
@@ -706,7 +709,8 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         return;
       }
       if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
-        setPendingTaskCloseTabId(closeId);
+        setPendingTaskClose({ tabId: closeId, label: tab.tabTitle ?? "" });
+        setTaskCloseDialogOpen(true);
         return;
       }
       performCloseTab(closeId);
@@ -723,14 +727,16 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   }, [pendingCloseTabId, performCloseTab]);
 
   const handleConfirmTaskCloseTab = useCallback(() => {
-    if (!pendingTaskCloseTabId) {
+    if (!pendingTaskClose) {
       return;
     }
-    const closeId = pendingTaskCloseTabId;
-    setPendingTaskCloseTabId(null);
+    const closeId = pendingTaskClose.tabId;
+    // Keep pendingTaskClose latched: the closing dialog still renders its label
+    // while the exit animation plays (same pattern as the sidebar delete dialog).
+    setTaskCloseDialogOpen(false);
     void terminateTaskTerminalInstance(closeId);
     performCloseTab(closeId);
-  }, [pendingTaskCloseTabId, performCloseTab]);
+  }, [pendingTaskClose, performCloseTab]);
 
   const handleBrowserUrlChange = useCallback(
     (tabId: string, url: string) => {
@@ -1188,15 +1194,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         }}
       />
       <AlertDialog
-        open={pendingTaskCloseTabId !== null}
+        open={taskCloseDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
-            setPendingTaskCloseTabId(null);
+            setTaskCloseDialogOpen(false);
           }
         }}
         title={t("task.terminateConfirmTitle")}
         description={t("task.terminateConfirmDescription", {
-          label: tabs.find((item) => item.id === pendingTaskCloseTabId)?.tabTitle ?? "",
+          label: pendingTaskClose?.label ?? "",
         })}
         confirmLabel={t("task.terminateConfirmAction")}
         cancelLabel={t("common.cancel")}
