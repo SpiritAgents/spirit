@@ -14,14 +14,16 @@ const WORKSPACE_CONTROLLED_KINDS = new Set<LoadedTaskFile["sourceKind"]>([
 ]);
 
 // The hash covers the exact file bytes (rawText), so JSONC comments and formatting changes
-// re-prompt even when the parsed task set is unchanged.
+// re-prompt even when the parsed task set is unchanged. The source kind stands in for the
+// path so the hash does not depend on how the workspace root was spelled (symlinks,
+// canonicalization); the two workspace-controlled sources always have distinct kinds.
 export function computeWorkspaceTasksContentHash(files: LoadedTaskFile[]): string {
   const controlled = files
     .filter((file) => WORKSPACE_CONTROLLED_KINDS.has(file.sourceKind))
     .sort((left, right) => sourceRank(left.sourceKind) - sourceRank(right.sourceKind));
   const hash = createHash("sha256");
   for (const file of controlled) {
-    hash.update(file.path);
+    hash.update(file.sourceKind);
     hash.update("\0");
     hash.update(file.rawText);
     hash.update("\0");
