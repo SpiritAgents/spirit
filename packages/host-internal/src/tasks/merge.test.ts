@@ -94,7 +94,7 @@ test("file-level type and flags act as defaults and task wins", () => {
   assert.equal(overrides.promptOnClose, undefined);
 });
 
-test("presentation merges per property and revealProblems presence ORs across layers", () => {
+test("presentation merges per property and ignores revealProblems", () => {
   const merged = mergeOne(
     {
       schemaVersion: 1,
@@ -113,34 +113,19 @@ test("presentation merges per property and revealProblems presence ORs across la
     echo: false,
     reveal: "never",
     focus: true,
-    hasRevealProblems: true,
   });
 });
 
-test("problemMatcher presence ORs across file, OS and task layers", () => {
-  const fromFile = mergeOne(
-    { schemaVersion: 1, problemMatcher: [], tasks: [{ label: "t", command: "a" }] },
-    "linux",
-  );
-  assert.equal(fromFile.hasProblemMatcher, true);
-
-  const fromFileOs = mergeOne(
+test("problemMatcher fields at any layer merge away without effect", () => {
+  const merged = mergeOne(
     {
       schemaVersion: 1,
-      linux: { problemMatcher: "$gcc" },
-      tasks: [{ label: "t", command: "a" }],
+      problemMatcher: [],
+      linux: { problemMatcher: "$gcc", options: { cwd: "/os" } },
+      tasks: [{ label: "t", command: "a", problemMatcher: { owner: "cpp" } }],
     },
     "linux",
   );
-  assert.equal(fromFileOs.hasProblemMatcher, true);
-
-  const fromOtherPlatform = mergeOne(
-    {
-      schemaVersion: 1,
-      windows: { problemMatcher: "$gcc" },
-      tasks: [{ label: "t", command: "a" }],
-    },
-    "linux",
-  );
-  assert.equal(fromOtherPlatform.hasProblemMatcher, false);
+  assert.equal(merged.command, "a");
+  assert.equal(merged.options?.cwd, "/os");
 });

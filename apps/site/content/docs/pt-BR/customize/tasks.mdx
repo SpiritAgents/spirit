@@ -43,9 +43,9 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 | `options.cwd`                                  | Suportado     | Diretório de trabalho do processo                                                                                                                                                                                                           |
 | `options.env`                                  | Suportado     | Variáveis de ambiente extras, mescladas sobre o ambiente do host                                                                                                                                                                            |
 | `options.shell`                                | Suportado     | `{ executable, args }` — shell usado em tarefas `shell` em vez do shell de terminal padrão                                                                                                                                                  |
-| `windows` / `osx` / `linux` (nível da tarefa)  | Suportado     | Sobrescritas de `{ command, args, options }` para o SO atual. Um `problemMatcher` dentro do bloco do SO atual também oculta a tarefa                                                                                                        |
+| `windows` / `osx` / `linux` (nível da tarefa)  | Suportado     | Sobrescritas de `{ command, args, options }` para o SO atual.                                                                                                                                                                               |
 | `windows` / `osx` / `linux` (nível do arquivo) | Suportado     | Mesmo formato, atuando como a camada padrão específica de SO para cada tarefa do arquivo                                                                                                                                                    |
-| Padrões no nível do arquivo                    | Suportado     | Somente `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` podem atuar como padrões no nível do arquivo. Um `problemMatcher` no nível do arquivo oculta todas as tarefas do arquivo                      |
+| Padrões no nível do arquivo                    | Suportado     | Somente `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` podem atuar como padrões no nível do arquivo.                                                                                                 |
 | `isBackground`                                 | Suportado     | A saída conta como encerramento pelo usuário, nunca como falha. Outra tarefa que dependa dela fica oculta (veja abaixo)                                                                                                                     |
 | `promptOnClose`                                | Suportado     | Fechar a aba enquanto o processo está ativo pede confirmação                                                                                                                                                                                |
 | `dependsOn`                                    | Suportado     | Uma string de label ou uma matriz de strings de label. A forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta a tarefa                                                                                                                 |
@@ -66,22 +66,21 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 
 ### Apresentação
 
-| Campo                               | Comportamento   | Notas                                                                                   |
-| ----------------------------------- | --------------- | --------------------------------------------------------------------------------------- |
-| `presentation.echo`                 | Suportado       | Escreve a linha de comando no terminal antes da saída do processo                       |
-| `presentation.reveal`               | Suportado       | `always` (padrão), `silent` ou `never` — veja [Executando tarefas](#executando-tarefas) |
-| `presentation.focus`                | Suportado       | Implica reveal e move o foco do teclado para o terminal                                 |
-| `presentation.panel`                | Suportado       | `shared` (padrão), `dedicated` ou `new` — política de reutilização de terminal          |
-| `presentation.clear`                | Suportado       | Limpa o terminal antes de uma reexecução que o reutiliza                                |
-| `presentation.close`                | Suportado       | Fecha a aba automaticamente quando o processo termina                                   |
-| `presentation.preserveTerminalName` | Suportado       | Mantém o label da tarefa como título da aba em vez do título do processo                |
-| `presentation.revealProblems`       | Oculta a tarefa | Depende de correspondência de problemas, que o Spirit não executa                       |
-| `presentation.showReuseMessage`     | Ignorado        | Puramente apresentacional                                                               |
-| `presentation.group`                | Ignorado        | Agrupamento de terminais está fora do escopo                                            |
+| Campo                               | Comportamento | Notas                                                                                   |
+| ----------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | Suportado     | Escreve a linha de comando no terminal antes da saída do processo                       |
+| `presentation.reveal`               | Suportado     | `always` (padrão), `silent` ou `never` — veja [Executando tarefas](#executando-tarefas) |
+| `presentation.focus`                | Suportado     | Implica reveal e move o foco do teclado para o terminal                                 |
+| `presentation.panel`                | Suportado     | `shared` (padrão), `dedicated` ou `new` — política de reutilização de terminal          |
+| `presentation.clear`                | Suportado     | Limpa o terminal antes de uma reexecução que o reutiliza                                |
+| `presentation.close`                | Suportado     | Fecha a aba automaticamente quando o processo termina                                   |
+| `presentation.preserveTerminalName` | Suportado     | Mantém o label da tarefa como título da aba em vez do título do processo                |
+| `presentation.showReuseMessage`     | Ignorado      | Puramente apresentacional                                                               |
+| `presentation.group`                | Ignorado      | Agrupamento de terminais está fora do escopo                                            |
 
 ### Campos ignorados
 
-Ter estes campos nunca oculta uma tarefa: `group` (agrupamento de build/teste), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. A matriz `inputs` no nível do arquivo simplesmente não é lida — mas uma _referência_ `${input:*}` dentro de uma tarefa oculta essa tarefa (veja [Variáveis](#variáveis)).
+Ter estes campos nunca oculta uma tarefa: `problemMatcher` (qualquer forma, em qualquer nível), `presentation.revealProblems`, `group` (agrupamento de build/teste), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. A matriz `inputs` no nível do arquivo simplesmente não é lida — mas uma _referência_ `${input:*}` dentro de uma tarefa oculta essa tarefa (veja [Variáveis](#variáveis)).
 
 ## Variáveis
 
@@ -104,8 +103,6 @@ Uma tarefa que não pode ser executada exatamente como configurada fica totalmen
 
 | Regra                        | Motivo                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------- |
-| `problemMatcher`             | O Spirit não analisa a saída do comando em busca de problemas                                     |
-| `revealProblems`             | Depende de correspondência de problemas                                                           |
 | `unsupportedVariable`        | Substituir um valor adivinhado executaria um comando diferente do configurado                     |
 | `runOn`                      | Nada nunca é executado automaticamente — tarefas só iniciam a partir de um clique explícito       |
 | `dependsOnObjectForm`        | Entradas de dependência tipadas por extensão não são executáveis                                  |
@@ -131,7 +128,7 @@ As tarefas só iniciam a partir de um clique explícito na paleta — nada nunca
 - **Limite de instâncias** — `runOptions.instanceLimit` tem padrão `1`. Iniciar outra instância além do limite pergunta: **Nova instância paralela**, **Encerrar instância antiga** ou **Cancelar**.
 - **Reutilização de terminal** — somente terminais de tarefas já finalizadas são reutilizados. `panel: "shared"` e `panel: "dedicated"` reutilizam o terminal ocioso da própria tarefa quando existe um (o pool é por tarefa) e abrem uma nova aba caso contrário; `panel: "new"` sempre abre uma aba nova.
 - **Echo** — com `presentation.echo` (ativado por padrão), a linha de comando é escrita no terminal antes da saída do processo.
-- **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal.
+- **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal. Note dois desvios do VS Code: `reveal: "silent"` só expande com um código de saída diferente de zero (o Spirit não tem um caminho de acionamento por problem matcher), e `presentation.revealProblems` não tem efeito algum — não suprime nem aciona a exibição do terminal.
 - **Clear** — `presentation.clear` limpa o terminal antes de uma reexecução que o reutiliza.
 - **Close** — `presentation.close` fecha a aba automaticamente na saída, qualquer que seja o código de saída.
 - **Preservar nome do terminal** — `presentation.preserveTerminalName` mantém o label da tarefa como título da aba; caso contrário, o título do processo em execução o substitui.

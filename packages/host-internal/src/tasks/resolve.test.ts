@@ -184,7 +184,7 @@ test("ignores extension-customized entries entirely without hiding siblings", ()
   );
 });
 
-test("hides tasks carrying problemMatcher in string, object, array and OS block forms", () => {
+test("tolerates problemMatcher in string, object, array and OS block forms", () => {
   const result = resolve([
     vscodeJson([
       { label: "pm-string", command: "make", problemMatcher: "$gcc" },
@@ -198,22 +198,16 @@ test("hides tasks carrying problemMatcher in string, object, array and OS block 
       { label: "clean", command: "make clean" },
     ]),
   ]);
-  assert.deepEqual(
-    result.hiddenReasons.map((reason) => [reason.label, reason.rule]),
-    [
-      ["pm-string", "problemMatcher"],
-      ["pm-object", "problemMatcher"],
-      ["pm-array", "problemMatcher"],
-      ["pm-os-block", "problemMatcher"],
-    ],
-  );
+  assert.deepEqual(result.hiddenReasons, []);
   assert.deepEqual(
     result.menuItems.map((item) => item.label),
-    ["clean"],
+    ["pm-string", "pm-object", "pm-array", "pm-os-block", "clean"],
   );
+  // The OS block still applies its command override on the current platform.
+  assert.equal(result.tasks.find((task) => task.label === "pm-os-block")?.command, "make linux");
 });
 
-test("hides every task when the file carries a default problemMatcher", () => {
+test("tolerates a file-level default problemMatcher", () => {
   const result = resolve([
     vscodeJson(
       [
@@ -225,26 +219,29 @@ test("hides every task when the file carries a default problemMatcher", () => {
       },
     ),
   ]);
+  assert.deepEqual(result.hiddenReasons, []);
   assert.deepEqual(
-    result.hiddenReasons.map((reason) => reason.rule),
-    ["problemMatcher", "problemMatcher"],
+    result.menuItems.map((item) => item.label),
+    ["a", "b"],
   );
-  assert.deepEqual(result.menuItems, []);
 });
 
-test("hides tasks carrying presentation.revealProblems", () => {
+test("tolerates presentation.revealProblems without touching the reveal setting", () => {
   const result = resolve([
     spiritJson([
       {
         label: "a",
         command: "make",
-        presentation: { revealProblems: "onProblem" },
+        presentation: { reveal: "silent", revealProblems: "always" },
       },
     ]),
   ]);
-  assert.deepEqual(result.hiddenReasons, [
-    { key: "/repo/.spirit/tasks.json#a", label: "a", rule: "revealProblems" },
-  ]);
+  assert.deepEqual(result.hiddenReasons, []);
+  assert.deepEqual(
+    result.menuItems.map((item) => item.label),
+    ["a"],
+  );
+  assert.equal(result.tasks[0]?.presentation.reveal, "silent");
 });
 
 test("hides tasks referencing unsupported variables across command, args and options", () => {
@@ -387,10 +384,27 @@ test("rejects cyclic dependencies including self-references", () => {
   );
 });
 
+test("a task depending on a problemMatcher carrier resolves and keeps its chain", () => {
+  const result = resolve([
+    spiritJson([
+      { label: "dep", command: "make", problemMatcher: "$gcc" },
+      { label: "main", command: "echo main", dependsOn: ["dep"], dependsOrder: "sequence" },
+    ]),
+  ]);
+  assert.deepEqual(result.hiddenReasons, []);
+  assert.deepEqual(
+    result.menuItems.map((item) => item.label),
+    ["dep", "main"],
+  );
+  const main = result.tasks.find((task) => task.label === "main");
+  assert.deepEqual(main?.dependsOn, ["dep"]);
+  assert.equal(main?.dependsOrder, "sequence");
+});
+
 test("hides tasks depending on hidden or nonexistent labels, transitively", () => {
   const result = resolve([
     spiritJson([
-      { label: "hidden", command: "make", problemMatcher: "$gcc" },
+      { label: "hidden", command: "echo ${file}" },
       { label: "on-hidden", command: "echo a", dependsOn: ["hidden"] },
       { label: "on-transitive", command: "echo b", dependsOn: ["on-hidden"] },
       { label: "on-missing", command: "echo c", dependsOn: ["does-not-exist"] },
@@ -400,7 +414,7 @@ test("hides tasks depending on hidden or nonexistent labels, transitively", () =
   assert.deepEqual(
     result.hiddenReasons.map((reason) => [reason.label, reason.rule]),
     [
-      ["hidden", "problemMatcher"],
+      ["hidden", "unsupportedVariable"],
       ["on-hidden", "transitiveHiddenDependency"],
       ["on-transitive", "transitiveHiddenDependency"],
       ["on-missing", "transitiveHiddenDependency"],
@@ -533,7 +547,7 @@ test("dedupes same-label tasks by source priority for menu and dependsOn resolut
   assert.deepEqual(useDep.dependsOn, ["dep"]);
 });
 
-test("applies OS blocks per platform and hides OS problemMatcher only on that platform", () => {
+test("applies OS blocks per platform and tolerates OS problemMatcher", () => {
   const files = [
     vscodeJson([
       {
@@ -545,11 +559,8 @@ test("applies OS blocks per platform and hides OS problemMatcher only on that pl
     ]),
   ];
   const darwin = resolve(files, CONTEXT, "darwin");
-  assert.deepEqual(
-    darwin.hiddenReasons.map((reason) => reason.rule),
-    ["problemMatcher"],
-  );
-  assert.deepEqual(darwin.menuItems, []);
+  assert.deepEqual(darwin.hiddenReasons, []);
+  assert.equal(darwin.tasks[0]!.command, "make darwin");
 
   const linux = resolve(files, CONTEXT, "linux");
   assert.deepEqual(linux.hiddenReasons, []);

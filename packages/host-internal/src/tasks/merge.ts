@@ -2,9 +2,9 @@ import type {
   MergedTask,
   NormalizedTask,
   NormalizedTaskFile,
-  NormalizedTaskPresentation,
   TaskOptions,
   TaskPlatform,
+  TaskPresentation,
   TaskShellConfiguration,
 } from "./schema.js";
 
@@ -25,11 +25,6 @@ export function mergeTaskLayers(
     dependsOrder: task.dependsOrder,
     runOptions: task.runOptions,
     presentation: mergeTaskPresentation(file.defaults.presentation, task.presentation),
-    hasProblemMatcher:
-      file.defaults.hasProblemMatcher ||
-      fileOs?.hasProblemMatcher === true ||
-      task.hasProblemMatcher ||
-      taskOs?.hasProblemMatcher === true,
   };
   const command = taskOs?.command ?? task.command ?? fileOs?.command ?? file.defaults.command;
   if (command !== undefined) {
@@ -119,13 +114,10 @@ function mergeTaskOptions(...layers: (TaskOptions | undefined)[]): TaskOptions |
 }
 
 function mergeTaskPresentation(
-  filePresentation: NormalizedTaskPresentation | undefined,
-  taskPresentation: NormalizedTaskPresentation,
-): NormalizedTaskPresentation {
-  const merged: NormalizedTaskPresentation = {
-    hasRevealProblems:
-      (filePresentation?.hasRevealProblems ?? false) || taskPresentation.hasRevealProblems,
-  };
+  filePresentation: TaskPresentation | undefined,
+  taskPresentation: TaskPresentation,
+): TaskPresentation {
+  const merged: TaskPresentation = {};
   const echo = taskPresentation.echo ?? filePresentation?.echo;
   if (echo !== undefined) {
     merged.echo = echo;

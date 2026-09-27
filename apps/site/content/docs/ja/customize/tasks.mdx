@@ -43,9 +43,9 @@ Spirit タスクは独自のシステムであり、VS Code タスクではあ�
 | `options.cwd`                                 | 対応 | プロセスの作業ディレクトリ                                                                                                                                                                                                                      |
 | `options.env`                                 | 対応 | ホスト環境の上にマージされる追加の環境変数                                                                                                                                                                                                      |
 | `options.shell`                               | 対応 | `{ executable, args }` — `shell` タスクでデフォルトのターミナルシェルの代わりに使うシェル                                                                                                                                                       |
-| `windows` / `osx` / `linux`（タスクレベル）   | 対応 | 現在の OS に対する `{ command, args, options }` の上書き。現在の OS のブロック内にある `problemMatcher` もタスクを非表示にします                                                                                                                |
+| `windows` / `osx` / `linux`（タスクレベル）   | 対応 | 現在の OS に対する `{ command, args, options }` の上書き。                                                                                                                                                                                      |
 | `windows` / `osx` / `linux`（ファイルレベル） | 対応 | 同じ形状で、ファイル内のすべてのタスクに対する OS 固有のデフォルトレイヤーとして機能します                                                                                                                                                      |
-| ファイルレベルのデフォルト                    | 対応 | ファイルレベルのデフォルトとして機能できるのは `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` のみです。ファイルレベルの `problemMatcher` はファイル内のすべてのタスクを非表示にします                   |
+| ファイルレベルのデフォルト                    | 対応 | ファイルレベルのデフォルトとして機能できるのは `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` のみです。                                                                                                 |
 | `isBackground`                                | 対応 | 終了はユーザーによる終了としてカウントされ、失敗としてはカウントされません。これに依存する別のタスクは非表示になります（後述）                                                                                                                  |
 | `promptOnClose`                               | 対応 | プロセスが生きている間にタブを閉じると確認を求めます                                                                                                                                                                                            |
 | `dependsOn`                                   | 対応 | ラベル文字列、またはラベル文字列の配列。オブジェクト形式（`{ "type": … }`、`{ "task": … }`）はタスクを非表示にします                                                                                                                            |
@@ -66,22 +66,21 @@ Spirit タスクは独自のシステムであり、VS Code タスクではあ�
 
 ### プレゼンテーション
 
-| フィールド                          | 動作           | 備考                                                                                    |
-| ----------------------------------- | -------------- | --------------------------------------------------------------------------------------- |
-| `presentation.echo`                 | 対応           | プロセスの出力の前にコマンドラインをターミナルに書き込みます                            |
-| `presentation.reveal`               | 対応           | `always`（デフォルト）、`silent`、または `never` — [タスクの実行](#タスクの実行) を参照 |
-| `presentation.focus`                | 対応           | reveal を含意し、キーボードフォーカスをターミナルに移します                             |
-| `presentation.panel`                | 対応           | `shared`（デフォルト）、`dedicated`、または `new` — ターミナルの再利用ポリシー          |
-| `presentation.clear`                | 対応           | 再利用する再実行の前にターミナルをクリアします                                          |
-| `presentation.close`                | 対応           | プロセスの終了時にタブを自動的に閉じます                                                |
-| `presentation.preserveTerminalName` | 対応           | プロセスのタイトルの代わりに、タスクのラベルをタブのタイトルとして保持します            |
-| `presentation.revealProblems`       | タスクを非表示 | 問題マッチングに依存しますが、Spirit はそれを実行しません                               |
-| `presentation.showReuseMessage`     | 無視           | 純粋に見た目だけの指定です                                                              |
-| `presentation.group`                | 無視           | ターミナルのグループ化は対象外です                                                      |
+| フィールド                          | 動作 | 備考                                                                                    |
+| ----------------------------------- | ---- | --------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | 対応 | プロセスの出力の前にコマンドラインをターミナルに書き込みます                            |
+| `presentation.reveal`               | 対応 | `always`（デフォルト）、`silent`、または `never` — [タスクの実行](#タスクの実行) を参照 |
+| `presentation.focus`                | 対応 | reveal を含意し、キーボードフォーカスをターミナルに移します                             |
+| `presentation.panel`                | 対応 | `shared`（デフォルト）、`dedicated`、または `new` — ターミナルの再利用ポリシー          |
+| `presentation.clear`                | 対応 | 再利用する再実行の前にターミナルをクリアします                                          |
+| `presentation.close`                | 対応 | プロセスの終了時にタブを自動的に閉じます                                                |
+| `presentation.preserveTerminalName` | 対応 | プロセスのタイトルの代わりに、タスクのラベルをタブのタイトルとして保持します            |
+| `presentation.showReuseMessage`     | 無視 | 純粋に見た目だけの指定です                                                              |
+| `presentation.group`                | 無視 | ターミナルのグループ化は対象外です                                                      |
 
 ### 無視されるフィールド
 
-これらを含んでいてもタスクは非表示になりません: `group`（ビルド / テストのグループ化）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。ファイルレベルの `inputs` 配列は単純に読み取られません — ただし、タスク内の `${input:*}` _参照_ はそのタスクを非表示にします（[変数](#変数) を参照）。
+これらを含んでいてもタスクは非表示になりません: `problemMatcher`（任意の形式・任意のレベル）、`presentation.revealProblems`、`group`（ビルド / テストのグループ化）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。ファイルレベルの `inputs` 配列は単純に読み取られません — ただし、タスク内の `${input:*}` _参照_ はそのタスクを非表示にします（[変数](#変数) を参照）。
 
 ## 変数
 
@@ -104,8 +103,6 @@ Spirit タスクは独自のシステムであり、VS Code タスクではあ�
 
 | ルール                       | 理由                                                                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `problemMatcher`             | Spirit はコマンド出力から問題をパースしません                                                                |
-| `revealProblems`             | 問題マッチングに依存します                                                                                   |
 | `unsupportedVariable`        | 推測した値で置き換えると、設定とは異なるコマンドが実行されてしまいます                                       |
 | `runOn`                      | 自動実行されるものは何もありません — タスクは明示的なクリックからのみ開始されます                            |
 | `dependsOnObjectForm`        | 拡張機能型の依存エントリは実行できません                                                                     |
@@ -131,7 +128,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - **インスタンス上限** — `runOptions.instanceLimit` のデフォルトは `1` です。上限を超えて別のインスタンスを開始すると、**新しい並列インスタンス**、**古いインスタンスを終了**、**キャンセル** の確認が表示されます。
 - **ターミナルの再利用** — 再利用されるのは終了したタスクのターミナルのみです。`panel: "shared"` と `panel: "dedicated"` はどちらも、このタスク自身のアイドルなターミナルが存在する場合はそれを再利用し（プールはタスクごとです）、存在しない場合は新しいタブを開きます。`panel: "new"` は常に新しいタブを開きます。
 - **エコー** — `presentation.echo`（デフォルトでオン）では、コマンドラインがプロセスの出力の前にターミナルに書き込まれます。
-- **表示（reveal）** — `always`（デフォルト）は起動時にツールパネルを展開します。`silent` は起動時には閉じたままにし、タスクが非ゼロで終了したときだけ展開します。`never` は自動展開しません。`focus: true` は reveal を含意し、さらにキーボードフォーカスをターミナルに移します。
+- **表示（reveal）** — `always`（デフォルト）は起動時にツールパネルを展開します。`silent` は起動時には閉じたままにし、タスクが非ゼロで終了したときだけ展開します。`never` は自動展開しません。`focus: true` は reveal を含意し、さらにキーボードフォーカスをターミナルに移します。なお、VS Code からの 2 つの相違点があります: `reveal: "silent"` は終了コードが非ゼロの場合にのみ展開します（Spirit には problemMatcher によるトリガーパスがありません）。また `presentation.revealProblems` は一切効果を持ちません — ターミナルの表示を抑制もトリガーもしません。
 - **クリア** — `presentation.clear` は、再利用する再実行の前にターミナルをクリアします。
 - **クローズ** — `presentation.close` は、終了コードにかかわらず、終了時にタブを自動的に閉じます。
 - **ターミナル名の保持** — `presentation.preserveTerminalName` はタスクのラベルをタブのタイトルとして保持します。それ以外の場合は、実行中のプロセスのタイトルに置き換わります。
