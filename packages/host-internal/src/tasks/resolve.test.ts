@@ -14,7 +14,7 @@ const CONTEXT: TaskVariableContext = {
 };
 
 function loaded(path: string, sourceKind: TaskFileSourceKind, json: unknown): LoadedTaskFile {
-  return { path, sourceKind, json };
+  return { path, sourceKind, json, rawText: "" };
 }
 
 function spiritJson(tasks: unknown[], extra: Record<string, unknown> = {}): LoadedTaskFile {
