@@ -1,5 +1,9 @@
-/** Public GitHub OAuth App identifier for Desktop Device Flow. Not a secret. */
-export const GITHUB_OAUTH_CLIENT_ID = "Ov23liKCwRR3gYhfH3wC";
+/**
+ * Public GitHub OAuth App identifier for Desktop Device Flow. Not a secret.
+ * Intentionally blank because the OAuth App was deleted; Device Flow sign-in
+ * stays disabled until a new app is configured.
+ */
+export const GITHUB_OAUTH_CLIENT_ID = "";
 
 export const GITHUB_OAUTH_SCOPES = ["repo", "read:user"] as const;
 
