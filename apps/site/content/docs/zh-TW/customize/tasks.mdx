@@ -33,27 +33,27 @@ Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON �
 
 ### 核心欄位
 
-| 欄位                                    | 行為 | 備註                                                                                                                                                                |
-| --------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `label`                                 | 必填 | 沒有非空標籤的項目會被完全捨棄 — 它們不會進入選單或相依圖                                                                                                           |
-| `type`                                  | 支援 | `shell`（預設）或 `process`。任何其他字串（`npm`、`grunt`、…）屬於擴充功能自訂的項目，會被完全忽略：不隱藏、不列出，同層項目不受影響                                |
-| `command`                               | 支援 | `string`、`string[]` 或 `{ value, quoting }`。合併後缺少 command 的任務會被隱藏 — `shell` 任務亦同（比 VS Code 更嚴格）                                             |
-| `args`                                  | 支援 | 由 `string` 或 `{ value, quoting }` 組成的陣列                                                                                                                      |
-| `quoting`                               | 支援 | `escape`、`strong`（預設）或 `weak`；無效值退回 `strong`。套用於 shell 命令列                                                                                       |
-| `options.cwd`                           | 支援 | 處理程序的工作目錄                                                                                                                                                  |
-| `options.env`                           | 支援 | 額外的環境變數，合併於主機環境之上                                                                                                                                  |
-| `options.shell`                         | 支援 | `{ executable, args }` — `shell` 任務使用的 shell，取代預設終端機 shell                                                                                             |
-| `windows` / `osx` / `linux`（任務層級） | 支援 | 針對目前作業系統的 `{ command, args, options }` 覆寫。目前作業系統區塊內若有 `problemMatcher`，同樣會隱藏該任務                                                     |
-| `windows` / `osx` / `linux`（檔案層級） | 支援 | 相同結構，作為檔案中每個任務的作業系統專屬預設層                                                                                                                    |
-| 檔案層級預設值                          | 支援 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可作為檔案層級預設值。檔案層級的 `problemMatcher` 會隱藏檔案中的每個任務 |
-| `isBackground`                          | 支援 | 結束視為使用者終止，絕不視為失敗。相依於它的其他任務會被隱藏（見下文）                                                                                              |
-| `promptOnClose`                         | 支援 | 處理程序仍在執行時關閉標籤頁會要求確認                                                                                                                              |
-| `dependsOn`                             | 支援 | 標籤字串，或標籤字串陣列。物件形式（`{ "type": … }`、`{ "task": … }`）會隱藏該任務                                                                                  |
-| `dependsOrder`                          | 支援 | `parallel`（預設）或 `sequence`                                                                                                                                     |
-| `detail`                                | 支援 | 在命令選擇區清單中顯示於標籤旁                                                                                                                                      |
-| `icon.id`                               | 支援 | 選單圖示：優先 Spirit Icons，其次 Lucide，並以終端機字符作為後備                                                                                                    |
-| `icon.color`                            | 忽略 | 純展示性質                                                                                                                                                          |
-| `hide`                                  | 支援 | 從命令選擇區清單隱藏，但仍可解析 — 該任務可作為 `dependsOn` 相依項目執行                                                                                            |
+| 欄位                                    | 行為 | 備註                                                                                                                                                                          |
+| --------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                                 | 必填 | 沒有非空標籤的項目會被完全捨棄 — 它們不會進入選單或相依圖                                                                                                                     |
+| `type`                                  | 支援 | `shell`（預設）或 `process`。任何其他字串（`npm`、`grunt`、…）屬於擴充功能自訂的項目，會被完全忽略：不隱藏、不列出，同層項目不受影響                                          |
+| `command`                               | 支援 | `string`、`string[]` 或 `{ value, quoting }`。合併後缺少 command 的任務會被隱藏 — `shell` 任務亦同（比 VS Code 更嚴格）                                                       |
+| `args`                                  | 支援 | 由 `string` 或 `{ value, quoting }` 組成的陣列                                                                                                                                |
+| `quoting`                               | 支援 | `escape`、`strong`（預設）或 `weak`；無效值退回 `strong`。僅套用於 `args` 與物件形式 `{ value, quoting }`；純字串形式的 `command` 會原樣傳給 shell，因此可包含原始 shell 語法 |
+| `options.cwd`                           | 支援 | 處理程序的工作目錄                                                                                                                                                            |
+| `options.env`                           | 支援 | 額外的環境變數，合併於主機環境之上                                                                                                                                            |
+| `options.shell`                         | 支援 | `{ executable, args }` — `shell` 任務使用的 shell，取代預設終端機 shell                                                                                                       |
+| `windows` / `osx` / `linux`（任務層級） | 支援 | 針對目前作業系統的 `{ command, args, options }` 覆寫。目前作業系統區塊內若有 `problemMatcher`，同樣會隱藏該任務                                                               |
+| `windows` / `osx` / `linux`（檔案層級） | 支援 | 相同結構，作為檔案中每個任務的作業系統專屬預設層                                                                                                                              |
+| 檔案層級預設值                          | 支援 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可作為檔案層級預設值。檔案層級的 `problemMatcher` 會隱藏檔案中的每個任務           |
+| `isBackground`                          | 支援 | 結束視為使用者終止，絕不視為失敗。相依於它的其他任務會被隱藏（見下文）                                                                                                        |
+| `promptOnClose`                         | 支援 | 處理程序仍在執行時關閉標籤頁會要求確認                                                                                                                                        |
+| `dependsOn`                             | 支援 | 標籤字串，或標籤字串陣列。物件形式（`{ "type": … }`、`{ "task": … }`）會隱藏該任務                                                                                            |
+| `dependsOrder`                          | 支援 | `parallel`（預設）或 `sequence`                                                                                                                                               |
+| `detail`                                | 支援 | 在命令選擇區清單中顯示於標籤旁                                                                                                                                                |
+| `icon.id`                               | 支援 | 選單圖示：優先 Spirit Icons，其次 Lucide，並以終端機字符作為後備                                                                                                              |
+| `icon.color`                            | 忽略 | 純展示性質                                                                                                                                                                    |
+| `hide`                                  | 支援 | 從命令選擇區清單隱藏，但仍可解析 — 該任務可作為 `dependsOn` 相依項目執行                                                                                                      |
 
 ### 執行選項
 
