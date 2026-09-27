@@ -94,8 +94,9 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     );
   }
 
-  if (isAppearanceMenuAction(item)) {
-    const Icon = item.kind === "theme-menu" ? Palette : Languages;
+  if (isAppearanceMenuAction(item) || isTaskMenuAction(item)) {
+    const Icon =
+      item.kind === "theme-menu" ? Palette : item.kind === "locale-menu" ? Languages : Terminal;
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Icon
@@ -107,9 +108,7 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
           strokeWidth={1.75}
         />
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
-        {currentValueLabel ? (
-          <span className={actionPickerMetaClass}>{currentValueLabel}</span>
-        ) : null}
+        <span className={actionPickerMetaClass}>{currentValueLabel}</span>
         <ChevronRight
           className={cn(
             "size-3.5 shrink-0 text-popover-foreground",
@@ -126,30 +125,6 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
-      </div>
-    );
-  }
-
-  if (isTaskMenuAction(item)) {
-    return (
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        <Terminal
-          className={cn(
-            "size-3.5 shrink-0 text-popover-foreground",
-            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
-          )}
-          aria-hidden
-          strokeWidth={1.75}
-        />
-        <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
-        <ChevronRight
-          className={cn(
-            "size-3.5 shrink-0 text-popover-foreground",
-            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
-          )}
-          aria-hidden
-          strokeWidth={1.75}
-        />
       </div>
     );
   }
