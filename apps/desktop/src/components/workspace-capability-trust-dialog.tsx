@@ -33,6 +33,15 @@ export function WorkspaceCapabilityTrustDialog({
   const { t } = useTranslation();
   const { api } = useHostApi();
   const open = pending !== undefined;
+  const hasHooks = (pending?.hooks.length ?? 0) > 0;
+  const tasks = pending?.tasks;
+  const hasTasks = (tasks?.items.length ?? 0) > 0;
+  const riskKey = hasHooks
+    ? hasTasks
+      ? "workspaceTrust.riskBoth"
+      : "workspaceTrust.risk"
+    : "workspaceTrust.riskTasks";
+  const openPathInDefaultApp = api?.openPathInDefaultApp;
 
   return (
     <Dialog open={open}>
@@ -44,7 +53,7 @@ export function WorkspaceCapabilityTrustDialog({
       >
         <DialogHeader>
           <DialogTitle>{t("workspaceTrust.title")}</DialogTitle>
-          <DialogDescription>{t("workspaceTrust.risk")}</DialogDescription>
+          <DialogDescription>{t(riskKey)}</DialogDescription>
         </DialogHeader>
 
         {pending?.hashChanged ? (
@@ -55,8 +64,16 @@ export function WorkspaceCapabilityTrustDialog({
             {t("workspaceTrust.hooksChanged")}
           </div>
         ) : null}
+        {tasks?.hashChanged ? (
+          <div
+            role="status"
+            className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100"
+          >
+            {t("workspaceTrust.tasksChanged")}
+          </div>
+        ) : null}
 
-        {pending ? (
+        {pending !== undefined && hasHooks ? (
           <div className="grid gap-1.5">
             <div className="text-xs font-medium text-muted-foreground">
               {t("workspaceTrust.hooksSection")}
@@ -67,7 +84,6 @@ export function WorkspaceCapabilityTrustDialog({
             >
               <ul className="grid gap-1.5">
                 {pending.hooks.map((hook) => {
-                  const openPathInDefaultApp = api?.openPathInDefaultApp;
                   const canOpen = Boolean(openPathInDefaultApp && hook.resolvedPath);
                   return (
                     <li key={`${hook.event}:${hook.command}`}>
@@ -94,6 +110,53 @@ export function WorkspaceCapabilityTrustDialog({
                           className="break-all font-mono text-[0.65rem] text-muted-foreground"
                         >
                           {hook.command}
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
+          </div>
+        ) : null}
+
+        {tasks !== undefined && hasTasks ? (
+          <div className="grid gap-1.5">
+            <div className="text-xs font-medium text-muted-foreground">
+              {t("workspaceTrust.tasksSection")}
+            </div>
+            <ScrollArea
+              type="always"
+              className="pr-3 [&>[data-radix-scroll-area-viewport]]:max-h-40"
+            >
+              <ul className="grid gap-1.5">
+                {tasks.items.map((item) => {
+                  const canOpen = Boolean(openPathInDefaultApp);
+                  return (
+                    <li key={`${item.sourcePath}:${item.label}`}>
+                      <button
+                        type="button"
+                        disabled={!canOpen || busy}
+                        title={t("workspaceTrust.openTaskFile")}
+                        className={cn(
+                          "w-full min-w-0 rounded-md border border-border/40 bg-muted/15 px-2.5 py-2 text-left outline-none",
+                          "focus-visible:ring-2 focus-visible:ring-ring/50",
+                          canOpen && "cursor-pointer",
+                          canOpen && clickableToolCardTriggerClass,
+                        )}
+                        onClick={() => {
+                          if (!openPathInDefaultApp) {
+                            return;
+                          }
+                          void openPathInDefaultApp(item.sourcePath);
+                        }}
+                      >
+                        <div className="font-medium text-foreground">{item.label}</div>
+                        <div
+                          data-spirit-selectable="text"
+                          className="break-all font-mono text-[0.65rem] text-muted-foreground"
+                        >
+                          {item.command}
                         </div>
                       </button>
                     </li>

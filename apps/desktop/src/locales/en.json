@@ -1540,7 +1540,12 @@
     "deny": "Deny",
     "alwaysTrust": "Always trust",
     "hooksSection": "Hooks that will run",
-    "openHookScript": "Open script in default editor"
+    "openHookScript": "Open script in default editor",
+    "riskTasks": "This workspace defines tasks that run commands from the project. Only continue if you trust this codebase.",
+    "riskBoth": "This workspace defines hooks and tasks that run scripts or commands from the project. Only continue if you trust this codebase.",
+    "tasksChanged": "Workspace tasks have changed since you last trusted them. Review the list before continuing.",
+    "tasksSection": "Tasks that will be available",
+    "openTaskFile": "Open tasks file in default editor"
   },
   "webHost": {
     "error": {
