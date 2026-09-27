@@ -214,7 +214,7 @@ test("openBrowserUrlInWorkspaceTabs creates new tab when titled browser tab exis
   assert.notEqual(result.activeId, browserTab.id);
 });
 
-test("addWorkspaceTaskTab carries task metadata with a pinned title", () => {
+test("addWorkspaceTaskTab carries task metadata", () => {
   const tabs = createDefaultWorkspaceToolTabs();
   const { tabs: next, activeId } = addWorkspaceTaskTab(tabs, {
     taskKey: "/repo/.spirit/tasks.json#build",
@@ -225,8 +225,17 @@ test("addWorkspaceTaskTab carries task metadata with a pinned title", () => {
   assert.equal(taskTab.kind, "task");
   assert.equal(taskTab.taskKey, "/repo/.spirit/tasks.json#build");
   assert.equal(taskTab.tabTitle, "build");
-  assert.equal(taskTab.pinnedTitle, true);
+  assert.equal(taskTab.pinnedTitle, undefined);
   assert.equal(next.length, tabs.length + 1);
+});
+
+test("addWorkspaceTaskTab pins the title only when requested", () => {
+  const { tabs } = addWorkspaceTaskTab([], {
+    taskKey: "/repo/.spirit/tasks.json#build",
+    label: "build",
+    pinnedTitle: true,
+  });
+  assert.equal(tabs[0].pinnedTitle, true);
 });
 
 test("closeWorkspaceToolTab does not recreate anything when the last task tab closes", () => {

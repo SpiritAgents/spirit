@@ -212,6 +212,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     resolveTaskForRun(key) {
       return bridge.resolveTaskForRun(key);
     },
+    resolveTaskByLabel(label) {
+      return bridge.resolveTaskByLabel(label);
+    },
     subscribeTasksUpdates(callback) {
       return bridge.tasksSubscribe(callback);
     },

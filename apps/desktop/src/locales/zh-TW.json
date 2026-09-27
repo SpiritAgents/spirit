@@ -907,6 +907,7 @@
     "browserPlaceholder": "瀏覽器分頁載入中…",
     "browserElectronOnly": "瀏覽器僅在 Electron 桌面版中可用。",
     "prTab": "Pull Request",
+    "taskTab": "工作",
     "prElectronOnly": "Pull Requests 僅在 Electron 桌面版中可用。",
     "prGitHubAuthChecking": "正在檢查 GitHub 連線…",
     "prGitHubConnectLink": "連線",
@@ -1096,8 +1097,10 @@
     "group": {
       "chat": "對話",
       "mode": "模式",
+      "workspace": "工作區",
       "appearance": "外觀"
     },
+    "runTask": "執行任務",
     "theme": "主題",
     "language": "語言",
     "back": "返回"

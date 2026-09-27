@@ -206,3 +206,28 @@ test("dispose kills the live pty and later starts reject", async () => {
   bridge.emitExit("pty-1", 0);
   assert.equal(await exitPromise, 0);
 });
+
+test("kill terminates the pty but keeps the xterm and settles start via the exit event", async () => {
+  const bridge = createFakeBridge();
+  const { session } = createSession(bridge);
+  const exitPromise = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(session.isRunning(), true);
+
+  session.kill();
+  assert.deepEqual(bridge.killed, ["pty-1"]);
+  // Still "running" until the real exit event arrives and settles the pending promise.
+  assert.equal(session.isRunning(), true);
+
+  bridge.emitExit("pty-1", 143);
+  assert.equal(await exitPromise, 143);
+  assert.equal(session.isRunning(), false);
+
+  // The xterm is reusable after a kill.
+  const second = session.start(INVOCATION, { cwd: "/tmp" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(bridge.created.length, 2);
+  bridge.emitExit("pty-2", 0);
+  assert.equal(await second, 0);
+  session.dispose();
+});

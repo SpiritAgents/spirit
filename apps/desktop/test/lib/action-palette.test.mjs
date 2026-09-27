@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   ACTION_PALETTE_GROUP_ORDER,
   buildActionPaletteItems,
+  buildActionPaletteItemsWithTasks,
   groupActionPaletteRootItems,
 } from "../../src/lib/action-palette.ts";
 import { STATIC_SLASH_COMMANDS } from "../../src/lib/skill-slash.ts";
@@ -90,9 +91,94 @@ test("groupActionPaletteRootItems preserves chat mode appearance order", () => {
   const grouped = groupActionPaletteRootItems(items);
   assert.deepEqual(
     grouped.map((entry) => entry.group),
-    [...ACTION_PALETTE_GROUP_ORDER],
+    ACTION_PALETTE_GROUP_ORDER.filter((group) => group !== "workspace"),
   );
   assert.ok(grouped.find((entry) => entry.group === "appearance")?.items.length === 2);
+});
+
+test("buildActionPaletteItemsWithTasks hides the Run Task row when no tasks exist", () => {
+  const root = buildActionPaletteItemsWithTasks("", tEn, "root", []);
+  assert.equal(
+    root.some((item) => item.kind === "task-menu"),
+    false,
+  );
+  const grouped = groupActionPaletteRootItems(root);
+  assert.equal(
+    grouped.some((entry) => entry.group === "workspace"),
+    false,
+  );
+  assert.deepEqual(buildActionPaletteItemsWithTasks("", tEn, "tasks", []), []);
+});
+
+const SAMPLE_TASK_ITEMS = [
+  {
+    key: "/repo/.spirit/tasks.json#build",
+    label: "build",
+    detail: "Builds everything",
+    iconId: "gear",
+  },
+  { key: "/repo/.vscode/tasks.json#watch", label: "watch" },
+];
+
+test("buildActionPaletteItemsWithTasks lists the Run Task row inside a workspace group", () => {
+  const root = buildActionPaletteItemsWithTasks("", tEn, "root", SAMPLE_TASK_ITEMS);
+  const taskMenu = root.find((item) => item.kind === "task-menu");
+  assert.ok(taskMenu);
+  assert.equal(taskMenu.id, "action:run-task");
+  assert.equal(taskMenu.group, "workspace");
+
+  const grouped = groupActionPaletteRootItems(root);
+  assert.deepEqual(
+    grouped.map((entry) => entry.group),
+    [...ACTION_PALETTE_GROUP_ORDER],
+  );
+  assert.deepEqual(
+    grouped.find((entry) => entry.group === "workspace")?.items.map((item) => item.id),
+    ["action:run-task"],
+  );
+});
+
+test("buildActionPaletteItemsWithTasks applies the query to the Run Task row", () => {
+  assert.equal(
+    buildActionPaletteItemsWithTasks("zzz-no-match", tEn, "root", SAMPLE_TASK_ITEMS).some(
+      (item) => item.kind === "task-menu",
+    ),
+    false,
+  );
+  assert.ok(
+    buildActionPaletteItemsWithTasks("run task", tEn, "root", SAMPLE_TASK_ITEMS).some(
+      (item) => item.kind === "task-menu",
+    ),
+  );
+});
+
+test("buildTaskOptionItems maps task items and filters by label and detail", () => {
+  const options = buildActionPaletteItemsWithTasks("", tEn, "tasks", SAMPLE_TASK_ITEMS);
+  assert.deepEqual(
+    options.map((item) => [item.id, item.kind, item.label]),
+    [
+      ["action:task:/repo/.spirit/tasks.json#build", "task-option", "build"],
+      ["action:task:/repo/.vscode/tasks.json#watch", "task-option", "watch"],
+    ],
+  );
+  assert.equal(options[0]?.taskKey, "/repo/.spirit/tasks.json#build");
+  assert.equal(options[0]?.detail, "Builds everything");
+  assert.equal(options[0]?.iconId, "gear");
+  assert.equal(options[1]?.detail, undefined);
+  assert.equal(options[1]?.iconId, undefined);
+
+  assert.deepEqual(
+    buildActionPaletteItemsWithTasks("wat", tEn, "tasks", SAMPLE_TASK_ITEMS).map(
+      (item) => item.label,
+    ),
+    ["watch"],
+  );
+  assert.deepEqual(
+    buildActionPaletteItemsWithTasks("builds everything", tEn, "tasks", SAMPLE_TASK_ITEMS).map(
+      (item) => item.label,
+    ),
+    ["build"],
+  );
 });
 
 test("buildActionPaletteItems filters compact by prefix", () => {

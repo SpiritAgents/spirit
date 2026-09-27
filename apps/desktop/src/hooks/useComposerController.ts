@@ -52,6 +52,8 @@ import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
   isNewChatAction,
+  isTaskMenuAction,
+  isTaskOptionAction,
   isThemeOptionAction,
   type ActionPaletteItem,
 } from "@/lib/action-palette";
@@ -811,7 +813,13 @@ export function useComposerController({
 
   const runActionPaletteItem = useCallback(
     (item: ActionPaletteItem) => {
-      if (isAppearanceMenuAction(item) || isThemeOptionAction(item) || isLocaleOptionAction(item)) {
+      if (
+        isAppearanceMenuAction(item) ||
+        isThemeOptionAction(item) ||
+        isLocaleOptionAction(item) ||
+        isTaskMenuAction(item) ||
+        isTaskOptionAction(item)
+      ) {
         return;
       }
       ensureConversationSurface();

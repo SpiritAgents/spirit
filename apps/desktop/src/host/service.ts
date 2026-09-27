@@ -2542,6 +2542,13 @@ class DesktopHostService {
     });
   }
 
+  async resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskByLabel({
+      workspaceRoot: this.state?.workspaceRoot,
+      label,
+    });
+  }
+
   async createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot> {
     return this.runSerialized(async () => {
       await createAutomationCommand(request);

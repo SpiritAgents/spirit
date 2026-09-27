@@ -154,6 +154,7 @@ declare global {
     setAutomationEnabled(automationId: string, enabled: boolean): Promise<DesktopSnapshot>;
     listTaskMenuItems(): Promise<import("./types.js").DesktopTaskMenuItem[]>;
     resolveTaskForRun(key: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    resolveTaskByLabel(label: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
     tasksSubscribe(
       callback: (items: import("./types.js").DesktopTaskMenuItem[]) => void,
     ): () => void;

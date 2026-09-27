@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
@@ -64,6 +64,7 @@ import {
   type ShellOverlayPhase,
 } from "@/lib/desktop-shell";
 import { isMarkdownPath } from "@/lib/file-picker-path";
+import { initTaskRunService, runTaskByKey } from "@/lib/task-run-service";
 import {
   isWorkspaceReferenceDirectoryPath,
   normalizeWorkspaceReferenceDirectoryPath,
@@ -187,6 +188,28 @@ export default function App() {
     snapshot,
     activeFilePath,
   });
+
+  useEffect(() => {
+    initTaskRunService({
+      resolveTaskForRun: runtime.resolveTaskForRun,
+      resolveTaskByLabel: runtime.resolveTaskByLabel,
+      getTabs: workspaceTools.getWorkspaceToolTabs,
+      setTabs: workspaceTools.setWorkspaceToolTabs,
+      getActiveTabId: workspaceTools.getActiveWorkspaceToolTabId,
+      setActiveTabId: workspaceTools.setActiveWorkspaceToolTabId,
+      setToolsOpen: workspaceTools.setWorkspaceToolsOpen,
+      getWorkspaceRoot: () => snapshot?.workspaceRoot ?? "",
+    });
+  }, [
+    runtime.resolveTaskForRun,
+    runtime.resolveTaskByLabel,
+    workspaceTools.getWorkspaceToolTabs,
+    workspaceTools.setWorkspaceToolTabs,
+    workspaceTools.getActiveWorkspaceToolTabId,
+    workspaceTools.setActiveWorkspaceToolTabId,
+    workspaceTools.setWorkspaceToolsOpen,
+    snapshot?.workspaceRoot,
+  ]);
 
   const gitHubAuthConnected = useGitHubAuthConnected(
     runtime.getGitHubAuthStatus,
@@ -856,6 +879,8 @@ export default function App() {
                   onOpenChange={composer.setActionPickerOpen}
                   onSelect={composer.runActionPaletteItem}
                   onSavePatch={runtime.saveSettingsPatch}
+                  taskItems={runtime.taskMenuItems}
+                  onRunTask={(key) => void runTaskByKey(key)}
                   isItemDisabled={composer.isActionPaletteItemDisabled}
                   shouldIncludeItem={composer.filterActionPaletteItem}
                 />

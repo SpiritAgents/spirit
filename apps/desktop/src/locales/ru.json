@@ -911,6 +911,7 @@
     "browserPlaceholder": "Загрузка вкладки браузера…",
     "browserElectronOnly": "Браузер доступен только в десктопной версии Electron.",
     "prTab": "Pull Request",
+    "taskTab": "Задача",
     "prElectronOnly": "Pull Requests доступны только в десктопной версии Electron.",
     "prGitHubAuthChecking": "Проверка подключения к GitHub…",
     "prGitHubConnectLink": "Подключиться",
@@ -1100,8 +1101,10 @@
     "group": {
       "chat": "Чат",
       "mode": "Режим",
+      "workspace": "Рабочая область",
       "appearance": "Оформление"
     },
+    "runTask": "Запустить задачу",
     "theme": "Тема",
     "language": "Язык",
     "back": "Назад"

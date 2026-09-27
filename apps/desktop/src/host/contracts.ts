@@ -90,6 +90,7 @@ export type HostCommandName =
   | "setAutomationEnabled"
   | "listTaskMenuItems"
   | "resolveTaskForRun"
+  | "resolveTaskByLabel"
   | "replyPendingApproval"
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"

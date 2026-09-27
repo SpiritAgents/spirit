@@ -1,6 +1,7 @@
 import { Compose } from "@spiritagent/icons/compose";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { Languages, Palette } from "lucide-react";
+import { Languages, Palette, Terminal } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_COMMAND_PALETTE_ITEM_TONE } from "@/lib/desktop-chrome";
@@ -11,11 +12,14 @@ import {
   isLocaleOptionAction,
   isNewChatAction,
   isSlashActionPaletteItem,
+  isTaskMenuAction,
+  isTaskOptionAction,
   isThemeOptionAction,
   type ActionPaletteItem,
 } from "@/lib/action-palette";
 import { SLASH_SUGGESTION_ICONS } from "@/lib/slash-command-icons";
 import type { SkillSlashSuggestionKind } from "@/lib/skill-slash";
+import { resolveTaskIcon, type TaskIconResolution } from "@/lib/task-icon";
 
 type ActionPickerRowProps = {
   item: ActionPaletteItem;
@@ -44,6 +48,32 @@ const actionPickerMetaClass = cn(
   "ml-auto min-w-0 truncate text-xs text-muted-foreground",
   DESKTOP_COMMAND_PALETTE_ITEM_TONE,
 );
+
+const taskOptionIconClass = cn(
+  "size-3.5 shrink-0 text-popover-foreground",
+  DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+);
+
+// DynamicIcon renders its fallback without props, so the tone is baked into the component.
+function TaskOptionIconFallback() {
+  return <Terminal className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
+}
+
+function TaskOptionIcon({ resolution }: { resolution: TaskIconResolution }) {
+  if (resolution.kind === "lucide") {
+    return (
+      <DynamicIcon
+        name={resolution.name as IconName}
+        className={taskOptionIconClass}
+        aria-hidden
+        strokeWidth={1.75}
+        fallback={TaskOptionIconFallback}
+      />
+    );
+  }
+  const Icon = resolution.component;
+  return <Icon className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
+}
 
 export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProps) {
   const { t } = useTranslation();
@@ -96,6 +126,40 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
+      </div>
+    );
+  }
+
+  if (isTaskMenuAction(item)) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+        <Terminal
+          className={cn(
+            "size-3.5 shrink-0 text-popover-foreground",
+            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+          )}
+          aria-hidden
+          strokeWidth={1.75}
+        />
+        <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
+        <ChevronRight
+          className={cn(
+            "size-3.5 shrink-0 text-popover-foreground",
+            DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+          )}
+          aria-hidden
+          strokeWidth={1.75}
+        />
+      </div>
+    );
+  }
+
+  if (isTaskOptionAction(item)) {
+    return (
+      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+        <TaskOptionIcon resolution={resolveTaskIcon(item.iconId)} />
+        <span className={actionPickerPrimaryTitleClass}>{item.label}</span>
+        {item.detail?.trim() ? <span className={actionPickerMetaClass}>{item.detail}</span> : null}
       </div>
     );
   }

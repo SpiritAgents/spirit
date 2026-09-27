@@ -79,6 +79,7 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
   DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
@@ -936,6 +937,25 @@ export function useDesktopRuntime() {
     return api.listAutomations();
   }, [api]);
 
+  const resolveTaskForRun = useCallback(
+    async (key: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskForRun(key);
+    },
+    [api],
+  );
+
+  const resolveTaskByLabel = useCallback(
+    async (label: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskByLabel(label);
+    },
+    [api],
+  );
   const getAutomation = useCallback(
     async (automationId: string): Promise<DesktopAutomationDetail | undefined> => {
       if (!api) {
@@ -4059,6 +4079,8 @@ export function useDesktopRuntime() {
     refreshSessions,
     listDreamsOverview,
     listAutomations,
+    resolveTaskForRun,
+    resolveTaskByLabel,
     getAutomation,
     createAutomation,
     updateAutomation,

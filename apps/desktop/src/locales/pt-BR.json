@@ -907,6 +907,7 @@
     "browserPlaceholder": "Carregando aba do navegador…",
     "browserElectronOnly": "O Navegador está disponível apenas na versão desktop Electron.",
     "prTab": "Pull Request",
+    "taskTab": "Tarefa",
     "prElectronOnly": "Pull Requests estão disponíveis apenas na versão desktop Electron.",
     "prGitHubAuthChecking": "Verificando conexão com GitHub…",
     "prGitHubConnectLink": "Conectar",
@@ -1096,8 +1097,10 @@
     "group": {
       "chat": "Conversa",
       "mode": "Modo",
+      "workspace": "Workspace",
       "appearance": "Aparência"
     },
+    "runTask": "Executar tarefa",
     "theme": "Tema",
     "language": "Idioma",
     "back": "Voltar"

@@ -9,19 +9,21 @@ import type { ThemePreference } from "@/lib/theme";
 
 export type ActionPaletteTranslate = (key: string) => string;
 
-export type ActionPaletteGroup = "chat" | "mode" | "appearance";
+export type ActionPaletteGroup = "chat" | "mode" | "workspace" | "appearance";
 
-export type ActionPaletteView = "root" | "theme" | "locale";
+export type ActionPaletteView = "root" | "theme" | "locale" | "tasks";
 
 export const ACTION_PALETTE_GROUP_ORDER: readonly ActionPaletteGroup[] = [
   "chat",
   "mode",
+  "workspace",
   "appearance",
 ] as const;
 
 export const ACTION_PALETTE_GROUP_LABEL_KEYS: Record<ActionPaletteGroup, string> = {
   chat: "actionPalette.group.chat",
   mode: "actionPalette.group.mode",
+  workspace: "actionPalette.group.workspace",
   appearance: "actionPalette.group.appearance",
 };
 
@@ -66,6 +68,22 @@ export type LocaleOptionActionPaletteItem = {
   labelKey: string;
 };
 
+export type TaskMenuActionPaletteItem = {
+  id: "action:run-task";
+  kind: "task-menu";
+  group: "workspace";
+  labelKey: "actionPalette.runTask";
+};
+
+export type TaskOptionActionPaletteItem = {
+  id: `action:task:${string}`;
+  kind: "task-option";
+  taskKey: string;
+  label: string;
+  detail?: string;
+  iconId?: string;
+};
+
 export type SlashActionPaletteItem = SkillSlashSuggestion & {
   group: "chat" | "mode";
 };
@@ -76,7 +94,9 @@ export type ActionPaletteItem =
   | ThemeMenuActionPaletteItem
   | LocaleMenuActionPaletteItem
   | ThemeOptionActionPaletteItem
-  | LocaleOptionActionPaletteItem;
+  | LocaleOptionActionPaletteItem
+  | TaskMenuActionPaletteItem
+  | TaskOptionActionPaletteItem;
 
 const NEW_CHAT_ITEM: NewChatActionPaletteItem = {
   id: "action:new-chat",
@@ -97,6 +117,13 @@ const LOCALE_MENU_ITEM: LocaleMenuActionPaletteItem = {
   kind: "locale-menu",
   group: "appearance",
   labelKey: "actionPalette.language",
+};
+
+const TASK_MENU_ITEM: TaskMenuActionPaletteItem = {
+  id: "action:run-task",
+  kind: "task-menu",
+  group: "workspace",
+  labelKey: "actionPalette.runTask",
 };
 
 const MODE_SLASH_KINDS = new Set<SkillSlashSuggestion["kind"]>(["loop", "plan", "ask", "debug"]);
@@ -174,6 +201,14 @@ function actionPaletteSearchText(item: ActionPaletteItem, t: ActionPaletteTransl
     return withEnglishSearchText(t(item.labelKey), item.labelKey);
   }
 
+  if (item.kind === "task-menu") {
+    return withEnglishSearchText(t(item.labelKey), item.labelKey);
+  }
+
+  if (item.kind === "task-option") {
+    return `${item.label} ${item.detail ?? ""}`;
+  }
+
   if (item.kind === "theme-option") {
     return `${withEnglishSearchText(t(item.labelKey), item.labelKey)} ${item.value}`;
   }
@@ -218,6 +253,51 @@ export function buildActionPaletteItems(
     return filterByQuery(LOCALE_OPTION_ITEMS, query, t);
   }
   return filterByQuery(ROOT_ITEMS, query, t);
+}
+
+export type ActionPaletteTaskItem = {
+  key: string;
+  label: string;
+  detail?: string;
+  iconId?: string;
+};
+
+export function buildTaskOptionItems(
+  taskItems: readonly ActionPaletteTaskItem[],
+  query: string,
+): TaskOptionActionPaletteItem[] {
+  const trimmed = query.trim();
+  const filtered = !trimmed
+    ? [...taskItems]
+    : taskItems.filter((item) => matchesQuery(`${item.label} ${item.detail ?? ""}`, trimmed));
+  return filtered.map((item) => ({
+    id: `action:task:${item.key}`,
+    kind: "task-option",
+    taskKey: item.key,
+    label: item.label,
+    ...(item.detail !== undefined ? { detail: item.detail } : {}),
+    ...(item.iconId !== undefined ? { iconId: item.iconId } : {}),
+  }));
+}
+
+/**
+ * Root/tasks composition with injected task data: the tasks view lists task options, and
+ * the Run Task root row appears (subject to the query) only while any valid task exists.
+ */
+export function buildActionPaletteItemsWithTasks(
+  query: string,
+  t: ActionPaletteTranslate,
+  view: ActionPaletteView,
+  taskItems: readonly ActionPaletteTaskItem[],
+): ActionPaletteItem[] {
+  if (view === "tasks") {
+    return buildTaskOptionItems(taskItems, query);
+  }
+  const items = buildActionPaletteItems(query, t, view);
+  if (view !== "root" || taskItems.length === 0) {
+    return items;
+  }
+  return filterByQuery([TASK_MENU_ITEM], query, t).length > 0 ? [...items, TASK_MENU_ITEM] : items;
 }
 
 export function groupActionPaletteRootItems(
@@ -271,4 +351,12 @@ export function isSlashActionPaletteItem(item: ActionPaletteItem): item is Slash
     item.kind === "debug" ||
     item.kind === "skill"
   );
+}
+
+export function isTaskMenuAction(item: ActionPaletteItem): item is TaskMenuActionPaletteItem {
+  return item.kind === "task-menu";
+}
+
+export function isTaskOptionAction(item: ActionPaletteItem): item is TaskOptionActionPaletteItem {
+  return item.kind === "task-option";
 }

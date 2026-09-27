@@ -15,11 +15,12 @@ import { useCommandListWheelHover } from "@/hooks/use-command-list-wheel-hover";
 import { useTheme } from "@/hooks/useTheme";
 import {
   ACTION_PALETTE_GROUP_LABEL_KEYS,
-  buildActionPaletteItems,
+  buildActionPaletteItemsWithTasks,
   groupActionPaletteRootItems,
   isLocaleOptionAction,
   isThemeOptionAction,
   type ActionPaletteItem,
+  type ActionPaletteTaskItem,
   type ActionPaletteView,
 } from "@/lib/action-palette";
 import {
@@ -37,6 +38,8 @@ type ActionPickerDialogProps = {
   onOpenChange(open: boolean): void;
   onSelect(item: ActionPaletteItem): void;
   onSavePatch(patch: { uiLocale: string }): Promise<void>;
+  taskItems?: readonly ActionPaletteTaskItem[];
+  onRunTask?(taskKey: string): void;
   isItemDisabled?(item: ActionPaletteItem): boolean;
   shouldIncludeItem?(item: ActionPaletteItem): boolean;
 };
@@ -50,6 +53,8 @@ export function ActionPickerDialog({
   onOpenChange,
   onSelect,
   onSavePatch,
+  taskItems = [],
+  onRunTask,
   isItemDisabled,
   shouldIncludeItem,
 }: ActionPickerDialogProps) {
@@ -76,8 +81,10 @@ export function ActionPickerDialog({
 
   const items = useMemo(
     () =>
-      buildActionPaletteItems(query, t, view).filter((item) => shouldIncludeItem?.(item) ?? true),
-    [query, shouldIncludeItem, t, view],
+      buildActionPaletteItemsWithTasks(query, t, view, taskItems).filter(
+        (item) => shouldIncludeItem?.(item) ?? true,
+      ),
+    [query, shouldIncludeItem, t, taskItems, view],
   );
 
   const groupedRootItems = useMemo(
@@ -124,6 +131,16 @@ export function ActionPickerDialog({
     if (item.kind === "locale-menu") {
       setView("locale");
       setQuery("");
+      return;
+    }
+    if (item.kind === "task-menu") {
+      setView("tasks");
+      setQuery("");
+      return;
+    }
+    if (item.kind === "task-option") {
+      onOpenChange(false);
+      onRunTask?.(item.taskKey);
       return;
     }
     if (isThemeOptionAction(item)) {
