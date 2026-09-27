@@ -5,6 +5,7 @@ export type TaskTerminalRegistration = {
   taskKey: string;
   instanceKey?: string;
   running: boolean;
+  promptOnClose?: boolean;
   /** Fired when the registration is unregistered (task tab unmounted); the coordinator hooks here. */
   onSessionDisposed?: (tabId: string) => void;
 };
@@ -28,7 +29,7 @@ export function getTaskTerminal(tabId: string): TaskTerminalRegistration | undef
 
 export function updateTaskTerminal(
   tabId: string,
-  patch: Partial<Pick<TaskTerminalRegistration, "instanceKey" | "running">>,
+  patch: Partial<Pick<TaskTerminalRegistration, "instanceKey" | "running" | "promptOnClose">>,
 ): void {
   const entry = registrations.get(tabId);
   if (entry !== undefined) {
@@ -62,6 +63,13 @@ export function focusTaskTerminal(tabId: string): boolean {
   }
   entry.session.focus();
   return true;
+}
+
+/** The promptOnClose close gate: confirm only while a live process belongs to a task that asked for it. */
+export function shouldConfirmTaskTabClose(
+  entry: Pick<TaskTerminalRegistration, "running" | "promptOnClose"> | undefined,
+): boolean {
+  return entry?.running === true && entry.promptOnClose === true;
 }
 
 export function listTaskTerminals(): [string, TaskTerminalRegistration][] {

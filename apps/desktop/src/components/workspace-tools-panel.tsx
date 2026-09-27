@@ -98,6 +98,8 @@ import {
   type WorkspaceToolTab,
   type WorkspaceToolTabKind,
 } from "@/lib/workspace-tool-tabs";
+import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-registry";
+import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
 import type {
   DesktopGitSnapshot,
   WorkspaceContentInvalidation,
@@ -603,6 +605,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     () => new Set(),
   );
   const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
+  const [pendingTaskCloseTabId, setPendingTaskCloseTabId] = useState<string | null>(null);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 
@@ -702,6 +705,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         setPendingCloseTabId(closeId);
         return;
       }
+      if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
+        setPendingTaskCloseTabId(closeId);
+        return;
+      }
       performCloseTab(closeId);
     },
     [performCloseTab, tabs],
@@ -714,6 +721,16 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     performCloseTab(pendingCloseTabId);
     setPendingCloseTabId(null);
   }, [pendingCloseTabId, performCloseTab]);
+
+  const handleConfirmTaskCloseTab = useCallback(() => {
+    if (!pendingTaskCloseTabId) {
+      return;
+    }
+    const closeId = pendingTaskCloseTabId;
+    setPendingTaskCloseTabId(null);
+    void terminateTaskTerminalInstance(closeId);
+    performCloseTab(closeId);
+  }, [pendingTaskCloseTabId, performCloseTab]);
 
   const handleBrowserUrlChange = useCallback(
     (tabId: string, url: string) => {
@@ -1168,6 +1185,23 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         cancelLabel={t("common.cancel")}
         onConfirm={() => {
           handleConfirmCloseTab();
+        }}
+      />
+      <AlertDialog
+        open={pendingTaskCloseTabId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingTaskCloseTabId(null);
+          }
+        }}
+        title={t("task.terminateConfirmTitle")}
+        description={t("task.terminateConfirmDescription", {
+          label: tabs.find((item) => item.id === pendingTaskCloseTabId)?.tabTitle ?? "",
+        })}
+        confirmLabel={t("task.terminateConfirmAction")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          handleConfirmTaskCloseTab();
         }}
       />
     </>

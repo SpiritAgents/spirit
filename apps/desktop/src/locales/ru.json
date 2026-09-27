@@ -1092,6 +1092,15 @@
     "forceDeleteConfirmTitle": "Удалить навсегда?",
     "forceDeleteConfirmDescription": "Не удалось переместить в корзину: {{reason}}. Это действие необратимо."
   },
+  "task": {
+    "instanceLimitTitle": "Задача уже запущена",
+    "instanceLimitDescription": "«{{label}}» уже запущена. Запустить новый параллельный экземпляр или завершить текущий и заменить его?",
+    "instanceLimitNew": "Новый параллельный экземпляр",
+    "instanceLimitReplace": "Завершить старый экземпляр",
+    "terminateConfirmTitle": "Завершить задачу?",
+    "terminateConfirmDescription": "«{{label}}» ещё выполняется. Закрыть вкладку и завершить её?",
+    "terminateConfirmAction": "Завершить"
+  },
   "actionPalette": {
     "title": "Палитра команд",
     "description": "Поиск и выполнение действий рабочего пространства.",

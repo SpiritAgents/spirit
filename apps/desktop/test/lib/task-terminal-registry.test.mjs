@@ -8,6 +8,7 @@ import {
   getTaskTerminal,
   listTaskTerminals,
   registerTaskTerminal,
+  shouldConfirmTaskTabClose,
   unregisterTaskTerminal,
   updateTaskTerminal,
 } from "../../src/lib/task-terminal-registry.ts";
@@ -94,4 +95,24 @@ test("listTaskTerminals iterates current registrations", () => {
   );
   clearTaskTerminalRegistry();
   assert.deepEqual(listTaskTerminals(), []);
+});
+
+test("shouldConfirmTaskTabClose gates only running entries that asked for confirmation", () => {
+  clearTaskTerminalRegistry();
+  assert.equal(shouldConfirmTaskTabClose(undefined), false);
+
+  const session = createFakeSession();
+  registerTaskTerminal("tab-1", {
+    session,
+    taskKey: "/repo/tasks.json#tab-1",
+    running: true,
+    promptOnClose: true,
+  });
+  assert.equal(shouldConfirmTaskTabClose(getTaskTerminal("tab-1")), true);
+
+  updateTaskTerminal("tab-1", { promptOnClose: false });
+  assert.equal(shouldConfirmTaskTabClose(getTaskTerminal("tab-1")), false);
+
+  updateTaskTerminal("tab-1", { promptOnClose: true, running: false });
+  assert.equal(shouldConfirmTaskTabClose(getTaskTerminal("tab-1")), false);
 });

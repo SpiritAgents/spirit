@@ -1088,6 +1088,15 @@
     "forceDeleteConfirmTitle": "Endgültig löschen?",
     "forceDeleteConfirmDescription": "Konnte nicht in den Papierkorb verschoben werden: {{reason}}. Dies kann nicht rückgängig gemacht werden."
   },
+  "task": {
+    "instanceLimitTitle": "Task läuft bereits",
+    "instanceLimitDescription": "„{{label}}“ läuft bereits. Eine neue parallele Instanz starten oder die laufende Instanz beenden und ersetzen?",
+    "instanceLimitNew": "Neue parallele Instanz",
+    "instanceLimitReplace": "Alte Instanz beenden",
+    "terminateConfirmTitle": "Task beenden?",
+    "terminateConfirmDescription": "„{{label}}“ läuft noch. Tab schließen und beenden?",
+    "terminateConfirmAction": "Beenden"
+  },
   "actionPalette": {
     "title": "Befehlspalette",
     "description": "Suchen und Ausführen von Workspace-Aktionen.",

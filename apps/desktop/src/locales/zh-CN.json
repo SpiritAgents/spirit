@@ -1085,6 +1085,15 @@
     "forceDeleteConfirmTitle": "永久删除？",
     "forceDeleteConfirmDescription": "无法移到回收站：{{reason}}。此操作无法撤销。"
   },
+  "task": {
+    "instanceLimitTitle": "任务已在运行",
+    "instanceLimitDescription": "“{{label}}”已在运行。要启动新的并行实例，或终止正在运行的实例并替换它吗？",
+    "instanceLimitNew": "新建并行实例",
+    "instanceLimitReplace": "终止旧实例",
+    "terminateConfirmTitle": "终止任务？",
+    "terminateConfirmDescription": "“{{label}}”仍在运行。关闭分页并终止它吗？",
+    "terminateConfirmAction": "终止"
+  },
   "actionPalette": {
     "title": "命令面板",
     "description": "搜索并运行工作区操作。",

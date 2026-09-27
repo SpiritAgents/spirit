@@ -1088,6 +1088,15 @@
     "forceDeleteConfirmTitle": "영구 삭제할까요?",
     "forceDeleteConfirmDescription": "휴지통으로 이동할 수 없습니다: {{reason}}. 이 작업은 되돌릴 수 없습니다."
   },
+  "task": {
+    "instanceLimitTitle": "작업이 이미 실행 중입니다",
+    "instanceLimitDescription": "“{{label}}”이(가) 이미 실행 중입니다. 새 병렬 인스턴스를 시작하거나 실행 중인 인스턴스를 종료하고 교체하시겠습니까?",
+    "instanceLimitNew": "새 병렬 인스턴스",
+    "instanceLimitReplace": "이전 인스턴스 종료",
+    "terminateConfirmTitle": "작업을 종료할까요?",
+    "terminateConfirmDescription": "“{{label}}”이(가) 아직 실행 중입니다. 탭을 닫고 종료하시겠습니까?",
+    "terminateConfirmAction": "종료"
+  },
   "actionPalette": {
     "title": "명령 팔레트",
     "description": "워크스페이스 액션을 검색하고 실행합니다.",

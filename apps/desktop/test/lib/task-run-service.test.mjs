@@ -9,11 +9,16 @@ import {
 } from "../../src/lib/task-terminal-registry.ts";
 import {
   formatTaskDisplayCommandLine,
+  getTaskInstanceLimitPrompt,
   initTaskRunService,
   resetTaskRunService,
+  resolveTaskInstanceLimitPrompt,
   runTaskByKey,
+  subscribeTaskInstanceLimitPrompt,
+  terminateTaskTerminalInstance,
 } from "../../src/lib/task-run-service.ts";
 import { closeWorkspaceToolTab } from "../../src/lib/workspace-tool-tabs.ts";
+import { shouldConfirmTaskTabClose } from "../../src/lib/task-terminal-registry.ts";
 
 function makeResolvedTask(overrides = {}) {
   return {
@@ -74,6 +79,8 @@ function createFakeSession() {
     },
     kill() {
       session.killed += 1;
+      // Like a real pty, the killed process still delivers its exit event.
+      session.settleExit(0);
     },
     isRunning() {
       return session.settleFn !== null;
@@ -431,4 +438,153 @@ test("formatTaskDisplayCommandLine uses the trailing arg for shells and joins fo
     "node server.js --port 80",
   );
   assert.equal(formatTaskDisplayCommandLine(shellTask, { file: "/bin/sh", args: [] }), "/bin/sh");
+});
+
+test("instance limit surfaces a pending prompt and new starts a parallel instance", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const first = runTaskByKey(task.key);
+  await flush();
+  const tab = onlyTaskTab(state);
+  const session = state.sessionsByTabId.get(tab.id);
+
+  const promptEvents = [];
+  const unsubscribe = subscribeTaskInstanceLimitPrompt(() => {
+    promptEvents.push(getTaskInstanceLimitPrompt() !== undefined);
+  });
+
+  const second = runTaskByKey(task.key);
+  await flush();
+  const prompt = getTaskInstanceLimitPrompt();
+  assert.ok(prompt);
+  assert.equal(prompt.task.key, task.key);
+  assert.equal(prompt.active, 1);
+  assert.deepEqual(promptEvents, [true]);
+  assert.equal(state.tabs.length, 1);
+
+  resolveTaskInstanceLimitPrompt("new");
+  await flush();
+  assert.equal(getTaskInstanceLimitPrompt(), undefined);
+  assert.equal(state.tabs.length, 2);
+  const newTab = state.tabs.find((candidate) => candidate.id !== tab.id);
+  assert.ok(newTab);
+  const newSession = state.sessionsByTabId.get(newTab.id);
+  assert.equal(newSession.startInvocations.length, 1);
+
+  session.settleExit(0);
+  newSession.settleExit(0);
+  await first;
+  await second;
+  unsubscribe();
+});
+
+test("resolving the instance prompt with replace terminates the oldest instance first", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const first = runTaskByKey(task.key);
+  await flush();
+  const tab = onlyTaskTab(state);
+  const session = state.sessionsByTabId.get(tab.id);
+
+  const second = runTaskByKey(task.key);
+  await flush();
+  assert.ok(getTaskInstanceLimitPrompt());
+
+  resolveTaskInstanceLimitPrompt("replace");
+  await flush();
+  assert.equal(session.killed, 1);
+  // The replacement run reuses the freshly pooled terminal on the same tab.
+  assert.equal(state.tabs.length, 1);
+  assert.equal(session.respawnInvocations.length, 1);
+
+  session.settleExit(0);
+  await first;
+  await second;
+});
+
+test("resolving the instance prompt with cancel starts nothing new", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const first = runTaskByKey(task.key);
+  await flush();
+  const session = state.sessionsByTabId.get(state.tabs[0].id);
+
+  const second = runTaskByKey(task.key);
+  await flush();
+  assert.ok(getTaskInstanceLimitPrompt());
+
+  resolveTaskInstanceLimitPrompt("cancel");
+  await second;
+  assert.equal(getTaskInstanceLimitPrompt(), undefined);
+  assert.equal(state.tabs.length, 1);
+  assert.equal(session.startInvocations.length, 1);
+
+  session.settleExit(0);
+  await first;
+});
+
+test("a second instance-limit hit while the prompt is open cancels immediately", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const first = runTaskByKey(task.key);
+  await flush();
+  const session = state.sessionsByTabId.get(state.tabs[0].id);
+
+  const second = runTaskByKey(task.key);
+  await flush();
+  const prompt = getTaskInstanceLimitPrompt();
+  assert.ok(prompt);
+
+  const third = runTaskByKey(task.key);
+  await flush();
+  // The open prompt is untouched and the newer run was cancelled: nothing started.
+  assert.equal(getTaskInstanceLimitPrompt(), prompt);
+  assert.equal(state.tabs.length, 1);
+  assert.equal(session.startInvocations.length, 1);
+
+  resolveTaskInstanceLimitPrompt("cancel");
+  await second;
+  await third;
+  session.settleExit(0);
+  await first;
+});
+
+test("promptOnClose rides on the registry entry and clears on exit", async () => {
+  const task = makeResolvedTask({ promptOnClose: true });
+  const { state } = setup([task]);
+  const run = runTaskByKey(task.key);
+  await flush();
+  const tab = onlyTaskTab(state);
+  const session = state.sessionsByTabId.get(tab.id);
+
+  const entry = getTaskTerminal(tab.id);
+  assert.equal(entry?.running, true);
+  assert.equal(entry?.promptOnClose, true);
+  assert.equal(shouldConfirmTaskTabClose(entry), true);
+
+  session.settleExit(0);
+  await run;
+  const after = getTaskTerminal(tab.id);
+  assert.equal(after?.running, false);
+  assert.equal(after?.promptOnClose, false);
+  assert.equal(shouldConfirmTaskTabClose(after), false);
+});
+
+test("terminateTaskTerminalInstance terminates the running instance through the coordinator", async () => {
+  const task = makeResolvedTask({ promptOnClose: true });
+  const { state } = setup([task]);
+  const run = runTaskByKey(task.key);
+  await flush();
+  const tab = onlyTaskTab(state);
+  const session = state.sessionsByTabId.get(tab.id);
+
+  await terminateTaskTerminalInstance(tab.id);
+  assert.equal(session.killed, 1);
+  const after = getTaskTerminal(tab.id);
+  assert.equal(after?.running, false);
+  assert.equal(after?.promptOnClose, false);
+
+  await run;
+  await terminateTaskTerminalInstance(tab.id);
+  assert.equal(session.killed, 1);
 });
