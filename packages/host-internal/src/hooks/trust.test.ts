@@ -299,7 +299,8 @@ test("createHookRunner deny skips workspace hooks", async () => {
   assert.equal(result.records.length, 0);
   assert.equal(prompts, 1);
 
-  // Deny is not remembered: the next workspace-hook event asks again.
+  // Deny is remembered per content hash: the next event with identical content
+  // does not prompt again.
   const second = await runner.runSessionStart({
     sessionId: "s",
     conversationPath: null,
@@ -308,7 +309,41 @@ test("createHookRunner deny skips workspace hooks", async () => {
     source: "resume",
   });
   assert.equal(second.records.length, 0);
-  assert.equal(prompts, 2);
+  assert.equal(prompts, 1);
+});
+
+test("hooks trust gate: deny is remembered per content hash until the content changes", async () => {
+  clearWorkspaceCapabilityTrustSessionForTests();
+  const { dataDir, workspaceRoot, loaded } = await makeWorkspaceFixture();
+  const hash = computeWorkspaceHooksContentHash(loaded);
+  assert.ok(hash);
+
+  await applyWorkspaceCapabilityTrustDecision({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    contentHash: hash,
+    decision: "deny",
+  });
+  const denied = await evaluateWorkspaceHooksTrustGate({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    loaded,
+  });
+  assert.deepEqual(denied, { status: "denied" });
+
+  const changed: LoadedHooksConfig = {
+    ...loaded,
+    workspace: {
+      version: 1,
+      hooks: { sessionStart: [{ command: "hooks/other.sh" }] },
+    },
+  };
+  const reprompt = await evaluateWorkspaceHooksTrustGate({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    loaded: changed,
+  });
+  assert.equal(reprompt.status, "needsPrompt");
 });
 
 test("createHookRunner skips workspace hooks when content hash changes during prompt", async () => {
