@@ -27,6 +27,20 @@ Alle drei Quellen verschmelzen in einem Namespace. Definieren mehrere Quellen da
 
 `.vscode/tasks.json` wird tolerant geparst, weil Dateien in der Praxis JSONC sind: `//`- und `/* */`-Kommentare sowie abschließende Kommas werden akzeptiert. Spirits eigene Dateien sind striktes JSON — ein Kommentar macht die Datei ungültig.
 
+## Workspace-Vertrauen
+
+Workspace-Aufgabendateien kommen mit dem Repository und sind daher nicht vertrauenswürdige Daten: `.spirit/tasks.json` und `.vscode/tasks.json` werden erst geladen, nachdem Sie den Workspace-Inhalt genehmigt haben. Die benutzerbezogene `tasks.json` (Spirit-Datenverzeichnis) ist implizit vertrauenswürdig und wird immer geladen.
+
+Wenn Spirit Desktop Workspace-Aufgabendateien (oder eine Änderung daran) erkennt, fragt es einmal: Der Dialog listet die verfügbar werdenden Tasks mit ihren Befehlen; ein Klick auf einen Eintrag öffnet die Quelldatei. Benötigen auch Workspace-Hooks eine Zustimmung, erscheinen beide Listen in einem gemeinsamen Dialog.
+
+- **Einmal zulassen** — die Tasks werden nur für diese Sitzung geladen.
+- **Immer vertrauen** — für genau diesen Dateiinhalt gemerkt.
+- **Ablehnen** — die Workspace-Tasks bleiben nicht verfügbar; die Ablehnung wird für genau diesen Inhalt in dieser Sitzung gemerkt.
+
+Das Bearbeiten einer der Dateien fragt erneut (die Zustimmung ist an den Inhaltshash gebunden). Zur Wiederherstellung nach einer Ablehnung: Datei bearbeiten (erneute Frage) oder App neu starten.
+
+Diese Sperre ist die strukturelle Voraussetzung für künftige automatische Auslöser (`runOn`), die derzeit deaktiviert bleiben.
+
 ## Felder
 
 Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Dateiebene < OS-Block auf Dateiebene < Task < OS-Block auf Taskebene.

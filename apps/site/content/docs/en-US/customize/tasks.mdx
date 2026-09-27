@@ -27,6 +27,20 @@ All three sources merge into one namespace. When several sources define the same
 
 `.vscode/tasks.json` is parsed tolerantly, because real-world files are JSONC: `//` and `/* */` comments and trailing commas are accepted. Spirit's own files are strict JSON — a comment makes the file invalid.
 
+## Workspace trust
+
+Workspace task files arrive with the repository, so they are untrusted data: `.spirit/tasks.json` and `.vscode/tasks.json` load only after you approve the workspace content. The user-level `tasks.json` is implicitly trusted and always loads.
+
+When Spirit Desktop detects workspace task files (or a change to them), it asks once: the prompt lists the tasks that will become available with their commands, and clicking an entry opens the source file. If workspace hooks also need approval, both lists appear in one combined dialog.
+
+- **Allow once** — the tasks load for this session only.
+- **Always trust** — remembered for this exact file content.
+- **Deny** — the workspace tasks stay unavailable; the denial is remembered for that exact content in this session.
+
+Editing either file asks again (the approval is tied to the content hash). To recover from a denial, edit the file (you will be asked again) or restart the app.
+
+This gate is the structural prerequisite for any future automatic run triggers (`runOn`), which remain disabled today.
+
 ## Fields
 
 Behavior per field, evaluated after merging: file-level defaults < file-level OS block < task < task-level OS block.
