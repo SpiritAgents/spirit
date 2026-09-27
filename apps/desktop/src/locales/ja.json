@@ -1089,10 +1089,9 @@
     "forceDeleteConfirmDescription": "ごみ箱に移動できませんでした: {{reason}}。この操作は元に戻せません。"
   },
   "task": {
-    "instanceLimitTitle": "タスクは実行中です",
-    "instanceLimitDescription": "“{{label}}” はすでに実行中です。新しい並列インスタンスを開始しますか？それとも実行中のインスタンスを終了して置き換えますか？",
-    "instanceLimitNew": "新しい並列インスタンス",
-    "instanceLimitReplace": "古いインスタンスを終了",
+    "instanceLimitTitle": "“{{label}}” はすでに実行中です。",
+    "instanceLimitDescription": "置き換えは選択したインスタンスを終了し、新しいインスタンスを開始します。",
+    "instanceLimitReplace": "置き換え",
     "terminateConfirmTitle": "タスクを終了しますか？",
     "terminateConfirmDescription": "“{{label}}” はまだ実行中です。タブを閉じて終了しますか？",
     "terminateConfirmAction": "終了"

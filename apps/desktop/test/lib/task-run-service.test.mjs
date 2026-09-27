@@ -440,66 +440,62 @@ test("formatTaskDisplayCommandLine uses the trailing arg for shells and joins fo
   assert.equal(formatTaskDisplayCommandLine(shellTask, { file: "/bin/sh", args: [] }), "/bin/sh");
 });
 
-test("instance limit surfaces a pending prompt and new starts a parallel instance", async () => {
-  const task = makeResolvedTask();
+test("instance limit surfaces the ordered active instances and replace terminates the selection", async () => {
+  const task = makeResolvedTask({
+    runOptions: { reevaluateOnRerun: true, instanceLimit: 2 },
+  });
   const { state } = setup([task]);
   const first = runTaskByKey(task.key);
   await flush();
-  const tab = onlyTaskTab(state);
-  const session = state.sessionsByTabId.get(tab.id);
+  const firstTab = state.tabs[0];
+  const firstSession = state.sessionsByTabId.get(firstTab.id);
+  const second = runTaskByKey(task.key);
+  await flush();
+  const secondTab = state.tabs.find((candidate) => candidate.id !== firstTab.id);
+  assert.ok(secondTab);
+  const secondSession = state.sessionsByTabId.get(secondTab.id);
 
   const promptEvents = [];
   const unsubscribe = subscribeTaskInstanceLimitPrompt(() => {
     promptEvents.push(getTaskInstanceLimitPrompt() !== undefined);
   });
 
-  const second = runTaskByKey(task.key);
+  const third = runTaskByKey(task.key);
   await flush();
   const prompt = getTaskInstanceLimitPrompt();
   assert.ok(prompt);
   assert.equal(prompt.task.key, task.key);
-  assert.equal(prompt.active, 1);
   assert.deepEqual(promptEvents, [true]);
-  assert.equal(state.tabs.length, 1);
+  assert.equal(state.tabs.length, 2);
 
-  resolveTaskInstanceLimitPrompt("new");
+  // The payload lists both active instances in start order with ISO timestamps.
+  assert.deepEqual(
+    prompt.activeInstances.map((entry) => entry.instance),
+    [1, 2],
+  );
+  assert.deepEqual(
+    prompt.activeInstances.map((entry) => entry.instanceKey),
+    [task.key, `${task.key}|2`],
+  );
+  for (const entry of prompt.activeInstances) {
+    assert.equal(Number.isNaN(Date.parse(entry.startedAt)), false);
+  }
+
+  // Replacing the SECOND instance terminates it, never the oldest.
+  resolveTaskInstanceLimitPrompt({ kind: "replace", instanceKey: `${task.key}|2` });
   await flush();
   assert.equal(getTaskInstanceLimitPrompt(), undefined);
+  assert.equal(secondSession.killed, 1);
+  assert.equal(firstSession.killed, 0);
   assert.equal(state.tabs.length, 2);
-  const newTab = state.tabs.find((candidate) => candidate.id !== tab.id);
-  assert.ok(newTab);
-  const newSession = state.sessionsByTabId.get(newTab.id);
-  assert.equal(newSession.startInvocations.length, 1);
+  assert.equal(secondSession.respawnInvocations.length, 1);
 
-  session.settleExit(0);
-  newSession.settleExit(0);
+  firstSession.settleExit(0);
+  secondSession.settleExit(0);
   await first;
   await second;
+  await third;
   unsubscribe();
-});
-
-test("resolving the instance prompt with replace terminates the oldest instance first", async () => {
-  const task = makeResolvedTask();
-  const { state } = setup([task]);
-  const first = runTaskByKey(task.key);
-  await flush();
-  const tab = onlyTaskTab(state);
-  const session = state.sessionsByTabId.get(tab.id);
-
-  const second = runTaskByKey(task.key);
-  await flush();
-  assert.ok(getTaskInstanceLimitPrompt());
-
-  resolveTaskInstanceLimitPrompt("replace");
-  await flush();
-  assert.equal(session.killed, 1);
-  // The replacement run reuses the freshly pooled terminal on the same tab.
-  assert.equal(state.tabs.length, 1);
-  assert.equal(session.respawnInvocations.length, 1);
-
-  session.settleExit(0);
-  await first;
-  await second;
 });
 
 test("resolving the instance prompt with cancel starts nothing new", async () => {
@@ -513,7 +509,7 @@ test("resolving the instance prompt with cancel starts nothing new", async () =>
   await flush();
   assert.ok(getTaskInstanceLimitPrompt());
 
-  resolveTaskInstanceLimitPrompt("cancel");
+  resolveTaskInstanceLimitPrompt({ kind: "cancel" });
   await second;
   assert.equal(getTaskInstanceLimitPrompt(), undefined);
   assert.equal(state.tabs.length, 1);
@@ -542,7 +538,7 @@ test("a second instance-limit hit while the prompt is open cancels immediately",
   assert.equal(state.tabs.length, 1);
   assert.equal(session.startInvocations.length, 1);
 
-  resolveTaskInstanceLimitPrompt("cancel");
+  resolveTaskInstanceLimitPrompt({ kind: "cancel" });
   await second;
   await third;
   session.settleExit(0);
