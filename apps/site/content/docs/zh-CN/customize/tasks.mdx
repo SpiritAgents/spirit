@@ -1,0 +1,192 @@
+---
+title: 任务
+description: 从命令面板运行工作区任务：在 .spirit/tasks.json 中声明，或从 .vscode/tasks.json 导入。
+---
+
+<Callout type="info">仅 Desktop。</Callout>
+
+任务可以从 Spirit Desktop 命令面板运行预定义的工作区命令：打开命令面板（`Mod+Shift+P`），选择 **工作区 → 运行任务**，再从二级列表中选择一项任务。任务会在右侧工具面板的终端标签页里运行。只有至少存在一项有效任务时，命令面板才会出现 **工作区** 分组。
+
+Spirit 任务是自己的一套系统，不是 VS Code Tasks。它读取严格 JSON 的 Spirit 格式，并作为兼容导入读取 VS Code 的 `tasks.json`——只支持明确定义的 VS Code 字段子集。无法严格按配置运行的任务会被整个隐藏，而不是半配置运行；见[任务为什么被隐藏](#任务为什么被隐藏)。
+
+## 任务文件
+
+按优先级从高到低读取三个来源：
+
+| 优先级 | 来源                             | 必需标记             | 备注                     |
+| ------ | -------------------------------- | -------------------- | ------------------------ |
+| 1      | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Spirit 自己的格式        |
+| 2      | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 用户级，对每个工作区生效 |
+| 3      | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 兼容导入，只读   |
+
+只扫描工作区根目录，不扫描嵌套目录。`<data dir>` 是 Spirit 数据目录（例如 macOS 上的 `~/Library/Application Support/Spirit`）。文件缺失、不可读、不是合法 JSON 或标记不对时，不提供任何任务。
+
+三个文件都会被实时监听；任一文件变化时，命令面板列表自动刷新。
+
+三个来源合并进同一个命名空间。多个来源定义了相同 `label` 时，优先级最高的来源胜出——对命令面板列表和 `dependsOn` 引用都一样。
+
+`.vscode/tasks.json` 采用宽松解析，因为真实文件是 JSONC：接受 `//` 和 `/* */` 注释以及尾随逗号。Spirit 自己的文件是严格 JSON——有注释就算非法。
+
+## 字段
+
+每个字段的行为，在合并后求值：文件级默认值 < 文件级 OS 块 < 任务 < 任务级 OS 块。
+
+### 核心字段
+
+| 字段                                  | 行为 | 备注                                                                                                                                                          |
+| ------------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                               | 必填 | 没有非空 label 的条目会被整个丢弃——不会进菜单，也不会进依赖图                                                                                                 |
+| `type`                                | 支持 | `shell`（默认）或 `process`。其他任何字符串（`npm`、`grunt`、…）都是扩展定制条目，会被完全忽略：不隐藏、不列出，同级条目不受影响                              |
+| `command`                             | 支持 | `string`、`string[]` 或 `{ value, quoting }`。合并后 command 缺失的任务会被隐藏——`shell` 任务也一样（比 VS Code 更严格）                                      |
+| `args`                                | 支持 | 由 `string` 或 `{ value, quoting }` 组成的数组                                                                                                                |
+| `quoting`                             | 支持 | `escape`、`strong`（默认）或 `weak`；非法值回落到 `strong`。作用于 shell 命令行                                                                               |
+| `options.cwd`                         | 支持 | 进程的工作目录                                                                                                                                                |
+| `options.env`                         | 支持 | 额外的环境变量，合并覆盖在宿主环境之上                                                                                                                        |
+| `options.shell`                       | 支持 | `{ executable, args }`——`shell` 任务使用的 shell，代替默认终端 shell                                                                                          |
+| `windows` / `osx` / `linux`（任务级） | 支持 | 当前 OS 的 `{ command, args, options }` 覆盖。当前 OS 块内带 `problemMatcher` 也会隐藏该任务                                                                  |
+| `windows` / `osx` / `linux`（文件级） | 支持 | 形状相同，作为文件内每个任务的 OS 特定默认层                                                                                                                  |
+| 文件级默认值                          | 支持 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可以作为文件级默认值。文件级 `problemMatcher` 会隐藏文件内所有任务 |
+| `isBackground`                        | 支持 | 退出视为用户终止，永远不算失败。依赖它的其他任务会被隐藏（见下文）                                                                                            |
+| `promptOnClose`                       | 支持 | 进程还活着时关闭标签页会要求确认                                                                                                                              |
+| `dependsOn`                           | 支持 | 一个 label 字符串，或 label 字符串数组。对象形式（`{ "type": … }`、`{ "task": … }`）会隐藏该任务                                                              |
+| `dependsOrder`                        | 支持 | `parallel`（默认）或 `sequence`                                                                                                                               |
+| `detail`                              | 支持 | 在命令面板列表中显示在 label 旁边                                                                                                                             |
+| `icon.id`                             | 支持 | 菜单图标：先找 Spirit Icons，再找 Lucide，找不到就用终端字形兜底                                                                                              |
+| `icon.color`                          | 忽略 | 纯展示用途                                                                                                                                                    |
+| `hide`                                | 支持 | 从命令面板列表隐藏，但仍可解析——该任务可以作为 `dependsOn` 依赖运行                                                                                           |
+
+### 运行选项
+
+| 字段                           | 行为 | 备注                                                                                  |
+| ------------------------------ | ---- | ------------------------------------------------------------------------------------- |
+| `runOptions.reevaluateOnRerun` | 支持 | 默认 `true`。`false` 会把第一次解析结果缓存给后续重跑                                 |
+| `runOptions.runOn`             | 受限 | 只支持 `default`。`folderOpen` / `worktreeCreated` 会隐藏任务——任何东西都不会自动运行 |
+| `runOptions.instanceLimit`     | 支持 | 默认 `1`。超过限制会弹出对话框（见[运行任务](#运行任务)）                             |
+| `runOptions.instancePolicy`    | 受限 | 只支持 `prompt`。`terminateNewest`、`terminateOldest`、`warn`、`silent` 会隐藏任务    |
+
+### 展示
+
+| 字段                                | 行为     | 备注                                                           |
+| ----------------------------------- | -------- | -------------------------------------------------------------- |
+| `presentation.echo`                 | 支持     | 在进程输出之前把命令行写入终端                                 |
+| `presentation.reveal`               | 支持     | `always`（默认）、`silent` 或 `never`——见[运行任务](#运行任务) |
+| `presentation.focus`                | 支持     | 隐含 reveal，并把键盘焦点移进终端                              |
+| `presentation.panel`                | 支持     | `shared`（默认）、`dedicated` 或 `new`——终端复用策略           |
+| `presentation.clear`                | 支持     | 重跑并复用终端之前先清空终端                                   |
+| `presentation.close`                | 支持     | 进程退出时自动关闭标签页                                       |
+| `presentation.preserveTerminalName` | 支持     | 标签页标题保持为任务 label，而不是进程标题                     |
+| `presentation.revealProblems`       | 隐藏任务 | 依赖问题匹配，Spirit 不做问题匹配                              |
+| `presentation.showReuseMessage`     | 忽略     | 纯展示用途                                                     |
+| `presentation.group`                | 忽略     | 终端分组不在支持范围内                                         |
+
+### 被忽略的字段
+
+带上这些字段永远不会隐藏任务：`group`（build/test 分组）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。文件级 `inputs` 数组完全不会被读取——但任务内的 `${input:*}` _引用_ 会隐藏该任务（见[变量](#变量)）。
+
+## 变量
+
+支持的引用，在任务解析时替换：
+
+| 变量                         | 值                                |
+| ---------------------------- | --------------------------------- |
+| `${workspaceFolder}`         | 工作区根路径                      |
+| `${workspaceFolderBasename}` | 工作区根目录名                    |
+| `${cwd}`                     | Spirit Desktop 自己进程的工作目录 |
+| `${userHome}`                | 操作系统用户的主目录              |
+| `${pathSeparator}`、`${/}`   | 操作系统路径分隔符                |
+| `${env:NAME}`                | 环境变量 `NAME`（未设置时为空）   |
+
+扫描覆盖 `command`、`args`、`options.cwd`、`options.env` 的值和 `options.shell`。任何其他 `${…}` 引用——`${file}`、`${selectedText}`、`${lineNumber}`、`${config:*}`、`${command:*}`、`${input:*}`、`${defaultBuildTask}`、……——都会隐藏任务。未打开工作区时，引用 `${workspaceFolder}` 或 `${workspaceFolderBasename}` 的任务在该轮解析中被隐藏。
+
+## 任务为什么被隐藏
+
+无法严格按配置运行的任务会被整个隐藏，而不是半配置运行。任务从命令面板消失；原因以稳定的规则 id 记录。
+
+| 规则                         | 原因                                                         |
+| ---------------------------- | ------------------------------------------------------------ |
+| `problemMatcher`             | Spirit 不解析命令输出中的问题                                |
+| `revealProblems`             | 依赖问题匹配                                                 |
+| `unsupportedVariable`        | 用猜测的值替换会运行与配置不同的命令                         |
+| `runOn`                      | 任何东西都不会自动运行——任务只能由明确点击启动               |
+| `dependsOnObjectForm`        | 扩展类型的依赖条目无法运行                                   |
+| `dependsOnBackground`        | 后台任务永远不会结束，依赖链没有明确可等待的对象             |
+| `instancePolicy`             | 只有交互式提示；静默策略会在用户看不见的情况下终止实例       |
+| `cyclicDependency`           | 依赖环永远无法启动                                           |
+| `transitiveHiddenDependency` | 依赖了一个本身被隐藏或不存在的 label——隐藏会传播             |
+| `invalidTask`                | 没有 label（被整个丢弃），或合并链上任何地方都没有 `command` |
+
+要诊断消失的任务，开启调试通道启动 Desktop——每个被隐藏的任务都会带着规则 id 记录日志：
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+日志行形如 `[desktop-host][tasks] hidden <file>#<label> rule=<id>`。
+
+## 运行任务
+
+任务只能从命令面板里的明确点击启动——打开文件夹、保存文件或任何其他事件都不会运行任务。这也是除 `default` 以外的 `runOn` 值不受支持的原因。
+
+- **依赖** — `dependsOn` label 在合并后的命名空间里解析。`dependsOrder: "parallel"`（默认）时所有依赖一起启动，各自在自己的终端里、用各自的展示配置，主任务要等所有依赖都退出后才启动；任一依赖非零退出，主任务不运行——与 VS Code 相同的失败语义。`"sequence"` 时依赖按顺序逐个运行，第一个非零退出即在主任务启动前中止整条链。已经在运行的依赖会被等待，而不是重启。
+- **实例限制** — `runOptions.instanceLimit` 默认为 `1`。超过限制再启动实例会询问：**新建并行实例**、**终止旧实例** 或 **取消**。
+- **终端复用** — 只有已退出任务的终端会被复用。`panel: "shared"` 和 `panel: "dedicated"` 都会在本任务自己的空闲终端存在时复用它（复用池按任务划分），否则打开新标签页；`panel: "new"` 总是打开全新标签页。
+- **回显** — `presentation.echo`（默认开）会在进程输出之前把命令行写入终端。
+- **显示** — `always`（默认）在启动时展开工具面板；`silent` 启动时保持关闭，只在任务非零退出时展开；`never` 永不自动展开。`focus: true` 隐含 reveal，并额外把键盘焦点移进终端。
+- **清空** — `presentation.clear` 在重跑并复用终端之前清空终端。
+- **关闭** — `presentation.close` 在退出时自动关闭标签页，不管退出码是什么。
+- **保留终端名** — `presentation.preserveTerminalName` 让标签页标题保持为任务 label；否则会被运行中进程的标题替换。
+- **后台** — `isBackground: true` 把任务标记为永不结束；它的退出视为用户终止，永远不算失败（不做失败展开）。
+- **关闭确认** — `promptOnClose: true` 时，关闭进程还活着的标签页会要求确认；确认即终止进程。
+- **隐藏任务** — `hide: true` 的任务从不出现在命令面板，但仍可作为 `dependsOn` 依赖运行。
+
+## 示例
+
+一份完整的 `.spirit/tasks.json`——build → test → package 顺序链，外加一个后台 watch 任务：
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "生产构建",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` 只在 `build` 零退出后运行；随后 `package` 在 `test` 之后运行，复用同一个终端并先清空。
+- `package` 在运行时解析 `${workspaceFolder}`，并把 `CHANNEL` 加进进程环境。
+- `watch` 不碍事（`silent` 只在非零退出时展开），它的退出永远不算失败。注意任何任务都不能依赖它——指向后台任务的 `dependsOn` 条目会被隐藏。
+
+相关页面：[自动化](./automations.mdx) 介绍按计划或 GitHub 事件运行的 Agent 任务，[Hooks](./hooks.mdx) 介绍由 Agent 和会话事件触发的脚本。

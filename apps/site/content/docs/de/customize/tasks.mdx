@@ -1,0 +1,192 @@
+---
+title: Tasks
+description: Führen Sie Arbeitsbereichs-Tasks aus der Befehlspalette aus, deklariert in .spirit/tasks.json oder importiert aus .vscode/tasks.json.
+---
+
+<Callout type="info">Nur Desktop.</Callout>
+
+Tasks führen vordefinierte Arbeitsbereichsbefehle aus der Befehlspalette von Spirit Desktop aus: Öffnen Sie die Palette (`Mod+Shift+P`), wählen Sie **Arbeitsbereich → Task ausführen** und dann einen Task aus der Liste auf der zweiten Ebene. Der Task läuft in einem Terminal-Tab im rechten Werkzeugbereich. Die Gruppe **Arbeitsbereich** erscheint in der Palette nur, wenn mindestens ein gültiger Task existiert.
+
+Spirit Tasks ist ein eigenes System, nicht VS Code Tasks. Es liest ein striktes JSON-Format von Spirit und — als Kompatibilitätsimport — VS Codes `tasks.json`, mit einer klar definierten Teilmenge der VS-Code-Felder. Ein Task, der nicht exakt wie konfiguriert laufen kann, wird vollständig ausgeblendet, statt halb konfiguriert zu laufen; siehe [Warum ein Task ausgeblendet wird](#warum-ein-task-ausgeblendet-wird).
+
+## Task-Dateien
+
+Drei Quellen werden gelesen, höchste Priorität zuerst:
+
+| Priorität | Quelle                           | Erforderliche Markierung | Hinweise                                        |
+| --------- | -------------------------------- | ------------------------ | ----------------------------------------------- |
+| 1         | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1`     | Spirits eigenes Format                          |
+| 2         | `<data dir>/tasks.json`          | `"schemaVersion": 1`     | Benutzerebene, gilt für jeden Arbeitsbereich    |
+| 3         | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"`     | VS-Code-Kompatibilitätsimport, schreibgeschützt |
+
+Nur das Stammverzeichnis des Arbeitsbereichs wird durchsucht — verschachtelte Verzeichnisse nicht. `<data dir>` ist das Spirit-Datenverzeichnis (zum Beispiel `~/Library/Application Support/Spirit` unter macOS). Eine Datei, die fehlt, unlesbar ist, ungültiges JSON enthält oder die falsche Markierung trägt, liefert keine Tasks.
+
+Die drei Dateien werden live überwacht; die Palettenliste aktualisiert sich automatisch, wenn sich eine davon ändert.
+
+Alle drei Quellen verschmelzen in einem Namespace. Definieren mehrere Quellen dasselbe `label`, gewinnt die Quelle mit der höchsten Priorität — sowohl für die Palettenliste als auch für `dependsOn`-Verweise.
+
+`.vscode/tasks.json` wird tolerant geparst, weil Dateien in der Praxis JSONC sind: `//`- und `/* */`-Kommentare sowie abschließende Kommas werden akzeptiert. Spirits eigene Dateien sind striktes JSON — ein Kommentar macht die Datei ungültig.
+
+## Felder
+
+Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Dateiebene < OS-Block auf Dateiebene < Task < OS-Block auf Taskebene.
+
+### Kernfelder
+
+| Feld                                     | Verhalten    | Hinweise                                                                                                                                                                                                          |
+| ---------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                                  | Erforderlich | Einträge ohne nicht-leeres Label werden vollständig verworfen — sie erreichen weder das Menü noch den Abhängigkeitsgraphen                                                                                        |
+| `type`                                   | Unterstützt  | `shell` (Standard) oder `process`. Jeder andere String (`npm`, `grunt`, …) ist ein erweiterungsangepasster Eintrag und wird vollständig ignoriert: nicht ausgeblendet, nicht gelistet, Geschwister unbetroffen    |
+| `command`                                | Unterstützt  | `string`, `string[]` oder `{ value, quoting }`. Ein Task, dessen zusammengeführtes Kommando fehlt, wird ausgeblendet — auch bei `shell`-Tasks (strenger als VS Code)                                              |
+| `args`                                   | Unterstützt  | Array aus `string` oder `{ value, quoting }`                                                                                                                                                                      |
+| `quoting`                                | Unterstützt  | `escape`, `strong` (Standard) oder `weak`; ungültige Werte fallen auf `strong` zurück. Gilt für Shell-Kommandozeilen                                                                                              |
+| `options.cwd`                            | Unterstützt  | Arbeitsverzeichnis des Prozesses                                                                                                                                                                                  |
+| `options.env`                            | Unterstützt  | Zusätzliche Umgebungsvariablen, über der Host-Umgebung zusammengeführt                                                                                                                                            |
+| `options.shell`                          | Unterstützt  | `{ executable, args }` — Shell, die für `shell`-Tasks statt der Standard-Terminal-Shell verwendet wird                                                                                                            |
+| `windows` / `osx` / `linux` (Taskebene)  | Unterstützt  | `{ command, args, options }`-Überschreibungen für das aktuelle OS. Ein `problemMatcher` im Block des aktuellen OS blendet den Task ebenfalls aus                                                                  |
+| `windows` / `osx` / `linux` (Dateiebene) | Unterstützt  | Gleiche Form, wirkt als OS-spezifische Standardebene für jeden Task in der Datei                                                                                                                                  |
+| Standardwerte auf Dateiebene             | Unterstützt  | Nur `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` dürfen als Standardwerte auf Dateiebene wirken. Ein `problemMatcher` auf Dateiebene blendet jeden Task in der Datei aus |
+| `isBackground`                           | Unterstützt  | Das Beenden gilt als Benutzerabbruch, nie als Fehlschlag. Ein davon abhängiger Task wird ausgeblendet (siehe unten)                                                                                               |
+| `promptOnClose`                          | Unterstützt  | Das Schließen des Tabs bei laufendem Prozess fragt nach einer Bestätigung                                                                                                                                         |
+| `dependsOn`                              | Unterstützt  | Ein Label-String oder ein Array von Label-Strings. Die Objektform (`{ "type": … }`, `{ "task": … }`) blendet den Task aus                                                                                         |
+| `dependsOrder`                           | Unterstützt  | `parallel` (Standard) oder `sequence`                                                                                                                                                                             |
+| `detail`                                 | Unterstützt  | Wird neben dem Label in der Palettenliste angezeigt                                                                                                                                                               |
+| `icon.id`                                | Unterstützt  | Menüsymbol: zuerst Spirit Icons, dann Lucide, mit einem Terminalsymbol als Fallback                                                                                                                               |
+| `icon.color`                             | Ignoriert    | Rein darstellerisch                                                                                                                                                                                               |
+| `hide`                                   | Unterstützt  | Aus der Palettenliste ausgeblendet, aber weiterhin auflösbar — der Task kann als `dependsOn`-Abhängigkeit laufen                                                                                                  |
+
+### Ausführungsoptionen
+
+| Feld                           | Verhalten     | Hinweise                                                                                                            |
+| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `runOptions.reevaluateOnRerun` | Unterstützt   | Standard `true`. `false` legt die erste Auflösung für spätere erneute Ausführungen im Cache ab                      |
+| `runOptions.runOn`             | Eingeschränkt | Nur `default` wird unterstützt. `folderOpen` / `worktreeCreated` blenden den Task aus — nichts läuft je automatisch |
+| `runOptions.instanceLimit`     | Unterstützt   | Standard `1`. Das Überschreiten des Limits öffnet einen Dialog (siehe [Tasks ausführen](#tasks-ausführen))          |
+| `runOptions.instancePolicy`    | Eingeschränkt | Nur `prompt` wird unterstützt. `terminateNewest`, `terminateOldest`, `warn`, `silent` blenden den Task aus          |
+
+### Darstellung
+
+| Feld                                | Verhalten        | Hinweise                                                                                   |
+| ----------------------------------- | ---------------- | ------------------------------------------------------------------------------------------ |
+| `presentation.echo`                 | Unterstützt      | Schreibt die Kommandozeile vor der Prozessausgabe in das Terminal                          |
+| `presentation.reveal`               | Unterstützt      | `always` (Standard), `silent` oder `never` — siehe [Tasks ausführen](#tasks-ausführen)     |
+| `presentation.focus`                | Unterstützt      | Impliziert reveal und verschiebt den Tastaturfokus in das Terminal                         |
+| `presentation.panel`                | Unterstützt      | `shared` (Standard), `dedicated` oder `new` — Richtlinie für die Terminal-Wiederverwendung |
+| `presentation.clear`                | Unterstützt      | Leert das Terminal vor einer Wiederholung, die es wiederverwendet                          |
+| `presentation.close`                | Unterstützt      | Schließt den Tab automatisch, wenn der Prozess endet                                       |
+| `presentation.preserveTerminalName` | Unterstützt      | Behält das Task-Label als Tab-Titel statt des Prozesstitels                                |
+| `presentation.revealProblems`       | Blendet Task aus | Hängt von der Problemauswertung ab, die Spirit nicht ausführt                              |
+| `presentation.showReuseMessage`     | Ignoriert        | Rein darstellerisch                                                                        |
+| `presentation.group`                | Ignoriert        | Terminal-Gruppierung ist nicht Teil des Umfangs                                            |
+
+### Ignorierte Felder
+
+Diese Felder zu tragen blendet einen Task nie aus: `group` (Build-/Test-Gruppierung), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. Das `inputs`-Array auf Dateiebene wird schlicht nicht gelesen — aber ein `${input:*}`-_Verweis_ innerhalb eines Tasks blendet diesen Task aus (siehe [Variablen](#variablen)).
+
+## Variablen
+
+Unterstützte Verweise, ersetzt, wenn der Task aufgelöst wird:
+
+| Variable                     | Wert                                                |
+| ---------------------------- | --------------------------------------------------- |
+| `${workspaceFolder}`         | Stammpfad des Arbeitsbereichs                       |
+| `${workspaceFolderBasename}` | Ordnername des Arbeitsbereichs-Stammverzeichnisses  |
+| `${cwd}`                     | Spirit Desktops eigenes Prozess-Arbeitsverzeichnis  |
+| `${userHome}`                | Home-Verzeichnis des OS-Benutzers                   |
+| `${pathSeparator}`, `${/}`   | Der OS-Pfadtrenner                                  |
+| `${env:NAME}`                | Umgebungsvariable `NAME` (leer, wenn nicht gesetzt) |
+
+Die Prüfung deckt `command`, `args`, `options.cwd`, `options.env`-Werte und `options.shell` ab. Jeder andere `${…}`-Verweis — `${file}`, `${selectedText}`, `${lineNumber}`, `${config:*}`, `${command:*}`, `${input:*}`, `${defaultBuildTask}`, … — blendet den Task aus. Wenn kein Arbeitsbereich geöffnet ist, werden Tasks, die `${workspaceFolder}` oder `${workspaceFolderBasename}` referenzieren, für diesen Auflösungsdurchlauf ausgeblendet.
+
+## Warum ein Task ausgeblendet wird
+
+Ein Task, der nicht exakt wie konfiguriert laufen kann, wird vollständig ausgeblendet, statt halb konfiguriert zu laufen. Der Task verschwindet aus der Palette; der Grund wird mit einer stabilen Regel-ID aufgezeichnet.
+
+| Regel                        | Begründung                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `problemMatcher`             | Spirit wertet die Kommandoausgabe nicht nach Problemen aus                                                    |
+| `revealProblems`             | Hängt von der Problemauswertung ab                                                                            |
+| `unsupportedVariable`        | Das Einsetzen eines geratenen Werts würde ein anderes Kommando ausführen als konfiguriert                     |
+| `runOn`                      | Nichts läuft je automatisch — Tasks starten nur durch einen expliziten Klick                                  |
+| `dependsOnObjectForm`        | Erweiterungstypisierte Abhängigkeitseinträge sind nicht ausführbar                                            |
+| `dependsOnBackground`        | Ein Hintergrundtask endet nie, sodass die Kette nichts Wohldefiniertes hat, auf das sie warten kann           |
+| `instancePolicy`             | Es existiert nur die interaktive Nachfrage; stille Richtlinien würden Instanzen ungesehen beenden             |
+| `cyclicDependency`           | Ein Abhängigkeitszyklus könnte nie starten                                                                    |
+| `transitiveHiddenDependency` | Hängt von einem Label ab, das selbst ausgeblendet ist oder nicht existiert — das Ausblenden pflanzt sich fort |
+| `invalidTask`                | Kein Label (wird vollständig verworfen) oder kein `command` irgendwo in der Zusammenführungskette             |
+
+Um einen verschwundenen Task zu diagnostizieren, starten Sie Desktop mit aktiviertem Debug-Kanal — jeder ausgeblendete Task wird mit seiner Regel-ID protokolliert:
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+Die Logzeile hat die Form `[desktop-host][tasks] hidden <file>#<label> rule=<id>`.
+
+## Tasks ausführen
+
+Tasks starten nur durch einen expliziten Klick in der Palette — nichts läuft je beim Öffnen eines Ordners, beim Speichern einer Datei oder bei einem anderen Ereignis. Das ist auch der Grund, warum `runOn`-Werte außer `default` nicht unterstützt werden.
+
+- **Abhängigkeiten** — `dependsOn`-Labels werden im zusammengeführten Namespace aufgelöst. Mit `dependsOrder: "parallel"` (Standard) starten alle Abhängigkeiten gemeinsam, jede in ihrem eigenen Terminal mit eigener Darstellung, und der Haupttask startet erst, nachdem jede Abhängigkeit beendet wurde; endet eine Abhängigkeit mit einem Exit-Code ungleich null, läuft der Haupttask nicht — dieselbe Fehlersemantik wie VS Code. Mit `"sequence"` laufen die Abhängigkeiten einzeln der Reihe nach, und der erste Exit-Code ungleich null bricht die Kette ab, bevor der Haupttask startet. Eine bereits laufende Abhängigkeit wird abgewartet, nicht neu gestartet.
+- **Instanzlimit** — `runOptions.instanceLimit` ist standardmäßig `1`. Das Starten einer weiteren Instanz über das Limit hinaus fragt nach: **Neue parallele Instanz**, **Alte Instanz beenden** oder **Abbrechen**.
+- **Terminal-Wiederverwendung** — nur Terminals beendeter Tasks werden je wiederverwendet. `panel: "shared"` und `panel: "dedicated"` verwenden beide das eigene freie Terminal dieses Tasks wieder, wenn eines existiert (der Pool gilt pro Task), und öffnen sonst einen neuen Tab; `panel: "new"` öffnet immer einen frischen Tab.
+- **Echo** — mit `presentation.echo` (standardmäßig an) wird die Kommandozeile vor der Prozessausgabe in das Terminal geschrieben.
+- **Reveal** — `always` (Standard) klappt den Werkzeugbereich beim Start aus; `silent` hält ihn beim Start geschlossen und klappt ihn nur aus, wenn der Task mit einem Exit-Code ungleich null endet; `never` klappt nie automatisch aus. `focus: true` impliziert reveal und verschiebt zusätzlich den Tastaturfokus in das Terminal.
+- **Clear** — `presentation.clear` leert das Terminal vor einer Wiederholung, die es wiederverwendet.
+- **Close** — `presentation.close` schließt den Tab beim Beenden automatisch, unabhängig vom Exit-Code.
+- **Terminalname beibehalten** — `presentation.preserveTerminalName` behält das Task-Label als Tab-Titel; sonst ersetzt der Titel des laufenden Prozesses ihn.
+- **Hintergrund** — `isBackground: true` markiert den Task als nie endend; sein Beenden gilt als Benutzerabbruch, nie als Fehlschlag (kein Fehler-Reveal).
+- **Schließbestätigung** — `promptOnClose: true` fragt nach einer Bestätigung, wenn Sie einen Tab schließen, dessen Prozess noch läuft; das Bestätigen beendet den Prozess.
+- **Ausgeblendete Tasks** — Tasks mit `hide: true` erscheinen nie in der Palette, können aber weiterhin als `dependsOn`-Abhängigkeiten laufen.
+
+## Beispiel
+
+Eine vollständige `.spirit/tasks.json` — eine Build- → Test- → Paket-Sequenzkette plus ein Hintergrund-Watch-Task:
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "Production build",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` läuft erst, nachdem `build` mit null endet; `package` läuft dann nach `test` und verwendet dasselbe, zuvor geleerte Terminal wieder.
+- `package` löst `${workspaceFolder}` zur Laufzeit auf und fügt `CHANNEL` zur Prozessumgebung hinzu.
+- `watch` bleibt unauffällig (`silent` zeigt nur bei einem Exit-Code ungleich null) und sein Beenden gilt nie als Fehlschlag. Beachten Sie, dass nichts davon abhängen darf — ein `dependsOn`-Eintrag, der auf einen Hintergrundtask zeigt, wird ausgeblendet.
+
+Verwandte Seiten: [Automatisierungen](./automations.mdx) für Agent-Jobs nach Zeitplan oder GitHub-Ereignis, [Hooks](./hooks.mdx) für Skripte, die durch Agent- und Sitzungsereignisse ausgelöst werden.
