@@ -1618,9 +1618,27 @@ if (gotSpiritSingleInstanceLock) {
       "desktop:pty-create",
       (
         event,
-        request: { cwd: string; cols: number; rows: number },
+        request: {
+          cwd: string;
+          cols: number;
+          rows: number;
+          file?: unknown;
+          args?: unknown;
+          env?: unknown;
+        },
       ): { ok: true; id: string; shellDisplayName: string } | { ok: false; error: string } => {
-        return workspacePtyManager.createSession(event.sender, request);
+        return workspacePtyManager.createSession(event.sender, {
+          cwd: request.cwd,
+          cols: request.cols,
+          rows: request.rows,
+          ...(typeof request.file === "string" ? { file: request.file } : {}),
+          ...(Array.isArray(request.args)
+            ? { args: request.args.filter((arg): arg is string => typeof arg === "string") }
+            : {}),
+          ...(request.env !== null && typeof request.env === "object"
+            ? { env: request.env as Record<string, string> }
+            : {}),
+        });
       },
     );
 

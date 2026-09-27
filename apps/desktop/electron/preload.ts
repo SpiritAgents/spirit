@@ -646,7 +646,14 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   executeWindowAction(action: string) {
     return ipcRenderer.invoke("desktop:execute-window-action", action);
   },
-  ptyCreate(request: { cwd: string; cols: number; rows: number }) {
+  ptyCreate(request: {
+    cwd: string;
+    cols: number;
+    rows: number;
+    file?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  }) {
     return ipcRenderer.invoke("desktop:pty-create", request);
   },
   ptyWrite(id: string, data: string) {
