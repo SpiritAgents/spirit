@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   BROWSER_NEW_TAB_SENTINEL,
+  addWorkspaceTaskTab,
   addWorkspaceToolTab,
   closeWorkspaceToolTab,
   createDefaultWorkspaceToolTabs,
@@ -211,4 +212,65 @@ test("openBrowserUrlInWorkspaceTabs creates new tab when titled browser tab exis
   const result = openBrowserUrlInWorkspaceTabs(tabs, "https://example.com/other");
   assert.equal(result.tabs.filter((t) => t.kind === "browser").length, 2);
   assert.notEqual(result.activeId, browserTab.id);
+});
+
+test("addWorkspaceTaskTab carries task metadata with a pinned title", () => {
+  const tabs = createDefaultWorkspaceToolTabs();
+  const { tabs: next, activeId } = addWorkspaceTaskTab(tabs, {
+    taskKey: "/repo/.spirit/tasks.json#build",
+    label: "build",
+  });
+  const taskTab = next.find((t) => t.id === activeId);
+  assert.ok(taskTab);
+  assert.equal(taskTab.kind, "task");
+  assert.equal(taskTab.taskKey, "/repo/.spirit/tasks.json#build");
+  assert.equal(taskTab.tabTitle, "build");
+  assert.equal(taskTab.pinnedTitle, true);
+  assert.equal(next.length, tabs.length + 1);
+});
+
+test("closeWorkspaceToolTab does not recreate anything when the last task tab closes", () => {
+  const { tabs } = addWorkspaceTaskTab([], {
+    taskKey: "/repo/.spirit/tasks.json#build",
+    label: "build",
+  });
+  const closed = closeWorkspaceToolTab(tabs, tabs[0].id, tabs[0].id);
+  assert.deepEqual(closed, { tabs: [], activeId: "" });
+});
+
+test("closeWorkspaceToolTab keeps other tabs when the last task tab closes", () => {
+  const base = createDefaultWorkspaceToolTabs();
+  const { tabs } = addWorkspaceTaskTab(base, {
+    taskKey: "/repo/.spirit/tasks.json#build",
+    label: "build",
+  });
+  const taskTab = tabs.find((t) => t.kind === "task");
+  assert.ok(taskTab);
+  const closed = closeWorkspaceToolTab(tabs, taskTab.id, taskTab.id);
+  assert.equal(
+    closed.tabs.some((t) => t.kind === "task"),
+    false,
+  );
+  assert.deepEqual(
+    closed.tabs.map((t) => t.kind),
+    base.map((t) => t.kind),
+  );
+});
+
+test("closeWorkspaceToolTab still recreates the interactive terminal when task tabs exist", () => {
+  const base = createDefaultWorkspaceToolTabs();
+  const { tabs } = addWorkspaceTaskTab(base, {
+    taskKey: "/repo/.spirit/tasks.json#build",
+    label: "build",
+  });
+  const terminalTab = tabs.find((t) => t.kind === "terminal");
+  assert.ok(terminalTab);
+  const closed = closeWorkspaceToolTab(tabs, terminalTab.id, terminalTab.id);
+  const terminals = closed.tabs.filter((t) => t.kind === "terminal");
+  assert.equal(terminals.length, 1);
+  assert.notEqual(terminals[0].id, terminalTab.id);
+  assert.equal(
+    closed.tabs.some((t) => t.kind === "task"),
+    true,
+  );
 });

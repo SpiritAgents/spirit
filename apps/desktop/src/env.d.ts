@@ -333,6 +333,9 @@ declare global {
       cwd: string;
       cols: number;
       rows: number;
+      file?: string;
+      args?: string[];
+      env?: Record<string, string>;
     }): Promise<{ ok: true; id: string; shellDisplayName: string } | { ok: false; error: string }>;
     ptyWrite(id: string, data: string): void;
     ptyResize(id: string, cols: number, rows: number): void;

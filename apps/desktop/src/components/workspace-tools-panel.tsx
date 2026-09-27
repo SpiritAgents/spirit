@@ -47,6 +47,7 @@ import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
 import { WorkspaceGitTab } from "@/components/workspace-git-tab";
 import { WorkspacePrTab } from "@/components/workspace-pr-tab";
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
+import { WorkspaceTaskTerminalTab } from "@/components/workspace-task-terminal-tab";
 import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
@@ -123,6 +124,7 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
   git: { labelKey: "workspace.gitTab", icon: GitBranch },
   browser: { labelKey: "workspace.browser", icon: Globe },
   pr: { labelKey: "workspace.prTab", icon: GitPullRequest },
+  task: { labelKey: "workspace.taskTab", icon: Terminal },
 };
 
 export type WorkspaceToolsDockProps = {
@@ -631,7 +633,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
   useEffect(() => {
-    if (activeTab?.kind !== "terminal") {
+    if (activeTab?.kind !== "terminal" && activeTab?.kind !== "task") {
       return;
     }
     setMountedTerminalTabIds((prev) => {
@@ -726,7 +728,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     (tabId: string, title: string | undefined) => {
       onTabsChange((prev) =>
         prev.map((item) =>
-          item.id === tabId
+          item.id === tabId && item.pinnedTitle !== true
             ? {
                 ...item,
                 tabTitle: title || undefined,
@@ -1059,6 +1061,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                               onTerminalAddToChat({ ...attachment, sourceTabId: item.id })
                           : undefined
                       }
+                      suspendTerminalResize={isResizing}
+                    />
+                  </div>
+                ) : null
+              ) : item.kind === "task" ? (
+                mountedTerminalTabIds.has(item.id) ? (
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <WorkspaceTaskTerminalTab
+                      tabId={item.id}
+                      taskKey={item.taskKey ?? ""}
+                      useTranslucency={useTranslucency}
+                      onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                       suspendTerminalResize={isResizing}
                     />
                   </div>

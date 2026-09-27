@@ -43,6 +43,16 @@ function resolveValidatedCwd(raw: string): string {
   return resolved;
 }
 
+function mergePtyEnv(extra: Record<string, string>): Record<string, string> {
+  const merged = { ...process.env } as Record<string, string>;
+  for (const [key, value] of Object.entries(extra)) {
+    if (typeof value === "string") {
+      merged[key] = value;
+    }
+  }
+  return merged;
+}
+
 function loadPtyModule(): typeof import("node-pty") {
   return require("node-pty") as typeof import("node-pty");
 }
@@ -52,7 +62,14 @@ export class WorkspacePtyManager {
 
   createSession(
     webContents: WebContents,
-    request: { cwd: string; cols: number; rows: number },
+    request: {
+      cwd: string;
+      cols: number;
+      rows: number;
+      file?: string;
+      args?: string[];
+      env?: Record<string, string>;
+    },
   ): { ok: true; id: string; shellDisplayName: string } | { ok: false; error: string } {
     const cwd = resolveValidatedCwd(request.cwd);
     const cols = Math.max(2, Math.min(512, Math.floor(request.cols)));
@@ -61,14 +78,28 @@ export class WorkspacePtyManager {
     let shellFile = "";
     try {
       const mod = loadPtyModule();
-      const { file, args } = defaultShellForPty();
+      let file: string;
+      let args: string[];
+      if (request.file !== undefined) {
+        file = request.file.trim();
+        if (!file) {
+          return { ok: false, error: "file must be a non-empty string" };
+        }
+        args = Array.isArray(request.args)
+          ? request.args.filter((arg): arg is string => typeof arg === "string")
+          : [];
+      } else {
+        const defaultShell = defaultShellForPty();
+        file = defaultShell.file;
+        args = defaultShell.args;
+      }
       shellFile = file;
       const spawnOptions = {
         name: "xterm-256color",
         cols,
         rows,
         cwd,
-        env: process.env as Record<string, string>,
+        env: request.env ? mergePtyEnv(request.env) : (process.env as Record<string, string>),
       };
       const preferConpty =
         process.platform === "win32" && process.env.SPIRIT_PTY_USE_WINPTY !== "1";
