@@ -5,6 +5,7 @@ import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_COMMAND_PALETTE_ITEM_TONE } from "@/lib/desktop-chrome";
+import { DESKTOP_OVERLAY_LIST_ITEM_SECONDARY } from "@/lib/desktop-chrome";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 import {
@@ -50,14 +51,9 @@ const actionPickerMetaClass = cn(
 );
 
 const taskOptionIconClass = cn(
-  "size-3.5 shrink-0 text-popover-foreground",
+  "mt-0.5 size-3.5 shrink-0 text-popover-foreground",
   DESKTOP_COMMAND_PALETTE_ITEM_TONE,
 );
-
-// DynamicIcon renders its fallback without props, so the tone is baked into the component.
-function TaskOptionIconFallback() {
-  return <Terminal className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
-}
 
 function TaskOptionIcon({ resolution }: { resolution: TaskIconResolution }) {
   if (resolution.kind === "lucide") {
@@ -67,12 +63,14 @@ function TaskOptionIcon({ resolution }: { resolution: TaskIconResolution }) {
         className={taskOptionIconClass}
         aria-hidden
         strokeWidth={1.75}
-        fallback={TaskOptionIconFallback}
       />
     );
   }
-  const Icon = resolution.component;
-  return <Icon className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
+  if (resolution.kind === "spirit") {
+    const Icon = resolution.component;
+    return <Icon className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
+  }
+  return null;
 }
 
 export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProps) {
@@ -130,11 +128,22 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
   }
 
   if (isTaskOptionAction(item)) {
+    // Two-line form mirroring the composer slash menu: label (and optional declared
+    // icon) on the first line, gray detail on the second.
+    const resolution = resolveTaskIcon(item.iconId);
     return (
-      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-        <TaskOptionIcon resolution={resolveTaskIcon(item.iconId)} />
-        <span className={actionPickerPrimaryTitleClass}>{item.label}</span>
-        {item.detail?.trim() ? <span className={actionPickerMetaClass}>{item.detail}</span> : null}
+      <div className="flex min-w-0 flex-1 items-start gap-2 overflow-hidden">
+        {resolution.kind !== "none" ? <TaskOptionIcon resolution={resolution} /> : null}
+        <div className="min-w-0 flex-1">
+          <div className={actionPickerPrimaryTitleClass} title={item.label}>
+            {item.label}
+          </div>
+          {item.detail?.trim() ? (
+            <div className={DESKTOP_OVERLAY_LIST_ITEM_SECONDARY} title={item.detail}>
+              {item.detail}
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }

@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { Terminal } from "lucide-react";
 import * as spiritIcons from "@spiritagent/icons";
 
 import { resolveTaskIcon } from "../../src/lib/task-icon.ts";
@@ -28,11 +27,8 @@ test("resolveTaskIcon normalizes PascalCase ids to kebab for Lucide", () => {
   assert.deepEqual(resolution, { kind: "lucide", name: "git-branch" });
 });
 
-test("resolveTaskIcon falls back to the terminal glyph for unknown or missing ids", () => {
-  assert.deepEqual(resolveTaskIcon("definitely-not-an-icon-xyz"), {
-    kind: "fallback",
-    component: Terminal,
-  });
-  assert.deepEqual(resolveTaskIcon("   "), { kind: "fallback", component: Terminal });
-  assert.deepEqual(resolveTaskIcon(undefined), { kind: "fallback", component: Terminal });
+test("resolveTaskIcon returns no icon for unknown or undeclared ids", () => {
+  assert.deepEqual(resolveTaskIcon("definitely-not-an-icon-xyz"), { kind: "none" });
+  assert.deepEqual(resolveTaskIcon("   "), { kind: "none" });
+  assert.deepEqual(resolveTaskIcon(undefined), { kind: "none" });
 });
