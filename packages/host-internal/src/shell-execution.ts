@@ -1,13 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import path from "node:path";
 
 import { buildAgentShellEnvironment } from "./bundled-ripgrep-env.js";
 import {
   decodeShellHostOutput,
   defaultShellForPty,
-  isWindowsCmdExecutable,
-  isWindowsPowerShellExecutable,
   prepareShellForHostExecution,
+  shellRunCommandArgs,
 } from "./default-terminal-shell.js";
 
 const DEFAULT_MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
@@ -36,23 +34,7 @@ function shellSpawnInvocation(
   shellFile: string,
   command: string,
 ): { file: string; args: string[] } {
-  if (isWindowsPowerShellExecutable(shellFile)) {
-    return {
-      file: shellFile,
-      args: ["-NoProfile", "-NonInteractive", "-Command", command],
-    };
-  }
-  if (isWindowsCmdExecutable(shellFile)) {
-    return {
-      file: shellFile,
-      args: ["/d", "/s", "/c", command],
-    };
-  }
-  const base = path.basename(shellFile).toLowerCase();
-  if (base === "fish") {
-    return { file: shellFile, args: ["-c", command] };
-  }
-  return { file: shellFile, args: ["-c", command] };
+  return { file: shellFile, args: [...shellRunCommandArgs(shellFile), command] };
 }
 
 function createChunkThrottle(

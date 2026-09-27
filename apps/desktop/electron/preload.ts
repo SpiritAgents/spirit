@@ -317,6 +317,21 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   setAutomationEnabled(automationId: string, enabled: boolean) {
     return ipcRenderer.invoke("desktop:invoke", "setAutomationEnabled", { automationId, enabled });
   },
+  listTaskMenuItems() {
+    return ipcRenderer.invoke("desktop:invoke", "listTaskMenuItems");
+  },
+  resolveTaskForRun(key: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskForRun", { key });
+  },
+  tasksSubscribe(callback: (items: unknown) => void) {
+    const onTasksUpdate = (_event: Electron.IpcRendererEvent, items: unknown) => {
+      callback(items);
+    };
+    ipcRenderer.on("desktop:tasks-updated", onTasksUpdate);
+    return () => {
+      ipcRenderer.removeListener("desktop:tasks-updated", onTasksUpdate);
+    };
+  },
   dreamSubscribe(callback: (snapshot: unknown) => void) {
     const onDreamUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
       callback(snapshot);

@@ -33,6 +33,8 @@ const RENDERER_SAFE_HOST_INTERNAL_SUBPATHS = new Set([
   "work-location",
   "local-file-composer-route",
   "image-file-support",
+  "tasks",
+  "tasks-runtime",
 ]);
 
 const RENDERER_EXCLUDED_PREFIXES = [join(desktopSrc, "host")];

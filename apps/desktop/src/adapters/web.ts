@@ -429,6 +429,15 @@ export function createWebHostApi(): HostApi {
     subscribeAutomationsUpdates() {
       return () => {};
     },
+    listTaskMenuItems() {
+      return Promise.resolve([]);
+    },
+    resolveTaskForRun() {
+      return Promise.resolve({ status: "unsupported" as const });
+    },
+    subscribeTasksUpdates() {
+      return () => {};
+    },
     subscribeDreamUpdates(callback) {
       const controller = new AbortController();
       void consumeSnapshotStream(

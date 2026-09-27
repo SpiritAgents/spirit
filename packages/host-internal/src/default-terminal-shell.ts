@@ -80,6 +80,17 @@ export function isWindowsCmdExecutable(file: string): boolean {
   return path.basename(file).toLowerCase() === "cmd.exe";
 }
 
+/** Run-command prefix args for a shell executable: the command line itself is appended as one trailing arg. */
+export function shellRunCommandArgs(shellFile: string): string[] {
+  if (isWindowsPowerShellExecutable(shellFile)) {
+    return ["-NoProfile", "-NonInteractive", "-Command"];
+  }
+  if (isWindowsCmdExecutable(shellFile)) {
+    return ["/d", "/s", "/c"];
+  }
+  return ["-c"];
+}
+
 /**
  * Non-interactive subprocesses (shell tool) do not go through ConPTY on Windows by default, so UTF-8 output must be aligned explicitly.
  * PowerShell: set OutputEncoding; cmd: keep the chcp 65001 prefix (output decoding: see {@link decodeShellHostOutput}).

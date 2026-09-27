@@ -153,6 +153,7 @@ import {
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
+  subscribeDesktopTasksUpdates,
 } from "../src/host/service.js";
 import {
   chatsDirPath,
@@ -222,6 +223,7 @@ let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
 let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
+let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
@@ -1225,6 +1227,14 @@ if (gotSpiritSingleInstanceLock) {
       }
     });
 
+    unsubscribeDesktopTasksUpdates = subscribeDesktopTasksUpdates((items) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send("desktop:tasks-updated", items);
+        }
+      }
+    });
+
     unsubscribeDesktopSessionListUpdates = subscribeDesktopSessionListUpdates(() => {
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) {
@@ -1855,6 +1865,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopAutomationsUpdates = undefined;
   unsubscribeDesktopSessionListUpdates?.();
   unsubscribeDesktopSessionListUpdates = undefined;
+  unsubscribeDesktopTasksUpdates?.();
+  unsubscribeDesktopTasksUpdates = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {
     return;
   }

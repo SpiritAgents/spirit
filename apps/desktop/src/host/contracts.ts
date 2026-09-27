@@ -88,6 +88,8 @@ export type HostCommandName =
   | "updateAutomation"
   | "deleteAutomation"
   | "setAutomationEnabled"
+  | "listTaskMenuItems"
+  | "resolveTaskForRun"
   | "replyPendingApproval"
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"
