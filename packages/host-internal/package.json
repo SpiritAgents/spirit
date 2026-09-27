@@ -152,6 +152,10 @@
     "./lsp": {
       "types": "./dist/lsp/index.d.ts",
       "default": "./dist/lsp/index.js"
+    },
+    "./tasks": {
+      "types": "./dist/tasks/public.d.ts",
+      "default": "./dist/tasks/public.js"
     }
   },
   "publishConfig": {
