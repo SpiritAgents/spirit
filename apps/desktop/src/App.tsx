@@ -20,6 +20,7 @@ import { MarketplaceView } from "@/components/marketplace-view";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { SessionSidebarShell } from "@/components/session-sidebar-shell";
 import { SettingsView } from "@/components/settings-view";
+import { TaskInstanceLimitDialog } from "@/components/task-instance-limit-dialog";
 import { WebHostPairingGate } from "@/components/web-host-pairing-gate";
 import { WorkspaceCapabilityTrustDialog } from "@/components/workspace-capability-trust-dialog";
 import { WorkspaceFilePickerDialog } from "@/components/workspace-file-picker-dialog";
@@ -884,6 +885,8 @@ export default function App() {
                   isItemDisabled={composer.isActionPaletteItemDisabled}
                   shouldIncludeItem={composer.filterActionPaletteItem}
                 />
+
+                <TaskInstanceLimitDialog />
 
                 <WorkspaceFilePickerDialog
                   open={composer.filePickerOpen}

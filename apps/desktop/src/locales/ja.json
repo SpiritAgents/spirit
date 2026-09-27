@@ -1088,6 +1088,15 @@
     "forceDeleteConfirmTitle": "完全に削除しますか？",
     "forceDeleteConfirmDescription": "ごみ箱に移動できませんでした: {{reason}}。この操作は元に戻せません。"
   },
+  "task": {
+    "instanceLimitTitle": "タスクは実行中です",
+    "instanceLimitDescription": "“{{label}}” はすでに実行中です。新しい並列インスタンスを開始しますか？それとも実行中のインスタンスを終了して置き換えますか？",
+    "instanceLimitNew": "新しい並列インスタンス",
+    "instanceLimitReplace": "古いインスタンスを終了",
+    "terminateConfirmTitle": "タスクを終了しますか？",
+    "terminateConfirmDescription": "“{{label}}” はまだ実行中です。タブを閉じて終了しますか？",
+    "terminateConfirmAction": "終了"
+  },
   "actionPalette": {
     "title": "コマンドパレット",
     "description": "ワークスペースのアクションを検索して実行します。",

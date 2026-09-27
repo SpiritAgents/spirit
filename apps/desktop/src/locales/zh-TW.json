@@ -1088,6 +1088,15 @@
     "forceDeleteConfirmTitle": "永久刪除？",
     "forceDeleteConfirmDescription": "無法移至垃圾桶：{{reason}}。此操作無法復原。"
   },
+  "task": {
+    "instanceLimitTitle": "工作已在執行",
+    "instanceLimitDescription": "「{{label}}」已在執行。要啟動新的平行執行個體，或終止正在執行的執行個體並加以取代嗎？",
+    "instanceLimitNew": "新增平行執行個體",
+    "instanceLimitReplace": "終止舊執行個體",
+    "terminateConfirmTitle": "終止工作？",
+    "terminateConfirmDescription": "「{{label}}」仍在執行。關閉分頁並終止它嗎？",
+    "terminateConfirmAction": "終止"
+  },
   "actionPalette": {
     "title": "命令面板",
     "description": "搜尋並執行工作區動作。",

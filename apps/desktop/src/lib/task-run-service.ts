@@ -39,9 +39,19 @@ export type TaskRunServiceDeps = {
 
 type TaskShellPair = { executable: string; args: string[] };
 
+export type TaskInstanceLimitChoice = "new" | "replace" | "cancel";
+
+export type TaskInstanceLimitPrompt = {
+  task: ResolvedTask;
+  active: number;
+  resolve: (choice: TaskInstanceLimitChoice) => void;
+};
+
 let deps: TaskRunServiceDeps | undefined;
 let coordinator: TaskRunCoordinator | undefined;
 const resolvedByLabel = new Map<string, ResolvedTask>();
+let pendingInstanceLimitPrompt: TaskInstanceLimitPrompt | undefined;
+const instanceLimitPromptListeners = new Set<() => void>();
 
 export function initTaskRunService(nextDeps: TaskRunServiceDeps): void {
   deps = nextDeps;
@@ -55,6 +65,43 @@ export function resetTaskRunService(): void {
   deps = undefined;
   coordinator = undefined;
   resolvedByLabel.clear();
+  pendingInstanceLimitPrompt = undefined;
+  instanceLimitPromptListeners.clear();
+}
+
+export function subscribeTaskInstanceLimitPrompt(listener: () => void): () => void {
+  instanceLimitPromptListeners.add(listener);
+  return () => {
+    instanceLimitPromptListeners.delete(listener);
+  };
+}
+
+export function getTaskInstanceLimitPrompt(): TaskInstanceLimitPrompt | undefined {
+  return pendingInstanceLimitPrompt;
+}
+
+export function resolveTaskInstanceLimitPrompt(choice: TaskInstanceLimitChoice): void {
+  const pending = pendingInstanceLimitPrompt;
+  if (pending === undefined) {
+    return;
+  }
+  pendingInstanceLimitPrompt = undefined;
+  notifyInstanceLimitPromptListeners();
+  pending.resolve(choice);
+}
+
+export async function terminateTaskTerminalInstance(tabId: string): Promise<void> {
+  const instanceKey = getTaskTerminal(tabId)?.instanceKey;
+  if (instanceKey === undefined || coordinator === undefined) {
+    return;
+  }
+  await coordinator.terminateInstance(instanceKey);
+}
+
+function notifyInstanceLimitPromptListeners(): void {
+  for (const listener of instanceLimitPromptListeners) {
+    listener();
+  }
 }
 
 export async function runTaskByKey(key: string): Promise<void> {
@@ -180,7 +227,11 @@ class DesktopTaskRunHost implements TaskRunHost {
       return { terminalId: tabId };
     }
 
-    updateTaskTerminal(tabId, { running: true, instanceKey });
+    updateTaskTerminal(tabId, {
+      running: true,
+      instanceKey,
+      promptOnClose: task.promptOnClose,
+    });
 
     const startOptions: WorkspaceTaskTerminalStartOptions = {
       cwd: task.options.cwd ?? currentDeps.getWorkspaceRoot(),
@@ -212,7 +263,7 @@ class DesktopTaskRunHost implements TaskRunHost {
     }
     const exitCode = await exitPromise;
     this.exitByTerminal.delete(handle.terminalId);
-    updateTaskTerminal(handle.terminalId, { running: false });
+    updateTaskTerminal(handle.terminalId, { running: false, promptOnClose: false });
     return exitCode;
   }
 
@@ -220,8 +271,16 @@ class DesktopTaskRunHost implements TaskRunHost {
     getTaskTerminal(handle.terminalId)?.session.kill();
   }
 
-  async promptInstanceLimit(): Promise<"cancel"> {
-    return "cancel";
+  async promptInstanceLimit(task: ResolvedTask, active: number): Promise<TaskInstanceLimitChoice> {
+    // One prompt at a time: a second limit hit while the dialog is open cancels the new
+    // run immediately rather than queueing behind the open dialog.
+    if (pendingInstanceLimitPrompt !== undefined) {
+      return "cancel";
+    }
+    return new Promise<TaskInstanceLimitChoice>((resolve) => {
+      pendingInstanceLimitPrompt = { task, active, resolve };
+      notifyInstanceLimitPromptListeners();
+    });
   }
 }
 
