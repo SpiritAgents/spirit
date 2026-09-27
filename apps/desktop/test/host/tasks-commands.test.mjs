@@ -5,7 +5,12 @@ import path from "node:path";
 import { test } from "vitest";
 
 import {
+  applyWorkspaceTasksTrustDecision,
+  clearWorkspaceCapabilityTrustSessionForTests,
+} from "@spiritagent/host-internal";
+import {
   createTaskRunResolver,
+  evaluateAndFilterTaskFiles,
   listTaskMenuItemsCommand,
 } from "../../dist-electron/src/host/host-tasks-commands.js";
 import { setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
@@ -14,12 +19,27 @@ async function withTaskDirs(run) {
   const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), "spirit-tasks-cmd-ws-"));
   const spiritDataDir = await mkdtemp(path.join(os.tmpdir(), "spirit-tasks-cmd-data-"));
   setSpiritDataDirOverride(spiritDataDir);
+  clearWorkspaceCapabilityTrustSessionForTests();
   try {
     await run({ workspaceRoot, spiritDataDir });
   } finally {
     setSpiritDataDirOverride(undefined);
+    clearWorkspaceCapabilityTrustSessionForTests();
     await rm(workspaceRoot, { recursive: true, force: true });
     await rm(spiritDataDir, { recursive: true, force: true });
+  }
+}
+
+// Workspace task files are trust-gated; these tests exercise resolution, not the gate.
+async function trustWorkspaceTasks(workspaceRoot, spiritDataDir) {
+  const { gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+  if (gate.status === "needsPrompt") {
+    await applyWorkspaceTasksTrustDecision({
+      spiritDataDir,
+      workspaceRoot,
+      contentHash: gate.tasks.contentHash,
+      decision: "alwaysTrust",
+    });
   }
 }
 
@@ -31,7 +51,7 @@ async function writeSpiritTasks(workspaceRoot, json) {
 }
 
 test("listTaskMenuItemsCommand projects the menu and omits hidden and hide-flagged tasks", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
     const tasksFile = await writeSpiritTasks(workspaceRoot, {
       tasks: [
         {
@@ -46,6 +66,8 @@ test("listTaskMenuItemsCommand projects the menu and omits hidden and hide-flagg
       ],
     });
 
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
+
     const items = await listTaskMenuItemsCommand({ workspaceRoot });
     assert.deepEqual(items, [
       {
@@ -59,10 +81,11 @@ test("listTaskMenuItemsCommand projects the menu and omits hidden and hide-flagg
 });
 
 test("resolveTaskForRun resolves hide-flagged tasks that stay out of the menu", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
     const tasksFile = await writeSpiritTasks(workspaceRoot, {
       tasks: [{ label: "helper", command: "echo helper", hide: true }],
     });
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const resolver = createTaskRunResolver();
     const result = await resolver.resolveTaskForRun({
       workspaceRoot,
@@ -79,7 +102,7 @@ test("resolveTaskForRun resolves hide-flagged tasks that stay out of the menu", 
 });
 
 test("resolveTaskForRun returns the fully substituted task spec", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
     const tasksFile = await writeSpiritTasks(workspaceRoot, {
       tasks: [
         {
@@ -89,6 +112,7 @@ test("resolveTaskForRun returns the fully substituted task spec", async () => {
         },
       ],
     });
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const resolver = createTaskRunResolver();
     const result = await resolver.resolveTaskForRun({
       workspaceRoot,
@@ -101,7 +125,7 @@ test("resolveTaskForRun returns the fully substituted task spec", async () => {
 });
 
 test("resolveTaskForRun caches the first resolution when reevaluateOnRerun is false", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
     const tasksFile = await writeSpiritTasks(workspaceRoot, {
       tasks: [
         {
@@ -111,6 +135,7 @@ test("resolveTaskForRun caches the first resolution when reevaluateOnRerun is fa
         },
       ],
     });
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const resolver = createTaskRunResolver();
     const key = `${tasksFile}#cached`;
     const first = await resolver.resolveTaskForRun({ workspaceRoot, key });
@@ -133,10 +158,11 @@ test("resolveTaskForRun caches the first resolution when reevaluateOnRerun is fa
 });
 
 test("resolveTaskForRun picks up file changes when reevaluateOnRerun is true", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
     const tasksFile = await writeSpiritTasks(workspaceRoot, {
       tasks: [{ label: "fresh", command: "echo one" }],
     });
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const resolver = createTaskRunResolver();
     const key = `${tasksFile}#fresh`;
     const first = await resolver.resolveTaskForRun({ workspaceRoot, key });
@@ -146,6 +172,7 @@ test("resolveTaskForRun picks up file changes when reevaluateOnRerun is true", a
     await writeSpiritTasks(workspaceRoot, {
       tasks: [{ label: "fresh", command: "echo two" }],
     });
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const second = await resolver.resolveTaskForRun({ workspaceRoot, key });
     assert.equal(second.status, "ok");
     assert.equal(second.task.command, "echo two");
@@ -153,7 +180,8 @@ test("resolveTaskForRun picks up file changes when reevaluateOnRerun is true", a
 });
 
 test("resolveTaskForRun reports notFound for unknown keys", async () => {
-  await withTaskDirs(async ({ workspaceRoot }) => {
+  await withTaskDirs(async ({ workspaceRoot, spiritDataDir }) => {
+    await trustWorkspaceTasks(workspaceRoot, spiritDataDir);
     const resolver = createTaskRunResolver();
     const result = await resolver.resolveTaskForRun({
       workspaceRoot,
