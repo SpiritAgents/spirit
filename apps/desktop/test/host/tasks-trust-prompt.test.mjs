@@ -71,6 +71,9 @@ test("a standalone tasks prompt opens a pending request and a reply applies the 
   assert.equal(harness.pending?.workspaceRoot, "/repo");
   assert.deepEqual(harness.pending?.hooks, []);
   assert.equal(harness.pending?.tasks?.contentHash, "t1");
+  // The top-level hooks-domain fields stay empty on a tasks-originated request.
+  assert.equal(harness.pending?.contentHash, "");
+  assert.equal(harness.pending?.hashChanged, false);
   assert.equal(harness.emitCount, 1);
 
   const handled = await reply("alwaysTrust");
@@ -87,9 +90,11 @@ test("a tasks prompt merges into an open same-root hooks prompt and one reply co
   queue.request(payload("t1"), "/repo");
   await flushTail();
 
-  // One pending request carries both sections.
-  assert.equal(harness.pending?.hooks?.length, 1);
-  assert.equal(harness.pending?.tasks?.contentHash, "t1");
+  // One pending request carries both sections, with the hooks-domain top level untouched.
+  assert.equal(harness.pending.hooks.length, 1);
+  assert.equal(harness.pending.tasks?.contentHash, "t1");
+  assert.equal(harness.pending.contentHash, "hooks-hash");
+  assert.equal(harness.pending.hashChanged, false);
   assert.equal(harness.emitCount, 1);
 
   const handled = await reply("allowOnce");

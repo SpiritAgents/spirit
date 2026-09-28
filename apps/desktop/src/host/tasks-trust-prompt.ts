@@ -93,8 +93,10 @@ export class WorkspaceTasksTrustPromptQueue {
     return new Promise<void>((finish) => {
       this.options.setPending({
         workspaceRoot: canonical,
-        contentHash: payload.contentHash,
-        hashChanged: payload.hashChanged,
+        // The top-level fields belong to the hooks domain; a tasks-only request keeps
+        // them empty and carries its hash on the tasks section instead.
+        contentHash: "",
+        hashChanged: false,
         hooks: [],
         tasks: payload,
       });
