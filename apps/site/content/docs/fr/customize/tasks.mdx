@@ -27,6 +27,20 @@ Les trois sources fusionnent dans un seul espace de noms. Lorsque plusieurs sour
 
 `.vscode/tasks.json` est analysé avec tolérance, car les fichiers réels sont en JSONC : les commentaires `//` et `/* */` ainsi que les virgules traînantes sont acceptés. Les fichiers propres à Spirit sont en JSON strict — un commentaire rend le fichier invalide.
 
+## Confiance dans l'espace de travail
+
+Les fichiers de tâches de l'espace de travail arrivent avec le dépôt et sont donc des données non fiables : `.spirit/tasks.json` et `.vscode/tasks.json` ne se chargent qu'après votre approbation du contenu de l'espace de travail. Le `tasks.json` utilisateur (répertoire de données Spirit) est implicitement fiable et toujours chargé.
+
+Quand Spirit Desktop détecte des fichiers de tâches de l'espace de travail (ou un changement), il demande une fois : la boîte de dialogue liste les tâches qui deviendront disponibles avec leurs commandes, et cliquer sur une entrée ouvre le fichier source. Si les hooks de l'espace de travail ont aussi besoin d'une approbation, les deux listes apparaissent dans une seule boîte de dialogue combinée.
+
+- **Autoriser une fois** — les tâches se chargent pour cette session uniquement.
+- **Toujours faire confiance** — mémorisé pour ce contenu de fichier exact.
+- **Refuser** — les tâches de l'espace de travail restent indisponibles ; le refus est mémorisé pour ce contenu exact dans cette session.
+
+Modifier l'un des fichiers redemande (l'approbation est liée au hachage du contenu). Pour revenir d'un refus, modifiez le fichier (nouvelle demande) ou redémarrez l'application.
+
+Ce garde-fou est le prérequis structurel de tout déclencheur automatique futur (`runOn`), qui reste désactivé aujourd'hui.
+
 ## Champs
 
 Comportement par champ, évalué après fusion : valeurs par défaut au niveau du fichier < bloc OS au niveau du fichier < tâche < bloc OS au niveau de la tâche.
