@@ -39,7 +39,7 @@ Wenn Spirit Desktop Workspace-Aufgabendateien (oder eine Änderung daran) erkenn
 
 Das Bearbeiten einer der Dateien fragt erneut (die Zustimmung ist an den Inhaltshash gebunden). Zur Wiederherstellung nach einer Ablehnung: Datei bearbeiten (erneute Frage) oder App neu starten.
 
-Diese Sperre ist die strukturelle Voraussetzung für künftige automatische Auslöser (`runOn`), die derzeit deaktiviert bleiben.
+Diese Sperre ist die strukturelle Voraussetzung für automatische Auslöser: `runOn: "folderOpen"` läuft erst nach Genehmigung, und `worktreeCreated` bleibt deaktiviert.
 
 ## Felder
 
@@ -71,12 +71,12 @@ Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Date
 
 ### Ausführungsoptionen
 
-| Feld                           | Verhalten     | Hinweise                                                                                                            |
-| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `runOptions.reevaluateOnRerun` | Unterstützt   | Standard `true`. `false` legt die erste Auflösung für spätere erneute Ausführungen im Cache ab                      |
-| `runOptions.runOn`             | Eingeschränkt | Nur `default` wird unterstützt. `folderOpen` / `worktreeCreated` blenden den Task aus — nichts läuft je automatisch |
-| `runOptions.instanceLimit`     | Unterstützt   | Standard `1`. Das Überschreiten des Limits öffnet einen Dialog (siehe [Tasks ausführen](#tasks-ausführen))          |
-| `runOptions.instancePolicy`    | Eingeschränkt | Nur `prompt` wird unterstützt. `terminateNewest`, `terminateOldest`, `warn`, `silent` blenden den Task aus          |
+| Feld                           | Verhalten     | Hinweise                                                                                                   |
+| ------------------------------ | ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `runOptions.reevaluateOnRerun` | Unterstützt   | Standard `true`. `false` legt die erste Auflösung für spätere erneute Ausführungen im Cache ab             |
+| `runOptions.runOn`             | Eingeschränkt | `default` und `folderOpen` werden unterstützt; `worktreeCreated` blendet den Task aus                      |
+| `runOptions.instanceLimit`     | Unterstützt   | Standard `1`. Das Überschreiten des Limits öffnet einen Dialog (siehe [Tasks ausführen](#tasks-ausführen)) |
+| `runOptions.instancePolicy`    | Eingeschränkt | Nur `prompt` wird unterstützt. `terminateNewest`, `terminateOldest`, `warn`, `silent` blenden den Task aus |
 
 ### Darstellung
 
@@ -118,7 +118,6 @@ Ein Task, der nicht exakt wie konfiguriert laufen kann, wird vollständig ausgeb
 | Regel                        | Begründung                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `unsupportedVariable`        | Das Einsetzen eines geratenen Werts würde ein anderes Kommando ausführen als konfiguriert                     |
-| `runOn`                      | Nichts läuft je automatisch — Tasks starten nur durch einen expliziten Klick                                  |
 | `dependsOnObjectForm`        | Erweiterungstypisierte Abhängigkeitseinträge sind nicht ausführbar                                            |
 | `dependsOnBackground`        | Ein Hintergrundtask endet nie, sodass die Kette nichts Wohldefiniertes hat, auf das sie warten kann           |
 | `instancePolicy`             | Es existiert nur die interaktive Nachfrage; stille Richtlinien würden Instanzen ungesehen beenden             |
@@ -136,10 +135,11 @@ Die Logzeile hat die Form `[desktop-host][tasks] hidden <file>#<label> rule=<id>
 
 ## Tasks ausführen
 
-Tasks starten nur durch einen expliziten Klick in der Palette — nichts läuft je beim Öffnen eines Ordners, beim Speichern einer Datei oder bei einem anderen Ereignis. Das ist auch der Grund, warum `runOn`-Werte außer `default` nicht unterstützt werden.
+Tasks starten durch einen expliziten Klick in der Palette; nur in vertrauenswürdigen Workspaces laufen Tasks mit `runOn: "folderOpen"` zusätzlich automatisch beim Öffnen des Ordners. Beim Speichern einer Datei oder bei einem anderen Ereignis läuft nie etwas. `worktreeCreated` wird weiterhin nicht unterstützt.
 
 - **Abhängigkeiten** — `dependsOn`-Labels werden im zusammengeführten Namespace aufgelöst. Mit `dependsOrder: "parallel"` (Standard) starten alle Abhängigkeiten gemeinsam, jede in ihrem eigenen Terminal mit eigener Darstellung, und der Haupttask startet erst, nachdem jede Abhängigkeit beendet wurde; endet eine Abhängigkeit mit einem Exit-Code ungleich null, läuft der Haupttask nicht — dieselbe Fehlersemantik wie VS Code. Mit `"sequence"` laufen die Abhängigkeiten einzeln der Reihe nach, und der erste Exit-Code ungleich null bricht die Kette ab, bevor der Haupttask startet. Eine bereits laufende Abhängigkeit wird abgewartet, nicht neu gestartet.
 - **Instanzlimit** — `runOptions.instanceLimit` ist standardmäßig `1`. Das Starten einer weiteren Instanz über das Limit hinaus listet die laufenden Instanzen mit ihrer Laufzeit auf; wähle eine aus (die erste ist vorausgewählt) und wähle **Ersetzen**, um sie zu beenden und den neuen Lauf zu starten, oder **Abbrechen**. Es gibt keine Option, das konfigurierte Limit zu überschreiten.
+- **Ordneröffnungs-Auslöser** — `runOn: "folderOpen"` führt den Task bei der Aktivierung des Workspaces automatisch aus, aber nur in vertrauenswürdigen Workspaces (nach Genehmigung oder mit vorhandenem Vertrauenseintrag); ein abgelehnter Workspace führt ihn nie aus. Nach dem Genehmigen der Vertrauensfrage laufen die Ordneröffnungs-Tasks dieser Sitzung sofort. Der Auslöser feuert höchstens einmal pro Aktivierungsrunde — das Bearbeiten der `tasks.json` führt nie etwas erneut aus — und läuft der Task bereits am Instanzlimit, wird der automatische Lauf still übersprungen (kein Dialog).
 - **Terminal-Wiederverwendung** — nur Terminals beendeter Tasks werden je wiederverwendet. `panel: "shared"` und `panel: "dedicated"` verwenden beide das eigene freie Terminal dieses Tasks wieder, wenn eines existiert (der Pool gilt pro Task), und öffnen sonst einen neuen Tab; `panel: "new"` öffnet immer einen frischen Tab.
 - **Echo** — mit `presentation.echo` (standardmäßig an) wird die Kommandozeile vor der Prozessausgabe in das Terminal geschrieben.
 - **Reveal** — `always` (Standard) klappt den Werkzeugbereich beim Start aus; `silent` hält ihn beim Start geschlossen und klappt ihn nur aus, wenn der Task mit einem Exit-Code ungleich null endet; `never` klappt nie automatisch aus. `focus: true` impliziert reveal und verschiebt zusätzlich den Tastaturfokus in das Terminal. Zwei Abweichungen gegenüber VS Code: `reveal: "silent"` klappt nur bei einem Exit-Code ungleich null aus (Spirit hat keinen problemMatcher-Auslösepfad), und `presentation.revealProblems` hat überhaupt keine Wirkung — es unterdrückt weder eine Terminal-Anzeige noch löst es eine aus.
