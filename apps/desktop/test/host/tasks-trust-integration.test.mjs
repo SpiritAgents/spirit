@@ -246,3 +246,38 @@ test("reply consumes the pending request before applying, so a second reply find
     assert.equal(store.tasks?.length, 1);
   });
 });
+
+test("a trust prompt never emits the launch's first live snapshot; it rides the natural one", async () => {
+  await withService(async ({ service, workspaceRoot }) => {
+    await writeSpiritTasks(workspaceRoot, "make");
+    const original = service["emitLiveSnapshotUpdate"];
+    let emitCalls = 0;
+    service["emitLiveSnapshotUpdate"] = () => {
+      emitCalls += 1;
+      return original.call(service);
+    };
+
+    // Launch phase: no live snapshot has been emitted yet. The prompt is
+    // registered in state but must not push one of its own.
+    await service["evaluateWorkspaceTasksTrust"]("startup");
+    await flushPromptQueue();
+    assert.equal(emitCalls, 0);
+    assert.ok(service["pendingWorkspaceCapabilityTrust"]);
+
+    // The natural first emission happens (whatever produces it); the pending
+    // request is part of that snapshot's state.
+    service["emitLiveSnapshotUpdate"]();
+    assert.equal(emitCalls, 1);
+
+    // Afterwards the prompt path emits normally again: answer the first
+    // prompt, change the content, and the next prompt pushes its own emit.
+    await service["tasksTrustPromptQueue"].handleReply(
+      "deny",
+      service["pendingWorkspaceCapabilityTrust"],
+    );
+    await writeSpiritTasks(workspaceRoot, "make all");
+    await service["evaluateWorkspaceTasksTrust"]("startup");
+    await flushPromptQueue();
+    assert.equal(emitCalls, 2);
+  });
+});
