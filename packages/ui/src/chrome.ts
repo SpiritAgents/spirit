@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 //
 // Desktop chrome class recipes used by shared primitives. Token values live in

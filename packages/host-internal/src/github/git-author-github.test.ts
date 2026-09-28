@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { parseGitHubNoreplyLogin, resolveGitCommitAuthorIdentity } from "./git-author-github.js";
 
 test("parseGitHubNoreplyLogin extracts login from numeric noreply email", () => {
-  assert.equal(parseGitHubNoreplyLogin("121384036+N123999@users.noreply.github.com"), "N123999");
+  assert.equal(
+    parseGitHubNoreplyLogin("332389783+yureDesign@users.noreply.github.com"),
+    "yureDesign",
+  );
 });
 
 test("parseGitHubNoreplyLogin extracts login from legacy noreply email", () => {
@@ -28,12 +31,12 @@ test("resolveGitCommitAuthorIdentity prefers linked GitHub user", () => {
 test("resolveGitCommitAuthorIdentity falls back to noreply email login", () => {
   assert.deepEqual(
     resolveGitCommitAuthorIdentity({
-      authorName: "XianYu",
-      authorEmail: "121384036+N123999@users.noreply.github.com",
+      authorName: "Yu",
+      authorEmail: "332389783+yureDesign@users.noreply.github.com",
     }),
     {
-      login: "N123999",
-      avatarUrl: "https://github.com/N123999.png?size=40",
+      login: "yureDesign",
+      avatarUrl: "https://github.com/yureDesign.png?size=40",
     },
   );
 });

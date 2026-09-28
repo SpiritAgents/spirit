@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 //
 // Anchored overlay motion is written here so Tailwind can see every origin utility.

@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 
 /** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion. */

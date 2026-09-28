@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 //
 // Original in-project work. EmptyCard is a single outline card wrapping one

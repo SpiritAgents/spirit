@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
