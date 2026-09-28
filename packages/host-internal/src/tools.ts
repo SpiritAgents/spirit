@@ -15,7 +15,12 @@ import {
 } from "@spiritagent/agent-core";
 
 import { applyDiff } from "./apply-diff.js";
-import { formatGrepToolOutput, runRipgrepSearch } from "./ripgrep-search.js";
+import {
+  GREP_TOOL_MAX_MATCHES,
+  formatGrepToolOutput,
+  runRipgrepSearch,
+  type GrepToolOutputMode,
+} from "./ripgrep-search.js";
 import { resolveTranscriptsDir } from "./transcript.js";
 import {
   defaultShellForPty,
@@ -235,7 +240,16 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       offset?: number;
       limit?: number;
     }
-  | { name: "grep"; pattern: string; glob?: string; caseInsensitive?: boolean }
+  | {
+      name: "grep";
+      pattern: string;
+      glob?: string;
+      caseInsensitive?: boolean;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+    }
   | {
       name: "subagent";
       task: string;
@@ -702,11 +716,19 @@ export class NodeHostToolService<
       case "grep": {
         const caseInsensitive = optionalBoolean(parsed, "-i");
         const glob = optionalStringStrict(parsed, "glob");
+        const outputMode = optionalGrepOutputMode(parsed, "output_mode");
+        const headLimit = optionalPositiveInt(parsed, "head_limit");
+        const offset = optionalNonNegativeInt(parsed, "offset");
+        const lineNumbers = optionalBoolean(parsed, "-n");
         return {
           name,
           pattern: requiredString(parsed, "pattern"),
           ...(caseInsensitive !== undefined ? { caseInsensitive } : {}),
           ...(glob ? { glob } : {}),
+          ...(outputMode !== undefined ? { outputMode } : {}),
+          ...(headLimit !== undefined ? { headLimit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+          ...(lineNumbers !== undefined ? { lineNumbers } : {}),
         };
       }
       case "subagent": {
@@ -1055,6 +1077,10 @@ export class NodeHostToolService<
             ? { caseInsensitive: request.caseInsensitive }
             : {}),
           ...(request.glob !== undefined ? { glob: request.glob } : {}),
+          ...(request.outputMode !== undefined ? { outputMode: request.outputMode } : {}),
+          ...(request.headLimit !== undefined ? { headLimit: request.headLimit } : {}),
+          ...(request.offset !== undefined ? { offset: request.offset } : {}),
+          ...(request.lineNumbers !== undefined ? { lineNumbers: request.lineNumbers } : {}),
         });
       case "subagent":
         throw new Error(
@@ -1673,7 +1699,14 @@ export class NodeHostToolService<
 
   private async executeSearchFiles(
     pattern: string,
-    options: { caseInsensitive?: boolean; glob?: string } = {},
+    options: {
+      caseInsensitive?: boolean;
+      glob?: string;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+    } = {},
   ): Promise<string> {
     const needle = pattern.trim();
     if (!needle) {
@@ -1685,15 +1718,22 @@ export class NodeHostToolService<
         ? normalizeWorkspaceGlobPattern(options.glob)
         : null;
 
-    const { matches } = await runRipgrepSearch({
+    const { matches, truncated } = await runRipgrepSearch({
       workspaceRoot: this.workspaceRoot,
       query: needle,
       isRegexp: true,
       caseSensitive: options.caseInsensitive !== true,
       globPattern,
+      maxMatches: GREP_TOOL_MAX_MATCHES,
     });
 
-    return formatGrepToolOutput(matches);
+    return formatGrepToolOutput(matches, {
+      ...(options.outputMode !== undefined ? { mode: options.outputMode } : {}),
+      ...(options.lineNumbers !== undefined ? { lineNumbers: options.lineNumbers } : {}),
+      ...(options.offset !== undefined ? { offset: options.offset } : {}),
+      ...(options.headLimit !== undefined ? { headLimit: options.headLimit } : {}),
+      truncated,
+    });
   }
 
   private async executeShell(
@@ -2292,6 +2332,32 @@ function optionalPositiveInt(obj: HostJsonObject, key: string): number | undefin
 function optionalBoolean(obj: HostJsonObject, key: string): boolean | undefined {
   const value = obj[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNonNegativeInt(obj: HostJsonObject, key: string): number | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`Field ${key} must be an integer`);
+  }
+  const n = Math.trunc(value);
+  if (n < 0) {
+    throw new Error(`Field ${key} must be >= 0`);
+  }
+  return n;
+}
+
+function optionalGrepOutputMode(obj: HostJsonObject, key: string): GrepToolOutputMode | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (value === "content" || value === "files_with_matches" || value === "count_matches") {
+    return value;
+  }
+  throw new Error(`Field ${key} must be one of: content, files_with_matches, count_matches`);
 }
 
 function normalizeWorkspaceGlobPattern(input: string): string {

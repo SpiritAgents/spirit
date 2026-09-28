@@ -289,20 +289,73 @@ export async function runRipgrepSearch(
   return { matches, truncated: false };
 }
 
-export function formatGrepToolOutput(matches: readonly RipgrepMatch[]): string {
+/** Default entry cap for the grep tool; page further results with offset. */
+export const GREP_TOOL_DEFAULT_HEAD_LIMIT = 250;
+
+/** Hard internal cap on collected matches for one grep tool call. */
+export const GREP_TOOL_MAX_MATCHES = 10_000;
+
+export type GrepToolOutputMode = "content" | "files_with_matches" | "count_matches";
+
+export type FormatGrepToolOutputOptions = {
+  mode?: GrepToolOutputMode;
+  /** Content mode only: prefix lines with line numbers. Defaults to true. */
+  lineNumbers?: boolean;
+  offset?: number;
+  headLimit?: number;
+  /** True when the search hit GREP_TOOL_MAX_MATCHES and the real total is unknown. */
+  truncated?: boolean;
+};
+
+function uniqueMatchPaths(matches: readonly RipgrepMatch[]): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  for (const match of matches) {
+    if (!seen.has(match.relativePath)) {
+      seen.add(match.relativePath);
+      paths.push(match.relativePath);
+    }
+  }
+  return paths;
+}
+
+export function formatGrepToolOutput(
+  matches: readonly RipgrepMatch[],
+  options: FormatGrepToolOutputOptions = {},
+): string {
   if (matches.length === 0) {
     return "No matches found";
   }
 
-  const files = new Set<string>();
-  let out = "";
-  for (const match of matches) {
-    files.add(match.relativePath);
-    out += `${match.relativePath}:${match.lineNumber} | ${match.lineText}\n`;
+  const mode = options.mode ?? "content";
+  let lines: string[];
+  if (mode === "files_with_matches") {
+    lines = uniqueMatchPaths(matches);
+  } else if (mode === "count_matches") {
+    const counts = new Map<string, number>();
+    for (const match of matches) {
+      counts.set(match.relativePath, (counts.get(match.relativePath) ?? 0) + 1);
+    }
+    lines = [...counts.entries()].map(([path, count]) => `${path}:${count}`);
+  } else {
+    const lineNumbers = options.lineNumbers !== false;
+    lines = matches.map((match) =>
+      lineNumbers
+        ? `${match.relativePath}:${match.lineNumber}:${match.lineText}`
+        : `${match.relativePath}:${match.lineText}`,
+    );
   }
-  out += "\nFiles\n";
-  for (const file of [...files].sort((left, right) => left.localeCompare(right))) {
-    out += `${file}\n`;
+
+  const offset = options.offset ?? 0;
+  const headLimit = options.headLimit ?? GREP_TOOL_DEFAULT_HEAD_LIMIT;
+  const page = lines.slice(offset, offset + headLimit);
+  let out = `${page.join("\n")}\n`;
+
+  if (offset + page.length < lines.length) {
+    out += `\n[truncated] Showing ${page.length} of ${lines.length} entries (offset ${offset}). Pass offset ${offset + page.length} to continue.\n`;
+  }
+  if (options.truncated === true) {
+    out += `\n[truncated] Search hit the internal limit of ${GREP_TOOL_MAX_MATCHES} matches; totals above are incomplete. Narrow the pattern or pass glob/type to reduce scope.\n`;
   }
   return out;
 }

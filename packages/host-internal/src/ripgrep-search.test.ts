@@ -251,17 +251,73 @@ test("runRipgrepSearch excludes .git directory at any path", async () => {
   });
 });
 
-test("formatGrepToolOutput preserves grep tool summary shape", () => {
-  const output = formatGrepToolOutput([
-    {
-      relativePath: "src/app.ts",
-      lineNumber: 1,
-      lineText: "needle here",
-      submatches: [{ start: 0, end: 6 }],
-    },
-  ]);
+function grepToolMatch(relativePath: string, lineNumber: number, lineText: string) {
+  return { relativePath, lineNumber, lineText, submatches: [] };
+}
 
-  assert.equal(output, ["src/app.ts:1 | needle here", "", "Files", "src/app.ts", ""].join("\n"));
+test("formatGrepToolOutput renders ripgrep-style content lines", () => {
+  const output = formatGrepToolOutput([grepToolMatch("src/app.ts", 1, "needle here")]);
+
+  assert.equal(output, "src/app.ts:1:needle here\n");
+});
+
+test("formatGrepToolOutput omits line numbers when disabled", () => {
+  const output = formatGrepToolOutput([grepToolMatch("src/app.ts", 1, "needle here")], {
+    lineNumbers: false,
+  });
+
+  assert.equal(output, "src/app.ts:needle here\n");
+});
+
+test("formatGrepToolOutput lists unique paths in files_with_matches mode", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepToolMatch("src/app.ts", 1, "needle"),
+      grepToolMatch("src/app.ts", 5, "needle again"),
+      grepToolMatch("docs/readme.md", 2, "needle"),
+    ],
+    { mode: "files_with_matches" },
+  );
+
+  assert.equal(output, "src/app.ts\ndocs/readme.md\n");
+});
+
+test("formatGrepToolOutput counts matches per file in count_matches mode", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepToolMatch("src/app.ts", 1, "needle"),
+      grepToolMatch("src/app.ts", 5, "needle again"),
+      grepToolMatch("docs/readme.md", 2, "needle"),
+    ],
+    { mode: "count_matches" },
+  );
+
+  assert.equal(output, "src/app.ts:2\ndocs/readme.md:1\n");
+});
+
+test("formatGrepToolOutput pages entries with headLimit and offset", () => {
+  const matches = [
+    grepToolMatch("a.txt", 1, "needle 1"),
+    grepToolMatch("a.txt", 2, "needle 2"),
+    grepToolMatch("a.txt", 3, "needle 3"),
+  ];
+
+  const firstPage = formatGrepToolOutput(matches, { headLimit: 2 });
+  assert.equal(
+    firstPage,
+    "a.txt:1:needle 1\na.txt:2:needle 2\n\n[truncated] Showing 2 of 3 entries (offset 0). Pass offset 2 to continue.\n",
+  );
+
+  const secondPage = formatGrepToolOutput(matches, { headLimit: 2, offset: 2 });
+  assert.equal(secondPage, "a.txt:3:needle 3\n");
+});
+
+test("formatGrepToolOutput notes when the internal match cap was hit", () => {
+  const output = formatGrepToolOutput([grepToolMatch("a.txt", 1, "needle")], {
+    truncated: true,
+  });
+
+  assert.match(output, /\[truncated\] Search hit the internal limit of 10000 matches/u);
 });
 
 test("normalizeSearchLine strips trailing newline but keeps leading indent", () => {
