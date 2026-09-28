@@ -737,11 +737,14 @@ export class DesktopHostService {
         finish: () => void;
       }
     | undefined;
+  /** True once the current pending trust prompt has had a macrotask to reach the renderer. */
+  private capabilityTrustPromptShown = false;
   private readonly tasksTrustPromptQueue = new WorkspaceTasksTrustPromptQueue({
     getPending: () => this.pendingWorkspaceCapabilityTrust,
     setPending: (request) => {
-      this.pendingWorkspaceCapabilityTrust = request;
+      this.setCapabilityTrustPending(request);
     },
+    isPromptShown: () => this.capabilityTrustPromptShown,
     getTail: () => this.workspaceCapabilityTrustTail,
     setTail: (tail) => {
       this.workspaceCapabilityTrustTail = tail;
@@ -1004,6 +1007,19 @@ export class DesktopHostService {
     await runRemoteDesktopSessionStart(bundle.runtime, source);
   }
 
+  // Merging new content into a trust prompt is only safe before the user can see it; the
+  // flag flips one macrotask after the pending request is emitted (identity-guarded so a
+  // replaced pending request never flips an older marker).
+  private setCapabilityTrustPending(request: WorkspaceCapabilityTrustRequest): void {
+    this.pendingWorkspaceCapabilityTrust = request;
+    this.capabilityTrustPromptShown = false;
+    setImmediate(() => {
+      if (this.pendingWorkspaceCapabilityTrust === request) {
+        this.capabilityTrustPromptShown = true;
+      }
+    });
+  }
+
   private enqueueRemoteWorkspaceCapabilityTrust(
     requestId: string,
     request: WorkspaceCapabilityTrustRequest,
@@ -1014,7 +1030,7 @@ export class DesktopHostService {
       .then(
         () =>
           new Promise<void>((finish) => {
-            this.pendingWorkspaceCapabilityTrust = request;
+            this.setCapabilityTrustPending(request);
             this.pendingRemoteWorkspaceCapabilityTrust = {
               requestId,
               runtime,
@@ -1366,6 +1382,9 @@ export class DesktopHostService {
       invalidateExtensionWarmup: () => this.invalidateExtensionWarmup(),
       scheduleExtensionWarmup: (trigger) => this.scheduleExtensionWarmup(trigger),
       loadDesktopPlanSnapshot,
+      evaluateWorkspaceTasksTrust: (reason) => {
+        void this.evaluateWorkspaceTasksTrust(reason);
+      },
     };
   }
 
@@ -2401,8 +2420,17 @@ export class DesktopHostService {
     request: ReplyWorkspaceCapabilityTrustRequest,
   ): Promise<DesktopSnapshot> {
     const remote = this.pendingRemoteWorkspaceCapabilityTrust;
-    // A merged or standalone tasks waiter shares the same reply.
-    const tasksHandled = await this.tasksTrustPromptQueue.handleReply(request.decision);
+    const pending = this.pendingWorkspaceCapabilityTrust;
+    if (!remote && !pending) {
+      throw new Error("No pending workspace capability trust request");
+    }
+    // Consume synchronously before any await: a second reply must find nothing pending.
+    this.pendingRemoteWorkspaceCapabilityTrust = undefined;
+    this.pendingWorkspaceCapabilityTrust = undefined;
+    this.capabilityTrustPromptShown = false;
+    this.emitLiveSnapshotUpdate();
+
+    await this.tasksTrustPromptQueue.handleReply(request.decision, pending);
     if (remote) {
       try {
         await replyRemoteWorkspaceCapabilityTrust(
@@ -2411,18 +2439,9 @@ export class DesktopHostService {
           request.decision,
         );
       } finally {
-        this.pendingRemoteWorkspaceCapabilityTrust = undefined;
-        this.pendingWorkspaceCapabilityTrust = undefined;
         remote.finish();
-        this.emitLiveSnapshotUpdate();
       }
-      return this.buildSnapshot();
     }
-    if (!this.pendingWorkspaceCapabilityTrust && !tasksHandled) {
-      throw new Error("No pending workspace capability trust request");
-    }
-    this.pendingWorkspaceCapabilityTrust = undefined;
-    this.emitLiveSnapshotUpdate();
     return this.buildSnapshot();
   }
 

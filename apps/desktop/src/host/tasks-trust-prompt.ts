@@ -14,7 +14,10 @@ interface TasksTrustWaiter {
 
 export interface WorkspaceTasksTrustPromptQueueOptions {
   getPending: () => WorkspaceCapabilityTrustRequest | undefined;
-  setPending: (request: WorkspaceCapabilityTrustRequest | undefined) => void;
+  /** Merge-replace or open the pending request; display state is managed by the host. */
+  setPending: (request: WorkspaceCapabilityTrustRequest) => void;
+  /** True once the current pending prompt has had a chance to paint in the renderer. */
+  isPromptShown: () => boolean;
   /** The host's shared capability-trust tail (serialized with remote hooks prompts). */
   getTail: () => Promise<void>;
   setTail: (tail: Promise<void>) => void;
@@ -27,9 +30,11 @@ export interface WorkspaceTasksTrustPromptQueueOptions {
 
 // Serializes tasks trust prompts onto the host's shared capability-trust tail and merges a
 // tasks section into an already-open same-workspace prompt (typically a hooks prompt) so
-// one reply answers both. A tasks prompt never replaces a pending tasks prompt for the
-// same root with identical content, and never merges into a tasks-owned prompt (its
-// waiter owns the open tail slot).
+// one reply answers both. Merging is only allowed while the pending prompt has not been
+// displayed yet: once the user can see it, adding content under their click would
+// authorize it unseen, so a standalone prompt is queued instead. A tasks prompt never
+// replaces a pending tasks prompt for the same root with identical content, and never
+// merges into a tasks-owned prompt (its waiter owns the open tail slot).
 export class WorkspaceTasksTrustPromptQueue {
   private waiter: TasksTrustWaiter | undefined;
 
@@ -38,8 +43,12 @@ export class WorkspaceTasksTrustPromptQueue {
   request(payload: WorkspaceTasksTrustPayload, workspaceRoot: string): void {
     const canonical = canonicalizeWorkspaceRoot(workspaceRoot);
     const pending = this.options.getPending();
-    if (pending !== undefined && pending.workspaceRoot === canonical) {
-      // A same-root prompt is open right now: merge immediately (or dedupe).
+    if (
+      pending !== undefined &&
+      pending.workspaceRoot === canonical &&
+      !this.options.isPromptShown()
+    ) {
+      // A same-root prompt is queued-but-not-displayed: merge immediately (or dedupe).
       if (this.mergeIntoPending(pending, payload, canonical)) {
         return;
       }
@@ -52,18 +61,24 @@ export class WorkspaceTasksTrustPromptQueue {
     );
   }
 
-  /** Applies the reply to the tasks waiter when the answered request carries its content. */
-  async handleReply(decision: WorkspaceCapabilityTrustDecision): Promise<boolean> {
+  /**
+   * Applies the reply to the tasks waiter when the answered request carries its content.
+   * The waiter is consumed synchronously; the answered request is passed in because the
+   * host clears its pending state before awaiting (a second reply must find nothing).
+   */
+  async handleReply(
+    decision: WorkspaceCapabilityTrustDecision,
+    answered: WorkspaceCapabilityTrustRequest | undefined,
+  ): Promise<boolean> {
     const waiter = this.waiter;
     if (waiter === undefined) {
       return false;
     }
     this.waiter = undefined;
-    const pending = this.options.getPending();
     const covered =
-      pending !== undefined &&
-      pending.workspaceRoot === waiter.workspaceRoot &&
-      pending.tasks?.contentHash === waiter.contentHash;
+      answered !== undefined &&
+      answered.workspaceRoot === waiter.workspaceRoot &&
+      answered.tasks?.contentHash === waiter.contentHash;
     try {
       if (covered) {
         await this.options.apply(waiter, decision);
@@ -74,18 +89,7 @@ export class WorkspaceTasksTrustPromptQueue {
     return covered;
   }
 
-  private open(payload: WorkspaceTasksTrustPayload, canonical: string): Promise<void> | void {
-    const pending = this.options.getPending();
-    if (pending !== undefined && pending.workspaceRoot === canonical) {
-      // A same-root prompt became pending while this request was queued (e.g. a hooks
-      // prompt opened in between): merge instead of opening a second prompt.
-      if (this.mergeIntoPending(pending, payload, canonical)) {
-        return;
-      }
-      // The open prompt is tasks-owned (its waiter holds the tail slot): unreachable from
-      // a serialized chain, but never overwrite it from here.
-      return;
-    }
+  private open(payload: WorkspaceTasksTrustPayload, canonical: string): Promise<void> {
     return new Promise<void>((finish) => {
       this.options.setPending({
         workspaceRoot: canonical,
