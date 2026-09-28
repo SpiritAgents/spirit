@@ -1,7 +1,4 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-//
-// Original in-project work. EmptyCard is a single outline card wrapping one
+// EmptyCard is a single outline card wrapping one
 // centered muted text line, built on DESKTOP_ITEM_CARD_SURFACE.
 
 import type { ComponentProps } from "react";

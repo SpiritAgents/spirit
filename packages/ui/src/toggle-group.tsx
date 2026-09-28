@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
 import { createContext, useContext, type ComponentProps } from "react";
 import type { VariantProps } from "class-variance-authority";

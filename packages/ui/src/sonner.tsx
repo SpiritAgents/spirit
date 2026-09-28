@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import type { CSSProperties } from "react";
 import { Toaster as SonnerToaster, type ToasterProps } from "sonner";
 

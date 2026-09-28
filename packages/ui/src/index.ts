@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 export { cn } from "./cn.js";
 export * from "./chrome.js";
 export {

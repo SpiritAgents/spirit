@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 // Information section for the extension detail page: label / value rows
 // without a card surface; rows without data are omitted.
 

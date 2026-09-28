@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 

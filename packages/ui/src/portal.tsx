@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { createContext, useContext, type ReactNode } from "react";
 
 export type UiPortalContainerGetter = () => HTMLElement | undefined;

@@ -1,9 +1,5 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-//
-// This file is original in-project work. It is not derived from shadcn/ui
-// (shadcn has no Doodle primitive). Doodle is the welcome line above the
-// empty-session composer, built solely on the project's own typography tokens.
+// Doodle is the welcome line above the empty-session composer, built solely
+// on the project's own typography tokens.
 
 import * as React from "react";
 

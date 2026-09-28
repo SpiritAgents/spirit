@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import type { TooltipSwitchSlotKey } from "./tooltip-switch-registry.js";
 
 function slotsEqual(a: TooltipSwitchSlotKey | null, b: TooltipSwitchSlotKey | null): boolean {
