@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
@@ -193,7 +193,11 @@ export async function saveWorkspaceCapabilityTrustStore(
 ): Promise<void> {
   const filePath = workspaceCapabilityTrustPath(spiritDataDir);
   await mkdir(spiritDataDir, { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  // tmp+rename keeps a crash from leaving truncated JSON; a leftover tmp file from a
+  // crashed write is ignored by load (it never matches the store file name).
+  const tmpPath = `${filePath}.tmp`;
+  await writeFile(tmpPath, `${JSON.stringify(store, null, 2)}\n`, "utf8");
+  await rename(tmpPath, filePath);
 }
 
 function recordsForKind(
@@ -232,6 +236,12 @@ export async function persistPermanentWorkspaceCapabilityTrust(
   contentHash: string,
 ): Promise<void> {
   const root = canonicalizeWorkspaceRoot(workspaceRoot);
+  // Merge-on-write: the store is loaded fresh here (never a caller-stale copy) and the
+  // union preserves the other capability's records plus same-capability records for other
+  // roots, so a racing writer's grant survives. Desktop (tasks) and the daemon (hooks)
+  // share this file. A residual sub-millisecond window between the fresh read and the
+  // rename remains; a lockfile is intentionally not used because a lost grant is
+  // fail-closed and self-healing — the worst outcome is one re-prompt.
   const store = await loadWorkspaceCapabilityTrustStore(spiritDataDir);
   const next: WorkspaceCapabilityTrustRecord = {
     workspaceRoot: root,
