@@ -39,7 +39,7 @@ When Spirit Desktop detects workspace task files (or a change to them), it asks 
 
 Editing either file asks again (the approval is tied to the content hash). To recover from a denial, edit the file (you will be asked again) or restart the app.
 
-This gate is the structural prerequisite for any future automatic run triggers (`runOn`), which remain disabled today.
+This gate is the structural prerequisite for automatic run triggers: `runOn: "folderOpen"` runs only after approval, and `worktreeCreated` remains disabled.
 
 ## Fields
 
@@ -71,12 +71,12 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 
 ### Run options
 
-| Field                          | Behavior   | Notes                                                                                                |
-| ------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------- |
-| `runOptions.reevaluateOnRerun` | Supported  | Default `true`. `false` caches the first resolution for later reruns                                 |
-| `runOptions.runOn`             | Restricted | Only `default` is supported. `folderOpen` / `worktreeCreated` hide the task — nothing ever auto-runs |
-| `runOptions.instanceLimit`     | Supported  | Default `1`. Exceeding the limit opens a dialog (see [Running tasks](#running-tasks))                |
-| `runOptions.instancePolicy`    | Restricted | Only `prompt` is supported. `terminateNewest`, `terminateOldest`, `warn`, `silent` hide the task     |
+| Field                          | Behavior   | Notes                                                                                            |
+| ------------------------------ | ---------- | ------------------------------------------------------------------------------------------------ |
+| `runOptions.reevaluateOnRerun` | Supported  | Default `true`. `false` caches the first resolution for later reruns                             |
+| `runOptions.runOn`             | Restricted | `default` and `folderOpen` are supported; `worktreeCreated` hides the task                       |
+| `runOptions.instanceLimit`     | Supported  | Default `1`. Exceeding the limit opens a dialog (see [Running tasks](#running-tasks))            |
+| `runOptions.instancePolicy`    | Restricted | Only `prompt` is supported. `terminateNewest`, `terminateOldest`, `warn`, `silent` hide the task |
 
 ### Presentation
 
@@ -118,7 +118,6 @@ A task that cannot run exactly as configured is hidden entirely rather than run 
 | Rule                         | Rationale                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------ |
 | `unsupportedVariable`        | Substituting a guessed value would run a different command than configured           |
-| `runOn`                      | Nothing ever auto-runs — tasks start only from an explicit click                     |
 | `dependsOnObjectForm`        | Extension-typed dependency entries are not runnable                                  |
 | `dependsOnBackground`        | A background task never finishes, so the chain has nothing well-defined to wait on   |
 | `instancePolicy`             | Only the interactive prompt exists; silent policies would terminate instances unseen |
@@ -136,10 +135,11 @@ The log line has the form `[desktop-host][tasks] hidden <file>#<label> rule=<id>
 
 ## Running tasks
 
-Tasks start only from an explicit click in the palette — nothing ever runs on folder open, file save, or any other event. That is also why `runOn` values other than `default` are unsupported.
+Tasks start on an explicit click in the palette or, in trusted workspaces only, automatically on folder open when the task sets `runOn: "folderOpen"`. Nothing ever runs on file save or any other event. `worktreeCreated` remains unsupported.
 
 - **Dependencies** — `dependsOn` labels resolve in the merged namespace. With `dependsOrder: "parallel"` (default) all dependencies start together, each in its own terminal with its own presentation, and the main task starts only after every dependency has exited; if any dependency exits non-zero, the main task does not run — the same failure semantics as VS Code. With `"sequence"`, dependencies run one at a time in order and the first non-zero exit aborts the chain before the main task starts. A dependency that is already running is awaited, not restarted.
 - **Instance limit** — `runOptions.instanceLimit` defaults to `1`. Starting another instance past the limit lists the running instances with their elapsed times; select one (the first is preselected) and choose **Replace** to terminate it and start the new run, or **Cancel**. There is no option to exceed the configured limit.
+- **Folder-open trigger** — `runOn: "folderOpen"` runs the task automatically when the workspace is activated, but only in trusted workspaces (after approval or with an existing trust record); a denied workspace never runs it. Approving the trust prompt runs this session's folder-open tasks immediately. The trigger fires at most once per activation round — editing `tasks.json` never re-runs anything — and when the task is already running at its instance limit, the automatic run is silently skipped (no dialog).
 - **Terminal reuse** — only terminals of exited tasks are ever reused. `panel: "shared"` and `panel: "dedicated"` both reuse this task's own idle terminal when one exists (the pool is per task) and open a new tab otherwise; `panel: "new"` always opens a fresh tab.
 - **Echo** — with `presentation.echo` (default on) the command line is written into the terminal before the process output.
 - **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal. Note two VS Code deviations: `reveal: "silent"` reveals only on a non-zero exit code (Spirit has no problem-matcher trigger path), and `presentation.revealProblems` has no effect at all — it neither suppresses nor triggers a terminal reveal.

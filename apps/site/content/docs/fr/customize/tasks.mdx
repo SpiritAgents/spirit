@@ -39,7 +39,7 @@ Quand Spirit Desktop détecte des fichiers de tâches de l'espace de travail (ou
 
 Modifier l'un des fichiers redemande (l'approbation est liée au hachage du contenu). Pour revenir d'un refus, modifiez le fichier (nouvelle demande) ou redémarrez l'application.
 
-Ce garde-fou est le prérequis structurel de tout déclencheur automatique futur (`runOn`), qui reste désactivé aujourd'hui.
+Ce garde-fou est le prérequis structurel des déclencheurs automatiques : `runOn: "folderOpen"` ne s'exécute qu'après approbation, et `worktreeCreated` reste désactivé.
 
 ## Champs
 
@@ -71,12 +71,12 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 
 ### Options d'exécution
 
-| Champ                          | Comportement   | Notes                                                                                                                            |
-| ------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `runOptions.reevaluateOnRerun` | Pris en charge | `true` par défaut. `false` met en cache la première résolution pour les réexécutions ultérieures                                 |
-| `runOptions.runOn`             | Restreint      | Seul `default` est pris en charge. `folderOpen` / `worktreeCreated` masquent la tâche — rien ne s'exécute jamais automatiquement |
-| `runOptions.instanceLimit`     | Pris en charge | `1` par défaut. Dépasser la limite ouvre une boîte de dialogue (voir [Exécution des tâches](#running-tasks))                     |
-| `runOptions.instancePolicy`    | Restreint      | Seul `prompt` est pris en charge. `terminateNewest`, `terminateOldest`, `warn` et `silent` masquent la tâche                     |
+| Champ                          | Comportement   | Notes                                                                                                        |
+| ------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `runOptions.reevaluateOnRerun` | Pris en charge | `true` par défaut. `false` met en cache la première résolution pour les réexécutions ultérieures             |
+| `runOptions.runOn`             | Restreint      | `default` et `folderOpen` sont pris en charge ; `worktreeCreated` masque la tâche                            |
+| `runOptions.instanceLimit`     | Pris en charge | `1` par défaut. Dépasser la limite ouvre une boîte de dialogue (voir [Exécution des tâches](#running-tasks)) |
+| `runOptions.instancePolicy`    | Restreint      | Seul `prompt` est pris en charge. `terminateNewest`, `terminateOldest`, `warn` et `silent` masquent la tâche |
 
 ### Présentation
 
@@ -118,7 +118,6 @@ Une tâche qui ne peut pas s'exécuter exactement comme configurée est entière
 | Règle                        | Motif                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `unsupportedVariable`        | Substituer une valeur devinée exécuterait une commande différente de celle configurée                               |
-| `runOn`                      | Rien ne s'exécute jamais automatiquement — les tâches ne démarrent que sur un clic explicite                        |
 | `dependsOnObjectForm`        | Les entrées de dépendance typées par une extension ne sont pas exécutables                                          |
 | `dependsOnBackground`        | Une tâche en arrière-plan ne se termine jamais, la chaîne n'a donc rien de bien défini à attendre                   |
 | `instancePolicy`             | Seule l'invite interactive existe ; les politiques silencieuses termineraient des instances sans que vous le voyiez |
@@ -136,10 +135,11 @@ La ligne de journal a la forme `[desktop-host][tasks] hidden <file>#<label> rule
 
 ## Exécution des tâches
 
-Les tâches ne démarrent que sur un clic explicite dans la palette — rien ne s'exécute jamais à l'ouverture d'un dossier, à l'enregistrement d'un fichier ou sur tout autre événement. C'est aussi pourquoi les valeurs de `runOn` autres que `default` ne sont pas prises en charge.
+Les tâches démarrent sur un clic explicite dans la palette ; uniquement dans les espaces de travail approuvés, une tâche avec `runOn: "folderOpen"` s'exécute aussi automatiquement à l'ouverture du dossier. Rien ne s'exécute jamais à l'enregistrement d'un fichier ou sur un autre événement. `worktreeCreated` n'est toujours pas pris en charge.
 
 - **Dépendances** — les labels de `dependsOn` se résolvent dans l'espace de noms fusionné. Avec `dependsOrder: "parallel"` (par défaut), toutes les dépendances démarrent ensemble, chacune dans son propre terminal avec sa propre présentation, et la tâche principale ne démarre qu'une fois que chaque dépendance s'est terminée ; si une dépendance sort avec un code non nul, la tâche principale ne s'exécute pas — la même sémantique d'échec que VS Code. Avec `"sequence"`, les dépendances s'exécutent une par une dans l'ordre et la première sortie non nulle interrompt la chaîne avant le démarrage de la tâche principale. Une dépendance déjà en cours d'exécution est attendue, pas relancée.
 - **Limite d'instances** — `runOptions.instanceLimit` vaut `1` par défaut. Démarrer une instance de plus au-delà de la limite liste les instances en cours avec leur temps écoulé ; sélectionnez-en une (la première est présélectionnée) puis choisissez **Remplacer** pour la terminer et démarrer la nouvelle exécution, ou **Annuler**. Il n'est pas possible de dépasser la limite configurée.
+- **Déclencheur à l'ouverture du dossier** — `runOn: "folderOpen"` exécute automatiquement la tâche à l'activation de l'espace de travail, mais uniquement dans les espaces de travail approuvés (après approbation ou avec un enregistrement de confiance existant) ; un espace refusé ne l'exécute jamais. Approuver la demande de confiance exécute immédiatement les tâches d'ouverture de cette session. Le déclencheur ne s'exécute qu'une fois par activation — modifier `tasks.json` ne relance rien — et si la tâche atteint déjà sa limite d'instances, l'exécution automatique est silencieusement ignorée (aucune boîte de dialogue).
 - **Réutilisation du terminal** — seuls les terminaux de tâches terminées sont réutilisés. `panel: "shared"` et `panel: "dedicated"` réutilisent tous deux le terminal inactif propre à cette tâche lorsqu'il existe (le pool est propre à chaque tâche) et ouvrent un nouvel onglet sinon ; `panel: "new"` ouvre toujours un onglet neuf.
 - **Écho** — avec `presentation.echo` (activé par défaut), la ligne de commande est écrite dans le terminal avant la sortie du processus.
 - **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal. Notez deux écarts avec VS Code : `reveal: "silent"` ne se déploie que sur un code de sortie non nul (Spirit n'a pas de déclencheur par problem matcher), et `presentation.revealProblems` n'a aucun effet — il ne supprime ni ne déclenche l'affichage du terminal.

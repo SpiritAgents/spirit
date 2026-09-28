@@ -39,7 +39,7 @@ Quando o Spirit Desktop detecta arquivos de tarefas do espaço de trabalho (ou u
 
 Editar qualquer um dos arquivos pergunta novamente (a aprovação está vinculada ao hash do conteúdo). Para se recuperar de uma recusa, edite o arquivo (será perguntado de novo) ou reinicie o app.
 
-Esse gate é o pré-requisito estrutural para qualquer futuro gatilho automático de execução (`runOn`), que hoje permanece desabilitado.
+Esse gate é o pré-requisito estrutural dos gatilhos automáticos: `runOn: "folderOpen"` só é executado após aprovação, e `worktreeCreated` permanece desabilitado.
 
 ## Campos
 
@@ -71,12 +71,12 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 
 ### Opções de execução
 
-| Campo                          | Comportamento | Notas                                                                                                                     |
-| ------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `runOptions.reevaluateOnRerun` | Suportado     | Padrão `true`. `false` armazena em cache a primeira resolução para reexecuções posteriores                                |
-| `runOptions.runOn`             | Restrito      | Somente `default` é suportado. `folderOpen` / `worktreeCreated` ocultam a tarefa — nada nunca é executado automaticamente |
-| `runOptions.instanceLimit`     | Suportado     | Padrão `1`. Exceder o limite abre um diálogo (veja [Executando tarefas](#executando-tarefas))                             |
-| `runOptions.instancePolicy`    | Restrito      | Somente `prompt` é suportado. `terminateNewest`, `terminateOldest`, `warn`, `silent` ocultam a tarefa                     |
+| Campo                          | Comportamento | Notas                                                                                                 |
+| ------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
+| `runOptions.reevaluateOnRerun` | Suportado     | Padrão `true`. `false` armazena em cache a primeira resolução para reexecuções posteriores            |
+| `runOptions.runOn`             | Restrito      | `default` e `folderOpen` são suportados; `worktreeCreated` oculta a tarefa                            |
+| `runOptions.instanceLimit`     | Suportado     | Padrão `1`. Exceder o limite abre um diálogo (veja [Executando tarefas](#executando-tarefas))         |
+| `runOptions.instancePolicy`    | Restrito      | Somente `prompt` é suportado. `terminateNewest`, `terminateOldest`, `warn`, `silent` ocultam a tarefa |
 
 ### Apresentação
 
@@ -118,7 +118,6 @@ Uma tarefa que não pode ser executada exatamente como configurada fica totalmen
 | Regra                        | Motivo                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------- |
 | `unsupportedVariable`        | Substituir um valor adivinhado executaria um comando diferente do configurado                     |
-| `runOn`                      | Nada nunca é executado automaticamente — tarefas só iniciam a partir de um clique explícito       |
 | `dependsOnObjectForm`        | Entradas de dependência tipadas por extensão não são executáveis                                  |
 | `dependsOnBackground`        | Uma tarefa em segundo plano nunca termina, então a cadeia não tem nada bem definido para aguardar |
 | `instancePolicy`             | Só existe o prompt interativo; políticas silenciosas encerrariam instâncias sem que você visse    |
@@ -136,10 +135,11 @@ A linha de log tem o formato `[desktop-host][tasks] hidden <file>#<label> rule=<
 
 ## Executando tarefas
 
-As tarefas só iniciam a partir de um clique explícito na paleta — nada nunca é executado ao abrir pasta, salvar arquivo ou em qualquer outro evento. É também por isso que valores de `runOn` diferentes de `default` não são suportados.
+As tarefas iniciam com um clique explícito na paleta; somente em espaços de trabalho confiáveis, uma tarefa com `runOn: "folderOpen"` também é executada automaticamente ao abrir a pasta. Nada é executado ao salvar um arquivo ou em qualquer outro evento. `worktreeCreated` continua sem suporte.
 
 - **Dependências** — os labels de `dependsOn` são resolvidos no namespace mesclado. Com `dependsOrder: "parallel"` (padrão), todas as dependências iniciam juntas, cada uma em seu próprio terminal com sua própria apresentação, e a tarefa principal só inicia depois que todas as dependências terminaram; se alguma dependência sair com código diferente de zero, a tarefa principal não é executada — a mesma semântica de falha do VS Code. Com `"sequence"`, as dependências são executadas uma por vez em ordem, e a primeira saída diferente de zero aborta a cadeia antes de a tarefa principal iniciar. Uma dependência que já está em execução é aguardada, não reiniciada.
 - **Limite de instâncias** — `runOptions.instanceLimit` tem padrão `1`. Iniciar outra instância além do limite lista as instâncias em execução com seus tempos decorridos; selecione uma (a primeira vem pré-selecionada) e escolha **Substituir** para encerrá-la e iniciar a nova execução, ou **Cancelar**. Não há opção de exceder o limite configurado.
+- **Gatilho de abertura de pasta** — `runOn: "folderOpen"` executa a tarefa automaticamente quando o espaço de trabalho é ativado, mas apenas em espaços de trabalho confiáveis (após aprovação ou com um registro de confiança existente); um espaço negado nunca a executa. Aprovar o aviso de confiança executa imediatamente as tarefas de abertura desta sessão. O gatilho dispara no máximo uma vez por ativação — editar `tasks.json` nunca reexecuta nada — e se a tarefa já está no limite de instâncias, a execução automática é silenciosamente ignorada (sem diálogo).
 - **Reutilização de terminal** — somente terminais de tarefas já finalizadas são reutilizados. `panel: "shared"` e `panel: "dedicated"` reutilizam o terminal ocioso da própria tarefa quando existe um (o pool é por tarefa) e abrem uma nova aba caso contrário; `panel: "new"` sempre abre uma aba nova.
 - **Echo** — com `presentation.echo` (ativado por padrão), a linha de comando é escrita no terminal antes da saída do processo.
 - **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal. Note dois desvios do VS Code: `reveal: "silent"` só expande com um código de saída diferente de zero (o Spirit não tem um caminho de acionamento por problem matcher), e `presentation.revealProblems` não tem efeito algum — não suprime nem aciona a exibição do terminal.
