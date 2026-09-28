@@ -322,19 +322,67 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "grep",
-      "Search text within workspace file contents. Respects .gitignore. By default query is matched as case-insensitive literal text; set is_regexp to true for a regular expression. Optionally pass glob to limit which files are searched. Use the glob tool to list paths only and ls for a single directory inventory.",
+      "Search text within workspace file contents using a ripgrep regular expression. Respects .gitignore. Matching is case-sensitive by default; set -i to ignore case. Optionally pass glob to limit which files are searched. Use the glob tool to list paths only and ls for a single directory inventory.",
       {
         type: "object",
         properties: {
-          query: {
+          pattern: {
             type: "string",
-            description:
-              "Literal text to search for, or a regular expression pattern when is_regexp is true.",
+            description: "Ripgrep regular expression to search for.",
           },
-          is_regexp: {
+          "-i": {
+            type: "boolean",
+            description: "Match case-insensitively.",
+          },
+          "-n": {
+            type: "boolean",
+            description: "Show line numbers in content mode. Defaults to true.",
+          },
+          "-A": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show after each match. Content mode only.",
+          },
+          "-B": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show before each match. Content mode only.",
+          },
+          "-C": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show before and after each match. Content mode only.",
+          },
+          type: {
+            type: "string",
+            description: "Restrict search to a ripgrep file type, e.g. ts, py, rust, md.",
+          },
+          include_ignored: {
             type: "boolean",
             description:
-              "When true, treat query as a regular expression. Regex searches are case-insensitive by default.",
+              "Search files excluded by ignore rules such as .gitignore. The .git directory is always excluded.",
+          },
+          multiline: {
+            type: "boolean",
+            description:
+              "Allow the pattern to match across line boundaries; dot also matches newlines.",
+          },
+          output_mode: {
+            type: "string",
+            enum: ["content", "files_with_matches", "count_matches"],
+            description:
+              "Output mode: content shows matching lines (default), files_with_matches lists matching file paths only, count_matches shows per-file match counts.",
+          },
+          head_limit: {
+            type: "integer",
+            minimum: 1,
+            description:
+              "Maximum number of entries to return. Defaults to 250; use offset to page through more.",
+          },
+          offset: {
+            type: "integer",
+            minimum: 0,
+            description: "Number of entries to skip before returning results, for pagination.",
           },
           glob: {
             type: "string",
@@ -342,7 +390,7 @@ export function buildBuiltinHostToolDefinitions(
               "Optional workspace-relative glob that limits searched file paths, e.g. packages/**/*.ts or src/**/*.{ts,tsx}.",
           },
         },
-        required: ["query"],
+        required: ["pattern"],
         additionalProperties: false,
       },
     ),

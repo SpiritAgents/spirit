@@ -336,8 +336,7 @@ export function toolCallSummaryCopyForRequest(
     case "grep": {
       const headlineDetail = grepToolHeadlineDetail(
         {
-          query: typeof record.query === "string" ? record.query : undefined,
-          is_regexp: record.is_regexp === true,
+          pattern: typeof record.pattern === "string" ? record.pattern : undefined,
           glob: typeof record.glob === "string" ? record.glob : undefined,
         },
         (key, opts) => i18n.t(key, { ...tOpts, ...opts }),

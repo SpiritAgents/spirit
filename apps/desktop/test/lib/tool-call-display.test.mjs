@@ -167,7 +167,7 @@ test("getToolCallSummaryParts: grep detail re-translates on language switch", as
     headline: "Searched",
     headlineDetail: "ratatui in apps/cli/**/*.{rs,toml}",
     argsExcerpt: JSON.stringify({
-      query: "ratatui",
+      pattern: "ratatui",
       glob: "apps/cli/**/*.{rs,toml}",
     }),
     detailLines: [],
