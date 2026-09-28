@@ -754,7 +754,7 @@ export class DesktopHostService {
     setTail: (tail) => {
       this.workspaceCapabilityTrustTail = tail;
     },
-    emit: () => this.emitLiveSnapshotUpdate(),
+    emit: () => this.emitCapabilityTrustSnapshotUpdate(),
     apply: (waiter, decision) => this.applyTasksCapabilityTrustDecision(waiter, decision),
   });
   /** Serialize trust prompts so one reply cannot authorize multiple workspaces. */
@@ -3591,6 +3591,20 @@ export class DesktopHostService {
     for (const listener of this.dreamUpdateListeners) {
       listener(snapshot);
     }
+  }
+
+  /**
+   * Trust prompt emissions must never be the launch's first live snapshot: an
+   * early emit trips the splash's `snapshot != null` exit condition while the
+   * rest of init is still loading. Before anything has been emitted, the
+   * pending request already lives in host state, so the natural first emission
+   * carries it to the renderer with no extra push.
+   */
+  private emitCapabilityTrustSnapshotUpdate(): void {
+    if (this.lastLiveSnapshotEmitAtMs === 0) {
+      return;
+    }
+    this.emitLiveSnapshotUpdate();
   }
 
   private emitLiveSnapshotUpdate(): void {
