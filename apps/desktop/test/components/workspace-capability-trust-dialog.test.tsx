@@ -135,3 +135,8 @@ test("nothing renders when no request is pending", () => {
   const { container } = renderDialog(undefined);
   expect(container.querySelector("[data-slot='dialog-content']")).toBeNull();
 });
+
+test("opening focuses the dialog body, not an action button", () => {
+  renderDialog(hooksRequest());
+  expect(document.activeElement instanceof HTMLButtonElement).toBe(false);
+});

@@ -48,10 +48,17 @@ export function WorkspaceCapabilityTrustDialog({
   return (
     <Dialog open={open}>
       <DialogContent
-        className="sm:max-w-lg"
+        className="outline-none sm:max-w-lg"
         showCloseButton={false}
         onPointerDownOutside={(event) => event.preventDefault()}
         onEscapeKeyDown={(event) => event.preventDefault()}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          const content = event.currentTarget;
+          if (content instanceof HTMLElement) {
+            content.focus({ preventScroll: true });
+          }
+        }}
       >
         {displayed !== undefined ? (
           <WorkspaceCapabilityTrustDialogBody pending={displayed} busy={busy} onReply={onReply} />

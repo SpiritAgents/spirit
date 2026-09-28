@@ -60,7 +60,16 @@ export function TaskInstanceLimitDialog() {
         }
       }}
     >
-      <DialogContent>
+      <DialogContent
+        className="outline-none"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          const content = event.currentTarget;
+          if (content instanceof HTMLElement) {
+            content.focus({ preventScroll: true });
+          }
+        }}
+      >
         <TaskInstanceLimitDialogBody
           label={prompt?.task.label ?? ""}
           instances={prompt?.activeInstances ?? []}
