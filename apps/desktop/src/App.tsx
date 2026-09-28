@@ -917,7 +917,12 @@ export default function App() {
                 />
 
                 <WorkspaceCapabilityTrustDialog
-                  pending={snapshot?.pendingWorkspaceCapabilityTrust}
+                  // The prompt must not preempt the launch overlay: while the splash/OOBE
+                  // is up the app body is still hidden, so hold the request until the
+                  // exit animation has finished.
+                  pending={
+                    shellUnderlayHidden ? undefined : snapshot?.pendingWorkspaceCapabilityTrust
+                  }
                   busy={runtime.busyAction === "workspaceTrust"}
                   onReply={(decision) => {
                     void runtime.replyWorkspaceCapabilityTrust(decision);
