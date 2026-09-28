@@ -907,6 +907,7 @@
     "browserPlaceholder": "Carregando aba do navegador…",
     "browserElectronOnly": "O Navegador está disponível apenas na versão desktop Electron.",
     "prTab": "Pull Request",
+    "taskTab": "Tarefa",
     "prElectronOnly": "Pull Requests estão disponíveis apenas na versão desktop Electron.",
     "prGitHubAuthChecking": "Verificando conexão com GitHub…",
     "prGitHubConnectLink": "Conectar",
@@ -1087,6 +1088,14 @@
     "forceDeleteConfirmTitle": "Excluir permanentemente?",
     "forceDeleteConfirmDescription": "Não foi possível mover para o lixo: {{reason}}. Esta ação não pode ser desfeita."
   },
+  "task": {
+    "instanceLimitTitle": "“{{label}}” já está em execução.",
+    "instanceLimitDescription": "Substituir encerrará a instância selecionada e iniciará uma nova.",
+    "instanceLimitReplace": "Substituir",
+    "terminateConfirmTitle": "Encerrar tarefa?",
+    "terminateConfirmDescription": "“{{label}}” ainda está em execução. Fechar a aba e encerrá-la?",
+    "terminateConfirmAction": "Encerrar"
+  },
   "actionPalette": {
     "title": "Paleta de comandos",
     "description": "Pesquise e execute ações do workspace.",
@@ -1096,8 +1105,10 @@
     "group": {
       "chat": "Conversa",
       "mode": "Modo",
+      "workspace": "Workspace",
       "appearance": "Aparência"
     },
+    "runTask": "Executar tarefa",
     "theme": "Tema",
     "language": "Idioma",
     "back": "Voltar"
@@ -1529,7 +1540,13 @@
     "deny": "Negar",
     "alwaysTrust": "Sempre confiar",
     "hooksSection": "Hooks que serão executados",
-    "openHookScript": "Abrir script no editor padrão"
+    "openHookScript": "Abrir script no editor padrão",
+    "riskTasks": "Este espaço de trabalho define tarefas que executam comandos do projeto. Continue apenas se confiar nesta base de código.",
+    "riskBoth": "Este espaço de trabalho define hooks e tarefas que executam scripts ou comandos do projeto. Continue apenas se confiar nesta base de código.",
+    "tasksChanged": "As tarefas do espaço de trabalho mudaram desde a última vez que você confiou nelas. Revise a lista antes de continuar.",
+    "bothChanged": "Os hooks e as tarefas do espaço de trabalho mudaram desde a última vez que você confiou neles. Revise a lista antes de continuar.",
+    "tasksSection": "Tarefas que ficarão disponíveis",
+    "openTaskFile": "Abrir arquivo de tarefas no editor padrão"
   },
   "webHost": {
     "error": {

@@ -34,7 +34,6 @@ export function loadWorkspaceTerminalWebgl(term: Terminal): WebglAddon | null {
   }
 }
 
-/** With a selection: copy; without a selection: paste (consistent with common integrated terminals, no menu popup). */
 function writeClipboard(text: string): void {
   const b = window.spiritDesktop;
   if (b?.writeClipboardText) {
@@ -54,6 +53,30 @@ function readClipboardSync(): string | null {
     }
   }
   return null;
+}
+
+/** Copies the current selection to the clipboard; returns false when there is no selection. */
+export function copyTerminalSelection(term: Terminal): boolean {
+  const selected = term.getSelection();
+  if (!selected) {
+    return false;
+  }
+  writeClipboard(selected);
+  return true;
+}
+
+/** Pastes clipboard text into the terminal: synchronous bridge read first, async clipboard fallback. */
+export function pasteTerminalClipboard(term: Terminal): void {
+  const sync = readClipboardSync();
+  if (sync != null) {
+    term.paste(sync);
+    return;
+  }
+  void navigator.clipboard.readText().then((text) => {
+    if (text) {
+      term.paste(text);
+    }
+  });
 }
 
 export type WorkspaceTerminalPtyBridge = Pick<
@@ -140,23 +163,11 @@ export function createWorkspaceTerminalSession(
     }),
     dispatch: (command) => {
       if (command === "copy") {
-        const selected = term.getSelection();
-        if (selected) {
-          writeClipboard(selected);
-        }
+        copyTerminalSelection(term);
         return;
       }
       if (command === "paste") {
-        const sync = readClipboardSync();
-        if (sync != null) {
-          term.paste(sync);
-          return;
-        }
-        void navigator.clipboard.readText().then((text) => {
-          if (text) {
-            term.paste(text);
-          }
-        });
+        pasteTerminalClipboard(term);
         return;
       }
       if (command === "selectAll") {
@@ -172,28 +183,6 @@ export function createWorkspaceTerminalSession(
     webglAddon,
     isSuspended: isResizeSuspended,
   });
-
-  const onContextMenu = (e: MouseEvent): void => {
-    e.preventDefault();
-    e.stopPropagation();
-    const sel = term.getSelection();
-    if (sel.length > 0) {
-      writeClipboard(sel);
-      term.clearSelection();
-      return;
-    }
-    const sync = readClipboardSync();
-    if (sync != null) {
-      term.paste(sync);
-      return;
-    }
-    void navigator.clipboard.readText().then((text) => {
-      if (text) {
-        term.paste(text);
-      }
-    });
-  };
-  container.addEventListener("contextmenu", onContextMenu, true);
 
   unsubPty = bridge.ptySubscribe({
     onData: (payload) => {
@@ -227,7 +216,6 @@ export function createWorkspaceTerminalSession(
 
   const teardown = (): void => {
     sessionAlive = false;
-    container.removeEventListener("contextmenu", onContextMenu, true);
     selectionDisposable.dispose();
     unregisterEditCommand();
     unsubPty?.();

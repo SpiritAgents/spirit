@@ -1,6 +1,6 @@
 import type { PullRequestChipStatus } from "@/lib/pr-diff-attachment";
 
-export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr";
+export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr" | "task";
 
 export const BROWSER_NEW_TAB_SENTINEL = "__spirit_browser_new_tab__";
 
@@ -17,6 +17,10 @@ export type WorkspaceToolTab = {
   filesWorkspacePath?: string;
   /** Only used when kind === "pr"; the status of the current PR detail page, used to switch the tab icon */
   prStatus?: PullRequestChipStatus;
+  /** Only used when kind === "task"; the resolved task key this tab belongs to */
+  taskKey?: string;
+  /** Only used when kind === "task"; the task label owns the title, so OSC/process title updates must not replace it */
+  pinnedTitle?: boolean;
 };
 
 const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
@@ -25,6 +29,7 @@ const KIND_BASE_LABEL_KEY: Record<WorkspaceToolTabKind, string> = {
   git: "workspace.gitTab",
   browser: "workspace.browser",
   pr: "workspace.prTab",
+  task: "workspace.taskTab",
 };
 
 function newTabId(): string {
@@ -131,6 +136,20 @@ export function addWorkspaceToolTab(
   const tab = createWorkspaceToolTab(kind);
   if (tabTitle) {
     tab.tabTitle = tabTitle;
+  }
+  return { tabs: [...tabs, tab], activeId: tab.id };
+}
+
+/** Task tabs are created only by the task coordinator, never from the manual "+" menu. */
+export function addWorkspaceTaskTab(
+  tabs: readonly WorkspaceToolTab[],
+  input: { taskKey: string; label: string; pinnedTitle?: boolean },
+): { tabs: WorkspaceToolTab[]; activeId: string } {
+  const tab = createWorkspaceToolTab("task");
+  tab.taskKey = input.taskKey;
+  tab.tabTitle = input.label;
+  if (input.pinnedTitle === true) {
+    tab.pinnedTitle = true;
   }
   return { tabs: [...tabs, tab], activeId: tab.id };
 }

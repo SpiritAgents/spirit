@@ -47,6 +47,7 @@ import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
 import { WorkspaceGitTab } from "@/components/workspace-git-tab";
 import { WorkspacePrTab } from "@/components/workspace-pr-tab";
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
+import { WorkspaceTaskTerminalTab } from "@/components/workspace-task-terminal-tab";
 import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
@@ -97,6 +98,8 @@ import {
   type WorkspaceToolTab,
   type WorkspaceToolTabKind,
 } from "@/lib/workspace-tool-tabs";
+import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-registry";
+import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
 import type {
   DesktopGitSnapshot,
   WorkspaceContentInvalidation,
@@ -123,6 +126,7 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
   git: { labelKey: "workspace.gitTab", icon: GitBranch },
   browser: { labelKey: "workspace.browser", icon: Globe },
   pr: { labelKey: "workspace.prTab", icon: GitPullRequest },
+  task: { labelKey: "workspace.taskTab", icon: Terminal },
 };
 
 export type WorkspaceToolsDockProps = {
@@ -601,6 +605,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     () => new Set(),
   );
   const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
+  const [pendingTaskClose, setPendingTaskClose] = useState<{ tabId: string; label: string } | null>(
+    null,
+  );
+  const [taskCloseDialogOpen, setTaskCloseDialogOpen] = useState(false);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 
@@ -631,7 +639,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
   useEffect(() => {
-    if (activeTab?.kind !== "terminal") {
+    if (activeTab?.kind !== "terminal" && activeTab?.kind !== "task") {
       return;
     }
     setMountedTerminalTabIds((prev) => {
@@ -700,6 +708,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         setPendingCloseTabId(closeId);
         return;
       }
+      if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
+        setPendingTaskClose({ tabId: closeId, label: tab.tabTitle ?? "" });
+        setTaskCloseDialogOpen(true);
+        return;
+      }
       performCloseTab(closeId);
     },
     [performCloseTab, tabs],
@@ -712,6 +725,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     performCloseTab(pendingCloseTabId);
     setPendingCloseTabId(null);
   }, [pendingCloseTabId, performCloseTab]);
+
+  const handleConfirmTaskCloseTab = useCallback(() => {
+    if (!pendingTaskClose) {
+      return;
+    }
+    const closeId = pendingTaskClose.tabId;
+    // Keep pendingTaskClose latched: the closing dialog still renders its label
+    // while the exit animation plays (same pattern as the sidebar delete dialog).
+    setTaskCloseDialogOpen(false);
+    void terminateTaskTerminalInstance(closeId);
+    performCloseTab(closeId);
+  }, [pendingTaskClose, performCloseTab]);
 
   const handleBrowserUrlChange = useCallback(
     (tabId: string, url: string) => {
@@ -726,7 +751,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     (tabId: string, title: string | undefined) => {
       onTabsChange((prev) =>
         prev.map((item) =>
-          item.id === tabId
+          item.id === tabId && item.pinnedTitle !== true
             ? {
                 ...item,
                 tabTitle: title || undefined,
@@ -1063,6 +1088,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     />
                   </div>
                 ) : null
+              ) : item.kind === "task" ? (
+                mountedTerminalTabIds.has(item.id) ? (
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <WorkspaceTaskTerminalTab
+                      tabId={item.id}
+                      taskKey={item.taskKey ?? ""}
+                      useTranslucency={useTranslucency}
+                      onTitleChange={(title) => handleTabTitleChange(item.id, title)}
+                      suspendTerminalResize={isResizing}
+                    />
+                  </div>
+                ) : null
               ) : item.kind === "browser" ? (
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspaceBrowserTab
@@ -1154,6 +1191,23 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         cancelLabel={t("common.cancel")}
         onConfirm={() => {
           handleConfirmCloseTab();
+        }}
+      />
+      <AlertDialog
+        open={taskCloseDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTaskCloseDialogOpen(false);
+          }
+        }}
+        title={t("task.terminateConfirmTitle")}
+        description={t("task.terminateConfirmDescription", {
+          label: pendingTaskClose?.label ?? "",
+        })}
+        confirmLabel={t("task.terminateConfirmAction")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          handleConfirmTaskCloseTab();
         }}
       />
     </>

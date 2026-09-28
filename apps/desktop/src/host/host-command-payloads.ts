@@ -150,6 +150,10 @@ export type CommandPayloads = {
   updateAutomation: { automationId: string; patch: DesktopUpdateAutomationRequest };
   deleteAutomation: { automationId: string };
   setAutomationEnabled: { automationId: string; enabled: boolean };
+  listTaskMenuItems: undefined;
+  resolveTaskForRun: { key: string };
+  resolveTaskByLabel: { label: string };
+  consumeFolderOpenTaskTriggers: undefined;
   replyPendingApproval: { request: ReplyPendingApprovalRequest };
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };

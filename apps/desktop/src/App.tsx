@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
@@ -20,6 +20,7 @@ import { MarketplaceView } from "@/components/marketplace-view";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { SessionSidebarShell } from "@/components/session-sidebar-shell";
 import { SettingsView } from "@/components/settings-view";
+import { TaskInstanceLimitDialog } from "@/components/task-instance-limit-dialog";
 import { WebHostPairingGate } from "@/components/web-host-pairing-gate";
 import { WorkspaceCapabilityTrustDialog } from "@/components/workspace-capability-trust-dialog";
 import { WorkspaceFilePickerDialog } from "@/components/workspace-file-picker-dialog";
@@ -64,6 +65,7 @@ import {
   type ShellOverlayPhase,
 } from "@/lib/desktop-shell";
 import { isMarkdownPath } from "@/lib/file-picker-path";
+import { initTaskRunService, runTaskByKey } from "@/lib/task-run-service";
 import {
   isWorkspaceReferenceDirectoryPath,
   normalizeWorkspaceReferenceDirectoryPath,
@@ -187,6 +189,28 @@ export default function App() {
     snapshot,
     activeFilePath,
   });
+
+  useEffect(() => {
+    initTaskRunService({
+      resolveTaskForRun: runtime.resolveTaskForRun,
+      resolveTaskByLabel: runtime.resolveTaskByLabel,
+      getTabs: workspaceTools.getWorkspaceToolTabs,
+      setTabs: workspaceTools.setWorkspaceToolTabs,
+      getActiveTabId: workspaceTools.getActiveWorkspaceToolTabId,
+      setActiveTabId: workspaceTools.setActiveWorkspaceToolTabId,
+      setToolsOpen: workspaceTools.setWorkspaceToolsOpen,
+      getWorkspaceRoot: () => snapshot?.workspaceRoot ?? "",
+    });
+  }, [
+    runtime.resolveTaskForRun,
+    runtime.resolveTaskByLabel,
+    workspaceTools.getWorkspaceToolTabs,
+    workspaceTools.setWorkspaceToolTabs,
+    workspaceTools.getActiveWorkspaceToolTabId,
+    workspaceTools.setActiveWorkspaceToolTabId,
+    workspaceTools.setWorkspaceToolsOpen,
+    snapshot?.workspaceRoot,
+  ]);
 
   const gitHubAuthConnected = useGitHubAuthConnected(
     runtime.getGitHubAuthStatus,
@@ -856,9 +880,13 @@ export default function App() {
                   onOpenChange={composer.setActionPickerOpen}
                   onSelect={composer.runActionPaletteItem}
                   onSavePatch={runtime.saveSettingsPatch}
+                  taskItems={runtime.taskMenuItems}
+                  onRunTask={(key) => void runTaskByKey(key)}
                   isItemDisabled={composer.isActionPaletteItemDisabled}
                   shouldIncludeItem={composer.filterActionPaletteItem}
                 />
+
+                <TaskInstanceLimitDialog />
 
                 <WorkspaceFilePickerDialog
                   open={composer.filePickerOpen}
@@ -889,7 +917,12 @@ export default function App() {
                 />
 
                 <WorkspaceCapabilityTrustDialog
-                  pending={snapshot?.pendingWorkspaceCapabilityTrust}
+                  // The prompt must not preempt the launch overlay: while the splash/OOBE
+                  // is up the app body is still hidden, so hold the request until the
+                  // exit animation has finished.
+                  pending={
+                    shellUnderlayHidden ? undefined : snapshot?.pendingWorkspaceCapabilityTrust
+                  }
                   busy={runtime.busyAction === "workspaceTrust"}
                   onReply={(decision) => {
                     void runtime.replyWorkspaceCapabilityTrust(decision);

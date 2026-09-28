@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSingleTextQuestionNotificationReplyResult } from "@/lib/ask-questions-notification-reply";
 import { applyConversationDelta } from "@/lib/live-update";
+import { runTaskByKey } from "@/lib/task-run-service";
 import {
   resolvePendingApprovalSessionPath,
   resolvePendingQuestionsSessionPath,
@@ -79,6 +80,8 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopMcpServerInspection,
@@ -459,6 +462,7 @@ export function useDesktopRuntime() {
   const [paneSendBusySessionPath, setPaneSendBusySessionPath] = useState<string | null>(null);
   const [layoutNavigationPending, setLayoutNavigationPendingState] = useState(false);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [taskMenuItems, setTaskMenuItems] = useState<DesktopTaskMenuItem[]>([]);
   const [unseenCompletedSessionPaths, setUnseenCompletedSessionPaths] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -934,6 +938,25 @@ export function useDesktopRuntime() {
     return api.listAutomations();
   }, [api]);
 
+  const resolveTaskForRun = useCallback(
+    async (key: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskForRun(key);
+    },
+    [api],
+  );
+
+  const resolveTaskByLabel = useCallback(
+    async (label: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskByLabel(label);
+    },
+    [api],
+  );
   const getAutomation = useCallback(
     async (automationId: string): Promise<DesktopAutomationDetail | undefined> => {
       if (!api) {
@@ -1579,6 +1602,58 @@ export function useDesktopRuntime() {
       void refreshSessions();
     });
   }, [api, applySnapshot, refreshSessions]);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    let cancelled = false;
+    // Armed only at workspace activation or a trust allow, so this consumes an empty list
+    // on watcher-driven updates and never re-triggers on tasks.json edits.
+    const consumeFolderOpenTriggers = async () => {
+      if (!api.consumeFolderOpenTaskTriggers) {
+        return;
+      }
+      let keys: string[] = [];
+      try {
+        keys = await api.consumeFolderOpenTaskTriggers();
+      } catch {
+        return;
+      }
+      if (cancelled) {
+        return;
+      }
+      for (const key of keys) {
+        void runTaskByKey(key, { trigger: "folderOpen" });
+      }
+    };
+    api
+      .listTaskMenuItems()
+      .then((items) => {
+        if (!cancelled) {
+          setTaskMenuItems(items);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskMenuItems([]);
+        }
+      });
+    void consumeFolderOpenTriggers();
+    if (!api.subscribeTasksUpdates) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const unsubscribe = api.subscribeTasksUpdates((items) => {
+      setTaskMenuItems(items);
+      void consumeFolderOpenTriggers();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [api, snapshot?.workspaceRoot]);
 
   useEffect(() => {
     if (!api?.subscribeSessionListUpdates) {
@@ -4026,6 +4101,8 @@ export function useDesktopRuntime() {
     refreshSessions,
     listDreamsOverview,
     listAutomations,
+    resolveTaskForRun,
+    resolveTaskByLabel,
     getAutomation,
     createAutomation,
     updateAutomation,
@@ -4033,6 +4110,7 @@ export function useDesktopRuntime() {
     setAutomationEnabled,
     runtimeError,
     sessions,
+    taskMenuItems,
     unseenCompletedSessionPaths,
     settings,
     snapshot,

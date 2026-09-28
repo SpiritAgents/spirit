@@ -907,6 +907,7 @@
     "browserPlaceholder": "Browser-Tab wird geladen…",
     "browserElectronOnly": "Browser ist nur in der Electron Desktop-Version verfügbar.",
     "prTab": "Pull Request",
+    "taskTab": "Task",
     "prElectronOnly": "Pull Requests sind nur in der Electron Desktop-Version verfügbar.",
     "prGitHubAuthChecking": "GitHub-Verbindung wird überprüft…",
     "prGitHubConnectLink": "Verbinden",
@@ -1087,6 +1088,14 @@
     "forceDeleteConfirmTitle": "Endgültig löschen?",
     "forceDeleteConfirmDescription": "Konnte nicht in den Papierkorb verschoben werden: {{reason}}. Dies kann nicht rückgängig gemacht werden."
   },
+  "task": {
+    "instanceLimitTitle": "„{{label}}“ läuft bereits.",
+    "instanceLimitDescription": "Ersetzen beendet die ausgewählte Instanz und startet eine neue Instanz.",
+    "instanceLimitReplace": "Ersetzen",
+    "terminateConfirmTitle": "Task beenden?",
+    "terminateConfirmDescription": "„{{label}}“ läuft noch. Tab schließen und beenden?",
+    "terminateConfirmAction": "Beenden"
+  },
   "actionPalette": {
     "title": "Befehlspalette",
     "description": "Suchen und Ausführen von Workspace-Aktionen.",
@@ -1096,8 +1105,10 @@
     "group": {
       "chat": "Chat",
       "mode": "Modus",
+      "workspace": "Arbeitsbereich",
       "appearance": "Erscheinungsbild"
     },
+    "runTask": "Task ausführen",
     "theme": "Design",
     "language": "Sprache",
     "back": "Zurück"
@@ -1529,7 +1540,13 @@
     "deny": "Ablehnen",
     "alwaysTrust": "Immer vertrauen",
     "hooksSection": "Hooks, die ausgeführt werden",
-    "openHookScript": "Skript im Standard-Editor öffnen"
+    "openHookScript": "Skript im Standard-Editor öffnen",
+    "riskTasks": "Dieser Workspace definiert Tasks, die Befehle aus dem Projekt ausführen. Nur fortfahren, wenn Sie dieser Codebasis vertrauen.",
+    "riskBoth": "Dieser Workspace definiert Hooks und Tasks, die Skripte oder Befehle aus dem Projekt ausführen. Nur fortfahren, wenn Sie dieser Codebasis vertrauen.",
+    "tasksChanged": "Workspace-Tasks haben sich seit Ihrer letzten Zustimmung geändert. Überprüfen Sie die Liste, bevor Sie fortfahren.",
+    "bothChanged": "Workspace-Hooks und -Tasks haben sich seit Ihrer letzten Zustimmung geändert. Überprüfen Sie die Liste, bevor Sie fortfahren.",
+    "tasksSection": "Tasks, die verfügbar werden",
+    "openTaskFile": "Tasks-Datei im Standard-Editor öffnen"
   },
   "webHost": {
     "error": {

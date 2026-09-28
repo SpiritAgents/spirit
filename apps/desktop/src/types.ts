@@ -28,6 +28,8 @@ import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
 } from "@spiritagent/host-internal/hooks/trust";
+import type { ResolvedTask, TaskMenuItem } from "@spiritagent/host-internal/tasks";
+import type { TaskShellDefinition } from "@spiritagent/host-internal/tasks-runtime";
 
 export type {
   ApprovalLevel,
@@ -1311,6 +1313,13 @@ export type {
   DesktopAutomationGitHubEvent,
   DesktopAutomationTrigger,
 } from "./lib/automation-trigger.js";
+
+export type DesktopTaskMenuItem = TaskMenuItem;
+
+export type DesktopResolveTaskForRunResult =
+  | { status: "ok"; task: ResolvedTask; defaultShell: TaskShellDefinition }
+  | { status: "notFound" }
+  | { status: "unsupported" };
 
 export interface DesktopGitHubAutomationRepositoryItem {
   owner: string;

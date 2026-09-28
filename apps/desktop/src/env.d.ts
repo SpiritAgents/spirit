@@ -152,6 +152,13 @@ declare global {
     ): Promise<DesktopSnapshot>;
     deleteAutomation(automationId: string): Promise<DesktopSnapshot>;
     setAutomationEnabled(automationId: string, enabled: boolean): Promise<DesktopSnapshot>;
+    listTaskMenuItems(): Promise<import("./types.js").DesktopTaskMenuItem[]>;
+    resolveTaskForRun(key: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    resolveTaskByLabel(label: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    consumeFolderOpenTaskTriggers(): Promise<string[]>;
+    tasksSubscribe(
+      callback: (items: import("./types.js").DesktopTaskMenuItem[]) => void,
+    ): () => void;
     dreamSubscribe(callback: (update: DesktopLiveUpdate) => void): () => void;
     automationsSubscribe(callback: (snapshot: DesktopSnapshot) => void): () => void;
     sessionListSubscribe(callback: () => void): () => void;
@@ -328,6 +335,9 @@ declare global {
       cwd: string;
       cols: number;
       rows: number;
+      file?: string;
+      args?: string[];
+      env?: Record<string, string>;
     }): Promise<{ ok: true; id: string; shellDisplayName: string } | { ok: false; error: string }>;
     ptyWrite(id: string, data: string): void;
     ptyResize(id: string, cols: number, rows: number): void;

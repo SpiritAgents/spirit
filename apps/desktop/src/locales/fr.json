@@ -907,6 +907,7 @@
     "browserPlaceholder": "Chargement du navigateur…",
     "browserElectronOnly": "Le navigateur est disponible uniquement dans la version de bureau Electron.",
     "prTab": "Pull Request",
+    "taskTab": "Tâche",
     "prElectronOnly": "Les Pull Requests sont disponibles uniquement dans la version de bureau Electron.",
     "prGitHubAuthChecking": "Vérification de la connexion GitHub…",
     "prGitHubConnectLink": "Connecter",
@@ -1087,6 +1088,14 @@
     "forceDeleteConfirmTitle": "Supprimer définitivement ?",
     "forceDeleteConfirmDescription": "Impossible de déplacer vers la corbeille : {{reason}}. Cette action est irréversible."
   },
+  "task": {
+    "instanceLimitTitle": "« {{label}} » est déjà en cours d'exécution.",
+    "instanceLimitDescription": "Remplacer terminera l'instance sélectionnée et démarrera une nouvelle instance.",
+    "instanceLimitReplace": "Remplacer",
+    "terminateConfirmTitle": "Terminer la tâche ?",
+    "terminateConfirmDescription": "« {{label}} » est encore en cours. Fermer l'onglet et la terminer ?",
+    "terminateConfirmAction": "Terminer"
+  },
   "actionPalette": {
     "title": "Palette de commandes",
     "description": "Rechercher et exécuter des actions de l'espace de travail.",
@@ -1096,8 +1105,10 @@
     "group": {
       "chat": "Discussion",
       "mode": "Mode",
+      "workspace": "Espace de travail",
       "appearance": "Apparence"
     },
+    "runTask": "Exécuter la tâche",
     "theme": "Thème",
     "language": "Langue",
     "back": "Retour"
@@ -1529,7 +1540,13 @@
     "deny": "Refuser",
     "alwaysTrust": "Toujours faire confiance",
     "hooksSection": "Hooks qui s'exécuteront",
-    "openHookScript": "Ouvrir le script dans l'éditeur par défaut"
+    "openHookScript": "Ouvrir le script dans l'éditeur par défaut",
+    "riskTasks": "Cet espace de travail définit des tâches qui exécutent des commandes depuis le projet. Continuez uniquement si vous avez confiance dans cette base de code.",
+    "riskBoth": "Cet espace de travail définit des hooks et des tâches qui exécutent des scripts ou des commandes depuis le projet. Continuez uniquement si vous avez confiance dans cette base de code.",
+    "tasksChanged": "Les tâches de l'espace de travail ont changé depuis votre dernière validation. Vérifiez la liste avant de continuer.",
+    "bothChanged": "Les hooks et les tâches de l'espace de travail ont changé depuis votre dernière validation. Vérifiez la liste avant de continuer.",
+    "tasksSection": "Tâches qui seront disponibles",
+    "openTaskFile": "Ouvrir le fichier de tâches dans l'éditeur par défaut"
   },
   "webHost": {
     "error": {

@@ -904,6 +904,7 @@
     "browserPlaceholder": "浏览器选项卡加载中…",
     "browserElectronOnly": "浏览器仅在 Electron 桌面版可用。",
     "prTab": "Pull Request",
+    "taskTab": "任务",
     "prElectronOnly": "Pull Request 仅在 Electron 桌面版可用。",
     "prGitHubAuthChecking": "正在检查 GitHub 连接…",
     "prGitHubConnectLink": "连接",
@@ -1084,6 +1085,14 @@
     "forceDeleteConfirmTitle": "永久删除？",
     "forceDeleteConfirmDescription": "无法移到回收站：{{reason}}。此操作无法撤销。"
   },
+  "task": {
+    "instanceLimitTitle": "“{{label}}”已在运行。",
+    "instanceLimitDescription": "替换将终止所选实例，并启动新实例。",
+    "instanceLimitReplace": "替换",
+    "terminateConfirmTitle": "终止任务？",
+    "terminateConfirmDescription": "“{{label}}”仍在运行。关闭分页并终止它吗？",
+    "terminateConfirmAction": "终止"
+  },
   "actionPalette": {
     "title": "命令面板",
     "description": "搜索并运行工作区操作。",
@@ -1093,8 +1102,10 @@
     "group": {
       "chat": "对话",
       "mode": "模式",
+      "workspace": "工作区",
       "appearance": "外观"
     },
+    "runTask": "运行任务",
     "theme": "主题",
     "language": "语言",
     "back": "返回"
@@ -1526,7 +1537,13 @@
     "deny": "拒绝",
     "alwaysTrust": "始终信任",
     "hooksSection": "将运行的 Hooks",
-    "openHookScript": "在默认编辑器中打开脚本"
+    "openHookScript": "在默认编辑器中打开脚本",
+    "riskTasks": "此工作区定义了将执行项目内命令的任务。仅在你信任该代码库时继续。",
+    "riskBoth": "此工作区定义了将执行项目内脚本或命令的 Hooks 和任务。仅在你信任该代码库时继续。",
+    "tasksChanged": "自上次信任以来，工作区任务已变更。请在继续前复查列表。",
+    "bothChanged": "自上次信任以来，工作区 Hooks 与任务已变更。请在继续前复查列表。",
+    "tasksSection": "将可用的任务",
+    "openTaskFile": "在默认编辑器中打开任务文件"
   },
   "webHost": {
     "error": {

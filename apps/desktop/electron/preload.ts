@@ -317,6 +317,27 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   setAutomationEnabled(automationId: string, enabled: boolean) {
     return ipcRenderer.invoke("desktop:invoke", "setAutomationEnabled", { automationId, enabled });
   },
+  listTaskMenuItems() {
+    return ipcRenderer.invoke("desktop:invoke", "listTaskMenuItems");
+  },
+  resolveTaskForRun(key: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskForRun", { key });
+  },
+  resolveTaskByLabel(label: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskByLabel", { label });
+  },
+  consumeFolderOpenTaskTriggers() {
+    return ipcRenderer.invoke("desktop:invoke", "consumeFolderOpenTaskTriggers");
+  },
+  tasksSubscribe(callback: (items: unknown) => void) {
+    const onTasksUpdate = (_event: Electron.IpcRendererEvent, items: unknown) => {
+      callback(items);
+    };
+    ipcRenderer.on("desktop:tasks-updated", onTasksUpdate);
+    return () => {
+      ipcRenderer.removeListener("desktop:tasks-updated", onTasksUpdate);
+    };
+  },
   dreamSubscribe(callback: (snapshot: unknown) => void) {
     const onDreamUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
       callback(snapshot);
@@ -631,7 +652,14 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   executeWindowAction(action: string) {
     return ipcRenderer.invoke("desktop:execute-window-action", action);
   },
-  ptyCreate(request: { cwd: string; cols: number; rows: number }) {
+  ptyCreate(request: {
+    cwd: string;
+    cols: number;
+    rows: number;
+    file?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  }) {
     return ipcRenderer.invoke("desktop:pty-create", request);
   },
   ptyWrite(id: string, data: string) {

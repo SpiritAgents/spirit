@@ -56,6 +56,11 @@ import {
   normalizeWorkLocationKind,
   gitBranchLabelForBasicInfo,
   setGitHubFetchImplementation,
+  applyWorkspaceTasksTrustDecision,
+  computeWorkspaceTasksContentHash,
+  loadTaskFiles,
+  canonicalizeWorkspaceRoot,
+  type LoadedTaskFile,
   type WorkLocationKind,
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
@@ -83,6 +88,8 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopApprovalDecision,
@@ -366,6 +373,17 @@ import {
   updateAutomationCommand,
 } from "./host-automation-commands.js";
 import {
+  createTaskRunResolver,
+  evaluateAndFilterTaskFiles,
+  listTaskMenuItemsCommand,
+  resolveTaskMenuItems,
+  resolveTaskFiles,
+  tasksDebugEnabled,
+  type TaskRunResolver,
+} from "./host-tasks-commands.js";
+import { TasksWatcher } from "./tasks-watcher.js";
+import { WorkspaceTasksTrustPromptQueue } from "./tasks-trust-prompt.js";
+import {
   clearAssistantContinuationMarkers as clearAssistantContinuationMarkersFromService,
   latestContinuableAssistantMessage as latestContinuableAssistantMessageFromService,
   logContinuationSnapshotState as logContinuationSnapshotStateFromService,
@@ -598,7 +616,7 @@ async function loadDesktopPlanSnapshot(
   }
 }
 
-class DesktopHostService {
+export class DesktopHostService {
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly extensionStateStore = createDesktopExtensionStateStore({
@@ -657,6 +675,13 @@ class DesktopHostService {
   private readonly dreamUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly automationUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly sessionListUpdateListeners = new Set<() => void>();
+  private readonly tasksUpdateListeners = new Set<(items: DesktopTaskMenuItem[]) => void>();
+  private readonly taskRunResolver: TaskRunResolver = createTaskRunResolver();
+  private pendingFolderOpenTaskKeys: string[] = [];
+  private folderOpenTriggerRoot: string | undefined;
+  private readonly tasksWatcher = new TasksWatcher(() => {
+    void this.refreshTasksFromDisk();
+  });
   private subagentViewerTargetToolCallId: string | null = null;
   private gitRefreshInFlight: Promise<void> | null = null;
   private workspaceContentInvalidation: WorkspaceContentInvalidation | undefined;
@@ -717,12 +742,21 @@ class DesktopHostService {
         finish: () => void;
       }
     | undefined;
-  private workspaceCapabilityTrustWaiter:
-    | {
-        resolve: (decision: WorkspaceCapabilityTrustDecision) => void;
-        reject: (error: Error) => void;
-      }
-    | undefined;
+  /** True once the current pending trust prompt has had a macrotask to reach the renderer. */
+  private capabilityTrustPromptShown = false;
+  private readonly tasksTrustPromptQueue = new WorkspaceTasksTrustPromptQueue({
+    getPending: () => this.pendingWorkspaceCapabilityTrust,
+    setPending: (request) => {
+      this.setCapabilityTrustPending(request);
+    },
+    isPromptShown: () => this.capabilityTrustPromptShown,
+    getTail: () => this.workspaceCapabilityTrustTail,
+    setTail: (tail) => {
+      this.workspaceCapabilityTrustTail = tail;
+    },
+    emit: () => this.emitCapabilityTrustSnapshotUpdate(),
+    apply: (waiter, decision) => this.applyTasksCapabilityTrustDecision(waiter, decision),
+  });
   /** Serialize trust prompts so one reply cannot authorize multiple workspaces. */
   private workspaceCapabilityTrustTail: Promise<void> = Promise.resolve();
   /** sessionStart may await interactive trust; never run it while holding runSerialized. */
@@ -964,32 +998,6 @@ class DesktopHostService {
     }
   }
 
-  private requestWorkspaceCapabilityTrust = (
-    request: WorkspaceCapabilityTrustRequest,
-  ): Promise<WorkspaceCapabilityTrustDecision> => {
-    return new Promise<WorkspaceCapabilityTrustDecision>((resolve, reject) => {
-      this.workspaceCapabilityTrustTail = this.workspaceCapabilityTrustTail
-        .catch(() => undefined)
-        .then(
-          () =>
-            new Promise<void>((slotDone) => {
-              this.pendingWorkspaceCapabilityTrust = request;
-              this.workspaceCapabilityTrustWaiter = {
-                resolve: (decision) => {
-                  resolve(decision);
-                  slotDone();
-                },
-                reject: (error) => {
-                  reject(error);
-                  slotDone();
-                },
-              };
-              this.emitLiveSnapshotUpdate();
-            }),
-        );
-    });
-  };
-
   private async runSessionEndForBundle(
     bundle: SessionBundle,
     reason: SessionEndHookInput["reason"],
@@ -1004,6 +1012,19 @@ class DesktopHostService {
     await runRemoteDesktopSessionStart(bundle.runtime, source);
   }
 
+  // Merging new content into a trust prompt is only safe before the user can see it; the
+  // flag flips one macrotask after the pending request is emitted (identity-guarded so a
+  // replaced pending request never flips an older marker).
+  private setCapabilityTrustPending(request: WorkspaceCapabilityTrustRequest): void {
+    this.pendingWorkspaceCapabilityTrust = request;
+    this.capabilityTrustPromptShown = false;
+    setImmediate(() => {
+      if (this.pendingWorkspaceCapabilityTrust === request) {
+        this.capabilityTrustPromptShown = true;
+      }
+    });
+  }
+
   private enqueueRemoteWorkspaceCapabilityTrust(
     requestId: string,
     request: WorkspaceCapabilityTrustRequest,
@@ -1014,7 +1035,7 @@ class DesktopHostService {
       .then(
         () =>
           new Promise<void>((finish) => {
-            this.pendingWorkspaceCapabilityTrust = request;
+            this.setCapabilityTrustPending(request);
             this.pendingRemoteWorkspaceCapabilityTrust = {
               requestId,
               runtime,
@@ -1366,6 +1387,9 @@ class DesktopHostService {
       invalidateExtensionWarmup: () => this.invalidateExtensionWarmup(),
       scheduleExtensionWarmup: (trigger) => this.scheduleExtensionWarmup(trigger),
       loadDesktopPlanSnapshot,
+      evaluateWorkspaceTasksTrust: (reason) => {
+        void this.evaluateWorkspaceTasksTrust(reason);
+      },
     };
   }
 
@@ -1555,6 +1579,14 @@ class DesktopHostService {
     this.startAutomationSchedulerMonitorIfNeeded();
     return () => {
       this.automationUpdateListeners.delete(listener);
+    };
+  }
+
+  subscribeTasksUpdates(listener: (items: DesktopTaskMenuItem[]) => void): () => void {
+    this.tasksUpdateListeners.add(listener);
+    this.syncTasksWatcher();
+    return () => {
+      this.tasksUpdateListeners.delete(listener);
     };
   }
 
@@ -2393,6 +2425,17 @@ class DesktopHostService {
     request: ReplyWorkspaceCapabilityTrustRequest,
   ): Promise<DesktopSnapshot> {
     const remote = this.pendingRemoteWorkspaceCapabilityTrust;
+    const pending = this.pendingWorkspaceCapabilityTrust;
+    if (!remote && !pending) {
+      throw new Error("No pending workspace capability trust request");
+    }
+    // Consume synchronously before any await: a second reply must find nothing pending.
+    this.pendingRemoteWorkspaceCapabilityTrust = undefined;
+    this.pendingWorkspaceCapabilityTrust = undefined;
+    this.capabilityTrustPromptShown = false;
+    this.emitLiveSnapshotUpdate();
+
+    await this.tasksTrustPromptQueue.handleReply(request.decision, pending);
     if (remote) {
       try {
         await replyRemoteWorkspaceCapabilityTrust(
@@ -2401,21 +2444,9 @@ class DesktopHostService {
           request.decision,
         );
       } finally {
-        this.pendingRemoteWorkspaceCapabilityTrust = undefined;
-        this.pendingWorkspaceCapabilityTrust = undefined;
         remote.finish();
-        this.emitLiveSnapshotUpdate();
       }
-      return this.buildSnapshot();
     }
-    if (!this.pendingWorkspaceCapabilityTrust || !this.workspaceCapabilityTrustWaiter) {
-      throw new Error("No pending workspace capability trust request");
-    }
-    const waiter = this.workspaceCapabilityTrustWaiter;
-    this.workspaceCapabilityTrustWaiter = undefined;
-    this.pendingWorkspaceCapabilityTrust = undefined;
-    waiter.resolve(request.decision);
-    this.emitLiveSnapshotUpdate();
     return this.buildSnapshot();
   }
 
@@ -2508,6 +2539,24 @@ class DesktopHostService {
 
   async getAutomation(automationId: string): Promise<DesktopAutomationDetail | undefined> {
     return getAutomationCommand(automationId);
+  }
+
+  async listTaskMenuItems(): Promise<DesktopTaskMenuItem[]> {
+    return listTaskMenuItemsCommand({ workspaceRoot: this.state?.workspaceRoot });
+  }
+
+  async resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskForRun({
+      workspaceRoot: this.state?.workspaceRoot,
+      key,
+    });
+  }
+
+  async resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskByLabel({
+      workspaceRoot: this.state?.workspaceRoot,
+      label,
+    });
   }
 
   async createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot> {
@@ -3417,6 +3466,115 @@ class DesktopHostService {
     }
   }
 
+  private syncTasksWatcher(): void {
+    this.tasksWatcher.sync({
+      workspaceRoot: this.state?.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
+    });
+  }
+
+  // Evaluates workspace task trust and enqueues a prompt when the content hash is unknown.
+  // Runs on workspace adoption and on every watched-file change; the verdict is never cached.
+  private async evaluateWorkspaceTasksTrust(reason: string): Promise<void> {
+    const workspaceRoot = this.state?.workspaceRoot;
+    if (workspaceRoot === undefined) {
+      return;
+    }
+    const { files, gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+    if (tasksDebugEnabled()) {
+      console.warn(`[desktop-host][tasks] trust gate ${gate.status} (${reason})`);
+    }
+    if (gate.status === "needsPrompt") {
+      this.tasksTrustPromptQueue.request(gate.tasks, workspaceRoot);
+      return;
+    }
+    // User-level tasks are implicitly trusted, so noWorkspaceFiles arms them the same way.
+    if (gate.status === "allow" || gate.status === "noWorkspaceFiles") {
+      this.armFolderOpenTasks(workspaceRoot, files, false);
+    }
+  }
+
+  // folderOpen tasks arm once per activation round: adopting the same root again within a
+  // stay never re-arms, a different root starts a new round, and a trust-allow always arms
+  // (it is this session's deferred folder-open). Watcher refreshes never call this.
+  private armFolderOpenTasks(
+    workspaceRoot: string,
+    files: LoadedTaskFile[],
+    always: boolean,
+  ): void {
+    const canonical = canonicalizeWorkspaceRoot(workspaceRoot);
+    if (!always && this.folderOpenTriggerRoot === canonical) {
+      return;
+    }
+    const { tasks } = resolveTaskFiles({ workspaceRoot }, files);
+    const armed = tasks.filter((task) => task.runOptions.runOn === "folderOpen");
+    this.pendingFolderOpenTaskKeys = armed.map((task) => task.key);
+    this.folderOpenTriggerRoot = canonical;
+    if (tasksDebugEnabled()) {
+      for (const task of armed) {
+        console.warn(
+          `[desktop-host][tasks] folder-open armed ${task.label} ${task.key} (${task.sourceFile})`,
+        );
+      }
+    }
+  }
+
+  async consumeFolderOpenTaskTriggers(): Promise<string[]> {
+    const keys = this.pendingFolderOpenTaskKeys;
+    this.pendingFolderOpenTaskKeys = [];
+    return keys;
+  }
+
+  private async refreshTasksFromDisk(): Promise<void> {
+    this.taskRunResolver.invalidate();
+    const workspaceRoot = this.state?.workspaceRoot;
+    if (workspaceRoot === undefined) {
+      const items = await listTaskMenuItemsCommand({ workspaceRoot });
+      this.emitTasksUpdate(items);
+      return;
+    }
+    const { files, gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+    if (tasksDebugEnabled()) {
+      console.warn(`[desktop-host][tasks] trust gate ${gate.status} (watch)`);
+    }
+    if (gate.status === "needsPrompt") {
+      this.tasksTrustPromptQueue.request(gate.tasks, workspaceRoot);
+    }
+    this.emitTasksUpdate(resolveTaskMenuItems({ workspaceRoot }, files));
+  }
+
+  // Mid-prompt tamper guard: apply the decision only when the file content still matches
+  // what was prompted; a hash change drops the decision (deny-without-record).
+  private async applyTasksCapabilityTrustDecision(
+    waiter: { workspaceRoot: string; contentHash: string },
+    decision: WorkspaceCapabilityTrustDecision,
+  ): Promise<void> {
+    const files = await loadTaskFiles({
+      workspaceRoot: waiter.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
+    });
+    if (computeWorkspaceTasksContentHash(files) !== waiter.contentHash) {
+      return;
+    }
+    await applyWorkspaceTasksTrustDecision({
+      spiritDataDir: spiritDataDir(),
+      workspaceRoot: waiter.workspaceRoot,
+      contentHash: waiter.contentHash,
+      decision,
+    });
+    if (decision !== "deny") {
+      // The just-allowed folderOpen tasks are this session's deferred folder-open run.
+      this.armFolderOpenTasks(waiter.workspaceRoot, files, true);
+      await this.refreshTasksFromDisk();
+    }
+  }
+
+  private emitTasksUpdate(items: DesktopTaskMenuItem[]): void {
+    for (const listener of this.tasksUpdateListeners) {
+      listener(items);
+    }
+  }
+
   private setDreamCollectorStatus(next: DesktopDreamCollectorSnapshot): void {
     if (sameDreamCollectorSnapshot(this.dreamCollectorStatus, next)) {
       return;
@@ -3433,6 +3591,20 @@ class DesktopHostService {
     for (const listener of this.dreamUpdateListeners) {
       listener(snapshot);
     }
+  }
+
+  /**
+   * Trust prompt emissions must never be the launch's first live snapshot: an
+   * early emit trips the splash's `snapshot != null` exit condition while the
+   * rest of init is still loading. Before anything has been emitted, the
+   * pending request already lives in host state, so the natural first emission
+   * carries it to the renderer with no extra push.
+   */
+  private emitCapabilityTrustSnapshotUpdate(): void {
+    if (this.lastLiveSnapshotEmitAtMs === 0) {
+      return;
+    }
+    this.emitLiveSnapshotUpdate();
   }
 
   private emitLiveSnapshotUpdate(): void {
@@ -4084,6 +4256,8 @@ class DesktopHostService {
     state.workspaceRoot = resolved;
     state.git = applyGitRevision(await readWorkspaceGitSnapshot(resolved), 0, { reset: true });
     bundle.workspaceRoot = resolved;
+    this.syncTasksWatcher();
+    void this.evaluateWorkspaceTasksTrust("adopt");
     await this.syncPlanStateForBundle(bundle);
 
     if (options?.deferHeavyWork) {
@@ -4156,6 +4330,8 @@ class DesktopHostService {
     bundle.workspaceRoot = home;
     bundle.workspaceBinding = "none";
     bundle.scopedGit = undefined;
+    this.syncTasksWatcher();
+    void this.evaluateWorkspaceTasksTrust("adopt");
 
     state.config = {
       ...state.config,
@@ -4880,6 +5056,7 @@ class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
       if (!bundle.activeSession || bundle.activeSession.kind === "ephemeral") {
         continue;
@@ -4950,6 +5127,12 @@ export function subscribeDesktopAutomationsUpdates(
 
 export function subscribeDesktopSessionListUpdates(listener: () => void): () => void {
   return desktopHostService.subscribeSessionListUpdates(listener);
+}
+
+export function subscribeDesktopTasksUpdates(
+  listener: (items: DesktopTaskMenuItem[]) => void,
+): () => void {
+  return desktopHostService.subscribeTasksUpdates(listener);
 }
 
 export async function shutdownDesktopHostService(): Promise<void> {
