@@ -61,7 +61,8 @@ export type TaskInstancePolicy =
 
 export interface TaskRunOptions {
   reevaluateOnRerun: boolean;
-  runOn: TaskRunOn;
+  /** "unknown" marks a string the schema does not know; the task is hidden by the runOn rule. */
+  runOn: TaskRunOn | "unknown";
   instanceLimit: number;
   instancePolicy: TaskInstancePolicy;
 }
@@ -133,6 +134,8 @@ export interface MergedTask {
 export interface ResolvedTaskRunOptions {
   reevaluateOnRerun: boolean;
   instanceLimit: number;
+  /** Only "default" and "folderOpen" survive resolution; everything else is hidden. */
+  runOn: "default" | "folderOpen";
 }
 
 export interface ResolvedTaskPresentation {
@@ -490,7 +493,7 @@ export function normalizeTaskRunOptions(value: unknown): TaskRunOptions {
   return {
     reevaluateOnRerun:
       typeof record.reevaluateOnRerun === "boolean" ? record.reevaluateOnRerun : true,
-    runOn: normalizeTaskRunOn(record.runOn) ?? "default",
+    runOn: normalizeTaskRunOn(record.runOn),
     instanceLimit:
       typeof record.instanceLimit === "number" &&
       Number.isInteger(record.instanceLimit) &&
@@ -501,11 +504,16 @@ export function normalizeTaskRunOptions(value: unknown): TaskRunOptions {
   };
 }
 
-function normalizeTaskRunOn(value: unknown): TaskRunOn | undefined {
-  if (value === "default" || value === "folderOpen" || value === "worktreeCreated") {
+// Unknown strings stay distinguishable (they hide the task); absent or non-string values
+// mean the default.
+function normalizeTaskRunOn(value: unknown): TaskRunOn | "unknown" {
+  if (value === "folderOpen" || value === "worktreeCreated") {
     return value;
   }
-  return undefined;
+  if (typeof value === "string" && value !== "default") {
+    return "unknown";
+  }
+  return "default";
 }
 
 function normalizeTaskInstancePolicy(value: unknown): TaskInstancePolicy | undefined {

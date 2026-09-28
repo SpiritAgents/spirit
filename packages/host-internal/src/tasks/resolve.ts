@@ -145,7 +145,7 @@ function firstPerTaskRule(
   if (context.workspaceFolder === undefined && usesWorkspaceFolderVariable(strings)) {
     return "unresolvableWorkspaceVariable";
   }
-  if (task.runOptions.runOn !== "default") {
+  if (task.runOptions.runOn !== "default" && task.runOptions.runOn !== "folderOpen") {
     return "runOn";
   }
   if (task.dependsOn.hasObjectForm) {
@@ -199,6 +199,7 @@ function buildResolvedTask(entry: NamespaceEntry, context: TaskVariableContext):
     runOptions: {
       reevaluateOnRerun: task.runOptions.reevaluateOnRerun,
       instanceLimit: task.runOptions.instanceLimit,
+      runOn: task.runOptions.runOn === "folderOpen" ? "folderOpen" : "default",
     },
     presentation: {
       echo: task.presentation.echo ?? true,

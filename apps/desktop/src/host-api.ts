@@ -234,6 +234,7 @@ export interface HostApi {
   listTaskMenuItems(): Promise<DesktopTaskMenuItem[]>;
   resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult>;
   resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult>;
+  consumeFolderOpenTaskTriggers(): Promise<string[]>;
   subscribeTasksUpdates?(callback: (items: DesktopTaskMenuItem[]) => void): () => void;
   replyPendingApproval(request: ReplyPendingApprovalRequest): Promise<DesktopSnapshot>;
   replyPendingQuestions(request: ReplyPendingQuestionsRequest): Promise<DesktopSnapshot>;

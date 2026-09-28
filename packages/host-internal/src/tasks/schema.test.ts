@@ -157,7 +157,16 @@ test("normalizeTaskEntry applies runOptions defaults and rejects invalid values"
     })?.runOptions,
     {
       reevaluateOnRerun: true,
-      runOn: "default",
+      runOn: "unknown",
+      instanceLimit: 1,
+      instancePolicy: "prompt",
+    },
+  );
+  assert.deepEqual(
+    normalizeTaskEntry({ label: "a", runOptions: { runOn: "folderOpen" } })?.runOptions,
+    {
+      reevaluateOnRerun: true,
+      runOn: "folderOpen",
       instanceLimit: 1,
       instancePolicy: "prompt",
     },

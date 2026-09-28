@@ -91,6 +91,7 @@ export type HostCommandName =
   | "listTaskMenuItems"
   | "resolveTaskForRun"
   | "resolveTaskByLabel"
+  | "consumeFolderOpenTaskTriggers"
   | "replyPendingApproval"
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"

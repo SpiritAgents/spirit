@@ -155,6 +155,7 @@ declare global {
     listTaskMenuItems(): Promise<import("./types.js").DesktopTaskMenuItem[]>;
     resolveTaskForRun(key: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
     resolveTaskByLabel(label: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    consumeFolderOpenTaskTriggers(): Promise<string[]>;
     tasksSubscribe(
       callback: (items: import("./types.js").DesktopTaskMenuItem[]) => void,
     ): () => void;

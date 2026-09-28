@@ -438,6 +438,9 @@ export function createWebHostApi(): HostApi {
     resolveTaskByLabel() {
       return Promise.resolve({ status: "unsupported" as const });
     },
+    consumeFolderOpenTaskTriggers() {
+      return Promise.resolve([]);
+    },
     subscribeTasksUpdates() {
       return () => {};
     },

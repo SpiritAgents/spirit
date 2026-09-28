@@ -153,6 +153,7 @@ export type CommandPayloads = {
   listTaskMenuItems: undefined;
   resolveTaskForRun: { key: string };
   resolveTaskByLabel: { label: string };
+  consumeFolderOpenTaskTriggers: undefined;
   replyPendingApproval: { request: ReplyPendingApprovalRequest };
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };

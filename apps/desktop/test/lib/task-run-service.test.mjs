@@ -584,3 +584,42 @@ test("terminateTaskTerminalInstance terminates the running instance through the 
   await terminateTaskTerminalInstance(tab.id);
   assert.equal(session.killed, 1);
 });
+
+test("a folderOpen trigger silently skips at the instance limit and never prompts", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const first = runTaskByKey(task.key);
+  await flush();
+
+  const warnings = [];
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    warnings.push(args.join(" "));
+  };
+  try {
+    await runTaskByKey(task.key, { trigger: "folderOpen" });
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.equal(getTaskInstanceLimitPrompt(), undefined);
+  assert.equal(state.tabs.length, 1);
+  assert.equal(warnings.length, 1);
+  assert.ok(warnings[0].includes("instance limit"));
+
+  const session = state.sessionsByTabId.get(state.tabs[0].id);
+  session.settleExit(0);
+  await first;
+});
+
+test("a folderOpen trigger runs through the normal pipeline when free", async () => {
+  const task = makeResolvedTask();
+  const { state } = setup([task]);
+  const run = runTaskByKey(task.key, { trigger: "folderOpen" });
+  await flush();
+  assert.equal(state.tabs.length, 1);
+  const session = state.sessionsByTabId.get(state.tabs[0].id);
+  assert.equal(session.startInvocations.length, 1);
+  session.settleExit(0);
+  await run;
+});

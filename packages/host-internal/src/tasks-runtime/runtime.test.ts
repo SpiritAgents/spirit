@@ -84,7 +84,7 @@ function makeTask(label: string, overrides: Partial<ResolvedTask> = {}): Resolve
     promptOnClose: false,
     dependsOn: [],
     dependsOrder: "parallel",
-    runOptions: { reevaluateOnRerun: true, instanceLimit: 1 },
+    runOptions: { reevaluateOnRerun: true, instanceLimit: 1, runOn: "default" },
     presentation: {
       echo: true,
       reveal: "always",
@@ -315,7 +315,7 @@ test("instance limit prompt never offers a way past the limit", async () => {
 
 test("instance limit replace terminates the selected instance, not the oldest", async () => {
   const task = makeTask("build", {
-    runOptions: { reevaluateOnRerun: true, instanceLimit: 2 },
+    runOptions: { reevaluateOnRerun: true, instanceLimit: 2, runOn: "default" },
   });
   const { host, coordinator } = setup([task]);
   const first = coordinator.run(task);
@@ -478,4 +478,31 @@ test("a missing dependency label returns a defensive error and releases the inst
   });
   assert.equal(host.started.length, 0);
   assert.equal(coordinator.activeInstanceCount(a.key), 0);
+});
+
+test("overLimit skip returns the skipped outcome without prompting or starting", async () => {
+  const task = makeTask("build");
+  const { host, coordinator } = setup([task]);
+  const first = coordinator.run(task);
+  await tick();
+  const second = await coordinator.run(task, { overLimit: "skip" });
+  assert.deepEqual(second, { status: "skipped", reason: "instanceLimit" });
+  assert.equal(host.promptCalls.length, 0);
+  assert.equal(host.started.length, 1);
+  assert.equal(coordinator.activeInstanceCount(task.key), 1);
+  host.resolveExit("term-1", 0);
+  await first;
+});
+
+test("overLimit prompt remains the default and still prompts", async () => {
+  const task = makeTask("build");
+  const { host, coordinator } = setup([task]);
+  host.promptAnswer = () => ({ kind: "cancel" });
+  const first = coordinator.run(task);
+  await tick();
+  const prompted = await coordinator.run(task, { overLimit: "prompt" });
+  assert.equal(prompted.status, "cancelled");
+  assert.equal(host.promptCalls.length, 1);
+  host.resolveExit("term-1", 0);
+  await first;
 });

@@ -126,7 +126,7 @@ async function loadAndResolveTasks(
   return resolveTaskFiles(context, files);
 }
 
-function resolveTaskFiles(
+export function resolveTaskFiles(
   context: TasksCommandContext,
   files: LoadedTaskFile[],
 ): ResolveWorkspaceTasksResult {

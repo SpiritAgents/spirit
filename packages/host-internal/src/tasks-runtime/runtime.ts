@@ -35,7 +35,13 @@ export type TaskRunOutcome =
   | { status: "completed"; exitCode: number; exitIntent: TaskExitIntent; terminalId: string }
   | { status: "cancelled" }
   | { status: "aborted"; exitCode: number; failedTaskKey: string }
+  | { status: "skipped"; reason: "instanceLimit" }
   | { status: "error"; message: string };
+
+export interface RunTaskOptions {
+  /** "prompt" (default) asks the host at the instance limit; "skip" silently declines. */
+  overLimit?: "prompt" | "skip";
+}
 
 export interface TaskRunCoordinatorOptions {
   host: TaskRunHost;
@@ -64,8 +70,8 @@ export class TaskRunCoordinator {
 
   constructor(private readonly options: TaskRunCoordinatorOptions) {}
 
-  async run(task: ResolvedTask): Promise<TaskRunOutcome> {
-    const acquired = await this.acquireForMainTask(task);
+  async run(task: ResolvedTask, options?: RunTaskOptions): Promise<TaskRunOutcome> {
+    const acquired = await this.acquireForMainTask(task, options?.overLimit ?? "prompt");
     if ("outcome" in acquired) {
       return acquired.outcome;
     }
@@ -113,11 +119,15 @@ export class TaskRunCoordinator {
 
   private async acquireForMainTask(
     task: ResolvedTask,
+    overLimit: "prompt" | "skip",
   ): Promise<{ instanceKey: string } | { outcome: TaskRunOutcome }> {
     for (;;) {
       const acquired = this.instances.tryAcquire(task.key, task.runOptions.instanceLimit);
       if (acquired.status === "acquired") {
         return { instanceKey: acquired.instanceKey };
+      }
+      if (overLimit === "skip") {
+        return { outcome: { status: "skipped", reason: "instanceLimit" } };
       }
       const choice = await this.options.host.promptInstanceLimit(task, acquired.active);
       if (choice.kind === "cancel") {

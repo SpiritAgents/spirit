@@ -93,7 +93,11 @@ test("resolves a fully specified task into the run spec", () => {
   assert.equal(build.promptOnClose, true);
   assert.deepEqual(build.dependsOn, ["prep"]);
   assert.equal(build.dependsOrder, "sequence");
-  assert.deepEqual(build.runOptions, { reevaluateOnRerun: false, instanceLimit: 3 });
+  assert.deepEqual(build.runOptions, {
+    reevaluateOnRerun: false,
+    instanceLimit: 3,
+    runOn: "default",
+  });
   assert.deepEqual(build.presentation, {
     echo: false,
     reveal: "silent",
@@ -110,7 +114,11 @@ test("resolves a fully specified task into the run spec", () => {
   assert.deepEqual(prep.options, {});
   assert.equal(prep.isBackground, false);
   assert.equal(prep.promptOnClose, false);
-  assert.deepEqual(prep.runOptions, { reevaluateOnRerun: true, instanceLimit: 1 });
+  assert.deepEqual(prep.runOptions, {
+    reevaluateOnRerun: true,
+    instanceLimit: 1,
+    runOn: "default",
+  });
   assert.deepEqual(prep.presentation, {
     echo: true,
     reveal: "always",
@@ -286,25 +294,31 @@ test("hides tasks referencing unsupported variables across command, args and opt
   );
 });
 
-test("hides tasks with runOptions.runOn other than default", () => {
+test("runOn folderOpen resolves while worktreeCreated and unknown values hide", () => {
   const result = resolve([
     spiritJson([
       { label: "on-open", command: "echo a", runOptions: { runOn: "folderOpen" } },
       { label: "on-worktree", command: "echo b", runOptions: { runOn: "worktreeCreated" } },
-      { label: "clean", command: "echo c", runOptions: { runOn: "default" } },
+      { label: "on-unknown", command: "echo c", runOptions: { runOn: "whenever" } },
+      { label: "clean", command: "echo d", runOptions: { runOn: "default" } },
     ]),
   ]);
   assert.deepEqual(
     result.hiddenReasons.map((reason) => [reason.label, reason.rule]),
     [
-      ["on-open", "runOn"],
       ["on-worktree", "runOn"],
+      ["on-unknown", "runOn"],
     ],
   );
   assert.deepEqual(
     result.menuItems.map((item) => item.label),
-    ["clean"],
+    ["on-open", "clean"],
   );
+  assert.equal(
+    result.tasks.find((task) => task.label === "on-open")?.runOptions.runOn,
+    "folderOpen",
+  );
+  assert.equal(result.tasks.find((task) => task.label === "clean")?.runOptions.runOn, "default");
 });
 
 test("hides tasks using the dependsOn object form, single or inside the array", () => {

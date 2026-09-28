@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSingleTextQuestionNotificationReplyResult } from "@/lib/ask-questions-notification-reply";
 import { applyConversationDelta } from "@/lib/live-update";
+import { runTaskByKey } from "@/lib/task-run-service";
 import {
   resolvePendingApprovalSessionPath,
   resolvePendingQuestionsSessionPath,
@@ -1607,6 +1608,25 @@ export function useDesktopRuntime() {
       return;
     }
     let cancelled = false;
+    // Armed only at workspace activation or a trust allow, so this consumes an empty list
+    // on watcher-driven updates and never re-triggers on tasks.json edits.
+    const consumeFolderOpenTriggers = async () => {
+      if (!api.consumeFolderOpenTaskTriggers) {
+        return;
+      }
+      let keys: string[] = [];
+      try {
+        keys = await api.consumeFolderOpenTaskTriggers();
+      } catch {
+        return;
+      }
+      if (cancelled) {
+        return;
+      }
+      for (const key of keys) {
+        void runTaskByKey(key, { trigger: "folderOpen" });
+      }
+    };
     api
       .listTaskMenuItems()
       .then((items) => {
@@ -1619,6 +1639,7 @@ export function useDesktopRuntime() {
           setTaskMenuItems([]);
         }
       });
+    void consumeFolderOpenTriggers();
     if (!api.subscribeTasksUpdates) {
       return () => {
         cancelled = true;
@@ -1626,6 +1647,7 @@ export function useDesktopRuntime() {
     }
     const unsubscribe = api.subscribeTasksUpdates((items) => {
       setTaskMenuItems(items);
+      void consumeFolderOpenTriggers();
     });
     return () => {
       cancelled = true;
