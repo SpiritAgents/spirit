@@ -305,7 +305,7 @@ test("formatGrepToolOutput pages entries with headLimit and offset", () => {
   const firstPage = formatGrepToolOutput(matches, { headLimit: 2 });
   assert.equal(
     firstPage,
-    "a.txt:1:needle 1\na.txt:2:needle 2\n\n[truncated] Showing 2 of 3 entries (offset 0). Pass offset 2 to continue.\n",
+    "a.txt:1:needle 1\na.txt:2:needle 2\n\n[truncated] Showing 2 of 3 matches (offset 0). Pass offset 2 to continue.\n",
   );
 
   const secondPage = formatGrepToolOutput(matches, { headLimit: 2, offset: 2 });
@@ -318,6 +318,90 @@ test("formatGrepToolOutput notes when the internal match cap was hit", () => {
   });
 
   assert.match(output, /\[truncated\] Search hit the internal limit of 10000 matches/u);
+});
+
+test("runRipgrepSearch returns context lines around matches", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.txt"), "before\nneedle here\nafter\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      context: 1,
+    });
+
+    assert.deepEqual(
+      matches.map((entry) => [entry.kind ?? "match", entry.lineNumber, entry.lineText]),
+      [
+        ["context", 1, "before"],
+        ["match", 2, "needle here"],
+        ["context", 3, "after"],
+      ],
+    );
+  });
+});
+
+function grepContextLine(relativePath: string, lineNumber: number, lineText: string) {
+  return { relativePath, lineNumber, lineText, submatches: [], kind: "context" as const };
+}
+
+test("formatGrepToolOutput renders context lines with block separators", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepContextLine("a.txt", 1, "before"),
+      grepToolMatch("a.txt", 2, "needle one"),
+      grepContextLine("a.txt", 3, "after"),
+      grepToolMatch("a.txt", 9, "needle two"),
+      grepContextLine("a.txt", 10, "trailing"),
+    ],
+    { blockSeparators: true },
+  );
+
+  assert.equal(
+    output,
+    [
+      "a.txt-1-before",
+      "a.txt:2:needle one",
+      "a.txt-3-after",
+      "--",
+      "a.txt:9:needle two",
+      "a.txt-10-trailing",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("formatGrepToolOutput ignores context lines in files and count modes", () => {
+  const entries = [
+    grepContextLine("a.txt", 1, "before"),
+    grepToolMatch("a.txt", 2, "needle"),
+    grepContextLine("a.txt", 3, "after"),
+  ];
+
+  assert.equal(formatGrepToolOutput(entries, { mode: "files_with_matches" }), "a.txt\n");
+  assert.equal(formatGrepToolOutput(entries, { mode: "count_matches" }), "a.txt:1\n");
+});
+
+test("formatGrepToolOutput pages by matches and keeps trailing context", () => {
+  const entries = [
+    grepToolMatch("a.txt", 1, "needle 1"),
+    grepContextLine("a.txt", 2, "after 1"),
+    grepToolMatch("a.txt", 5, "needle 2"),
+    grepContextLine("a.txt", 6, "after 2"),
+  ];
+
+  const firstPage = formatGrepToolOutput(entries, { headLimit: 1, blockSeparators: true });
+  assert.equal(
+    firstPage,
+    "a.txt:1:needle 1\na.txt-2-after 1\n\n[truncated] Showing 1 of 2 matches (offset 0). Pass offset 1 to continue.\n",
+  );
+
+  const secondPage = formatGrepToolOutput(entries, {
+    headLimit: 1,
+    offset: 1,
+    blockSeparators: true,
+  });
+  assert.equal(secondPage, "a.txt:5:needle 2\na.txt-6-after 2\n");
 });
 
 test("normalizeSearchLine strips trailing newline but keeps leading indent", () => {

@@ -338,6 +338,21 @@ export function buildBuiltinHostToolDefinitions(
             type: "boolean",
             description: "Show line numbers in content mode. Defaults to true.",
           },
+          "-A": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show after each match. Content mode only.",
+          },
+          "-B": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show before each match. Content mode only.",
+          },
+          "-C": {
+            type: "integer",
+            minimum: 0,
+            description: "Number of lines to show before and after each match. Content mode only.",
+          },
           output_mode: {
             type: "string",
             enum: ["content", "files_with_matches", "count_matches"],

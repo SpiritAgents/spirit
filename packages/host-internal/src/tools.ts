@@ -249,6 +249,9 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       headLimit?: number;
       offset?: number;
       lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
     }
   | {
       name: "subagent";
@@ -720,6 +723,9 @@ export class NodeHostToolService<
         const headLimit = optionalPositiveInt(parsed, "head_limit");
         const offset = optionalNonNegativeInt(parsed, "offset");
         const lineNumbers = optionalBoolean(parsed, "-n");
+        const afterContext = optionalNonNegativeInt(parsed, "-A");
+        const beforeContext = optionalNonNegativeInt(parsed, "-B");
+        const contextLines = optionalNonNegativeInt(parsed, "-C");
         return {
           name,
           pattern: requiredString(parsed, "pattern"),
@@ -729,6 +735,9 @@ export class NodeHostToolService<
           ...(headLimit !== undefined ? { headLimit } : {}),
           ...(offset !== undefined ? { offset } : {}),
           ...(lineNumbers !== undefined ? { lineNumbers } : {}),
+          ...(afterContext !== undefined ? { afterContext } : {}),
+          ...(beforeContext !== undefined ? { beforeContext } : {}),
+          ...(contextLines !== undefined ? { contextLines } : {}),
         };
       }
       case "subagent": {
@@ -1081,6 +1090,9 @@ export class NodeHostToolService<
           ...(request.headLimit !== undefined ? { headLimit: request.headLimit } : {}),
           ...(request.offset !== undefined ? { offset: request.offset } : {}),
           ...(request.lineNumbers !== undefined ? { lineNumbers: request.lineNumbers } : {}),
+          ...(request.afterContext !== undefined ? { afterContext: request.afterContext } : {}),
+          ...(request.beforeContext !== undefined ? { beforeContext: request.beforeContext } : {}),
+          ...(request.contextLines !== undefined ? { contextLines: request.contextLines } : {}),
         });
       case "subagent":
         throw new Error(
@@ -1706,6 +1718,9 @@ export class NodeHostToolService<
       headLimit?: number;
       offset?: number;
       lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
     } = {},
   ): Promise<string> {
     const needle = pattern.trim();
@@ -1725,13 +1740,22 @@ export class NodeHostToolService<
       caseSensitive: options.caseInsensitive !== true,
       globPattern,
       maxMatches: GREP_TOOL_MAX_MATCHES,
+      ...(options.contextLines !== undefined ? { context: options.contextLines } : {}),
+      ...(options.beforeContext !== undefined ? { beforeContext: options.beforeContext } : {}),
+      ...(options.afterContext !== undefined ? { afterContext: options.afterContext } : {}),
     });
+
+    const hasContext =
+      (options.contextLines ?? 0) > 0 ||
+      (options.beforeContext ?? 0) > 0 ||
+      (options.afterContext ?? 0) > 0;
 
     return formatGrepToolOutput(matches, {
       ...(options.outputMode !== undefined ? { mode: options.outputMode } : {}),
       ...(options.lineNumbers !== undefined ? { lineNumbers: options.lineNumbers } : {}),
       ...(options.offset !== undefined ? { offset: options.offset } : {}),
       ...(options.headLimit !== undefined ? { headLimit: options.headLimit } : {}),
+      blockSeparators: hasContext,
       truncated,
     });
   }

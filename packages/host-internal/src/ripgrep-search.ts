@@ -19,6 +19,9 @@ export type RipgrepSearchOptions = {
   wholeWord?: boolean;
   globPattern?: string | null;
   maxMatches?: number;
+  beforeContext?: number;
+  afterContext?: number;
+  context?: number;
 };
 
 export type RipgrepSearchResult = {
@@ -36,6 +39,8 @@ export type RipgrepMatch = {
   lineNumber: number;
   lineText: string;
   submatches: RipgrepSubmatch[];
+  /** "context" entries only appear when context options are set; absent means a real match. */
+  kind?: "match" | "context";
 };
 
 type RipgrepMatchLine = {
@@ -47,7 +52,7 @@ type RipgrepMatchLine = {
 
 type RipgrepJsonLine =
   | {
-      type: "match";
+      type: "match" | "context";
       data: RipgrepMatchLine;
     }
   | {
@@ -118,6 +123,16 @@ export function buildRipgrepArgs(options: RipgrepSearchOptions): string[] {
     args.push("-g", globPattern);
   }
 
+  if (options.context !== undefined) {
+    args.push("--context", String(options.context));
+  }
+  if (options.beforeContext !== undefined) {
+    args.push("--before-context", String(options.beforeContext));
+  }
+  if (options.afterContext !== undefined) {
+    args.push("--after-context", String(options.afterContext));
+  }
+
   appendQueryArgs(args, options);
   // Search "." (cwd is already workspaceRoot): with an absolute path arg, rg matches
   // workspace-relative -g globs like "src/**/*.ts" against the absolute file path,
@@ -155,11 +170,11 @@ function parseRipgrepJsonMatchLine(line: string, workspaceRoot: string): Ripgrep
     return null;
   }
 
-  if (parsed.type !== "match") {
+  if (parsed.type !== "match" && parsed.type !== "context") {
     return null;
   }
 
-  const matchData = (parsed as { type: "match"; data: RipgrepMatchLine }).data;
+  const matchData = (parsed as { type: "match" | "context"; data: RipgrepMatchLine }).data;
   const rawLineText = readRipgrepMatchLineText(matchData.lines);
   if (rawLineText === undefined || !matchData.path?.text) {
     return null;
@@ -173,6 +188,7 @@ function parseRipgrepJsonMatchLine(line: string, workspaceRoot: string): Ripgrep
       start: item.start,
       end: item.end,
     })),
+    ...(parsed.type === "context" ? { kind: "context" as const } : {}),
   };
 }
 
@@ -303,6 +319,8 @@ export type FormatGrepToolOutputOptions = {
   lineNumbers?: boolean;
   offset?: number;
   headLimit?: number;
+  /** Content mode only: insert a `--` separator between non-contiguous blocks (used with context options). */
+  blockSeparators?: boolean;
   /** True when the search hit GREP_TOOL_MAX_MATCHES and the real total is unknown. */
   truncated?: boolean;
 };
@@ -319,35 +337,94 @@ function uniqueMatchPaths(matches: readonly RipgrepMatch[]): string[] {
   return paths;
 }
 
+function renderContentEntry(entry: RipgrepMatch, lineNumbers: boolean): string {
+  if (entry.kind === "context") {
+    return lineNumbers
+      ? `${entry.relativePath}-${entry.lineNumber}-${entry.lineText}`
+      : `${entry.relativePath}-${entry.lineText}`;
+  }
+  return lineNumbers
+    ? `${entry.relativePath}:${entry.lineNumber}:${entry.lineText}`
+    : `${entry.relativePath}:${entry.lineText}`;
+}
+
 export function formatGrepToolOutput(
   matches: readonly RipgrepMatch[],
   options: FormatGrepToolOutputOptions = {},
 ): string {
-  if (matches.length === 0) {
+  const realMatches = matches.filter((entry) => entry.kind !== "context");
+  if (realMatches.length === 0) {
     return "No matches found";
   }
 
   const mode = options.mode ?? "content";
+  const offset = options.offset ?? 0;
+  const headLimit = options.headLimit ?? GREP_TOOL_DEFAULT_HEAD_LIMIT;
+
+  if (mode === "content") {
+    const lineNumbers = options.lineNumbers !== false;
+    const blockSeparators = options.blockSeparators === true;
+    const pageMatches = realMatches.slice(offset, offset + headLimit);
+    let out = "";
+    if (pageMatches.length > 0) {
+      let startIndex = matches.indexOf(pageMatches[0]!);
+      // Leading context lines belong to the first shown match only when they form a
+      // contiguous block directly above it; a stray context line from an earlier match
+      // is not this match's before-context.
+      while (
+        startIndex > 0 &&
+        matches[startIndex - 1]!.kind === "context" &&
+        matches[startIndex - 1]!.relativePath === matches[startIndex]!.relativePath &&
+        matches[startIndex - 1]!.lineNumber === matches[startIndex]!.lineNumber - 1
+      ) {
+        startIndex -= 1;
+      }
+      let endIndex = matches.indexOf(pageMatches[pageMatches.length - 1]!);
+      // Trailing context lines belong to the last shown match, so keep them on the page.
+      while (
+        endIndex + 1 < matches.length &&
+        matches[endIndex + 1]!.kind === "context" &&
+        matches[endIndex + 1]!.relativePath === matches[endIndex]!.relativePath &&
+        matches[endIndex + 1]!.lineNumber === matches[endIndex]!.lineNumber + 1
+      ) {
+        endIndex += 1;
+      }
+      const rendered: string[] = [];
+      for (let index = startIndex; index <= endIndex; index += 1) {
+        const entry = matches[index]!;
+        if (blockSeparators && index > startIndex) {
+          const previous = matches[index - 1]!;
+          if (
+            entry.relativePath !== previous.relativePath ||
+            entry.lineNumber !== previous.lineNumber + 1
+          ) {
+            rendered.push("--");
+          }
+        }
+        rendered.push(renderContentEntry(entry, lineNumbers));
+      }
+      out += `${rendered.join("\n")}\n`;
+    }
+    if (offset + pageMatches.length < realMatches.length) {
+      out += `\n[truncated] Showing ${pageMatches.length} of ${realMatches.length} matches (offset ${offset}). Pass offset ${offset + pageMatches.length} to continue.\n`;
+    }
+    if (options.truncated === true) {
+      out += `\n[truncated] Search hit the internal limit of ${GREP_TOOL_MAX_MATCHES} matches; totals above are incomplete. Narrow the pattern or pass glob/type to reduce scope.\n`;
+    }
+    return out;
+  }
+
   let lines: string[];
   if (mode === "files_with_matches") {
-    lines = uniqueMatchPaths(matches);
-  } else if (mode === "count_matches") {
+    lines = uniqueMatchPaths(realMatches);
+  } else {
     const counts = new Map<string, number>();
-    for (const match of matches) {
+    for (const match of realMatches) {
       counts.set(match.relativePath, (counts.get(match.relativePath) ?? 0) + 1);
     }
     lines = [...counts.entries()].map(([path, count]) => `${path}:${count}`);
-  } else {
-    const lineNumbers = options.lineNumbers !== false;
-    lines = matches.map((match) =>
-      lineNumbers
-        ? `${match.relativePath}:${match.lineNumber}:${match.lineText}`
-        : `${match.relativePath}:${match.lineText}`,
-    );
   }
 
-  const offset = options.offset ?? 0;
-  const headLimit = options.headLimit ?? GREP_TOOL_DEFAULT_HEAD_LIMIT;
   const page = lines.slice(offset, offset + headLimit);
   let out = `${page.join("\n")}\n`;
 
