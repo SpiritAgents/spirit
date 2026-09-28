@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
 import {
   applyWorkspaceCapabilityTrustDecision,
+  persistPermanentWorkspaceCapabilityTrust,
+  workspaceCapabilityTrustPath,
   clearWorkspaceCapabilityTrustSessionForTests,
   computeWorkspaceHooksContentHash,
   evaluateWorkspaceHooksTrustGate,
@@ -299,7 +301,8 @@ test("createHookRunner deny skips workspace hooks", async () => {
   assert.equal(result.records.length, 0);
   assert.equal(prompts, 1);
 
-  // Deny is not remembered: the next workspace-hook event asks again.
+  // Deny is remembered per content hash: the next event with identical content
+  // does not prompt again.
   const second = await runner.runSessionStart({
     sessionId: "s",
     conversationPath: null,
@@ -308,7 +311,41 @@ test("createHookRunner deny skips workspace hooks", async () => {
     source: "resume",
   });
   assert.equal(second.records.length, 0);
-  assert.equal(prompts, 2);
+  assert.equal(prompts, 1);
+});
+
+test("hooks trust gate: deny is remembered per content hash until the content changes", async () => {
+  clearWorkspaceCapabilityTrustSessionForTests();
+  const { dataDir, workspaceRoot, loaded } = await makeWorkspaceFixture();
+  const hash = computeWorkspaceHooksContentHash(loaded);
+  assert.ok(hash);
+
+  await applyWorkspaceCapabilityTrustDecision({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    contentHash: hash,
+    decision: "deny",
+  });
+  const denied = await evaluateWorkspaceHooksTrustGate({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    loaded,
+  });
+  assert.deepEqual(denied, { status: "denied" });
+
+  const changed: LoadedHooksConfig = {
+    ...loaded,
+    workspace: {
+      version: 1,
+      hooks: { sessionStart: [{ command: "hooks/other.sh" }] },
+    },
+  };
+  const reprompt = await evaluateWorkspaceHooksTrustGate({
+    spiritDataDir: dataDir,
+    workspaceRoot,
+    loaded: changed,
+  });
+  assert.equal(reprompt.status, "needsPrompt");
 });
 
 test("createHookRunner skips workspace hooks when content hash changes during prompt", async () => {
@@ -351,4 +388,57 @@ echo '{"permission":"allow","additionalContext":"tampered"}'
   assert.equal(prompts, 1);
   assert.equal(result.records.length, 0);
   assert.equal(result.additionalContexts.length, 0);
+});
+
+test("concurrent persists from both capability kinds survive each other", async () => {
+  clearWorkspaceCapabilityTrustSessionForTests();
+  const dataDir = await mkdtemp(join(tmpdir(), "spirit-trust-merge-"));
+  try {
+    // Interleaved as two processes would: each persist re-reads and merges on write.
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "hooks", "/repo-a", "h1");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo-b", "t1");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "hooks", "/repo-c", "h2");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo-a", "t2");
+
+    const store = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      store.hooks.map((entry) => [entry.workspaceRoot, entry.contentHash]),
+      [
+        ["/repo-a", "h1"],
+        ["/repo-c", "h2"],
+      ],
+    );
+    assert.deepEqual(
+      store.tasks?.map((entry) => [entry.workspaceRoot, entry.contentHash]),
+      [
+        ["/repo-b", "t1"],
+        ["/repo-a", "t2"],
+      ],
+    );
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a corrupted tmp leftover from a crashed write does not break load", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "spirit-trust-tmp-"));
+  try {
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo", "t1");
+    await writeFile(`${workspaceCapabilityTrustPath(dataDir)}.tmp`, "{not json", "utf8");
+    const store = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      store.tasks?.map((entry) => entry.contentHash),
+      ["t1"],
+    );
+
+    // The next write replaces the leftover tmp file.
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo", "t2");
+    const reloaded = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      reloaded.tasks?.map((entry) => entry.contentHash),
+      ["t2"],
+    );
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
 });

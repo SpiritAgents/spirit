@@ -45,30 +45,32 @@ export async function loadTaskFiles(input: LoadTaskFilesInput): Promise<LoadedTa
   }
   const files: LoadedTaskFile[] = [];
   for (const candidate of candidates) {
-    const json = await readTaskFileJson(candidate.path, candidate.sourceKind);
-    if (json === undefined || !matchesTaskFileVersion(candidate.sourceKind, json)) {
+    const loaded = await readTaskFile(candidate.path, candidate.sourceKind);
+    if (loaded === undefined || !matchesTaskFileVersion(candidate.sourceKind, loaded.json)) {
       continue;
     }
-    files.push({ path: candidate.path, sourceKind: candidate.sourceKind, json });
+    files.push({ path: candidate.path, sourceKind: candidate.sourceKind, ...loaded });
   }
   return files;
 }
 
 // tasks.json content is untrusted data: files that fail to read or parse simply contribute
 // no tasks. Spirit's own files keep strict JSON; real-world .vscode/tasks.json is JSONC, so
-// the vscode-compat source first strips comments and trailing commas.
-async function readTaskFileJson(
+// the vscode-compat source first strips comments and trailing commas. The raw text is kept
+// unstripped so trust hashes cover the exact file bytes, including comments.
+async function readTaskFile(
   filePath: string,
   sourceKind: TaskFileSourceKind,
-): Promise<unknown> {
-  let raw: string;
+): Promise<{ json: unknown; rawText: string } | undefined> {
+  let rawText: string;
   try {
-    raw = await readFile(filePath, "utf8");
+    rawText = await readFile(filePath, "utf8");
   } catch {
     return undefined;
   }
   try {
-    return JSON.parse(sourceKind === "vscode-compat" ? jsoncToJson(raw) : raw) as unknown;
+    const json = JSON.parse(sourceKind === "vscode-compat" ? jsoncToJson(rawText) : rawText);
+    return { json, rawText };
   } catch {
     return undefined;
   }

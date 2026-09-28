@@ -1540,7 +1540,12 @@
     "deny": "拒絕",
     "alwaysTrust": "永遠信任",
     "hooksSection": "將執行的鉤子",
-    "openHookScript": "在預設編輯器中開啟腳本"
+    "openHookScript": "在預設編輯器中開啟腳本",
+    "riskTasks": "此工作區定義了會從專案執行命令的任務。只有在你信任此程式碼庫時才繼續。",
+    "riskBoth": "此工作區定義了會從專案執行腳本或命令的鉤子和任務。只有在你信任此程式碼庫時才繼續。",
+    "tasksChanged": "工作區任務自你上次信任後已變更。繼續前請檢閱清單。",
+    "tasksSection": "將可用的任務",
+    "openTaskFile": "在預設編輯器中開啟任務檔案"
   },
   "webHost": {
     "error": {

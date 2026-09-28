@@ -4,6 +4,8 @@ export interface LoadedTaskFile {
   path: string;
   sourceKind: TaskFileSourceKind;
   json: unknown;
+  /** The file bytes exactly as read (before any JSONC stripping), for trust hashing. */
+  rawText: string;
 }
 
 export type TaskPlatform = "win32" | "darwin" | "linux";

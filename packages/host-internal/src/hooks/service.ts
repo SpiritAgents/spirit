@@ -128,6 +128,10 @@ export function createHookRunner(options: CreateHookRunnerOptions): HookRunner {
       if (gate.status === "allow") {
         return true;
       }
+      if (gate.status === "denied") {
+        options.logger?.("Skipping workspace hooks: previously denied this content.");
+        return false;
+      }
 
       if (!options.requestWorkspaceCapabilityTrust) {
         options.logger?.(
@@ -138,6 +142,12 @@ export function createHookRunner(options: CreateHookRunnerOptions): HookRunner {
 
       const decision = await options.requestWorkspaceCapabilityTrust(gate.request);
       if (decision === "deny") {
+        await applyWorkspaceCapabilityTrustDecision({
+          spiritDataDir: options.spiritDataDir,
+          workspaceRoot: gate.request.workspaceRoot,
+          contentHash: gate.request.contentHash,
+          decision,
+        });
         options.logger?.("Skipping workspace hooks: user denied workspace capability trust.");
         return false;
       }
