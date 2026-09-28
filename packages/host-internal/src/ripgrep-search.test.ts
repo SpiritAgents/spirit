@@ -463,3 +463,67 @@ test("runRipgrepSearch stops at maxMatches and reports truncated", async () => {
 test("formatGrepToolOutput reports empty results", () => {
   assert.equal(formatGrepToolOutput([]), "No matches found");
 });
+
+test("runRipgrepSearch restricts search to a file type", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.ts"), "needle\n", "utf8");
+    await writeFile(join(root, "beta.txt"), "needle\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      fileType: "ts",
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.relativePath, "alpha.ts");
+  });
+});
+
+test("runRipgrepSearch rejects unknown file types with a clear error", async () => {
+  await withTempWorkspace(async (root) => {
+    await assert.rejects(
+      () =>
+        runRipgrepSearch({
+          workspaceRoot: root,
+          query: "needle",
+          fileType: "not-a-real-type",
+        }),
+      /Invalid file type: not-a-real-type/u,
+    );
+  });
+});
+
+test("runRipgrepSearch searches ignored files with includeIgnored", async () => {
+  await withTempWorkspace(async (root) => {
+    await initGitRepo(root);
+    await writeFile(join(root, ".gitignore"), "ignored.txt\n", "utf8");
+    await writeFile(join(root, "ignored.txt"), "needle\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      includeIgnored: true,
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.relativePath, "ignored.txt");
+  });
+});
+
+test("runRipgrepSearch matches across line boundaries with multiline", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.txt"), "foo\nbar\nplain\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "foo\\nbar",
+      isRegexp: true,
+      multiline: true,
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.lineNumber, 1);
+    assert.equal(matches[0]?.lineText, "foo\nbar");
+  });
+});

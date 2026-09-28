@@ -22,6 +22,9 @@ export type RipgrepSearchOptions = {
   beforeContext?: number;
   afterContext?: number;
   context?: number;
+  fileType?: string;
+  includeIgnored?: boolean;
+  multiline?: boolean;
 };
 
 export type RipgrepSearchResult = {
@@ -131,6 +134,16 @@ export function buildRipgrepArgs(options: RipgrepSearchOptions): string[] {
   }
   if (options.afterContext !== undefined) {
     args.push("--after-context", String(options.afterContext));
+  }
+
+  if (options.fileType) {
+    args.push("--type", options.fileType);
+  }
+  if (options.includeIgnored === true) {
+    args.push("--no-ignore");
+  }
+  if (options.multiline === true) {
+    args.push("--multiline", "--multiline-dotall");
   }
 
   appendQueryArgs(args, options);
@@ -292,6 +305,10 @@ export async function runRipgrepSearch(
   }
 
   if (exitCode === 2) {
+    const fileTypeError = /unrecognized file type:\s*(?<type>\S+)/u.exec(stderr);
+    if (fileTypeError?.groups?.type) {
+      throw new Error(`Invalid file type: ${fileTypeError.groups.type}`);
+    }
     if (options.isRegexp) {
       throw mapRipgrepRegexError(stderr);
     }

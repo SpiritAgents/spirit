@@ -353,6 +353,20 @@ export function buildBuiltinHostToolDefinitions(
             minimum: 0,
             description: "Number of lines to show before and after each match. Content mode only.",
           },
+          type: {
+            type: "string",
+            description: "Restrict search to a ripgrep file type, e.g. ts, py, rust, md.",
+          },
+          include_ignored: {
+            type: "boolean",
+            description:
+              "Search files excluded by ignore rules such as .gitignore. The .git directory is always excluded.",
+          },
+          multiline: {
+            type: "boolean",
+            description:
+              "Allow the pattern to match across line boundaries; dot also matches newlines.",
+          },
           output_mode: {
             type: "string",
             enum: ["content", "files_with_matches", "count_matches"],
