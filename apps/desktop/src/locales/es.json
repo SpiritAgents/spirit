@@ -1544,6 +1544,7 @@
     "riskTasks": "Este espacio de trabajo define tareas que ejecutan comandos del proyecto. Solo continúa si confías en esta base de código.",
     "riskBoth": "Este espacio de trabajo define hooks y tareas que ejecutan scripts o comandos del proyecto. Solo continúa si confías en esta base de código.",
     "tasksChanged": "Las tareas del espacio de trabajo han cambiado desde la última vez que confiaste en ellas. Revisa la lista antes de continuar.",
+    "bothChanged": "Los hooks y las tareas del espacio de trabajo han cambiado desde la última vez que confiaste en ellos. Revisa la lista antes de continuar.",
     "tasksSection": "Tareas que estarán disponibles",
     "openTaskFile": "Abrir archivo de tareas en el editor predeterminado"
   },

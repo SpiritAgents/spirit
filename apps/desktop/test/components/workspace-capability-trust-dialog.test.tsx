@@ -69,13 +69,15 @@ test("a merged request renders both sections with headers and the combined risk 
   expect(screen.getByText(/defines hooks and tasks that run scripts or commands/)).toBeTruthy();
 });
 
-test("changed banners render independently and stack", () => {
+test("changed banners follow their own capability and combine when both changed", () => {
   const hooksBanner = /Workspace hooks have changed/;
   const tasksBanner = /Workspace tasks have changed/;
+  const bothBanner = /Workspace hooks and tasks have changed/;
 
   const onlyHooks = renderDialog(hooksRequest({ hashChanged: true }));
   expect(screen.getByText(hooksBanner)).toBeTruthy();
   expect(screen.queryByText(tasksBanner)).toBeNull();
+  expect(screen.queryByText(bothBanner)).toBeNull();
   onlyHooks.unmount();
 
   const onlyTasks = renderDialog(
@@ -85,9 +87,21 @@ test("changed banners render independently and stack", () => {
   expect(screen.getByText(tasksBanner)).toBeTruthy();
   onlyTasks.unmount();
 
+  // Both capabilities changed: one combined banner, not two stacked.
   renderDialog(hooksRequest({ hashChanged: true, tasks: tasksPayload({ hashChanged: true }) }));
-  expect(screen.getByText(hooksBanner)).toBeTruthy();
-  expect(screen.getByText(tasksBanner)).toBeTruthy();
+  expect(screen.getByText(bothBanner)).toBeTruthy();
+  expect(screen.queryByText(hooksBanner)).toBeNull();
+  expect(screen.queryByText(tasksBanner)).toBeNull();
+});
+
+test("a tasks-only request with a stale top-level hashChanged shows no hooks banner", () => {
+  // Even if the payload lies in the hooks domain, the banner follows section presence.
+  renderDialog(
+    hooksRequest({ hashChanged: true, hooks: [], tasks: tasksPayload({ hashChanged: true }) }),
+  );
+  expect(screen.queryByText(/Workspace hooks have changed/)).toBeNull();
+  expect(screen.queryByText(/Workspace hooks and tasks have changed/)).toBeNull();
+  expect(screen.getByText(/Workspace tasks have changed/)).toBeTruthy();
 });
 
 test("clicking a task row opens its source file; rows are disabled without the api", () => {

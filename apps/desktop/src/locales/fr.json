@@ -1544,6 +1544,7 @@
     "riskTasks": "Cet espace de travail définit des tâches qui exécutent des commandes depuis le projet. Continuez uniquement si vous avez confiance dans cette base de code.",
     "riskBoth": "Cet espace de travail définit des hooks et des tâches qui exécutent des scripts ou des commandes depuis le projet. Continuez uniquement si vous avez confiance dans cette base de code.",
     "tasksChanged": "Les tâches de l'espace de travail ont changé depuis votre dernière validation. Vérifiez la liste avant de continuer.",
+    "bothChanged": "Les hooks et les tâches de l'espace de travail ont changé depuis votre dernière validation. Vérifiez la liste avant de continuer.",
     "tasksSection": "Tâches qui seront disponibles",
     "openTaskFile": "Ouvrir le fichier de tâches dans l'éditeur par défaut"
   },

@@ -81,6 +81,15 @@ function WorkspaceCapabilityTrustDialogBody({
       : "workspaceTrust.risk"
     : "workspaceTrust.riskTasks";
   const openPathInDefaultApp = api?.openPathInDefaultApp;
+  const hooksChanged = hasHooks && pending.hashChanged;
+  const tasksChanged = hasTasks && tasks?.hashChanged === true;
+  const bannerKey = hooksChanged
+    ? tasksChanged
+      ? "workspaceTrust.bothChanged"
+      : "workspaceTrust.hooksChanged"
+    : tasksChanged
+      ? "workspaceTrust.tasksChanged"
+      : null;
 
   return (
     <>
@@ -89,20 +98,12 @@ function WorkspaceCapabilityTrustDialogBody({
         <DialogDescription>{t(riskKey)}</DialogDescription>
       </DialogHeader>
 
-      {pending.hashChanged ? (
+      {bannerKey ? (
         <div
           role="status"
           className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100"
         >
-          {t("workspaceTrust.hooksChanged")}
-        </div>
-      ) : null}
-      {tasks?.hashChanged ? (
-        <div
-          role="status"
-          className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100"
-        >
-          {t("workspaceTrust.tasksChanged")}
+          {t(bannerKey)}
         </div>
       ) : null}
 

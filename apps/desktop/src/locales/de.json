@@ -1544,6 +1544,7 @@
     "riskTasks": "Dieser Workspace definiert Tasks, die Befehle aus dem Projekt ausführen. Nur fortfahren, wenn Sie dieser Codebasis vertrauen.",
     "riskBoth": "Dieser Workspace definiert Hooks und Tasks, die Skripte oder Befehle aus dem Projekt ausführen. Nur fortfahren, wenn Sie dieser Codebasis vertrauen.",
     "tasksChanged": "Workspace-Tasks haben sich seit Ihrer letzten Zustimmung geändert. Überprüfen Sie die Liste, bevor Sie fortfahren.",
+    "bothChanged": "Workspace-Hooks und -Tasks haben sich seit Ihrer letzten Zustimmung geändert. Überprüfen Sie die Liste, bevor Sie fortfahren.",
     "tasksSection": "Tasks, die verfügbar werden",
     "openTaskFile": "Tasks-Datei im Standard-Editor öffnen"
   },
