@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
-import { chmod, mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
 import {
   applyWorkspaceCapabilityTrustDecision,
+  persistPermanentWorkspaceCapabilityTrust,
+  workspaceCapabilityTrustPath,
   clearWorkspaceCapabilityTrustSessionForTests,
   computeWorkspaceHooksContentHash,
   evaluateWorkspaceHooksTrustGate,
@@ -386,4 +388,57 @@ echo '{"permission":"allow","additionalContext":"tampered"}'
   assert.equal(prompts, 1);
   assert.equal(result.records.length, 0);
   assert.equal(result.additionalContexts.length, 0);
+});
+
+test("concurrent persists from both capability kinds survive each other", async () => {
+  clearWorkspaceCapabilityTrustSessionForTests();
+  const dataDir = await mkdtemp(join(tmpdir(), "spirit-trust-merge-"));
+  try {
+    // Interleaved as two processes would: each persist re-reads and merges on write.
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "hooks", "/repo-a", "h1");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo-b", "t1");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "hooks", "/repo-c", "h2");
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo-a", "t2");
+
+    const store = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      store.hooks.map((entry) => [entry.workspaceRoot, entry.contentHash]),
+      [
+        ["/repo-a", "h1"],
+        ["/repo-c", "h2"],
+      ],
+    );
+    assert.deepEqual(
+      store.tasks?.map((entry) => [entry.workspaceRoot, entry.contentHash]),
+      [
+        ["/repo-b", "t1"],
+        ["/repo-a", "t2"],
+      ],
+    );
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
+test("a corrupted tmp leftover from a crashed write does not break load", async () => {
+  const dataDir = await mkdtemp(join(tmpdir(), "spirit-trust-tmp-"));
+  try {
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo", "t1");
+    await writeFile(`${workspaceCapabilityTrustPath(dataDir)}.tmp`, "{not json", "utf8");
+    const store = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      store.tasks?.map((entry) => entry.contentHash),
+      ["t1"],
+    );
+
+    // The next write replaces the leftover tmp file.
+    await persistPermanentWorkspaceCapabilityTrust(dataDir, "tasks", "/repo", "t2");
+    const reloaded = await loadWorkspaceCapabilityTrustStore(dataDir);
+    assert.deepEqual(
+      reloaded.tasks?.map((entry) => entry.contentHash),
+      ["t2"],
+    );
+  } finally {
+    await rm(dataDir, { recursive: true, force: true });
+  }
 });
