@@ -161,6 +161,8 @@ test("a single active instance is preselected and Replace is actionable", async 
   expect(radios[0]?.getAttribute("aria-checked")).toBe("true");
   const replaceButton = screen.getByRole("button", { name: "Replace" });
   expect(replaceButton.hasAttribute("disabled")).toBe(false);
+  // Opening focuses the dialog body, never an action button.
+  expect(document.activeElement instanceof HTMLButtonElement).toBe(false);
 
   resolveTaskInstanceLimitPrompt({ kind: "cancel" });
   await second;
