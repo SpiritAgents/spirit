@@ -287,6 +287,7 @@ function WorkspaceFilesExplorerToolbar({
               <Toggle
                 variant="default"
                 size="sm"
+                className="text-xs"
                 pressed={markdownViewMode === "preview"}
                 onPressedChange={(pressed) => {
                   if (pressed) {
@@ -297,12 +298,13 @@ function WorkspaceFilesExplorerToolbar({
                 title={t("workspace.markdownPreview")}
                 disabled={!docReady}
               >
-                <Eye aria-hidden strokeWidth={1.75} />
+                <Eye className="size-3.5" aria-hidden strokeWidth={1.75} />
                 {t("workspace.preview")}
               </Toggle>
               <Toggle
                 variant="default"
                 size="sm"
+                className="text-xs"
                 pressed={markdownViewMode === "edit"}
                 onPressedChange={(pressed) => {
                   if (pressed) {
@@ -315,7 +317,7 @@ function WorkspaceFilesExplorerToolbar({
                 }
                 disabled={!docReady || docReadOnly}
               >
-                <Compose aria-hidden strokeWidth={1.75} />
+                <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
                 {t("workspace.edit")}
               </Toggle>
             </div>
