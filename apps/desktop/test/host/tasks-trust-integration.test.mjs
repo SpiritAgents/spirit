@@ -93,7 +93,10 @@ test("deny chain: no re-prompt for the same hash, re-prompt after edit, allow re
 
     // Answer through the queue exactly like replyWorkspaceCapabilityTrust does, then drop
     // the pending request (that clearing lives in the reply command).
-    await service["tasksTrustPromptQueue"].handleReply("deny");
+    await service["tasksTrustPromptQueue"].handleReply(
+      "deny",
+      service["pendingWorkspaceCapabilityTrust"],
+    );
     service["pendingWorkspaceCapabilityTrust"] = undefined;
     assert.deepEqual(pushed.at(-1), []);
     assert.deepEqual((await loadWorkspaceCapabilityTrustStore(spiritDataDir)).tasks, []);
@@ -111,7 +114,10 @@ test("deny chain: no re-prompt for the same hash, re-prompt after edit, allow re
     assert.ok(reprompt);
     assert.notEqual(reprompt.tasks.contentHash, pending.tasks.contentHash);
 
-    await service["tasksTrustPromptQueue"].handleReply("allowOnce");
+    await service["tasksTrustPromptQueue"].handleReply(
+      "allowOnce",
+      service["pendingWorkspaceCapabilityTrust"],
+    );
     service["pendingWorkspaceCapabilityTrust"] = undefined;
     assert.deepEqual(
       pushed.at(-1).map((item) => item.label),
@@ -147,7 +153,10 @@ test("merged prompt: one reply applies the tasks decision while the hooks sectio
     assert.equal(pending.tasks.items.length, 1);
     assert.equal(pending.tasks.items[0].label, "ws-task");
 
-    await service["tasksTrustPromptQueue"].handleReply("alwaysTrust");
+    await service["tasksTrustPromptQueue"].handleReply(
+      "alwaysTrust",
+      service["pendingWorkspaceCapabilityTrust"],
+    );
     const store = await loadWorkspaceCapabilityTrustStore(spiritDataDir);
     assert.deepEqual(
       store.tasks?.map((entry) => entry.contentHash),
@@ -156,5 +165,84 @@ test("merged prompt: one reply applies the tasks decision while the hooks sectio
     // The hooks record is not desktop's to write here (the remote runtime owns it); the
     // store keeps it untouched and empty.
     assert.deepEqual(store.hooks, []);
+  });
+});
+
+test("startup initialization evaluates tasks trust for the restored workspace", async () => {
+  const workspaceRoot = await mkdtemp(path.join(tmpdir(), "spirit-tasks-init-ws-"));
+  const spiritDataDir = await mkdtemp(path.join(tmpdir(), "spirit-tasks-init-data-"));
+  setSpiritDataDirOverride(spiritDataDir);
+  clearWorkspaceCapabilityTrustSessionForTests();
+  await writeSpiritTasks(workspaceRoot, "make");
+  try {
+    const { ensureInitializedCommand } =
+      await import("../../dist-electron/src/host/host-initialization.js");
+    const { SessionRegistry } = await import("../../dist-electron/src/host/session-registry.js");
+    const evaluations = [];
+    let state;
+    const ctx = {
+      initialized: () => false,
+      state: () => state,
+      setState: (next) => {
+        state = next;
+      },
+      setInitialized: () => {},
+      setLastRuntimeError: () => {},
+      setToolExecutor: () => {},
+      sessionRegistry: () => new SessionRegistry(() => {}),
+      resetStreamingPlacementState: () => {},
+      seedBuiltInExtensions: async () => {},
+      refreshExtensionsList: async () => {},
+      refreshRuntime: async () => {},
+      refreshLspSnapshot: async () => {},
+      deactivateExtensions: async () => {},
+      invalidateExtensionWarmup: () => {},
+      scheduleExtensionWarmup: () => {},
+      loadDesktopPlanSnapshot: async (planPath) => ({ path: planPath, exists: false }),
+      evaluateWorkspaceTasksTrust: (reason) => {
+        evaluations.push(reason);
+      },
+    };
+    await ensureInitializedCommand(ctx, workspaceRoot);
+    assert.deepEqual(evaluations, ["startup"]);
+    assert.equal(state.workspaceRoot, path.resolve(workspaceRoot));
+
+    // And the restored content would indeed prompt (the chain test pins the enqueue path).
+    const { evaluateWorkspaceTasksTrustGate, loadTaskFiles } =
+      await import("@spiritagent/host-internal");
+    const gate = await evaluateWorkspaceTasksTrustGate({
+      spiritDataDir,
+      workspaceRoot: state.workspaceRoot,
+      files: await loadTaskFiles({ workspaceRoot: state.workspaceRoot, spiritDataDir }),
+    });
+    assert.equal(gate.status, "needsPrompt");
+  } finally {
+    setSpiritDataDirOverride(undefined);
+    clearWorkspaceCapabilityTrustSessionForTests();
+    await rm(workspaceRoot, { recursive: true, force: true });
+    await rm(spiritDataDir, { recursive: true, force: true });
+  }
+});
+
+test("reply consumes the pending request before applying, so a second reply finds nothing", async () => {
+  await withService(async ({ service, workspaceRoot, spiritDataDir }) => {
+    await writeSpiritTasks(workspaceRoot, "make");
+    await service.refreshTasksFromDisk();
+    await flushPromptQueue();
+    assert.ok(service["pendingWorkspaceCapabilityTrust"]);
+
+    const first = service
+      .replyWorkspaceCapabilityTrust({ decision: "alwaysTrust" })
+      .catch((error) => error);
+    // The pending request was consumed synchronously, before the apply path's file I/O.
+    assert.equal(service["pendingWorkspaceCapabilityTrust"], undefined);
+    const second = await service
+      .replyWorkspaceCapabilityTrust({ decision: "deny" })
+      .catch((error) => error);
+    assert.match(String(second), /No pending workspace capability trust request/);
+    await first;
+
+    const store = await loadWorkspaceCapabilityTrustStore(spiritDataDir);
+    assert.equal(store.tasks?.length, 1);
   });
 });

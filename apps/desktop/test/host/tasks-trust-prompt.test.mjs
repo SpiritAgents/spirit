@@ -9,12 +9,14 @@ function createHarness() {
     tail: Promise.resolve(),
     applied: [],
     emitCount: 0,
+    shown: false,
   };
   const queue = new WorkspaceTasksTrustPromptQueue({
     getPending: () => harness.pending,
     setPending: (request) => {
       harness.pending = request;
     },
+    isPromptShown: () => harness.shown,
     getTail: () => harness.tail,
     setTail: (next) => {
       harness.tail = next;
@@ -30,8 +32,10 @@ function createHarness() {
     },
   });
   const reply = async (decision) => {
-    const handled = await queue.handleReply(decision);
+    const answered = harness.pending;
+    const handled = await queue.handleReply(decision, answered);
     harness.pending = undefined;
+    harness.shown = false;
     return handled;
   };
   return { harness, queue, reply };
@@ -140,4 +144,55 @@ test("a reply to a prompt whose tasks section no longer matches does not apply t
   queue.request(payload("t3"), "/repo");
   await flushTail();
   assert.equal(harness.pending?.tasks?.contentHash, "t3");
+});
+
+test("a tasks request never merges into an already-displayed prompt", async () => {
+  const { harness, queue, reply } = createHarness();
+  // Model the real host: a displayed remote prompt holds its tail slot until the reply.
+  let releaseRemoteSlot = () => {};
+  harness.tail = new Promise((resolve) => {
+    releaseRemoteSlot = resolve;
+  });
+  harness.pending = hooksPending("/repo");
+  harness.shown = true;
+
+  queue.request(payload("t1"), "/repo");
+  await flushTail();
+  // Not merged: the open prompt keeps its hooks-only content.
+  assert.equal(harness.pending.tasks, undefined);
+
+  await reply("deny");
+  releaseRemoteSlot();
+  await flushTail();
+  // The queued standalone tasks prompt opens after the displayed one is answered.
+  assert.equal(harness.pending?.tasks?.contentHash, "t1");
+  assert.deepEqual(harness.pending?.hooks, []);
+});
+
+test("a tasks request merges while the same-root prompt is queued but not displayed", async () => {
+  const { harness, queue } = createHarness();
+  harness.pending = hooksPending("/repo");
+  harness.shown = false;
+
+  queue.request(payload("t1"), "/repo");
+  await flushTail();
+  assert.equal(harness.pending.hooks.length, 1);
+  assert.equal(harness.pending.tasks?.contentHash, "t1");
+});
+
+test("a second reply while the first apply is in flight no-ops and cannot reorder", async () => {
+  const { harness, queue } = createHarness();
+  queue.request(payload("t1"), "/repo");
+  await flushTail();
+  const answered = harness.pending;
+
+  const first = queue.handleReply("deny", answered);
+  // The waiter was consumed synchronously: a re-entrant second reply finds nothing.
+  const second = await queue.handleReply("alwaysTrust", answered);
+  assert.equal(second, false);
+  await first;
+  assert.deepEqual(
+    harness.applied.map((entry) => entry.decision),
+    ["deny"],
+  );
 });
