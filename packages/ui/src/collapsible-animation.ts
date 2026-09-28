@@ -1,4 +1,4 @@
-// Copyright (c) 2026 N123999
+// Copyright (c) 2026 Yu
 // SPDX-License-Identifier: MIT
 
 /** Matches the `spirit-collapsible-down` duration in app theme CSS. */

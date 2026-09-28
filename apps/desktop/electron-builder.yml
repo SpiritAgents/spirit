@@ -80,7 +80,7 @@ dmg:
       path: /Applications
 linux:
   executableName: spirit-desktop
-  maintainer: Spirit contributors <121384036+N123999@users.noreply.github.com>
+  maintainer: Yu <332389783+yureDesign@users.noreply.github.com>
   target:
     - AppImage
     - deb
