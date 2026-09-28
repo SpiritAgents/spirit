@@ -168,13 +168,13 @@ test("toolCallSummaryCopyForResponsesBuiltInTool: web_search falls back to sourc
 });
 
 test("toolCallSummaryCopyForRequest: search tools use verb headline + detail", () => {
-  assert.deepEqual(toolCallSummaryCopyForRequest("grep", { query: "TODO" }), {
+  assert.deepEqual(toolCallSummaryCopyForRequest("grep", { pattern: "TODO" }), {
     headline: toolHeadline("tool.search"),
     headlineDetail: "TODO",
   });
   assert.deepEqual(
     toolCallSummaryCopyForRequest("grep", {
-      query: "ratatui",
+      pattern: "ratatui",
       glob: "apps/cli/**/*.{rs,toml}",
     }),
     {
@@ -587,14 +587,14 @@ test("toolCallSummaryCopyForRequest: English verbs use progressive in running ph
       headline: "Listing",
       headlineDetail: "src/",
     });
-    assert.deepEqual(toolCallSummaryCopyForRequest("grep", { query: "TODO" }, "running"), {
+    assert.deepEqual(toolCallSummaryCopyForRequest("grep", { pattern: "TODO" }, "running"), {
       headline: "Searching",
       headlineDetail: "TODO",
     });
     assert.deepEqual(
       toolCallSummaryCopyForRequest(
         "grep",
-        { query: "ratatui", glob: "apps/cli/**/*.{rs,toml}" },
+        { pattern: "ratatui", glob: "apps/cli/**/*.{rs,toml}" },
         "running",
       ),
       { headline: "Searching", headlineDetail: "ratatui in apps/cli/**/*.{rs,toml}" },

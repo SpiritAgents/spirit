@@ -321,5 +321,5 @@ test("runRipgrepSearch stops at maxMatches and reports truncated", async () => {
 });
 
 test("formatGrepToolOutput reports empty results", () => {
-  assert.equal(formatGrepToolOutput([]), "No files found");
+  assert.equal(formatGrepToolOutput([]), "No matches found");
 });

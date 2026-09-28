@@ -291,7 +291,7 @@ export async function runRipgrepSearch(
 
 export function formatGrepToolOutput(matches: readonly RipgrepMatch[]): string {
   if (matches.length === 0) {
-    return "No files found";
+    return "No matches found";
   }
 
   const files = new Set<string>();
