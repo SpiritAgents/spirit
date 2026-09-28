@@ -322,19 +322,17 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "grep",
-      "Search text within workspace file contents. Respects .gitignore. By default query is matched as case-insensitive literal text; set is_regexp to true for a regular expression. Optionally pass glob to limit which files are searched. Use the glob tool to list paths only and ls for a single directory inventory.",
+      "Search text within workspace file contents using a ripgrep regular expression. Respects .gitignore. Matching is case-sensitive by default; set -i to ignore case. Optionally pass glob to limit which files are searched. Use the glob tool to list paths only and ls for a single directory inventory.",
       {
         type: "object",
         properties: {
-          query: {
+          pattern: {
             type: "string",
-            description:
-              "Literal text to search for, or a regular expression pattern when is_regexp is true.",
+            description: "Ripgrep regular expression to search for.",
           },
-          is_regexp: {
+          "-i": {
             type: "boolean",
-            description:
-              "When true, treat query as a regular expression. Regex searches are case-insensitive by default.",
+            description: "Match case-insensitively.",
           },
           glob: {
             type: "string",
@@ -342,7 +340,7 @@ export function buildBuiltinHostToolDefinitions(
               "Optional workspace-relative glob that limits searched file paths, e.g. packages/**/*.ts or src/**/*.{ts,tsx}.",
           },
         },
-        required: ["query"],
+        required: ["pattern"],
         additionalProperties: false,
       },
     ),

@@ -235,7 +235,7 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       offset?: number;
       limit?: number;
     }
-  | { name: "grep"; query: string; is_regexp?: boolean; glob?: string }
+  | { name: "grep"; pattern: string; glob?: string; caseInsensitive?: boolean }
   | {
       name: "subagent";
       task: string;
@@ -638,17 +638,13 @@ export class NodeHostToolService<
         };
       }
       case "search": {
-        const searchInput = raw.slice("search".length).trim();
-        const usesRegexp =
-          searchInput.startsWith("--regexp ") || searchInput.startsWith("--regex ");
-        const query = usesRegexp ? searchInput.replace(/^--regex(p)?\s+/u, "").trim() : searchInput;
-        if (!query) {
-          throw new Error("Usage: /tool search [--regexp] <query>");
+        const pattern = raw.slice("search".length).trim();
+        if (!pattern) {
+          throw new Error("Usage: /tool search <pattern>");
         }
         return {
           name: "grep",
-          query,
-          ...(usesRegexp ? { is_regexp: true } : {}),
+          pattern,
         };
       }
       default:
@@ -704,12 +700,12 @@ export class NodeHostToolService<
         };
       }
       case "grep": {
-        const isRegexp = optionalBoolean(parsed, "is_regexp");
+        const caseInsensitive = optionalBoolean(parsed, "-i");
         const glob = optionalStringStrict(parsed, "glob");
         return {
           name,
-          query: requiredString(parsed, "query"),
-          ...(isRegexp !== undefined ? { is_regexp: isRegexp } : {}),
+          pattern: requiredString(parsed, "pattern"),
+          ...(caseInsensitive !== undefined ? { caseInsensitive } : {}),
           ...(glob ? { glob } : {}),
         };
       }
@@ -1054,7 +1050,12 @@ export class NodeHostToolService<
       case "read_file":
         return this.executeReadFile(request.path, request.offset, request.limit);
       case "grep":
-        return this.executeSearchFiles(request.query, request.is_regexp ?? false, request.glob);
+        return this.executeSearchFiles(request.pattern, {
+          ...(request.caseInsensitive !== undefined
+            ? { caseInsensitive: request.caseInsensitive }
+            : {}),
+          ...(request.glob !== undefined ? { glob: request.glob } : {}),
+        });
       case "subagent":
         throw new Error(
           "subagent must be handled by the Agent runtime, not the host-internal tool executor",
@@ -1671,24 +1672,24 @@ export class NodeHostToolService<
   }
 
   private async executeSearchFiles(
-    query: string,
-    isRegexp = false,
-    inputGlob?: string,
+    pattern: string,
+    options: { caseInsensitive?: boolean; glob?: string } = {},
   ): Promise<string> {
-    const needle = query.trim();
+    const needle = pattern.trim();
     if (!needle) {
-      throw new Error("search query must not be empty");
+      throw new Error("search pattern must not be empty");
     }
 
     const globPattern =
-      inputGlob !== undefined && inputGlob.trim() !== ""
-        ? normalizeWorkspaceGlobPattern(inputGlob)
+      options.glob !== undefined && options.glob.trim() !== ""
+        ? normalizeWorkspaceGlobPattern(options.glob)
         : null;
 
     const { matches } = await runRipgrepSearch({
       workspaceRoot: this.workspaceRoot,
       query: needle,
-      isRegexp,
+      isRegexp: true,
+      caseSensitive: options.caseInsensitive !== true,
       globPattern,
     });
 
