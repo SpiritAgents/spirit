@@ -1,6 +1,5 @@
 export type GrepRequestFields = {
-  query?: string;
-  is_regexp?: boolean;
+  pattern?: string;
   glob?: string;
 };
 
@@ -14,8 +13,7 @@ export function parseGrepRequestFromArgsExcerpt(
   try {
     const parsed = JSON.parse(excerpt) as Record<string, unknown>;
     return {
-      query: typeof parsed.query === "string" ? parsed.query : undefined,
-      is_regexp: parsed.is_regexp === true,
+      pattern: typeof parsed.pattern === "string" ? parsed.pattern : undefined,
       glob: typeof parsed.glob === "string" ? parsed.glob : undefined,
     };
   } catch {
@@ -27,10 +25,10 @@ export function grepToolHeadlineDetail(
   request: GrepRequestFields,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): string | undefined {
-  const query = request.query?.trim() ?? "";
+  const pattern = request.pattern?.trim() ?? "";
   const glob = request.glob?.trim() ?? "";
-  if (query && glob) {
-    return t("tool.searchQueryInGlob", { query, glob });
+  if (pattern && glob) {
+    return t("tool.searchQueryInGlob", { query: pattern, glob });
   }
-  return query || glob || undefined;
+  return pattern || glob || undefined;
 }

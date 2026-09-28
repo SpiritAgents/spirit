@@ -15,7 +15,12 @@ import {
 } from "@spiritagent/agent-core";
 
 import { applyDiff } from "./apply-diff.js";
-import { formatGrepToolOutput, runRipgrepSearch } from "./ripgrep-search.js";
+import {
+  GREP_TOOL_MAX_MATCHES,
+  formatGrepToolOutput,
+  runRipgrepSearch,
+  type GrepToolOutputMode,
+} from "./ripgrep-search.js";
 import { resolveTranscriptsDir } from "./transcript.js";
 import {
   defaultShellForPty,
@@ -235,7 +240,22 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       offset?: number;
       limit?: number;
     }
-  | { name: "grep"; query: string; is_regexp?: boolean; glob?: string }
+  | {
+      name: "grep";
+      pattern: string;
+      glob?: string;
+      caseInsensitive?: boolean;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
+    }
   | {
       name: "subagent";
       task: string;
@@ -638,17 +658,13 @@ export class NodeHostToolService<
         };
       }
       case "search": {
-        const searchInput = raw.slice("search".length).trim();
-        const usesRegexp =
-          searchInput.startsWith("--regexp ") || searchInput.startsWith("--regex ");
-        const query = usesRegexp ? searchInput.replace(/^--regex(p)?\s+/u, "").trim() : searchInput;
-        if (!query) {
-          throw new Error("Usage: /tool search [--regexp] <query>");
+        const pattern = raw.slice("search".length).trim();
+        if (!pattern) {
+          throw new Error("Usage: /tool search <pattern>");
         }
         return {
           name: "grep",
-          query,
-          ...(usesRegexp ? { is_regexp: true } : {}),
+          pattern,
         };
       }
       default:
@@ -704,13 +720,33 @@ export class NodeHostToolService<
         };
       }
       case "grep": {
-        const isRegexp = optionalBoolean(parsed, "is_regexp");
+        const caseInsensitive = optionalBoolean(parsed, "-i");
         const glob = optionalStringStrict(parsed, "glob");
+        const outputMode = optionalGrepOutputMode(parsed, "output_mode");
+        const headLimit = optionalPositiveInt(parsed, "head_limit");
+        const offset = optionalNonNegativeInt(parsed, "offset");
+        const lineNumbers = optionalBoolean(parsed, "-n");
+        const afterContext = optionalNonNegativeInt(parsed, "-A");
+        const beforeContext = optionalNonNegativeInt(parsed, "-B");
+        const contextLines = optionalNonNegativeInt(parsed, "-C");
+        const fileType = optionalStringStrict(parsed, "type");
+        const includeIgnored = optionalBoolean(parsed, "include_ignored");
+        const multiline = optionalBoolean(parsed, "multiline");
         return {
           name,
-          query: requiredString(parsed, "query"),
-          ...(isRegexp !== undefined ? { is_regexp: isRegexp } : {}),
+          pattern: requiredString(parsed, "pattern"),
+          ...(caseInsensitive !== undefined ? { caseInsensitive } : {}),
           ...(glob ? { glob } : {}),
+          ...(outputMode !== undefined ? { outputMode } : {}),
+          ...(headLimit !== undefined ? { headLimit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+          ...(lineNumbers !== undefined ? { lineNumbers } : {}),
+          ...(afterContext !== undefined ? { afterContext } : {}),
+          ...(beforeContext !== undefined ? { beforeContext } : {}),
+          ...(contextLines !== undefined ? { contextLines } : {}),
+          ...(fileType ? { fileType } : {}),
+          ...(includeIgnored !== undefined ? { includeIgnored } : {}),
+          ...(multiline !== undefined ? { multiline } : {}),
         };
       }
       case "subagent": {
@@ -1054,7 +1090,24 @@ export class NodeHostToolService<
       case "read_file":
         return this.executeReadFile(request.path, request.offset, request.limit);
       case "grep":
-        return this.executeSearchFiles(request.query, request.is_regexp ?? false, request.glob);
+        return this.executeSearchFiles(request.pattern, {
+          ...(request.caseInsensitive !== undefined
+            ? { caseInsensitive: request.caseInsensitive }
+            : {}),
+          ...(request.glob !== undefined ? { glob: request.glob } : {}),
+          ...(request.outputMode !== undefined ? { outputMode: request.outputMode } : {}),
+          ...(request.headLimit !== undefined ? { headLimit: request.headLimit } : {}),
+          ...(request.offset !== undefined ? { offset: request.offset } : {}),
+          ...(request.lineNumbers !== undefined ? { lineNumbers: request.lineNumbers } : {}),
+          ...(request.afterContext !== undefined ? { afterContext: request.afterContext } : {}),
+          ...(request.beforeContext !== undefined ? { beforeContext: request.beforeContext } : {}),
+          ...(request.contextLines !== undefined ? { contextLines: request.contextLines } : {}),
+          ...(request.fileType !== undefined ? { fileType: request.fileType } : {}),
+          ...(request.includeIgnored !== undefined
+            ? { includeIgnored: request.includeIgnored }
+            : {}),
+          ...(request.multiline !== undefined ? { multiline: request.multiline } : {}),
+        });
       case "subagent":
         throw new Error(
           "subagent must be handled by the Agent runtime, not the host-internal tool executor",
@@ -1671,28 +1724,60 @@ export class NodeHostToolService<
   }
 
   private async executeSearchFiles(
-    query: string,
-    isRegexp = false,
-    inputGlob?: string,
+    pattern: string,
+    options: {
+      caseInsensitive?: boolean;
+      glob?: string;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
+    } = {},
   ): Promise<string> {
-    const needle = query.trim();
+    const needle = pattern.trim();
     if (!needle) {
-      throw new Error("search query must not be empty");
+      throw new Error("search pattern must not be empty");
     }
 
     const globPattern =
-      inputGlob !== undefined && inputGlob.trim() !== ""
-        ? normalizeWorkspaceGlobPattern(inputGlob)
+      options.glob !== undefined && options.glob.trim() !== ""
+        ? normalizeWorkspaceGlobPattern(options.glob)
         : null;
 
-    const { matches } = await runRipgrepSearch({
+    const { matches, truncated } = await runRipgrepSearch({
       workspaceRoot: this.workspaceRoot,
       query: needle,
-      isRegexp,
+      isRegexp: true,
+      caseSensitive: options.caseInsensitive !== true,
       globPattern,
+      maxMatches: GREP_TOOL_MAX_MATCHES,
+      ...(options.contextLines !== undefined ? { context: options.contextLines } : {}),
+      ...(options.beforeContext !== undefined ? { beforeContext: options.beforeContext } : {}),
+      ...(options.afterContext !== undefined ? { afterContext: options.afterContext } : {}),
+      ...(options.fileType ? { fileType: options.fileType } : {}),
+      ...(options.includeIgnored !== undefined ? { includeIgnored: options.includeIgnored } : {}),
+      ...(options.multiline !== undefined ? { multiline: options.multiline } : {}),
     });
 
-    return formatGrepToolOutput(matches);
+    const hasContext =
+      (options.contextLines ?? 0) > 0 ||
+      (options.beforeContext ?? 0) > 0 ||
+      (options.afterContext ?? 0) > 0;
+
+    return formatGrepToolOutput(matches, {
+      ...(options.outputMode !== undefined ? { mode: options.outputMode } : {}),
+      ...(options.lineNumbers !== undefined ? { lineNumbers: options.lineNumbers } : {}),
+      ...(options.offset !== undefined ? { offset: options.offset } : {}),
+      ...(options.headLimit !== undefined ? { headLimit: options.headLimit } : {}),
+      blockSeparators: hasContext,
+      truncated,
+    });
   }
 
   private async executeShell(
@@ -2291,6 +2376,32 @@ function optionalPositiveInt(obj: HostJsonObject, key: string): number | undefin
 function optionalBoolean(obj: HostJsonObject, key: string): boolean | undefined {
   const value = obj[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNonNegativeInt(obj: HostJsonObject, key: string): number | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`Field ${key} must be an integer`);
+  }
+  const n = Math.trunc(value);
+  if (n < 0) {
+    throw new Error(`Field ${key} must be >= 0`);
+  }
+  return n;
+}
+
+function optionalGrepOutputMode(obj: HostJsonObject, key: string): GrepToolOutputMode | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (value === "content" || value === "files_with_matches" || value === "count_matches") {
+    return value;
+  }
+  throw new Error(`Field ${key} must be one of: content, files_with_matches, count_matches`);
 }
 
 function normalizeWorkspaceGlobPattern(input: string): string {
