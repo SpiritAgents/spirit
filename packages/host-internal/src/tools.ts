@@ -252,6 +252,9 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       afterContext?: number;
       beforeContext?: number;
       contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
     }
   | {
       name: "subagent";
@@ -726,6 +729,9 @@ export class NodeHostToolService<
         const afterContext = optionalNonNegativeInt(parsed, "-A");
         const beforeContext = optionalNonNegativeInt(parsed, "-B");
         const contextLines = optionalNonNegativeInt(parsed, "-C");
+        const fileType = optionalStringStrict(parsed, "type");
+        const includeIgnored = optionalBoolean(parsed, "include_ignored");
+        const multiline = optionalBoolean(parsed, "multiline");
         return {
           name,
           pattern: requiredString(parsed, "pattern"),
@@ -738,6 +744,9 @@ export class NodeHostToolService<
           ...(afterContext !== undefined ? { afterContext } : {}),
           ...(beforeContext !== undefined ? { beforeContext } : {}),
           ...(contextLines !== undefined ? { contextLines } : {}),
+          ...(fileType ? { fileType } : {}),
+          ...(includeIgnored !== undefined ? { includeIgnored } : {}),
+          ...(multiline !== undefined ? { multiline } : {}),
         };
       }
       case "subagent": {
@@ -1093,6 +1102,11 @@ export class NodeHostToolService<
           ...(request.afterContext !== undefined ? { afterContext: request.afterContext } : {}),
           ...(request.beforeContext !== undefined ? { beforeContext: request.beforeContext } : {}),
           ...(request.contextLines !== undefined ? { contextLines: request.contextLines } : {}),
+          ...(request.fileType !== undefined ? { fileType: request.fileType } : {}),
+          ...(request.includeIgnored !== undefined
+            ? { includeIgnored: request.includeIgnored }
+            : {}),
+          ...(request.multiline !== undefined ? { multiline: request.multiline } : {}),
         });
       case "subagent":
         throw new Error(
@@ -1721,6 +1735,9 @@ export class NodeHostToolService<
       afterContext?: number;
       beforeContext?: number;
       contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
     } = {},
   ): Promise<string> {
     const needle = pattern.trim();
@@ -1743,6 +1760,9 @@ export class NodeHostToolService<
       ...(options.contextLines !== undefined ? { context: options.contextLines } : {}),
       ...(options.beforeContext !== undefined ? { beforeContext: options.beforeContext } : {}),
       ...(options.afterContext !== undefined ? { afterContext: options.afterContext } : {}),
+      ...(options.fileType ? { fileType: options.fileType } : {}),
+      ...(options.includeIgnored !== undefined ? { includeIgnored: options.includeIgnored } : {}),
+      ...(options.multiline !== undefined ? { multiline: options.multiline } : {}),
     });
 
     const hasContext =

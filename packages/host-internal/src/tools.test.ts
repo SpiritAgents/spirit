@@ -770,6 +770,76 @@ test("grep shows context lines around matches with -C", async () => {
   }
 });
 
+test("grep restricts search to a ripgrep file type", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-type-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.ts"), "needle\n");
+    await writeFile(join(workspaceRoot, "beta.txt"), "needle\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      fileType: "ts",
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /alpha\.ts:1:needle/u);
+    assert.doesNotMatch(output, /beta\.txt/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep searches gitignored files with include_ignored", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-ignored-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot, windowsHide: true });
+    await writeFile(join(workspaceRoot, ".gitignore"), "ignored.txt\n", "utf8");
+    await writeFile(join(workspaceRoot, "ignored.txt"), "needle here\n", "utf8");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      includeIgnored: true,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /ignored\.txt:1:needle here/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep matches across line boundaries with multiline", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-multiline-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "foo\nbar\nplain\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "foo\\nbar",
+      multiline: true,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /alpha\.txt:1:foo\nbar/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("requestFromFunctionCall parses grep output mode and paging fields", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-modes-"));
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
@@ -815,6 +885,31 @@ test("requestFromFunctionCall parses grep context options", async () => {
       afterContext: 2,
       beforeContext: 1,
       contextLines: 3,
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("requestFromFunctionCall parses grep type, include_ignored, and multiline", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-filters-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const request = await service.requestFromFunctionCall(
+      "grep",
+      '{"pattern":"needle","type":"ts","include_ignored":true,"multiline":true}',
+    );
+
+    assert.deepEqual(request, {
+      name: "grep",
+      pattern: "needle",
+      fileType: "ts",
+      includeIgnored: true,
+      multiline: true,
     });
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
