@@ -989,6 +989,7 @@ async function linkWorkspaceNodeModules(repoRoot, workspacePath) {
   const packageRelativePaths = [
     'packages/agent-core/node_modules',
     'packages/host-internal/node_modules',
+    'packages/extension-toolkit/node_modules',
   ];
 
   for (const relativePath of packageRelativePaths) {
