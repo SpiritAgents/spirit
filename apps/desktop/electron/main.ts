@@ -153,6 +153,7 @@ import {
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
+  subscribeDesktopTasksUpdates,
 } from "../src/host/service.js";
 import {
   chatsDirPath,
@@ -222,6 +223,7 @@ let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
 let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
+let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
@@ -1225,6 +1227,14 @@ if (gotSpiritSingleInstanceLock) {
       }
     });
 
+    unsubscribeDesktopTasksUpdates = subscribeDesktopTasksUpdates((items) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send("desktop:tasks-updated", items);
+        }
+      }
+    });
+
     unsubscribeDesktopSessionListUpdates = subscribeDesktopSessionListUpdates(() => {
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) {
@@ -1608,9 +1618,27 @@ if (gotSpiritSingleInstanceLock) {
       "desktop:pty-create",
       (
         event,
-        request: { cwd: string; cols: number; rows: number },
+        request: {
+          cwd: string;
+          cols: number;
+          rows: number;
+          file?: unknown;
+          args?: unknown;
+          env?: unknown;
+        },
       ): { ok: true; id: string; shellDisplayName: string } | { ok: false; error: string } => {
-        return workspacePtyManager.createSession(event.sender, request);
+        return workspacePtyManager.createSession(event.sender, {
+          cwd: request.cwd,
+          cols: request.cols,
+          rows: request.rows,
+          ...(typeof request.file === "string" ? { file: request.file } : {}),
+          ...(Array.isArray(request.args)
+            ? { args: request.args.filter((arg): arg is string => typeof arg === "string") }
+            : {}),
+          ...(request.env !== null && typeof request.env === "object"
+            ? { env: request.env as Record<string, string> }
+            : {}),
+        });
       },
     );
 
@@ -1855,6 +1883,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopAutomationsUpdates = undefined;
   unsubscribeDesktopSessionListUpdates?.();
   unsubscribeDesktopSessionListUpdates = undefined;
+  unsubscribeDesktopTasksUpdates?.();
+  unsubscribeDesktopTasksUpdates = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {
     return;
   }

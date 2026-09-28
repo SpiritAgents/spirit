@@ -1,9 +1,11 @@
 import { Compose } from "@spiritagent/icons/compose";
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { Languages, Palette } from "lucide-react";
+import { Languages, Palette, Terminal } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { useTranslation } from "react-i18next";
 
 import { DESKTOP_COMMAND_PALETTE_ITEM_TONE } from "@/lib/desktop-chrome";
+import { DESKTOP_OVERLAY_LIST_ITEM_SECONDARY } from "@/lib/desktop-chrome";
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 import {
@@ -11,11 +13,14 @@ import {
   isLocaleOptionAction,
   isNewChatAction,
   isSlashActionPaletteItem,
+  isTaskMenuAction,
+  isTaskOptionAction,
   isThemeOptionAction,
   type ActionPaletteItem,
 } from "@/lib/action-palette";
 import { SLASH_SUGGESTION_ICONS } from "@/lib/slash-command-icons";
 import type { SkillSlashSuggestionKind } from "@/lib/skill-slash";
+import { resolveTaskIcon, type TaskIconResolution } from "@/lib/task-icon";
 
 type ActionPickerRowProps = {
   item: ActionPaletteItem;
@@ -45,6 +50,29 @@ const actionPickerMetaClass = cn(
   DESKTOP_COMMAND_PALETTE_ITEM_TONE,
 );
 
+const taskOptionIconClass = cn(
+  "mt-0.5 size-3.5 shrink-0 text-popover-foreground",
+  DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+);
+
+function TaskOptionIcon({ resolution }: { resolution: TaskIconResolution }) {
+  if (resolution.kind === "lucide") {
+    return (
+      <DynamicIcon
+        name={resolution.name as IconName}
+        className={taskOptionIconClass}
+        aria-hidden
+        strokeWidth={1.75}
+      />
+    );
+  }
+  if (resolution.kind === "spirit") {
+    const Icon = resolution.component;
+    return <Icon className={taskOptionIconClass} aria-hidden strokeWidth={1.75} />;
+  }
+  return null;
+}
+
 export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProps) {
   const { t } = useTranslation();
 
@@ -64,8 +92,9 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     );
   }
 
-  if (isAppearanceMenuAction(item)) {
-    const Icon = item.kind === "theme-menu" ? Palette : Languages;
+  if (isAppearanceMenuAction(item) || isTaskMenuAction(item)) {
+    const Icon =
+      item.kind === "theme-menu" ? Palette : item.kind === "locale-menu" ? Languages : Terminal;
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <Icon
@@ -77,9 +106,7 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
           strokeWidth={1.75}
         />
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
-        {currentValueLabel ? (
-          <span className={actionPickerMetaClass}>{currentValueLabel}</span>
-        ) : null}
+        <span className={actionPickerMetaClass}>{currentValueLabel}</span>
         <ChevronRight
           className={cn(
             "size-3.5 shrink-0 text-popover-foreground",
@@ -96,6 +123,27 @@ export function ActionPickerRow({ item, currentValueLabel }: ActionPickerRowProp
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
         <span className={actionPickerPrimaryTitleClass}>{t(item.labelKey)}</span>
+      </div>
+    );
+  }
+
+  if (isTaskOptionAction(item)) {
+    // Two-line form mirroring the composer slash menu: label (and optional declared
+    // icon) on the first line, gray detail on the second.
+    const resolution = resolveTaskIcon(item.iconId);
+    return (
+      <div className="flex min-w-0 flex-1 items-start gap-2 overflow-hidden">
+        {resolution.kind !== "none" ? <TaskOptionIcon resolution={resolution} /> : null}
+        <div className="min-w-0 flex-1">
+          <div className={actionPickerPrimaryTitleClass} title={item.label}>
+            {item.label}
+          </div>
+          {item.detail?.trim() ? (
+            <div className={DESKTOP_OVERLAY_LIST_ITEM_SECONDARY} title={item.detail}>
+              {item.detail}
+            </div>
+          ) : null}
+        </div>
       </div>
     );
   }

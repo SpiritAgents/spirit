@@ -1,0 +1,203 @@
+---
+title: 任務
+description: 從命令選擇區執行工作區任務，於 .spirit/tasks.json 宣告，或從 .vscode/tasks.json 匯入。
+---
+
+<Callout type="info">僅限桌面版。</Callout>
+
+任務可從 Spirit Desktop 命令選擇區執行預先定義的工作區命令：開啟命令選擇區（`Mod+Shift+P`），選擇**工作區 → 執行任務**，然後從第二層清單中選擇一個任務。該任務會在右側工具面板的終端機標籤頁中執行。**工作區**群組僅在至少存在一個有效任務時，才會出現在命令選擇區中。
+
+Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON 的 Spirit 格式，並以相容性匯入的方式讀取 VS Code 的 `tasks.json` — 僅支援明確定義的 VS Code 欄位子集。無法完全依照設定執行的任務會被整個隱藏，而不是以不完整的設定執行；見[任務為何被隱藏](#why-a-task-is-hidden)。
+
+## 任務檔案
+
+會讀取三個來源，按優先順序由高至低：
+
+| 優先順序 | 來源                             | 必要標記             | 備註                         |
+| -------- | -------------------------------- | -------------------- | ---------------------------- |
+| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Spirit 自有格式              |
+| 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 使用者層級，套用至每個工作區 |
+| 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 相容性匯入，唯讀     |
+
+只會掃描工作區根目錄，不會掃描巢狀目錄。`<data dir>` 是 Spirit 資料目錄（例如在 macOS 上為 `~/Library/Application Support/Spirit`）。檔案若遺失、無法讀取、JSON 無效或標記錯誤，則不提供任何任務。
+
+這三個檔案會被即時監看；任一檔案變更時，命令選擇區清單會自動重新整理。
+
+三個來源會合併到同一個命名空間。當多個來源定義相同的 `label` 時，優先順序最高的來源生效 — 對命令選擇區清單與 `dependsOn` 參照皆然。
+
+`.vscode/tasks.json` 採寬容解析，因為實際檔案多為 JSONC：接受 `//` 與 `/* */` 註解及尾隨逗號。Spirit 自有檔案則是嚴格 JSON — 出現註解即會使檔案失效。
+
+## 工作區信任
+
+工作區任務檔案隨存放庫一起送達，因此屬於未受信任的資料：`.spirit/tasks.json` 與 `.vscode/tasks.json` 只有在你核准工作區內容後才會載入。使用者層級的 `tasks.json`（Spirit 資料目錄）一律受信任，一律載入。
+
+當 Spirit Desktop 偵測到工作區任務檔案（或其變更）時，會詢問一次：對話框列出將可用的任務及其命令，點擊條目會開啟來源檔案。如果工作區鉤子也需要核准，兩個清單會合併在同一個對話框中。
+
+- **允許一次** — 任務僅在本次工作階段載入。
+- **永遠信任** — 記住目前確切的檔案內容。
+- **拒絕** — 工作區任務維持不可用；本次工作階段會對該確切內容記住此次拒絕。
+
+編輯任一檔案會再次詢問（核准與內容雜湊綁定）。要從拒絕中恢復，編輯該檔案（會再次詢問）或重新啟動應用程式。
+
+此門禁是自動執行觸發器的結構前提：`runOn: "folderOpen"` 僅在核准後執行，`worktreeCreated` 仍為停用狀態。
+
+## 欄位
+
+各欄位的行為，於合併後評估：檔案層級預設值 < 檔案層級作業系統區塊 < 任務 < 任務層級作業系統區塊。
+
+### 核心欄位
+
+| 欄位                                    | 行為 | 備註                                                                                                                                                                          |
+| --------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `label`                                 | 必填 | 沒有非空標籤的項目會被完全捨棄 — 它們不會進入選單或相依圖                                                                                                                     |
+| `type`                                  | 支援 | `shell`（預設）或 `process`。任何其他字串（`npm`、`grunt`、…）屬於擴充功能自訂的項目，會被完全忽略：不隱藏、不列出，同層項目不受影響                                          |
+| `command`                               | 支援 | `string`、`string[]` 或 `{ value, quoting }`。合併後缺少 command 的任務會被隱藏 — `shell` 任務亦同（比 VS Code 更嚴格）                                                       |
+| `args`                                  | 支援 | 由 `string` 或 `{ value, quoting }` 組成的陣列                                                                                                                                |
+| `quoting`                               | 支援 | `escape`、`strong`（預設）或 `weak`；無效值退回 `strong`。僅套用於 `args` 與物件形式 `{ value, quoting }`；純字串形式的 `command` 會原樣傳給 shell，因此可包含原始 shell 語法 |
+| `options.cwd`                           | 支援 | 處理程序的工作目錄                                                                                                                                                            |
+| `options.env`                           | 支援 | 額外的環境變數，合併於主機環境之上                                                                                                                                            |
+| `options.shell`                         | 支援 | `{ executable, args }` — `shell` 任務使用的 shell，取代預設終端機 shell                                                                                                       |
+| `windows` / `osx` / `linux`（任務層級） | 支援 | 針對目前作業系統的 `{ command, args, options }` 覆寫。                                                                                                                        |
+| `windows` / `osx` / `linux`（檔案層級） | 支援 | 相同結構，作為檔案中每個任務的作業系統專屬預設層                                                                                                                              |
+| 檔案層級預設值                          | 支援 | 只有 `command`、`args`、`options`、`type`、`isBackground`、`promptOnClose`、`presentation` 可作為檔案層級預設值。                                                             |
+| `isBackground`                          | 支援 | 結束視為使用者終止，絕不視為失敗。相依於它的其他任務會被隱藏（見下文）                                                                                                        |
+| `promptOnClose`                         | 支援 | 處理程序仍在執行時關閉標籤頁會要求確認                                                                                                                                        |
+| `dependsOn`                             | 支援 | 標籤字串，或標籤字串陣列。物件形式（`{ "type": … }`、`{ "task": … }`）會隱藏該任務                                                                                            |
+| `dependsOrder`                          | 支援 | `parallel`（預設）或 `sequence`                                                                                                                                               |
+| `detail`                                | 支援 | 在命令選擇區清單中顯示於標籤旁                                                                                                                                                |
+| `icon.id`                               | 支援 | 選單圖示：優先 Spirit Icons，其次 Lucide，並以終端機字符作為後備                                                                                                              |
+| `icon.color`                            | 忽略 | 純展示性質                                                                                                                                                                    |
+| `hide`                                  | 支援 | 從命令選擇區清單隱藏，但仍可解析 — 該任務可作為 `dependsOn` 相依項目執行                                                                                                      |
+
+### 執行選項
+
+| 欄位                           | 行為 | 備註                                                                                 |
+| ------------------------------ | ---- | ------------------------------------------------------------------------------------ |
+| `runOptions.reevaluateOnRerun` | 支援 | 預設 `true`。設為 `false` 會快取第一次的解析結果，供後續重新執行使用                 |
+| `runOptions.runOn`             | 受限 | 支援 `default` 和 `folderOpen`；`worktreeCreated` 會隱藏該任務                       |
+| `runOptions.instanceLimit`     | 支援 | 預設 `1`。超過上限時會開啟對話框（見[執行任務](#running-tasks)）                     |
+| `runOptions.instancePolicy`    | 受限 | 僅支援 `prompt`。`terminateNewest`、`terminateOldest`、`warn`、`silent` 會隱藏該任務 |
+
+### 呈現方式
+
+| 欄位                                | 行為 | 備註                                                                 |
+| ----------------------------------- | ---- | -------------------------------------------------------------------- |
+| `presentation.echo`                 | 支援 | 在處理程序輸出之前，先將命令列寫入終端機                             |
+| `presentation.reveal`               | 支援 | `always`（預設）、`silent` 或 `never` — 見[執行任務](#running-tasks) |
+| `presentation.focus`                | 支援 | 隱含 reveal，並將鍵盤焦點移至終端機                                  |
+| `presentation.panel`                | 支援 | `shared`（預設）、`dedicated` 或 `new` — 終端機重複使用策略          |
+| `presentation.clear`                | 支援 | 在重複使用終端機重新執行前，先清除終端機                             |
+| `presentation.close`                | 支援 | 處理程序結束時自動關閉標籤頁                                         |
+| `presentation.preserveTerminalName` | 支援 | 以任務標籤作為標籤頁標題，而非處理程序標題                           |
+| `presentation.showReuseMessage`     | 忽略 | 純展示性質                                                           |
+| `presentation.group`                | 忽略 | 終端機分組不在範圍內                                                 |
+
+### 忽略的欄位
+
+帶有這些欄位絕不會導致任務被隱藏：`problemMatcher`（任何形式、任何層級）、`presentation.revealProblems`、`group`（建置/測試分組）、`icon.color`、`presentation.showReuseMessage`、`presentation.group`、`inAgents`。檔案層級的 `inputs` 陣列完全不會被讀取 — 但任務內的 `${input:*}` _參照_ 會隱藏該任務（見[變數](#variables)）。
+
+## 變數
+
+支援的參照，於任務解析時代入：
+
+| 變數                         | 值                                    |
+| ---------------------------- | ------------------------------------- |
+| `${workspaceFolder}`         | 工作區根目錄路徑                      |
+| `${workspaceFolderBasename}` | 工作區根目錄的資料夾名稱              |
+| `${cwd}`                     | Spirit Desktop 自身處理程序的工作目錄 |
+| `${userHome}`                | 作業系統使用者的家目錄                |
+| `${pathSeparator}`、`${/}`   | 作業系統路徑分隔符                    |
+| `${env:NAME}`                | 環境變數 `NAME`（未設定時為空）       |
+
+掃描範圍涵蓋 `command`、`args`、`options.cwd`、`options.env` 的值以及 `options.shell`。任何其他 `${…}` 參照 — `${file}`、`${selectedText}`、`${lineNumber}`、`${config:*}`、`${command:*}`、`${input:*}`、`${defaultBuildTask}`、… — 都會隱藏該任務。未開啟工作區時，參照 `${workspaceFolder}` 或 `${workspaceFolderBasename}` 的任務會在該次解析中被隱藏。
+
+## 任務為何被隱藏
+
+無法完全依照設定執行的任務會被整個隱藏，而不是以不完整的設定執行。該任務會從命令選擇區消失；原因會以穩定的規則 id 記錄。
+
+| 規則                         | 原因                                                 |
+| ---------------------------- | ---------------------------------------------------- |
+| `unsupportedVariable`        | 代入猜測的值會導致執行的命令與設定不同               |
+| `dependsOnObjectForm`        | 擴充功能型別的相依項目無法執行                       |
+| `dependsOnBackground`        | 背景任務永不結束，相依鏈沒有明確可等待的目標         |
+| `instancePolicy`             | 僅存在互動式提示；靜默策略會在您不知情下終止實例     |
+| `cyclicDependency`           | 循環相依永遠無法啟動                                 |
+| `transitiveHiddenDependency` | 相依於本身被隱藏或不存在的標籤 — 隱藏會傳遞          |
+| `invalidTask`                | 沒有標籤（完全捨棄），或整條合併鏈中都沒有 `command` |
+
+要診斷消失的任務，請在啟用偵錯通道的情況下啟動 Desktop — 每個被隱藏的任務都會連同其規則 id 記錄下來：
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+記錄行的格式為 `[desktop-host][tasks] hidden <file>#<label> rule=<id>`。
+
+## 執行任務
+
+任務可透過在命令選擇區中明確點擊來啟動；在受信任的工作區中，設定 `runOn: "folderOpen"` 的任務也會在開啟資料夾時自動執行。儲存檔案或任何其他事件絕不會執行任務。`worktreeCreated` 仍不受支援。
+
+- **相依項目** — `dependsOn` 標籤在合併後的命名空間中解析。使用 `dependsOrder: "parallel"`（預設）時，所有相依項目會同時啟動，各自在獨立的終端機中以各自的呈現設定執行，且主任務會等每個相依項目都結束後才啟動；若任一相依項目以非零代碼結束，主任務不會執行 — 與 VS Code 相同的失敗語義。使用 `"sequence"` 時，相依項目依序逐一執行，第一個非零結束會在主任務啟動前中止整條鏈。已在執行中的相依項目會被等待完成，而不會重新啟動。
+- **實例上限** — `runOptions.instanceLimit` 預設為 `1`。超過上限再啟動執行個體時，會列出正在執行的執行個體及其已執行時間；選擇一個（預設選取第一個）後點擊**取代**以終止該執行個體並啟動新執行個體，或點擊**取消**。無法超出已設定的上限。
+- **開啟資料夾觸發** — `runOn: "folderOpen"` 會在工作區啟用時自動執行該任務，但僅限受信任的工作區（經過核准或已有信任記錄）；被拒絕的工作區永遠不會執行。核准信任提示後會立即執行本次工作階段的開啟資料夾任務。每次啟用最多觸發一次——編輯 `tasks.json` 不會重新執行——若該任務已達實例上限，自動執行會被靜默略過（不跳出對話框）。
+- **終端機重複使用** — 只有已結束任務的終端機才會被重複使用。`panel: "shared"` 與 `panel: "dedicated"` 都會在存在此任務自身的閒置終端機時重複使用它（重複使用池以任務為單位），否則開啟新標籤頁；`panel: "new"` 一律開啟全新標籤頁。
+- **回顯** — 啟用 `presentation.echo`（預設開啟）時，命令列會在處理程序輸出之前寫入終端機。
+- **顯示** — `always`（預設）在啟動時展開工具面板；`silent` 在啟動時保持關閉，僅在任務以非零代碼結束時才展開；`never` 絕不自動展開。`focus: true` 隱含 reveal，並額外將鍵盤焦點移至終端機。注意與 VS Code 的兩處差異：`reveal: "silent"` 只會在結束代碼非零時展開（Spirit 沒有 problemMatcher 觸發路徑）；`presentation.revealProblems` 完全無效——既不抑制也不觸發終端機顯示。
+- **清除** — `presentation.clear` 會在重複使用終端機重新執行前，先清除終端機。
+- **關閉** — `presentation.close` 會在結束時自動關閉標籤頁，無論結束代碼為何。
+- **保留終端機名稱** — `presentation.preserveTerminalName` 以任務標籤作為標籤頁標題；否則標題會被執行中處理程序的標題取代。
+- **背景** — `isBackground: true` 將任務標記為永不結束；其結束視為使用者終止，絕不視為失敗（不會因失敗而顯示面板）。
+- **關閉確認** — `promptOnClose: true` 會在您關閉處理程序仍在執行的標籤頁時要求確認；確認後會終止該處理程序。
+- **隱藏任務** — `hide: true` 的任務絕不會出現在命令選擇區，但仍可作為 `dependsOn` 相依項目執行。
+
+## 範例
+
+完整的 `.spirit/tasks.json` — 一條 build → test → package 的序列鏈，外加一個背景監看任務：
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "Production build",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` 只會在 `build` 以零代碼結束後執行；`package` 接著在 `test` 之後執行，並重複使用先清除過的同一個終端機。
+- `package` 在執行時解析 `${workspaceFolder}`，並將 `CHANNEL` 加入處理程序環境。
+- `watch` 保持不打擾（`silent` 僅在非零結束時才顯示面板），且其結束絕不計為失敗。請注意，任何任務都不得相依於它 — 指向背景任務的 `dependsOn` 項目會被隱藏。
+
+相關頁面：[自動化](./automations.mdx)介紹按排程或 GitHub 事件執行的 Agent 任務，[Hooks](./hooks.mdx)介紹由 Agent 與工作階段事件觸發的指令碼。

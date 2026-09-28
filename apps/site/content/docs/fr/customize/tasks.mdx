@@ -1,0 +1,203 @@
+---
+title: Tâches
+description: Exécutez des tâches d'espace de travail depuis la palette de commandes, déclarées dans .spirit/tasks.json ou importées depuis .vscode/tasks.json.
+---
+
+<Callout type="info">Desktop uniquement.</Callout>
+
+Les tâches exécutent des commandes d'espace de travail prédéfinies depuis la palette de commandes de Spirit Desktop : ouvrez la palette (`Mod+Shift+P`), choisissez **Espace de travail → Exécuter une tâche**, puis choisissez une tâche dans la liste de second niveau. La tâche s'exécute dans un onglet de terminal du panneau d'outils à droite. Le groupe **Espace de travail** n'apparaît dans la palette que lorsqu'au moins une tâche valide existe.
+
+Les tâches Spirit forment un système à part entière, distinct des tâches VS Code. Spirit lit un format Spirit en JSON strict et, à titre d'import de compatibilité, le `tasks.json` de VS Code — avec un sous-ensemble clairement défini des champs de VS Code. Une tâche qui ne peut pas s'exécuter exactement comme configurée est entièrement masquée plutôt qu'exécutée à moitié configurée ; voir [Pourquoi une tâche est masquée](#why-a-task-is-hidden).
+
+## Fichiers de tâches
+
+Trois sources sont lues, de la priorité la plus haute à la plus basse :
+
+| Priorité | Source                           | Marqueur requis      | Notes                                                        |
+| -------- | -------------------------------- | -------------------- | ------------------------------------------------------------ |
+| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Format propre à Spirit                                       |
+| 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | Niveau utilisateur, s'applique à tous les espaces de travail |
+| 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Import de compatibilité VS Code, en lecture seule            |
+
+Seule la racine de l'espace de travail est analysée — les sous-répertoires ne le sont pas. `<data dir>` est le répertoire de données Spirit (par exemple `~/Library/Application Support/Spirit` sur macOS). Un fichier absent, illisible, en JSON invalide ou portant le mauvais marqueur ne fournit aucune tâche.
+
+Les trois fichiers sont surveillés en direct ; la liste de la palette se rafraîchit automatiquement dès que l'un d'eux change.
+
+Les trois sources fusionnent dans un seul espace de noms. Lorsque plusieurs sources définissent le même `label`, la source de plus haute priorité l'emporte — aussi bien pour la liste de la palette que pour les références `dependsOn`.
+
+`.vscode/tasks.json` est analysé avec tolérance, car les fichiers réels sont en JSONC : les commentaires `//` et `/* */` ainsi que les virgules traînantes sont acceptés. Les fichiers propres à Spirit sont en JSON strict — un commentaire rend le fichier invalide.
+
+## Confiance dans l'espace de travail
+
+Les fichiers de tâches de l'espace de travail arrivent avec le dépôt et sont donc des données non fiables : `.spirit/tasks.json` et `.vscode/tasks.json` ne se chargent qu'après votre approbation du contenu de l'espace de travail. Le `tasks.json` utilisateur (répertoire de données Spirit) est implicitement fiable et toujours chargé.
+
+Quand Spirit Desktop détecte des fichiers de tâches de l'espace de travail (ou un changement), il demande une fois : la boîte de dialogue liste les tâches qui deviendront disponibles avec leurs commandes, et cliquer sur une entrée ouvre le fichier source. Si les hooks de l'espace de travail ont aussi besoin d'une approbation, les deux listes apparaissent dans une seule boîte de dialogue combinée.
+
+- **Autoriser une fois** — les tâches se chargent pour cette session uniquement.
+- **Toujours faire confiance** — mémorisé pour ce contenu de fichier exact.
+- **Refuser** — les tâches de l'espace de travail restent indisponibles ; le refus est mémorisé pour ce contenu exact dans cette session.
+
+Modifier l'un des fichiers redemande (l'approbation est liée au hachage du contenu). Pour revenir d'un refus, modifiez le fichier (nouvelle demande) ou redémarrez l'application.
+
+Ce garde-fou est le prérequis structurel des déclencheurs automatiques : `runOn: "folderOpen"` ne s'exécute qu'après approbation, et `worktreeCreated` reste désactivé.
+
+## Champs
+
+Comportement par champ, évalué après fusion : valeurs par défaut au niveau du fichier < bloc OS au niveau du fichier < tâche < bloc OS au niveau de la tâche.
+
+### Champs principaux
+
+| Champ                                        | Comportement   | Notes                                                                                                                                                                                                                                                                    |
+| -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `label`                                      | Requis         | Les entrées sans `label` non vide sont entièrement écartées — elles n'atteignent jamais le menu ni le graphe de dépendances                                                                                                                                              |
+| `type`                                       | Pris en charge | `shell` (par défaut) ou `process`. Toute autre chaîne (`npm`, `grunt`, …) est une entrée personnalisée par une extension et est complètement ignorée : ni masquée, ni listée, sans effet sur les entrées voisines                                                        |
+| `command`                                    | Pris en charge | `string`, `string[]` ou `{ value, quoting }`. Une tâche dont la commande fusionnée est absente est masquée — y compris pour les tâches `shell` (plus strict que VS Code)                                                                                                 |
+| `args`                                       | Pris en charge | Tableau de `string` ou de `{ value, quoting }`                                                                                                                                                                                                                           |
+| `quoting`                                    | Pris en charge | `escape`, `strong` (par défaut) ou `weak` ; les valeurs invalides retombent sur `strong`. S'applique à `args` et à la forme objet `{ value, quoting }` ; une `command` en chaîne simple est passée au shell telle quelle et peut donc contenir de la syntaxe shell brute |
+| `options.cwd`                                | Pris en charge | Répertoire de travail du processus                                                                                                                                                                                                                                       |
+| `options.env`                                | Pris en charge | Variables d'environnement supplémentaires, fusionnées par-dessus l'environnement de l'hôte                                                                                                                                                                               |
+| `options.shell`                              | Pris en charge | `{ executable, args }` — shell utilisé pour les tâches `shell` à la place du shell de terminal par défaut                                                                                                                                                                |
+| `windows` / `osx` / `linux` (niveau tâche)   | Pris en charge | Remplacements `{ command, args, options }` pour l'OS courant.                                                                                                                                                                                                            |
+| `windows` / `osx` / `linux` (niveau fichier) | Pris en charge | Même forme, servant de couche de valeurs par défaut spécifiques à l'OS pour chaque tâche du fichier                                                                                                                                                                      |
+| Valeurs par défaut au niveau du fichier      | Pris en charge | Seuls `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose` et `presentation` peuvent servir de valeurs par défaut au niveau du fichier.                                                                                                                 |
+| `isBackground`                               | Pris en charge | La sortie compte comme une terminaison par l'utilisateur, jamais comme un échec. Une autre tâche qui en dépend est masquée (voir ci-dessous)                                                                                                                             |
+| `promptOnClose`                              | Pris en charge | Fermer l'onglet alors que le processus est encore actif demande une confirmation                                                                                                                                                                                         |
+| `dependsOn`                                  | Pris en charge | Une chaîne de label, ou un tableau de chaînes de labels. La forme objet (`{ "type": … }`, `{ "task": … }`) masque la tâche                                                                                                                                               |
+| `dependsOrder`                               | Pris en charge | `parallel` (par défaut) ou `sequence`                                                                                                                                                                                                                                    |
+| `detail`                                     | Pris en charge | Affiché à côté du label dans la liste de la palette                                                                                                                                                                                                                      |
+| `icon.id`                                    | Pris en charge | Icône de menu : Spirit Icons d'abord, puis Lucide, avec un glyphe de terminal en repli                                                                                                                                                                                   |
+| `icon.color`                                 | Ignoré         | Purement présentationnel                                                                                                                                                                                                                                                 |
+| `hide`                                       | Pris en charge | Masquée dans la liste de la palette mais toujours résolvable — la tâche peut s'exécuter comme dépendance `dependsOn`                                                                                                                                                     |
+
+### Options d'exécution
+
+| Champ                          | Comportement   | Notes                                                                                                        |
+| ------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------ |
+| `runOptions.reevaluateOnRerun` | Pris en charge | `true` par défaut. `false` met en cache la première résolution pour les réexécutions ultérieures             |
+| `runOptions.runOn`             | Restreint      | `default` et `folderOpen` sont pris en charge ; `worktreeCreated` masque la tâche                            |
+| `runOptions.instanceLimit`     | Pris en charge | `1` par défaut. Dépasser la limite ouvre une boîte de dialogue (voir [Exécution des tâches](#running-tasks)) |
+| `runOptions.instancePolicy`    | Restreint      | Seul `prompt` est pris en charge. `terminateNewest`, `terminateOldest`, `warn` et `silent` masquent la tâche |
+
+### Présentation
+
+| Champ                               | Comportement   | Notes                                                                                    |
+| ----------------------------------- | -------------- | ---------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | Pris en charge | Écrit la ligne de commande dans le terminal avant la sortie du processus                 |
+| `presentation.reveal`               | Pris en charge | `always` (par défaut), `silent` ou `never` — voir [Exécution des tâches](#running-tasks) |
+| `presentation.focus`                | Pris en charge | Implique reveal et déplace le focus clavier dans le terminal                             |
+| `presentation.panel`                | Pris en charge | `shared` (par défaut), `dedicated` ou `new` — politique de réutilisation du terminal     |
+| `presentation.clear`                | Pris en charge | Efface le terminal avant une réexécution qui le réutilise                                |
+| `presentation.close`                | Pris en charge | Ferme automatiquement l'onglet à la sortie du processus                                  |
+| `presentation.preserveTerminalName` | Pris en charge | Conserve le label de la tâche comme titre d'onglet au lieu du titre du processus         |
+| `presentation.showReuseMessage`     | Ignoré         | Purement présentationnel                                                                 |
+| `presentation.group`                | Ignoré         | Le regroupement de terminaux est hors de portée                                          |
+
+### Champs ignorés
+
+Porter ces champs ne masque jamais une tâche : `problemMatcher` (toute forme, à tout niveau), `presentation.revealProblems`, `group` (regroupement build/test), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. Le tableau `inputs` au niveau du fichier n'est tout simplement pas lu — mais une _référence_ `${input:*}` à l'intérieur d'une tâche masque cette tâche (voir [Variables](#variables)).
+
+## Variables
+
+Références prises en charge, substituées lors de la résolution de la tâche :
+
+| Variable                     | Valeur                                                      |
+| ---------------------------- | ----------------------------------------------------------- |
+| `${workspaceFolder}`         | Chemin de la racine de l'espace de travail                  |
+| `${workspaceFolderBasename}` | Nom du dossier racine de l'espace de travail                |
+| `${cwd}`                     | Répertoire de travail du propre processus de Spirit Desktop |
+| `${userHome}`                | Répertoire personnel de l'utilisateur de l'OS               |
+| `${pathSeparator}`, `${/}`   | Séparateur de chemin de l'OS                                |
+| `${env:NAME}`                | Variable d'environnement `NAME` (vide si non définie)       |
+
+L'analyse couvre `command`, `args`, `options.cwd`, les valeurs de `options.env` et `options.shell`. Toute autre référence `${…}` — `${file}`, `${selectedText}`, `${lineNumber}`, `${config:*}`, `${command:*}`, `${input:*}`, `${defaultBuildTask}`, … — masque la tâche. Lorsqu'aucun espace de travail n'est ouvert, les tâches référençant `${workspaceFolder}` ou `${workspaceFolderBasename}` sont masquées pour cette passe de résolution.
+
+## Pourquoi une tâche est masquée
+
+Une tâche qui ne peut pas s'exécuter exactement comme configurée est entièrement masquée plutôt qu'exécutée à moitié configurée. La tâche disparaît de la palette ; la raison est enregistrée avec un identifiant de règle stable.
+
+| Règle                        | Motif                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `unsupportedVariable`        | Substituer une valeur devinée exécuterait une commande différente de celle configurée                               |
+| `dependsOnObjectForm`        | Les entrées de dépendance typées par une extension ne sont pas exécutables                                          |
+| `dependsOnBackground`        | Une tâche en arrière-plan ne se termine jamais, la chaîne n'a donc rien de bien défini à attendre                   |
+| `instancePolicy`             | Seule l'invite interactive existe ; les politiques silencieuses termineraient des instances sans que vous le voyiez |
+| `cyclicDependency`           | Un cycle de dépendances ne pourrait jamais démarrer                                                                 |
+| `transitiveHiddenDependency` | Dépend d'un label lui-même masqué ou inexistant — le masquage se propage                                            |
+| `invalidTask`                | Pas de label (entièrement écartée) ou aucun `command` dans toute la chaîne de fusion                                |
+
+Pour diagnostiquer une tâche disparue, démarrez Desktop avec le canal de débogage activé — chaque tâche masquée est journalisée avec son identifiant de règle :
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+La ligne de journal a la forme `[desktop-host][tasks] hidden <file>#<label> rule=<id>`.
+
+## Exécution des tâches
+
+Les tâches démarrent sur un clic explicite dans la palette ; uniquement dans les espaces de travail approuvés, une tâche avec `runOn: "folderOpen"` s'exécute aussi automatiquement à l'ouverture du dossier. Rien ne s'exécute jamais à l'enregistrement d'un fichier ou sur un autre événement. `worktreeCreated` n'est toujours pas pris en charge.
+
+- **Dépendances** — les labels de `dependsOn` se résolvent dans l'espace de noms fusionné. Avec `dependsOrder: "parallel"` (par défaut), toutes les dépendances démarrent ensemble, chacune dans son propre terminal avec sa propre présentation, et la tâche principale ne démarre qu'une fois que chaque dépendance s'est terminée ; si une dépendance sort avec un code non nul, la tâche principale ne s'exécute pas — la même sémantique d'échec que VS Code. Avec `"sequence"`, les dépendances s'exécutent une par une dans l'ordre et la première sortie non nulle interrompt la chaîne avant le démarrage de la tâche principale. Une dépendance déjà en cours d'exécution est attendue, pas relancée.
+- **Limite d'instances** — `runOptions.instanceLimit` vaut `1` par défaut. Démarrer une instance de plus au-delà de la limite liste les instances en cours avec leur temps écoulé ; sélectionnez-en une (la première est présélectionnée) puis choisissez **Remplacer** pour la terminer et démarrer la nouvelle exécution, ou **Annuler**. Il n'est pas possible de dépasser la limite configurée.
+- **Déclencheur à l'ouverture du dossier** — `runOn: "folderOpen"` exécute automatiquement la tâche à l'activation de l'espace de travail, mais uniquement dans les espaces de travail approuvés (après approbation ou avec un enregistrement de confiance existant) ; un espace refusé ne l'exécute jamais. Approuver la demande de confiance exécute immédiatement les tâches d'ouverture de cette session. Le déclencheur ne s'exécute qu'une fois par activation — modifier `tasks.json` ne relance rien — et si la tâche atteint déjà sa limite d'instances, l'exécution automatique est silencieusement ignorée (aucune boîte de dialogue).
+- **Réutilisation du terminal** — seuls les terminaux de tâches terminées sont réutilisés. `panel: "shared"` et `panel: "dedicated"` réutilisent tous deux le terminal inactif propre à cette tâche lorsqu'il existe (le pool est propre à chaque tâche) et ouvrent un nouvel onglet sinon ; `panel: "new"` ouvre toujours un onglet neuf.
+- **Écho** — avec `presentation.echo` (activé par défaut), la ligne de commande est écrite dans le terminal avant la sortie du processus.
+- **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal. Notez deux écarts avec VS Code : `reveal: "silent"` ne se déploie que sur un code de sortie non nul (Spirit n'a pas de déclencheur par problem matcher), et `presentation.revealProblems` n'a aucun effet — il ne supprime ni ne déclenche l'affichage du terminal.
+- **Effacement** — `presentation.clear` efface le terminal avant une réexécution qui le réutilise.
+- **Fermeture** — `presentation.close` ferme automatiquement l'onglet à la sortie, quel que soit le code de sortie.
+- **Préservation du nom du terminal** — `presentation.preserveTerminalName` conserve le label de la tâche comme titre d'onglet ; sinon, le titre du processus en cours le remplace.
+- **Arrière-plan** — `isBackground: true` marque la tâche comme sans fin ; sa sortie compte comme une terminaison par l'utilisateur, jamais comme un échec (pas de déploiement du panneau en cas d'échec).
+- **Confirmation de fermeture** — `promptOnClose: true` demande une confirmation lorsque vous fermez un onglet dont le processus est encore actif ; confirmer termine le processus.
+- **Tâches masquées** — les tâches `hide: true` n'apparaissent jamais dans la palette mais peuvent toujours s'exécuter comme dépendances `dependsOn`.
+
+## Exemple
+
+Un `.spirit/tasks.json` complet — une chaîne en séquence build → test → package, plus une tâche de surveillance en arrière-plan :
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "Production build",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` ne s'exécute qu'une fois que `build` sort avec un code zéro ; `package` s'exécute ensuite après `test`, en réutilisant le même terminal préalablement effacé.
+- `package` résout `${workspaceFolder}` à l'exécution et ajoute `CHANNEL` à l'environnement du processus.
+- `watch` reste discret (`silent` n'affiche le panneau que sur une sortie non nulle) et sa sortie ne compte jamais comme un échec. Notez que rien ne peut en dépendre — une entrée `dependsOn` pointant vers une tâche en arrière-plan est masquée.
+
+Pages liées : [Automatisations](./automations.mdx) pour des tâches d'agent planifiées ou déclenchées par un événement GitHub, [Hooks](./hooks.mdx) pour des scripts déclenchés par des événements d'agent et de session.

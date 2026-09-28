@@ -907,6 +907,7 @@
     "browserPlaceholder": "Browser tab loading…",
     "browserElectronOnly": "Browser is only available in the Electron desktop version.",
     "prTab": "Pull Request",
+    "taskTab": "Task",
     "prElectronOnly": "Pull Requests are only available in the Electron desktop version.",
     "prGitHubAuthChecking": "Checking GitHub connection…",
     "prGitHubConnectLink": "Connect",
@@ -1087,6 +1088,14 @@
     "forceDeleteConfirmTitle": "Delete permanently?",
     "forceDeleteConfirmDescription": "Could not move to trash: {{reason}}. This cannot be undone."
   },
+  "task": {
+    "instanceLimitTitle": "“{{label}}” is already running.",
+    "instanceLimitDescription": "Replace terminates the selected instance and starts a new one.",
+    "instanceLimitReplace": "Replace",
+    "terminateConfirmTitle": "Terminate Task?",
+    "terminateConfirmDescription": "“{{label}}” is still running. Close the tab and terminate it?",
+    "terminateConfirmAction": "Terminate"
+  },
   "actionPalette": {
     "title": "Command Palette",
     "description": "Search and run workspace actions.",
@@ -1096,8 +1105,10 @@
     "group": {
       "chat": "Chat",
       "mode": "Mode",
+      "workspace": "Workspace",
       "appearance": "Appearance"
     },
+    "runTask": "Run Task",
     "theme": "Theme",
     "language": "Language",
     "back": "Back"
@@ -1529,7 +1540,13 @@
     "deny": "Deny",
     "alwaysTrust": "Always trust",
     "hooksSection": "Hooks that will run",
-    "openHookScript": "Open script in default editor"
+    "openHookScript": "Open script in default editor",
+    "riskTasks": "This workspace defines tasks that run commands from the project. Only continue if you trust this codebase.",
+    "riskBoth": "This workspace defines hooks and tasks that run scripts or commands from the project. Only continue if you trust this codebase.",
+    "tasksChanged": "Workspace tasks have changed since you last trusted them. Review the list before continuing.",
+    "bothChanged": "Workspace hooks and tasks have changed since you last trusted them. Review the list before continuing.",
+    "tasksSection": "Tasks that will be available",
+    "openTaskFile": "Open tasks file in default editor"
   },
   "webHost": {
     "error": {

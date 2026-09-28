@@ -83,6 +83,10 @@ export interface HostCommandDelegate {
   ): Promise<unknown>;
   deleteAutomation(automationId: string): Promise<unknown>;
   setAutomationEnabled(automationId: string, enabled: boolean): Promise<unknown>;
+  listTaskMenuItems(): Promise<unknown>;
+  resolveTaskForRun(key: string): Promise<unknown>;
+  resolveTaskByLabel(label: string): Promise<unknown>;
+  consumeFolderOpenTaskTriggers(): Promise<unknown>;
   replyPendingApproval(
     request: CommandPayloads["replyPendingApproval"]["request"],
   ): Promise<unknown>;
@@ -297,6 +301,10 @@ const hostCommandDispatch = {
   deleteAutomation: (host, payload) => host.deleteAutomation(payload.automationId),
   setAutomationEnabled: (host, payload) =>
     host.setAutomationEnabled(payload.automationId, payload.enabled),
+  listTaskMenuItems: (host) => host.listTaskMenuItems(),
+  resolveTaskForRun: (host, payload) => host.resolveTaskForRun(payload.key),
+  resolveTaskByLabel: (host, payload) => host.resolveTaskByLabel(payload.label),
+  consumeFolderOpenTaskTriggers: (host) => host.consumeFolderOpenTaskTriggers(),
   replyPendingApproval: (host, payload) => host.replyPendingApproval(payload.request),
   replyPendingQuestions: (host, payload) => host.replyPendingQuestions(payload.request),
   replyWorkspaceCapabilityTrust: (host, payload) =>

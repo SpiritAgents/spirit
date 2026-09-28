@@ -12,6 +12,7 @@ import {
   prepareShellForHostExecution,
   shellDisplayNameForResolvedShell,
   shellHostExecUsesBufferOutput,
+  shellRunCommandArgs,
 } from "./default-terminal-shell.js";
 import { detectShellForTools } from "./tools.js";
 
@@ -109,3 +110,19 @@ test.skipIf(process.platform !== "win32")(
     assert.equal(stdout.trim(), sample);
   },
 );
+
+test("shellRunCommandArgs picks the run-command prefix per shell flavor", () => {
+  assert.deepEqual(shellRunCommandArgs("/usr/local/bin/pwsh.exe"), [
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+  ]);
+  assert.deepEqual(shellRunCommandArgs("/system/powershell.exe"), [
+    "-NoProfile",
+    "-NonInteractive",
+    "-Command",
+  ]);
+  assert.deepEqual(shellRunCommandArgs("/system/cmd.exe"), ["/d", "/s", "/c"]);
+  assert.deepEqual(shellRunCommandArgs("/bin/zsh"), ["-c"]);
+  assert.deepEqual(shellRunCommandArgs("/usr/bin/fish"), ["-c"]);
+});
