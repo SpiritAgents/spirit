@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { useEffect, useState } from "react";
 
 import { COLLAPSIBLE_CLOSE_UNMOUNT_DELAY_MS } from "../collapsible-animation.js";

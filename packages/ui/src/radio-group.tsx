@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { RadioGroup as RadioGroupPrimitive } from "radix-ui";
 import type { ComponentProps } from "react";
 

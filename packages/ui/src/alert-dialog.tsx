@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { AlertDialog as AlertDialogPrimitive } from "radix-ui";
 import type { KeyboardEvent, ReactNode } from "react";
 

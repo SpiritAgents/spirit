@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { Check } from "@spiritagent/icons/check";
 

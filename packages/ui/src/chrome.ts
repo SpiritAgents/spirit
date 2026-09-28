@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-//
 // Desktop chrome class recipes used by shared primitives. Token values live in
 // theme.css; these strings are the visual source (desktop outline / hover / overlay).
 

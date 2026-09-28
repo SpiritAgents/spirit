@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { useEffect, useRef, type ComponentProps } from "react";
 
 import { cn } from "./cn.js";

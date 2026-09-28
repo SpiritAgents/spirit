@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { ScrollArea as ScrollAreaPrimitive } from "radix-ui";
 import { forwardRef, type ComponentProps, type CSSProperties } from "react";
 

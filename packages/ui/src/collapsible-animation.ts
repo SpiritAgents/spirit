@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 /** Matches the `spirit-collapsible-down` duration in app theme CSS. */
 export const COLLAPSIBLE_OPEN_ANIMATION_MS = 280;
 

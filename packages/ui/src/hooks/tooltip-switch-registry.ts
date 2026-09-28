@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 /** Matches `RADIX_OVERLAY_CLOSE_MS` in overlay-motion. */
 export const TOOLTIP_SWITCH_CONTENT_LINGER_MS = 100;
 

@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-//
 // One viewport-space band is shared by every mounted Skeleton. Restart only after
 // the highlight has fully cleared the rightmost target so leftover cannot loop.
 

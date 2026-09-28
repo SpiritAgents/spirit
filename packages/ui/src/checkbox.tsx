@@ -1,6 +1,3 @@
-// Copyright (c) 2026 Yu
-// SPDX-License-Identifier: MIT
-
 import { Check } from "@spiritagent/icons/check";
 
 import { Checkbox as CheckboxPrimitive } from "radix-ui";
