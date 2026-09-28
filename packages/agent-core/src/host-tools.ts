@@ -334,6 +334,27 @@ export function buildBuiltinHostToolDefinitions(
             type: "boolean",
             description: "Match case-insensitively.",
           },
+          "-n": {
+            type: "boolean",
+            description: "Show line numbers in content mode. Defaults to true.",
+          },
+          output_mode: {
+            type: "string",
+            enum: ["content", "files_with_matches", "count_matches"],
+            description:
+              "Output mode: content shows matching lines (default), files_with_matches lists matching file paths only, count_matches shows per-file match counts.",
+          },
+          head_limit: {
+            type: "integer",
+            minimum: 1,
+            description:
+              "Maximum number of entries to return. Defaults to 250; use offset to page through more.",
+          },
+          offset: {
+            type: "integer",
+            minimum: 0,
+            description: "Number of entries to skip before returning results, for pagination.",
+          },
           glob: {
             type: "string",
             description:
