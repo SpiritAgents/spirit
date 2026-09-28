@@ -113,7 +113,10 @@ function notifyInstanceLimitPromptListeners(): void {
   }
 }
 
-export async function runTaskByKey(key: string): Promise<void> {
+export async function runTaskByKey(
+  key: string,
+  options?: { trigger?: "folderOpen" },
+): Promise<void> {
   const currentDeps = deps;
   if (currentDeps === undefined) {
     return;
@@ -124,7 +127,16 @@ export async function runTaskByKey(key: string): Promise<void> {
     return;
   }
   await prewarmDependencies(currentDeps, resolved.task);
-  const outcome = await ensureCoordinator(resolved.defaultShell).run(resolved.task);
+  const outcome = await ensureCoordinator(resolved.defaultShell).run(
+    resolved.task,
+    options?.trigger === "folderOpen" ? { overLimit: "skip" } : undefined,
+  );
+  if (outcome.status === "skipped") {
+    console.warn(
+      `[tasks] skipped folder-open run of "${resolved.task.label}" (${resolved.task.key}): instance limit reached`,
+    );
+    return;
+  }
   if (outcome.status !== "completed") {
     return;
   }

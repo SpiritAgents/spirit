@@ -215,6 +215,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     resolveTaskByLabel(label) {
       return bridge.resolveTaskByLabel(label);
     },
+    consumeFolderOpenTaskTriggers() {
+      return bridge.consumeFolderOpenTaskTriggers();
+    },
     subscribeTasksUpdates(callback) {
       return bridge.tasksSubscribe(callback);
     },

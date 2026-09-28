@@ -21,7 +21,7 @@ function makeTask(overrides: Partial<ResolvedTask>): ResolvedTask {
     promptOnClose: false,
     dependsOn: [],
     dependsOrder: "parallel",
-    runOptions: { reevaluateOnRerun: true, instanceLimit: 1 },
+    runOptions: { reevaluateOnRerun: true, instanceLimit: 1, runOn: "default" },
     presentation: {
       echo: true,
       reveal: "always",

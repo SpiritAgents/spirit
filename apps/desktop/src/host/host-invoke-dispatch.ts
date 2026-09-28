@@ -86,6 +86,7 @@ export interface HostCommandDelegate {
   listTaskMenuItems(): Promise<unknown>;
   resolveTaskForRun(key: string): Promise<unknown>;
   resolveTaskByLabel(label: string): Promise<unknown>;
+  consumeFolderOpenTaskTriggers(): Promise<unknown>;
   replyPendingApproval(
     request: CommandPayloads["replyPendingApproval"]["request"],
   ): Promise<unknown>;
@@ -303,6 +304,7 @@ const hostCommandDispatch = {
   listTaskMenuItems: (host) => host.listTaskMenuItems(),
   resolveTaskForRun: (host, payload) => host.resolveTaskForRun(payload.key),
   resolveTaskByLabel: (host, payload) => host.resolveTaskByLabel(payload.label),
+  consumeFolderOpenTaskTriggers: (host) => host.consumeFolderOpenTaskTriggers(),
   replyPendingApproval: (host, payload) => host.replyPendingApproval(payload.request),
   replyPendingQuestions: (host, payload) => host.replyPendingQuestions(payload.request),
   replyWorkspaceCapabilityTrust: (host, payload) =>

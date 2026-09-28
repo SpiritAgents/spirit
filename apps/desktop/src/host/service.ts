@@ -59,6 +59,8 @@ import {
   applyWorkspaceTasksTrustDecision,
   computeWorkspaceTasksContentHash,
   loadTaskFiles,
+  canonicalizeWorkspaceRoot,
+  type LoadedTaskFile,
   type WorkLocationKind,
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
@@ -375,6 +377,7 @@ import {
   evaluateAndFilterTaskFiles,
   listTaskMenuItemsCommand,
   resolveTaskMenuItems,
+  resolveTaskFiles,
   tasksDebugEnabled,
   type TaskRunResolver,
 } from "./host-tasks-commands.js";
@@ -674,6 +677,8 @@ export class DesktopHostService {
   private readonly sessionListUpdateListeners = new Set<() => void>();
   private readonly tasksUpdateListeners = new Set<(items: DesktopTaskMenuItem[]) => void>();
   private readonly taskRunResolver: TaskRunResolver = createTaskRunResolver();
+  private pendingFolderOpenTaskKeys: string[] = [];
+  private folderOpenTriggerRoot: string | undefined;
   private readonly tasksWatcher = new TasksWatcher(() => {
     void this.refreshTasksFromDisk();
   });
@@ -3475,13 +3480,49 @@ export class DesktopHostService {
     if (workspaceRoot === undefined) {
       return;
     }
-    const { gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+    const { files, gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
     if (tasksDebugEnabled()) {
       console.warn(`[desktop-host][tasks] trust gate ${gate.status} (${reason})`);
     }
     if (gate.status === "needsPrompt") {
       this.tasksTrustPromptQueue.request(gate.tasks, workspaceRoot);
+      return;
     }
+    // User-level tasks are implicitly trusted, so noWorkspaceFiles arms them the same way.
+    if (gate.status === "allow" || gate.status === "noWorkspaceFiles") {
+      this.armFolderOpenTasks(workspaceRoot, files, false);
+    }
+  }
+
+  // folderOpen tasks arm once per activation round: adopting the same root again within a
+  // stay never re-arms, a different root starts a new round, and a trust-allow always arms
+  // (it is this session's deferred folder-open). Watcher refreshes never call this.
+  private armFolderOpenTasks(
+    workspaceRoot: string,
+    files: LoadedTaskFile[],
+    always: boolean,
+  ): void {
+    const canonical = canonicalizeWorkspaceRoot(workspaceRoot);
+    if (!always && this.folderOpenTriggerRoot === canonical) {
+      return;
+    }
+    const { tasks } = resolveTaskFiles({ workspaceRoot }, files);
+    const armed = tasks.filter((task) => task.runOptions.runOn === "folderOpen");
+    this.pendingFolderOpenTaskKeys = armed.map((task) => task.key);
+    this.folderOpenTriggerRoot = canonical;
+    if (tasksDebugEnabled()) {
+      for (const task of armed) {
+        console.warn(
+          `[desktop-host][tasks] folder-open armed ${task.label} ${task.key} (${task.sourceFile})`,
+        );
+      }
+    }
+  }
+
+  async consumeFolderOpenTaskTriggers(): Promise<string[]> {
+    const keys = this.pendingFolderOpenTaskKeys;
+    this.pendingFolderOpenTaskKeys = [];
+    return keys;
   }
 
   private async refreshTasksFromDisk(): Promise<void> {
@@ -3522,6 +3563,8 @@ export class DesktopHostService {
       decision,
     });
     if (decision !== "deny") {
+      // The just-allowed folderOpen tasks are this session's deferred folder-open run.
+      this.armFolderOpenTasks(waiter.workspaceRoot, files, true);
       await this.refreshTasksFromDisk();
     }
   }
