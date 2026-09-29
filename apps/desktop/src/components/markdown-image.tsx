@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
+import { useEffect, useState, type CSSProperties, type ComponentPropsWithoutRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
@@ -12,6 +12,22 @@ import { cn } from "@/lib/utils";
 
 export type ReadManagedImagePreviewDataUrl = (reference: string) => Promise<string | null>;
 type ImageLoadState = "idle" | "loading" | "unavailable";
+
+// A CSS width rule (e.g. the sizing classes below) beats the HTML width/height presentation
+// attributes, so markdown-declared dimensions must be re-applied as inline style.
+function toCssLength(value: string | number | undefined): string | number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value === "number") {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return /^\d+(?:\.\d+)?$/u.test(trimmed) ? Number(trimmed) : trimmed;
+}
 
 type MarkdownImagePreviewProps = {
   readManagedImagePreviewDataUrl?: ReadManagedImagePreviewDataUrl;
@@ -89,6 +105,9 @@ export function MarkdownImage({
   className,
   src,
   alt,
+  width,
+  height,
+  style,
   readManagedImagePreviewDataUrl,
   readLocalImagePreviewDataUrl,
   localImageBaseDir,
@@ -229,6 +248,16 @@ export function MarkdownImage({
     return null;
   }
 
+  const dimensionStyle: CSSProperties = {};
+  const cssWidth = toCssLength(width);
+  const cssHeight = toCssLength(height);
+  if (cssWidth !== undefined) {
+    dimensionStyle.width = cssWidth;
+  }
+  if (cssHeight !== undefined) {
+    dimensionStyle.height = cssHeight;
+  }
+
   return (
     <img
       className={cn(
@@ -239,6 +268,7 @@ export function MarkdownImage({
       alt={alt}
       loading="lazy"
       {...props}
+      style={{ ...dimensionStyle, ...style }}
       onError={() => setLoadState("unavailable")}
     />
   );
