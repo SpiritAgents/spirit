@@ -152,6 +152,24 @@ function preparedReferenceIndexForFiles(files: readonly string[]): PreparedRefer
   return prepared;
 }
 
+interface ScoredReferenceCandidate {
+  score: number;
+  candidate: PreparedReferenceCandidate;
+}
+
+function compareScoredReferenceCandidates(
+  left: ScoredReferenceCandidate,
+  right: ScoredReferenceCandidate,
+): number {
+  return (
+    right.score - left.score ||
+    Number(right.candidate.isDirectory) - Number(left.candidate.isDirectory) ||
+    left.candidate.basenameLength - right.candidate.basenameLength ||
+    left.candidate.pathLength - right.candidate.pathLength ||
+    left.candidate.path.localeCompare(right.candidate.path)
+  );
+}
+
 export function computeWorkspaceFileReferenceSuggestions(
   query: string,
   files: readonly string[],
@@ -164,7 +182,7 @@ export function computeWorkspaceFileReferenceSuggestions(
   const index = preparedReferenceIndexForFiles(files);
   const candidates = includeDirectories ? [...index.directories, ...index.files] : index.files;
 
-  const scored: { score: number; candidate: PreparedReferenceCandidate }[] = [];
+  const scored: ScoredReferenceCandidate[] = [];
   for (const candidate of candidates) {
     const score = scorePreparedReferenceCandidate(needle, needleChars, candidate);
     if (score === undefined) {
@@ -173,17 +191,69 @@ export function computeWorkspaceFileReferenceSuggestions(
     scored.push({ score, candidate });
   }
 
-  scored.sort((left, right) => {
-    return (
-      right.score - left.score ||
-      Number(right.candidate.isDirectory) - Number(left.candidate.isDirectory) ||
-      left.candidate.basenameLength - right.candidate.basenameLength ||
-      left.candidate.pathLength - right.candidate.pathLength ||
-      left.candidate.path.localeCompare(right.candidate.path)
-    );
-  });
+  scored.sort(compareScoredReferenceCandidates);
 
   return scored.slice(0, DEFAULT_SUGGESTION_LIMIT).map((item) => item.candidate.path);
+}
+
+/**
+ * Case-insensitive identity for merging: slash-normalized path without the trailing
+ * directory marker, so a pooled `ui/` and an index-derived `ui/` collapse into one row.
+ */
+function referenceSuggestionDedupeKey(path: string): string {
+  return normalizeWorkspaceReferenceDirectoryPath(path.replace(/\\/gu, "/")).toLowerCase();
+}
+
+/**
+ * Merge recent-pool display paths into workspace index suggestions, VS Code Quick Open style:
+ * the union is scored with the same fuzzy matcher, recent-pool hits stay on top in MRU order
+ * (the order of `recentPaths`), and the remaining hits follow the regular match-quality order.
+ * Recent paths may be workspace-relative or absolute; both score on basename and full path.
+ */
+export function mergeRecentIntoSuggestions(
+  query: string,
+  indexSuggestions: readonly string[],
+  recentPaths: readonly string[],
+  options?: { limit?: number },
+): string[] {
+  const needle = query.replace(/^@/u, "").trim().toLowerCase();
+  const needleChars = Array.from(needle);
+
+  const seen = new Set<string>();
+  const recentHits: string[] = [];
+  const scored: ScoredReferenceCandidate[] = [];
+
+  for (const path of recentPaths) {
+    const key = referenceSuggestionDedupeKey(path);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const candidate = prepareReferenceCandidate(path);
+    if (scorePreparedReferenceCandidate(needle, needleChars, candidate) === undefined) {
+      continue;
+    }
+    recentHits.push(candidate.path);
+  }
+
+  for (const path of indexSuggestions) {
+    const key = referenceSuggestionDedupeKey(path);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const candidate = prepareReferenceCandidate(path);
+    const score = scorePreparedReferenceCandidate(needle, needleChars, candidate);
+    if (score === undefined) {
+      continue;
+    }
+    scored.push({ score, candidate });
+  }
+
+  scored.sort(compareScoredReferenceCandidates);
+
+  const limit = options?.limit ?? DEFAULT_SUGGESTION_LIMIT;
+  return [...recentHits, ...scored.map((item) => item.candidate.path)].slice(0, limit);
 }
 
 export function charCountToCodeUnitIndex(input: string, cursorChars: number): number {
