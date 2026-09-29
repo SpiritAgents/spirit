@@ -244,7 +244,10 @@ export function ActionPickerDialog({
             goBackToRoot();
           }}
         />
-        <CommandList ref={commandListWheelHoverRef} className="max-h-96">
+        <CommandList
+          ref={commandListWheelHoverRef}
+          className="max-h-[min(28rem,calc(100dvh-6rem))]"
+        >
           {view === "root"
             ? groupedRootItems.map(({ group, items: groupItems }) => (
                 <CommandGroup key={group} heading={t(ACTION_PALETTE_GROUP_LABEL_KEYS[group])}>
