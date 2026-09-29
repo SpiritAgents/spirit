@@ -14,7 +14,7 @@ Un agente de IA de código abierto diseñado para multiplicar tu productividad.
 
 > Este proyecto está en desarrollo activo. El comportamiento y las API pueden cambiar entre versiones.
 
-[English](../README.md)
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 

@@ -14,7 +14,7 @@ Ein Open-Source-KI-Agent, der Ihre Produktivität vervielfacht.
 
 > Dieses Projekt befindet sich in aktiver Entwicklung. Verhalten und APIs können sich zwischen Releases ändern.
 
-[English](../README.md)
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 
