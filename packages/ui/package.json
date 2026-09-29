@@ -34,6 +34,10 @@
       "types": "./dist/resize-cursor.d.ts",
       "default": "./dist/resize-cursor.js"
     },
+    "./scroll-hover-keepalive": {
+      "types": "./dist/scroll-hover-keepalive.d.ts",
+      "default": "./dist/scroll-hover-keepalive.js"
+    },
     "./badge": {
       "types": "./dist/badge.d.ts",
       "default": "./dist/badge.js"

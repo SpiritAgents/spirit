@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import "./lib/i18n";
 import App from "./App";
 import { UiPortalProvider } from "@spiritagent/ui/portal";
+import { installScrollHoverKeepalive } from "@spiritagent/ui/scroll-hover-keepalive";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceToolsChromeProvider } from "@/contexts/workspace-tools-chrome-context";
@@ -38,6 +39,7 @@ if (typeof document !== "undefined") {
   applyClickablePointerCursorToDocument(getStoredClickablePointerCursor());
   applyReduceMotionToDocument(getStoredReduceMotion());
   startReduceMotionSystemListener();
+  installScrollHoverKeepalive();
 }
 
 const rootElement = document.getElementById("app");
