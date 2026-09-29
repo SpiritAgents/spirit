@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 An open-source AI agent built to multiply your productivity.
@@ -9,8 +15,6 @@ An open-source AI agent built to multiply your productivity.
 > This project is under active development. Behavior and APIs may change between releases.
 
 [简体中文](docs/README_zh-CN.md) · [繁體中文](docs/README_zh-TW.md) · [日本語](docs/README_ja.md) · [한국어](docs/README_ko.md) · [Deutsch](docs/README_de.md) · [Français](docs/README_fr.md) · [Español](docs/README_es.md) · [Português do Brasil](docs/README_pt-BR.md) · [Русский](docs/README_ru.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
 
 </div>
 
@@ -115,8 +119,6 @@ pnpm run dev:site
 See [apps/site/README.md](apps/site/README.md) for local development and the Vercel Git switch checklist.
 
 ## CLI
-
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
 
 The [Rust CLI](apps/cli) (`spirit`) provides a terminal-first host with an optional Ratatui UI. It connects to the shared Spirit Server daemon over WebSocket and suits scripting, SSH sessions, and minimal environments.
 
