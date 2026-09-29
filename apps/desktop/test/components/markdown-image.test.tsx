@@ -6,7 +6,7 @@ import { act, render, waitFor } from "@testing-library/react";
 import { Streamdown } from "streamdown";
 import { expect, test, vi } from "vitest";
 
-import { MarkdownImageSource } from "@/components/markdown-image";
+import { MarkdownImage, MarkdownImageSource } from "@/components/markdown-image";
 import { createMarkdownMessageComponents } from "@/lib/markdown-message-components";
 import { streamdownRehypePlugins } from "@/lib/markdown-streamdown-plugins";
 import { streamdownUrlTransform } from "@/lib/markdown-url-transform";
@@ -164,4 +164,35 @@ test("picture sources ignore late results after srcset changes", async () => {
   });
   await act(async () => resolveFirst(darkPreview));
   expect(container.querySelector("source")?.getAttribute("srcset")).toBe(lightPreview);
+});
+
+test("image width and height attributes become inline style over the auto-size class", async () => {
+  const { container } = render(
+    <MarkdownImage src="https://example.com/logo.svg" alt="Spirit" width={120} height="48" />,
+  );
+  await waitFor(() => {
+    expect(container.querySelector("img")).not.toBeNull();
+  });
+  const image = container.querySelector("img")!;
+  expect(image.style.width).toBe("120px");
+  expect(image.style.height).toBe("48px");
+  expect(image.getAttribute("width")).toBeNull();
+});
+
+test("raw Markdown img width survives the full pipeline", async () => {
+  const components = createMarkdownMessageComponents(undefined);
+  const { container } = render(
+    <Streamdown
+      mode="static"
+      components={components}
+      rehypePlugins={streamdownRehypePlugins}
+      urlTransform={streamdownUrlTransform}
+    >
+      {`<img src="https://example.com/logo.svg" width="120" alt="Spirit">`}
+    </Streamdown>,
+  );
+  await waitFor(() => {
+    expect(container.querySelector("img")).not.toBeNull();
+  });
+  expect(container.querySelector("img")?.style.width).toBe("120px");
 });
