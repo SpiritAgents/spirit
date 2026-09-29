@@ -9,7 +9,7 @@ import { cn } from "./cn.js";
 import { modalContentMotion, modalOverlayMotion } from "./overlay-motion.js";
 import { useUiPortalContainer } from "./portal.js";
 
-export const dialogOverlayClassName = cn("fixed inset-0 z-50 bg-black/40", modalOverlayMotion);
+export const dialogOverlayClassName = cn("fixed inset-0 z-50 bg-black/20", modalOverlayMotion);
 
 export const dialogContentClassName = cn(
   "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-popover-foreground sm:max-w-sm",
