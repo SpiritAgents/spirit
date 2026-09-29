@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { detectSupportedImageFile, hasSupportedImageExtension } from "./image-file-support.js";
+import {
+  detectPreviewableImageFile,
+  detectSupportedImageFile,
+  hasSupportedImageExtension,
+} from "./image-file-support.js";
 
 const PNG_HEADER = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
@@ -53,4 +57,31 @@ test("detectSupportedImageFile validates ico signature", () => {
 test("detectSupportedImageFile rejects mismatched extension and signature", () => {
   assert.equal(detectSupportedImageFile("icon.png", Uint8Array.from([0, 1, 2, 3])), undefined);
   assert.equal(detectSupportedImageFile("notes.txt", PNG_HEADER), undefined);
+});
+
+test("detectPreviewableImageFile accepts svg text signatures", () => {
+  const plain = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+  const withProlog = new TextEncoder().encode(
+    '<?xml version="1.0" encoding="UTF-8"?>\n<!-- brand asset -->\n<svg viewBox="0 0 1 1"></svg>',
+  );
+  assert.deepEqual(detectPreviewableImageFile("vector.svg", plain), {
+    extension: ".svg",
+    mimeType: "image/svg+xml",
+  });
+  assert.deepEqual(detectPreviewableImageFile("vector.svg", withProlog), {
+    extension: ".svg",
+    mimeType: "image/svg+xml",
+  });
+});
+
+test("detectPreviewableImageFile rejects non-svg text and keeps raster behavior", () => {
+  assert.equal(
+    detectPreviewableImageFile("vector.svg", new TextEncoder().encode("<html></html>")),
+    undefined,
+  );
+  assert.equal(detectPreviewableImageFile("vector.SVG", PNG_HEADER), undefined);
+  assert.deepEqual(detectPreviewableImageFile("icon.png", PNG_HEADER), {
+    extension: ".png",
+    mimeType: "image/png",
+  });
 });

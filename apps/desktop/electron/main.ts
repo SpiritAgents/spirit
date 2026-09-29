@@ -16,7 +16,7 @@ import {
   shell,
 } from "electron";
 
-import { detectSupportedImageFile } from "@spiritagent/host-internal/image-file-support";
+import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
 
 import {
   registerDesktopNotifications,
@@ -1987,7 +1987,7 @@ async function readImagePreviewDataUrlFromPath(filePath: string): Promise<string
     }
 
     const bytes = await readFile(filePath);
-    const detected = detectSupportedImageFile(filePath, bytes);
+    const detected = detectPreviewableImageFile(filePath, bytes);
     if (!detected) {
       return null;
     }

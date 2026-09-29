@@ -5,8 +5,37 @@ import {
   classifyMarkdownImageSrc,
   dirnameLocalPath,
   isBlockedRemoteMarkdownMediaSrc,
+  parseMarkdownImageSrcSet,
   resolveMarkdownLocalImageFilePath,
 } from "../../src/lib/markdown-local-image-src.ts";
+
+test("parseMarkdownImageSrcSet preserves candidate descriptors and commas inside URLs", () => {
+  assert.deepEqual(parseMarkdownImageSrcSet("packages/brand/assets/logo-dark.svg"), [
+    { src: "packages/brand/assets/logo-dark.svg", descriptor: "" },
+  ]);
+  assert.deepEqual(parseMarkdownImageSrcSet("./a.svg, ./b.svg 2x, ./c.svg 3x"), [
+    { src: "./a.svg", descriptor: "" },
+    { src: "./b.svg", descriptor: "2x" },
+    { src: "./c.svg", descriptor: "3x" },
+  ]);
+  assert.deepEqual(parseMarkdownImageSrcSet("https://example.com/a,b.svg 320w, ./c.svg 640w"), [
+    { src: "https://example.com/a,b.svg", descriptor: "320w" },
+    { src: "./c.svg", descriptor: "640w" },
+  ]);
+  assert.deepEqual(parseMarkdownImageSrcSet("data:image/png;base64,abc 1x, ./b.png 2x"), [
+    { src: "data:image/png;base64,abc", descriptor: "1x" },
+    { src: "./b.png", descriptor: "2x" },
+  ]);
+});
+
+test("parseMarkdownImageSrcSet skips invalid descriptors and handles HTML whitespace", () => {
+  assert.deepEqual(parseMarkdownImageSrcSet(" \n,\t./a.svg\t.5x,\n./b.svg 1.5x, "), [
+    { src: "./a.svg", descriptor: ".5x" },
+    { src: "./b.svg", descriptor: "1.5x" },
+  ]);
+  assert.deepEqual(parseMarkdownImageSrcSet("./a.svg 0w, ./b.svg 1x 2x, ./c.svg invalid"), []);
+  assert.deepEqual(parseMarkdownImageSrcSet(""), []);
+});
 
 test("isBlockedRemoteMarkdownMediaSrc detects clear-text http and protocol-relative urls", () => {
   assert.equal(isBlockedRemoteMarkdownMediaSrc("https://example.com/a.png"), false);
