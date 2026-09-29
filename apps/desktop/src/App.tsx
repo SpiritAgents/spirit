@@ -893,6 +893,9 @@ export default function App() {
                   onOpenChange={composer.setFilePickerOpen}
                   workspaceRoot={snapshot?.workspaceRoot ?? ""}
                   workspaceBinding={snapshot?.workspaceBinding ?? "project"}
+                  recentFiles={composer.recentFilePool.fileDisplayPaths}
+                  onValidateRecentFiles={composer.recentFilePool.validateEntries}
+                  onOpenPlan={() => workspaceTools.openWorkspacePlan()}
                   onOpenWorkspaceFile={(relativePath) => {
                     if (isWorkspaceReferenceDirectoryPath(relativePath)) {
                       workspaceTools.revealWorkspaceDirectory(
