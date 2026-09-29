@@ -70,7 +70,7 @@ export function AlertDialog({
       <AlertDialogPrimitive.Portal container={portalContainer}>
         <AlertDialogPrimitive.Overlay
           data-slot="alert-dialog-overlay"
-          className={cn("fixed inset-0 z-50 bg-black/40", modalOverlayMotion)}
+          className={cn("fixed inset-0 z-50 bg-black/20", modalOverlayMotion)}
         />
         <AlertDialogPrimitive.Content
           data-slot="alert-dialog-content"
