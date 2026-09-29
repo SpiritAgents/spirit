@@ -40,6 +40,7 @@ import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
 import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
 import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
+import { useRecentFilePool } from "@/hooks/useRecentFilePool";
 import { useWorkspaceFileIndex } from "@/hooks/use-workspace-file-index";
 import type { useDesktopRuntime, QuestionDraft } from "@/hooks/useDesktopRuntime";
 import {
@@ -491,6 +492,11 @@ export function useComposerController({
     getWorkspaceFileReferenceIndex: runtime.getWorkspaceFileReferenceIndex,
   });
 
+  const recentFilePool = useRecentFilePool({
+    workspaceRoot: snapshot?.workspaceRoot ?? "",
+    statHostTextFile: runtime.statHostTextFile,
+  });
+
   useEffect(() => {
     setSlashSelectedIndex(0);
   }, [slashQuery?.raw, slashQuery?.start, slashQuery?.end]);
@@ -879,11 +885,13 @@ export function useComposerController({
       }
 
       composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true);
+      // The chip counts as a reference even if the message is never sent.
+      recentFilePool.recordAtReference(path);
       setFileReferenceSelectedIndex(-1);
       setFileReferenceMenuView("root");
       setDismissedFileReferenceKey(null);
     },
-    [fileReferenceSuggestions?.query],
+    [fileReferenceSuggestions?.query, recentFilePool.recordAtReference],
   );
 
   const applySessionReferenceSuggestion = useCallback(
