@@ -140,7 +140,10 @@ export function WorkspaceFilePickerDialog({
           onValueChange={setQuery}
           placeholder={t("workspace.filePickerPlaceholder")}
         />
-        <CommandList ref={commandListWheelHoverRef} className="max-h-96">
+        <CommandList
+          ref={commandListWheelHoverRef}
+          className="max-h-[min(28rem,calc(100dvh-6rem))]"
+        >
           {absolutePathCandidate && absolutePathExists !== false && showAbsolutePathIcon ? (
             <CommandItem
               key={`absolute:${absolutePathCandidate}`}
