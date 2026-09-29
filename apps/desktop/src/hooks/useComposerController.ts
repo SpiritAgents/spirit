@@ -10,7 +10,10 @@ import {
 } from "react";
 import type { TFunction } from "i18next";
 
-import { codeUnitIndexToCharCount } from "@spiritagent/host-internal/workspace-file-reference-query";
+import {
+  codeUnitIndexToCharCount,
+  mergeRecentIntoSuggestions,
+} from "@spiritagent/host-internal/workspace-file-reference-query";
 
 import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
 import { segmentsToMessageText, segmentsToPlainText } from "@/components/composer-rich-input";
@@ -508,23 +511,25 @@ export function useComposerController({
       return;
     }
 
-    if (!workspaceFileIndex.ready) {
-      setFileReferenceSuggestions({
-        query: fileReferenceQuery,
-        suggestions: [],
-      });
-      return;
-    }
-
+    recentFilePool.validateEntries();
+    const indexSuggestions = workspaceFileIndex.ready
+      ? workspaceFileIndex.search(fileReferenceQuery.raw)
+      : [];
     setFileReferenceSuggestions({
       query: fileReferenceQuery,
-      suggestions: workspaceFileIndex.search(fileReferenceQuery.raw),
+      suggestions: mergeRecentIntoSuggestions(
+        fileReferenceQuery.raw,
+        indexSuggestions,
+        recentFilePool.displayPaths,
+      ),
     });
     setFileReferenceSelectedIndex(0);
   }, [
     dismissedFileReferenceKey,
     fileReferenceQuery,
     fileReferenceQueryKey,
+    recentFilePool.displayPaths,
+    recentFilePool.validateEntries,
     workspaceFileIndex.ready,
     workspaceFileIndex.fileCount,
     workspaceFileIndex.search,
@@ -1544,6 +1549,7 @@ export function useComposerController({
     handleComposerSuggestionKeyDown,
     handleComposerKeyDown,
     workspaceFileIndex,
+    recentFilePool,
     composerPlaceholder,
     composerAgentModeChipPlaceholder,
     composerCanSend,
