@@ -8,7 +8,11 @@ import type {
   MouseEvent,
 } from "react";
 
-import { MarkdownImage, type ReadManagedImagePreviewDataUrl } from "@/components/markdown-image";
+import {
+  MarkdownImage,
+  MarkdownImageSource,
+  type ReadManagedImagePreviewDataUrl,
+} from "@/components/markdown-image";
 import { MarkdownVideo, type ReadManagedVideoPreviewUrl } from "@/components/markdown-video";
 import type {
   ReadLocalImagePreview,
@@ -319,7 +323,15 @@ export function createMarkdownMessageComponents(
               {children}
             </picture>
           ),
-          source: (props: ComponentPropsWithoutRef<"source">) => <source {...props} />,
+          source: (props: ComponentPropsWithoutRef<"source">) => (
+            <MarkdownImageSource
+              readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
+              readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+              localImageBaseDir={localImageBaseDir}
+              localImageAllowedRootDir={localImageAllowedRootDir}
+              {...props}
+            />
+          ),
           sup: ({ className, ...props }: HTMLAttributes<HTMLElement>) => (
             <sup
               className={cn("text-[10px] leading-snug text-muted-foreground/80", className)}

@@ -9,6 +9,34 @@ export type MarkdownImageSrcKind = "managed" | "remote" | "local" | "invalid";
 
 const SCHEME_PATTERN = /^([a-zA-Z][a-zA-Z0-9+.-]*):/u;
 
+export function parseMarkdownImageSrcSet(
+  srcSet: string,
+): Array<{ src: string; descriptor: string }> {
+  const candidates: Array<{ src: string; descriptor: string }> = [];
+  let remaining = srcSet;
+  while (remaining) {
+    remaining = remaining.replace(/^[\t\n\f\r ,]+/u, "");
+    const token = /^[^\t\n\f\r ]+/u.exec(remaining)?.[0];
+    if (!token) {
+      break;
+    }
+    remaining = remaining.slice(token.length);
+    let src = token;
+    let descriptor = "";
+    if (src.endsWith(",")) {
+      src = src.replace(/,+$/u, "");
+    } else {
+      const separator = remaining.indexOf(",");
+      descriptor = (separator < 0 ? remaining : remaining.slice(0, separator)).trim();
+      remaining = separator < 0 ? "" : remaining.slice(separator + 1);
+    }
+    if (/^(?:[1-9]\d*w|(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?x)?$/u.test(descriptor)) {
+      candidates.push({ src, descriptor });
+    }
+  }
+  return candidates;
+}
+
 /** True for clear-text http and protocol-relative URLs that must not load in Markdown media. */
 export function isBlockedRemoteMarkdownMediaSrc(src: string): boolean {
   const trimmed = src.trim();

@@ -29,6 +29,38 @@ export function hasSupportedImageExtension(filePath: string): boolean {
   return supportedImageExtension(filePath) !== undefined;
 }
 
+type PreviewableImageExtension = SupportedImageExtension | ".svg";
+
+export interface PreviewableImageFile {
+  extension: PreviewableImageExtension;
+  mimeType: string;
+}
+
+const SVG_PREVIEW_MIME_TYPE = "image/svg+xml";
+const SVG_SNIFF_BYTES = 8192;
+// SVG has no magic bytes; sniff the text prolog (BOM, <?xml?>, comments, DOCTYPE) for a root <svg> tag.
+const SVG_TEXT_PATTERN =
+  /^\uFEFF?\s*(?:<\?xml[\s\S]*?\?>\s*)?(?:(?:<!--[\s\S]*?-->|<!DOCTYPE[^>[]*(?:\[[\s\S]*?\][^>[]*)?>)\s*)*<svg[\s>]/iu;
+
+/**
+ * Image detection for host-side preview surfaces (e.g. Desktop Markdown / file preview), where the
+ * bytes stay local as a data URL. Unlike detectSupportedImageFile this also accepts SVG, which must
+ * not be sent to model transports but renders fine in an <img> element.
+ */
+export function detectPreviewableImageFile(
+  filePath: string,
+  bytes: Uint8Array,
+): PreviewableImageFile | undefined {
+  if (fileExtensionFromPath(filePath) !== ".svg") {
+    return detectSupportedImageFile(filePath, bytes);
+  }
+  const text = new TextDecoder().decode(bytes.subarray(0, SVG_SNIFF_BYTES));
+  if (!SVG_TEXT_PATTERN.test(text)) {
+    return undefined;
+  }
+  return { extension: ".svg", mimeType: SVG_PREVIEW_MIME_TYPE };
+}
+
 export function detectSupportedImageFile(
   filePath: string,
   bytes: Uint8Array,
