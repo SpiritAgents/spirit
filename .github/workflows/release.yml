@@ -38,7 +38,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          registry-url: https://registry.npmjs.org/
 
       - name: Verify versions
         run: pnpm run release:verify-version -- --version "$RELEASE_VERSION"
@@ -93,7 +92,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          registry-url: https://registry.npmjs.org/
           cache: pnpm
 
       - name: Install dependencies
@@ -211,12 +209,6 @@ jobs:
     # Only the macOS legs sign, so only they get the signing secrets; an empty name means no
     # environment at all, which also keeps the Windows and Linux legs out of the deployment log.
     environment: ${{ matrix.platform == 'mac' && 'signing' || '' }}
-    env:
-      npm_config_registry: https://registry.npmjs.org/
-      npm_config_electron_mirror: https://github.com/electron/electron/releases/download/
-      npm_config_electron_builder_binaries_mirror: https://github.com/electron-userland/electron-builder-binaries/releases/download/
-      ELECTRON_MIRROR: https://github.com/electron/electron/releases/download/
-      ELECTRON_BUILDER_BINARIES_MIRROR: https://github.com/electron-userland/electron-builder-binaries/releases/download/
     strategy:
       fail-fast: false
       matrix:
@@ -258,7 +250,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: ".nvmrc"
-          registry-url: https://registry.npmjs.org/
           cache: pnpm
 
       - name: Install dependencies
