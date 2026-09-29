@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ListTodo } from "lucide-react";
+
+import { mergeRecentIntoSuggestions } from "@spiritagent/host-internal/workspace-file-reference-query";
 
 import { WorkspaceFilePickerRow } from "@/components/workspace-file-picker-row";
 import {
@@ -31,8 +34,12 @@ type WorkspaceFilePickerDialogProps = {
   workspaceBinding: "project" | "none";
   indexReady: boolean;
   searchWorkspaceFiles(query: string): string[];
+  /** Recent-pool file entries in display form (workspace-relative or absolute), MRU-first. */
+  recentFiles: readonly string[];
   onOpenWorkspaceFile(relativePath: string): void;
   onOpenExternalFile(absolutePath: string): void;
+  onOpenPlan?: () => void;
+  onValidateRecentFiles?: () => void;
   statHostTextFile(absolutePath: string): Promise<{ exists: boolean; isFile: boolean }>;
 };
 
@@ -43,8 +50,11 @@ export function WorkspaceFilePickerDialog({
   workspaceBinding,
   indexReady,
   searchWorkspaceFiles,
+  recentFiles,
   onOpenWorkspaceFile,
   onOpenExternalFile,
+  onOpenPlan,
+  onValidateRecentFiles,
   statHostTextFile,
 }: WorkspaceFilePickerDialogProps) {
   const { t } = useTranslation();
@@ -67,6 +77,12 @@ export function WorkspaceFilePickerDialog({
   }, [open]);
 
   useEffect(() => {
+    if (open) {
+      onValidateRecentFiles?.();
+    }
+  }, [open, onValidateRecentFiles]);
+
+  useEffect(() => {
     if (!open) {
       return;
     }
@@ -74,14 +90,19 @@ export function WorkspaceFilePickerDialog({
     const trimmed = query.trim();
     const workspaceSearchEnabled =
       workspaceBinding === "project" && workspaceRoot.trim().length > 0;
+    const indexSuggestions =
+      workspaceSearchEnabled && indexReady
+        ? searchWorkspaceFiles(toWorkspaceFileReferenceQueryInput(trimmed))
+        : [];
 
-    if (!workspaceSearchEnabled || !indexReady) {
-      setSuggestions([]);
-      return;
-    }
-
-    setSuggestions(searchWorkspaceFiles(toWorkspaceFileReferenceQueryInput(trimmed)));
-  }, [indexReady, open, query, searchWorkspaceFiles, workspaceBinding, workspaceRoot]);
+    setSuggestions(
+      mergeRecentIntoSuggestions(
+        toWorkspaceFileReferenceQueryInput(trimmed),
+        indexSuggestions,
+        recentFiles,
+      ),
+    );
+  }, [indexReady, open, query, recentFiles, searchWorkspaceFiles, workspaceBinding, workspaceRoot]);
 
   const trimmedQuery = query.trim();
   const absolutePathCandidate = looksLikeAbsolutePath(trimmedQuery)
@@ -122,8 +143,37 @@ export function WorkspaceFilePickerDialog({
     onOpenExternalFile(absolutePath);
   };
 
+  // Pool entries may display as absolute paths (out-of-workspace files); route them
+  // to the external-open path, everything else stays a workspace-relative open.
+  const closeAndOpenSuggestion = (path: string) => {
+    if (looksLikeAbsolutePath(path)) {
+      closeAndOpenExternalFile(path);
+      return;
+    }
+    closeAndOpenWorkspaceFile(path);
+  };
+
+  const closeAndOpenPlan = () => {
+    onOpenChange(false);
+    onOpenPlan?.();
+  };
+
+  const planNeedle = trimmedQuery.toLowerCase();
+  const showPlan = Boolean(onOpenPlan && (planNeedle === "" || "plan".includes(planNeedle)));
+  const recentFileKeys = new Set(recentFiles.map((path) => path.toLowerCase()));
+  const firstNonRecentIndex = suggestions.findIndex(
+    (path) => !recentFileKeys.has(path.toLowerCase()),
+  );
+  const planInsertIndex = showPlan
+    ? firstNonRecentIndex === -1
+      ? suggestions.length
+      : firstNonRecentIndex
+    : -1;
+
   const showEmpty =
-    suggestions.length === 0 && (!absolutePathCandidate || absolutePathExists === false);
+    suggestions.length === 0 &&
+    !showPlan &&
+    (!absolutePathCandidate || absolutePathExists === false);
   const showAbsolutePathIcon = Boolean(absolutePathCandidate && absolutePathExists !== false);
 
   return (
@@ -165,16 +215,55 @@ export function WorkspaceFilePickerDialog({
               </span>
             </CommandItem>
           ) : null}
-          {suggestions.map((path) => (
+          {suggestions
+            .slice(0, planInsertIndex === -1 ? suggestions.length : planInsertIndex)
+            .map((path) => (
+              <CommandItem
+                key={path}
+                value={path}
+                className={DESKTOP_COMMAND_PALETTE_ITEM_CLASS}
+                onSelect={() => closeAndOpenSuggestion(path)}
+              >
+                <WorkspaceFilePickerRow path={path} />
+              </CommandItem>
+            ))}
+          {showPlan ? (
             <CommandItem
-              key={path}
-              value={path}
+              key="plan"
+              value="plan:"
               className={DESKTOP_COMMAND_PALETTE_ITEM_CLASS}
-              onSelect={() => closeAndOpenWorkspaceFile(path)}
+              onSelect={closeAndOpenPlan}
             >
-              <WorkspaceFilePickerRow path={path} />
+              <ListTodo
+                className={cn(
+                  "size-3.5 shrink-0 text-popover-foreground",
+                  DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+                )}
+                aria-hidden
+                strokeWidth={1.75}
+              />
+              <span
+                className={cn(
+                  "min-w-0 truncate text-sm text-popover-foreground",
+                  DESKTOP_COMMAND_PALETTE_ITEM_TONE,
+                )}
+              >
+                Plan
+              </span>
             </CommandItem>
-          ))}
+          ) : null}
+          {planInsertIndex > -1
+            ? suggestions.slice(planInsertIndex).map((path) => (
+                <CommandItem
+                  key={path}
+                  value={path}
+                  className={DESKTOP_COMMAND_PALETTE_ITEM_CLASS}
+                  onSelect={() => closeAndOpenSuggestion(path)}
+                >
+                  <WorkspaceFilePickerRow path={path} />
+                </CommandItem>
+              ))
+            : null}
           {showEmpty ? (
             <CommandEmpty>
               {!indexReady
