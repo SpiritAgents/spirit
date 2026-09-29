@@ -14,7 +14,7 @@
 
 > 本项目仍在积极开发中。各版本之间的行为与 API 可能发生变化。
 
-[English](../README.md)
+[English](../README.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 
