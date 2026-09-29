@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties, type ComponentPropsWithoutRef 
 import { useTranslation } from "react-i18next";
 
 import type { ReadLocalImagePreview } from "@/components/tool-call/tool-call-types";
+import { DESKTOP_ELEVATION_SHADOW_SM } from "@/lib/desktop-chrome";
 import {
   classifyMarkdownImageSrc,
   parseMarkdownImageSrcSet,
@@ -261,7 +262,8 @@ export function MarkdownImage({
   return (
     <img
       className={cn(
-        "my-3 block max-h-[28rem] w-auto max-w-full rounded-md border border-border/40 bg-background/40 object-contain shadow-sm",
+        "my-3 block max-h-[28rem] w-auto max-w-full rounded-md border border-border/40 bg-background/40 object-contain",
+        DESKTOP_ELEVATION_SHADOW_SM,
         className,
       )}
       src={resolvedSrc}
