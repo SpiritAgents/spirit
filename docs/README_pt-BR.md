@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 Um agente de IA de código aberto feito para multiplicar sua produtividade.
@@ -9,8 +15,6 @@ Um agente de IA de código aberto feito para multiplicar sua produtividade.
 > Este projeto está em desenvolvimento ativo. Comportamento e APIs podem mudar entre releases.
 
 [English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
 
 </div>
 
@@ -115,8 +119,6 @@ pnpm run dev:site
 Veja [apps/site/README.md](../apps/site/README.md) para desenvolvimento local e a troca de repositório na Vercel.
 
 ## CLI
-
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
 
 A [CLI Rust](../apps/cli) (`spirit`) oferece um host terminal-first com UI Ratatui opcional. Conecta-se ao daemon compartilhado Spirit Server via WebSocket, ideal para scripts, sessões SSH e ambientes mínimos.
 

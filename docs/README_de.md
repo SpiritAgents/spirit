@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 Ein Open-Source-KI-Agent, der Ihre Produktivität vervielfacht.
@@ -9,8 +15,6 @@ Ein Open-Source-KI-Agent, der Ihre Produktivität vervielfacht.
 > Dieses Projekt befindet sich in aktiver Entwicklung. Verhalten und APIs können sich zwischen Releases ändern.
 
 [English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
 
 </div>
 
@@ -115,8 +119,6 @@ pnpm run dev:site
 Lokale Entwicklung und der Vercel-Repo-Wechsel stehen in [apps/site/README.md](../apps/site/README.md).
 
 ## CLI
-
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
 
 Die [Rust CLI](../apps/cli) (`spirit`) bietet einen terminal-first Host mit optionaler Ratatui-UI. Sie verbindet sich per WebSocket mit dem gemeinsamen Spirit-Server-Daemon und eignet sich für Skripte, SSH-Sitzungen und Minimalumgebungen.
 

@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 一款開源 AI 智能體，旨在成倍提升你的生產力。
@@ -9,8 +15,6 @@
 > 本專案仍在積極開發中。各版本之間的行為與 API 可能發生變化。
 
 [English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
 
 </div>
 
@@ -115,8 +119,6 @@ pnpm run dev:site
 本機開發與 Vercel 換倉步驟見 [apps/site/README.md](../apps/site/README.md)。
 
 ## CLI
-
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
 
 [Rust CLI](../apps/cli)（`spirit`）提供終端優先的宿主，可選 Ratatui 介面。透過 WebSocket 連接共享 Spirit Server daemon，適合腳本化、SSH 工作階段與極簡環境。
 
