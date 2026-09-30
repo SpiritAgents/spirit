@@ -8,13 +8,16 @@ import {
   WORKSPACE_FILE_CHIP_ICON_CLASS,
 } from "@/lib/workspace-file-chip-styles";
 import { WORKSPACE_FILE_ICON_CHIP_SIZE_PX } from "@/lib/workspace-file-icon-sizes";
+import { ListTodo } from "lucide-react";
 
 type WorkspaceFileChipProps = {
   path: string;
   sourceTabId?: string;
+  /** The reference is the session Plan file (carried by the segment / navigate meta). */
+  isPlan?: boolean;
 };
 
-export function WorkspaceFileChip({ path, sourceTabId }: WorkspaceFileChipProps) {
+export function WorkspaceFileChip({ path, sourceTabId, isPlan = false }: WorkspaceFileChipProps) {
   const normalized = path.replace(/\\/gu, "/");
   const presentation = resolveWorkspaceFileChipPresentation(normalized);
   return (
@@ -22,24 +25,29 @@ export function WorkspaceFileChip({ path, sourceTabId }: WorkspaceFileChipProps)
       data-chip-kind="workspaceFile"
       className={WORKSPACE_FILE_CHIP_CLASS}
       title={normalized}
-      aria-label={normalized}
+      aria-label={isPlan ? "Plan" : normalized}
     >
       <ChipIcon className={WORKSPACE_FILE_CHIP_ICON_CLASS}>
-        <WorkspaceFileIcon
-          path={presentation.iconPath}
-          kind={presentation.iconKind}
-          size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
-          colorMode="inherit"
-        />
+        {isPlan ? (
+          <ListTodo size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX} aria-hidden strokeWidth={1.75} />
+        ) : (
+          <WorkspaceFileIcon
+            path={presentation.iconPath}
+            kind={presentation.iconKind}
+            size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
+            colorMode="inherit"
+          />
+        )}
       </ChipIcon>
       <NavigableChipLabel
         target={{
           kind: "workspaceFile",
           path: normalized,
           ...(sourceTabId ? { sourceTabId } : {}),
+          ...(isPlan ? { isPlan: true } : {}),
         }}
       >
-        {workspaceFileBasename(normalized)}
+        {isPlan ? "Plan" : workspaceFileBasename(normalized)}
       </NavigableChipLabel>
     </ChipShell>
   );

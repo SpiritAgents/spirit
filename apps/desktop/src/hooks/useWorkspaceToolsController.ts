@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useWorkspaceToolsChromeActions } from "@/contexts/workspace-tools-chrome-context";
+import { useRecentFilePool } from "@/hooks/useRecentFilePool";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { normalizeBrowserUrl } from "@/lib/browser-url";
 import { readWorkspaceToolsWidthRatio } from "@/lib/layout-prefs";
@@ -103,9 +104,15 @@ export function useWorkspaceToolsController({
     [runtime.hostKind],
   );
 
+  const recentFilePool = useRecentFilePool({
+    workspaceRoot: snapshot?.workspaceRoot ?? "",
+    statHostTextFile: runtime.statHostTextFile,
+  });
+
   const revealEditorFile = useCallback(
     (navigation: ReturnType<typeof buildOpenEditorFileNavigation>) => {
       const target = navigation.reveal;
+      recentFilePool.recordOpenedFile(target);
       setWorkspaceToolsOpen(true);
       setWorkspaceToolTabs(navigation.tabs);
       setActiveWorkspaceToolTabId(navigation.activeTabId);
@@ -124,7 +131,7 @@ export function useWorkspaceToolsController({
       }
       setWorkspaceFileRevealNonce((value) => value + 1);
     },
-    [setWorkspaceToolsOpen],
+    [recentFilePool.recordOpenedFile, setWorkspaceToolsOpen],
   );
 
   const openEditorFile = useCallback(

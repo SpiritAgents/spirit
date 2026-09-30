@@ -10,7 +10,10 @@ import {
 } from "react";
 import type { TFunction } from "i18next";
 
-import { codeUnitIndexToCharCount } from "@spiritagent/host-internal/workspace-file-reference-query";
+import {
+  codeUnitIndexToCharCount,
+  mergeRecentIntoSuggestions,
+} from "@spiritagent/host-internal/workspace-file-reference-query";
 
 import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
 import { segmentsToMessageText, segmentsToPlainText } from "@/components/composer-rich-input";
@@ -40,6 +43,7 @@ import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
 import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
 import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
+import { useRecentFilePool } from "@/hooks/useRecentFilePool";
 import { useWorkspaceFileIndex } from "@/hooks/use-workspace-file-index";
 import type { useDesktopRuntime, QuestionDraft } from "@/hooks/useDesktopRuntime";
 import {
@@ -491,6 +495,13 @@ export function useComposerController({
     getWorkspaceFileReferenceIndex: runtime.getWorkspaceFileReferenceIndex,
   });
 
+  const recentFilePool = useRecentFilePool({
+    workspaceRoot: snapshot?.workspaceRoot ?? "",
+    statHostTextFile: runtime.statHostTextFile,
+    // Only an existing Plan is referenceable; a missing Plan stays out of the @ menu.
+    planPath: snapshot?.plan?.exists ? snapshot.plan.path : undefined,
+  });
+
   useEffect(() => {
     setSlashSelectedIndex(0);
   }, [slashQuery?.raw, slashQuery?.start, slashQuery?.end]);
@@ -502,23 +513,25 @@ export function useComposerController({
       return;
     }
 
-    if (!workspaceFileIndex.ready) {
-      setFileReferenceSuggestions({
-        query: fileReferenceQuery,
-        suggestions: [],
-      });
-      return;
-    }
-
+    recentFilePool.validateEntries();
+    const indexSuggestions = workspaceFileIndex.ready
+      ? workspaceFileIndex.search(fileReferenceQuery.raw)
+      : [];
     setFileReferenceSuggestions({
       query: fileReferenceQuery,
-      suggestions: workspaceFileIndex.search(fileReferenceQuery.raw),
+      suggestions: mergeRecentIntoSuggestions(
+        fileReferenceQuery.raw,
+        indexSuggestions,
+        recentFilePool.displayPaths,
+      ),
     });
     setFileReferenceSelectedIndex(0);
   }, [
     dismissedFileReferenceKey,
     fileReferenceQuery,
     fileReferenceQueryKey,
+    recentFilePool.displayPaths,
+    recentFilePool.validateEntries,
     workspaceFileIndex.ready,
     workspaceFileIndex.fileCount,
     workspaceFileIndex.search,
@@ -542,8 +555,15 @@ export function useComposerController({
       rawQuery: fileReferenceSuggestions.query.raw,
       fileSuggestions: fileReferenceSuggestions.suggestions,
       sessions: atReferenceSessionCandidates,
+      planPath: snapshot?.plan?.exists ? snapshot.plan.path : null,
     });
-  }, [atReferenceSessionCandidates, fileReferenceMenuView, fileReferenceSuggestions]);
+  }, [
+    atReferenceSessionCandidates,
+    fileReferenceMenuView,
+    fileReferenceSuggestions,
+    snapshot?.plan?.exists,
+    snapshot?.plan?.path,
+  ]);
 
   useEffect(() => {
     if (slashSuggestions.length === 0) {
@@ -872,18 +892,22 @@ export function useComposerController({
   );
 
   const applyFileReferenceSuggestion = useCallback(
-    (path: string) => {
+    (path: string, options?: { isPlan?: boolean }) => {
       const query = fileReferenceSuggestions?.query;
       if (!query) {
         return;
       }
 
-      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true);
+      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true, {
+        isPlan: options?.isPlan === true,
+      });
+      // The chip counts as a reference even if the message is never sent.
+      recentFilePool.recordAtReference(path);
       setFileReferenceSelectedIndex(-1);
       setFileReferenceMenuView("root");
       setDismissedFileReferenceKey(null);
     },
-    [fileReferenceSuggestions?.query],
+    [fileReferenceSuggestions?.query, recentFilePool.recordAtReference],
   );
 
   const applySessionReferenceSuggestion = useCallback(
@@ -921,8 +945,10 @@ export function useComposerController({
         backAtReferenceMenu();
         return;
       }
-      if (item.kind === "file") {
-        applyFileReferenceSuggestion(item.path);
+      if (item.kind === "file" || item.kind === "plan") {
+        // The Plan row's identity is part of the inserted chip, so it survives send,
+        // rewind, history reload and split-pane focus changes.
+        applyFileReferenceSuggestion(item.path, { isPlan: item.kind === "plan" });
         return;
       }
       if (item.kind === "sessions-entry") {
@@ -1536,6 +1562,7 @@ export function useComposerController({
     handleComposerSuggestionKeyDown,
     handleComposerKeyDown,
     workspaceFileIndex,
+    recentFilePool,
     composerPlaceholder,
     composerAgentModeChipPlaceholder,
     composerCanSend,

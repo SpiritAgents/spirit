@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  composerChipNavigateTargetFromMeta,
   pointerMovedBeyondChipNavigateThreshold,
   resolveComposerChipNavigate,
   resolveSessionChatPathFromTranscript,
@@ -58,6 +59,44 @@ test("closed tracked files tab falls back to same-path tab or new reveal", () =>
       env({ tabs }),
     ),
     { navigable: true, action: { type: "reveal-workspace-path", relativePath: "src/b.ts" } },
+  );
+});
+
+test("plan-flagged file chips open the Plan tab regardless of runtime plan state", () => {
+  assert.deepEqual(
+    resolveComposerChipNavigate(
+      { kind: "workspaceFile", path: "plans/test.md", isPlan: true },
+      env(),
+    ),
+    { navigable: true, action: { type: "open-plan" } },
+  );
+  // Without the flag the same path is an ordinary file reference.
+  const decision = resolveComposerChipNavigate(
+    { kind: "workspaceFile", path: "plans/test.md" },
+    env(),
+  );
+  assert.deepEqual(decision, {
+    navigable: true,
+    action: { type: "reveal-workspace-path", relativePath: "plans/test.md" },
+  });
+});
+
+test("composerChipNavigateTargetFromMeta carries isPlan for workspaceFile chips", () => {
+  assert.deepEqual(
+    composerChipNavigateTargetFromMeta("workspaceFile", {
+      kind: "workspaceFile",
+      isPlan: true,
+      sourceTabId: "files-1",
+    }),
+    { isPlan: true, sourceTabId: "files-1" },
+  );
+  assert.deepEqual(
+    composerChipNavigateTargetFromMeta("workspaceFile", { kind: "workspaceFile" }),
+    {},
+  );
+  assert.deepEqual(
+    composerChipNavigateTargetFromMeta("workspaceFile", { kind: "skill", isPlan: true }),
+    {},
   );
 });
 

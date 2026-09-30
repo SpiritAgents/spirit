@@ -21,7 +21,7 @@ export const COMPOSER_CHIP_NAVIGATE_POINTER_THRESHOLD_PX = 4;
 
 export type ComposerChipNavigateTarget =
   | { kind: "skill"; alias: string }
-  | { kind: "workspaceFile"; path: string; sourceTabId?: string }
+  | { kind: "workspaceFile"; path: string; sourceTabId?: string; isPlan?: boolean }
   | {
       kind: "fileSnippet";
       filePath: string;
@@ -73,6 +73,7 @@ export type ComposerChipNavigateAction =
       directory?: boolean;
     }
   | { type: "open-external-file"; absolutePath: string }
+  | { type: "open-plan" }
   | { type: "focus-tab"; tabId: string }
   | { type: "open-browser"; url: string; preferTabId?: string }
   | { type: "open-git"; preferTabId?: string }
@@ -240,6 +241,11 @@ export function resolveComposerChipNavigate(
       if (!path) {
         return { navigable: false };
       }
+      // Plan identity travels with the chip (segment isPlan / navigate meta); it never
+      // depends on which session currently owns the foreground plan file.
+      if (target.isPlan === true) {
+        return { navigable: true, action: { type: "open-plan" } };
+      }
       return workspaceFileAction(path, env.tabs, target.sourceTabId, {
         directory: isWorkspaceDirectoryChipPath(path),
       });
@@ -297,13 +303,14 @@ export function composerChipNavigateTargetFromMeta(
   meta: ComposerChipNavigateMeta | undefined,
 ): Pick<
   ComposerChipNavigateMeta,
-  "sourceTabId" | "quoteSessionPath" | "quoteMessageId" | "quoteOrigin"
+  "sourceTabId" | "isPlan" | "quoteSessionPath" | "quoteMessageId" | "quoteOrigin"
 > {
   if (!meta || meta.kind !== kind) {
     return {};
   }
   return {
     ...(meta.sourceTabId ? { sourceTabId: meta.sourceTabId } : {}),
+    ...(meta.isPlan === true ? { isPlan: true } : {}),
     ...(meta.quoteSessionPath ? { quoteSessionPath: meta.quoteSessionPath } : {}),
     ...(meta.quoteMessageId !== undefined ? { quoteMessageId: meta.quoteMessageId } : {}),
     ...(meta.quoteOrigin ? { quoteOrigin: meta.quoteOrigin } : {}),

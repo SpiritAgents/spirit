@@ -57,7 +57,13 @@ export type RichSegment =
   | { kind: "terminalSnippet"; attachment: TerminalSnippetAttachment }
   | { kind: "fileSnippet"; attachment: FileSnippetAttachment }
   | { kind: "messageQuote"; attachment: MessageQuoteAttachment }
-  | { kind: "workspaceFile"; path: string; sourceTabId?: string }
+  | {
+      kind: "workspaceFile";
+      path: string;
+      sourceTabId?: string;
+      /** The reference was inserted as the session Plan file; UI-only, persisted via chipNavigateMeta. */
+      isPlan?: boolean;
+    }
   | { kind: "sessionReference"; path: string; title: string; content?: string }
   | { kind: "loop" }
   | { kind: "plan" }
@@ -537,7 +543,7 @@ export function segmentsEqual(a: RichSegment[], b: RichSegment[]): boolean {
       return seg.attachment.id === other.attachment.id;
     }
     if (seg.kind === "workspaceFile" && other.kind === "workspaceFile") {
-      return seg.path === other.path;
+      return seg.path === other.path && (seg.isPlan === true) === (other.isPlan === true);
     }
     if (seg.kind === "sessionReference" && other.kind === "sessionReference") {
       return seg.path === other.path && seg.title === other.title;
@@ -903,8 +909,10 @@ export function replaceWorkspaceFileReferenceInSegments(
   query: ActiveWorkspaceFileReferenceQuery,
   path: string,
   finalize: boolean,
+  options?: { isPlan?: boolean },
 ): { segments: RichSegment[]; caret: SegmentCaret } {
   const normalizedPath = normalizeWorkspaceFilePath(path);
+  const planFlag = options?.isPlan === true ? { isPlan: true as const } : {};
   const merged = mergeAdjacentTextSegments(segs);
   const startCaret = plainTextOffsetToCaret(merged, query.start);
   const endCaret = plainTextOffsetToCaret(merged, query.end);
@@ -915,6 +923,7 @@ export function replaceWorkspaceFileReferenceInSegments(
     return insertSegmentAtCaret(merged, caretAtEnd(merged), {
       kind: "workspaceFile",
       path: normalizedPath,
+      ...planFlag,
     });
   }
 
@@ -931,7 +940,7 @@ export function replaceWorkspaceFileReferenceInSegments(
   const next: RichSegment[] = [
     ...merged.slice(0, index),
     ...(before ? [{ kind: "text" as const, value: before }] : []),
-    { kind: "workspaceFile", path: normalizedPath },
+    { kind: "workspaceFile", path: normalizedPath, ...planFlag },
     { kind: "text" as const, value: trailing },
     ...merged.slice(index + 1),
   ];

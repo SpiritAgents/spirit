@@ -380,6 +380,7 @@ export type ComposerRichInputHandle = {
     path: string,
     query: ActiveWorkspaceFileReferenceQuery,
     finalize?: boolean,
+    options?: { isPlan?: boolean },
   ): void;
   insertSessionReference(
     session: { path: string; title: string; content?: string },
@@ -723,11 +724,17 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
     );
 
     const insertWorkspaceFileReference = useCallback(
-      (path: string, query: ActiveWorkspaceFileReferenceQuery, finalize = true) => {
+      (
+        path: string,
+        query: ActiveWorkspaceFileReferenceQuery,
+        finalize = true,
+        options?: { isPlan?: boolean },
+      ) => {
         editor.dispatchCommand(INSERT_WORKSPACE_FILE_REFERENCE_COMMAND, {
           path,
           query,
           finalize,
+          ...(options?.isPlan === true ? { isPlan: true } : {}),
         });
       },
       [editor],

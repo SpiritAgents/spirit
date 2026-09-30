@@ -89,7 +89,7 @@ export type ComposerDockProps = {
   onFileReferenceSelectedIndexChange: (index: number) => void;
   fileReferenceMenuView: import("@/lib/composer-at-reference-demo").AtReferenceMenuView;
   atReferenceMenuItems: import("@/lib/composer-at-reference-demo").AtReferenceMenuItem[];
-  onApplyFileReferenceSuggestion: (path: string) => void;
+  onApplyFileReferenceSuggestion: (path: string, options?: { isPlan?: boolean }) => void;
   onApplySessionReferenceSuggestion: (session: { path: string; title: string }) => void;
   onOpenAtReferenceSessions: () => void;
   onBackAtReferenceMenu: () => void;
