@@ -1,6 +1,6 @@
 export const WEB_FETCH_TIMEOUT_MS = 20_000;
-export const WEB_FETCH_MAX_CHARS = 32_000;
 export const WEB_FETCH_MAX_LINKS = 200;
+export const WEB_FETCH_META_VALUE_MAX_BYTES = 512;
 
 export const WEB_FETCH_ACCEPT_HEADER =
   "text/markdown, text/html;q=0.9, application/xhtml+xml;q=0.9, text/plain;q=0.8, */*;q=0.5";

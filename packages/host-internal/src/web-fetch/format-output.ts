@@ -1,5 +1,16 @@
 import type { ExtractedWebContent } from "./extract-markdown.js";
-import { WEB_FETCH_MAX_CHARS, WEB_FETCH_MAX_LINKS, WEB_FETCH_USER_AGENT } from "./constants.js";
+import {
+  CONTEXT_INJECTION_MAX_BYTES,
+  decodeUtf8,
+  encodeUtf8,
+  sliceUtf8Head,
+  utf8ByteLength,
+} from "@spiritagent/agent-core";
+import {
+  WEB_FETCH_MAX_LINKS,
+  WEB_FETCH_META_VALUE_MAX_BYTES,
+  WEB_FETCH_USER_AGENT,
+} from "./constants.js";
 
 export interface WebFetchOutputMeta {
   url: string;
@@ -12,8 +23,10 @@ export interface WebFetchOutputMeta {
   extraction: ExtractedWebContent["extraction"];
   jsonKeys?: string;
   truncated: boolean;
-  linksTruncated: boolean;
-  contentChars: number;
+  /** Present (and rendered as a header line) whenever the page supplied any links. */
+  linksTruncated?: boolean;
+  /** Byte size of the full extracted markdown, before any truncation. */
+  contentBytes: number;
 }
 
 export interface TruncateMarkdownResult {
@@ -28,8 +41,17 @@ export function sanitizeWebFetchMetaValue(value: string): string {
     .trim();
 }
 
+// Header values carry externally supplied text (page title, redirect target, link URLs, …)
+// with no upstream length bound; cap each so the header alone can never exhaust the budget.
+function capWebFetchMetaValue(value: string): string {
+  const bytes = encodeUtf8(value);
+  return bytes.length <= WEB_FETCH_META_VALUE_MAX_BYTES
+    ? value
+    : decodeUtf8(sliceUtf8Head(bytes, WEB_FETCH_META_VALUE_MAX_BYTES));
+}
+
 function formatMetaLine(key: string, value: string): string {
-  return `${key}: ${sanitizeWebFetchMetaValue(value)}`;
+  return `${key}: ${capWebFetchMetaValue(sanitizeWebFetchMetaValue(value))}`;
 }
 
 export function escapeMarkdownLinkLabel(text: string): string {
@@ -38,14 +60,14 @@ export function escapeMarkdownLinkLabel(text: string): string {
 
 export function truncateMarkdownAtHeadingBoundary(
   markdown: string,
-  maxChars: number,
+  maxBytes: number,
 ): TruncateMarkdownResult {
-  const chars = [...markdown];
-  if (chars.length <= maxChars) {
+  const bytes = encodeUtf8(markdown);
+  if (bytes.length <= maxBytes) {
     return { text: markdown, truncated: false };
   }
 
-  const slice = chars.slice(0, maxChars).join("");
+  const slice = decodeUtf8(sliceUtf8Head(bytes, maxBytes));
   const headingPattern = /\n#{1,6} /gu;
   let lastHeadingIndex = -1;
   for (const match of slice.matchAll(headingPattern)) {
@@ -63,7 +85,7 @@ export function truncateMarkdownAtHeadingBoundary(
   }
 
   const paragraphBreak = slice.lastIndexOf("\n\n");
-  if (paragraphBreak > maxChars * 0.5) {
+  if (paragraphBreak > 0 && utf8ByteLength(slice.slice(0, paragraphBreak)) > maxBytes * 0.5) {
     return {
       text: slice.slice(0, paragraphBreak).trimEnd(),
       truncated: true,
@@ -76,51 +98,73 @@ export function truncateMarkdownAtHeadingBoundary(
   };
 }
 
-function formatLinksSection(links: ReadonlyArray<{ text: string; url: string }>): {
-  section: string;
-  truncated: boolean;
-} {
+function formatLinkLine(link: { text: string; url: string }): string {
+  return `- [${escapeMarkdownLinkLabel(link.text)}](${link.url})`;
+}
+
+function formatLinksSectionWithinBudget(
+  links: ReadonlyArray<{ text: string; url: string }>,
+  maxBytes: number,
+): { section: string; truncated: boolean } {
   if (links.length === 0) {
     return { section: "", truncated: false };
   }
 
-  const limited = links.slice(0, WEB_FETCH_MAX_LINKS);
-  const lines = limited.map((link) => `- [${escapeMarkdownLinkLabel(link.text)}](${link.url})`);
-  const truncated = links.length > WEB_FETCH_MAX_LINKS;
-  if (truncated) {
-    lines.push(`- … (${links.length - WEB_FETCH_MAX_LINKS} more links omitted)`);
+  const prefix = "## links\n";
+  const lines = links.slice(0, WEB_FETCH_MAX_LINKS).map(formatLinkLine);
+  const markerFor = (omitted: number): string => `- … (${omitted} more links omitted)`;
+
+  let usedBytes = utf8ByteLength(prefix);
+  let kept = 0;
+  for (const line of lines) {
+    const separatorBytes = kept > 0 ? 1 : 0;
+    const remainingAfter = links.length - (kept + 1);
+    const markerReserve = remainingAfter > 0 ? utf8ByteLength(`\n${markerFor(remainingAfter)}`) : 0;
+    if (usedBytes + separatorBytes + utf8ByteLength(line) + markerReserve > maxBytes) {
+      break;
+    }
+    usedBytes += separatorBytes + utf8ByteLength(line);
+    kept += 1;
   }
+
+  const omitted = links.length - kept;
+  if (kept === 0 && omitted > 0) {
+    // A degenerate budget may not even fit one link; fall back to the omission
+    // marker alone, and drop the section entirely if even that does not fit.
+    const markerOnly = `${prefix}${markerFor(omitted)}`;
+    return utf8ByteLength(markerOnly) <= maxBytes
+      ? { section: markerOnly, truncated: true }
+      : { section: "", truncated: true };
+  }
+
   return {
-    section: `## links\n${lines.join("\n")}`,
-    truncated,
+    section: `${prefix}${lines.slice(0, kept).join("\n")}${omitted > 0 ? `\n${markerFor(omitted)}` : ""}`,
+    truncated: omitted > 0,
   };
 }
 
 export function formatWebFetchToolOutput(input: {
   meta: WebFetchOutputMeta;
   contentMarkdown: string;
-  links: ReadonlyArray<{ text: string; url: string }>;
+  linksSection: string;
 }): string {
-  const { meta, contentMarkdown, links } = input;
-  const { section: linksSection, truncated: linksTruncated } = formatLinksSection(links);
+  const { meta, contentMarkdown, linksSection } = input;
 
   const headerLines = [
     "[web]",
-    `url: ${meta.url}`,
-    `final_url: ${meta.finalUrl}`,
+    formatMetaLine("url", meta.url),
+    formatMetaLine("final_url", meta.finalUrl),
     `status: ${meta.status}`,
-    `content_type: ${meta.contentType}`,
+    formatMetaLine("content_type", meta.contentType),
     `user_agent: ${WEB_FETCH_USER_AGENT}`,
     `extraction: ${meta.extraction}`,
     ...(meta.title ? [formatMetaLine("title", meta.title)] : []),
     ...(meta.siteName ? [formatMetaLine("site_name", meta.siteName)] : []),
     ...(meta.excerpt ? [formatMetaLine("excerpt", meta.excerpt)] : []),
     ...(meta.jsonKeys ? [formatMetaLine("json_keys", meta.jsonKeys)] : []),
-    `content_chars: ${meta.contentChars}`,
+    `content_bytes: ${meta.contentBytes}`,
     `truncated: ${meta.truncated}`,
-    ...(linksSection.length > 0
-      ? [`links_truncated: ${linksTruncated || meta.linksTruncated}`]
-      : []),
+    ...(meta.linksTruncated !== undefined ? [`links_truncated: ${meta.linksTruncated}`] : []),
   ];
 
   const parts = [`${headerLines.join("\n")}\n\n## content\n${contentMarkdown}`];
@@ -138,32 +182,78 @@ export function buildWebFetchOutput(input: {
   contentType: string;
   extracted: ExtractedWebContent;
   links: ReadonlyArray<{ text: string; url: string }>;
-  maxContentChars?: number;
+  maxOutputBytes?: number;
 }): string {
-  const maxChars = input.maxContentChars ?? WEB_FETCH_MAX_CHARS;
-  const { text: contentMarkdown, truncated } = truncateMarkdownAtHeadingBoundary(
-    input.extracted.markdown,
-    maxChars,
-  );
+  const maxBytes = input.maxOutputBytes ?? CONTEXT_INJECTION_MAX_BYTES;
+  const fullMarkdown = input.extracted.markdown;
+  const contentBytes = utf8ByteLength(fullMarkdown);
 
-  const meta: WebFetchOutputMeta = {
+  const baseMeta = {
     url: input.url,
     finalUrl: input.finalUrl,
     status: input.status,
     contentType: input.contentType,
     extraction: input.extracted.extraction,
-    truncated,
-    linksTruncated: input.links.length > WEB_FETCH_MAX_LINKS,
-    contentChars: [...contentMarkdown].length,
+    contentBytes,
     ...(input.extracted.title ? { title: input.extracted.title } : {}),
     ...(input.extracted.siteName ? { siteName: input.extracted.siteName } : {}),
-    ...(input.extracted.excerpt ? { excerpt: input.extracted.excerpt } : {}),
     ...(input.extracted.jsonKeys ? { jsonKeys: input.extracted.jsonKeys } : {}),
   };
+  const hasLinks = input.links.length > 0;
+
+  // Fast path: full content, count-capped links, excerpt included.
+  const eagerLinks = formatLinksSectionWithinBudget(input.links, Number.POSITIVE_INFINITY);
+  const eager = formatWebFetchToolOutput({
+    meta: {
+      ...baseMeta,
+      ...(input.extracted.excerpt ? { excerpt: input.extracted.excerpt } : {}),
+      truncated: false,
+      ...(hasLinks ? { linksTruncated: eagerLinks.truncated } : {}),
+    },
+    contentMarkdown: fullMarkdown,
+    linksSection: eagerLinks.section,
+  });
+  if (utf8ByteLength(eager) <= maxBytes) {
+    return eager;
+  }
+
+  // Tight path: the excerpt duplicates the content head, so it is the first thing
+  // dropped; content keeps priority over links for the remaining budget.
+  // Boolean header values are measured at their worst-case width ("false") so the
+  // final assembly can only come in under the measured size.
+  const skeletonMeta = {
+    ...baseMeta,
+    truncated: false,
+    ...(hasLinks ? { linksTruncated: false } : {}),
+  };
+  const skeletonBytes = utf8ByteLength(
+    formatWebFetchToolOutput({ meta: skeletonMeta, contentMarkdown: "", linksSection: "" }),
+  );
+  const contentResult = truncateMarkdownAtHeadingBoundary(
+    fullMarkdown,
+    Math.max(maxBytes - skeletonBytes, 0),
+  );
+
+  const contentMeta = { ...skeletonMeta, truncated: contentResult.truncated };
+  const linksBudget = Math.max(
+    maxBytes -
+      utf8ByteLength(
+        formatWebFetchToolOutput({
+          meta: contentMeta,
+          contentMarkdown: contentResult.text,
+          linksSection: "",
+        }),
+      ),
+    0,
+  );
+  const linksResult = formatLinksSectionWithinBudget(input.links, linksBudget);
 
   return formatWebFetchToolOutput({
-    meta,
-    contentMarkdown,
-    links: input.links,
+    meta: {
+      ...contentMeta,
+      ...(hasLinks ? { linksTruncated: linksResult.truncated } : {}),
+    },
+    contentMarkdown: contentResult.text,
+    linksSection: linksResult.section,
   });
 }

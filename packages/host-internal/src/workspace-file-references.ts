@@ -18,10 +18,10 @@ import {
   referencedWorkspaceFilePathsFromInput,
   type WorkspaceFileReferenceSuggestionsResult,
 } from "./workspace-file-reference-query.js";
+import { CONTEXT_INJECTION_MAX_BYTES, decodeUtf8, sliceUtf8Head } from "@spiritagent/agent-core";
 import { detectSupportedImageFile, hasSupportedImageExtension } from "./image-file-support.js";
 import { detectSupportedVideoFile, hasSupportedVideoExtension } from "./video-file-support.js";
 
-const DEFAULT_MAX_CONTENT_CHARS = 24_000;
 const DEFAULT_IGNORED_DIRECTORY_NAMES = new Set([".git", "target", "node_modules", "bin", "obj"]);
 
 interface WorkspaceFileIndexCacheEntry {
@@ -34,7 +34,7 @@ const workspaceFileIndexCache = new Map<string, WorkspaceFileIndexCacheEntry>();
 export interface WorkspaceFileReferenceTextAttachment {
   kind: "text";
   path: string;
-  totalChars: number;
+  totalBytes: number;
   truncated: boolean;
   attachedAtUnixMs: number;
   content: string;
@@ -58,7 +58,7 @@ export type WorkspaceFileReferenceAttachment =
   | WorkspaceFileReferenceVideoAttachment;
 
 export interface ResolveWorkspaceFileReferenceAttachmentsOptions {
-  maxContentChars?: number;
+  maxContentBytes?: number;
 }
 
 export interface WorkspaceFileReferenceIndexSnapshot {
@@ -282,18 +282,16 @@ async function localFileAttachmentFromAbsolutePath(
     throw new Error(`Referencing binary files is not supported yet: ${attachmentPath}`);
   }
 
-  const text = bytes.toString("utf8");
-  const chars = Array.from(text);
-  const maxContentChars = options.maxContentChars ?? DEFAULT_MAX_CONTENT_CHARS;
-  const truncated = chars.length > maxContentChars;
+  const maxContentBytes = options.maxContentBytes ?? CONTEXT_INJECTION_MAX_BYTES;
+  const truncated = bytes.length > maxContentBytes;
   const content = truncated
-    ? `${chars.slice(0, maxContentChars).join("")}\n\n...<file content truncated>`
-    : text;
+    ? `${decodeUtf8(sliceUtf8Head(bytes, maxContentBytes))}\n\n...<file content truncated>`
+    : bytes.toString("utf8");
 
   return {
     kind: "text",
     path: attachmentPath,
-    totalChars: chars.length,
+    totalBytes: bytes.length,
     truncated,
     attachedAtUnixMs: Date.now(),
     content,

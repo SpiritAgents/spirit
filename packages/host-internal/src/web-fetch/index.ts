@@ -1,7 +1,7 @@
 import {
   WEB_FETCH_ACCEPT_HEADER,
-  WEB_FETCH_MAX_CHARS,
   WEB_FETCH_MAX_LINKS,
+  WEB_FETCH_META_VALUE_MAX_BYTES,
   WEB_FETCH_TIMEOUT_MS,
   WEB_FETCH_USER_AGENT,
 } from "./constants.js";
@@ -26,8 +26,8 @@ import { looksLikeHtml, normalizeMimeType, resolveAbsoluteUrl } from "./resolve-
 
 export {
   WEB_FETCH_ACCEPT_HEADER,
-  WEB_FETCH_MAX_CHARS,
   WEB_FETCH_MAX_LINKS,
+  WEB_FETCH_META_VALUE_MAX_BYTES,
   WEB_FETCH_TIMEOUT_MS,
   WEB_FETCH_USER_AGENT,
   buildWebFetchOutput,
