@@ -44,35 +44,6 @@ impl PendingMcpResource {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PendingWorkspaceFile {
-    pub path: String,
-    pub attached_at_unix_ms: u128,
-    pub total_chars: usize,
-    pub truncated: bool,
-    pub content: String,
-}
-
-impl PendingWorkspaceFile {
-    pub fn new(path: String, total_chars: usize, truncated: bool, content: String) -> Self {
-        Self {
-            path,
-            attached_at_unix_ms: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_millis())
-                .unwrap_or(0),
-            total_chars,
-            truncated,
-            content,
-        }
-    }
-
-    pub fn short_label(&self) -> String {
-        self.path.clone()
-    }
-}
-
 pub struct SessionModel {
     llm_history: Vec<LlmMessage>,
     llm_api_trace: Vec<Value>,
