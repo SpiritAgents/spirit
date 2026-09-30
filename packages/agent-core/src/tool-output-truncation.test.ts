@@ -27,7 +27,7 @@ test("buildContextRetryExcerpt includes archive path guidance when provided", ()
 });
 
 test("prepareToolOutputTruncationForHistory persists full output and injects archive path", async () => {
-  const longToolOutput = "x".repeat(20_000);
+  const longToolOutput = "x".repeat(40_000);
   let persistedContent = "";
   const history = [
     { role: "user" as const, content: createLlmMessageContentFromText("hello") },
@@ -59,7 +59,7 @@ test("prepareToolOutputTruncationForHistory persists full output and injects arc
 });
 
 test("prepareToolOutputForAppend persists and truncates large tool output on append", async () => {
-  const longToolOutput = "y".repeat(20_000);
+  const longToolOutput = "y".repeat(40_000);
   let persistedContent = "";
   const prepared = await prepareToolOutputForAppend({
     content: longToolOutput,
@@ -84,7 +84,7 @@ test("prepareToolOutputForAppend leaves short tool output unchanged", async () =
 });
 
 test("prepareToolOutputTruncationForHistory still truncates when archive persist fails", async () => {
-  const longToolOutput = "y".repeat(20_000);
+  const longToolOutput = "y".repeat(40_000);
   const prepared = await prepareToolOutputTruncationForHistory(
     [
       {
@@ -106,4 +106,18 @@ test("prepareToolOutputTruncationForHistory still truncates when archive persist
   const toolText = llmMessageTextContent(toolMessage.content);
   assert.match(toolText, new RegExp(TOOL_OUTPUT_TRUNCATION_LABEL.replace(/[[\]]/g, "\\$&")));
   assert.doesNotMatch(toolText, /Full output archived at:/u);
+});
+
+test("buildContextRetryExcerpt leaves output under the byte budget unchanged", () => {
+  assert.equal(buildContextRetryExcerpt("a".repeat(30_000)), undefined);
+});
+
+test("buildContextRetryExcerpt truncates by UTF-8 bytes without splitting characters", () => {
+  const text = "汉".repeat(12_000);
+  const excerpt = buildContextRetryExcerpt(text);
+
+  assert.ok(excerpt);
+  assert.match(excerpt!, /omitted_bytes=\d+/u);
+  assert.ok(!excerpt!.includes("\uFFFD"));
+  assert.ok(Array.from(excerpt!).length < Array.from(text).length);
 });
