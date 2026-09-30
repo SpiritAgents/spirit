@@ -112,6 +112,42 @@ test("parseChipNavigateMeta rejects unknown kinds", () => {
   ]);
 });
 
+test("workspaceFile isPlan rides the meta round-trip and stays out of the wire", () => {
+  const segments = [
+    { kind: "text", value: "see " },
+    { kind: "workspaceFile", path: "plans/test.md", isPlan: true },
+    { kind: "workspaceFile", path: "src/a.ts" },
+  ];
+  const meta = extractChipNavigateMeta(segments);
+  assert.deepEqual(meta, [{ kind: "workspaceFile", isPlan: true }, { kind: "workspaceFile" }]);
+
+  const wire = segmentsToMessageText(segments);
+  assert.equal(wire.includes("isPlan"), false);
+  // The plan chip's wire block is identical to a plain file reference block.
+  assert.equal(wire.includes("```file:plans/test.md\n\n```"), true);
+
+  const restored = applyChipNavigateMeta(messageContentToRichSegments(wire, "m"), meta);
+  const planSegment = restored.find(
+    (segment) => segment.kind === "workspaceFile" && segment.path === "plans/test.md",
+  );
+  assert.equal(planSegment?.kind === "workspaceFile" && planSegment.isPlan, true);
+  const fileSegment = restored.find(
+    (segment) => segment.kind === "workspaceFile" && segment.path === "src/a.ts",
+  );
+  assert.equal(fileSegment?.kind === "workspaceFile" && "isPlan" in fileSegment, false);
+  assert.deepEqual(extractChipNavigateMeta(restored), meta);
+});
+
+test("parseChipNavigateMeta keeps isPlan only as true on workspaceFile entries", () => {
+  assert.deepEqual(parseChipNavigateMeta([{ kind: "workspaceFile", isPlan: true }]), [
+    { kind: "workspaceFile", isPlan: true },
+  ]);
+  assert.deepEqual(parseChipNavigateMeta([{ kind: "skill", isPlan: true }]), [{ kind: "skill" }]);
+  assert.deepEqual(parseChipNavigateMeta([{ kind: "workspaceFile", isPlan: "yes" }]), [
+    { kind: "workspaceFile" },
+  ]);
+});
+
 test("remapChipNavigateMetaQuoteSessionPath rewrites matching quote paths only", () => {
   const meta = [
     { kind: "workspaceFile", sourceTabId: "tab-1" },

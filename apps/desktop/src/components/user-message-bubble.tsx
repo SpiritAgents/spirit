@@ -6,6 +6,7 @@ import {
   GitPullRequest,
   GitPullRequestClosed,
   GitPullRequestDraft,
+  ListTodo,
   MessageCircle,
   MessageCircleMore,
   PenTool,
@@ -119,24 +120,35 @@ function WorkspaceFileCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   const normalized = path.replace(/\\/gu, "/");
+  const isPlan = navigateMeta?.isPlan === true;
   const presentation = resolveWorkspaceFileChipPresentation(normalized);
   return (
     <span title={normalized} className={MESSAGE_BUBBLE_CHIP_CLASS}>
-      <WorkspaceFileIcon
-        path={presentation.iconPath}
-        kind={presentation.iconKind}
-        size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
-        colorMode="inherit"
-        className={cn("shrink-0", presentation.iconClass)}
-      />
+      {isPlan ? (
+        <ListTodo
+          size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
+          aria-hidden
+          strokeWidth={1.75}
+          className={cn("shrink-0", presentation.iconClass)}
+        />
+      ) : (
+        <WorkspaceFileIcon
+          path={presentation.iconPath}
+          kind={presentation.iconKind}
+          size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
+          colorMode="inherit"
+          className={cn("shrink-0", presentation.iconClass)}
+        />
+      )}
       <NavigableChipLabel
         target={{
           kind: "workspaceFile",
           path: normalized,
+          ...(isPlan ? { isPlan: true } : {}),
           ...sourceTabIdFields(navigateMeta),
         }}
       >
-        {workspaceFileBasename(normalized)}
+        {isPlan ? "Plan" : workspaceFileBasename(normalized)}
       </NavigableChipLabel>
     </span>
   );

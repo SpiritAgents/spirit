@@ -91,13 +91,14 @@ export function ComposerCommandsPlugin({
 
     const unregisterInsertWorkspaceFileReference = editor.registerCommand(
       INSERT_WORKSPACE_FILE_REFERENCE_COMMAND,
-      ({ path, query, finalize = true }) => {
+      ({ path, query, finalize = true, isPlan }) => {
         editor.focus();
         const { segments: next, caret } = replaceWorkspaceFileReferenceInSegments(
           segmentsRef.current,
           query,
           path,
           finalize,
+          { isPlan: isPlan === true },
         );
         commitSegments(next, caret);
         return true;
