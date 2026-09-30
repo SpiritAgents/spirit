@@ -35,6 +35,8 @@ export type ReplaceWorkspaceFileReferenceCommandPayload = {
   path: string;
   query: ActiveWorkspaceFileReferenceQuery;
   finalize?: boolean;
+  /** Inserted via the Plan row of the @ menu: the chip is the session Plan file reference. */
+  isPlan?: boolean;
 };
 
 export type ReplaceSessionReferenceCommandPayload = {

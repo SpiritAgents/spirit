@@ -44,7 +44,13 @@ export function SpiritChipDecorator({
     case "skill":
       return <SkillChip alias={payload.alias} />;
     case "workspaceFile":
-      return <WorkspaceFileChip path={payload.path} sourceTabId={payload.sourceTabId} />;
+      return (
+        <WorkspaceFileChip
+          path={payload.path}
+          sourceTabId={payload.sourceTabId}
+          isPlan={payload.isPlan}
+        />
+      );
     case "sessionReference":
       return <SessionReferenceChip path={payload.path} title={payload.title} />;
     case "element":

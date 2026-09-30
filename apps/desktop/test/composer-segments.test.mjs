@@ -614,6 +614,39 @@ test("replaceWorkspaceFileReferenceInSegments inserts chip and caret after final
   assert.equal(caret.offset, 1);
 });
 
+test("replaceWorkspaceFileReferenceInSegments marks Plan chips and keeps the wire pure", () => {
+  const { segments } = replaceWorkspaceFileReferenceInSegments(
+    [{ kind: "text", value: "@" }],
+    { start: 0, end: 1, raw: "@" },
+    "plans/test.md",
+    true,
+    { isPlan: true },
+  );
+  assert.deepEqual(segments, [
+    { kind: "workspaceFile", path: "plans/test.md", isPlan: true },
+    { kind: "text", value: " " },
+  ]);
+  // The wire block carries only the bare path, identical to a plain file reference.
+  assert.equal(segmentsToMessageText(segments).includes("```file:plans/test.md\n\n```"), true);
+  assert.equal(segmentsToMessageText(segments).includes("isPlan"), false);
+
+  const plain = replaceWorkspaceFileReferenceInSegments(
+    [{ kind: "text", value: "@" }],
+    { start: 0, end: 1, raw: "@" },
+    "plans/test.md",
+    true,
+  );
+  assert.deepEqual(plain.segments[0], { kind: "workspaceFile", path: "plans/test.md" });
+  // The flag participates in identity: a plan chip is not interchangeable with a file chip.
+  assert.equal(
+    segmentsEqual(
+      [{ kind: "workspaceFile", path: "plans/test.md", isPlan: true }],
+      [{ kind: "workspaceFile", path: "plans/test.md" }],
+    ),
+    false,
+  );
+});
+
 test("syncSegmentsFromExternalValue keeps workspace file chips", () => {
   const synced = syncSegmentsFromExternalValue(
     [

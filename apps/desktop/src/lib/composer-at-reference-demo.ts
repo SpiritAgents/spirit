@@ -8,6 +8,7 @@ export type AtReferenceMenuView = "root" | "sessions";
 
 export type AtReferenceMenuItem =
   | { kind: "file"; path: string }
+  | { kind: "plan"; path: string }
   | { kind: "sessions-entry" }
   | { kind: "back" }
   | { kind: "session"; path: string; title: string };
@@ -64,6 +65,8 @@ export function buildAtReferenceMenuItems(input: {
   rawQuery: string;
   fileSuggestions: readonly string[];
   sessions: readonly AtReferenceSessionCandidate[];
+  /** Absolute path of the session Plan file; surfaced as a dedicated row for the user. */
+  planPath?: string | null;
 }): AtReferenceMenuItem[] {
   const needle = atReferenceNeedle(input.rawQuery);
   const matchedSessions = filterSessionCandidatesByNeedle(input.sessions, needle).map(
@@ -78,13 +81,26 @@ export function buildAtReferenceMenuItems(input: {
     return [{ kind: "back" }, ...matchedSessions];
   }
 
+  const planPath = input.planPath?.trim() ? input.planPath.replace(/\\/gu, "/") : null;
+
   if (!needle) {
-    const files = input.fileSuggestions
-      .slice(0, AT_REFERENCE_EMPTY_QUERY_FILE_LIMIT)
-      .map((path) => ({ kind: "file" as const, path }));
-    return [...files, { kind: "sessions-entry" }];
+    const items: AtReferenceMenuItem[] = [];
+    if (planPath) {
+      items.push({ kind: "plan", path: planPath });
+    }
+    for (const path of input.fileSuggestions) {
+      if (items.length >= AT_REFERENCE_EMPTY_QUERY_FILE_LIMIT) {
+        break;
+      }
+      items.push({ kind: "file", path });
+    }
+    return [...items, { kind: "sessions-entry" }];
   }
 
-  const files = input.fileSuggestions.map((path) => ({ kind: "file" as const, path }));
+  const files = input.fileSuggestions.map((path): AtReferenceMenuItem =>
+    planPath && path.replace(/\\/gu, "/").toLowerCase() === planPath.toLowerCase()
+      ? { kind: "plan", path: planPath }
+      : { kind: "file", path },
+  );
   return [...files, ...matchedSessions];
 }

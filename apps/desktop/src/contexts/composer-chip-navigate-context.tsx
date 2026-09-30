@@ -192,6 +192,9 @@ export function ComposerChipNavigateProvider({
             viewMode: isMarkdownPath(action.absolutePath) ? "preview" : "edit",
           });
           return;
+        case "open-plan":
+          workspaceTools.openWorkspacePlan();
+          return;
         case "open-browser":
           workspaceTools.focusOrOpenBrowserUrl(action.url, action.preferTabId);
           return;
