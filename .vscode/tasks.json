@@ -40,6 +40,16 @@
       "label": "Start Desktop",
       "type": "shell",
       "command": "pnpm",
+      "args": ["--filter", "@spiritagent/desktop", "start"],
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Desktop (Dev)",
+      "type": "shell",
+      "command": "pnpm",
       "args": ["dev:desktop"],
       "group": {
         "kind": "build",
