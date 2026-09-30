@@ -22,6 +22,8 @@ export type NavigableComposerChipKind = (typeof NAVIGABLE_COMPOSER_CHIP_KINDS)[n
 export type ComposerChipNavigateMeta = {
   kind: NavigableComposerChipKind;
   sourceTabId?: string;
+  /** workspaceFile chips only: the reference is the session Plan file (render + navigate as Plan). */
+  isPlan?: boolean;
   quoteSessionPath?: string;
   quoteMessageId?: number;
   quoteOrigin?: QuoteChipOrigin;
@@ -103,6 +105,9 @@ export function extractChipNavigateMeta(
     if (sourceTabId) {
       item.sourceTabId = sourceTabId;
     }
+    if (segment.kind === "workspaceFile" && segment.isPlan === true) {
+      item.isPlan = true;
+    }
     if (segment.kind === "messageQuote") {
       Object.assign(item, quoteFieldsFromSegment(segment));
     }
@@ -162,7 +167,13 @@ function applyMetaToSegment(
 ): RichSegment {
   switch (segment.kind) {
     case "workspaceFile":
-      return item.sourceTabId ? { ...segment, sourceTabId: item.sourceTabId } : segment;
+      return item.sourceTabId || item.isPlan === true
+        ? {
+            ...segment,
+            ...(item.sourceTabId ? { sourceTabId: item.sourceTabId } : {}),
+            ...(item.isPlan === true ? { isPlan: true } : {}),
+          }
+        : segment;
     case "messageQuote":
       return {
         ...segment,
@@ -221,6 +232,9 @@ export function parseChipNavigateMeta(value: unknown): ComposerChipNavigateMeta[
     const sourceTabId = (item as { sourceTabId?: unknown }).sourceTabId;
     if (typeof sourceTabId === "string" && sourceTabId.trim()) {
       next.sourceTabId = sourceTabId.trim();
+    }
+    if (kind === "workspaceFile" && (item as { isPlan?: unknown }).isPlan === true) {
+      next.isPlan = true;
     }
     const quoteSessionPath = (item as { quoteSessionPath?: unknown }).quoteSessionPath;
     if (typeof quoteSessionPath === "string" && quoteSessionPath.trim()) {

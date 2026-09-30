@@ -23,6 +23,12 @@ type StatHostTextFileFn = (absolutePath: string) => Promise<{ exists: boolean; i
 export type UseRecentFilePoolOptions = {
   workspaceRoot: string;
   statHostTextFile: StatHostTextFileFn;
+  /**
+   * Absolute path of the session Plan file when it exists. The pool surfaces it as the
+   * "Plan" row (Files panel wording) so Composer @ can reference it like any other file;
+   * omit it to keep the pool purely record-driven (Mod+P already has its own Plan entry).
+   */
+  planPath?: string;
 };
 
 export type RecentFilePoolController = {
@@ -43,6 +49,7 @@ export type RecentFilePoolController = {
 export function useRecentFilePool({
   workspaceRoot,
   statHostTextFile,
+  planPath,
 }: UseRecentFilePoolOptions): RecentFilePoolController {
   const entries = useSyncExternalStore(subscribeRecentFilePool, getRecentFilePoolEntries);
 
@@ -51,10 +58,14 @@ export function useRecentFilePool({
     [entries, workspaceRoot],
   );
 
-  const displayPaths = useMemo(
-    () => visibleEntries.map((entry) => recentPoolEntryDisplayPath(entry, workspaceRoot)),
-    [visibleEntries, workspaceRoot],
-  );
+  const displayPaths = useMemo(() => {
+    const paths = visibleEntries.map((entry) => recentPoolEntryDisplayPath(entry, workspaceRoot));
+    const plan = planPath ? normalizeRecentPoolPath(planPath) : "";
+    if (plan && !paths.some((path) => path.toLowerCase() === plan.toLowerCase())) {
+      paths.push(plan);
+    }
+    return paths;
+  }, [visibleEntries, workspaceRoot, planPath]);
 
   const fileDisplayPaths = useMemo(
     () =>
@@ -63,6 +74,9 @@ export function useRecentFilePool({
         .map((entry) => recentPoolEntryDisplayPath(entry, workspaceRoot)),
     [visibleEntries, workspaceRoot],
   );
+
+  // The Plan row is an @-menu affordance; the file picker's fixed Plan entry keeps owning
+  // that surface, so the synthetic path never leaks into the picker via fileDisplayPaths.
 
   const recordAtReference = useCallback(
     (chipPath: string) => {

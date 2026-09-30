@@ -498,6 +498,8 @@ export function useComposerController({
   const recentFilePool = useRecentFilePool({
     workspaceRoot: snapshot?.workspaceRoot ?? "",
     statHostTextFile: runtime.statHostTextFile,
+    // Only an existing Plan is referenceable; a missing Plan stays out of the @ menu.
+    planPath: snapshot?.plan?.exists ? snapshot.plan.path : undefined,
   });
 
   useEffect(() => {
@@ -553,8 +555,15 @@ export function useComposerController({
       rawQuery: fileReferenceSuggestions.query.raw,
       fileSuggestions: fileReferenceSuggestions.suggestions,
       sessions: atReferenceSessionCandidates,
+      planPath: snapshot?.plan?.exists ? snapshot.plan.path : null,
     });
-  }, [atReferenceSessionCandidates, fileReferenceMenuView, fileReferenceSuggestions]);
+  }, [
+    atReferenceSessionCandidates,
+    fileReferenceMenuView,
+    fileReferenceSuggestions,
+    snapshot?.plan?.exists,
+    snapshot?.plan?.path,
+  ]);
 
   useEffect(() => {
     if (slashSuggestions.length === 0) {
@@ -883,13 +892,15 @@ export function useComposerController({
   );
 
   const applyFileReferenceSuggestion = useCallback(
-    (path: string) => {
+    (path: string, options?: { isPlan?: boolean }) => {
       const query = fileReferenceSuggestions?.query;
       if (!query) {
         return;
       }
 
-      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true);
+      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true, {
+        isPlan: options?.isPlan === true,
+      });
       // The chip counts as a reference even if the message is never sent.
       recentFilePool.recordAtReference(path);
       setFileReferenceSelectedIndex(-1);
@@ -934,8 +945,10 @@ export function useComposerController({
         backAtReferenceMenu();
         return;
       }
-      if (item.kind === "file") {
-        applyFileReferenceSuggestion(item.path);
+      if (item.kind === "file" || item.kind === "plan") {
+        // The Plan row's identity is part of the inserted chip, so it survives send,
+        // rewind, history reload and split-pane focus changes.
+        applyFileReferenceSuggestion(item.path, { isPlan: item.kind === "plan" });
         return;
       }
       if (item.kind === "sessions-entry") {
