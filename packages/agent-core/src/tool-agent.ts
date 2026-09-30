@@ -17,8 +17,15 @@ import {
   LLM_CONTEXT_TAGS,
   wrapLlmContextBlock,
 } from "./llm-context-block.js";
+import {
+  CONTEXT_INJECTION_MAX_BYTES,
+  decodeUtf8,
+  encodeUtf8,
+  sliceUtf8Head,
+  sliceUtf8Tail,
+  utf8ByteLength,
+} from "./context-budget.js";
 
-const TOOL_OUTPUT_RETRY_MAX_CHARS = 12_000;
 const TOOL_TRUNCATION_HEAD_RATIO_NUM = 2;
 const TOOL_TRUNCATION_HEAD_RATIO_DEN = 3;
 
@@ -1257,8 +1264,8 @@ function truncateMessageContentForRetry(
 }
 
 export function buildContextRetryExcerpt(text: string, archivePath?: string): string | undefined {
-  const chars = Array.from(text);
-  if (chars.length <= TOOL_OUTPUT_RETRY_MAX_CHARS) {
+  const textBytes = encodeUtf8(text);
+  if (textBytes.length <= CONTEXT_INJECTION_MAX_BYTES) {
     return undefined;
   }
 
@@ -1267,35 +1274,25 @@ export function buildContextRetryExcerpt(text: string, archivePath?: string): st
   const archiveHint = archivePath?.trim()
     ? `\nFull output archived at: ${archivePath.trim()}\n${TOOL_OUTPUT_ARCHIVE_READ_FILE_GUIDANCE}`
     : "";
-  const overhead = Array.from(label).length + Array.from(archiveHint).length + 160;
-  const usable = Math.max(TOOL_OUTPUT_RETRY_MAX_CHARS - overhead, 256);
-  const headChars = Math.floor(
+  const overhead = utf8ByteLength(label) + utf8ByteLength(archiveHint) + 160;
+  const usable = Math.max(CONTEXT_INJECTION_MAX_BYTES - overhead, 256);
+  const headBytes = Math.floor(
     (usable * TOOL_TRUNCATION_HEAD_RATIO_NUM) / TOOL_TRUNCATION_HEAD_RATIO_DEN,
   );
-  const tailChars = Math.max(usable - headChars, 0);
-  const head = takeFirstChars(text, headChars);
-  const tail = takeLastChars(text, tailChars);
-  const omittedChars = Math.max(
-    chars.length - Array.from(head).length - Array.from(tail).length,
-    0,
-  );
+  const tailBytes = Math.max(usable - headBytes, 0);
+  const headSlice = sliceUtf8Head(textBytes, headBytes);
+  const tailSlice = sliceUtf8Tail(textBytes, tailBytes);
+  const head = decodeUtf8(headSlice);
+  const tail = decodeUtf8(tailSlice);
+  const omittedBytes = Math.max(textBytes.length - headSlice.length - tailSlice.length, 0);
   const omittedLines = Math.max(
     totalLines - head.split(/\r?\n/).length - tail.split(/\r?\n/).length,
     0,
   );
 
-  const middle = `${label} omitted_chars=${omittedChars} omitted_lines≈${omittedLines}${archiveHint}`;
+  const middle = `${label} omitted_bytes=${omittedBytes} omitted_lines≈${omittedLines}${archiveHint}`;
 
   return [head, middle, tail].filter((part) => part.trim().length > 0).join("\n");
-}
-
-function takeFirstChars(text: string, count: number): string {
-  return Array.from(text).slice(0, count).join("");
-}
-
-function takeLastChars(text: string, count: number): string {
-  const chars = Array.from(text);
-  return chars.slice(Math.max(chars.length - count, 0)).join("");
 }
 
 function escapeRuleAttribute(value: string): string {

@@ -19,7 +19,7 @@ const ANTHROPIC_REASONING_SIGNATURE = "sig_anthropic_stream_1";
 const ANTHROPIC_TOOL_USE_ID = "toolu_anthropic_stream_1";
 const ANTHROPIC_PROJECTED_SYSTEM_CONTEXT_PREFIX = "[HOST_CONTEXT_FROM_SYSTEM]";
 const ANTHROPIC_SEPARATED_SYSTEM_CONTEXT_SAMPLE =
-  "[WORKSPACE_FILE]\npath: D:\\Spirit\\README.md\nchars: 11";
+  "[WORKSPACE_FILE]\npath: D:\\Spirit\\README.md\nbytes: 11";
 
 async function main(): Promise<void> {
   let requestCount = 0;

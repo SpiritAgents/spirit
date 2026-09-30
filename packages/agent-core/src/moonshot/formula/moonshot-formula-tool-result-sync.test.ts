@@ -6,7 +6,7 @@ import { TOOL_OUTPUT_TRUNCATION_LABEL } from "../../tool-agent.js";
 import { prepareAndSyncRuntimeToolResultToHistory } from "../../runtime/tool-output-append.js";
 
 test("prepareAndSyncRuntimeToolResultToHistory truncates oversized Formula tool output", async () => {
-  const encryptedOutput = `----MOONSHOT ENCRYPTED BEGIN----+nf6${"x".repeat(20_000)}----MOONSHOT ENCRYPTED END----`;
+  const encryptedOutput = `----MOONSHOT ENCRYPTED BEGIN----+nf6${"x".repeat(40_000)}----MOONSHOT ENCRYPTED END----`;
   const historyStore: LlmMessage[] = [
     {
       role: "assistant",

@@ -203,7 +203,7 @@ test("compactHistoryImmediate emits event when session transcript sync fails", a
 });
 
 test("compactHistoryImmediate syncs pre-truncation history and compacts post-truncation history", async () => {
-  const longToolOutput = "x".repeat(20_000);
+  const longToolOutput = "x".repeat(40_000);
   const history: LlmMessage[] = [
     { role: "user", content: createLlmMessageContentFromText("investigate") },
     {
@@ -286,7 +286,7 @@ test("compactHistoryImmediate syncs pre-truncation history and compacts post-tru
 });
 
 test("compactHistoryImmediate persists tool output archive path in truncated excerpt", async () => {
-  const longToolOutput = "y".repeat(20_000);
+  const longToolOutput = "y".repeat(40_000);
   const archivePath = "/Spirit/tool-output-archives/smoke-sess/call-1.txt";
   const history: LlmMessage[] = [
     { role: "user", content: createLlmMessageContentFromText("investigate") },

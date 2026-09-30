@@ -285,7 +285,7 @@ export interface PendingMcpResource {
 export interface PendingWorkspaceTextFile {
   kind: "text";
   path: string;
-  totalChars: number;
+  totalBytes: number;
   truncated: boolean;
   attachedAtUnixMs: number;
   content: string;
