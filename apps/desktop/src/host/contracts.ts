@@ -15,7 +15,6 @@ export type HostCommandName =
   | "forgetWorkspace"
   | "commitChanges"
   | "updateConfig"
-  | "installLspProvider"
   | "setWebHostAuthTokenHash"
   | "addModel"
   | "addProviderModels"

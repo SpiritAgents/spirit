@@ -194,7 +194,7 @@ Server is where the runtime is hosted, not a fourth semantic layer; apps must st
 | Host UI capability facts (`hostUiPromptSection`, `hostToolDescriptionHints` — e.g. Desktop Mermaid rendering)        | apps author the facts; `agent-core` owns assembly (system section / tool description merge) |
 | Dream file storage, expiry cleanup, and run logs                                                                     | host-internal library                                                                       |
 | Session TODO storage, `replaceAll`, and tool execution                                                               | host-internal library                                                                       |
-| LSP multi-provider processes, PATH/install detection, document sync, post-write append, and workspace cache          | host-internal library                                                                       |
+| LSP multi-provider processes, PATH detection, document sync, post-write append, and workspace cache                  | host-internal library                                                                       |
 | Platform adaptation for shell / search / file / web fetch                                                            | host-internal library                                                                       |
 | CLI / Desktop UI and platform wiring                                                                                 | apps                                                                                        |
 | Desktop dreams settings page, background scheduling, and Commit consumption                                          | apps                                                                                        |
@@ -219,7 +219,7 @@ Under this boundary, the current repo should be understood as:
 - `packages/agent-core` continues to carry the runtime, MCP, system prompts, and tool contracts.
 - `packages/agent-core` carries dream tool contracts and the collector system prompt, but not Desktop session scanning or file storage.
 - `packages/host-internal` carries dream tool execution, the dream store, log directories, and other host capabilities.
-- `packages/host-internal/src/lsp/` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery/install, post-write diagnostic append, workspace cache).
+- `packages/host-internal/src/lsp/` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery, post-write diagnostic append, workspace cache).
 - `packages/agent-core/src/lsp/` keeps only the LSP tool contract (`get_diagnostics` auto-routed by path extension), supported-extension constants, and LLM-visible diagnostic formatting.
 - `packages/server` carries the shared daemon: single source of truth for sessions/turns/approvals, WS transport, and instance registry; CLI and Desktop main sessions, Automation, and Dream Collector all have no in-process fallback
 - `packages/host-internal/src/credentials/` carries shared config and credential reading (`config.json` + OS keyring, with `group::{groupId}` as the canonical account scheme), used by server and acp-server to resolve transports in-process.

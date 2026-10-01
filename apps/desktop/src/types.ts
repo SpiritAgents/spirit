@@ -134,10 +134,6 @@ export interface DesktopAgentsConfigUpdate {
   };
 }
 
-export interface InstallLspProviderRequest {
-  providerId: string;
-}
-
 export type DesktopLspProviderStatus = "ready" | "not_found" | "disabled";
 
 export interface DesktopLspProviderSnapshot {
@@ -145,10 +141,6 @@ export interface DesktopLspProviderSnapshot {
   displayName: string;
   languages: string[];
   status: DesktopLspProviderStatus;
-  installKind: "npm" | "go" | "rustup" | "platform" | "manual" | "dotnet";
-  npmPackage?: string;
-  /** Command line that Settings will run if the user confirms Install. */
-  installCommand?: string;
   command?: string;
 }
 

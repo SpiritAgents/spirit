@@ -71,10 +71,8 @@ export type SettingsViewProps = {
   skillsBusy: boolean;
   rulesBusy: boolean;
   extensionsBusy: boolean;
-  lspInstallBusy: boolean;
   isElectronShell: boolean;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
-  onInstallLspProvider: (providerId: string) => Promise<void>;
   onResetWebHostPairing?: () => Promise<void>;
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;

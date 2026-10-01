@@ -22,7 +22,6 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  InstallLspProviderRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
@@ -77,7 +76,6 @@ export type CommandPayloads = {
   forgetWorkspace: { request: ForgetWorkspaceRequest };
   commitChanges: { request: CommitChangesRequest };
   updateConfig: { request: UpdateConfigRequest };
-  installLspProvider: { request: InstallLspProviderRequest };
   setLoopEnabled: { enabled: boolean };
   setApprovalLevel: { approvalLevel: ApprovalLevel };
   setPendingGitBranch: { branch: string };

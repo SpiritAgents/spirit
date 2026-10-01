@@ -62,7 +62,7 @@ Diese Chips injizieren einen festen Prompt. Der Agent verwendet dann [Workspace-
 
 ### LSP
 
-Aktiviere Sprachserver in **Settings → Agents** und installiere dann einen Anbieter, falls er fehlt. Sobald ein Server bereit ist, kann der Agent [`get_diagnostics`](./agent/tools.mdx) aufrufen.
+Aktiviere Sprachserver in **Settings → Agents**. Spirit erkennt nur bereits auf diesem Rechner installierte Server; installiere fehlende selbst, jeweils mit der Toolchain aus der Tabelle. Sobald ein Server bereit ist, kann der Agent [`get_diagnostics`](./agent/tools.mdx) aufrufen.
 
 | ID              | Sprachen | Installationsmethode                        |
 | --------------- | -------- | ------------------------------------------- |
@@ -73,7 +73,7 @@ Aktiviere Sprachserver in **Settings → Agents** und installiere dann einen Anb
 | `jdtls`         | Java     | Manuell                                     |
 | `omnisharp`     | C#       | .NET                                        |
 
-clangd und jdtls sind nicht gebündelt. Installiere sie selbst und kehre dann zu Settings → Agents zurück.
+Spirit installiert keine Sprachserver. Installiere fehlende selbst und kehre dann zu Settings → Agents zurück.
 
 ### Tab
 

@@ -2,7 +2,6 @@ import { access, readdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import path from "node:path";
 
-import { isWindowsPlatform } from "./windows-path.js";
 import { resolveCommandOnPath, type ResolvedLanguageServerCommand } from "./resolve-server.js";
 
 async function isExecutable(filePath: string): Promise<boolean> {
@@ -117,11 +116,4 @@ export async function resolveJdtlsOnPath(
     return undefined;
   }
   return { command: javaCommand, args: [] };
-}
-
-export function jdtlsInstallHint(platform: NodeJS.Platform = process.platform): string {
-  const osHint = isWindowsPlatform(platform)
-    ? "Download eclipse.jdt.ls from GitHub releases and set JDTLS_HOME."
-    : "Download eclipse.jdt.ls from GitHub releases, extract it, and set JDTLS_HOME to the install directory.";
-  return `${osHint} Requires Java 21+ on PATH.`;
 }

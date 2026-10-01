@@ -155,7 +155,6 @@ type BusyAction =
   | "rules"
   | "extensions"
   | "extensionsImport"
-  | "lspInstall"
   | "git"
   | "automation";
 
@@ -4055,27 +4054,6 @@ export function useDesktopRuntime() {
     onNotifyRefresh: refreshFromHostPoll,
   });
 
-  const installLspProvider = useCallback(
-    async (providerId: string) => {
-      if (!api?.installLspProvider) {
-        throw new Error("LSP provider install is only available in the desktop app.");
-      }
-
-      setBusyAction("lspInstall");
-      try {
-        const next = await api.installLspProvider({ providerId });
-        applySnapshot(next);
-        setRuntimeError("");
-      } catch (error) {
-        setRuntimeError(describeError(error));
-        throw error;
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api, applySnapshot],
-  );
-
   return {
     apiReady: hostReady,
     hostConnectionError: hostError,
@@ -4240,8 +4218,6 @@ export function useDesktopRuntime() {
     removeQueuedUserTurn,
     saveSettingsPatch,
     resetWebHostPairing,
-    installLspProvider,
-    lspInstallBusy: busyAction === "lspInstall",
     sendMessage,
     submitStartImplementing,
     skipQuestions,

@@ -16,16 +16,11 @@ export type LspProviderId =
   | "jdtls"
   | "omnisharp";
 
-export type LspInstallKind = "npm" | "go" | "rustup" | "platform" | "manual" | "dotnet";
-
 export interface LspProviderDescriptor {
   id: LspProviderId;
   displayName: string;
   languageLabels: string[];
   extensions: readonly string[];
-  installKind: LspInstallKind;
-  /** npm global package name when installKind is npm */
-  npmPackage?: string;
 }
 
 export type LspProviderDiscoveryStatus = "ready" | "not_found";
@@ -43,43 +38,36 @@ export const LSP_PROVIDERS: readonly LspProviderDescriptor[] = [
     displayName: "Pyright",
     languageLabels: ["Python"],
     extensions: [".py", ".pyi"],
-    installKind: "npm",
-    npmPackage: "pyright",
   },
   {
     id: "gopls",
     displayName: "gopls",
     languageLabels: ["Go"],
     extensions: [".go"],
-    installKind: "go",
   },
   {
     id: "rust-analyzer",
     displayName: "rust-analyzer",
     languageLabels: ["Rust"],
     extensions: [".rs"],
-    installKind: "rustup",
   },
   {
     id: "clangd",
     displayName: "clangd",
     languageLabels: ["C", "C++"],
     extensions: [".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx"],
-    installKind: "platform",
   },
   {
     id: "jdtls",
     displayName: "Eclipse JDT Language Server",
     languageLabels: ["Java"],
     extensions: [".java"],
-    installKind: "manual",
   },
   {
     id: "omnisharp",
     displayName: "OmniSharp",
     languageLabels: ["C#"],
     extensions: [".cs"],
-    installKind: "dotnet",
   },
 ] as const;
 

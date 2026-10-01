@@ -62,7 +62,7 @@ Ces puces injectent une invite fixe. L'agent utilise ensuite les outils [workspa
 
 ### LSP
 
-Activez les serveurs de langage dans **Paramètres → Agents**, puis installez un fournisseur s'il manque. Une fois qu'un serveur est prêt, l'agent peut appeler [`get_diagnostics`](./agent/tools.mdx).
+Activez les serveurs de langage dans **Paramètres → Agents**. Spirit détecte uniquement les serveurs déjà installés sur cette machine ; installez vous-même ceux qui manquent avec la chaîne d'outils du tableau. Une fois qu'un serveur est prêt, l'agent peut appeler [`get_diagnostics`](./agent/tools.mdx).
 
 | Id              | Langages | Comment il est installé                                  |
 | --------------- | -------- | -------------------------------------------------------- |
@@ -73,7 +73,7 @@ Activez les serveurs de langage dans **Paramètres → Agents**, puis installez 
 | `jdtls`         | Java     | Manuel                                                   |
 | `omnisharp`     | C#       | .NET                                                     |
 
-clangd et jdtls ne sont pas fournis. Installez-les vous-même, puis revenez à Paramètres → Agents.
+Spirit n'installe pas les serveurs de langage. Installez vous-même ceux qui manquent, puis revenez à Paramètres → Agents.
 
 ### Onglet
 

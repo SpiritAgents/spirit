@@ -62,7 +62,7 @@ Esses chips injetam um prompt fixo. O agente então usa as ferramentas [workspac
 
 ### LSP
 
-Ative os servidores de linguagem em **Configurações → Agentes** e instale um provedor se estiver faltando. Quando o servidor estiver pronto, o agente pode chamar [`get_diagnostics`](./agent/tools.mdx).
+Ative os servidores de linguagem em **Configurações → Agentes**. O Spirit detecta apenas os servidores já instalados nesta máquina; instale você mesmo os que estiverem faltando, com a ferramenta indicada na tabela. Quando o servidor estiver pronto, o agente pode chamar [`get_diagnostics`](./agent/tools.mdx).
 
 | ID              | Linguagens | Como é instalado                                       |
 | --------------- | ---------- | ------------------------------------------------------ |
@@ -73,7 +73,7 @@ Ative os servidores de linguagem em **Configurações → Agentes** e instale um
 | `jdtls`         | Java       | Manual                                                 |
 | `omnisharp`     | C#         | .NET                                                   |
 
-clangd e jdtls não estão incluídos. Instale-os você mesmo e depois volte para Configurações → Agentes.
+O Spirit não instala servidores de linguagem. Instale você mesmo os que estiverem faltando e depois volte para Configurações → Agentes.
 
 ### Aba
 
