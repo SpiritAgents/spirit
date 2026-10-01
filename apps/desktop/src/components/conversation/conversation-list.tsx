@@ -64,8 +64,6 @@ const EMPTY_REWIND_LOCAL_FILE_ATTACHMENTS: readonly ComposerLocalFileAttachmentV
 export type ConversationListProps = {
   messages: readonly ConversationMessageSnapshot[];
   conversationRenderItems: readonly ConversationRenderItem[];
-  /** Virtualized scroll container (Radix ScrollArea viewport); provided by ConversationView. */
-  getScrollElement: () => HTMLElement | null;
   /** Synchronously pins to the bottom while tail-following (stream tail owns the stick semantics); called on every commit where totalSize changes */
   pinScrollToTail: () => void;
   releaseTailFollow?: () => void;
@@ -113,7 +111,6 @@ export type ConversationListProps = {
 export function ConversationList({
   messages,
   conversationRenderItems,
-  getScrollElement,
   pinScrollToTail,
   releaseTailFollow,
   quoteScrollRequest,
@@ -260,39 +257,16 @@ export function ConversationList({
 
   const sizingRef = useRef<HTMLDivElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
-  // The viewport is the parent ScrollArea's DOM; on cold start getScrollElement() is null on
-  // the first frame, so it must be converted to state to make the virtualizer re-run _willUpdate
-  // and bind the scroll listener.
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
 
-  // useLayoutEffect is required: useEffect binds scrollElement only after paint, so navigating
-  // into this view would first paint one frame of an empty list (virtualItems empty), perceived
-  // as a blank flash. setState in a layout effect flushes synchronously before paint, and
-  // virtual-core measures the rect synchronously when registering observeElementRect, so the
-  // first frame already has rows.
-  // After a full page reload (e.g. HMR) the snapshot is ready on the first commit, and this
-  // component mounts in the same commit as the ancestor ScrollArea; child layout effects run
-  // before the ancestor viewport ref is attached, so we get null here.
-  // A one-shot binding would leave the virtualizer without a scroll element forever (blank
-  // list), so poll until the viewport is available.
+  // The list's DOM is attached before its layout effects, but the ancestor ScrollArea ref
+  // is not. Resolve the viewport from our own node so surface remounts bind the virtualizer
+  // before paint instead of showing an empty message area while waiting for another frame.
   useLayoutEffect(() => {
-    const el = getScrollElement();
-    if (el) {
-      setScrollElement(el);
-      return;
-    }
-    let rafId = 0;
-    const waitForViewport = () => {
-      const next = getScrollElement();
-      if (!next) {
-        rafId = requestAnimationFrame(waitForViewport);
-        return;
-      }
-      setScrollElement(next);
-    };
-    rafId = requestAnimationFrame(waitForViewport);
-    return () => cancelAnimationFrame(rafId);
-  }, [getScrollElement]);
+    setScrollElement(
+      sizingRef.current?.closest<HTMLElement>("[data-radix-scroll-area-viewport]") ?? null,
+    );
+  }, []);
 
   const getItemKey = useCallback(
     (index: number) => {

@@ -13,8 +13,12 @@ import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
-import { resolveEffectiveEmptySession } from "@/lib/conversation-surface-stale";
-import { resolvePaneDesktopSnapshot, lookupPaneSessionSlice } from "@/lib/pane-desktop-snapshot";
+import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
+import {
+  resolvePaneContentStatus,
+  type PaneContentStatus,
+} from "@/lib/conversation-navigation-pending";
+import { resolvePaneDesktopSnapshot } from "@/lib/pane-desktop-snapshot";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
 import type { ConversationMessageSnapshot, DesktopSnapshot } from "@/types";
@@ -36,12 +40,8 @@ export type UseConversationPaneControllerOptions = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
-  hideStaleConversationMessages: boolean;
-  showWorkspaceBindingControls: boolean;
-  sessionNavigationBusy: boolean;
   newChatBusy: boolean;
   splitPaneCount: number;
-  layoutNavigationPending: boolean;
   onNewChat?: () => void;
   onBeginSideChat?: () => void;
   workspaceTools: WorkspaceTools;
@@ -62,12 +62,8 @@ export function useConversationPaneController({
   subagentViewer,
   compactionDemo,
   longConversationListDemo,
-  hideStaleConversationMessages,
-  showWorkspaceBindingControls: _showWorkspaceBindingControls,
-  sessionNavigationBusy: _sessionNavigationBusy,
   newChatBusy,
   splitPaneCount,
-  layoutNavigationPending,
   onNewChat,
   onBeginSideChat,
   workspaceTools,
@@ -85,23 +81,16 @@ export function useConversationPaneController({
   const paneCompactionDemoActive = isFocused && compactionDemo.active;
   const paneLongConversationListDemoActive = isFocused && longConversationListDemo.active;
 
-  const paneMissingSliceDuringNav = useMemo(() => {
-    if (!layoutNavigationPending || splitPaneCount <= 1) {
-      return false;
-    }
-    const hasPaneSessions = Boolean(
-      baseSnapshot?.paneSessions && Object.keys(baseSnapshot.paneSessions).length > 0,
-    );
-    return hasPaneSessions && !lookupPaneSessionSlice(baseSnapshot, sessionPath);
-  }, [baseSnapshot, layoutNavigationPending, sessionPath, splitPaneCount]);
-
-  const paneHideStaleConversationMessages = useMemo(
-    () => (isFocused ? hideStaleConversationMessages : false) || paneMissingSliceDuringNav,
-    [hideStaleConversationMessages, isFocused, paneMissingSliceDuringNav],
-  );
+  const paneContentStatus: PaneContentStatus = resolvePaneContentStatus({
+    paneSessionPath: sessionPath,
+    snapshot: baseSnapshot,
+  });
+  const paneContentPending = paneContentStatus === "pending-placeholder";
 
   const paneIsEmptySession = useMemo(() => {
-    if (paneMissingSliceDuringNav) {
+    // While the pane's data is still in flight, "empty" is unknown — never show
+    // the empty-session hero as a transitional state.
+    if (paneContentPending) {
       return false;
     }
     return resolveEffectiveEmptySession({
@@ -115,8 +104,8 @@ export function useConversationPaneController({
     isFocused,
     newChatBusy,
     paneCompactionDemoActive,
+    paneContentPending,
     paneLongConversationListDemoActive,
-    paneMissingSliceDuringNav,
     paneSnapshot?.conversation.messages.length,
     paneSubagentViewActive,
     splitPaneCount,
@@ -365,7 +354,7 @@ export function useConversationPaneController({
   return {
     paneSnapshot,
     paneIsEmptySession,
-    hideStaleConversationMessages: paneHideStaleConversationMessages,
+    paneContentStatus,
     list,
     composerDock,
     branchCheckout: {

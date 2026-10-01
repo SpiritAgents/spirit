@@ -46,9 +46,6 @@ export type ConversationPaneHostProps = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
-  hideStaleConversationMessages: boolean;
-  showWorkspaceBindingControls: boolean;
-  sessionNavigationBusy: boolean;
   newChatBusy: boolean;
   onNewChat?: () => void;
   deleteSessionBusy?: boolean;
@@ -113,7 +110,6 @@ export function ConversationPaneHost({
     isAnchorPane,
     useIsolatedPane,
     splitPaneCount,
-    layoutNavigationPending: controllerInput.runtime.layoutNavigationPending,
     conversationAbortShortcutTargetRef: split.conversationAbortShortcutTargetRef ?? undefined,
   });
 
@@ -205,7 +201,7 @@ export function ConversationPaneHost({
         useTranslucency={useTranslucency}
         snapshot={pane.paneSnapshot}
         isEmptySession={pane.paneIsEmptySession}
-        hideStaleConversationMessages={pane.hideStaleConversationMessages}
+        paneContentStatus={pane.paneContentStatus}
         showComposerDock
         showSessionSidebarToggle={splitPaneCount <= 1 || isSessionSidebarAnchorPane}
         showWorkspaceToggle={isAnchorPane}

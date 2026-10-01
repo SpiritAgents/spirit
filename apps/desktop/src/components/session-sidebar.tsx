@@ -143,7 +143,6 @@ type SessionSidebarProps = {
   /** Windows Mica: the sidebar needs translucency + blur so content behind the window does not show through and look smeared */
   translucency?: boolean;
   newChatBusy?: boolean;
-  sessionNavigationBusy?: boolean;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
@@ -1372,7 +1371,6 @@ function SessionSidebarInner({
   onExtensionSettingsChange,
   translucency,
   newChatBusy = false,
-  sessionNavigationBusy = false,
   deleteSessionBusy = false,
   onDeleteSession,
   renameSessionBusy = false,
@@ -1692,11 +1690,12 @@ function SessionSidebarInner({
   const isActiveSessionInSidebar =
     activeFilePath !== null && sessions.some((session) => samePath(session.path, activeFilePath));
 
+  // The New Chat item is the sidebar's location indicator whenever the current
+  // location is not a listed session. It must hold through a frozen navigation
+  // window — busy state never factors in, or the indicator would die at click
+  // time while the page is still frozen on the previous content.
   const newChatNavActive =
-    !marketplaceActive &&
-    !automationsActive &&
-    !sessionNavigationBusy &&
-    (newChatBusy || !isActiveSessionInSidebar);
+    !marketplaceActive && !automationsActive && (newChatBusy || !isActiveSessionInSidebar);
   const newChatDragEnabled = Boolean(split) && !disabled && !(newChatBusy && !newChatNavActive);
 
   useEffect(() => {

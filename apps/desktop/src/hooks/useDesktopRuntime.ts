@@ -43,9 +43,7 @@ import {
   cancelDoodleNavigation,
   commitDoodleNavigation,
 } from "@/lib/doodle";
-import { readSessionSplitBinding } from "@/lib/session-split-binding";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
-import { collectPaneSessionPaths } from "@/lib/conversation-split-layout";
 import {
   normalizePaneSessionPathKey,
   resolvePaneDesktopSnapshot,
@@ -360,26 +358,6 @@ function patchActiveSessionDisplayNameInList(
   return changed ? next : null;
 }
 
-function normalizeSessionPathKey(sessionPath: string): string {
-  return sessionPath.replace(/\\/g, "/").toLowerCase();
-}
-
-function shouldHoldSessionBusyForSplitRestore(
-  sessionPath: string,
-  snapshot: DesktopSnapshot,
-): boolean {
-  const binding = readSessionSplitBinding(sessionPath);
-  if (!binding) {
-    return false;
-  }
-  const bindingPaths = collectPaneSessionPaths(binding);
-  const paneKeys = Object.keys(snapshot.paneSessions ?? {});
-  return bindingPaths.some(
-    (path) =>
-      !paneKeys.some((key) => normalizeSessionPathKey(key) === normalizeSessionPathKey(path)),
-  );
-}
-
 function isRemoteWebHostClient(apiKind: string | null | undefined): boolean {
   if (apiKind === "web") {
     return true;
@@ -475,7 +453,6 @@ export function useDesktopRuntime() {
   const appliedConversationRevisionRef = useRef(0);
   const appliedComposerSessionKeyRef = useRef("");
   const sessionNavigationGenerationRef = useRef(0);
-  const [sessionNavigationGeneration, setSessionNavigationGeneration] = useState(0);
   const [navigationDoodleVariant, setNavigationDoodleVariant] = useState<
     import("@/lib/doodle").DoodleVariantId | null
   >(null);
@@ -503,7 +480,6 @@ export function useDesktopRuntime() {
   const advanceSessionNavigationGeneration = useCallback(() => {
     const next = sessionNavigationGenerationRef.current + 1;
     sessionNavigationGenerationRef.current = next;
-    setSessionNavigationGeneration(next);
     return next;
   }, []);
 
@@ -3431,37 +3407,34 @@ export function useDesktopRuntime() {
   );
 
   const openSession = useCallback(
-    async (path: string) => {
+    async (path: string): Promise<boolean> => {
       if (!api) {
-        return;
+        return false;
       }
       acknowledgeSessionAttention(path);
       const navGeneration = sessionNavigationGenerationRef.current + 1;
       sessionNavigationGenerationRef.current = navGeneration;
-      let holdBusyForSplitRestore = false;
       setBusyAction("session");
       try {
         stashSessionUi(snapshotRef.current);
         const next = await api.openSession(path);
         if (navGeneration !== sessionNavigationGenerationRef.current) {
-          return;
+          return false;
         }
         if (isRemoteWebHostClient(api.kind)) {
           syncWebViewingSessionPath(next.activeSession?.filePath ?? path);
         }
         applySnapshot(next, { navGeneration });
         restoreSessionUi(next);
-        holdBusyForSplitRestore = shouldHoldSessionBusyForSplitRestore(path, next);
         setRuntimeError("");
         void refreshSessions();
+        return true;
       } catch (error) {
         setRuntimeError(describeError(error));
+        return false;
       } finally {
         if (navGeneration === sessionNavigationGenerationRef.current) {
-          if (!holdBusyForSplitRestore) {
-            setBusyAction("");
-          } else {
-          }
+          setBusyAction("");
         }
       }
     },
@@ -3475,13 +3448,6 @@ export function useDesktopRuntime() {
       syncWebViewingSessionPath,
     ],
   );
-
-  const releaseSessionNavigationBusy = useCallback(() => {
-    if (busyActionRef.current !== "session") {
-      return;
-    }
-    setBusyAction("");
-  }, []);
 
   const setLayoutNavigationPending = useCallback((pending: boolean) => {
     setLayoutNavigationPendingState((current) => (current === pending ? current : pending));
@@ -4164,8 +4130,6 @@ export function useDesktopRuntime() {
     pushGitBranch,
     continueAssistantCompletion,
     openSession,
-    releaseSessionNavigationBusy,
-    sessionNavigationGeneration,
     navigationDoodleVariant,
     beginSplitPaneSession,
     beginSideChatPaneSession,

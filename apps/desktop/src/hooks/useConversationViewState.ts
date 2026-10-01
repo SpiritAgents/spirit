@@ -12,7 +12,7 @@ import { resolveConversationListScopeKey } from "@/lib/conversation-list-scope";
 import { buildConversationRenderItems } from "@/lib/conversation-process-groups";
 import { resolveTurnContinuePresentation } from "@/lib/conversation-continue-ui";
 import { useProcessSealAnimationGate } from "@/lib/process-seal-animation";
-import { resolveEffectiveEmptySession } from "@/lib/conversation-surface-stale";
+import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
 import { useElementBoxHeight } from "@/hooks/use-element-box-height";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
