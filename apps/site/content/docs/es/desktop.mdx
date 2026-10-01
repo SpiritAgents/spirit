@@ -62,7 +62,7 @@ Esos chips inyectan un prompt fijo. Luego el agente usa las herramientas [worksp
 
 ### LSP
 
-Activa los servidores de lenguaje en **Settings → Agents**, luego instala un proveedor si falta. Cuando un servidor esté listo, el agente puede llamar a [`get_diagnostics`](./agent/tools.mdx).
+Activa los servidores de lenguaje en **Settings → Agents**. Spirit solo detecta los servidores ya instalados en esta máquina; instala tú mismo cualquiera que falte con la cadena de herramientas de la tabla. Cuando un servidor esté listo, el agente puede llamar a [`get_diagnostics`](./agent/tools.mdx).
 
 | Id              | Lenguajes | Cómo se instala                                           |
 | --------------- | --------- | --------------------------------------------------------- |
@@ -73,7 +73,7 @@ Activa los servidores de lenguaje en **Settings → Agents**, luego instala un p
 | `jdtls`         | Java      | Manual                                                    |
 | `omnisharp`     | C#        | .NET                                                      |
 
-clangd y jdtls no están incluidos. Instálalos tú mismo y luego vuelve a Settings → Agents.
+Spirit no instala servidores de lenguaje. Instala tú mismo los que falten y luego vuelve a Settings → Agents.
 
 ### Tab
 

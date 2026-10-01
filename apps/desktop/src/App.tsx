@@ -600,10 +600,8 @@ export default function App() {
                               runtime.busyAction === "extensions" ||
                               runtime.busyAction === "extensionsImport"
                             }
-                            lspInstallBusy={runtime.lspInstallBusy}
                             isElectronShell={isElectronShell}
                             onSavePatch={runtime.saveSettingsPatch}
-                            onInstallLspProvider={runtime.installLspProvider}
                             onResetWebHostPairing={runtime.resetWebHostPairing}
                             onAddModel={runtime.addModel}
                             onAddProviderModels={runtime.addProviderModels}

@@ -62,7 +62,7 @@ Those chips inject a fixed prompt. The agent then uses [workspace and `shell` to
 
 ### LSP
 
-Turn language servers on in **Settings → Agents**, then install a provider if it is missing. Once a server is ready, the agent can call [`get_diagnostics`](./agent/tools.mdx).
+Turn language servers on in **Settings → Agents**. Spirit only detects servers already installed on this machine; install any missing one yourself with the toolchain in the table. Once a server is ready, the agent can call [`get_diagnostics`](./agent/tools.mdx).
 
 | Id              | Languages | How it is installed                               |
 | --------------- | --------- | ------------------------------------------------- |
@@ -73,7 +73,7 @@ Turn language servers on in **Settings → Agents**, then install a provider if 
 | `jdtls`         | Java      | Manual                                            |
 | `omnisharp`     | C#        | .NET                                              |
 
-clangd and jdtls are not bundled. Install them yourself, then come back to Settings → Agents.
+Spirit does not install language servers. Install a missing one yourself, then come back to Settings → Agents.
 
 ### Tab
 

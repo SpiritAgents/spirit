@@ -149,7 +149,6 @@ import type {
   MarketplaceUpdateCommandResult,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  InstallLspProviderRequest,
   SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
   AbortConversationRequest,
@@ -520,7 +519,6 @@ import {
   sharedLspServiceForWorkspace,
 } from "@spiritagent/host-internal/lsp";
 import { buildDesktopLspSnapshot, defaultDesktopLspSnapshot } from "./lsp-snapshot.js";
-import { installLspProviderCommand } from "./lsp-commands.js";
 import {
   basicInfoHostFromClientHost,
   currentApiBase,
@@ -1611,10 +1609,6 @@ export class DesktopHostService {
 
   async updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot> {
     return updateConfigCommand(this.modelCommandContext(), request);
-  }
-
-  async installLspProvider(request: InstallLspProviderRequest): Promise<DesktopSnapshot> {
-    return installLspProviderCommand(this.modelCommandContext(), request);
   }
 
   async setWebHostAuthTokenHash(authTokenHash: string): Promise<DesktopSnapshot> {

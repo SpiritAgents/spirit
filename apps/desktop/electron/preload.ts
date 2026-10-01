@@ -143,9 +143,6 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   updateConfig(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateConfig", { request });
   },
-  installLspProvider(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "installLspProvider", { request });
-  },
   addModel(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addModel", { request });
   },
