@@ -914,3 +914,18 @@ html:not(.spirit-clickable-pointer) a[href] {
 .spirit-composer-suggestion-open-settle * {
   cursor: text !important;
 }
+
+/* Session-navigation placeholder: delayed fade-in so fast switches never show the spinner */
+@keyframes spirit-nav-placeholder-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.spirit-nav-placeholder-fade {
+  opacity: 0;
+  animation: spirit-nav-placeholder-fade 160ms ease-out 160ms forwards;
+}

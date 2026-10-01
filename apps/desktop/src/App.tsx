@@ -151,7 +151,6 @@ export default function App() {
     subagentViewActive,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
-    sessionNavigationBusy,
     newChatBusy,
     t,
     composerAutomationApiRef,
@@ -253,11 +252,9 @@ export default function App() {
 
   const handleSelectSession = useCallback(
     (path: string) => {
-      surfaceNav.setLastNonSettingsSurface("conversation");
-      surfaceNav.setActiveSurface("conversation");
-      void runtime.openSession(path);
+      surfaceNav.beginSessionNavigation(path);
     },
-    [runtime.openSession, surfaceNav.setActiveSurface, surfaceNav.setLastNonSettingsSurface],
+    [surfaceNav.beginSessionNavigation],
   );
 
   useDesktopKeyboardShortcuts({
@@ -546,7 +543,6 @@ export default function App() {
                           onExtensionSettingsChange={(id) => surfaceNav.setExtensionSettingsId(id)}
                           translucency={useTranslucency}
                           newChatBusy={newChatBusy}
-                          sessionNavigationBusy={sessionNavigationBusy}
                           deleteSessionBusy={sessionMutationBusy}
                           onDeleteSession={(path) => runtime.deleteSession(path)}
                           renameSessionBusy={sessionMutationBusy}
@@ -668,9 +664,7 @@ export default function App() {
                                   surfaceNav.setActiveSurface("automations");
                                 }}
                                 onOpenSession={(path) => {
-                                  surfaceNav.setLastNonSettingsSurface("conversation");
-                                  surfaceNav.setActiveSurface("conversation");
-                                  void runtime.openSession(path);
+                                  surfaceNav.beginSessionNavigation(path);
                                 }}
                                 getAutomation={runtime.getAutomation}
                                 updateAutomation={(id, patch) =>
@@ -822,13 +816,6 @@ export default function App() {
                                     subagentViewer={subagentViewer}
                                     compactionDemo={compactionDemo}
                                     longConversationListDemo={longConversationListDemo}
-                                    hideStaleConversationMessages={
-                                      surfaceNav.hideStaleConversationMessages
-                                    }
-                                    showWorkspaceBindingControls={
-                                      surfaceNav.showWorkspaceBindingControls
-                                    }
-                                    sessionNavigationBusy={sessionNavigationBusy}
                                     newChatBusy={newChatBusy}
                                     onNewChat={handleNewChat}
                                     deleteSessionBusy={sessionMutationBusy}

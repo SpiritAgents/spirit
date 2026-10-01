@@ -4,13 +4,12 @@ import type { TFunction } from "i18next";
 import type { SessionSidebarChromeApi } from "@/contexts/session-sidebar-chrome-context";
 import type { SettingsSidebarTab } from "@/components/session-sidebar";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
+import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
 import {
-  resolveEffectiveEmptySession,
-  shouldClearConversationSnapshotStale,
-  shouldHideStaleConversationMessages,
-  shouldMarkConversationSnapshotStale,
-  shouldSuppressStaleConversation,
-} from "@/lib/conversation-surface-stale";
+  resolveSessionNavPending,
+  type SessionNavTarget,
+} from "@/lib/conversation-navigation-pending";
+import { normalizeSessionPathKey } from "@/lib/session-path-kind";
 import type { FocusedPaneComposerControls } from "@/lib/focused-pane-composer-controls";
 import { sameWorkspacePath } from "@/lib/workspace-display-label";
 import type { DesktopSnapshot } from "@/types";
@@ -26,6 +25,8 @@ export type AppSurface =
 
 export type NonSettingsSurface = "conversation" | "marketplace" | "automations";
 
+type PendingSessionNav = SessionNavTarget & { fromSurface: AppSurface };
+
 export type UseAppSurfaceNavigationOptions = {
   runtime: DesktopRuntime;
   snapshot: DesktopSnapshot | null;
@@ -33,7 +34,6 @@ export type UseAppSurfaceNavigationOptions = {
   subagentViewActive: boolean;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
-  sessionNavigationBusy: boolean;
   newChatBusy: boolean;
   t: TFunction;
   composerAutomationApiRef?: MutableRefObject<FocusedPaneComposerControls | null>;
@@ -46,7 +46,6 @@ export function useAppSurfaceNavigation({
   subagentViewActive,
   compactionDemoActive,
   longConversationListDemoActive,
-  sessionNavigationBusy,
   newChatBusy,
   t,
   composerAutomationApiRef,
@@ -55,7 +54,12 @@ export function useAppSurfaceNavigation({
   const activeSurfaceRef = useRef(activeSurface);
   activeSurfaceRef.current = activeSurface;
 
-  const [conversationSnapshotStale, setConversationSnapshotStale] = useState(false);
+  const [sessionNavTarget, setSessionNavTarget] = useState<PendingSessionNav | null>(null);
+  const sessionNavTargetRef = useRef<PendingSessionNav | null>(null);
+  const updateSessionNavTarget = useCallback((next: PendingSessionNav | null) => {
+    sessionNavTargetRef.current = next;
+    setSessionNavTarget(next);
+  }, []);
   const [lastNonSettingsSurface, setLastNonSettingsSurface] =
     useState<NonSettingsSurface>("conversation");
   const [selectedAutomationId, setSelectedAutomationId] = useState<string | null>(null);
@@ -64,23 +68,16 @@ export function useAppSurfaceNavigation({
   const [extensionSettingsId, setExtensionSettingsId] = useState<string | null>(null);
   const sessionSidebarChromeApiRef = useRef<SessionSidebarChromeApi | null>(null);
 
-  useEffect(() => {
-    if (shouldMarkConversationSnapshotStale(activeSurface)) {
-      setConversationSnapshotStale(true);
-    }
-  }, [activeSurface]);
+  const sessionNavPending = resolveSessionNavPending({ navTarget: sessionNavTarget, snapshot });
 
+  // The intent is fulfilled once the snapshot shows the target session; clear it
+  // so a later foreground change (new chat, delete-and-open-next) is not mistaken
+  // for this navigation still being in flight.
   useEffect(() => {
-    if (
-      shouldClearConversationSnapshotStale({
-        activeSurface,
-        sessionNavigationBusy,
-        newChatBusy,
-      })
-    ) {
-      setConversationSnapshotStale(false);
+    if (sessionNavTarget && !sessionNavPending) {
+      updateSessionNavTarget(null);
     }
-  }, [activeSurface, newChatBusy, sessionNavigationBusy]);
+  }, [sessionNavTarget, sessionNavPending, updateSessionNavTarget]);
 
   const settingsMode = activeSurface === "settings";
   const marketplaceMode = activeSurface === "marketplace";
@@ -89,16 +86,6 @@ export function useAppSurfaceNavigation({
   const preserveConversationSurface =
     activeSurface === "conversation" || (settingsMode && lastNonSettingsSurface === "conversation");
 
-  const suppressStaleConversation = shouldSuppressStaleConversation({
-    conversationSnapshotStale,
-    activeSurface,
-    sessionNavigationBusy,
-    newChatBusy,
-  });
-  const hideStaleConversationMessages = shouldHideStaleConversationMessages({
-    suppressStaleConversation,
-    sessionNavigationBusy,
-  });
   const isEmptySession = resolveEffectiveEmptySession({
     sessionMessageCount: sessionMessages.length,
     subagentViewActive,
@@ -106,16 +93,16 @@ export function useAppSurfaceNavigation({
     longConversationListDemoActive,
     newChatBusy,
   });
-  const showWorkspaceBindingControls = isEmptySession;
 
   const handleNewChat = useCallback(() => {
     if (runtime.busyAction === "reset") {
       return;
     }
+    updateSessionNavTarget(null);
     setLastNonSettingsSurface("conversation");
     setActiveSurface("conversation");
     void runtime.resetSession();
-  }, [runtime]);
+  }, [runtime, updateSessionNavTarget]);
 
   const handleNewChatInWorkspace = useCallback(
     async (workspaceRoot: string) => {
@@ -124,6 +111,7 @@ export function useAppSurfaceNavigation({
         return;
       }
 
+      updateSessionNavTarget(null);
       setLastNonSettingsSurface("conversation");
       setActiveSurface("conversation");
 
@@ -142,7 +130,43 @@ export function useAppSurfaceNavigation({
 
       await runtime.resetSession();
     },
-    [runtime, snapshot?.workspaceBinding, snapshot?.workspaceRoot],
+    [runtime, snapshot?.workspaceBinding, snapshot?.workspaceRoot, updateSessionNavTarget],
+  );
+
+  const beginSessionNavigation = useCallback(
+    (path: string) => {
+      // Re-clicking the foreground session is a plain surface switch: its data
+      // is already on screen, so there is nothing to freeze on. Opening it again
+      // would also fulfill the intent at birth (navPending is false from the
+      // start), which used to eat the intent before openSession resolved and
+      // leave the page stuck.
+      const activePath = snapshot?.activeSession?.filePath;
+      if (activePath && normalizeSessionPathKey(activePath) === normalizeSessionPathKey(path)) {
+        setLastNonSettingsSurface("conversation");
+        setActiveSurface("conversation");
+        return;
+      }
+      const intent: PendingSessionNav = { path, fromSurface: activeSurfaceRef.current };
+      updateSessionNavTarget(intent);
+      void runtime.openSession(path).then((opened) => {
+        if (sessionNavTargetRef.current !== intent) {
+          return; // superseded by a newer navigation intent, which owns the outcome
+        }
+        if (!opened) {
+          updateSessionNavTarget(null);
+          return;
+        }
+        // Freeze navigation: switch only once the target session's snapshot has
+        // landed, and only if the user has not headed to another page meanwhile.
+        if (activeSurfaceRef.current === intent.fromSurface) {
+          setLastNonSettingsSurface("conversation");
+          setActiveSurface("conversation");
+          return;
+        }
+        updateSessionNavTarget(null);
+      });
+    },
+    [runtime, snapshot, updateSessionNavTarget],
   );
 
   const handlePrefillComposerSkillChip = useCallback(
@@ -157,6 +181,7 @@ export function useAppSurfaceNavigation({
   );
 
   const handleGenerateAutomation = useCallback(async () => {
+    updateSessionNavTarget(null);
     setLastNonSettingsSurface("conversation");
     setActiveSurface("conversation");
     const seed = t("automations.generateComposerSeed");
@@ -169,7 +194,7 @@ export function useAppSurfaceNavigation({
     queueMicrotask(() => {
       composerApi?.focusComposer();
     });
-  }, [composerAutomationApiRef, runtime, t]);
+  }, [composerAutomationApiRef, runtime, t, updateSessionNavTarget]);
 
   const handleOpenSettings = useCallback(() => {
     sessionSidebarChromeApiRef.current?.openSidebar();
@@ -208,7 +233,7 @@ export function useAppSurfaceNavigation({
     activeSurface,
     setActiveSurface,
     activeSurfaceRef,
-    conversationSnapshotStale,
+    beginSessionNavigation,
     lastNonSettingsSurface,
     setLastNonSettingsSurface,
     selectedAutomationId,
@@ -225,10 +250,7 @@ export function useAppSurfaceNavigation({
     automationsMode,
     automationDetailMode,
     preserveConversationSurface,
-    suppressStaleConversation,
-    hideStaleConversationMessages,
     isEmptySession,
-    showWorkspaceBindingControls,
     handleNewChat,
     handleNewChatInWorkspace,
     handleGenerateAutomation,

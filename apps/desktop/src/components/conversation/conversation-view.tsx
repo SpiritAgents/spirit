@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { ComposerDock } from "@/components/conversation/composer-dock";
 import { BranchCheckoutDialog } from "@/components/branch-checkout-dialog";
 import { ConversationList } from "@/components/conversation/conversation-list";
+import { ConversationNavPlaceholder } from "@/components/conversation/conversation-nav-placeholder";
 import { ConversationMessageSelectionMenu } from "@/components/conversation/conversation-message-selection-menu";
 import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrome-bar";
 import { sessionGitTooltipItemFromChromeSession } from "@/components/session-list-git-tooltip";
@@ -55,6 +56,7 @@ import {
   visiblePaneDropZonesForSidebarSessionDrag,
 } from "@/lib/conversation-pane-drop-preview";
 import type { PaneDropZone } from "@/lib/conversation-split-layout";
+import type { PaneContentStatus } from "@/lib/conversation-navigation-pending";
 
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 
@@ -177,7 +179,7 @@ export type BranchCheckoutSectionProps = {
 export type ConversationViewProps = {
   useTranslucency: boolean;
   isEmptySession: boolean;
-  hideStaleConversationMessages: boolean;
+  paneContentStatus: PaneContentStatus;
   snapshot: DesktopSnapshot | null;
   subagentViewActive: boolean;
   onExitSubagentViewer: (() => void) | undefined;
@@ -246,7 +248,7 @@ export type ConversationViewProps = {
 export function ConversationView({
   useTranslucency,
   isEmptySession,
-  hideStaleConversationMessages,
+  paneContentStatus,
   snapshot,
   subagentViewActive,
   onExitSubagentViewer,
@@ -323,8 +325,9 @@ export function ConversationView({
     (quoteSessionPath ? isSideChatPaneProvisionalSessionPath(quoteSessionPath) : false)
       ? "side-chat"
       : "session";
+  const navPlaceholderActive = paneContentStatus === "pending-placeholder";
   const conversationMessagesVisible =
-    (!isEmptySession || subagentViewActive) && !hideStaleConversationMessages;
+    (!isEmptySession || subagentViewActive) && !navPlaceholderActive;
   // translucency: ScrollArea stays full height; the shape mask clips to the input/Changes/TODO
   // outline (the top rounded-corner gap is preserved).
   // In Rewind mode the mask is disabled: mask-image would make the viewport form a new stacking
@@ -334,7 +337,7 @@ export function ConversationView({
     useTranslucency && conversationMessagesVisible && !rewindDraft
       ? conversationScrollOccludeMaskStyle
       : undefined;
-  const sessionTitleVisible = !isEmptySession && !hideStaleConversationMessages;
+  const sessionTitleVisible = !isEmptySession && !navPlaceholderActive;
   const sessionTooltip =
     sessionTitleVisible && snapshot?.activeSession
       ? sessionGitTooltipItemFromChromeSession({
@@ -635,7 +638,7 @@ export function ConversationView({
                   desktopTranslucencyTintInnerClass(useTranslucency),
                 )}
                 style={{
-                  ...((!isEmptySession || subagentViewActive) && !hideStaleConversationMessages
+                  ...(conversationMessagesVisible
                     ? { paddingBottom: conversationScrollBedPaddingPx }
                     : undefined),
                   // Hide the list until bottom-anchoring settles, avoiding two visible shifts
@@ -643,11 +646,10 @@ export function ConversationView({
                   ...(listSettling ? { visibility: "hidden" as const } : undefined),
                 }}
               >
-                {(!isEmptySession || subagentViewActive) && !hideStaleConversationMessages ? (
+                {conversationMessagesVisible ? (
                   <ConversationList
                     messages={list.messages}
                     conversationRenderItems={list.conversationRenderItems}
-                    getScrollElement={getConversationScrollElement}
                     pinScrollToTail={pinScrollToTail}
                     releaseTailFollow={releaseTailFollow}
                     quoteScrollRequest={quoteScrollRequest}
@@ -689,6 +691,7 @@ export function ConversationView({
                     onComposerAgentModeChange={list.onComposerAgentModeChange}
                   />
                 ) : null}
+                {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
               </div>
             </ScrollArea>
 
@@ -701,7 +704,7 @@ export function ConversationView({
                 showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
               }
             />
-            {showComposerDock ? (
+            {showComposerDock && !navPlaceholderActive ? (
               <ComposerDock
                 ref={composerDock.composerDockRef}
                 isEmptySession={isEmptySession}
@@ -771,7 +774,7 @@ export function ConversationView({
                 models={composerDock.models}
                 useTranslucency={useTranslucency}
                 onOpenGitTab={composerDock.onOpenGitTab}
-                showScrollToBottom={!isEmptySession && !followingTail}
+                showScrollToBottom={!isEmptySession && !navPlaceholderActive && !followingTail}
                 onScrollToBottom={() => pinScrollToTail(true, "smooth")}
                 getScrollViewport={getConversationScrollElement}
                 onScrollOccludeMaskStyleChange={composerDock.onScrollOccludeMaskStyleChange}
