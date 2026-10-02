@@ -18,7 +18,7 @@ fn main() {
 
     let out = PathBuf::from(env::var_os("OUT_DIR").expect("Cargo output directory"));
     if let Some(prebuilt) = env::var_os("SPIRIT_PRODUCT_ARTIFACT_DIR") {
-        let prebuilt = PathBuf::from(prebuilt);
+        let prebuilt = root.join(prebuilt);
         let stamp_path = prebuilt.join("inputs.sha256");
         let rust_path = prebuilt.join("product.rs");
         println!("cargo:rerun-if-changed={}", stamp_path.display());

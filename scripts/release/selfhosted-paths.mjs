@@ -1,35 +1,37 @@
-/** Shared GitHub artifact → download.spirit.dev path mapping (primary installers only). */
+/** Shared GitHub artifact to public download path mapping (primary installers only). */
 
 import { VERSION_IN_FILENAME_RE } from './version.mjs';
+import { product } from '../../packages/product/dist/index.js';
 
-export const PUBLIC_DOWNLOAD_HOST = 'download.spirit.dev';
+export const PUBLIC_DOWNLOAD_HOST = new URL(product.downloadOrigin).host;
+const productPattern = product.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const PRIMARY_PATTERNS = [
   {
     channel: 'desktop',
-    re: new RegExp(`^Spirit-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-darwin-(?<arch>x64|arm64)\\.dmg$`),
+    re: new RegExp(`^${productPattern}-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-darwin-(?<arch>x64|arm64)\\.dmg$`),
     toKey: ({ arch, version }) => ({
       os: 'darwin',
       arch,
       version,
-      fileName: `Spirit-darwin-${arch}.dmg`,
+      fileName: `${product.name}-darwin-${arch}.dmg`,
     }),
   },
   {
     channel: 'desktop',
-    re: new RegExp(`^Spirit-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-win-(?<arch>x64|arm64)\\.exe$`),
+    re: new RegExp(`^${productPattern}-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-win-(?<arch>x64|arm64)\\.exe$`),
     toKey: ({ arch, version }) => ({
       os: 'windows',
       arch,
       version,
-      fileName: `Spirit-windows-${arch}.exe`,
+      fileName: `${product.name}-windows-${arch}.exe`,
     }),
   },
   {
     channel: 'desktop',
     // electron-builder AppImage uses x86_64 for linux x64 (arm64 stays arm64).
     re: new RegExp(
-      `^Spirit-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-linux-(?<arch>x64|x86_64|arm64)\\.AppImage$`,
+      `^${productPattern}-Desktop-(?<version>${VERSION_IN_FILENAME_RE})-linux-(?<arch>x64|x86_64|arm64)\\.AppImage$`,
     ),
     toKey: ({ arch, version }) => {
       const normalizedArch = arch === 'x86_64' ? 'x64' : arch;
@@ -37,38 +39,40 @@ const PRIMARY_PATTERNS = [
         os: 'linux',
         arch: normalizedArch,
         version,
-        fileName: `Spirit-linux-${normalizedArch}.AppImage`,
+        fileName: `${product.name}-linux-${normalizedArch}.AppImage`,
       };
     },
   },
   {
     channel: 'cli',
-    re: new RegExp(`^Spirit-CLI-(?<version>${VERSION_IN_FILENAME_RE})-darwin-(?<arch>x64|arm64)\\.tar\\.gz$`),
+    re: new RegExp(
+      `^${productPattern}-CLI-(?<version>${VERSION_IN_FILENAME_RE})-darwin-(?<arch>x64|arm64)\\.tar\\.gz$`,
+    ),
     toKey: ({ arch, version }) => ({
       os: 'darwin',
       arch,
       version,
-      fileName: `Spirit-CLI-darwin-${arch}.tar.gz`,
+      fileName: `${product.name}-CLI-darwin-${arch}.tar.gz`,
     }),
   },
   {
     channel: 'cli',
-    re: new RegExp(`^Spirit-CLI-(?<version>${VERSION_IN_FILENAME_RE})-windows-(?<arch>x64|arm64)\\.zip$`),
+    re: new RegExp(`^${productPattern}-CLI-(?<version>${VERSION_IN_FILENAME_RE})-windows-(?<arch>x64|arm64)\\.zip$`),
     toKey: ({ arch, version }) => ({
       os: 'windows',
       arch,
       version,
-      fileName: `Spirit-CLI-windows-${arch}.zip`,
+      fileName: `${product.name}-CLI-windows-${arch}.zip`,
     }),
   },
   {
     channel: 'cli',
-    re: new RegExp(`^Spirit-CLI-(?<version>${VERSION_IN_FILENAME_RE})-linux-(?<arch>x64|arm64)\\.tar\\.gz$`),
+    re: new RegExp(`^${productPattern}-CLI-(?<version>${VERSION_IN_FILENAME_RE})-linux-(?<arch>x64|arm64)\\.tar\\.gz$`),
     toKey: ({ arch, version }) => ({
       os: 'linux',
       arch,
       version,
-      fileName: `Spirit-CLI-linux-${arch}.tar.gz`,
+      fileName: `${product.name}-CLI-linux-${arch}.tar.gz`,
     }),
   },
 ];
@@ -108,5 +112,5 @@ export function objectKeyFor(mapped, versionSegment) {
  * @param {string} objectKey
  */
 export function publicUrlFor(objectKey) {
-  return `https://${PUBLIC_DOWNLOAD_HOST}/${objectKey}`;
+  return new URL(objectKey.split('/').map(encodeURIComponent).join('/'), `${product.downloadOrigin}/`).href;
 }

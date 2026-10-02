@@ -177,6 +177,9 @@ importers:
       '@spiritagent/product':
         specifier: workspace:*
         version: link:packages/product
+      cross-spawn:
+        specifier: 7.0.6
+        version: 7.0.6
       oxfmt:
         specifier: ^0.62.0
         version: 0.62.0
@@ -406,6 +409,9 @@ importers:
       linkedom:
         specifier: 0.18.13
         version: 0.18.13
+      plist:
+        specifier: 3.1.0
+        version: 3.1.0
       png-to-ico:
         specifier: 3.0.2
         version: 3.0.2

@@ -4,6 +4,17 @@ import path from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { product, PRODUCT_BUILD_ID } from "@spiritagent/product";
+
+export function renderProductHtml(html: string): string {
+  const name = product.name
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  return html
+    .replaceAll("{{product.name}}", () => name)
+    .replaceAll("{{productBuildId}}", () => PRODUCT_BUILD_ID);
+}
 
 /**
  * Dev-only: resolve renderer-consumed workspace packages to their TypeScript
@@ -46,7 +57,11 @@ function workspaceSourceAliases() {
 
 export default defineConfig(({ command }) => ({
   base: "./",
-  plugins: [react(), tailwindcss()],
+  plugins: [
+    { name: "product-html", transformIndexHtml: renderProductHtml },
+    react(),
+    tailwindcss(),
+  ],
   resolve: {
     alias: [
       ...(command === "serve" ? workspaceSourceAliases() : []),
