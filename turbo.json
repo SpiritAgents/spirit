@@ -1,5 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [
+    "product.json",
+    "packages/product/schema.ts",
+    "packages/product/scripts/generate.mjs"
+  ],
+  "globalEnv": ["SPIRIT_PRODUCT_QUALITY"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

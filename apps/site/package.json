@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node scripts/generate-brand-assets.mjs && next dev --hostname 127.0.0.1",
+    "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
+    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && next dev --hostname 127.0.0.1",
     "build": "node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
     "start": "next start",
     "test": "tsx --test scripts/*.test.ts",
@@ -24,6 +25,7 @@
     "@shikijs/langs": "^4.3.1",
     "@shikijs/themes": "^4.3.1",
     "@spiritagent/icons": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "@spiritagent/ui": "workspace:*",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
