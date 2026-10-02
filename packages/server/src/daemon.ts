@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type Server as HttpServer } from "node:http";
 import type { Socket } from "node:net";
+import { PRODUCT_BUILD_ID } from "@spiritagent/product";
 
 import {
   configureLlmClientVersion,
@@ -783,6 +784,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         case SERVER_HEALTH: {
           const result: ServerHealthResult = {
             ok: true,
+            productBuildId: PRODUCT_BUILD_ID,
             instanceId,
             pid: process.pid,
             version,

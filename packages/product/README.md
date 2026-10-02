@@ -18,11 +18,30 @@ SPIRIT_PRODUCT_QUALITY=dev pnpm exec turbo run build --filter=@spiritagent/serve
 Cargo invokes the same generator during a native build. For cross containers
 without Node, generate first on the build host and pass
 `SPIRIT_PRODUCT_ARTIFACT_DIR` pointing to that output. Cargo verifies the quality,
-source-input fingerprint, and Rust artifact hash before including it.
+source-input fingerprint, and Rust artifact hash before including it. Relative
+artifact directories resolve from the repository root. `Cross.toml` forwards
+both product environment variables into cross containers. Desktop release jobs
+use native Linux ARM runners for their C++ native modules.
 
 Consumers import `product` and `PRODUCT_BUILD_ID` from `@spiritagent/product`.
 Hosts own path resolution; this package only supplies directory names.
 Generated files under `dist/` are not editable sources.
+
+Daemon health includes the baked build identity. Clients reject missing or
+different identities before using daemon capabilities; discovery does not
+silently spawn a replacement after a product mismatch.
+
+Desktop packaging loads `apps/desktop/electron-builder.config.mjs` over its
+platform-only YAML settings. Both the packaged app and the development app
+bundle declare the baked URL scheme. CLI packaging deploys the complete server
+production dependency graph rather than copying selected workspace packages.
+For offline packaging, pass `--node-runtime-dir <distribution>` and
+`--node-version <version>` to `scripts/release/bundle-cli.mjs`, together with
+`--offline`. `--binary` and `--output-dir` select controlled local inputs and
+outputs. `--ignore-scripts` is available when the target's native binaries
+already ship prebuilt; it must not replace building missing native modules.
+Publishing jobs consume the validated product artifact without installing
+dependencies in the credential-bearing publishing job.
 
 Site documentation and bundled resources keep a single source at their original
 `.mdx`, `.md`, or `.json` path. `pnpm product:content` renders Site content into

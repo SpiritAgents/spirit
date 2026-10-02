@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { product } from "@spiritagent/product";
+import { product, PRODUCT_BUILD_ID } from "@spiritagent/product";
 import { fileURLToPath } from "node:url";
 
 import { readCurrentToken } from "./auth-token.js";
@@ -9,6 +9,7 @@ import type {
   JsonRpcId,
   JsonRpcNotification,
   JsonRpcSuccessResponse,
+  ServerHealthResult,
 } from "./protocol/index.js";
 
 export interface ServerRpcClientOptions {
@@ -38,6 +39,17 @@ function isLoopbackHost(host: string): boolean {
 
 type JsonRpcResponse = JsonRpcSuccessResponse | JsonRpcErrorResponse;
 
+export class ProductBuildMismatchError extends Error {
+  constructor(actual: unknown) {
+    super(
+      `${product.name} client requires product build ${PRODUCT_BUILD_ID} (${product.quality}), ` +
+        `but the daemon reported ${typeof actual === "string" ? actual : "no product build identity"}. ` +
+        "Use matching client and daemon builds.",
+    );
+    this.name = "ProductBuildMismatchError";
+  }
+}
+
 export class ServerRpcClient {
   private readonly pending = new Map<
     JsonRpcId,
@@ -47,14 +59,25 @@ export class ServerRpcClient {
   private readonly disconnectListeners = new Set<ServerDisconnectListener>();
   private nextRequestId = 1;
   private socket: WebSocket | undefined;
+  private connectionPromise: Promise<void> | undefined;
+  private serverInstanceId: string | undefined;
 
   constructor(private readonly options: ServerRpcClientOptions) {}
 
-  async connect(): Promise<void> {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      return;
+  connect(): Promise<void> {
+    if (this.connectionPromise) {
+      return this.connectionPromise;
     }
+    if (this.isConnected()) {
+      return Promise.resolve();
+    }
+    this.connectionPromise = this.connectSocket().finally(() => {
+      this.connectionPromise = undefined;
+    });
+    return this.connectionPromise;
+  }
 
+  private async connectSocket(): Promise<void> {
     // Node's WebSocket API cannot set Authorization headers; the daemon also
     // accepts ?token= on the upgrade URL (see daemon.ts extractPresentedToken).
     const url = new URL(this.options.url);
@@ -85,6 +108,7 @@ export class ServerRpcClient {
     socket.addEventListener("close", () => {
       if (this.socket === socket) {
         this.socket = undefined;
+        this.serverInstanceId = undefined;
       }
       const error = new Error(`${product.name} Server connection closed`);
       this.rejectPending(error);
@@ -92,16 +116,36 @@ export class ServerRpcClient {
         listener(error);
       }
     });
+    try {
+      const health = await this.call<ServerHealthResult>("server.health");
+      if (health?.productBuildId !== PRODUCT_BUILD_ID) {
+        throw new ProductBuildMismatchError(health?.productBuildId);
+      }
+      if (typeof health.instanceId !== "string" || !health.instanceId) {
+        throw new Error(`${product.name} Server health response has no instance identity`);
+      }
+      this.serverInstanceId = health.instanceId;
+    } catch (error) {
+      this.close();
+      throw error;
+    }
+  }
+
+  get instanceId(): string | undefined {
+    return this.serverInstanceId;
   }
 
   isConnected(): boolean {
-    return this.socket?.readyState === WebSocket.OPEN;
+    return this.socket?.readyState === WebSocket.OPEN && this.serverInstanceId !== undefined;
   }
 
   async call<Result = unknown>(method: string, params?: unknown): Promise<Result> {
     const socket = this.socket;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       throw new Error(`${product.name} Server is not connected`);
+    }
+    if (!this.isConnected() && method !== "server.health") {
+      throw new Error(`${product.name} Server product handshake is not complete`);
     }
     const id = this.nextRequestId++;
     const response = new Promise<Result>((resolve, reject) => {
@@ -134,6 +178,7 @@ export class ServerRpcClient {
   close(): void {
     const socket = this.socket;
     this.socket = undefined;
+    this.serverInstanceId = undefined;
     socket?.close();
     this.rejectPending(new Error(`${product.name} Server client closed`));
   }
@@ -245,13 +290,15 @@ async function connectToRegisteredServer(
     });
     try {
       await client.connect();
-      const health = await client.call<{ instanceId: string }>("server.health");
-      if (health.instanceId !== instance.instanceId) {
+      if (client.instanceId !== instance.instanceId) {
         throw new Error("daemon health instanceId mismatch");
       }
       return { client, instance };
-    } catch {
+    } catch (error) {
       client.close();
+      if (error instanceof ProductBuildMismatchError) {
+        throw error;
+      }
     }
   }
   return undefined;

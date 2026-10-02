@@ -67,7 +67,8 @@ export function spiritDownloadUrl(
   arch: SpiritDownloadArch,
   version: "latest" | string = "latest",
 ): string {
-  return new URL(spiritDownloadObjectKey(channel, os, arch, version), `${product.downloadOrigin}/`)
+  const key = spiritDownloadObjectKey(channel, os, arch, version);
+  return new URL(key.split("/").map(encodeURIComponent).join("/"), `${product.downloadOrigin}/`)
     .href;
 }
 

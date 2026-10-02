@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { isReleaseVersion, parseReleaseVersion } from './version.mjs';
 import { mapPrimaryAsset } from './selfhosted-paths.mjs';
+import { product } from '@spiritagent/product';
 
 test('parseReleaseVersion accepts a stable X.Y.Z', () => {
   assert.deepEqual(parseReleaseVersion('1.0.0'), {
@@ -39,13 +40,13 @@ test('isReleaseVersion matches parseReleaseVersion', () => {
 });
 
 test('mapPrimaryAsset captures prerelease versions in installer names', () => {
-  const mapped = mapPrimaryAsset('Spirit-Desktop-1.0.0-beta.1-darwin-arm64.dmg');
+  const mapped = mapPrimaryAsset(`${product.name}-Desktop-1.0.0-beta.1-darwin-arm64.dmg`);
   assert.equal(mapped?.version, '1.0.0-beta.1');
   assert.equal(mapped?.os, 'darwin');
   assert.equal(mapped?.arch, 'arm64');
 
-  const stable = mapPrimaryAsset('Spirit-Desktop-0.3.3-darwin-arm64.dmg');
+  const stable = mapPrimaryAsset(`${product.name}-Desktop-0.3.3-darwin-arm64.dmg`);
   assert.equal(stable?.version, '0.3.3');
 
-  assert.equal(mapPrimaryAsset('Spirit-Desktop-1.0.0-preview.1-darwin-arm64.dmg'), undefined);
+  assert.equal(mapPrimaryAsset(`${product.name}-Desktop-1.0.0-preview.1-darwin-arm64.dmg`), undefined);
 });
