@@ -2,7 +2,7 @@
 
 Marketing and docs site for Spirit (Next.js + Fumadocs).
 
-Preview: https://next.spirit.dev
+Preview deployment: https://next.spirit.dev
 
 ## Development
 
@@ -22,7 +22,7 @@ Equivalent: `pnpm --filter @spiritagent/site dev`.
 
 Build settings live in [`vercel.json`](./vercel.json). After this package lands on `SpiritAgents/spirit`, switch the existing Vercel project (keep `spirit.dev` / `next.spirit.dev` on the same project):
 
-1. **Settings → Git**: disconnect `spirit.dev`, connect `SpiritAgents/spirit`.
+1. **Settings → Git**: disconnect the previous `spirit.dev` repository, connect `SpiritAgents/spirit`.
 2. **Root Directory**: `apps/site`.
 3. Enable **Include source files outside of the Root Directory**.
 4. Leave Install / Build / Output empty so `vercel.json` applies.

@@ -1,14 +1,16 @@
 ---
 title: MCP
-description: Пользовательский mcp.json плюс workspace .spirit/mcp.json. Workspace имеет приоритет при совпадении имени сервера.
+description: Пользовательский mcp.json плюс workspace
+  {{product.workspaceDataFolderName}}/mcp.json. Workspace имеет приоритет при
+  совпадении имени сервера.
 ---
 
-MCP-серверы добавляют инструменты, ресурсы и подсказки извне Spirit.
+MCP-серверы добавляют инструменты, ресурсы и подсказки извне {{product.name|mdx}}.
 
 | Область      | Путь                           |
 | ------------ | ------------------------------ |
 | Пользователь | `{spiritDataDir}/mcp.json`     |
-| Workspace    | `{workspace}/.spirit/mcp.json` |
+| Workspace    | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 Когда оба файла определяют одно и то же имя сервера, запись из **workspace** имеет приоритет.
 

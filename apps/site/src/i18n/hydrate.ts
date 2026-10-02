@@ -1,4 +1,5 @@
 import type { Messages } from "@/i18n/messages";
+import { hydrateProductCopy } from "@/i18n/product-copy";
 
 type JsonMessages = Omit<Messages, "common" | "footer" | "desktop"> & {
   common: Omit<Messages["common"], "downloadForPlatform"> & {
@@ -41,7 +42,7 @@ function fill(template: string, params: Record<string, string | number>): string
 }
 
 export function hydrateMessages(raw: unknown): Messages {
-  const json = raw as JsonMessages;
+  const json = hydrateProductCopy(raw) as JsonMessages;
   return {
     ...json,
     common: {

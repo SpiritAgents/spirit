@@ -9,7 +9,7 @@ import {
 import { messagesByLocale } from "@/i18n/messages";
 import { SPIRIT_GITHUB_REPO_URL, SPIRIT_RELEASES_URL } from "@/lib/github-links";
 
-export const DEFAULT_SITE_ORIGIN = "https://spirit.dev";
+export const DEFAULT_SITE_ORIGIN = product.websiteOrigin;
 
 export function getSiteOrigin(): string {
   return (process.env.SITE_URL ?? DEFAULT_SITE_ORIGIN).replace(/\/$/, "");
@@ -211,7 +211,7 @@ export function renderDownloadBodyHtml(locale: AppLocale): string {
     <article>
       <h2>${escapeHtml(download.cli)}</h2>
       <p>${escapeHtml(download.copyInstall)}</p>
-      <pre>curl -fsSL https://spirit.dev/install | bash</pre>
+      <pre>${escapeHtml(SPIRIT_CLI_INSTALL_CURL)}</pre>
     </article>
     <article>
       <h2>${escapeHtml(download.acp)}</h2>
@@ -244,7 +244,7 @@ export function renderDownloadMarkdown(locale: AppLocale): string {
     download.copyInstall,
     "",
     "```bash",
-    "curl -fsSL https://spirit.dev/install | bash",
+    SPIRIT_CLI_INSTALL_CURL,
     "```",
     "",
     `## ${download.acp}`,
@@ -307,7 +307,7 @@ export function renderRootRedirectHtml(siteOrigin: string): string {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spirit</title>
+    <title>${escapeHtml(product.name)}</title>
     <meta http-equiv="refresh" content="0; url=${escapeHtml(defaultUrl)}" />
     <link rel="canonical" href="${escapeHtml(defaultUrl)}" />
   </head>
@@ -363,3 +363,5 @@ Allow: /
 Sitemap: ${siteOrigin.replace(/\/$/, "")}/sitemap.xml
 `;
 }
+import { product } from "@spiritagent/product";
+import { SPIRIT_CLI_INSTALL_CURL } from "@/lib/spirit-cli-install-command";

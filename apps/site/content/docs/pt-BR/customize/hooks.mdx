@@ -1,9 +1,10 @@
 ---
 title: Hooks
-description: Execute scripts em eventos de sessão, ferramenta e subagente. Eles podem permitir, negar ou perguntar.
+description: Execute scripts em eventos de sessão, ferramenta e subagente. Eles
+  podem permitir, negar ou perguntar.
 ---
 
-Hooks são scripts que o Spirit executa em pontos fixos. Eles podem permitir uma ferramenta, negá-la ou forçar um prompt de aprovação (`ask`).
+Hooks são scripts que o {{product.name|mdx}} executa em pontos fixos. Eles podem permitir uma ferramenta, negá-la ou forçar um prompt de aprovação (`ask`).
 
 ## Eventos
 
@@ -22,7 +23,7 @@ Hooks são scripts que o Spirit executa em pontos fixos. Eles podem permitir uma
 | Escopo             | Config                           | Scripts                      |
 | ------------------ | -------------------------------- | ---------------------------- |
 | Usuário            | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| Espaço de trabalho | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| Espaço de trabalho | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 No mesmo evento, as entradas do usuário e as entradas do espaço de trabalho são concatenadas nessa ordem. Elas não se sobrescrevem.
 

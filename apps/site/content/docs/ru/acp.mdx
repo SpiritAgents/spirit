@@ -5,7 +5,7 @@ description: Реализовано для ACP-клиентов. На стран
 
 ACP (Agent Client Protocol) реализован как `spirit-acp` (`@spiritagent/acp-server`). Он работает через stdio ndJSON, использует ту же директорию данных и связку ключей, что Desktop и CLI, и может запускаться с `--setup` для подключения провайдера.
 
-**На публичной странице загрузки ACP пока не указан.** Spirit всё ещё готовится к размещению в реестре ACP.
+**На публичной странице загрузки ACP пока не указан.** {{product.name|mdx}} всё ещё готовится к размещению в реестре ACP.
 
 ## Временная настройка до размещения
 
@@ -19,7 +19,7 @@ npx @spiritagent/acp-server --setup
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

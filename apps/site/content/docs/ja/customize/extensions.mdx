@@ -3,7 +3,7 @@ title: 拡張機能
 description: マーケットプレイスから拡張機能をインストールし、ZIP パッケージをインポートし、独自のリモート拡張機能マーケットプレイスを追加できます。
 ---
 
-拡張機能は Spirit に能力を追加します——ツール、スキル、フック、MCP サーバー、UI 貢献。拡張機能は拡張機能マーケットプレイスを通じて配布されます：
+拡張機能は {{product.name|mdx}} に能力を追加します——ツール、スキル、フック、MCP サーバー、UI 貢献。拡張機能は拡張機能マーケットプレイスを通じて配布されます：
 
 - **組み込み**——アプリに同梱。
 - **個人**——自分で追加した ZIP パッケージのインポート。
@@ -54,7 +54,7 @@ ZIP パッケージは自己申告のサイドチャネルです：マーケッ�
 | Git リポジトリ（HTTPS または SSH） | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP インデックス URL              | `spirit extension marketplace add https://example.com`                   |
 
-Git URL には `--git-ref <tag|branch|commit>` で ref を固定できます。デフォルトはリモートのデフォルトブランチです。ベアなサイト URL には自動で `/.spirit/marketplace.json` が補完されます。
+Git URL には `--git-ref <tag|branch|commit>` で ref を固定できます。デフォルトはリモートのデフォルトブランチです。ベアなサイト URL には自動で `/{{product.workspaceDataFolderName}}/marketplace.json` が補完されます。
 
 追加したマーケットプレイスは `spirit extension marketplace list` と `spirit extension marketplace remove <name>` で管理します。Desktop ではマーケットプレイスのタブを右クリックすると削除アクションが表示されます。
 

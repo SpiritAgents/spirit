@@ -60,7 +60,7 @@ export type LandingEditorTreeNode = {
 };
 
 export const COMPLETION_DEMO_FILE_TREE: LandingEditorTreeNode = {
-  name: "Spirit",
+  name: product.name,
   kind: "dir",
   children: [
     {
@@ -98,3 +98,4 @@ export const COMPLETION_DEMO_FILE_TREE: LandingEditorTreeNode = {
     { name: "package.json", kind: "file" },
   ],
 };
+import { product } from "@spiritagent/product";

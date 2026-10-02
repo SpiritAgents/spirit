@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
-    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && next dev --hostname 127.0.0.1",
-    "build": "node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
+    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && node scripts/dev.mjs",
+    "build": "node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
     "start": "next start",
-    "test": "tsx --test scripts/*.test.ts",
+    "test": "node ../../scripts/product/generate-content.mjs --scope site && tsx --test scripts/*.test.ts",
     "lint": "oxlint --deny-warnings .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",

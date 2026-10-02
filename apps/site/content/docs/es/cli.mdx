@@ -1,6 +1,7 @@
 ---
 title: CLI
-description: TUI, no interactivo -p, SPIRIT_API_KEY / SPIRIT_API_BASE, y el daemon compartido.
+description: TUI, no interactivo -p, SPIRIT_API_KEY / SPIRIT_API_BASE, y el
+  daemon compartido.
 ---
 
 El CLI es un host de terminal. Instálalo con el [script de instalación](./install/cli.mdx). Habla con el mismo daemon que [Desktop](./desktop.mdx).
@@ -31,11 +32,11 @@ Solo el texto final del asistente va a stdout. Pon `-m`, `-a` y `-l` **antes** d
 | `SPIRIT_API_KEY`  | Clave API para este proceso. Orden: env → llavero del modelo → llavero global  |
 | `SPIRIT_API_BASE` | Anulación de la URL base de la API                                             |
 | `SPIRIT_DATA_DIR` | Directorio de datos (mismo almacén que Desktop)                                |
-| `SPIRIT_HOME`     | Directorio raíz de instalación del **binario** CLI — no el directorio de datos |
+| `SPIRIT_HOME`     | Raíz de binarios CLI (bin/ y cli/), independiente de los ajustes de datos compartidos |
 
 ## Daemon compartido
 
-`spirit` se conecta a través de WebSocket al daemon de Spirit Server. Las sesiones, la transmisión, las herramientas y la cola de aprobaciones viven allí. El token de portador es `{spiritDataDir}/server.token` (modo `0600`). El daemon se vincula a `127.0.0.1` en un puerto aleatorio por defecto.
+`spirit` se conecta a través de WebSocket al daemon de {{product.name|mdx}} Server. Las sesiones, la transmisión, las herramientas y la cola de aprobaciones viven allí. El token de portador es `{spiritDataDir}/server.token` (modo `0600`). El daemon se vincula a `127.0.0.1` en un puerto aleatorio por defecto.
 
 `spirit serve` ejecuta el daemon en primer plano. `0.0.0.0` remoto no es una ruta de producto abierta. Consulta [Seguridad](./security.mdx).
 

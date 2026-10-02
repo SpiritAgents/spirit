@@ -1,6 +1,6 @@
 ---
 title: クイックスタート
-description: Spirit をインストールし、プロバイダを1つ接続して、小さな承認済みの編集を行います。
+description: "{{product.name}} をインストールし、プロバイダを1つ接続して、小さな承認済みの編集を行います。"
 ---
 
 このページでは、新規インストールから便利な変更1つまでを説明します。後のページではすべてのプロバイダとホストを説明しますが、このパスがなければ、それらのページは何にも結びつきません。
@@ -24,11 +24,11 @@ description: Spirit をインストールし、プロバイダを1つ接続し�
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 新しいターミナルを開き、`spirit --version` を実行します。詳細: [CLI のインストール](./install/cli.mdx)。
@@ -60,7 +60,7 @@ TUI は現在のディレクトリをワークスペースとして使用しま�
 
 ## 3. プロバイダを1つ接続する
 
-すでに使用しているプロバイダの API キーが必要です。Spirit はそのキーを OS のキーリング（`Spirit`）に保存します。
+すでに使用しているプロバイダの API キーが必要です。{{product.name|mdx}} はそのキーを OS のキーリング（`{{product.name}}`）に保存します。
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

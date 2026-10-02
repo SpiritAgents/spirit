@@ -23,7 +23,7 @@ export function isBuiltInSkillName(skillName: string): skillName is BuiltInSkill
 export function resolveBuiltInSkillsRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   // src/built-in and dist/built-in are the same depth relative to package root.
-  return path.join(here, "../../built-in/skills");
+  return path.join(here, "../../dist/resources/built-in/skills");
 }
 
 export async function ensureBuiltInSkills(

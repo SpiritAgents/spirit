@@ -1,20 +1,20 @@
 ---
 title: 설정
-description: 데이터 디렉터리, config.json v2, .spirit/, 환경 변수.
+description: 데이터 디렉터리, config.json v2, {{product.workspaceDataFolderName}}/, 환경 변수.
 ---
 
-Spirit은 바이너리와 데이터를 서로 다른 위치에 저장합니다. 이 둘을 혼동하는 것이 “CLI를 설치했는데 설정이 비어 있다”는 일반적인 이유입니다.
+공유 사용자 데이터 경로는 빌드 quality에 따라 결정되며 OS의 애플리케이션 데이터 디렉터리를 사용하지 않습니다.
 
 ## 데이터 디렉터리
 
 `SPIRIT_DATA_DIR`로 재정의할 수 있습니다. 서버는 `SPIRIT_SERVER_DATA_DIR`도 사용할 수 있습니다(전자보다 우선).
 
-| OS      | 기본값                                               |
-| ------- | ---------------------------------------------------- |
-| macOS   | `~/Library/Application Support/Spirit`               |
-| Windows | `%APPDATA%\Spirit`                                   |
-| Linux   | `$XDG_DATA_HOME/Spirit` 또는 `~/.local/share/Spirit` |
-| 폴백    | `~/.spirit-data`                                     |
+| 빌드 | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change: 이전 플랫폼 디렉터리를 자동으로 읽거나 마이그레이션하지 않습니다. 데이터 디렉터리를 명시적으로 지정하는 기능은 유지됩니다. Electron 캐시, 브라우저 저장소, 창 상태는 플랫폼 전용 애플리케이션 디렉터리에 남습니다.
 
 일반적인 파일:
 
@@ -34,7 +34,7 @@ Spirit은 바이너리와 데이터를 서로 다른 위치에 저장합니다. 
   server/instances/
 ```
 
-CLI 바이너리는 `SPIRIT_HOME` (`~/.spirit` 또는 `%LOCALAPPDATA%\Spirit`)에 있습니다. 이는 이 디렉터리가 아닙니다. [CLI 설치](./install/cli.mdx)를 참조하세요.
+CLI 바이너리는 SPIRIT_HOME을 사용합니다. Unix에서는 Stable 설치와 공유 데이터가 같은 상위 디렉터리를 사용할 수 있지만 bin/과 cli/는 설치 파일입니다. 설치 설정은 공유 데이터 디렉터리를 결정하지 않습니다.
 
 ## config.json v2
 
@@ -48,14 +48,14 @@ CLI 바이너리는 `SPIRIT_HOME` (`~/.spirit` 또는 `%LOCALAPPDATA%\Spirit`)�
 
 키(Key)는 이 파일에 **없습니다**. 키는 [키링](./security.mdx)에 있습니다.
 
-## 작업공간 `.spirit/`
+## 작업공간 `{{product.workspaceDataFolderName}}/`
 
 | 경로                 | 역할                                    |
 | -------------------- | --------------------------------------- |
-| `.spirit/rule.md`    | 작업공간 [규칙](./customize/rules.mdx)  |
-| `.spirit/skills/`    | 작업공간 [스킬](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | 작업공간 [MCP](./customize/mcp.mdx)     |
-| `.spirit/hooks.json` | 작업공간 [훅](./customize/hooks.mdx)    |
+| `{{product.workspaceDataFolderName}}/rule.md`    | 작업공간 [규칙](./customize/rules.mdx)  |
+| `{{product.workspaceDataFolderName}}/skills/`    | 작업공간 [스킬](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | 작업공간 [MCP](./customize/mcp.mdx)     |
+| `{{product.workspaceDataFolderName}}/hooks.json` | 작업공간 [훅](./customize/hooks.mdx)    |
 
 또한 사용됨: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

@@ -107,7 +107,7 @@ test("empty first cells are not anchor targets", () => {
 test("the global MDX configuration compiles tool rows in every locale", async () => {
   for (const locale of ["de", "en-US", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh-CN", "zh-TW"]) {
     const compiled = await import(
-      new URL(`../content/docs/${locale}/agent/tools.mdx`, import.meta.url).href
+      new URL(`../.generated/product/docs/${locale}/agent/tools.mdx`, import.meta.url).href
     );
     const markup = renderToStaticMarkup(createElement(compiled.default));
 

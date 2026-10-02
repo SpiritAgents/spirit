@@ -3,7 +3,7 @@ title: 擴充功能
 description: 用 npm create 精靈或手動建立擴充功能，並搭建你自己的遠端擴充功能市場。
 ---
 
-擴充功能是一個資料夾：內含 `.spirit/extension.json`（Spirit 宣言轉儲）與一個純 npm 的 `package.json`。Spirit 按使用者、按主機安裝擴充功能，不放在工作區 `.spirit/` 下，並按來源市場對每次安裝做隔離：安裝身份為 `(源 id, name)`。
+擴充功能是一個資料夾：內含 `{{product.workspaceDataFolderName}}/extension.json`（{{product.name|mdx}} 宣言轉儲）與一個純 npm 的 `package.json`。{{product.name|mdx}} 按使用者、按主機安裝擴充功能，不放在工作區 `{{product.workspaceDataFolderName}}/` 下，並按來源市場對每次安裝做隔離：安裝身份為 `(源 id, name)`。
 
 | 主機    | 路徑                                                    |
 | ------- | ------------------------------------------------------- |
@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-精靈會詢問擴充功能名稱（kebab-case）、顯示名稱、一行描述以及要鷹架的能力。它會寫入 `package.json`、`icon.svg` 與 `.spirit/extension.json`，並按你選擇的能力追加對應檔案（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），結束時打印一段可直接貼上的市場條目。
+精靈會詢問擴充功能名稱（kebab-case）、顯示名稱、一行描述以及要鷹架的能力。它會寫入 `package.json`、`icon.svg` 與 `{{product.workspaceDataFolderName}}/extension.json`，並按你選擇的能力追加對應檔案（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），結束時打印一段可直接貼上的市場條目。
 
 腳本化使用時，每個提問都有對應 flag：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`，以及跳過確認的 `--yes`。
 
@@ -72,12 +72,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="手動建立">
 
-擴充功能目錄只需要兩個檔案——`.spirit/extension.json` 與 `package.json`——再加上它宣告的能力檔案：
+擴充功能目錄只需要兩個檔案——`{{product.workspaceDataFolderName}}/extension.json` 與 `package.json`——再加上它宣告的能力檔案：
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # Spirit 宣言轉儲（必填）
+  {{product.workspaceDataFolderName}}/
+    extension.json        # {{product.name}} 宣言轉儲（必填）
   package.json            # 純 npm；只讀取 `main`
   icon.svg                # 選填；僅 SVG，禁止 <script>
   index.mjs               # 選填；`main` 引用的 activate 入口
@@ -89,9 +89,9 @@ my-extension/
   cli-hooks.json          # 宣告 CLI hooks 時（路徑由宣言引用）
 ```
 
-`package.json` 不攜帶任何 Spirit 欄位——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` 保持純 npm 語義。主機只讀取 `main`，即 [`activate`](#activate) 的模組入口。
+`package.json` 不攜帶任何 {{product.name|mdx}} 欄位——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` 保持純 npm 語義。主機只讀取 `main`，即 [`activate`](#activate) 的模組入口。
 
-`.spirit/extension.json` 欄位：
+`{{product.workspaceDataFolderName}}/extension.json` 欄位：
 
 | 欄位            | 說明                                                                                        |
 | --------------- | ------------------------------------------------------------------------------------------- |
@@ -241,7 +241,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | Skills | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
 
-在 `tools/call` 期間，若客戶端宣告了 `experimental["spirit/ui"]`，捆綁 MCP 可發出 JSON-RPC 請求 `spirit/ui/open`（`{ viewId, params }`）。Spirit 只開啟同一擴充功能在 `contributes.desktop.views` 宣告的 View；使用者/工作區 MCP 一律拒絕。Dialog 會擋住這次 `tools/call`，`close(result)` 的結果回到同一條請求。無視窗宿主回傳 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具應自行降級。
+在 `tools/call` 期間，若客戶端宣告了 `experimental["spirit/ui"]`，捆綁 MCP 可發出 JSON-RPC 請求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只開啟同一擴充功能在 `contributes.desktop.views` 宣告的 View；使用者/工作區 MCP 一律拒絕。Dialog 會擋住這次 `tools/call`，`close(result)` 的結果回到同一條請求。無視窗宿主回傳 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具應自行降級。
 
 ### `settingsSchema`
 
@@ -351,7 +351,7 @@ export function activate(ctx) {
 
 ## 打包為 ZIP 分發
 
-把擴充功能目錄打包為可分享的 ZIP（內容加 `.spirit/extension.json`）：
+把擴充功能目錄打包為可分享的 ZIP（內容加 `{{product.workspaceDataFolderName}}/extension.json`）：
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +363,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ## 搭建遠端擴充功能市場
 
-遠端擴充功能市場就是一個提供 `.spirit/marketplace.json` 索引的可服務目錄：Git 儲存庫、靜態網站或本機目錄。使用者透過 `spirit extension marketplace add <url|path>` 或 Desktop **擴充功能**頁新增它，然後瀏覽並安裝其中的條目。
+遠端擴充功能市場就是一個提供 `{{product.workspaceDataFolderName}}/marketplace.json` 索引的可服務目錄：Git 儲存庫、靜態網站或本機目錄。使用者透過 `spirit extension marketplace add <url|path>` 或 Desktop **擴充功能**頁新增它，然後瀏覽並安裝其中的條目。
 
 <Tabs items={["使用模板儲存庫", "手動建立"]}>
 <Tab value="使用模板儲存庫">
@@ -373,7 +373,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 模板自帶註冊處佈局、兩個範例擴充功能，以及在每次 push 與 PR 上校驗註冊處的 CI。發布一個擴充功能：
 
 1. 用 `npm create @spiritagent/extension` 鷹架。
-2. 執行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它會把擴充功能複製進 `extensions/`，並把條目合併進 `.spirit/marketplace.json`。見[用 publish 發佈](#用-publish-發佈)。
+2. 執行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它會把擴充功能複製進 `extensions/`，並把條目合併進 `{{product.workspaceDataFolderName}}/marketplace.json`。見[用 publish 發佈](#用-publish-發佈)。
 3. 推送——使用者用它的 Git URL 新增市場。
 
 </Tab>
@@ -383,7 +383,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # 索引
   extensions/
     my-extension/     # 內容目錄（純 npm 套件 + 能力檔案）
@@ -416,18 +416,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 
 ### 本機市場
 
-任何帶 `.spirit/marketplace.json` 的本機目錄都可以作為市場新增——用 `spirit extension marketplace add <path>` 或 Desktop 的**從磁碟新增**。本機市場原地讀取、無需 CI，因此也是擴充功能作者的開發循環：編輯、重裝、重複。
+任何帶 `{{product.workspaceDataFolderName}}/marketplace.json` 的本機目錄都可以作為市場新增——用 `spirit extension marketplace add <path>` 或 Desktop 的**從磁碟新增**。本機市場原地讀取、無需 CI，因此也是擴充功能作者的開發循環：編輯、重裝、重複。
 
 ### 用 publish 發佈
 
-`extension-toolkit publish` 把擴充功能的 `.spirit/extension.json` 合併進目標市場的 `.spirit/marketplace.json`，並按條目 source 的需要複製內容：
+`extension-toolkit publish` 把擴充功能的 `{{product.workspaceDataFolderName}}/extension.json` 合併進目標市場的 `{{product.workspaceDataFolderName}}/marketplace.json`，並按條目 source 的需要複製內容：
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- 第一個參數是擴充功能目錄，第二個是市場根目錄——任何帶 `.spirit/marketplace.json` 的本機目錄：模板儲存庫克隆、`{spiritDataDir}/marketplaces/personal` 的個人市場等。
-- `--source local`（預設）：把完整的套件複製進市場的 `extensions/<name>/`——含 `.spirit/extension.json`，排除 `node_modules` 與 `.git`——並把條目 `source` 指向該目錄。
+- 第一個參數是擴充功能目錄，第二個是市場根目錄——任何帶 `{{product.workspaceDataFolderName}}/marketplace.json` 的本機目錄：模板儲存庫克隆、`{spiritDataDir}/marketplaces/personal` 的個人市場等。
+- `--source local`（預設）：把完整的套件複製進市場的 `extensions/<name>/`——含 `{{product.workspaceDataFolderName}}/extension.json`，排除 `node_modules` 與 `.git`——並把條目 `source` 指向該目錄。
 - `--source npm`：從擴充功能的 `package.json` 讀 `name@version` 釘版作為條目的 npm `source`；只把宣言宣告的圖示複製進 `extensions/<name>/`（圖示由市場自託管）。npm 套件本身的發佈仍由你用 npm CLI 完成。
 - `--dry-run`：打印將寫入的條目與計畫動作，不落盤。
 - 合併規則：同名條目原位替換，否則追加；新條目或 `version` 變動時 `reviewStatus` 回落為 `unverified`，同版本重發保留；`featured` 等策展欄位始終保留市場側原值。

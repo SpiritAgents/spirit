@@ -5,7 +5,7 @@ description: Связка ключей, подтверждения и фонов
 
 ## Связка ключей
 
-API-ключи, секреты Bedrock / Vertex, секреты расширений и токен интеграции GitHub хранятся в системной связке ключей. Имя службы — `Spirit`.
+API-ключи, секреты Bedrock / Vertex, секреты расширений и токен интеграции GitHub хранятся в системной связке ключей. Имя службы — `{{product.name}}`.
 
 `config.json` содержит группы провайдеров и ссылки на модели, но не сами секреты. Большие секреты могут быть разделены на части в связке ключей.
 
@@ -23,6 +23,6 @@ Desktop и CLI используют общий демон, который при
 
 ## Конфиденциальность
 
-Spirit не включает телеметрию разработчика. Данные остаются в каталоге данных и связке ключей. См. [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) в репозитории.
+{{product.name|mdx}} не включает телеметрию разработчика. Данные остаются в каталоге данных и связке ключей. См. [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) в репозитории.
 
 Сообщайте об уязвимостях конфиденциально (GitHub Private Advisory), а не в публичном issue. См. [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md).

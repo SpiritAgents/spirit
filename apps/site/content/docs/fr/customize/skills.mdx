@@ -1,17 +1,19 @@
 ---
 title: Compétences
-description: Compétences utilisateur, .spirit et .agents, plus create-rule, create-skill, create-hook et create-extension intégrés.
+description: Compétences utilisateur, {{product.workspaceDataFolderName}} et
+  .agents, plus create-rule, create-skill, create-hook et create-extension
+  intégrés.
 ---
 
-Une compétence est un dossier avec un `SKILL.md`. Spirit découvre les compétences à partir de trois emplacements :
+Une compétence est un dossier avec un `SKILL.md`. {{product.name|mdx}} découvre les compétences à partir de trois emplacements :
 
 | Portée                        | Chemin                                       |
 | ----------------------------- | -------------------------------------------- |
 | Utilisateur                   | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Espace de travail Spirit      | `{workspace}/.spirit/skills/{name}/SKILL.md` |
+| Espace de travail {{product.name|mdx}}      | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Agents de l'espace de travail | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-Lorsque vous mentionnez une compétence dans un tour, Spirit peut joindre son texte complet à ce message utilisateur. Il ne déverse pas chaque compétence dans le prompt système.
+Lorsque vous mentionnez une compétence dans un tour, {{product.name|mdx}} peut joindre son texte complet à ce message utilisateur. Il ne déverse pas chaque compétence dans le prompt système.
 
 ## Frontmatter
 
@@ -24,7 +26,7 @@ Lorsque vous mentionnez une compétence dans un tour, Spirit peut joindre son te
 
 ## Compétences intégrées
 
-Celles-ci sont fournies avec Spirit (ce ne sont pas des fichiers dans votre répertoire de données) :
+Celles-ci sont fournies avec {{product.name|mdx}} (ce ne sont pas des fichiers dans votre répertoire de données) :
 
 - `create-rule` — rédigez une [règle](./rules.mdx)
 - `create-skill` — rédigez une [compétence](./skills.mdx)

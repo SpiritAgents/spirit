@@ -4,7 +4,7 @@ import { defineDocs } from "fumadocs-mdx/macro";
 import { docsI18n } from "@/lib/docs-i18n";
 
 const docs = defineDocs({
-  dir: "content/docs",
+  dir: ".generated/product/docs",
   docs: {
     postprocess: {
       includeProcessedMarkdown: true,

@@ -174,7 +174,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | Variable d’environnement | Requis | Description                                                                    |
 | ------------------------ | ------ | ------------------------------------------------------------------------------ |
 | `SPIRIT_ACP_WORKSPACE`   | Non    | Racine workspace (défaut : `cwd` client)                                       |
-| `SPIRIT_ACP_DATA_DIR`    | Non    | Répertoire de données Spirit (défaut : `%APPDATA%/Spirit` ou `~/.spirit-data`) |
+| `SPIRIT_ACP_DATA_DIR`    | Non    | Répertoire de données Spirit (défaut : Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Développement
 

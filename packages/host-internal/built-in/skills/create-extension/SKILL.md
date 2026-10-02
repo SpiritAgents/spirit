@@ -1,15 +1,16 @@
 ---
 name: create-extension
-description: Author a Spirit extension — scaffold, declare capabilities, validate, and publish to a marketplace.
+description: Author a {{product.name}} extension — scaffold, declare
+  capabilities, validate, and publish to a marketplace.
 ---
 
-Create or update a Spirit extension from the user's request. An extension is a directory with a `.spirit/extension.json` manifest dump next to a pure-npm `package.json`, plus the capability files it declares.
+Create or update a {{product.name}} extension from the user's request. An extension is a directory with a `{{product.workspaceDataFolderName}}/extension.json` manifest dump next to a pure-npm `package.json`, plus the capability files it declares.
 
 The docs are the contract. When a field shape or API is unclear, fetch the reference instead of guessing:
 
-- Extension reference (manifest, capabilities, `activate` API, validate, publish): https://spirit.dev/en-US/docs/develop/extensions.md
-- Bundled MCP servers (`mcp.json`): https://spirit.dev/en-US/docs/customize/mcp.md
-- Page index: https://spirit.dev/llms.txt
+- Extension reference (manifest, capabilities, `activate` API, validate, publish): {{product.websiteOrigin}}/en-US/docs/develop/extensions.md
+- Bundled MCP servers (`mcp.json`): {{product.websiteOrigin}}/en-US/docs/customize/mcp.md
+- Page index: {{product.websiteOrigin}}/llms.txt
 
 ## Capabilities
 
@@ -38,7 +39,7 @@ Unless the user names another marketplace, publish to the built-in Personal mark
 
 ## Workflow
 
-1. Scaffold: `npx create @spiritagent/extension` (wizard; every prompt has a flag, `--yes` skips confirmation). Manual alternative: write `.spirit/extension.json`, `package.json`, and the declared capability files by hand per the reference.
+1. Scaffold: `npx create @spiritagent/extension` (wizard; every prompt has a flag, `--yes` skips confirmation). Manual alternative: write `{{product.workspaceDataFolderName}}/extension.json`, `package.json`, and the declared capability files by hand per the reference.
 2. Validate: `npx @spiritagent/extension-toolkit check <dir>` until clean — install runs the same validation.
 3. Publish: `npx @spiritagent/extension-toolkit publish <dir> <marketplace-dir> [--source local|npm] [--dry-run]` — the default marketplace is the Personal one above; use `pack <dir>` instead when the user wants a shareable ZIP file.
 4. Fallback: when a detail is missing or unclear, fetch the reference page; never invent manifest fields.

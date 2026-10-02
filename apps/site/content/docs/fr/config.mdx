@@ -1,20 +1,21 @@
 ---
 title: Configuration
-description: Répertoires de données, config.json v2, .spirit/, et variables d'environnement.
+description: Répertoires de données, config.json v2,
+  {{product.workspaceDataFolderName}}/, et variables d'environnement.
 ---
 
-Spirit conserve les binaires et les données à des endroits différents. Les mélanger est la raison habituelle pour laquelle « J'ai installé la CLI mais les paramètres sont vides ».
+Le répertoire des données utilisateur partagées dépend de la quality du build, et non du répertoire applicatif du système.
 
 ## Répertoire de données
 
 Remplacez avec `SPIRIT_DATA_DIR`. Le serveur peut aussi utiliser `SPIRIT_SERVER_DATA_DIR` (prioritaire sur le premier).
 
-| OS      | Valeur par défaut                                  |
-| ------- | -------------------------------------------------- |
-| macOS   | `~/Library/Application Support/Spirit`             |
-| Windows | `%APPDATA%\Spirit`                                 |
-| Linux   | `$XDG_DATA_HOME/Spirit` ou `~/.local/share/Spirit` |
-| Repli   | `~/.spirit-data`                                   |
+| Build | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change : les anciens répertoires ne sont ni lus ni migrés automatiquement. Les surcharges explicites du répertoire de données restent possibles. Les caches Electron, le stockage du navigateur et l'état des fenêtres restent dans le répertoire applicatif privé de la plateforme.
 
 Fichiers typiques :
 
@@ -34,7 +35,7 @@ Fichiers typiques :
   server/instances/
 ```
 
-Les binaires CLI se trouvent dans `SPIRIT_HOME` (`~/.spirit` ou `%LOCALAPPDATA%\Spirit`). Ce n'est pas ce répertoire. Voir [Installer la CLI](./install/cli.mdx).
+Les binaires CLI utilisent SPIRIT_HOME. Sous Unix, l'installation Stable et les données partagées peuvent avoir le même répertoire parent ; bin/ et cli/ restent des fichiers d'installation. Ce réglage ne choisit pas le répertoire des données partagées.
 
 ## config.json v2
 
@@ -48,14 +49,14 @@ Champs principaux :
 
 Les clés ne sont **pas** dans ce fichier. Elles vivent dans le [trousseau](./security.mdx).
 
-## Espace de travail `.spirit/`
+## Espace de travail `{{product.workspaceDataFolderName}}/`
 
 | Chemin               | Rôle                                                                  |
 | -------------------- | --------------------------------------------------------------------- |
-| `.spirit/rule.md`    | Règle d'espace de travail [règle](./customize/rules.mdx)              |
-| `.spirit/skills/`    | Compétences d'espace de travail [compétences](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | MCP d'espace de travail [MCP](./customize/mcp.mdx)                    |
-| `.spirit/hooks.json` | Hooks d'espace de travail [hooks](./customize/hooks.mdx)              |
+| `{{product.workspaceDataFolderName}}/rule.md`    | Règle d'espace de travail [règle](./customize/rules.mdx)              |
+| `{{product.workspaceDataFolderName}}/skills/`    | Compétences d'espace de travail [compétences](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | MCP d'espace de travail [MCP](./customize/mcp.mdx)                    |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Hooks d'espace de travail [hooks](./customize/hooks.mdx)              |
 
 Également utilisés : `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

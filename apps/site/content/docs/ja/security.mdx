@@ -5,7 +5,7 @@ description: キーリング、承認、およびループバックデーモン�
 
 ## キーリング
 
-APIキー、Bedrock / Vertex のシークレット、拡張機能のシークレット、および GitHub 統合トークンは、オペレーティングシステムのキーリングに保存されます。サービス名は `Spirit` です。
+APIキー、Bedrock / Vertex のシークレット、拡張機能のシークレット、および GitHub 統合トークンは、オペレーティングシステムのキーリングに保存されます。サービス名は `{{product.name}}` です。
 
 `config.json` にはプロバイダーグループとモデル参照が含まれており、シークレット自体は含まれません。大きなシークレットはキーリングでシャーディングされる場合があります。
 
@@ -23,6 +23,6 @@ Web Host のペアリングは、Desktop 上の別の6桁のコードです。5�
 
 ## プライバシー
 
-Spirit は開発者テレメトリを提供しません。データはデータディレクトリとキーリングに残ります。リポジトリ内の [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) を参照してください。
+{{product.name|mdx}} は開発者テレメトリを提供しません。データはデータディレクトリとキーリングに残ります。リポジトリ内の [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) を参照してください。
 
 脆弱性は公開イシューではなく、非公開で（GitHub Private Advisory）報告してください。[SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md) を参照してください。

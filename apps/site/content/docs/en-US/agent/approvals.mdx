@@ -3,7 +3,7 @@ title: Approvals
 description: Approval levels and the permission allowlist. What allow, ask, and deny mean.
 ---
 
-Every risky tool call can wait for you. Spirit has three approval levels. Desktop shows them as **Default Approval**, **Auto Approval**, and **Bypass Approval**. The CLI uses `/approval` or `-a`.
+Every risky tool call can wait for you. {{product.name|mdx}} has three approval levels. Desktop shows them as **Default Approval**, **Auto Approval**, and **Bypass Approval**. The CLI uses `/approval` or `-a`.
 
 | Level            | Id                | Behavior                                                                                               |
 | ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------ |
@@ -58,13 +58,13 @@ A `deny` rule cannot be overridden by rule order, session memory, a hook returni
 
 ### Composite shell commands
 
-Spirit splits a shell command into the simple commands that would execute — respecting quotes and escapes, across `&&`, `||`, `;`, `|`, `|&`, `&`, newlines, and subshells, including `$(...)` and backtick contents — and evaluates each segment. One denied segment denies the whole command. A command Spirit cannot parse conservatively asks.
+{{product.name|mdx}} splits a shell command into the simple commands that would execute — respecting quotes and escapes, across `&&`, `||`, `;`, `|`, `|&`, `&`, newlines, and subshells, including `$(...)` and backtick contents — and evaluates each segment. One denied segment denies the whole command. A command {{product.name|mdx}} cannot parse conservatively asks.
 
 ### read_file paths
 
 Patterns match the canonical (realpath) absolute path. `~/` at the start expands to your home directory. Patterns starting with `*` count as absolute — the leading wildcard absorbs the root separator, so `*` and `"*/.env*"` match canonical paths anywhere. A pattern starting with a literal relative segment (for example `"src/*.ts"`) has workspace-relative semantics: it matches only paths inside the current workspace, never outside paths, and produces a config lint warning.
 
-When no rule matches, a built-in location fallback applies: workspace-internal and Spirit-managed paths allow, other external paths ask. Rules can tighten workspace-internal paths too — `"*/.env*": "ask"` works inside the workspace.
+When no rule matches, a built-in location fallback applies: workspace-internal and {{product.name|mdx}}-managed paths allow, other external paths ask. Rules can tighten workspace-internal paths too — `"*/.env*": "ask"` works inside the workspace.
 
 Invalid entries (empty patterns, unknown actions, non-object blocks) are dropped with lint warnings.
 
@@ -100,7 +100,7 @@ spirit permission check --shell "git push origin main"
 spirit permission check --read-file ~/.ssh/id_rsa
 ```
 
-Prints the verdict, the matched rule, and per-segment detail without running anything. Evaluation runs daemon-side, so a reachable Spirit daemon is required.
+Prints the verdict, the matched rule, and per-segment detail without running anything. Evaluation runs daemon-side, so a reachable {{product.name|mdx}} daemon is required.
 
 There is no settings UI for rules yet. Edit `config.json` and verify with `spirit permission check`.
 

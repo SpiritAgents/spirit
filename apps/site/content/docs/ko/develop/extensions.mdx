@@ -3,7 +3,7 @@ title: 확장
 description: npm create 마법사 또는 수동으로 확장을 만들고, 나만의 원격 확장 마켓플레이스를 운영하세요.
 ---
 
-확장은 `.spirit/extension.json`(Spirit 매니페스트 덤프)과 순수한 npm `package.json`이 있는 폴더입니다. Spirit은 확장을 사용자별, 호스트별로 설치하며 워크스페이스 `.spirit/` 아래에는 두지 않고, 각 설치를 가져온 마켓플레이스로 범위를 나눕니다: 설치 ID는 `(소스 id, name)`입니다.
+확장은 `{{product.workspaceDataFolderName}}/extension.json`({{product.name|mdx}} 매니페스트 덤프)과 순수한 npm `package.json`이 있는 폴더입니다. {{product.name|mdx}}은 확장을 사용자별, 호스트별로 설치하며 워크스페이스 `{{product.workspaceDataFolderName}}/` 아래에는 두지 않고, 각 설치를 가져온 마켓플레이스로 범위를 나눕니다: 설치 ID는 `(소스 id, name)`입니다.
 
 | 호스트  | 경로                                                    |
 | ------- | ------------------------------------------------------- |
@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-마법사는 확장 이름(kebab-case), 표시 이름, 한 줄 설명, 스캐폴드할 기능을 묻습니다. `package.json`, `icon.svg`, `.spirit/extension.json`을 작성하고, 선택한 기능에 해당하는 파일(`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`)을 추가하며, 완료되면 바로 붙여넣을 수 있는 마켓플레이스 항목을 출력합니다.
+마법사는 확장 이름(kebab-case), 표시 이름, 한 줄 설명, 스캐폴드할 기능을 묻습니다. `package.json`, `icon.svg`, `{{product.workspaceDataFolderName}}/extension.json`을 작성하고, 선택한 기능에 해당하는 파일(`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`)을 추가하며, 완료되면 바로 붙여넣을 수 있는 마켓플레이스 항목을 출력합니다.
 
 스크립팅할 때는 모든 질문에 플래그가 있습니다: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, 그리고 확인을 건너뛰는 `--yes`.
 
@@ -72,12 +72,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="수동으로 만들기">
 
-확장 디렉터리에는 `.spirit/extension.json`과 `package.json` 두 파일과 선언하는 기능 파일만 있으면 됩니다:
+확장 디렉터리에는 `{{product.workspaceDataFolderName}}/extension.json`과 `package.json` 두 파일과 선언하는 기능 파일만 있으면 됩니다:
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # Spirit 매니페스트 덤프(필수)
+  {{product.workspaceDataFolderName}}/
+    extension.json        # {{product.name}} 매니페스트 덤프(필수)
   package.json            # 순수 npm; `main`만 읽힘
   icon.svg                # 선택 사항; SVG만 가능, <script> 금지
   index.mjs               # 선택 사항; `main`이 참조하는 activate 엔트리
@@ -89,9 +89,9 @@ my-extension/
   cli-hooks.json          # CLI hooks 선언 시(경로는 매니페스트에서 참조)
 ```
 
-`package.json`에는 Spirit 필드가 없습니다——`name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords`는 순수한 npm으로 유지됩니다. 호스트는 `main`만 읽으며, 이것이 [`activate`](#activate)의 모듈 엔트리입니다.
+`package.json`에는 {{product.name|mdx}} 필드가 없습니다——`name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords`는 순수한 npm으로 유지됩니다. 호스트는 `main`만 읽으며, 이것이 [`activate`](#activate)의 모듈 엔트리입니다.
 
-`.spirit/extension.json` 필드:
+`{{product.workspaceDataFolderName}}/extension.json` 필드:
 
 | 필드            | 설명                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +241,7 @@ my-extension/
 
 확장 프로그램이 켜져 있을 때만 세션에 overlay되며 **설정 → MCPs | Hooks | Skills | Rules** 목록에는 나타나지 않습니다. 이름 충돌은 workspace > user > extension입니다.
 
-`tools/call` 중에 클라이언트가 `experimental["spirit/ui"]`를 선언했다면 번들 MCP는 JSON-RPC `spirit/ui/open`(`{ viewId, params }`)을 보낼 수 있습니다. Spirit는 같은 확장의 `contributes.desktop.views`만 엽니다. 사용자/워크스페이스 MCP는 거부됩니다. Dialog는 해당 `tools/call`을 막고 `close(result)`는 같은 요청으로 돌아갑니다. 창이 없는 호스트는 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`를 반환하므로 도구가 직접 폴백해야 합니다.
+`tools/call` 중에 클라이언트가 `experimental["spirit/ui"]`를 선언했다면 번들 MCP는 JSON-RPC `spirit/ui/open`(`{ viewId, params }`)을 보낼 수 있습니다. {{product.name|mdx}}는 같은 확장의 `contributes.desktop.views`만 엽니다. 사용자/워크스페이스 MCP는 거부됩니다. Dialog는 해당 `tools/call`을 막고 `close(result)`는 같은 요청으로 돌아갑니다. 창이 없는 호스트는 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`를 반환하므로 도구가 직접 폴백해야 합니다.
 
 ### `settingsSchema`
 
@@ -351,7 +351,7 @@ export function activate(ctx) {
 
 ## ZIP으로 배포하기
 
-확장 디렉터리를 공유 가능한 ZIP 형식(콘텐츠와 `.spirit/extension.json`)으로 패킹합니다:
+확장 디렉터리를 공유 가능한 ZIP 형식(콘텐츠와 `{{product.workspaceDataFolderName}}/extension.json`)으로 패킹합니다:
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +363,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ## 원격 확장 마켓플레이스 운영하기
 
-원격 확장 마켓플레이스는 `.spirit/marketplace.json` 인덱스를 제공하는 서비스 가능한 디렉터리입니다: Git 저장소, 정적 사이트 또는 로컬 디렉터리. 사용자는 `spirit extension marketplace add <url|path>` 또는 Desktop **확장** 페이지에서 추가한 다음 항목을 탐색하고 설치합니다.
+원격 확장 마켓플레이스는 `{{product.workspaceDataFolderName}}/marketplace.json` 인덱스를 제공하는 서비스 가능한 디렉터리입니다: Git 저장소, 정적 사이트 또는 로컬 디렉터리. 사용자는 `spirit extension marketplace add <url|path>` 또는 Desktop **확장** 페이지에서 추가한 다음 항목을 탐색하고 설치합니다.
 
 <Tabs items={["템플릿 저장소", "수동으로 만들기"]}>
 <Tab value="템플릿 저장소">
@@ -373,7 +373,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 템플릿에는 레지스트리 레이아웃, 두 개의 예제 확장, 그리고 모든 push와 pull request에서 레지스트리를 검증하는 CI가 포함되어 있습니다. 확장을 게시하려면:
 
 1. `npm create @spiritagent/extension`으로 스캐폴드합니다.
-2. `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`을 실행합니다——확장을 `extensions/`로 복사하고 항목을 `.spirit/marketplace.json`에 병합합니다. [publish로 게시하기](#publish로-게시하기)를 참조하세요.
+2. `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`을 실행합니다——확장을 `extensions/`로 복사하고 항목을 `{{product.workspaceDataFolderName}}/marketplace.json`에 병합합니다. [publish로 게시하기](#publish로-게시하기)를 참조하세요.
 3. 푸시합니다——사용자는 해당 Git URL로 마켓플레이스를 추가합니다.
 
 </Tab>
@@ -383,7 +383,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # 인덱스
   extensions/
     my-extension/     # 콘텐츠 디렉터리(순수 npm 패키지 + 기능 파일)
@@ -416,18 +416,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 
 ### 로컬 마켓플레이스
 
-`.spirit/marketplace.json`이 있는 모든 로컬 디렉터리는 마켓플레이스로 추가할 수 있습니다——`spirit extension marketplace add <path>` 또는 Desktop의 **디스크에서 추가**로. 로컬 마켓플레이스는 그 자리에서 읽히며 CI가 필요 없으므로 확장 작성자의 개발 루프가 됩니다: 편집, 재설치, 반복.
+`{{product.workspaceDataFolderName}}/marketplace.json`이 있는 모든 로컬 디렉터리는 마켓플레이스로 추가할 수 있습니다——`spirit extension marketplace add <path>` 또는 Desktop의 **디스크에서 추가**로. 로컬 마켓플레이스는 그 자리에서 읽히며 CI가 필요 없으므로 확장 작성자의 개발 루프가 됩니다: 편집, 재설치, 반복.
 
 ### publish로 게시하기
 
-`extension-toolkit publish`는 확장의 `.spirit/extension.json`을 대상 마켓플레이스의 `.spirit/marketplace.json`에 병합하고, 항목의 source에 필요한 콘텐츠를 복사합니다:
+`extension-toolkit publish`는 확장의 `{{product.workspaceDataFolderName}}/extension.json`을 대상 마켓플레이스의 `{{product.workspaceDataFolderName}}/marketplace.json`에 병합하고, 항목의 source에 필요한 콘텐츠를 복사합니다:
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- 첫 번째 인자는 확장 디렉터리, 두 번째는 마켓플레이스 루트입니다——`.spirit/marketplace.json`이 있는 모든 로컬 디렉터리: 템플릿 저장소 클론, `{spiritDataDir}/marketplaces/personal`의 개인 마켓플레이스 등.
-- `--source local`(기본값): 전체 패키지를 마켓플레이스의 `extensions/<name>/`에 복사하고(`.spirit/extension.json` 포함, `node_modules`와 `.git` 제외) 항목의 `source`를 해당 디렉터리로 지정합니다.
+- 첫 번째 인자는 확장 디렉터리, 두 번째는 마켓플레이스 루트입니다——`{{product.workspaceDataFolderName}}/marketplace.json`이 있는 모든 로컬 디렉터리: 템플릿 저장소 클론, `{spiritDataDir}/marketplaces/personal`의 개인 마켓플레이스 등.
+- `--source local`(기본값): 전체 패키지를 마켓플레이스의 `extensions/<name>/`에 복사하고(`{{product.workspaceDataFolderName}}/extension.json` 포함, `node_modules`와 `.git` 제외) 항목의 `source`를 해당 디렉터리로 지정합니다.
 - `--source npm`: 확장의 `package.json`에서 `name@version`을 읽어 항목의 npm `source`로 고정합니다. 선언된 아이콘만 `extensions/<name>/`에 복사합니다(아이콘은 마켓플레이스가 자체 호스팅). npm 패키지 자체의 게시는 계속 npm CLI로 수행합니다.
 - `--dry-run`: 작성될 항목과 예정된 작업을 출력하고 디스크에는 쓰지 않습니다.
 - 병합 규칙: 같은 이름의 항목은 그 자리에서 교체하고, 없으면 추가합니다. 새 항목이거나 `version`이 바뀌면 `reviewStatus`가 `unverified`로 돌아가고, 같은 버전을 다시 게시하면 유지됩니다. `featured` 같은 큐레이션 필드는 항상 마켓플레이스 측 값을 유지합니다.

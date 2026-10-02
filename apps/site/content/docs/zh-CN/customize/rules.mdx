@@ -1,6 +1,6 @@
 ---
 title: Rules
-description: AGENTS.md、.spirit/rule.md 和用户级 rule.md。
+description: AGENTS.md、{{product.workspaceDataFolderName}}/rule.md 和用户级 rule.md。
 ---
 
 Rules 是 Agent 会一直考虑的 Markdown。一共三个槽位：
@@ -8,9 +8,9 @@ Rules 是 Agent 会一直考虑的 Markdown。一共三个槽位：
 | 范围               | 路径                          |
 | ------------------ | ----------------------------- |
 | 工作区 agents 文件 | `{workspace}/AGENTS.md`       |
-| 工作区 Spirit rule | `{workspace}/.spirit/rule.md` |
+| 工作区 {{product.name|mdx}} rule | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
 | 用户 rule          | `{spiritDataDir}/rule.md`     |
 
-项目约定写进 `AGENTS.md`，谁打开仓库都能看到。Spirit 专用、又不想放进通用 agents 文件的内容写 `.spirit/rule.md`。跟着你跨工作区走的偏好写用户 rule。
+项目约定写进 `AGENTS.md`，谁打开仓库都能看到。{{product.name|mdx}} 专用、又不想放进通用 agents 文件的内容写 `{{product.workspaceDataFolderName}}/rule.md`。跟着你跨工作区走的偏好写用户 rule。
 
 在 **设置 → 规则** 管理槽位。内置 Skill `create-rule` 可以帮你起草。[扩展](../develop/extensions.mdx) 捆绑的 rule 只在该扩展启用时生效，不出现在此设置列表。

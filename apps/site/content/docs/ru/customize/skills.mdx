@@ -1,17 +1,18 @@
 ---
 title: Навыки
-description: Навыки пользователя, .spirit и .agents, а также встроенные create-rule, create-skill, create-hook и create-extension.
+description: Навыки пользователя, {{product.workspaceDataFolderName}} и .agents,
+  а также встроенные create-rule, create-skill, create-hook и create-extension.
 ---
 
-Навык — это папка с файлом `SKILL.md`. Spirit обнаруживает навыки в трёх местах:
+Навык — это папка с файлом `SKILL.md`. {{product.name|mdx}} обнаруживает навыки в трёх местах:
 
 | Область                | Путь                                         |
 | ---------------------- | -------------------------------------------- |
 | Пользователь           | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Рабочая область Spirit | `{workspace}/.spirit/skills/{name}/SKILL.md` |
+| Рабочая область {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Агенты рабочей области | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-Когда вы упоминаете навык в сообщении, Spirit может прикрепить его полный текст к этому сообщению пользователя. Он не помещает все навыки в системный промпт.
+Когда вы упоминаете навык в сообщении, {{product.name|mdx}} может прикрепить его полный текст к этому сообщению пользователя. Он не помещает все навыки в системный промпт.
 
 ## Frontmatter
 
@@ -24,7 +25,7 @@ description: Навыки пользователя, .spirit и .agents, а та�
 
 ## Встроенные навыки
 
-Они поставляются с Spirit (это не файлы в вашем каталоге данных):
+Они поставляются с {{product.name|mdx}} (это не файлы в вашем каталоге данных):
 
 - `create-rule` — создание проекта [правила](./rules.mdx)
 - `create-skill` — создание проекта [навыка](./skills.mdx)

@@ -174,7 +174,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | 環境変数               | 必須   | 説明                                                                                |
 | ---------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | いいえ | ワークスペースルート（デフォルト：クライアント `cwd`）                              |
-| `SPIRIT_ACP_DATA_DIR`  | いいえ | Spirit データディレクトリ（デフォルト：`%APPDATA%/Spirit` または `~/.spirit-data`） |
+| `SPIRIT_ACP_DATA_DIR`  | いいえ | Spirit データディレクトリ（デフォルト：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
 
 ## 開発
 

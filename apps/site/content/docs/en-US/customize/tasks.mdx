@@ -1,13 +1,15 @@
 ---
 title: Tasks
-description: Run workspace tasks from the command palette, declared in .spirit/tasks.json or imported from .vscode/tasks.json.
+description: Run workspace tasks from the command palette, declared in
+  {{product.workspaceDataFolderName}}/tasks.json or imported from
+  .vscode/tasks.json.
 ---
 
 <Callout type="info">Desktop only.</Callout>
 
-Tasks run predefined workspace commands from the Spirit Desktop command palette: open the palette (`Mod+Shift+P`), pick **Workspace → Run Task**, then pick a task from the second-level list. The task runs in a terminal tab in the right-hand tools panel. The **Workspace** group appears in the palette only when at least one valid task exists.
+Tasks run predefined workspace commands from the {{product.name|mdx}} Desktop command palette: open the palette (`Mod+Shift+P`), pick **Workspace → Run Task**, then pick a task from the second-level list. The task runs in a terminal tab in the right-hand tools panel. The **Workspace** group appears in the palette only when at least one valid task exists.
 
-Spirit Tasks is its own system, not VS Code Tasks. It reads a strict-JSON Spirit format and, as a compatibility import, VS Code's `tasks.json` — with a clearly defined subset of VS Code's fields. A task that cannot run exactly as configured is hidden entirely rather than run half-configured; see [Why a task is hidden](#why-a-task-is-hidden).
+{{product.name|mdx}} Tasks is its own system, not VS Code Tasks. It reads a strict-JSON {{product.name|mdx}} format and, as a compatibility import, VS Code's `tasks.json` — with a clearly defined subset of VS Code's fields. A task that cannot run exactly as configured is hidden entirely rather than run half-configured; see [Why a task is hidden](#why-a-task-is-hidden).
 
 ## Task files
 
@@ -15,23 +17,23 @@ Three sources are read, highest priority first:
 
 | Priority | Source                           | Required marker      | Notes                                   |
 | -------- | -------------------------------- | -------------------- | --------------------------------------- |
-| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Spirit's own format                     |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}}'s own format                     |
 | 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | User-level, applies to every workspace  |
 | 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code compatibility import, read-only |
 
-Only the workspace root is scanned — nested directories are not. `<data dir>` is the Spirit data directory (for example `~/Library/Application Support/Spirit` on macOS). A file that is missing, unreadable, invalid JSON, or carries the wrong marker contributes no tasks.
+Only the workspace root is scanned — nested directories are not. `<data dir>` is the {{product.name|mdx}} data directory (for example `~/{{product.stable.userDataFolderName}}` on macOS). A file that is missing, unreadable, invalid JSON, or carries the wrong marker contributes no tasks.
 
 The three files are watched live; the palette list refreshes automatically when any of them changes.
 
 All three sources merge into one namespace. When several sources define the same `label`, the highest-priority source wins — for the palette list and for `dependsOn` references alike.
 
-`.vscode/tasks.json` is parsed tolerantly, because real-world files are JSONC: `//` and `/* */` comments and trailing commas are accepted. Spirit's own files are strict JSON — a comment makes the file invalid.
+`.vscode/tasks.json` is parsed tolerantly, because real-world files are JSONC: `//` and `/* */` comments and trailing commas are accepted. {{product.name|mdx}}'s own files are strict JSON — a comment makes the file invalid.
 
 ## Workspace trust
 
-Workspace task files arrive with the repository, so they are untrusted data: `.spirit/tasks.json` and `.vscode/tasks.json` load only after you approve the workspace content. The user-level `tasks.json` is implicitly trusted and always loads.
+Workspace task files arrive with the repository, so they are untrusted data: `{{product.workspaceDataFolderName}}/tasks.json` and `.vscode/tasks.json` load only after you approve the workspace content. The user-level `tasks.json` is implicitly trusted and always loads.
 
-When Spirit Desktop detects workspace task files (or a change to them), it asks once: the prompt lists the tasks that will become available with their commands, and clicking an entry opens the source file. If workspace hooks also need approval, both lists appear in one combined dialog.
+When {{product.name|mdx}} Desktop detects workspace task files (or a change to them), it asks once: the prompt lists the tasks that will become available with their commands, and clicking an entry opens the source file. If workspace hooks also need approval, both lists appear in one combined dialog.
 
 - **Allow once** — the tasks load for this session only.
 - **Always trust** — remembered for this exact file content.
@@ -65,7 +67,7 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 | `dependsOn`                              | Supported | A label string, or an array of label strings. The object form (`{ "type": … }`, `{ "task": … }`) hides the task                                                                                                                         |
 | `dependsOrder`                           | Supported | `parallel` (default) or `sequence`                                                                                                                                                                                                      |
 | `detail`                                 | Supported | Shown next to the label in the palette list                                                                                                                                                                                             |
-| `icon.id`                                | Supported | Menu icon: Spirit Icons first, then Lucide, with a terminal glyph as fallback                                                                                                                                                           |
+| `icon.id`                                | Supported | Menu icon: {{product.name|mdx}} Icons first, then Lucide, with a terminal glyph as fallback                                                                                                                                                           |
 | `icon.color`                             | Ignored   | Purely presentational                                                                                                                                                                                                                   |
 | `hide`                                   | Supported | Hidden from the palette list but still resolvable — the task can run as a `dependsOn` dependency                                                                                                                                        |
 
@@ -104,7 +106,7 @@ Supported references, substituted when the task is resolved:
 | ---------------------------- | ---------------------------------------------- |
 | `${workspaceFolder}`         | Workspace root path                            |
 | `${workspaceFolderBasename}` | Workspace root folder name                     |
-| `${cwd}`                     | Spirit Desktop's own process working directory |
+| `${cwd}`                     | {{product.name|mdx}} Desktop's own process working directory |
 | `${userHome}`                | The OS user's home directory                   |
 | `${pathSeparator}`, `${/}`   | The OS path separator                          |
 | `${env:NAME}`                | Environment variable `NAME` (empty when unset) |
@@ -142,7 +144,7 @@ Tasks start on an explicit click in the palette or, in trusted workspaces only, 
 - **Folder-open trigger** — `runOn: "folderOpen"` runs the task automatically when the workspace is activated, but only in trusted workspaces (after approval or with an existing trust record); a denied workspace never runs it. Approving the trust prompt runs this session's folder-open tasks immediately. The trigger fires at most once per activation round — editing `tasks.json` never re-runs anything — and when the task is already running at its instance limit, the automatic run is silently skipped (no dialog).
 - **Terminal reuse** — only terminals of exited tasks are ever reused. `panel: "shared"` and `panel: "dedicated"` both reuse this task's own idle terminal when one exists (the pool is per task) and open a new tab otherwise; `panel: "new"` always opens a fresh tab.
 - **Echo** — with `presentation.echo` (default on) the command line is written into the terminal before the process output.
-- **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal. Note two VS Code deviations: `reveal: "silent"` reveals only on a non-zero exit code (Spirit has no problem-matcher trigger path), and `presentation.revealProblems` has no effect at all — it neither suppresses nor triggers a terminal reveal.
+- **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal. Note two VS Code deviations: `reveal: "silent"` reveals only on a non-zero exit code ({{product.name|mdx}} has no problem-matcher trigger path), and `presentation.revealProblems` has no effect at all — it neither suppresses nor triggers a terminal reveal.
 - **Clear** — `presentation.clear` clears the terminal before a rerun that reuses it.
 - **Close** — `presentation.close` closes the tab automatically on exit, whatever the exit code.
 - **Preserve terminal name** — `presentation.preserveTerminalName` keeps the task label as the tab title; otherwise the running process's title replaces it.
@@ -152,7 +154,7 @@ Tasks start on an explicit click in the palette or, in trusted workspaces only, 
 
 ## Example
 
-A complete `.spirit/tasks.json` — a build → test → package sequence chain plus a background watch task:
+A complete `{{product.workspaceDataFolderName}}/tasks.json` — a build → test → package sequence chain plus a background watch task:
 
 ```json
 {

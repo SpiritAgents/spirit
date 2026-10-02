@@ -174,7 +174,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | 환경 변수              | 필수   | 설명                                                                   |
 | ---------------------- | ------ | ---------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | 아니오 | 워크스페이스 루트(기본: 클라이언트 `cwd`)                              |
-| `SPIRIT_ACP_DATA_DIR`  | 아니오 | Spirit 데이터 디렉터리(기본: `%APPDATA%/Spirit` 또는 `~/.spirit-data`) |
+| `SPIRIT_ACP_DATA_DIR`  | 아니오 | Spirit 데이터 디렉터리(기본: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## 개발
 
