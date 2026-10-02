@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { resolveWorkspaceDataDir } from "../data-paths.js";
 
 import type { LoadedTaskFile, TaskFileSourceKind } from "./schema.js";
 
@@ -9,7 +10,7 @@ export interface LoadTaskFilesInput {
 }
 
 export function workspaceTasksFilePath(workspaceRoot: string): string {
-  return path.join(path.resolve(workspaceRoot), ".spirit", "tasks.json");
+  return path.join(resolveWorkspaceDataDir(path.resolve(workspaceRoot)), "tasks.json");
 }
 
 export function userTasksFilePath(spiritDataDir: string): string {

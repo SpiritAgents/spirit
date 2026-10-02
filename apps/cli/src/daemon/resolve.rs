@@ -121,7 +121,12 @@ pub(crate) fn read_server_token(data_dir: &Path) -> Result<String> {
 /// Attaches to a running daemon or spawns one (`node entry.js serve`,
 /// detached, stderr → `{dataDir}/server/daemon.log`).
 pub(crate) fn ensure_daemon(workspace_root: &Path) -> Result<(DaemonInstance, String)> {
-    let data_dir = spirit_data_dir();
+    let data_dir = std::env::var("SPIRIT_SERVER_DATA_DIR")
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(spirit_data_dir);
     if let Some(instance) = find_live_instance(&data_dir) {
         return Ok((instance, read_server_token(&data_dir)?));
     }
@@ -137,6 +142,7 @@ pub(crate) fn ensure_daemon(workspace_root: &Path) -> Result<(DaemonInstance, St
     command
         .arg(entry)
         .arg("serve")
+        .env("SPIRIT_SERVER_DATA_DIR", &data_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(log_err));

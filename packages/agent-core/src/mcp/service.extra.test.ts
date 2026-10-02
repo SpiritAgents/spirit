@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
 import { McpService } from "./service.js";
+import { parseMcpConfigFile } from "./config.js";
 
 function withEnv(
   vars: Record<string, string | undefined>,
@@ -36,6 +37,10 @@ test("extraConfigs merge into runtime but stay out of listServers", async () => 
   try {
     await withEnv({ SPIRIT_DATA_DIR: dataDir }, async () => {
       const service = new McpService(workspaceRoot, true, {
+        configSource: {
+          scopeKey: dataDir,
+          read: () => ({ user: { servers: {} }, workspace: { servers: {} } }),
+        },
         extraConfigs: () => ({
           servers: {
             extra_only: {
@@ -81,6 +86,15 @@ test("user and workspace configs overlay extraConfigs of the same server name", 
     );
     await withEnv({ SPIRIT_DATA_DIR: dataDir }, async () => {
       const service = new McpService(workspaceRoot, true, {
+        configSource: {
+          scopeKey: dataDir,
+          read: () => ({
+            user: parseMcpConfigFile(JSON.parse(readFileSync(join(dataDir, "mcp.json"), "utf8"))),
+            workspace: parseMcpConfigFile(
+              JSON.parse(readFileSync(join(workspaceRoot, ".spirit", "mcp.json"), "utf8")),
+            ),
+          }),
+        },
         extraConfigs: () => ({
           servers: {
             shared: {

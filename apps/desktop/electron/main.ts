@@ -17,6 +17,7 @@ import {
 } from "electron";
 
 import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
+import { configureElectronProductStorage } from "./product-storage.js";
 
 import {
   registerDesktopNotifications,
@@ -88,13 +89,13 @@ import {
 } from "../src/lib/translucency.js";
 
 registerSpiritGeneratedAssetPrivilegedScheme();
+configureElectronProductStorage(app);
 
 const gotSpiritSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSpiritSingleInstanceLock) {
   app.quit();
 } else {
   const spiritDataDir = resolveConfiguredSpiritDataDir();
-  app.setPath("userData", spiritDataDir);
   setSpiritDataDirOverride(spiritDataDir);
 
   app.on("second-instance", (_event, argv) => {

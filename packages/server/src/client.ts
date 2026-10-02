@@ -183,7 +183,8 @@ export class ServerRpcClient {
 export async function connectOrSpawnServer(
   options: ConnectOrSpawnServerOptions,
 ): Promise<ConnectedServer> {
-  const existing = await connectToRegisteredServer(options.dataDir);
+  const dataDir = process.env["SPIRIT_SERVER_DATA_DIR"]?.trim() || options.dataDir;
+  const existing = await connectToRegisteredServer(dataDir);
   if (existing) {
     return existing;
   }
@@ -196,7 +197,7 @@ export async function connectOrSpawnServer(
     env: {
       ...process.env,
       ...(process.versions.electron ? { ELECTRON_RUN_AS_NODE: "1" } : {}),
-      SPIRIT_DATA_DIR: options.dataDir,
+      SPIRIT_SERVER_DATA_DIR: dataDir,
     },
   });
   if (forwardStderr && child.stderr) {
@@ -209,7 +210,7 @@ export async function connectOrSpawnServer(
   const deadline = Date.now() + (options.connectTimeoutMs ?? 15_000);
   while (Date.now() < deadline) {
     await new Promise<void>((resolve) => setTimeout(resolve, 100));
-    const connected = await connectToRegisteredServer(options.dataDir, child.pid);
+    const connected = await connectToRegisteredServer(dataDir, child.pid);
     if (connected) {
       return connected;
     }
