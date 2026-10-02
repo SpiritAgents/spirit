@@ -570,6 +570,10 @@ html.dark,
   font-family: var(--font-sans);
   font-weight: 500;
   letter-spacing: -0.025em;
+}
+
+[data-docs-layout] #nd-page > h1,
+[data-docs-layout] .prose :is(h1, h2, h3, h4, h5, h6, [id]) {
   scroll-margin-top: calc(var(--site-nav-height) + 2rem);
 }
 
