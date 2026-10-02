@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import { product } from "@spiritagent/product";
 
 const hostRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const builtInRoot = path.join(hostRoot, "dist/resources/built-in");
 const indexPath = path.join(
-  hostRoot,
-  "built-in",
+  builtInRoot,
   product.workspaceDataFolderName,
   "marketplace.json",
 );
@@ -29,7 +29,7 @@ for (const [offset, entry] of index.extensions.entries()) {
   names.push(entry.name);
 }
 
-const extensionsRoot = path.join(hostRoot, "built-in/extensions");
+const extensionsRoot = path.join(builtInRoot, "extensions");
 await rm(extensionsRoot, { recursive: true, force: true });
 
 for (const name of names) {

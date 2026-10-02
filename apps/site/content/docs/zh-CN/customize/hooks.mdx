@@ -3,7 +3,7 @@ title: Hooks
 description: 在会话、工具和子智能体事件上跑脚本。可以允许、拒绝或询问。
 ---
 
-Hooks 是 Spirit 在固定节点跑的脚本。它们可以允许工具、拒绝工具，或强制弹出审批（`ask`）。
+Hooks 是 {{product.name|mdx}} 在固定节点跑的脚本。它们可以允许工具、拒绝工具，或强制弹出审批（`ask`）。
 
 ## 事件
 
@@ -22,7 +22,7 @@ Hooks 是 Spirit 在固定节点跑的脚本。它们可以允许工具、拒绝
 | 范围   | 配置                             | 脚本                         |
 | ------ | -------------------------------- | ---------------------------- |
 | 用户   | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| 工作区 | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| 工作区 | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 同一事件上，用户条目与工作区条目会按顺序拼接，不是互相覆盖。
 

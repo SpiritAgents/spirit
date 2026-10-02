@@ -1,9 +1,10 @@
 ---
 title: Extensões
-description: Crie extensões com o assistente npm create ou manualmente, e opere seu próprio marketplace de extensões remoto.
+description: Crie extensões com o assistente npm create ou manualmente, e opere
+  seu próprio marketplace de extensões remoto.
 ---
 
-Uma extensão é uma pasta com um `.spirit/extension.json` — o dump de manifesto do Spirit — ao lado de um `package.json` puramente npm. O Spirit instala extensões por usuário e por host, não sob o diretório `.spirit/` do workspace, e delimita cada instalação pelo marketplace de origem: a identidade de instalação é `(id da fonte, name)`.
+Uma extensão é uma pasta com um `{{product.workspaceDataFolderName}}/extension.json` — o dump de manifesto do {{product.name|mdx}} — ao lado de um `package.json` puramente npm. O {{product.name|mdx}} instala extensões por usuário e por host, não sob o diretório `{{product.workspaceDataFolderName}}/` do workspace, e delimita cada instalação pelo marketplace de origem: a identidade de instalação é `(id da fonte, name)`.
 
 | Host    | Caminho                                                 |
 | ------- | ------------------------------------------------------- |
@@ -59,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-O assistente pergunta um nome de extensão (kebab-case), um nome de exibição, uma descrição de uma linha e as capacidades para o scaffold. Ele escreve `package.json`, `icon.svg` e `.spirit/extension.json`, mais os arquivos das capacidades escolhidas (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), e ao final imprime uma entrada de marketplace pronta para colar.
+O assistente pergunta um nome de extensão (kebab-case), um nome de exibição, uma descrição de uma linha e as capacidades para o scaffold. Ele escreve `package.json`, `icon.svg` e `{{product.workspaceDataFolderName}}/extension.json`, mais os arquivos das capacidades escolhidas (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), e ao final imprime uma entrada de marketplace pronta para colar.
 
 Para scripting, cada pergunta tem uma flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` e `--yes` para pular a confirmação.
 
@@ -72,12 +73,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="Manual">
 
-Um diretório de extensão precisa de apenas dois arquivos — `.spirit/extension.json` e `package.json` — mais os arquivos das capacidades que declarar:
+Um diretório de extensão precisa de apenas dois arquivos — `{{product.workspaceDataFolderName}}/extension.json` e `package.json` — mais os arquivos das capacidades que declarar:
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # dump de manifesto do Spirit (obrigatório)
+  {{product.workspaceDataFolderName}}/
+    extension.json        # dump de manifesto do {{product.name}} (obrigatório)
   package.json            # puramente npm; apenas `main` é lido
   icon.svg                # opcional; apenas SVG, sem <script>
   index.mjs               # opcional; a entrada de activate referenciada por `main`
@@ -89,9 +90,9 @@ my-extension/
   cli-hooks.json          # ao declarar hooks de CLI (caminho referenciado no manifesto)
 ```
 
-`package.json` não carrega nenhum campo do Spirit — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` permanecem puramente npm. O host lê apenas `main`, a entrada de módulo de [`activate`](#activate).
+`package.json` não carrega nenhum campo do {{product.name|mdx}} — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` permanecem puramente npm. O host lê apenas `main`, a entrada de módulo de [`activate`](#activate).
 
-Campos do `.spirit/extension.json`:
+Campos do `{{product.workspaceDataFolderName}}/extension.json`:
 
 | Campo           | Descrição                                                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +242,7 @@ Declarado mas ausente ou inválido: a instalação falha. Arquivos não declarad
 
 Essas contribuições entram na sessão em runtime quando a extensão está ativada. Não aparecem em **Configurações → MCPs | Hooks | Skills | Rules**. Em conflito de nome: workspace > usuário > extensão.
 
-Durante `tools/call`, um MCP empacotado pode enviar `spirit/ui/open` (`{ viewId, params }`) se o cliente declarou `experimental["spirit/ui"]`. O Spirit só abre uma view da mesma extensão em `contributes.desktop.views`. MCP de usuário/workspace é recusado. O diálogo bloqueia essa chamada; `close(result)` volta na mesma requisição. Hosts sem janela respondem `{ "kind": "unavailable", "reason": "host-has-no-ui" }` e a ferramenta deve degradar.
+Durante `tools/call`, um MCP empacotado pode enviar `spirit/ui/open` (`{ viewId, params }`) se o cliente declarou `experimental["spirit/ui"]`. O {{product.name|mdx}} só abre uma view da mesma extensão em `contributes.desktop.views`. MCP de usuário/workspace é recusado. O diálogo bloqueia essa chamada; `close(result)` volta na mesma requisição. Hosts sem janela respondem `{ "kind": "unavailable", "reason": "host-has-no-ui" }` e a ferramenta deve degradar.
 
 ### `settingsSchema`
 
@@ -351,7 +352,7 @@ export function activate(ctx) {
 
 ## Distribuir como ZIP
 
-Empacote um diretório de extensão no formato ZIP compartilhável (conteúdo mais `.spirit/extension.json`):
+Empacote um diretório de extensão no formato ZIP compartilhável (conteúdo mais `{{product.workspaceDataFolderName}}/extension.json`):
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +364,7 @@ Para listar a extensão em um marketplace, veja [Publicar com publish](#publicar
 
 ## Operar um marketplace de extensões remoto
 
-Um marketplace de extensões remoto é um diretório servível com um índice `.spirit/marketplace.json`: um repositório Git, um site estático ou um diretório local. Os usuários o adicionam com `spirit extension marketplace add <url|path>` ou na página **Extensões** do Desktop, e então navegam e instalam suas entradas.
+Um marketplace de extensões remoto é um diretório servível com um índice `{{product.workspaceDataFolderName}}/marketplace.json`: um repositório Git, um site estático ou um diretório local. Os usuários o adicionam com `spirit extension marketplace add <url|path>` ou na página **Extensões** do Desktop, e então navegam e instalam suas entradas.
 
 <Tabs items={["Repositório de modelo", "Manual"]}>
 <Tab value="Repositório de modelo">
@@ -373,7 +374,7 @@ Um marketplace de extensões remoto é um diretório servível com um índice `.
 O modelo traz o layout de registro, duas extensões de exemplo e CI que valida o registro em cada push e pull request. Para publicar uma extensão:
 
 1. Crie o scaffold com `npm create @spiritagent/extension`.
-2. Execute `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — ele copia a extensão para `extensions/` e mescla a entrada em `.spirit/marketplace.json`. Veja [Publicar com publish](#publicar-com-publish).
+2. Execute `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — ele copia a extensão para `extensions/` e mescla a entrada em `{{product.workspaceDataFolderName}}/marketplace.json`. Veja [Publicar com publish](#publicar-com-publish).
 3. Faça push — os usuários adicionam o marketplace pela sua URL Git.
 
 </Tab>
@@ -383,7 +384,7 @@ Uma raiz de marketplace contém o índice mais um diretório de conteúdo por ex
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # o índice
   extensions/
     my-extension/     # diretório de conteúdo (pacote npm simples + arquivos de capacidades)
@@ -416,18 +417,18 @@ Disciplina de revisão: pull requests que adicionam uma entrada ou mudam sua `ve
 
 ### Marketplaces locais
 
-Qualquer diretório local com um `.spirit/marketplace.json` funciona como marketplace — adicione-o com `spirit extension marketplace add <path>` ou em **Adicionar do disco** no Desktop. Marketplaces locais são lidos no lugar e não precisam de CI, o que os torna o loop de desenvolvimento dos autores de extensões: editar, reinstalar, repetir.
+Qualquer diretório local com um `{{product.workspaceDataFolderName}}/marketplace.json` funciona como marketplace — adicione-o com `spirit extension marketplace add <path>` ou em **Adicionar do disco** no Desktop. Marketplaces locais são lidos no lugar e não precisam de CI, o que os torna o loop de desenvolvimento dos autores de extensões: editar, reinstalar, repetir.
 
 ### Publicar com publish
 
-O `extension-toolkit publish` mescla o `.spirit/extension.json` de uma extensão no `.spirit/marketplace.json` de um marketplace e copia o conteúdo que a fonte da entrada precisa:
+O `extension-toolkit publish` mescla o `{{product.workspaceDataFolderName}}/extension.json` de uma extensão no `{{product.workspaceDataFolderName}}/marketplace.json` de um marketplace e copia o conteúdo que a fonte da entrada precisa:
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- O primeiro argumento é o diretório da extensão; o segundo é a raiz do marketplace — qualquer diretório local com um `.spirit/marketplace.json`: um clone do repositório de modelo, o marketplace Pessoal em `{spiritDataDir}/marketplaces/personal`, e assim por diante.
-- `--source local` (padrão): copia o pacote completo para `extensions/<name>/` do marketplace — incluindo `.spirit/extension.json`, excluindo `node_modules` e `.git` — e aponta o `source` da entrada para ele.
+- O primeiro argumento é o diretório da extensão; o segundo é a raiz do marketplace — qualquer diretório local com um `{{product.workspaceDataFolderName}}/marketplace.json`: um clone do repositório de modelo, o marketplace Pessoal em `{spiritDataDir}/marketplaces/personal`, e assim por diante.
+- `--source local` (padrão): copia o pacote completo para `extensions/<name>/` do marketplace — incluindo `{{product.workspaceDataFolderName}}/extension.json`, excluindo `node_modules` e `.git` — e aponta o `source` da entrada para ele.
 - `--source npm`: fixa `name@version` a partir do `package.json` da extensão como o `source` npm da entrada; apenas o ícone declarado é copiado para `extensions/<name>/` (marketplaces hospedam os próprios ícones). A publicação do pacote npm em si continua com a sua CLI npm.
 - `--dry-run`: imprime a entrada e as ações planejadas sem escrever nada.
 - Regras de mesclagem: uma entrada com o mesmo nome é substituída no lugar; caso contrário, é adicionada. Entradas novas e mudanças de `version` voltam para `reviewStatus: "unverified"`; republicar a mesma versão a mantém. Campos de curadoria como `featured` sempre mantêm os valores do marketplace.

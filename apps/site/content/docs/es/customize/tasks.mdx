@@ -1,13 +1,15 @@
 ---
 title: Tareas
-description: Ejecuta tareas del espacio de trabajo desde la paleta de comandos, declaradas en .spirit/tasks.json o importadas desde .vscode/tasks.json.
+description: Ejecuta tareas del espacio de trabajo desde la paleta de comandos,
+  declaradas en {{product.workspaceDataFolderName}}/tasks.json o importadas
+  desde .vscode/tasks.json.
 ---
 
 <Callout type="info">Solo Desktop.</Callout>
 
-Las tareas ejecutan comandos predefinidos del espacio de trabajo desde la paleta de comandos de Spirit Desktop: abre la paleta (`Mod+Shift+P`), elige **Workspace → Ejecutar tarea** y luego elige una tarea de la lista de segundo nivel. La tarea se ejecuta en una pestaña de terminal en el panel de herramientas de la derecha. El grupo **Workspace** solo aparece en la paleta cuando existe al menos una tarea válida.
+Las tareas ejecutan comandos predefinidos del espacio de trabajo desde la paleta de comandos de {{product.name|mdx}} Desktop: abre la paleta (`Mod+Shift+P`), elige **Workspace → Ejecutar tarea** y luego elige una tarea de la lista de segundo nivel. La tarea se ejecuta en una pestaña de terminal en el panel de herramientas de la derecha. El grupo **Workspace** solo aparece en la paleta cuando existe al menos una tarea válida.
 
-Las tareas de Spirit son un sistema propio, no las tareas de VS Code. Lee un formato Spirit de JSON estricto y, como importación de compatibilidad, el `tasks.json` de VS Code — con un subconjunto claramente definido de los campos de VS Code. Una tarea que no puede ejecutarse exactamente como está configurada se oculta por completo en lugar de ejecutarse a medias; consulta [Por qué una tarea está oculta](#por-qué-una-tarea-está-oculta).
+Las tareas de {{product.name|mdx}} son un sistema propio, no las tareas de VS Code. Lee un formato {{product.name|mdx}} de JSON estricto y, como importación de compatibilidad, el `tasks.json` de VS Code — con un subconjunto claramente definido de los campos de VS Code. Una tarea que no puede ejecutarse exactamente como está configurada se oculta por completo en lugar de ejecutarse a medias; consulta [Por qué una tarea está oculta](#por-qué-una-tarea-está-oculta).
 
 ## Archivos de tareas
 
@@ -15,23 +17,23 @@ Se leen tres fuentes, de mayor a menor prioridad:
 
 | Prioridad | Fuente                           | Marcador requerido   | Notas                                                         |
 | --------- | -------------------------------- | -------------------- | ------------------------------------------------------------- |
-| 1         | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Formato propio de Spirit                                      |
+| 1         | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato propio de {{product.name|mdx}}                                      |
 | 2         | `<data dir>/tasks.json`          | `"schemaVersion": 1` | A nivel de usuario, se aplica a todos los espacios de trabajo |
 | 3         | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Importación de compatibilidad con VS Code, de solo lectura    |
 
-Solo se analiza la raíz del espacio de trabajo; los directorios anidados no. `<data dir>` es el directorio de datos de Spirit (por ejemplo `~/Library/Application Support/Spirit` en macOS). Un archivo que falta, no se puede leer, contiene JSON no válido o lleva el marcador incorrecto no aporta ninguna tarea.
+Solo se analiza la raíz del espacio de trabajo; los directorios anidados no. `<data dir>` es el directorio de datos de {{product.name|mdx}} (por ejemplo `~/{{product.stable.userDataFolderName}}` en macOS). Un archivo que falta, no se puede leer, contiene JSON no válido o lleva el marcador incorrecto no aporta ninguna tarea.
 
 Los tres archivos se vigilan en vivo; la lista de la paleta se actualiza automáticamente cuando cualquiera de ellos cambia.
 
 Las tres fuentes se combinan en un solo espacio de nombres. Cuando varias fuentes definen el mismo `label`, gana la fuente de mayor prioridad — tanto para la lista de la paleta como para las referencias de `dependsOn`.
 
-`.vscode/tasks.json` se analiza con tolerancia, porque los archivos del mundo real son JSONC: se aceptan comentarios `//` y `/* */` y comas finales. Los archivos propios de Spirit son JSON estricto — un comentario invalida el archivo.
+`.vscode/tasks.json` se analiza con tolerancia, porque los archivos del mundo real son JSONC: se aceptan comentarios `//` y `/* */` y comas finales. Los archivos propios de {{product.name|mdx}} son JSON estricto — un comentario invalida el archivo.
 
 ## Confianza en el espacio de trabajo
 
-Los archivos de tareas del espacio de trabajo llegan con el repositorio, así que son datos no confiables: `.spirit/tasks.json` y `.vscode/tasks.json` solo se cargan después de que apruebes el contenido del espacio de trabajo. El `tasks.json` a nivel de usuario (directorio de datos de Spirit) es implícitamente confiable y siempre se carga.
+Los archivos de tareas del espacio de trabajo llegan con el repositorio, así que son datos no confiables: `{{product.workspaceDataFolderName}}/tasks.json` y `.vscode/tasks.json` solo se cargan después de que apruebes el contenido del espacio de trabajo. El `tasks.json` a nivel de usuario (directorio de datos de {{product.name|mdx}}) es implícitamente confiable y siempre se carga.
 
-Cuando Spirit Desktop detecta archivos de tareas del espacio de trabajo (o un cambio en ellos), pregunta una vez: el diálogo lista las tareas que estarán disponibles con sus comandos, y al hacer clic en una entrada se abre el archivo de origen. Si los hooks del espacio de trabajo también necesitan aprobación, ambas listas aparecen en un solo diálogo combinado.
+Cuando {{product.name|mdx}} Desktop detecta archivos de tareas del espacio de trabajo (o un cambio en ellos), pregunta una vez: el diálogo lista las tareas que estarán disponibles con sus comandos, y al hacer clic en una entrada se abre el archivo de origen. Si los hooks del espacio de trabajo también necesitan aprobación, ambas listas aparecen en un solo diálogo combinado.
 
 - **Permitir una vez** — las tareas se cargan solo para esta sesión.
 - **Confiar siempre** — se recuerda para este contenido exacto del archivo.
@@ -65,7 +67,7 @@ Comportamiento por campo, evaluado después de la combinación: valores predeter
 | `dependsOn`                                    | Compatible     | Una cadena de etiqueta o un arreglo de cadenas de etiquetas. La forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta la tarea                                                                                                                                         |
 | `dependsOrder`                                 | Compatible     | `parallel` (predeterminado) o `sequence`                                                                                                                                                                                                                                   |
 | `detail`                                       | Compatible     | Se muestra junto a la etiqueta en la lista de la paleta                                                                                                                                                                                                                    |
-| `icon.id`                                      | Compatible     | Icono del menú: primero Spirit Icons, luego Lucide, con un glifo de terminal como respaldo                                                                                                                                                                                 |
+| `icon.id`                                      | Compatible     | Icono del menú: primero {{product.name|mdx}} Icons, luego Lucide, con un glifo de terminal como respaldo                                                                                                                                                                                 |
 | `icon.color`                                   | Ignorado       | Puramente presentacional                                                                                                                                                                                                                                                   |
 | `hide`                                         | Compatible     | Oculta de la lista de la paleta pero aún resoluble — la tarea puede ejecutarse como dependencia de `dependsOn`                                                                                                                                                             |
 
@@ -104,7 +106,7 @@ Referencias admitidas, sustituidas cuando se resuelve la tarea:
 | ---------------------------- | ---------------------------------------------------------- |
 | `${workspaceFolder}`         | Ruta raíz del espacio de trabajo                           |
 | `${workspaceFolderBasename}` | Nombre de la carpeta raíz del espacio de trabajo           |
-| `${cwd}`                     | Directorio de trabajo del propio proceso de Spirit Desktop |
+| `${cwd}`                     | Directorio de trabajo del propio proceso de {{product.name|mdx}} Desktop |
 | `${userHome}`                | Directorio personal del usuario del SO                     |
 | `${pathSeparator}`, `${/}`   | Separador de rutas del SO                                  |
 | `${env:NAME}`                | Variable de entorno `NAME` (vacía si no está definida)     |
@@ -142,7 +144,7 @@ Las tareas se inician con un clic explícito en la paleta; solo en espacios de t
 - **Disparador al abrir la carpeta** — `runOn: "folderOpen"` ejecuta la tarea automáticamente cuando se activa el espacio de trabajo, pero solo en espacios de trabajo confiables (tras la aprobación o con un registro de confianza existente); un espacio denegado nunca la ejecuta. Aprobar el aviso de confianza ejecuta de inmediato las tareas de apertura de esta sesión. El disparador se activa como máximo una vez por activación — editar `tasks.json` nunca reejecuta nada — y si la tarea ya está en su límite de instancias, la ejecución automática se omite en silencio (sin diálogo).
 - **Reutilización de terminales** — solo se reutilizan terminales de tareas que ya terminaron. `panel: "shared"` y `panel: "dedicated"` reutilizan la terminal inactiva propia de esta tarea cuando existe una (el pool es por tarea) y abren una pestaña nueva en caso contrario; `panel: "new"` siempre abre una pestaña nueva.
 - **Echo** — con `presentation.echo` (activado de forma predeterminada) la línea de comandos se escribe en la terminal antes de la salida del proceso.
-- **Reveal** — `always` (predeterminado) expande el panel de herramientas al iniciar; `silent` lo mantiene cerrado al iniciar y lo expande solo cuando la tarea termina con código distinto de cero; `never` nunca lo expande automáticamente. `focus: true` implica reveal y además mueve el foco del teclado a la terminal. Ten en cuenta dos desviaciones de VS Code: `reveal: "silent"` solo se expande con un código de salida distinto de cero (Spirit no tiene una ruta de activación por problem matcher), y `presentation.revealProblems` no tiene ningún efecto: ni suprime ni dispara la revelación del terminal.
+- **Reveal** — `always` (predeterminado) expande el panel de herramientas al iniciar; `silent` lo mantiene cerrado al iniciar y lo expande solo cuando la tarea termina con código distinto de cero; `never` nunca lo expande automáticamente. `focus: true` implica reveal y además mueve el foco del teclado a la terminal. Ten en cuenta dos desviaciones de VS Code: `reveal: "silent"` solo se expande con un código de salida distinto de cero ({{product.name|mdx}} no tiene una ruta de activación por problem matcher), y `presentation.revealProblems` no tiene ningún efecto: ni suprime ni dispara la revelación del terminal.
 - **Clear** — `presentation.clear` limpia la terminal antes de una nueva ejecución que la reutilice.
 - **Close** — `presentation.close` cierra la pestaña automáticamente al terminar, sea cual sea el código de salida.
 - **Conservar el nombre de la terminal** — `presentation.preserveTerminalName` mantiene la etiqueta de la tarea como título de la pestaña; de lo contrario, el título del proceso en ejecución lo reemplaza.
@@ -152,7 +154,7 @@ Las tareas se inician con un clic explícito en la paleta; solo en espacios de t
 
 ## Ejemplo
 
-Un `.spirit/tasks.json` completo — una cadena en secuencia build → test → package más una tarea `watch` en segundo plano:
+Un `{{product.workspaceDataFolderName}}/tasks.json` completo — una cadena en secuencia build → test → package más una tarea `watch` en segundo plano:
 
 ```json
 {

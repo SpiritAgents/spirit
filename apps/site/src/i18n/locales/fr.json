@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "Génération de l'image…"
       },
-      "manualAssistantResponse": "Télécharger Spirit.",
+      "manualAssistantResponse": "Télécharger {{product.name}}.",
       "demoUserPrompt": "Examinez la page d'accueil actuelle et dites-moi quoi améliorer ensuite.",
       "demoThinkingText": "Vérification de la structure du Hero actuel.\nRecherche des lacunes les plus visibles dans la surface de conversation.\nPréparation d'un résumé d'implémentation court.",
       "demoAssistantResponse": "Voici la prochaine étape que je prendrais.\n\n- Remplacer la zone de conversation vide par une vraie démo en streaming.\n- Garder la fenêtre Hero interruptible pour que les visiteurs puissent prendre le contrôle immédiatement.\n- Réutiliser les styles de messages Desktop pour la réflexion et les appels d'outils au lieu de les approximer.",
@@ -193,7 +193,7 @@
       "exited": "[sorti, code {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Aperçu du site marketing pour le produit de bureau Spirit.",
+      "siteReadmeDescription": "Aperçu du site marketing pour le produit de bureau {{product.name}}.",
       "desktopReadmeDescription": "Coque Electron et rendu web pour le produit de bureau.",
       "generatedWorkspaceDescription": "Espace de travail simulé généré pour l'aperçu de la page de destination {{label}}.",
       "generatedWorkspaceOverview": "Racine de l'espace de travail : {{root}}\\n\\nCet espace de travail simulé garde l'onglet de fichier interactif sans monter le runtime de bureau complet.",
@@ -205,17 +205,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit est un agent IA open source que vous exécutez avec vos modèles, vos clés et votre flux de travail."
+    "title": "{{product.name}}",
+    "description": "{{product.name}} est un agent IA open source que vous exécutez avec vos modèles, vos clés et votre flux de travail."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "Télécharger",
     "downloadForPlatform": "Télécharger pour {{platform}}"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Accueil Spirit",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "Accueil {{product.name}}",
     "primaryNavAria": "Principale",
     "nav": {
       "features": "Fonctionnalités",
@@ -236,8 +236,8 @@
     "headline": "Un agent IA open source\nconçu pour démultiplier votre productivité."
   },
   "download": {
-    "metaTitle": "Télécharger Spirit",
-    "metaDescription": "Téléchargez Spirit pour Desktop, installez le CLI, ou surveillez ACP.",
+    "metaTitle": "Télécharger {{product.name}}",
+    "metaDescription": "Téléchargez {{product.name}} pour Desktop, installez le CLI, ou surveillez ACP.",
     "title": "Le même agent, sur tout votre travail.",
     "sectionAria": "Le même agent, sur tout votre travail.",
     "desktop": "Desktop",
@@ -247,7 +247,7 @@
     "copied": "Copié",
     "comingSoonJoke": "Bientôt™",
     "listingInProgress": "Référencement en cours…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "Examine auth.ts et corrige le bug d'actualisation de session.",
     "cliAssistantMessage": "Je vais inspecter auth.ts et corriger la vérification de session défaillante.",
     "cliUserFollowUp": "Ajoute aussi un test de régression.",
@@ -255,20 +255,20 @@
     "cliFooter": "Agent  |  Approbation par défaut  |  Boucle désactivée          gpt-5"
   },
   "landing": {
-    "sectionAria": "Contenu de Spirit",
+    "sectionAria": "Contenu de {{product.name}}",
     "featureHeading": ["Vos modèles.", "Vos clés.", "Votre contrôle."],
-    "featureBody": "Spirit ne vous enferme pas dans une stack hébergée. Apportez une clé de n'importe quel fournisseur, ajoutez-la une fois, et utilisez le même workflow d'agent sur tous.",
+    "featureBody": "{{product.name}} ne vous enferme pas dans une stack hébergée. Apportez une clé de n'importe quel fournisseur, ajoutez-la une fois, et utilisez le même workflow d'agent sur tous.",
     "agent": {
-      "sectionAria": "Productivité de Spirit",
+      "sectionAria": "Productivité de {{product.name}}",
       "featureHeading": [
         "Planifiez avec contexte.",
         "Exécutez avec des outils.",
         "Livrez dans votre espace de travail."
       ],
-      "featureBody": "Spirit planifie avant d'agir : générez des maquettes, rédigez des plans structurés, et exécutez sur votre dépôt sans quitter le shell desktop."
+      "featureBody": "{{product.name}} planifie avant d'agir : générez des maquettes, rédigez des plans structurés, et exécutez sur votre dépôt sans quitter le shell desktop."
     },
-    "ctaSectionAria": "Télécharger Spirit",
-    "ctaTitle": "Essayez Spirit.",
+    "ctaSectionAria": "Télécharger {{product.name}}",
+    "ctaTitle": "Essayez {{product.name}}.",
     "trio": {
       "sectionAria": "Aperçus des capacités",
       "completion": {
@@ -306,12 +306,12 @@
     "linkHome": "Accueil",
     "changelog": "Journal des modifications",
     "openSourceLicenses": "Licences open source",
-    "copyrightLine": "© {{year}} Spirit. Agent IA open source."
+    "copyrightLine": "© {{year}} {{product.name}}. Agent IA open source."
   },
   "docs": {
     "title": "Documentation",
-    "metaTitle": "Documentation Spirit",
-    "metaDescription": "Installez Spirit, connectez un fournisseur avec votre propre clé, et exécutez le même agent sur Desktop et CLI.",
+    "metaTitle": "Documentation {{product.name}}",
+    "metaDescription": "Installez {{product.name}}, connectez un fournisseur avec votre propre clé, et exécutez le même agent sur Desktop et CLI.",
     "comingSoon": "Bientôt disponible.",
     "sectionAria": "Documentation",
     "search": "Rechercher",

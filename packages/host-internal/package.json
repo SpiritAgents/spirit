@@ -10,7 +10,6 @@
   },
   "files": [
     "dist",
-    "built-in",
     "README.md"
   ],
   "type": "module",
@@ -166,7 +165,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
+    "build": "node ../../scripts/product/generate-content.mjs --scope built-in && tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
     "build:tsc": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",

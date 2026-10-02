@@ -1,6 +1,6 @@
 ---
 title: Quickstart
-description: Install Spirit, connect one provider, and land a small approved edit.
+description: Install {{product.name}}, connect one provider, and land a small approved edit.
 ---
 
 This page takes you from a fresh install to one useful change. Later pages cover every provider and host; without this path, those pages have nothing to attach to.
@@ -24,11 +24,11 @@ Details: [Install Desktop](./install/desktop.mdx).
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 Open a new terminal and run `spirit --version`. Details: [Install CLI](./install/cli.mdx).
@@ -60,7 +60,7 @@ The TUI uses the current directory as the workspace.
 
 ## 3. Connect one provider
 
-You need an API key from a provider you already use. Spirit stores that key in the operating system keyring (`Spirit`).
+You need an API key from a provider you already use. {{product.name|mdx}} stores that key in the operating system keyring (`{{product.name}}`).
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

@@ -1,16 +1,17 @@
 ---
 title: Modes
-description: Switch among Agent, Plan, Ask, and Debug. The same workspace, different permissions.
+description: Switch among Agent, Plan, Ask, and Debug. The same workspace,
+  different permissions.
 ---
 
-Spirit has four agent modes. Desktop and the CLI cycle them with Tab: **Agent → Plan → Ask → Debug → Agent**.
+{{product.name|mdx}} has four agent modes. Desktop and the CLI cycle them with Tab: **Agent → Plan → Ask → Debug → Agent**.
 
 | Mode      | What it does                                                                                                                                                                           |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent** | The default. Reads, edits, runs commands, and verifies.                                                                                                                                |
 | **Plan**  | Plans only. Clarifies with [ask_questions](./ask-questions.mdx), writes a plan with `create_plan`, then asks you to start implementing or switch back to Agent.                        |
 | **Ask**   | Read-only. Explains and searches. File edits, shell, patches, and media generation are unavailable. Switch to Agent to change code.                                                    |
-| **Debug** | Investigates a bug: ranks hypotheses, inserts NDJSON logs under `.spirit/logs/` (wrapped in `#region agent log`), and waits for you to say the issue is resolved or still reproducing. |
+| **Debug** | Investigates a bug: ranks hypotheses, inserts NDJSON logs under `{{product.workspaceDataFolderName}}/logs/` (wrapped in `#region agent log`), and waits for you to say the issue is resolved or still reproducing. |
 
 Use Plan when the change is large or the goal is fuzzy. Use Ask when you only want to understand the repo. Use Debug when you can reproduce a failure and want a systematic pass. Leave Agent on for ordinary edits.
 

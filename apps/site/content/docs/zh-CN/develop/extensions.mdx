@@ -3,7 +3,7 @@ title: 扩展
 description: 用 npm create 向导或手动创建扩展，并搭建你自己的远程扩展市场。
 ---
 
-扩展是一个文件夹：内含 `.spirit/extension.json`（Spirit 宣言转储）与一个纯 npm 的 `package.json`。Spirit 按用户、按宿主安装扩展，不放在工作区 `.spirit/` 下，并按来源市场对每次安装做隔离：安装身份为 `(源 id, name)`。
+扩展是一个文件夹：内含 `{{product.workspaceDataFolderName}}/extension.json`（{{product.name|mdx}} 宣言转储）与一个纯 npm 的 `package.json`。{{product.name|mdx}} 按用户、按宿主安装扩展，不放在工作区 `{{product.workspaceDataFolderName}}/` 下，并按来源市场对每次安装做隔离：安装身份为 `(源 id, name)`。
 
 | 宿主    | 路径                                                    |
 | ------- | ------------------------------------------------------- |
@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-向导会询问扩展名（kebab-case）、显示名、一行描述以及要脚手架的能力。它会写入 `package.json`、`icon.svg` 与 `.spirit/extension.json`，并按你选择的能力追加对应文件（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），结束时打印一段可直接粘贴的市场条目。
+向导会询问扩展名（kebab-case）、显示名、一行描述以及要脚手架的能力。它会写入 `package.json`、`icon.svg` 与 `{{product.workspaceDataFolderName}}/extension.json`，并按你选择的能力追加对应文件（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`），结束时打印一段可直接粘贴的市场条目。
 
 脚本化使用时，每个提问都有对应 flag：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`，以及跳过确认的 `--yes`。
 
@@ -72,12 +72,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="手动创建">
 
-扩展目录只需要两个文件——`.spirit/extension.json` 与 `package.json`——再加上它声明的能力文件：
+扩展目录只需要两个文件——`{{product.workspaceDataFolderName}}/extension.json` 与 `package.json`——再加上它声明的能力文件：
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # Spirit 宣言转储（必填）
+  {{product.workspaceDataFolderName}}/
+    extension.json        # {{product.name}} 宣言转储（必填）
   package.json            # 纯 npm；只读取 `main`
   icon.svg                # 可选；仅 SVG，禁止 <script>
   index.mjs               # 可选；`main` 引用的 activate 入口
@@ -89,9 +89,9 @@ my-extension/
   cli-hooks.json          # 声明 CLI hooks 时（路径由宣言引用）
 ```
 
-`package.json` 不携带任何 Spirit 字段——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` 保持纯 npm 语义。宿主只读取 `main`，即 [`activate`](#activate) 的模块入口。
+`package.json` 不携带任何 {{product.name|mdx}} 字段——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` 保持纯 npm 语义。宿主只读取 `main`，即 [`activate`](#activate) 的模块入口。
 
-`.spirit/extension.json` 字段：
+`{{product.workspaceDataFolderName}}/extension.json` 字段：
 
 | 参数            | 说明                                                                                    |
 | --------------- | --------------------------------------------------------------------------------------- |
@@ -241,7 +241,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCPs | Hooks | Skills | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
 
-在 `tools/call` 期间，捆绑 MCP 可以在客户端声明了 `experimental["spirit/ui"]` 时发出 JSON-RPC 请求 `spirit/ui/open`（`{ viewId, params }`）。Spirit 只打开同一扩展在 `contributes.desktop.views` 里声明的 View；用户/工作区 MCP 一律拒绝。Dialog 会挡住这次 `tools/call`，`close(result)` 的结果回到同一条请求。无窗口宿主返回 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具应自行降级。
+在 `tools/call` 期间，捆绑 MCP 可以在客户端声明了 `experimental["spirit/ui"]` 时发出 JSON-RPC 请求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只打开同一扩展在 `contributes.desktop.views` 里声明的 View；用户/工作区 MCP 一律拒绝。Dialog 会挡住这次 `tools/call`，`close(result)` 的结果回到同一条请求。无窗口宿主返回 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具应自行降级。
 
 ### `settingsSchema`
 
@@ -351,7 +351,7 @@ export function activate(ctx) {
 
 ## 打包为 ZIP 分发
 
-把扩展目录打包为可分享的 ZIP（内容加 `.spirit/extension.json`）：
+把扩展目录打包为可分享的 ZIP（内容加 `{{product.workspaceDataFolderName}}/extension.json`）：
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +363,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ## 搭建远程扩展市场
 
-远程扩展市场就是一个提供 `.spirit/marketplace.json` 索引的可服务目录：Git 仓库、静态站点或本地目录。用户通过 `spirit extension marketplace add <url|path>` 或 Desktop **扩展**页添加它，然后浏览并安装其中的条目。
+远程扩展市场就是一个提供 `{{product.workspaceDataFolderName}}/marketplace.json` 索引的可服务目录：Git 仓库、静态站点或本地目录。用户通过 `spirit extension marketplace add <url|path>` 或 Desktop **扩展**页添加它，然后浏览并安装其中的条目。
 
 <Tabs items={["使用模板仓库", "手动创建"]}>
 <Tab value="使用模板仓库">
@@ -373,7 +373,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 模板自带注册处布局、两个示例扩展，以及在每次 push 与 PR 上校验注册处的 CI。发布一个扩展：
 
 1. 用 `npm create @spiritagent/extension` 脚手架。
-2. 运行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它会把扩展复制进 `extensions/`，并把条目合并进 `.spirit/marketplace.json`。见[用 publish 发布](#用-publish-发布)。
+2. 运行 `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone`——它会把扩展复制进 `extensions/`，并把条目合并进 `{{product.workspaceDataFolderName}}/marketplace.json`。见[用 publish 发布](#用-publish-发布)。
 3. 推送——用户用它的 Git URL 添加市场。
 
 </Tab>
@@ -383,7 +383,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # 索引
   extensions/
     my-extension/     # 内容目录（纯 npm 包 + 能力文件）
@@ -416,18 +416,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 
 ### 本地市场
 
-任何带 `.spirit/marketplace.json` 的本地目录都可以作为市场添加——用 `spirit extension marketplace add <path>` 或 Desktop 的**从磁盘添加**。本地市场原地读取、无需 CI，因此也是扩展作者的开发循环：编辑、重装、重复。
+任何带 `{{product.workspaceDataFolderName}}/marketplace.json` 的本地目录都可以作为市场添加——用 `spirit extension marketplace add <path>` 或 Desktop 的**从磁盘添加**。本地市场原地读取、无需 CI，因此也是扩展作者的开发循环：编辑、重装、重复。
 
 ### 用 publish 发布
 
-`extension-toolkit publish` 把扩展的 `.spirit/extension.json` 合并进目标市场的 `.spirit/marketplace.json`，并按条目 source 的需要复制内容：
+`extension-toolkit publish` 把扩展的 `{{product.workspaceDataFolderName}}/extension.json` 合并进目标市场的 `{{product.workspaceDataFolderName}}/marketplace.json`，并按条目 source 的需要复制内容：
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- 第一个参数是扩展目录，第二个是市场根目录——任何带 `.spirit/marketplace.json` 的本地目录：模板仓库克隆、`{spiritDataDir}/marketplaces/personal` 的个人市场等。
-- `--source local`（默认）：把完整的包复制进市场的 `extensions/<name>/`——含 `.spirit/extension.json`，排除 `node_modules` 与 `.git`——并把条目 `source` 指向该目录。
+- 第一个参数是扩展目录，第二个是市场根目录——任何带 `{{product.workspaceDataFolderName}}/marketplace.json` 的本地目录：模板仓库克隆、`{spiritDataDir}/marketplaces/personal` 的个人市场等。
+- `--source local`（默认）：把完整的包复制进市场的 `extensions/<name>/`——含 `{{product.workspaceDataFolderName}}/extension.json`，排除 `node_modules` 与 `.git`——并把条目 `source` 指向该目录。
 - `--source npm`：从扩展的 `package.json` 读 `name@version` 钉版作为条目的 npm `source`；只把宣言声明的图标复制进 `extensions/<name>/`（图标由市场自托管）。npm 包本身的发布仍由你用 npm CLI 完成。
 - `--dry-run`：打印将写入的条目与计划动作，不落盘。
 - 合并规则：同名条目原位替换，否则追加；新条目或 `version` 变动时 `reviewStatus` 回落为 `unverified`，同版本重发保留；`featured` 等策展字段始终保留市场侧原值。

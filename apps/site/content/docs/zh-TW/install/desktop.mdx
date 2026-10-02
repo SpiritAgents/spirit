@@ -1,13 +1,13 @@
 ---
 title: 安裝 Desktop
-description: 下載適用於 macOS、Windows 或 Linux 的 Spirit。
+description: 下載適用於 macOS、Windows 或 Linux 的 {{product.name}}。
 ---
 
 Desktop 是圖形化主機：聊天、工作區檔案、Git、設定、擴充功能和自動化。它與 [CLI](./cli.mdx) 共用本機 daemon。
 
 ## 下載
 
-使用[下載頁面](/en-US/download)。它會根據您的作業系統和架構，從 `download.spirit.dev` 挑選合適的建置版本。
+使用[下載頁面](/en-US/download)。它會根據您的作業系統和架構，從 `{{product.downloadOrigin|host}}` 挑選合適的建置版本。
 
 | 平台    | 檔案          | 架構             |
 | ------- | ------------- | ---------------- |
@@ -21,13 +21,13 @@ Desktop 沒有官方的 Homebrew、winget 或 apt 套件。
 
 ## 安裝後
 
-1. 開啟 Spirit。
+1. 開啟 {{product.name|mdx}}。
 2. [開啟工作區](../quickstart.mdx#2-open-a-workspace)。
 3. 在 **設定 → 模型** 中連接提供者。金鑰會儲存到系統鑰匙圈。
 
 在 macOS 上，如果 Gatekeeper 阻止首次啟動，請在 Finder 中以 Control-click → 開啟 來開啟應用程式。
 
-在 Linux 上，執行前請先將 AppImage 標記為可執行（`chmod +x Spirit-linux-*.AppImage`）。
+在 Linux 上，執行前請先將 AppImage 標記為可執行（`chmod +x {{product.name}}-linux-*.AppImage`）。
 
 ## 更新
 

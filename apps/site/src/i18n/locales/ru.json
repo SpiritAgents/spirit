@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "Генерация изображения…"
       },
-      "manualAssistantResponse": "Скачайте Spirit.",
+      "manualAssistantResponse": "Скачайте {{product.name}}.",
       "demoUserPrompt": "Просмотрите текущую целевую страницу и подскажите, что улучшить дальше.",
       "demoThinkingText": "Проверяю текущую структуру Hero.\nИщу самые заметные пробелы в поверхности беседы.\nГотовлю краткую сводку по реализации.",
       "demoAssistantResponse": "Вот следующий шаг, который я бы предпринял.\n\n- Замените пустую область беседы на реальное потоковое демо.\n- Оставьте окно Hero прерываемым, чтобы посетители могли сразу взять управление.\n- Используйте стили сообщений Desktop для Thinking и вызовов инструментов вместо приблизительных.",
@@ -190,7 +190,7 @@
       "exited": "[завершено, код {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Предпросмотр маркетингового сайта для настольного продукта Spirit.",
+      "siteReadmeDescription": "Предпросмотр маркетингового сайта для настольного продукта {{product.name}}.",
       "desktopReadmeDescription": "Оболочка Electron и веб-рендерер для настольного продукта.",
       "generatedWorkspaceDescription": "Имитация рабочей области, созданная для предпросмотра целевой страницы {{label}}.",
       "generatedWorkspaceOverview": "Корень рабочей области: {{root}}\\n\\nЭта имитация рабочей области сохраняет интерактивность вкладки файлов без подключения полной среды выполнения Desktop.",
@@ -202,17 +202,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit — это open-source ИИ-агент, который вы запускаете со своими моделями, своими ключами и своим рабочим процессом."
+    "title": "{{product.name}}",
+    "description": "{{product.name}} — это open-source ИИ-агент, который вы запускаете со своими моделями, своими ключами и своим рабочим процессом."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "Скачать",
     "downloadForPlatform": "Скачать для {{platform}}"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Главная Spirit",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "Главная {{product.name}}",
     "primaryNavAria": "Основная",
     "nav": {
       "features": "Возможности",
@@ -233,8 +233,8 @@
     "headline": "Open-source ИИ-агент,\nсозданный для умножения вашей продуктивности."
   },
   "download": {
-    "metaTitle": "Скачать Spirit",
-    "metaDescription": "Скачайте Spirit для Desktop, установите CLI или следите за ACP.",
+    "metaTitle": "Скачать {{product.name}}",
+    "metaDescription": "Скачайте {{product.name}} для Desktop, установите CLI или следите за ACP.",
     "title": "Тот же агент, во всех ваших задачах.",
     "sectionAria": "Тот же агент, во всех ваших задачах.",
     "desktop": "Desktop",
@@ -244,7 +244,7 @@
     "copied": "Скопировано",
     "comingSoonJoke": "Скоро™",
     "listingInProgress": "Загрузка…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "Проверь auth.ts и исправь баг с обновлением сессии.",
     "cliAssistantMessage": "Я проверю auth.ts и исправлю сбой проверки сессии.",
     "cliUserFollowUp": "И добавь регрессионный тест.",
@@ -252,20 +252,20 @@
     "cliFooter": "Agent  |  Default Approval  |  Loop Off          gpt-5"
   },
   "landing": {
-    "sectionAria": "Содержимое Spirit",
+    "sectionAria": "Содержимое {{product.name}}",
     "featureHeading": ["Ваши модели.", "Ваши ключи.", "Ваш контроль."],
-    "featureBody": "Spirit не привязывает вас к облачному стеку. Принесите ключ от любого провайдера, добавьте его один раз и используйте один и тот же агентский процесс для всех.",
+    "featureBody": "{{product.name}} не привязывает вас к облачному стеку. Принесите ключ от любого провайдера, добавьте его один раз и используйте один и тот же агентский процесс для всех.",
     "agent": {
-      "sectionAria": "Продуктивность Spirit",
+      "sectionAria": "Продуктивность {{product.name}}",
       "featureHeading": [
         "Планируйте с контекстом.",
         "Выполняйте с инструментами.",
         "Запускайте в своём рабочем пространстве."
       ],
-      "featureBody": "Spirit планирует, прежде чем действовать: создаёт макеты, пишет структурированные планы и выполняет их в вашем репозитории, не покидая настольную оболочку."
+      "featureBody": "{{product.name}} планирует, прежде чем действовать: создаёт макеты, пишет структурированные планы и выполняет их в вашем репозитории, не покидая настольную оболочку."
     },
-    "ctaSectionAria": "Скачать Spirit",
-    "ctaTitle": "Попробуйте Spirit.",
+    "ctaSectionAria": "Скачать {{product.name}}",
+    "ctaTitle": "Попробуйте {{product.name}}.",
     "trio": {
       "sectionAria": "Превью возможностей",
       "completion": {
@@ -303,12 +303,12 @@
     "linkHome": "Главная",
     "changelog": "История изменений",
     "openSourceLicenses": "Лицензии с открытым исходным кодом",
-    "copyrightLine": "© {{year}} Spirit. ИИ-агент с открытым исходным кодом."
+    "copyrightLine": "© {{year}} {{product.name}}. ИИ-агент с открытым исходным кодом."
   },
   "docs": {
     "title": "Документация",
-    "metaTitle": "Документация Spirit",
-    "metaDescription": "Установите Spirit, подключите провайдера со своим ключом и запустите того же агента на Desktop и CLI.",
+    "metaTitle": "Документация {{product.name}}",
+    "metaDescription": "Установите {{product.name}}, подключите провайдера со своим ключом и запустите того же агента на Desktop и CLI.",
     "comingSoon": "Скоро.",
     "sectionAria": "Документация",
     "search": "Поиск",

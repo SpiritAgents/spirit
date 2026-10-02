@@ -1,16 +1,17 @@
 ---
 title: Modi
-description: Wechseln Sie zwischen Agent, Plan, Ask und Debug. Derselbe Arbeitsbereich, unterschiedliche Berechtigungen.
+description: Wechseln Sie zwischen Agent, Plan, Ask und Debug. Derselbe
+  Arbeitsbereich, unterschiedliche Berechtigungen.
 ---
 
-Spirit hat vier Agent-Modi. Desktop und die CLI wechseln sie mit Tab: **Agent → Plan → Ask → Debug → Agent**.
+{{product.name|mdx}} hat vier Agent-Modi. Desktop und die CLI wechseln sie mit Tab: **Agent → Plan → Ask → Debug → Agent**.
 
 | Modus     | Was er tut                                                                                                                                                                                                           |
 | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent** | Der Standardmodus. Liest, bearbeitet, führt Befehle aus und verifiziert.                                                                                                                                             |
 | **Plan**  | Nur Planung. Klärt mit [ask_questions](./ask-questions.mdx), schreibt einen Plan mit `create_plan` und bittet Sie dann, mit der Implementierung zu beginnen oder zu Agent zurückzukehren.                            |
 | **Ask**   | Nur lesen. Erklärt und sucht. Dateibearbeitungen, Shell, Patches und Mediengenerierung sind nicht verfügbar. Wechseln Sie zu Agent, um Code zu ändern.                                                               |
-| **Debug** | Untersucht einen Fehler: bewertet Hypothesen, fügt NDJSON-Protokolle unter `.spirit/logs/` ein (eingebettet in `#region agent log`) und wartet, bis Sie sagen, dass das Problem behoben ist oder weiterhin auftritt. |
+| **Debug** | Untersucht einen Fehler: bewertet Hypothesen, fügt NDJSON-Protokolle unter `{{product.workspaceDataFolderName}}/logs/` ein (eingebettet in `#region agent log`) und wartet, bis Sie sagen, dass das Problem behoben ist oder weiterhin auftritt. |
 
 Verwenden Sie Plan, wenn die Änderung groß oder das Ziel vage ist. Verwenden Sie Ask, wenn Sie das Repository nur verstehen möchten. Verwenden Sie Debug, wenn Sie einen Fehler reproduzieren können und eine systematische Analyse wünschen. Lassen Sie Agent für gewöhnliche Bearbeitungen aktiv.
 

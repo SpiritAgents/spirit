@@ -1,6 +1,7 @@
 ---
 title: Schnellstart
-description: Installieren Sie Spirit, verbinden Sie einen Anbieter und landen Sie eine kleine genehmigte Änderung.
+description: Installieren Sie {{product.name}}, verbinden Sie einen Anbieter und
+  landen Sie eine kleine genehmigte Änderung.
 ---
 
 Diese Seite führt Sie von einer frischen Installation zu einer nützlichen Änderung. Spätere Seiten behandeln jeden Anbieter und Host; ohne diesen Pfad haben diese Seiten nichts, woran sie anknüpfen können.
@@ -24,11 +25,11 @@ Details: [Desktop installieren](./install/desktop.mdx).
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 Öffnen Sie ein neues Terminal und führen Sie `spirit --version` aus. Details: [CLI installieren](./install/cli.mdx).
@@ -60,7 +61,7 @@ Das TUI verwendet das aktuelle Verzeichnis als Workspace.
 
 ## 3. Verbinden Sie einen Anbieter
 
-Sie benötigen einen API-Schlüssel von einem Anbieter, den Sie bereits verwenden. Spirit speichert diesen Schlüssel im Betriebssystem-Keyring (`Spirit`).
+Sie benötigen einen API-Schlüssel von einem Anbieter, den Sie bereits verwenden. {{product.name|mdx}} speichert diesen Schlüssel im Betriebssystem-Keyring (`{{product.name}}`).
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

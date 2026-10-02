@@ -1,6 +1,7 @@
 ---
 name: create-hook
-description: Create or update Spirit command hooks in hooks.json and hook scripts under the managed hook roots.
+description: Create or update {{product.name}} command hooks in hooks.json and
+  hook scripts under the managed hook roots.
 ---
 
 Create or update hooks from the user's request. Hooks are command scripts that receive JSON on stdin and may return JSON on stdout to observe, allow, deny, ask, inject context, rewrite tool input, or schedule follow-up work.
@@ -19,7 +20,7 @@ Infer from the conversation when possible; only ask for missing pieces:
 
 ## Scope and paths
 
-- **Default**: workspace hook at `<workspace_root>/.spirit/hooks.json` with scripts under `<workspace_root>/.spirit/hooks/`
+- **Default**: workspace hook at `<workspace_root>/{{product.workspaceDataFolderName}}/hooks.json` with scripts under `<workspace_root>/{{product.workspaceDataFolderName}}/hooks/`
 - **User hook**: `<spirit_data_dir>/hooks.json` with scripts under `<spirit_data_dir>/hooks/` only when the user explicitly asks for user-level, global, or cross-repo behavior
 - If this skill is active from `<spirit_data_dir>/skills/create-hook/SKILL.md`, use that same `<spirit_data_dir>` for user scope
 - `command` paths in `hooks.json` are **relative to the directory that contains that `hooks.json`** (not the script's own folder unless you write `hooks/my-hook.sh`)

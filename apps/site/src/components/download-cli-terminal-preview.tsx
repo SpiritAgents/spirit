@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { product } from "@spiritagent/product";
 
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,7 @@ const SPIRIT_LOGO_LINES = [
 
 const LOGO_INNER_WIDTH = Math.max(
   ...SPIRIT_LOGO_LINES.map((line) => line.length),
-  " Spirit ".length,
+  ` ${product.name} `.length,
 );
 
 function buildCliTitledBox(title: string, bodyLines: string[], innerWidth: number): string {

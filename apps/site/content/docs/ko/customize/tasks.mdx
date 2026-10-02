@@ -1,13 +1,15 @@
 ---
 title: 작업
-description: 명령 팔레트에서 작업공간 작업을 실행합니다. .spirit/tasks.json에 선언하거나 .vscode/tasks.json에서 가져옵니다.
+description: 명령 팔레트에서 작업공간 작업을 실행합니다.
+  {{product.workspaceDataFolderName}}/tasks.json에 선언하거나 .vscode/tasks.json에서
+  가져옵니다.
 ---
 
 <Callout type="info">데스크톱 전용.</Callout>
 
-작업은 Spirit Desktop 명령 팔레트에서 미리 정의된 작업공간 명령을 실행합니다. 팔레트를 열고(`Mod+Shift+P`) **작업공간 → 작업 실행**을 선택한 다음 두 번째 수준 목록에서 작업을 선택하세요. 작업은 오른쪽 도구 패널의 터미널 탭에서 실행됩니다. **작업공간** 그룹은 유효한 작업이 하나 이상 있을 때만 팔레트에 표시됩니다.
+작업은 {{product.name|mdx}} Desktop 명령 팔레트에서 미리 정의된 작업공간 명령을 실행합니다. 팔레트를 열고(`Mod+Shift+P`) **작업공간 → 작업 실행**을 선택한 다음 두 번째 수준 목록에서 작업을 선택하세요. 작업은 오른쪽 도구 패널의 터미널 탭에서 실행됩니다. **작업공간** 그룹은 유효한 작업이 하나 이상 있을 때만 팔레트에 표시됩니다.
 
-Spirit 작업은 VS Code Tasks가 아닌 자체 시스템입니다. 엄격한 JSON Spirit 형식을 읽고, 호환성 가져오기로 VS Code의 `tasks.json`을 읽습니다 — 명확하게 정의된 VS Code 필드의 하위 집합만 지원합니다. 구성한 그대로 실행할 수 없는 작업은 절반만 구성된 상태로 실행되는 대신 완전히 숨겨집니다. [작업이 숨겨지는 이유](#작업이-숨겨지는-이유)를 참조하세요.
+{{product.name|mdx}} 작업은 VS Code Tasks가 아닌 자체 시스템입니다. 엄격한 JSON {{product.name|mdx}} 형식을 읽고, 호환성 가져오기로 VS Code의 `tasks.json`을 읽습니다 — 명확하게 정의된 VS Code 필드의 하위 집합만 지원합니다. 구성한 그대로 실행할 수 없는 작업은 절반만 구성된 상태로 실행되는 대신 완전히 숨겨집니다. [작업이 숨겨지는 이유](#작업이-숨겨지는-이유)를 참조하세요.
 
 ## 작업 파일
 
@@ -15,23 +17,23 @@ Spirit 작업은 VS Code Tasks가 아닌 자체 시스템입니다. 엄격한 JS
 
 | 우선순위 | 소스                             | 필수 마커            | 참고                               |
 | -------- | -------------------------------- | -------------------- | ---------------------------------- |
-| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Spirit 자체 형식                   |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 자체 형식                   |
 | 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 사용자 수준, 모든 작업공간에 적용  |
 | 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 호환성 가져오기, 읽기 전용 |
 
-작업공간 루트만 스캔하며 중첩 디렉터리는 스캔하지 않습니다. `<data dir>`는 Spirit 데이터 디렉터리입니다(예: macOS에서는 `~/Library/Application Support/Spirit`). 파일이 없거나, 읽을 수 없거나, 잘못된 JSON이거나, 마커가 올바르지 않으면 해당 파일은 작업을 제공하지 않습니다.
+작업공간 루트만 스캔하며 중첩 디렉터리는 스캔하지 않습니다. `<data dir>`는 {{product.name|mdx}} 데이터 디렉터리입니다(예: macOS에서는 `~/{{product.stable.userDataFolderName}}`). 파일이 없거나, 읽을 수 없거나, 잘못된 JSON이거나, 마커가 올바르지 않으면 해당 파일은 작업을 제공하지 않습니다.
 
 세 파일은 실시간으로 감시되며, 하나라도 변경되면 팔레트 목록이 자동으로 새로 고쳐집니다.
 
 세 소스는 하나의 네임스페이스로 병합됩니다. 여러 소스가 동일한 `label`을 정의하면 팔레트 목록과 `dependsOn` 참조 모두에서 우선순위가 가장 높은 소스가 우선합니다.
 
-`.vscode/tasks.json`은 실제 환경의 파일이 JSONC이므로 관대하게 파싱됩니다. `//` 및 `/* */` 주석과 후행 쉼표를 허용합니다. Spirit 자체 파일은 엄격한 JSON이며, 주석이 있으면 파일이 무효가 됩니다.
+`.vscode/tasks.json`은 실제 환경의 파일이 JSONC이므로 관대하게 파싱됩니다. `//` 및 `/* */` 주석과 후행 쉼표를 허용합니다. {{product.name|mdx}} 자체 파일은 엄격한 JSON이며, 주석이 있으면 파일이 무효가 됩니다.
 
 ## 워크스페이스 신뢰
 
-워크스페이스 작업 파일은 저장소와 함께 도착하므로 신뢰할 수 없는 데이터입니다: `.spirit/tasks.json`과 `.vscode/tasks.json`은 워크스페이스 내용을 승인한 후에만 로드됩니다. 사용자 수준 `tasks.json`(Spirit 데이터 디렉터리)은 암묵적으로 신뢰되며 항상 로드됩니다.
+워크스페이스 작업 파일은 저장소와 함께 도착하므로 신뢰할 수 없는 데이터입니다: `{{product.workspaceDataFolderName}}/tasks.json`과 `.vscode/tasks.json`은 워크스페이스 내용을 승인한 후에만 로드됩니다. 사용자 수준 `tasks.json`({{product.name|mdx}} 데이터 디렉터리)은 암묵적으로 신뢰되며 항상 로드됩니다.
 
-Spirit Desktop이 워크스페이스 작업 파일(또는 그 변경)을 감지하면 한 번 묻습니다: 프롬프트에는 사용 가능해질 작업과 해당 명령이 나열되고, 항목을 클릭하면 소스 파일이 열립니다. 워크스페이스 훅도 승인이 필요하면 두 목록이 하나의 결합된 대화 상자에 표시됩니다.
+{{product.name|mdx}} Desktop이 워크스페이스 작업 파일(또는 그 변경)을 감지하면 한 번 묻습니다: 프롬프트에는 사용 가능해질 작업과 해당 명령이 나열되고, 항목을 클릭하면 소스 파일이 열립니다. 워크스페이스 훅도 승인이 필요하면 두 목록이 하나의 결합된 대화 상자에 표시됩니다.
 
 - **한 번 허용** — 작업은 이 세션에서만 로드됩니다.
 - **항상 신뢰** — 정확히 이 파일 내용에 대해 기억됩니다.
@@ -65,7 +67,7 @@ Spirit Desktop이 워크스페이스 작업 파일(또는 그 변경)을 감지�
 | `dependsOn`                            | 지원됨 | label 문자열 또는 label 문자열 배열. 객체 형태(`{ "type": … }`, `{ "task": … }`)는 작업을 숨깁니다                                                                                                                      |
 | `dependsOrder`                         | 지원됨 | `parallel`(기본값) 또는 `sequence`                                                                                                                                                                                      |
 | `detail`                               | 지원됨 | 팔레트 목록에서 label 옆에 표시됩니다                                                                                                                                                                                   |
-| `icon.id`                              | 지원됨 | 메뉴 아이콘: Spirit Icons 우선, 그 다음 Lucide, 기본값으로 터미널 글리프 사용                                                                                                                                           |
+| `icon.id`                              | 지원됨 | 메뉴 아이콘: {{product.name|mdx}} Icons 우선, 그 다음 Lucide, 기본값으로 터미널 글리프 사용                                                                                                                                           |
 | `icon.color`                           | 무시됨 | 순전히 표시상의 요소입니다                                                                                                                                                                                              |
 | `hide`                                 | 지원됨 | 팔레트 목록에서는 숨겨지지만 여전히 해석 가능합니다 — `dependsOn` 종속성으로 실행할 수 있습니다                                                                                                                         |
 
@@ -104,7 +106,7 @@ Spirit Desktop이 워크스페이스 작업 파일(또는 그 변경)을 감지�
 | ---------------------------- | ------------------------------------------------ |
 | `${workspaceFolder}`         | 작업공간 루트 경로                               |
 | `${workspaceFolderBasename}` | 작업공간 루트 디렉터리 이름                      |
-| `${cwd}`                     | Spirit Desktop 자체 프로세스의 작업 디렉터리     |
+| `${cwd}`                     | {{product.name|mdx}} Desktop 자체 프로세스의 작업 디렉터리     |
 | `${userHome}`                | OS 사용자의 홈 디렉터리                          |
 | `${pathSeparator}`, `${/}`   | OS 경로 구분자                                   |
 | `${env:NAME}`                | 환경 변수 `NAME`(설정되어 있지 않으면 비어 있음) |
@@ -142,7 +144,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - **폴더 열기 트리거** — `runOn: "folderOpen"`은 워크스페이스가 활성화될 때 작업을 자동으로 실행하지만, 신뢰된 워크스페이스(승인 후 또는 기존 신뢰 레코드가 있는 경우)에서만 실행됩니다. 거부된 워크스페이스에서는 절대 실행되지 않습니다. 신뢰 프롬프트를 승인하면 이 세션의 폴더 열기 작업이 바로 실행됩니다. 활성화당 최대 한 번만 트리거되며 `tasks.json`을 편집해도 다시 실행되지 않습니다. 작업이 이미 인스턴스 제한으로 실행 중이면 자동 실행은 조용히 건너뜁니다(대화 상자 없음).
 - **터미널 재사용** — 종료된 작업의 터미널만 재사용됩니다. `panel: "shared"`와 `panel: "dedicated"`는 모두 이 작업의 유휴 터미널이 있으면 재사용하고(풀은 작업별로 구분됩니다) 없으면 새 탭을 엽니다. `panel: "new"`는 항상 새 탭을 엽니다.
 - **에코** — `presentation.echo`(기본값 켜짐)를 사용하면 프로세스 출력 전에 명령줄이 터미널에 기록됩니다.
-- **표시** — `always`(기본값)는 시작 시 도구 패널을 펼칩니다. `silent`는 시작 시 닫힌 상태를 유지하고 작업이 0이 아닌 코드로 종료될 때만 펼칩니다. `never`는 결코 자동으로 펼치지 않습니다. `focus: true`는 표시를 암시하며 추가로 키보드 포커스를 터미널로 이동합니다. VS Code와의 두 가지 차이점에 유의하세요: `reveal: "silent"`는 종료 코드가 0이 아닐 때만 펼칩니다(Spirit에는 problemMatcher 트리거 경로가 없습니다). 그리고 `presentation.revealProblems`는 전혀 효과가 없습니다 — 터미널 표시를 억제하지도 트리거하지도 않습니다.
+- **표시** — `always`(기본값)는 시작 시 도구 패널을 펼칩니다. `silent`는 시작 시 닫힌 상태를 유지하고 작업이 0이 아닌 코드로 종료될 때만 펼칩니다. `never`는 결코 자동으로 펼치지 않습니다. `focus: true`는 표시를 암시하며 추가로 키보드 포커스를 터미널로 이동합니다. VS Code와의 두 가지 차이점에 유의하세요: `reveal: "silent"`는 종료 코드가 0이 아닐 때만 펼칩니다({{product.name|mdx}}에는 problemMatcher 트리거 경로가 없습니다). 그리고 `presentation.revealProblems`는 전혀 효과가 없습니다 — 터미널 표시를 억제하지도 트리거하지도 않습니다.
 - **지우기** — `presentation.clear`는 터미널을 재사용하는 재실행 전에 터미널을 지웁니다.
 - **닫기** — `presentation.close`는 종료 코드와 관계없이 종료 시 탭을 자동으로 닫습니다.
 - **터미널 이름 유지** — `presentation.preserveTerminalName`은 작업 label을 탭 제목으로 유지합니다. 그렇지 않으면 실행 중인 프로세스의 제목이 탭 제목으로 바뀝니다.
@@ -152,7 +154,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 
 ## 예시
 
-완전한 `.spirit/tasks.json` 예시 — build → test → package 시퀀스 체인과 백그라운드 watch 작업:
+완전한 `{{product.workspaceDataFolderName}}/tasks.json` 예시 — build → test → package 시퀀스 체인과 백그라운드 watch 작업:
 
 ```json
 {

@@ -1,9 +1,10 @@
 ---
 title: Extensions
-description: Create extensions with the npm create wizard or by hand, and run your own extension marketplace.
+description: Create extensions with the npm create wizard or by hand, and run
+  your own extension marketplace.
 ---
 
-An extension is a folder with a `.spirit/extension.json` — the Spirit manifest dump — next to a pure-npm `package.json`. Spirit installs extensions per user and per host, not under the workspace `.spirit/` directory, and scopes each install by the marketplace it came from: the install identity is `(source id, name)`.
+An extension is a folder with a `{{product.workspaceDataFolderName}}/extension.json` — the {{product.name|mdx}} manifest dump — next to a pure-npm `package.json`. {{product.name|mdx}} installs extensions per user and per host, not under the workspace `{{product.workspaceDataFolderName}}/` directory, and scopes each install by the marketplace it came from: the install identity is `(source id, name)`.
 
 | Host    | Path                                                    |
 | ------- | ------------------------------------------------------- |
@@ -59,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-The wizard asks for an extension name (kebab-case), a display name, a one-line description, and the capabilities to scaffold. It writes `package.json`, `icon.svg`, and `.spirit/extension.json`, plus the files for the capabilities you picked (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), and prints a ready-to-paste marketplace entry when it finishes.
+The wizard asks for an extension name (kebab-case), a display name, a one-line description, and the capabilities to scaffold. It writes `package.json`, `icon.svg`, and `{{product.workspaceDataFolderName}}/extension.json`, plus the files for the capabilities you picked (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), and prints a ready-to-paste marketplace entry when it finishes.
 
 For scripting, every prompt has a flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>`, and `--yes` to skip confirmation.
 
@@ -72,12 +73,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="Manual">
 
-An extension directory needs only two files — `.spirit/extension.json` and `package.json` — plus the capability files it declares:
+An extension directory needs only two files — `{{product.workspaceDataFolderName}}/extension.json` and `package.json` — plus the capability files it declares:
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # Spirit manifest dump (required)
+  {{product.workspaceDataFolderName}}/
+    extension.json        # {{product.name}} manifest dump (required)
   package.json            # pure npm; only `main` is read
   icon.svg                # optional; SVG only, no <script>
   index.mjs               # optional; the activate entry referenced by `main`
@@ -89,9 +90,9 @@ my-extension/
   cli-hooks.json          # when declaring CLI hooks (path referenced from the manifest)
 ```
 
-`package.json` carries no Spirit fields — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` stay pure npm. The host reads only `main`, the module entry for [`activate`](#activate).
+`package.json` carries no {{product.name|mdx}} fields — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` stay pure npm. The host reads only `main`, the module entry for [`activate`](#activate).
 
-`.spirit/extension.json` fields:
+`{{product.workspaceDataFolderName}}/extension.json` fields:
 
 | Field           | Description                                                                                                                                   |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -241,7 +242,7 @@ Relative `command` and `cwd` values resolve against the extension root. If an MC
 
 These contributions overlay into the agent session when the extension is enabled. They do not appear in **Settings → MCPs | Hooks | Skills | Rules**. On a name conflict, workspace wins, then user, then extension.
 
-During `tools/call`, a bundled MCP server may send a JSON-RPC request `spirit/ui/open` with `{ viewId, params }` when the client advertised `experimental["spirit/ui"]`. Spirit only opens a view declared by the same extension in `contributes.desktop.views`. User and workspace MCP servers are rejected. The Dialog stays open while that `tools/call` is in flight; `close(result)` returns on the same request. Hosts without a window respond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — the tool should degrade.
+During `tools/call`, a bundled MCP server may send a JSON-RPC request `spirit/ui/open` with `{ viewId, params }` when the client advertised `experimental["spirit/ui"]`. {{product.name|mdx}} only opens a view declared by the same extension in `contributes.desktop.views`. User and workspace MCP servers are rejected. The Dialog stays open while that `tools/call` is in flight; `close(result)` returns on the same request. Hosts without a window respond `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — the tool should degrade.
 
 ### `settingsSchema`
 
@@ -351,7 +352,7 @@ export function activate(ctx) {
 
 ## Distribute as a ZIP
 
-Pack an extension directory into the shareable ZIP format (content plus `.spirit/extension.json`):
+Pack an extension directory into the shareable ZIP format (content plus `{{product.workspaceDataFolderName}}/extension.json`):
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +364,7 @@ To list the extension in a marketplace instead, see [Publish to a marketplace](#
 
 ## Run a marketplace
 
-A marketplace is a servable directory with a `.spirit/marketplace.json` index: a Git repository, a static site, or a local directory. Users add it with `spirit extension marketplace add <url|path>` or from the Desktop **Extensions** page, then browse and install its entries.
+A marketplace is a servable directory with a `{{product.workspaceDataFolderName}}/marketplace.json` index: a Git repository, a static site, or a local directory. Users add it with `spirit extension marketplace add <url|path>` or from the Desktop **Extensions** page, then browse and install its entries.
 
 <Tabs items={["Template repository", "Manual"]}>
 <Tab value="Template repository">
@@ -373,7 +374,7 @@ A marketplace is a servable directory with a `.spirit/marketplace.json` index: a
 The template ships the registry layout, two example extensions, and CI that validates the registry on every push and pull request. To publish an extension:
 
 1. Scaffold it with `npm create @spiritagent/extension`.
-2. Run `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — it copies the extension into `extensions/` and merges the entry into `.spirit/marketplace.json`. See [Publish to a marketplace](#publish-to-a-marketplace).
+2. Run `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — it copies the extension into `extensions/` and merges the entry into `{{product.workspaceDataFolderName}}/marketplace.json`. See [Publish to a marketplace](#publish-to-a-marketplace).
 3. Push — users add the marketplace with its Git URL.
 
 </Tab>
@@ -383,7 +384,7 @@ A marketplace root holds the index plus one content directory per extension:
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # the index
   extensions/
     my-extension/     # content directory (plain npm package + capability files)
@@ -416,18 +417,18 @@ Review discipline: pull requests that add an entry or change its `version` must 
 
 ### Local marketplaces
 
-Any local directory with a `.spirit/marketplace.json` works as a marketplace — add it with `spirit extension marketplace add <path>` or Desktop **Add from Disk**. Local marketplaces are read in place and need no CI, which makes them the development loop for extension authors: edit, reinstall, repeat.
+Any local directory with a `{{product.workspaceDataFolderName}}/marketplace.json` works as a marketplace — add it with `spirit extension marketplace add <path>` or Desktop **Add from Disk**. Local marketplaces are read in place and need no CI, which makes them the development loop for extension authors: edit, reinstall, repeat.
 
 ### Publish to a marketplace
 
-`extension-toolkit publish` merges an extension's `.spirit/extension.json` into a marketplace's `.spirit/marketplace.json` and copies the content the entry's source needs:
+`extension-toolkit publish` merges an extension's `{{product.workspaceDataFolderName}}/extension.json` into a marketplace's `{{product.workspaceDataFolderName}}/marketplace.json` and copies the content the entry's source needs:
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- The first argument is the extension directory; the second is the marketplace root — any local directory with a `.spirit/marketplace.json`: a template-repository clone, the Personal marketplace at `{spiritDataDir}/marketplaces/personal`, and so on.
-- `--source local` (default): copy the full package into the marketplace's `extensions/<name>/` — including `.spirit/extension.json`, excluding `node_modules` and `.git` — and point the entry's `source` at it.
+- The first argument is the extension directory; the second is the marketplace root — any local directory with a `{{product.workspaceDataFolderName}}/marketplace.json`: a template-repository clone, the Personal marketplace at `{spiritDataDir}/marketplaces/personal`, and so on.
+- `--source local` (default): copy the full package into the marketplace's `extensions/<name>/` — including `{{product.workspaceDataFolderName}}/extension.json`, excluding `node_modules` and `.git` — and point the entry's `source` at it.
 - `--source npm`: pin `name@version` from the extension's `package.json` as the entry's npm `source`; only the declared icon is copied into `extensions/<name>/` (marketplaces self-host icons). Publishing the npm package itself stays with your npm CLI.
 - `--dry-run`: print the entry and the planned actions without writing anything.
 - Merge rules: a same-name entry is replaced in place, otherwise the entry is appended. New entries and `version` changes fall back to `reviewStatus: "unverified"`; republishing the same version keeps it. Curation fields such as `featured` always keep the marketplace's values.

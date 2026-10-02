@@ -1,13 +1,14 @@
 ---
 title: Providers
-description: Bring your own key, run the connect wizard, and keep the same agent workflow when you switch houses.
+description: Bring your own key, run the connect wizard, and keep the same agent
+  workflow when you switch houses.
 ---
 
-Spirit is BYOK. You create a key in a provider console, paste it into Desktop or the CLI, and Spirit stores it in the operating system keyring. Switching houses does not change how you open a workspace, approve edits, or run the agent.
+{{product.name|mdx}} is BYOK. You create a key in a provider console, paste it into Desktop or the CLI, and {{product.name|mdx}} stores it in the operating system keyring. Switching houses does not change how you open a workspace, approve edits, or run the agent.
 
 The connect wizard is **Settings → Models** on Desktop, or `/model add` / `spirit model add` in the CLI. Extra fields appear only when that provider needs them.
 
-Spirit talks to providers over one of four transports. The wizard either fixes the type or lets you pick.
+{{product.name|mdx}} talks to providers over one of four transports. The wizard either fixes the type or lets you pick.
 
 | Transport           | Wizard label                       | Typical use                                                                |
 | ------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
@@ -16,7 +17,7 @@ Spirit talks to providers over one of four transports. The wizard either fixes t
 | `anthropic`         | Messages API                       | Anthropic, MiniMax, and optional Messages-compatible endpoints             |
 | `bedrock`           | Amazon Bedrock                     | Amazon Bedrock only                                                        |
 
-Google Gemini and Vertex AI always use Chat Completions. If a profile asks for Responses or Messages, Spirit falls back to `openai-compatible`.
+Google Gemini and Vertex AI always use Chat Completions. If a profile asks for Responses or Messages, {{product.name|mdx}} falls back to `openai-compatible`.
 
 Some houses add a second dimension on top of the key:
 
@@ -26,7 +27,7 @@ Some houses add a second dimension on top of the key:
 
 If a provider has none of these, the wizard is just key → import models → pick an active chat model.
 
-Spirit imports the model catalog and lets you assign the active chat model, plus image / video / lightweight chat slots when the catalog marks those capabilities. Reasoning and built-in web search follow the model and transport, not a separate Spirit toggle.
+{{product.name|mdx}} imports the model catalog and lets you assign the active chat model, plus image / video / lightweight chat slots when the catalog marks those capabilities. Reasoning and built-in web search follow the model and transport, not a separate {{product.name|mdx}} toggle.
 
 ## Catalog
 
@@ -34,7 +35,7 @@ These are the houses in the connect picker, in the same order. Each section is t
 
 ### OpenAI
 
-Create an API key in the [OpenAI platform](https://platform.openai.com/api-keys). Spirit does not sell OpenAI usage.
+Create an API key in the [OpenAI platform](https://platform.openai.com/api-keys). {{product.name|mdx}} does not sell OpenAI usage.
 
 The wizard fixes **Responses API** (`open-responses`). There is no transport picker. Default base: `https://api.openai.com/v1`.
 
@@ -46,7 +47,7 @@ Create an API key in the [Anthropic console](https://console.anthropic.com/setti
 
 Fixed **Messages API** (`anthropic`). Default base: `https://api.anthropic.com/v1`.
 
-Chat after import. Reasoning follows the model. No Spirit-side image or video generation slot unless a later catalog entry marks it.
+Chat after import. Reasoning follows the model. No {{product.name|mdx}}-side image or video generation slot unless a later catalog entry marks it.
 
 ### Google
 
@@ -279,7 +280,7 @@ Fixed **Chat Completions API**. The wizard does not offer Responses or Messages.
 - **Guangzhou** (default) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapore** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Chat after import. Do not rely on Chat-injected web search. TokenHub documents Chat `web_search_options` and Responses `web_search`, but Chat injection does not work in practice, and Responses is only on a few models. Spirit therefore keeps Chat Completions only.
+Chat after import. Do not rely on Chat-injected web search. TokenHub documents Chat `web_search_options` and Responses `web_search`, but Chat injection does not work in practice, and Responses is only on a few models. {{product.name|mdx}} therefore keeps Chat Completions only.
 
 ### Mistral
 
@@ -305,7 +306,7 @@ Fixed **Responses API** (`open-responses`). No transport picker.
 
 - **Resource name** (required) — 2–64 characters, letters, numbers, and hyphens; cannot start or end with a hyphen
 
-Spirit builds `https://{resource}.openai.azure.com/openai/v1`. Chat after import. Image generation follows the Azure catalog when marked.
+{{product.name|mdx}} builds `https://{resource}.openai.azure.com/openai/v1`. Chat after import. Image generation follows the Azure catalog when marked.
 
 ### Amazon Bedrock
 
@@ -316,7 +317,7 @@ Fixed **Amazon Bedrock** (`bedrock`). Default host shape: `https://bedrock.us-ea
 - **AWS Region** (required), for example `us-east-1`
 - **Authentication**: **Bearer** or **IAM**
   - Bearer — paste a Bedrock API key and a model id. Models are **not** fetched automatically.
-  - IAM — Access Key ID + Secret Access Key. Spirit lists foundation models from the account.
+  - IAM — Access Key ID + Secret Access Key. {{product.name|mdx}} lists foundation models from the account.
 
 Chat after you pick a model. Other capabilities follow that model. Bearer keys work for inference only. `ListFoundationModels` does not accept Bearer, so the catalog import needs IAM.
 
@@ -336,12 +337,12 @@ Chat after a model is selected. For AI Studio keys without a GCP project, use [G
 
 ### Custom
 
-Use the API key your endpoint expects. There is no Spirit-hosted custom provider.
+Use the API key your endpoint expects. There is no {{product.name|mdx}}-hosted custom provider.
 
 Picker: **Chat Completions**, **Open Responses**, or **Messages**. You must supply the **Base URL**. The placeholder default is `https://api.openai.com/v1` if you leave it empty.
 
-Enter the root the vendor documents, including the version suffix when they require it (`/v1`, `/v1/openai`, …). Spirit does not guess a path for custom endpoints.
+Enter the root the vendor documents, including the version suffix when they require it (`/v1`, `/v1/openai`, …). {{product.name|mdx}} does not guess a path for custom endpoints.
 
 You can also set a display name for the provider group so several custom endpoints stay distinguishable.
 
-After connect, import or type model ids. Mark chat / image / video capabilities in the wizard when the endpoint does not publish a catalog Spirit understands.
+After connect, import or type model ids. Mark chat / image / video capabilities in the wizard when the endpoint does not publish a catalog {{product.name|mdx}} understands.

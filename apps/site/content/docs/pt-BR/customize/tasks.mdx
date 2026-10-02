@@ -1,13 +1,15 @@
 ---
 title: Tarefas
-description: Execute tarefas do workspace a partir da paleta de comandos, declaradas em .spirit/tasks.json ou importadas de .vscode/tasks.json.
+description: Execute tarefas do workspace a partir da paleta de comandos,
+  declaradas em {{product.workspaceDataFolderName}}/tasks.json ou importadas de
+  .vscode/tasks.json.
 ---
 
 <Callout type="info">Somente no Desktop.</Callout>
 
-As tarefas executam comandos predefinidos do workspace a partir da paleta de comandos do Spirit Desktop: abra a paleta (`Mod+Shift+P`), escolha **Workspace → Executar tarefa** e depois escolha uma tarefa na lista do segundo nível. A tarefa é executada em uma aba de terminal no painel de ferramentas à direita. O grupo **Workspace** aparece na paleta somente quando existe pelo menos uma tarefa válida.
+As tarefas executam comandos predefinidos do workspace a partir da paleta de comandos do {{product.name|mdx}} Desktop: abra a paleta (`Mod+Shift+P`), escolha **Workspace → Executar tarefa** e depois escolha uma tarefa na lista do segundo nível. A tarefa é executada em uma aba de terminal no painel de ferramentas à direita. O grupo **Workspace** aparece na paleta somente quando existe pelo menos uma tarefa válida.
 
-As tarefas do Spirit formam um sistema próprio, diferente das tarefas do VS Code. Elas leem um formato Spirit em JSON estrito e, como importação de compatibilidade, o `tasks.json` do VS Code — com um subconjunto claramente definido dos campos do VS Code. Uma tarefa que não pode ser executada exatamente como configurada fica totalmente oculta em vez de ser executada semiconfigurada; veja [Por que uma tarefa fica oculta](#por-que-uma-tarefa-fica-oculta).
+As tarefas do {{product.name|mdx}} formam um sistema próprio, diferente das tarefas do VS Code. Elas leem um formato {{product.name|mdx}} em JSON estrito e, como importação de compatibilidade, o `tasks.json` do VS Code — com um subconjunto claramente definido dos campos do VS Code. Uma tarefa que não pode ser executada exatamente como configurada fica totalmente oculta em vez de ser executada semiconfigurada; veja [Por que uma tarefa fica oculta](#por-que-uma-tarefa-fica-oculta).
 
 ## Arquivos de tarefas
 
@@ -15,23 +17,23 @@ Três fontes são lidas, da prioridade mais alta para a mais baixa:
 
 | Prioridade | Fonte                            | Marcador obrigatório | Notas                                                        |
 | ---------- | -------------------------------- | -------------------- | ------------------------------------------------------------ |
-| 1          | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Formato próprio do Spirit                                    |
+| 1          | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato próprio do {{product.name|mdx}}                                    |
 | 2          | `<data dir>/tasks.json`          | `"schemaVersion": 1` | Nível de usuário, aplica-se a todos os workspaces            |
 | 3          | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Importação de compatibilidade com o VS Code, somente leitura |
 
-Somente a raiz do workspace é varrida — diretórios aninhados não são. `<data dir>` é o diretório de dados do Spirit (por exemplo, `~/Library/Application Support/Spirit` no macOS). Um arquivo ausente, ilegível, com JSON inválido ou com o marcador errado não contribui nenhuma tarefa.
+Somente a raiz do workspace é varrida — diretórios aninhados não são. `<data dir>` é o diretório de dados do {{product.name|mdx}} (por exemplo, `~/{{product.stable.userDataFolderName}}` no macOS). Um arquivo ausente, ilegível, com JSON inválido ou com o marcador errado não contribui nenhuma tarefa.
 
 Os três arquivos são observados em tempo real; a lista da paleta é atualizada automaticamente quando qualquer um deles muda.
 
 As três fontes são mescladas em um único namespace. Quando várias fontes definem o mesmo `label`, a fonte de maior prioridade vence — tanto para a lista da paleta quanto para as referências de `dependsOn`.
 
-O `.vscode/tasks.json` é analisado com tolerância, porque arquivos do mundo real são JSONC: comentários `//` e `/* */` e vírgulas finais são aceitos. Os arquivos próprios do Spirit são JSON estrito — um comentário torna o arquivo inválido.
+O `.vscode/tasks.json` é analisado com tolerância, porque arquivos do mundo real são JSONC: comentários `//` e `/* */` e vírgulas finais são aceitos. Os arquivos próprios do {{product.name|mdx}} são JSON estrito — um comentário torna o arquivo inválido.
 
 ## Confiança no espaço de trabalho
 
-Os arquivos de tarefas do espaço de trabalho chegam com o repositório, portanto são dados não confiáveis: `.spirit/tasks.json` e `.vscode/tasks.json` só são carregados depois que você aprova o conteúdo do espaço de trabalho. O `tasks.json` no nível do usuário (diretório de dados do Spirit) é implicitamente confiável e sempre carregado.
+Os arquivos de tarefas do espaço de trabalho chegam com o repositório, portanto são dados não confiáveis: `{{product.workspaceDataFolderName}}/tasks.json` e `.vscode/tasks.json` só são carregados depois que você aprova o conteúdo do espaço de trabalho. O `tasks.json` no nível do usuário (diretório de dados do {{product.name|mdx}}) é implicitamente confiável e sempre carregado.
 
-Quando o Spirit Desktop detecta arquivos de tarefas do espaço de trabalho (ou uma mudança neles), ele pergunta uma vez: o diálogo lista as tarefas que ficarão disponíveis com seus comandos, e clicar numa entrada abre o arquivo de origem. Se os hooks do espaço de trabalho também precisarem de aprovação, as duas listas aparecem em um único diálogo combinado.
+Quando o {{product.name|mdx}} Desktop detecta arquivos de tarefas do espaço de trabalho (ou uma mudança neles), ele pergunta uma vez: o diálogo lista as tarefas que ficarão disponíveis com seus comandos, e clicar numa entrada abre o arquivo de origem. Se os hooks do espaço de trabalho também precisarem de aprovação, as duas listas aparecem em um único diálogo combinado.
 
 - **Permitir uma vez** — as tarefas são carregadas apenas nesta sessão.
 - **Sempre confiar** — lembrado para este conteúdo exato do arquivo.
@@ -65,7 +67,7 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 | `dependsOn`                                    | Suportado     | Uma string de label ou uma matriz de strings de label. A forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta a tarefa                                                                                                                 |
 | `dependsOrder`                                 | Suportado     | `parallel` (padrão) ou `sequence`                                                                                                                                                                                                           |
 | `detail`                                       | Suportado     | Mostrado ao lado do label na lista da paleta                                                                                                                                                                                                |
-| `icon.id`                                      | Suportado     | Ícone do menu: Spirit Icons primeiro, depois Lucide, com um glifo de terminal como fallback                                                                                                                                                 |
+| `icon.id`                                      | Suportado     | Ícone do menu: {{product.name|mdx}} Icons primeiro, depois Lucide, com um glifo de terminal como fallback                                                                                                                                                 |
 | `icon.color`                                   | Ignorado      | Puramente apresentacional                                                                                                                                                                                                                   |
 | `hide`                                         | Suportado     | Oculta da lista da paleta, mas ainda resolvível — a tarefa pode ser executada como dependência de `dependsOn`                                                                                                                               |
 
@@ -104,7 +106,7 @@ Referências suportadas, substituídas quando a tarefa é resolvida:
 | ---------------------------- | ------------------------------------------------------------- |
 | `${workspaceFolder}`         | Caminho da raiz do workspace                                  |
 | `${workspaceFolderBasename}` | Nome da pasta raiz do workspace                               |
-| `${cwd}`                     | O próprio diretório de trabalho do processo do Spirit Desktop |
+| `${cwd}`                     | O próprio diretório de trabalho do processo do {{product.name|mdx}} Desktop |
 | `${userHome}`                | O diretório home do usuário do SO                             |
 | `${pathSeparator}`, `${/}`   | O separador de caminho do SO                                  |
 | `${env:NAME}`                | Variável de ambiente `NAME` (vazia quando não definida)       |
@@ -142,7 +144,7 @@ As tarefas iniciam com um clique explícito na paleta; somente em espaços de tr
 - **Gatilho de abertura de pasta** — `runOn: "folderOpen"` executa a tarefa automaticamente quando o espaço de trabalho é ativado, mas apenas em espaços de trabalho confiáveis (após aprovação ou com um registro de confiança existente); um espaço negado nunca a executa. Aprovar o aviso de confiança executa imediatamente as tarefas de abertura desta sessão. O gatilho dispara no máximo uma vez por ativação — editar `tasks.json` nunca reexecuta nada — e se a tarefa já está no limite de instâncias, a execução automática é silenciosamente ignorada (sem diálogo).
 - **Reutilização de terminal** — somente terminais de tarefas já finalizadas são reutilizados. `panel: "shared"` e `panel: "dedicated"` reutilizam o terminal ocioso da própria tarefa quando existe um (o pool é por tarefa) e abrem uma nova aba caso contrário; `panel: "new"` sempre abre uma aba nova.
 - **Echo** — com `presentation.echo` (ativado por padrão), a linha de comando é escrita no terminal antes da saída do processo.
-- **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal. Note dois desvios do VS Code: `reveal: "silent"` só expande com um código de saída diferente de zero (o Spirit não tem um caminho de acionamento por problem matcher), e `presentation.revealProblems` não tem efeito algum — não suprime nem aciona a exibição do terminal.
+- **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal. Note dois desvios do VS Code: `reveal: "silent"` só expande com um código de saída diferente de zero (o {{product.name|mdx}} não tem um caminho de acionamento por problem matcher), e `presentation.revealProblems` não tem efeito algum — não suprime nem aciona a exibição do terminal.
 - **Clear** — `presentation.clear` limpa o terminal antes de uma reexecução que o reutiliza.
 - **Close** — `presentation.close` fecha a aba automaticamente na saída, qualquer que seja o código de saída.
 - **Preservar nome do terminal** — `presentation.preserveTerminalName` mantém o label da tarefa como título da aba; caso contrário, o título do processo em execução o substitui.
@@ -152,7 +154,7 @@ As tarefas iniciam com um clique explícito na paleta; somente em espaços de tr
 
 ## Exemplo
 
-Um `.spirit/tasks.json` completo — uma cadeia em sequência build → test → package mais uma tarefa `watch` em segundo plano:
+Um `{{product.workspaceDataFolderName}}/tasks.json` completo — uma cadeia em sequência build → test → package mais uma tarefa `watch` em segundo plano:
 
 ```json
 {

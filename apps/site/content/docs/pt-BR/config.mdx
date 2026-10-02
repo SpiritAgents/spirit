@@ -1,20 +1,21 @@
 ---
 title: Configuração
-description: Diretórios de dados, config.json v2, .spirit/ e variáveis de ambiente.
+description: Diretórios de dados, config.json v2,
+  {{product.workspaceDataFolderName}}/ e variáveis de ambiente.
 ---
 
-O Spirit mantém binários e dados em lugares diferentes. Misturá-los é o motivo usual de "instalei o CLI, mas as configurações estão vazias".
+O diretório de dados compartilhados do usuário depende da quality do build, não do diretório de aplicativos do sistema.
 
 ## Diretório de dados
 
 Substitua com `SPIRIT_DATA_DIR`. O servidor também pode usar `SPIRIT_SERVER_DATA_DIR` (tem precedência sobre o primeiro).
 
-| SO       | Padrão                                             |
-| -------- | -------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Spirit`             |
-| Windows  | `%APPDATA%\Spirit`                                 |
-| Linux    | `$XDG_DATA_HOME/Spirit` ou `~/.local/share/Spirit` |
-| Fallback | `~/.spirit-data`                                   |
+| Build | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change: os diretórios antigos não são lidos nem migrados automaticamente. As substituições explícitas do diretório de dados continuam disponíveis. Caches do Electron, armazenamento do navegador e estado das janelas permanecem no diretório privado da plataforma.
 
 Arquivos típicos:
 
@@ -34,7 +35,7 @@ Arquivos típicos:
   server/instances/
 ```
 
-Os binários do CLI ficam em `SPIRIT_HOME` (`~/.spirit` ou `%LOCALAPPDATA%\Spirit`). Esse não é este diretório. Veja [Instalar CLI](./install/cli.mdx).
+Os binários CLI usam SPIRIT_HOME. No Unix, a instalação Stable e os dados compartilhados podem ter o mesmo diretório pai; bin/ e cli/ continuam sendo arquivos de instalação. Essa configuração não seleciona o diretório de dados compartilhados.
 
 ## config.json v2
 
@@ -48,14 +49,14 @@ Campos principais:
 
 As chaves **não** estão neste arquivo. Elas ficam no [keyring](./security.mdx).
 
-## `.spirit/` do workspace
+## `{{product.workspaceDataFolderName}}/` do workspace
 
 | Caminho              | Função                                        |
 | -------------------- | --------------------------------------------- |
-| `.spirit/rule.md`    | [Regra](./customize/rules.mdx) do workspace   |
-| `.spirit/skills/`    | [Skills](./customize/skills.mdx) do workspace |
-| `.spirit/mcp.json`   | [MCP](./customize/mcp.mdx) do workspace       |
-| `.spirit/hooks.json` | [Hooks](./customize/hooks.mdx) do workspace   |
+| `{{product.workspaceDataFolderName}}/rule.md`    | [Regra](./customize/rules.mdx) do workspace   |
+| `{{product.workspaceDataFolderName}}/skills/`    | [Skills](./customize/skills.mdx) do workspace |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | [MCP](./customize/mcp.mdx) do workspace       |
+| `{{product.workspaceDataFolderName}}/hooks.json` | [Hooks](./customize/hooks.mdx) do workspace   |
 
 Também usado: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

@@ -3,14 +3,25 @@
   "globalDependencies": [
     "product.json",
     "packages/product/schema.ts",
-    "packages/product/scripts/generate.mjs"
+    "packages/product/scripts/generate.mjs",
+    "scripts/product/generate-content.mjs"
   ],
   "globalEnv": ["SPIRIT_PRODUCT_QUALITY"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "dist-electron/**", ".next/**", ".source/**"],
-      "passThroughEnv": ["SITE_URL"]
+      "env": ["SITE_URL"]
+    },
+    "@spiritagent/site#build": {
+      "dependsOn": ["^build"],
+      "env": ["SITE_URL"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/apps/desktop/src/locales/*.json"],
+      "outputs": [".next/**", ".source/**", ".generated/**", "public/**"]
+    },
+    "@spiritagent/host-internal#build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
     },
     "build:tsc": {
       "dependsOn": ["^build"],

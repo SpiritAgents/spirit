@@ -3,7 +3,7 @@ title: 扩展
 description: 从市场安装扩展、导入 ZIP 包，或添加你自己的远程扩展市场。
 ---
 
-扩展为 Spirit 添加能力——工具、技能、钩子、MCP 服务器与界面贡献。扩展通过扩展市场分发：
+扩展为 {{product.name|mdx}} 添加能力——工具、技能、钩子、MCP 服务器与界面贡献。扩展通过扩展市场分发：
 
 - **内置**——随应用附带。
 - **个人**——你自己的导入：亲手添加的 ZIP 包。
@@ -54,7 +54,7 @@ ZIP 包是自声明旁路：不经过任何市场。
 | Git 仓库（HTTPS 或 SSH） | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP 索引 URL            | `spirit extension marketplace add https://example.com`                   |
 
-Git URL 可用 `--git-ref <tag|branch|commit>` 钉住 ref；缺省为远端默认分支。裸站点 URL 会自动补全其 `/.spirit/marketplace.json`。
+Git URL 可用 `--git-ref <tag|branch|commit>` 钉住 ref；缺省为远端默认分支。裸站点 URL 会自动补全其 `/{{product.workspaceDataFolderName}}/marketplace.json`。
 
 用 `spirit extension marketplace list` 与 `spirit extension marketplace remove <name>` 管理已添加的市场。Desktop 上右键点击市场 Tab 即可移除。
 

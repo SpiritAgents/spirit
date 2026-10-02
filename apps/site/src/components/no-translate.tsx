@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import { product } from "@spiritagent/product";
 
 /** Marks a DOM fragment as non-translatable for Safari / Google Translate. */
 export function NoTranslate({ children }: { children: ReactNode }) {
@@ -9,7 +10,10 @@ export function NoTranslate({ children }: { children: ReactNode }) {
   );
 }
 
-const BRAND_TOKEN_PATTERN = /Spirit|BYOK/g;
+const BRAND_TOKEN_PATTERN = new RegExp(
+  [product.name, "BYOK"].map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"),
+  "g",
+);
 
 /**
  * Wrap brand / product tokens so browser page translation leaves them intact

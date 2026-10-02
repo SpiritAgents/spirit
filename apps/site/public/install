@@ -8,7 +8,13 @@
 
 set -euo pipefail
 
-SPIRIT_DOWNLOAD_HOST="${SPIRIT_DOWNLOAD_HOST:-download.spirit.dev}"
+SPIRIT_PRODUCT_NAME='Spirit'
+SPIRIT_PRODUCT_NAME_REGEX='Spirit'
+if [ -n "${SPIRIT_DOWNLOAD_HOST:-}" ]; then
+  SPIRIT_DOWNLOAD_ORIGIN="https://${SPIRIT_DOWNLOAD_HOST}"
+else
+  SPIRIT_DOWNLOAD_ORIGIN='https://download.spirit.dev'
+fi
 SPIRIT_HOME="${SPIRIT_HOME:-$HOME/.spirit}"
 SPIRIT_VERSION="${SPIRIT_VERSION:-latest}"
 
@@ -42,13 +48,13 @@ detect_arch() {
 
 cli_archive_name() {
   local os="$1" arch="$2"
-  printf 'Spirit-CLI-%s-%s.tar.gz' "$os" "$arch"
+  printf '%s-CLI-%s-%s.tar.gz' "$SPIRIT_PRODUCT_NAME" "$os" "$arch"
 }
 
 cli_download_url() {
   local os="$1" arch="$2" version="$3"
-  printf 'https://%s/cli/%s/%s/%s/%s' \
-    "$SPIRIT_DOWNLOAD_HOST" "$os" "$arch" "$version" "$(cli_archive_name "$os" "$arch")"
+  printf '%s/cli/%s/%s/%s/%s' \
+    "$SPIRIT_DOWNLOAD_ORIGIN" "$os" "$arch" "$version" "$(cli_archive_name "$os" "$arch")"
 }
 
 github_checksums_url() {
@@ -62,7 +68,7 @@ github_checksums_url() {
 
 github_cli_asset_name() {
   local os="$1" arch="$2" version="$3"
-  printf 'Spirit-CLI-%s-%s-%s.tar.gz' "$version" "$os" "$arch"
+  printf '%s-CLI-%s-%s-%s.tar.gz' "$SPIRIT_PRODUCT_NAME" "$version" "$os" "$arch"
 }
 
 file_sha256() {
@@ -83,7 +89,7 @@ expected_sha256_from_sums() {
   local line hash name found_hash="" found_count=0
   local version_re='[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?'
   local name_re pinned_name
-  name_re="^Spirit-CLI-${version_re}-${os}-${arch}\\.tar\\.gz$"
+  name_re="^${SPIRIT_PRODUCT_NAME_REGEX}-CLI-${version_re}-${os}-${arch}\\.tar\\.gz$"
   pinned_name="$(github_cli_asset_name "$os" "$arch" "$version")"
 
   while IFS= read -r line || [ -n "$line" ]; do
@@ -148,7 +154,7 @@ main() {
   url="$(cli_download_url "$os" "$arch" "$SPIRIT_VERSION")"
   checksums_url="$(github_checksums_url "$SPIRIT_VERSION")"
 
-  info "Installing Spirit CLI"
+  info "Installing ${SPIRIT_PRODUCT_NAME} CLI"
   info "Platform: $os/$arch"
   info "SPIRIT_HOME: $SPIRIT_HOME"
   info "Version: $SPIRIT_VERSION"

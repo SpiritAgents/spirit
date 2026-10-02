@@ -3,11 +3,11 @@ title: プロバイダー
 description: 自分のAPIキーを持ち込み、接続ウィザードを実行し、ハウスを切り替えても同じエージェントワークフローを維持します。
 ---
 
-SpiritはBYOKです。プロバイダーのコンソールでキーを作成し、それをDesktopまたはCLIに貼り付けます。SpiritはそれをOSのキーリングに保存します。ハウスを切り替えても、ワークスペースの開き方、編集の承認方法、エージェントの実行方法は変わりません。
+{{product.name|mdx}}はBYOKです。プロバイダーのコンソールでキーを作成し、それをDesktopまたはCLIに貼り付けます。{{product.name|mdx}}はそれをOSのキーリングに保存します。ハウスを切り替えても、ワークスペースの開き方、編集の承認方法、エージェントの実行方法は変わりません。
 
 接続ウィザードは、Desktopでは**Settings → Models**、CLIでは`/model add`または`spirit model add`です。追加フィールドは、そのプロバイダーが必要とする場合にのみ表示されます。
 
-Spiritは4つのトランスポートのいずれかでプロバイダーと通信します。ウィザードはタイプを固定するか、選択させます。
+{{product.name|mdx}}は4つのトランスポートのいずれかでプロバイダーと通信します。ウィザードはタイプを固定するか、選択させます。
 
 | トランスポート      | ウィザードのラベル                 | 一般的な用途                                                                       |
 | ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
@@ -16,7 +16,7 @@ Spiritは4つのトランスポートのいずれかでプロバイダーと通�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax、およびオプションのMessages互換エンドポイント                   |
 | `bedrock`           | Amazon Bedrock                     | Amazon Bedrockのみ                                                                 |
 
-Google GeminiとVertex AIは常にChat Completionsを使用します。プロファイルがResponsesまたはMessagesを要求する場合、Spiritは`openai-compatible`にフォールバックします。
+Google GeminiとVertex AIは常にChat Completionsを使用します。プロファイルがResponsesまたはMessagesを要求する場合、{{product.name|mdx}}は`openai-compatible`にフォールバックします。
 
 一部のハウスでは、キーに加えて2番目の次元が追加されます：
 
@@ -26,7 +26,7 @@ Google GeminiとVertex AIは常にChat Completionsを使用します。プロフ
 
 これらのいずれも持たないプロバイダーの場合、ウィザードはキー → モデルのインポート → アクティブなチャットモデルの選択だけです。
 
-Spiritはモデルカタログをインポートし、アクティブなチャットモデルを割り当てることができます。さらに、カタログがその機能をマークしている場合、画像/ビデオ/軽量チャットのスロットも割り当てられます。推論と組み込みのウェブ検索は、モデルとトランスポートに従い、Spiritの別のトグルではありません。
+{{product.name|mdx}}はモデルカタログをインポートし、アクティブなチャットモデルを割り当てることができます。さらに、カタログがその機能をマークしている場合、画像/ビデオ/軽量チャットのスロットも割り当てられます。推論と組み込みのウェブ検索は、モデルとトランスポートに従い、{{product.name|mdx}}の別のトグルではありません。
 
 ## カタログ
 
@@ -34,7 +34,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 ### OpenAI
 
-[OpenAIプラットフォーム](https://platform.openai.com/api-keys)でAPIキーを作成します。SpiritはOpenAIの使用量を販売しません。
+[OpenAIプラットフォーム](https://platform.openai.com/api-keys)でAPIキーを作成します。{{product.name|mdx}}はOpenAIの使用量を販売しません。
 
 ウィザードは**Responses API**（`open-responses`）を固定します。トランスポートのピッカーはありません。デフォルトのベース：`https://api.openai.com/v1`。
 
@@ -46,7 +46,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 **Messages API**（`anthropic`）を固定します。デフォルトのベース：`https://api.anthropic.com/v1`。
 
-インポート後にチャットします。推論はモデルに従います。Spirit側の画像またはビデオ生成スロットは、後のカタログエントリがそれをマークしない限りありません。
+インポート後にチャットします。推論はモデルに従います。{{product.name|mdx}}側の画像またはビデオ生成スロットは、後のカタログエントリがそれをマークしない限りありません。
 
 ### Google
 
@@ -279,7 +279,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 - **広州** (デフォルト) — `https://tokenhub.tencentmaas.com/v1`
 - **シンガポール** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-インポート後にチャット。Chat に組み込まれた Web 検索に依存しないでください。TokenHub は Chat の `web_search_options` と Responses の `web_search` を文書化していますが、Chat の注入は実際には機能せず、Responses は一部のモデルでのみ利用可能です。したがって、Spirit は Chat Completions のみを保持します。
+インポート後にチャット。Chat に組み込まれた Web 検索に依存しないでください。TokenHub は Chat の `web_search_options` と Responses の `web_search` を文書化していますが、Chat の注入は実際には機能せず、Responses は一部のモデルでのみ利用可能です。したがって、{{product.name|mdx}} は Chat Completions のみを保持します。
 
 ### Mistral
 
@@ -305,7 +305,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 - **リソース名** (必須) — 2〜64文字、英字、数字、ハイフンを使用可能。ハイフンで始まるまたは終わることはできません。
 
-Spirit は `https://{resource}.openai.azure.com/openai/v1` を構築します。インポート後にチャットできます。画像生成は、マークされている場合に Azure カタログに従います。
+{{product.name|mdx}} は `https://{resource}.openai.azure.com/openai/v1` を構築します。インポート後にチャットできます。画像生成は、マークされている場合に Azure カタログに従います。
 
 ### Amazon Bedrock
 
@@ -316,7 +316,7 @@ Spirit は `https://{resource}.openai.azure.com/openai/v1` を構築します。
 - **AWS リージョン** (必須)、例: `us-east-1`
 - **認証**: **Bearer** または **IAM**
   - Bearer — Bedrock API キーとモデル ID を貼り付けます。モデルは自動的に取得されません。
-  - IAM — Access Key ID + Secret Access Key。Spirit はアカウントから基盤モデルを一覧表示します。
+  - IAM — Access Key ID + Secret Access Key。{{product.name|mdx}} はアカウントから基盤モデルを一覧表示します。
 
 モデルを選択した後にチャットできます。他の機能はそのモデルに従います。Bearer キーは推論のみで機能します。`ListFoundationModels` は Bearer を受け付けないため、カタログのインポートには IAM が必要です。
 
@@ -336,12 +336,12 @@ Vertex AI が有効な GCP プロジェクトを使用します。認証は ADC�
 
 ### カスタム
 
-エンドポイントが期待する API キーを使用します。Spirit がホストするカスタムプロバイダーはありません。
+エンドポイントが期待する API キーを使用します。{{product.name|mdx}} がホストするカスタムプロバイダーはありません。
 
 選択肢: **Chat Completions**、**Open Responses**、または **Messages**。**ベース URL** を指定する必要があります。空のままにした場合のプレースホルダーのデフォルトは `https://api.openai.com/v1` です。
 
-ベンダーが文書化しているルートを入力します。ベンダーが要求する場合はバージョンサフィックスも含めます (`/v1`、`/v1/openai` など)。Spirit はカスタムエンドポイントのパスを推測しません。
+ベンダーが文書化しているルートを入力します。ベンダーが要求する場合はバージョンサフィックスも含めます (`/v1`、`/v1/openai` など)。{{product.name|mdx}} はカスタムエンドポイントのパスを推測しません。
 
 プロバイダーグループの表示名を設定して、複数のカスタムエンドポイントを区別しやすくすることもできます。
 
-接続後、モデル ID をインポートまたは入力します。エンドポイントが Spirit が理解できるカタログを公開しない場合は、ウィザードでチャット/画像/ビデオの機能をマークします。
+接続後、モデル ID をインポートまたは入力します。エンドポイントが {{product.name|mdx}} が理解できるカタログを公開しない場合は、ウィザードでチャット/画像/ビデオの機能をマークします。
