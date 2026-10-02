@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/server",
   "version": "1.0.0-alpha.0",
-  "description": "Spirit Server — shared daemon backend for Spirit clients (CLI / Desktop / Web)",
+  "description": "Shared agent daemon backend for CLI, Desktop and Web clients",
   "license": "MIT",
   "repository": {
     "type": "git",

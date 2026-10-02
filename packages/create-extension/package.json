@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/create-extension",
   "version": "1.0.0-alpha.0",
-  "description": "Scaffold Spirit extensions (npm create @spiritagent/extension). Thin alias over @spiritagent/extension-toolkit.",
+  "description": "Scaffold extensions (npm create @spiritagent/extension). Thin alias over @spiritagent/extension-toolkit.",
   "license": "MIT",
   "repository": {
     "type": "git",

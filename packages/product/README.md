@@ -65,3 +65,51 @@ filters adapt values to their output context. Quote frontmatter placeholders
 as YAML strings; the generator resolves their values structurally before MDX
 compilation, so rendered pages and processed Markdown receive the same text.
 Generation does not add banners or reformat unrelated content.
+
+## Verification and Scope
+
+`pnpm product:verify` uses controlled directories under the checkout's `tmp/`,
+not existing user data. It runs Schema/codegen tests, native Rust value probes,
+non-installer template checks, a source-literal audit, release URL checks, and
+two-quality integration tests. Build server dependencies and Desktop TypeScript
+first; the runner does not install dependencies or rebuild native modules.
+The daemon tests bind loopback only. External network restrictions should also
+be enforced by the execution environment rather than relying on package-manager
+offline flags alone.
+
+The integration test runs both the repository manifest and a changed manifest
+with independent origins, directory names, and protocols. Real host consumers
+load generated product modules in isolated processes. It verifies user roots,
+workspace rules/skills/MCP/hooks/tasks, daemon registry/token separation,
+cross-quality rejection, Electron private paths, and persistence/reload of
+config, chats, transcripts, rewind, TODOs, extension settings, marketplaces,
+automations, and dreams. Old platform roots contain decoys; filesystem probes
+count attempted reads and writes, including attempts swallowed by a consumer.
+No credential lookup, model request, hook command, or automation is executed.
+
+The source audit intentionally retains external technical identities:
+repository and package names, executables, environment variables, app/bundle
+identifiers, Keyring service/account names, commit attribution, CSS/IPC/storage
+keys, and logo assets. Historical examples, test fixtures, comments, and
+generated documents are not additional editable product sources. Package
+descriptions are product-neutral; packaged Desktop metadata uses the product.
+
+The implementation was also exercised from a fresh local source export with
+offline dependency restoration and no pre-existing build outputs: server,
+ACP, Site, CLI, and Desktop renderer/TypeScript built successfully. A changed
+root manifest propagated to thirty production Site HTML pages/client chunks,
+Desktop renderer/package metadata, and a real CLI/daemon startup. The existing
+CLI staging tree ran with source dependency fallback blocked and reconnected
+to the same daemon. macOS ARM64 Desktop directory layout was checked using
+the installed Electron distribution and an existing icon.
+
+**Not verified locally:** other native platforms/architectures, cross containers,
+remote CI/publication, signing/notarization, OS protocol registration, and the
+complete Desktop native-rebuild/ASAR path. Installer verification was explicitly
+excluded. Archive extraction testing was also excluded; after that restriction,
+no archive command was used. Directory-layout checks do not certify archives.
+
+The default-root change contains no automatic old-data discovery, migration,
+fallback, or dual write. Any explicitly authorized personal copy is a separate
+operation, not application behavior. Electron private data and OS credentials
+are not claimed to be quality-isolated.

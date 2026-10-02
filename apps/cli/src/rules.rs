@@ -102,7 +102,7 @@ pub fn rule_path_for_scope(workspace_root: &Path, scope: RuleScope) -> PathBuf {
     }
 }
 
-/// Ensures the `.spirit` directory exists so `workspace_spirit_rule_path` can be written later.
+/// Ensures the product workspace directory exists before writing its rule file.
 pub fn ensure_workspace_spirit_dir(workspace_root: &Path) -> Result<()> {
     let dir = workspace_root.join(SPIRIT_DIR_NAME);
     if dir.exists() {

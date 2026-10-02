@@ -20,6 +20,7 @@
     "build": "node scripts/product/generate-content.mjs && turbo run build",
     "product:content": "node scripts/product/generate-content.mjs",
     "product:content:check": "node scripts/product/generate-content.mjs --check",
+    "product:verify": "node scripts/product/verify.mjs",
     "release:verify-version": "node scripts/release/verify-version.mjs",
     "release:cli:bundle": "node scripts/release/bundle-cli.mjs",
     "release:checksums": "node scripts/release/checksums.mjs",
