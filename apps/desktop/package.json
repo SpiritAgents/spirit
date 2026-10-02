@@ -2,7 +2,7 @@
   "name": "@spiritagent/desktop",
   "version": "1.0.0-alpha.0",
   "private": true,
-  "description": "Desktop application for Spirit",
+  "description": "Desktop agent application",
   "homepage": "https://github.com/SpiritAgents/spirit",
   "license": "MIT",
   "author": {

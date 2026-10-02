@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/ui",
   "version": "1.0.0-alpha.0",
-  "description": "Shared React UI primitives for Spirit desktop and site",
+  "description": "Shared React UI primitives for desktop and site",
   "license": "MIT",
   "repository": {
     "type": "git",

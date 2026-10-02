@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/icons",
   "version": "1.0.0-alpha.0",
-  "description": "Spirit Icons — React icon components for Spirit desktop and site",
+  "description": "React icon components for desktop and site",
   "license": "CC-BY-4.0",
   "repository": {
     "type": "git",
