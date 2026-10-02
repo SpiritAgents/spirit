@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { sanitize } from "hast-util-sanitize";
@@ -8,7 +9,7 @@ import {
 } from "../../src/lib/markdown-streamdown-plugins.ts";
 
 test("streamdown sanitize schema keeps spirit img src", () => {
-  const ref = "spirit://generated/image/1780701216913-a51ab479-f44c-4efc-86f8-a0a2fe4f85e7.png";
+  const ref = `${product.urlProtocol}://generated/image/1780701216913-a51ab479-f44c-4efc-86f8-a0a2fe4f85e7.png`;
   const tree = {
     type: "root",
     children: [
@@ -31,7 +32,7 @@ test("streamdown sanitize schema keeps spirit img src", () => {
 });
 
 test("streamdown sanitize schema keeps spirit video src", () => {
-  const ref = "spirit://generated/video/example.mp4";
+  const ref = `${product.urlProtocol}://generated/video/example.mp4`;
   const tree = {
     type: "root",
     children: [
@@ -104,7 +105,7 @@ test("streamdown sanitize schema keeps relative image src", () => {
 });
 
 test("default github schema strips spirit src", () => {
-  const ref = "spirit://generated/image/test.png";
+  const ref = `${product.urlProtocol}://generated/image/test.png`;
   const tree = {
     type: "root",
     children: [
@@ -119,7 +120,7 @@ test("default github schema strips spirit src", () => {
 
   const safe = sanitize(tree);
   assert.equal(safe.children[0].properties.src, undefined);
-  assert.equal(MANAGED_GENERATED_ASSET_SANITIZE_PROTOCOL, "spirit");
+  assert.equal(MANAGED_GENERATED_ASSET_SANITIZE_PROTOCOL, product.urlProtocol);
 });
 
 test("streamdown sanitize schema keeps picture link structure and https media", () => {

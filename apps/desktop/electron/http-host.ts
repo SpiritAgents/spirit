@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
@@ -124,7 +125,7 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
           running: true,
           url: `http://${options.host}:${options.port}`,
         };
-        logger.log(`Spirit desktop web host listening on ${state.url}`);
+        logger.log(`${product.name} desktop web host listening on ${state.url}`);
         return { ...state };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

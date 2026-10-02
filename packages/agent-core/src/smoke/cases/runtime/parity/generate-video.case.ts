@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import type {
   JsonValue,
   LlmMessage,
@@ -140,7 +141,7 @@ function createGenerateVideoRuntime(
         );
       }
 
-      const markdownRef = "spirit://generated/video/courtyard-clip.mp4";
+      const markdownRef = `${product.urlProtocol}://generated/video/courtyard-clip.mp4`;
       const summaryText = [
         "[generated video]",
         `video_ref: ${markdownRef}`,
@@ -185,7 +186,7 @@ function assertTerminalGenerateVideoResult(
   if (
     !execution ||
     execution.failed ||
-    !execution.output.includes("spirit://generated/video/courtyard-clip.mp4")
+    !execution.output.includes(`${product.urlProtocol}://generated/video/courtyard-clip.mp4`)
   ) {
     throw new Error(`${label} did not record the correct generate_video tool result.`);
   }

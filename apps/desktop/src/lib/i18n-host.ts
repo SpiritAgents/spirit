@@ -1,4 +1,5 @@
 import i18n from "i18next";
+import { product } from "@spiritagent/product";
 
 import de from "../locales/de.json" with { type: "json" };
 import en from "../locales/en.json" with { type: "json" };
@@ -33,6 +34,7 @@ instance.init({
   fallbackLng: FALLBACK_LANGUAGE,
   interpolation: {
     escapeValue: false,
+    defaultVariables: { product },
   },
 });
 

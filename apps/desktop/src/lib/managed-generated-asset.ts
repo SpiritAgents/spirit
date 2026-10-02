@@ -1,4 +1,6 @@
-export const MANAGED_GENERATED_ASSET_PROTOCOL_PREFIX = "spirit://generated/";
+import { product } from "@spiritagent/product";
+
+export const MANAGED_GENERATED_ASSET_PROTOCOL_PREFIX = `${product.urlProtocol}://generated/`;
 
 export type ManagedGeneratedAssetKind = "image" | "video";
 

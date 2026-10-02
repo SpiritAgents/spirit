@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { product } from "@spiritagent/product";
 
 import de from "../locales/de.json";
 import en from "../locales/en.json";
@@ -96,6 +97,7 @@ i18n.use(initReactI18next).init({
   fallbackLng: FALLBACK_LANGUAGE,
   interpolation: {
     escapeValue: false,
+    defaultVariables: { product },
   },
 });
 

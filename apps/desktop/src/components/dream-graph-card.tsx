@@ -1,4 +1,5 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { product } from "@spiritagent/product";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -283,7 +284,12 @@ function DreamLogoNode({ data }: NodeProps<Node<DreamLogoNodeData>>) {
         position={Position.Right}
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
-      <img src={data.iconSrc} alt="Spirit" className="h-16 w-16 object-contain" draggable={false} />
+      <img
+        src={data.iconSrc}
+        alt={product.name}
+        className="h-16 w-16 object-contain"
+        draggable={false}
+      />
     </div>
   );
 }

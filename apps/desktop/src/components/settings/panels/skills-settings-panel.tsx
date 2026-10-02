@@ -2,6 +2,7 @@ import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Sparkles } from "lucide-react";
+import { product } from "@spiritagent/product";
 
 import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
 import type { SettingsViewProps } from "@/components/settings/types";
@@ -51,7 +52,7 @@ const skillCreateRootOptions: Array<{
   },
   {
     kind: "workspaceSpirit",
-    labelFallback: ".spirit",
+    labelFallback: product.workspaceDataFolderName,
     hintKey: "settings.skillWorkspaceSpiritHint",
   },
   {

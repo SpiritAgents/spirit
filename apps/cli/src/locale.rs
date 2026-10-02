@@ -10,6 +10,14 @@ pub const SUPPORTED_UI_LOCALES: [&str; 10] = [
     "en", "zh-CN", "zh-TW", "ja", "ko", "de", "fr", "es", "pt-BR", "ru",
 ];
 
+pub fn product_text(key: &str) -> std::borrow::Cow<'_, str> {
+    t!(
+        key,
+        product_name = crate::product::NAME,
+        workspace_data_folder_name = crate::product::WORKSPACE_DATA_FOLDER_NAME
+    )
+}
+
 pub fn apply_ui_locale(config: &AppConfig) {
     rust_i18n::set_locale(&resolve_ui_locale(config));
 }
@@ -79,6 +87,28 @@ pub fn language_display_name(locale: &str) -> String {
 mod tests {
     use super::*;
     use crate::model_registry::AppConfig;
+
+    #[test]
+    fn product_labels_resolve_for_every_locale() {
+        for locale in SUPPORTED_UI_LOCALES {
+            let name = t!(
+                "ui.brand.title",
+                locale = locale,
+                product_name = crate::product::NAME
+            );
+            assert_eq!(name, crate::product::NAME);
+            let path = t!(
+                "form.rules.short.spirit",
+                locale = locale,
+                workspace_data_folder_name = crate::product::WORKSPACE_DATA_FOLDER_NAME
+            );
+            assert_eq!(
+                path,
+                format!("{}/rule.md", crate::product::WORKSPACE_DATA_FOLDER_NAME)
+            );
+        }
+        assert_eq!(product_text("ui.brand.title"), crate::product::NAME);
+    }
 
     #[test]
     fn parse_ui_locale_accepts_aliases() {

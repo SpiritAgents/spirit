@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import type {
   JsonValue,
   LlmMessage,
@@ -125,7 +126,7 @@ function createGenerateImageRuntime(
         throw new Error(`generate_image smoke did not parse the expected size: ${request.size}`);
       }
 
-      const markdownRef = "spirit://generated/image/square-poster.png";
+      const markdownRef = `${product.urlProtocol}://generated/image/square-poster.png`;
       const summaryText = [
         "[generated image]",
         `image_ref: ${markdownRef}`,
@@ -168,7 +169,7 @@ function assertTerminalGenerateImageResult(
   if (
     !execution ||
     execution.failed ||
-    !execution.output.includes("spirit://generated/image/square-poster.png")
+    !execution.output.includes(`${product.urlProtocol}://generated/image/square-poster.png`)
   ) {
     throw new Error(`${label} did not record the correct generate_image tool result.`);
   }
@@ -191,7 +192,7 @@ function assertToolResultMessagePersisted(state: ScriptedState, label: string): 
 
   if (
     typeof toolMessage?.content !== "string" ||
-    !toolMessage.content.includes("spirit://generated/image/square-poster.png")
+    !toolMessage.content.includes(`${product.urlProtocol}://generated/image/square-poster.png`)
   ) {
     throw new Error(
       `${label} did not write the generate_image result back to runtime state messages.`,

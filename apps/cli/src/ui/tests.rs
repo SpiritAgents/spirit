@@ -314,7 +314,7 @@ fn footer_shows_mode_without_tab_toggle_hint() {
     assert!(!plan_footer[0].contains("Tab"));
     assert!(agent_footer[0].contains(t!("ui.footer.mode.agent").as_ref()));
     assert!(plan_footer[0].contains(t!("ui.footer.mode.plan").as_ref()));
-    assert!(!agent_footer[0].contains(t!("ui.footer.preview").as_ref()));
+    assert!(!agent_footer[0].contains(crate::locale::product_text("ui.footer.preview").as_ref()));
     assert!(agent_footer[0].contains(t!("ui.footer.approval.default").as_ref()));
     let approval_pos = agent_footer[0]
         .find(t!("ui.footer.approval.default").as_ref())
@@ -477,7 +477,7 @@ fn sessions_picker_uses_inline_layout_without_footer_or_title() {
     assert!(
         !lines
             .iter()
-            .any(|line| line.contains(t!("ui.footer.preview").as_ref()))
+            .any(|line| line.contains(crate::locale::product_text("ui.footer.preview").as_ref()))
     );
 }
 
@@ -561,7 +561,7 @@ fn slash_suggestions_use_inline_layout_without_footer_or_title() {
     assert!(
         !lines
             .iter()
-            .any(|line| line.contains(t!("ui.footer.preview").as_ref()))
+            .any(|line| line.contains(crate::locale::product_text("ui.footer.preview").as_ref()))
     );
 }
 
@@ -919,7 +919,7 @@ fn file_reference_suggestions_use_inline_layout_without_footer_or_title() {
     assert!(
         !lines
             .iter()
-            .any(|line| line.contains(t!("ui.footer.preview").as_ref()))
+            .any(|line| line.contains(crate::locale::product_text("ui.footer.preview").as_ref()))
     );
 }
 

@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { product } from "@spiritagent/product";
 import { fileURLToPath } from "node:url";
 
 import { readCurrentToken } from "./auth-token.js";
@@ -68,7 +69,7 @@ export class ServerRpcClient {
       };
       const onError = () => {
         cleanup();
-        reject(new Error(`failed to connect to Spirit Server at ${url.host}`));
+        reject(new Error(`failed to connect to ${product.name} Server at ${url.host}`));
       };
       const cleanup = () => {
         socket.removeEventListener("open", onOpen);
@@ -85,7 +86,7 @@ export class ServerRpcClient {
       if (this.socket === socket) {
         this.socket = undefined;
       }
-      const error = new Error("Spirit Server connection closed");
+      const error = new Error(`${product.name} Server connection closed`);
       this.rejectPending(error);
       for (const listener of this.disconnectListeners) {
         listener(error);
@@ -100,7 +101,7 @@ export class ServerRpcClient {
   async call<Result = unknown>(method: string, params?: unknown): Promise<Result> {
     const socket = this.socket;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
-      throw new Error("Spirit Server is not connected");
+      throw new Error(`${product.name} Server is not connected`);
     }
     const id = this.nextRequestId++;
     const response = new Promise<Result>((resolve, reject) => {
@@ -134,7 +135,7 @@ export class ServerRpcClient {
     const socket = this.socket;
     this.socket = undefined;
     socket?.close();
-    this.rejectPending(new Error("Spirit Server client closed"));
+    this.rejectPending(new Error(`${product.name} Server client closed`));
   }
 
   private handleMessage(raw: string): void {
@@ -215,7 +216,7 @@ export async function connectOrSpawnServer(
       return connected;
     }
   }
-  throw new Error("timed out waiting for Spirit Server to start");
+  throw new Error(`timed out waiting for ${product.name} Server to start`);
 }
 
 async function connectToRegisteredServer(

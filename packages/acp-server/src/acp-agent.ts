@@ -1,4 +1,5 @@
 import type * as acp from "@agentclientprotocol/sdk";
+import { product } from "@spiritagent/product";
 import type * as schema from "@agentclientprotocol/sdk";
 import { RequestError } from "@agentclientprotocol/sdk";
 import type { JsonValue, LlmActiveSkill, RuntimeEvent } from "@spiritagent/agent-core";
@@ -66,7 +67,7 @@ export class SpiritAcpAgent implements acp.Agent {
       },
       agentInfo: {
         name: "spirit",
-        title: "Spirit",
+        title: product.name,
         version: "1.0.0-alpha.0",
       },
       authMethods,
