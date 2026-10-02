@@ -125,8 +125,8 @@ pub fn default_rule_sources(workspace_root: &Path) -> Vec<RuleSource> {
         RuleSource {
             id: stable_rule_id(&spirit_path),
             scope: RuleScope::Workspace,
-            title: t!("form.rules.title.workspace_spirit").into_owned(),
-            short_label: t!("form.rules.short.spirit").into_owned(),
+            title: crate::locale::product_text("form.rules.title.workspace_spirit").into_owned(),
+            short_label: crate::locale::product_text("form.rules.short.spirit").into_owned(),
             path: spirit_path,
         },
         RuleSource {

@@ -24,15 +24,21 @@ pub fn handle_permissions_cli(action: PermissionCommand) -> Result<()> {
                 _ => unreachable!("clap enforces exactly one of --shell/--read-file"),
             };
             let workspace_root = app_paths.workspace_root();
-            let mut runtime = DaemonRuntime::new_host_only(workspace_root.clone())
-                .with_context(|| t!("cli.permissions.check.daemon_unreachable").into_owned())?;
+            let mut runtime =
+                DaemonRuntime::new_host_only(workspace_root.clone()).with_context(|| {
+                    crate::locale::product_text("cli.permissions.check.daemon_unreachable")
+                        .into_owned()
+                })?;
             let result = runtime
                 .check_permission(
                     domain,
                     &value,
                     Some(workspace_root.to_string_lossy().as_ref()),
                 )
-                .with_context(|| t!("cli.permissions.check.daemon_unreachable").into_owned())?;
+                .with_context(|| {
+                    crate::locale::product_text("cli.permissions.check.daemon_unreachable")
+                        .into_owned()
+                })?;
             print_permission_check(domain, &result);
         }
     }

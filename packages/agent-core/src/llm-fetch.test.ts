@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
 
 import {
@@ -30,8 +31,8 @@ test("configureLlmHttpVersion updates getLlmHttpVersion", () => {
 });
 
 test("buildSpiritUserAgent formats product and version", () => {
-  assert.equal(buildSpiritUserAgent("1.2.3"), "Spirit/1.2.3");
-  assert.equal(buildSpiritUserAgent(" 0.1.0 "), "Spirit/0.1.0");
+  assert.equal(buildSpiritUserAgent("1.2.3"), `${encodeURIComponent(product.name)}/1.2.3`);
+  assert.equal(buildSpiritUserAgent(" 0.1.0 "), `${encodeURIComponent(product.name)}/0.1.0`);
 });
 
 test("configureLlmClientVersion updates getLlmClientVersion and ignores empty strings", () => {
@@ -53,7 +54,10 @@ test("mergeLlmFetchInit sets User-Agent from record headers", () => {
   assert.equal(merged.method, "POST");
   assert.ok(merged.headers instanceof Headers);
   assert.equal((merged.headers as Headers).get("Authorization"), "Bearer token");
-  assert.equal((merged.headers as Headers).get("User-Agent"), "Spirit/1.0.0");
+  assert.equal(
+    (merged.headers as Headers).get("User-Agent"),
+    `${encodeURIComponent(product.name)}/1.0.0`,
+  );
 });
 
 test("mergeLlmFetchInit sets User-Agent from Headers instance without mutating source", () => {
@@ -62,7 +66,10 @@ test("mergeLlmFetchInit sets User-Agent from Headers instance without mutating s
   const merged = mergeLlmFetchInit({ headers: source });
   assert.equal(source.get("User-Agent"), null);
   assert.equal((merged.headers as Headers).get("Content-Type"), "application/json");
-  assert.equal((merged.headers as Headers).get("User-Agent"), "Spirit/3.4.5");
+  assert.equal(
+    (merged.headers as Headers).get("User-Agent"),
+    `${encodeURIComponent(product.name)}/3.4.5`,
+  );
 });
 
 test("mergeLlmFetchInit overwrites existing User-Agent", () => {
@@ -72,7 +79,10 @@ test("mergeLlmFetchInit overwrites existing User-Agent", () => {
       "User-Agent": "other-client/1.0",
     },
   });
-  assert.equal((merged.headers as Headers).get("User-Agent"), "Spirit/9.9.9");
+  assert.equal(
+    (merged.headers as Headers).get("User-Agent"),
+    `${encodeURIComponent(product.name)}/9.9.9`,
+  );
 });
 
 test("getLlmFetch applies Spirit User-Agent on outbound calls", async () => {
@@ -85,7 +95,10 @@ test("getLlmFetch applies Spirit User-Agent on outbound calls", async () => {
   try {
     await getLlmFetch()("https://example.com/v1/chat/completions", { method: "POST" });
     assert.ok(capturedInit?.headers instanceof Headers);
-    assert.equal((capturedInit.headers as Headers).get("User-Agent"), "Spirit/4.5.6");
+    assert.equal(
+      (capturedInit.headers as Headers).get("User-Agent"),
+      `${encodeURIComponent(product.name)}/4.5.6`,
+    );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
   }

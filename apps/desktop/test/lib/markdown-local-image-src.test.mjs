@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -42,12 +43,21 @@ test("isBlockedRemoteMarkdownMediaSrc detects clear-text http and protocol-relat
   assert.equal(isBlockedRemoteMarkdownMediaSrc("http://example.com/a.png"), true);
   assert.equal(isBlockedRemoteMarkdownMediaSrc("//cdn.example.com/a.png"), true);
   assert.equal(isBlockedRemoteMarkdownMediaSrc("./docs/a.png"), false);
-  assert.equal(isBlockedRemoteMarkdownMediaSrc("spirit://generated/image/a.png"), false);
+  assert.equal(
+    isBlockedRemoteMarkdownMediaSrc(`${product.urlProtocol}://generated/image/a.png`),
+    false,
+  );
 });
 
 test("classifyMarkdownImageSrc classifies managed remote local and invalid", () => {
-  assert.equal(classifyMarkdownImageSrc("spirit://generated/image/abc.png"), "managed");
-  assert.equal(classifyMarkdownImageSrc("spirit://generated/video/abc.mp4"), "managed");
+  assert.equal(
+    classifyMarkdownImageSrc(`${product.urlProtocol}://generated/image/abc.png`),
+    "managed",
+  );
+  assert.equal(
+    classifyMarkdownImageSrc(`${product.urlProtocol}://generated/video/abc.mp4`),
+    "managed",
+  );
   assert.equal(classifyMarkdownImageSrc("https://example.com/a.png"), "remote");
   assert.equal(classifyMarkdownImageSrc("http://example.com/a.png"), "invalid");
   assert.equal(classifyMarkdownImageSrc("//cdn.example.com/a.png"), "invalid");
@@ -81,7 +91,10 @@ test("resolveMarkdownLocalImageFilePath joins relative paths and folds parent se
 test("resolveMarkdownLocalImageFilePath rejects remote and requires base for relative", () => {
   assert.equal(resolveMarkdownLocalImageFilePath("https://example.com/a.png", "/tmp"), null);
   assert.equal(resolveMarkdownLocalImageFilePath("//cdn.example.com/a.png", "/tmp"), null);
-  assert.equal(resolveMarkdownLocalImageFilePath("spirit://generated/image/a.png", "/tmp"), null);
+  assert.equal(
+    resolveMarkdownLocalImageFilePath(`${product.urlProtocol}://generated/image/a.png`, "/tmp"),
+    null,
+  );
   assert.equal(resolveMarkdownLocalImageFilePath("./docs/a.png"), null);
   assert.equal(resolveMarkdownLocalImageFilePath("./docs/a.png", "  "), null);
 });

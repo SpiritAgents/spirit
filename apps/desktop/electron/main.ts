@@ -18,6 +18,7 @@ import {
 
 import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
 import { configureElectronProductStorage } from "./product-storage.js";
+import { product } from "@spiritagent/product";
 
 import {
   registerDesktopNotifications,
@@ -192,17 +193,14 @@ import { resolveRendererDistPath } from "./renderer-dist.js";
 import { registerGitHubDeviceLoginRunners } from "../src/host/github-oauth-bridge.js";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
-import {
-  configureElectronProductDisplayName,
-  PRODUCT_DISPLAY_NAME,
-} from "./product-display-name.js";
+import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 import i18nHost from "../src/lib/i18n-host.js";
 import { resolveUiLocalePreference } from "../src/lib/ui-locale.js";
 
 /** Must match `titleBarOverlay.height` and the custom title bar CSS height (px) */
 const TITLE_BAR_OVERLAY_HEIGHT = 32;
 const LOCAL_IMAGE_PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
-const MANAGED_ASSET_PROTOCOL = "spirit:";
+const MANAGED_ASSET_PROTOCOL = `${product.urlProtocol}:`;
 const MANAGED_ASSET_HOST = "generated";
 const MANAGED_GENERATED_IMAGES_DIR = "generated-images";
 const MANAGED_GENERATED_VIDEOS_DIR = "generated-videos";
@@ -210,7 +208,6 @@ const MANAGED_GENERATED_VIDEOS_DIR = "generated-videos";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-configureElectronProductDisplayName();
 installMainStderrCapture();
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;

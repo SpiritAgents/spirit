@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -95,7 +96,7 @@ test("DeepInfraVideosBackend create/poll/download success path", async () => {
       async (request) => ({
         path: "/tmp/video.mp4",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/video/abc",
+        markdownRef: `${product.urlProtocol}://generated/video/abc`,
       }),
     );
 
@@ -150,7 +151,7 @@ test("DeepInfraVideosBackend accepts url/output_url result fields", async () => 
       async (request) => ({
         path: "/tmp/video-alt.mp4",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/video/def",
+        markdownRef: `${product.urlProtocol}://generated/video/def`,
       }),
     );
     assert.match(output.summaryText ?? "", /generated video/i);

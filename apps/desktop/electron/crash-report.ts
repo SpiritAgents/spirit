@@ -5,6 +5,8 @@
  * and cannot itself fail inside a degraded main process; all wiring lives in main.ts.
  */
 
+import { product } from "@spiritagent/product";
+
 export type CrashPageTrigger = "render-process-gone" | "unresponsive";
 
 export interface CrashSceneDetails {
@@ -229,7 +231,7 @@ ${truncatedLog}
 ## Environment
 
 - OS / platform: ${input.env.platform} ${input.env.arch} (${input.env.osRelease})
-- Spirit version: ${input.env.version} (Electron ${input.env.electronVersion})
+- ${product.name} version: ${input.env.version} (Electron ${input.env.electronVersion})
 - Install source: ${input.env.packaged ? "packaged build" : "pnpm dev"}
 
 ## Additional Context

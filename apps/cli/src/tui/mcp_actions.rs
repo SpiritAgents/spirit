@@ -5,7 +5,7 @@ impl TuiShell {
     pub(super) fn push_mcp_usage(&mut self) {
         self.messages.push(ChatMessage {
             role: MessageRole::Agent,
-            content: t!("tui.mcp.usage").into_owned(),
+            content: crate::locale::product_text("tui.mcp.usage").into_owned(),
             tool_block: None,
         });
     }

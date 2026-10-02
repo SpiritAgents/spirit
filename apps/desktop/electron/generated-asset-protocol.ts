@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { net, protocol } from "electron";
+import { product } from "@spiritagent/product";
 
 import {
   assertResolvedViewFilePath,
@@ -10,7 +11,7 @@ import {
   SPIRIT_EXTENSION_UI_HOST,
 } from "./extension-ui-protocol.js";
 
-const SCHEME = "spirit";
+const SCHEME = product.urlProtocol;
 const GENERATED_HOST = "generated";
 
 export function registerSpiritGeneratedAssetPrivilegedScheme(): void {

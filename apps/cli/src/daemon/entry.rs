@@ -87,6 +87,7 @@ pub(crate) fn resolve_server_entry(workspace_root: &Path) -> Result<PathBuf> {
     }
 
     Err(anyhow!(
-        "Spirit Server entry.js not found. Run pnpm run build in packages/server first."
+        "{} Server entry.js not found. Run pnpm run build in packages/server first.",
+        crate::product::NAME
     ))
 }

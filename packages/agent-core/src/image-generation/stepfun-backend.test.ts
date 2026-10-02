@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -30,7 +31,7 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
+        markdownRef: `${product.urlProtocol}://generated/image/abc`,
       }),
     );
     await generateStepfunImage(
@@ -39,7 +40,7 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
+        markdownRef: `${product.urlProtocol}://generated/image/abc`,
       }),
     );
     assert.deepEqual(capturedUrls, [

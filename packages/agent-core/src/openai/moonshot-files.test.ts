@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { product } from "@spiritagent/product";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -43,7 +44,7 @@ test("uploadMoonshotVideoFile posts multipart with purpose=video, User-Agent, an
     assert.ok(capturedBody instanceof UndiciFormData);
     assert.equal(capturedBody.get("purpose"), "video");
     assert.ok(capturedBody.get("file"));
-    assert.equal(capturedUserAgent, "Spirit/1.2.3");
+    assert.equal(capturedUserAgent, `${encodeURIComponent(product.name)}/1.2.3`);
 
     const cached = await uploadMoonshotVideoFile(
       { apiKey: "test-key", baseUrl: "https://api.moonshot.cn/v1" },

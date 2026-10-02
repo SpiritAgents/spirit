@@ -1,4 +1,5 @@
 import { defaultSchema } from "hast-util-sanitize";
+import { product } from "@spiritagent/product";
 import rehypeSanitize from "rehype-sanitize";
 import { defaultRehypePlugins } from "streamdown";
 import type { Pluggable } from "unified";
@@ -9,12 +10,12 @@ import {
 } from "@/lib/markdown-harden-local-urls";
 
 /** hast-util-sanitize compares protocol names without the trailing colon. */
-export const MANAGED_GENERATED_ASSET_SANITIZE_PROTOCOL = "spirit";
+export const MANAGED_GENERATED_ASSET_SANITIZE_PROTOCOL = product.urlProtocol;
 
 const streamdownExtraTagNames = ["video", "picture", "source", "sup", "sub"] as const;
 
 /**
- * Markdown media may load Spirit-managed spirit:// assets, relative/absolute local
+ * Markdown media may load product-managed assets, relative/absolute local
  * paths (no scheme), and remote https. Clear-text http is not on the allowlist.
  */
 export const streamdownSanitizeSchema = {

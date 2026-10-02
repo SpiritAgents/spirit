@@ -41,7 +41,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LSHIF
 #[command(name = "spirit")]
 #[command(version)]
 #[command(disable_version_flag = true)]
-#[command(about = "Spirit — AI productivity agent", long_about = None)]
+#[command(about = format!("{} — AI productivity agent", spirit::product::NAME), long_about = None)]
 struct Cli {
     /// Print version
     #[arg(short = 'v', long = "version", action = ArgAction::SetTrue)]
@@ -83,7 +83,7 @@ struct Cli {
 enum Commands {
     Skill,
     Interactive,
-    /// Run the Spirit Server daemon in the foreground (WebSocket backend for hosts)
+    /// Run the shared server daemon in the foreground (WebSocket backend for hosts)
     Serve,
     Model {
         #[command(subcommand)]
@@ -255,7 +255,7 @@ enum HookAction {
 #[derive(Subcommand)]
 enum PermissionAction {
     /// Check a shell command or read_file path against the permission allowlist.
-    /// Rule evaluation runs daemon-side, so a reachable Spirit daemon is required.
+    /// Rule evaluation runs daemon-side, so a reachable shared daemon is required.
     Check {
         /// Shell command to check
         #[arg(

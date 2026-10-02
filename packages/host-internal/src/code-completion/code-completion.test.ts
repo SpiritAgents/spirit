@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
 
 import { CodeCompletionEditJournal } from "./edit-journal.js";
@@ -43,9 +44,10 @@ test("buildCodeCompletionContextSlices extracts prefix and suffix around cursor"
 test("buildCodeCompletionSystemSections excludes tool agent host sections", () => {
   const sections = buildCodeCompletionSystemSections("mini-model", "openai");
   assert.equal(sections.length, 2);
-  assert.match(sections[0] ?? "", /You are Spirit/);
+  assert.ok(sections[0]?.includes(`You are ${product.name}`));
   assert.match(sections[0] ?? "", /The user's model is mini-model from openai/);
   assert.match(sections[1] ?? "", /code completion assistant/);
+  assert.ok(sections[1]?.includes(`for the ${product.name} editor`));
   assert.doesNotMatch(sections.join("\n"), /Available tools are defined/);
 });
 

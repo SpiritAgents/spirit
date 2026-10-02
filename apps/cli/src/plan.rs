@@ -96,7 +96,8 @@ pub fn extract_active_plan_path_from_archived_llm_history(
 pub fn build_start_implementing_user_turn(active_plan_path: Option<&Path>) -> String {
     match active_plan_path.filter(|path| !path.as_os_str().is_empty()) {
         Some(path) => format!(
-            "The user has approved the plan and asked to start implementing. Before implementing, first read the Spirit-managed plan file {} to understand the execution plan, then start coding and verification. If the file does not exist, cannot be read, or its content clearly diverges from the current requirements, state so explicitly and ask the user to regenerate or confirm the plan; do not assume the plan content.",
+            "The user has approved the plan and asked to start implementing. Before implementing, first read the {}-managed plan file {} to understand the execution plan, then start coding and verification. If the file does not exist, cannot be read, or its content clearly diverges from the current requirements, state so explicitly and ask the user to regenerate or confirm the plan; do not assume the plan content.",
+            crate::product::NAME,
             path.display()
         ),
         None => "The user has approved the plan and asked to start implementing. No usable implementation plan path has been recorded in this session; use create_plan to create a plan before starting implementation.".to_string(),

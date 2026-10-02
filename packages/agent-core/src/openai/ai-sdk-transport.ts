@@ -1,4 +1,5 @@
 import { basename } from "node:path";
+import { product } from "@spiritagent/product";
 
 import { createAlibaba } from "@ai-sdk/alibaba";
 import { createFireworks } from "@ai-sdk/fireworks";
@@ -200,7 +201,7 @@ interface Deferred<T> {
   reject(error: unknown): void;
 }
 
-const MANAGED_GENERATED_ASSET_PROTOCOL = "spirit:";
+const MANAGED_GENERATED_ASSET_PROTOCOL = `${product.urlProtocol}:`;
 const MANAGED_GENERATED_ASSET_HOST = "generated";
 
 export function normalizeGeneratedImageMarkdownRef(markdownRef: string): string {
@@ -248,7 +249,7 @@ export function normalizeGeneratedImageMarkdownRef(markdownRef: string): string 
     throw new Error("Host returned an invalid generated image markdownRef.");
   }
 
-  return `spirit://generated/image/${encodeURIComponent(imageId)}`;
+  return `${product.urlProtocol}://generated/image/${encodeURIComponent(imageId)}`;
 }
 
 export class AiSdkOpenAiCompatibleTransport
