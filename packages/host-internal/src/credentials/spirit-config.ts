@@ -1,6 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -17,48 +16,10 @@ import {
 import type { SpiritConfigFile, SpiritModelProfile } from "./types.js";
 
 const CONFIG_FILE_NAME = "config.json";
-const APP_DATA_DIR_NAME = "Spirit";
 
 export { SpiritConfigSchemaError };
 
-/**
- * Resolves the shared Spirit data directory. Hosts with their own env
- * override (e.g. SPIRIT_ACP_DATA_DIR, SPIRIT_SERVER_DATA_DIR) should check it
- * before falling back to this function.
- */
-export function resolveSpiritDataDir(): string {
-  const envOverride = process.env["SPIRIT_DATA_DIR"]?.trim();
-  if (envOverride) {
-    return envOverride;
-  }
-
-  const appData = process.env["APPDATA"]?.trim();
-  if (appData) {
-    return join(appData, APP_DATA_DIR_NAME);
-  }
-
-  const home = process.env["HOME"]?.trim() || homedir()?.trim();
-  if (home) {
-    if (process.platform === "darwin") {
-      return join(home, "Library", "Application Support", APP_DATA_DIR_NAME);
-    }
-    if (process.platform === "linux") {
-      const xdgDataHome = process.env["XDG_DATA_HOME"]?.trim();
-      if (xdgDataHome) {
-        return join(xdgDataHome, APP_DATA_DIR_NAME);
-      }
-      return join(home, ".local", "share", APP_DATA_DIR_NAME);
-    }
-    return join(home, ".spirit-data");
-  }
-
-  const userProfile = process.env["USERPROFILE"]?.trim();
-  if (userProfile) {
-    return join(userProfile, ".spirit-data");
-  }
-
-  return join(homedir(), ".spirit-data");
-}
+export { resolveSpiritDataDir } from "../data-paths.js";
 
 export function configFilePath(spiritDataDir: string): string {
   return join(spiritDataDir, CONFIG_FILE_NAME);

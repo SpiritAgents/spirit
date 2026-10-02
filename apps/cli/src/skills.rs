@@ -9,7 +9,7 @@ use std::{
 
 use crate::{logging, mcp::spirit_data_dir};
 
-pub const SPIRIT_DIR_NAME: &str = ".spirit";
+pub const SPIRIT_DIR_NAME: &str = crate::product::WORKSPACE_DATA_FOLDER_NAME;
 pub const AGENTS_DIR_NAME: &str = ".agents";
 pub const SKILLS_DIR_NAME: &str = "skills";
 pub const SKILL_FILE_NAME: &str = "SKILL.md";
@@ -711,7 +711,7 @@ fn stable_skill_id(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::shared_env_lock;
+    use crate::test_support::{ScopedEnv, shared_env_lock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_test_dir(label: &str) -> PathBuf {
@@ -742,15 +742,9 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let appdata = temp_test_dir("user-skills-dir");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
-        assert_eq!(
-            user_skills_dir(),
-            appdata.join("Spirit").join(SKILLS_DIR_NAME)
-        );
+        assert_eq!(user_skills_dir(), appdata.join(SKILLS_DIR_NAME));
     }
 
     #[test]
@@ -759,17 +753,14 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let appdata = temp_test_dir("skill-state-roundtrip");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let mut state = SkillStateFile::default();
         state.set_enabled("skill-a", false);
         state.set_enabled("skill-b", true);
         let path = save_skill_state(&state).expect("save skill state");
 
-        assert_eq!(path, appdata.join("Spirit").join(SKILLS_STATE_FILE_NAME));
+        assert_eq!(path, appdata.join(SKILLS_STATE_FILE_NAME));
         assert_eq!(load_skill_state().expect("load skill state"), state);
     }
 
@@ -780,10 +771,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-precedence-workspace");
         let appdata = temp_test_dir("discover-precedence-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         write_skill(
             &workspace_spirit_skills_dir(&workspace_root),
@@ -824,10 +812,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-enabled-workspace");
         let appdata = temp_test_dir("discover-enabled-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let skill_path = write_skill(
             &workspace_spirit_skills_dir(&workspace_root),
@@ -853,10 +838,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-missing-description-workspace");
         let appdata = temp_test_dir("discover-missing-description-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         write_skill(
             &workspace_spirit_skills_dir(&workspace_root),
@@ -876,10 +858,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-lenient-yaml-workspace");
         let appdata = temp_test_dir("discover-lenient-yaml-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         write_skill(
             &workspace_spirit_skills_dir(&workspace_root),

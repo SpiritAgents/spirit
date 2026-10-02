@@ -40,6 +40,7 @@ import {
   NodeHostToolService,
   createHostExtensionManager,
   createNoopMcpAdapter,
+  createHostMcpService,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
   loadHostInstructionMetadata,
@@ -102,7 +103,10 @@ export async function createAcpRuntime(
 
   // 1. Create noop peer + tool executor (ACP doesn't use JSON-RPC peer)
   const noopPeer = createNoopPeer();
-  const toolExecutor = new HostToolExecutorProxy(noopPeer);
+  const toolExecutor = new HostToolExecutorProxy(
+    noopPeer,
+    createHostMcpService(workspaceRoot, spiritDataDir),
+  );
 
   // 2. Create NodeHostToolService with noop MCP adapter
   await ensureBuiltInSkills(spiritDataDir);

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { test } from "vitest";
 
 import { McpService } from "./service.js";
+import { parseMcpConfigFile } from "./config.js";
 import { resolveSpiritUiOpen } from "./spirit-ui.js";
 
 const fixtureServer = join(
@@ -145,7 +146,15 @@ test("user and workspace MCP servers cannot open views", async () => {
       }),
     );
     await withEnv({ SPIRIT_DATA_DIR: dataDir }, async () => {
-      const service = new McpService(workspaceRoot, true);
+      const service = new McpService(workspaceRoot, true, {
+        configSource: {
+          scopeKey: dataDir,
+          read: () => ({
+            user: parseMcpConfigFile(JSON.parse(readFileSync(join(dataDir, "mcp.json"), "utf8"))),
+            workspace: { servers: {} },
+          }),
+        },
+      });
       const result = await service.callTool("demo", "demo", JSON.stringify({ viewId: "own" }), {
         uiOpener: async () => ({ kind: "opened", result: { leaked: true } }),
       });

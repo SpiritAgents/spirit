@@ -1,9 +1,3 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
-
-const APP_DATA_DIR_NAME = "Spirit";
-const ENV_SPIRIT_DATA_DIR = "SPIRIT_DATA_DIR";
-
 import { McpConfigError } from "./errors.js";
 import type {
   McpCapabilityToggles,
@@ -19,65 +13,12 @@ import type {
 
 const ENV_PLACEHOLDER_PREFIX = "${env:";
 export const MCP_CONFIG_FILE_NAME = "mcp.json";
-const DEFAULT_MCP_CONFIG_FILE = MCP_CONFIG_FILE_NAME;
-export const SPIRIT_DIR_NAME = ".spirit";
 export type McpConfigScope = "user" | "workspace";
 
 export const DEFAULT_MCP_CLIENT_INFO: McpClientInfo = {
   name: "@spiritagent/agent-core",
   version: "1.0.0-alpha.0",
 };
-
-export function mcpUserConfigPath(dataDir: string): string {
-  return join(dataDir, DEFAULT_MCP_CONFIG_FILE);
-}
-
-export function mcpWorkspaceConfigPath(workspaceRoot: string): string {
-  return join(workspaceRoot, SPIRIT_DIR_NAME, DEFAULT_MCP_CONFIG_FILE);
-}
-
-function resolveHomeDirectory(): string | undefined {
-  const home = process.env.HOME?.trim() || homedir()?.trim();
-  return home || undefined;
-}
-
-export function resolveDefaultSpiritDataDir(): string {
-  const appData = process.env.APPDATA?.trim();
-  if (appData) {
-    return join(appData, APP_DATA_DIR_NAME);
-  }
-
-  const home = resolveHomeDirectory();
-  if (home) {
-    if (process.platform === "darwin") {
-      return join(home, "Library", "Application Support", APP_DATA_DIR_NAME);
-    }
-    if (process.platform === "linux") {
-      const xdgDataHome = process.env.XDG_DATA_HOME?.trim();
-      if (xdgDataHome) {
-        return join(xdgDataHome, APP_DATA_DIR_NAME);
-      }
-      return join(home, ".local", "share", APP_DATA_DIR_NAME);
-    }
-    return join(home, ".spirit-data");
-  }
-
-  const userProfile = process.env.USERPROFILE?.trim();
-  if (userProfile) {
-    return join(userProfile, ".spirit-data");
-  }
-
-  return join(homedir(), ".spirit-data");
-}
-
-export function spiritDataDir(): string {
-  const envOverride = process.env[ENV_SPIRIT_DATA_DIR]?.trim();
-  if (envOverride) {
-    return envOverride;
-  }
-
-  return resolveDefaultSpiritDataDir();
-}
 
 export function mergeMcpConfigFiles(user: McpConfigFile, workspace: McpConfigFile): McpConfigFile {
   return {

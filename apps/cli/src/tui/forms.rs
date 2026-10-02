@@ -6,7 +6,10 @@ fn workspace_hooks_scope_available(workspace_root: &Path, workspace_binding: &st
     if workspace_binding == "none" {
         return false;
     }
-    workspace_root.join(".spirit").is_dir() || workspace_root.join(".git").exists()
+    workspace_root
+        .join(crate::product::WORKSPACE_DATA_FOLDER_NAME)
+        .is_dir()
+        || workspace_root.join(".git").exists()
 }
 
 #[derive(Default)]

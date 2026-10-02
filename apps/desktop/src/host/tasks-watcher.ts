@@ -1,5 +1,10 @@
 import { existsSync, watch, type FSWatcher } from "node:fs";
 import path from "node:path";
+import {
+  workspaceTasksFilePath,
+  userTasksFilePath,
+  vscodeTasksFilePath,
+} from "@spiritagent/host-internal";
 
 const TASKS_WATCH_DEBOUNCE_MS = 150;
 
@@ -49,11 +54,11 @@ export class TasksWatcher {
     }
     const { workspaceRoot, spiritDataDir } = this.target;
     if (workspaceRoot !== undefined) {
-      this.armOne(path.join(workspaceRoot, ".spirit", "tasks.json"));
+      this.armOne(workspaceTasksFilePath(workspaceRoot));
     }
-    this.armOne(path.join(spiritDataDir, "tasks.json"));
+    this.armOne(userTasksFilePath(spiritDataDir));
     if (workspaceRoot !== undefined) {
-      this.armOne(path.join(workspaceRoot, ".vscode", "tasks.json"));
+      this.armOne(vscodeTasksFilePath(workspaceRoot));
     }
   }
 

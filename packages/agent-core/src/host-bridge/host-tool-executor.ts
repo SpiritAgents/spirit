@@ -112,8 +112,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     protected readonly peer: JsonRpcPeer,
     mcp?: McpService,
   ) {
-    // Daemons serving multiple workspaces inject a per-session McpService;
-    // single-workspace hosts (CLI sidecar, ACP) keep the process-cwd default.
+    // Hosts inject file-backed MCP configuration. The SDK-only default is empty.
     this.mcp = mcp ?? new McpService();
   }
 

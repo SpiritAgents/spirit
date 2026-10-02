@@ -26,7 +26,7 @@ import {
   AuthorizationDecision,
   createToolExecutionTextOutput,
   JsonValue,
-  McpService,
+  type McpService,
   McpStatusSnapshot,
   type McpUiOpener,
   TOOL_CALL_TOOL_NAME,
@@ -84,6 +84,7 @@ import {
   NodeHostToolService,
   normalizeApprovalLevel,
   createNoopMcpAdapter,
+  createHostMcpService,
 } from "@spiritagent/host-internal";
 
 import type { AskQuestionsQuestionSpec } from "../types.js";
@@ -147,7 +148,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       mcpUiOpener?: McpUiOpener;
     } = {},
   ) {
-    this.mcp = options.mcp ?? new McpService(workspaceRoot);
+    this.mcp = options.mcp ?? createHostMcpService(workspaceRoot, spiritDataDir());
     this.mcpUiOpener = options.mcpUiOpener;
     this.lsp = options.lsp;
     this.extensionToolDefinitions = [...(options.extensionToolDefinitions ?? [])];
