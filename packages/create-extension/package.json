@@ -34,7 +34,8 @@
   },
   "dependencies": {
     "@inquirer/prompts": "7.10.1",
-    "@spiritagent/extension-toolkit": "workspace:*"
+    "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/product": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.9.5",

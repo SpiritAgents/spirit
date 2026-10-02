@@ -16,7 +16,7 @@
     "build:site": "turbo run build --filter=@spiritagent/site",
     "build:acp-server": "turbo run build --filter=@spiritagent/acp-server",
     "build:server": "turbo run build --filter=@spiritagent/server",
-    "build:cli": "cargo build -p spirit --release",
+    "build:cli": "turbo run build --filter=@spiritagent/server && cargo build -p spirit --release",
     "build": "turbo run build",
     "release:verify-version": "node scripts/release/verify-version.mjs",
     "release:cli:bundle": "node scripts/release/bundle-cli.mjs",
@@ -28,8 +28,9 @@
     "eval:judge": "turbo run build --filter=@spiritagent/agent-core && node scripts/eval-judge.mjs",
     "smoke:host-internal-models-parse": "pnpm --filter @spiritagent/host-internal run smoke:openai-models-parse",
     "smoke:extension-marketplace": "node scripts/smoke/extension-marketplace.mjs",
-    "dev": "turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal && cargo run -p spirit",
-    "dev:cli": "cargo run -p spirit",
+    "dev": "pnpm run dev:cli",
+    "dev:cli": "node packages/product/scripts/run-quality.mjs dev pnpm run dev:cli:run",
+    "dev:cli:run": "turbo run build --filter=@spiritagent/server && cargo run -p spirit",
     "dev:desktop": "pnpm --filter @spiritagent/desktop dev",
     "dev:desktop:web": "pnpm --filter @spiritagent/desktop dev:web",
     "dev:site": "pnpm --filter @spiritagent/site dev",
@@ -41,6 +42,7 @@
     "format:fix": "oxfmt packages apps/desktop apps/site"
   },
   "devDependencies": {
+    "@spiritagent/product": "workspace:*",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
     "turbo": "2.10.13",

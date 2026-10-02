@@ -1,0 +1,16 @@
+{
+  "name": "Spirit",
+  "websiteOrigin": "https://spirit.dev",
+  "downloadOrigin": "https://download.spirit.dev",
+  "workspaceDataFolderName": ".spirit",
+  "qualities": {
+    "stable": {
+      "userDataFolderName": ".spirit",
+      "urlProtocol": "spirit"
+    },
+    "dev": {
+      "userDataFolderName": ".spirit-dev",
+      "urlProtocol": "spirit-dev"
+    }
+  }
+}

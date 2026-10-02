@@ -174,6 +174,9 @@ importers:
 
   .:
     devDependencies:
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:packages/product
       oxfmt:
         specifier: ^0.62.0
         version: 0.62.0
@@ -237,6 +240,9 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../../packages/icons
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../../packages/product
       '@spiritagent/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -442,6 +448,9 @@ importers:
       '@spiritagent/icons':
         specifier: workspace:*
         version: link:../../packages/icons
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../../packages/product
       '@spiritagent/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -542,6 +551,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
     devDependencies:
       '@types/node':
         specifier: 25.9.5
@@ -627,6 +639,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(supports-color@8.1.1)(zod@4.4.3)
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
       ai:
         specifier: 7.0.83
         version: 7.0.83(zod@4.4.3)
@@ -658,6 +673,9 @@ importers:
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
     devDependencies:
       '@types/node':
         specifier: 25.9.5
@@ -677,6 +695,9 @@ importers:
       '@spiritagent/create-extension':
         specifier: workspace:*
         version: link:../create-extension
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
       fflate:
         specifier: 0.8.3
         version: 0.8.3
@@ -708,6 +729,9 @@ importers:
       '@spiritagent/extension-toolkit':
         specifier: workspace:*
         version: link:../extension-toolkit
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
       '@vscode/ripgrep':
         specifier: 1.18.0
         version: 1.18.0
@@ -773,6 +797,18 @@ importers:
         specifier: 5.9.3
         version: 5.9.3
 
+  packages/product:
+    devDependencies:
+      '@types/node':
+        specifier: 25.9.5
+        version: 25.9.5
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+
   packages/server:
     dependencies:
       '@spiritagent/agent-core':
@@ -781,6 +817,9 @@ importers:
       '@spiritagent/host-internal':
         specifier: workspace:*
         version: link:../host-internal
+      '@spiritagent/product':
+        specifier: workspace:*
+        version: link:../product
     devDependencies:
       '@types/node':
         specifier: 25.9.5
