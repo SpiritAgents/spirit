@@ -445,10 +445,9 @@ function ShellToolExpandedBody({
                   <Button
                     type="button"
                     variant="ghost"
-                    className={cn(
-                      "size-7 shrink-0 rounded-full p-0 shadow-none [&_svg]:size-3",
-                      instantHoverMotionClass,
-                    )}
+                    size="icon-sm"
+                    shape="pill"
+                    className={cn("shrink-0 shadow-none [&_svg]:size-3", instantHoverMotionClass)}
                     title={t("tool.shellTerminate")}
                     aria-label={t("tool.shellTerminate")}
                     onClick={(event) => {
