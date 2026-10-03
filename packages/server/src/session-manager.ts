@@ -1144,6 +1144,13 @@ export class SessionManager {
     this.requireSession(sessionId).runtimeResult.setAttribution(attribution);
   }
 
+  setWebToolExposure(
+    sessionId: string,
+    exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean },
+  ): void {
+    this.requireSession(sessionId).runtimeResult.setWebToolExposure(exposure);
+  }
+
   setTodoSessionKey(sessionId: string, sessionKey: string): void {
     const session = this.requireSession(sessionId);
     session.todoSessionKey = sessionKey;

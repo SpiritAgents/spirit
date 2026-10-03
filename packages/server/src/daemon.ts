@@ -62,6 +62,7 @@ import {
   SESSION_RELOAD_METADATA,
   SESSION_SET_APPROVAL_LEVEL,
   SESSION_SET_ATTRIBUTION,
+  SESSION_SET_WEB_TOOL_EXPOSURE,
   SESSION_SET_TODO_SESSION_KEY,
   SESSION_SET_LOOP_ENABLED,
   SESSION_SET_MODE,
@@ -139,6 +140,7 @@ const SESSION_METHODS = new Set([
   SESSION_RUN_SESSION_START,
   SESSION_RUN_SESSION_END,
   SESSION_SET_ATTRIBUTION,
+  SESSION_SET_WEB_TOOL_EXPOSURE,
   SESSION_SET_TODO_SESSION_KEY,
 ]);
 
@@ -746,6 +748,25 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           (params["attribution"] ?? {}) as never,
         );
         return { ok: true };
+      case SESSION_SET_WEB_TOOL_EXPOSURE: {
+        const exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean } = {};
+        const webSearchEnabled = params["webSearchEnabled"];
+        if (webSearchEnabled !== undefined) {
+          if (typeof webSearchEnabled !== "boolean") {
+            throw new Error("invalid webSearchEnabled");
+          }
+          exposure.webSearchEnabled = webSearchEnabled;
+        }
+        const webFetchEnabled = params["webFetchEnabled"];
+        if (webFetchEnabled !== undefined) {
+          if (typeof webFetchEnabled !== "boolean") {
+            throw new Error("invalid webFetchEnabled");
+          }
+          exposure.webFetchEnabled = webFetchEnabled;
+        }
+        sessionManager.setWebToolExposure(readSessionId(params), exposure);
+        return { ok: true };
+      }
       case SESSION_SET_TODO_SESSION_KEY: {
         const sessionKey = params["sessionKey"];
         if (typeof sessionKey !== "string" || !sessionKey.trim()) {
