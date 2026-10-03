@@ -4,7 +4,7 @@ export type LlmTransportKind = "openai-compatible" | "open-responses" | "anthrop
 export type TransportRequestProfile = "agent" | "code-completion";
 
 export interface LlmModelCapabilities {
-  chat?: true;
+  languageModel?: true;
   imageInput?: true;
   audioInput?: true;
   videoInput?: true;
