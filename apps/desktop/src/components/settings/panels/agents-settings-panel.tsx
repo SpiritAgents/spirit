@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type { SettingsFormState } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
+import { TextLink } from "@/components/ui/link";
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import {
@@ -11,6 +12,7 @@ import {
   DESKTOP_SETTINGS_LABEL_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
+import { siteDocsUrl } from "@/lib/docs-links";
 import { cn } from "@/lib/utils";
 import type { DesktopLspProviderSnapshot, DesktopSnapshot } from "@/types";
 
@@ -22,7 +24,7 @@ export function AgentsSettingsRow({
   children,
 }: {
   label: string;
-  description?: string;
+  description?: ReactNode;
   htmlFor?: string;
   children: ReactNode;
 }) {
@@ -58,13 +60,65 @@ export function AgentsSettingsPanel({
   snapshot: DesktopSnapshot | null;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lsp = snapshot?.lsp;
   const listDisabled = !settings.lspEnabled;
+  const webSearchDocsUrl = siteDocsUrl(i18n.language, "/agent/tools#web_search");
 
   return (
     <div className="space-y-6">
       <h1 className={DESKTOP_PAGE_TITLE_CLASS}>{t("settings.agents")}</h1>
+
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">{t("settings.contextSection")}</p>
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+          <AgentsSettingsRow
+            label={t("settings.webSearch")}
+            description={
+              <>
+                {t("settings.webSearchDescription")}{" "}
+                <TextLink
+                  href={webSearchDocsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline={false}
+                  aria-label={t("settings.webSearchLearnMoreAria")}
+                  onClick={(event) => {
+                    if (window.spiritDesktop?.openExternalUrl) {
+                      event.preventDefault();
+                      void window.spiritDesktop.openExternalUrl(webSearchDocsUrl);
+                    }
+                  }}
+                >
+                  {t("settings.webSearchLearnMore")}
+                </TextLink>
+              </>
+            }
+            htmlFor="settings-web-search"
+          >
+            <div className="flex justify-end">
+              <Switch
+                id="settings-web-search"
+                checked={settings.webSearchEnabled}
+                onCheckedChange={(value) => void onSavePatch({ webSearchEnabled: value === true })}
+              />
+            </div>
+          </AgentsSettingsRow>
+          <AgentsSettingsRow
+            label={t("settings.webFetch")}
+            description={t("settings.webFetchDescription")}
+            htmlFor="settings-web-fetch"
+          >
+            <div className="flex justify-end">
+              <Switch
+                id="settings-web-fetch"
+                checked={settings.webFetchEnabled}
+                onCheckedChange={(value) => void onSavePatch({ webFetchEnabled: value === true })}
+              />
+            </div>
+          </AgentsSettingsRow>
+        </div>
+      </div>
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.lspSection")}</p>

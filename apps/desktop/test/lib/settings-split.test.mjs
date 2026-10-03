@@ -78,6 +78,22 @@ test("AgentsSettingsPanel includes LSP section label and Attribution rows", asyn
   assert.match(source, /settings-pr-attribution/);
 });
 
+test("AgentsSettingsPanel places the Context group with web tool toggles above LSP", async () => {
+  const source = await readFile(join(srcRoot, "panels/agents-settings-panel.tsx"), "utf8");
+  assert.match(source, /settings\.contextSection/);
+  assert.match(source, /settings\.webSearchDescription/);
+  assert.match(source, /settings\.webSearchLearnMoreAria/);
+  assert.match(source, /settings\.webFetchDescription/);
+  assert.match(source, /webSearchEnabled/);
+  assert.match(source, /webFetchEnabled/);
+  assert.match(source, /settings-web-search/);
+  assert.match(source, /settings-web-fetch/);
+  assert.ok(
+    source.indexOf("settings.contextSection") < source.indexOf("settings.lspSection"),
+    "Context group must render above the LSP group",
+  );
+});
+
 test("AppearanceSettingsPanel groups Theme, Motion, and Typography without UI locale", async () => {
   const source = await readFile(join(srcRoot, "panels/appearance-settings-panel.tsx"), "utf8");
   assert.doesNotMatch(source, /settings\.themeSection/);
