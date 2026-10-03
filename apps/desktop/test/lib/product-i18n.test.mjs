@@ -8,6 +8,10 @@ for (const lng of ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh-CN", "
     assert.equal(i18n.t("tray.tooltip", { lng }), product.name);
     assert.equal(i18n.t("onboarding.welcomeTitle", { lng }), product.name);
     assert.ok(
+      i18n.t("settings.webSearchDescription", { lng }).includes(product.name),
+      `settings.webSearchDescription must interpolate product.name in ${lng}`,
+    );
+    assert.ok(
       i18n.t("settings.hooksWorkspaceDirHint", { lng }).includes(product.workspaceDataFolderName),
     );
     const details = i18n.t("sidebar.removeWorkspaceConfirmDescription", {
