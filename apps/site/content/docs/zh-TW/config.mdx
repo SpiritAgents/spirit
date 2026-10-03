@@ -1,20 +1,20 @@
 ---
 title: 設定
-description: 資料目錄、config.json v2、.spirit/ 和環境變數。
+description: 資料目錄、config.json v2、{{product.workspaceDataFolderName}}/ 和環境變數。
 ---
 
-Spirit 將二進位檔和資料存放在不同的位置。把它們混淆是「我安裝了 CLI 但設定是空的」的常見原因。
+共用使用者資料依建置 quality 選擇目錄，不再使用作業系統的應用程式資料目錄。
 
 ## 資料目錄
 
 使用 `SPIRIT_DATA_DIR` 覆寫。伺服器也可以使用 `SPIRIT_SERVER_DATA_DIR`（優先於前者）。
 
-| 作業系統 | 預設                                               |
-| -------- | -------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Spirit`             |
-| Windows  | `%APPDATA%\Spirit`                                 |
-| Linux    | `$XDG_DATA_HOME/Spirit` 或 `~/.local/share/Spirit` |
-| 後備     | `~/.spirit-data`                                   |
+| 建置 | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change：不會自動讀取或遷移舊平台資料目錄；仍支援明確指定資料目錄。Electron 快取、瀏覽器儲存與視窗狀態仍保留在平台私有應用程式目錄中。
 
 典型檔案：
 
@@ -34,7 +34,7 @@ Spirit 將二進位檔和資料存放在不同的位置。把它們混淆是「�
   server/instances/
 ```
 
-CLI 二進位檔位於 `SPIRIT_HOME`（`~/.spirit` 或 `%LOCALAPPDATA%\Spirit`）之下。那不是這個目錄。請參閱 [安裝 CLI](./install/cli.mdx)。
+CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料可以共用父目錄；bin/ 和 cli/ 仍屬於安裝檔案。安裝設定不決定共用資料目錄。
 
 ## config.json v2
 
@@ -48,14 +48,14 @@ CLI 二進位檔位於 `SPIRIT_HOME`（`~/.spirit` 或 `%LOCALAPPDATA%\Spirit`�
 
 金鑰**不**在此檔案中。它們位於[金鑰圈](./security.mdx)中。
 
-## 工作區 `.spirit/`
+## 工作區 `{{product.workspaceDataFolderName}}/`
 
 | 路徑                 | 角色                                 |
 | -------------------- | ------------------------------------ |
-| `.spirit/rule.md`    | 工作區[規則](./customize/rules.mdx)  |
-| `.spirit/skills/`    | 工作區[技能](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | 工作區 [MCP](./customize/mcp.mdx)    |
-| `.spirit/hooks.json` | 工作區[鉤子](./customize/hooks.mdx)  |
+| `{{product.workspaceDataFolderName}}/rule.md`    | 工作區[規則](./customize/rules.mdx)  |
+| `{{product.workspaceDataFolderName}}/skills/`    | 工作區[技能](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | 工作區 [MCP](./customize/mcp.mdx)    |
+| `{{product.workspaceDataFolderName}}/hooks.json` | 工作區[鉤子](./customize/hooks.mdx)  |
 
 也使用：`{workspace}/AGENTS.md`、`{workspace}/.agents/skills/`、`{workspace}/plans/`。
 

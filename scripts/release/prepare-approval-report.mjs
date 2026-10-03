@@ -13,6 +13,8 @@ import {
   PUBLIC_DOWNLOAD_HOST,
 } from './selfhosted-paths.mjs';
 import { parseReleaseVersion } from './version.mjs';
+import { readNpmPackages } from './npm-packages.mjs';
+import { product, PRODUCT_BUILD_ID } from '../../packages/product/dist/index.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
@@ -116,7 +118,9 @@ function generateNotesViaGh(version, sha) {
 }
 
 function generateNotesViaGitLog(sha) {
-  const describe = runCapture('git', ['describe', '--tags', '--abbrev=0'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const describe = runCapture('git', ['describe', '--tags', '--abbrev=0'], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
   const rangeArgs =
     describe.status === 0 && describe.stdout.trim()
       ? [`${describe.stdout.trim()}..${sha || 'HEAD'}`, '--']
@@ -131,10 +135,7 @@ function generateNotesViaGitLog(sha) {
 }
 
 function renderAssetTable(assets) {
-  const lines = [
-    '| File | SHA256 | Size (bytes) |',
-    '| --- | --- | ---: |',
-  ];
+  const lines = ['| File | SHA256 | Size (bytes) |', '| --- | --- | ---: |'];
   for (const asset of assets) {
     lines.push(`| \`${asset.file}\` | \`${asset.sha256}\` | ${formatBytes(asset.size)} |`);
   }
@@ -196,15 +197,12 @@ const changelog = generateNotesViaGh(version, sha) ?? generateNotesViaGitLog(sha
 await writeFile(notesPath, `${changelog}\n`);
 
 const table = renderAssetTable(assets);
-const npmPackages = [
-  '@spiritagent/agent-core',
-  '@spiritagent/host-internal',
-  '@spiritagent/acp-server',
-];
+const npmPackageInfo = await readNpmPackages();
+const npmPackages = npmPackageInfo.map(({ name }) => name);
 const npmTable = [
   '| Package | Version |',
   '| --- | --- |',
-  ...npmPackages.map((name) => `| \`${name}\` | \`${version}\` |`),
+  ...npmPackageInfo.map(({ name, version }) => `| \`${name}\` | \`${version}\` |`),
 ].join('\n');
 
 const selfhostedRows = [];
@@ -273,7 +271,7 @@ const report = [
   '',
   npmChannelNote,
   '',
-  'Publish order: `agent-core` → `host-internal` → `acp-server`',
+  `Publish order: ${npmPackages.map((name) => `\`${name}\``).join(' → ')}`,
   '',
   npmTable,
   '',
@@ -295,6 +293,8 @@ await writeFile(reportPath, report);
 
 const manifest = {
   version,
+  product,
+  productBuildId: PRODUCT_BUILD_ID,
   channel: parsed.channel,
   prerelease: parsed.prerelease,
   sha: sha || null,
@@ -305,6 +305,7 @@ const manifest = {
     selfhosted: {
       publish: true,
       host: PUBLIC_DOWNLOAD_HOST,
+      origin: product.downloadOrigin,
       updateLatest: !parsed.prerelease,
       uploads: selfhostedRows,
     },

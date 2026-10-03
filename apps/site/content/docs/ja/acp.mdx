@@ -5,7 +5,7 @@ description: ACPクライアント向けに実装されています。ダウン�
 
 ACP（エージェント・クライアント・プロトコル）は `spirit-acp`（`@spiritagent/acp-server`）として実装されています。これは stdio の ndJSON を使用し、Desktop や CLI と同じデータディレクトリとキーリングを共有し、`--setup` を実行してプロバイダーに接続できます。
 
-**公開ダウンロードページにはまだ ACP が記載されていません。** Spirit は、ACP レジストリに掲載する準備を進めています。
+**公開ダウンロードページにはまだ ACP が記載されていません。** {{product.name|mdx}} は、ACP レジストリに掲載する準備を進めています。
 
 ## 掲載前の一時的なセットアップ
 
@@ -19,7 +19,7 @@ npx @spiritagent/acp-server --setup
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

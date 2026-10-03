@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -13,7 +14,7 @@ test("openExtensionView stays pending until resolve", async () => {
     requestId: "req-1",
     extensionId: "built-in/demo",
     viewId: "main",
-    viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+    viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
     title: "Demo",
     params: { ok: true },
   });
@@ -28,7 +29,7 @@ test("dismiss reports dismissed without throwing", async () => {
     requestId: "req-2",
     extensionId: "built-in/demo",
     viewId: "main",
-    viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+    viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
   });
   dismissOpenExtensionView("req-2");
   assert.deepEqual(await opened, { dismissed: true });

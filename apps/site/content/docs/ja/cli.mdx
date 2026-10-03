@@ -31,11 +31,11 @@ spirit -p "your prompt here"
 | `SPIRIT_API_KEY`  | このプロセスの API キー。優先順位: env → モデルキーリング → グローバルキーリング |
 | `SPIRIT_API_BASE` | API ベース URL の上書き                                                          |
 | `SPIRIT_DATA_DIR` | データディレクトリ（Desktop と同じストア）                                       |
-| `SPIRIT_HOME`     | CLI **バイナリ** インストールルート — データディレクトリではありません           |
+| `SPIRIT_HOME`     | CLI バイナリのインストール先（bin/ と cli/）。共有データの設定とは独立 |
 
 ## 共有デーモン
 
-`spirit` は WebSocket を介して Spirit Server デーモンに接続します。セッション、ストリーミング、ツール、承認キューはそこにあります。ベアラートークンは `{spiritDataDir}/server.token`（モード `0600`）です。デーモンはデフォルトでランダムなポートの `127.0.0.1` にバインドします。
+`spirit` は WebSocket を介して {{product.name|mdx}} Server デーモンに接続します。セッション、ストリーミング、ツール、承認キューはそこにあります。ベアラートークンは `{spiritDataDir}/server.token`（モード `0600`）です。デーモンはデフォルトでランダムなポートの `127.0.0.1` にバインドします。
 
 `spirit serve` はデーモンをフォアグラウンドで実行します。リモート `0.0.0.0` はオープンな製品パスではありません。[セキュリティ](./security.mdx) を参照してください。
 

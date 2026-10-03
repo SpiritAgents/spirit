@@ -174,7 +174,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | Переменная окружения   | Обязательна | Описание                                                                      |
 | ---------------------- | ----------- | ----------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | Нет         | Корень workspace (по умолчанию: `cwd` клиента)                                |
-| `SPIRIT_ACP_DATA_DIR`  | Нет         | Каталог данных Spirit (по умолчанию: `%APPDATA%/Spirit` или `~/.spirit-data`) |
+| `SPIRIT_ACP_DATA_DIR`  | Нет         | Каталог данных Spirit (по умолчанию: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Разработка
 

@@ -1,6 +1,7 @@
 ---
 title: Démarrage rapide
-description: Installez Spirit, connectez un fournisseur et réalisez une petite modification approuvée.
+description: Installez {{product.name}}, connectez un fournisseur et réalisez
+  une petite modification approuvée.
 ---
 
 Cette page vous mène d'une installation fraîche à une modification utile. Les pages suivantes couvrent chaque fournisseur et hôte ; sans ce chemin, ces pages n'ont rien à quoi se rattacher.
@@ -24,11 +25,11 @@ Détails : [Installer Desktop](./install/desktop.mdx).
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 Ouvrez un nouveau terminal et exécutez `spirit --version`. Détails : [Installer CLI](./install/cli.mdx).
@@ -60,7 +61,7 @@ La TUI utilise le répertoire courant comme espace de travail.
 
 ## 3. Connectez un fournisseur
 
-Vous avez besoin d'une clé API d'un fournisseur que vous utilisez déjà. Spirit stocke cette clé dans le trousseau du système d'exploitation (`Spirit`).
+Vous avez besoin d'une clé API d'un fournisseur que vous utilisez déjà. {{product.name|mdx}} stocke cette clé dans le trousseau du système d'exploitation (`{{product.name}}`).
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

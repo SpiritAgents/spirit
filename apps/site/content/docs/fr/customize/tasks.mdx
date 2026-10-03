@@ -1,13 +1,15 @@
 ---
 title: Tâches
-description: Exécutez des tâches d'espace de travail depuis la palette de commandes, déclarées dans .spirit/tasks.json ou importées depuis .vscode/tasks.json.
+description: Exécutez des tâches d'espace de travail depuis la palette de
+  commandes, déclarées dans {{product.workspaceDataFolderName}}/tasks.json ou
+  importées depuis .vscode/tasks.json.
 ---
 
 <Callout type="info">Desktop uniquement.</Callout>
 
-Les tâches exécutent des commandes d'espace de travail prédéfinies depuis la palette de commandes de Spirit Desktop : ouvrez la palette (`Mod+Shift+P`), choisissez **Espace de travail → Exécuter une tâche**, puis choisissez une tâche dans la liste de second niveau. La tâche s'exécute dans un onglet de terminal du panneau d'outils à droite. Le groupe **Espace de travail** n'apparaît dans la palette que lorsqu'au moins une tâche valide existe.
+Les tâches exécutent des commandes d'espace de travail prédéfinies depuis la palette de commandes de {{product.name|mdx}} Desktop : ouvrez la palette (`Mod+Shift+P`), choisissez **Espace de travail → Exécuter une tâche**, puis choisissez une tâche dans la liste de second niveau. La tâche s'exécute dans un onglet de terminal du panneau d'outils à droite. Le groupe **Espace de travail** n'apparaît dans la palette que lorsqu'au moins une tâche valide existe.
 
-Les tâches Spirit forment un système à part entière, distinct des tâches VS Code. Spirit lit un format Spirit en JSON strict et, à titre d'import de compatibilité, le `tasks.json` de VS Code — avec un sous-ensemble clairement défini des champs de VS Code. Une tâche qui ne peut pas s'exécuter exactement comme configurée est entièrement masquée plutôt qu'exécutée à moitié configurée ; voir [Pourquoi une tâche est masquée](#why-a-task-is-hidden).
+Les tâches {{product.name|mdx}} forment un système à part entière, distinct des tâches VS Code. {{product.name|mdx}} lit un format {{product.name|mdx}} en JSON strict et, à titre d'import de compatibilité, le `tasks.json` de VS Code — avec un sous-ensemble clairement défini des champs de VS Code. Une tâche qui ne peut pas s'exécuter exactement comme configurée est entièrement masquée plutôt qu'exécutée à moitié configurée ; voir [Pourquoi une tâche est masquée](#why-a-task-is-hidden).
 
 ## Fichiers de tâches
 
@@ -15,23 +17,23 @@ Trois sources sont lues, de la priorité la plus haute à la plus basse :
 
 | Priorité | Source                           | Marqueur requis      | Notes                                                        |
 | -------- | -------------------------------- | -------------------- | ------------------------------------------------------------ |
-| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Format propre à Spirit                                       |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Format propre à {{product.name|mdx}}                                       |
 | 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | Niveau utilisateur, s'applique à tous les espaces de travail |
 | 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Import de compatibilité VS Code, en lecture seule            |
 
-Seule la racine de l'espace de travail est analysée — les sous-répertoires ne le sont pas. `<data dir>` est le répertoire de données Spirit (par exemple `~/Library/Application Support/Spirit` sur macOS). Un fichier absent, illisible, en JSON invalide ou portant le mauvais marqueur ne fournit aucune tâche.
+Seule la racine de l'espace de travail est analysée — les sous-répertoires ne le sont pas. `<data dir>` est le répertoire de données {{product.name|mdx}} (par exemple `~/{{product.stable.userDataFolderName}}` sur macOS). Un fichier absent, illisible, en JSON invalide ou portant le mauvais marqueur ne fournit aucune tâche.
 
 Les trois fichiers sont surveillés en direct ; la liste de la palette se rafraîchit automatiquement dès que l'un d'eux change.
 
 Les trois sources fusionnent dans un seul espace de noms. Lorsque plusieurs sources définissent le même `label`, la source de plus haute priorité l'emporte — aussi bien pour la liste de la palette que pour les références `dependsOn`.
 
-`.vscode/tasks.json` est analysé avec tolérance, car les fichiers réels sont en JSONC : les commentaires `//` et `/* */` ainsi que les virgules traînantes sont acceptés. Les fichiers propres à Spirit sont en JSON strict — un commentaire rend le fichier invalide.
+`.vscode/tasks.json` est analysé avec tolérance, car les fichiers réels sont en JSONC : les commentaires `//` et `/* */` ainsi que les virgules traînantes sont acceptés. Les fichiers propres à {{product.name|mdx}} sont en JSON strict — un commentaire rend le fichier invalide.
 
 ## Confiance dans l'espace de travail
 
-Les fichiers de tâches de l'espace de travail arrivent avec le dépôt et sont donc des données non fiables : `.spirit/tasks.json` et `.vscode/tasks.json` ne se chargent qu'après votre approbation du contenu de l'espace de travail. Le `tasks.json` utilisateur (répertoire de données Spirit) est implicitement fiable et toujours chargé.
+Les fichiers de tâches de l'espace de travail arrivent avec le dépôt et sont donc des données non fiables : `{{product.workspaceDataFolderName}}/tasks.json` et `.vscode/tasks.json` ne se chargent qu'après votre approbation du contenu de l'espace de travail. Le `tasks.json` utilisateur (répertoire de données {{product.name|mdx}}) est implicitement fiable et toujours chargé.
 
-Quand Spirit Desktop détecte des fichiers de tâches de l'espace de travail (ou un changement), il demande une fois : la boîte de dialogue liste les tâches qui deviendront disponibles avec leurs commandes, et cliquer sur une entrée ouvre le fichier source. Si les hooks de l'espace de travail ont aussi besoin d'une approbation, les deux listes apparaissent dans une seule boîte de dialogue combinée.
+Quand {{product.name|mdx}} Desktop détecte des fichiers de tâches de l'espace de travail (ou un changement), il demande une fois : la boîte de dialogue liste les tâches qui deviendront disponibles avec leurs commandes, et cliquer sur une entrée ouvre le fichier source. Si les hooks de l'espace de travail ont aussi besoin d'une approbation, les deux listes apparaissent dans une seule boîte de dialogue combinée.
 
 - **Autoriser une fois** — les tâches se chargent pour cette session uniquement.
 - **Toujours faire confiance** — mémorisé pour ce contenu de fichier exact.
@@ -65,7 +67,7 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 | `dependsOn`                                  | Pris en charge | Une chaîne de label, ou un tableau de chaînes de labels. La forme objet (`{ "type": … }`, `{ "task": … }`) masque la tâche                                                                                                                                               |
 | `dependsOrder`                               | Pris en charge | `parallel` (par défaut) ou `sequence`                                                                                                                                                                                                                                    |
 | `detail`                                     | Pris en charge | Affiché à côté du label dans la liste de la palette                                                                                                                                                                                                                      |
-| `icon.id`                                    | Pris en charge | Icône de menu : Spirit Icons d'abord, puis Lucide, avec un glyphe de terminal en repli                                                                                                                                                                                   |
+| `icon.id`                                    | Pris en charge | Icône de menu : {{product.name|mdx}} Icons d'abord, puis Lucide, avec un glyphe de terminal en repli                                                                                                                                                                                   |
 | `icon.color`                                 | Ignoré         | Purement présentationnel                                                                                                                                                                                                                                                 |
 | `hide`                                       | Pris en charge | Masquée dans la liste de la palette mais toujours résolvable — la tâche peut s'exécuter comme dépendance `dependsOn`                                                                                                                                                     |
 
@@ -104,7 +106,7 @@ Références prises en charge, substituées lors de la résolution de la tâche 
 | ---------------------------- | ----------------------------------------------------------- |
 | `${workspaceFolder}`         | Chemin de la racine de l'espace de travail                  |
 | `${workspaceFolderBasename}` | Nom du dossier racine de l'espace de travail                |
-| `${cwd}`                     | Répertoire de travail du propre processus de Spirit Desktop |
+| `${cwd}`                     | Répertoire de travail du propre processus de {{product.name|mdx}} Desktop |
 | `${userHome}`                | Répertoire personnel de l'utilisateur de l'OS               |
 | `${pathSeparator}`, `${/}`   | Séparateur de chemin de l'OS                                |
 | `${env:NAME}`                | Variable d'environnement `NAME` (vide si non définie)       |
@@ -142,7 +144,7 @@ Les tâches démarrent sur un clic explicite dans la palette ; uniquement dans l
 - **Déclencheur à l'ouverture du dossier** — `runOn: "folderOpen"` exécute automatiquement la tâche à l'activation de l'espace de travail, mais uniquement dans les espaces de travail approuvés (après approbation ou avec un enregistrement de confiance existant) ; un espace refusé ne l'exécute jamais. Approuver la demande de confiance exécute immédiatement les tâches d'ouverture de cette session. Le déclencheur ne s'exécute qu'une fois par activation — modifier `tasks.json` ne relance rien — et si la tâche atteint déjà sa limite d'instances, l'exécution automatique est silencieusement ignorée (aucune boîte de dialogue).
 - **Réutilisation du terminal** — seuls les terminaux de tâches terminées sont réutilisés. `panel: "shared"` et `panel: "dedicated"` réutilisent tous deux le terminal inactif propre à cette tâche lorsqu'il existe (le pool est propre à chaque tâche) et ouvrent un nouvel onglet sinon ; `panel: "new"` ouvre toujours un onglet neuf.
 - **Écho** — avec `presentation.echo` (activé par défaut), la ligne de commande est écrite dans le terminal avant la sortie du processus.
-- **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal. Notez deux écarts avec VS Code : `reveal: "silent"` ne se déploie que sur un code de sortie non nul (Spirit n'a pas de déclencheur par problem matcher), et `presentation.revealProblems` n'a aucun effet — il ne supprime ni ne déclenche l'affichage du terminal.
+- **Affichage** — `always` (par défaut) déploie le panneau d'outils au lancement ; `silent` le garde fermé au lancement et ne le déploie que si la tâche sort avec un code non nul ; `never` ne le déploie jamais automatiquement. `focus: true` implique reveal et déplace en plus le focus clavier dans le terminal. Notez deux écarts avec VS Code : `reveal: "silent"` ne se déploie que sur un code de sortie non nul ({{product.name|mdx}} n'a pas de déclencheur par problem matcher), et `presentation.revealProblems` n'a aucun effet — il ne supprime ni ne déclenche l'affichage du terminal.
 - **Effacement** — `presentation.clear` efface le terminal avant une réexécution qui le réutilise.
 - **Fermeture** — `presentation.close` ferme automatiquement l'onglet à la sortie, quel que soit le code de sortie.
 - **Préservation du nom du terminal** — `presentation.preserveTerminalName` conserve le label de la tâche comme titre d'onglet ; sinon, le titre du processus en cours le remplace.
@@ -152,7 +154,7 @@ Les tâches démarrent sur un clic explicite dans la palette ; uniquement dans l
 
 ## Exemple
 
-Un `.spirit/tasks.json` complet — une chaîne en séquence build → test → package, plus une tâche de surveillance en arrière-plan :
+Un `{{product.workspaceDataFolderName}}/tasks.json` complet — une chaîne en séquence build → test → package, plus une tâche de surveillance en arrière-plan :
 
 ```json
 {

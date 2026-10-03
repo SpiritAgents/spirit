@@ -9,7 +9,7 @@ use std::{
 
 use crate::mcp::spirit_data_dir;
 
-pub const SPIRIT_DIR_NAME: &str = ".spirit";
+pub const SPIRIT_DIR_NAME: &str = crate::product::WORKSPACE_DATA_FOLDER_NAME;
 pub const WORKSPACE_SPIRIT_RULE_FILE_NAME: &str = "rule.md";
 pub const WORKSPACE_RULE_FILE_NAME: &str = "AGENTS.md";
 pub const USER_RULE_FILE_NAME: &str = "rule.md";
@@ -102,7 +102,7 @@ pub fn rule_path_for_scope(workspace_root: &Path, scope: RuleScope) -> PathBuf {
     }
 }
 
-/// Ensures the `.spirit` directory exists so `workspace_spirit_rule_path` can be written later.
+/// Ensures the product workspace directory exists before writing its rule file.
 pub fn ensure_workspace_spirit_dir(workspace_root: &Path) -> Result<()> {
     let dir = workspace_root.join(SPIRIT_DIR_NAME);
     if dir.exists() {
@@ -125,8 +125,8 @@ pub fn default_rule_sources(workspace_root: &Path) -> Vec<RuleSource> {
         RuleSource {
             id: stable_rule_id(&spirit_path),
             scope: RuleScope::Workspace,
-            title: t!("form.rules.title.workspace_spirit").into_owned(),
-            short_label: t!("form.rules.short.spirit").into_owned(),
+            title: crate::locale::product_text("form.rules.title.workspace_spirit").into_owned(),
+            short_label: crate::locale::product_text("form.rules.short.spirit").into_owned(),
             path: spirit_path,
         },
         RuleSource {
@@ -301,7 +301,7 @@ fn stable_rule_id(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::shared_env_lock;
+    use crate::test_support::{ScopedEnv, shared_env_lock};
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_test_dir(label: &str) -> PathBuf {
@@ -340,14 +340,11 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let appdata = temp_test_dir("user-rule-path");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let path = user_rule_path();
 
-        assert_eq!(path, appdata.join("Spirit").join(USER_RULE_FILE_NAME));
+        assert_eq!(path, appdata.join(USER_RULE_FILE_NAME));
     }
 
     #[test]
@@ -356,10 +353,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let appdata = temp_test_dir("load-state-default");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let state = load_rule_state().expect("load default state");
 
@@ -372,10 +366,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let appdata = temp_test_dir("save-state-roundtrip");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let mut state = RuleStateFile::default();
         state.set_enabled("repo-rule", false);
@@ -383,10 +374,7 @@ mod tests {
         let saved_path = save_rule_state(&state).expect("save state");
         let loaded = load_rule_state().expect("load state");
 
-        assert_eq!(
-            saved_path,
-            appdata.join("Spirit").join(RULES_STATE_FILE_NAME)
-        );
+        assert_eq!(saved_path, appdata.join(RULES_STATE_FILE_NAME));
         assert_eq!(loaded, state);
     }
 
@@ -397,10 +385,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-default-enabled-workspace");
         let appdata = temp_test_dir("discover-default-enabled-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
         fs::create_dir_all(workspace_root.join(SPIRIT_DIR_NAME)).expect("create .spirit");
         fs::write(
             workspace_spirit_rule_path(&workspace_root),
@@ -412,7 +397,7 @@ mod tests {
             "# agents rule\nagents body",
         )
         .expect("write agents rule");
-        fs::create_dir_all(appdata.join("Spirit")).expect("create appdata dir");
+        fs::create_dir_all(&appdata).expect("create user data dir");
         fs::write(user_rule_path(), "# user rule\nuser body").expect("write user rule");
 
         let entries = discover_rule_entries(&workspace_root, &RuleStateFile::default())
@@ -436,10 +421,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-override-workspace");
         let appdata = temp_test_dir("discover-override-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         fs::create_dir_all(workspace_root.join(SPIRIT_DIR_NAME)).expect("create .spirit");
         let spirit_path = workspace_spirit_rule_path(&workspace_root);
@@ -464,10 +446,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-missing-workspace");
         let appdata = temp_test_dir("discover-missing-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let entries = discover_rule_entries(&workspace_root, &RuleStateFile::default())
             .expect("discover rules");
@@ -536,10 +515,7 @@ mod tests {
             .unwrap_or_else(|err| err.into_inner());
         let workspace_root = temp_test_dir("discover-preview-workspace");
         let appdata = temp_test_dir("discover-preview-appdata");
-        unsafe {
-            env::set_var("APPDATA", &appdata);
-            env::remove_var("USERPROFILE");
-        }
+        let _data_dir = ScopedEnv::set("SPIRIT_DATA_DIR", &appdata);
 
         let long_content = (0..12)
             .map(|index| format!("line-{index}: {}", "x".repeat(180)))

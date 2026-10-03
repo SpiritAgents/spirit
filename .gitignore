@@ -1,8 +1,9 @@
 **/target/
+/tmp/
 **/node_modules/
 **/dist/
 **/dist-electron/
-/packages/host-internal/built-in/extensions/
+/apps/site/.generated/
 **/.turbo/
 **/.tsbuildinfo*
 **/*.tsbuildinfo

@@ -1,4 +1,5 @@
 import { APPLY_PATCH_HOST_TOOL_NAME } from "./open-responses/apply-patch-eligibility.js";
+import { product } from "@spiritagent/product";
 import { LLM_CONTEXT_TAGS, wrapLlmContextBlock } from "./llm-context-block.js";
 import { USE_SAME_LANGUAGE_AS_USER_MESSAGE_RULE } from "./user-message-language.js";
 import {
@@ -284,8 +285,7 @@ export function buildBuiltinHostToolDefinitions(
         properties: {
           path: {
             type: "string",
-            description:
-              "Path to the file to read, or a Spirit-managed generated asset ref such as spirit://generated/image/<name> or spirit://generated/video/<name>.",
+            description: `Path to the file to read, or a ${product.name}-managed generated asset ref such as ${product.urlProtocol}://generated/image/<name> or ${product.urlProtocol}://generated/video/<name>.`,
           },
           offset: {
             type: "integer",
@@ -534,7 +534,7 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "create_file",
-      "Create a new file inside the workspace or under Spirit-managed user rule/plan/skills paths. Fails if the file already exists.",
+      `Create a new file inside the workspace or under ${product.name}-managed user rule/plan/skills paths. Fails if the file already exists.`,
       {
         type: "object",
         properties: {
@@ -547,7 +547,7 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "edit_file",
-      "Edit an existing file inside the workspace or under Spirit-managed user rule/plan/skills paths by replacing one exact old_text snippet with new_text. This prevents accidental full-file overwrite.",
+      `Edit an existing file inside the workspace or under ${product.name}-managed user rule/plan/skills paths by replacing one exact old_text snippet with new_text. This prevents accidental full-file overwrite.`,
       {
         type: "object",
         properties: {
@@ -561,7 +561,7 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "delete_file",
-      "Delete an existing file inside the workspace or under Spirit-managed user rule/plan/skills paths.",
+      `Delete an existing file inside the workspace or under ${product.name}-managed user rule/plan/skills paths.`,
       {
         type: "object",
         properties: {
@@ -867,7 +867,7 @@ export function buildDreamCollectorSystemMessage(): string {
   return wrapLlmContextBlock(
     LLM_CONTEXT_TAGS.dream_collector,
     [
-      "You are the dream collector for Spirit.",
+      `You are the dream collector for ${product.name}.`,
       "Dreams are short-lived summaries of recent work movement, not permanent memory.",
       "The host has already scoped this collection run to one workspace and one Git branch.",
       "First call dream_list to inspect existing dreams in this scope.",

@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
+import { product } from "@spiritagent/product";
 
 import {
   resolveConfiguredSpiritDataDir,
@@ -32,25 +33,18 @@ async function withEnv(vars, run) {
   }
 }
 
-test("resolveDefaultSpiritDataDir uses Application Support on macOS", async () => {
-  if (process.platform !== "darwin") {
-    return;
-  }
-
+test("resolveDefaultSpiritDataDir uses the product directory under home", async () => {
   const home = await mkdtemp(path.join(tmpdir(), "spirit-home-"));
   try {
     await withEnv(
       {
-        APPDATA: undefined,
+        APPDATA: path.join(home, "legacy-appdata"),
         HOME: home,
-        USERPROFILE: undefined,
+        USERPROFILE: home,
         SPIRIT_DATA_DIR: undefined,
       },
       async () => {
-        assert.equal(
-          resolveDefaultSpiritDataDir(),
-          path.join(home, "Library", "Application Support", "Spirit"),
-        );
+        assert.equal(resolveDefaultSpiritDataDir(), path.join(home, product.userDataFolderName));
       },
     );
   } finally {

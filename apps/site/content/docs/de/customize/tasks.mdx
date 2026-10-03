@@ -1,13 +1,15 @@
 ---
 title: Tasks
-description: Führen Sie Arbeitsbereichs-Tasks aus der Befehlspalette aus, deklariert in .spirit/tasks.json oder importiert aus .vscode/tasks.json.
+description: Führen Sie Arbeitsbereichs-Tasks aus der Befehlspalette aus,
+  deklariert in {{product.workspaceDataFolderName}}/tasks.json oder importiert
+  aus .vscode/tasks.json.
 ---
 
 <Callout type="info">Nur Desktop.</Callout>
 
-Tasks führen vordefinierte Arbeitsbereichsbefehle aus der Befehlspalette von Spirit Desktop aus: Öffnen Sie die Palette (`Mod+Shift+P`), wählen Sie **Arbeitsbereich → Task ausführen** und dann einen Task aus der Liste auf der zweiten Ebene. Der Task läuft in einem Terminal-Tab im rechten Werkzeugbereich. Die Gruppe **Arbeitsbereich** erscheint in der Palette nur, wenn mindestens ein gültiger Task existiert.
+Tasks führen vordefinierte Arbeitsbereichsbefehle aus der Befehlspalette von {{product.name|mdx}} Desktop aus: Öffnen Sie die Palette (`Mod+Shift+P`), wählen Sie **Arbeitsbereich → Task ausführen** und dann einen Task aus der Liste auf der zweiten Ebene. Der Task läuft in einem Terminal-Tab im rechten Werkzeugbereich. Die Gruppe **Arbeitsbereich** erscheint in der Palette nur, wenn mindestens ein gültiger Task existiert.
 
-Spirit Tasks ist ein eigenes System, nicht VS Code Tasks. Es liest ein striktes JSON-Format von Spirit und — als Kompatibilitätsimport — VS Codes `tasks.json`, mit einer klar definierten Teilmenge der VS-Code-Felder. Ein Task, der nicht exakt wie konfiguriert laufen kann, wird vollständig ausgeblendet, statt halb konfiguriert zu laufen; siehe [Warum ein Task ausgeblendet wird](#warum-ein-task-ausgeblendet-wird).
+{{product.name|mdx}} Tasks ist ein eigenes System, nicht VS Code Tasks. Es liest ein striktes JSON-Format von {{product.name|mdx}} und — als Kompatibilitätsimport — VS Codes `tasks.json`, mit einer klar definierten Teilmenge der VS-Code-Felder. Ein Task, der nicht exakt wie konfiguriert laufen kann, wird vollständig ausgeblendet, statt halb konfiguriert zu laufen; siehe [Warum ein Task ausgeblendet wird](#warum-ein-task-ausgeblendet-wird).
 
 ## Task-Dateien
 
@@ -15,11 +17,11 @@ Drei Quellen werden gelesen, höchste Priorität zuerst:
 
 | Priorität | Quelle                           | Erforderliche Markierung | Hinweise                                        |
 | --------- | -------------------------------- | ------------------------ | ----------------------------------------------- |
-| 1         | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1`     | Spirits eigenes Format                          |
+| 1         | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1`     | Spirits eigenes Format                          |
 | 2         | `<data dir>/tasks.json`          | `"schemaVersion": 1`     | Benutzerebene, gilt für jeden Arbeitsbereich    |
 | 3         | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"`     | VS-Code-Kompatibilitätsimport, schreibgeschützt |
 
-Nur das Stammverzeichnis des Arbeitsbereichs wird durchsucht — verschachtelte Verzeichnisse nicht. `<data dir>` ist das Spirit-Datenverzeichnis (zum Beispiel `~/Library/Application Support/Spirit` unter macOS). Eine Datei, die fehlt, unlesbar ist, ungültiges JSON enthält oder die falsche Markierung trägt, liefert keine Tasks.
+Nur das Stammverzeichnis des Arbeitsbereichs wird durchsucht — verschachtelte Verzeichnisse nicht. `<data dir>` ist das {{product.name|mdx}}-Datenverzeichnis (zum Beispiel `~/{{product.stable.userDataFolderName}}` unter macOS). Eine Datei, die fehlt, unlesbar ist, ungültiges JSON enthält oder die falsche Markierung trägt, liefert keine Tasks.
 
 Die drei Dateien werden live überwacht; die Palettenliste aktualisiert sich automatisch, wenn sich eine davon ändert.
 
@@ -29,9 +31,9 @@ Alle drei Quellen verschmelzen in einem Namespace. Definieren mehrere Quellen da
 
 ## Workspace-Vertrauen
 
-Workspace-Aufgabendateien kommen mit dem Repository und sind daher nicht vertrauenswürdige Daten: `.spirit/tasks.json` und `.vscode/tasks.json` werden erst geladen, nachdem Sie den Workspace-Inhalt genehmigt haben. Die benutzerbezogene `tasks.json` (Spirit-Datenverzeichnis) ist implizit vertrauenswürdig und wird immer geladen.
+Workspace-Aufgabendateien kommen mit dem Repository und sind daher nicht vertrauenswürdige Daten: `{{product.workspaceDataFolderName}}/tasks.json` und `.vscode/tasks.json` werden erst geladen, nachdem Sie den Workspace-Inhalt genehmigt haben. Die benutzerbezogene `tasks.json` ({{product.name|mdx}}-Datenverzeichnis) ist implizit vertrauenswürdig und wird immer geladen.
 
-Wenn Spirit Desktop Workspace-Aufgabendateien (oder eine Änderung daran) erkennt, fragt es einmal: Der Dialog listet die verfügbar werdenden Tasks mit ihren Befehlen; ein Klick auf einen Eintrag öffnet die Quelldatei. Benötigen auch Workspace-Hooks eine Zustimmung, erscheinen beide Listen in einem gemeinsamen Dialog.
+Wenn {{product.name|mdx}} Desktop Workspace-Aufgabendateien (oder eine Änderung daran) erkennt, fragt es einmal: Der Dialog listet die verfügbar werdenden Tasks mit ihren Befehlen; ein Klick auf einen Eintrag öffnet die Quelldatei. Benötigen auch Workspace-Hooks eine Zustimmung, erscheinen beide Listen in einem gemeinsamen Dialog.
 
 - **Einmal zulassen** — die Tasks werden nur für diese Sitzung geladen.
 - **Immer vertrauen** — für genau diesen Dateiinhalt gemerkt.
@@ -65,7 +67,7 @@ Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Date
 | `dependsOn`                              | Unterstützt  | Ein Label-String oder ein Array von Label-Strings. Die Objektform (`{ "type": … }`, `{ "task": … }`) blendet den Task aus                                                                                                                                          |
 | `dependsOrder`                           | Unterstützt  | `parallel` (Standard) oder `sequence`                                                                                                                                                                                                                              |
 | `detail`                                 | Unterstützt  | Wird neben dem Label in der Palettenliste angezeigt                                                                                                                                                                                                                |
-| `icon.id`                                | Unterstützt  | Menüsymbol: zuerst Spirit Icons, dann Lucide, mit einem Terminalsymbol als Fallback                                                                                                                                                                                |
+| `icon.id`                                | Unterstützt  | Menüsymbol: zuerst {{product.name|mdx}} Icons, dann Lucide, mit einem Terminalsymbol als Fallback                                                                                                                                                                                |
 | `icon.color`                             | Ignoriert    | Rein darstellerisch                                                                                                                                                                                                                                                |
 | `hide`                                   | Unterstützt  | Aus der Palettenliste ausgeblendet, aber weiterhin auflösbar — der Task kann als `dependsOn`-Abhängigkeit laufen                                                                                                                                                   |
 
@@ -104,7 +106,7 @@ Unterstützte Verweise, ersetzt, wenn der Task aufgelöst wird:
 | ---------------------------- | --------------------------------------------------- |
 | `${workspaceFolder}`         | Stammpfad des Arbeitsbereichs                       |
 | `${workspaceFolderBasename}` | Ordnername des Arbeitsbereichs-Stammverzeichnisses  |
-| `${cwd}`                     | Spirit Desktops eigenes Prozess-Arbeitsverzeichnis  |
+| `${cwd}`                     | {{product.name|mdx}} Desktops eigenes Prozess-Arbeitsverzeichnis  |
 | `${userHome}`                | Home-Verzeichnis des OS-Benutzers                   |
 | `${pathSeparator}`, `${/}`   | Der OS-Pfadtrenner                                  |
 | `${env:NAME}`                | Umgebungsvariable `NAME` (leer, wenn nicht gesetzt) |
@@ -142,7 +144,7 @@ Tasks starten durch einen expliziten Klick in der Palette; nur in vertrauenswür
 - **Ordneröffnungs-Auslöser** — `runOn: "folderOpen"` führt den Task bei der Aktivierung des Workspaces automatisch aus, aber nur in vertrauenswürdigen Workspaces (nach Genehmigung oder mit vorhandenem Vertrauenseintrag); ein abgelehnter Workspace führt ihn nie aus. Nach dem Genehmigen der Vertrauensfrage laufen die Ordneröffnungs-Tasks dieser Sitzung sofort. Der Auslöser feuert höchstens einmal pro Aktivierungsrunde — das Bearbeiten der `tasks.json` führt nie etwas erneut aus — und läuft der Task bereits am Instanzlimit, wird der automatische Lauf still übersprungen (kein Dialog).
 - **Terminal-Wiederverwendung** — nur Terminals beendeter Tasks werden je wiederverwendet. `panel: "shared"` und `panel: "dedicated"` verwenden beide das eigene freie Terminal dieses Tasks wieder, wenn eines existiert (der Pool gilt pro Task), und öffnen sonst einen neuen Tab; `panel: "new"` öffnet immer einen frischen Tab.
 - **Echo** — mit `presentation.echo` (standardmäßig an) wird die Kommandozeile vor der Prozessausgabe in das Terminal geschrieben.
-- **Reveal** — `always` (Standard) klappt den Werkzeugbereich beim Start aus; `silent` hält ihn beim Start geschlossen und klappt ihn nur aus, wenn der Task mit einem Exit-Code ungleich null endet; `never` klappt nie automatisch aus. `focus: true` impliziert reveal und verschiebt zusätzlich den Tastaturfokus in das Terminal. Zwei Abweichungen gegenüber VS Code: `reveal: "silent"` klappt nur bei einem Exit-Code ungleich null aus (Spirit hat keinen problemMatcher-Auslösepfad), und `presentation.revealProblems` hat überhaupt keine Wirkung — es unterdrückt weder eine Terminal-Anzeige noch löst es eine aus.
+- **Reveal** — `always` (Standard) klappt den Werkzeugbereich beim Start aus; `silent` hält ihn beim Start geschlossen und klappt ihn nur aus, wenn der Task mit einem Exit-Code ungleich null endet; `never` klappt nie automatisch aus. `focus: true` impliziert reveal und verschiebt zusätzlich den Tastaturfokus in das Terminal. Zwei Abweichungen gegenüber VS Code: `reveal: "silent"` klappt nur bei einem Exit-Code ungleich null aus ({{product.name|mdx}} hat keinen problemMatcher-Auslösepfad), und `presentation.revealProblems` hat überhaupt keine Wirkung — es unterdrückt weder eine Terminal-Anzeige noch löst es eine aus.
 - **Clear** — `presentation.clear` leert das Terminal vor einer Wiederholung, die es wiederverwendet.
 - **Close** — `presentation.close` schließt den Tab beim Beenden automatisch, unabhängig vom Exit-Code.
 - **Terminalname beibehalten** — `presentation.preserveTerminalName` behält das Task-Label als Tab-Titel; sonst ersetzt der Titel des laufenden Prozesses ihn.
@@ -152,7 +154,7 @@ Tasks starten durch einen expliziten Klick in der Palette; nur in vertrauenswür
 
 ## Beispiel
 
-Eine vollständige `.spirit/tasks.json` — eine Build- → Test- → Paket-Sequenzkette plus ein Hintergrund-Watch-Task:
+Eine vollständige `{{product.workspaceDataFolderName}}/tasks.json` — eine Build- → Test- → Paket-Sequenzkette plus ein Hintergrund-Watch-Task:
 
 ```json
 {

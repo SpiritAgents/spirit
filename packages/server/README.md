@@ -42,7 +42,7 @@ Each daemon writes `{spiritDataDir}/server/instances/{instanceId}.json`:
 }
 ```
 
-Clients resolve a daemon by reading the registry, pruning records whose pid is dead, and attaching to a survivor — otherwise they spawn a new one. The registry lives in the shared Spirit data directory (`%APPDATA%/Spirit`, `~/Library/Application Support/Spirit`, `$XDG_DATA_HOME/Spirit`, or `~/.spirit-data`; override with `SPIRIT_DATA_DIR`).
+Clients resolve a daemon by reading the registry, pruning records whose pid is dead, and attaching to a survivor — otherwise they spawn a new one. The registry lives in the shared Spirit data directory (Stable: `~/.spirit` · Dev: `~/.spirit-dev`; Windows: `%USERPROFILE%\.spirit` / `%USERPROFILE%\.spirit-dev`; override with `SPIRIT_DATA_DIR`).
 
 ## Protocol
 

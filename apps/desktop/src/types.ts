@@ -724,7 +724,7 @@ export interface DesktopMcpServerInspection {
 export type DesktopSkillScope = "workspace" | "user";
 export type DesktopSkillRootKind = "workspaceSpirit" | "workspaceAgents" | "user";
 
-/** Create `skills/<name>/SKILL.md`; the root directory is determined by `rootKind` (user directory or workspace `.spirit` / `.agents`). */
+/** Create `skills/<name>/SKILL.md`; `rootKind` selects the user, product workspace, or `.agents` directory. */
 export interface CreateSkillRequest {
   name: string;
   rootKind: DesktopSkillRootKind;

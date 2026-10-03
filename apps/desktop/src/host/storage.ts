@@ -43,6 +43,8 @@ import {
   type PermissionConfig,
   type ProviderGroupV2,
   resolveSessionTranscriptFilePath,
+  resolveDefaultSpiritDataDir,
+  resolveSpiritDataDir,
 } from "@spiritagent/host-internal";
 
 import { resolveDesktopAgentMode, type DesktopAgentMode } from "../lib/agent-mode.js";
@@ -93,7 +95,6 @@ export {
 export const DEFAULT_API_BASE = "https://api.openai.com/v1";
 export const DEFAULT_DESKTOP_WEB_HOST = "127.0.0.1";
 export const DEFAULT_DESKTOP_WEB_PORT = 7788;
-const APP_DATA_DIR_NAME = "Spirit";
 const CONFIG_FILE_NAME = "config.json";
 const CHATS_DIR_NAME = "chats";
 const PROVISIONAL_CHATS_DIR_NAME = "__provisional__";
@@ -205,56 +206,14 @@ export type RuleDiscoveryResult = HostRuleDiscoveryResult;
 export type SkillDiscoveryResult = HostSkillDiscoveryResult;
 export type HostMetadataSummary = HostInstructionMetadataSummary;
 
-const ENV_SPIRIT_DATA_DIR = "SPIRIT_DATA_DIR";
-
 let spiritDataDirOverride: string | undefined;
 
 export function setSpiritDataDirOverride(dir: string | undefined): void {
   spiritDataDirOverride = dir;
 }
 
-function resolveHomeDirectory(): string | undefined {
-  const home = process.env.HOME?.trim() || homedir()?.trim();
-  return home || undefined;
-}
-
-export function resolveDefaultSpiritDataDir(): string {
-  const appData = process.env.APPDATA?.trim();
-  if (appData) {
-    return path.join(appData, APP_DATA_DIR_NAME);
-  }
-
-  const home = resolveHomeDirectory();
-  if (home) {
-    if (process.platform === "darwin") {
-      return path.join(home, "Library", "Application Support", APP_DATA_DIR_NAME);
-    }
-    if (process.platform === "linux") {
-      const xdgDataHome = process.env.XDG_DATA_HOME?.trim();
-      if (xdgDataHome) {
-        return path.join(xdgDataHome, APP_DATA_DIR_NAME);
-      }
-      return path.join(home, ".local", "share", APP_DATA_DIR_NAME);
-    }
-    return path.join(home, ".spirit-data");
-  }
-
-  const userProfile = process.env.USERPROFILE?.trim();
-  if (userProfile) {
-    return path.join(userProfile, ".spirit-data");
-  }
-
-  return path.join(homedir(), ".spirit-data");
-}
-
-export function resolveConfiguredSpiritDataDir(): string {
-  const envOverride = process.env[ENV_SPIRIT_DATA_DIR]?.trim();
-  if (envOverride) {
-    return envOverride;
-  }
-
-  return resolveDefaultSpiritDataDir();
-}
+export { resolveDefaultSpiritDataDir };
+export const resolveConfiguredSpiritDataDir = resolveSpiritDataDir;
 
 export function spiritDataDir(): string {
   if (spiritDataDirOverride) {

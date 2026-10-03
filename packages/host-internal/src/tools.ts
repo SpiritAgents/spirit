@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { product } from "@spiritagent/product";
 import { existsSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
@@ -1506,15 +1507,17 @@ export class NodeHostToolService<
     try {
       const managedRootStats = await lstat(managedRoot);
       if (!managedRootStats.isDirectory() || managedRootStats.isSymbolicLink()) {
-        throw new Error(`Invalid Spirit-managed ${assetLabel} directory: ${trimmed}`);
+        throw new Error(`Invalid ${product.name}-managed ${assetLabel} directory: ${trimmed}`);
       }
 
       const candidate = await lstat(candidatePath);
       if (candidate.isSymbolicLink()) {
-        throw new Error(`Spirit-managed ${assetLabel} reference must not be a symlink: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} reference must not be a symlink: ${trimmed}`,
+        );
       }
       if (!candidate.isFile()) {
-        throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`);
+        throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`);
       }
 
       const [canonicalSpiritRoot, canonicalRoot, canonical] = await Promise.all([
@@ -1523,15 +1526,19 @@ export class NodeHostToolService<
         realpath(candidatePath),
       ]);
       if (!pathHasPrefix(canonicalRoot, canonicalSpiritRoot)) {
-        throw new Error(`Spirit-managed ${assetLabel} directory escapes allowed root: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} directory escapes allowed root: ${trimmed}`,
+        );
       }
       if (!pathHasPrefix(canonical, canonicalRoot)) {
-        throw new Error(`Spirit-managed ${assetLabel} reference escapes allowed root: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} reference escapes allowed root: ${trimmed}`,
+        );
       }
 
       const st = await lstat(canonical);
       if (st.isSymbolicLink() || !st.isFile()) {
-        throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`);
+        throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`);
       }
 
       return canonical;
@@ -1539,7 +1546,9 @@ export class NodeHostToolService<
       if (error instanceof Error && error.message.includes(trimmed)) {
         throw error;
       }
-      throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`, { cause: error });
+      throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`, {
+        cause: error,
+      });
     }
   }
 

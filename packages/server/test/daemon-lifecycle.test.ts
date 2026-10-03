@@ -3,6 +3,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
+import { PRODUCT_BUILD_ID } from "@spiritagent/product";
 
 import { readCurrentToken } from "../src/auth-token.js";
 import { ServerRpcClient } from "../src/client.js";
@@ -126,6 +127,7 @@ describe("daemon lifecycle (smoke #1)", () => {
       const health = await client.nextMessage();
       assert.equal(health.id, 1);
       assert.equal(health.result?.["ok"], true);
+      assert.equal(health.result?.["productBuildId"], PRODUCT_BUILD_ID);
       assert.equal(health.result?.["instanceId"], daemon.instanceId);
 
       client.send({

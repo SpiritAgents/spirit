@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { product } from "@spiritagent/product";
 import "./setup";
 
 import { act, render, waitFor } from "@testing-library/react";
@@ -119,7 +120,7 @@ test("an unavailable source leaves the fallback image available", async () => {
 });
 
 test("picture sources use the managed image reader", async () => {
-  const reference = "spirit://generated/image/preview.png";
+  const reference = `${product.urlProtocol}://generated/image/preview.png`;
   const readManaged = vi.fn(async () => darkPreview);
   const { container } = render(
     <picture>

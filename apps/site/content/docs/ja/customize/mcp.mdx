@@ -1,14 +1,14 @@
 ---
 title: MCP
-description: ユーザーのmcp.jsonとワークスペースの.spirit/mcp.json。同じサーバー名の場合はワークスペースが優先されます。
+description: ユーザーのmcp.jsonとワークスペースの{{product.workspaceDataFolderName}}/mcp.json。同じサーバー名の場合はワークスペースが優先されます。
 ---
 
-MCPサーバーは、Spiritの外部からツール、リソース、プロンプトを追加します。
+MCPサーバーは、{{product.name|mdx}}の外部からツール、リソース、プロンプトを追加します。
 
 | スコープ       | パス                           |
 | -------------- | ------------------------------ |
 | ユーザー       | `{spiritDataDir}/mcp.json`     |
-| ワークスペース | `{workspace}/.spirit/mcp.json` |
+| ワークスペース | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 両方のファイルが同じサーバー名を定義する場合、**ワークスペース**のエントリが優先されます。
 

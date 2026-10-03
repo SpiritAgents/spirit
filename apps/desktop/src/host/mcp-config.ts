@@ -5,8 +5,6 @@ import path from "node:path";
 import i18n from "../lib/i18n-host.js";
 import {
   findMcpServerNameConflict,
-  mcpUserConfigPath,
-  mcpWorkspaceConfigPath,
   normalizeCapabilityToggles,
   normalizeMcpServerConfig,
   parseMcpConfigFile,
@@ -14,6 +12,7 @@ import {
   type McpConfigFile,
   type McpServerConfig,
 } from "@spiritagent/agent-core";
+import { mcpUserConfigPath, mcpWorkspaceConfigPath } from "@spiritagent/host-internal";
 
 import type {
   AddMcpServerRequest,

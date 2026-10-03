@@ -5,7 +5,7 @@ description: Keyring, aprovações e o daemon de loopback. Sem telemetria.
 
 ## Keyring
 
-Chaves de API, segredos do Bedrock / Vertex, segredos de extensões e o token de integração do GitHub são armazenados no keyring do sistema operacional. O nome do serviço é `Spirit`.
+Chaves de API, segredos do Bedrock / Vertex, segredos de extensões e o token de integração do GitHub são armazenados no keyring do sistema operacional. O nome do serviço é `{{product.name}}`.
 
 `config.json` contém grupos de provedores e referências de modelo, não o segredo em si. Segredos grandes podem ser fragmentados no keyring.
 
@@ -23,6 +23,6 @@ O pareamento do Web Host é um código separado de 6 dígitos no Desktop. Cinco 
 
 ## Privacidade
 
-O Spirit não envia telemetria de desenvolvedor. Os dados permanecem no diretório de dados e no keyring. Consulte [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) no repositório.
+O {{product.name|mdx}} não envia telemetria de desenvolvedor. Os dados permanecem no diretório de dados e no keyring. Consulte [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) no repositório.
 
 Reporte vulnerabilidades de forma privada (GitHub Private Advisory), não em uma issue pública. Consulte [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md).

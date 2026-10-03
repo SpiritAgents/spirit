@@ -3,7 +3,7 @@ title: 擴充功能
 description: 從市場安裝擴充功能、匯入 ZIP 套件，或新增你自己的遠端擴充功能市場。
 ---
 
-擴充功能為 Spirit 添加能力——工具、技能、鉤子、MCP 伺服器與介面貢獻。擴充功能透過擴充功能市場分發：
+擴充功能為 {{product.name|mdx}} 添加能力——工具、技能、鉤子、MCP 伺服器與介面貢獻。擴充功能透過擴充功能市場分發：
 
 - **內建**——隨應用程式附帶。
 - **個人**——你自己的匯入：親手加入的 ZIP 套件。
@@ -54,7 +54,7 @@ ZIP 套件是自聲明旁路：不經過任何市場。
 | Git 儲存庫（HTTPS 或 SSH） | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP 索引 URL              | `spirit extension marketplace add https://example.com`                   |
 
-Git URL 可用 `--git-ref <tag|branch|commit>` 釘住 ref；預設為遠端預設分支。裸網站 URL 會自動補全其 `/.spirit/marketplace.json`。
+Git URL 可用 `--git-ref <tag|branch|commit>` 釘住 ref；預設為遠端預設分支。裸網站 URL 會自動補全其 `/{{product.workspaceDataFolderName}}/marketplace.json`。
 
 用 `spirit extension marketplace list` 與 `spirit extension marketplace remove <name>` 管理已新增的市場。Desktop 上右鍵點擊市場 Tab 即可移除。
 

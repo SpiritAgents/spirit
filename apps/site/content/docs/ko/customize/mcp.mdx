@@ -1,14 +1,15 @@
 ---
 title: MCP
-description: 사용자 mcp.json 및 작업공간 .spirit/mcp.json입니다. 동일한 서버 이름이면 작업공간이 우선합니다.
+description: 사용자 mcp.json 및 작업공간
+  {{product.workspaceDataFolderName}}/mcp.json입니다. 동일한 서버 이름이면 작업공간이 우선합니다.
 ---
 
-MCP 서버는 Spirit 외부에서 도구, 리소스, 프롬프트를 추가합니다.
+MCP 서버는 {{product.name|mdx}} 외부에서 도구, 리소스, 프롬프트를 추가합니다.
 
 | 범위     | 경로                           |
 | -------- | ------------------------------ |
 | 사용자   | `{spiritDataDir}/mcp.json`     |
-| 작업공간 | `{workspace}/.spirit/mcp.json` |
+| 작업공간 | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 두 파일 모두 동일한 서버 이름을 정의하는 경우 **작업공간** 항목이 우선합니다.
 

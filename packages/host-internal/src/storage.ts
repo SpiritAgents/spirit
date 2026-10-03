@@ -2,12 +2,13 @@ import { Buffer } from "node:buffer";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { product } from "@spiritagent/product";
 
 import { SKILLS_DIR_NAME } from "./skill-paths.js";
 
 export { SKILL_FILE_NAME, SKILLS_DIR_NAME } from "./skill-paths.js";
 
-export const SPIRIT_DIR_NAME = ".spirit";
+export const SPIRIT_DIR_NAME = product.workspaceDataFolderName;
 export const AGENTS_DIR_NAME = ".agents";
 export const USER_RULE_FILE_NAME = "rule.md";
 export const WORKSPACE_RULE_FILE_NAME = "AGENTS.md";

@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -85,7 +86,7 @@ test("TogetherVideosBackend create/poll/download success path", async () => {
       async (request) => ({
         path: "/tmp/video.mp4",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/video/abc",
+        markdownRef: `${product.urlProtocol}://generated/video/abc`,
       }),
     );
 

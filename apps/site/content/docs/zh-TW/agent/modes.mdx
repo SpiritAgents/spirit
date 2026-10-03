@@ -3,14 +3,14 @@ title: 模式
 description: 在 Agent、Plan、Ask 和 Debug 之間切換。相同的工作區，不同的權限。
 ---
 
-Spirit 有四種 agent 模式。Desktop 和 CLI 使用 Tab 鍵循環切換：**Agent → Plan → Ask → Debug → Agent**。
+{{product.name|mdx}} 有四種 agent 模式。Desktop 和 CLI 使用 Tab 鍵循環切換：**Agent → Plan → Ask → Debug → Agent**。
 
 | 模式      | 功能                                                                                                                               |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent** | 預設模式。可讀取、編輯、執行指令並驗證。                                                                                           |
 | **Plan**  | 僅規劃。透過 [ask_questions](./ask-questions.mdx) 釐清需求，使用 `create_plan` 撰寫計畫，然後請您開始實作或切換回 Agent 模式。     |
 | **Ask**   | 唯讀模式。可解釋與搜尋。無法編輯檔案、執行 shell、套用修補程式或產生媒體。若要修改程式碼，請切換至 Agent 模式。                    |
-| **Debug** | 調查錯誤：對假設進行排序，在 `.spirit/logs/` 下插入 NDJSON 日誌（以 `#region agent log` 包覆），並等待您表示問題已解決或仍可重現。 |
+| **Debug** | 調查錯誤：對假設進行排序，在 `{{product.workspaceDataFolderName}}/logs/` 下插入 NDJSON 日誌（以 `#region agent log` 包覆），並等待您表示問題已解決或仍可重現。 |
 
 當變更範圍較大或目標模糊時，請使用 Plan 模式。當您只想了解儲存庫時，請使用 Ask 模式。當您可以重現失敗並希望進行系統性檢查時，請使用 Debug 模式。一般編輯則維持在 Agent 模式。
 

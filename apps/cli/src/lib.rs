@@ -30,6 +30,7 @@ pub mod permissions;
 pub mod permissions_types;
 pub mod plan;
 pub mod ports;
+pub mod product;
 #[cfg(feature = "tui")]
 pub mod relative_time;
 pub mod rewind;

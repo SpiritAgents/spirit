@@ -1,9 +1,10 @@
 import path from "node:path";
 
-import { McpService, type McpExtraConfigProvider } from "@spiritagent/agent-core";
+import type { McpService, McpExtraConfigProvider } from "@spiritagent/agent-core";
 import {
   collectEnabledExtensionInstructionContributions,
   createHostExtensionManager,
+  createHostMcpService,
 } from "@spiritagent/host-internal";
 
 /**
@@ -38,14 +39,18 @@ export function createExtensionMcpExtraConfigs(
 export class McpRegistry {
   private readonly cache = new Map<string, McpService>();
 
-  constructor(private readonly extraConfigs?: McpExtraConfigProvider) {}
+  constructor(
+    private readonly spiritDataDir: string,
+    private readonly extraConfigs?: McpExtraConfigProvider,
+  ) {}
 
   forWorkspace(workspaceRoot: string): McpService {
     const key = path.resolve(workspaceRoot);
     let service = this.cache.get(key);
     if (!service) {
-      service = new McpService(
+      service = createHostMcpService(
         key,
+        this.spiritDataDir,
         true,
         this.extraConfigs ? { extraConfigs: this.extraConfigs } : {},
       );

@@ -1,20 +1,21 @@
 ---
 title: Konfiguration
-description: Datenverzeichnisse, config.json v2, .spirit/ und Umgebungsvariablen.
+description: Datenverzeichnisse, config.json v2,
+  {{product.workspaceDataFolderName}}/ und Umgebungsvariablen.
 ---
 
-Spirit speichert Binärdateien und Daten an verschiedenen Orten. Sie zu verwechseln ist der übliche Grund für „Ich habe die CLI installiert, aber die Einstellungen sind leer“.
+Gemeinsame Benutzerdaten richten sich nach der Build-Quality, nicht nach dem Anwendungsdatenverzeichnis des Betriebssystems.
 
 ## Datenverzeichnis
 
 Überschreiben mit `SPIRIT_DATA_DIR`. Der Server kann auch `SPIRIT_SERVER_DATA_DIR` verwenden (gewinnt über ersteres).
 
-| Betriebssystem | Standard                                             |
-| -------------- | ---------------------------------------------------- |
-| macOS          | `~/Library/Application Support/Spirit`               |
-| Windows        | `%APPDATA%\Spirit`                                   |
-| Linux          | `$XDG_DATA_HOME/Spirit` oder `~/.local/share/Spirit` |
-| Fallback       | `~/.spirit-data`                                     |
+| Build | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change: Alte Plattformverzeichnisse werden weder automatisch gelesen noch migriert. Explizite Datenverzeichnis-Overrides bleiben unterstützt. Electron-Caches, Browserspeicher und Fensterzustand verbleiben im privaten Anwendungsverzeichnis der Plattform.
 
 Typische Dateien:
 
@@ -34,7 +35,7 @@ Typische Dateien:
   server/instances/
 ```
 
-CLI-Binärdateien liegen unter `SPIRIT_HOME` (`~/.spirit` oder `%LOCALAPPDATA%\Spirit`). Das ist nicht dieses Verzeichnis. Siehe [CLI installieren](./install/cli.mdx).
+CLI-Binärdateien verwenden SPIRIT_HOME. Unter Unix können Stable-Installation und gemeinsame Daten dasselbe übergeordnete Verzeichnis nutzen; bin/ und cli/ bleiben Installationsdateien. Die Installationseinstellung bestimmt nicht das gemeinsame Datenverzeichnis.
 
 ## config.json v2
 
@@ -48,14 +49,14 @@ Kernfelder:
 
 Schlüssel sind **nicht** in dieser Datei. Sie befinden sich im [Schlüsselbund](./security.mdx).
 
-## Arbeitsbereich `.spirit/`
+## Arbeitsbereich `{{product.workspaceDataFolderName}}/`
 
 | Pfad                 | Rolle                                                 |
 | -------------------- | ----------------------------------------------------- |
-| `.spirit/rule.md`    | Arbeitsbereichs-[Regel](./customize/rules.mdx)        |
-| `.spirit/skills/`    | Arbeitsbereichs-[Fähigkeiten](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | Arbeitsbereichs-[MCP](./customize/mcp.mdx)            |
-| `.spirit/hooks.json` | Arbeitsbereichs-[Hooks](./customize/hooks.mdx)        |
+| `{{product.workspaceDataFolderName}}/rule.md`    | Arbeitsbereichs-[Regel](./customize/rules.mdx)        |
+| `{{product.workspaceDataFolderName}}/skills/`    | Arbeitsbereichs-[Fähigkeiten](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | Arbeitsbereichs-[MCP](./customize/mcp.mdx)            |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Arbeitsbereichs-[Hooks](./customize/hooks.mdx)        |
 
 Ebenfalls verwendet: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

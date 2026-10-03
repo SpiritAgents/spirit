@@ -1,17 +1,19 @@
 ---
 title: Skills
-description: Habilidades de usuario, .spirit y .agents, además de create-rule, create-skill, create-hook y create-extension integrados.
+description: Habilidades de usuario, {{product.workspaceDataFolderName}} y
+  .agents, además de create-rule, create-skill, create-hook y create-extension
+  integrados.
 ---
 
-Una Skill es una carpeta con un `SKILL.md`. Spirit descubre habilidades desde tres lugares:
+Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre habilidades desde tres lugares:
 
 | Alcance                         | Ruta                                         |
 | ------------------------------- | -------------------------------------------- |
 | Usuario                         | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Espíritu del espacio de trabajo | `{workspace}/.spirit/skills/{name}/SKILL.md` |
+| Espíritu del espacio de trabajo | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | agentes del espacio de trabajo  | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-Cuando mencionas una Skill en un turno, Spirit puede adjuntar su texto completo a ese mensaje de usuario. No vierte cada Skill en el prompt del sistema.
+Cuando mencionas una Skill en un turno, {{product.name|mdx}} puede adjuntar su texto completo a ese mensaje de usuario. No vierte cada Skill en el prompt del sistema.
 
 ## Frontmatter
 
@@ -24,7 +26,7 @@ Cuando mencionas una Skill en un turno, Spirit puede adjuntar su texto completo 
 
 ## Habilidades integradas
 
-Estas vienen con Spirit (no son archivos en tu directorio de datos):
+Estas vienen con {{product.name|mdx}} (no son archivos en tu directorio de datos):
 
 - `create-rule` — redacta una [regla](./rules.mdx)
 - `create-skill` — redacta una [Skill](./skills.mdx)

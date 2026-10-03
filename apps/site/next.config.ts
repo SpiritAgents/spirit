@@ -1,8 +1,10 @@
 import { createMDX } from "fumadocs-mdx/next";
 import type { NextConfig } from "next";
+import { fileURLToPath } from "node:url";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  turbopack: { root: fileURLToPath(new URL("../..", import.meta.url)) },
   transpilePackages: ["@spiritagent/ui", "@spiritagent/icons"],
   async rewrites() {
     return [

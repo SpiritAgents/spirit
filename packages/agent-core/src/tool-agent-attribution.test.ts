@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
 
 import {
@@ -28,7 +29,7 @@ test("buildAttributionSystemMessage embeds PR credit guidance when pr is on", ()
   const message = buildAttributionSystemMessage({ prEnabled: true });
   assert.ok(message?.includes("<attribution>"));
   assert.ok(message?.includes("gh pr create"));
-  assert.ok(message?.includes("Made with [Spirit Agent](https://spirit.dev)"));
+  assert.ok(message?.includes(`Made with [${product.name} Agent](${product.websiteOrigin})`));
   assert.ok(!message?.includes("Co-authored-by"));
 });
 
@@ -38,7 +39,7 @@ test("buildAttributionSystemMessage embeds both instructions when both are on", 
     prEnabled: true,
   });
   assert.ok(message?.includes("Co-authored-by: Spirit Agent <agent@spirit.dev>"));
-  assert.ok(message?.includes("Made with [Spirit Agent](https://spirit.dev)"));
+  assert.ok(message?.includes(`Made with [${product.name} Agent](${product.websiteOrigin})`));
 });
 
 test("buildToolAgentMessages omits attribution when flags are off", () => {

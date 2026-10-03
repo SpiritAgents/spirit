@@ -1,6 +1,7 @@
 ---
 title: CLI
-description: TUI, nicht-interaktiv -p, SPIRIT_API_KEY / SPIRIT_API_BASE und der gemeinsame Daemon.
+description: TUI, nicht-interaktiv -p, SPIRIT_API_KEY / SPIRIT_API_BASE und der
+  gemeinsame Daemon.
 ---
 
 Die CLI ist ein Terminal-Host. Installieren Sie sie mit dem [Installationsskript](./install/cli.mdx). Sie kommuniziert mit demselben Daemon wie [Desktop](./desktop.mdx).
@@ -31,11 +32,11 @@ Nur der endgültige Assistententext gelangt nach stdout. Setzen Sie `-m`, `-a` u
 | `SPIRIT_API_KEY`  | API-Schlüssel für diesen Prozess. Reihenfolge: env → Modell-Keyring → globaler Keyring |
 | `SPIRIT_API_BASE` | API-Basis-URL-Überschreibung                                                           |
 | `SPIRIT_DATA_DIR` | Datenverzeichnis (gleicher Speicher wie Desktop)                                       |
-| `SPIRIT_HOME`     | Installationswurzel der CLI-**Binärdatei** – nicht das Datenverzeichnis                |
+| `SPIRIT_HOME`     | Installationsverzeichnis der CLI-Binärdateien (bin/ und cli/), unabhängig von gemeinsamen Daten |
 
 ## Gemeinsamer Daemon
 
-`spirit` verbindet sich über WebSocket mit dem Spirit Server-Daemon. Sitzungen, Streaming, Tools und die Genehmigungswarteschlange befinden sich dort. Das Bearer-Token ist `{spiritDataDir}/server.token` (Modus `0600`). Der Daemon bindet standardmäßig an `127.0.0.1` auf einem zufälligen Port.
+`spirit` verbindet sich über WebSocket mit dem {{product.name|mdx}} Server-Daemon. Sitzungen, Streaming, Tools und die Genehmigungswarteschlange befinden sich dort. Das Bearer-Token ist `{spiritDataDir}/server.token` (Modus `0600`). Der Daemon bindet standardmäßig an `127.0.0.1` auf einem zufälligen Port.
 
 `spirit serve` führt den Daemon im Vordergrund aus. Remote `0.0.0.0` ist kein offener Produktpfad. Siehe [Sicherheit](./security.mdx).
 

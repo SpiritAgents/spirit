@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { isAbsolute, relative, resolve } from "node:path";
 
 import { HookConfigError } from "./errors.js";
 import {
@@ -14,24 +14,6 @@ import {
 } from "./types.js";
 
 export { HOOKS_CONFIG_FILE_NAME };
-
-const SPIRIT = ".spirit";
-
-export function hooksUserConfigPath(dataDir: string): string {
-  return join(dataDir, HOOKS_CONFIG_FILE_NAME);
-}
-
-export function hooksWorkspaceConfigPath(workspaceRoot: string): string {
-  return join(workspaceRoot, SPIRIT, HOOKS_CONFIG_FILE_NAME);
-}
-
-export function hooksUserScriptsDir(dataDir: string): string {
-  return join(dataDir, "hooks");
-}
-
-export function hooksWorkspaceScriptsDir(workspaceRoot: string): string {
-  return join(workspaceRoot, SPIRIT, "hooks");
-}
 
 export function emptyHooksConfigFile(): HooksConfigFile {
   return { version: HOOK_CONFIG_VERSION, hooks: {} };

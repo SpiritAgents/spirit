@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
@@ -319,7 +320,7 @@ test("saveGeneratedImage returns a managed markdown reference instead of a raw l
     assert.equal(dirname(saved.path), join(spiritDataDir, "generated-images"));
     assert.equal(
       saved.markdownRef,
-      `spirit://generated/image/${encodeURIComponent(basename(saved.path))}`,
+      `${product.urlProtocol}://generated/image/${encodeURIComponent(basename(saved.path))}`,
     );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -344,7 +345,7 @@ test("saveGeneratedVideo returns a managed markdown reference instead of a raw l
     assert.equal(dirname(saved.path), join(spiritDataDir, "generated-videos"));
     assert.equal(
       saved.markdownRef,
-      `spirit://generated/video/${encodeURIComponent(basename(saved.path))}`,
+      `${product.urlProtocol}://generated/video/${encodeURIComponent(basename(saved.path))}`,
     );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -422,8 +423,8 @@ test("read_file accepts Spirit-managed generated image refs with mixed-case URL 
       model: "test-image-model",
     });
     const mixedCaseRef = saved.markdownRef.replace(
-      "spirit://generated/image/",
-      "SPIRIT://GENERATED/image/",
+      `${product.urlProtocol}://generated/image/`,
+      `${product.urlProtocol.toUpperCase()}://GENERATED/image/`,
     );
 
     const authorization = await service.authorize({
@@ -452,7 +453,7 @@ test("read_file missing Spirit-managed generated image ref reports sanitized err
     join(tmpdir(), "spirit-host-tools-missing-managed-image-read-"),
   );
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
-  const missingRef = "spirit://generated/image/missing-image.png";
+  const missingRef = `${product.urlProtocol}://generated/image/missing-image.png`;
   const leakedLocalPath = join(spiritDataDir, "generated-images", "missing-image.png");
 
   try {

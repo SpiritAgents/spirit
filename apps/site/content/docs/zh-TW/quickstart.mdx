@@ -1,6 +1,6 @@
 ---
 title: 快速入門
-description: 安裝 Spirit，連接一個提供者，並完成一個小而經批准的文字編輯。
+description: 安裝 {{product.name}}，連接一個提供者，並完成一個小而經批准的文字編輯。
 ---
 
 此頁面帶您從全新安裝到完成一個有用的變更。後續頁面涵蓋所有提供者和主機；沒有此路徑，這些頁面將無所依附。
@@ -24,11 +24,11 @@ description: 安裝 Spirit，連接一個提供者，並完成一個小而經批
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 開啟新的終端機並執行 `spirit --version`。詳細資訊：[安裝 CLI](./install/cli.mdx)。
@@ -60,7 +60,7 @@ TUI 會將目前目錄作為工作區。
 
 ## 3. 連接一個提供者
 
-您需要一個來自您已在使用之提供者的 API 金鑰。Spirit 會將該金鑰儲存在作業系統的金鑰環（`Spirit`）中。
+您需要一個來自您已在使用之提供者的 API 金鑰。{{product.name|mdx}} 會將該金鑰儲存在作業系統的金鑰環（`{{product.name}}`）中。
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

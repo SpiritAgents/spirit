@@ -3,11 +3,11 @@ title: 提供商
 description: 自带密钥，走连接向导，换一家不必换 Agent 工作流。
 ---
 
-Spirit 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，Spirit 写入操作系统钥匙串。换一家不会改变打开工作区、审批编辑或跑 Agent 的方式。
+{{product.name|mdx}} 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，{{product.name|mdx}} 写入操作系统钥匙串。换一家不会改变打开工作区、审批编辑或跑 Agent 的方式。
 
 连接向导在 Desktop 是 **设置 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。附加字段只在该家需要时出现。
 
-Spirit 用下面四种传输之一和提供商通信。向导会固定类型，或让你选。
+{{product.name|mdx}} 用下面四种传输之一和提供商通信。向导会固定类型，或让你选。
 
 | 传输                | 向导标签                           | 典型用途                                                           |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
@@ -16,7 +16,7 @@ Spirit 用下面四种传输之一和提供商通信。向导会固定类型，�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax，以及可选的 Messages 兼容端点                   |
 | `bedrock`           | Amazon Bedrock                     | 仅 Amazon Bedrock                                                  |
 
-Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Responses 或 Messages，Spirit 会回落到 `openai-compatible`。
+Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Responses 或 Messages，{{product.name|mdx}} 会回落到 `openai-compatible`。
 
 有的提供商在 Key 之外还有第二维：
 
@@ -26,7 +26,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 没有这些维的提供商，向导就是：Key → 导入模型 → 选当前对话模型。
 
-Spirit 会导入模型目录，并让你指定当前对话模型；目录标了生图 / 生视频 / 轻量对话时再指定对应槽位。推理和提供商内置联网跟模型与传输走，不是 Spirit 上的单独开关。
+{{product.name|mdx}} 会导入模型目录，并让你指定当前对话模型；目录标了生图 / 生视频 / 轻量对话时再指定对应槽位。推理和提供商内置联网跟模型与传输走，不是 {{product.name|mdx}} 上的单独开关。
 
 ## 目录
 
@@ -34,7 +34,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 ### OpenAI
 
-在 [OpenAI 平台](https://platform.openai.com/api-keys) 创建 API Key。Spirit 不出售 OpenAI 额度。
+在 [OpenAI 平台](https://platform.openai.com/api-keys) 创建 API Key。{{product.name|mdx}} 不出售 OpenAI 额度。
 
 向导固定 **Responses API**（`open-responses`），没有传输选择器。默认 Base：`https://api.openai.com/v1`。
 
@@ -279,7 +279,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 - **广州**（默认）— `https://tokenhub.tencentmaas.com/v1`
 - **新加坡** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-导入后即可对话。不要依赖 Chat 注入的联网搜索。TokenHub 文档写了 Chat `web_search_options` 和 Responses `web_search`，但实测 Chat 注入无效，Responses 也只覆盖少数模型。因此 Spirit 只保留 Chat Completions。
+导入后即可对话。不要依赖 Chat 注入的联网搜索。TokenHub 文档写了 Chat `web_search_options` 和 Responses `web_search`，但实测 Chat 注入无效，Responses 也只覆盖少数模型。因此 {{product.name|mdx}} 只保留 Chat Completions。
 
 ### Mistral
 
@@ -305,7 +305,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 - **资源名**（必填）— 2–64 个字符，仅字母、数字和连字符；不能以连字符开头或结尾
 
-Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即可对话。生图在 Azure 目录标了时再指定。
+{{product.name|mdx}} 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即可对话。生图在 Azure 目录标了时再指定。
 
 ### Amazon Bedrock
 
@@ -316,7 +316,7 @@ Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即�
 - **AWS 区域**（必填），例如 `us-east-1`
 - **认证**：**Bearer** 或 **IAM**
   - Bearer — 粘贴 Bedrock API Key 和模型 id。**不会**自动拉模型列表。
-  - IAM — Access Key ID + Secret Access Key。Spirit 从账户列出 foundation models。
+  - IAM — Access Key ID + Secret Access Key。{{product.name|mdx}} 从账户列出 foundation models。
 
 选定模型后即可对话。其他能力跟该模型走。Bearer 只能做推理。`ListFoundationModels` 不接受 Bearer，所以导入目录需要 IAM。
 
@@ -336,12 +336,12 @@ Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即�
 
 ### 自定义
 
-使用该端点要求的 API Key。Spirit 不托管自定义提供商。
+使用该端点要求的 API Key。{{product.name|mdx}} 不托管自定义提供商。
 
 可选手： **Chat Completions**、**Open Responses** 或 **Messages**。必须填写 **Base URL**。留空时占位默认是 `https://api.openai.com/v1`。
 
-填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 Spirit 不会猜路径。
+填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 {{product.name|mdx}} 不会猜路径。
 
 还可以给提供商分组起显示名，方便区分多条自定义端点。
 
-连接后导入或手填模型 id。若端点没有 Spirit 能读的目录，在向导里自行标记对话 / 生图 / 生视频能力。
+连接后导入或手填模型 id。若端点没有 {{product.name|mdx}} 能读的目录，在向导里自行标记对话 / 生图 / 生视频能力。

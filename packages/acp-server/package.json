@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/acp-server",
   "version": "1.0.0-alpha.0",
-  "description": "ACP (Agent Client Protocol) server adapter for Spirit",
+  "description": "ACP (Agent Client Protocol) server adapter",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,7 +33,8 @@
     "@agentclientprotocol/sdk": "0.25.1",
     "@inquirer/prompts": "7.10.1",
     "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*"
+    "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/product": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "25.9.5",

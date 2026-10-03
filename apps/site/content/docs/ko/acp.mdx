@@ -5,7 +5,7 @@ description: ACP 클라이언트용으로 구현되었습니다. 다운로드 �
 
 ACP(Agent Client Protocol)는 `spirit-acp`(`@spiritagent/acp-server`)로 구현됩니다. stdio ndJSON을 사용하며, Desktop 및 CLI와 동일한 데이터 디렉터리와 키링을 공유하고, `--setup`을 실행하여 공급자를 연결할 수 있습니다.
 
-**공개 다운로드 페이지에는 아직 ACP가 나열되지 않습니다.** Spirit는 아직 ACP 레지스트리에 등록을 준비 중입니다.
+**공개 다운로드 페이지에는 아직 ACP가 나열되지 않습니다.** {{product.name|mdx}}는 아직 ACP 레지스트리에 등록을 준비 중입니다.
 
 ## 등록 전 임시 설정
 
@@ -19,7 +19,7 @@ npx @spiritagent/acp-server --setup
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

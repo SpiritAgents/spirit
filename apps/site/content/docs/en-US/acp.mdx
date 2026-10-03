@@ -5,7 +5,7 @@ description: Implemented for ACP clients. The download page does not list a chan
 
 ACP (Agent Client Protocol) is implemented as `spirit-acp` (`@spiritagent/acp-server`). It speaks stdio ndJSON, shares the same data directory and keyring as Desktop and the CLI, and can run `--setup` to connect a provider.
 
-**The public download page does not list ACP yet.** Spirit is still preparing to list it on the ACP registry.
+**The public download page does not list ACP yet.** {{product.name|mdx}} is still preparing to list it on the ACP registry.
 
 ## Temporary setup before listing
 
@@ -19,7 +19,7 @@ Or point an ACP client (for example Zed) at the stdio entry:
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

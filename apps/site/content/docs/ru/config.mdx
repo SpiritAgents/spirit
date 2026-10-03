@@ -1,20 +1,21 @@
 ---
 title: Конфигурация
-description: Каталоги данных, config.json v2, .spirit/ и переменные окружения.
+description: Каталоги данных, config.json v2,
+  {{product.workspaceDataFolderName}}/ и переменные окружения.
 ---
 
-Spirit хранит исполняемые файлы и данные в разных местах. Их смешение — обычная причина того, что «я установил CLI, но настройки пусты».
+Каталог общих пользовательских данных определяется quality сборки, а не каталогом приложений операционной системы.
 
 ## Каталог данных
 
 Переопределяется с помощью `SPIRIT_DATA_DIR`. Сервер также может использовать `SPIRIT_SERVER_DATA_DIR` (имеет приоритет над первым).
 
-| ОС               | По умолчанию                                        |
-| ---------------- | --------------------------------------------------- |
-| macOS            | `~/Library/Application Support/Spirit`              |
-| Windows          | `%APPDATA%\Spirit`                                  |
-| Linux            | `$XDG_DATA_HOME/Spirit` или `~/.local/share/Spirit` |
-| Запасной вариант | `~/.spirit-data`                                    |
+| Сборка | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change: старые каталоги платформы не читаются и не переносятся автоматически. Явное указание каталога данных по-прежнему поддерживается. Кеш Electron, хранилище браузера и состояние окон остаются в частном каталоге приложения платформы.
 
 Типичные файлы:
 
@@ -34,7 +35,7 @@ Spirit хранит исполняемые файлы и данные в раз�
   server/instances/
 ```
 
-Исполняемые файлы CLI находятся в `SPIRIT_HOME` (`~/.spirit` или `%LOCALAPPDATA%\Spirit`). Это не тот каталог. См. [Установка CLI](./install/cli.mdx).
+Бинарные файлы CLI используют SPIRIT_HOME. В Unix установка Stable и общие данные могут иметь один родительский каталог; bin/ и cli/ остаются файлами установки. Эта настройка не определяет каталог общих данных.
 
 ## config.json v2
 
@@ -48,14 +49,14 @@ Spirit хранит исполняемые файлы и данные в раз�
 
 Ключи **не** хранятся в этом файле. Они находятся в [связке ключей](./security.mdx).
 
-## Workspace `.spirit/`
+## Workspace `{{product.workspaceDataFolderName}}/`
 
 | Путь                 | Роль                                               |
 | -------------------- | -------------------------------------------------- |
-| `.spirit/rule.md`    | Правила workspace [правила](./customize/rules.mdx) |
-| `.spirit/skills/`    | Навыки workspace [навыки](./customize/skills.mdx)  |
-| `.spirit/mcp.json`   | MCP workspace [MCP](./customize/mcp.mdx)           |
-| `.spirit/hooks.json` | Хуки workspace [хуки](./customize/hooks.mdx)       |
+| `{{product.workspaceDataFolderName}}/rule.md`    | Правила workspace [правила](./customize/rules.mdx) |
+| `{{product.workspaceDataFolderName}}/skills/`    | Навыки workspace [навыки](./customize/skills.mdx)  |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | MCP workspace [MCP](./customize/mcp.mdx)           |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Хуки workspace [хуки](./customize/hooks.mdx)       |
 
 Также используются: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

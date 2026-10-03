@@ -2,9 +2,15 @@ import { constants as fsConstants } from "node:fs";
 import { access, cp, mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { product } from "@spiritagent/product";
 
 const hostRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const indexPath = path.join(hostRoot, "built-in/.spirit/marketplace.json");
+const builtInRoot = path.join(hostRoot, "dist/resources/built-in");
+const indexPath = path.join(
+  builtInRoot,
+  product.workspaceDataFolderName,
+  "marketplace.json",
+);
 const index = JSON.parse(await readFile(indexPath, "utf8"));
 if (!Array.isArray(index.extensions)) {
   throw new Error(`${indexPath} is missing extensions[]`);
@@ -23,7 +29,7 @@ for (const [offset, entry] of index.extensions.entries()) {
   names.push(entry.name);
 }
 
-const extensionsRoot = path.join(hostRoot, "built-in/extensions");
+const extensionsRoot = path.join(builtInRoot, "extensions");
 await rm(extensionsRoot, { recursive: true, force: true });
 
 for (const name of names) {

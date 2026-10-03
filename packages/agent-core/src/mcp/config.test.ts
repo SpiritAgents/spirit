@@ -1,102 +1,16 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
 import { test } from "vitest";
-
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 
 import {
   findMcpServerNameConflict,
   mcpServerScopesFromFiles,
-  mcpWorkspaceConfigPath,
   mergeMcpConfigFiles,
-  resolveDefaultSpiritDataDir,
-  spiritDataDir,
 } from "./config.js";
 import type { McpConfigFile } from "./types.js";
 
 const stdioServer = {
   transport: { type: "stdio" as const, command: "echo" },
 };
-
-function withEnv(vars: Record<string, string | undefined>, run: () => void): void {
-  const previous = new Map<string, string | undefined>();
-  for (const [key, value] of Object.entries(vars)) {
-    previous.set(key, process.env[key]);
-    if (value === undefined) {
-      delete process.env[key];
-    } else {
-      process.env[key] = value;
-    }
-  }
-  try {
-    run();
-  } finally {
-    for (const [key, value] of previous.entries()) {
-      if (value === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = value;
-      }
-    }
-  }
-}
-
-test("resolveDefaultSpiritDataDir uses APPDATA on Windows-style hosts", () => {
-  withEnv(
-    {
-      APPDATA: "/tmp/spirit-appdata",
-      HOME: "/tmp/should-not-use",
-      USERPROFILE: undefined,
-      SPIRIT_DATA_DIR: undefined,
-    },
-    () => {
-      assert.equal(resolveDefaultSpiritDataDir(), join("/tmp/spirit-appdata", "Spirit"));
-    },
-  );
-});
-
-test("resolveDefaultSpiritDataDir uses Application Support on macOS", () => {
-  if (process.platform !== "darwin") {
-    return;
-  }
-
-  const home = mkdtempSync(join(tmpdir(), "spirit-home-"));
-  try {
-    withEnv(
-      {
-        APPDATA: undefined,
-        HOME: home,
-        USERPROFILE: undefined,
-        SPIRIT_DATA_DIR: undefined,
-      },
-      () => {
-        assert.equal(
-          resolveDefaultSpiritDataDir(),
-          join(home, "Library", "Application Support", "Spirit"),
-        );
-      },
-    );
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
-});
-
-test("spiritDataDir honors SPIRIT_DATA_DIR override", () => {
-  withEnv(
-    {
-      SPIRIT_DATA_DIR: "/tmp/spirit-override",
-      APPDATA: "/tmp/spirit-appdata",
-    },
-    () => {
-      assert.equal(spiritDataDir(), "/tmp/spirit-override");
-    },
-  );
-});
-
-test("mcpWorkspaceConfigPath resolves under .spirit directory", () => {
-  assert.equal(mcpWorkspaceConfigPath("/tmp/project"), join("/tmp/project", ".spirit", "mcp.json"));
-});
 
 test("mergeMcpConfigFiles combines user and workspace servers", () => {
   const user: McpConfigFile = {

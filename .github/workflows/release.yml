@@ -20,11 +20,14 @@ permissions:
 
 env:
   RELEASE_VERSION: ${{ inputs.version }}
+  SPIRIT_PRODUCT_QUALITY: stable
 
 jobs:
   verify:
     name: Verify release version
     runs-on: ubuntu-latest
+    outputs:
+      product_name: ${{ steps.product.outputs.name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,9 +45,28 @@ jobs:
       - name: Verify versions
         run: pnpm run release:verify-version -- --version "$RELEASE_VERSION"
 
+      - name: Install product build dependencies
+        run: pnpm --filter @spiritagent/product install --frozen-lockfile --ignore-scripts
+
+      - name: Build release product
+        id: product
+        run: |
+          pnpm --filter @spiritagent/product run build
+          node --input-type=module -e 'import { product } from "./packages/product/dist/index.js"; console.log(`name=${product.name}`)' >> "$GITHUB_OUTPUT"
+
+      - name: Upload validated product
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-build
+          path: packages/product/dist/
+          if-no-files-found: error
+
   cli:
     name: CLI ${{ matrix.package_target }}
     needs: verify
+    env:
+      PRODUCT_NAME: ${{ needs.verify.outputs.product_name }}
+      SPIRIT_PRODUCT_ARTIFACT_DIR: packages/product/dist
     runs-on: ${{ matrix.os }}
     # Only the macOS legs sign, so only they get the signing secrets; an empty name means no
     # environment at all, which also keeps the Windows and Linux legs out of the deployment log.
@@ -95,10 +117,10 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --cpu=x64 --cpu=arm64
 
       - name: Build TypeScript runtime
-        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal
+        run: pnpm exec turbo run build --filter=@spiritagent/server
 
       - name: Setup Rust target
         run: rustup target add ${{ matrix.rust_target }}
@@ -156,12 +178,12 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
-          archive="dist/release/Spirit-CLI-$RELEASE_VERSION-${{ matrix.package_target }}.tar.gz"
+          archive="dist/release/$PRODUCT_NAME-CLI-$RELEASE_VERSION-${{ matrix.package_target }}.tar.gz"
           workdir="$RUNNER_TEMP/cli-verify"
           rm -rf "$workdir"
           mkdir -p "$workdir"
           tar -xzf "$archive" -C "$workdir"
-          root="$workdir/Spirit-CLI-$RELEASE_VERSION-${{ matrix.package_target }}"
+          root="$workdir/$PRODUCT_NAME-CLI-$RELEASE_VERSION-${{ matrix.package_target }}"
           for relative in bin/spirit node/bin/node; do
             binary="$root/$relative"
             if [ ! -f "$binary" ]; then
@@ -199,7 +221,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cli-${{ matrix.package_target }}
-          path: dist/release/Spirit-CLI-*
+          path: |
+            dist/release/*.tar.gz
+            dist/release/*.zip
           if-no-files-found: error
 
   desktop:
@@ -225,7 +249,7 @@ jobs:
             platform: linux
             arch: x64
             package_target: linux-x64
-          - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
             package_target: linux-arm64
@@ -253,7 +277,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --cpu=x64 --cpu=arm64
 
       - name: Build Desktop
         run: pnpm --filter @spiritagent/desktop run build
@@ -270,14 +294,14 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.APPLE_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CSC_PASSWORD }}
-        run: npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+        run: pnpm exec electron-builder --config electron-builder.config.mjs --${{ matrix.platform }} --${{ matrix.arch }} --publish never
 
       - name: Package Desktop
         if: matrix.platform != 'mac'
         working-directory: apps/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npx electron-builder --config electron-builder.yml --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+        run: pnpm exec electron-builder --config electron-builder.config.mjs --${{ matrix.platform }} --${{ matrix.arch }} --publish never
 
       # electron-builder only warns when it silently skips signing, so this is the gate that turns
       # an unsigned macOS build into a failed job. Notarization is asserted by the notarize job.
@@ -513,6 +537,12 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: Download validated product
+        uses: actions/download-artifact@v4
+        with:
+          name: product-build
+          path: packages/product/dist
+
       - name: Prepare approval report
         env:
           GH_TOKEN: ${{ github.token }}
@@ -583,7 +613,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages for npm stage
-        run: pnpm turbo run build --filter=@spiritagent/agent-core --filter=@spiritagent/host-internal --filter=@spiritagent/extension-toolkit --filter=@spiritagent/create-extension --filter=@spiritagent/acp-server
+        run: pnpm exec turbo run build $(node scripts/release/npm-packages.mjs --filters)
 
       - name: Stage npm packages
         run: |
@@ -600,7 +630,7 @@ jobs:
           mkdir -p npm-publish-logs
           : > staged-packages.md
           : > approve-commands.txt
-          # Dependency order: agent-core → host-internal → extension-toolkit → create-extension; acp-server stays last
+          # The release inventory keeps product and runtime dependencies before their consumers.
           stage_one() {
             local dir="$1"
             local name version parsed tag tarball tarball_path log
@@ -647,11 +677,9 @@ jobs:
             tail -n 80 "$log" >> "$GITHUB_STEP_SUMMARY" || true
             return 1
           }
-          stage_one packages/agent-core
-          stage_one packages/host-internal
-          stage_one packages/extension-toolkit
-          stage_one packages/create-extension
-          stage_one packages/acp-server
+          while IFS= read -r dir; do
+            stage_one "$dir"
+          done < <(node scripts/release/npm-packages.mjs)
           # npm sends no notification when a package is staged; the publish job's Waiting
           # deployment mails the reviewers instead, and this summary is what they see when
           # they follow it. Approve on npmjs.com (2FA) before approving the publish job.
@@ -723,11 +751,9 @@ jobs:
               missing=1
             fi
           }
-          check_live packages/agent-core
-          check_live packages/host-internal
-          check_live packages/extension-toolkit
-          check_live packages/create-extension
-          check_live packages/acp-server
+          while IFS= read -r dir; do
+            check_live "$dir"
+          done < <(node scripts/release/npm-packages.mjs)
           [ "$missing" -eq 0 ]
 
       - name: Download release bundle
@@ -746,6 +772,12 @@ jobs:
       # Self-hosted first: R2 failures must not leave the GitHub Release already public.
       # Keep R2 credentials on this step only; this job runs no dependency install, so
       # postinstall scripts never see them.
+      - name: Download validated product
+        uses: actions/download-artifact@v4
+        with:
+          name: product-build
+          path: packages/product/dist
+
       - name: Publish self-hosted downloads
         env:
           SPIRIT_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.SPIRIT_CLOUDFLARE_ACCOUNT_ID }}

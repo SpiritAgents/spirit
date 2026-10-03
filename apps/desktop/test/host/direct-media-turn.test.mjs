@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -114,7 +115,7 @@ function createDirectMediaHarness() {
           ],
           summaryText: [
             "[generated image]",
-            "image_ref: spirit://generated/image/direct-test.png",
+            `image_ref: ${product.urlProtocol}://generated/image/direct-test.png`,
           ].join("\n"),
         };
       },
@@ -132,7 +133,7 @@ function createDirectMediaHarness() {
         return {
           path: "generated/direct-test.png",
           mimeType: request.mediaType,
-          markdownRef: "spirit://generated/image/direct-test.png",
+          markdownRef: `${product.urlProtocol}://generated/image/direct-test.png`,
         };
       },
     }),
@@ -170,7 +171,11 @@ test("executeDirectMediaTurn emits succeeded generate_image tool card and archiv
   assert.equal(toolMessage.tool.phase, "succeeded");
   assert.deepEqual(toolMessage.tool.imagePaths, ["generated/direct-test.png"]);
   assert.equal(harness.bundle.archiveHistory.length, 3);
-  assert.match(harness.bundle.archiveHistory[2].content[0].text, /spirit:\/\/generated\/image/);
+  assert.ok(
+    harness.bundle.archiveHistory[2].content[0].text.includes(
+      `${product.urlProtocol}://generated/image/`,
+    ),
+  );
   assert.equal(harness.bundle.runtime.history().length, 3);
   assert.equal(harness.bundle.runtime.history()[1].role, "assistant");
   assert.equal(harness.bundle.runtime.history()[1].toolCalls?.[0]?.name, "generate_image");
@@ -206,7 +211,7 @@ test("startComposerDirectMediaTurn shows tool card before generation completes",
       ],
       summaryText: [
         "[generated image]",
-        "image_ref: spirit://generated/image/direct-test.png",
+        `image_ref: ${product.urlProtocol}://generated/image/direct-test.png`,
       ].join("\n"),
     };
   };

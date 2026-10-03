@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "画像を生成中…"
       },
-      "manualAssistantResponse": "Spiritをダウンロードしてください。",
+      "manualAssistantResponse": "{{product.name}}をダウンロードしてください。",
       "demoUserPrompt": "現在のランディングページをレビューして、次に改善すべき点を教えてください。",
       "demoThinkingText": "現在のヒーロー構造を確認中。\n会話サーフェスで最も目立つギャップを探しています。\n短い実装サマリーを準備中。",
       "demoAssistantResponse": "次に取るべきステップは次のとおりです。\n\n- 空の会話エリアを実際のストリーミングデモに置き換えます。\n- ヒーローウィンドウは中断可能なままにして、訪問者がすぐに操作できるようにします。\n- Thinkingやツール呼び出しにDesktopのメッセージスタイルを再利用し、近似的なものにしないようにします。",
@@ -193,7 +193,7 @@
       "exited": "[終了しました。コード {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Spirit デスクトップ製品のマーケティングサイトプレビュー。",
+      "siteReadmeDescription": "{{product.name}} デスクトップ製品のマーケティングサイトプレビュー。",
       "desktopReadmeDescription": "デスクトップ製品用の Electron シェルと Web レンダラー。",
       "generatedWorkspaceDescription": "ランディングページ {{label}} プレビュー用に生成されたモックワークスペース。",
       "generatedWorkspaceOverview": "ワークスペースルート: {{root}}\\n\\nこのモックワークスペースは、完全なデスクトップランタイムをマウントせずにファイルタブをインタラクティブに保ちます。",
@@ -205,17 +205,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit は、あなたのモデル、キー、ワークフローで動作するオープンソースの AI エージェントです。"
+    "title": "{{product.name}}",
+    "description": "{{product.name}} は、あなたのモデル、キー、ワークフローで動作するオープンソースの AI エージェントです。"
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "ダウンロード",
     "downloadForPlatform": "{{platform}} 用にダウンロード"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit ホーム",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} ホーム",
     "primaryNavAria": "メイン",
     "nav": {
       "features": "機能",
@@ -236,8 +236,8 @@
     "headline": "生産性を何倍にも高める\nオープンソースの AI エージェント。"
   },
   "download": {
-    "metaTitle": "Spirit のダウンロード",
-    "metaDescription": "デスクトップ版の Spirit をダウンロードし、CLI をインストールするか、ACP を確認してください。",
+    "metaTitle": "{{product.name}} のダウンロード",
+    "metaDescription": "デスクトップ版の {{product.name}} をダウンロードし、CLI をインストールするか、ACP を確認してください。",
     "title": "すべての作業で同じエージェント。",
     "sectionAria": "すべての作業で同じエージェント。",
     "desktop": "デスクトップ",
@@ -247,7 +247,7 @@
     "copied": "コピーしました",
     "comingSoonJoke": "近日公開™",
     "listingInProgress": "一覧表示中…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "auth.ts を確認して、セッション更新のバグを修正してください。",
     "cliAssistantMessage": "auth.ts を調べて、失敗するセッションチェックを修正します。",
     "cliUserFollowUp": "回帰テストも追加してください。",
@@ -255,20 +255,20 @@
     "cliFooter": "エージェント | デフォルト承認 | ループオフ          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit コンテンツ",
+    "sectionAria": "{{product.name}} コンテンツ",
     "featureHeading": ["あなたのモデル。", "あなたのキー。", "あなたのコントロール。"],
-    "featureBody": "Spirit はホスト型スタックに縛り付けません。任意のプロバイダのキーを一度追加すれば、すべてのプロバイダで同じエージェントワークフローを使用できます。",
+    "featureBody": "{{product.name}} はホスト型スタックに縛り付けません。任意のプロバイダのキーを一度追加すれば、すべてのプロバイダで同じエージェントワークフローを使用できます。",
     "agent": {
-      "sectionAria": "Spirit の生産性",
+      "sectionAria": "{{product.name}} の生産性",
       "featureHeading": [
         "コンテキストを踏まえて計画。",
         "ツールで実行。",
         "ワークスペースで出荷。"
       ],
-      "featureBody": "Spirit は行動する前に計画します。モックアップを生成し、構造化された計画を書き、デスクトップシェルから離れずにリポジトリに対して実行します。"
+      "featureBody": "{{product.name}} は行動する前に計画します。モックアップを生成し、構造化された計画を書き、デスクトップシェルから離れずにリポジトリに対して実行します。"
     },
-    "ctaSectionAria": "Spirit をダウンロード",
-    "ctaTitle": "Spirit を試す。",
+    "ctaSectionAria": "{{product.name}} をダウンロード",
+    "ctaTitle": "{{product.name}} を試す。",
     "trio": {
       "sectionAria": "機能プレビュー",
       "completion": {
@@ -306,12 +306,12 @@
     "linkHome": "ホーム",
     "changelog": "チェンジログ",
     "openSourceLicenses": "オープンソースライセンス",
-    "copyrightLine": "© {{year}} Spirit. オープンソース AI エージェント。"
+    "copyrightLine": "© {{year}} {{product.name}}. オープンソース AI エージェント。"
   },
   "docs": {
     "title": "ドキュメント",
-    "metaTitle": "Spirit ドキュメント",
-    "metaDescription": "Spiritをインストールし、独自のキーでプロバイダーを接続して、DesktopとCLIで同じエージェントを実行します。",
+    "metaTitle": "{{product.name}} ドキュメント",
+    "metaDescription": "{{product.name}}をインストールし、独自のキーでプロバイダーを接続して、DesktopとCLIで同じエージェントを実行します。",
     "comingSoon": "近日公開",
     "sectionAria": "ドキュメント",
     "search": "検索",

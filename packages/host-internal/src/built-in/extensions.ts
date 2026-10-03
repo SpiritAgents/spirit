@@ -32,13 +32,14 @@ import { loadBuiltInState } from "./state.js";
 
 /**
  * The built-in registry root shipped inside the host-internal package:
- * `built-in/.spirit/marketplace.json` + `built-in/extensions/<name>/`.
+ * `dist/resources/built-in/<workspaceDataFolderName>/marketplace.json`
+ * + `dist/resources/built-in/extensions/<name>/`.
  * Same format as any remote registry; only the artifact backend differs
  * (local copy of prebuilt content).
  */
 export function resolveBuiltInRegistryRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.join(here, "../../built-in");
+  return path.join(here, "../../dist/resources/built-in");
 }
 
 export function builtInMarketplaceSourceRecord(

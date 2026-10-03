@@ -3,11 +3,11 @@ title: 供應商
 description: 自備金鑰、執行連線精靈，切換供應商時也保持相同的智慧體工作流程。
 ---
 
-Spirit 是 BYOK。你在供應商控制台建立金鑰，將其貼到 Desktop 或 CLI，Spirit 會將它存放在作業系統的金鑰環中。切換供應商不會改變你開啟工作區、批准編輯或執行智慧體的方式。
+{{product.name|mdx}} 是 BYOK。你在供應商控制台建立金鑰，將其貼到 Desktop 或 CLI，{{product.name|mdx}} 會將它存放在作業系統的金鑰環中。切換供應商不會改變你開啟工作區、批准編輯或執行智慧體的方式。
 
 連線精靈在 Desktop 是 **設定 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。只有當供應商需要時才會出現額外欄位。
 
-Spirit 透過四種傳輸方式之一與供應商通訊。精靈不是固定類型，就是讓你選擇。
+{{product.name|mdx}} 透過四種傳輸方式之一與供應商通訊。精靈不是固定類型，就是讓你選擇。
 
 | 傳輸                | 精靈標籤                           | 典型用途                                                          |
 | ------------------- | ---------------------------------- | ----------------------------------------------------------------- |
@@ -16,7 +16,7 @@ Spirit 透過四種傳輸方式之一與供應商通訊。精靈不是固定類�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax 以及可選的 Messages 相容端點                   |
 | `bedrock`           | Amazon Bedrock                     | 僅限 Amazon Bedrock                                               |
 
-Google Gemini 和 Vertex AI 始終使用 Chat Completions。如果設定檔要求 Responses 或 Messages，Spirit 會回退到 `openai-compatible`。
+Google Gemini 和 Vertex AI 始終使用 Chat Completions。如果設定檔要求 Responses 或 Messages，{{product.name|mdx}} 會回退到 `openai-compatible`。
 
 有些供應商在金鑰之上新增了第二個維度：
 
@@ -26,7 +26,7 @@ Google Gemini 和 Vertex AI 始終使用 Chat Completions。如果設定檔要�
 
 如果供應商沒有這些選項，精靈就只是金鑰 → 匯入模型 → 選擇使用中的聊天模型。
 
-Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指定使用中的聊天模型，以及影像 / 影片 / 輕量聊天位置。推理和內建網路搜尋跟隨模型和傳輸方式，而非單獨的 Spirit 開關。
+{{product.name|mdx}} 會匯入模型目錄，並讓你在目錄標記出對應功能時，指定使用中的聊天模型，以及影像 / 影片 / 輕量聊天位置。推理和內建網路搜尋跟隨模型和傳輸方式，而非單獨的 {{product.name|mdx}} 開關。
 
 ## 目錄
 
@@ -34,7 +34,7 @@ Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指�
 
 ### OpenAI
 
-在 [OpenAI 平台](https://platform.openai.com/api-keys) 建立 API 金鑰。Spirit 不轉售 OpenAI 用量。
+在 [OpenAI 平台](https://platform.openai.com/api-keys) 建立 API 金鑰。{{product.name|mdx}} 不轉售 OpenAI 用量。
 
 精靈固定使用 **Responses API** (`open-responses`)。沒有傳輸選擇器。預設基礎：`https://api.openai.com/v1`。
 
@@ -46,7 +46,7 @@ Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指�
 
 固定使用 **Messages API** (`anthropic`)。預設基礎：`https://api.anthropic.com/v1`。
 
-匯入後進行聊天。推理跟隨模型。除非之後的目錄條目標記出對應功能，否則沒有 Spirit 端的影像或影片生成位置。
+匯入後進行聊天。推理跟隨模型。除非之後的目錄條目標記出對應功能，否則沒有 {{product.name|mdx}} 端的影像或影片生成位置。
 
 ### Google
 
@@ -279,7 +279,7 @@ Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指�
 - **廣州**（預設）— `https://tokenhub.tencentmaas.com/v1`
 - **新加坡** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-匯入後即可聊天。請勿依賴 Chat 注入的網路搜尋。TokenHub 文件提到 Chat 的 `web_search_options` 和 Responses 的 `web_search`，但實際使用時 Chat 注入無法運作，且 Responses 僅限少數模型。因此 Spirit 僅保留 Chat Completions。
+匯入後即可聊天。請勿依賴 Chat 注入的網路搜尋。TokenHub 文件提到 Chat 的 `web_search_options` 和 Responses 的 `web_search`，但實際使用時 Chat 注入無法運作，且 Responses 僅限少數模型。因此 {{product.name|mdx}} 僅保留 Chat Completions。
 
 ### Mistral
 
@@ -305,7 +305,7 @@ Spirit 會匯入模型目錄，並讓你在目錄標記出對應功能時，指�
 
 - **資源名稱**（必填）— 2–64 個字元，可包含字母、數字和連字號；不能以連字號開頭或結尾
 
-Spirit 會建構 `https://{resource}.openai.azure.com/openai/v1`。匯入後即可聊天。若已標記，影像生成將遵循 Azure 目錄。
+{{product.name|mdx}} 會建構 `https://{resource}.openai.azure.com/openai/v1`。匯入後即可聊天。若已標記，影像生成將遵循 Azure 目錄。
 
 ### Amazon Bedrock
 
@@ -316,7 +316,7 @@ Spirit 會建構 `https://{resource}.openai.azure.com/openai/v1`。匯入後即�
 - **AWS 區域**（必填），例如 `us-east-1`
 - **驗證方式**：**Bearer** 或 **IAM**
   - Bearer — 貼上 Bedrock API 金鑰和模型 ID。模型**不會**自動擷取。
-  - IAM — Access Key ID + Secret Access Key。Spirit 會從帳戶列出基礎模型。
+  - IAM — Access Key ID + Secret Access Key。{{product.name|mdx}} 會從帳戶列出基礎模型。
 
 選擇模型後即可聊天。其他功能取決於該模型。Bearer 金鑰僅適用於推論。`ListFoundationModels` 不接受 Bearer，因此目錄匯入需要 IAM。
 
@@ -336,12 +336,12 @@ Spirit 會建構 `https://{resource}.openai.azure.com/openai/v1`。匯入後即�
 
 ### 自訂
 
-使用您的端點預期的 API 金鑰。Spirit 沒有代管的自訂提供者。
+使用您的端點預期的 API 金鑰。{{product.name|mdx}} 沒有代管的自訂提供者。
 
 選擇器：**Chat Completions**、**Open Responses** 或 **Messages**。您必須提供 **Base URL**。如果留空，預設值為 `https://api.openai.com/v1`。
 
-輸入供應商文件記載的根路徑，包括他們要求的版本後綴（`/v1`、`/v1/openai` 等）。Spirit 不會為自訂端點猜測路徑。
+輸入供應商文件記載的根路徑，包括他們要求的版本後綴（`/v1`、`/v1/openai` 等）。{{product.name|mdx}} 不會為自訂端點猜測路徑。
 
 您也可以為提供者群組設定顯示名稱，以便區分多個自訂端點。
 
-連線後，匯入或輸入模型 ID。當端點沒有發布 Spirit 能理解的目錄時，請在精靈中標記聊天／影像／影片功能。
+連線後，匯入或輸入模型 ID。當端點沒有發布 {{product.name|mdx}} 能理解的目錄時，請在精靈中標記聊天／影像／影片功能。

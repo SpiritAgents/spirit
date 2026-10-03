@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
+import { buildStartImplementingPrompt } from "./plan-user-turn.js";
 
 import {
   buildAgentModeSystemMessage,
   buildToolAgentMessages,
   hasAgentModeSystemMessage,
 } from "./tool-agent.js";
+
+test("implementation approval uses the product identity and the explicitly recorded plan", () => {
+  const message = buildStartImplementingPrompt(" /plans/implementation.md ");
+  assert.ok(message.includes(`${product.name}-managed plan file /plans/implementation.md`));
+  assert.ok(message.includes("do not assume its contents"));
+  assert.ok(!message.includes("file  /plans"));
+});
+
+test("implementation approval without a recorded path requires a plan", () => {
+  for (const activePlanPath of [undefined, "", "   "]) {
+    assert.ok(buildStartImplementingPrompt(activePlanPath).includes("create one with create_plan"));
+  }
+});
 
 test("buildAgentModeSystemMessage: Agent mode guidance", () => {
   const message = buildAgentModeSystemMessage({ path: "", exists: false, agentMode: "agent" });
@@ -58,7 +73,7 @@ test("buildAgentModeSystemMessage: Debug mode guidance", () => {
   assert.ok(message.includes("Insert structured log points in the relevant source code"));
   assert.ok(message.includes("#region agent log"));
   assert.ok(message.includes("Remove entire regions after the bug is verified fixed"));
-  assert.ok(message.includes(".spirit/logs/"));
+  assert.ok(message.includes(`${product.workspaceDataFolderName}/logs/`));
   assert.ok(message.includes("kebab-case"));
   assert.ok(message.includes('"hypotheses"'));
   assert.ok(message.includes('"message"'));

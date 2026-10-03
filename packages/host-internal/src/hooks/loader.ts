@@ -4,8 +4,6 @@ import path from "node:path";
 import {
   emptyHooksConfigFile,
   HOOK_EVENT_NAMES,
-  hooksUserConfigPath,
-  hooksWorkspaceConfigPath,
   parseHooksConfigFile,
   resolveHookCommandPath,
   resolveMergedHookDefinitions,
@@ -14,6 +12,7 @@ import {
   type HooksConfigFile,
   hookMatcherTarget,
 } from "@spiritagent/agent-core";
+import { hooksUserConfigPath, hooksWorkspaceConfigPath } from "../data-paths.js";
 
 export interface LoadHooksConfigOptions {
   spiritDataDir: string;

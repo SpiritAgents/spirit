@@ -174,7 +174,7 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | 環境變數               | 必填 | 說明                                                            |
 | ---------------------- | ---- | --------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | 否   | 工作區根路徑（預設：用戶端 `cwd`）                              |
-| `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 資料目錄（預設：`%APPDATA%/Spirit` 或 `~/.spirit-data`） |
+| `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 資料目錄（預設：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
 
 ## 開發
 

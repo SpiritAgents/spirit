@@ -1,6 +1,7 @@
 import type { HostDocumentChrome } from "./extension-view-tokens.js";
+import { product } from "@spiritagent/product";
 
-export const SPIRIT_EXTENSION_UI_ORIGIN = "spirit://extension-ui";
+export const SPIRIT_EXTENSION_UI_ORIGIN = `${product.urlProtocol}://extension-ui`;
 export const SPIRIT_EXTENSION_UI_RUNTIME_URL = `${SPIRIT_EXTENSION_UI_ORIGIN}/runtime.js`;
 
 export const SPIRIT_EXTENSION_VIEW_CLOSE_MESSAGE = "spirit-extension-view-close";

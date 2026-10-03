@@ -1,13 +1,14 @@
 ---
 title: Proveedores
-description: Trae tu propia clave, ejecuta el asistente de conexión y mantén el mismo flujo de trabajo del agente cuando cambies de casa.
+description: Trae tu propia clave, ejecuta el asistente de conexión y mantén el
+  mismo flujo de trabajo del agente cuando cambies de casa.
 ---
 
-Spirit es BYOK. Creas una clave en la consola del proveedor, la pegas en Desktop o en la CLI, y Spirit la guarda en el llavero del sistema operativo. Cambiar de casa no cambia cómo abres un workspace, apruebas ediciones o ejecutas el agente.
+{{product.name|mdx}} es BYOK. Creas una clave en la consola del proveedor, la pegas en Desktop o en la CLI, y {{product.name|mdx}} la guarda en el llavero del sistema operativo. Cambiar de casa no cambia cómo abres un workspace, apruebas ediciones o ejecutas el agente.
 
 El asistente de conexión es **Configuración → Modelos** en Desktop, o `/model add` / `spirit model add` en la CLI. Los campos adicionales aparecen solo cuando ese proveedor los necesita.
 
-Spirit se comunica con los proveedores a través de uno de cuatro transportes. El asistente fija el tipo o te permite elegirlo.
+{{product.name|mdx}} se comunica con los proveedores a través de uno de cuatro transportes. El asistente fija el tipo o te permite elegirlo.
 
 | Transporte          | Etiqueta del asistente                   | Uso típico                                                                   |
 | ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
@@ -16,7 +17,7 @@ Spirit se comunica con los proveedores a través de uno de cuatro transportes. E
 | `anthropic`         | API de Messages                          | Anthropic, MiniMax y endpoints compatibles con Messages opcionales           |
 | `bedrock`           | Amazon Bedrock                           | Solo Amazon Bedrock                                                          |
 
-Google Gemini y Vertex AI siempre usan Chat Completions. Si un perfil solicita Responses o Messages, Spirit recurre a `openai-compatible`.
+Google Gemini y Vertex AI siempre usan Chat Completions. Si un perfil solicita Responses o Messages, {{product.name|mdx}} recurre a `openai-compatible`.
 
 Algunas casas añaden una segunda dimensión además de la clave:
 
@@ -26,7 +27,7 @@ Algunas casas añaden una segunda dimensión además de la clave:
 
 Si un proveedor no tiene nada de esto, el asistente es solo clave → importar modelos → elegir un modelo de chat activo.
 
-Spirit importa el catálogo de modelos y te permite asignar el modelo de chat activo, además de los espacios de imagen / video / chat ligero cuando el catálogo marca esas capacidades. El razonamiento y la búsqueda web integrada siguen al modelo y al transporte, no a un interruptor separado de Spirit.
+{{product.name|mdx}} importa el catálogo de modelos y te permite asignar el modelo de chat activo, además de los espacios de imagen / video / chat ligero cuando el catálogo marca esas capacidades. El razonamiento y la búsqueda web integrada siguen al modelo y al transporte, no a un interruptor separado de {{product.name|mdx}}.
 
 ## Catálogo
 
@@ -34,7 +35,7 @@ Estas son las casas en el selector de conexión, en el mismo orden. Cada secció
 
 ### OpenAI
 
-Crea una clave de API en la [plataforma de OpenAI](https://platform.openai.com/api-keys). Spirit no vende el uso de OpenAI.
+Crea una clave de API en la [plataforma de OpenAI](https://platform.openai.com/api-keys). {{product.name|mdx}} no vende el uso de OpenAI.
 
 El asistente fija **API de Responses** (`open-responses`). No hay selector de transporte. Base predeterminada: `https://api.openai.com/v1`.
 
@@ -46,7 +47,7 @@ Crea una clave de API en la [consola de Anthropic](https://console.anthropic.com
 
 **API de Messages** fija (`anthropic`). Base predeterminada: `https://api.anthropic.com/v1`.
 
-Chat después de importar. El razonamiento sigue al modelo. No hay espacio de generación de imagen o video en el lado de Spirit a menos que una entrada posterior del catálogo lo marque.
+Chat después de importar. El razonamiento sigue al modelo. No hay espacio de generación de imagen o video en el lado de {{product.name|mdx}} a menos que una entrada posterior del catálogo lo marque.
 
 ### Google
 
@@ -279,7 +280,7 @@ Crea una clave de API en la [consola de Tencent TokenHub](https://console.cloud.
 - **Guangzhou** (predeterminado) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapur** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Chatea después de la importación. No confíes en la búsqueda web inyectada en Chat. TokenHub documenta `web_search_options` para Chat y `web_search` para Responses, pero la inyección en Chat no funciona en la práctica, y Responses solo está en algunos modelos. Por lo tanto, Spirit mantiene solo Chat Completions.
+Chatea después de la importación. No confíes en la búsqueda web inyectada en Chat. TokenHub documenta `web_search_options` para Chat y `web_search` para Responses, pero la inyección en Chat no funciona en la práctica, y Responses solo está en algunos modelos. Por lo tanto, {{product.name|mdx}} mantiene solo Chat Completions.
 
 ### Mistral
 
@@ -305,7 +306,7 @@ Cree una clave para su recurso de Azure OpenAI en el [portal de Azure](https://p
 
 - **Nombre del recurso** (obligatorio) — de 2 a 64 caracteres, letras, números y guiones; no puede comenzar ni terminar con un guion
 
-Spirit construye `https://{resource}.openai.azure.com/openai/v1`. Chat después de importar. La generación de imágenes sigue el catálogo de Azure cuando está marcada.
+{{product.name|mdx}} construye `https://{resource}.openai.azure.com/openai/v1`. Chat después de importar. La generación de imágenes sigue el catálogo de Azure cuando está marcada.
 
 ### Amazon Bedrock
 
@@ -316,7 +317,7 @@ En la [consola de AWS Bedrock](https://console.aws.amazon.com/bedrock), cree una
 - **Región de AWS** (obligatorio), por ejemplo `us-east-1`
 - **Autenticación**: **Bearer** o **IAM**
   - Bearer: pegue una clave de API de Bedrock y un ID de modelo. Los modelos **no** se obtienen automáticamente.
-  - IAM: ID de clave de acceso + clave de acceso secreta. Spirit lista los modelos fundacionales de la cuenta.
+  - IAM: ID de clave de acceso + clave de acceso secreta. {{product.name|mdx}} lista los modelos fundacionales de la cuenta.
 
 Chat después de elegir un modelo. Otras capacidades siguen a ese modelo. Las claves Bearer funcionan solo para inferencia. `ListFoundationModels` no acepta Bearer, por lo que la importación del catálogo necesita IAM.
 
@@ -336,12 +337,12 @@ Chat después de seleccionar un modelo. Para claves de AI Studio sin un proyecto
 
 ### Personalizado
 
-Use la clave de API que su endpoint espera. No hay un proveedor personalizado alojado por Spirit.
+Use la clave de API que su endpoint espera. No hay un proveedor personalizado alojado por {{product.name|mdx}}.
 
 Selector: **Chat Completions**, **Open Responses** o **Messages**. Debe proporcionar la **URL base**. El valor predeterminado del marcador de posición es `https://api.openai.com/v1` si lo deja vacío.
 
-Ingrese la raíz que documenta el proveedor, incluido el sufijo de versión cuando lo requieran (`/v1`, `/v1/openai`, …). Spirit no adivina una ruta para endpoints personalizados.
+Ingrese la raíz que documenta el proveedor, incluido el sufijo de versión cuando lo requieran (`/v1`, `/v1/openai`, …). {{product.name|mdx}} no adivina una ruta para endpoints personalizados.
 
 También puede establecer un nombre para mostrar para el grupo de proveedores para que varios endpoints personalizados sigan siendo distinguibles.
 
-Después de conectarse, importe o escriba los IDs de modelo. Marque las capacidades de chat / imagen / video en el asistente cuando el endpoint no publique un catálogo que Spirit entienda.
+Después de conectarse, importe o escriba los IDs de modelo. Marque las capacidades de chat / imagen / video en el asistente cuando el endpoint no publique un catálogo que {{product.name|mdx}} entienda.

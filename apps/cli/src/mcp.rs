@@ -11,8 +11,7 @@ use std::{
 use crate::logging;
 
 const MCP_CONFIG_FILE_NAME: &str = "mcp.json";
-const APP_DATA_DIR_NAME: &str = "Spirit";
-const SPIRIT_DIR_NAME: &str = ".spirit";
+const SPIRIT_DIR_NAME: &str = crate::product::WORKSPACE_DATA_FOLDER_NAME;
 const ENV_SPIRIT_DATA_DIR: &str = "SPIRIT_DATA_DIR";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -140,13 +139,6 @@ pub struct LoadedMcpConfig {
     pub config: McpConfigFile,
 }
 
-fn unix_home_dir() -> Option<PathBuf> {
-    env::var("HOME")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .map(PathBuf::from)
-}
-
 pub fn spirit_data_dir() -> PathBuf {
     if let Ok(dir) = env::var(ENV_SPIRIT_DATA_DIR) {
         let trimmed = dir.trim();
@@ -155,47 +147,16 @@ pub fn spirit_data_dir() -> PathBuf {
         }
     }
 
-    if let Ok(appdata) = env::var("APPDATA") {
-        let trimmed = appdata.trim();
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join(APP_DATA_DIR_NAME);
-        }
-    }
-
-    if let Some(home) = unix_home_dir() {
-        #[cfg(target_os = "macos")]
-        {
-            return home
-                .join("Library")
-                .join("Application Support")
-                .join(APP_DATA_DIR_NAME);
-        }
-        #[cfg(target_os = "linux")]
-        {
-            if let Ok(xdg_data_home) = env::var("XDG_DATA_HOME") {
-                let trimmed = xdg_data_home.trim();
-                if !trimmed.is_empty() {
-                    return PathBuf::from(trimmed).join(APP_DATA_DIR_NAME);
-                }
-            }
-            return home.join(".local").join("share").join(APP_DATA_DIR_NAME);
-        }
-        #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-        {
-            return home.join(".spirit-data");
-        }
-    }
-
-    if let Ok(home) = env::var("USERPROFILE") {
-        let trimmed = home.trim();
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed).join(".spirit-data");
-        }
-    }
-
-    unix_home_dir()
-        .map(|home| home.join(".spirit-data"))
-        .unwrap_or_else(|| PathBuf::from(".spirit-data"))
+    let home_variable = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    let home = env::var(home_variable)
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(env::home_dir)
+        .filter(|value| !value.as_os_str().to_string_lossy().trim().is_empty())
+        .expect("Cannot resolve the user home directory for product storage");
+    home.join(crate::product::USER_DATA_FOLDER_NAME)
 }
 
 pub fn user_mcp_config_path() -> PathBuf {
@@ -461,31 +422,24 @@ fn github_preset_config() -> McpServerConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::shared_env_lock;
+    use crate::test_support::{ScopedEnv, shared_env_lock};
 
     #[test]
-    fn spirit_data_dir_uses_application_support_on_macos() {
-        if !cfg!(target_os = "macos") {
-            return;
-        }
-
+    fn spirit_data_dir_uses_product_directory_under_home() {
         let _guard = shared_env_lock()
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let home = unique_test_workspace("macos-data-dir");
         std::fs::create_dir_all(&home).expect("create temp home");
-        unsafe {
-            env::set_var("HOME", &home);
-            env::remove_var("APPDATA");
-            env::remove_var("USERPROFILE");
-            env::remove_var(ENV_SPIRIT_DATA_DIR);
-        }
+        let _home = ScopedEnv::set("HOME", &home);
+        let _profile = ScopedEnv::set("USERPROFILE", &home);
+        let _appdata = ScopedEnv::set("APPDATA", home.join("legacy-appdata"));
+        let _xdg = ScopedEnv::set("XDG_DATA_HOME", home.join("legacy-xdg"));
+        let _data_dir = ScopedEnv::remove(ENV_SPIRIT_DATA_DIR);
 
         assert_eq!(
             spirit_data_dir(),
-            home.join("Library")
-                .join("Application Support")
-                .join(APP_DATA_DIR_NAME)
+            home.join(crate::product::USER_DATA_FOLDER_NAME)
         );
 
         let _ = fs::remove_dir_all(&home);
@@ -497,9 +451,7 @@ mod tests {
             .lock()
             .unwrap_or_else(|err| err.into_inner());
         let override_dir = unique_test_workspace("data-dir-override");
-        unsafe {
-            env::set_var(ENV_SPIRIT_DATA_DIR, &override_dir);
-        }
+        let _data_dir = ScopedEnv::set(ENV_SPIRIT_DATA_DIR, &override_dir);
 
         assert_eq!(spirit_data_dir(), override_dir);
 

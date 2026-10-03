@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import {
   cloneLlmProviderState,
   cloneLlmMessageContent,
@@ -284,7 +285,7 @@ export function buildSpiritCoreHostPrompt(model: string, providerId?: string): s
   const modelLabel = hostModelIdentityLabel(model);
   const providerLabel = hostModelIdentityLabel(providerId);
   return [
-    "You are Spirit.",
+    `You are ${product.name}.`,
     `The user's model is ${modelLabel} from ${providerLabel}.`,
     "Keep a neutral, matter-of-fact tone unless the user's enabled rules explicitly ask for a different style.",
     "",
@@ -305,9 +306,9 @@ export function buildToolAgentHostPrompt(model: string, providerId?: string): st
     "Treat this as a safety and privacy requirement, not a suggestion.",
     "High-risk tools (anything that could expose private data, credentials, secrets, personal information, or broadly traverse or modify the user's machine or repository) must not be used unless the user has given explicit, specific consent in the same turn or conversation for that exact class of action. If risk is unclear, do not call the tool; ask a short clarifying question instead.",
     "",
-    "Spirit product questions: the official site is https://spirit.dev.",
-    "When the user asks about Spirit itself (features, install, configuration, troubleshooting), fetch https://spirit.dev/llms.txt or the matching page under https://spirit.dev/docs with web_fetch instead of answering from memory.",
-    "When the user asks for the official website, answer https://spirit.dev.",
+    `${product.name} product questions: the official site is ${product.websiteOrigin}.`,
+    `When the user asks about ${product.name} itself (features, install, configuration, troubleshooting), fetch ${product.websiteOrigin}/llms.txt or the matching page under ${product.websiteOrigin}/docs with web_fetch instead of answering from memory.`,
+    `When the user asks for the official website, answer ${product.websiteOrigin}.`,
   ].join("\n");
 }
 
@@ -794,8 +795,8 @@ export function buildAgentModeSystemMessage(planMetadata?: ToolAgentPlanMetadata
       "1. Propose hypotheses about the root cause, ranked by likelihood.",
       "2. Insert structured log points in the relevant source code to test each hypothesis.",
       "",
-      "Each log point should append one NDJSON line to a file under .spirit/logs/ at runtime:",
-      "- Directory: .spirit/logs/ under the workspace root",
+      `Each log point should append one NDJSON line to a file under ${product.workspaceDataFolderName}/logs/ at runtime:`,
+      `- Directory: ${product.workspaceDataFolderName}/logs/ under the workspace root`,
       "- Filename: kebab-case (e.g. auth-retry-failure.json)",
       "- Format: NDJSON (one JSON object per line)",
       "- Required fields:",
@@ -874,7 +875,7 @@ export function buildAttributionSystemMessage(
   }
   if (prEnabled) {
     lines.push(
-      "When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [Spirit Agent](https://spirit.dev)",
+      `When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [${product.name} Agent](${product.websiteOrigin})`,
     );
   }
   return wrapLlmContextBlock(LLM_CONTEXT_TAGS.attribution, lines.join("\n"));

@@ -5,7 +5,7 @@ description: Implementado para clientes ACP. A página de download ainda não li
 
 O ACP (Agent Client Protocol) é implementado como `spirit-acp` (`@spiritagent/acp-server`). Ele fala stdio ndJSON, compartilha o mesmo diretório de dados e chaveiro do Desktop e da CLI, e pode executar `--setup` para conectar um provedor.
 
-**A página pública de download ainda não lista o ACP.** O Spirit ainda está se preparando para listá-lo no registro ACP.
+**A página pública de download ainda não lista o ACP.** O {{product.name|mdx}} ainda está se preparando para listá-lo no registro ACP.
 
 ## Configuração temporária antes da listagem
 
@@ -19,7 +19,7 @@ Ou aponte um cliente ACP (por exemplo, Zed) para a entrada stdio:
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

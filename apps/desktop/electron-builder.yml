@@ -1,7 +1,5 @@
 appId: dev.spirit.desktop
-productName: Spirit
 icon: build/icon.ico
-artifactName: Spirit-Desktop-${version}-${os}-${arch}.${ext}
 directories:
   buildResources: build
   output: release
@@ -19,12 +17,6 @@ files:
     filter:
       - ripgrep/**
       - ripgrep-*/**
-  - ../../packages/agent-core/dist/**/*
-  - ../../packages/agent-core/package.json
-  - ../../packages/host-internal/dist/**/*
-  - ../../packages/host-internal/package.json
-  - ../../packages/server/dist/**/*
-  - ../../packages/server/package.json
 extraMetadata:
   main: dist-electron/electron/main.js
 asarUnpack:
@@ -48,8 +40,6 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
 mac:
-  # Prefer darwin over electron-builder's default ${os}=mac for release URL alignment.
-  artifactName: Spirit-Desktop-${version}-darwin-${arch}.${ext}
   icon: build/icon.png
   # Info.plist LSApplicationCategoryType; mapped to "效率与财务" (Productivity & Finance) in the Apps app (Tahoe+).
   # Do not rely on Electron's default developer-tools category (the new Apps app no longer has it).

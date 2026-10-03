@@ -1,6 +1,6 @@
 ---
 title: Reglas
-description: AGENTS.md, .spirit/rule.md y tu rule.md de usuario.
+description: AGENTS.md, {{product.workspaceDataFolderName}}/rule.md y tu rule.md de usuario.
 ---
 
 Las reglas son Markdown que el agente siempre considera. Hay tres espacios:
@@ -8,9 +8,9 @@ Las reglas son Markdown que el agente siempre considera. Hay tres espacios:
 | Alcance                                   | Ruta                          |
 | ----------------------------------------- | ----------------------------- |
 | Archivo de agentes del espacio de trabajo | `{workspace}/AGENTS.md`       |
-| Regla de Spirit del espacio de trabajo    | `{workspace}/.spirit/rule.md` |
+| Regla de {{product.name|mdx}} del espacio de trabajo    | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
 | Regla de usuario                          | `{spiritDataDir}/rule.md`     |
 
-Escribe las convenciones del proyecto en `AGENTS.md` para que cualquiera que abra el repositorio las vea. Usa `.spirit/rule.md` para notas específicas de Spirit que no quieras en el archivo de agentes genérico. Usa la regla de usuario para preferencias que te siguen entre espacios de trabajo.
+Escribe las convenciones del proyecto en `AGENTS.md` para que cualquiera que abra el repositorio las vea. Usa `{{product.workspaceDataFolderName}}/rule.md` para notas específicas de {{product.name|mdx}} que no quieras en el archivo de agentes genérico. Usa la regla de usuario para preferencias que te siguen entre espacios de trabajo.
 
 Gestiona los espacios en **Configuración → Reglas**. Una Skill integrada, `create-rule`, puede redactar un archivo de reglas por ti. Una rule empaquetada en una [extensión](../develop/extensions.mdx) se aplica cuando esa extensión está habilitada. No aparece en esta lista de ajustes.

@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { product } from "@spiritagent/product";
 
 import { Agent, fetch as undiciFetch } from "undici";
 
@@ -6,7 +7,7 @@ import { observeLlmFetchResponse } from "./llm-retry.js";
 
 export type LlmHttpVersion = "http1.1" | "http2";
 
-export const SPIRIT_UA_PRODUCT = "Spirit";
+export const SPIRIT_UA_PRODUCT = encodeURIComponent(product.name);
 
 const require = createRequire(import.meta.url);
 const defaultClientVersion = (require("../package.json") as { version: string }).version;

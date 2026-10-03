@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { product } from "@spiritagent/product";
 import http from "node:http";
 import https from "node:https";
 import { promisify } from "node:util";
@@ -101,7 +102,7 @@ export function probeHttpUrl(
         rejectUnauthorized: false,
         headers: {
           Accept: "text/html,application/xhtml+xml,*/*",
-          "User-Agent": "Spirit-Desktop-LocalProbe/1.0",
+          "User-Agent": `${encodeURIComponent(product.name)}-Desktop-LocalProbe/1.0`,
         },
       },
       (res) => {
