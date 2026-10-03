@@ -303,8 +303,10 @@ export function ComposerSurface({
             const actionButton = (
               <Button
                 type="button"
+                size="icon-sm"
+                shape="pill"
                 className={cn(
-                  "size-7 shrink-0 rounded-full p-0 shadow-none [&_svg]:size-3",
+                  "shrink-0 shadow-none [&_svg]:size-3",
                   instantHoverMotionClass,
                   sendDisabled && "disabled:pointer-events-auto disabled:cursor-default",
                 )}

@@ -787,7 +787,8 @@ export function MarketplaceView({
                     <Button
                       type="button"
                       size="sm"
-                      className="h-8 shrink-0 gap-1 rounded-full px-3.5"
+                      shape="pill"
+                      className="h-8 shrink-0 px-3.5"
                       disabled={extensionsInstalling}
                     >
                       {extensionsInstalling ? (
