@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type { SettingsFormState } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { TextLink } from "@/components/ui/link";
 import { Switch } from "@/components/ui/switch";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
@@ -30,11 +31,13 @@ export function AgentsSettingsRow({
 }) {
   return (
     <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-      <div className="min-w-0 space-y-1">
-        <label htmlFor={htmlFor} className={DESKTOP_SETTINGS_LABEL_CLASS}>
+      <div className="min-w-0">
+        <Label htmlFor={htmlFor} className={DESKTOP_SETTINGS_LABEL_CLASS}>
           {label}
-        </label>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </Label>
+        {description ? (
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        ) : null}
       </div>
       <div className="min-w-0">{children}</div>
     </div>

@@ -62,7 +62,9 @@ test("AgentsSettingsRow uses grid layout without shared SettingsRow border", () 
 
   assert.match(html, /sm:grid-cols-\[minmax\(0,1fr\)_auto\]/);
   assert.doesNotMatch(html, /border-b/);
-  assert.match(html, /text-sm text-muted-foreground/);
+  // Label + description text stack matches the shared SettingsRow used by other panels.
+  assert.match(html, /data-slot="label"/);
+  assert.match(html, /mt-1 text-xs leading-relaxed text-muted-foreground/);
   assert.match(html, /for="settings-lsp-enabled"/);
 });
 
