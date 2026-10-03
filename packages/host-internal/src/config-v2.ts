@@ -10,7 +10,7 @@ export interface ModelRef {
 }
 
 export type SpiritModelCapabilityV2 =
-  | "chat"
+  | "languageModel"
   | "image"
   | "video"
   | "imageGeneration"
@@ -78,7 +78,7 @@ export interface SpiritConfigV2Core {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
 }
 
 export class SpiritConfigSchemaError extends Error {

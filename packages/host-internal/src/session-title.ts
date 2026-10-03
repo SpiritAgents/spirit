@@ -14,7 +14,7 @@ import { resolveTransportConfig } from "./resolve-transport.js";
 
 export const SESSION_TITLE_MAX_LENGTH = 40;
 export const SESSION_TITLE_FALLBACK_SEED = "New conversation";
-export const LIGHTWEIGHT_CHAT_MODEL_FALLBACK_PATTERNS = ["deepseek-v4-flash"] as const;
+export const SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS = ["deepseek-v4-flash"] as const;
 
 export const SESSION_TITLE_JSON_SCHEMA: JsonObject = {
   type: "object",
@@ -31,7 +31,7 @@ export const SESSION_TITLE_JSON_SCHEMA: JsonObject = {
 
 export type SessionTitleModelConfig = Pick<
   SpiritConfigFile,
-  "activeModel" | "lightweightChatModel" | "providerGroups"
+  "activeModel" | "secondaryLanguageModel" | "providerGroups"
 >;
 
 export function buildSessionTitlePrompt(
@@ -88,31 +88,31 @@ export function deriveSessionTitleFallbackSeed(text: string): string {
   return trimmed.length > 28 ? `${trimmed.slice(0, 28)}…` : trimmed;
 }
 
-export function modelSupportsChat(model: {
+export function modelSupportsLanguageModel(model: {
   capabilities?: readonly SpiritModelCapability[];
 }): boolean {
-  return model.capabilities === undefined || model.capabilities.includes("chat");
+  return model.capabilities === undefined || model.capabilities.includes("languageModel");
 }
 
-export function normalizeLightweightChatModel(
+export function normalizeSecondaryLanguageModel(
   value: ModelRef | undefined,
   config: Pick<SessionTitleModelConfig, "providerGroups">,
 ): ModelRef | undefined {
   const resolved = findModelByRef(config.providerGroups, value);
-  return resolved && modelSupportsChat(resolved.model) ? value : undefined;
+  return resolved && modelSupportsLanguageModel(resolved.model) ? value : undefined;
 }
 
-export function resolveLightweightChatModelRef(config: SessionTitleModelConfig): ModelRef {
-  const explicit = normalizeLightweightChatModel(config.lightweightChatModel, config);
+export function resolveSecondaryLanguageModelRef(config: SessionTitleModelConfig): ModelRef {
+  const explicit = normalizeSecondaryLanguageModel(config.secondaryLanguageModel, config);
   if (explicit) {
     return explicit;
   }
 
-  for (const pattern of LIGHTWEIGHT_CHAT_MODEL_FALLBACK_PATTERNS) {
+  for (const pattern of SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS) {
     const lowerPattern = pattern.toLowerCase();
     for (const group of config.providerGroups) {
       for (const model of group.models) {
-        if (modelSupportsChat(model) && model.name.toLowerCase().includes(lowerPattern)) {
+        if (modelSupportsLanguageModel(model) && model.name.toLowerCase().includes(lowerPattern)) {
           return { groupId: group.id, name: model.name };
         }
       }
@@ -126,20 +126,20 @@ export function resolveSessionTitleModelRef(
   config: SessionTitleModelConfig,
   options?: { needsImage?: boolean; needsVideo?: boolean },
 ): ModelRef {
-  const lightweight = resolveLightweightChatModelRef(config);
+  const secondary = resolveSecondaryLanguageModelRef(config);
   const needsImage = options?.needsImage === true;
   const needsVideo = options?.needsVideo === true;
   if (!needsImage && !needsVideo) {
-    return lightweight;
+    return secondary;
   }
 
-  if (modelRefSupportsMedia(config.providerGroups, lightweight, needsImage, needsVideo)) {
-    return lightweight;
+  if (modelRefSupportsMedia(config.providerGroups, secondary, needsImage, needsVideo)) {
+    return secondary;
   }
   if (modelRefSupportsMedia(config.providerGroups, config.activeModel, needsImage, needsVideo)) {
     return config.activeModel;
   }
-  return lightweight;
+  return secondary;
 }
 
 export async function completeSessionTitle(input: {
@@ -218,7 +218,7 @@ function modelRefSupportsMedia(
   needsVideo: boolean,
 ): boolean {
   const resolved = findModelByRef(groups, ref);
-  if (!resolved || !modelSupportsChat(resolved.model)) {
+  if (!resolved || !modelSupportsLanguageModel(resolved.model)) {
     return false;
   }
   const capabilities = resolved.model.capabilities ?? [];

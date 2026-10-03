@@ -34,7 +34,7 @@ test("resolveTransportConfig builds bedrock transport from IAM credentials", () 
               {
                 name: modelName,
                 reasoningEffort: "medium",
-                capabilities: ["chat"],
+                capabilities: ["languageModel"],
               },
             ],
           },
@@ -91,7 +91,7 @@ test("resolveTransportConfig builds vertex transport from service account creden
               {
                 name: modelName,
                 reasoningEffort: "medium",
-                capabilities: ["chat"],
+                capabilities: ["languageModel"],
               },
             ],
           },
@@ -154,7 +154,7 @@ test("resolveTransportConfig defaults minimax to anthropic transport with llmVen
               {
                 name: modelName,
                 reasoningEffort: "medium",
-                capabilities: ["chat"],
+                capabilities: ["languageModel"],
               },
             ],
           },

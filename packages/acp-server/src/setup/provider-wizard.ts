@@ -159,7 +159,7 @@ export function buildSetupProfile(input: {
     name,
     apiBase: input.apiBaseOverride?.trim() || "",
     reasoningEffort: "medium",
-    capabilities: ["chat", "image"],
+    capabilities: ["languageModel", "image"],
     provider: input.provider === "custom" ? "custom" : input.provider,
     transportKind,
   };
