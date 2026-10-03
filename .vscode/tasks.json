@@ -13,6 +13,11 @@
       "type": "shell",
       "command": "pnpm",
       "args": ["build"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:buildProductQuality}"
+        }
+      },
       "problemMatcher": []
     },
     {
@@ -37,7 +42,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Start Desktop",
+      "label": "Run Built Desktop",
       "type": "shell",
       "command": "pnpm",
       "args": ["--filter", "@spiritagent/desktop", "start"],
@@ -47,10 +52,15 @@
       "problemMatcher": []
     },
     {
-      "label": "Start Desktop (Dev)",
+      "label": "Dev Desktop",
       "type": "shell",
       "command": "pnpm",
       "args": ["dev:desktop"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
       "group": {
         "kind": "build",
         "isDefault": true
@@ -61,18 +71,50 @@
       "problemMatcher": []
     },
     {
-      "label": "Start Site",
+      "label": "Dev Site",
       "type": "shell",
       "command": "pnpm",
       "args": ["dev:site"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
       "problemMatcher": []
     },
     {
-      "label": "Start CLI",
+      "label": "Dev CLI",
       "type": "shell",
       "command": "pnpm",
       "args": ["dev:cli"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
       "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "devProductQuality",
+      "type": "pickString",
+      "description": "Product quality for development. Stable uses your regular data. Do not run both qualities concurrently in one checkout.",
+      "options": [
+        { "label": "Dev (~/.spirit-dev)", "value": "dev" },
+        { "label": "Stable (~/.spirit)", "value": "stable" }
+      ],
+      "default": "dev"
+    },
+    {
+      "id": "buildProductQuality",
+      "type": "pickString",
+      "description": "Product quality to bake into build outputs. Stop development tasks before switching quality.",
+      "options": [
+        { "label": "Stable (~/.spirit)", "value": "stable" },
+        { "label": "Dev (~/.spirit-dev)", "value": "dev" }
+      ],
+      "default": "stable"
     }
   ]
 }
