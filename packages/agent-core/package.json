@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/agent-core",
   "version": "1.0.0-alpha.0",
-  "description": "TypeScript core runtime for Spirit",
+  "description": "TypeScript agent core runtime",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -120,6 +120,7 @@
     "@aws/bedrock-token-generator": "1.1.0",
     "@huggingface/inference": "4.13.25",
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@spiritagent/product": "workspace:*",
     "ai": "7.0.83",
     "undici": "7.29.0"
   },

@@ -1,6 +1,7 @@
 ---
 title: Início Rápido
-description: Instale o Spirit, conecte um provedor e faça uma pequena edição aprovada.
+description: Instale o {{product.name}}, conecte um provedor e faça uma pequena
+  edição aprovada.
 ---
 
 Esta página leva você de uma instalação nova até uma alteração útil. As páginas seguintes cobrem todos os provedores e hosts; sem este caminho, essas páginas não têm onde se ancorar.
@@ -24,11 +25,11 @@ Detalhes: [Instalar Desktop](./install/desktop.mdx).
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 Abra um novo terminal e execute `spirit --version`. Detalhes: [Instalar CLI](./install/cli.mdx).
@@ -60,7 +61,7 @@ A TUI usa o diretório atual como workspace.
 
 ## 3. Conecte um provedor
 
-Você precisa de uma chave de API de um provedor que já usa. O Spirit armazena essa chave no chaveiro do sistema operacional (`Spirit`).
+Você precisa de uma chave de API de um provedor que já usa. O {{product.name|mdx}} armazena essa chave no chaveiro do sistema operacional (`{{product.name}}`).
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

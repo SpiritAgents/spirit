@@ -7,8 +7,11 @@ import glyphWhiteUrl from "@spiritagent/brand/assets/glyph-white.svg?url";
 import logoDarkUrl from "@spiritagent/brand/assets/logo-dark.svg?url";
 import sharp from "sharp";
 import { test } from "vitest";
+import { parseHTML } from "linkedom";
+import { product, PRODUCT_BUILD_ID } from "@spiritagent/product";
 
 import { spiritAgentBrandIconSrc, spiritAgentTitleBarIconSrc } from "../src/lib/brand-icon.ts";
+import { renderProductHtml } from "../vite.config.ts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const desktopRoot = join(__dirname, "..");
@@ -39,11 +42,15 @@ async function collectFiles(dir) {
   return files;
 }
 
-test("index.html title is Spirit without Desktop/MVP", async () => {
+test("index.html resolves its title from the baked product", async () => {
   const html = await readFile(join(desktopRoot, "index.html"), "utf8");
-  assert.match(html, /<title>Spirit<\/title>/);
-  assert.doesNotMatch(html, /MVP/);
-  assert.doesNotMatch(html, /Spirit Agent Desktop/);
+  const { document } = parseHTML(renderProductHtml(html));
+  assert.equal(document.title, product.name);
+  assert.equal(
+    document.querySelector('meta[name="spirit-product-build"]').getAttribute("content"),
+    PRODUCT_BUILD_ID,
+  );
+  assert.doesNotMatch(document.title, /\{\{product\./);
 });
 
 test("about dialog message is Spirit without Desktop/MVP", async () => {

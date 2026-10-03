@@ -5,7 +5,7 @@ description: 為 ACP 用戶端實作。下載頁面尚未列出頻道。
 
 ACP（Agent 用戶端協定）以 `spirit-acp`（`@spiritagent/acp-server`）實作。它使用 stdio ndJSON，與 Desktop 和 CLI 共用相同的資料目錄和金鑰環，並可執行 `--setup` 以連接提供者。
 
-**公開下載頁面尚未列出 ACP。** Spirit 仍在準備將其列入 ACP 註冊表。
+**公開下載頁面尚未列出 ACP。** {{product.name|mdx}} 仍在準備將其列入 ACP 註冊表。
 
 ## 在列出之前的臨時設定
 
@@ -19,7 +19,7 @@ npx @spiritagent/acp-server --setup
 
 ```json
 "agent_servers": {
-  "Spirit": {
+  "{{product.name}}": {
     "command": "node",
     "args": ["path/to/packages/acp-server/dist/src/stdio-entry.js"]
   }

@@ -1,14 +1,16 @@
 ---
 title: MCP
-description: User mcp.json plus workspace .spirit/mcp.json. Workspace wins on the same server name.
+description: User mcp.json plus workspace
+  {{product.workspaceDataFolderName}}/mcp.json. Workspace wins on the same
+  server name.
 ---
 
-MCP servers add tools, resources, and prompts from outside Spirit.
+MCP servers add tools, resources, and prompts from outside {{product.name|mdx}}.
 
 | Scope     | Path                           |
 | --------- | ------------------------------ |
 | User      | `{spiritDataDir}/mcp.json`     |
-| Workspace | `{workspace}/.spirit/mcp.json` |
+| Workspace | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 When both files define the same server name, the **workspace** entry wins.
 

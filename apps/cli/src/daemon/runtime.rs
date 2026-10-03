@@ -40,7 +40,7 @@ use crate::{
     view::{ChatMessage, PendingAssistantAux, PendingSubagentApprovalView},
 };
 
-use super::client::DaemonClient;
+use super::client::{DaemonClient, validate_product_build};
 use super::resolve::{ensure_daemon, is_loopback_host};
 
 /// Buffer window for draining daemon notifications without blocking.
@@ -130,16 +130,8 @@ impl DaemonRuntime {
             ));
         }
 
-        client.call(
-            "server.initialize",
-            json!({
-                "clientKind": "cli",
-                "clientId": format!("cli-{}", std::process::id()),
-                "workspaceRoot": workspace_root.to_string_lossy(),
-            }),
-        )?;
-
         let health = client.call("server.health", json!({}))?;
+        validate_product_build(&health).inspect_err(|_| client.close())?;
         let health_instance_id = health
             .get("instanceId")
             .and_then(Value::as_str)
@@ -151,6 +143,15 @@ impl DaemonRuntime {
                 health_instance_id
             ));
         }
+
+        client.call(
+            "server.initialize",
+            json!({
+                "clientKind": "cli",
+                "clientId": format!("cli-{}", std::process::id()),
+                "workspaceRoot": workspace_root.to_string_lossy(),
+            }),
+        )?;
 
         Ok(Self {
             client,

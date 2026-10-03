@@ -1,6 +1,6 @@
 ---
 title: 빠른 시작
-description: Spirit를 설치하고, 공급자 하나를 연결하고, 작고 승인된 편집을 적용하세요.
+description: "{{product.name}}를 설치하고, 공급자 하나를 연결하고, 작고 승인된 편집을 적용하세요."
 ---
 
 이 페이지는 새 설치에서 유용한 변경 하나까지 안내합니다. 이후 페이지에서는 모든 공급자와 호스트를 다루지만, 이 경로가 없으면 해당 페이지들이 붙을 곳이 없습니다.
@@ -24,11 +24,11 @@ description: Spirit를 설치하고, 공급자 하나를 연결하고, 작고 �
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 새 터미널을 열고 `spirit --version`을 실행하세요. 자세한 내용: [CLI 설치](./install/cli.mdx).
@@ -60,7 +60,7 @@ TUI는 현재 디렉터리를 작업 공간으로 사용합니다.
 
 ## 3. 공급자 하나 연결
 
-이미 사용 중인 공급자의 API 키가 필요합니다. Spirit은 해당 키를 운영 체제 키링(`Spirit`)에 저장합니다.
+이미 사용 중인 공급자의 API 키가 필요합니다. {{product.name|mdx}}은 해당 키를 운영 체제 키링(`{{product.name}}`)에 저장합니다.
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">

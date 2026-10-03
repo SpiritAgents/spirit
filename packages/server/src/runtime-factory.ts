@@ -4,7 +4,7 @@ import path from "node:path";
 
 import {
   AgentRuntime,
-  McpService,
+  type McpService,
   buildAgentModeSystemMessage,
   buildApplyPatchFileToolsPromptSection,
   buildBasicInfoSystemMessage,
@@ -68,6 +68,7 @@ import {
   collectHostExtensionContributedTools,
   extensionExposesModelContext,
   createHostExtensionManager,
+  createHostMcpService,
   createHookRunner,
   createNoopMcpAdapter,
   ensureBuiltInExtensions,
@@ -243,9 +244,9 @@ export async function createServerRuntime(
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
   const mcpService = isDreamCollector
-    ? new McpService(workspaceRoot, true)
+    ? createHostMcpService(workspaceRoot, spiritDataDir, true)
     : (options.mcpService ??
-      new McpService(workspaceRoot, true, {
+      createHostMcpService(workspaceRoot, spiritDataDir, true, {
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);

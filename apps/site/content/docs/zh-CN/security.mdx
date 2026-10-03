@@ -5,7 +5,7 @@ description: 钥匙串、审批和本机 loopback 守护进程。无遥测。
 
 ## 钥匙串
 
-API Key、Bedrock / Vertex 密钥、扩展密钥和 GitHub 集成 token 存在操作系统钥匙串。服务名是 `Spirit`。
+API Key、Bedrock / Vertex 密钥、扩展密钥和 GitHub 集成 token 存在操作系统钥匙串。服务名是 `{{product.name}}`。
 
 `config.json` 里是提供商分组和模型引用，不是密钥本身。过大的密钥可能在钥匙串里分片。
 
@@ -23,6 +23,6 @@ Web Host 配对是 Desktop 上另一套 6 位码。失败 5 次会锁定，直�
 
 ## 隐私
 
-Spirit 不发送开发者遥测。数据留在数据目录和钥匙串。见仓库里的 [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md)。
+{{product.name|mdx}} 不发送开发者遥测。数据留在数据目录和钥匙串。见仓库里的 [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md)。
 
 漏洞请走私下渠道（GitHub Private Advisory），不要开公开 issue。见 [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md)。

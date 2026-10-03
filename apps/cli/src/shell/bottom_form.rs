@@ -195,7 +195,7 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
                 help: String::new(),
                 editor: BottomFormFieldEditorView::Choice {
                     options: vec![
-                        t!("form.mcp.field.scope.workspace").into_owned(),
+                        crate::locale::product_text("form.mcp.field.scope.workspace").into_owned(),
                         t!("form.mcp.field.scope.user").into_owned(),
                     ],
                     selected: 0,
@@ -246,7 +246,7 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
 pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormView {
     let scope_options = if workspace_scope_available {
         vec![
-            t!("form.hooks.field.scope.workspace").into_owned(),
+            crate::locale::product_text("form.hooks.field.scope.workspace").into_owned(),
             t!("form.hooks.field.scope.user").into_owned(),
         ]
     } else {

@@ -1,13 +1,15 @@
 ---
 title: Anbieter
-description: Bringen Sie Ihren eigenen Schlüssel mit, führen Sie den Verbindungsassistenten aus und behalten Sie denselben Agent-Workflow bei, wenn Sie das Haus wechseln.
+description: Bringen Sie Ihren eigenen Schlüssel mit, führen Sie den
+  Verbindungsassistenten aus und behalten Sie denselben Agent-Workflow bei, wenn
+  Sie das Haus wechseln.
 ---
 
-Spirit ist BYOK. Sie erstellen einen Schlüssel in einer Anbieterkonsole, fügen ihn in Desktop oder der CLI ein, und Spirit speichert ihn im Betriebssystem-Schlüsselbund. Der Wechsel des Hauses ändert nicht, wie Sie einen Workspace öffnen, Bearbeitungen genehmigen oder den Agent ausführen.
+{{product.name|mdx}} ist BYOK. Sie erstellen einen Schlüssel in einer Anbieterkonsole, fügen ihn in Desktop oder der CLI ein, und {{product.name|mdx}} speichert ihn im Betriebssystem-Schlüsselbund. Der Wechsel des Hauses ändert nicht, wie Sie einen Workspace öffnen, Bearbeitungen genehmigen oder den Agent ausführen.
 
 Der Verbindungsassistent ist **Einstellungen → Modelle** auf Desktop oder `/model add` / `spirit model add` in der CLI. Zusätzliche Felder erscheinen nur, wenn der Anbieter sie benötigt.
 
-Spirit kommuniziert mit Anbietern über einen von vier Transports. Der Assistent legt den Typ entweder fest oder lässt Sie wählen.
+{{product.name|mdx}} kommuniziert mit Anbietern über einen von vier Transports. Der Assistent legt den Typ entweder fest oder lässt Sie wählen.
 
 | Transport           | Assistenten-Label                  | Typische Verwendung                                                        |
 | ------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
@@ -16,7 +18,7 @@ Spirit kommuniziert mit Anbietern über einen von vier Transports. Der Assistent
 | `anthropic`         | Messages-API                       | Anthropic, MiniMax und optionale Messages-kompatible Endpunkte             |
 | `bedrock`           | Amazon Bedrock                     | Nur Amazon Bedrock                                                         |
 
-Google Gemini und Vertex AI verwenden immer Chat Completions. Wenn ein Profil Responses oder Messages verlangt, fällt Spirit auf `openai-compatible` zurück.
+Google Gemini und Vertex AI verwenden immer Chat Completions. Wenn ein Profil Responses oder Messages verlangt, fällt {{product.name|mdx}} auf `openai-compatible` zurück.
 
 Einige Häuser fügen dem Schlüssel eine zweite Dimension hinzu:
 
@@ -26,7 +28,7 @@ Einige Häuser fügen dem Schlüssel eine zweite Dimension hinzu:
 
 Wenn ein Anbieter keines davon hat, ist der Assistent einfach: Schlüssel → Modelle importieren → aktives Chat-Modell auswählen.
 
-Spirit importiert den Modellkatalog und ermöglicht Ihnen, das aktive Chat-Modell sowie Bild-, Video- und leichtgewichtige Chat-Slots zuzuweisen, wenn der Katalog diese Fähigkeiten markiert. Reasoning und integrierte Websuche folgen dem Modell und Transport, nicht einem separaten Spirit-Schalter.
+{{product.name|mdx}} importiert den Modellkatalog und ermöglicht Ihnen, das aktive Chat-Modell sowie Bild-, Video- und leichtgewichtige Chat-Slots zuzuweisen, wenn der Katalog diese Fähigkeiten markiert. Reasoning und integrierte Websuche folgen dem Modell und Transport, nicht einem separaten {{product.name|mdx}}-Schalter.
 
 ## Katalog
 
@@ -34,7 +36,7 @@ Dies sind die Häuser im Verbindungsauswähler, in derselben Reihenfolge. Jeder 
 
 ### OpenAI
 
-Erstellen Sie einen API-Schlüssel in der [OpenAI-Plattform](https://platform.openai.com/api-keys). Spirit verkauft keine OpenAI-Nutzung.
+Erstellen Sie einen API-Schlüssel in der [OpenAI-Plattform](https://platform.openai.com/api-keys). {{product.name|mdx}} verkauft keine OpenAI-Nutzung.
 
 Der Assistent legt **Responses-API** (`open-responses`) fest. Es gibt keinen Transport-Auswähler. Standard-Basis: `https://api.openai.com/v1`.
 
@@ -46,7 +48,7 @@ Erstellen Sie einen API-Schlüssel in der [Anthropic-Konsole](https://console.an
 
 Festgelegte **Messages-API** (`anthropic`). Standard-Basis: `https://api.anthropic.com/v1`.
 
-Chat nach dem Import. Reasoning folgt dem Modell. Kein Spirit-seitiger Bild- oder Video-Generierungs-Slot, es sei denn, ein späterer Katalogeintrag markiert ihn.
+Chat nach dem Import. Reasoning folgt dem Modell. Kein {{product.name|mdx}}-seitiger Bild- oder Video-Generierungs-Slot, es sei denn, ein späterer Katalogeintrag markiert ihn.
 
 ### Google
 
@@ -279,7 +281,7 @@ Festgelegt: **Chat-Completions-API**. Der Assistent bietet keine Responses oder 
 - **Guangzhou** (Standard) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapur** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Chat nach dem Import. Verlassen Sie sich nicht auf die vom Chat eingebettete Websuche. TokenHub dokumentiert Chat `web_search_options` und Responses `web_search`, aber die Chat-Einbettung funktioniert in der Praxis nicht, und Responses ist nur bei wenigen Modellen verfügbar. Spirit behält daher nur Chat-Completions bei.
+Chat nach dem Import. Verlassen Sie sich nicht auf die vom Chat eingebettete Websuche. TokenHub dokumentiert Chat `web_search_options` und Responses `web_search`, aber die Chat-Einbettung funktioniert in der Praxis nicht, und Responses ist nur bei wenigen Modellen verfügbar. {{product.name|mdx}} behält daher nur Chat-Completions bei.
 
 ### Mistral
 
@@ -305,7 +307,7 @@ Festgelegt: **Responses API** (`open-responses`). Kein Transportauswahl.
 
 - **Ressourcenname** (erforderlich) — 2–64 Zeichen, Buchstaben, Zahlen und Bindestriche; darf nicht mit einem Bindestrich beginnen oder enden
 
-Spirit erstellt `https://{resource}.openai.azure.com/openai/v1`. Chat nach dem Import. Bildgenerierung folgt dem Azure-Katalog, wenn markiert.
+{{product.name|mdx}} erstellt `https://{resource}.openai.azure.com/openai/v1`. Chat nach dem Import. Bildgenerierung folgt dem Azure-Katalog, wenn markiert.
 
 ### Amazon Bedrock
 
@@ -316,7 +318,7 @@ Festgelegt: **Amazon Bedrock** (`bedrock`). Standard-Hostform: `https://bedrock.
 - **AWS-Region** (erforderlich), z. B. `us-east-1`
 - **Authentifizierung**: **Bearer** oder **IAM**
   - Bearer — fügen Sie einen Bedrock-API-Schlüssel und eine Modell-ID ein. Modelle werden **nicht** automatisch abgerufen.
-  - IAM — Zugriffsschlüssel-ID + geheimer Zugriffsschlüssel. Spirit listet Foundation-Modelle aus dem Konto.
+  - IAM — Zugriffsschlüssel-ID + geheimer Zugriffsschlüssel. {{product.name|mdx}} listet Foundation-Modelle aus dem Konto.
 
 Chat, nachdem Sie ein Modell ausgewählt haben. Andere Fähigkeiten folgen diesem Modell. Bearer-Schlüssel funktionieren nur für Inferenz. `ListFoundationModels` akzeptiert kein Bearer, daher benötigt der Katalogimport IAM.
 
@@ -336,12 +338,12 @@ Chat, nachdem ein Modell ausgewählt wurde. Für AI-Studio-Schlüssel ohne GCP-P
 
 ### Benutzerdefiniert
 
-Verwenden Sie den API-Schlüssel, den Ihr Endpunkt erwartet. Es gibt keinen von Spirit gehosteten benutzerdefinierten Anbieter.
+Verwenden Sie den API-Schlüssel, den Ihr Endpunkt erwartet. Es gibt keinen von {{product.name|mdx}} gehosteten benutzerdefinierten Anbieter.
 
 Auswahl: **Chat Completions**, **Open Responses** oder **Messages**. Sie müssen die **Basis-URL** angeben. Der Platzhalter-Standardwert ist `https://api.openai.com/v1`, wenn Sie das Feld leer lassen.
 
-Geben Sie die vom Anbieter dokumentierte Wurzel ein, einschließlich des Versionssuffixes, wenn er es verlangt (`/v1`, `/v1/openai`, …). Spirit errät keinen Pfad für benutzerdefinierte Endpunkte.
+Geben Sie die vom Anbieter dokumentierte Wurzel ein, einschließlich des Versionssuffixes, wenn er es verlangt (`/v1`, `/v1/openai`, …). {{product.name|mdx}} errät keinen Pfad für benutzerdefinierte Endpunkte.
 
 Sie können auch einen Anzeigenamen für die Anbietergruppe festlegen, damit mehrere benutzerdefinierte Endpunkte unterscheidbar bleiben.
 
-Nach dem Verbinden importieren oder Modell-IDs eingeben. Markieren Sie Chat- / Bild- / Videofähigkeiten im Assistenten, wenn der Endpunkt keinen Katalog veröffentlicht, den Spirit versteht.
+Nach dem Verbinden importieren oder Modell-IDs eingeben. Markieren Sie Chat- / Bild- / Videofähigkeiten im Assistenten, wenn der Endpunkt keinen Katalog veröffentlicht, den {{product.name|mdx}} versteht.

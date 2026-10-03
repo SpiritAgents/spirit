@@ -1,6 +1,7 @@
 ---
 title: CLI
-description: TUI, non-interactive -p, SPIRIT_API_KEY / SPIRIT_API_BASE, and the shared daemon.
+description: TUI, non-interactive -p, SPIRIT_API_KEY / SPIRIT_API_BASE, and the
+  shared daemon.
 ---
 
 The CLI is a terminal host. Install it with the [install script](./install/cli.mdx). It talks to the same daemon as [Desktop](./desktop.mdx).
@@ -31,11 +32,11 @@ Only the final assistant text goes to stdout. Put `-m`, `-a`, and `-l` **before*
 | `SPIRIT_API_KEY`  | API key for this process. Order: env → model keyring → global keyring |
 | `SPIRIT_API_BASE` | API base URL override                                                 |
 | `SPIRIT_DATA_DIR` | Data directory (same store as Desktop)                                |
-| `SPIRIT_HOME`     | CLI **binary** install root — not the data directory                  |
+| `SPIRIT_HOME`     | CLI binary install root (bin/ and cli/); independent of shared-data settings |
 
 ## Shared daemon
 
-`spirit` connects over WebSocket to the Spirit Server daemon. Sessions, streaming, tools, and the approval queue live there. The bearer token is `{spiritDataDir}/server.token` (mode `0600`). The daemon binds `127.0.0.1` on a random port by default.
+`spirit` connects over WebSocket to the {{product.name|mdx}} Server daemon. Sessions, streaming, tools, and the approval queue live there. The bearer token is `{spiritDataDir}/server.token` (mode `0600`). The daemon binds `127.0.0.1` on a random port by default.
 
 `spirit serve` runs the daemon in the foreground. Remote `0.0.0.0` is not an open product path. See [Security](./security.mdx).
 

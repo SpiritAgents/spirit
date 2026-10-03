@@ -1,9 +1,10 @@
 ---
 title: Erweiterungen
-description: Installiere Erweiterungen aus Marketplaces, importiere ein ZIP-Paket oder füge deinen eigenen entfernten Erweiterungsmarktplatz hinzu.
+description: Installiere Erweiterungen aus Marketplaces, importiere ein
+  ZIP-Paket oder füge deinen eigenen entfernten Erweiterungsmarktplatz hinzu.
 ---
 
-Erweiterungen fügen Spirit Fähigkeiten hinzu — Werkzeuge, Skills, Hooks, MCP-Server und UI-Beiträge. Sie werden über Erweiterungsmarktplätze verteilt:
+Erweiterungen fügen {{product.name|mdx}} Fähigkeiten hinzu — Werkzeuge, Skills, Hooks, MCP-Server und UI-Beiträge. Sie werden über Erweiterungsmarktplätze verteilt:
 
 - **Integriert** — wird mit der App ausgeliefert.
 - **Persönlich** — deine eigenen Importe: ZIP-Pakete, die du selbst hinzugefügt hast.
@@ -54,7 +55,7 @@ Drei Locator-Formen:
 | Git-Repository (HTTPS oder SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP-Index-URL                  | `spirit extension marketplace add https://example.com`                   |
 
-Git-URLs akzeptieren `--git-ref <tag|branch|commit>`, um ein Ref festzulegen; Standard ist der Standard-Branch des Remotes. Eine nackte Site-URL wird automatisch um `/.spirit/marketplace.json` ergänzt.
+Git-URLs akzeptieren `--git-ref <tag|branch|commit>`, um ein Ref festzulegen; Standard ist der Standard-Branch des Remotes. Eine nackte Site-URL wird automatisch um `/{{product.workspaceDataFolderName}}/marketplace.json` ergänzt.
 
 Verwalte hinzugefügte Marktplätze mit `spirit extension marketplace list` und `spirit extension marketplace remove <name>`. Auf dem Desktop erreichst du die Entfernen-Aktion per Rechtsklick auf einen Marktplatz-Tab.
 

@@ -1,9 +1,10 @@
 ---
 title: Extensions
-description: Install extensions from marketplaces, import a ZIP package, or add your own remote extension marketplace.
+description: Install extensions from marketplaces, import a ZIP package, or add
+  your own remote extension marketplace.
 ---
 
-Extensions add capabilities to Spirit — tools, skills, hooks, MCP servers, and UI contributions. They are distributed through extension marketplaces:
+Extensions add capabilities to {{product.name|mdx}} — tools, skills, hooks, MCP servers, and UI contributions. They are distributed through extension marketplaces:
 
 - **Built-in** — ships with the app.
 - **Personal** — your own imports: ZIP packages you added yourself.
@@ -54,7 +55,7 @@ Three locator forms:
 | Git repository (HTTPS or SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP index URL                | `spirit extension marketplace add https://example.com`                   |
 
-Git URLs accept `--git-ref <tag|branch|commit>` to pin a ref; the default is the remote's default branch. A bare site URL resolves to its `/.spirit/marketplace.json` automatically.
+Git URLs accept `--git-ref <tag|branch|commit>` to pin a ref; the default is the remote's default branch. A bare site URL resolves to its `/{{product.workspaceDataFolderName}}/marketplace.json` automatically.
 
 List and remove added marketplaces with `spirit extension marketplace list` and `spirit extension marketplace remove <name>`. On Desktop, right-click a marketplace tab for the remove action.
 

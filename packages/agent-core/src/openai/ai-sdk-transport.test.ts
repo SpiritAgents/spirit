@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -6,8 +7,10 @@ import { renderAiSdkProviderError } from "./ai-sdk-provider-error.js";
 
 test("normalizeGeneratedImageMarkdownRef normalizes valid managed refs", () => {
   assert.equal(
-    normalizeGeneratedImageMarkdownRef("  SPIRIT://GENERATED/image/example%20image.png  "),
-    "spirit://generated/image/example%20image.png",
+    normalizeGeneratedImageMarkdownRef(
+      `  ${product.urlProtocol.toUpperCase()}://GENERATED/image/example%20image.png  `,
+    ),
+    `${product.urlProtocol}://generated/image/example%20image.png`,
   );
 });
 
@@ -20,7 +23,13 @@ test("normalizeGeneratedImageMarkdownRef rejects empty refs", () => {
 
 test("normalizeGeneratedImageMarkdownRef rejects invalid managed refs", () => {
   assert.throws(
-    () => normalizeGeneratedImageMarkdownRef("spirit://generated/image/%2Fsecret.png"),
+    () =>
+      normalizeGeneratedImageMarkdownRef(`${product.urlProtocol}://generated/image/%2Fsecret.png`),
+    /invalid generated image markdownRef/u,
+  );
+  assert.throws(
+    () =>
+      normalizeGeneratedImageMarkdownRef(`${product.urlProtocol}-other://generated/image/test.png`),
     /invalid generated image markdownRef/u,
   );
 });

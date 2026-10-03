@@ -1,6 +1,7 @@
-/** Mirrors Spirit `scripts/release/selfhosted-paths.mjs` public CDN layout. */
+import { product } from "@spiritagent/product";
 
-export const SPIRIT_DOWNLOAD_HOST = "download.spirit.dev";
+/** Mirrors `scripts/release/selfhosted-paths.mjs` public CDN layout. */
+export const SPIRIT_DOWNLOAD_HOST = new URL(product.downloadOrigin).host;
 
 export type SpiritDownloadChannel = "desktop" | "cli";
 export type SpiritDownloadOs = "darwin" | "windows" | "linux";
@@ -8,33 +9,33 @@ export type SpiritDownloadArch = "x64" | "arm64" | "ia32";
 
 const DESKTOP_FILENAMES: Record<SpiritDownloadOs, Partial<Record<SpiritDownloadArch, string>>> = {
   darwin: {
-    x64: "Spirit-darwin-x64.dmg",
-    arm64: "Spirit-darwin-arm64.dmg",
+    x64: `${product.name}-darwin-x64.dmg`,
+    arm64: `${product.name}-darwin-arm64.dmg`,
   },
   windows: {
-    x64: "Spirit-windows-x64.exe",
-    ia32: "Spirit-windows-ia32.exe",
-    arm64: "Spirit-windows-arm64.exe",
+    x64: `${product.name}-windows-x64.exe`,
+    ia32: `${product.name}-windows-ia32.exe`,
+    arm64: `${product.name}-windows-arm64.exe`,
   },
   linux: {
-    x64: "Spirit-linux-x64.AppImage",
-    arm64: "Spirit-linux-arm64.AppImage",
+    x64: `${product.name}-linux-x64.AppImage`,
+    arm64: `${product.name}-linux-arm64.AppImage`,
   },
 };
 
 const CLI_FILENAMES: Record<SpiritDownloadOs, Partial<Record<SpiritDownloadArch, string>>> = {
   darwin: {
-    x64: "Spirit-CLI-darwin-x64.tar.gz",
-    arm64: "Spirit-CLI-darwin-arm64.tar.gz",
+    x64: `${product.name}-CLI-darwin-x64.tar.gz`,
+    arm64: `${product.name}-CLI-darwin-arm64.tar.gz`,
   },
   windows: {
-    x64: "Spirit-CLI-windows-x64.zip",
-    ia32: "Spirit-CLI-windows-ia32.zip",
-    arm64: "Spirit-CLI-windows-arm64.zip",
+    x64: `${product.name}-CLI-windows-x64.zip`,
+    ia32: `${product.name}-CLI-windows-ia32.zip`,
+    arm64: `${product.name}-CLI-windows-arm64.zip`,
   },
   linux: {
-    x64: "Spirit-CLI-linux-x64.tar.gz",
-    arm64: "Spirit-CLI-linux-arm64.tar.gz",
+    x64: `${product.name}-CLI-linux-x64.tar.gz`,
+    arm64: `${product.name}-CLI-linux-arm64.tar.gz`,
   },
 };
 
@@ -66,7 +67,9 @@ export function spiritDownloadUrl(
   arch: SpiritDownloadArch,
   version: "latest" | string = "latest",
 ): string {
-  return `https://${SPIRIT_DOWNLOAD_HOST}/${spiritDownloadObjectKey(channel, os, arch, version)}`;
+  const key = spiritDownloadObjectKey(channel, os, arch, version);
+  return new URL(key.split("/").map(encodeURIComponent).join("/"), `${product.downloadOrigin}/`)
+    .href;
 }
 
 export function spiritDesktopDownloadUrl(

@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/extension-toolkit",
   "version": "1.0.0-alpha.0",
-  "description": "Spirit extension package and marketplace registry schema toolkit (marketplace.json parsing, semver, registry-relative paths, contribution file checks)",
+  "description": "Extension package and marketplace registry schema toolkit (marketplace.json parsing, semver, registry-relative paths, contribution file checks)",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,6 +36,7 @@
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/create-extension": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "fflate": "0.8.3"
   },
   "devDependencies": {

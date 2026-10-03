@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/i18n/config";
+import { interpolateProductCopy } from "@/i18n/product-copy";
 import { getDesktopPack } from "@/i18n/desktop-packs";
 import type { Messages } from "@/i18n/messages";
 
@@ -118,11 +119,12 @@ function getByPath(object: unknown, path: string): string | undefined {
 }
 
 function formatTranslation(template: string, params?: TranslationParams): string {
+  const productTemplate = interpolateProductCopy(template);
   if (!params) {
-    return template;
+    return productTemplate;
   }
   if (params.defaultValue && template === params.defaultValue) {
-    return params.defaultValue;
+    return productTemplate;
   }
   return Object.entries(params).reduce((result, [name, value]) => {
     if (name === "defaultValue") {
@@ -130,7 +132,7 @@ function formatTranslation(template: string, params?: TranslationParams): string
     }
     const text = value == null ? "" : String(value);
     return result.replaceAll(`{{${name}}}`, text).replaceAll(`{${name}}`, text);
-  }, template);
+  }, productTemplate);
 }
 
 function resolvePluralSuffix(

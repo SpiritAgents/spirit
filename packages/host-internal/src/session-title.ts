@@ -187,7 +187,7 @@ export async function generateSessionTitleForTurn(input: {
 }): Promise<{ title: string; modelName: string }> {
   const config = loadSpiritConfig(input.spiritDataDir);
   if (!config) {
-    throw new Error("Spirit config is not available.");
+    throw new Error(`${product.name} config is not available.`);
   }
 
   const imagePaths = input.imagePaths ?? [];
@@ -237,3 +237,4 @@ function providerIdForTransportConfig(config: LlmTransportConfig): string | unde
   }
   return config.llmVendor;
 }
+import { product } from "@spiritagent/product";

@@ -3,12 +3,11 @@ import path from "node:path";
 
 import {
   HOOK_EVENT_NAMES,
-  hooksUserConfigPath,
-  hooksWorkspaceConfigPath,
   type HookDefinition,
   type HookEventName,
   type HooksConfigFile,
 } from "@spiritagent/agent-core";
+import { hooksUserConfigPath, hooksWorkspaceConfigPath } from "../data-paths.js";
 
 import { loadHooksConfigFileAt, loadHooksConfigFileForMutation } from "./loader.js";
 

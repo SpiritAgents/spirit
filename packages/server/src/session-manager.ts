@@ -279,6 +279,7 @@ export class SessionManager {
   ) {
     this.spiritDataDir = spiritDataDir;
     this.mcpRegistry = new McpRegistry(
+      spiritDataDir,
       createExtensionMcpExtraConfigs(spiritDataDir, ["cli", "desktop"]),
     );
   }

@@ -1,6 +1,7 @@
 ---
 title: Règles
-description: AGENTS.md, .spirit/rule.md et votre fichier rule.md utilisateur.
+description: AGENTS.md, {{product.workspaceDataFolderName}}/rule.md et votre
+  fichier rule.md utilisateur.
 ---
 
 Les règles sont du Markdown que l'agent considère toujours. Il y a trois emplacements :
@@ -8,9 +9,9 @@ Les règles sont du Markdown que l'agent considère toujours. Il y a trois empla
 | Portée                                | Chemin                        |
 | ------------------------------------- | ----------------------------- |
 | Fichier agents de l'espace de travail | `{workspace}/AGENTS.md`       |
-| Règle Spirit de l'espace de travail   | `{workspace}/.spirit/rule.md` |
+| Règle {{product.name|mdx}} de l'espace de travail   | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
 | Règle utilisateur                     | `{spiritDataDir}/rule.md`     |
 
-Écrivez les conventions du projet dans `AGENTS.md` afin que toute personne qui ouvre le dépôt les voie. Utilisez `.spirit/rule.md` pour les notes spécifiques à Spirit que vous ne souhaitez pas inclure dans le fichier agents générique. Utilisez la règle utilisateur pour les préférences qui vous suivent à travers les espaces de travail.
+Écrivez les conventions du projet dans `AGENTS.md` afin que toute personne qui ouvre le dépôt les voie. Utilisez `{{product.workspaceDataFolderName}}/rule.md` pour les notes spécifiques à {{product.name|mdx}} que vous ne souhaitez pas inclure dans le fichier agents générique. Utilisez la règle utilisateur pour les préférences qui vous suivent à travers les espaces de travail.
 
 Gérez les emplacements dans **Paramètres → Règles**. Une compétence intégrée, `create-rule`, peut rédiger un fichier de règles pour vous. Une rule bundlée dans une [extension](../develop/extensions.mdx) s'applique lorsque cette extension est activée. Elle n'apparaît pas dans cette liste de paramètres.

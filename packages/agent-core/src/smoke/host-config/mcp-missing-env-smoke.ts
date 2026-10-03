@@ -1,8 +1,10 @@
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 
 import { McpService } from "../../mcp/service.js";
+import { parseMcpConfigFile } from "../../mcp/config.js";
 
 const MISSING_ENV_NAME = "SPIRIT_AGENT_MCP_MISSING_ENV_SMOKE_TOKEN";
 
@@ -48,7 +50,15 @@ async function runMcpMissingEnvSmoke(): Promise<void> {
     delete process.env.USERPROFILE;
     delete process.env[MISSING_ENV_NAME];
 
-    const service = new McpService(process.cwd());
+    const service = new McpService(tempRoot, false, {
+      configSource: {
+        scopeKey: dataDir,
+        read: () => ({
+          user: parseMcpConfigFile(JSON.parse(readFileSync(join(dataDir, "mcp.json"), "utf8"))),
+          workspace: { servers: {} },
+        }),
+      },
+    });
     service.startBackgroundRefreshInBackground(true);
 
     const backgroundSnapshot = await waitForSnapshot(

@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "이미지 생성 중…"
       },
-      "manualAssistantResponse": "Spirit를 다운로드하세요.",
+      "manualAssistantResponse": "{{product.name}}를 다운로드하세요.",
       "demoUserPrompt": "현재 랜딩 페이지를 검토하고 다음에 개선할 점을 알려주세요.",
       "demoThinkingText": "현재 Hero 구조를 확인하는 중.\n대화 표면에서 가장 눈에 띄는 공백을 찾는 중.\n간단한 구현 요약을 준비하는 중.",
       "demoAssistantResponse": "다음 단계는 다음과 같습니다.\n\n- 빈 대화 영역을 실제 스트리밍 데모로 교체하세요.\n- Hero 창을 중단 가능하게 유지하여 방문자가 즉시 제어할 수 있게 하세요.\n- Desktop 메시지 스타일을 Thinking 및 도구 호출에 재사용하고 근사치로 대체하지 마세요.",
@@ -190,7 +190,7 @@
       "exited": "[종료됨, 코드 {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Spirit 데스크톱 제품용 마케팅 사이트 미리보기.",
+      "siteReadmeDescription": "{{product.name}} 데스크톱 제품용 마케팅 사이트 미리보기.",
       "desktopReadmeDescription": "데스크톱 제품의 Electron 셸 및 웹 렌더러.",
       "generatedWorkspaceDescription": "랜딩 페이지 {{label}} 미리보기를 위해 생성된 모의 워크스페이스.",
       "generatedWorkspaceOverview": "워크스페이스 루트: {{root}}\\n\\n이 모의 워크스페이스는 전체 데스크톱 런타임을 마운트하지 않고 파일 탭을 인터랙티브하게 유지합니다.",
@@ -202,17 +202,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit는 사용자의 모델, 키, 워크플로로 실행하는 오픈 소스 AI 에이전트입니다."
+    "title": "{{product.name}}",
+    "description": "{{product.name}}는 사용자의 모델, 키, 워크플로로 실행하는 오픈 소스 AI 에이전트입니다."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "다운로드",
     "downloadForPlatform": "{{platform}}용 다운로드"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit 홈",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} 홈",
     "primaryNavAria": "주 메뉴",
     "nav": {
       "features": "기능",
@@ -233,8 +233,8 @@
     "headline": "생산성을 배가하도록 설계된\n오픈 소스 AI 에이전트."
   },
   "download": {
-    "metaTitle": "Spirit 다운로드",
-    "metaDescription": "Spirit를 Desktop용으로 다운로드하고, CLI를 설치하고, ACP를 기대하세요.",
+    "metaTitle": "{{product.name}} 다운로드",
+    "metaDescription": "{{product.name}}를 Desktop용으로 다운로드하고, CLI를 설치하고, ACP를 기대하세요.",
     "title": "모든 작업에 동일한 에이전트.",
     "sectionAria": "모든 작업에 동일한 에이전트.",
     "desktop": "Desktop",
@@ -244,7 +244,7 @@
     "copied": "복사됨",
     "comingSoonJoke": "Coming soon™",
     "listingInProgress": "목록 불러오는 중…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "auth.ts를 검토하고 세션 갱신 버그를 수정하세요.",
     "cliAssistantMessage": "auth.ts를 검사하고 실패하는 세션 검사를 패치하겠습니다.",
     "cliUserFollowUp": "회귀 테스트도 추가하세요.",
@@ -252,20 +252,20 @@
     "cliFooter": "Agent  |  기본 승인  |  루프 꺼짐          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit 콘텐츠",
+    "sectionAria": "{{product.name}} 콘텐츠",
     "featureHeading": ["당신의 모델.", "당신의 키.", "당신의 통제."],
-    "featureBody": "Spirit은 호스팅 스택에 당신을 가두지 않습니다. 어떤 제공업체의 키든 가져와서 한 번 추가하면 모든 곳에서 동일한 에이전트 워크플로우를 사용할 수 있습니다.",
+    "featureBody": "{{product.name}}은 호스팅 스택에 당신을 가두지 않습니다. 어떤 제공업체의 키든 가져와서 한 번 추가하면 모든 곳에서 동일한 에이전트 워크플로우를 사용할 수 있습니다.",
     "agent": {
-      "sectionAria": "Spirit 생산성",
+      "sectionAria": "{{product.name}} 생산성",
       "featureHeading": [
         "컨텍스트로 계획하세요.",
         "도구로 실행하세요.",
         "작업 공간에서 배포하세요."
       ],
-      "featureBody": "Spirit은 행동하기 전에 계획합니다: 목업을 생성하고, 구조화된 계획을 작성하고, 데스크톱 셸을 벗어나지 않고 저장소에 대해 실행합니다."
+      "featureBody": "{{product.name}}은 행동하기 전에 계획합니다: 목업을 생성하고, 구조화된 계획을 작성하고, 데스크톱 셸을 벗어나지 않고 저장소에 대해 실행합니다."
     },
-    "ctaSectionAria": "Spirit 다운로드",
-    "ctaTitle": "Spirit을 사용해 보세요.",
+    "ctaSectionAria": "{{product.name}} 다운로드",
+    "ctaTitle": "{{product.name}}을 사용해 보세요.",
     "trio": {
       "sectionAria": "기능 미리보기",
       "completion": {
@@ -303,12 +303,12 @@
     "linkHome": "홈",
     "changelog": "변경 로그",
     "openSourceLicenses": "오픈소스 라이선스",
-    "copyrightLine": "© {{year}} Spirit. 오픈소스 AI 에이전트."
+    "copyrightLine": "© {{year}} {{product.name}}. 오픈소스 AI 에이전트."
   },
   "docs": {
     "title": "문서",
-    "metaTitle": "Spirit 문서",
-    "metaDescription": "Spirit를 설치하고, 자신의 키로 제공자를 연결하고, Desktop과 CLI에서 동일한 에이전트를 실행하세요.",
+    "metaTitle": "{{product.name}} 문서",
+    "metaDescription": "{{product.name}}를 설치하고, 자신의 키로 제공자를 연결하고, Desktop과 CLI에서 동일한 에이전트를 실행하세요.",
     "comingSoon": "곧 제공됩니다.",
     "sectionAria": "문서",
     "search": "검색",

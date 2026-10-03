@@ -1,6 +1,7 @@
 ---
 title: Install CLI
-description: Install the Spirit CLI with the install script, SPIRIT_HOME, and SPIRIT_VERSION.
+description: Install the {{product.name}} CLI with the install script,
+  SPIRIT_HOME, and SPIRIT_VERSION.
 ---
 
 The CLI is a terminal host with a TUI and a non-interactive `-p` mode. It talks to the same local daemon as [Desktop](./desktop.mdx).
@@ -10,16 +11,16 @@ The CLI is a terminal host with a TUI and a non-interactive `-p` mode. It talks 
 macOS and Linux:
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
-The script downloads a build from `download.spirit.dev`, verifies its SHA-256 against the matching GitHub Release `SHA256SUMS.txt` (aborting on mismatch), unpacks it, and puts `spirit` on your `PATH`.
+The script downloads a build from `{{product.downloadOrigin|host}}`, verifies its SHA-256 against the matching GitHub Release `SHA256SUMS.txt` (aborting on mismatch), unpacks it, and puts `spirit` on your `PATH`.
 
 Open a new terminal, then:
 
@@ -29,12 +30,12 @@ spirit --version
 
 ## Where it lands
 
-The install root is **not** the Spirit data directory.
+CLI binaries use SPIRIT_HOME. On Unix, the Stable install and shared data may have the same parent directory; bin/ and cli/ remain installation files. The installer setting does not select the shared-data directory.
 
 |                                    | Default                                                                                                      | Override          |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------- |
 | CLI binaries                       | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                         | `SPIRIT_HOME`     |
-| Sessions, config, keyring pointers | macOS: `~/Library/Application Support/Spirit` · Windows: `%APPDATA%\Spirit` · Linux: `~/.local/share/Spirit` | `SPIRIT_DATA_DIR` |
+| Sessions, config, keyring pointers | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 On Unix the script links `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/current/bin/spirit` and appends `export PATH="$SPIRIT_HOME/bin:$PATH"` to `~/.profile`, `~/.bashrc`, and `~/.zshrc` (marker `# spirit cli`).
 
@@ -44,10 +45,10 @@ On Unix the script links `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/current
 | ---------------------- | -------------------------------------- | ----------------------------------- |
 | `SPIRIT_HOME`          | `~/.spirit` or `%LOCALAPPDATA%\Spirit` | Install root for CLI binaries       |
 | `SPIRIT_VERSION`       | `latest`                               | Version segment in the download URL |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                  | CDN host                            |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                  | CDN host                            |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 You can also download a CLI archive from the [download page](/en-US/download) or [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) and unpack it yourself.

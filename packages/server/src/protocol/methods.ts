@@ -146,6 +146,7 @@ export interface ServerInitializeResult {
 
 export interface ServerHealthResult {
   ok: true;
+  productBuildId: string;
   instanceId: string;
   pid: number;
   version: string;

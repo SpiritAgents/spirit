@@ -5,6 +5,9 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 
+[build-dependencies]
+sha2 = "0.10"
+
 [features]
 default = ["tui"]
 tui = [

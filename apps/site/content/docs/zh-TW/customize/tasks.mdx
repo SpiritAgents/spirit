@@ -1,13 +1,14 @@
 ---
 title: 任務
-description: 從命令選擇區執行工作區任務，於 .spirit/tasks.json 宣告，或從 .vscode/tasks.json 匯入。
+description: 從命令選擇區執行工作區任務，於 {{product.workspaceDataFolderName}}/tasks.json
+  宣告，或從 .vscode/tasks.json 匯入。
 ---
 
 <Callout type="info">僅限桌面版。</Callout>
 
-任務可從 Spirit Desktop 命令選擇區執行預先定義的工作區命令：開啟命令選擇區（`Mod+Shift+P`），選擇**工作區 → 執行任務**，然後從第二層清單中選擇一個任務。該任務會在右側工具面板的終端機標籤頁中執行。**工作區**群組僅在至少存在一個有效任務時，才會出現在命令選擇區中。
+任務可從 {{product.name|mdx}} Desktop 命令選擇區執行預先定義的工作區命令：開啟命令選擇區（`Mod+Shift+P`），選擇**工作區 → 執行任務**，然後從第二層清單中選擇一個任務。該任務會在右側工具面板的終端機標籤頁中執行。**工作區**群組僅在至少存在一個有效任務時，才會出現在命令選擇區中。
 
-Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON 的 Spirit 格式，並以相容性匯入的方式讀取 VS Code 的 `tasks.json` — 僅支援明確定義的 VS Code 欄位子集。無法完全依照設定執行的任務會被整個隱藏，而不是以不完整的設定執行；見[任務為何被隱藏](#why-a-task-is-hidden)。
+{{product.name|mdx}} 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON 的 {{product.name|mdx}} 格式，並以相容性匯入的方式讀取 VS Code 的 `tasks.json` — 僅支援明確定義的 VS Code 欄位子集。無法完全依照設定執行的任務會被整個隱藏，而不是以不完整的設定執行；見[任務為何被隱藏](#why-a-task-is-hidden)。
 
 ## 任務檔案
 
@@ -15,23 +16,23 @@ Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON �
 
 | 優先順序 | 來源                             | 必要標記             | 備註                         |
 | -------- | -------------------------------- | -------------------- | ---------------------------- |
-| 1        | `<workspace>/.spirit/tasks.json` | `"schemaVersion": 1` | Spirit 自有格式              |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 自有格式              |
 | 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 使用者層級，套用至每個工作區 |
 | 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 相容性匯入，唯讀     |
 
-只會掃描工作區根目錄，不會掃描巢狀目錄。`<data dir>` 是 Spirit 資料目錄（例如在 macOS 上為 `~/Library/Application Support/Spirit`）。檔案若遺失、無法讀取、JSON 無效或標記錯誤，則不提供任何任務。
+只會掃描工作區根目錄，不會掃描巢狀目錄。`<data dir>` 是 {{product.name|mdx}} 資料目錄（例如在 macOS 上為 `~/{{product.stable.userDataFolderName}}`）。檔案若遺失、無法讀取、JSON 無效或標記錯誤，則不提供任何任務。
 
 這三個檔案會被即時監看；任一檔案變更時，命令選擇區清單會自動重新整理。
 
 三個來源會合併到同一個命名空間。當多個來源定義相同的 `label` 時，優先順序最高的來源生效 — 對命令選擇區清單與 `dependsOn` 參照皆然。
 
-`.vscode/tasks.json` 採寬容解析，因為實際檔案多為 JSONC：接受 `//` 與 `/* */` 註解及尾隨逗號。Spirit 自有檔案則是嚴格 JSON — 出現註解即會使檔案失效。
+`.vscode/tasks.json` 採寬容解析，因為實際檔案多為 JSONC：接受 `//` 與 `/* */` 註解及尾隨逗號。{{product.name|mdx}} 自有檔案則是嚴格 JSON — 出現註解即會使檔案失效。
 
 ## 工作區信任
 
-工作區任務檔案隨存放庫一起送達，因此屬於未受信任的資料：`.spirit/tasks.json` 與 `.vscode/tasks.json` 只有在你核准工作區內容後才會載入。使用者層級的 `tasks.json`（Spirit 資料目錄）一律受信任，一律載入。
+工作區任務檔案隨存放庫一起送達，因此屬於未受信任的資料：`{{product.workspaceDataFolderName}}/tasks.json` 與 `.vscode/tasks.json` 只有在你核准工作區內容後才會載入。使用者層級的 `tasks.json`（{{product.name|mdx}} 資料目錄）一律受信任，一律載入。
 
-當 Spirit Desktop 偵測到工作區任務檔案（或其變更）時，會詢問一次：對話框列出將可用的任務及其命令，點擊條目會開啟來源檔案。如果工作區鉤子也需要核准，兩個清單會合併在同一個對話框中。
+當 {{product.name|mdx}} Desktop 偵測到工作區任務檔案（或其變更）時，會詢問一次：對話框列出將可用的任務及其命令，點擊條目會開啟來源檔案。如果工作區鉤子也需要核准，兩個清單會合併在同一個對話框中。
 
 - **允許一次** — 任務僅在本次工作階段載入。
 - **永遠信任** — 記住目前確切的檔案內容。
@@ -65,7 +66,7 @@ Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON �
 | `dependsOn`                             | 支援 | 標籤字串，或標籤字串陣列。物件形式（`{ "type": … }`、`{ "task": … }`）會隱藏該任務                                                                                            |
 | `dependsOrder`                          | 支援 | `parallel`（預設）或 `sequence`                                                                                                                                               |
 | `detail`                                | 支援 | 在命令選擇區清單中顯示於標籤旁                                                                                                                                                |
-| `icon.id`                               | 支援 | 選單圖示：優先 Spirit Icons，其次 Lucide，並以終端機字符作為後備                                                                                                              |
+| `icon.id`                               | 支援 | 選單圖示：優先 {{product.name|mdx}} Icons，其次 Lucide，並以終端機字符作為後備                                                                                                              |
 | `icon.color`                            | 忽略 | 純展示性質                                                                                                                                                                    |
 | `hide`                                  | 支援 | 從命令選擇區清單隱藏，但仍可解析 — 該任務可作為 `dependsOn` 相依項目執行                                                                                                      |
 
@@ -104,7 +105,7 @@ Spirit 任務是獨立的系統，不是 VS Code 任務。它讀取嚴格 JSON �
 | ---------------------------- | ------------------------------------- |
 | `${workspaceFolder}`         | 工作區根目錄路徑                      |
 | `${workspaceFolderBasename}` | 工作區根目錄的資料夾名稱              |
-| `${cwd}`                     | Spirit Desktop 自身處理程序的工作目錄 |
+| `${cwd}`                     | {{product.name|mdx}} Desktop 自身處理程序的工作目錄 |
 | `${userHome}`                | 作業系統使用者的家目錄                |
 | `${pathSeparator}`、`${/}`   | 作業系統路徑分隔符                    |
 | `${env:NAME}`                | 環境變數 `NAME`（未設定時為空）       |
@@ -142,7 +143,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - **開啟資料夾觸發** — `runOn: "folderOpen"` 會在工作區啟用時自動執行該任務，但僅限受信任的工作區（經過核准或已有信任記錄）；被拒絕的工作區永遠不會執行。核准信任提示後會立即執行本次工作階段的開啟資料夾任務。每次啟用最多觸發一次——編輯 `tasks.json` 不會重新執行——若該任務已達實例上限，自動執行會被靜默略過（不跳出對話框）。
 - **終端機重複使用** — 只有已結束任務的終端機才會被重複使用。`panel: "shared"` 與 `panel: "dedicated"` 都會在存在此任務自身的閒置終端機時重複使用它（重複使用池以任務為單位），否則開啟新標籤頁；`panel: "new"` 一律開啟全新標籤頁。
 - **回顯** — 啟用 `presentation.echo`（預設開啟）時，命令列會在處理程序輸出之前寫入終端機。
-- **顯示** — `always`（預設）在啟動時展開工具面板；`silent` 在啟動時保持關閉，僅在任務以非零代碼結束時才展開；`never` 絕不自動展開。`focus: true` 隱含 reveal，並額外將鍵盤焦點移至終端機。注意與 VS Code 的兩處差異：`reveal: "silent"` 只會在結束代碼非零時展開（Spirit 沒有 problemMatcher 觸發路徑）；`presentation.revealProblems` 完全無效——既不抑制也不觸發終端機顯示。
+- **顯示** — `always`（預設）在啟動時展開工具面板；`silent` 在啟動時保持關閉，僅在任務以非零代碼結束時才展開；`never` 絕不自動展開。`focus: true` 隱含 reveal，並額外將鍵盤焦點移至終端機。注意與 VS Code 的兩處差異：`reveal: "silent"` 只會在結束代碼非零時展開（{{product.name|mdx}} 沒有 problemMatcher 觸發路徑）；`presentation.revealProblems` 完全無效——既不抑制也不觸發終端機顯示。
 - **清除** — `presentation.clear` 會在重複使用終端機重新執行前，先清除終端機。
 - **關閉** — `presentation.close` 會在結束時自動關閉標籤頁，無論結束代碼為何。
 - **保留終端機名稱** — `presentation.preserveTerminalName` 以任務標籤作為標籤頁標題；否則標題會被執行中處理程序的標題取代。
@@ -152,7 +153,7 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 
 ## 範例
 
-完整的 `.spirit/tasks.json` — 一條 build → test → package 的序列鏈，外加一個背景監看任務：
+完整的 `{{product.workspaceDataFolderName}}/tasks.json` — 一條 build → test → package 的序列鏈，外加一個背景監看任務：
 
 ```json
 {

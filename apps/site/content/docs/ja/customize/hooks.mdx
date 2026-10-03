@@ -3,7 +3,7 @@ title: フック
 description: セッション、ツール、サブエージェントのイベントでスクリプトを実行します。許可、拒否、または確認を求めることができます。
 ---
 
-フックは、Spirit が特定の時点で実行するスクリプトです。ツールを許可、拒否、または承認プロンプト（`ask`）を強制することができます。
+フックは、{{product.name|mdx}} が特定の時点で実行するスクリプトです。ツールを許可、拒否、または承認プロンプト（`ask`）を強制することができます。
 
 ## イベント
 
@@ -22,7 +22,7 @@ description: セッション、ツール、サブエージェントのイベン�
 | スコープ       | 設定                             | スクリプト                   |
 | -------------- | -------------------------------- | ---------------------------- |
 | ユーザー       | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| ワークスペース | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| ワークスペース | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 同じイベントでは、ユーザーエントリとワークスペースエントリがその順序で連結されます。互いに上書きされることはありません。
 

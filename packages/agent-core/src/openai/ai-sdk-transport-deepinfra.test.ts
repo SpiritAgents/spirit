@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -156,7 +157,7 @@ test("DeepInfra image generation reuses openai-compatible branch with preset /op
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
+        markdownRef: `${product.urlProtocol}://generated/image/abc`,
       }),
     );
 

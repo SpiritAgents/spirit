@@ -31,11 +31,11 @@ spirit -p "your prompt here"
 | `SPIRIT_API_KEY`  | 이 프로세스의 API 키. 순서: 환경 변수 → 모델 키링 → 전역 키링 |
 | `SPIRIT_API_BASE` | API 기본 URL 재정의                                           |
 | `SPIRIT_DATA_DIR` | 데이터 디렉터리 (Desktop과 동일한 저장소)                     |
-| `SPIRIT_HOME`     | CLI **바이너리** 설치 루트 — 데이터 디렉터리가 아님           |
+| `SPIRIT_HOME`     | CLI 바이너리 설치 루트(bin/ 및 cli/), 공유 데이터 설정과 별개 |
 
 ## 공유 데몬
 
-`spirit`은 WebSocket을 통해 Spirit Server 데몬에 연결됩니다. 세션, 스트리밍, 도구 및 승인 큐가 거기에 있습니다. 베어러 토큰은 `{spiritDataDir}/server.token` (모드 `0600`)입니다. 데몬은 기본적으로 임의 포트의 `127.0.0.1`에 바인딩됩니다.
+`spirit`은 WebSocket을 통해 {{product.name|mdx}} Server 데몬에 연결됩니다. 세션, 스트리밍, 도구 및 승인 큐가 거기에 있습니다. 베어러 토큰은 `{spiritDataDir}/server.token` (모드 `0600`)입니다. 데몬은 기본적으로 임의 포트의 `127.0.0.1`에 바인딩됩니다.
 
 `spirit serve`는 포그라운드에서 데몬을 실행합니다. 원격 `0.0.0.0`은 공개 제품 경로가 아닙니다. [보안](./security.mdx)을 참조하세요.
 

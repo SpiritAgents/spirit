@@ -1,20 +1,21 @@
 ---
 title: Config
-description: Data directories, config.json v2, .spirit/, and environment variables.
+description: Data directories, config.json v2,
+  {{product.workspaceDataFolderName}}/, and environment variables.
 ---
 
-Spirit keeps binaries and data in different places. Mixing them up is the usual reason “I installed the CLI but settings are empty”.
+Shared user data follows the build quality, not the operating system's application-data directory.
 
 ## Data directory
 
 Override with `SPIRIT_DATA_DIR`. The server can also use `SPIRIT_SERVER_DATA_DIR` (wins over the former).
 
-| OS       | Default                                            |
-| -------- | -------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Spirit`             |
-| Windows  | `%APPDATA%\Spirit`                                 |
-| Linux    | `$XDG_DATA_HOME/Spirit` or `~/.local/share/Spirit` |
-| Fallback | `~/.spirit-data`                                   |
+| Build | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking change: old platform data directories are not read or migrated automatically. Explicit data-directory overrides remain supported. Electron caches, browser storage, and window state remain in the private platform application directory.
 
 Typical files:
 
@@ -34,7 +35,7 @@ Typical files:
   server/instances/
 ```
 
-CLI binaries live under `SPIRIT_HOME` (`~/.spirit` or `%LOCALAPPDATA%\Spirit`). That is not this directory. See [Install CLI](./install/cli.mdx).
+CLI binaries use SPIRIT_HOME. On Unix, the Stable install and shared data may have the same parent directory; bin/ and cli/ remain installation files. The installer setting does not select the shared-data directory.
 
 ## config.json v2
 
@@ -68,14 +69,14 @@ Keys are **not** in this file. They live in the [keyring](./security.mdx).
 
 The old `tool-permissions.json` (written by the "Always Trust" button) is deprecated: the code no longer reads or writes it, and there is no automatic migration. Leftover files are inert — delete them manually.
 
-## Workspace `.spirit/`
+## Workspace `{{product.workspaceDataFolderName}}/`
 
 | Path                 | Role                                       |
 | -------------------- | ------------------------------------------ |
-| `.spirit/rule.md`    | Workspace [rule](./customize/rules.mdx)    |
-| `.spirit/skills/`    | Workspace [skills](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | Workspace [MCP](./customize/mcp.mdx)       |
-| `.spirit/hooks.json` | Workspace [hooks](./customize/hooks.mdx)   |
+| `{{product.workspaceDataFolderName}}/rule.md`    | Workspace [rule](./customize/rules.mdx)    |
+| `{{product.workspaceDataFolderName}}/skills/`    | Workspace [skills](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | Workspace [MCP](./customize/mcp.mdx)       |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Workspace [hooks](./customize/hooks.mdx)   |
 
 Also used: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

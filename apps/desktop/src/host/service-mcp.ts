@@ -1,6 +1,7 @@
 import path from "node:path";
 
-import { McpService, type McpExtraConfigProvider } from "@spiritagent/agent-core";
+import type { McpService, McpExtraConfigProvider } from "@spiritagent/agent-core";
+import { createHostMcpService } from "@spiritagent/host-internal";
 
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -8,7 +9,7 @@ import type {
   DeleteMcpServerRequest,
   DesktopMcpServerInspection,
 } from "../types.js";
-import type { DesktopWorkspaceBinding } from "./storage.js";
+import { spiritDataDir, type DesktopWorkspaceBinding } from "./storage.js";
 import {
   addMcpServerToDisk,
   buildMcpServerConfigFromRequest,
@@ -25,8 +26,9 @@ export function sharedMcpServiceForWorkspace(
   const key = `${path.resolve(workspaceRoot)}|${includeWorkspaceConfig ? "project" : "none"}`;
   let service = cache.get(key);
   if (!service) {
-    service = new McpService(
+    service = createHostMcpService(
       path.resolve(workspaceRoot),
+      spiritDataDir(),
       includeWorkspaceConfig,
       extraConfigs ? { extraConfigs } : {},
     );

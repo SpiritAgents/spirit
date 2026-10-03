@@ -11,6 +11,10 @@ TypeScript core runtime for [Spirit](https://github.com/SpiritAgents/spirit) —
 - **Host tool contracts** — built-in tools defined once (name, description, JSON Schema); hosts implement execution for workspace files, shell, web, delegation, planning, multimodal output, Dreams memory, and LSP diagnostics.
 - **System context** — rules, skills, MCP client/registry, and mode prompts assembled for the model without duplicating tool lists in system text.
 
+## Host configuration sources
+
+`McpService` accepts `McpServiceOptions.configSource`. The host supplies synchronous configuration reads for immediate registry priming and a user-scope cache key. Without a source, the SDK service has no file-backed MCP servers; it does not discover a home directory or read configuration files. Hosts in this repository use `createHostMcpService` from `@spiritagent/host-internal`. MCP parsing, merging, protocol handling, and runtime semantics remain in Agent Core.
+
 ## Requirements
 
 - Node.js 24+

@@ -1,6 +1,7 @@
 import path from "node:path";
+import { product } from "@spiritagent/product";
 
-export const MANAGED_GENERATED_ASSET_PROTOCOL = "spirit:";
+export const MANAGED_GENERATED_ASSET_PROTOCOL = `${product.urlProtocol}:`;
 export const MANAGED_GENERATED_ASSET_HOST = "generated";
 
 export const GENERATED_IMAGES_DIR = "generated-images";
@@ -54,24 +55,24 @@ export function parseManagedGeneratedAssetReference(
     url.search.length > 0 ||
     url.hash.length > 0
   ) {
-    throw new Error(`Invalid Spirit managed asset reference: ${trimmed}`);
+    throw new Error(`Invalid ${product.name} managed asset reference: ${trimmed}`);
   }
 
   const segments = url.pathname.replace(/^\/+/, "").split("/").filter(Boolean);
   if (segments.length !== 2) {
-    throw new Error(`Invalid Spirit managed asset reference: ${trimmed}`);
+    throw new Error(`Invalid ${product.name} managed asset reference: ${trimmed}`);
   }
 
   const kindSegment = segments[0]?.toLowerCase();
   if (kindSegment !== "image" && kindSegment !== "video") {
-    throw new Error(`Invalid Spirit managed asset reference: ${trimmed}`);
+    throw new Error(`Invalid ${product.name} managed asset reference: ${trimmed}`);
   }
 
   let basename: string;
   try {
     basename = decodeURIComponent(segments[1] ?? "").trim();
   } catch {
-    throw new Error(`Invalid Spirit managed asset reference: ${trimmed}`);
+    throw new Error(`Invalid ${product.name} managed asset reference: ${trimmed}`);
   }
 
   if (
@@ -82,7 +83,7 @@ export function parseManagedGeneratedAssetReference(
     basename.includes("/") ||
     basename.includes("\\")
   ) {
-    throw new Error(`Invalid Spirit managed asset reference: ${trimmed}`);
+    throw new Error(`Invalid ${product.name} managed asset reference: ${trimmed}`);
   }
 
   return {

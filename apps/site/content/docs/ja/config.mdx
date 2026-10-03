@@ -1,20 +1,20 @@
 ---
 title: 設定
-description: データディレクトリ、config.json v2、.spirit/、環境変数。
+description: データディレクトリ、config.json v2、{{product.workspaceDataFolderName}}/、環境変数。
 ---
 
-Spirit はバイナリとデータを別の場所に保存します。これらを混同すると、「CLI をインストールしたのに設定が空である」というよくある問題が発生します。
+共有ユーザーデータの保存先はビルドの quality で決まり、OS のアプリケーションデータディレクトリは使用しません。
 
 ## データディレクトリ
 
 `SPIRIT_DATA_DIR` で上書きできます。サーバーは `SPIRIT_SERVER_DATA_DIR` も使用でき（前者よりも優先されます）。
 
-| OS             | デフォルト                                             |
-| -------------- | ------------------------------------------------------ |
-| macOS          | `~/Library/Application Support/Spirit`                 |
-| Windows        | `%APPDATA%\Spirit`                                     |
-| Linux          | `$XDG_DATA_HOME/Spirit` または `~/.local/share/Spirit` |
-| フォールバック | `~/.spirit-data`                                       |
+| ビルド | macOS / Linux | Windows |
+| --- | --- | --- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+
+Breaking Change：旧プラットフォームディレクトリの読み込みや移行は自動では行いません。データディレクトリの明示的な指定は引き続き使用できます。Electron のキャッシュ、ブラウザーストレージ、ウィンドウ状態はプラットフォーム専用のアプリケーションディレクトリに残ります。
 
 一般的なファイル:
 
@@ -34,7 +34,7 @@ Spirit はバイナリとデータを別の場所に保存します。これら�
   server/instances/
 ```
 
-CLI バイナリは `SPIRIT_HOME`（`~/.spirit` または `%LOCALAPPDATA%\Spirit`）に配置されます。これはこのディレクトリではありません。[CLI のインストール](./install/cli.mdx) を参照してください。
+CLI バイナリには SPIRIT_HOME を使用します。Unix では Stable のインストールと共有データが同じ親ディレクトリを使用できますが、bin/ と cli/ はインストールファイルです。インストール設定で共有データディレクトリは変わりません。
 
 ## config.json v2
 
@@ -48,14 +48,14 @@ CLI バイナリは `SPIRIT_HOME`（`~/.spirit` または `%LOCALAPPDATA%\Spirit
 
 キーはこのファイルには含まれません。キーは [キーリング](./security.mdx) に保存されます。
 
-## ワークスペースの `.spirit/`
+## ワークスペースの `{{product.workspaceDataFolderName}}/`
 
 | パス                 | 役割                                              |
 | -------------------- | ------------------------------------------------- |
-| `.spirit/rule.md`    | ワークスペースの [ルール](./customize/rules.mdx)  |
-| `.spirit/skills/`    | ワークスペースの [スキル](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | ワークスペースの [MCP](./customize/mcp.mdx)       |
-| `.spirit/hooks.json` | ワークスペースの [フック](./customize/hooks.mdx)  |
+| `{{product.workspaceDataFolderName}}/rule.md`    | ワークスペースの [ルール](./customize/rules.mdx)  |
+| `{{product.workspaceDataFolderName}}/skills/`    | ワークスペースの [スキル](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | ワークスペースの [MCP](./customize/mcp.mdx)       |
+| `{{product.workspaceDataFolderName}}/hooks.json` | ワークスペースの [フック](./customize/hooks.mdx)  |
 
 また、`{workspace}/AGENTS.md`、`{workspace}/.agents/skills/`、`{workspace}/plans/` も使用されます。
 

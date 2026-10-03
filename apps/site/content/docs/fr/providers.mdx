@@ -1,13 +1,14 @@
 ---
 title: Fournisseurs
-description: Apportez votre propre clé, exécutez l'assistant de connexion et conservez le même flux de travail d'agent lorsque vous changez de maison.
+description: Apportez votre propre clé, exécutez l'assistant de connexion et
+  conservez le même flux de travail d'agent lorsque vous changez de maison.
 ---
 
-Spirit est BYOK. Vous créez une clé dans la console d'un fournisseur, vous la collez dans Desktop ou la CLI, et Spirit la stocke dans le trousseau du système d'exploitation. Changer de maison ne modifie pas la façon dont vous ouvrez un espace de travail, approuvez des modifications ou exécutez l'agent.
+{{product.name|mdx}} est BYOK. Vous créez une clé dans la console d'un fournisseur, vous la collez dans Desktop ou la CLI, et {{product.name|mdx}} la stocke dans le trousseau du système d'exploitation. Changer de maison ne modifie pas la façon dont vous ouvrez un espace de travail, approuvez des modifications ou exécutez l'agent.
 
 L'assistant de connexion se trouve dans **Paramètres → Modèles** sur Desktop, ou `/model add` / `spirit model add` dans la CLI. Des champs supplémentaires n'apparaissent que lorsque ce fournisseur en a besoin.
 
-Spirit communique avec les fournisseurs via l'un des quatre transports. L'assistant fixe le type ou vous permet de choisir.
+{{product.name|mdx}} communique avec les fournisseurs via l'un des quatre transports. L'assistant fixe le type ou vous permet de choisir.
 
 | Transport           | Libellé de l'assistant             | Utilisation typique                                                                 |
 | ------------------- | ---------------------------------- | ----------------------------------------------------------------------------------- |
@@ -16,7 +17,7 @@ Spirit communique avec les fournisseurs via l'un des quatre transports. L'assist
 | `anthropic`         | API Messages                       | Anthropic, MiniMax et points de terminaison compatibles Messages facultatifs        |
 | `bedrock`           | Amazon Bedrock                     | Uniquement pour Amazon Bedrock                                                      |
 
-Google Gemini et Vertex AI utilisent toujours Chat Completions. Si un profil demande Responses ou Messages, Spirit revient à `openai-compatible`.
+Google Gemini et Vertex AI utilisent toujours Chat Completions. Si un profil demande Responses ou Messages, {{product.name|mdx}} revient à `openai-compatible`.
 
 Certaines maisons ajoutent une seconde dimension au-dessus de la clé :
 
@@ -26,7 +27,7 @@ Certaines maisons ajoutent une seconde dimension au-dessus de la clé :
 
 Si un fournisseur n'a aucune de ces options, l'assistant est simplement : clé → importer les modèles → choisir un modèle de chat actif.
 
-Spirit importe le catalogue de modèles et vous permet d'attribuer le modèle de chat actif, ainsi que les emplacements d'image / vidéo / chat léger lorsque le catalogue marque ces capacités. Le raisonnement et la recherche Web intégrée suivent le modèle et le transport, et non un bouton Spirit séparé.
+{{product.name|mdx}} importe le catalogue de modèles et vous permet d'attribuer le modèle de chat actif, ainsi que les emplacements d'image / vidéo / chat léger lorsque le catalogue marque ces capacités. Le raisonnement et la recherche Web intégrée suivent le modèle et le transport, et non un bouton {{product.name|mdx}} séparé.
 
 ## Catalogue
 
@@ -34,7 +35,7 @@ Voici les maisons dans le sélecteur de connexion, dans le même ordre. Chaque s
 
 ### OpenAI
 
-Créez une clé API dans la [plateforme OpenAI](https://platform.openai.com/api-keys). Spirit ne vend pas l'utilisation d'OpenAI.
+Créez une clé API dans la [plateforme OpenAI](https://platform.openai.com/api-keys). {{product.name|mdx}} ne vend pas l'utilisation d'OpenAI.
 
 L'assistant fixe **API Responses** (`open-responses`). Il n'y a pas de sélecteur de transport. Base par défaut : `https://api.openai.com/v1`.
 
@@ -46,7 +47,7 @@ Créez une clé API dans la [console Anthropic](https://console.anthropic.com/se
 
 **API Messages** fixée (`anthropic`). Base par défaut : `https://api.anthropic.com/v1`.
 
-Chat après import. Le raisonnement suit le modèle. Aucun emplacement de génération d'image ou de vidéo côté Spirit, sauf si une entrée de catalogue ultérieure le marque.
+Chat après import. Le raisonnement suit le modèle. Aucun emplacement de génération d'image ou de vidéo côté {{product.name|mdx}}, sauf si une entrée de catalogue ultérieure le marque.
 
 ### Google
 
@@ -279,7 +280,7 @@ Créez une clé API dans la [console Tencent TokenHub](https://console.cloud.ten
 - **Guangzhou** (par défaut) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapour** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Discutez après l'importation. Ne comptez pas sur la recherche web injectée dans Chat. TokenHub documente `web_search_options` pour Chat et `web_search` pour Responses, mais l'injection dans Chat ne fonctionne pas en pratique, et Responses n'est disponible que sur quelques modèles. Spirit conserve donc uniquement Chat Completions.
+Discutez après l'importation. Ne comptez pas sur la recherche web injectée dans Chat. TokenHub documente `web_search_options` pour Chat et `web_search` pour Responses, mais l'injection dans Chat ne fonctionne pas en pratique, et Responses n'est disponible que sur quelques modèles. {{product.name|mdx}} conserve donc uniquement Chat Completions.
 
 ### Mistral
 
@@ -305,7 +306,7 @@ Corrigé **API Responses** (`open-responses`). Pas de sélecteur de transport.
 
 - **Nom de ressource** (obligatoire) — 2 à 64 caractères, lettres, chiffres et traits d'union ; ne peut pas commencer ni se terminer par un trait d'union
 
-Spirit construit `https://{resource}.openai.azure.com/openai/v1`. Chat après importation. La génération d'images suit le catalogue Azure lorsqu'il est marqué.
+{{product.name|mdx}} construit `https://{resource}.openai.azure.com/openai/v1`. Chat après importation. La génération d'images suit le catalogue Azure lorsqu'il est marqué.
 
 ### Amazon Bedrock
 
@@ -316,7 +317,7 @@ Corrigé **Amazon Bedrock** (`bedrock`). Format d'hôte par défaut : `https://b
 - **Région AWS** (obligatoire), par exemple `us-east-1`
 - **Authentification** : **Bearer** ou **IAM**
   - Bearer — collez une clé API Bedrock et un identifiant de modèle. Les modèles ne sont **pas** récupérés automatiquement.
-  - IAM — ID de clé d'accès + clé d'accès secrète. Spirit répertorie les modèles de base du compte.
+  - IAM — ID de clé d'accès + clé d'accès secrète. {{product.name|mdx}} répertorie les modèles de base du compte.
 
 Chat après avoir choisi un modèle. Les autres capacités suivent ce modèle. Les clés Bearer ne fonctionnent que pour l'inférence. `ListFoundationModels` n'accepte pas Bearer, donc l'importation du catalogue nécessite IAM.
 
@@ -336,12 +337,12 @@ Chat après la sélection d'un modèle. Pour les clés AI Studio sans projet GCP
 
 ### Personnalisé
 
-Utilisez la clé API attendue par votre point de terminaison. Il n'y a pas de fournisseur personnalisé hébergé par Spirit.
+Utilisez la clé API attendue par votre point de terminaison. Il n'y a pas de fournisseur personnalisé hébergé par {{product.name|mdx}}.
 
 Sélecteur : **Chat Completions**, **Open Responses** ou **Messages**. Vous devez fournir l'**URL de base**. La valeur par défaut indicative est `https://api.openai.com/v1` si vous la laissez vide.
 
-Saisissez la racine documentée par le fournisseur, y compris le suffixe de version lorsqu'il l'exige (`/v1`, `/v1/openai`, …). Spirit ne devine pas le chemin pour les points de terminaison personnalisés.
+Saisissez la racine documentée par le fournisseur, y compris le suffixe de version lorsqu'il l'exige (`/v1`, `/v1/openai`, …). {{product.name|mdx}} ne devine pas le chemin pour les points de terminaison personnalisés.
 
 Vous pouvez également définir un nom d'affichage pour le groupe de fournisseurs afin que plusieurs points de terminaison personnalisés restent distinguables.
 
-Après la connexion, importez ou saisissez les identifiants de modèles. Marquez les capacités chat / image / vidéo dans l'assistant lorsque le point de terminaison ne publie pas de catalogue que Spirit comprend.
+Après la connexion, importez ou saisissez les identifiants de modèles. Marquez les capacités chat / image / vidéo dans l'assistant lorsque le point de terminaison ne publie pas de catalogue que {{product.name|mdx}} comprend.

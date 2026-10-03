@@ -42,6 +42,8 @@ export * from "./runtime.js";
 export * from "./session-title.js";
 export * from "./subagent-viewer.js";
 export * from "./storage.js";
+export * from "./data-paths.js";
+export * from "./mcp-config-source.js";
 export * from "./managed-generated-asset.js";
 export * from "./tools.js";
 export * from "./workspace-file-reference-query.js";

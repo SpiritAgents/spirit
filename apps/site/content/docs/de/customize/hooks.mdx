@@ -1,9 +1,10 @@
 ---
 title: Hooks
-description: Führen Sie Skripte bei Sitzungs-, Tool- und Subagent-Ereignissen aus. Sie können erlauben, verweigern oder nachfragen.
+description: Führen Sie Skripte bei Sitzungs-, Tool- und Subagent-Ereignissen
+  aus. Sie können erlauben, verweigern oder nachfragen.
 ---
 
-Hooks sind Skripte, die Spirit an festgelegten Punkten ausführt. Sie können ein Tool erlauben, es verweigern oder eine Genehmigungsabfrage (`ask`) erzwingen.
+Hooks sind Skripte, die {{product.name|mdx}} an festgelegten Punkten ausführt. Sie können ein Tool erlauben, es verweigern oder eine Genehmigungsabfrage (`ask`) erzwingen.
 
 ## Ereignisse
 
@@ -22,7 +23,7 @@ Wenn `preToolUse` `ask` zurückgibt, werden Sie auch bei [Auto-Genehmigung oder 
 | Gültigkeitsbereich | Konfiguration                    | Skripte                      |
 | ------------------ | -------------------------------- | ---------------------------- |
 | Benutzer           | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| Arbeitsbereich     | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| Arbeitsbereich     | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 Beim gleichen Ereignis werden Benutzereinträge und Arbeitsbereichseinträge in dieser Reihenfolge verkettet. Sie überschreiben sich nicht gegenseitig.
 

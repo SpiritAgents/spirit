@@ -4,15 +4,17 @@
  * (that paints the square canvas and skips the system squircle).
  *
  * The stock app under node_modules is read-only. Product name matches
- * electron/product-display-name.ts and electron-builder.yml productName.
+ * electron/product-display-name.ts and electron-builder.config.mjs productName.
  */
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import plist from "plist";
+import { product } from "@spiritagent/product";
 
 /** User-facing product name; must match electron-builder `productName`. */
-export const DEV_PRODUCT_NAME = "Spirit";
+export const DEV_PRODUCT_NAME = product.name;
 /** Distinct from the packaged app id `dev.spirit.desktop`. */
 export const DEV_BUNDLE_ID = "dev.spirit.desktop.dev";
 export const DEV_APP_DIR_NAME = `${DEV_PRODUCT_NAME}.app`;
@@ -57,8 +59,8 @@ export function hashTree(dir) {
   return JSON.stringify(files);
 }
 
-export function computeStamp({ electronVersion, icnsHash, productName, bundleId }) {
-  return { electronVersion, icnsHash, productName, bundleId };
+export function computeStamp({ electronVersion, icnsHash, productName, bundleId, urlProtocol }) {
+  return { electronVersion, icnsHash, productName, bundleId, urlProtocol };
 }
 
 function stampsEqual(a, b) {
@@ -66,7 +68,8 @@ function stampsEqual(a, b) {
     a?.electronVersion === b.electronVersion &&
     a?.icnsHash === b.icnsHash &&
     a?.productName === b.productName &&
-    a?.bundleId === b.bundleId
+    a?.bundleId === b.bundleId &&
+    a?.urlProtocol === b.urlProtocol
   );
 }
 
@@ -135,6 +138,7 @@ export function applyBrandToCopiedApp({
   icnsSrc,
   productName,
   bundleId,
+  urlProtocol = product.urlProtocol,
   adHocSign = process.platform === "darwin",
 }) {
   const icnsDest = path.join(appDir, "Contents", "Resources", STOCK_ICON_FILE);
@@ -142,9 +146,21 @@ export function applyBrandToCopiedApp({
   fs.copyFileSync(icnsSrc, icnsDest);
 
   const plistPath = path.join(appDir, "Contents", "Info.plist");
-  replacePlistString(plistPath, "CFBundleName", productName);
-  replacePlistString(plistPath, "CFBundleDisplayName", productName);
-  replacePlistString(plistPath, "CFBundleIdentifier", bundleId);
+  const xml =
+    process.platform === "darwin"
+      ? execFileSync("plutil", ["-convert", "xml1", "-o", "-", plistPath], { encoding: "utf8" })
+      : fs.readFileSync(plistPath, "utf8");
+  const metadata = plist.parse(xml);
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    throw new Error(`Info.plist must contain a dictionary: ${plistPath}`);
+  }
+  Object.assign(metadata, {
+    CFBundleName: productName,
+    CFBundleDisplayName: productName,
+    CFBundleIdentifier: bundleId,
+    CFBundleURLTypes: [{ CFBundleURLName: productName, CFBundleURLSchemes: [urlProtocol] }],
+  });
+  fs.writeFileSync(plistPath, plist.build(metadata));
 
   if (adHocSign) {
     execFileSync("codesign", ["--force", "--deep", "--sign", "-", appDir], { stdio: "pipe" });
@@ -179,6 +195,7 @@ export function ensureDevElectronBundle({
     icnsHash: hashFile(icnsPath),
     productName: DEV_PRODUCT_NAME,
     bundleId: DEV_BUNDLE_ID,
+    urlProtocol: product.urlProtocol,
   });
 
   if (fs.existsSync(destApp) && fs.existsSync(stampPath)) {

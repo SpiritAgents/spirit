@@ -445,7 +445,7 @@ pub(crate) fn help_text(has_active_plan: bool, can_continue_last_turn: bool) -> 
         t!("tui.help.image_pick").into_owned(),
         t!("tui.help.image_queue").into_owned(),
         t!("tui.help.file_reference").into_owned(),
-        t!("tui.help.mcp_add").into_owned(),
+        crate::locale::product_text("tui.help.mcp_add").into_owned(),
         t!("tui.help.hooks_add").into_owned(),
         t!("tui.help.model_add").into_owned(),
         t!("tui.help.mcp_prompt_alias").into_owned(),
@@ -482,7 +482,7 @@ pub(crate) fn handle_command(shell: &mut TuiShell, message: &str) {
 
     match cmd {
         "/quit" | "/exit" => {
-            shell.push_agent_message(t!("tui.quit.message").into_owned());
+            shell.push_agent_message(crate::locale::product_text("tui.quit.message").into_owned());
             shell.request_quit();
         }
         "/help" => shell.push_agent_message(help_text(
@@ -554,7 +554,7 @@ mod tests {
 
         assert!(help.contains("/mcp add"));
         assert!(help.contains("/model add"));
-        assert!(help.contains(t!("tui.help.mcp_add").as_ref()));
+        assert!(help.contains(crate::locale::product_text("tui.help.mcp_add").as_ref()));
         assert!(help.contains("/rule"));
         assert!(help.contains("/skill"));
         assert!(help.contains("/extension"));

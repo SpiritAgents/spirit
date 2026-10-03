@@ -7,11 +7,10 @@
  */
 import { spawn } from "node:child_process";
 import { readFileSync, readdirSync, openSync } from "node:fs";
-import { homedir } from "node:os";
+import { resolveSpiritDataDir } from "@spiritagent/host-internal";
 import { join } from "node:path";
 
-const DATA_DIR =
-  process.env.SPIRIT_DATA_DIR || join(homedir(), "Library", "Application Support", "Spirit");
+const DATA_DIR = process.env.SPIRIT_SERVER_DATA_DIR?.trim() || resolveSpiritDataDir();
 const ENTRY = new URL("../dist/src/entry.js", import.meta.url).pathname;
 const WORKSPACE = process.cwd();
 
