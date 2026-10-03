@@ -234,3 +234,61 @@ test("resolveProviderWebSearchMode excludes minimax openai-compatible chat", () 
     undefined,
   );
 });
+
+test("webSearchEnabled=false suppresses every provider web search mode", () => {
+  const cases: Array<Parameters<typeof resolveProviderWebSearchMode>[0]> = [
+    {
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "gpt-5.4",
+      llmVendor: "openai",
+      responsesProvider: "openai",
+    },
+    {
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "grok-4",
+      llmVendor: "xai",
+      responsesProvider: "xai",
+    },
+    {
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "openai/gpt-5.4",
+      llmVendor: "vercel-ai-gateway",
+    },
+    {
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "qwen3-max",
+      llmVendor: "alibaba",
+    },
+    {
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "deepseek-v4-pro",
+      llmVendor: "deepseek",
+    },
+    {
+      transportKind: "anthropic",
+      apiKey: "k",
+      model: "MiniMax-M3",
+      baseUrl: "https://api.minimaxi.com/anthropic/v1",
+      llmVendor: "minimax",
+    },
+  ];
+  for (const base of cases) {
+    assert.equal(resolveProviderWebSearchMode({ ...base, webSearchEnabled: false }), undefined);
+    assert.equal(shouldUseProviderWebSearch({ ...base, webSearchEnabled: false }), false);
+  }
+});
+
+test("webSearchEnabled=false suppresses alibaba chat completions web search only", () => {
+  const alibabaChat = {
+    apiKey: "k",
+    model: "qwen3-max",
+    llmVendor: "alibaba",
+  } as const;
+  assert.equal(shouldUseProviderWebSearch(alibabaChat), true);
+  assert.equal(shouldUseProviderWebSearch({ ...alibabaChat, webSearchEnabled: false }), false);
+});

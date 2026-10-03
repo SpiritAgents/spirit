@@ -1,5 +1,9 @@
 import type { JsonObject, JsonValue, AgentMode } from "../ports.js";
-import type { LlmModelCapabilities, TransportRequestProfile } from "../llm-provider-shared.js";
+import type {
+  LlmModelCapabilities,
+  LlmWebToolExposure,
+  TransportRequestProfile,
+} from "../llm-provider-shared.js";
 import type {
   OpenAiImageGenerationConfig,
   OpenAiLlmVendor,
@@ -26,7 +30,7 @@ export type OpenResponsesPreviousResponseMode = "disabled" | "stored" | "statele
 
 export type OpenResponsesReasoningSummary = "auto" | "detailed" | "off";
 
-export interface OpenResponsesTransportConfig {
+export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   transportKind: "open-responses";
   apiKey: string;
   model: string;

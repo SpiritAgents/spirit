@@ -3,6 +3,9 @@ import { transportKindForConfig } from "../../provider-config.js";
 import type { OpenAiTransportConfig } from "../../openai/openai-compat.js";
 
 export function shouldUseMoonshotFormulaWebSearch(config: LlmTransportConfig): boolean {
+  if (config.webSearchEnabled === false) {
+    return false;
+  }
   return isMoonshotAiDirectChatCompletionsConfig(config);
 }
 

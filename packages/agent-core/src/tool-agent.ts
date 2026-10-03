@@ -294,7 +294,16 @@ export function buildSpiritCoreHostPrompt(model: string, providerId?: string): s
   ].join("\n");
 }
 
-export function buildToolAgentHostPrompt(model: string, providerId?: string): string {
+export interface ToolAgentHostPromptOptions {
+  /** User web fetch opt-out (agents.webFetch.enabled=false): drop the line that tells the model to use web_fetch. */
+  webFetchEnabled?: boolean | undefined;
+}
+
+export function buildToolAgentHostPrompt(
+  model: string,
+  providerId?: string,
+  options: ToolAgentHostPromptOptions = {},
+): string {
   return [
     buildSpiritCoreHostPrompt(model, providerId),
     "Available tools are defined only by the tools field in this request.",
@@ -307,17 +316,22 @@ export function buildToolAgentHostPrompt(model: string, providerId?: string): st
     "High-risk tools (anything that could expose private data, credentials, secrets, personal information, or broadly traverse or modify the user's machine or repository) must not be used unless the user has given explicit, specific consent in the same turn or conversation for that exact class of action. If risk is unclear, do not call the tool; ask a short clarifying question instead.",
     "",
     `${product.name} product questions: the official site is ${product.websiteOrigin}.`,
-    `When the user asks about ${product.name} itself (features, install, configuration, troubleshooting), fetch ${product.websiteOrigin}/llms.txt or the matching page under ${product.websiteOrigin}/docs with web_fetch instead of answering from memory.`,
+    ...(options.webFetchEnabled === false
+      ? []
+      : [
+          `When the user asks about ${product.name} itself (features, install, configuration, troubleshooting), fetch ${product.websiteOrigin}/llms.txt or the matching page under ${product.websiteOrigin}/docs with web_fetch instead of answering from memory.`,
+        ]),
     `When the user asks for the official website, answer ${product.websiteOrigin}.`,
   ].join("\n");
 }
 
 export function buildToolAgentSystemMessage(
   model: string,
-  providerId?: string,
+  providerId: string | undefined,
+  options: ToolAgentHostPromptOptions = {},
   ...sections: Array<string | undefined>
 ): string {
-  return [buildToolAgentHostPrompt(model, providerId), ...sections]
+  return [buildToolAgentHostPrompt(model, providerId, options), ...sections]
     .filter(
       (section): section is string => typeof section === "string" && section.trim().length > 0,
     )
@@ -340,6 +354,7 @@ export function buildToolAgentMessages(input: {
   providerWebSearchPromptSection?: string;
   loopEnabled?: boolean;
   attribution?: ToolAgentAttributionFlags;
+  webFetchEnabled?: boolean;
 }): JsonValue[] {
   const rulesSystemMessage = buildRulesSystemMessage(input.enabledRules ?? []);
   const skillsCatalogSystemMessage = buildSkillsCatalogSystemMessage(
@@ -359,6 +374,7 @@ export function buildToolAgentMessages(input: {
       content: buildToolAgentSystemMessage(
         input.model,
         input.providerId,
+        { webFetchEnabled: input.webFetchEnabled },
         rulesSystemMessage,
         skillsCatalogSystemMessage,
         mcpCatalogSystemMessage,

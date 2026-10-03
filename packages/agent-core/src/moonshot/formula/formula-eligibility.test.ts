@@ -85,3 +85,15 @@ test("buildMoonshotFormulaToolPreviewArgumentsJson sets suppressExpand", () => {
   const parsed = JSON.parse(argumentsJson) as { _spiritUi: { inputExcerpt: string } };
   assert.equal(parsed._spiritUi.inputExcerpt, "latest AI news");
 });
+
+test("shouldUseMoonshotFormulaWebSearch honors the web search opt-out", () => {
+  assert.equal(
+    shouldUseMoonshotFormulaWebSearch({
+      apiKey: "k",
+      model: "kimi-k2.5",
+      llmVendor: "moonshot-ai",
+      webSearchEnabled: false,
+    }),
+    false,
+  );
+});

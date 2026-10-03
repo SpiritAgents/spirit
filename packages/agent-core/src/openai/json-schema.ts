@@ -43,7 +43,7 @@ export type StructuredOutputResponseFormat =
     };
 
 export function buildJsonSchemaCompletionMessages(
-  config: { model: string; llmVendor?: string; workspaceRoot?: string },
+  config: { model: string; llmVendor?: string; workspaceRoot?: string; webFetchEnabled?: boolean },
   request: OpenAiJsonSchemaCompletionRequest,
 ): JsonObject[] {
   const structuredOutputSystemSection = buildStructuredOutputSystemSection(config, request);
@@ -58,7 +58,12 @@ export function buildJsonSchemaCompletionMessages(
       content:
         request.includeToolAgentHostPrompt === false
           ? sections.join("\n\n")
-          : buildToolAgentSystemMessage(config.model, config.llmVendor, ...sections),
+          : buildToolAgentSystemMessage(
+              config.model,
+              config.llmVendor,
+              { webFetchEnabled: config.webFetchEnabled },
+              ...sections,
+            ),
     },
     buildJsonSchemaCompletionUserMessage(config.workspaceRoot, request),
   ];

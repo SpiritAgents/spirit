@@ -18,12 +18,15 @@ export function createAlibabaResponsesAwareFetch(
   }
 
   return async (input, init) => {
-    const patchedInit = patchAlibabaResponsesRequestInit(init);
+    const patchedInit = patchAlibabaResponsesRequestInit(config, init);
     return baseFetch(input, patchedInit);
   };
 }
 
-function patchAlibabaResponsesRequestInit(init: RequestInit | undefined): RequestInit | undefined {
+function patchAlibabaResponsesRequestInit(
+  config: OpenResponsesTransportConfig,
+  init: RequestInit | undefined,
+): RequestInit | undefined {
   if (!init?.body || typeof init.body !== "string") {
     return init;
   }
@@ -39,7 +42,9 @@ function patchAlibabaResponsesRequestInit(init: RequestInit | undefined): Reques
       ...init,
       body: JSON.stringify({
         ...body,
-        tools: mergeAlibabaResponsesBuiltInTools(existingTools),
+        tools: mergeAlibabaResponsesBuiltInTools(existingTools, {
+          includeWebSearch: config.webSearchEnabled !== false,
+        }),
       }),
     };
   } catch {

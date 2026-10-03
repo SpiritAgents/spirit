@@ -1,6 +1,10 @@
 import type { JsonObject, JsonValue } from "../ports.js";
 import { cloneJsonValue } from "../tool-agent.js";
-import type { LlmModelCapabilities, TransportRequestProfile } from "../llm-provider-shared.js";
+import type {
+  LlmModelCapabilities,
+  LlmWebToolExposure,
+  TransportRequestProfile,
+} from "../llm-provider-shared.js";
 
 /** Bedrock reasoning effort; `default` means no `reasoningConfig` is injected. */
 export type BedrockReasoningEffort =
@@ -13,7 +17,7 @@ export type BedrockReasoningEffort =
   | "xhigh"
   | "max";
 
-export interface BedrockTransportConfig {
+export interface BedrockTransportConfig extends LlmWebToolExposure {
   transportKind: "bedrock";
   model: string;
   /** AWS region (e.g. `us-east-1`); from the host `awsRegion`. */

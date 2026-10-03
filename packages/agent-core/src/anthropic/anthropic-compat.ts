@@ -2,7 +2,11 @@ import { isCodeCompletionTransportProfile } from "../code-completion/transport-p
 import { isMeituanAnthropicThinkingSwitchConfig } from "../meituan/meituan-anthropic-fetch.js";
 import type { JsonObject, JsonValue } from "../ports.js";
 import { cloneJsonValue } from "../tool-agent.js";
-import type { LlmModelCapabilities, TransportRequestProfile } from "../llm-provider-shared.js";
+import type {
+  LlmModelCapabilities,
+  LlmWebToolExposure,
+  TransportRequestProfile,
+} from "../llm-provider-shared.js";
 import { buildMinimaxProviderOptions } from "./minimax-provider-options.js";
 
 export const DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
@@ -16,7 +20,7 @@ export type AnthropicEffort = "low" | "medium" | "high" | "xhigh" | "max";
 
 export type AnthropicStructuredOutputMode = "outputFormat" | "jsonTool" | "auto";
 
-export interface AnthropicTransportConfig {
+export interface AnthropicTransportConfig extends LlmWebToolExposure {
   transportKind: "anthropic";
   apiKey: string;
   model: string;

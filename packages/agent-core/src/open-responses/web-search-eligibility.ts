@@ -24,12 +24,20 @@ export type ProviderWebSearchMode =
   | "deepseek-responses-built-in-tools";
 
 export function shouldUseProviderWebSearch(config: LlmTransportConfig): boolean {
+  // User opt-out (agents.webSearch.enabled=false in config.json): the provider is treated as if it
+  // had no web search capability everywhere (tool injection, apply_patch bridge, turn routing).
+  if (config.webSearchEnabled === false) {
+    return false;
+  }
   return resolveProviderWebSearchMode(config) !== undefined || shouldUseAlibabaBuiltInTools(config);
 }
 
 export function resolveProviderWebSearchMode(
   config: LlmTransportConfig,
 ): ProviderWebSearchMode | undefined {
+  if (config.webSearchEnabled === false) {
+    return undefined;
+  }
   if (shouldUseMinimaxServerToolsWebSearch(config)) {
     return "minimax-server-tools-web-search";
   }
@@ -94,5 +102,8 @@ export function xaiResponsesRejectsLocalFunctionTools(
     return false;
   }
 
+  // When the user opts out of web search on xAI, local function tools cannot be sent either
+  // (the API rejects them without provider web search), so the turn inherits the same failure
+  // path as a provider that never qualified for web search.
   return !shouldUseProviderWebSearch(config);
 }
