@@ -16,8 +16,10 @@ import type { ModelProviderId } from "./model-provider-presets.js";
 import {
   loadActiveModelProfile,
   loadModelProfile,
+  loadSpiritConfig,
   readBedrockCredentials,
   readGoogleVertexCredentials,
+  resolveAgentsWebToolExposure,
   resolveStoredApiKeyForProfile,
 } from "./credentials/index.js";
 import type { SpiritModelCapability, SpiritModelProfile } from "./credentials/types.js";
@@ -344,7 +346,19 @@ export function tryResolveTransportConfig(
     };
   }
 
-  return { ok: true, config: buildTransportFromProfile(profile, apiKey, context.workspaceRoot) };
+  const config = buildTransportFromProfile(profile, apiKey, context.workspaceRoot);
+  // Stamp the user's web tool opt-outs (agents.webSearch/webFetch in config.json) so every
+  // agent-core exposure gate can read them off the transport config; only an explicit
+  // false is stamped, keeping serialized configs free of redundant true values.
+  const webToolExposure = resolveAgentsWebToolExposure(loadSpiritConfig(context.spiritDataDir));
+  return {
+    ok: true,
+    config: {
+      ...config,
+      ...(webToolExposure.webSearchEnabled ? {} : { webSearchEnabled: false }),
+      ...(webToolExposure.webFetchEnabled ? {} : { webFetchEnabled: false }),
+    },
+  };
 }
 
 /**

@@ -1,3 +1,4 @@
+export { resolveAgentsWebToolExposure, type AgentsWebToolExposure } from "./agents-config.js";
 export {
   hasResolvableCredentials,
   loadActiveModelProfile,
