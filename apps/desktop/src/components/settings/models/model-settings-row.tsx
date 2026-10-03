@@ -13,7 +13,7 @@ export function ModelSettingsRowButton({
   displayTitle,
   isActive,
   isImageDefault,
-  isLightweightDefault,
+  isSecondaryDefault,
   defaultActionLabel,
   disabled,
   isHighlighted = false,
@@ -25,7 +25,7 @@ export function ModelSettingsRowButton({
   displayTitle: string;
   isActive: boolean;
   isImageDefault: boolean;
-  isLightweightDefault: boolean;
+  isSecondaryDefault: boolean;
   defaultActionLabel: string;
   disabled: boolean;
   isHighlighted?: boolean;
@@ -55,7 +55,7 @@ export function ModelSettingsRowButton({
           <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{displayTitle}</span>
           {isActive ? (
             <Badge variant="secondary" className="text-muted-foreground">
-              {t("settings.currentInference")}
+              {t("settings.currentLanguageModel")}
             </Badge>
           ) : null}
           {isImageDefault ? (
@@ -63,9 +63,9 @@ export function ModelSettingsRowButton({
               {t("settings.currentImageGen")}
             </Badge>
           ) : null}
-          {isLightweightDefault ? (
+          {isSecondaryDefault ? (
             <Badge variant="secondary" className="text-muted-foreground">
-              {t("settings.currentLightweightChat")}
+              {t("settings.currentSecondaryLanguageModel")}
             </Badge>
           ) : null}
           {model.capabilities?.map((capability) => (
@@ -84,7 +84,7 @@ export function ModelSettingsRowWithHover({
   displayTitle,
   isActive,
   isImageDefault,
-  isLightweightDefault,
+  isSecondaryDefault,
   defaultActionLabel,
   disabled,
   onDefaultAction,
@@ -93,7 +93,7 @@ export function ModelSettingsRowWithHover({
   displayTitle: string;
   isActive: boolean;
   isImageDefault: boolean;
-  isLightweightDefault: boolean;
+  isSecondaryDefault: boolean;
   defaultActionLabel: string;
   disabled: boolean;
   onDefaultAction: () => void;
@@ -107,7 +107,7 @@ export function ModelSettingsRowWithHover({
         displayTitle={displayTitle}
         isActive={isActive}
         isImageDefault={isImageDefault}
-        isLightweightDefault={isLightweightDefault}
+        isSecondaryDefault={isSecondaryDefault}
         defaultActionLabel={defaultActionLabel}
         disabled={disabled}
         isHighlighted={isHighlighted}

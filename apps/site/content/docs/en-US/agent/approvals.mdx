@@ -5,11 +5,11 @@ description: Approval levels and the permission allowlist. What allow, ask, and 
 
 Every risky tool call can wait for you. {{product.name|mdx}} has three approval levels. Desktop shows them as **Default Approval**, **Auto Approval**, and **Bypass Approval**. The CLI uses `/approval` or `-a`.
 
-| Level            | Id                | Behavior                                                                                               |
-| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------ |
-| Default Approval | `default`         | You approve file edits, shell, and other high-risk tools yourself.                                     |
-| Auto Approval    | `auto-approval`   | A lightweight model reviews high-risk calls. You are not prompted unless that review (or a hook) asks. |
-| Bypass Approval  | `bypass-approval` | High-risk tools run without the approval prompt. `deny` rules still apply.                             |
+| Level            | Id                | Behavior                                                                                                      |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| Default Approval | `default`         | You approve file edits, shell, and other high-risk tools yourself.                                            |
+| Auto Approval    | `auto-approval`   | A secondary language model reviews high-risk calls. You are not prompted unless that review (or a hook) asks. |
+| Bypass Approval  | `bypass-approval` | High-risk tools run without the approval prompt. `deny` rules still apply.                                    |
 
 ## Permission allowlist
 

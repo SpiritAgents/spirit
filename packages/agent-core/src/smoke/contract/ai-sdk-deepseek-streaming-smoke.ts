@@ -529,7 +529,7 @@ function verifyKnownModelCapabilityTable(): void {
   const explicitCustom = resolveOpenAiModelCompatibilityProfile({
     llmVendor: "custom",
     model: "custom-image-model",
-    modelCapabilities: { chat: true, imageInput: true, imageGeneration: true },
+    modelCapabilities: { languageModel: true, imageInput: true, imageGeneration: true },
   });
   if (
     !explicitCustom.hasExplicitCapabilities ||

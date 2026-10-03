@@ -109,15 +109,15 @@ test("applyModelsRemovalToConfig clears default slots when active model is remov
         provider: "openai",
         apiBase: "https://api.openai.com/v1",
         models: [
-          { name: "a", reasoningEffort: "medium", capabilities: ["chat"] },
-          { name: "b", reasoningEffort: "medium", capabilities: ["chat"] },
+          { name: "a", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          { name: "b", reasoningEffort: "medium", capabilities: ["languageModel"] },
         ],
       },
     ],
     activeModel: { groupId: openAiGroupId, name: "a" },
     imageGenerationModel: { groupId: openAiGroupId, name: "a" },
     videoGenerationModel: { groupId: openAiGroupId, name: "b" },
-    lightweightChatModel: { groupId: openAiGroupId, name: "a" },
+    secondaryLanguageModel: { groupId: openAiGroupId, name: "a" },
   };
 
   assert.equal(
@@ -131,7 +131,7 @@ test("applyModelsRemovalToConfig clears default slots when active model is remov
   assert.deepEqual(config.activeModel, { groupId: openAiGroupId, name: "b" });
   assert.equal(config.imageGenerationModel, undefined);
   assert.deepEqual(config.videoGenerationModel, { groupId: openAiGroupId, name: "b" });
-  assert.equal(config.lightweightChatModel, undefined);
+  assert.equal(config.secondaryLanguageModel, undefined);
 });
 
 test("applyModelsRemovalToConfig only removes models in the same provider scope", () => {
@@ -141,14 +141,14 @@ test("applyModelsRemovalToConfig only removes models in the same provider scope"
         id: openAiGroupId,
         provider: "openai",
         apiBase: "https://api.openai.com/v1",
-        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["chat"] }],
+        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["languageModel"] }],
       },
       {
         id: gatewayGroupId,
         provider: "vercel-ai-gateway",
         apiBase: "https://ai-gateway.vercel.sh/v1",
         transportKind: "open-responses",
-        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["chat"] }],
+        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["languageModel"] }],
       },
     ],
     activeModel: { groupId: openAiGroupId, name: "shared-id" },

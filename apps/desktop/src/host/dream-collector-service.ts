@@ -9,7 +9,7 @@ import {
   emptyDreamCollectorSnapshot,
   runDesktopDreamCollectorOnce,
 } from "./dreams.js";
-import { resolveLightweightChatModelProfile } from "./lightweight-chat-model.js";
+import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
 import { cloneDesktopConfig } from "./service-utils.js";
 
 interface DreamCollectorState {
@@ -47,11 +47,11 @@ export function startDreamCollectorIfNeeded(ctx: DreamCollectorServiceContext): 
     ctx.setStatus(emptyDreamCollectorSnapshot("disabled"));
     return;
   }
-  const lightweightModel = resolveLightweightChatModelProfile(state.config);
-  if (!lightweightModel) {
+  const secondaryModel = resolveSecondaryLanguageModelProfile(state.config);
+  if (!secondaryModel) {
     ctx.setStatus({
       ...emptyDreamCollectorSnapshot("missing-model"),
-      lastError: i18n.t("error.lightweightChatModelNotConfigured"),
+      lastError: i18n.t("error.secondaryLanguageModelNotConfigured"),
     });
     return;
   }
@@ -87,7 +87,7 @@ export function startDreamCollectorIfNeeded(ctx: DreamCollectorServiceContext): 
   const collectorInput = {
     workspaceRoot: state.workspaceRoot,
     gitBranch: state.git.branch,
-    collectorModel: lightweightModel.profile.ref,
+    collectorModel: secondaryModel.profile.ref,
     config: cloneDesktopConfig(state.config),
     planMetadata: buildDreamCollectorPlanMetadata(state.metadata.planMetadata),
   };

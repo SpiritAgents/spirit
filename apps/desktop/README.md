@@ -31,7 +31,7 @@ Docked panels attach to the active workspace:
 
 ### Configuration and extensibility
 
-- **Models** — configure inference providers, API keys, reasoning effort, and a lightweight background model.
+- **Models** — configure inference providers, API keys, reasoning effort, and a secondary language model.
 - **Skills and Rules** — discover workspace and user-level skills; manage Spirit rule slots (`AGENTS.md`, `.spirit/rule.md`, and user `rule.md`).
 - **MCP servers** — add stdio or HTTP Model Context Protocol servers from settings.
 - **Extensions** — import ZIP packages from the Extensions page; extensions can contribute tools, Desktop CSS, CLI hooks, and settings pages.

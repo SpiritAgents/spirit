@@ -60,7 +60,7 @@ export interface SpiritConfigFile {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   permission?: PermissionConfig;
   [key: string]: unknown;
 }

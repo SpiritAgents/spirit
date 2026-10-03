@@ -47,7 +47,9 @@ test("buildAuthMethods returns terminal auth even when shared credentials exist"
     JSON.stringify(
       v2ConfigFixture({
         groups: [
-          openAiGroup([{ name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["chat"] }]),
+          openAiGroup([
+            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          ]),
         ],
         activeModel: { groupId: "openai", name: "gpt-4o-mini" },
       }),
@@ -81,7 +83,9 @@ test("logout allows authenticate to restore session creation", () => {
     JSON.stringify(
       v2ConfigFixture({
         groups: [
-          openAiGroup([{ name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["chat"] }]),
+          openAiGroup([
+            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          ]),
         ],
         activeModel: { groupId: "openai", name: "gpt-4o-mini" },
       }),
@@ -124,7 +128,9 @@ test("createInitialAuthState pre-authenticates when shared credentials exist", (
     JSON.stringify(
       v2ConfigFixture({
         groups: [
-          openAiGroup([{ name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["chat"] }]),
+          openAiGroup([
+            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          ]),
         ],
         activeModel: { groupId: "openai", name: "gpt-4o-mini" },
       }),
@@ -162,7 +168,9 @@ test("canCreateSession requires authenticate when using shared credentials witho
     JSON.stringify(
       v2ConfigFixture({
         groups: [
-          openAiGroup([{ name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["chat"] }]),
+          openAiGroup([
+            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          ]),
         ],
         activeModel: { groupId: "openai", name: "gpt-4o-mini" },
       }),
@@ -210,7 +218,9 @@ test("resolveTransportConfig reads shared config and keyring", () => {
     JSON.stringify(
       v2ConfigFixture({
         groups: [
-          openAiGroup([{ name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["chat"] }]),
+          openAiGroup([
+            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          ]),
         ],
         activeModel: { groupId: "openai", name: "gpt-4o-mini" },
       }),

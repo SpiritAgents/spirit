@@ -15,7 +15,7 @@ const dualMediaRef = { groupId: exampleGroupId, name: "dual-media" };
 const chatModel = {
   name: "gpt-4o-mini",
   apiBase: "https://api.openai.com/v1",
-  capabilities: ["chat"],
+  capabilities: ["languageModel"],
 };
 
 const imageModel = {
