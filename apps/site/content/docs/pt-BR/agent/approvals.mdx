@@ -6,11 +6,11 @@ description: Padrão, aprovação automática e bypass de aprovação. O que cad
 
 Toda chamada de ferramenta arriscada pode esperar por você. O {{product.name|mdx}} tem três níveis de aprovação. O Desktop os mostra como **Aprovação Padrão**, **Aprovação Automática** e **Bypass de Aprovação**. O CLI usa `/approval` ou `-a`.
 
-| Nível                | ID                | Comportamento                                                                                                   |
-| -------------------- | ----------------- | --------------------------------------------------------------------------------------------------------------- |
-| Aprovação Padrão     | `default`         | Você aprova edições de arquivos, shell e outras ferramentas de alto risco pessoalmente.                         |
-| Aprovação Automática | `auto-approval`   | Um modelo leve revisa chamadas de alto risco. Você não é solicitado a menos que essa revisão (ou um hook) peça. |
-| Bypass de Aprovação  | `bypass-approval` | Ferramentas de alto risco são executadas sem o prompt de aprovação.                                             |
+| Nível                | ID                | Comportamento                                                                                                                      |
+| -------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Aprovação Padrão     | `default`         | Você aprova edições de arquivos, shell e outras ferramentas de alto risco pessoalmente.                                            |
+| Aprovação Automática | `auto-approval`   | Um modelo de linguagem secundário revisa chamadas de alto risco. Você não é solicitado a menos que essa revisão (ou um hook) peça. |
+| Bypass de Aprovação  | `bypass-approval` | Ferramentas de alto risco são executadas sem o prompt de aprovação.                                                                |
 
 ## O que o bypass não pula
 
