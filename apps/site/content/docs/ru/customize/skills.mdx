@@ -6,11 +6,11 @@ description: Навыки пользователя, {{product.workspaceDataFolde
 
 Навык — это папка с файлом `SKILL.md`. {{product.name|mdx}} обнаруживает навыки в трёх местах:
 
-| Область                | Путь                                         |
-| ---------------------- | -------------------------------------------- |
-| Пользователь           | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Рабочая область {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| Агенты рабочей области | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| Область                        | Путь                                         |
+| ------------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ |
+| Пользователь                   | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Рабочая область {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| Агенты рабочей области         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 Когда вы упоминаете навык в сообщении, {{product.name|mdx}} может прикрепить его полный текст к этому сообщению пользователя. Он не помещает все навыки в системный промпт.
 

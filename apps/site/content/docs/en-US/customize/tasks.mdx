@@ -15,11 +15,11 @@ Tasks run predefined workspace commands from the {{product.name|mdx}} Desktop co
 
 Three sources are read, highest priority first:
 
-| Priority | Source                           | Required marker      | Notes                                   |
-| -------- | -------------------------------- | -------------------- | --------------------------------------- |
-| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}}'s own format                     |
-| 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | User-level, applies to every workspace  |
-| 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code compatibility import, read-only |
+| Priority | Source                                                       | Required marker      | Notes                                   |
+| -------- | ------------------------------------------------------------ | -------------------- | --------------------------------------- | ------------------ |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}}'s own format |
+| 2        | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | User-level, applies to every workspace  |
+| 3        | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | VS Code compatibility import, read-only |
 
 Only the workspace root is scanned — nested directories are not. `<data dir>` is the {{product.name|mdx}} data directory (for example `~/{{product.stable.userDataFolderName}}` on macOS). A file that is missing, unreadable, invalid JSON, or carries the wrong marker contributes no tasks.
 
@@ -50,7 +50,7 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 ### Core fields
 
 | Field                                    | Behavior  | Notes                                                                                                                                                                                                                                   |
-| ---------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `label`                                  | Required  | Items without a non-empty label are dropped entirely — they never reach the menu or the dependency graph                                                                                                                                |
 | `type`                                   | Supported | `shell` (default) or `process`. Any other string (`npm`, `grunt`, …) is an extension-customized entry and is ignored completely: not hidden, not listed, siblings unaffected                                                            |
 | `command`                                | Supported | `string`, `string[]`, or `{ value, quoting }`. A task whose merged command is missing is hidden — also for `shell` tasks (stricter than VS Code)                                                                                        |
@@ -67,7 +67,7 @@ Behavior per field, evaluated after merging: file-level defaults < file-level OS
 | `dependsOn`                              | Supported | A label string, or an array of label strings. The object form (`{ "type": … }`, `{ "task": … }`) hides the task                                                                                                                         |
 | `dependsOrder`                           | Supported | `parallel` (default) or `sequence`                                                                                                                                                                                                      |
 | `detail`                                 | Supported | Shown next to the label in the palette list                                                                                                                                                                                             |
-| `icon.id`                                | Supported | Menu icon: {{product.name|mdx}} Icons first, then Lucide, with a terminal glyph as fallback                                                                                                                                                           |
+| `icon.id`                                | Supported | Menu icon: {{product.name|mdx}} Icons first, then Lucide, with a terminal glyph as fallback |
 | `icon.color`                             | Ignored   | Purely presentational                                                                                                                                                                                                                   |
 | `hide`                                   | Supported | Hidden from the palette list but still resolvable — the task can run as a `dependsOn` dependency                                                                                                                                        |
 
@@ -103,7 +103,7 @@ Carrying these never hides a task: `problemMatcher` (any form, at any level), `p
 Supported references, substituted when the task is resolved:
 
 | Variable                     | Value                                          |
-| ---------------------------- | ---------------------------------------------- |
+| ---------------------------- | ---------------------------------------------- | --------------------------------------------- |
 | `${workspaceFolder}`         | Workspace root path                            |
 | `${workspaceFolderBasename}` | Workspace root folder name                     |
 | `${cwd}`                     | {{product.name|mdx}} Desktop's own process working directory |

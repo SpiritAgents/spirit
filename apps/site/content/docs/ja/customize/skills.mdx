@@ -6,11 +6,11 @@ description: ユーザー、{{product.workspaceDataFolderName}}、.agents のス
 
 スキルは `SKILL.md` を含むフォルダーです。{{product.name|mdx}} はスキルを以下の 3 つの場所から発見します:
 
-| スコープ              | パス                                         |
-| --------------------- | -------------------------------------------- |
-| ユーザー              | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| ワークスペース {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| ワークスペース agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| スコープ                      | パス                                         |
+| ----------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| ユーザー                      | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| ワークスペース {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| ワークスペース agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 ターン内でスキルに言及すると、{{product.name|mdx}} はそのユーザーメッセージにスキルの全文を添付できます。すべてのスキルをシステムプロンプトに投入することはありません。
 

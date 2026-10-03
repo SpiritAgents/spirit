@@ -31,9 +31,9 @@ spirit --version
 
 CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料可以共用父目錄；bin/ 和 cli/ 仍屬於安裝檔案。安裝設定不決定共用資料目錄。
 
-|                            | 預設                                                                                                         | 覆寫              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------- |
-| CLI 二進位檔               | Unix：`~/.spirit` · Windows：`%LOCALAPPDATA%\Spirit`                                                         | `SPIRIT_HOME`     |
+|                            | 預設                                                                                                                                                                                                                  | 覆寫              |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| CLI 二進位檔               | Unix：`~/.spirit` · Windows：`%LOCALAPPDATA%\Spirit`                                                                                                                                                                  | `SPIRIT_HOME`     |
 | 工作階段、設定、金鑰環指標 | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 在 Unix 上，腳本會建立 `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/current/bin/spirit` 的符號連結，並將 `export PATH="$SPIRIT_HOME/bin:$PATH"` 附加到 `~/.profile`、`~/.bashrc` 和 `~/.zshrc`（標記為 `# spirit cli`）。
@@ -41,10 +41,10 @@ CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料
 ## 固定版本或鏡像
 
 | 變數                   | 預設                                   | 角色                     |
-| ---------------------- | -------------------------------------- | ------------------------ |
+| ---------------------- | -------------------------------------- | ------------------------ | -------- |
 | `SPIRIT_HOME`          | `~/.spirit` 或 `%LOCALAPPDATA%\Spirit` | CLI 二進位檔的安裝根目錄 |
 | `SPIRIT_VERSION`       | `latest`                               | 下載 URL 中的版本段      |
-| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                  | CDN 主機                 |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                  | CDN 主機 |
 
 ```bash
 SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash

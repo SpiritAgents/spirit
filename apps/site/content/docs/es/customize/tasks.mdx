@@ -15,11 +15,11 @@ Las tareas de {{product.name|mdx}} son un sistema propio, no las tareas de VS Co
 
 Se leen tres fuentes, de mayor a menor prioridad:
 
-| Prioridad | Fuente                           | Marcador requerido   | Notas                                                         |
-| --------- | -------------------------------- | -------------------- | ------------------------------------------------------------- |
-| 1         | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato propio de {{product.name|mdx}}                                      |
-| 2         | `<data dir>/tasks.json`          | `"schemaVersion": 1` | A nivel de usuario, se aplica a todos los espacios de trabajo |
-| 3         | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Importación de compatibilidad con VS Code, de solo lectura    |
+| Prioridad | Fuente                                                       | Marcador requerido   | Notas                                                         |
+| --------- | ------------------------------------------------------------ | -------------------- | ------------------------------------------------------------- | ----- |
+| 1         | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato propio de {{product.name|mdx}} |
+| 2         | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | A nivel de usuario, se aplica a todos los espacios de trabajo |
+| 3         | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | Importación de compatibilidad con VS Code, de solo lectura    |
 
 Solo se analiza la raíz del espacio de trabajo; los directorios anidados no. `<data dir>` es el directorio de datos de {{product.name|mdx}} (por ejemplo `~/{{product.stable.userDataFolderName}}` en macOS). Un archivo que falta, no se puede leer, contiene JSON no válido o lleva el marcador incorrecto no aporta ninguna tarea.
 
@@ -50,7 +50,7 @@ Comportamiento por campo, evaluado después de la combinación: valores predeter
 ### Campos principales
 
 | Campo                                          | Comportamiento | Notas                                                                                                                                                                                                                                                                      |
-| ---------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
 | `label`                                        | Requerido      | Los elementos sin un `label` no vacío se descartan por completo — nunca llegan al menú ni al grafo de dependencias                                                                                                                                                         |
 | `type`                                         | Compatible     | `shell` (predeterminado) o `process`. Cualquier otra cadena (`npm`, `grunt`, …) es una entrada personalizada por una extensión y se ignora por completo: no se oculta, no se lista, las hermanas no se ven afectadas                                                       |
 | `command`                                      | Compatible     | `string`, `string[]` o `{ value, quoting }`. Una tarea cuyo comando combinado falta se oculta — también para las tareas `shell` (más estricto que VS Code)                                                                                                                 |
@@ -67,7 +67,7 @@ Comportamiento por campo, evaluado después de la combinación: valores predeter
 | `dependsOn`                                    | Compatible     | Una cadena de etiqueta o un arreglo de cadenas de etiquetas. La forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta la tarea                                                                                                                                         |
 | `dependsOrder`                                 | Compatible     | `parallel` (predeterminado) o `sequence`                                                                                                                                                                                                                                   |
 | `detail`                                       | Compatible     | Se muestra junto a la etiqueta en la lista de la paleta                                                                                                                                                                                                                    |
-| `icon.id`                                      | Compatible     | Icono del menú: primero {{product.name|mdx}} Icons, luego Lucide, con un glifo de terminal como respaldo                                                                                                                                                                                 |
+| `icon.id`                                      | Compatible     | Icono del menú: primero {{product.name|mdx}} Icons, luego Lucide, con un glifo de terminal como respaldo |
 | `icon.color`                                   | Ignorado       | Puramente presentacional                                                                                                                                                                                                                                                   |
 | `hide`                                         | Compatible     | Oculta de la lista de la paleta pero aún resoluble — la tarea puede ejecutarse como dependencia de `dependsOn`                                                                                                                                                             |
 
@@ -103,7 +103,7 @@ Llevar estos campos nunca oculta una tarea: `problemMatcher` (cualquier forma, e
 Referencias admitidas, sustituidas cuando se resuelve la tarea:
 
 | Variable                     | Valor                                                      |
-| ---------------------------- | ---------------------------------------------------------- |
+| ---------------------------- | ---------------------------------------------------------- | ------------- |
 | `${workspaceFolder}`         | Ruta raíz del espacio de trabajo                           |
 | `${workspaceFolderBasename}` | Nombre de la carpeta raíz del espacio de trabajo           |
 | `${cwd}`                     | Directorio de trabajo del propio proceso de {{product.name|mdx}} Desktop |

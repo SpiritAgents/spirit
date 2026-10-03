@@ -10,10 +10,10 @@ Shared user data follows the build quality, not the operating system's applicati
 
 Override with `SPIRIT_DATA_DIR`. The server can also use `SPIRIT_SERVER_DATA_DIR` (wins over the former).
 
-| Build | macOS / Linux | Windows |
-| --- | --- | --- |
+| Build  | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
 | Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
-| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
 
 Breaking change: old platform data directories are not read or migrated automatically. Explicit data-directory overrides remain supported. Electron caches, browser storage, and window state remain in the private platform application directory.
 
@@ -71,8 +71,8 @@ The old `tool-permissions.json` (written by the "Always Trust" button) is deprec
 
 ## Workspace `{{product.workspaceDataFolderName}}/`
 
-| Path                 | Role                                       |
-| -------------------- | ------------------------------------------ |
+| Path                                             | Role                                       |
+| ------------------------------------------------ | ------------------------------------------ |
 | `{{product.workspaceDataFolderName}}/rule.md`    | Workspace [rule](./customize/rules.mdx)    |
 | `{{product.workspaceDataFolderName}}/skills/`    | Workspace [skills](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | Workspace [MCP](./customize/mcp.mdx)       |

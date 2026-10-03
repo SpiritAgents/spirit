@@ -5,11 +5,11 @@ description: AGENTS.md, {{product.workspaceDataFolderName}}/rule.md, and your us
 
 Rules are Markdown the agent always considers. There are three slots:
 
-| Scope                 | Path                          |
-| --------------------- | ----------------------------- |
-| Workspace agents file | `{workspace}/AGENTS.md`       |
-| Workspace {{product.name|mdx}} rule | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
-| User rule             | `{spiritDataDir}/rule.md`     |
+| Scope                    | Path                      |
+| ------------------------ | ------------------------- | --------------------------------------------------------- |
+| Workspace agents file    | `{workspace}/AGENTS.md`   |
+| Workspace {{product.name|mdx}} rule                | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
+| User rule                | `{spiritDataDir}/rule.md` |
 
 Write project conventions in `AGENTS.md` so anyone who opens the repo sees them. Use `{{product.workspaceDataFolderName}}/rule.md` for {{product.name|mdx}}-specific notes you do not want in the generic agents file. Use the user rule for preferences that follow you across workspaces.
 

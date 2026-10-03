@@ -6,11 +6,11 @@ description: 用户、{{product.workspaceDataFolderName}}、.agents 下的 Skill
 
 Skill 是带 `SKILL.md` 的文件夹。{{product.name|mdx}} 从三处发现：
 
-| 范围          | 路径                                         |
-| ------------- | -------------------------------------------- |
-| 用户          | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| 工作区 {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| 工作区 agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| 范围                  | 路径                                         |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| 用户                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 工作区 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| 工作区 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 你在某一回合点名某个 Skill 时，{{product.name|mdx}} 可以把全文附到那条用户消息上。它不会把所有 Skill 塞进 system。
 

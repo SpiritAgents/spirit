@@ -14,11 +14,11 @@ description: 从命令面板运行工作区任务：在 {{product.workspaceDataF
 
 按优先级从高到低读取三个来源：
 
-| 优先级 | 来源                             | 必需标记             | 备注                     |
-| ------ | -------------------------------- | -------------------- | ------------------------ |
-| 1      | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 自己的格式        |
-| 2      | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 用户级，对每个工作区生效 |
-| 3      | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 兼容导入，只读   |
+| 优先级 | 来源                                                         | 必需标记             | 备注                     |
+| ------ | ------------------------------------------------------------ | -------------------- | ------------------------ | ---------------- |
+| 1      | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 自己的格式 |
+| 2      | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | 用户级，对每个工作区生效 |
+| 3      | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | VS Code 兼容导入，只读   |
 
 只扫描工作区根目录，不扫描嵌套目录。`<data dir>` 是 {{product.name|mdx}} 数据目录（例如 macOS 上的 `~/{{product.stable.userDataFolderName}}`）。文件缺失、不可读、不是合法 JSON 或标记不对时，不提供任何任务。
 
@@ -49,7 +49,7 @@ description: 从命令面板运行工作区任务：在 {{product.workspaceDataF
 ### 核心字段
 
 | 字段                                  | 行为 | 备注                                                                                                                                                                                |
-| ------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `label`                               | 必填 | 没有非空 label 的条目会被整个丢弃——不会进菜单，也不会进依赖图                                                                                                                       |
 | `type`                                | 支持 | `shell`（默认）或 `process`。其他任何字符串（`npm`、`grunt`、…）都是扩展定制条目，会被完全忽略：不隐藏、不列出，同级条目不受影响                                                    |
 | `command`                             | 支持 | `string`、`string[]` 或 `{ value, quoting }`。合并后 command 缺失的任务会被隐藏——`shell` 任务也一样（比 VS Code 更严格）                                                            |
@@ -66,7 +66,7 @@ description: 从命令面板运行工作区任务：在 {{product.workspaceDataF
 | `dependsOn`                           | 支持 | 一个 label 字符串，或 label 字符串数组。对象形式（`{ "type": … }`、`{ "task": … }`）会隐藏该任务                                                                                    |
 | `dependsOrder`                        | 支持 | `parallel`（默认）或 `sequence`                                                                                                                                                     |
 | `detail`                              | 支持 | 在命令面板列表中显示在 label 旁边                                                                                                                                                   |
-| `icon.id`                             | 支持 | 菜单图标：先找 {{product.name|mdx}} Icons，再找 Lucide，找不到就用终端字形兜底                                                                                                                    |
+| `icon.id`                             | 支持 | 菜单图标：先找 {{product.name|mdx}} Icons，再找 Lucide，找不到就用终端字形兜底 |
 | `icon.color`                          | 忽略 | 纯展示用途                                                                                                                                                                          |
 | `hide`                                | 支持 | 从命令面板列表隐藏，但仍可解析——该任务可以作为 `dependsOn` 依赖运行                                                                                                                 |
 
@@ -101,14 +101,14 @@ description: 从命令面板运行工作区任务：在 {{product.workspaceDataF
 
 支持的引用，在任务解析时替换：
 
-| 变量                         | 值                                |
-| ---------------------------- | --------------------------------- |
-| `${workspaceFolder}`         | 工作区根路径                      |
-| `${workspaceFolderBasename}` | 工作区根目录名                    |
+| 变量                         | 值                              |
+| ---------------------------- | ------------------------------- | -------------------------------- |
+| `${workspaceFolder}`         | 工作区根路径                    |
+| `${workspaceFolderBasename}` | 工作区根目录名                  |
 | `${cwd}`                     | {{product.name|mdx}} Desktop 自己进程的工作目录 |
-| `${userHome}`                | 操作系统用户的主目录              |
-| `${pathSeparator}`、`${/}`   | 操作系统路径分隔符                |
-| `${env:NAME}`                | 环境变量 `NAME`（未设置时为空）   |
+| `${userHome}`                | 操作系统用户的主目录            |
+| `${pathSeparator}`、`${/}`   | 操作系统路径分隔符              |
+| `${env:NAME}`                | 环境变量 `NAME`（未设置时为空） |
 
 扫描覆盖 `command`、`args`、`options.cwd`、`options.env` 的值和 `options.shell`。任何其他 `${…}` 引用——`${file}`、`${selectedText}`、`${lineNumber}`、`${config:*}`、`${command:*}`、`${input:*}`、`${defaultBuildTask}`、……——都会隐藏任务。未打开工作区时，引用 `${workspaceFolder}` 或 `${workspaceFolderBasename}` 的任务在该轮解析中被隐藏。
 

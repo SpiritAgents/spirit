@@ -15,11 +15,11 @@ As tarefas do {{product.name|mdx}} formam um sistema próprio, diferente das tar
 
 Três fontes são lidas, da prioridade mais alta para a mais baixa:
 
-| Prioridade | Fonte                            | Marcador obrigatório | Notas                                                        |
-| ---------- | -------------------------------- | -------------------- | ------------------------------------------------------------ |
-| 1          | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato próprio do {{product.name|mdx}}                                    |
-| 2          | `<data dir>/tasks.json`          | `"schemaVersion": 1` | Nível de usuário, aplica-se a todos os workspaces            |
-| 3          | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Importação de compatibilidade com o VS Code, somente leitura |
+| Prioridade | Fonte                                                        | Marcador obrigatório | Notas                                                        |
+| ---------- | ------------------------------------------------------------ | -------------------- | ------------------------------------------------------------ | ----- |
+| 1          | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato próprio do {{product.name|mdx}} |
+| 2          | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | Nível de usuário, aplica-se a todos os workspaces            |
+| 3          | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | Importação de compatibilidade com o VS Code, somente leitura |
 
 Somente a raiz do workspace é varrida — diretórios aninhados não são. `<data dir>` é o diretório de dados do {{product.name|mdx}} (por exemplo, `~/{{product.stable.userDataFolderName}}` no macOS). Um arquivo ausente, ilegível, com JSON inválido ou com o marcador errado não contribui nenhuma tarefa.
 
@@ -50,7 +50,7 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 ### Campos principais
 
 | Campo                                          | Comportamento | Notas                                                                                                                                                                                                                                       |
-| ---------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | `label`                                        | Obrigatório   | Itens sem um label não vazio são descartados por completo — nunca chegam ao menu nem ao grafo de dependências                                                                                                                               |
 | `type`                                         | Suportado     | `shell` (padrão) ou `process`. Qualquer outra string (`npm`, `grunt`, …) é uma entrada personalizada por extensão e é ignorada por completo: não fica oculta, não é listada, irmãs não são afetadas                                         |
 | `command`                                      | Suportado     | `string`, `string[]` ou `{ value, quoting }`. Uma tarefa cujo comando mesclado está ausente fica oculta — também para tarefas `shell` (mais estrito que o VS Code)                                                                          |
@@ -67,7 +67,7 @@ Comportamento por campo, avaliado após a mesclagem: padrões no nível do arqui
 | `dependsOn`                                    | Suportado     | Uma string de label ou uma matriz de strings de label. A forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta a tarefa                                                                                                                 |
 | `dependsOrder`                                 | Suportado     | `parallel` (padrão) ou `sequence`                                                                                                                                                                                                           |
 | `detail`                                       | Suportado     | Mostrado ao lado do label na lista da paleta                                                                                                                                                                                                |
-| `icon.id`                                      | Suportado     | Ícone do menu: {{product.name|mdx}} Icons primeiro, depois Lucide, com um glifo de terminal como fallback                                                                                                                                                 |
+| `icon.id`                                      | Suportado     | Ícone do menu: {{product.name|mdx}} Icons primeiro, depois Lucide, com um glifo de terminal como fallback |
 | `icon.color`                                   | Ignorado      | Puramente apresentacional                                                                                                                                                                                                                   |
 | `hide`                                         | Suportado     | Oculta da lista da paleta, mas ainda resolvível — a tarefa pode ser executada como dependência de `dependsOn`                                                                                                                               |
 
@@ -103,7 +103,7 @@ Ter estes campos nunca oculta uma tarefa: `problemMatcher` (qualquer forma, em q
 Referências suportadas, substituídas quando a tarefa é resolvida:
 
 | Variável                     | Valor                                                         |
-| ---------------------------- | ------------------------------------------------------------- |
+| ---------------------------- | ------------------------------------------------------------- | ------------- |
 | `${workspaceFolder}`         | Caminho da raiz do workspace                                  |
 | `${workspaceFolderBasename}` | Nome da pasta raiz do workspace                               |
 | `${cwd}`                     | O próprio diretório de trabalho do processo do {{product.name|mdx}} Desktop |

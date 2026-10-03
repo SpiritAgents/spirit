@@ -8,9 +8,9 @@ description: Habilidades do usuário, {{product.workspaceDataFolderName}} e
 Uma Habilidade é uma pasta com um `SKILL.md`. O {{product.name|mdx}} descobre habilidades de três lugares:
 
 | Escopo               | Caminho                                      |
-| -------------------- | -------------------------------------------- |
+| -------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
 | Usuário              | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| {{product.name|mdx}} do Workspace  | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| {{product.name|mdx}} do Workspace                           | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Agentes do Workspace | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 Quando você menciona uma Habilidade em um turno, o {{product.name|mdx}} pode anexar seu texto completo à mensagem do usuário. Ele não despeja todas as Habilidades no prompt do sistema.

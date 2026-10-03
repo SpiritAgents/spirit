@@ -6,11 +6,7 @@ import { product } from "@spiritagent/product";
 
 const hostRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const builtInRoot = path.join(hostRoot, "dist/resources/built-in");
-const indexPath = path.join(
-  builtInRoot,
-  product.workspaceDataFolderName,
-  "marketplace.json",
-);
+const indexPath = path.join(builtInRoot, product.workspaceDataFolderName, "marketplace.json");
 const index = JSON.parse(await readFile(indexPath, "utf8"));
 if (!Array.isArray(index.extensions)) {
   throw new Error(`${indexPath} is missing extensions[]`);

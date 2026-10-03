@@ -6,11 +6,11 @@ description: 사용자, {{product.workspaceDataFolderName}} 및 .agents 스킬�
 
 스킬은 `SKILL.md`가 포함된 폴더입니다. {{product.name|mdx}}은 세 곳에서 스킬을 발견합니다:
 
-| 범위            | 경로                                         |
-| --------------- | -------------------------------------------- |
-| 사용자          | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| 작업공간 {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| 작업공간 agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| 범위                    | 경로                                         |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| 사용자                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 작업공간 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| 작업공간 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 턴에서 스킬을 언급하면, {{product.name|mdx}}은 해당 사용자 메시지에 전체 텍스트를 첨부할 수 있습니다. 모든 스킬을 시스템 프롬프트에 덤프하지는 않습니다.
 

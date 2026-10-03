@@ -15,11 +15,11 @@ Les tâches {{product.name|mdx}} forment un système à part entière, distinct 
 
 Trois sources sont lues, de la priorité la plus haute à la plus basse :
 
-| Priorité | Source                           | Marqueur requis      | Notes                                                        |
-| -------- | -------------------------------- | -------------------- | ------------------------------------------------------------ |
-| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Format propre à {{product.name|mdx}}                                       |
-| 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | Niveau utilisateur, s'applique à tous les espaces de travail |
-| 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | Import de compatibilité VS Code, en lecture seule            |
+| Priorité | Source                                                       | Marqueur requis      | Notes                                                        |
+| -------- | ------------------------------------------------------------ | -------------------- | ------------------------------------------------------------ | ----- |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Format propre à {{product.name|mdx}} |
+| 2        | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | Niveau utilisateur, s'applique à tous les espaces de travail |
+| 3        | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | Import de compatibilité VS Code, en lecture seule            |
 
 Seule la racine de l'espace de travail est analysée — les sous-répertoires ne le sont pas. `<data dir>` est le répertoire de données {{product.name|mdx}} (par exemple `~/{{product.stable.userDataFolderName}}` sur macOS). Un fichier absent, illisible, en JSON invalide ou portant le mauvais marqueur ne fournit aucune tâche.
 
@@ -50,7 +50,7 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 ### Champs principaux
 
 | Champ                                        | Comportement   | Notes                                                                                                                                                                                                                                                                    |
-| -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
 | `label`                                      | Requis         | Les entrées sans `label` non vide sont entièrement écartées — elles n'atteignent jamais le menu ni le graphe de dépendances                                                                                                                                              |
 | `type`                                       | Pris en charge | `shell` (par défaut) ou `process`. Toute autre chaîne (`npm`, `grunt`, …) est une entrée personnalisée par une extension et est complètement ignorée : ni masquée, ni listée, sans effet sur les entrées voisines                                                        |
 | `command`                                    | Pris en charge | `string`, `string[]` ou `{ value, quoting }`. Une tâche dont la commande fusionnée est absente est masquée — y compris pour les tâches `shell` (plus strict que VS Code)                                                                                                 |
@@ -67,7 +67,7 @@ Comportement par champ, évalué après fusion : valeurs par défaut au niveau d
 | `dependsOn`                                  | Pris en charge | Une chaîne de label, ou un tableau de chaînes de labels. La forme objet (`{ "type": … }`, `{ "task": … }`) masque la tâche                                                                                                                                               |
 | `dependsOrder`                               | Pris en charge | `parallel` (par défaut) ou `sequence`                                                                                                                                                                                                                                    |
 | `detail`                                     | Pris en charge | Affiché à côté du label dans la liste de la palette                                                                                                                                                                                                                      |
-| `icon.id`                                    | Pris en charge | Icône de menu : {{product.name|mdx}} Icons d'abord, puis Lucide, avec un glyphe de terminal en repli                                                                                                                                                                                   |
+| `icon.id`                                    | Pris en charge | Icône de menu : {{product.name|mdx}} Icons d'abord, puis Lucide, avec un glyphe de terminal en repli |
 | `icon.color`                                 | Ignoré         | Purement présentationnel                                                                                                                                                                                                                                                 |
 | `hide`                                       | Pris en charge | Masquée dans la liste de la palette mais toujours résolvable — la tâche peut s'exécuter comme dépendance `dependsOn`                                                                                                                                                     |
 
@@ -103,7 +103,7 @@ Porter ces champs ne masque jamais une tâche : `problemMatcher` (toute forme, �
 Références prises en charge, substituées lors de la résolution de la tâche :
 
 | Variable                     | Valeur                                                      |
-| ---------------------------- | ----------------------------------------------------------- |
+| ---------------------------- | ----------------------------------------------------------- | ------------- |
 | `${workspaceFolder}`         | Chemin de la racine de l'espace de travail                  |
 | `${workspaceFolderBasename}` | Nom du dossier racine de l'espace de travail                |
 | `${cwd}`                     | Répertoire de travail du propre processus de {{product.name|mdx}} Desktop |
