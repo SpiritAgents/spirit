@@ -26,6 +26,10 @@
       "types": "./dist/cn.d.ts",
       "default": "./dist/cn.js"
     },
+    "./cjk": {
+      "types": "./dist/cjk.d.ts",
+      "default": "./dist/cjk.js"
+    },
     "./chrome": {
       "types": "./dist/chrome.d.ts",
       "default": "./dist/chrome.js"

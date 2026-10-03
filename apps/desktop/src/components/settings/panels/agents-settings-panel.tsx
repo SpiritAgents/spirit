@@ -14,6 +14,7 @@ import {
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
 import { siteDocsUrl } from "@/lib/docs-links";
+import { needsSpaceBeforeInlineContent } from "@/lib/cjk";
 import { cn } from "@/lib/utils";
 import type { DesktopLspProviderSnapshot, DesktopSnapshot } from "@/types";
 
@@ -67,6 +68,7 @@ export function AgentsSettingsPanel({
   const lsp = snapshot?.lsp;
   const listDisabled = !settings.lspEnabled;
   const webSearchDocsUrl = siteDocsUrl(i18n.language, "/agent/tools#web_search");
+  const webSearchDescription = t("settings.webSearchDescription");
 
   return (
     <div className="space-y-6">
@@ -79,7 +81,8 @@ export function AgentsSettingsPanel({
             label={t("settings.webSearch")}
             description={
               <>
-                {t("settings.webSearchDescription")}{" "}
+                {webSearchDescription}
+                {needsSpaceBeforeInlineContent(webSearchDescription) ? " " : null}
                 <TextLink
                   href={webSearchDocsUrl}
                   target="_blank"
