@@ -17,9 +17,17 @@ export const TEXT_LINK_POPOVER_CLASS =
 export function TextLink({
   className,
   muted = false,
+  underline = true,
   ...props
-}: ComponentProps<"a"> & { muted?: boolean }) {
+}: ComponentProps<"a"> & { muted?: boolean; underline?: boolean }) {
   return (
-    <a className={cn(muted ? TEXT_LINK_MUTED_CLASS : TEXT_LINK_CLASS, className)} {...props} />
+    <a
+      className={cn(
+        muted ? TEXT_LINK_MUTED_CLASS : TEXT_LINK_CLASS,
+        !underline && "no-underline",
+        className,
+      )}
+      {...props}
+    />
   );
 }
