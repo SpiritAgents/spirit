@@ -184,6 +184,11 @@ export interface ServerRuntimeResult {
   setAttribution: (
     attribution: { commitEnabled?: boolean; prEnabled?: boolean } | undefined,
   ) => void;
+  /**
+   * Web tool exposure toggles applied live: mutates the shared transport config
+   * (read lazily by state factories and transports) and refreshes tool definitions.
+   */
+  setWebToolExposure: (exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean }) => void;
   /** Re-scope the todo store (CLI keys todos by its own chat session id). */
   setTodoSessionKey: (sessionKey: string) => void;
   /**
@@ -481,6 +486,7 @@ export async function createServerRuntime(
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
       hostPromptProviderId(transportConfig),
+      transportConfig.webFetchEnabled,
     );
 
   const createContinuationState = (messages: LlmMessage[]) =>
@@ -500,6 +506,7 @@ export async function createServerRuntime(
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
       hostPromptProviderId(transportConfig),
+      transportConfig.webFetchEnabled,
     );
 
   const llmTransport = createLlmTransport(transportConfig);
@@ -561,6 +568,7 @@ export async function createServerRuntime(
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
         hostPromptProviderId(transportConfig),
+        transportConfig.webFetchEnabled,
       ),
     generateImage: (request) =>
       llmTransport.generateImage(
@@ -725,6 +733,7 @@ export async function createServerRuntime(
           tool_agent: buildToolAgentHostPrompt(
             transportConfig.model,
             hostPromptProviderId(transportConfig),
+            { webFetchEnabled: transportConfig.webFetchEnabled },
           ),
           ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
           ...(skillsCatalogSystemPrompt === undefined
@@ -744,6 +753,15 @@ export async function createServerRuntime(
     },
     setAttribution: (next) => {
       attribution = next;
+    },
+    setWebToolExposure: (next) => {
+      if (next.webSearchEnabled !== undefined) {
+        transportConfig.webSearchEnabled = next.webSearchEnabled;
+      }
+      if (next.webFetchEnabled !== undefined) {
+        transportConfig.webFetchEnabled = next.webFetchEnabled;
+      }
+      toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
     },
     setTodoSessionKey: (key) => {
       service.setTodoScope?.({ sessionKey: key });
