@@ -149,8 +149,8 @@ pub(crate) fn model_capabilities_json(
     let mut object = Map::new();
     for capability in capabilities {
         match capability.as_str() {
-            "chat" => {
-                object.insert("chat".to_string(), Value::Bool(true));
+            "languageModel" => {
+                object.insert("languageModel".to_string(), Value::Bool(true));
             }
             "image" | "imageInput" => {
                 object.insert("imageInput".to_string(), Value::Bool(true));
