@@ -1,6 +1,6 @@
 import { SKILL_CHIP_CLASS } from "@/lib/skill-chip-styles";
-import { ChipLeadingSpacer, ChipShell } from "@/components/composer-lexical/chips/chip-shell";
-import { NavigableChipLabel } from "@/contexts/composer-chip-navigate-context";
+import { ChipLabel, ChipLeadingSpacer } from "@/components/composer-lexical/chips/chip-shell";
+import { NavigableChipShell } from "@/contexts/composer-chip-navigate-context";
 
 type SkillChipProps = {
   alias: string;
@@ -8,9 +8,14 @@ type SkillChipProps = {
 
 export function SkillChip({ alias }: SkillChipProps) {
   return (
-    <ChipShell data-chip-kind="skill" className={SKILL_CHIP_CLASS} aria-label={alias}>
+    <NavigableChipShell
+      target={{ kind: "skill", alias }}
+      data-chip-kind="skill"
+      className={SKILL_CHIP_CLASS}
+      aria-label={alias}
+    >
       <ChipLeadingSpacer />
-      <NavigableChipLabel target={{ kind: "skill", alias }}>{alias}</NavigableChipLabel>
-    </ChipShell>
+      <ChipLabel>{alias}</ChipLabel>
+    </NavigableChipShell>
   );
 }

@@ -1,6 +1,6 @@
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
-import { ChipIcon, ChipShell } from "@/components/composer-lexical/chips/chip-shell";
-import { NavigableChipLabel } from "@/contexts/composer-chip-navigate-context";
+import { ChipIcon, ChipLabel } from "@/components/composer-lexical/chips/chip-shell";
+import { NavigableChipShell } from "@/contexts/composer-chip-navigate-context";
 import { workspaceFileBasename } from "@/lib/file-picker-path";
 import {
   resolveWorkspaceFileChipPresentation,
@@ -21,7 +21,13 @@ export function WorkspaceFileChip({ path, sourceTabId, isPlan = false }: Workspa
   const normalized = path.replace(/\\/gu, "/");
   const presentation = resolveWorkspaceFileChipPresentation(normalized);
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "workspaceFile",
+        path: normalized,
+        ...(sourceTabId ? { sourceTabId } : {}),
+        ...(isPlan ? { isPlan: true } : {}),
+      }}
       data-chip-kind="workspaceFile"
       className={WORKSPACE_FILE_CHIP_CLASS}
       title={normalized}
@@ -39,16 +45,7 @@ export function WorkspaceFileChip({ path, sourceTabId, isPlan = false }: Workspa
           />
         )}
       </ChipIcon>
-      <NavigableChipLabel
-        target={{
-          kind: "workspaceFile",
-          path: normalized,
-          ...(sourceTabId ? { sourceTabId } : {}),
-          ...(isPlan ? { isPlan: true } : {}),
-        }}
-      >
-        {isPlan ? "Plan" : workspaceFileBasename(normalized)}
-      </NavigableChipLabel>
-    </ChipShell>
+      <ChipLabel>{isPlan ? "Plan" : workspaceFileBasename(normalized)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
