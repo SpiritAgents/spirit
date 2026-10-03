@@ -516,11 +516,19 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
   html.spirit-clickable-pointer label[for],
   html.spirit-clickable-pointer summary,
   html.spirit-clickable-pointer a[href],
-  html.spirit-clickable-pointer [data-chip-label][data-chip-navigable] {
+  html.spirit-clickable-pointer [data-spirit-chip][data-chip-navigable] {
     cursor: pointer;
   }
 
-  [data-chip-label][data-chip-navigable]:hover {
+  /* Chips are atomic, non-text objects embedded in the composer's cursor-text chrome: they must
+     never show the inherited text cursor. A navigable chip is one clickable unit (icon + label):
+     it upgrades to the pointer cursor only when the preference is enabled (rule above), and the
+     hover underline stays on the label text only. */
+  [data-spirit-chip] {
+    cursor: default;
+  }
+
+  [data-spirit-chip][data-chip-navigable]:hover [data-chip-label] {
     text-decoration: underline;
   }
 

@@ -76,7 +76,8 @@ import {
 } from "@/lib/workspace-file-icon-sizes";
 import { cn } from "@/lib/utils";
 import type { ConversationMessageSnapshot } from "@/types";
-import { NavigableChipLabel } from "@/contexts/composer-chip-navigate-context";
+import { NavigableChipShell } from "@/contexts/composer-chip-navigate-context";
+import { ChipLabel } from "@/components/composer-lexical/chips/chip-shell";
 
 function sourceTabIdFields(
   meta: ComposerChipNavigateMeta | undefined,
@@ -95,20 +96,23 @@ function ElementCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   return (
-    <span title={url} className={MESSAGE_BUBBLE_CHIP_CLASS}>
+    <NavigableChipShell
+      target={{
+        kind: "element",
+        pageUrl: url,
+        ...sourceTabIdFields(navigateMeta),
+      }}
+      title={url}
+      className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
+    >
       <PenTool
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, BROWSER_ELEMENT_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "element",
-          pageUrl: url,
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >{`<${tagName}>`}</NavigableChipLabel>
-    </span>
+      <ChipLabel>{`<${tagName}>`}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -123,7 +127,17 @@ function WorkspaceFileCard({
   const isPlan = navigateMeta?.isPlan === true;
   const presentation = resolveWorkspaceFileChipPresentation(normalized);
   return (
-    <span title={normalized} className={MESSAGE_BUBBLE_CHIP_CLASS}>
+    <NavigableChipShell
+      target={{
+        kind: "workspaceFile",
+        path: normalized,
+        ...(isPlan ? { isPlan: true } : {}),
+        ...sourceTabIdFields(navigateMeta),
+      }}
+      title={normalized}
+      className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
+    >
       {isPlan ? (
         <ListTodo
           size={WORKSPACE_FILE_ICON_CHIP_SIZE_PX}
@@ -140,41 +154,42 @@ function WorkspaceFileCard({
           className={cn("shrink-0", presentation.iconClass)}
         />
       )}
-      <NavigableChipLabel
-        target={{
-          kind: "workspaceFile",
-          path: normalized,
-          ...(isPlan ? { isPlan: true } : {}),
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >
-        {isPlan ? "Plan" : workspaceFileBasename(normalized)}
-      </NavigableChipLabel>
-    </span>
+      <ChipLabel>{isPlan ? "Plan" : workspaceFileBasename(normalized)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 function SessionReferenceCard({ path, title }: { path: string; title: string }) {
   const label = title.trim() || path;
   return (
-    <span title={path} className={MESSAGE_BUBBLE_CHIP_CLASS} aria-label={label}>
+    <NavigableChipShell
+      target={{ kind: "sessionReference", transcriptPath: path }}
+      title={path}
+      className={MESSAGE_BUBBLE_CHIP_CLASS}
+      aria-label={label}
+      trailingSpacer={false}
+    >
       <MessageCircle
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, WORKSPACE_FILE_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel target={{ kind: "sessionReference", transcriptPath: path }}>
-        {label}
-      </NavigableChipLabel>
-    </span>
+      <ChipLabel>{label}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 function SkillCard({ alias }: { alias: string }) {
   return (
-    <span title={alias} className={SKILL_CHIP_CLASS} aria-label={alias}>
-      <NavigableChipLabel target={{ kind: "skill", alias }}>{alias}</NavigableChipLabel>
-    </span>
+    <NavigableChipShell
+      target={{ kind: "skill", alias }}
+      title={alias}
+      className={SKILL_CHIP_CLASS}
+      aria-label={alias}
+      trailingSpacer={false}
+    >
+      <ChipLabel>{alias}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -201,7 +216,12 @@ function PrDiffCard({
 }) {
   const Icon = prDiffStatusIcon(part.status);
   return (
-    <span
+    <NavigableChipShell
+      target={{
+        kind: "prDiff",
+        prUrl: part.prUrl,
+        ...sourceTabIdFields(navigateMeta),
+      }}
       title={formatPrDiffChipTitle({
         id: "",
         prUrl: part.prUrl,
@@ -212,22 +232,15 @@ function PrDiffCard({
         status: part.status,
       })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
     >
       <Icon
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, PR_DIFF_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "prDiff",
-          prUrl: part.prUrl,
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >
-        {formatPrDiffChipLabel(part.filename, part.lineStart, part.lineEnd)}
-      </NavigableChipLabel>
-    </span>
+      <ChipLabel>{formatPrDiffChipLabel(part.filename, part.lineStart, part.lineEnd)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -239,7 +252,11 @@ function TerminalCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   return (
-    <span
+    <NavigableChipShell
+      target={{
+        kind: "terminalSnippet",
+        ...sourceTabIdFields(navigateMeta),
+      }}
       title={formatTerminalChipTitle({
         id: "",
         terminalName: part.terminalName,
@@ -248,21 +265,17 @@ function TerminalCard({
         selectedText: part.selectedText,
       })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
     >
       <Terminal
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, TERMINAL_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "terminalSnippet",
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >
+      <ChipLabel>
         {formatTerminalChipLabel(part.terminalName, part.lineStart, part.lineEnd)}
-      </NavigableChipLabel>
-    </span>
+      </ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -274,7 +287,14 @@ function FileSnippetCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   return (
-    <span
+    <NavigableChipShell
+      target={{
+        kind: "fileSnippet",
+        filePath: part.filePath,
+        lineStart: part.lineStart,
+        lineEnd: part.lineEnd,
+        ...sourceTabIdFields(navigateMeta),
+      }}
       title={formatFileSnippetChipTitle({
         id: "",
         filePath: part.filePath,
@@ -283,24 +303,17 @@ function FileSnippetCard({
         selectedText: part.selectedText,
       })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
     >
       <FileText
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, FILE_SNIPPET_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "fileSnippet",
-          filePath: part.filePath,
-          lineStart: part.lineStart,
-          lineEnd: part.lineEnd,
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >
+      <ChipLabel>
         {formatFileSnippetChipLabel(part.filePath, part.lineStart, part.lineEnd)}
-      </NavigableChipLabel>
-    </span>
+      </ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -312,26 +325,24 @@ function MessageQuoteCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   return (
-    <span
+    <NavigableChipShell
+      target={{
+        kind: "messageQuote",
+        quoteSessionPath: navigateMeta?.quoteSessionPath,
+        quoteMessageId: navigateMeta?.quoteMessageId,
+        quoteOrigin: navigateMeta?.quoteOrigin,
+      }}
       title={formatMessageQuoteChipTitle({ selectedText: part.selectedText })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
     >
       <MessageCircleMore
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, MESSAGE_QUOTE_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "messageQuote",
-          quoteSessionPath: navigateMeta?.quoteSessionPath,
-          quoteMessageId: navigateMeta?.quoteMessageId,
-          quoteOrigin: navigateMeta?.quoteOrigin,
-        }}
-      >
-        {formatMessageQuoteChipLabel(part.selectedText)}
-      </NavigableChipLabel>
-    </span>
+      <ChipLabel>{formatMessageQuoteChipLabel(part.selectedText)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -343,7 +354,11 @@ function GitCommitCard({
   navigateMeta?: ComposerChipNavigateMeta;
 }) {
   return (
-    <span
+    <NavigableChipShell
+      target={{
+        kind: "gitCommit",
+        ...sourceTabIdFields(navigateMeta),
+      }}
       title={formatGitCommitChipTitle({
         id: "",
         oid: part.oid,
@@ -353,21 +368,15 @@ function GitCommitCard({
         fullMessage: part.fullMessage,
       })}
       className={MESSAGE_BUBBLE_CHIP_CLASS}
+      trailingSpacer={false}
     >
       <GitCommit
         className={cn(WORKSPACE_FILE_ICON_CHIP_CLASS, GIT_COMMIT_CHIP_ICON_CLASS)}
         aria-hidden
         strokeWidth={1.75}
       />
-      <NavigableChipLabel
-        target={{
-          kind: "gitCommit",
-          ...sourceTabIdFields(navigateMeta),
-        }}
-      >
-        {formatGitCommitChipLabel(part.subject)}
-      </NavigableChipLabel>
-    </span>
+      <ChipLabel>{formatGitCommitChipLabel(part.subject)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 

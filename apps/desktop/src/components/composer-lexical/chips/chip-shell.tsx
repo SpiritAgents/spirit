@@ -5,10 +5,14 @@ import { pointerMovedBeyondChipNavigateThreshold } from "@/lib/composer-chip-nav
 import { COMPOSER_CHIP_ICON_SIZE_PX } from "@/lib/composer-inline-chip-styles";
 import { cn } from "@/lib/utils";
 
-type ChipShellProps = {
+export type ChipShellProps = {
   className?: string;
   title?: string;
   "aria-label"?: string;
+  navigable?: boolean;
+  onNavigate?: () => void;
+  /** Composer-only selection-tint filler; must stay out of message bubbles (its U+3000 text node would leak into selection.toString()). */
+  trailingSpacer?: boolean;
   "data-chip-kind"?: string;
   "data-element-chip"?: string;
   "data-element-id"?: string;
@@ -20,10 +24,17 @@ type ChipShellProps = {
 
 // The chip subtree must not carry user-select: none — it suppresses native selection painting for
 // the entire subtree (neither text nor icons get a selection tint)
+//
+// A navigable chip is a single clickable unit: the interaction lives on the shell (not the label)
+// so the icon, label, and padding all navigate on click and share one hover cursor; only the label
+// text takes the hover underline (see the [data-chip-navigable] rules in styles.css).
 export function ChipShell({
   className,
   title,
   "aria-label": ariaLabel,
+  navigable = false,
+  onNavigate,
+  trailingSpacer = true,
   "data-chip-kind": chipKind,
   "data-element-chip": elementChip,
   "data-element-id": elementId,
@@ -32,36 +43,6 @@ export function ChipShell({
   "data-element-url": elementUrl,
   children,
 }: ChipShellProps) {
-  return (
-    <span
-      contentEditable={false}
-      data-spirit-chip="true"
-      data-chip-kind={chipKind}
-      data-element-chip={elementChip}
-      data-element-id={elementId}
-      data-element-tag={elementTag}
-      data-element-html={elementHtml}
-      data-element-url={elementUrl}
-      className={className}
-      title={title}
-      aria-label={ariaLabel}
-    >
-      {children}
-      <ChipTrailingSpacer />
-    </span>
-  );
-}
-
-/** Label text only: must stay `inline` (never inline-flex / user-select:none) so chip selection tint stays native. */
-export function ChipLabel({
-  navigable = false,
-  onNavigate,
-  children,
-}: {
-  navigable?: boolean;
-  onNavigate?: () => void;
-  children: ReactNode;
-}) {
   const pointerOriginRef = useRef<{ x: number; y: number } | null>(null);
 
   const handlePointerDown = (event: PointerEvent<HTMLSpanElement>) => {
@@ -89,14 +70,30 @@ export function ChipLabel({
 
   return (
     <span
-      data-chip-label=""
+      contentEditable={false}
+      data-spirit-chip="true"
       {...(navigable ? { "data-chip-navigable": "" } : {})}
+      data-chip-kind={chipKind}
+      data-element-chip={elementChip}
+      data-element-id={elementId}
+      data-element-tag={elementTag}
+      data-element-html={elementHtml}
+      data-element-url={elementUrl}
+      className={className}
+      title={title}
+      aria-label={ariaLabel}
       onPointerDown={handlePointerDown}
       onClick={handleClick}
     >
       {children}
+      {trailingSpacer ? <ChipTrailingSpacer /> : null}
     </span>
   );
+}
+
+/** Label text only: must stay `inline` (never inline-flex / user-select:none) so chip selection tint stays native. */
+export function ChipLabel({ children }: { children: ReactNode }) {
+  return <span data-chip-label="">{children}</span>;
 }
 
 /** Dedicated to icon-less chips (e.g. skill): a selection band covering the left margin + left padding. Icon chips are handled by the ChipIcon spacer and must not stack with it (that would push the icon baseline down). */
