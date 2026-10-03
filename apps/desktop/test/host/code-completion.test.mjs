@@ -18,7 +18,7 @@ const baseConfig = {
       name: "gpt-4o-mini",
       apiBase: "https://api.openai.com/v1",
       reasoningEffort: "default",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ],
   activeModel: "gpt-4o-mini",
@@ -32,13 +32,13 @@ const baseConfig = {
   networks: { llmHttpVersion: "http2" },
 };
 
-test("requestCodeCompletionCommand returns empty when lightweight model missing", async () => {
+test("requestCodeCompletionCommand returns empty when secondary model missing", async () => {
   const result = await requestCodeCompletionCommand(
     {
       workspaceRoot,
       config: {
         ...baseConfig,
-        lightweightChatModel: "missing-model",
+        secondaryLanguageModel: "missing-model",
       },
     },
     {
@@ -106,7 +106,7 @@ test("buildCodeCompletionTransportConfig disables DeepSeek thinking", () => {
     workspaceRoot,
     profile: {
       provider: "deepseek",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       reasoningEffort: "high",
     },
   });
@@ -124,7 +124,7 @@ test("buildCodeCompletionTransportConfig disables Moonshot AI thinking", () => {
     workspaceRoot,
     profile: {
       provider: "moonshot-ai",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       reasoningEffort: "high",
     },
   });
@@ -142,7 +142,7 @@ test("buildCodeCompletionTransportConfig disables OpenAI reasoning", () => {
     workspaceRoot,
     profile: {
       provider: "openai",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       reasoningEffort: "default",
     },
   });
@@ -159,7 +159,7 @@ test("buildCodeCompletionTransportConfig disables custom provider reasoning", ()
     workspaceRoot,
     profile: {
       provider: "custom",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       reasoningEffort: "high",
     },
   });

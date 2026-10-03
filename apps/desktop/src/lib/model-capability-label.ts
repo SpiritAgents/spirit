@@ -6,7 +6,7 @@ const modelCapabilityOptions: Array<{
   label: string;
   labelKey: string;
 }> = [
-  { value: "chat", label: "Chat", labelKey: "settings.capabilityChatLabel" },
+  { value: "languageModel", label: "Chat", labelKey: "settings.capabilityChatLabel" },
   { value: "image", label: "Image", labelKey: "settings.capabilityImageLabel" },
   { value: "video", label: "Video", labelKey: "settings.capabilityVideoLabel" },
   {

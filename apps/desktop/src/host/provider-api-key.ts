@@ -152,7 +152,7 @@ type ModelRemovalConfigTarget = {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
 };
 
 export type ModelRemovalTarget = {
@@ -168,7 +168,7 @@ function modelRefStillExists(
 
 function clearDefaultSlotIfNoRemainingModel(
   config: ModelRemovalConfigTarget,
-  slot: "imageGenerationModel" | "videoGenerationModel" | "lightweightChatModel",
+  slot: "imageGenerationModel" | "videoGenerationModel" | "secondaryLanguageModel",
 ): void {
   const value = config[slot];
   if (value && !modelRefStillExists(config.providerGroups, value)) {
@@ -202,7 +202,7 @@ export function applyModelsRemovalToConfig(
   }
   clearDefaultSlotIfNoRemainingModel(config, "imageGenerationModel");
   clearDefaultSlotIfNoRemainingModel(config, "videoGenerationModel");
-  clearDefaultSlotIfNoRemainingModel(config, "lightweightChatModel");
+  clearDefaultSlotIfNoRemainingModel(config, "secondaryLanguageModel");
   return removed;
 }
 

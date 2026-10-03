@@ -74,7 +74,7 @@ test("buildPrimaryTransportConfig routes minimax to anthropic transport", () => 
       provider: "minimax",
       transportKind: "anthropic",
       providerSite: "cn",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
 

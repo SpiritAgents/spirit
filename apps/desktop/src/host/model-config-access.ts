@@ -170,8 +170,10 @@ export function modelSupportsVideoGeneration(
   return model.capabilities?.includes("videoGeneration") === true;
 }
 
-export function modelSupportsChat(model: Pick<ModelProfileSnapshot, "capabilities">): boolean {
-  return model.capabilities === undefined || model.capabilities.includes("chat");
+export function modelSupportsLanguageModel(
+  model: Pick<ModelProfileSnapshot, "capabilities">,
+): boolean {
+  return model.capabilities === undefined || model.capabilities.includes("languageModel");
 }
 
 export function findModelRefByName(

@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
-  normalizeLightweightChatModel,
-  resolveLightweightChatModelName,
-  resolveLightweightChatModelProfile,
-} from "../../dist-electron/src/host/lightweight-chat-model.js";
+  normalizeSecondaryLanguageModel,
+  resolveSecondaryLanguageModelName,
+  resolveSecondaryLanguageModelProfile,
+} from "../../dist-electron/src/host/secondary-language-model.js";
 
 const openAiGroupId = "openai";
 const exampleGroupId = "example";
@@ -13,13 +13,13 @@ const exampleGroupId = "example";
 const chatModel = {
   name: "gpt-4o-mini",
   reasoningEffort: "medium",
-  capabilities: ["chat"],
+  capabilities: ["languageModel"],
 };
 
 const flashModel = {
   name: "deepseek/deepseek-v4-flash",
   reasoningEffort: "medium",
-  capabilities: ["chat"],
+  capabilities: ["languageModel"],
 };
 
 const imageOnlyModel = {
@@ -46,26 +46,26 @@ const config = {
   activeModel: { groupId: openAiGroupId, name: "gpt-4o-mini" },
 };
 
-test("resolveLightweightChatModelName prefers explicit lightweightChatModel", () => {
-  const name = resolveLightweightChatModelName({
+test("resolveSecondaryLanguageModelName prefers explicit secondaryLanguageModel", () => {
+  const name = resolveSecondaryLanguageModelName({
     ...config,
-    lightweightChatModel: { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" },
+    secondaryLanguageModel: { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" },
   });
 
   assert.deepEqual(name, { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" });
 });
 
-test("resolveLightweightChatModelName ignores invalid explicit config", () => {
-  const name = resolveLightweightChatModelName({
+test("resolveSecondaryLanguageModelName ignores invalid explicit config", () => {
+  const name = resolveSecondaryLanguageModelName({
     ...config,
-    lightweightChatModel: { groupId: openAiGroupId, name: "missing-model" },
+    secondaryLanguageModel: { groupId: openAiGroupId, name: "missing-model" },
   });
 
   assert.deepEqual(name, { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" });
 });
 
-test("resolveLightweightChatModelName ignores non-chat explicit config", () => {
-  const name = resolveLightweightChatModelName({
+test("resolveSecondaryLanguageModelName ignores non-language-model explicit config", () => {
+  const name = resolveSecondaryLanguageModelName({
     providerGroups: [
       {
         id: openAiGroupId,
@@ -75,20 +75,20 @@ test("resolveLightweightChatModelName ignores non-chat explicit config", () => {
       },
     ],
     activeModel: { groupId: openAiGroupId, name: "gpt-4o-mini" },
-    lightweightChatModel: { groupId: openAiGroupId, name: "dall-e-3" },
+    secondaryLanguageModel: { groupId: openAiGroupId, name: "dall-e-3" },
   });
 
   assert.deepEqual(name, { groupId: openAiGroupId, name: "gpt-4o-mini" });
 });
 
-test("resolveLightweightChatModelName falls back to pattern match before activeModel", () => {
-  const name = resolveLightweightChatModelName(config);
+test("resolveSecondaryLanguageModelName falls back to pattern match before activeModel", () => {
+  const name = resolveSecondaryLanguageModelName(config);
 
   assert.deepEqual(name, { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" });
 });
 
-test("resolveLightweightChatModelName falls back to activeModel when no pattern matches", () => {
-  const name = resolveLightweightChatModelName({
+test("resolveSecondaryLanguageModelName falls back to activeModel when no pattern matches", () => {
+  const name = resolveSecondaryLanguageModelName({
     providerGroups: [config.providerGroups[0]],
     activeModel: { groupId: openAiGroupId, name: "gpt-4o-mini" },
   });
@@ -96,16 +96,16 @@ test("resolveLightweightChatModelName falls back to activeModel when no pattern 
   assert.deepEqual(name, { groupId: openAiGroupId, name: "gpt-4o-mini" });
 });
 
-test("normalizeLightweightChatModel only keeps chat-capable models", () => {
+test("normalizeSecondaryLanguageModel only keeps language-model-capable models", () => {
   assert.equal(
-    normalizeLightweightChatModel(
+    normalizeSecondaryLanguageModel(
       { groupId: openAiGroupId, name: "dall-e-3" },
       { providerGroups: [config.providerGroups[0]] },
     ),
     undefined,
   );
   assert.deepEqual(
-    normalizeLightweightChatModel(
+    normalizeSecondaryLanguageModel(
       { groupId: openAiGroupId, name: "gpt-4o-mini" },
       { providerGroups: [config.providerGroups[0]] },
     ),
@@ -113,10 +113,10 @@ test("normalizeLightweightChatModel only keeps chat-capable models", () => {
   );
 });
 
-test("resolveLightweightChatModelProfile returns profile for resolved model", () => {
-  const resolved = resolveLightweightChatModelProfile({
+test("resolveSecondaryLanguageModelProfile returns profile for resolved model", () => {
+  const resolved = resolveSecondaryLanguageModelProfile({
     ...config,
-    lightweightChatModel: { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" },
+    secondaryLanguageModel: { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" },
   });
 
   assert.equal(resolved?.name, "deepseek/deepseek-v4-flash");

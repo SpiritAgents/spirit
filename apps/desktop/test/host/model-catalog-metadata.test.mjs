@@ -31,7 +31,7 @@ test("siliconflow provider uses listed model catalog metadata", () => {
     {
       id: "deepseek-ai/DeepSeek-V3",
       displayName: "DeepSeek AI DeepSeek V3",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
     {
       id: "black-forest-labs/FLUX.1-schnell",
@@ -68,7 +68,7 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
     {
       id: "claude-sonnet-4-20250514",
       displayName: "Claude Sonnet 4.20250514",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "high", "max"],
     },
   ]);
@@ -109,14 +109,14 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
     {
       id: "kimi-k2.5",
       displayName: "Kimi K2.5",
-      capabilities: ["chat", "image"],
+      capabilities: ["languageModel", "image"],
       supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
       contextLength: 256000,
     },
     {
       id: "kimi-k2-turbo-preview",
       displayName: "Kimi K2 Turbo Preview",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: [],
     },
   ]);
@@ -148,7 +148,7 @@ test("openrouter provider passes through display metadata and pricing", () => {
         inputPerTokenUsd: "0.000003",
         outputPerTokenUsd: "0.000015",
       },
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 
@@ -181,7 +181,7 @@ test("openrouter provider maps output_modalities to catalog capabilities", () =>
   assert.deepEqual(preview, [
     {
       id: "openai/gpt-4o",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
     {
       id: "google/imagen-4",
@@ -214,7 +214,7 @@ test("vercel-ai-gateway provider maps language and image model types to catalog 
   assert.deepEqual(preview, [
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
     {
       id: "google/imagen-4",
@@ -244,12 +244,12 @@ test("vercel-ai-gateway infers supportedReasoningEfforts for anthropic claude ca
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "medium", "high"],
     },
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
@@ -271,12 +271,12 @@ test("openrouter infers supportedReasoningEfforts for anthropic claude catalog e
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "medium", "high"],
     },
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
@@ -296,7 +296,7 @@ test("openrouter keeps explicit empty supportedReasoningEfforts without claude i
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: [],
     },
   ]);
@@ -318,7 +318,7 @@ test("moonshot-ai video input maps to video capability not videoGeneration", () 
     {
       id: "moonshot-v1-128k-vision-preview",
       displayName: "Moonshot V1 128k Vision Preview",
-      capabilities: ["chat", "video"],
+      capabilities: ["languageModel", "video"],
     },
   ]);
 });
@@ -347,12 +347,12 @@ test("xiaomi provider consumes Xiaomi model catalog metadata", () => {
     {
       id: "mimo-v2.5",
       displayName: "MiMo V2.5",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
     },
     {
       id: "mimo-v2-flash",
       displayName: "MiMo V2 Flash",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
@@ -381,12 +381,12 @@ test("minimax provider consumes MiniMax model catalog metadata", () => {
     {
       id: "MiniMax-M3",
       displayName: "MiniMax M3",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
     },
     {
       id: "MiniMax-M2.5",
       displayName: "MiniMax M2.5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
@@ -423,13 +423,13 @@ test("volcengine provider maps domain-derived traits to catalog capabilities", (
     {
       id: "doubao-1-5-pro-32k-250115",
       displayName: "doubao-1-5-pro-32k",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 131072,
     },
     {
       id: "doubao-seed-1-6-250615",
       displayName: "Doubao Seed 1.6 250615",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
     },
     {
       id: "doubao-seedance-2-0-260128",
@@ -472,7 +472,7 @@ test("meituan provider maps LongCat catalog metadata to preview entries", () => 
     {
       id: "LongCat-2.0",
       displayName: "LongCat-2.0",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 1048576,
       supportsThinkingSwitch: true,
       pricing: {
@@ -501,7 +501,7 @@ test("tencent-tokenhub provider preserves upstream displayName from models catal
     {
       id: "deepseek-v4-pro",
       displayName: "DeepSeek-V4-Pro",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
@@ -529,7 +529,7 @@ test("mistral provider maps catalog metadata including vision and context length
       displayName: "Pixtral Large",
       description: "Vision chat model",
       contextLength: 128000,
-      capabilities: ["chat", "image"],
+      capabilities: ["languageModel", "image"],
     },
   ]);
 });
@@ -555,7 +555,7 @@ test("google provider uses upstream display metadata from native models catalog"
       id: "gemini-3.1-pro-preview",
       displayName: "Gemini 3.1 Pro Preview",
       description: "Preview model for advanced reasoning.",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 1048576 + 8192,
     },
   ]);
@@ -582,7 +582,7 @@ test("openai-compatible transport does not treat metadata as Anthropic-specific 
     previewCatalogMapForTransport({
       provider: "custom",
       transportKind: "openai-compatible",
-      modelCatalog: [{ id: "some-model", capabilities: ["chat", "image"] }],
+      modelCatalog: [{ id: "some-model", capabilities: ["languageModel", "image"] }],
     }).size,
     0,
   );
@@ -603,7 +603,7 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 200000,
     },
   ]);
@@ -640,7 +640,7 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
     {
       id: "kimi-for-coding",
       displayName: "K2.7 Code",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
       supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
       contextLength: 262144,
       supportsThinkingType: "only",
@@ -648,7 +648,7 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
     {
       id: "k3",
       displayName: "K3",
-      capabilities: ["chat", "image"],
+      capabilities: ["languageModel", "image"],
       supportedReasoningEfforts: ["low", "high", "max"],
       defaultReasoningEffort: "high",
       contextLength: 262144,

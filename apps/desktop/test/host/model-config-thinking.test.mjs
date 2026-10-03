@@ -13,7 +13,7 @@ test("buildPrimaryTransportConfig wires DeepSeek V4 thinking on with high effort
       provider: "deepseek",
       transportKind: "openai-compatible",
       reasoningEffort: "high",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.vendorExtendedThinking, undefined);
@@ -31,7 +31,7 @@ test("buildPrimaryTransportConfig disables DeepSeek V4 thinking and strips effor
       transportKind: "openai-compatible",
       reasoningEffort: "high",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.vendorExtendedThinking, false);
@@ -48,7 +48,7 @@ test("buildPrimaryTransportConfig wires Z.ai effort when thinking enabled", () =
       provider: "z-ai",
       transportKind: "openai-compatible",
       reasoningEffort: "medium",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.vendorExtendedThinking, undefined);
@@ -66,7 +66,7 @@ test("buildPrimaryTransportConfig disables Alibaba thinking when thinkingEnabled
       transportKind: "openai-compatible",
       reasoningEffort: "default",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.vendorExtendedThinking, false);
@@ -83,7 +83,7 @@ test("buildPrimaryTransportConfig wires Gateway Claude budget thinking off via v
       transportKind: "open-responses",
       reasoningEffort: "medium",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -102,7 +102,7 @@ test("buildPrimaryTransportConfig wires Gateway Claude adaptive thinking off via
       transportKind: "open-responses",
       reasoningEffort: "high",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -120,7 +120,7 @@ test("buildPrimaryTransportConfig wires Gateway Claude adaptive thinking on with
       provider: "vercel-ai-gateway",
       transportKind: "open-responses",
       reasoningEffort: "high",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -138,7 +138,7 @@ test("buildPrimaryTransportConfig wires Gateway Xiaomi responses reasoningEffort
       provider: "vercel-ai-gateway",
       transportKind: "open-responses",
       reasoningEffort: "none",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -157,7 +157,7 @@ test("buildPrimaryTransportConfig maps legacy Gateway Xiaomi thinkingEnabled fal
       transportKind: "open-responses",
       reasoningEffort: "default",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -176,7 +176,7 @@ test("buildPrimaryTransportConfig maps legacy Gateway Xiaomi thinkingEnabled fal
       transportKind: "open-responses",
       reasoningEffort: "high",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -194,7 +194,7 @@ test("buildPrimaryTransportConfig wires direct Xiaomi responses reasoningEffort 
       provider: "xiaomi",
       transportKind: "open-responses",
       reasoningEffort: "none",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -212,7 +212,7 @@ test("buildPrimaryTransportConfig keeps direct Xiaomi chat thinking switch", () 
       provider: "xiaomi",
       transportKind: "openai-compatible",
       thinkingEnabled: false,
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.vendorExtendedThinking, false);
@@ -230,7 +230,7 @@ test("buildPrimaryTransportConfig wires gpt-5.6 pro max reasoning mode", () => {
       transportKind: "open-responses",
       reasoningEffort: "max",
       reasoningMode: "pro",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.transportKind, "open-responses");
@@ -249,7 +249,7 @@ test("buildPrimaryTransportConfig omits reasoning mode for gpt-5.6 standard", ()
       transportKind: "open-responses",
       reasoningEffort: "medium",
       reasoningMode: "standard",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   });
   assert.equal(config.reasoningEffort, "medium");

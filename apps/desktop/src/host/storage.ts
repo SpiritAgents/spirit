@@ -100,13 +100,13 @@ const CHATS_DIR_NAME = "chats";
 const PROVISIONAL_CHATS_DIR_NAME = "__provisional__";
 const MAX_RECENT_WORKSPACES = 20;
 const MODEL_CAPABILITIES = [
-  "chat",
+  "languageModel",
   "image",
   "video",
   "imageGeneration",
   "videoGeneration",
 ] as const;
-const DEFAULT_CUSTOM_MODEL_CAPABILITIES: DesktopModelCapability[] = ["chat", "image"];
+const DEFAULT_CUSTOM_MODEL_CAPABILITIES: DesktopModelCapability[] = ["languageModel", "image"];
 
 export type DesktopWorkspaceBinding = "project" | "none";
 
@@ -155,7 +155,7 @@ export interface DesktopConfigFile {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   recentWorkspaces?: string[];
   /** When `none`, cwd is the user home directory and workspace-scoped instructions/MCP are skipped. */
   workspaceBinding?: DesktopWorkspaceBinding;
@@ -1180,8 +1180,8 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
     normalizedGroups,
   );
   const dreams = normalizeDreamConfig(raw.dreams, normalizedGroups);
-  const lightweightChatModel = normalizeLightweightChatModelRef(
-    raw.lightweightChatModel ?? dreams.collectorModel,
+  const secondaryLanguageModel = normalizeSecondaryLanguageModelRef(
+    raw.secondaryLanguageModel ?? dreams.collectorModel,
     normalizedGroups,
   );
 
@@ -1191,7 +1191,7 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
     activeModel: resolvedActive,
     ...(imageGenerationModel ? { imageGenerationModel } : {}),
     ...(videoGenerationModel ? { videoGenerationModel } : {}),
-    ...(lightweightChatModel ? { lightweightChatModel } : {}),
+    ...(secondaryLanguageModel ? { secondaryLanguageModel } : {}),
     recentWorkspaces: normalizeRecentWorkspaceRoots(raw.recentWorkspaces),
     workspaceBinding: normalizeWorkspaceBinding(raw.workspaceBinding),
     ...(typeof raw.lastProjectWorkspaceRoot === "string" && raw.lastProjectWorkspaceRoot.trim()
@@ -1252,7 +1252,7 @@ function normalizeVideoGenerationModelRef(
   return capabilities?.includes("videoGeneration") ? ref : undefined;
 }
 
-function normalizeLightweightChatModelRef(
+function normalizeSecondaryLanguageModelRef(
   value: unknown,
   groups: readonly ProviderGroupV2[],
 ): ModelRef | undefined {
@@ -1265,7 +1265,7 @@ function normalizeLightweightChatModelRef(
     return undefined;
   }
   const capabilities = normalizeModelCapabilities(resolved.model.capabilities);
-  if (capabilities && !capabilities.includes("chat")) {
+  if (capabilities && !capabilities.includes("languageModel")) {
     return undefined;
   }
   return ref;
@@ -1354,7 +1354,7 @@ export function normalizeDreamConfig(
   raw?: Partial<DesktopDreamConfigFile>,
   groups: readonly ProviderGroupV2[] = [],
 ): DesktopDreamConfigFile {
-  const collectorModel = normalizeLightweightChatModelRef(raw?.collectorModel, groups);
+  const collectorModel = normalizeSecondaryLanguageModelRef(raw?.collectorModel, groups);
   return {
     enabled: raw?.enabled === true,
     ...(collectorModel ? { collectorModel } : {}),

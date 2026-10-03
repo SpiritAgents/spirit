@@ -73,7 +73,7 @@ import {
   bedrockMantleApiBaseFromRegion,
   isBedrockMantleOpenAiModel,
 } from "@spiritagent/host-internal/bedrock-mantle";
-import { modelSupportsChat } from "./lightweight-chat-model.js";
+import { modelSupportsLanguageModel } from "./secondary-language-model.js";
 import {
   applyModelsRemovalToConfig,
   filterNewGroupModelIds,
@@ -566,23 +566,23 @@ export async function updateConfigCommand(
         state.config.videoGenerationModel = videoRef;
       }
     }
-    if (request.lightweightChatModel !== undefined) {
-      if (isEmptyModelRef(request.lightweightChatModel)) {
-        delete state.config.lightweightChatModel;
+    if (request.secondaryLanguageModel !== undefined) {
+      if (isEmptyModelRef(request.secondaryLanguageModel)) {
+        delete state.config.secondaryLanguageModel;
       } else {
-        const chatRef = normalizeSlotModelRef(
-          request.lightweightChatModel,
+        const languageModelRef = normalizeSlotModelRef(
+          request.secondaryLanguageModel,
           state.config,
-          modelSupportsChat,
+          modelSupportsLanguageModel,
         );
-        if (!chatRef) {
+        if (!languageModelRef) {
           throw new Error(
             i18n.t("error.lightweightChatModelNotFound", {
-              model: request.lightweightChatModel.name,
+              model: request.secondaryLanguageModel.name,
             }),
           );
         }
-        state.config.lightweightChatModel = chatRef;
+        state.config.secondaryLanguageModel = languageModelRef;
       }
     }
     if (request.translucency !== undefined) {

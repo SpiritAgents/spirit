@@ -3,7 +3,7 @@ import { CodeCompletionService } from "@spiritagent/host-internal";
 import type { CodeCompletionResult } from "@spiritagent/agent-core";
 
 import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
-import { resolveLightweightChatModelProfile } from "./lightweight-chat-model.js";
+import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
 import { buildCodeCompletionTransportConfig } from "./model-config.js";
 import { currentApiBase } from "./service-utils.js";
 import type { DesktopConfigFile } from "./storage.js";
@@ -70,7 +70,7 @@ export async function requestCodeCompletionCommand(
 
   const signal = beginCompletionRequest(context.workspaceRoot);
   try {
-    const resolved = resolveLightweightChatModelProfile(context.config);
+    const resolved = resolveSecondaryLanguageModelProfile(context.config);
     if (!resolved) {
       return { operations: [] };
     }

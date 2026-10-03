@@ -217,7 +217,7 @@ function previewCapabilitiesFromListedEntry(
     return ["videoGeneration"];
   }
 
-  const capabilities: DesktopModelCapability[] = ["chat"];
+  const capabilities: DesktopModelCapability[] = ["languageModel"];
   if (entry.supportsImageInput === true) {
     capabilities.push("image");
   }
