@@ -714,6 +714,9 @@ impl DaemonRuntime {
         if let Err(err) = self.apply_attribution_to_daemon() {
             self.handle_daemon_error(err);
         }
+        if let Err(err) = self.apply_web_tool_exposure_to_daemon() {
+            self.handle_daemon_error(err);
+        }
         if !transport_changed {
             return;
         }
@@ -755,6 +758,22 @@ impl DaemonRuntime {
                     "commitEnabled": commit_attribution,
                     "prEnabled": pr_attribution,
                 },
+            })),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn apply_web_tool_exposure_to_daemon(&mut self) -> Result<()> {
+        if self.daemon_failed {
+            return Err(anyhow!("daemon is already in a failed state."));
+        }
+        let (web_search_enabled, web_fetch_enabled) =
+            crate::model_registry::resolve_cli_web_tool_exposure(&self.config);
+        self.call_daemon(
+            "session.setWebToolExposure",
+            Some(json!({
+                "webSearchEnabled": web_search_enabled,
+                "webFetchEnabled": web_fetch_enabled,
             })),
         )?;
         Ok(())
