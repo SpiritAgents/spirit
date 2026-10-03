@@ -7,7 +7,7 @@ import {
   modelRefsEqual,
 } from "@spiritagent/host-internal/config-v2";
 
-export const defaultCustomModelCapabilities: DesktopModelCapability[] = ["chat", "image"];
+export const defaultCustomModelCapabilities: DesktopModelCapability[] = ["languageModel", "image"];
 
 export type SettingsModelProfile = DesktopSnapshot["config"]["models"][number];
 
@@ -15,7 +15,7 @@ export type ModelDefaultAssignments = {
   activeModel: boolean;
   imageGenerationModel: boolean;
   videoGenerationModel: boolean;
-  lightweightChatModel: boolean;
+  secondaryLanguageModel: boolean;
 };
 
 export type ModelDefaultRole = keyof ModelDefaultAssignments;
@@ -44,7 +44,7 @@ export const modelCapabilityOptions: Array<{
   summaryKey: string;
 }> = [
   {
-    value: "chat",
+    value: "languageModel",
     label: "Chat",
     labelKey: "settings.capabilityChatLabel",
     summaryKey: "settings.capabilityChat",
@@ -96,7 +96,9 @@ export function canAssignAsActiveModel(
   isCurrentActiveModel: boolean,
 ): boolean {
   return (
-    isCurrentActiveModel || model.capabilities === undefined || model.capabilities.includes("chat")
+    isCurrentActiveModel ||
+    model.capabilities === undefined ||
+    model.capabilities.includes("languageModel")
   );
 }
 
@@ -114,11 +116,11 @@ export function canAssignAsVideoGenerationModel(
   return isCurrentVideoGenerationModel || model.capabilities?.includes("videoGeneration") === true;
 }
 
-export function canAssignAsLightweightChatModel(
+export function canAssignAsSecondaryLanguageModel(
   model: SettingsModelProfile,
-  isCurrentLightweightChatModel: boolean,
+  isCurrentSecondaryLanguageModel: boolean,
 ): boolean {
-  return canAssignAsActiveModel(model, isCurrentLightweightChatModel);
+  return canAssignAsActiveModel(model, isCurrentSecondaryLanguageModel);
 }
 
 export function getSupportedModelDefaultRoles(
@@ -126,7 +128,7 @@ export function getSupportedModelDefaultRoles(
   activeModel: ModelRef,
   imageGenerationModel: ModelRef | undefined,
   videoGenerationModel: ModelRef | undefined,
-  lightweightChatModel: ModelRef | undefined,
+  secondaryLanguageModel: ModelRef | undefined,
 ): ModelDefaultRole[] {
   const modelRef = settingsModelRef(model);
   const roles: ModelDefaultRole[] = [];
@@ -154,12 +156,12 @@ export function getSupportedModelDefaultRoles(
   }
 
   if (
-    canAssignAsLightweightChatModel(
+    canAssignAsSecondaryLanguageModel(
       model,
-      lightweightChatModel !== undefined && modelRefsEqual(modelRef, lightweightChatModel),
+      secondaryLanguageModel !== undefined && modelRefsEqual(modelRef, secondaryLanguageModel),
     )
   ) {
-    roles.push("lightweightChatModel");
+    roles.push("secondaryLanguageModel");
   }
 
   return roles;

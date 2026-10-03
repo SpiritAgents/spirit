@@ -9,7 +9,7 @@ import {
   type SettingsModelProfile,
   canAssignAsActiveModel,
   canAssignAsImageGenerationModel,
-  canAssignAsLightweightChatModel,
+  canAssignAsSecondaryLanguageModel,
   canAssignAsVideoGenerationModel,
   getSupportedModelDefaultRoles,
   modelDefaultActionLabel,
@@ -116,7 +116,7 @@ export function ModelsSettingsPanel({
     activeModel: false,
     imageGenerationModel: false,
     videoGenerationModel: false,
-    lightweightChatModel: false,
+    secondaryLanguageModel: false,
   });
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
@@ -128,8 +128,8 @@ export function ModelsSettingsPanel({
     settings.imageGenerationModel ?? snapshot?.config.imageGenerationModel;
   const videoGenerationModel =
     settings.videoGenerationModel ?? snapshot?.config.videoGenerationModel;
-  const lightweightChatModel =
-    settings.lightweightChatModel ?? snapshot?.config.lightweightChatModel;
+  const secondaryLanguageModel =
+    settings.secondaryLanguageModel ?? snapshot?.config.secondaryLanguageModel;
   const modelDefaultsDialogModel =
     modelDefaultsDialogTarget === null
       ? null
@@ -162,18 +162,18 @@ export function ModelsSettingsPanel({
     );
   const canAssignLightweightChatRole =
     modelDefaultsDialogModel !== null &&
-    canAssignAsLightweightChatModel(
+    canAssignAsSecondaryLanguageModel(
       modelDefaultsDialogModel,
-      lightweightChatModel !== undefined &&
+      secondaryLanguageModel !== undefined &&
         modelDefaultsDialogRef !== null &&
-        modelRefsEqual(modelDefaultsDialogRef, lightweightChatModel),
+        modelRefsEqual(modelDefaultsDialogRef, secondaryLanguageModel),
     );
   const isModelDefaultsDialogModelActive =
     modelDefaultsDialogRef !== null && modelRefsEqual(modelDefaultsDialogRef, activeModel);
   const isModelDefaultsDialogModelLightweight =
-    lightweightChatModel !== undefined &&
+    secondaryLanguageModel !== undefined &&
     modelDefaultsDialogRef !== null &&
-    modelRefsEqual(modelDefaultsDialogRef, lightweightChatModel);
+    modelRefsEqual(modelDefaultsDialogRef, secondaryLanguageModel);
   const hasModelDefaultAssignmentChanges =
     modelDefaultsDialogModel !== null &&
     (modelDefaultAssignments.activeModel !== isModelDefaultsDialogModelActive ||
@@ -185,7 +185,7 @@ export function ModelsSettingsPanel({
         (modelDefaultsDialogRef !== null &&
           videoGenerationModel !== undefined &&
           modelRefsEqual(modelDefaultsDialogRef, videoGenerationModel)) ||
-      modelDefaultAssignments.lightweightChatModel !== isModelDefaultsDialogModelLightweight);
+      modelDefaultAssignments.secondaryLanguageModel !== isModelDefaultsDialogModelLightweight);
 
   const catalogDetailByModelName = useMemo(
     () => buildModelCatalogDetailMap(models, snapshot?.config.modelCatalogHints),
@@ -291,8 +291,8 @@ export function ModelsSettingsPanel({
         imageGenerationModel !== undefined && modelRefsEqual(modelRef, imageGenerationModel),
       videoGenerationModel:
         videoGenerationModel !== undefined && modelRefsEqual(modelRef, videoGenerationModel),
-      lightweightChatModel:
-        lightweightChatModel !== undefined && modelRefsEqual(modelRef, lightweightChatModel),
+      secondaryLanguageModel:
+        secondaryLanguageModel !== undefined && modelRefsEqual(modelRef, secondaryLanguageModel),
     });
     setModelDefaultsDialogOpen(true);
   };
@@ -305,7 +305,7 @@ export function ModelsSettingsPanel({
         activeModel: false,
         imageGenerationModel: false,
         videoGenerationModel: false,
-        lightweightChatModel: false,
+        secondaryLanguageModel: false,
       });
     });
   }, []);
@@ -358,17 +358,17 @@ export function ModelsSettingsPanel({
 
     if (canAssignLightweightChatRole) {
       if (
-        modelDefaultAssignments.lightweightChatModel &&
-        (lightweightChatModel === undefined ||
-          !modelRefsEqual(modelDefaultsDialogRef!, lightweightChatModel))
+        modelDefaultAssignments.secondaryLanguageModel &&
+        (secondaryLanguageModel === undefined ||
+          !modelRefsEqual(modelDefaultsDialogRef!, secondaryLanguageModel))
       ) {
-        patch.lightweightChatModel = modelDefaultsDialogRef!;
+        patch.secondaryLanguageModel = modelDefaultsDialogRef!;
       } else if (
-        !modelDefaultAssignments.lightweightChatModel &&
-        lightweightChatModel !== undefined &&
-        modelRefsEqual(modelDefaultsDialogRef!, lightweightChatModel)
+        !modelDefaultAssignments.secondaryLanguageModel &&
+        secondaryLanguageModel !== undefined &&
+        modelRefsEqual(modelDefaultsDialogRef!, secondaryLanguageModel)
       ) {
-        patch.lightweightChatModel = undefined;
+        patch.secondaryLanguageModel = undefined;
       }
     }
 
@@ -402,10 +402,10 @@ export function ModelsSettingsPanel({
         patch.videoGenerationModel = modelRef;
       }
     } else if (
-      lightweightChatModel === undefined ||
-      !modelRefsEqual(modelRef, lightweightChatModel)
+      secondaryLanguageModel === undefined ||
+      !modelRefsEqual(modelRef, secondaryLanguageModel)
     ) {
-      patch.lightweightChatModel = modelRef;
+      patch.secondaryLanguageModel = modelRef;
     }
 
     if (Object.keys(patch).length === 0) {
@@ -421,7 +421,7 @@ export function ModelsSettingsPanel({
       activeModel,
       imageGenerationModel,
       videoGenerationModel,
-      lightweightChatModel,
+      secondaryLanguageModel,
     );
 
     if (supportedRoles.length === 0) {
@@ -514,14 +514,14 @@ export function ModelsSettingsPanel({
                             imageGenerationModel !== undefined &&
                             modelRefsEqual(modelRef, imageGenerationModel);
                           const isLightweightDefault =
-                            lightweightChatModel !== undefined &&
-                            modelRefsEqual(modelRef, lightweightChatModel);
+                            secondaryLanguageModel !== undefined &&
+                            modelRefsEqual(modelRef, secondaryLanguageModel);
                           const supportedDefaultRoles = getSupportedModelDefaultRoles(
                             model,
                             activeModel,
                             imageGenerationModel,
                             videoGenerationModel,
-                            lightweightChatModel,
+                            secondaryLanguageModel,
                           );
                           const defaultActionLabel = modelDefaultActionLabel(supportedDefaultRoles);
                           const rowDisabled = modelsBusy || modelsPreviewBusy;
@@ -602,14 +602,14 @@ export function ModelsSettingsPanel({
                           imageGenerationModel !== undefined &&
                           modelRefsEqual(modelRef, imageGenerationModel);
                         const isLightweightDefault =
-                          lightweightChatModel !== undefined &&
-                          modelRefsEqual(modelRef, lightweightChatModel);
+                          secondaryLanguageModel !== undefined &&
+                          modelRefsEqual(modelRef, secondaryLanguageModel);
                         const supportedDefaultRoles = getSupportedModelDefaultRoles(
                           model,
                           activeModel,
                           imageGenerationModel,
                           videoGenerationModel,
-                          lightweightChatModel,
+                          secondaryLanguageModel,
                         );
                         const defaultActionLabel = modelDefaultActionLabel(supportedDefaultRoles);
                         const displayTitle = modelDisplayTitleFromMap(
@@ -756,12 +756,12 @@ export function ModelsSettingsPanel({
               >
                 <Checkbox
                   id="model-default-lightweight-chat"
-                  checked={modelDefaultAssignments.lightweightChatModel}
+                  checked={modelDefaultAssignments.secondaryLanguageModel}
                   disabled={modelsBusy || modelsPreviewBusy}
                   onCheckedChange={(checked) =>
                     setModelDefaultAssignments((current) => ({
                       ...current,
-                      lightweightChatModel: checked === true,
+                      secondaryLanguageModel: checked === true,
                     }))
                   }
                 />

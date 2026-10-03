@@ -418,7 +418,7 @@ function normalizeCachedCapabilities(value: unknown): DesktopModelCapability[] |
     return undefined;
   }
   const allowed = new Set<DesktopModelCapability>([
-    "chat",
+    "languageModel",
     "image",
     "video",
     "imageGeneration",

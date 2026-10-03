@@ -136,7 +136,7 @@ test("mergeNewCatalogModelsIntoConfig appends only new provider-scoped models", 
         {
           name: "zai/glm-5.1",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
         },
       ]),
     ],
@@ -150,8 +150,8 @@ test("mergeNewCatalogModelsIntoConfig appends only new provider-scoped models", 
       modelIds: ["zai/glm-5.1", "zai/glm-5.2"],
       fromCache: false,
       modelCatalog: [
-        { id: "zai/glm-5.1", capabilities: ["chat"] },
-        { id: "zai/glm-5.2", capabilities: ["chat"] },
+        { id: "zai/glm-5.1", capabilities: ["languageModel"] },
+        { id: "zai/glm-5.2", capabilities: ["languageModel"] },
       ],
     },
   );
@@ -171,12 +171,12 @@ test("syncExistingModelsFromCatalog upgrades chat-only profiles from catalog", (
         {
           name: "MiniMax-M3",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
         },
         {
           name: "MiniMax-M2.5",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
         },
       ]),
     ],
@@ -190,22 +190,26 @@ test("syncExistingModelsFromCatalog upgrades chat-only profiles from catalog", (
       name: "MiniMax-M3",
       apiBase: "https://api.minimaxi.com/v1",
       provider: "minimax",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       reasoningEffort: "medium",
     },
     {
       modelIds: ["MiniMax-M3", "MiniMax-M2.5"],
       fromCache: false,
       modelCatalog: [
-        { id: "MiniMax-M3", capabilities: ["chat", "image", "video"] },
-        { id: "MiniMax-M2.5", capabilities: ["chat"] },
+        { id: "MiniMax-M3", capabilities: ["languageModel", "image", "video"] },
+        { id: "MiniMax-M2.5", capabilities: ["languageModel"] },
       ],
     },
   );
 
   assert.equal(synced, 1);
-  assert.deepEqual(config.providerGroups[0].models[0].capabilities, ["chat", "image", "video"]);
-  assert.deepEqual(config.providerGroups[0].models[1].capabilities, ["chat"]);
+  assert.deepEqual(config.providerGroups[0].models[0].capabilities, [
+    "languageModel",
+    "image",
+    "video",
+  ]);
+  assert.deepEqual(config.providerGroups[0].models[1].capabilities, ["languageModel"]);
 });
 
 test("syncExistingModelsFromCatalog writes videoGeneration when capabilities are missing", () => {
@@ -237,7 +241,7 @@ test("syncExistingModelsFromCatalog corrects stale video input to videoGeneratio
         {
           name: "alibaba/wan-v2.6-t2v",
           reasoningEffort: "medium",
-          capabilities: ["chat", "video"],
+          capabilities: ["languageModel", "video"],
         },
       ]),
     ],
@@ -260,7 +264,7 @@ test("syncExistingModelsFromCatalog syncs supportedReasoningEfforts from catalog
         {
           name: "anthropic/claude-sonnet-4",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
         },
       ]),
     ],
@@ -272,7 +276,7 @@ test("syncExistingModelsFromCatalog syncs supportedReasoningEfforts from catalog
     modelCatalog: [
       {
         id: "anthropic/claude-sonnet-4",
-        capabilities: ["chat"],
+        capabilities: ["languageModel"],
         supportedReasoningEfforts: ["low", "high"],
       },
     ],
@@ -289,7 +293,7 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
         {
           name: "openai/gpt-4.1",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
           supportedReasoningEfforts: ["low", "high"],
           contextLength: 128000,
         },
@@ -303,7 +307,7 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
     modelCatalog: [
       {
         id: "openai/gpt-4.1",
-        capabilities: ["chat"],
+        capabilities: ["languageModel"],
         supportedReasoningEfforts: ["low", "high"],
         contextLength: 256000,
       },
@@ -388,7 +392,7 @@ test("removeDelistedModelsFromCatalog drops scope models missing from upstream i
         {
           name: "openai/gpt-4.1",
           reasoningEffort: "medium",
-          capabilities: ["chat"],
+          capabilities: ["languageModel"],
         },
       ]),
       customGroup([
@@ -405,7 +409,7 @@ test("removeDelistedModelsFromCatalog drops scope models missing from upstream i
   const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
     modelIds: ["openai/gpt-4.1"],
     fromCache: false,
-    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["chat"] }],
+    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["languageModel"] }],
   });
 
   assert.deepEqual(pruned, ["alibaba/wan-v2.6-t2v"]);
@@ -502,7 +506,7 @@ test("removeDelistedModelsFromCatalog prunes delisted gateway model but keeps op
   const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
     modelIds: ["openai/gpt-4.1"],
     fromCache: false,
-    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["chat"] }],
+    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["languageModel"] }],
   });
 
   assert.deepEqual(pruned, ["shared-id"]);

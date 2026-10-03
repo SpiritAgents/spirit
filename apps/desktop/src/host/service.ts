@@ -489,7 +489,7 @@ import {
 import { buildDesktopUiMarkdownPromptSection } from "./desktop-ui-markdown-prompt.js";
 import { buildActiveSkillPayload } from "./skills.js";
 import { buildDreamContextText, emptyDreamCollectorSnapshot } from "./dreams.js";
-import { resolveLightweightChatModelProfile } from "./lightweight-chat-model.js";
+import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
 import { createTodoScope } from "./todos.js";
 import {
   buildDesktopExtensionListItems,
@@ -3294,15 +3294,15 @@ export class DesktopHostService {
       hostContributedToolsEnabled: true,
       getAutomationCreateDefaults: () => {
         const currentState = this.requireState();
-        const lightweightModel = resolveLightweightChatModelProfile(currentState.config);
-        if (!lightweightModel) {
+        const secondaryModel = resolveSecondaryLanguageModelProfile(currentState.config);
+        if (!secondaryModel) {
           throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
         }
         return {
           workspaceRoot,
-          modelRef: lightweightModel.profile.ref,
-          ...(lightweightModel.profile.reasoningEffort
-            ? { reasoningEffort: lightweightModel.profile.reasoningEffort }
+          modelRef: secondaryModel.profile.ref,
+          ...(secondaryModel.profile.reasoningEffort
+            ? { reasoningEffort: secondaryModel.profile.reasoningEffort }
             : {}),
         };
       },
@@ -4393,11 +4393,11 @@ export class DesktopHostService {
     repoRoot: string,
   ): Promise<{ worktreeName: string; branchName: string }> {
     const state = this.requireState();
-    const lightweightModel = resolveLightweightChatModelProfile(state.config);
-    if (!lightweightModel) {
+    const secondaryModel = resolveSecondaryLanguageModelProfile(state.config);
+    if (!secondaryModel) {
       throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
     }
-    const apiKey = await resolveApiKeyForConfigModel(state.config, lightweightModel.profile.ref);
+    const apiKey = await resolveApiKeyForConfigModel(state.config, secondaryModel.profile.ref);
     if (!apiKey) {
       throw new Error(i18n.t("error.autoWorktreeNameFailedNoKey"));
     }
@@ -4413,8 +4413,8 @@ export class DesktopHostService {
       workspaceRoot: state.workspaceRoot,
       gitBranch: state.git.branch,
       config: state.config,
-      taskModel: lightweightModel.name,
-      taskProfile: lightweightModel.profile,
+      taskModel: secondaryModel.name,
+      taskProfile: secondaryModel.profile,
       apiKey,
       metadata: {
         ...state.metadata,
