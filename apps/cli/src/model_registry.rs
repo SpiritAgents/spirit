@@ -657,6 +657,14 @@ pub struct AgentsAttributionConfig {
     pub pr: AgentsAttributionToggleConfig,
 }
 
+/// Opt-out toggle for a built-in web tool: only an explicit `"enabled": false`
+/// hides the tool; a missing key keeps the default (on).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AgentsWebToolToggleConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentsConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -669,6 +677,10 @@ pub struct AgentsConfig {
     pub code_completion: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attribution: Option<AgentsAttributionConfig>,
+    #[serde(rename = "webSearch", default, skip_serializing_if = "Option::is_none")]
+    pub web_search: Option<AgentsWebToolToggleConfig>,
+    #[serde(rename = "webFetch", default, skip_serializing_if = "Option::is_none")]
+    pub web_fetch: Option<AgentsWebToolToggleConfig>,
     #[serde(flatten, default, skip_serializing_if = "Map::is_empty")]
     pub extra: Map<String, Value>,
 }
@@ -703,6 +715,27 @@ pub fn resolve_cli_attribution(config: &AppConfig) -> (bool, bool) {
         return (false, false);
     };
     (attribution.commit.enabled, attribution.pr.enabled)
+}
+
+/// CLI-side parsing of the Web Search / Web Fetch switches.
+///
+/// Both are true (on) when the fields are missing: unlike attribution, the web
+/// tools ship in the default tool surface, so the toggles are opt-out and only
+/// an explicit `"enabled": false` in config.json hides them from the model.
+pub fn resolve_cli_web_tool_exposure(config: &AppConfig) -> (bool, bool) {
+    let web_search_enabled = config
+        .agents
+        .web_search
+        .as_ref()
+        .and_then(|toggle| toggle.enabled)
+        != Some(false);
+    let web_fetch_enabled = config
+        .agents
+        .web_fetch
+        .as_ref()
+        .and_then(|toggle| toggle.enabled)
+        != Some(false);
+    (web_search_enabled, web_fetch_enabled)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1969,7 +2002,7 @@ mod tests {
         AppConfig, ModelEntry, ModelProvider, ModelRef, ModelTransportKind, PermissionRuleAction,
         ProviderGroupConnectDraft, SPIRIT_CONFIG_SCHEMA_VERSION, deserialize_config,
         normalize_reasoning_effort_value, normalize_reasoning_mode_value, resolve_cli_attribution,
-        serialize_config,
+        resolve_cli_web_tool_exposure, serialize_config,
     };
     use serde_json::Value;
     use std::path::Path;
@@ -2602,6 +2635,51 @@ mod tests {
             json.pointer("/agents/attribution/pr/enabled")
                 .and_then(Value::as_bool),
             Some(false)
+        );
+    }
+
+    #[test]
+    fn cli_web_tool_exposure_defaults_on_when_missing() {
+        let config = r#"
+{
+  "schemaVersion": 2,
+  "providerGroups": [],
+  "activeModel": { "groupId": "", "name": "" }
+}
+"#;
+        let parsed = deserialize_config(config, Path::new("config.json")).expect("parse config");
+        assert_eq!(resolve_cli_web_tool_exposure(&parsed), (true, true));
+        assert!(parsed.agents.web_search.is_none());
+        assert!(parsed.agents.web_fetch.is_none());
+    }
+
+    #[test]
+    fn cli_web_tool_exposure_honors_explicit_disabled() {
+        let config = r#"
+{
+  "schemaVersion": 2,
+  "providerGroups": [],
+  "activeModel": { "groupId": "", "name": "" },
+  "agents": {
+    "webSearch": { "enabled": false },
+    "webFetch": { "enabled": true }
+  }
+}
+"#;
+        let parsed = deserialize_config(config, Path::new("config.json")).expect("parse config");
+        assert_eq!(resolve_cli_web_tool_exposure(&parsed), (false, true));
+
+        let serialized = serialize_config(&parsed).expect("serialize config");
+        let json: Value = serde_json::from_str(&serialized).expect("json value");
+        assert_eq!(
+            json.pointer("/agents/webSearch/enabled")
+                .and_then(Value::as_bool),
+            Some(false)
+        );
+        assert_eq!(
+            json.pointer("/agents/webFetch/enabled")
+                .and_then(Value::as_bool),
+            Some(true)
         );
     }
 
