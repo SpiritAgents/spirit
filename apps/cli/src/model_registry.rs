@@ -483,9 +483,12 @@ impl ModelProfile {
         })
     }
 
-    pub fn supports_chat(&self) -> bool {
-        self.explicit_capabilities()
-            .is_none_or(|capabilities| capabilities.iter().any(|capability| capability == "chat"))
+    pub fn supports_language_model(&self) -> bool {
+        self.explicit_capabilities().is_none_or(|capabilities| {
+            capabilities
+                .iter()
+                .any(|capability| capability == "languageModel")
+        })
     }
 
     pub fn explicit_capabilities(&self) -> Option<Vec<String>> {
@@ -765,12 +768,11 @@ pub struct AppConfig {
     )]
     pub video_generation_model: Option<ModelRef>,
     #[serde(
-        rename = "lightweightChatModel",
-        alias = "lightweight_chat_model",
+        rename = "secondaryLanguageModel",
         default,
         skip_serializing_if = "Option::is_none"
     )]
-    pub lightweight_chat_model: Option<ModelRef>,
+    pub secondary_language_model: Option<ModelRef>,
     #[serde(
         rename = "uiLocale",
         alias = "ui_locale",
@@ -806,7 +808,7 @@ impl Default for AppConfig {
             active_model: ModelRef::empty(),
             image_generation_model: None,
             video_generation_model: None,
-            lightweight_chat_model: None,
+            secondary_language_model: None,
             ui_locale: None,
             tui: default_tui_mode(),
             networks: NetworksConfig::default(),
@@ -1233,8 +1235,8 @@ impl AppConfig {
         self.resolve_model_profile(model_ref)
     }
 
-    pub fn lightweight_chat_model_profile(&self) -> Option<ModelProfile> {
-        let model_ref = self.lightweight_chat_model.as_ref()?;
+    pub fn secondary_language_model_profile(&self) -> Option<ModelProfile> {
+        let model_ref = self.secondary_language_model.as_ref()?;
         self.resolve_model_profile(model_ref)
     }
 
@@ -1486,7 +1488,7 @@ fn normalize_config(cfg: &mut AppConfig) {
         cfg.active_model = ModelRef::empty();
         cfg.image_generation_model = None;
         cfg.video_generation_model = None;
-        cfg.lightweight_chat_model = None;
+        cfg.secondary_language_model = None;
         return;
     }
 
@@ -1505,8 +1507,8 @@ fn normalize_config(cfg: &mut AppConfig) {
         &flattened,
         ModelProfile::supports_video_generation,
     );
-    cfg.lightweight_chat_model =
-        normalize_lightweight_chat_model_ref(cfg.lightweight_chat_model.take(), &flattened);
+    cfg.secondary_language_model =
+        normalize_secondary_language_model_ref(cfg.secondary_language_model.take(), &flattened);
 
     for group in &mut cfg.provider_groups {
         if group.api_base.trim().is_empty() {
@@ -1584,7 +1586,7 @@ fn normalize_slot_model_ref(
     }
 }
 
-fn normalize_lightweight_chat_model_ref(
+fn normalize_secondary_language_model_ref(
     value: Option<ModelRef>,
     models: &[ModelProfile],
 ) -> Option<ModelRef> {
@@ -1595,7 +1597,7 @@ fn normalize_lightweight_chat_model_ref(
     let profile = models
         .iter()
         .find(|model| model.group_id == model_ref.group_id && model.name == model_ref.name)?;
-    if profile.supports_chat() {
+    if profile.supports_language_model() {
         Some(model_ref)
     } else {
         None
@@ -2226,7 +2228,7 @@ mod tests {
         let mut kimi_with_image = kimi_without_capabilities.clone();
         kimi_with_image.extra.insert(
             "capabilities".to_string(),
-            serde_json::json!(["chat", "image"]),
+            serde_json::json!(["languageModel", "image"]),
         );
         let deepseek = test_profile(
             "deepseek",
@@ -2258,7 +2260,7 @@ mod tests {
         let mut mimo_with_image = mimo_without_capabilities.clone();
         mimo_with_image.extra.insert(
             "capabilities".to_string(),
-            serde_json::json!(["chat", "image", "video"]),
+            serde_json::json!(["languageModel", "image", "video"]),
         );
 
         assert!(!mimo_without_capabilities.supports_image_input());
@@ -2276,7 +2278,7 @@ mod tests {
         let mut groq_with_image = groq_without_capabilities.clone();
         groq_with_image.extra.insert(
             "capabilities".to_string(),
-            serde_json::json!(["chat", "image"]),
+            serde_json::json!(["languageModel", "image"]),
         );
 
         assert!(!groq_without_capabilities.supports_image_input());
@@ -2293,7 +2295,7 @@ mod tests {
         );
         deepseek.extra.insert(
             "capabilities".to_string(),
-            serde_json::json!(["chat", "image"]),
+            serde_json::json!(["languageModel", "image"]),
         );
 
         let mut custom = test_profile(
@@ -2302,9 +2304,10 @@ mod tests {
             "https://example.invalid/v1",
             ModelProvider::Custom,
         );
-        custom
-            .extra
-            .insert("capabilities".to_string(), serde_json::json!(["chat"]));
+        custom.extra.insert(
+            "capabilities".to_string(),
+            serde_json::json!(["languageModel"]),
+        );
 
         assert!(deepseek.supports_image_input());
         assert!(!custom.supports_image_input());
@@ -2321,7 +2324,7 @@ mod tests {
             "provider": "custom",
             "apiBase": "https://example.invalid/v1",
             "models": [
-                { "name": "chat-model", "capabilities": ["chat"] },
+                { "name": "chat-model", "capabilities": ["languageModel"] },
                 { "name": "image-model", "capabilities": ["imageGeneration"] }
             ]
         }
@@ -2356,7 +2359,7 @@ mod tests {
             "provider": "custom",
             "apiBase": "https://example.invalid/v1",
             "models": [
-                { "name": "chat-model", "capabilities": ["chat"] },
+                { "name": "chat-model", "capabilities": ["languageModel"] },
                 { "name": "video-model", "capabilities": ["videoGeneration"] }
             ]
         }
@@ -3017,7 +3020,7 @@ mod tests {
                 reasoning_mode: None,
                 thinking_enabled: None,
                 supported_reasoning_efforts: None,
-                capabilities: Some(vec!["chat".to_string()]),
+                capabilities: Some(vec!["languageModel".to_string()]),
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
@@ -3054,7 +3057,7 @@ mod tests {
                 reasoning_mode: None,
                 thinking_enabled: None,
                 supported_reasoning_efforts: None,
-                capabilities: Some(vec!["chat".to_string()]),
+                capabilities: Some(vec!["languageModel".to_string()]),
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,

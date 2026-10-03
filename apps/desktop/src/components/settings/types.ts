@@ -29,7 +29,7 @@ export type SettingsFormState = {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   apiBase: string;
   uiLocale: string;
   apiKey: string;

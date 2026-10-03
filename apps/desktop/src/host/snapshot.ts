@@ -116,8 +116,8 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       ...(input.config.videoGenerationModel
         ? { videoGenerationModel: input.config.videoGenerationModel }
         : {}),
-      ...(input.config.lightweightChatModel
-        ? { lightweightChatModel: input.config.lightweightChatModel }
+      ...(input.config.secondaryLanguageModel
+        ? { secondaryLanguageModel: input.config.secondaryLanguageModel }
         : {}),
       ...(input.config.uiLocale ? { uiLocale: input.config.uiLocale } : {}),
       activeApiKeyConfigured: input.activeApiKeyConfigured,

@@ -83,7 +83,7 @@ export interface UpdateConfigRequest {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   apiBase: string;
   reasoningEffort?: DesktopModelReasoningEffort;
   reasoningMode?: DesktopModelReasoningMode;
@@ -197,7 +197,7 @@ export type DesktopModelReasoningEffort = ModelReasoningEffort;
 export type DesktopModelReasoningMode = "standard" | "pro";
 
 export type DesktopModelCapability =
-  | "chat"
+  | "languageModel"
   | "image"
   | "video"
   | "imageGeneration"
@@ -1238,7 +1238,7 @@ export interface DesktopConfigSnapshot {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   uiLocale?: string;
   activeApiKeyConfigured: boolean;
   /** Window-level translucent material: Off / Sidebar / All; treated as Sidebar when the field is absent or unknown. */

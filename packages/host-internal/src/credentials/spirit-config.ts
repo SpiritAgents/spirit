@@ -72,7 +72,7 @@ function normalizeConfig(raw: Record<string, unknown>): SpiritConfigFile {
   const activeModel = parseModelRef(raw["activeModel"]) ?? { groupId: "", name: "" };
   const imageGenerationModel = parseModelRef(raw["imageGenerationModel"]);
   const videoGenerationModel = parseModelRef(raw["videoGenerationModel"]);
-  const lightweightChatModel = parseModelRef(raw["lightweightChatModel"]);
+  const secondaryLanguageModel = parseModelRef(raw["secondaryLanguageModel"]);
 
   return {
     ...raw,
@@ -81,7 +81,7 @@ function normalizeConfig(raw: Record<string, unknown>): SpiritConfigFile {
     activeModel,
     ...(imageGenerationModel ? { imageGenerationModel } : {}),
     ...(videoGenerationModel ? { videoGenerationModel } : {}),
-    ...(lightweightChatModel ? { lightweightChatModel } : {}),
+    ...(secondaryLanguageModel ? { secondaryLanguageModel } : {}),
   };
 }
 

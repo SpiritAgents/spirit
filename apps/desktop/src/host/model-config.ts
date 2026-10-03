@@ -612,7 +612,7 @@ export function modelCapabilitiesFromConfig(
   capabilities: readonly DesktopModelCapability[],
 ): LlmModelCapabilities {
   return {
-    ...(capabilities.includes("chat") ? { chat: true } : {}),
+    ...(capabilities.includes("languageModel") ? { languageModel: true } : {}),
     ...(capabilities.includes("image") ? { imageInput: true } : {}),
     ...(capabilities.includes("video") ? { videoInput: true } : {}),
     ...(capabilities.includes("imageGeneration") ? { imageGeneration: true } : {}),
