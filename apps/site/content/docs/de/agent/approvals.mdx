@@ -6,11 +6,11 @@ description: Standard, automatische Genehmigung und Genehmigung umgehen. Was
 
 Jeder riskante Tool-Aufruf kann auf Sie warten. {{product.name|mdx}} hat drei Genehmigungsstufen. Desktop zeigt sie als **Standard-Genehmigung**, **Automatische Genehmigung** und **Genehmigung umgehen**. Die CLI verwendet `/approval` oder `-a`.
 
-| Stufe                    | Id                | Verhalten                                                                                                                                      |
-| ------------------------ | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Standard-Genehmigung     | `default`         | Sie genehmigen Dateibearbeitungen, Shell und andere risikoreiche Tools selbst.                                                                 |
-| Automatische Genehmigung | `auto-approval`   | Ein leichtgewichtiges Modell überprüft risikoreiche Aufrufe. Sie werden nur aufgefordert, wenn diese Überprüfung (oder ein Hook) danach fragt. |
-| Genehmigung umgehen      | `bypass-approval` | Risikoreiche Tools werden ohne Genehmigungsaufforderung ausgeführt.                                                                            |
+| Stufe                    | Id                | Verhalten                                                                                                                                     |
+| ------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Standard-Genehmigung     | `default`         | Sie genehmigen Dateibearbeitungen, Shell und andere risikoreiche Tools selbst.                                                                |
+| Automatische Genehmigung | `auto-approval`   | Ein sekundäres Sprachmodell überprüft risikoreiche Aufrufe. Sie werden nur aufgefordert, wenn diese Überprüfung (oder ein Hook) danach fragt. |
+| Genehmigung umgehen      | `bypass-approval` | Risikoreiche Tools werden ohne Genehmigungsaufforderung ausgeführt.                                                                           |
 
 ## Was die Umgehung nicht überspringt
 

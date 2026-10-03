@@ -6,11 +6,11 @@ description: Par défaut, approbation automatique et contournement de
 
 Chaque appel d'outil risqué peut attendre votre accord. {{product.name|mdx}} dispose de trois niveaux d'approbation. Desktop les affiche comme **Default Approval**, **Auto Approval** et **Bypass Approval**. Le CLI utilise `/approval` ou `-a`.
 
-| Niveau           | Id                | Comportement                                                                                                                |
-| ---------------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Default Approval | `default`         | Vous approuvez vous-même les modifications de fichiers, le shell et d'autres outils à haut risque.                          |
-| Auto Approval    | `auto-approval`   | Un modèle léger examine les appels à haut risque. Vous n'êtes pas invité à moins que cet examen (ou un hook) ne le demande. |
-| Bypass Approval  | `bypass-approval` | Les outils à haut risque s'exécutent sans la demande d'approbation.                                                         |
+| Niveau           | Id                | Comportement                                                                                                                               |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default Approval | `default`         | Vous approuvez vous-même les modifications de fichiers, le shell et d'autres outils à haut risque.                                         |
+| Auto Approval    | `auto-approval`   | Un modèle de langue secondaire examine les appels à haut risque. Vous n'êtes pas invité à moins que cet examen (ou un hook) ne le demande. |
+| Bypass Approval  | `bypass-approval` | Les outils à haut risque s'exécutent sans la demande d'approbation.                                                                        |
 
 ## Ce que le contournement ne saute pas
 
