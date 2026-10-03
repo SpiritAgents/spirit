@@ -117,3 +117,22 @@ test("mergeAlibabaResponsesBuiltInTools does not duplicate", () => {
   assert.ok(types.includes("code_interpreter"));
   assert.ok(types.includes("function"));
 });
+
+test("buildAlibabaChatCompletionsExtraBody without web search keeps code interpreter", () => {
+  const streaming = buildAlibabaChatCompletionsExtraBody({ streaming: true, webSearch: false });
+  assert.equal(streaming.enable_search, undefined);
+  assert.equal(streaming.search_options, undefined);
+  assert.equal(streaming.enable_thinking, true);
+  assert.equal(streaming.enable_code_interpreter, true);
+
+  const nonStreaming = buildAlibabaChatCompletionsExtraBody({
+    streaming: false,
+    webSearch: false,
+  });
+  assert.equal(nonStreaming.enable_search, undefined);
+});
+
+test("mergeAlibabaResponsesBuiltInTools without web search keeps code_interpreter", () => {
+  const merged = mergeAlibabaResponsesBuiltInTools([], { includeWebSearch: false });
+  assert.deepEqual(merged, [{ type: "code_interpreter" }]);
+});

@@ -724,7 +724,10 @@ function buildAiSdkRequestTrace(
 
   const alibabaExtraBody =
     isAlibabaOfficialAiSdkProvider(config) && shouldUseAlibabaChatCompletionsBuiltInTools(config)
-      ? buildAlibabaChatCompletionsExtraBody({ streaming: stream })
+      ? buildAlibabaChatCompletionsExtraBody({
+          streaming: stream,
+          webSearch: config.webSearchEnabled !== false,
+        })
       : undefined;
   const moonshotFormulaTraceTools =
     isMoonshotOfficialAiSdkProvider(config) && shouldUseMoonshotFormulaWebSearch(config)
@@ -1245,7 +1248,10 @@ function buildAiSdkProviderOptions(config: OpenAiTransportConfig): Record<string
     }
 
     const extraBody = shouldUseAlibabaChatCompletionsBuiltInTools(config)
-      ? buildAlibabaChatCompletionsExtraBody({ streaming: true })
+      ? buildAlibabaChatCompletionsExtraBody({
+          streaming: true,
+          webSearch: config.webSearchEnabled !== false,
+        })
       : undefined;
 
     if (extraBody !== undefined) {

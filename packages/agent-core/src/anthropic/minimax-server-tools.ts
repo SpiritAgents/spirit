@@ -13,7 +13,11 @@ export const MINIMAX_WEB_SEARCH_SERVER_TOOL_NAME = "web_search" as const;
 export function shouldUseMinimaxServerToolsWebSearch(
   config: LlmTransportConfig | undefined,
 ): config is AnthropicTransportConfig {
-  return isAnthropicTransportConfig(config) && config.llmVendor === "minimax";
+  return (
+    isAnthropicTransportConfig(config) &&
+    config.llmVendor === "minimax" &&
+    config.webSearchEnabled !== false
+  );
 }
 
 export function buildMinimaxWebSearchServerToolEntry(): JsonObject {

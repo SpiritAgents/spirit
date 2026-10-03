@@ -10,3 +10,13 @@ export interface LlmModelCapabilities {
   videoInput?: true;
   imageGeneration?: true;
 }
+
+/**
+ * User-level opt-out switches for the built-in web tools, resolved by the host from config.json
+ * (`agents.webSearch.enabled` / `agents.webFetch.enabled`). Undefined means enabled; only an
+ * explicit `false` hides the tool from the model.
+ */
+export interface LlmWebToolExposure {
+  webSearchEnabled?: boolean;
+  webFetchEnabled?: boolean;
+}

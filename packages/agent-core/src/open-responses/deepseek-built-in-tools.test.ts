@@ -60,3 +60,16 @@ test("mergeDeepSeekResponsesBuiltInTools does not duplicate web_search", () => {
   assert.equal(types.includes("function"), true);
   assert.equal(types.includes("code_interpreter"), false);
 });
+
+test("shouldUseDeepSeekResponsesBuiltInTools honors the web search opt-out", () => {
+  assert.equal(
+    shouldUseDeepSeekResponsesBuiltInTools({
+      transportKind: "open-responses",
+      apiKey: "k",
+      model: "deepseek-v4-flash",
+      llmVendor: "deepseek",
+      webSearchEnabled: false,
+    }),
+    false,
+  );
+});

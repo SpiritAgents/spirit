@@ -7,7 +7,11 @@ export type DeepSeekResponsesBuiltInToolType =
   (typeof DEEPSEEK_RESPONSES_BUILT_IN_TOOL_TYPES)[number];
 
 export function shouldUseDeepSeekResponsesBuiltInTools(config: LlmTransportConfig): boolean {
-  return isOpenResponsesTransportConfig(config) && config.llmVendor === "deepseek";
+  return (
+    isOpenResponsesTransportConfig(config) &&
+    config.llmVendor === "deepseek" &&
+    config.webSearchEnabled !== false
+  );
 }
 
 export function buildDeepSeekResponsesBuiltInTools(): JsonObject[] {

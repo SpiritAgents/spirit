@@ -634,6 +634,12 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       hostDefinitions = filterToolDefinitionByName(hostDefinitions, "generate_video");
     }
     if (
+      this.transportConfigForToolDefinitions?.webFetchEnabled === false &&
+      Array.isArray(hostDefinitions)
+    ) {
+      hostDefinitions = filterToolDefinitionByName(hostDefinitions, "web_fetch");
+    }
+    if (
       isOpenResponsesTransportConfig(this.transportConfigForToolDefinitions) &&
       shouldUseApplyPatchFileTools(this.transportConfigForToolDefinitions, {
         agentMode: this.agentMode,
@@ -642,6 +648,20 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     ) {
       hostDefinitions = filterLegacyHostFileToolDefinitions(hostDefinitions);
     }
+    const managedWebSearchDefinitions =
+      this.transportConfigForToolDefinitions?.webSearchEnabled === false
+        ? []
+        : [
+            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
+              ? [buildStepfunWebSearchToolDefinition()]
+              : []),
+            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
+              ? [buildKimiCodeWebSearchToolDefinition()]
+              : []),
+            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
+              ? [buildZaiWebSearchToolDefinition()]
+              : []),
+          ];
     const mergedHostDefinitions = filterHostToolDefinitionsForAgentMode(
       Array.isArray(hostDefinitions)
         ? [
@@ -649,29 +669,13 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildStepfunWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildKimiCodeWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildZaiWebSearchToolDefinition()]
-              : []),
+            ...managedWebSearchDefinitions,
           ]
         : [
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildStepfunWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildKimiCodeWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildZaiWebSearchToolDefinition()]
-              : []),
+            ...managedWebSearchDefinitions,
           ],
       this.agentMode,
     );

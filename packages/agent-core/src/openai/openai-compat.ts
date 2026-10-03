@@ -1,6 +1,10 @@
 import type { JsonObject, JsonValue } from "../ports.js";
 import { isArkLlmVendor } from "../ark/ark-provider.js";
-import type { LlmModelCapabilities, TransportRequestProfile } from "../llm-provider-shared.js";
+import type {
+  LlmModelCapabilities,
+  LlmWebToolExposure,
+  TransportRequestProfile,
+} from "../llm-provider-shared.js";
 import { resolveOpenAiTransportReasoningEffortForContext } from "../reasoning-effort.js";
 import {
   modelSupportsOpenAiGpt56ReasoningControls,
@@ -93,7 +97,7 @@ export interface OpenAiVideoGenerationConfig {
   inferenceProvider?: string;
 }
 
-export interface OpenAiTransportConfig {
+export interface OpenAiTransportConfig extends LlmWebToolExposure {
   transportKind?: "openai-compatible";
   apiKey: string;
   model: string;
