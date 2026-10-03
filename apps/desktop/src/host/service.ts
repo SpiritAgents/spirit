@@ -809,6 +809,7 @@ export class DesktopHostService {
       buildSnapshot: () => this.buildSnapshot(),
       disposeAllLspServices: () => this.disposeAllLspServices(),
       invalidateToolExecutors: () => this.invalidateToolExecutors(),
+      applyWebToolExposureToRuntimes: (exposure) => this.applyWebToolExposureToRuntimes(exposure),
       refreshLspSnapshot: () => this.refreshLspSnapshot(),
     };
   }
@@ -829,6 +830,34 @@ export class DesktopHostService {
     for (const bundle of this.sessionRegistry.all()) {
       bundle.toolExecutor = undefined;
     }
+  }
+
+  /**
+   * Best-effort live push of the web tool toggles to every attached daemon
+   * session; a failed push is logged and dropped (the next attach re-syncs).
+   */
+  private async applyWebToolExposureToRuntimes(exposure: {
+    webSearchEnabled: boolean;
+    webFetchEnabled: boolean;
+  }): Promise<void> {
+    const runtimes = new Set<DesktopHostRuntime>();
+    if (this.runtime) {
+      runtimes.add(this.runtime);
+    }
+    for (const bundle of this.sessionRegistry.all()) {
+      if (bundle.runtime) {
+        runtimes.add(bundle.runtime);
+      }
+    }
+    await Promise.all(
+      [...runtimes].map(async (runtime) => {
+        try {
+          await runtime.clientCall("session.setWebToolExposure", { ...exposure });
+        } catch (error) {
+          console.warn("[desktop-host] setWebToolExposure push failed", error);
+        }
+      }),
+    );
   }
 
   private extensionCommandContext(): HostExtensionCommandContext {
@@ -3067,6 +3096,10 @@ export class DesktopHostService {
       archive,
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
+      webToolExposure: {
+        webSearchEnabled: state.config.agents.webSearch.enabled,
+        webFetchEnabled: state.config.agents.webFetch.enabled,
+      },
       ...(bundle.basicInfoHost ? { basicInfoHost: bundle.basicInfoHost } : {}),
       onActivity: () => {
         this.sessionPump.ensureRunning();
@@ -3232,6 +3265,7 @@ export class DesktopHostService {
     return new DesktopToolExecutor(workspaceRoot, {
       mcp: this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding),
       mcpUiOpener: (request) => this.openLocalExtensionUi(request),
+      webFetchEnabled: state.config.agents.webFetch.enabled,
       ...(lsp ? { lsp } : {}),
       extensionToolDefinitions: buildDesktopExtensionToolDefinitions(extensions),
       fileChangeObserver: {
