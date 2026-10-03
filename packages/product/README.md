@@ -6,14 +6,25 @@ static JavaScript, TypeScript declarations, and Rust code from the same result.
 The runtime export has no dependencies, filesystem access, or environment lookup.
 
 `SPIRIT_PRODUCT_QUALITY=stable|dev` selects the build; the default is `stable`.
-Development entry points explicitly select `dev`. Release version channels do
-not select product quality. Changing an environment variable after a build
-does not change its product.
+Development entry points default to `dev` but honor an explicitly set
+`SPIRIT_PRODUCT_QUALITY`. Invalid values are rejected. The release workflow
+explicitly selects `stable`; release version channels do not select product
+quality. Changing an environment variable after a build does not change its
+product.
 
 ```sh
 pnpm exec turbo run build --filter=@spiritagent/product
 SPIRIT_PRODUCT_QUALITY=dev pnpm exec turbo run build --filter=@spiritagent/server
+SPIRIT_PRODUCT_QUALITY=stable pnpm dev:desktop
 ```
+
+VS Code's `Dev Desktop`, `Dev Site`, and `Dev CLI` tasks prompt for product
+quality, defaulting to Dev. `Build` defaults to Stable. `Run Built Desktop`
+starts existing outputs without rebuilding or changing their quality.
+Stable quality in a development loop still enables development tooling and
+uses the regular `~/.spirit` data; it is not a release build. Dev uses
+`~/.spirit-dev`. Both qualities share build output directories, so stop running
+development tasks before switching quality in the same checkout.
 
 Cargo invokes the same generator during a native build. For cross containers
 without Node, generate first on the build host and pass

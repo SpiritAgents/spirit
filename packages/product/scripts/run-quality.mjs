@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { QualitySchema } from "../schema.ts";
 
-const [requestedQuality, command, ...args] = process.argv.slice(2);
-const quality = QualitySchema.parse(requestedQuality);
+const [defaultQuality, command, ...args] = process.argv.slice(2);
+const quality = QualitySchema.parse(
+  process.env.SPIRIT_PRODUCT_QUALITY ?? QualitySchema.parse(defaultQuality),
+);
 if (!command) throw new Error("Expected a command after the product quality");
 
 const child = spawn(command, args, {
