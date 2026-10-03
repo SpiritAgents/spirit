@@ -54,6 +54,8 @@ interface RemoteDesktopRuntimeInput {
   archive: ChatArchive;
   approvalLevel: "default" | "auto-approval" | "bypass-approval";
   todoSessionKey?: string;
+  /** Current web tool toggles; pushed on attach so reused daemon sessions re-sync with config.json. */
+  webToolExposure?: { webSearchEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
   sessionKind?: "default" | "dream-collector";
@@ -214,7 +216,7 @@ async function applyRemoteSessionPreferences(
   runtime: RemoteDesktopRuntime,
   input: Pick<
     RemoteDesktopRuntimeInput,
-    "approvalLevel" | "todoSessionKey" | "archive" | "agentMode"
+    "approvalLevel" | "todoSessionKey" | "archive" | "agentMode" | "webToolExposure"
   >,
 ): Promise<void> {
   await runtime.clientCall("session.setApprovalLevel", { approvalLevel: input.approvalLevel });
@@ -224,6 +226,14 @@ async function applyRemoteSessionPreferences(
   if (input.todoSessionKey?.trim()) {
     await runtime.clientCall("session.setTodoSessionKey", {
       sessionKey: input.todoSessionKey.trim(),
+    });
+  }
+  // Same re-sync rationale as setMode: the daemon session resolves the toggles at creation,
+  // so a reused session can lag behind a config.json edit made while it was running.
+  if (input.webToolExposure) {
+    await runtime.clientCall("session.setWebToolExposure", {
+      webSearchEnabled: input.webToolExposure.webSearchEnabled,
+      webFetchEnabled: input.webToolExposure.webFetchEnabled,
     });
   }
   if (typeof input.archive.loopEnabled === "boolean") {

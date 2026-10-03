@@ -132,6 +132,12 @@ export interface DesktopAgentsConfigUpdate {
       enabled?: boolean;
     };
   };
+  webSearch?: {
+    enabled?: boolean;
+  };
+  webFetch?: {
+    enabled?: boolean;
+  };
 }
 
 export type DesktopLspProviderStatus = "ready" | "not_found" | "disabled";
@@ -157,6 +163,11 @@ export interface DesktopCodeCompletionSnapshot {
 export interface DesktopAttributionSnapshot {
   commitEnabled: boolean;
   prEnabled: boolean;
+}
+
+export interface DesktopWebToolExposureSnapshot {
+  webSearchEnabled: boolean;
+  webFetchEnabled: boolean;
 }
 
 export interface DesktopWebHostConfigUpdate {
@@ -1136,6 +1147,7 @@ export interface DesktopSnapshot {
   lsp: DesktopLspSnapshot;
   codeCompletion: DesktopCodeCompletionSnapshot;
   attribution: DesktopAttributionSnapshot;
+  webToolExposure: DesktopWebToolExposureSnapshot;
   conversation: ConversationSnapshot;
   /** Per split-pane session projection keyed by resolved session file path. */
   paneSessions?: Record<string, PaneSessionSlice>;

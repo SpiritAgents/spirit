@@ -273,6 +273,12 @@ function updateConfigFromSettingsForm(
           enabled: s.prAttributionEnabled,
         },
       },
+      webSearch: {
+        enabled: s.webSearchEnabled,
+      },
+      webFetch: {
+        enabled: s.webFetchEnabled,
+      },
     },
     networks: {
       llmHttpVersion: s.llmHttpVersion,
@@ -430,6 +436,8 @@ export function useDesktopRuntime() {
     codeCompletionEnabled: true,
     commitAttributionEnabled: true,
     prAttributionEnabled: true,
+    webSearchEnabled: true,
+    webFetchEnabled: true,
     llmHttpVersion: "http2",
   });
   const [busyAction, setBusyAction] = useState<BusyAction>("");
@@ -832,6 +840,8 @@ export function useDesktopRuntime() {
           codeCompletionEnabled: next.codeCompletion.userEnabled,
           commitAttributionEnabled: next.attribution.commitEnabled,
           prAttributionEnabled: next.attribution.prEnabled,
+          webSearchEnabled: next.webToolExposure.webSearchEnabled,
+          webFetchEnabled: next.webToolExposure.webFetchEnabled,
           llmHttpVersion: next.config.networks.llmHttpVersion,
         };
       });

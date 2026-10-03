@@ -119,6 +119,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
   private readonly todoScope: HostTodoScope | undefined;
   private extensionToolDefinitions: JsonValue[];
   private readonly hostContributedToolsEnabled: boolean;
+  private readonly webFetchEnabled: boolean;
   private loopToolDefinitions: JsonValue[] = [];
   private loopToolExposureEnabled = false;
   private planToolDefinitions: JsonValue[] = [];
@@ -143,6 +144,8 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       dreamSourceSession?: HostDreamSourceSessionRef;
       todoScope?: HostTodoScope;
       hostContributedToolsEnabled?: boolean;
+      /** User opt-out (agents.webFetch.enabled=false); defaults to exposed. */
+      webFetchEnabled?: boolean;
       getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
       onAutomationCreated?: (definition: HostAutomationDefinition) => void;
       mcpUiOpener?: McpUiOpener;
@@ -153,6 +156,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     this.lsp = options.lsp;
     this.extensionToolDefinitions = [...(options.extensionToolDefinitions ?? [])];
     this.hostContributedToolsEnabled = options.hostContributedToolsEnabled === true;
+    this.webFetchEnabled = options.webFetchEnabled !== false;
     this.dreamScope = options.dreamScope;
     this.todoScope = options.todoScope;
     this.dreamToolMode = options.dreamScope ? (options.dreamToolMode ?? "collector") : undefined;
@@ -255,6 +259,11 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         (definition) => toolDefinitionName(definition) !== "generate_video",
       );
     }
+    if (!this.webFetchEnabled) {
+      builtinDefinitions = builtinDefinitions.filter(
+        (definition) => toolDefinitionName(definition) !== "web_fetch",
+      );
+    }
 
     if (
       this.activeTransportConfig !== undefined &&
@@ -272,10 +281,12 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         ...this.dreamToolDefinitions,
         ...this.todoToolDefinitions,
         ...(this.activeTransportConfig !== undefined &&
+        this.activeTransportConfig.webSearchEnabled !== false &&
         shouldUseStepfunWebSearch(this.activeTransportConfig)
           ? [buildStepfunWebSearchToolDefinition()]
           : []),
         ...(this.activeTransportConfig !== undefined &&
+        this.activeTransportConfig.webSearchEnabled !== false &&
         shouldUseKimiCodeWebSearch(this.activeTransportConfig)
           ? [buildKimiCodeWebSearchToolDefinition()]
           : []),

@@ -147,6 +147,10 @@ export interface HostModelCommandContext {
   buildSnapshot(): DesktopSnapshot;
   disposeAllLspServices(): Promise<void>;
   invalidateToolExecutors(): void;
+  applyWebToolExposureToRuntimes(exposure: {
+    webSearchEnabled: boolean;
+    webFetchEnabled: boolean;
+  }): Promise<void>;
   refreshLspSnapshot(): Promise<void>;
 }
 
@@ -434,6 +438,8 @@ export async function updateConfigCommand(
     const prevApiBase = currentApiBase(state.config);
     const prevAgentMode = resolveDesktopAgentMode(state.config);
     const prevLspEnabled = state.config.agents.lsp.enabled;
+    const prevWebSearchEnabled = state.config.agents.webSearch.enabled;
+    const prevWebFetchEnabled = state.config.agents.webFetch.enabled;
     const prevActiveModelProfile = resolveModelProfile(state.config, state.config.activeModel);
     const prevActiveModelInference = prevActiveModelProfile
       ? {
@@ -649,6 +655,24 @@ export async function updateConfigCommand(
         },
       });
     }
+    if (request.agents?.webSearch !== undefined) {
+      state.config.agents = normalizeAgentsConfig({
+        ...state.config.agents,
+        webSearch: {
+          ...state.config.agents.webSearch,
+          ...request.agents.webSearch,
+        },
+      });
+    }
+    if (request.agents?.webFetch !== undefined) {
+      state.config.agents = normalizeAgentsConfig({
+        ...state.config.agents,
+        webFetch: {
+          ...state.config.agents.webFetch,
+          ...request.agents.webFetch,
+        },
+      });
+    }
     if (request.networks?.llmHttpVersion !== undefined) {
       state.config.networks = normalizeNetworksConfig({
         ...state.config.networks,
@@ -664,6 +688,9 @@ export async function updateConfigCommand(
 
     const agentModeNow = resolveDesktopAgentMode(state.config);
     const lspEnabledChanged = state.config.agents.lsp.enabled !== prevLspEnabled;
+    const webToolExposureChanged =
+      state.config.agents.webSearch.enabled !== prevWebSearchEnabled ||
+      state.config.agents.webFetch.enabled !== prevWebFetchEnabled;
     const modelOrEndpointChanged =
       !modelRefsEqual(state.config.activeModel, prevActiveModel) ||
       currentApiBase(state.config) !== prevApiBase;
@@ -686,6 +713,16 @@ export async function updateConfigCommand(
     if (lspEnabledChanged) {
       await ctx.disposeAllLspServices();
       ctx.invalidateToolExecutors();
+    }
+
+    if (webToolExposureChanged) {
+      // In-process executors (side tasks) rebuild lazily with the new webFetch flag;
+      // attached daemon sessions get the live push so their tool surface updates now.
+      ctx.invalidateToolExecutors();
+      await ctx.applyWebToolExposureToRuntimes({
+        webSearchEnabled: state.config.agents.webSearch.enabled,
+        webFetchEnabled: state.config.agents.webFetch.enabled,
+      });
     }
 
     if (!modelRefsEqual(state.config.activeModel, prevActiveModel)) {

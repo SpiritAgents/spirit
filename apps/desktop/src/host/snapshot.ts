@@ -192,6 +192,10 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       commitEnabled: agents.attribution.commit.enabled,
       prEnabled: agents.attribution.pr.enabled,
     },
+    webToolExposure: {
+      webSearchEnabled: agents.webSearch.enabled,
+      webFetchEnabled: agents.webFetch.enabled,
+    },
     conversation: input.conversation,
     ...(input.paneSessions ? { paneSessions: input.paneSessions } : {}),
     ...(input.activeSession ? { activeSession: { ...input.activeSession } } : {}),

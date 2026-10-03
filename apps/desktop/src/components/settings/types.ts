@@ -48,6 +48,8 @@ export type SettingsFormState = {
   codeCompletionEnabled: boolean;
   commitAttributionEnabled: boolean;
   prAttributionEnabled: boolean;
+  webSearchEnabled: boolean;
+  webFetchEnabled: boolean;
   llmHttpVersion: "http1.1" | "http2";
 };
 

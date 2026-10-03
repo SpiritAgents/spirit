@@ -133,10 +133,16 @@ export interface DesktopAttributionConfigFile {
   pr: DesktopAttributionToggleConfigFile;
 }
 
+export interface DesktopWebToolToggleConfigFile {
+  enabled: boolean;
+}
+
 export interface DesktopAgentsConfigFile {
   lsp: DesktopLspConfigFile;
   codeCompletion: DesktopCodeCompletionConfigFile;
   attribution: DesktopAttributionConfigFile;
+  webSearch: DesktopWebToolToggleConfigFile;
+  webFetch: DesktopWebToolToggleConfigFile;
 }
 
 export interface DesktopNetworksConfigFile {
@@ -874,6 +880,12 @@ export function defaultAgentsConfig(): DesktopAgentsConfigFile {
         enabled: true,
       },
     },
+    webSearch: {
+      enabled: true,
+    },
+    webFetch: {
+      enabled: true,
+    },
   };
 }
 
@@ -944,6 +956,14 @@ export function normalizeAgentsConfig(raw: unknown): DesktopAgentsConfigFile {
     typeof attributionRaw.pr === "object" && attributionRaw.pr !== null
       ? (attributionRaw.pr as Partial<DesktopAttributionToggleConfigFile>)
       : {};
+  const webSearchRaw =
+    typeof record.webSearch === "object" && record.webSearch !== null
+      ? (record.webSearch as Partial<DesktopWebToolToggleConfigFile>)
+      : {};
+  const webFetchRaw =
+    typeof record.webFetch === "object" && record.webFetch !== null
+      ? (record.webFetch as Partial<DesktopWebToolToggleConfigFile>)
+      : {};
   return {
     lsp: {
       enabled: lspRaw.enabled !== false,
@@ -959,6 +979,13 @@ export function normalizeAgentsConfig(raw: unknown): DesktopAgentsConfigFile {
       pr: {
         enabled: prRaw.enabled !== false,
       },
+    },
+    // Opt-out everywhere: the web tools ship in the default tool surface; only explicit false hides them.
+    webSearch: {
+      enabled: webSearchRaw.enabled !== false,
+    },
+    webFetch: {
+      enabled: webFetchRaw.enabled !== false,
     },
   };
 }
