@@ -26,7 +26,7 @@ export interface PreviewModelCatalogPricing {
 }
 
 export type DesktopModelCapability =
-  | "chat"
+  | "languageModel"
   | "image"
   | "video"
   | "imageGeneration"

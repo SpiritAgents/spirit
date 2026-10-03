@@ -45,9 +45,9 @@ export const modelCapabilityOptions: Array<{
 }> = [
   {
     value: "languageModel",
-    label: "Chat",
-    labelKey: "settings.capabilityChatLabel",
-    summaryKey: "settings.capabilityChat",
+    label: "Language Model",
+    labelKey: "settings.capabilityLanguageModelLabel",
+    summaryKey: "settings.capabilityLanguageModel",
   },
   {
     value: "image",
@@ -182,7 +182,7 @@ export function modelDefaultActionLabel(roles: readonly ModelDefaultRole[]): str
     if (roles[0] === "videoGenerationModel") {
       return i18n.t("settings.setVideoGenModel");
     }
-    return i18n.t("settings.setLightweightChatModel");
+    return i18n.t("settings.setSecondaryLanguageModel");
   }
 
   return i18n.t("settings.selectDefaultRole");

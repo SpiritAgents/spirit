@@ -60,7 +60,7 @@ const MESSAGE_PATHS: Record<string, string> = {
   "composer.enqueueWhileBusy": "desktop.conversation.sendTitle",
   "git.commit": "desktop.window.commitButton",
   "settings.title": "desktop.sessionSidebar.settingsHeading",
-  "settings.capabilityChatLabel": "desktop.models.heading",
+  "settings.capabilityLanguageModelLabel": "desktop.models.heading",
   "settings.capabilityImageLabel": "desktop.models.heading",
   "settings.capabilityVideoLabel": "desktop.models.heading",
   "settings.capabilityImageGenerationLabel": "desktop.models.heading",
