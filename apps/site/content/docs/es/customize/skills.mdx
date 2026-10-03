@@ -7,11 +7,11 @@ description: Habilidades de usuario, {{product.workspaceDataFolderName}} y
 
 Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre habilidades desde tres lugares:
 
-| Alcance                         | Ruta                                         |
-| ------------------------------- | -------------------------------------------- |
-| Usuario                         | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Alcance                         | Ruta                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------ |
+| Usuario                         | `{spiritDataDir}/skills/{name}/SKILL.md`                                 |
 | Espíritu del espacio de trabajo | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| agentes del espacio de trabajo  | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| agentes del espacio de trabajo  | `{workspace}/.agents/skills/{name}/SKILL.md`                             |
 
 Cuando mencionas una Skill en un turno, {{product.name|mdx}} puede adjuntar su texto completo a ese mensaje de usuario. No vierte cada Skill en el prompt del sistema.
 

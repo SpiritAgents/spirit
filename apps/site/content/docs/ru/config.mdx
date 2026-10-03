@@ -10,10 +10,10 @@ description: Каталоги данных, config.json v2,
 
 Переопределяется с помощью `SPIRIT_DATA_DIR`. Сервер также может использовать `SPIRIT_SERVER_DATA_DIR` (имеет приоритет над первым).
 
-| Сборка | macOS / Linux | Windows |
-| --- | --- | --- |
+| Сборка | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
 | Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
-| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
 
 Breaking Change: старые каталоги платформы не читаются и не переносятся автоматически. Явное указание каталога данных по-прежнему поддерживается. Кеш Electron, хранилище браузера и состояние окон остаются в частном каталоге приложения платформы.
 
@@ -51,8 +51,8 @@ Breaking Change: старые каталоги платформы не чита�
 
 ## Workspace `{{product.workspaceDataFolderName}}/`
 
-| Путь                 | Роль                                               |
-| -------------------- | -------------------------------------------------- |
+| Путь                                             | Роль                                               |
+| ------------------------------------------------ | -------------------------------------------------- |
 | `{{product.workspaceDataFolderName}}/rule.md`    | Правила workspace [правила](./customize/rules.mdx) |
 | `{{product.workspaceDataFolderName}}/skills/`    | Навыки workspace [навыки](./customize/skills.mdx)  |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | MCP workspace [MCP](./customize/mcp.mdx)           |

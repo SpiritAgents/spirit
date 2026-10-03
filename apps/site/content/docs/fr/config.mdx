@@ -10,10 +10,10 @@ Le répertoire des données utilisateur partagées dépend de la quality du buil
 
 Remplacez avec `SPIRIT_DATA_DIR`. Le serveur peut aussi utiliser `SPIRIT_SERVER_DATA_DIR` (prioritaire sur le premier).
 
-| Build | macOS / Linux | Windows |
-| --- | --- | --- |
+| Build  | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
 | Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
-| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
 
 Breaking Change : les anciens répertoires ne sont ni lus ni migrés automatiquement. Les surcharges explicites du répertoire de données restent possibles. Les caches Electron, le stockage du navigateur et l'état des fenêtres restent dans le répertoire applicatif privé de la plateforme.
 
@@ -51,8 +51,8 @@ Les clés ne sont **pas** dans ce fichier. Elles vivent dans le [trousseau](./se
 
 ## Espace de travail `{{product.workspaceDataFolderName}}/`
 
-| Chemin               | Rôle                                                                  |
-| -------------------- | --------------------------------------------------------------------- |
+| Chemin                                           | Rôle                                                                  |
+| ------------------------------------------------ | --------------------------------------------------------------------- |
 | `{{product.workspaceDataFolderName}}/rule.md`    | Règle d'espace de travail [règle](./customize/rules.mdx)              |
 | `{{product.workspaceDataFolderName}}/skills/`    | Compétences d'espace de travail [compétences](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | MCP d'espace de travail [MCP](./customize/mcp.mdx)                    |

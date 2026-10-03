@@ -14,11 +14,11 @@ description: 從命令選擇區執行工作區任務，於 {{product.workspaceDa
 
 會讀取三個來源，按優先順序由高至低：
 
-| 優先順序 | 來源                             | 必要標記             | 備註                         |
-| -------- | -------------------------------- | -------------------- | ---------------------------- |
-| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 自有格式              |
-| 2        | `<data dir>/tasks.json`          | `"schemaVersion": 1` | 使用者層級，套用至每個工作區 |
-| 3        | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"` | VS Code 相容性匯入，唯讀     |
+| 優先順序 | 來源                                                         | 必要標記             | 備註                         |
+| -------- | ------------------------------------------------------------ | -------------------- | ---------------------------- | -------------- |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}} 自有格式 |
+| 2        | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | 使用者層級，套用至每個工作區 |
+| 3        | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | VS Code 相容性匯入，唯讀     |
 
 只會掃描工作區根目錄，不會掃描巢狀目錄。`<data dir>` 是 {{product.name|mdx}} 資料目錄（例如在 macOS 上為 `~/{{product.stable.userDataFolderName}}`）。檔案若遺失、無法讀取、JSON 無效或標記錯誤，則不提供任何任務。
 
@@ -49,7 +49,7 @@ description: 從命令選擇區執行工作區任務，於 {{product.workspaceDa
 ### 核心欄位
 
 | 欄位                                    | 行為 | 備註                                                                                                                                                                          |
-| --------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------- | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | `label`                                 | 必填 | 沒有非空標籤的項目會被完全捨棄 — 它們不會進入選單或相依圖                                                                                                                     |
 | `type`                                  | 支援 | `shell`（預設）或 `process`。任何其他字串（`npm`、`grunt`、…）屬於擴充功能自訂的項目，會被完全忽略：不隱藏、不列出，同層項目不受影響                                          |
 | `command`                               | 支援 | `string`、`string[]` 或 `{ value, quoting }`。合併後缺少 command 的任務會被隱藏 — `shell` 任務亦同（比 VS Code 更嚴格）                                                       |
@@ -66,7 +66,7 @@ description: 從命令選擇區執行工作區任務，於 {{product.workspaceDa
 | `dependsOn`                             | 支援 | 標籤字串，或標籤字串陣列。物件形式（`{ "type": … }`、`{ "task": … }`）會隱藏該任務                                                                                            |
 | `dependsOrder`                          | 支援 | `parallel`（預設）或 `sequence`                                                                                                                                               |
 | `detail`                                | 支援 | 在命令選擇區清單中顯示於標籤旁                                                                                                                                                |
-| `icon.id`                               | 支援 | 選單圖示：優先 {{product.name|mdx}} Icons，其次 Lucide，並以終端機字符作為後備                                                                                                              |
+| `icon.id`                               | 支援 | 選單圖示：優先 {{product.name|mdx}} Icons，其次 Lucide，並以終端機字符作為後備 |
 | `icon.color`                            | 忽略 | 純展示性質                                                                                                                                                                    |
 | `hide`                                  | 支援 | 從命令選擇區清單隱藏，但仍可解析 — 該任務可作為 `dependsOn` 相依項目執行                                                                                                      |
 
@@ -101,14 +101,14 @@ description: 從命令選擇區執行工作區任務，於 {{product.workspaceDa
 
 支援的參照，於任務解析時代入：
 
-| 變數                         | 值                                    |
-| ---------------------------- | ------------------------------------- |
-| `${workspaceFolder}`         | 工作區根目錄路徑                      |
-| `${workspaceFolderBasename}` | 工作區根目錄的資料夾名稱              |
+| 變數                         | 值                              |
+| ---------------------------- | ------------------------------- | ------------------------------------ |
+| `${workspaceFolder}`         | 工作區根目錄路徑                |
+| `${workspaceFolderBasename}` | 工作區根目錄的資料夾名稱        |
 | `${cwd}`                     | {{product.name|mdx}} Desktop 自身處理程序的工作目錄 |
-| `${userHome}`                | 作業系統使用者的家目錄                |
-| `${pathSeparator}`、`${/}`   | 作業系統路徑分隔符                    |
-| `${env:NAME}`                | 環境變數 `NAME`（未設定時為空）       |
+| `${userHome}`                | 作業系統使用者的家目錄          |
+| `${pathSeparator}`、`${/}`   | 作業系統路徑分隔符              |
+| `${env:NAME}`                | 環境變數 `NAME`（未設定時為空） |
 
 掃描範圍涵蓋 `command`、`args`、`options.cwd`、`options.env` 的值以及 `options.shell`。任何其他 `${…}` 參照 — `${file}`、`${selectedText}`、`${lineNumber}`、`${config:*}`、`${command:*}`、`${input:*}`、`${defaultBuildTask}`、… — 都會隱藏該任務。未開啟工作區時，參照 `${workspaceFolder}` 或 `${workspaceFolderBasename}` 的任務會在該次解析中被隱藏。
 

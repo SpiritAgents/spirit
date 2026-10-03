@@ -31,9 +31,9 @@ spirit --version
 
 CLI バイナリには SPIRIT_HOME を使用します。Unix では Stable のインストールと共有データが同じ親ディレクトリを使用できますが、bin/ と cli/ はインストールファイルです。インストール設定で共有データディレクトリは変わりません。
 
-|                                      | デフォルト                                                                                                   | 上書き            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------- |
-| CLIバイナリ                          | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                         | `SPIRIT_HOME`     |
+|                                      | デフォルト                                                                                                                                                                                                            | 上書き            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| CLIバイナリ                          | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                                                                                                                                  | `SPIRIT_HOME`     |
 | セッション、設定、キーリングポインタ | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 Unixでは、スクリプトは `$SPIRIT_HOME/bin/spirit` から `$SPIRIT_HOME/cli/current/bin/spirit` へのシンボリックリンクを作成し、`~/.profile`、`~/.bashrc`、`~/.zshrc` に `export PATH="$SPIRIT_HOME/bin:$PATH"` を追加します（マーカー `# spirit cli`）。
@@ -41,10 +41,10 @@ Unixでは、スクリプトは `$SPIRIT_HOME/bin/spirit` から `$SPIRIT_HOME/c
 ## バージョンまたはミラーの固定
 
 | 変数                   | デフォルト                                 | 役割                                  |
-| ---------------------- | ------------------------------------------ | ------------------------------------- |
+| ---------------------- | ------------------------------------------ | ------------------------------------- | --------- |
 | `SPIRIT_HOME`          | `~/.spirit` または `%LOCALAPPDATA%\Spirit` | CLIバイナリのインストールルート       |
 | `SPIRIT_VERSION`       | `latest`                                   | ダウンロードURLのバージョンセグメント |
-| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                      | CDNホスト                             |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                               | CDNホスト |
 
 ```bash
 SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash

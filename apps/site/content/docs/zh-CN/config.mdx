@@ -9,10 +9,10 @@ description: 数据目录、config.json v2、{{product.workspaceDataFolderName}}
 
 用 `SPIRIT_DATA_DIR` 覆盖。Server 还可以用 `SPIRIT_SERVER_DATA_DIR`（优先于前者）。
 
-| 构建 | macOS / Linux | Windows |
-| --- | --- | --- |
+| 构建   | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
 | Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
-| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
 
 Breaking Change：不会自动读取或迁移旧平台数据目录；仍支持显式数据目录覆盖。Electron 缓存、浏览器存储和窗口状态继续保留在平台私有应用目录中。
 
@@ -50,8 +50,8 @@ Key **不在**这个文件里。它们在[钥匙串](./security.mdx)。
 
 ## 工作区 `{{product.workspaceDataFolderName}}/`
 
-| 路径                 | 作用                                    |
-| -------------------- | --------------------------------------- |
+| 路径                                             | 作用                                    |
+| ------------------------------------------------ | --------------------------------------- |
 | `{{product.workspaceDataFolderName}}/rule.md`    | 工作区 [rule](./customize/rules.mdx)    |
 | `{{product.workspaceDataFolderName}}/skills/`    | 工作区 [skills](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | 工作区 [MCP](./customize/mcp.mdx)       |

@@ -6,11 +6,11 @@ description: User, {{product.workspaceDataFolderName}}, and .agents skills, plus
 
 A Skill is a folder with a `SKILL.md`. {{product.name|mdx}} discovers skills from three places:
 
-| Scope            | Path                                         |
-| ---------------- | -------------------------------------------- |
-| User             | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Workspace {{product.name|mdx}} | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| Workspace agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| Scope                    | Path                                         |
+| ------------------------ | -------------------------------------------- | ------------------------------------------------------------------------ |
+| User                     | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Workspace {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| Workspace agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 When you mention a Skill in a turn, {{product.name|mdx}} can attach its full text to that user message. It does not dump every Skill into the system prompt.
 

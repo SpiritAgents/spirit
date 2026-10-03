@@ -32,9 +32,9 @@ spirit --version
 
 Бинарные файлы CLI используют SPIRIT_HOME. В Unix установка Stable и общие данные могут иметь один родительский каталог; bin/ и cli/ остаются файлами установки. Эта настройка не определяет каталог общих данных.
 
-|                                                     | По умолчанию                                                                                                 | Переопределение   |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------- |
-| Бинарные файлы CLI                                  | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                         | `SPIRIT_HOME`     |
+|                                                     | По умолчанию                                                                                                                                                                                                          | Переопределение   |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Бинарные файлы CLI                                  | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                                                                                                                                  | `SPIRIT_HOME`     |
 | Сессии, конфигурация, указатели на хранилище ключей | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 В Unix скрипт создаёт ссылку `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/current/bin/spirit` и добавляет `export PATH="$SPIRIT_HOME/bin:$PATH"` в `~/.profile`, `~/.bashrc` и `~/.zshrc` (маркер `# spirit cli`).
@@ -42,10 +42,10 @@ spirit --version
 ## Зафиксировать версию или зеркало
 
 | Переменная             | По умолчанию                            | Роль                                     |
-| ---------------------- | --------------------------------------- | ---------------------------------------- |
+| ---------------------- | --------------------------------------- | ---------------------------------------- | -------- |
 | `SPIRIT_HOME`          | `~/.spirit` или `%LOCALAPPDATA%\Spirit` | Корень установки для бинарных файлов CLI |
 | `SPIRIT_VERSION`       | `latest`                                | Сегмент версии в URL загрузки            |
-| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                   | Хост CDN                                 |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                                  | Хост CDN |
 
 ```bash
 SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash

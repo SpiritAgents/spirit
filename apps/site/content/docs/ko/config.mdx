@@ -9,10 +9,10 @@ description: 데이터 디렉터리, config.json v2, {{product.workspaceDataFold
 
 `SPIRIT_DATA_DIR`로 재정의할 수 있습니다. 서버는 `SPIRIT_SERVER_DATA_DIR`도 사용할 수 있습니다(전자보다 우선).
 
-| 빌드 | macOS / Linux | Windows |
-| --- | --- | --- |
+| 빌드   | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
 | Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
-| Dev | `~/{{product.dev.userDataFolderName}}` | `%USERPROFILE%\{{product.dev.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
 
 Breaking Change: 이전 플랫폼 디렉터리를 자동으로 읽거나 마이그레이션하지 않습니다. 데이터 디렉터리를 명시적으로 지정하는 기능은 유지됩니다. Electron 캐시, 브라우저 저장소, 창 상태는 플랫폼 전용 애플리케이션 디렉터리에 남습니다.
 
@@ -50,8 +50,8 @@ CLI 바이너리는 SPIRIT_HOME을 사용합니다. Unix에서는 Stable 설치�
 
 ## 작업공간 `{{product.workspaceDataFolderName}}/`
 
-| 경로                 | 역할                                    |
-| -------------------- | --------------------------------------- |
+| 경로                                             | 역할                                    |
+| ------------------------------------------------ | --------------------------------------- |
 | `{{product.workspaceDataFolderName}}/rule.md`    | 작업공간 [규칙](./customize/rules.mdx)  |
 | `{{product.workspaceDataFolderName}}/skills/`    | 작업공간 [스킬](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | 작업공간 [MCP](./customize/mcp.mdx)     |

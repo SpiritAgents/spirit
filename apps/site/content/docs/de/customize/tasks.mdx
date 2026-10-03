@@ -15,11 +15,11 @@ Tasks führen vordefinierte Arbeitsbereichsbefehle aus der Befehlspalette von {{
 
 Drei Quellen werden gelesen, höchste Priorität zuerst:
 
-| Priorität | Quelle                           | Erforderliche Markierung | Hinweise                                        |
-| --------- | -------------------------------- | ------------------------ | ----------------------------------------------- |
+| Priorität | Quelle                                                       | Erforderliche Markierung | Hinweise                                        |
+| --------- | ------------------------------------------------------------ | ------------------------ | ----------------------------------------------- |
 | 1         | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1`     | Spirits eigenes Format                          |
-| 2         | `<data dir>/tasks.json`          | `"schemaVersion": 1`     | Benutzerebene, gilt für jeden Arbeitsbereich    |
-| 3         | `<workspace>/.vscode/tasks.json` | `"version": "2.0.0"`     | VS-Code-Kompatibilitätsimport, schreibgeschützt |
+| 2         | `<data dir>/tasks.json`                                      | `"schemaVersion": 1`     | Benutzerebene, gilt für jeden Arbeitsbereich    |
+| 3         | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"`     | VS-Code-Kompatibilitätsimport, schreibgeschützt |
 
 Nur das Stammverzeichnis des Arbeitsbereichs wird durchsucht — verschachtelte Verzeichnisse nicht. `<data dir>` ist das {{product.name|mdx}}-Datenverzeichnis (zum Beispiel `~/{{product.stable.userDataFolderName}}` unter macOS). Eine Datei, die fehlt, unlesbar ist, ungültiges JSON enthält oder die falsche Markierung trägt, liefert keine Tasks.
 
@@ -50,7 +50,7 @@ Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Date
 ### Kernfelder
 
 | Feld                                     | Verhalten    | Hinweise                                                                                                                                                                                                                                                           |
-| ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- |
 | `label`                                  | Erforderlich | Einträge ohne nicht-leeres Label werden vollständig verworfen — sie erreichen weder das Menü noch den Abhängigkeitsgraphen                                                                                                                                         |
 | `type`                                   | Unterstützt  | `shell` (Standard) oder `process`. Jeder andere String (`npm`, `grunt`, …) ist ein erweiterungsangepasster Eintrag und wird vollständig ignoriert: nicht ausgeblendet, nicht gelistet, Geschwister unbetroffen                                                     |
 | `command`                                | Unterstützt  | `string`, `string[]` oder `{ value, quoting }`. Ein Task, dessen zusammengeführtes Kommando fehlt, wird ausgeblendet — auch bei `shell`-Tasks (strenger als VS Code)                                                                                               |
@@ -67,7 +67,7 @@ Verhalten pro Feld, ausgewertet nach dem Zusammenführen: Standardwerte auf Date
 | `dependsOn`                              | Unterstützt  | Ein Label-String oder ein Array von Label-Strings. Die Objektform (`{ "type": … }`, `{ "task": … }`) blendet den Task aus                                                                                                                                          |
 | `dependsOrder`                           | Unterstützt  | `parallel` (Standard) oder `sequence`                                                                                                                                                                                                                              |
 | `detail`                                 | Unterstützt  | Wird neben dem Label in der Palettenliste angezeigt                                                                                                                                                                                                                |
-| `icon.id`                                | Unterstützt  | Menüsymbol: zuerst {{product.name|mdx}} Icons, dann Lucide, mit einem Terminalsymbol als Fallback                                                                                                                                                                                |
+| `icon.id`                                | Unterstützt  | Menüsymbol: zuerst {{product.name|mdx}} Icons, dann Lucide, mit einem Terminalsymbol als Fallback |
 | `icon.color`                             | Ignoriert    | Rein darstellerisch                                                                                                                                                                                                                                                |
 | `hide`                                   | Unterstützt  | Aus der Palettenliste ausgeblendet, aber weiterhin auflösbar — der Task kann als `dependsOn`-Abhängigkeit laufen                                                                                                                                                   |
 
@@ -103,10 +103,10 @@ Diese Felder zu tragen blendet einen Task nie aus: `problemMatcher` (jede Form, 
 Unterstützte Verweise, ersetzt, wenn der Task aufgelöst wird:
 
 | Variable                     | Wert                                                |
-| ---------------------------- | --------------------------------------------------- |
+| ---------------------------- | --------------------------------------------------- | ------------------------------------------------- |
 | `${workspaceFolder}`         | Stammpfad des Arbeitsbereichs                       |
 | `${workspaceFolderBasename}` | Ordnername des Arbeitsbereichs-Stammverzeichnisses  |
-| `${cwd}`                     | {{product.name|mdx}} Desktops eigenes Prozess-Arbeitsverzeichnis  |
+| `${cwd}`                     | {{product.name|mdx}} Desktops eigenes Prozess-Arbeitsverzeichnis |
 | `${userHome}`                | Home-Verzeichnis des OS-Benutzers                   |
 | `${pathSeparator}`, `${/}`   | Der OS-Pfadtrenner                                  |
 | `${env:NAME}`                | Umgebungsvariable `NAME` (leer, wenn nicht gesetzt) |

@@ -20,9 +20,9 @@ Hooks são scripts que o {{product.name|mdx}} executa em pontos fixos. Eles pode
 
 ## Onde eles vivem
 
-| Escopo             | Config                           | Scripts                      |
-| ------------------ | -------------------------------- | ---------------------------- |
-| Usuário            | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
+| Escopo             | Config                                                       | Scripts                                                  |
+| ------------------ | ------------------------------------------------------------ | -------------------------------------------------------- |
+| Usuário            | `{spiritDataDir}/hooks.json`                                 | `{spiritDataDir}/hooks/`                                 |
 | Espaço de trabalho | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 No mesmo evento, as entradas do usuário e as entradas do espaço de trabalho são concatenadas nessa ordem. Elas não se sobrescrevem.

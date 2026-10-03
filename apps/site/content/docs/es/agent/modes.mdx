@@ -6,11 +6,11 @@ description: Cambia entre Agent, Plan, Ask y Debug. El mismo espacio de trabajo,
 
 {{product.name|mdx}} tiene cuatro modos de agente. El escritorio y la CLI los recorren con Tab: **Agent → Plan → Ask → Debug → Agent**.
 
-| Modo      | Qué hace                                                                                                                                                                                                 |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Agent** | El predeterminado. Lee, edita, ejecuta comandos y verifica.                                                                                                                                              |
-| **Plan**  | Solo planifica. Aclara con [ask_questions](./ask-questions.mdx), escribe un plan con `create_plan` y luego te pide que empieces a implementar o que vuelvas a Agent.                                     |
-| **Ask**   | Solo lectura. Explica y busca. Las ediciones de archivos, shell, parches y generación de medios no están disponibles. Cambia a Agent para modificar código.                                              |
+| Modo      | Qué hace                                                                                                                                                                                                                             |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Agent** | El predeterminado. Lee, edita, ejecuta comandos y verifica.                                                                                                                                                                          |
+| **Plan**  | Solo planifica. Aclara con [ask_questions](./ask-questions.mdx), escribe un plan con `create_plan` y luego te pide que empieces a implementar o que vuelvas a Agent.                                                                 |
+| **Ask**   | Solo lectura. Explica y busca. Las ediciones de archivos, shell, parches y generación de medios no están disponibles. Cambia a Agent para modificar código.                                                                          |
 | **Debug** | Investiga un error: clasifica hipótesis, inserta registros NDJSON bajo `{{product.workspaceDataFolderName}}/logs/` (envueltos en `#region agent log`), y espera a que digas si el problema está resuelto o si sigue reproduciéndose. |
 
 Usa Plan cuando el cambio sea grande o el objetivo sea difuso. Usa Ask cuando solo quieras entender el repositorio. Usa Debug cuando puedas reproducir una falla y quieras un análisis sistemático. Deja Agent activado para ediciones ordinarias.

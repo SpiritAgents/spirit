@@ -32,9 +32,9 @@ spirit --version
 
 Les binaires CLI utilisent SPIRIT_HOME. Sous Unix, l'installation Stable et les données partagées peuvent avoir le même répertoire parent ; bin/ et cli/ restent des fichiers d'installation. Ce réglage ne choisit pas le répertoire des données partagées.
 
-|                                                 | Défaut                                                                                                          | Remplacement      |
-| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------- |
-| Binaires CLI                                    | Unix : `~/.spirit` · Windows : `%LOCALAPPDATA%\Spirit`                                                          | `SPIRIT_HOME`     |
+|                                                 | Défaut                                                                                                                                                                                                                | Remplacement      |
+| ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Binaires CLI                                    | Unix : `~/.spirit` · Windows : `%LOCALAPPDATA%\Spirit`                                                                                                                                                                | `SPIRIT_HOME`     |
 | Sessions, configuration, pointeurs de trousseau | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 Sur Unix, le script crée un lien `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cli/current/bin/spirit` et ajoute `export PATH="$SPIRIT_HOME/bin:$PATH"` à `~/.profile`, `~/.bashrc` et `~/.zshrc` (marqueur `# spirit cli`).
@@ -42,10 +42,10 @@ Sur Unix, le script crée un lien `$SPIRIT_HOME/bin/spirit` → `$SPIRIT_HOME/cl
 ## Épingler une version ou un miroir
 
 | Variable               | Défaut                                 | Rôle                                            |
-| ---------------------- | -------------------------------------- | ----------------------------------------------- |
+| ---------------------- | -------------------------------------- | ----------------------------------------------- | -------- |
 | `SPIRIT_HOME`          | `~/.spirit` ou `%LOCALAPPDATA%\Spirit` | Racine d'installation pour les binaires CLI     |
 | `SPIRIT_VERSION`       | `latest`                               | Segment de version dans l'URL de téléchargement |
-| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                  | Hôte CDN                                        |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                                         | Hôte CDN |
 
 ```bash
 SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash

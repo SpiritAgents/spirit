@@ -7,11 +7,11 @@ description: Compétences utilisateur, {{product.workspaceDataFolderName}} et
 
 Une compétence est un dossier avec un `SKILL.md`. {{product.name|mdx}} découvre les compétences à partir de trois emplacements :
 
-| Portée                        | Chemin                                       |
-| ----------------------------- | -------------------------------------------- |
-| Utilisateur                   | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| Espace de travail {{product.name|mdx}}      | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
-| Agents de l'espace de travail | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| Portée                           | Chemin                                       |
+| -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| Utilisateur                      | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| Espace de travail {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| Agents de l'espace de travail    | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
 Lorsque vous mentionnez une compétence dans un tour, {{product.name|mdx}} peut joindre son texte complet à ce message utilisateur. Il ne déverse pas chaque compétence dans le prompt système.
 

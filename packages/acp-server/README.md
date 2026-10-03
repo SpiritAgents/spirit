@@ -19,9 +19,9 @@ npx @spiritagent/acp-server --setup
 
 Setup writes to the shared Spirit data directory (`config.json` + OS keyring — same store as Desktop/CLI). After setup, your ACP client calls `authenticate`, then `session/new`.
 
-| Environment variable   | Required | Description                                                             |
-| ---------------------- | -------- | ----------------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | No       | Workspace root (default: client `cwd`)                                  |
+| Environment variable   | Required | Description                                                                 |
+| ---------------------- | -------- | --------------------------------------------------------------------------- |
+| `SPIRIT_ACP_WORKSPACE` | No       | Workspace root (default: client `cwd`)                                      |
 | `SPIRIT_ACP_DATA_DIR`  | No       | Spirit data directory (default: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Requirements

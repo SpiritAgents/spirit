@@ -20,9 +20,9 @@ Hooks are scripts {{product.name|mdx}} runs at fixed points. They can allow a to
 
 ## Where they live
 
-| Scope     | Config                           | Scripts                      |
-| --------- | -------------------------------- | ---------------------------- |
-| User      | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
+| Scope     | Config                                                       | Scripts                                                  |
+| --------- | ------------------------------------------------------------ | -------------------------------------------------------- |
+| User      | `{spiritDataDir}/hooks.json`                                 | `{spiritDataDir}/hooks/`                                 |
 | Workspace | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 On the same event, user entries and workspace entries are concatenated in that order. They do not overwrite each other.

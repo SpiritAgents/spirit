@@ -5,11 +5,11 @@ description: AGENTS.md、{{product.workspaceDataFolderName}}/rule.md 和用户�
 
 Rules 是 Agent 会一直考虑的 Markdown。一共三个槽位：
 
-| 范围               | 路径                          |
-| ------------------ | ----------------------------- |
-| 工作区 agents 文件 | `{workspace}/AGENTS.md`       |
-| 工作区 {{product.name|mdx}} rule | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
-| 用户 rule          | `{spiritDataDir}/rule.md`     |
+| 范围                  | 路径                      |
+| --------------------- | ------------------------- | --------------------------------------------------------- |
+| 工作区 agents 文件    | `{workspace}/AGENTS.md`   |
+| 工作区 {{product.name|mdx}} rule                | `{workspace}/{{product.workspaceDataFolderName}}/rule.md` |
+| 用户 rule             | `{spiritDataDir}/rule.md` |
 
 项目约定写进 `AGENTS.md`，谁打开仓库都能看到。{{product.name|mdx}} 专用、又不想放进通用 agents 文件的内容写 `{{product.workspaceDataFolderName}}/rule.md`。跟着你跨工作区走的偏好写用户 rule。
 
