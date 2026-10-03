@@ -51,7 +51,7 @@ export function startDreamCollectorIfNeeded(ctx: DreamCollectorServiceContext): 
   if (!secondaryModel) {
     ctx.setStatus({
       ...emptyDreamCollectorSnapshot("missing-model"),
-      lastError: i18n.t("error.lightweightChatModelNotConfigured"),
+      lastError: i18n.t("error.secondaryLanguageModelNotConfigured"),
     });
     return;
   }

@@ -160,7 +160,7 @@ export function ModelsSettingsPanel({
         modelDefaultsDialogRef !== null &&
         modelRefsEqual(modelDefaultsDialogRef, videoGenerationModel),
     );
-  const canAssignLightweightChatRole =
+  const canAssignSecondaryLanguageModelRole =
     modelDefaultsDialogModel !== null &&
     canAssignAsSecondaryLanguageModel(
       modelDefaultsDialogModel,
@@ -170,7 +170,7 @@ export function ModelsSettingsPanel({
     );
   const isModelDefaultsDialogModelActive =
     modelDefaultsDialogRef !== null && modelRefsEqual(modelDefaultsDialogRef, activeModel);
-  const isModelDefaultsDialogModelLightweight =
+  const isModelDefaultsDialogModelSecondary =
     secondaryLanguageModel !== undefined &&
     modelDefaultsDialogRef !== null &&
     modelRefsEqual(modelDefaultsDialogRef, secondaryLanguageModel);
@@ -185,7 +185,7 @@ export function ModelsSettingsPanel({
         (modelDefaultsDialogRef !== null &&
           videoGenerationModel !== undefined &&
           modelRefsEqual(modelDefaultsDialogRef, videoGenerationModel)) ||
-      modelDefaultAssignments.secondaryLanguageModel !== isModelDefaultsDialogModelLightweight);
+      modelDefaultAssignments.secondaryLanguageModel !== isModelDefaultsDialogModelSecondary);
 
   const catalogDetailByModelName = useMemo(
     () => buildModelCatalogDetailMap(models, snapshot?.config.modelCatalogHints),
@@ -356,7 +356,7 @@ export function ModelsSettingsPanel({
       }
     }
 
-    if (canAssignLightweightChatRole) {
+    if (canAssignSecondaryLanguageModelRole) {
       if (
         modelDefaultAssignments.secondaryLanguageModel &&
         (secondaryLanguageModel === undefined ||
@@ -513,7 +513,7 @@ export function ModelsSettingsPanel({
                           const isImageDefault =
                             imageGenerationModel !== undefined &&
                             modelRefsEqual(modelRef, imageGenerationModel);
-                          const isLightweightDefault =
+                          const isSecondaryDefault =
                             secondaryLanguageModel !== undefined &&
                             modelRefsEqual(modelRef, secondaryLanguageModel);
                           const supportedDefaultRoles = getSupportedModelDefaultRoles(
@@ -541,7 +541,7 @@ export function ModelsSettingsPanel({
                                 displayTitle={displayTitle}
                                 isActive={isActive}
                                 isImageDefault={isImageDefault}
-                                isLightweightDefault={isLightweightDefault}
+                                isSecondaryDefault={isSecondaryDefault}
                                 defaultActionLabel={defaultActionLabel}
                                 disabled={rowDisabled}
                                 onDefaultAction={() => handleModelDefaultAction(model)}
@@ -556,7 +556,7 @@ export function ModelsSettingsPanel({
                               displayTitle={displayTitle}
                               isActive={isActive}
                               isImageDefault={isImageDefault}
-                              isLightweightDefault={isLightweightDefault}
+                              isSecondaryDefault={isSecondaryDefault}
                               defaultActionLabel={defaultActionLabel}
                               disabled={rowDisabled}
                               onDefaultAction={() => handleModelDefaultAction(model)}
@@ -601,7 +601,7 @@ export function ModelsSettingsPanel({
                         const isImageDefault =
                           imageGenerationModel !== undefined &&
                           modelRefsEqual(modelRef, imageGenerationModel);
-                        const isLightweightDefault =
+                        const isSecondaryDefault =
                           secondaryLanguageModel !== undefined &&
                           modelRefsEqual(modelRef, secondaryLanguageModel);
                         const supportedDefaultRoles = getSupportedModelDefaultRoles(
@@ -623,7 +623,7 @@ export function ModelsSettingsPanel({
                             displayTitle={displayTitle}
                             isActive={isActive}
                             isImageDefault={isImageDefault}
-                            isLightweightDefault={isLightweightDefault}
+                            isSecondaryDefault={isSecondaryDefault}
                             defaultActionLabel={defaultActionLabel}
                             disabled={modelsBusy || modelsPreviewBusy}
                             onDefaultAction={() => handleModelDefaultAction(model)}
@@ -749,13 +749,13 @@ export function ModelsSettingsPanel({
                 </div>
               </div>
             ) : null}
-            {canAssignLightweightChatRole ? (
+            {canAssignSecondaryLanguageModelRole ? (
               <div
                 className="group/field flex items-start gap-3 rounded-lg border border-dialog-panel-border px-3 py-3 transition-colors data-[disabled=true]:opacity-70"
                 data-disabled={modelsBusy || modelsPreviewBusy || undefined}
               >
                 <Checkbox
-                  id="model-default-lightweight-chat"
+                  id="model-default-secondary-language-model"
                   checked={modelDefaultAssignments.secondaryLanguageModel}
                   disabled={modelsBusy || modelsPreviewBusy}
                   onCheckedChange={(checked) =>
@@ -767,13 +767,13 @@ export function ModelsSettingsPanel({
                 />
                 <div className="grid gap-1.5">
                   <Label
-                    htmlFor="model-default-lightweight-chat"
+                    htmlFor="model-default-secondary-language-model"
                     className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}
                   >
-                    {t("settings.lightweightChatModelLabel")}
+                    {t("settings.secondaryLanguageModelLabel")}
                   </Label>
                   <p className="text-xs leading-5 text-muted-foreground">
-                    {t("settings.lightweightChatModelUsage")}
+                    {t("settings.secondaryLanguageModelUsage")}
                   </p>
                 </div>
               </div>
@@ -781,7 +781,7 @@ export function ModelsSettingsPanel({
             {!canAssignActiveRole &&
             !canAssignImageGenerationRole &&
             !canAssignVideoGenerationRole &&
-            !canAssignLightweightChatRole ? (
+            !canAssignSecondaryLanguageModelRole ? (
               <div className="rounded-lg border border-dashed border-dialog-panel-border px-3 py-4 text-sm text-muted-foreground">
                 {t("settings.noDefaultRolesForModel")}
               </div>

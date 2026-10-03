@@ -577,7 +577,7 @@ export async function updateConfigCommand(
         );
         if (!languageModelRef) {
           throw new Error(
-            i18n.t("error.lightweightChatModelNotFound", {
+            i18n.t("error.secondaryLanguageModelNotFound", {
               model: request.secondaryLanguageModel.name,
             }),
           );

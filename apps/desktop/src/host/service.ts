@@ -3296,7 +3296,7 @@ export class DesktopHostService {
         const currentState = this.requireState();
         const secondaryModel = resolveSecondaryLanguageModelProfile(currentState.config);
         if (!secondaryModel) {
-          throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
+          throw new Error(i18n.t("error.secondaryLanguageModelNotConfigured"));
         }
         return {
           workspaceRoot,
@@ -4395,7 +4395,7 @@ export class DesktopHostService {
     const state = this.requireState();
     const secondaryModel = resolveSecondaryLanguageModelProfile(state.config);
     if (!secondaryModel) {
-      throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
+      throw new Error(i18n.t("error.secondaryLanguageModelNotConfigured"));
     }
     const apiKey = await resolveApiKeyForConfigModel(state.config, secondaryModel.profile.ref);
     if (!apiKey) {
