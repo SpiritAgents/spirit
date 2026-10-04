@@ -8,7 +8,7 @@ import {
 } from "@spiritagent/agent-core";
 
 import type { HostAutomationTrigger } from "./automations.js";
-import { formatTriggerLabel, normalizeAutomationTrigger } from "./automations.js";
+import { normalizeAutomationTrigger } from "./automations.js";
 
 export type CreateAutomationApprovalLevel = "default" | "auto-approval" | "bypass-approval";
 
@@ -45,16 +45,6 @@ export function parseCreateAutomationApprovalLevel(value: unknown): CreateAutoma
     return "bypass-approval";
   }
   return "default";
-}
-
-export function formatCreateAutomationApprovalLabel(level: CreateAutomationApprovalLevel): string {
-  if (level === "bypass-approval") {
-    return "Bypass approval";
-  }
-  if (level === "auto-approval") {
-    return "Auto-approval";
-  }
-  return "Default approval";
 }
 
 export function parseCreateAutomationTrigger(value: unknown): HostAutomationTrigger {
@@ -95,16 +85,6 @@ export function previewCreateAutomationFromArguments(
     trigger: parseCreateAutomationTriggerInput(args),
     approval_level: parseCreateAutomationApprovalLevel(args.approval_level),
   };
-}
-
-export function buildCreateAutomationApprovalPrompt(input: CreateAutomationPreviewInput): string {
-  return (
-    `High-risk tool call: Create automation\n` +
-    `Title: ${input.title}\n` +
-    `Schedule: ${formatTriggerLabel(input.trigger)}\n` +
-    `Run approval: ${formatCreateAutomationApprovalLabel(input.approval_level)}\n` +
-    `Overview length: ${[...input.overview].length} characters`
-  );
 }
 
 export function toBuiltInLazyToolIndexEntry(

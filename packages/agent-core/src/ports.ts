@@ -575,6 +575,7 @@ export type ToolApprovalRequest =
   | { kind: "web_fetch"; url: string }
   | { kind: "read_path"; operation: "read_file" | "ls"; path: string }
   | { kind: "create_file"; path: string; contentChars: number }
+  | { kind: "create_plan"; planName: string; contentChars: number }
   | { kind: "edit_file"; path: string; oldChars: number; newChars: number }
   | { kind: "delete_file"; path: string }
   | { kind: "apply_patch"; operation: string; path: string; diffLines?: number }

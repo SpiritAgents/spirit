@@ -13,6 +13,7 @@ import {
   toolNamesFromDefinitions,
   type JsonValue,
   type PermissionMemoryTarget,
+  type ToolApprovalRequest,
 } from "@spiritagent/agent-core";
 
 import { applyDiff } from "./apply-diff.js";
@@ -45,7 +46,6 @@ import {
   type HostExtensionToolExecutionMode,
 } from "./extensions.js";
 import {
-  buildCreateAutomationApprovalPrompt,
   CREATE_AUTOMATION_TOOL_NAME,
   type CreateAutomationApprovalLevel,
   deriveAutomationTitle,
@@ -321,7 +321,11 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
 
 export type HostAuthorizationDecision<QuestionSpec = HostAskQuestionsQuestionSpec> =
   | { kind: "allowed" }
-  | { kind: "need-approval"; prompt: string; rememberTarget?: PermissionMemoryTarget }
+  | {
+      kind: "need-approval";
+      approval: ToolApprovalRequest;
+      rememberTarget?: PermissionMemoryTarget;
+    }
   | { kind: "need-questions"; questions: HostAskQuestionsRequest<QuestionSpec> }
   | { kind: "denied"; reason: string };
 
@@ -941,7 +945,12 @@ export class NodeHostToolService<
         if (request.approval_mode === "need-approval") {
           return {
             kind: "need-approval",
-            prompt: buildExtensionApprovalPrompt(request),
+            approval: {
+              kind: "extension_tool",
+              extensionId: request.extension_id,
+              toolName: request.tool_name,
+              argumentsPreview: truncateChars(JSON.stringify(request.arguments, null, 2), 1_200),
+            },
           };
         }
         return { kind: "allowed" };
@@ -976,22 +985,25 @@ export class NodeHostToolService<
         const shell = this.toolDefinitionEnvironment();
         return {
           kind: "need-approval",
-          prompt:
-            `Reason: ${request.reason}\n` +
-            `High-risk tool call: shell\nTerminal: ${shell.shellDisplayName}\nCommand: ${request.command}`,
+          approval: {
+            kind: "shell",
+            command: request.command,
+            reason: request.reason,
+            terminal: shell.shellDisplayName,
+          },
           rememberTarget: { kind: "shell", command: request.command },
         };
       }
       case "web_fetch":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: fetch web page\nURL: ${request.url}\n\nThe body will enter the conversation; confirm the source is trustworthy — malicious pages may attempt prompt injection.`,
+          approval: { kind: "web_fetch", url: request.url },
         };
       case "ls": {
         const canonical = await this.resolveExistingAbsoluteDirectory(request.path);
         return this.authorizeExternalReadPath(
           canonical,
-          "List directory outside the workspace",
+          "ls",
           bypassHighRiskApproval || this.requestMetadataFor(request)?.userInitiated === true,
         );
       }
@@ -1003,44 +1015,65 @@ export class NodeHostToolService<
         const canonical = target.canonicalPath;
         return this.authorizeExternalReadPath(
           canonical,
-          "Read file outside the workspace",
+          "read_file",
           bypassHighRiskApproval || this.requestMetadataFor(request)?.userInitiated === true,
         );
       }
       case "create_file":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: create file\nPath: ${request.path}\nContent length: ${[...request.content].length} chars`,
+          approval: {
+            kind: "create_file",
+            path: request.path,
+            contentChars: [...request.content].length,
+          },
         };
       case "create_plan":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: create plan\nName: ${request.plan_name}\nContent length: ${[...request.content].length} chars`,
+          approval: {
+            kind: "create_plan",
+            planName: request.plan_name,
+            contentChars: [...request.content].length,
+          },
         };
       case CREATE_AUTOMATION_TOOL_NAME:
         return {
           kind: "need-approval",
-          prompt: buildCreateAutomationApprovalPrompt(request),
+          approval: {
+            kind: "create_automation",
+            title: request.title,
+            trigger: request.trigger as JsonValue,
+            approvalLevel: request.approval_level,
+            overviewChars: [...request.overview].length,
+          },
         };
       case "edit_file":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: edit file (exact replacement)\nPath: ${request.path}\nOld text length: ${[...request.old_text].length} chars\nNew text length: ${[...request.new_text].length} chars`,
+          approval: {
+            kind: "edit_file",
+            path: request.path,
+            oldChars: [...request.old_text].length,
+            newChars: [...request.new_text].length,
+          },
         };
       case "delete_file":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: delete file\nPath: ${request.path}`,
+          approval: { kind: "delete_file", path: request.path },
         };
       case APPLY_PATCH_HOST_TOOL_NAME: {
         const diffLines =
           request.operation.diff === undefined ? 0 : request.operation.diff.split(/\r?\n/).length;
         return {
           kind: "need-approval",
-          prompt:
-            `High-risk tool call: apply_patch (${request.operation.type})\n` +
-            `Path: ${request.operation.path}` +
-            (request.operation.type === "update_file" ? `\nDiff lines: ${diffLines}` : ""),
+          approval: {
+            kind: "apply_patch",
+            operation: request.operation.type,
+            path: request.operation.path,
+            ...(request.operation.type === "update_file" ? { diffLines } : {}),
+          },
         };
       }
       case "dream_list":
@@ -1398,7 +1431,7 @@ export class NodeHostToolService<
    */
   private authorizeExternalReadPath(
     canonical: string,
-    promptTitle: string,
+    operation: "read_file" | "ls",
     foldAskToAllow: boolean,
   ): HostAuthorizationDecision<QuestionSpec> {
     const evaluation = evaluateReadFilePermission(
@@ -1417,7 +1450,11 @@ export class NodeHostToolService<
     }
     if (evaluation.matched !== undefined) {
       if (evaluation.verdict === "ask" && !foldAskToAllow) {
-        return needReadPathApproval(canonical, promptTitle);
+        return {
+          kind: "need-approval",
+          approval: { kind: "read_path", operation, path: canonical },
+          rememberTarget: { kind: "read_file", path: canonical },
+        };
       }
       return { kind: "allowed" };
     }
@@ -1427,7 +1464,11 @@ export class NodeHostToolService<
     if (this.isAllowedReadLocation(canonical) || foldAskToAllow) {
       return { kind: "allowed" };
     }
-    return needReadPathApproval(canonical, promptTitle);
+    return {
+      kind: "need-approval",
+      approval: { kind: "read_path", operation, path: canonical },
+      rememberTarget: { kind: "read_file", path: canonical },
+    };
   }
 
   /**
@@ -2277,17 +2318,6 @@ function sessionApprovalKey(target: PermissionMemoryTarget): string {
   return target.kind === "shell" ? `shell:${target.command}` : `read_file:${target.path}`;
 }
 
-function needReadPathApproval<QuestionSpec>(
-  canonical: string,
-  promptTitle: string,
-): HostAuthorizationDecision<QuestionSpec> {
-  return {
-    kind: "need-approval",
-    prompt: `High-risk tool call: ${promptTitle}\nPath: ${canonical}`,
-    rememberTarget: { kind: "read_file", path: canonical },
-  };
-}
-
 function parseJsonObject(argumentsJson: string): HostJsonObject {
   if (argumentsJson.trim().length === 0) {
     return {};
@@ -2606,13 +2636,6 @@ function inferSupportedImageExtensionFromWebResponse(
   } catch {
     return undefined;
   }
-}
-
-function buildExtensionApprovalPrompt<QuestionSpec>(
-  request: Extract<HostToolRequest<QuestionSpec>, { name: "extension_tool" }>,
-): string {
-  const preview = truncateChars(JSON.stringify(request.arguments, null, 2), 1_200);
-  return `Extension tool requires confirmation\nExtension: ${request.extension_id}\nTool: ${request.tool_name}\n\nArguments\n${preview}`;
 }
 
 function buildExtensionQuestionsAuthorization<QuestionSpec>(
