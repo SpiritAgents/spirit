@@ -3,6 +3,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     ask_questions::AskQuestionsRequest,
+    host_protocol::{BridgeToolApprovalPrompt, BridgeToolApprovalRequest},
     view::{ChatMessage, ToolUiBlock, ToolUiPhase},
 };
 
@@ -133,23 +134,278 @@ fn apply_patch_diff_chars(request: &ToolUiRequest) -> Option<usize> {
         .filter(|count| *count > 0)
 }
 
-fn strip_shell_reason_from_prompt(prompt: &str) -> (Option<String>, Vec<String>) {
-    let mut lines = prompt.lines();
-    let first = lines.next();
-    let reason = first
-        .and_then(|line| line.trim().strip_prefix("Reason:"))
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(ToString::to_string);
-    let detail_lines = if reason.is_some() {
-        lines.map(|line| line.to_string()).collect::<Vec<_>>()
-    } else {
-        prompt
-            .lines()
-            .map(|line| line.to_string())
-            .collect::<Vec<_>>()
-    };
-    (reason, detail_lines)
+/// Display text for a pending approval, built TUI-side from the structured bridge payload.
+/// Returns `(headline_override, body)`: the shell reason lifts into the block headline.
+pub(crate) fn approval_prompt_text(
+    prompt: &BridgeToolApprovalPrompt,
+    tool_name: &str,
+) -> (Option<String>, String) {
+    match prompt {
+        BridgeToolApprovalPrompt::Hook { message } => {
+            let body = message
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToString::to_string)
+                .unwrap_or_else(|| {
+                    t!("tui.tool.approval.hook_fallback", tool = tool_name).into_owned()
+                });
+            (None, body)
+        }
+        BridgeToolApprovalPrompt::Tool { request } => approval_request_text(request),
+    }
+}
+
+fn approval_request_text(request: &BridgeToolApprovalRequest) -> (Option<String>, String) {
+    match request {
+        BridgeToolApprovalRequest::Shell {
+            command,
+            reason,
+            terminal,
+        } => {
+            let reason = reason
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(ToString::to_string);
+            let body = [
+                t!("tui.tool.approval.high_risk.shell").into_owned(),
+                t!("tui.tool.approval.field.terminal", name = terminal).into_owned(),
+                t!("tui.tool.approval.field.command", command = command).into_owned(),
+            ]
+            .join("\n");
+            (reason, body)
+        }
+        BridgeToolApprovalRequest::WebFetch { url } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.fetch_web_page").into_owned(),
+                t!("tui.tool.approval.field.url", url = url).into_owned(),
+                String::new(),
+                t!("tui.tool.approval.web_fetch_warning").into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::ReadPath { operation, path } => {
+            let headline = if operation == "ls" {
+                t!("tui.tool.approval.high_risk.list_directory_outside_workspace").into_owned()
+            } else {
+                t!("tui.tool.approval.high_risk.read_file_outside_workspace").into_owned()
+            };
+            let body = [
+                headline,
+                t!("tui.tool.approval.field.path", path = path).into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::CreateFile {
+            path,
+            content_chars,
+        } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.create_file").into_owned(),
+                t!("tui.tool.approval.field.path", path = path).into_owned(),
+                t!(
+                    "tui.tool.approval.field.content_length",
+                    chars = content_chars
+                )
+                .into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::CreatePlan {
+            plan_name,
+            content_chars,
+        } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.create_plan").into_owned(),
+                t!("tui.tool.approval.field.name", name = plan_name).into_owned(),
+                t!(
+                    "tui.tool.approval.field.content_length",
+                    chars = content_chars
+                )
+                .into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::EditFile {
+            path,
+            old_chars,
+            new_chars,
+        } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.edit_file_exact_replacement").into_owned(),
+                t!("tui.tool.approval.field.path", path = path).into_owned(),
+                t!("tui.tool.approval.field.old_text_length", chars = old_chars).into_owned(),
+                t!("tui.tool.approval.field.new_text_length", chars = new_chars).into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::DeleteFile { path } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.delete_file").into_owned(),
+                t!("tui.tool.approval.field.path", path = path).into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::ApplyPatch {
+            operation,
+            path,
+            diff_lines,
+        } => {
+            let mut lines = vec![
+                t!(
+                    "tui.tool.approval.high_risk.apply_patch",
+                    operation = operation
+                )
+                .into_owned(),
+                t!("tui.tool.approval.field.path", path = path).into_owned(),
+            ];
+            if let Some(diff_lines) = diff_lines {
+                lines.push(
+                    t!("tui.tool.approval.field.diff_lines", lines = diff_lines).into_owned(),
+                );
+            }
+            (None, lines.join("\n"))
+        }
+        BridgeToolApprovalRequest::CreateAutomation {
+            title,
+            trigger,
+            approval_level,
+            overview_chars,
+        } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.create_automation").into_owned(),
+                t!("tui.tool.approval.field.title", title = title).into_owned(),
+                t!(
+                    "tui.tool.approval.field.schedule",
+                    schedule = automation_trigger_label(trigger)
+                )
+                .into_owned(),
+                t!(
+                    "tui.tool.approval.field.run_approval",
+                    level = automation_approval_level_label(approval_level)
+                )
+                .into_owned(),
+                t!(
+                    "tui.tool.approval.field.overview_length",
+                    characters = overview_chars
+                )
+                .into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::ExtensionTool {
+            extension_id,
+            tool_name,
+            arguments_preview,
+        } => {
+            let body = [
+                t!("tui.tool.approval.high_risk.extension_tool").into_owned(),
+                t!("tui.tool.approval.field.extension", id = extension_id).into_owned(),
+                t!("tui.tool.approval.field.tool", tool = tool_name).into_owned(),
+                String::new(),
+                t!(
+                    "tui.tool.approval.field.extension_arguments",
+                    arguments = arguments_preview
+                )
+                .into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+        BridgeToolApprovalRequest::LazyToolCall {
+            provider,
+            server,
+            tool,
+            arguments,
+        } => {
+            let args_text = arguments
+                .as_ref()
+                .map(|value| serde_json::to_string_pretty(value).unwrap_or_default())
+                .filter(|text| !text.is_empty())
+                .unwrap_or_else(|| t!("tui.tool.approval.field.no_arguments").into_owned());
+            let headline = match provider.as_str() {
+                "built-in" => {
+                    t!("tui.tool.approval.high_risk.lazy_built_in_tool_call").into_owned()
+                }
+                "mcp" => t!("tui.tool.approval.high_risk.lazy_mcp_tool_call").into_owned(),
+                other => [
+                    t!("tui.tool.approval.high_risk.lazy_tool_call").into_owned(),
+                    t!("tui.tool.approval.field.provider", provider = other).into_owned(),
+                ]
+                .join("\n"),
+            };
+            let body = [
+                headline,
+                t!("tui.tool.approval.field.server", server = server).into_owned(),
+                t!("tui.tool.approval.field.tool", tool = tool).into_owned(),
+                t!("tui.tool.approval.field.arguments", arguments = args_text).into_owned(),
+            ]
+            .join("\n");
+            (None, body)
+        }
+    }
+}
+
+fn automation_approval_level_label(approval_level: &str) -> String {
+    match approval_level {
+        "auto-approval" => t!("tui.tool.approval.level.auto").into_owned(),
+        "bypass-approval" => t!("tui.tool.approval.level.bypass").into_owned(),
+        _ => t!("tui.tool.approval.level.default").into_owned(),
+    }
+}
+
+fn automation_trigger_label(trigger: &Value) -> String {
+    let kind = trigger.get("kind").and_then(Value::as_str).unwrap_or("");
+    if kind == "time" {
+        let schedule = trigger.get("schedule").cloned().unwrap_or(Value::Null);
+        let schedule_kind = schedule.get("kind").and_then(Value::as_str).unwrap_or("");
+        if schedule_kind == "hourly" {
+            return t!("tui.tool.approval.schedule.hourly").into_owned();
+        }
+        let hour = schedule.get("hour").and_then(Value::as_u64).unwrap_or(0);
+        let minute = schedule.get("minute").and_then(Value::as_u64).unwrap_or(0);
+        let time = format!("{hour:02}:{minute:02}");
+        if schedule_kind == "daily" {
+            return t!("tui.tool.approval.schedule.daily", time = time).into_owned();
+        }
+        if schedule_kind == "weekly" {
+            let weekday_index = schedule.get("weekday").and_then(Value::as_u64).unwrap_or(0);
+            let weekday =
+                t!(format!("tui.tool.approval.schedule.weekday{weekday_index}")).into_owned();
+            return t!(
+                "tui.tool.approval.schedule.weekly",
+                weekday = weekday,
+                time = time
+            )
+            .into_owned();
+        }
+    }
+    if kind == "github" {
+        let owner = trigger.get("owner").and_then(Value::as_str).unwrap_or("");
+        let repo = trigger.get("repo").and_then(Value::as_str).unwrap_or("");
+        let event = trigger.get("event").and_then(Value::as_str).unwrap_or("");
+        let event_label = if event == "pull_request_created" {
+            t!("tui.tool.approval.schedule.event_pull_request_created").into_owned()
+        } else {
+            t!("tui.tool.approval.schedule.event_issue_created").into_owned()
+        };
+        return t!(
+            "tui.tool.approval.schedule.github",
+            owner = owner,
+            repo = repo,
+            event = event_label
+        )
+        .into_owned();
+    }
+    trigger.to_string()
 }
 
 fn truncate_for_preview(text: &str, max_chars: usize) -> String {
@@ -317,21 +573,15 @@ fn preview_summary_for_tool(tool_name: &str, request: &ToolUiRequest) -> (String
 pub(crate) fn tool_approval_block(
     tool_name: &str,
     tool_call_id: Option<&str>,
-    prompt: &str,
+    prompt: &BridgeToolApprovalPrompt,
     supports_remember: bool,
     auto_review_block_reason: Option<&str>,
 ) -> ToolUiBlock {
-    let (shell_reason, mut detail_lines) = if tool_name == "shell" {
-        strip_shell_reason_from_prompt(prompt)
-    } else {
-        (
-            None,
-            prompt
-                .lines()
-                .map(|line| line.to_string())
-                .collect::<Vec<_>>(),
-        )
-    };
+    let (shell_reason, body) = approval_prompt_text(prompt, tool_name);
+    let mut detail_lines = body
+        .lines()
+        .map(|line| line.to_string())
+        .collect::<Vec<_>>();
     if let Some(reason) = auto_review_block_reason
         .map(str::trim)
         .filter(|r| !r.is_empty())
@@ -806,6 +1056,7 @@ mod tests {
         ToolUiPhase, ToolUiRequest, build_tool_preview_block, build_tool_result_block,
         format_tool_ui_message, tool_approval_block, tool_request_args_excerpt,
     };
+    use crate::host_protocol::{BridgeToolApprovalPrompt, BridgeToolApprovalRequest};
     use rust_i18n::t;
     use serde_json::{Value, json};
 
@@ -917,7 +1168,13 @@ mod tests {
         let block = tool_approval_block(
             "shell",
             Some("call_00_block"),
-            "High-risk tool call: shell\nCommand: rm -rf /",
+            &BridgeToolApprovalPrompt::Tool {
+                request: BridgeToolApprovalRequest::Shell {
+                    command: "rm -rf /".to_string(),
+                    reason: None,
+                    terminal: "zsh".to_string(),
+                },
+            },
             false,
             Some("destructive command"),
         );
@@ -941,7 +1198,13 @@ mod tests {
         let block = tool_approval_block(
             "shell",
             Some("call_00_demo"),
-            "Reason: check build output\nHigh-risk tool call: shell\nTerminal: Command Prompt (cmd.exe)\nCommand: echo hi",
+            &BridgeToolApprovalPrompt::Tool {
+                request: BridgeToolApprovalRequest::Shell {
+                    command: "echo hi".to_string(),
+                    reason: Some("check build output".to_string()),
+                    terminal: "Command Prompt (cmd.exe)".to_string(),
+                },
+            },
             true,
             None,
         );

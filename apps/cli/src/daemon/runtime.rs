@@ -22,7 +22,7 @@ use crate::{
         CliMarketplaceSource, WorkspaceCapabilityTrustDecision, WorkspaceCapabilityTrustPrompter,
         WorkspaceCapabilityTrustRequest,
     },
-    host_runtime::RuntimeEvent,
+    host_runtime::{RuntimeEvent, approval_prompt_text},
     logging,
     model_registry::AppConfig,
     plan::{self, PlanMetadata, bootstrap_plan_metadata},
@@ -1827,6 +1827,7 @@ impl DaemonRuntime {
     pub fn pending_subagent_approval(&self) -> Option<PendingSubagentApprovalView> {
         let approval = self.sync.current_pending_approval.as_ref()?;
         let session_id = approval.subagent_session_id.clone()?;
+        let (_, prompt) = approval_prompt_text(&approval.prompt, &approval.tool_name);
         Some(PendingSubagentApprovalView {
             session_id,
             session_title: approval
@@ -1834,7 +1835,7 @@ impl DaemonRuntime {
                 .clone()
                 .unwrap_or_else(|| "SubAgent".to_string()),
             tool_name: approval.tool_name.clone(),
-            prompt: approval.prompt.clone(),
+            prompt,
         })
     }
 
