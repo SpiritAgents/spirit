@@ -6,7 +6,12 @@ import {
   type ToolAutoReviewInput,
   type ToolAutoReviewer,
 } from "../auto-approval/index.js";
-import type { AuthorizationDecision, JsonValue, ToolCallRequest } from "../ports.js";
+import type {
+  AuthorizationDecision,
+  JsonValue,
+  ToolApprovalPrompt,
+  ToolCallRequest,
+} from "../ports.js";
 import type { PreToolUseGateResult } from "../hooks/tool-hooks.js";
 import type { ToolApprovalGate } from "../hooks/tool-hooks.js";
 
@@ -20,7 +25,7 @@ export type AutoReviewCache = Map<string, Promise<ToolAutoReviewGateOutcome>>;
 export function buildToolAutoReviewInput(input: {
   toolName: string;
   argumentsJson: string;
-  hostApprovalContext: string;
+  hostApprovalContext: ToolApprovalPrompt;
   toolDefinitions: JsonValue;
   targetMcpToolSchema?: JsonValue;
 }): ToolAutoReviewInput {
@@ -199,7 +204,7 @@ function startAutoReviewPromise<ToolRequest>(input: {
         buildToolAutoReviewInput({
           toolName: input.call.name,
           argumentsJson: input.call.argumentsJson,
-          hostApprovalContext: authorization.prompt,
+          hostApprovalContext: { kind: "tool", request: authorization.approval },
           toolDefinitions: input.toolDefinitions,
         }),
       );

@@ -95,7 +95,7 @@ export async function startManualToolCommand<Config, State, ToolRequest>(
         argumentsJson: JSON.stringify(request),
       },
       {
-        prompt: authorization.prompt,
+        prompt: { kind: "tool", request: authorization.approval },
         rememberTarget: authorization.rememberTarget,
       },
     );
