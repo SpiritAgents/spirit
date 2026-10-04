@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
 
 import {
+  approvalNotificationBody,
   formatSessionPrefixedTitle,
-  genericApprovalNotificationBody,
-  shellApprovalNotificationBody,
 } from "@/lib/desktop-notification-copy";
 import type { DesktopShowNotificationRequest } from "@/lib/desktop-notification-types";
 import type {
@@ -77,10 +76,7 @@ function approvalNotificationPayload(
   approval: PendingToolApprovalSnapshot,
   isWindows: boolean,
 ): DesktopShowNotificationRequest {
-  const body =
-    approval.toolName === "shell"
-      ? shellApprovalNotificationBody(approval.prompt, "Reason:")
-      : genericApprovalNotificationBody(approval.toolName, approval.prompt);
+  const body = approvalNotificationBody(approval.toolName, approval.prompt);
 
   return {
     kind: "approval",

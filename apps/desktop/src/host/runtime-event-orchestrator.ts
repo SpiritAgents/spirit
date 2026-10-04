@@ -25,6 +25,7 @@ import {
   serializeFileToolDiffArgumentsJson,
 } from "../lib/file-tool-diff-source.js";
 import i18n from "../lib/i18n-host.js";
+import { buildApprovalPromptView } from "../lib/approval-prompt.js";
 import {
   diagnosticsPathsHeadlineDetail,
   parseDiagnosticsPathsFromRequest,
@@ -69,7 +70,6 @@ import {
   messageOrderDebugLevel,
   summarizeMessagesTailForOrderDebug,
   summarizeToolRowsForDebug,
-  stripReasonLineFromShellPrompt,
   toolMessageKey,
 } from "./message-ordering.js";
 
@@ -866,7 +866,7 @@ export class DesktopRuntimeEventOrchestrator {
             phase: "pending-approval",
             headline: approvalSummary.headline,
             detailLines: [
-              stripReasonLineFromShellPrompt(approval.toolName, approval.prompt),
+              buildApprovalPromptView(approval.prompt, approval.toolName, i18n.t).body,
               ...(approval.autoReviewBlockReason?.trim()
                 ? [
                     i18n.t("app.autoReviewBlockReason", {
