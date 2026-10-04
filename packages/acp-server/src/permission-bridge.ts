@@ -6,6 +6,7 @@ import type {
 import type { AgentSideConnection } from "@agentclientprotocol/sdk";
 import type * as schema from "@agentclientprotocol/sdk";
 import { mapToolNameToKind } from "./tool-call-mapper.js";
+import { buildApprovalPromptText } from "./approval-text.js";
 
 /**
  * Handles a runtime approval request by asking the ACP client for permission.
@@ -22,8 +23,8 @@ export async function handleApprovalRequest(
     const toolCallId = approval.toolCallId ?? `approval_${Date.now()}`;
     const kind = mapToolNameToKind(approval.toolName);
 
-    // Try to build a descriptive title from the approval prompt
-    const title = approval.prompt || approval.toolName;
+    // Build the descriptive text from the structured approval prompt
+    const { title, body } = buildApprovalPromptText(approval.prompt, approval.toolName);
 
     const response = await connection.requestPermission({
       sessionId,
@@ -37,7 +38,7 @@ export async function handleApprovalRequest(
             type: "content",
             content: {
               type: "text",
-              text: approval.prompt || `Tool ${approval.toolName} requires permission.`,
+              text: body || `Tool ${approval.toolName} requires permission.`,
             },
           },
         ],
