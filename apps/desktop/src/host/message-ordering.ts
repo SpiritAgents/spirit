@@ -173,9 +173,6 @@ export function truncateOneLineForDebug(s: string, max: number): string {
   return `${t.slice(0, max)}…`;
 }
 
-// The shell approval prompt is emitted in English by host-internal; match the fixed label.
-const SHELL_REASON_PREFIX = "Reason:";
-
 export function reasonForShellTool(toolName: string, request: unknown): string | undefined {
   if (toolName !== "shell" || !request || typeof request !== "object") {
     return undefined;
@@ -188,36 +185,6 @@ export function reasonForShellTool(toolName: string, request: unknown): string |
 
   const trimmed = reason.trim();
   return trimmed || undefined;
-}
-
-export function displayTitleForTool(toolName: string, request: unknown): string {
-  const shellReason = reasonForShellTool(toolName, request);
-  if (shellReason) {
-    return shellReason;
-  }
-  if (toolName === "tool_call" || toolName === "tool_describe") {
-    const summary = toolCallSummaryCopyForRequest(
-      toolName,
-      resolveToolSummaryRequest(toolName, request),
-    );
-    if (summary?.headline) {
-      return summary.headline;
-    }
-  }
-  return toolName;
-}
-
-export function stripReasonLineFromShellPrompt(toolName: string, prompt: string): string {
-  if (toolName !== "shell") {
-    return prompt;
-  }
-
-  const lines = prompt.split(/\r?\n/);
-  if (!lines[0]?.trim().startsWith(SHELL_REASON_PREFIX)) {
-    return prompt;
-  }
-
-  return lines.slice(1).join("\n").trim();
 }
 
 export interface ToolCallSummaryCopy {

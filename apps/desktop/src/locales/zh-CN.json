@@ -864,6 +864,48 @@
     "discardAndSwitchConfirmTitle": "放弃更改并切换到“{{branch}}”？",
     "discardAndSwitchConfirmDescription": "工作区有未提交的更改。放弃后，这些本地修改将永久丢失。"
   },
+  "approval": {
+    "highRisk": {
+      "shell": "高风险工具调用：shell",
+      "fetchWebPage": "高风险工具调用：获取网页",
+      "readFileOutsideWorkspace": "高风险工具调用：读取工作区外的文件",
+      "listDirectoryOutsideWorkspace": "高风险工具调用：列出工作区外的目录",
+      "createFile": "高风险工具调用：创建文件",
+      "createPlan": "高风险工具调用：创建计划",
+      "createAutomation": "高风险工具调用：创建自动化",
+      "editFileExactReplacement": "高风险工具调用：编辑文件（精确替换）",
+      "deleteFile": "高风险工具调用：删除文件",
+      "applyPatch": "高风险工具调用：apply_patch（{{operation}}）",
+      "extensionTool": "扩展工具需要确认",
+      "lazyBuiltInToolCall": "高风险工具调用：内置 tool_call",
+      "lazyMcpToolCall": "高风险工具调用：MCP tool_call",
+      "lazyToolCall": "高风险工具调用：tool_call"
+    },
+    "field": {
+      "terminal": "终端：{{name}}",
+      "command": "命令：{{command}}",
+      "path": "路径：{{path}}",
+      "contentLength": "内容长度：{{chars}} 字符",
+      "oldTextLength": "旧文本长度：{{chars}} 字符",
+      "newTextLength": "新文本长度：{{chars}} 字符",
+      "diffLines": "Diff 行数：{{lines}}",
+      "name": "名称：{{name}}",
+      "title": "标题：{{title}}",
+      "schedule": "调度：{{schedule}}",
+      "runApproval": "运行审批：{{level}}",
+      "overviewLength": "概述长度：{{characters}} 字符",
+      "url": "URL：{{url}}",
+      "extension": "扩展：{{id}}",
+      "tool": "工具：{{tool}}",
+      "arguments": "参数：\n{{arguments}}",
+      "extensionArguments": "参数\n{{arguments}}",
+      "provider": "提供方：{{provider}}",
+      "server": "服务器：{{server}}",
+      "noArguments": "（无）"
+    },
+    "webFetchWarning": "网页正文将进入对话；请确认来源可信——恶意页面可能尝试提示词注入。",
+    "hookFallback": "Hook 请求对 {{tool}} 进行审批。"
+  },
   "workspace": {
     "planNotCreated": "Plan 还没有创建。",
     "unsavedChangesIndicator": "未保存",

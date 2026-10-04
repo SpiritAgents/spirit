@@ -867,6 +867,48 @@
     "discardAndSwitchConfirmTitle": "Annuler les modifications et basculer vers « {{branch}} » ?",
     "discardAndSwitchConfirmDescription": "Il y a des modifications non commitées. Après les avoir annulées, ces modifications locales seront définitivement perdues."
   },
+  "approval": {
+    "highRisk": {
+      "shell": "Appel d'outil à haut risque : shell",
+      "fetchWebPage": "Appel d'outil à haut risque : récupération de page web",
+      "readFileOutsideWorkspace": "Appel d'outil à haut risque : lecture d'un fichier hors de l'espace de travail",
+      "listDirectoryOutsideWorkspace": "Appel d'outil à haut risque : listage d'un répertoire hors de l'espace de travail",
+      "createFile": "Appel d'outil à haut risque : création de fichier",
+      "createPlan": "Appel d'outil à haut risque : création de plan",
+      "createAutomation": "Appel d'outil à haut risque : création d'automatisation",
+      "editFileExactReplacement": "Appel d'outil à haut risque : modification de fichier (remplacement exact)",
+      "deleteFile": "Appel d'outil à haut risque : suppression de fichier",
+      "applyPatch": "Appel d'outil à haut risque : apply_patch ({{operation}})",
+      "extensionTool": "L'outil d'extension nécessite une confirmation",
+      "lazyBuiltInToolCall": "Appel d'outil à haut risque : tool_call intégré",
+      "lazyMcpToolCall": "Appel d'outil à haut risque : tool_call MCP",
+      "lazyToolCall": "Appel d'outil à haut risque : tool_call"
+    },
+    "field": {
+      "terminal": "Terminal : {{name}}",
+      "command": "Commande : {{command}}",
+      "path": "Chemin : {{path}}",
+      "contentLength": "Longueur du contenu : {{chars}} caractères",
+      "oldTextLength": "Longueur de l'ancien texte : {{chars}} caractères",
+      "newTextLength": "Longueur du nouveau texte : {{chars}} caractères",
+      "diffLines": "Lignes de diff : {{lines}}",
+      "name": "Nom : {{name}}",
+      "title": "Titre : {{title}}",
+      "schedule": "Planification : {{schedule}}",
+      "runApproval": "Approbation d'exécution : {{level}}",
+      "overviewLength": "Longueur de la description : {{characters}} caractères",
+      "url": "URL : {{url}}",
+      "extension": "Extension : {{id}}",
+      "tool": "Outil : {{tool}}",
+      "arguments": "Arguments :\n{{arguments}}",
+      "extensionArguments": "Arguments\n{{arguments}}",
+      "provider": "fournisseur : {{provider}}",
+      "server": "Serveur : {{server}}",
+      "noArguments": "(aucun)"
+    },
+    "webFetchWarning": "Le contenu de la page entrera dans la conversation ; confirmez que la source est fiable — des pages malveillantes peuvent tenter une injection de prompt.",
+    "hookFallback": "Un hook a demandé une approbation pour {{tool}}."
+  },
   "workspace": {
     "planNotCreated": "Le plan n'a pas encore été créé.",
     "unsavedChangesIndicator": "Modifications non sauvegardées",
