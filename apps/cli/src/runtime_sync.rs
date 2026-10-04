@@ -11,8 +11,8 @@ use crate::{
         BridgeRuntimeSnapshot,
     },
     host_runtime::{
-        RuntimeEvent, build_tool_result_block, format_tool_ui_message, tool_approval_block,
-        tool_failed_block,
+        RuntimeEvent, approval_prompt_text, build_tool_result_block, format_tool_ui_message,
+        tool_approval_block, tool_failed_block,
     },
     ports::SubagentSessionSummary,
     session::SessionModel,
@@ -99,13 +99,15 @@ impl RuntimeSyncState {
                     self.events.push_back(RuntimeEvent::RemovePendingAssistant);
                 }
                 BridgeRuntimeEvent::ApprovalRequested { approval } => {
+                    let (_, approval_body) =
+                        approval_prompt_text(&approval.prompt, &approval.tool_name);
                     if let Some(session_id) = approval.subagent_session_id.as_deref() {
                         match tool_request_from_host_value(approval.request.clone()) {
                             Ok(_) => self.push_subagent_live_message(
                                 session_id,
                                 ChatMessage::with_tool_block(
                                     MessageRole::Agent,
-                                    approval.prompt.clone(),
+                                    approval_body.clone(),
                                     tool_approval_block(
                                         &approval.tool_name,
                                         approval.tool_call_id.as_deref(),
@@ -122,7 +124,7 @@ impl RuntimeSyncState {
                                     t!(
                                         "tui.tool.approval_parse_failed",
                                         err = err,
-                                        prompt = approval.prompt
+                                        prompt = approval_body
                                     )
                                     .into_owned(),
                                 ),
@@ -132,7 +134,7 @@ impl RuntimeSyncState {
                         self.events.push_back(RuntimeEvent::PushMessage(
                             ChatMessage::with_tool_block(
                                 MessageRole::Agent,
-                                approval.prompt.clone(),
+                                approval_body,
                                 tool_approval_block(
                                     &approval.tool_name,
                                     approval.tool_call_id.as_deref(),
