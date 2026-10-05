@@ -64,7 +64,6 @@ import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent
 import {
   CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,
-  buildCreateAutomationApprovalPrompt,
   previewCreateAutomationFromArguments,
   toBuiltInLazyToolIndexEntry,
   type HostAutomationCreateDefaults,
@@ -603,7 +602,13 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
           );
           return {
             kind: "need-approval",
-            prompt: buildCreateAutomationApprovalPrompt(preview),
+            approval: {
+              kind: "create_automation",
+              title: preview.title,
+              trigger: preview.trigger as JsonValue,
+              approvalLevel: preview.approval_level,
+              overviewChars: [...preview.overview].length,
+            },
           };
         } catch {
           // Fall through to generic lazy gateway authorization.

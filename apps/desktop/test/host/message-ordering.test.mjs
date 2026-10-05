@@ -12,7 +12,6 @@ import {
   toolCallSummaryForPhase,
   toolCallSummaryForStreamingPreview,
   toolCallSummaryCopyForResponsesBuiltInTool,
-  displayTitleForTool,
 } from "../../dist-electron/src/host/message-ordering.js";
 import { phaseToVerbContext } from "../../src/lib/tool-verb-context.ts";
 import i18n from "../../dist-electron/src/lib/i18n-host.js";
@@ -277,26 +276,6 @@ test("toolCallSummaryForStreamingPreview: built-in create_automation uses progre
       streamingArgumentsJson: gatewayIdentified,
     }),
     { headline: toolHeadline("automations.create") },
-  );
-});
-
-test("displayTitleForTool: built-in create_automation approval uses automation headline", () => {
-  assert.equal(
-    displayTitleForTool("tool_call", {
-      kind: "lazyToolGateway",
-      name: "tool_call",
-      argumentsJson: JSON.stringify({
-        provider: "built-in",
-        server: "desktop",
-        tool: "create_automation",
-        arguments: {
-          overview: "Summarize CI failures.",
-          title: "CI check",
-          trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
-        },
-      }),
-    }),
-    toolHeadline("automations.create"),
   );
 });
 

@@ -7,6 +7,7 @@ import type {
   JsonValue,
   LlmMessage,
   PermissionMemoryTarget,
+  ToolApprovalPrompt,
   ToolExecutionOutput,
   ToolAgentRoundCompletion,
   ToolCallRequest,
@@ -366,7 +367,7 @@ export async function resumePendingQuestions<Config, State, ToolRequest>(
         runtime.options.toolExecutor.toolDefinitionsJson(),
         { name: pending.toolName, argumentsJson: pending.argumentsJson },
         {
-          prompt: authorization.prompt,
+          prompt: { kind: "tool", request: authorization.approval },
           rememberTarget: authorization.rememberTarget,
         },
         undefined,
@@ -2502,7 +2503,7 @@ export async function waitForCompletedTurnResult<Config, State, ToolRequest>(
 }
 
 function createApproval<ToolRequest>(
-  prompt: string,
+  prompt: ToolApprovalPrompt,
   request: ToolRequest,
   toolCallId: string,
   toolName: string,

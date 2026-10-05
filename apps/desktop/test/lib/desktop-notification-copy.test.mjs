@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  approvalNotificationBody,
   formatSessionPrefixedTitle,
-  genericApprovalNotificationBody,
-  shellApprovalNotificationBody,
-  stripShellReasonLine,
   truncateNotificationBody,
 } from "../../src/lib/desktop-notification-copy.ts";
 
@@ -20,19 +18,13 @@ test("truncateNotificationBody shortens long text", () => {
   assert.match(truncateNotificationBody(long, 10), /…$/u);
 });
 
-test("stripShellReasonLine removes reason header", () => {
-  const prompt = "Reason: deploy\nnpm run build";
-  assert.equal(stripShellReasonLine(prompt, "Reason:"), "npm run build");
+test("approvalNotificationBody shows the bare prompt for a reason-less shell approval", () => {
+  const body = approvalNotificationBody("shell", "High-risk tool call: shell\nCommand: ls");
+  assert.equal(body, "High-risk tool call: shell\nCommand: ls");
 });
 
-test("shellApprovalNotificationBody includes reason and command", () => {
-  const prompt = "Reason: deploy\nnpm run build";
-  assert.match(shellApprovalNotificationBody(prompt, "Reason:"), /Reason: deploy/);
-  assert.match(shellApprovalNotificationBody(prompt, "Reason:"), /npm run build/);
-});
-
-test("genericApprovalNotificationBody includes tool and prompt", () => {
-  const body = genericApprovalNotificationBody("edit_file", "path: README.md");
-  assert.match(body, /edit_file/);
-  assert.match(body, /README.md/);
+test("approvalNotificationBody prefixes the title for other approvals", () => {
+  const body = approvalNotificationBody("deploy the branch", "Command: npm run build");
+  assert.match(body, /^deploy the branch\n/u);
+  assert.match(body, /npm run build/u);
 });

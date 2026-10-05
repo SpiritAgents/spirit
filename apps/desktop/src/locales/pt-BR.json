@@ -867,6 +867,48 @@
     "discardAndSwitchConfirmTitle": "Descartar alterações e mudar para \"{{branch}}\"?",
     "discardAndSwitchConfirmDescription": "Há alterações não confirmadas. Depois de descartá-las, essas modificações locais serão perdidas permanentemente."
   },
+  "approval": {
+    "highRisk": {
+      "shell": "Chamada de ferramenta de alto risco: shell",
+      "fetchWebPage": "Chamada de ferramenta de alto risco: buscar página da web",
+      "readFileOutsideWorkspace": "Chamada de ferramenta de alto risco: ler arquivo fora do workspace",
+      "listDirectoryOutsideWorkspace": "Chamada de ferramenta de alto risco: listar diretório fora do workspace",
+      "createFile": "Chamada de ferramenta de alto risco: criar arquivo",
+      "createPlan": "Chamada de ferramenta de alto risco: criar plano",
+      "createAutomation": "Chamada de ferramenta de alto risco: criar automação",
+      "editFileExactReplacement": "Chamada de ferramenta de alto risco: editar arquivo (substituição exata)",
+      "deleteFile": "Chamada de ferramenta de alto risco: excluir arquivo",
+      "applyPatch": "Chamada de ferramenta de alto risco: apply_patch ({{operation}})",
+      "extensionTool": "A ferramenta de extensão requer confirmação",
+      "lazyBuiltInToolCall": "Chamada de ferramenta de alto risco: tool_call interno",
+      "lazyMcpToolCall": "Chamada de ferramenta de alto risco: tool_call MCP",
+      "lazyToolCall": "Chamada de ferramenta de alto risco: tool_call"
+    },
+    "field": {
+      "terminal": "Terminal: {{name}}",
+      "command": "Comando: {{command}}",
+      "path": "Caminho: {{path}}",
+      "contentLength": "Tamanho do conteúdo: {{chars}} caracteres",
+      "oldTextLength": "Tamanho do texto antigo: {{chars}} caracteres",
+      "newTextLength": "Tamanho do texto novo: {{chars}} caracteres",
+      "diffLines": "Linhas de diff: {{lines}}",
+      "name": "Nome: {{name}}",
+      "title": "Título: {{title}}",
+      "schedule": "Agendamento: {{schedule}}",
+      "runApproval": "Aprovação de execução: {{level}}",
+      "overviewLength": "Tamanho da descrição: {{characters}} caracteres",
+      "url": "URL: {{url}}",
+      "extension": "Extensão: {{id}}",
+      "tool": "Ferramenta: {{tool}}",
+      "arguments": "Argumentos:\n{{arguments}}",
+      "extensionArguments": "Argumentos\n{{arguments}}",
+      "provider": "provedor: {{provider}}",
+      "server": "Servidor: {{server}}",
+      "noArguments": "(nenhum)"
+    },
+    "webFetchWarning": "O conteúdo da página entrará na conversa; confirme se a fonte é confiável — páginas maliciosas podem tentar injeção de prompt.",
+    "hookFallback": "Um hook solicitou aprovação para {{tool}}."
+  },
   "workspace": {
     "planNotCreated": "O plano ainda não foi criado.",
     "unsavedChangesIndicator": "Alterações não salvas",

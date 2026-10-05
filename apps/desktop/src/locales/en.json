@@ -867,6 +867,48 @@
     "discardAndSwitchConfirmTitle": "Discard changes and switch to \"{{branch}}\"?",
     "discardAndSwitchConfirmDescription": "There are uncommitted changes. After discarding, these local modifications will be permanently lost."
   },
+  "approval": {
+    "highRisk": {
+      "shell": "High-risk tool call: shell",
+      "fetchWebPage": "High-risk tool call: fetch web page",
+      "readFileOutsideWorkspace": "High-risk tool call: Read file outside the workspace",
+      "listDirectoryOutsideWorkspace": "High-risk tool call: List directory outside the workspace",
+      "createFile": "High-risk tool call: create file",
+      "createPlan": "High-risk tool call: create plan",
+      "createAutomation": "High-risk tool call: Create automation",
+      "editFileExactReplacement": "High-risk tool call: edit file (exact replacement)",
+      "deleteFile": "High-risk tool call: delete file",
+      "applyPatch": "High-risk tool call: apply_patch ({{operation}})",
+      "extensionTool": "Extension tool requires confirmation",
+      "lazyBuiltInToolCall": "High-risk tool call: built-in tool_call",
+      "lazyMcpToolCall": "High-risk tool call: MCP tool_call",
+      "lazyToolCall": "High-risk tool call: tool_call"
+    },
+    "field": {
+      "terminal": "Terminal: {{name}}",
+      "command": "Command: {{command}}",
+      "path": "Path: {{path}}",
+      "contentLength": "Content length: {{chars}} chars",
+      "oldTextLength": "Old text length: {{chars}} chars",
+      "newTextLength": "New text length: {{chars}} chars",
+      "diffLines": "Diff lines: {{lines}}",
+      "name": "Name: {{name}}",
+      "title": "Title: {{title}}",
+      "schedule": "Schedule: {{schedule}}",
+      "runApproval": "Run approval: {{level}}",
+      "overviewLength": "Overview length: {{characters}} characters",
+      "url": "URL: {{url}}",
+      "extension": "Extension: {{id}}",
+      "tool": "Tool: {{tool}}",
+      "arguments": "Arguments:\n{{arguments}}",
+      "extensionArguments": "Arguments\n{{arguments}}",
+      "provider": "provider: {{provider}}",
+      "server": "Server: {{server}}",
+      "noArguments": "(none)"
+    },
+    "webFetchWarning": "The body will enter the conversation; confirm the source is trustworthy — malicious pages may attempt prompt injection.",
+    "hookFallback": "Hook requested approval for {{tool}}."
+  },
   "workspace": {
     "planNotCreated": "Plan has not been created yet.",
     "unsavedChangesIndicator": "Unsaved changes",

@@ -2,6 +2,7 @@ import type {
   AuthorizationDecision,
   JsonObject,
   PermissionMemoryTarget,
+  ToolApprovalPrompt,
   ToolCallRequest,
   ToolExecutionOutput,
 } from "../ports.js";
@@ -25,13 +26,13 @@ export type PreToolUseGateResult<ToolRequest> =
   | {
       kind: "needs-approval";
       request: ToolRequest;
-      prompt: string;
+      prompt: ToolApprovalPrompt;
       effectiveToolInput?: JsonObject;
     }
   | { kind: "denied"; error: HookDeniedError };
 
 export interface ToolApprovalGate {
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   rememberTarget: PermissionMemoryTarget | undefined;
 }
 
@@ -66,7 +67,7 @@ export function resolveApprovalGateAfterAuthorize<ToolRequest>(
     return {
       kind: "needs-approval",
       gate: {
-        prompt: authorization.prompt,
+        prompt: { kind: "tool", request: authorization.approval },
         rememberTarget: authorization.rememberTarget,
       },
     };
@@ -76,7 +77,6 @@ export function resolveApprovalGateAfterAuthorize<ToolRequest>(
 }
 
 function preToolUseGateFromHookResult<ToolRequest>(
-  call: ToolCallRequest,
   request: ToolRequest,
   permission: "allow" | "ask" | undefined,
   userMessage: string | undefined,
@@ -85,7 +85,7 @@ function preToolUseGateFromHookResult<ToolRequest>(
     return {
       kind: "needs-approval",
       request,
-      prompt: userMessage?.trim() || `Hook requested approval for ${call.name}.`,
+      prompt: { kind: "hook", message: userMessage?.trim() || undefined },
     };
   }
 
@@ -122,7 +122,6 @@ export async function runPreToolUseGate<Config, State, ToolRequest>(
     }
 
     const gate = preToolUseGateFromHookResult(
-      call,
       resolvedRequest,
       preHook.permission === "allow" || preHook.permission === "ask"
         ? preHook.permission

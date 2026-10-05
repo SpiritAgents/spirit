@@ -867,6 +867,48 @@
     "discardAndSwitchConfirmTitle": "変更を破棄して「{{branch}}」に切り替えますか？",
     "discardAndSwitchConfirmDescription": "未コミットの変更があります。破棄すると、これらのローカル変更は完全に失われます。"
   },
+  "approval": {
+    "highRisk": {
+      "shell": "高リスクなツール呼び出し：shell",
+      "fetchWebPage": "高リスクなツール呼び出し：Web ページの取得",
+      "readFileOutsideWorkspace": "高リスクなツール呼び出し：ワークスペース外のファイルの読み取り",
+      "listDirectoryOutsideWorkspace": "高リスクなツール呼び出し：ワークスペース外のディレクトリの一覧",
+      "createFile": "高リスクなツール呼び出し：ファイルの作成",
+      "createPlan": "高リスクなツール呼び出し：プランの作成",
+      "createAutomation": "高リスクなツール呼び出し：自動化の作成",
+      "editFileExactReplacement": "高リスクなツール呼び出し：ファイルの編集（完全一致による置換）",
+      "deleteFile": "高リスクなツール呼び出し：ファイルの削除",
+      "applyPatch": "高リスクなツール呼び出し：apply_patch（{{operation}}）",
+      "extensionTool": "拡張ツールの確認が必要です",
+      "lazyBuiltInToolCall": "高リスクなツール呼び出し：組み込み tool_call",
+      "lazyMcpToolCall": "高リスクなツール呼び出し：MCP tool_call",
+      "lazyToolCall": "高リスクなツール呼び出し：tool_call"
+    },
+    "field": {
+      "terminal": "ターミナル：{{name}}",
+      "command": "コマンド：{{command}}",
+      "path": "パス：{{path}}",
+      "contentLength": "コンテンツ長：{{chars}} 文字",
+      "oldTextLength": "変更前の長さ：{{chars}} 文字",
+      "newTextLength": "変更後の長さ：{{chars}} 文字",
+      "diffLines": "Diff 行数：{{lines}}",
+      "name": "名前：{{name}}",
+      "title": "タイトル：{{title}}",
+      "schedule": "スケジュール：{{schedule}}",
+      "runApproval": "実行の承認：{{level}}",
+      "overviewLength": "概要の長さ：{{characters}} 文字",
+      "url": "URL：{{url}}",
+      "extension": "拡張機能：{{id}}",
+      "tool": "ツール：{{tool}}",
+      "arguments": "引数：\n{{arguments}}",
+      "extensionArguments": "引数\n{{arguments}}",
+      "provider": "プロバイダー：{{provider}}",
+      "server": "サーバー：{{server}}",
+      "noArguments": "（なし）"
+    },
+    "webFetchWarning": "ページの本文が会話に取り込まれます。悪意のあるページがプロンプトインジェクションを試みる可能性があるため、信頼できるソースか確認してください。",
+    "hookFallback": "Hook が {{tool}} の承認を要求しました。"
+  },
   "workspace": {
     "planNotCreated": "計画はまだ作成されていません。",
     "unsavedChangesIndicator": "未保存の変更",

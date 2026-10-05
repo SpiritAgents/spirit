@@ -1,4 +1,4 @@
-import type { JsonValue } from "../ports.js";
+import type { JsonValue, ToolApprovalPrompt } from "../ports.js";
 
 export type SessionApprovalLevel = "default" | "auto-approval" | "bypass-approval";
 
@@ -7,7 +7,7 @@ export interface ToolAutoReviewInput {
   argumentsJson: string;
   inputSchema?: JsonValue;
   targetMcpToolSchema?: JsonValue;
-  hostApprovalContext: string;
+  hostApprovalContext: ToolApprovalPrompt;
 }
 
 export interface ToolAutoReviewResult {
