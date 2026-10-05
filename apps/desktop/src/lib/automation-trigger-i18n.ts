@@ -1,4 +1,4 @@
-import type { DesktopAutomationTriggerFormatLabels } from "@/lib/automation-trigger";
+import type { DesktopAutomationTriggerFormatLabels } from "./automation-trigger.js";
 
 /** Minimal signature compatible with react-i18next `t`, avoiding a direct dependency on the TFunction generics. */
 export type AutomationTriggerTranslate = (key: string, options?: Record<string, unknown>) => string;

@@ -871,6 +871,48 @@
     "discardAndSwitchConfirmTitle": "Отменить изменения и переключиться на «{{branch}}»?",
     "discardAndSwitchConfirmDescription": "Есть незакоммиченные изменения. После отмены эти локальные модификации будут безвозвратно потеряны."
   },
+  "approval": {
+    "highRisk": {
+      "shell": "Опасный вызов инструмента: shell",
+      "fetchWebPage": "Опасный вызов инструмента: загрузка веб-страницы",
+      "readFileOutsideWorkspace": "Опасный вызов инструмента: чтение файла вне рабочей области",
+      "listDirectoryOutsideWorkspace": "Опасный вызов инструмента: просмотр каталога вне рабочей области",
+      "createFile": "Опасный вызов инструмента: создание файла",
+      "createPlan": "Опасный вызов инструмента: создание плана",
+      "createAutomation": "Опасный вызов инструмента: создание автоматизации",
+      "editFileExactReplacement": "Опасный вызов инструмента: изменение файла (точная замена)",
+      "deleteFile": "Опасный вызов инструмента: удаление файла",
+      "applyPatch": "Опасный вызов инструмента: apply_patch ({{operation}})",
+      "extensionTool": "Инструмент расширения требует подтверждения",
+      "lazyBuiltInToolCall": "Опасный вызов инструмента: встроенный tool_call",
+      "lazyMcpToolCall": "Опасный вызов инструмента: MCP tool_call",
+      "lazyToolCall": "Опасный вызов инструмента: tool_call"
+    },
+    "field": {
+      "terminal": "Терминал: {{name}}",
+      "command": "Команда: {{command}}",
+      "path": "Путь: {{path}}",
+      "contentLength": "Длина содержимого: {{chars}} символов",
+      "oldTextLength": "Длина исходного текста: {{chars}} символов",
+      "newTextLength": "Длина нового текста: {{chars}} символов",
+      "diffLines": "Строк diff: {{lines}}",
+      "name": "Имя: {{name}}",
+      "title": "Название: {{title}}",
+      "schedule": "Расписание: {{schedule}}",
+      "runApproval": "Одобрение запуска: {{level}}",
+      "overviewLength": "Длина описания: {{characters}} символов",
+      "url": "URL: {{url}}",
+      "extension": "Расширение: {{id}}",
+      "tool": "Инструмент: {{tool}}",
+      "arguments": "Аргументы:\n{{arguments}}",
+      "extensionArguments": "Аргументы\n{{arguments}}",
+      "provider": "поставщик: {{provider}}",
+      "server": "Сервер: {{server}}",
+      "noArguments": "(нет)"
+    },
+    "webFetchWarning": "Содержимое страницы попадёт в разговор; убедитесь, что источник заслуживает доверия — вредоносные страницы могут пытаться внедрить промпт.",
+    "hookFallback": "Хук запросил одобрение для {{tool}}."
+  },
   "workspace": {
     "planNotCreated": "План ещё не создан.",
     "unsavedChangesIndicator": "Несохранённые изменения",

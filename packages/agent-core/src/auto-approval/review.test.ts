@@ -15,7 +15,10 @@ const sampleInput: ToolAutoReviewInput = {
   toolName: "shell",
   argumentsJson: '{"command":"echo hi","reason":"test"}',
   inputSchema: { type: "object", properties: { command: { type: "string" } } },
-  hostApprovalContext: "High-risk tool call: shell\nCommand: echo hi",
+  hostApprovalContext: {
+    kind: "tool",
+    request: { kind: "shell", command: "echo hi", terminal: "zsh" },
+  },
 };
 
 test("buildAutoApprovalReviewPrompt includes schema, context, and examples", () => {
@@ -94,10 +97,17 @@ test("applyAutoReviewToApprovalGate skips auto review when hook requested approv
     async () => ({ allow: true, reason: "would allow" }),
     [],
     { name: "grep", argumentsJson: "{}" },
-    { prompt: "hook confirmation required", rememberTarget: undefined },
-    { kind: "needs-approval", request: { name: "grep" }, prompt: "hook confirmation required" },
+    { prompt: { kind: "hook", message: "hook confirmation required" }, rememberTarget: undefined },
+    {
+      kind: "needs-approval",
+      request: { name: "grep" },
+      prompt: { kind: "hook", message: "hook confirmation required" },
+    },
   );
-  assert.deepEqual(gate, { prompt: "hook confirmation required", rememberTarget: undefined });
+  assert.deepEqual(gate, {
+    prompt: { kind: "hook", message: "hook confirmation required" },
+    rememberTarget: undefined,
+  });
 });
 
 test("prefetchAutoReviewForToolCallIfNeeded starts review and skips unchanged fingerprint", async () => {
@@ -123,7 +133,10 @@ test("prefetchAutoReviewForToolCallIfNeeded starts review and skips unchanged fi
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async () => ({ name: "shell" }),
-    authorize: async () => ({ kind: "need-approval", prompt: "review me" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
 
   assert.equal(reviewCache.has("call_1"), true);
@@ -141,7 +154,10 @@ test("prefetchAutoReviewForToolCallIfNeeded starts review and skips unchanged fi
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async () => ({ name: "shell" }),
-    authorize: async () => ({ kind: "need-approval", prompt: "review me" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
 
   const first = await reviewCache.get("call_1");
@@ -172,7 +188,10 @@ test("prefetchAutoReviewForToolCallIfNeeded invalidates cache when arguments cha
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async (_name, argumentsJson) => ({ name: "shell", argumentsJson }),
-    authorize: async () => ({ kind: "need-approval", prompt: "review me" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
 
   await reviewCache.get("call_1");
@@ -194,7 +213,10 @@ test("prefetchAutoReviewForToolCallIfNeeded invalidates cache when arguments cha
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async (_name, argumentsJson) => ({ name: "shell", argumentsJson }),
-    authorize: async () => ({ kind: "need-approval", prompt: "review me" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
 
   const second = await reviewCache.get("call_1");
@@ -227,7 +249,10 @@ test("applyAutoReviewToApprovalGate reuses streaming prefetch cache without seco
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async () => ({ name: "shell" }),
-    authorize: async () => ({ kind: "need-approval", prompt: "review me" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
 
   const gate = await applyAutoReviewToApprovalGate(
@@ -235,7 +260,13 @@ test("applyAutoReviewToApprovalGate reuses streaming prefetch cache without seco
     reviewer,
     [],
     call,
-    { prompt: "review me", rememberTarget: undefined },
+    {
+      prompt: {
+        kind: "tool",
+        request: { kind: "shell", command: "echo hi", terminal: "zsh" },
+      },
+      rememberTarget: undefined,
+    },
     { kind: "ready", request: { name: "shell" } },
     call.id,
     reviewCache,
@@ -263,7 +294,10 @@ test("applyAutoReviewToApprovalGate still blocks auto allow when hook ask after 
     toolDefinitions: [],
     reviewCache,
     requestFromFunctionCall: async () => ({ name: "shell" }),
-    authorize: async () => ({ kind: "need-approval", prompt: "host prompt" }),
+    authorize: async () => ({
+      kind: "need-approval",
+      approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    }),
   });
   await reviewCache.get(call.id);
 
@@ -272,18 +306,18 @@ test("applyAutoReviewToApprovalGate still blocks auto allow when hook ask after 
     async () => ({ allow: true, reason: "would allow" }),
     [],
     call,
-    { prompt: "hook confirmation required", rememberTarget: undefined },
+    { prompt: { kind: "hook", message: "hook confirmation required" }, rememberTarget: undefined },
     {
       kind: "needs-approval",
       request: { name: "shell" },
-      prompt: "hook confirmation required",
+      prompt: { kind: "hook", message: "hook confirmation required" },
     },
     call.id,
     reviewCache,
   );
 
   assert.deepEqual(gate, {
-    prompt: "hook confirmation required",
+    prompt: { kind: "hook", message: "hook confirmation required" },
     rememberTarget: undefined,
   });
 });

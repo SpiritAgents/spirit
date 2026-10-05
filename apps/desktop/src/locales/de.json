@@ -867,6 +867,48 @@
     "discardAndSwitchConfirmTitle": "Änderungen verwerfen und zu „{{branch}}“ wechseln?",
     "discardAndSwitchConfirmDescription": "Es gibt uncommittete Änderungen. Nach dem Verwerfen gehen diese lokalen Modifikationen endgültig verloren."
   },
+  "approval": {
+    "highRisk": {
+      "shell": "Riskanter Tool-Aufruf: shell",
+      "fetchWebPage": "Riskanter Tool-Aufruf: Webseite abrufen",
+      "readFileOutsideWorkspace": "Riskanter Tool-Aufruf: Datei außerhalb des Workspace lesen",
+      "listDirectoryOutsideWorkspace": "Riskanter Tool-Aufruf: Verzeichnis außerhalb des Workspace auflisten",
+      "createFile": "Riskanter Tool-Aufruf: Datei erstellen",
+      "createPlan": "Riskanter Tool-Aufruf: Plan erstellen",
+      "createAutomation": "Riskanter Tool-Aufruf: Automatisierung erstellen",
+      "editFileExactReplacement": "Riskanter Tool-Aufruf: Datei bearbeiten (exakte Ersetzung)",
+      "deleteFile": "Riskanter Tool-Aufruf: Datei löschen",
+      "applyPatch": "Riskanter Tool-Aufruf: apply_patch ({{operation}})",
+      "extensionTool": "Erweiterungs-Tool erfordert Bestätigung",
+      "lazyBuiltInToolCall": "Riskanter Tool-Aufruf: integrierter tool_call",
+      "lazyMcpToolCall": "Riskanter Tool-Aufruf: MCP tool_call",
+      "lazyToolCall": "Riskanter Tool-Aufruf: tool_call"
+    },
+    "field": {
+      "terminal": "Terminal: {{name}}",
+      "command": "Befehl: {{command}}",
+      "path": "Pfad: {{path}}",
+      "contentLength": "Inhaltslänge: {{chars}} Zeichen",
+      "oldTextLength": "Alte Textlänge: {{chars}} Zeichen",
+      "newTextLength": "Neue Textlänge: {{chars}} Zeichen",
+      "diffLines": "Diff-Zeilen: {{lines}}",
+      "name": "Name: {{name}}",
+      "title": "Titel: {{title}}",
+      "schedule": "Zeitplan: {{schedule}}",
+      "runApproval": "Ausführungsgenehmigung: {{level}}",
+      "overviewLength": "Übersichtslänge: {{characters}} Zeichen",
+      "url": "URL: {{url}}",
+      "extension": "Erweiterung: {{id}}",
+      "tool": "Tool: {{tool}}",
+      "arguments": "Argumente:\n{{arguments}}",
+      "extensionArguments": "Argumente\n{{arguments}}",
+      "provider": "Anbieter: {{provider}}",
+      "server": "Server: {{server}}",
+      "noArguments": "(keine)"
+    },
+    "webFetchWarning": "Der Seiteninhalt gelangt in die Konversation; bestätige, dass die Quelle vertrauenswürdig ist — bösartige Seiten könnten Prompt Injection versuchen.",
+    "hookFallback": "Hook hat eine Genehmigung für {{tool}} angefordert."
+  },
   "workspace": {
     "planNotCreated": "Plan wurde noch nicht erstellt.",
     "unsavedChangesIndicator": "Ungespeicherte Änderungen",

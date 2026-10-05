@@ -1247,7 +1247,12 @@ test("authorize asks for shell commands matched by an ask rule and offers rememb
     });
 
     assert.ok(decision.kind === "need-approval");
-    assert.match(decision.prompt, /High-risk tool call: shell/u);
+    assert.equal(decision.approval.kind, "shell");
+    if (decision.approval.kind === "shell") {
+      assert.equal(decision.approval.command, "npm test");
+      assert.equal(decision.approval.reason, "test");
+      assert.ok(decision.approval.terminal.length > 0);
+    }
     assert.deepEqual(decision.rememberTarget, { kind: "shell", command: "npm test" });
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });

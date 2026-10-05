@@ -13,6 +13,7 @@ import type {
   SubagentSessionArchiveEntry,
   SubagentSessionStatus,
   ToolAgentRoundCompletion,
+  ToolApprovalPrompt,
   ToolCallRequest,
   ToolExecutionOutput,
   ToolExecutor,
@@ -90,7 +91,7 @@ export interface EarlyStreamApprovalQueueItem<State, ToolRequest> {
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   rememberTarget?: PermissionMemoryTarget;
   autoReviewBlockReason?: string;
   toolCallId: string;
@@ -236,7 +237,7 @@ export type RuntimeEvent<ToolRequest> =
     };
 
 export interface RuntimePendingApproval<ToolRequest> {
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   request: ToolRequest;
   rememberTarget?: PermissionMemoryTarget;
   toolCallId?: string;
@@ -523,7 +524,7 @@ export interface PendingApprovalState<State, ToolRequest> {
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   rememberTarget?: PermissionMemoryTarget;
   autoReviewBlockReason?: string;
   toolCallId: string;
@@ -567,7 +568,7 @@ export interface PendingToolCallContinuation<State, ToolRequest> {
 
 export interface PendingManualApprovalState<ToolRequest> {
   request: ToolRequest;
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   rememberTarget?: PermissionMemoryTarget;
   toolName: string;
   autoReviewBlockReason?: string;

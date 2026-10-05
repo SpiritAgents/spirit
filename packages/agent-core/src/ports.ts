@@ -565,9 +565,48 @@ export type PermissionMemoryTarget =
   | { kind: "shell"; command: string }
   | { kind: "read_file"; path: string };
 
+/**
+ * Structured description of a tool call that needs approval, produced by the executor side.
+ * Display strings (localized) are built by each host; this payload must stay plain JSON so it
+ * survives host-bridge IPC.
+ */
+export type ToolApprovalRequest =
+  | { kind: "shell"; command: string; reason?: string; terminal: string }
+  | { kind: "web_fetch"; url: string }
+  | { kind: "read_path"; operation: "read_file" | "ls"; path: string }
+  | { kind: "create_file"; path: string; contentChars: number }
+  | { kind: "create_plan"; planName: string; contentChars: number }
+  | { kind: "edit_file"; path: string; oldChars: number; newChars: number }
+  | { kind: "delete_file"; path: string }
+  | { kind: "apply_patch"; operation: string; path: string; diffLines?: number }
+  | {
+      kind: "create_automation";
+      title: string;
+      trigger: JsonValue;
+      approvalLevel: string;
+      overviewChars: number;
+    }
+  | { kind: "extension_tool"; extensionId: string; toolName: string; argumentsPreview: string }
+  | {
+      kind: "lazy_tool_call";
+      provider: string;
+      server: string;
+      tool: string;
+      arguments?: JsonValue;
+    };
+
+/** Approval prompt surfaced to hosts: a structured tool request, or free-form text from a hook. */
+export type ToolApprovalPrompt =
+  | { kind: "tool"; request: ToolApprovalRequest }
+  | { kind: "hook"; message: string | undefined };
+
 export type AuthorizationDecision =
   | { kind: "allowed" }
-  | { kind: "need-approval"; prompt: string; rememberTarget?: PermissionMemoryTarget }
+  | {
+      kind: "need-approval";
+      approval: ToolApprovalRequest;
+      rememberTarget?: PermissionMemoryTarget;
+    }
   | { kind: "need-questions"; questions: AskQuestionsRequest }
   | { kind: "denied"; reason: string };
 

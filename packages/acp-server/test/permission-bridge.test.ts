@@ -68,7 +68,10 @@ function shellApproval(
   rememberTarget?: RuntimePendingApproval<JsonValue>["rememberTarget"],
 ): RuntimePendingApproval<JsonValue> {
   return {
-    prompt: "Run `npm test`?",
+    prompt: {
+      kind: "tool",
+      request: { kind: "shell", command: "npm test", reason: "Run `npm test`?", terminal: "zsh" },
+    },
     request: {},
     toolName: "shell",
     ...(rememberTarget !== undefined ? { rememberTarget } : {}),

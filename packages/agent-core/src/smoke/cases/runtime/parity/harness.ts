@@ -87,7 +87,7 @@ export class ApprovalExecutor implements ToolExecutor<ScriptedToolRequest> {
     if (request.name === "create_file") {
       return {
         kind: "need-approval",
-        prompt: "Writing files requires approval.",
+        approval: { kind: "create_file", path: "draft.md", contentChars: 12 },
       };
     }
 
@@ -1629,7 +1629,7 @@ export class StreamingApprovalExecutor implements ToolExecutor<ScriptedToolReque
     if (request.name === "create_file") {
       return {
         kind: "need-approval",
-        prompt: "Writing files requires approval.",
+        approval: { kind: "create_file", path: "draft.md", contentChars: 12 },
       };
     }
 
@@ -1840,7 +1840,7 @@ export class StreamingApprovalImageExecutor extends StreamingApprovalExecutor {
     if (request.name === "read_file") {
       return {
         kind: "need-approval",
-        prompt: "Reading images requires approval.",
+        approval: { kind: "read_path", operation: "read_file", path: "/tmp/image.png" },
       };
     }
 
@@ -2340,7 +2340,7 @@ export class HostExecutor implements ToolExecutor<ScriptedToolRequest> {
     if (request.name === "delete_file") {
       return {
         kind: "need-approval",
-        prompt: "Deleting files requires approval.",
+        approval: { kind: "delete_file", path: "old.md" },
       };
     }
 
