@@ -28,18 +28,24 @@ export function buildApprovalPromptView(
 ): ApprovalPromptView {
   if (prompt.kind === "hook") {
     return {
-      title: toolName,
+      // A hook ask that carries the host's structured request renders with the same localized
+      // title as a direct tool approval; the hook message stays the body.
+      title: prompt.request ? approvalViewTitle(prompt.request, toolName, t) : toolName,
       body: prompt.message ?? t("approval.hookFallback", { tool: toolName }),
     };
   }
   const request = prompt.request;
   return {
-    title: approvalViewTitle(request, toolName),
+    title: approvalViewTitle(request, toolName, t),
     body: approvalViewBody(request, t),
   };
 }
 
-function approvalViewTitle(request: ToolApprovalRequest, toolName: string): string {
+function approvalViewTitle(
+  request: ToolApprovalRequest,
+  toolName: string,
+  t: ApprovalPromptTranslate,
+): string {
   if (request.kind === "shell") {
     const reason = request.reason?.trim();
     if (reason) {

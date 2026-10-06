@@ -39,6 +39,7 @@ import {
   runPostToolUseSideEffects,
   runPreToolUseGate,
   type PreToolUseGateResult,
+  type ToolApprovalGateResolution,
 } from "../hooks/tool-hooks.js";
 import { toolInputFromArgumentsJson } from "../hooks/integration.js";
 import { appendToolResultMessages } from "../tool-agent.js";
@@ -704,7 +705,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
       continue;
     }
 
-    const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+    const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
     if (gateResolution?.kind === "denied") {
       const output = `[denied by permission rule] ${gateResolution.reason}`;
       commitSyntheticToolExecutionFailure(runtime, turn, request, call.id, call.name, output);
@@ -810,6 +811,24 @@ export async function processToolCalls<Config, State, ToolRequest>(
   }
 
   return runTurnLoop(runtime, currentState, pendingUserInput, turn);
+}
+
+/**
+ * Resolves the approval gate after authorization. For the corner where a hook asks on a call
+ * the host auto-allowed, the executor lazily describes the structured approval, so the hook
+ * prompt renders the same rich form as a direct tool approval. Only that corner pays for
+ * descriptor building (describeApproval may read file contents for previews).
+ */
+async function resolveDescribedApprovalGate<Config, State, ToolRequest>(
+  runtime: TurnMachineRuntime<Config, State, ToolRequest>,
+  preGate: PreToolUseGateResult<ToolRequest>,
+  authorization: AuthorizationDecision,
+): Promise<ToolApprovalGateResolution | null> {
+  const describedApproval =
+    preGate.kind === "needs-approval" && authorization.kind === "allowed"
+      ? await runtime.options.toolExecutor.describeApproval?.(preGate.request)
+      : undefined;
+  return resolveApprovalGateAfterAuthorize(preGate, authorization, describedApproval);
 }
 
 async function runPostToolUseForTurnExecution<Config, State, ToolRequest>(
@@ -1437,7 +1456,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       continue;
     }
 
-    const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+    const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
     if (gateResolution?.kind === "denied") {
       const output = `[denied by permission rule] ${gateResolution.reason}`;
       commitSyntheticToolExecutionFailure(runtime, turn, request, call.id, call.name, output);
@@ -1991,7 +2010,7 @@ async function runEarlyToolExecution<Config, State, ToolRequest>(
     return { kind: "deferred", reason: "authorization-error", preGate };
   }
 
-  const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+  const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
   if (gateResolution?.kind === "denied") {
     // Defer to the formal path, which re-authorizes and commits the permission-rule denial.
     return { kind: "deferred", reason: "authorization-error", preGate };

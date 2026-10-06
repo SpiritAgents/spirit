@@ -566,6 +566,35 @@ export type PermissionMemoryTarget =
   | { kind: "read_file"; path: string };
 
 /**
+ * Before/after file content pair attached to a file-change approval request, so hosts can render
+ * a diff preview inside the approval form. Produced by the executor at authorization time and
+ * kept as plain JSON to survive host-bridge IPC. Absent when the preview could not be built (an
+ * unreadable target, an over-sized file, …); hosts then fall back to the plain text prompt.
+ */
+export interface ToolApprovalFileDiffPreview {
+  /** Display path: the tool path for workspace files, `plans/{name}.md` for create_plan. */
+  path: string;
+  /** Content before the change; "" when the file is being created. */
+  original: string;
+  /** Content after the change; "" when the file is being deleted. */
+  modified: string;
+  /** Operation semantics; hosts use it for presentation (delete frames start collapsed). */
+  operation: "create" | "update" | "delete";
+}
+
+/**
+ * Text content preview attached to an out-of-workspace read approval, so the approval form can
+ * show what the agent would receive instead of just the path. Plain JSON for host-bridge IPC;
+ * absent when the target is binary, over-sized, or unreadable at authorization time.
+ */
+export interface ToolApprovalFileContentPreview {
+  /** Display path: the canonical absolute path of the read target. */
+  path: string;
+  /** UTF-8 text content for read_file; newline-joined entry names for ls. */
+  content: string;
+}
+
+/**
  * Structured description of a tool call that needs approval, produced by the executor side.
  * Display strings (localized) are built by each host; this payload must stay plain JSON so it
  * survives host-bridge IPC.
@@ -573,17 +602,52 @@ export type PermissionMemoryTarget =
 export type ToolApprovalRequest =
   | { kind: "shell"; command: string; reason?: string; terminal: string }
   | { kind: "web_fetch"; url: string }
-  | { kind: "read_path"; operation: "read_file" | "ls"; path: string }
-  | { kind: "create_file"; path: string; contentChars: number }
-  | { kind: "create_plan"; planName: string; contentChars: number }
-  | { kind: "edit_file"; path: string; oldChars: number; newChars: number }
-  | { kind: "delete_file"; path: string }
-  | { kind: "apply_patch"; operation: string; path: string; diffLines?: number }
+  | {
+      kind: "read_path";
+      operation: "read_file" | "ls";
+      /** Display path: workspace-relative when inside the workspace, else global absolute. */
+      path: string;
+      /** False when the target sits inside the workspace (ask-rule / hook-gated reads). */
+      workspaceExternal?: boolean;
+      fileContentPreview?: ToolApprovalFileContentPreview;
+    }
+  | {
+      kind: "create_file";
+      path: string;
+      contentChars: number;
+      fileDiffPreview?: ToolApprovalFileDiffPreview;
+    }
+  | {
+      kind: "create_plan";
+      planName: string;
+      contentChars: number;
+      fileDiffPreview?: ToolApprovalFileDiffPreview;
+    }
+  | {
+      kind: "edit_file";
+      path: string;
+      oldChars: number;
+      newChars: number;
+      fileDiffPreview?: ToolApprovalFileDiffPreview;
+    }
+  | {
+      kind: "delete_file";
+      path: string;
+      fileDiffPreview?: ToolApprovalFileDiffPreview;
+    }
+  | {
+      kind: "apply_patch";
+      operation: string;
+      path: string;
+      diffLines?: number;
+      fileDiffPreview?: ToolApprovalFileDiffPreview;
+    }
   | {
       kind: "create_automation";
       title: string;
       trigger: JsonValue;
       approvalLevel: string;
+      overview: string;
       overviewChars: number;
     }
   | { kind: "extension_tool"; extensionId: string; toolName: string; argumentsPreview: string }
@@ -598,7 +662,16 @@ export type ToolApprovalRequest =
 /** Approval prompt surfaced to hosts: a structured tool request, or free-form text from a hook. */
 export type ToolApprovalPrompt =
   | { kind: "tool"; request: ToolApprovalRequest }
-  | { kind: "hook"; message: string | undefined };
+  | {
+      kind: "hook";
+      message: string | undefined;
+      /**
+       * The host authorization's structured request when the hook ask fires alongside a
+       * need-approval outcome, so hosts can render the same command / file previews as a
+       * direct tool approval. Absent when the hook asks on an otherwise auto-allowed call.
+       */
+      request?: ToolApprovalRequest;
+    };
 
 export type AuthorizationDecision =
   | { kind: "allowed" }
@@ -637,6 +710,14 @@ export interface ToolExecutor<
   parseCommand(message: string): Promise<ToolRequest>;
   requestFromFunctionCall(name: string, argumentsJson: string): Promise<ToolRequest>;
   authorize(request: ToolRequest): Promise<AuthorizationDecision>;
+  /**
+   * Best-effort structured approval descriptor for a call the host would auto-allow; the turn
+   * machine uses it to enrich hook-gated approvals (hook ask + host allow) with the same rich
+   * form a real approval would render. Lazy by design: only invoked for that corner, so
+   * auto-allowed calls never pay for descriptor building. Returns undefined when the tool has
+   * no descriptor. Pure: no state mutation, no permission side effects.
+   */
+  describeApproval?(request: ToolRequest): Promise<ToolApprovalRequest | undefined>;
   rememberApproval(target: PermissionMemoryTarget, scope: "session" | "config"): Promise<void>;
   execute(request: ToolRequest): Promise<ToolExecutionOutput>;
   attachRequestMetadata?(request: ToolRequest, metadata: ToolRequestExecutionMetadata): ToolRequest;

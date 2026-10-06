@@ -868,14 +868,10 @@ export class DesktopRuntimeEventOrchestrator {
             detailLines: [
               buildApprovalPromptView(approval.prompt, approval.toolName, i18n.t).body,
               ...(approval.autoReviewBlockReason?.trim()
-                ? [
-                    i18n.t("app.autoReviewBlockReason", {
-                      reason: approval.autoReviewBlockReason.trim(),
-                    }),
-                  ]
+                ? [approval.autoReviewBlockReason.trim()]
                 : []),
             ],
-            argsExcerpt: truncateJson(approval.request),
+            argsExcerpt: JSON.stringify(approval.request, null, 2),
             ...(fileToolDiffArgumentsJson ? { fileToolDiffArgumentsJson } : {}),
           },
           approvalSummary,

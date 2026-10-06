@@ -39,6 +39,7 @@ test("buildApprovalPromptText renders the automation schedule and approval level
         title: "Nightly sweep",
         trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
         approvalLevel: "auto-approval",
+        overview: "Check CI status and summarize failures.",
         overviewChars: 88,
       },
     },

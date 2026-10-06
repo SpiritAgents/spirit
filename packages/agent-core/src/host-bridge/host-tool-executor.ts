@@ -6,6 +6,7 @@ import type {
   JsonValue,
   McpStatusSnapshot,
   PermissionMemoryTarget,
+  ToolApprovalRequest,
   ToolExecutionOutput,
   ToolRequestExecutionMetadata,
   ToolExecutor,
@@ -71,6 +72,8 @@ export interface LocalHostToolService {
   parseCommand(message: string): Promise<JsonValue>;
   requestFromFunctionCall(name: string, argumentsJson: string): Promise<JsonValue>;
   authorize(request: JsonValue): Promise<AuthorizationDecision>;
+  /** See ToolExecutor.describeApproval; absent on services that cannot describe approvals. */
+  describeApproval?(request: JsonValue): Promise<ToolApprovalRequest | undefined>;
   rememberApproval(target: PermissionMemoryTarget, scope: "session" | "config"): Promise<void>;
   execute(request: JsonValue): Promise<ToolExecutionOutput | string>;
   saveGeneratedImage?(request: GeneratedImageSaveRequest): Promise<GeneratedImageFile>;
@@ -311,6 +314,30 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     return this.peer.call<AuthorizationDecision>("host.authorize", {
       request: this.serializeRequest(request),
     });
+  }
+
+  /**
+   * Only local built-in tools carry approval descriptors; MCP / lazy-gateway / LSP requests have
+   * no rich approval form, and peer (remote bridge) mode has no describe RPC — those corners keep
+   * the hook message-only form.
+   */
+  async describeApproval(request: JsonValue): Promise<ToolApprovalRequest | undefined> {
+    if (this.mcp.isFetchMcpResourceToolRequest(request)) {
+      return undefined;
+    }
+    if (this.mcp.isLazyToolGatewayToolRequest(request)) {
+      return undefined;
+    }
+    if (this.mcp.isToolRequest(request)) {
+      return undefined;
+    }
+    if (isLspDiagnosticsToolRequest(request)) {
+      return undefined;
+    }
+    if (!this.localHostService) {
+      return undefined;
+    }
+    return this.localHostService.describeApproval?.(request);
   }
 
   async rememberApproval(

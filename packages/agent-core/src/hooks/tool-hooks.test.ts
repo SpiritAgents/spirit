@@ -73,10 +73,112 @@ test("resolveApprovalGateAfterAuthorize keeps hook ask prompt when both hook and
   assert.deepEqual(gate, {
     kind: "needs-approval",
     gate: {
-      prompt: { kind: "hook", message: "hook says ask" },
+      // The hook keeps its message, and the host's structured request rides along so hosts
+      // can render the same rich approval form (command block / file previews).
+      prompt: {
+        kind: "hook",
+        message: "hook says ask",
+        request: { kind: "shell", command: "grep x", terminal: "zsh" },
+      },
       rememberTarget: { kind: "shell", command: "grep x" },
     },
   });
+});
+
+test("resolveApprovalGateAfterAuthorize attaches a described request when the host allows", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "read_file" },
+      prompt: { kind: "hook", message: "hook wants a look" },
+    },
+    { kind: "allowed" },
+    {
+      kind: "read_path",
+      operation: "read_file",
+      path: "src/index.ts",
+      fileContentPreview: { path: "src/index.ts", content: "export {};\n" },
+    },
+  );
+  assert.deepEqual(gate, {
+    kind: "needs-approval",
+    gate: {
+      prompt: {
+        kind: "hook",
+        message: "hook wants a look",
+        request: {
+          kind: "read_path",
+          operation: "read_file",
+          path: "src/index.ts",
+          fileContentPreview: { path: "src/index.ts", content: "export {};\n" },
+        },
+      },
+      rememberTarget: undefined,
+    },
+  });
+});
+
+test("resolveApprovalGateAfterAuthorize prefers the authorization request over the described one", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "delete_file" },
+      prompt: { kind: "hook", message: "confirm" },
+    },
+    {
+      kind: "need-approval",
+      approval: { kind: "delete_file", path: "tmp/a.log" },
+    },
+    { kind: "delete_file", path: "tmp/stale.log" },
+  );
+  assert.deepEqual(gate, {
+    kind: "needs-approval",
+    gate: {
+      prompt: {
+        kind: "hook",
+        message: "confirm",
+        request: { kind: "delete_file", path: "tmp/a.log" },
+      },
+      rememberTarget: undefined,
+    },
+  });
+});
+
+test("resolveApprovalGateAfterAuthorize attaches a file preview request to the hook prompt", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "delete_file" },
+      prompt: { kind: "hook", message: "confirm the cleanup" },
+    },
+    {
+      kind: "need-approval",
+      approval: {
+        kind: "delete_file",
+        path: "tmp/scratch.log",
+        fileDiffPreview: {
+          path: "tmp/scratch.log",
+          original: "seed\n",
+          modified: "",
+          operation: "delete",
+        },
+      },
+    },
+  );
+  if (!gate || gate.kind !== "needs-approval") {
+    throw new Error("expected a needs-approval gate");
+  }
+  assert.equal(gate.gate.prompt.kind, "hook");
+  if (gate.gate.prompt.kind !== "hook") {
+    return;
+  }
+  assert.equal(gate.gate.prompt.request?.kind, "delete_file");
+  assert.equal(
+    gate.gate.prompt.request.kind === "delete_file"
+      ? gate.gate.prompt.request.fileDiffPreview?.operation
+      : undefined,
+    "delete",
+  );
 });
 
 test("resolveApprovalGateAfterAuthorize denies on allowlist deny even when hook allows", () => {
