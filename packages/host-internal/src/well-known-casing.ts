@@ -17,6 +17,7 @@ export const WELL_KNOWN_CASING_OVERRIDES: Readonly<Record<string, string>> = {
   cli: "CLI",
   deepseek: "DeepSeek",
   devops: "DevOps",
+  github: "GitHub",
   glm: "GLM",
   gpt: "GPT",
   mcp: "MCP",
