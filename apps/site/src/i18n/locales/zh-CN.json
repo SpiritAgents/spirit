@@ -157,7 +157,7 @@
       "runningToolDetails": ["正在打开 Hero 实现。", "正在检查桌面窗口外壳。"],
       "runningToolOutput": "发现了单一 Hero 区块、复用的桌面外壳，以及静态的对话空状态。",
       "emptyTitle": "开始点什么。",
-      "composerPlaceholder": "输入消息…",
+      "composerPlaceholder": "输入消息",
       "agentDemo": {
         "demoUserPrompt": "规划一次落地页 Hero 改版。先生成示意图，再写出实现计划。",
         "demoThinkingText": "正在查看当前 Hero 布局与文案。\n确认示意图应放在计划的哪个位置。\n准备先生成图片，再起草计划文档。",
