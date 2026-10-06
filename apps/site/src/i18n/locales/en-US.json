@@ -160,7 +160,7 @@
       ],
       "runningToolOutput": "Found a single Hero section, a reused Desktop shell, and a static conversation empty state.",
       "emptyTitle": "Start something.",
-      "composerPlaceholder": "Type a message…",
+      "composerPlaceholder": "Type a message",
       "agentDemo": {
         "demoUserPrompt": "Plan a landing hero refresh. Generate a mockup image first, then write the implementation plan.",
         "demoThinkingText": "Reviewing the current hero layout and messaging.\nChecking where a visual mockup would help the plan.\nPreparing to generate an image, then draft the plan document.",
