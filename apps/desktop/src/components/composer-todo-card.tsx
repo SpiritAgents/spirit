@@ -17,6 +17,45 @@ type ComposerTodoCardProps = {
   useTranslucency?: boolean;
 };
 
+/**
+ * The bare todo rows (status icon + title, completed struck through) shared by the composer card
+ * and the todo_write/todo_list tool detail: no header row, no chrome — the caller frames it.
+ */
+export function TodoItemsList({
+  items,
+  className,
+}: {
+  items: ReadonlyArray<{ title: string; status: "pending" | "in_progress" | "completed" }>;
+  className?: string;
+}) {
+  return (
+    <ul className={cn("space-y-0.5", className)}>
+      {items.map((item, index) => (
+        // Frozen per-render list (snapshot or post-write state): index keys never reorder.
+        <li key={index} className="flex items-start gap-2 text-sm leading-snug">
+          <StatusIcon
+            status={
+              item.status === "completed"
+                ? "completed"
+                : item.status === "in_progress"
+                  ? "in-progress"
+                  : "pending"
+            }
+          />
+          <span
+            className={cn(
+              "min-w-0 flex-1",
+              item.status === "completed" && "text-muted-foreground line-through",
+            )}
+          >
+            {item.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function storageKey(sessionKey: string): string {
   return `spirit-todo-expanded:${sessionKey}`;
 }
@@ -124,29 +163,7 @@ export function ComposerTodoCard({
         )}
       >
         <div className="overflow-hidden">
-          <ul className="space-y-0.5 px-3 pb-2.5 pt-0">
-            {todos.items.map((item) => (
-              <li key={item.id} className="flex items-start gap-2 text-sm leading-snug">
-                <StatusIcon
-                  status={
-                    item.status === "completed"
-                      ? "completed"
-                      : item.status === "in_progress"
-                        ? "in-progress"
-                        : "pending"
-                  }
-                />
-                <span
-                  className={cn(
-                    "min-w-0 flex-1",
-                    item.status === "completed" && "text-muted-foreground line-through",
-                  )}
-                >
-                  {item.title}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <TodoItemsList items={todos.items} className="px-3 pb-2.5 pt-0" />
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   computeTodoWriteDelta,
   formatTodoWriteDeltaDetail,
   parseTodoItemsFromPayload,
+  resolveTodoToolSnapshotTodos,
   resolveTodoWriteBeforeSnapshot,
   todoWriteSummaryDetail,
 } from "../../dist-electron/src/lib/todo-tool-display.js";
@@ -172,4 +173,35 @@ test("resolveTodoWriteBeforeSnapshot prefers existing non-empty snapshot", () =>
     resolveTodoWriteBeforeSnapshot(undefined, [{ title: "Live", status: "pending" }]),
     [{ title: "Live", status: "pending" }],
   );
+});
+
+test("resolveTodoToolSnapshotTodos reads the call's own after-state payload", () => {
+  const after = {
+    todos: [
+      { title: "Wire frames", status: "completed" },
+      { title: "Audit surfaces", status: "in_progress" },
+    ],
+  };
+  // Completed card: the execution output wins.
+  assert.deepEqual(
+    resolveTodoToolSnapshotTodos({
+      outputExcerpt: JSON.stringify(after),
+      argsExcerpt: JSON.stringify({ todos: [{ title: "Stale", status: "pending" }] }),
+    }),
+    after.todos,
+  );
+  // Preview card: streaming arguments carry the in-flight state.
+  assert.deepEqual(
+    resolveTodoToolSnapshotTodos({ streamingArgumentsJson: JSON.stringify(after) }),
+    [
+      { title: "Wire frames", status: "completed" },
+      { title: "Audit surfaces", status: "in_progress" },
+    ],
+  );
+  // Partial streaming JSON does not parse yet: no list, the raw detail view stays.
+  assert.equal(
+    resolveTodoToolSnapshotTodos({ streamingArgumentsJson: '{"todos":[{"title":"Wire' }),
+    undefined,
+  );
+  assert.equal(resolveTodoToolSnapshotTodos({}), undefined);
 });

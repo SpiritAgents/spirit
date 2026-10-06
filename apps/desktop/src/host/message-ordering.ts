@@ -1,4 +1,4 @@
-import { formatTriggerLabel, normalizeAutomationTrigger } from "@spiritagent/host-internal";
+import { formatTriggerLabel } from "@spiritagent/host-internal";
 
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -30,6 +30,7 @@ import {
 } from "../lib/read-file-skill-display.js";
 import { readFileToolHeadlineDetail, readFileVerbKey } from "../lib/read-file-tool-display.js";
 import { grepToolHeadlineDetail } from "../lib/grep-tool-display.js";
+import { formatLazyToolCallDetail } from "../lib/lazy-tool-call-display.js";
 import { phaseToVerbContext } from "../lib/tool-verb-context.js";
 import {
   diagnosticsPathsHeadlineDetail,
@@ -271,12 +272,9 @@ export function toolCallSummaryCopyForRequest(
     }
     case "create_automation": {
       const title = typeof record.title === "string" ? record.title.trim() : "";
-      const trigger = normalizeAutomationTrigger(record.trigger);
-      const triggerLabel = trigger ? formatTriggerLabel(trigger) : "";
-      const detail = [title, triggerLabel].filter((part) => part.length > 0).join(" · ");
       return {
-        headline: i18n.t("automations.create", tOpts),
-        headlineDetail: truncateSummaryDetail(detail || "automation"),
+        headline: i18n.t("tool.create", tOpts),
+        headlineDetail: truncateSummaryDetail(title || "automation"),
       };
     }
     case "apply_patch": {
@@ -338,11 +336,11 @@ export function toolCallSummaryCopyForRequest(
       const provider = typeof record.provider === "string" ? record.provider.trim() : "";
       const server = typeof record.server === "string" ? record.server.trim() : "";
       const tool = typeof record.tool === "string" ? record.tool.trim() : "";
-      const detail = [provider, server, tool].filter((part) => part.length > 0).join(" / ");
+      const detail = formatLazyToolCallDetail(provider, server, tool);
       return {
         headline:
           toolName === "tool_call"
-            ? i18n.t("tool.lazyToolCall", tOpts)
+            ? i18n.t("tool.lazyCall", tOpts)
             : i18n.t("tool.lazyToolDescribe", tOpts),
         ...(detail ? { headlineDetail: truncateSummaryDetail(detail) } : {}),
       };
@@ -496,7 +494,7 @@ function lazyBuiltInCreateAutomationSummaryCopy(
     return undefined;
   }
 
-  const headline = i18n.t("automations.create", tOpts);
+  const headline = i18n.t("tool.create", tOpts);
   const parts = builtInCreateAutomationToolCallSummaryParts({
     gatewayJson: gatewayJson || undefined,
     requestRecord: record,
@@ -1253,7 +1251,17 @@ export function toolCallSummaryForStreamingPreview(
     return {
       headline: hasBlockingToolAheadOfSameTurnPreview(messages, toolCallId)
         ? i18n.t("tool.queued", { toolName })
-        : i18n.t(toolName === "tool_call" ? "tool.lazyToolCall" : "tool.lazyToolDescribe", tOpts),
+        : i18n.t(toolName === "tool_call" ? "tool.lazyCall" : "tool.lazyToolDescribe", tOpts),
+    };
+  }
+
+  // apply_patch without parseable args yet (e.g. the model streams the diff first): the Patch
+  // verb stands in for the generic "calling" line.
+  if (toolName === "apply_patch") {
+    return {
+      headline: hasBlockingToolAheadOfSameTurnPreview(messages, toolCallId)
+        ? i18n.t("tool.queued", { toolName })
+        : i18n.t("tool.applyPatch", { context: "running" }),
     };
   }
 

@@ -4,20 +4,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { DiffCodeScrollView } from "@/components/diff-code-scroll-view";
 import { EditFileLineDeltaBadge } from "@/components/edit-file-line-delta-badge";
 import { FileToolLspDiagnosticsBadge } from "@/components/file-tool-lsp-diagnostics-badge";
 import {
   FileToolLspDiagnosticsHover,
   FileToolLspDiagnosticsHoverTrigger,
 } from "@/components/file-tool-lsp-diagnostics-hover";
-import { ShellToolCommandHighlight } from "@/components/shell-tool-command-highlight";
+import {
+  JsonToolArgumentsHighlight,
+  ShellToolCommandHighlight,
+} from "@/components/shell-tool-command-highlight";
 import { ShellToolXtermOutput } from "@/components/shell-tool-xterm-output";
-import { ToolCallDiffView } from "@/components/tool-call-diff-view";
 import { useToolCallDiffHost } from "@/components/tool-call-diff-host-context";
 import { useCollapsibleChildMount } from "@/hooks/use-collapsible-child-mount";
+import { TodoItemsList } from "@/components/composer-todo-card";
 import { Button } from "@/components/ui/button";
 import { AnimatedCollapse, AnimatedCollapseContent } from "@/components/ui/animated-collapse";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { buildToolCallDiffLines } from "@/lib/diff-display-lines";
 import { resolveToolLineDeltaForDisplay } from "@/lib/edit-file-line-delta";
 import {
   type FileToolDiffSource,
@@ -34,6 +39,10 @@ import {
   toolHasExpandableContent,
   type ShellToolSummaryParts,
 } from "@/lib/tool-call-display";
+import { resolveLazyMcpToolCallInputJson } from "@/lib/lazy-mcp-tool-display";
+import { AskQuestionsAnswerGroups } from "@/components/ask-questions-answer-groups";
+import { resolveAskQuestionsAnswerGroups } from "@/lib/ask-questions-display";
+import { resolveTodoToolSnapshotTodos } from "@/lib/todo-tool-display";
 import { parseShellToolResult, resolveShellToolExpandedCommand } from "@/lib/shell-tool-display";
 import {
   clickableToolCardTriggerClass,
@@ -267,14 +276,108 @@ function ResponsesBuiltInToolExpandedBody({
 }
 
 function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
+  const { t } = useTranslation();
+  const mcpInputJson = useMemo(
+    () => resolveLazyMcpToolCallInputJson(tool.argsExcerpt),
+    [tool.argsExcerpt],
+  );
+  const todoSnapshotTodos = useMemo(
+    () =>
+      tool.toolName === "todo_write" || tool.toolName === "todo_list"
+        ? resolveTodoToolSnapshotTodos(tool)
+        : undefined,
+    [tool.toolName, tool.outputExcerpt, tool.streamingArgumentsJson, tool.argsExcerpt],
+  );
+  const askQuestionsGroups = useMemo(
+    () => (tool.toolName === "ask_questions" ? resolveAskQuestionsAnswerGroups(tool) : undefined),
+    [tool.toolName, tool.argsExcerpt, tool.outputExcerpt],
+  );
   const detailLines = genericExpandableDetailLines(tool);
   const showArgsExcerpt =
     tool.phase === "preview" && Boolean(tool.argsExcerpt?.trim()) && !tool.outputExcerpt?.trim();
 
+  // ask_questions: Q/A groups resolved to readable titles and option labels; answers join with
+  // the locale's official list conjunction (Intl.ListFormat → "、"/", "/…).
+  if (askQuestionsGroups) {
+    return (
+      <div className="space-y-2">
+        <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2">
+          <AskQuestionsAnswerGroups groups={askQuestionsGroups} />
+        </div>
+        {detailLines.length > 0 ? (
+          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+            {detailLines.map((line, index) => (
+              <li key={`${index}:${line}`}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    );
+  }
+
+  // todo_write / todo_list: the list as of this call (never the live store), rendered with the
+  // same rows as the composer todo card; unparseable (still-streaming) payloads keep the raw view.
+  if (todoSnapshotTodos && todoSnapshotTodos.length > 0) {
+    return (
+      <div className="space-y-2">
+        <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2">
+          <TodoItemsList items={todoSnapshotTodos} />
+        </div>
+        {detailLines.length > 0 ? (
+          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+            {detailLines.map((line, index) => (
+              <li key={`${index}:${line}`}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    );
+  }
+
+  // MCP tool_call: the model's arguments get their own Shiki-highlighted Input card above the
+  // Output (mirroring the Shell Input/Output reading order); both keep the muted detail chrome.
+  if (mcpInputJson !== undefined) {
+    return (
+      <div className="space-y-2">
+        <div className="space-y-1">
+          <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">
+            {t("tool.input")}
+          </p>
+          <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2">
+            <JsonToolArgumentsHighlight argumentsJson={mcpInputJson} />
+          </div>
+        </div>
+        {tool.outputExcerpt ? (
+          <div className="space-y-1">
+            <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">
+              {t("tool.output")}
+            </p>
+            <pre
+              data-spirit-selectable="text"
+              className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+            >
+              {tool.outputExcerpt}
+            </pre>
+          </div>
+        ) : null}
+        {detailLines.length > 0 ? (
+          <ul className="list-disc space-y-0.5 pl-3.5 text-xs leading-relaxed text-muted-foreground">
+            {detailLines.map((line, index) => (
+              <li key={`${index}:${line}`}>{line}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       {tool.outputExcerpt ? (
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+        <pre
+          data-spirit-selectable="text"
+          className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+        >
           {tool.outputExcerpt}
         </pre>
       ) : null}
@@ -286,10 +389,50 @@ function GenericToolExpandedBody({ tool }: { tool: ToolBlockSnapshot }) {
         </ul>
       ) : null}
       {showArgsExcerpt ? (
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+        <pre
+          data-spirit-selectable="text"
+          className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+        >
           {tool.argsExcerpt}
         </pre>
       ) : null}
+    </div>
+  );
+}
+
+function FileToolDiffScrollView({
+  diff,
+  followTail,
+}: {
+  diff: FileToolDiffSource;
+  followTail: boolean;
+}) {
+  const lines = useMemo(
+    () => buildToolCallDiffLines(diff.original, diff.modified),
+    [diff.original, diff.modified],
+  );
+
+  if (lines.length === 0) {
+    return (
+      <pre
+        data-spirit-selectable="text"
+        className="overflow-x-auto whitespace-pre rounded-md border border-border/20 bg-background p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+      >
+        {diff.modified || diff.original}
+      </pre>
+    );
+  }
+
+  // Same chrome as the other tool-detail panels (Shell detail): muted translucent fill, no
+  // fixed height, no reserved scrollbar gutter.
+  return (
+    <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15">
+      <DiffCodeScrollView
+        lines={lines}
+        languageId={diff.languageId}
+        followTail={followTail}
+        relativePath={diff.relativePath}
+      />
     </div>
   );
 }
@@ -392,13 +535,7 @@ function FileToolDiffExpandedBody({ tool, open }: { tool: ToolBlockSnapshot; ope
 
   if (displayDiff) {
     return (
-      <ToolCallDiffView
-        relativePath={displayDiff.relativePath}
-        languageId={displayDiff.languageId}
-        original={displayDiff.original}
-        modified={displayDiff.modified}
-        followTail={open && tool.phase === "preview"}
-      />
+      <FileToolDiffScrollView diff={displayDiff} followTail={open && tool.phase === "preview"} />
     );
   }
 
@@ -485,7 +622,10 @@ function ShellToolExpandedBody({
         </ul>
       ) : null}
       {showArgsExcerpt ? (
-        <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground">
+        <pre
+          data-spirit-selectable="text"
+          className="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground"
+        >
           {tool.argsExcerpt}
         </pre>
       ) : null}

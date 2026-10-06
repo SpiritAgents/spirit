@@ -277,18 +277,6 @@ export function resolveCreateAutomationSummaryDetail(input: {
   };
 }
 
-export function formatCreateAutomationHeadlineDetail(
-  detail: CreateAutomationSummaryDetail | undefined,
-): string | undefined {
-  if (!detail) {
-    return undefined;
-  }
-  const parts = [detail.title, detail.triggerLabel].filter(
-    (part): part is string => typeof part === "string" && part.length > 0,
-  );
-  return parts.length > 0 ? parts.join(" · ") : undefined;
-}
-
 export function defaultDesktopAutomationTriggerFormatLabels(): DesktopAutomationTriggerFormatLabels {
   return {
     hourly: "Hourly",
@@ -307,7 +295,7 @@ export function builtInCreateAutomationToolCallSummaryParts(input: {
   requestRecord?: Record<string, unknown>;
   headline: string;
   formatTriggerLabel?: (trigger: DesktopAutomationTrigger) => string;
-}): { headline: string; detail?: string } | undefined {
+}): { headline: string; detail?: string; resultDetail?: string } | undefined {
   const detail = resolveCreateAutomationSummaryDetail({
     gatewayJson: input.gatewayJson,
     requestRecord: input.requestRecord,
@@ -322,10 +310,11 @@ export function builtInCreateAutomationToolCallSummaryParts(input: {
   if (!detail) {
     return undefined;
   }
+  // The automation name rides the second level and the schedule the dimmer third level, like the
+  // shell card's reason/command hierarchy — no " · " glued onto the name.
   return {
     headline: input.headline,
-    ...(formatCreateAutomationHeadlineDetail(detail)
-      ? { detail: formatCreateAutomationHeadlineDetail(detail) }
-      : {}),
+    ...(detail.title ? { detail: detail.title } : {}),
+    ...(detail.triggerLabel ? { resultDetail: detail.triggerLabel } : {}),
   };
 }

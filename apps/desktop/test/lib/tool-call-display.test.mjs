@@ -550,8 +550,9 @@ test("getToolCallSummaryParts: built-in create_automation preview uses streaming
   };
 
   assert.deepEqual(getToolCallSummaryParts(previewTool), {
-    headline: toolHeadline("automations.create", "preview"),
-    detail: `AI news daily · ${i18n.t("automations.schedule.daily")} 08:00`,
+    headline: toolHeadline("tool.create", "preview"),
+    detail: "AI news daily",
+    resultDetail: `${i18n.t("automations.schedule.daily")} 08:00`,
   });
 });
 
@@ -559,8 +560,8 @@ test("getToolCallSummaryParts: built-in create_automation uses automation headli
   const callTool = {
     toolName: "tool_call",
     phase: "running",
-    headline: "创建自动化",
-    headlineDetail: "CI check · Weekly Mon 09:00",
+    headline: "已创建",
+    headlineDetail: "CI check",
     argsExcerpt: JSON.stringify({
       kind: "lazyToolGateway",
       name: "tool_call",
@@ -579,15 +580,17 @@ test("getToolCallSummaryParts: built-in create_automation uses automation headli
   };
 
   assert.deepEqual(getToolCallSummaryParts(callTool), {
-    headline: toolHeadline("automations.create", "running"),
-    detail: "CI check · Weekly Mon 09:00",
+    headline: toolHeadline("tool.create", "running"),
+    detail: "CI check",
+    resultDetail: "每周一 09:00",
   });
 
   await i18n.changeLanguage("en");
   try {
     assert.deepEqual(getToolCallSummaryParts(callTool), {
-      headline: toolHeadline("automations.create", "running"),
-      detail: "CI check · Weekly Mon 09:00",
+      headline: toolHeadline("tool.create", "running"),
+      detail: "CI check",
+      resultDetail: "Weekly Monday 09:00",
     });
   } finally {
     await i18n.changeLanguage("zh-CN");
@@ -615,7 +618,7 @@ test("getToolCallSummaryParts: lazy gateway tools re-translate on language switc
     detail: "mcp / microsoft-learn / microsoft_docs_search",
   });
   assert.deepEqual(getToolCallSummaryParts(callTool), {
-    headline: toolHeadline("tool.lazyToolCall", "running"),
+    headline: toolHeadline("tool.lazyCall", "running"),
     detail: "mcp / microsoft-learn / microsoft_docs_search",
   });
 
@@ -626,7 +629,7 @@ test("getToolCallSummaryParts: lazy gateway tools re-translate on language switc
       detail: "mcp / microsoft-learn / microsoft_docs_search",
     });
     assert.deepEqual(getToolCallSummaryParts(callTool), {
-      headline: toolHeadline("tool.lazyToolCall", "running"),
+      headline: toolHeadline("tool.lazyCall", "running"),
       detail: "mcp / microsoft-learn / microsoft_docs_search",
     });
   } finally {
