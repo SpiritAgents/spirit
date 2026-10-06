@@ -2,12 +2,14 @@ import { product } from "@spiritagent/product";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 import { NodeHostToolService, type HostToolExecutionOutput } from "./tools.js";
+import { APPROVAL_FILE_PREVIEW_MAX_BYTES } from "./approval-file-preview.js";
 import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config-v2.js";
 import { configFilePath } from "./credentials/spirit-config.js";
 import { loadPermissionConfig } from "./permissions/index.js";
@@ -1721,6 +1723,100 @@ function assertHostToolExecutionOutput(
 ): asserts output is HostToolExecutionOutput {
   assert.notEqual(typeof output, "string");
 }
+
+test("apply_patch create attaches the exact before/after pair to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-create-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: { type: "create_file", path: "new.txt", diff: "+one\n+two\n*** End Patch" },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "new.txt",
+      before: "",
+      after: "one\ntwo",
+    });
+    assert.equal(await readFile(join(workspaceRoot, "new.txt"), "utf8"), "one\ntwo");
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch update attaches the real before/after pair to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-update-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await writeFile(join(workspaceRoot, "scratch.log"), "alpha\nbeta\n", "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: {
+        type: "update_file",
+        path: "scratch.log",
+        diff: "@@ \n alpha\n-beta\n+BETA\n*** End Patch",
+      },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "scratch.log",
+      before: "alpha\nbeta\n",
+      after: "alpha\nBETA\n",
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch delete attaches the doomed content to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-delete-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await writeFile(join(workspaceRoot, "scratch.log"), "doomed\ncontent\n", "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: { type: "delete_file", path: "scratch.log" },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "scratch.log",
+      before: "doomed\ncontent\n",
+      after: "",
+    });
+    assert.equal(existsSync(join(workspaceRoot, "scratch.log")), false);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch drops the fileChangeDiff payload when a side exceeds the budget", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-oversize-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    const huge = `x\n${"x".repeat(APPROVAL_FILE_PREVIEW_MAX_BYTES)}`;
+    await writeFile(join(workspaceRoot, "huge.log"), huge, "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: {
+        type: "update_file",
+        path: "huge.log",
+        diff: "@@ \n-x\n+y\n*** End Patch",
+      },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.equal(output.hostUi?.fileChangeDiff, undefined);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
 
 /**
  * mkdtemp + realpath: authorize realpath()s read targets, and on macOS

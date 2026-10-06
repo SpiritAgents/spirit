@@ -1025,6 +1025,9 @@ export class DesktopRuntimeEventOrchestrator {
             ...(execution.hostUi?.lspWriteDiagnostics
               ? { lspWriteDiagnostics: execution.hostUi.lspWriteDiagnostics }
               : {}),
+            ...(execution.hostUi?.fileChangeDiff
+              ? { fileChangeDiff: execution.hostUi.fileChangeDiff }
+              : {}),
             ...(todosBeforeWrite !== undefined
               ? { todoWriteBeforeTodos: [...todosBeforeWrite] }
               : {}),

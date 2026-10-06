@@ -6,12 +6,13 @@ import {
   resolveFileToolDiffSource,
 } from "../../src/lib/file-tool-diff-source.ts";
 
-test("FILE_DIFF_TOOL_NAMES includes four file/plan tools", () => {
-  assert.equal(FILE_DIFF_TOOL_NAMES.size, 4);
+test("FILE_DIFF_TOOL_NAMES includes the file/plan tools and apply_patch", () => {
+  assert.equal(FILE_DIFF_TOOL_NAMES.size, 5);
   assert.ok(FILE_DIFF_TOOL_NAMES.has("create_file"));
   assert.ok(FILE_DIFF_TOOL_NAMES.has("create_plan"));
   assert.ok(FILE_DIFF_TOOL_NAMES.has("edit_file"));
   assert.ok(FILE_DIFF_TOOL_NAMES.has("delete_file"));
+  assert.ok(FILE_DIFF_TOOL_NAMES.has("apply_patch"));
 });
 
 test("resolveFileToolDiffSource returns undefined when collapsed", () => {
@@ -88,6 +89,119 @@ test("resolveFileToolDiffSource maps create_plan name to plans path", () => {
   const result = resolveFileToolDiffSource(tool, { open: true });
   assert.equal(result.relativePath, "plans/my-plan.md");
   assert.equal(result.modified, "# Plan");
+});
+
+test("resolveFileToolDiffSource reconstructs an apply_patch update diff from its args", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Edited",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({
+      operation: {
+        type: "update_file",
+        path: "m.ts",
+        diff: "@@ \n const a = 1;\n-const b = 2;\n+const b = 3;\n*** End Patch",
+      },
+    }),
+  };
+  const result = resolveFileToolDiffSource(tool, { open: true });
+  assert.deepEqual(result, {
+    relativePath: "m.ts",
+    languageId: "typescript",
+    original: "const a = 1;\nconst b = 2;",
+    modified: "const a = 1;\nconst b = 3;",
+  });
+});
+
+test("resolveFileToolDiffSource renders an apply_patch create as all-new content", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Created",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({
+      operation: { type: "create_file", path: "new.md", diff: "+# Hi\n+there\n*** End Patch" },
+    }),
+  };
+  const result = resolveFileToolDiffSource(tool, { open: true });
+  assert.deepEqual(result, {
+    relativePath: "new.md",
+    languageId: "markdown",
+    original: "",
+    modified: "# Hi\nthere",
+  });
+});
+
+test("resolveFileToolDiffSource renders an apply_patch delete from the frozen baseline", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Deleted",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({ operation: { type: "delete_file", path: "gone.txt" } }),
+    deleteFileBaselineText: "doomed\ncontent",
+  };
+  assert.deepEqual(resolveFileToolDiffSource(tool, { open: true }), {
+    relativePath: "gone.txt",
+    languageId: "plaintext",
+    original: "doomed\ncontent",
+    modified: "",
+  });
+});
+
+test("resolveFileToolDiffSource renders an apply_patch delete even without a baseline", () => {
+  // No preview ran (e.g. old persisted timeline): same shape as a delete_file card.
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Deleted",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({ operation: { type: "delete_file", path: "gone.txt" } }),
+    outputExcerpt: "[write]\naction: apply_patch\noperation: delete_file\npath: gone.txt",
+  };
+  assert.deepEqual(resolveFileToolDiffSource(tool, { open: true }), {
+    relativePath: "gone.txt",
+    languageId: "plaintext",
+    original: "",
+    modified: "",
+  });
+});
+
+test("resolveFileToolDiffSource prefers the executor fileChangeDiff pair over the patch snippet", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Edited",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({
+      operation: { type: "update_file", path: "m.ts", diff: "@@ \n-a\n+b\n*** End Patch" },
+    }),
+    fileChangeDiff: { path: "m.ts", before: "x\na\ny", after: "x\nb\ny" },
+  };
+  assert.deepEqual(resolveFileToolDiffSource(tool, { open: true }), {
+    relativePath: "m.ts",
+    languageId: "typescript",
+    original: "x\na\ny",
+    modified: "x\nb\ny",
+  });
+});
+
+test("resolveFileToolDiffSource renders an executor delete diff for apply_patch", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Deleted",
+    detailLines: [],
+    argsExcerpt: JSON.stringify({ operation: { type: "delete_file", path: "gone.txt" } }),
+    fileChangeDiff: { path: "gone.txt", before: "doomed\ncontent", after: "" },
+  };
+  assert.deepEqual(resolveFileToolDiffSource(tool, { open: true }), {
+    relativePath: "gone.txt",
+    languageId: "plaintext",
+    original: "doomed\ncontent",
+    modified: "",
+  });
 });
 
 test("resolveFileToolDiffSource uses planBaselineText for create_plan overwrite", () => {

@@ -203,3 +203,41 @@ test("appendLspDiagnosticsAfterWriteIfNeeded leaves output unchanged on disabled
   );
   assert.equal(result.summaryText, "ok");
 });
+
+test("appendLspDiagnosticsAfterWriteIfNeeded merges into an existing hostUi payload", async () => {
+  const lsp = writeAppendLspMock({
+    enabled: true,
+    workspaceRoot: "D:\\Spirit",
+    getDiagnosticsForPath: async () => ({
+      relativePath: "packages/agent-core/src/a.py",
+      diagnostics: [
+        {
+          severity: 1,
+          message: "Type mismatch",
+          range: { start: { line: 0, character: 4 }, end: { line: 0, character: 8 } },
+          source: "pyright",
+          code: "reportAssignmentType",
+        },
+      ],
+      formatted: "ignored",
+    }),
+  });
+
+  const fileChangeDiff = { path: "packages/agent-core/src/a.py", before: "a", after: "b" };
+  const output = {
+    ...createToolExecutionTextOutput("[write]\naction: apply_patch"),
+    hostUi: { fileChangeDiff },
+  };
+  const result = await appendLspDiagnosticsAfterWriteIfNeeded(
+    lsp,
+    {
+      name: "apply_patch",
+      operation: { type: "update_file", path: "packages/agent-core/src/a.py" },
+    },
+    output,
+  );
+
+  // The executor's fileChangeDiff survives; the diagnostics badge joins alongside.
+  assert.deepEqual(result.hostUi?.fileChangeDiff, fileChangeDiff);
+  assert.equal(result.hostUi?.lspWriteDiagnostics?.relativePath, "packages/agent-core/src/a.py");
+});

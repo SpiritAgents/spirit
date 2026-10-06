@@ -10,6 +10,7 @@ import type {
 } from "@spiritagent/host-internal/config-v2";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { LspWriteDiagnosticsUi, PermissionMemoryTarget } from "@spiritagent/agent-core";
+import type { ToolExecutionFileChangeDiff } from "@spiritagent/agent-core";
 
 import type { DesktopAgentMode } from "./lib/agent-mode.js";
 import type { DesktopAutomationTrigger } from "./lib/automation-trigger.js";
@@ -1739,6 +1740,8 @@ export interface ToolBlockSnapshot {
   streamingArgumentsJson?: string;
   /** Completed file-type tool: the full request JSON (for Diff; separate from the UI's argsExcerpt truncation). */
   fileToolDiffArgumentsJson?: string;
+  /** apply_patch: the exact before/after pair computed by the executor atomically with the write. */
+  fileChangeDiff?: ToolExecutionFileChangeDiff;
   /** todo_write: the session TODOs before execution, for incremental detail recomputation and language switching. */
   todoWriteBeforeTodos?: Array<{ title: string; status: DesktopTodoStatus }>;
   detailLines: string[];

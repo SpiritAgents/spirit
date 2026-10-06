@@ -159,6 +159,7 @@ export interface HostToolModelCompatibilityProfile {
 export interface HostToolExecutionOutput {
   content: HostToolContentPart[];
   summaryText: string;
+  hostUi?: ToolExecutionHostUi;
 }
 
 export interface HostGeneratedImageSaveRequest {
@@ -351,6 +352,26 @@ export interface HostMcpStatusSnapshot {
 
 function createHostToolTextOutput(text: string): HostToolExecutionOutput {
   return createHostToolOutput(text);
+}
+
+/**
+ * Attaches the exact before/after pair of an apply_patch write to the tool output, so hosts can
+ * render a real diff on the completed tool card. Over-sized sides drop the payload; the card
+ * then falls back to reconstructing the diff from the patch text.
+ */
+function hostOutputWithFileChangeDiff(
+  summaryText: string,
+  fileChangeDiff: ToolExecutionFileChangeDiff,
+): HostToolExecutionOutput {
+  const output = createHostToolTextOutput(summaryText);
+  const encoder = new TextEncoder();
+  if (
+    encoder.encode(fileChangeDiff.before).length > APPROVAL_FILE_PREVIEW_MAX_BYTES ||
+    encoder.encode(fileChangeDiff.after).length > APPROVAL_FILE_PREVIEW_MAX_BYTES
+  ) {
+    return output;
+  }
+  return { ...output, hostUi: { fileChangeDiff } };
 }
 
 function createHostToolOutput(
@@ -2346,7 +2367,7 @@ export class NodeHostToolService<
 
   private async executeApplyPatch(
     request: Extract<HostToolRequest<QuestionSpec>, { name: typeof APPLY_PATCH_HOST_TOOL_NAME }>,
-  ): Promise<string> {
+  ): Promise<HostToolExecutionOutput> {
     const { operation } = request;
     switch (operation.type) {
       case "create_file": {
@@ -2354,10 +2375,15 @@ export class NodeHostToolService<
           throw new Error("apply_patch create_file requires a non-empty diff");
         }
         const content = applyDiff("", operation.diff, "create");
-        return this.executeCreateFile({
+        const summary = await this.executeCreateFile({
           name: "create_file",
           path: operation.path,
           content,
+        });
+        return hostOutputWithFileChangeDiff(summary, {
+          path: operation.path,
+          before: "",
+          after: content,
         });
       }
       case "update_file": {
@@ -2384,13 +2410,28 @@ export class NodeHostToolService<
           oldChars: [...source].length,
           newChars: [...updated].length,
         });
-        return `[write]\naction: apply_patch\noperation: update_file\npath: ${target}\nold_chars: ${[...source].length}\nnew_chars: ${[...updated].length}`;
+        return hostOutputWithFileChangeDiff(
+          `[write]\naction: apply_patch\noperation: update_file\npath: ${target}\nold_chars: ${[...source].length}\nnew_chars: ${[...updated].length}`,
+          { path: operation.path, before: source, after: updated },
+        );
       }
-      case "delete_file":
-        return this.executeDeleteFile({
+      case "delete_file": {
+        // Read the doomed content before unlink so the tool card can render a real delete diff.
+        const target = this.resolveWorkspaceWriteTarget(operation.path);
+        const doomed = await readFile(target, "utf8").catch(() => undefined);
+        const summary = await this.executeDeleteFile({
           name: "delete_file",
           path: operation.path,
         });
+        if (doomed === undefined) {
+          return createHostToolTextOutput(summary);
+        }
+        return hostOutputWithFileChangeDiff(summary, {
+          path: operation.path,
+          before: doomed,
+          after: "",
+        });
+      }
       default:
         throw new Error(
           `Unsupported apply_patch operation: ${(operation as ApplyPatchOperation).type}`,
