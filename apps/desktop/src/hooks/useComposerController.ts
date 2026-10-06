@@ -107,6 +107,7 @@ export type UseComposerControllerOptions = {
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
   approvalPreviewDemoActive: boolean;
+  toolCardPreviewDemoActive: boolean;
   subagentViewActive: boolean;
   pendingApproval: DesktopSnapshot["conversation"]["pendingToolApproval"];
   pendingQuestions: ReturnType<typeof useDesktopRuntime>["pendingQuestions"];
@@ -130,6 +131,7 @@ export function useComposerController({
   compactionDemoActive,
   longConversationListDemoActive,
   approvalPreviewDemoActive,
+  toolCardPreviewDemoActive,
   subagentViewActive,
   pendingApproval,
   pendingQuestions,
@@ -351,6 +353,7 @@ export function useComposerController({
     !compactionDemoActive &&
     !longConversationListDemoActive &&
     !approvalPreviewDemoActive &&
+    !toolCardPreviewDemoActive &&
     !subagentViewActive &&
     !activeSessionReadOnly &&
     !pendingApproval &&
@@ -377,6 +380,7 @@ export function useComposerController({
     !compactionDemoActive &&
     !longConversationListDemoActive &&
     !approvalPreviewDemoActive &&
+    !toolCardPreviewDemoActive &&
     !subagentViewActive &&
     composerHasPayload &&
     !activeSessionReadOnly &&

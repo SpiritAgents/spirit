@@ -31,6 +31,7 @@ import { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import { useFontSmoothing } from "@/hooks/useFontSmoothing";
 import { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
 import { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
+import { useToolCardPreviewDemo } from "@/hooks/useToolCardPreviewDemo";
 import { useComposerController } from "@/hooks/useComposerController";
 import { ConversationSessionFocusComposerBridge } from "@/components/conversation/conversation-session-focus-composer-bridge";
 import { ConversationTypingFocusRedirectBridge } from "@/components/conversation/conversation-typing-focus-redirect-bridge";
@@ -114,6 +115,7 @@ export default function App() {
   const compactionDemo = useCompactionUiDemo();
   const longConversationListDemo = useLongConversationListDemo();
   const approvalPreviewDemo = useApprovalPreviewDemo();
+  const toolCardPreviewDemo = useToolCardPreviewDemo();
   const subagentViewer = useSubagentViewer(runtime.setSubagentViewerTarget);
   const subagentViewActive = subagentViewer.active && Boolean(snapshot?.subagentViewer);
   const sessionMessages = snapshot?.conversation.messages ?? [];
@@ -154,6 +156,7 @@ export default function App() {
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
     approvalPreviewDemoActive: approvalPreviewDemo.active,
+    toolCardPreviewDemoActive: toolCardPreviewDemo.active,
     newChatBusy,
     t,
     composerAutomationApiRef,
@@ -182,6 +185,7 @@ export default function App() {
     compactionDemo,
     longConversationListDemo,
     approvalPreviewDemo,
+    toolCardPreviewDemo,
     t,
     language: i18n.language,
     conversationAbortShortcutTargetRef,
@@ -235,6 +239,7 @@ export default function App() {
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
     approvalPreviewDemoActive: approvalPreviewDemo.active,
+    toolCardPreviewDemoActive: toolCardPreviewDemo.active,
     subagentViewActive,
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
@@ -621,20 +626,30 @@ export default function App() {
                             onStartCompactionUiDemo={() => {
                               longConversationListDemo.stop();
                               approvalPreviewDemo.stop();
+                              toolCardPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               compactionDemo.start();
                             }}
                             onStartLongConversationListDemo={() => {
                               compactionDemo.stop();
                               approvalPreviewDemo.stop();
+                              toolCardPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               longConversationListDemo.start();
                             }}
                             onStartApprovalPreviewDemo={() => {
                               compactionDemo.stop();
                               longConversationListDemo.stop();
+                              toolCardPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               approvalPreviewDemo.start();
+                            }}
+                            onStartToolCardPreviewDemo={() => {
+                              compactionDemo.stop();
+                              longConversationListDemo.stop();
+                              approvalPreviewDemo.stop();
+                              surfaceNav.setActiveSurface("conversation");
+                              toolCardPreviewDemo.start();
                             }}
                             onDeleteSkill={runtime.deleteSkill}
                             onDeleteRule={runtime.deleteRule}
@@ -830,6 +845,7 @@ export default function App() {
                                     compactionDemo={compactionDemo}
                                     longConversationListDemo={longConversationListDemo}
                                     approvalPreviewDemo={approvalPreviewDemo}
+                                    toolCardPreviewDemo={toolCardPreviewDemo}
                                     newChatBusy={newChatBusy}
                                     onNewChat={handleNewChat}
                                     deleteSessionBusy={sessionMutationBusy}
@@ -846,6 +862,7 @@ export default function App() {
                                     onCompactionDemoStop={compactionDemo.stop}
                                     onLongConversationListDemoStop={longConversationListDemo.stop}
                                     onApprovalPreviewDemoStop={approvalPreviewDemo.stop}
+                                    onToolCardPreviewDemoStop={toolCardPreviewDemo.stop}
                                     t={t}
                                     language={i18n.language}
                                   />

@@ -42,8 +42,10 @@ import type {
   ConversationMessageSnapshot,
   DesktopSnapshot,
   MessageRewindDraftState,
+  ToolBlockSnapshot,
 } from "@/types";
 import type { ApprovalPreviewDemoEntry } from "@/lib/approval-preview-demo";
+import { ToolCardPreviewDemoGallery } from "@/components/conversation/tool-card-preview-demo-gallery";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { useConversationSessionScrollTail } from "@/hooks/useConversationSessionScrollTail";
 import { useConversationStreamScrollTail } from "@/hooks/useConversationStreamScrollTail";
@@ -201,6 +203,9 @@ export type ConversationViewProps = {
   approvalPreviewDemoActive: boolean;
   onApprovalPreviewDemoStop: () => void;
   approvalPreviewDemoApprovals: readonly ApprovalPreviewDemoEntry[];
+  toolCardPreviewDemoActive: boolean;
+  onToolCardPreviewDemoStop: () => void;
+  toolCardPreviewDemoTools: readonly ToolBlockSnapshot[];
   rewindDraft: MessageRewindDraftState | null;
   onRewindDraftClear: () => void;
   conversationScrollBedPaddingPx: number;
@@ -271,6 +276,9 @@ export function ConversationView({
   approvalPreviewDemoActive,
   onApprovalPreviewDemoStop,
   approvalPreviewDemoApprovals,
+  toolCardPreviewDemoActive,
+  onToolCardPreviewDemoStop,
+  toolCardPreviewDemoTools,
   rewindDraft,
   onRewindDraftClear,
   conversationScrollBedPaddingPx,
@@ -574,14 +582,19 @@ export function ConversationView({
             data-spirit-surface="conversation-stage"
             className="relative flex min-h-0 min-w-0 flex-1 flex-col text-sm"
           >
-            {compactionDemoActive || longConversationListDemoActive || approvalPreviewDemoActive ? (
+            {compactionDemoActive ||
+            longConversationListDemoActive ||
+            approvalPreviewDemoActive ||
+            toolCardPreviewDemoActive ? (
               <div
                 data-spirit-surface={
-                  approvalPreviewDemoActive
-                    ? "approval-preview-demo-banner"
-                    : longConversationListDemoActive
-                      ? "long-list-demo-banner"
-                      : "compaction-ui-demo-banner"
+                  toolCardPreviewDemoActive
+                    ? "tool-card-preview-demo-banner"
+                    : approvalPreviewDemoActive
+                      ? "approval-preview-demo-banner"
+                      : longConversationListDemoActive
+                        ? "long-list-demo-banner"
+                        : "compaction-ui-demo-banner"
                 }
                 className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}
               >
@@ -593,7 +606,17 @@ export function ConversationView({
                   )}
                 >
                   <p className="text-xs text-muted-foreground">
-                    {approvalPreviewDemoActive ? (
+                    {toolCardPreviewDemoActive ? (
+                      <>
+                        <span className="font-normal text-foreground">
+                          {t("app.toolCardPreviewDemo")}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {" "}
+                          · {t("app.toolCardPreviewDemoDescription")}
+                        </span>
+                      </>
+                    ) : approvalPreviewDemoActive ? (
                       <>
                         <span className="font-normal text-foreground">
                           {t("app.approvalPreviewDemo")}
@@ -651,11 +674,13 @@ export function ConversationView({
                       variant="outline"
                       size="sm"
                       onClick={
-                        approvalPreviewDemoActive
-                          ? onApprovalPreviewDemoStop
-                          : longConversationListDemoActive
-                            ? onLongConversationListDemoStop
-                            : onCompactionDemoStop
+                        toolCardPreviewDemoActive
+                          ? onToolCardPreviewDemoStop
+                          : approvalPreviewDemoActive
+                            ? onApprovalPreviewDemoStop
+                            : longConversationListDemoActive
+                              ? onLongConversationListDemoStop
+                              : onCompactionDemoStop
                       }
                     >
                       {t("app.exitDemo")}
@@ -707,7 +732,9 @@ export function ConversationView({
                     ...(listSettling ? { visibility: "hidden" as const } : undefined),
                   }}
                 >
-                  {approvalPreviewDemoActive ? (
+                  {toolCardPreviewDemoActive ? (
+                    <ToolCardPreviewDemoGallery tools={toolCardPreviewDemoTools} />
+                  ) : approvalPreviewDemoActive ? (
                     <ApprovalPreviewDemoGallery
                       approvals={approvalPreviewDemoApprovals}
                       useTranslucency={useTranslucency}
@@ -774,7 +801,10 @@ export function ConversationView({
                 }
               />
             </MessageQuoteActionsProvider>
-            {showComposerDock && !navPlaceholderActive && !approvalPreviewDemoActive ? (
+            {showComposerDock &&
+            !navPlaceholderActive &&
+            !approvalPreviewDemoActive &&
+            !toolCardPreviewDemoActive ? (
               <ComposerDock
                 ref={composerDock.composerDockRef}
                 isEmptySession={isEmptySession}

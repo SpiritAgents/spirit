@@ -11,9 +11,13 @@ export function DeveloperSettingsPanel({
   onStartCompactionUiDemo,
   onStartLongConversationListDemo,
   onStartApprovalPreviewDemo,
+  onStartToolCardPreviewDemo,
 }: Pick<
   SettingsViewProps,
-  "onStartCompactionUiDemo" | "onStartLongConversationListDemo" | "onStartApprovalPreviewDemo"
+  | "onStartCompactionUiDemo"
+  | "onStartLongConversationListDemo"
+  | "onStartApprovalPreviewDemo"
+  | "onStartToolCardPreviewDemo"
 >) {
   const { t } = useTranslation();
   return (
@@ -80,14 +84,20 @@ export function DeveloperSettingsPanel({
       </div>
       <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <p className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}></p>
-          <p className="text-xs leading-5 text-muted-foreground"></p>
+          <p className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>
+            {t("settings.toolCardPreviewDemoTitle")}
+          </p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("settings.toolCardPreviewDemoDescription")}
+          </p>
         </div>
         <Button
           type="button"
           variant="outline"
           size="sm"
           className="shrink-0 self-start sm:self-center"
+          disabled={!onStartToolCardPreviewDemo}
+          onClick={() => onStartToolCardPreviewDemo?.()}
         >
           {t("settings.demoInConversation")}
         </Button>
