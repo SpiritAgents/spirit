@@ -251,6 +251,7 @@ export async function* responsesEventStreamToRuntimeEvents(
             toolCalls,
             part.rawValue,
             nextToolIndex,
+            shouldAggregateGatewaySdkToolCalls(config),
           );
           if (rawUpdates.nextToolIndex !== nextToolIndex) {
             nextToolIndex = rawUpdates.nextToolIndex;
@@ -454,6 +455,7 @@ function accumulateOpenResponsesToolCallProgressFromRawChunk(
   toolCalls: Map<number, AggregatedStreamingToolCall>,
   rawValue: unknown,
   nextToolIndex: number,
+  skipFunctionCallArgumentDeltas: boolean,
 ): { events: LlmStreamEvent[]; nextToolIndex: number } {
   if (!isJsonObject(rawValue as JsonValue) || typeof (rawValue as JsonObject).type !== "string") {
     return { events: [], nextToolIndex };
@@ -525,7 +527,13 @@ function accumulateOpenResponsesToolCallProgressFromRawChunk(
     typeof chunk.item_id === "string"
   ) {
     const existing = findToolCallByItemId(toolCalls, chunk.item_id);
-    if (existing && typeof chunk.delta === "string") {
+    // Vercel AI Gateway's fullStream carries each wire event twice: once as a raw Open Responses
+    // SSE chunk and once as a parsed SDK tool-input-delta part. Both paths share one accumulator,
+    // so appending here too would land every delta twice ("{\"{\"operationoperation…"), corrupting
+    // the incremental arguments JSON and defeating the streaming-preview readiness signature. The
+    // SDK parts are authoritative for gateway function calls; the raw output_item.added/done
+    // branches stay active because they only create the entry and replace arguments wholesale.
+    if (!skipFunctionCallArgumentDeltas && existing && typeof chunk.delta === "string") {
       existing.functionArguments += chunk.delta;
       maybeEmitPreview(events, existing);
     }

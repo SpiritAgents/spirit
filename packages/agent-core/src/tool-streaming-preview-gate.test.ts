@@ -39,6 +39,46 @@ test("apply_patch early preview when operation.path is streamed", () => {
   });
 });
 
+test("apply_patch early preview readies on type or diff content before path arrives", () => {
+  // The observed failure mode: the model streams the 300-line diff first and `path` last.
+  const diffFirst = '{"operation":{"type":"update_file","diff":"@@\\n-a\\n+b\\n';
+  assert.equal(hostToolArgumentsReadyForEarlyStreamingPreview("apply_patch", diffFirst), true);
+
+  // A completed type alone also readies the preview (the header switches to the typed verb).
+  assert.equal(
+    hostToolArgumentsReadyForEarlyStreamingPreview(
+      "apply_patch",
+      '{"operation":{"type":"create_file"',
+    ),
+    true,
+  );
+
+  // Nothing parseable yet: not ready.
+  assert.equal(
+    hostToolArgumentsReadyForEarlyStreamingPreview("apply_patch", '{"operation":{"type":"upd'),
+    false,
+  );
+  assert.equal(hostToolArgumentsReadyForEarlyStreamingPreview("apply_patch", ""), false);
+});
+
+test("resolveStreamingToolPreviewEmit re-emits apply_patch when type, path or diff counts change", () => {
+  const withPath = '{"operation":{"type":"update_file","path":"a.ts","diff":"@@ \\n-a\\n+b';
+  const first = resolveStreamingToolPreviewEmit("apply_patch", withPath, {
+    readyPreviewEmitted: false,
+  });
+  assert.equal(first.emit, true);
+
+  // Same parse state and same +/- counts: no re-emit even as the args string grows.
+  const sameCounts = `${withPath}\\n context line grows`;
+  const second = resolveStreamingToolPreviewEmit("apply_patch", sameCounts, first.nextState);
+  assert.equal(second.emit, false);
+
+  // A new added line flips the +/- counts: re-emit so the badge/diff update live.
+  const countBump = `${withPath}\\n+c`;
+  const third = resolveStreamingToolPreviewEmit("apply_patch", countBump, second.nextState);
+  assert.equal(third.emit, true);
+});
+
 test("edit_file early preview when only path is streamed", () => {
   const partial = '{"path":"README.md","old_text":"';
   assert.equal(hostToolArgumentsReadyForEarlyStreamingPreview("edit_file", partial), true);
