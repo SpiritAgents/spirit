@@ -13,11 +13,14 @@ import { useTranslation } from "react-i18next";
 import { ComposerDock } from "@/components/conversation/composer-dock";
 import { BranchCheckoutDialog } from "@/components/branch-checkout-dialog";
 import { ConversationList } from "@/components/conversation/conversation-list";
+import { ApprovalPreviewDemoGallery } from "@/components/conversation/approval-preview-demo-gallery";
+import { MessageQuoteActionsProvider } from "@/components/message-quote-actions-context";
 import { ConversationNavPlaceholder } from "@/components/conversation/conversation-nav-placeholder";
 import { ConversationMessageSelectionMenu } from "@/components/conversation/conversation-message-selection-menu";
 import { DesktopLayoutChromeBar } from "@/components/layout/desktop-layout-chrome-bar";
 import { sessionGitTooltipItemFromChromeSession } from "@/components/session-list-git-tooltip";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
 import type { DesktopAgentMode } from "@/lib/agent-mode";
@@ -40,6 +43,7 @@ import type {
   DesktopSnapshot,
   MessageRewindDraftState,
 } from "@/types";
+import type { ApprovalPreviewDemoEntry } from "@/lib/approval-preview-demo";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import { useConversationSessionScrollTail } from "@/hooks/useConversationSessionScrollTail";
 import { useConversationStreamScrollTail } from "@/hooks/useConversationStreamScrollTail";
@@ -194,6 +198,9 @@ export type ConversationViewProps = {
     messageCount: number;
     toolCount: number;
   } | null;
+  approvalPreviewDemoActive: boolean;
+  onApprovalPreviewDemoStop: () => void;
+  approvalPreviewDemoApprovals: readonly ApprovalPreviewDemoEntry[];
   rewindDraft: MessageRewindDraftState | null;
   onRewindDraftClear: () => void;
   conversationScrollBedPaddingPx: number;
@@ -229,6 +236,8 @@ export type ConversationViewProps = {
   onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   paneId?: string;
   onPaneFocus?: () => void;
+  /** Pane-scoped key handling (Enter → Allow for the pane's pending approval). */
+  onPaneKeyDown?: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onPaneDragStart?: (paneId: string) => void;
   onPaneDragEnter?: (
     paneId: string,
@@ -259,6 +268,9 @@ export function ConversationView({
   longConversationListDemoActive,
   onLongConversationListDemoStop,
   longConversationListDemoStats,
+  approvalPreviewDemoActive,
+  onApprovalPreviewDemoStop,
+  approvalPreviewDemoApprovals,
   rewindDraft,
   onRewindDraftClear,
   conversationScrollBedPaddingPx,
@@ -293,6 +305,7 @@ export function ConversationView({
   onTogglePinSession,
   paneId,
   onPaneFocus,
+  onPaneKeyDown,
   onPaneDragStart,
   onPaneDragEnter,
   onPaneDragLeave,
@@ -327,7 +340,7 @@ export function ConversationView({
       : "session";
   const navPlaceholderActive = paneContentStatus === "pending-placeholder";
   const conversationMessagesVisible =
-    (!isEmptySession || subagentViewActive) && !navPlaceholderActive;
+    (!isEmptySession || subagentViewActive) && !navPlaceholderActive && !approvalPreviewDemoActive;
   // translucency: ScrollArea stays full height; the shape mask clips to the input/Changes/TODO
   // outline (the top rounded-corner gap is preserved).
   // In Rewind mode the mask is disabled: mask-image would make the viewport form a new stacking
@@ -367,6 +380,7 @@ export function ConversationView({
     behavior: ScrollBehavior;
     nonce: number;
   } | null>(null);
+  const [approvalDemoShowReasonNotes, setApprovalDemoShowReasonNotes] = useState(true);
   const quoteSessionPathForScroll =
     composerDock.paneSessionPath ?? snapshot?.activeSession?.filePath ?? "";
   useEffect(() => {
@@ -454,12 +468,16 @@ export function ConversationView({
         data-spirit-surface="conversation-shell"
         {...(paneId ? { "data-pane-drop-host": paneId } : {})}
         className={cn(
-          "relative flex min-h-0 min-w-0 flex-1 flex-col min-w-0",
+          "relative flex min-h-0 min-w-0 flex-1 flex-col min-w-0 outline-none",
           desktopTranslucencyTintInnerClass(useTranslucency),
         )}
         onPointerDown={() => {
           onPaneFocus?.();
         }}
+        onKeyDown={onPaneKeyDown}
+        // Clicking blank pane areas focuses the shell (nearest focusable ancestor), so the
+        // pane-level Enter → Allow shortcut works without forcing focus into a control.
+        tabIndex={-1}
         onDragLeave={clearDropTargetIfLeavingHost}
       >
         <DesktopLayoutChromeBar
@@ -556,12 +574,14 @@ export function ConversationView({
             data-spirit-surface="conversation-stage"
             className="relative flex min-h-0 min-w-0 flex-1 flex-col text-sm"
           >
-            {compactionDemoActive || longConversationListDemoActive ? (
+            {compactionDemoActive || longConversationListDemoActive || approvalPreviewDemoActive ? (
               <div
                 data-spirit-surface={
-                  longConversationListDemoActive
-                    ? "long-list-demo-banner"
-                    : "compaction-ui-demo-banner"
+                  approvalPreviewDemoActive
+                    ? "approval-preview-demo-banner"
+                    : longConversationListDemoActive
+                      ? "long-list-demo-banner"
+                      : "compaction-ui-demo-banner"
                 }
                 className={cn("shrink-0", desktopTranslucencyTintInnerClass(useTranslucency))}
               >
@@ -573,7 +593,17 @@ export function ConversationView({
                   )}
                 >
                   <p className="text-xs text-muted-foreground">
-                    {longConversationListDemoActive ? (
+                    {approvalPreviewDemoActive ? (
+                      <>
+                        <span className="font-normal text-foreground">
+                          {t("app.approvalPreviewDemo")}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {" "}
+                          · {t("app.approvalPreviewDemoDescription")}
+                        </span>
+                      </>
+                    ) : longConversationListDemoActive ? (
                       <>
                         <span className="font-normal text-foreground">
                           {t("app.longConversationListDemo")}
@@ -598,18 +628,39 @@ export function ConversationView({
                       </>
                     )}
                   </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={
-                      longConversationListDemoActive
-                        ? onLongConversationListDemoStop
-                        : onCompactionDemoStop
-                    }
-                  >
-                    {t("app.exitDemo")}
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    {approvalPreviewDemoActive ? (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="approval-preview-demo-show-reasons"
+                          checked={approvalDemoShowReasonNotes}
+                          onCheckedChange={(value) =>
+                            setApprovalDemoShowReasonNotes(value === true)
+                          }
+                        />
+                        <label
+                          htmlFor="approval-preview-demo-show-reasons"
+                          className="cursor-pointer text-xs text-muted-foreground"
+                        >
+                          {t("app.approvalPreviewDemoShowReasons")}
+                        </label>
+                      </div>
+                    ) : null}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={
+                        approvalPreviewDemoActive
+                          ? onApprovalPreviewDemoStop
+                          : longConversationListDemoActive
+                            ? onLongConversationListDemoStop
+                            : onCompactionDemoStop
+                      }
+                    >
+                      {t("app.exitDemo")}
+                    </Button>
+                  </div>
                 </div>
               </div>
             ) : null}
@@ -621,90 +672,109 @@ export function ConversationView({
                 onClick={onRewindDraftClear}
               />
             ) : null}
-            <ScrollArea
-              ref={conversationScrollAreaRef}
-              data-spirit-surface="conversation-scroll"
-              className={cn("min-h-0 flex-1", desktopTranslucencyTintInnerClass(useTranslucency))}
-              type="hover"
-              scrollHideDelay={450}
-              viewportStyle={conversationScrollViewportStyle}
+            <MessageQuoteActionsProvider
+              value={{
+                ...(quoteSessionPath ? { quoteSessionPath } : {}),
+                ...(quoteOrigin ? { quoteOrigin } : {}),
+                onMessageQuoteAddToChat: composerDock.onMessageQuoteAddToChat,
+                ...(showSideChat && paneId
+                  ? { onMessageQuoteAddToSideChat: handleMessageQuoteAddToSideChat }
+                  : {}),
+              }}
             >
-              {/* min-h-full: short content still fills the viewport; pb ≥ measured dock height + breathing room, grows in sync when the approval card pops up */}
-              <div
-                ref={conversationScrollBodyRef}
-                data-spirit-surface="conversation-scroll-body"
-                className={cn(
-                  "min-h-full w-full",
-                  desktopTranslucencyTintInnerClass(useTranslucency),
-                )}
-                style={{
-                  ...(conversationMessagesVisible
-                    ? { paddingBottom: conversationScrollBedPaddingPx }
-                    : undefined),
-                  // Hide the list until bottom-anchoring settles, avoiding two visible shifts
-                  // ("estimated-height anchoring → measured correction")
-                  ...(listSettling ? { visibility: "hidden" as const } : undefined),
-                }}
+              <ScrollArea
+                ref={conversationScrollAreaRef}
+                data-spirit-surface="conversation-scroll"
+                className={cn("min-h-0 flex-1", desktopTranslucencyTintInnerClass(useTranslucency))}
+                type="hover"
+                scrollHideDelay={450}
+                viewportStyle={conversationScrollViewportStyle}
               >
-                {conversationMessagesVisible ? (
-                  <ConversationList
-                    messages={list.messages}
-                    conversationRenderItems={list.conversationRenderItems}
-                    pinScrollToTail={pinScrollToTail}
-                    releaseTailFollow={releaseTailFollow}
-                    quoteScrollRequest={quoteScrollRequest}
-                    onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
-                    subagentViewActive={subagentViewActive}
-                    composerSessionKey={list.composerSessionKey}
-                    conversationListScopeKey={list.conversationListScopeKey}
-                    conversationListRemountEpoch={list.conversationListRemountEpoch}
-                    conversationPendingAuxState={list.conversationPendingAuxState}
-                    processGroupManualOpen={list.processGroupManualOpen}
-                    processGroupManualOpenKey={list.processGroupManualOpenKey}
-                    onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
-                    shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
-                    workspaceRoot={snapshot?.workspaceRoot ?? ""}
-                    runtime={list.runtime}
-                    turnContinue={list.turnContinue}
-                    activeSessionReadOnly={list.activeSessionReadOnly}
-                    conversationIsBusy={snapshot?.conversation.isBusy === true}
-                    continueBusy={list.continueBusy}
-                    rewindDraft={list.rewindDraft}
-                    onRewindDraftChange={list.onRewindDraftChange}
-                    messageRewindComposerEnabled={list.messageRewindComposerEnabled}
-                    rewindRichInputRef={list.rewindRichInputRef}
-                    models={list.models}
-                    catalogHints={snapshot?.config.modelCatalogHints}
-                    activeModel={snapshot?.config.activeModel ?? list.runtime.settings.activeModel}
-                    agentMode={list.runtime.settings.agentMode}
-                    onOpenSubagentViewer={list.onOpenSubagentViewer}
-                    onOpenReadFile={list.onOpenReadFile}
-                    onOpenPlan={list.onOpenPlan}
-                    onStartMessageRewind={list.onStartMessageRewind}
-                    onForkMessage={list.onForkMessage}
-                    onSubmitMessageRewind={list.onSubmitMessageRewind}
-                    onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
-                    onRewindPickLocalFile={list.onRewindPickLocalFile}
-                    onRewindPaste={list.onRewindPaste}
-                    onRewindDragOver={list.onRewindDragOver}
-                    onRewindDrop={list.onRewindDrop}
-                    onComposerAgentModeChange={list.onComposerAgentModeChange}
-                  />
-                ) : null}
-                {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
-              </div>
-            </ScrollArea>
+                {/* min-h-full: short content still fills the viewport; pb ≥ measured dock height + breathing room, grows in sync when the approval card pops up */}
+                <div
+                  ref={conversationScrollBodyRef}
+                  data-spirit-surface="conversation-scroll-body"
+                  className={cn(
+                    "min-h-full w-full",
+                    desktopTranslucencyTintInnerClass(useTranslucency),
+                  )}
+                  style={{
+                    ...(conversationMessagesVisible
+                      ? { paddingBottom: conversationScrollBedPaddingPx }
+                      : undefined),
+                    // Hide the list until bottom-anchoring settles, avoiding two visible shifts
+                    // ("estimated-height anchoring → measured correction")
+                    ...(listSettling ? { visibility: "hidden" as const } : undefined),
+                  }}
+                >
+                  {approvalPreviewDemoActive ? (
+                    <ApprovalPreviewDemoGallery
+                      approvals={approvalPreviewDemoApprovals}
+                      useTranslucency={useTranslucency}
+                      showReasonNotes={approvalDemoShowReasonNotes}
+                    />
+                  ) : conversationMessagesVisible ? (
+                    <ConversationList
+                      messages={list.messages}
+                      conversationRenderItems={list.conversationRenderItems}
+                      pinScrollToTail={pinScrollToTail}
+                      releaseTailFollow={releaseTailFollow}
+                      quoteScrollRequest={quoteScrollRequest}
+                      onQuoteScrollHandled={() => setQuoteScrollRequest(null)}
+                      subagentViewActive={subagentViewActive}
+                      composerSessionKey={list.composerSessionKey}
+                      conversationListScopeKey={list.conversationListScopeKey}
+                      conversationListRemountEpoch={list.conversationListRemountEpoch}
+                      conversationPendingAuxState={list.conversationPendingAuxState}
+                      processGroupManualOpen={list.processGroupManualOpen}
+                      processGroupManualOpenKey={list.processGroupManualOpenKey}
+                      onProcessGroupManualOpenChange={list.onProcessGroupManualOpenChange}
+                      shouldPlayProcessSealAnimation={list.shouldPlayProcessSealAnimation}
+                      workspaceRoot={snapshot?.workspaceRoot ?? ""}
+                      runtime={list.runtime}
+                      turnContinue={list.turnContinue}
+                      activeSessionReadOnly={list.activeSessionReadOnly}
+                      conversationIsBusy={snapshot?.conversation.isBusy === true}
+                      continueBusy={list.continueBusy}
+                      rewindDraft={list.rewindDraft}
+                      onRewindDraftChange={list.onRewindDraftChange}
+                      messageRewindComposerEnabled={list.messageRewindComposerEnabled}
+                      rewindRichInputRef={list.rewindRichInputRef}
+                      models={list.models}
+                      catalogHints={snapshot?.config.modelCatalogHints}
+                      activeModel={
+                        snapshot?.config.activeModel ?? list.runtime.settings.activeModel
+                      }
+                      agentMode={list.runtime.settings.agentMode}
+                      onOpenSubagentViewer={list.onOpenSubagentViewer}
+                      onOpenReadFile={list.onOpenReadFile}
+                      onOpenPlan={list.onOpenPlan}
+                      onStartMessageRewind={list.onStartMessageRewind}
+                      onForkMessage={list.onForkMessage}
+                      onSubmitMessageRewind={list.onSubmitMessageRewind}
+                      onRewindRemoveLocalFileAttachment={list.onRewindRemoveLocalFileAttachment}
+                      onRewindPickLocalFile={list.onRewindPickLocalFile}
+                      onRewindPaste={list.onRewindPaste}
+                      onRewindDragOver={list.onRewindDragOver}
+                      onRewindDrop={list.onRewindDrop}
+                      onComposerAgentModeChange={list.onComposerAgentModeChange}
+                    />
+                  ) : null}
+                  {navPlaceholderActive ? <ConversationNavPlaceholder /> : null}
+                </div>
+              </ScrollArea>
 
-            <ConversationMessageSelectionMenu
-              rootRef={conversationScrollBodyRef}
-              quoteSessionPath={quoteSessionPath}
-              quoteOrigin={quoteOrigin}
-              onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
-              onMessageQuoteAddToSideChat={
-                showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
-              }
-            />
-            {showComposerDock && !navPlaceholderActive ? (
+              <ConversationMessageSelectionMenu
+                rootRef={conversationScrollBodyRef}
+                quoteSessionPath={quoteSessionPath}
+                quoteOrigin={quoteOrigin}
+                onMessageQuoteAddToChat={composerDock.onMessageQuoteAddToChat}
+                onMessageQuoteAddToSideChat={
+                  showSideChat && paneId ? handleMessageQuoteAddToSideChat : undefined
+                }
+              />
+            </MessageQuoteActionsProvider>
+            {showComposerDock && !navPlaceholderActive && !approvalPreviewDemoActive ? (
               <ComposerDock
                 ref={composerDock.composerDockRef}
                 isEmptySession={isEmptySession}

@@ -103,6 +103,9 @@ export type SettingsViewProps = {
   onStartCompactionUiDemo?: () => void;
   /** Developer page: loads an extremely long message list performance demo in the conversation area (no model call). */
   onStartLongConversationListDemo?: () => void;
+  /** Developer page: tiles every tool approval form in the conversation area for style tuning (no model call). */
+  onStartApprovalPreviewDemo?: () => void;
+  /** Developer page: lists collapsed agent tool cards in the conversation area, expandable to their real details (no model call). */
   /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with settings-shell. */
   useTranslucency?: boolean;
   getGitHubAuthStatus: () => Promise<GitHubAuthStatus>;

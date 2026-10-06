@@ -12,6 +12,7 @@ import { useMessageRewind } from "@/hooks/useMessageRewind";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
 import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
 import {
@@ -27,6 +28,7 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
+type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
 export type UseConversationPaneControllerOptions = {
@@ -40,6 +42,7 @@ export type UseConversationPaneControllerOptions = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
+  approvalPreviewDemo: ApprovalPreviewDemo;
   newChatBusy: boolean;
   splitPaneCount: number;
   onNewChat?: () => void;
@@ -62,6 +65,7 @@ export function useConversationPaneController({
   subagentViewer,
   compactionDemo,
   longConversationListDemo,
+  approvalPreviewDemo,
   newChatBusy,
   splitPaneCount,
   onNewChat,
@@ -80,6 +84,7 @@ export function useConversationPaneController({
   const paneSubagentViewActive = isFocused && subagentViewActive;
   const paneCompactionDemoActive = isFocused && compactionDemo.active;
   const paneLongConversationListDemoActive = isFocused && longConversationListDemo.active;
+  const paneApprovalPreviewDemoActive = isFocused && approvalPreviewDemo.active;
 
   const paneContentStatus: PaneContentStatus = resolvePaneContentStatus({
     paneSessionPath: sessionPath,
@@ -98,11 +103,13 @@ export function useConversationPaneController({
       subagentViewActive: paneSubagentViewActive,
       compactionDemoActive: paneCompactionDemoActive,
       longConversationListDemoActive: paneLongConversationListDemoActive,
+      approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
       newChatBusy: isFocused && splitPaneCount <= 1 ? newChatBusy : false,
     });
   }, [
     isFocused,
     newChatBusy,
+    paneApprovalPreviewDemoActive,
     paneCompactionDemoActive,
     paneContentPending,
     paneLongConversationListDemoActive,
@@ -125,6 +132,10 @@ export function useConversationPaneController({
     longConversationListDemo: {
       ...longConversationListDemo,
       active: paneLongConversationListDemoActive,
+    },
+    approvalPreviewDemo: {
+      ...approvalPreviewDemo,
+      active: paneApprovalPreviewDemoActive,
     },
     t,
     language,
@@ -164,6 +175,7 @@ export function useConversationPaneController({
     activeSessionReadOnly: conversation.activeSessionReadOnly,
     compactionDemoActive: paneCompactionDemoActive,
     longConversationListDemoActive: paneLongConversationListDemoActive,
+    approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
     subagentViewActive: paneSubagentViewActive,
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
@@ -378,6 +390,9 @@ export function useConversationPaneController({
     subagentViewActive: paneSubagentViewActive,
     compactionDemoActive: paneCompactionDemoActive,
     longConversationListDemoActive: paneLongConversationListDemoActive,
+    approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
+    approvalPreviewDemoApprovals: approvalPreviewDemo.approvals,
+    onPaneKeyDown: composer.handlePaneKeyDown,
     composerInsertHandlers,
     composerControls,
   };

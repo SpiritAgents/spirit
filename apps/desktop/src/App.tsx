@@ -30,6 +30,7 @@ import { useClickablePointerCursor } from "@/hooks/useClickablePointerCursor";
 import { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import { useFontSmoothing } from "@/hooks/useFontSmoothing";
 import { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
 import { useComposerController } from "@/hooks/useComposerController";
 import { ConversationSessionFocusComposerBridge } from "@/components/conversation/conversation-session-focus-composer-bridge";
 import { ConversationTypingFocusRedirectBridge } from "@/components/conversation/conversation-typing-focus-redirect-bridge";
@@ -112,6 +113,7 @@ export default function App() {
 
   const compactionDemo = useCompactionUiDemo();
   const longConversationListDemo = useLongConversationListDemo();
+  const approvalPreviewDemo = useApprovalPreviewDemo();
   const subagentViewer = useSubagentViewer(runtime.setSubagentViewerTarget);
   const subagentViewActive = subagentViewer.active && Boolean(snapshot?.subagentViewer);
   const sessionMessages = snapshot?.conversation.messages ?? [];
@@ -151,6 +153,7 @@ export default function App() {
     subagentViewActive,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
     newChatBusy,
     t,
     composerAutomationApiRef,
@@ -178,6 +181,7 @@ export default function App() {
     subagentViewer,
     compactionDemo,
     longConversationListDemo,
+    approvalPreviewDemo,
     t,
     language: i18n.language,
     conversationAbortShortcutTargetRef,
@@ -230,6 +234,7 @@ export default function App() {
     activeSessionReadOnly: conversation.activeSessionReadOnly,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
     subagentViewActive,
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
@@ -615,13 +620,21 @@ export default function App() {
                             onCreateRule={runtime.createRule}
                             onStartCompactionUiDemo={() => {
                               longConversationListDemo.stop();
+                              approvalPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               compactionDemo.start();
                             }}
                             onStartLongConversationListDemo={() => {
                               compactionDemo.stop();
+                              approvalPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               longConversationListDemo.start();
+                            }}
+                            onStartApprovalPreviewDemo={() => {
+                              compactionDemo.stop();
+                              longConversationListDemo.stop();
+                              surfaceNav.setActiveSurface("conversation");
+                              approvalPreviewDemo.start();
                             }}
                             onDeleteSkill={runtime.deleteSkill}
                             onDeleteRule={runtime.deleteRule}
@@ -816,6 +829,7 @@ export default function App() {
                                     subagentViewer={subagentViewer}
                                     compactionDemo={compactionDemo}
                                     longConversationListDemo={longConversationListDemo}
+                                    approvalPreviewDemo={approvalPreviewDemo}
                                     newChatBusy={newChatBusy}
                                     onNewChat={handleNewChat}
                                     deleteSessionBusy={sessionMutationBusy}
@@ -831,6 +845,7 @@ export default function App() {
                                     onOpenIntegrationsSettings={openIntegrationsSettings}
                                     onCompactionDemoStop={compactionDemo.stop}
                                     onLongConversationListDemoStop={longConversationListDemo.stop}
+                                    onApprovalPreviewDemoStop={approvalPreviewDemo.stop}
                                     t={t}
                                     language={i18n.language}
                                   />

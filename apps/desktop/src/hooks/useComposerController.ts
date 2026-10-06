@@ -106,6 +106,7 @@ export type UseComposerControllerOptions = {
   activeSessionReadOnly: boolean;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
+  approvalPreviewDemoActive: boolean;
   subagentViewActive: boolean;
   pendingApproval: DesktopSnapshot["conversation"]["pendingToolApproval"];
   pendingQuestions: ReturnType<typeof useDesktopRuntime>["pendingQuestions"];
@@ -128,6 +129,7 @@ export function useComposerController({
   activeSessionReadOnly,
   compactionDemoActive,
   longConversationListDemoActive,
+  approvalPreviewDemoActive,
   subagentViewActive,
   pendingApproval,
   pendingQuestions,
@@ -348,6 +350,7 @@ export function useComposerController({
   const messageRewindComposerEnabled =
     !compactionDemoActive &&
     !longConversationListDemoActive &&
+    !approvalPreviewDemoActive &&
     !subagentViewActive &&
     !activeSessionReadOnly &&
     !pendingApproval &&
@@ -373,6 +376,7 @@ export function useComposerController({
   const composerCanSend =
     !compactionDemoActive &&
     !longConversationListDemoActive &&
+    !approvalPreviewDemoActive &&
     !subagentViewActive &&
     composerHasPayload &&
     !activeSessionReadOnly &&
@@ -1437,6 +1441,10 @@ export function useComposerController({
     ],
   );
 
+  const submitApprovalAllowShortcut = useCallback(() => {
+    void runtime.submitApproval({ kind: "allow" }, isPaneIsolated ? paneSessionPath : undefined);
+  }, [runtime, isPaneIsolated, paneSessionPath]);
+
   const handleComposerKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       handleComposerSuggestionKeyDown(event);
@@ -1465,20 +1473,48 @@ export function useComposerController({
         runtime.busyAction !== "approve"
       ) {
         event.preventDefault();
-        void runtime.submitApproval(
-          { kind: "allow" },
-          isPaneIsolated ? paneSessionPath : undefined,
-        );
+        submitApprovalAllowShortcut();
       }
     },
     [
       handleComposerAgentModeChange,
       handleComposerSuggestionKeyDown,
-      isPaneIsolated,
-      paneSessionPath,
       pendingApproval,
       runtime,
+      submitApprovalAllowShortcut,
     ],
+  );
+
+  // Pane-level Enter → Allow: fires for any focus inside this pane (blank areas focus the pane
+  // shell). Structural containment keeps split panes isolated — a keydown in a sibling pane
+  // never reaches this handler. Interactive descendants keep their native Enter behavior; the
+  // composer input and the approval guidance textarea preventDefault first.
+  const handlePaneKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
+      if (
+        event.defaultPrevented ||
+        !pendingApproval ||
+        event.key !== "Enter" ||
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.nativeEvent.isComposing ||
+        runtime.busyAction === "approve"
+      ) {
+        return;
+      }
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(
+          'button, a, input, textarea, select, [contenteditable="true"], [role="button"], [role="link"]',
+        )
+      ) {
+        return;
+      }
+      event.preventDefault();
+      submitApprovalAllowShortcut();
+    },
+    [pendingApproval, runtime, submitApprovalAllowShortcut],
   );
 
   const focusComposer = useCallback(() => {
@@ -1561,6 +1597,7 @@ export function useComposerController({
     discardBranchChangesAndCheckoutSend,
     handleComposerSuggestionKeyDown,
     handleComposerKeyDown,
+    handlePaneKeyDown,
     workspaceFileIndex,
     recentFilePool,
     composerPlaceholder,

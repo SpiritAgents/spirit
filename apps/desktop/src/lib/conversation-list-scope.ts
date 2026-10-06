@@ -6,6 +6,7 @@ export function resolveConversationListScopeKey(input: {
   subagentToolCallId: string | null;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
+  approvalPreviewDemoActive: boolean;
 }): string {
   if (input.subagentViewActive && input.subagentToolCallId) {
     return `subagent:${input.subagentToolCallId}`;
@@ -15,6 +16,9 @@ export function resolveConversationListScopeKey(input: {
   }
   if (input.longConversationListDemoActive) {
     return "long-list-demo";
+  }
+  if (input.approvalPreviewDemoActive) {
+    return "approval-preview-demo";
   }
   return "main";
 }
