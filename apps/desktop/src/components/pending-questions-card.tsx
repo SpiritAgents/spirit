@@ -250,7 +250,7 @@ export function PendingQuestionsCard({
             {questionsBusy ? (
               <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
             ) : null}
-            {t("app.continue")}
+            {isLastQuestion ? t("common.done") : t("app.continue")}
           </Button>
         </div>
       </CardContent>

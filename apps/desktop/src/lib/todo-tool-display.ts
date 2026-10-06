@@ -140,3 +140,18 @@ export function resolveTodoWriteBeforeSnapshot(
   }
   return [...liveBefore];
 }
+
+/**
+ * The todo list as of this tool call: parsed from the card's own payload (post-execution output
+ * first, then the preview-phase arguments), never the live session todo store. Partial streaming
+ * arguments simply do not parse yet and return undefined, falling back to the raw detail view.
+ */
+export function resolveTodoToolSnapshotTodos(tool: {
+  outputExcerpt?: string;
+  streamingArgumentsJson?: string;
+  argsExcerpt?: string;
+}): TodoDisplayItem[] | undefined {
+  const payload =
+    tool.outputExcerpt?.trim() || tool.streamingArgumentsJson?.trim() || tool.argsExcerpt?.trim();
+  return payload ? parseTodoItemsFromPayload(payload) : undefined;
+}

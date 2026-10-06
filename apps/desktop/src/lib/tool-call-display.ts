@@ -18,7 +18,10 @@ import { truncateSummaryDetail } from "@/lib/diagnostics-path-display";
 import { phaseToVerbContext } from "@/lib/tool-verb-context";
 import { grepToolHeadlineDetail, parseGrepRequestFromArgsExcerpt } from "@/lib/grep-tool-display";
 import { buildAutomationTriggerFormatLabels } from "./automation-trigger-i18n.js";
-import { formatDesktopAutomationTriggerLabel } from "./automation-trigger.js";
+import {
+  formatDesktopAutomationTriggerLabel,
+  isValidDesktopAutomationTrigger,
+} from "./automation-trigger.js";
 import { builtInCreateAutomationToolCallSummaryParts } from "./lazy-built-in-tool-display.js";
 import { resolveTodoWriteBeforeSnapshot, todoWriteSummaryDetail } from "@/lib/todo-tool-display.js";
 import type { ToolBlockSnapshot } from "@/types";
@@ -69,11 +72,11 @@ const TOOL_VERB_KEY_MAP: Record<string, string> = {
   dream_record: "tool.dreamRecord",
   todo_write: "tool.todoWrite",
   todo_list: "tool.todoList",
-  tool_call: "tool.lazyToolCall",
+  tool_call: "tool.lazyCall",
   tool_describe: "tool.lazyToolDescribe",
   fetch_mcp_resource: "tool.fetchMcpResource",
   create_plan: "tool.create",
-  create_automation: "automations.create",
+  create_automation: "tool.create",
 };
 
 /**
@@ -281,7 +284,7 @@ export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummar
     );
     const parts = builtInCreateAutomationToolCallSummaryParts({
       gatewayJson: gatewayJson || undefined,
-      headline: i18n.t("automations.create", tOpts),
+      headline: i18n.t("tool.create", tOpts),
       formatTriggerLabel: (trigger) => formatDesktopAutomationTriggerLabel(trigger, triggerLabels),
     });
     if (parts) {
@@ -293,6 +296,7 @@ export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummar
       return {
         headline: parts.headline,
         ...(resolvedDetail ? { detail: resolvedDetail } : {}),
+        ...(parts.resultDetail ? { resultDetail: parts.resultDetail } : {}),
       };
     }
   }
@@ -362,9 +366,14 @@ export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummar
     } else {
       detail = todoWriteDetail || snapshotDetail;
     }
+    const automationResultDetail =
+      tool.toolName === "create_automation"
+        ? directCreateAutomationTriggerLabel(tool.argsExcerpt)
+        : undefined;
     return {
       headline: i18n.t(verbKey, ctx ? { context: ctx } : {}),
       ...(detail ? { detail } : {}),
+      ...(automationResultDetail ? { resultDetail: automationResultDetail } : {}),
     };
   }
 
@@ -372,6 +381,26 @@ export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummar
     headline,
     ...(snapshotDetail ? { detail: snapshotDetail } : {}),
   };
+}
+
+/** Direct (non-lazy) create_automation cards: the schedule rides the dimmer third level. */
+function directCreateAutomationTriggerLabel(argsExcerpt: string | undefined): string | undefined {
+  const raw = argsExcerpt?.trim();
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const trigger = (JSON.parse(raw) as Record<string, unknown>).trigger;
+    if (!isValidDesktopAutomationTrigger(trigger as never)) {
+      return undefined;
+    }
+    return formatDesktopAutomationTriggerLabel(
+      trigger as never,
+      buildAutomationTriggerFormatLabels((key, opts) => i18n.t(key, opts)),
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 /** Plain one-line tool summary for clipboard export (matches MinimalToolSummary text). */
