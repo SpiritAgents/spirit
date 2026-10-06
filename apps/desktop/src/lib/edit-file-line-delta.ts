@@ -5,7 +5,13 @@ export type EditFileLineDelta = {
   removed: number;
 };
 
-const TOOLS_WITH_LINE_DELTA = new Set(["edit_file", "create_file", "create_plan", "delete_file"]);
+const TOOLS_WITH_LINE_DELTA = new Set([
+  "edit_file",
+  "create_file",
+  "create_plan",
+  "delete_file",
+  "apply_patch",
+]);
 
 function splitLines(text: string): string[] {
   if (!text) {
@@ -213,6 +219,78 @@ export function deleteFileLineDeltaFromContent(content: string): EditFileLineDel
   return { added: 0, removed };
 }
 
+/** apply_patch: git-stat-style +/- counts from the patch's own marker lines (pre-execution). */
+export function lineDeltaFromApplyPatchDiff(diff: string): EditFileLineDelta | undefined {
+  let added = 0;
+  let removed = 0;
+  for (const rawLine of diff.split(/\r?\n/u)) {
+    const marker = rawLine === "" ? " " : rawLine[0];
+    if (marker === "+") {
+      added += 1;
+    } else if (marker === "-") {
+      removed += 1;
+    }
+    // " " context lines, "@@" anchors and "***" markers carry no delta.
+  }
+  if (added === 0 && removed === 0) {
+    return undefined;
+  }
+  return { added, removed };
+}
+
+function applyPatchDiffFromRecord(record: Record<string, unknown>): string | undefined {
+  const operation = record.operation;
+  if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+    return undefined;
+  }
+  const diff = (operation as Record<string, unknown>).diff;
+  return typeof diff === "string" && diff.trim().length > 0 ? diff : undefined;
+}
+
+/** apply_patch delete_file: the doomed path lives under operation.path (parsed or in-flight). */
+function extractApplyPatchDeleteFilePath(
+  request?: unknown,
+  argumentsJson?: string,
+): string | undefined {
+  const extract = (record: Record<string, unknown>): string | undefined => {
+    const operation = record.operation;
+    if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+      return undefined;
+    }
+    const op = operation as Record<string, unknown>;
+    if (op.type !== "delete_file") {
+      return undefined;
+    }
+    const pathValue = op.path;
+    return typeof pathValue === "string" && pathValue.trim() ? pathValue.trim() : undefined;
+  };
+
+  if (request && typeof request === "object") {
+    const fromRequest = extract(request as Record<string, unknown>);
+    if (fromRequest) {
+      return fromRequest;
+    }
+  }
+
+  const trimmed = argumentsJson?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed && typeof parsed === "object") {
+      return extract(parsed as Record<string, unknown>);
+    }
+    return undefined;
+  } catch {
+    if (tryExtractPartialJsonStringValue(trimmed, "type") !== "delete_file") {
+      return undefined;
+    }
+    const partial = tryExtractPartialJsonStringValue(trimmed, "path");
+    return partial?.trim() ? partial.trim() : undefined;
+  }
+}
+
 function extractDeleteFilePath(
   toolName: string,
   request?: unknown,
@@ -281,6 +359,11 @@ export function toolLineDeltaFromRequest(
     return undefined;
   }
 
+  if (toolName === "apply_patch") {
+    const diff = applyPatchDiffFromRecord(record);
+    return diff !== undefined ? lineDeltaFromApplyPatchDiff(diff) : undefined;
+  }
+
   const oldText = typeof record.old_text === "string" ? record.old_text : "";
   const newText = typeof record.new_text === "string" ? record.new_text : "";
   if (!oldText && !newText) {
@@ -314,6 +397,11 @@ export function toolLineDeltaFromArgumentsJson(
 
     if (toolName === "delete_file") {
       return undefined;
+    }
+
+    if (toolName === "apply_patch") {
+      const diff = tryExtractPartialJsonStringValue(trimmed, "diff");
+      return diff !== undefined ? lineDeltaFromApplyPatchDiff(diff) : undefined;
     }
 
     const oldText = tryExtractPartialJsonStringValue(trimmed, "old_text");
@@ -367,32 +455,31 @@ export function attachEditFileLineDelta(
   }
 
   const phaseOptions = source.preview === true ? { preview: true } : undefined;
-  let delta =
-    source.argumentsJson !== undefined
-      ? toolLineDeltaFromArgumentsJson(tool.toolName, source.argumentsJson, phaseOptions)
-      : toolLineDeltaFromRequest(tool.toolName, source.request, phaseOptions);
+  let delta: EditFileLineDelta | undefined;
+  if (tool.toolName === "apply_patch" && tool.fileChangeDiff) {
+    // Post-execution: the executor's exact pair gives a git-style line stat (same as edit_file).
+    const pairDelta = lineChangeCounts(tool.fileChangeDiff.before, tool.fileChangeDiff.after);
+    delta = pairDelta.added > 0 || pairDelta.removed > 0 ? pairDelta : undefined;
+  } else {
+    delta =
+      source.argumentsJson !== undefined
+        ? toolLineDeltaFromArgumentsJson(tool.toolName, source.argumentsJson, phaseOptions)
+        : toolLineDeltaFromRequest(tool.toolName, source.request, phaseOptions);
+  }
 
   const deleteInputPath =
     tool.toolName === "delete_file"
       ? extractDeleteFilePath(tool.toolName, source.request, source.argumentsJson)
-      : undefined;
+      : tool.toolName === "apply_patch"
+        ? extractApplyPatchDeleteFilePath(source.request, source.argumentsJson)
+        : undefined;
 
-  if (
-    !delta &&
-    tool.toolName === "delete_file" &&
-    deleteInputPath &&
-    source.resolveDeleteFileLines
-  ) {
+  if (!delta && deleteInputPath && source.resolveDeleteFileLines) {
     delta = source.resolveDeleteFileLines(deleteInputPath);
   }
 
   let deleteFileBaselineText = tool.deleteFileBaselineText;
-  if (
-    tool.toolName === "delete_file" &&
-    deleteInputPath &&
-    source.resolveDeleteFileBaseline &&
-    deleteFileBaselineText === undefined
-  ) {
+  if (deleteInputPath && source.resolveDeleteFileBaseline && deleteFileBaselineText === undefined) {
     const baseline = source.resolveDeleteFileBaseline(deleteInputPath);
     if (baseline !== undefined) {
       deleteFileBaselineText = baseline;

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
+  attachEditFileLineDelta,
   deleteFileLineDeltaFromContent,
   preserveDeleteFileBaseline,
   preserveDeleteFileLineDelta,
@@ -158,4 +159,49 @@ test("preserveDeleteFileBaseline keeps prior text after delete succeeds", () => 
     preserveDeleteFileBaseline("create_file", attached, priorText).deleteFileBaselineText,
     undefined,
   );
+});
+
+test("toolLineDeltaFromRequest counts apply_patch marker lines", () => {
+  const request = {
+    name: "apply_patch",
+    operation: {
+      type: "update_file",
+      path: "m.ts",
+      diff: "@@ \n const a = 1;\n-const b = 2;\n+const b = 3;\n+const c = 4;\n*** End Patch",
+    },
+  };
+  assert.deepEqual(toolLineDeltaFromRequest("apply_patch", request), { added: 2, removed: 1 });
+  assert.deepEqual(
+    toolLineDeltaFromRequest("apply_patch", {
+      name: "apply_patch",
+      operation: { type: "delete_file", path: "x" },
+    }),
+    undefined,
+  );
+});
+
+test("toolLineDeltaFromArgumentsJson reads a streaming apply_patch diff", () => {
+  const delta = toolLineDeltaFromArgumentsJson(
+    "apply_patch",
+    '{"operation":{"type":"update_file","path":"m.ts","diff":"+a\\n+b',
+  );
+  assert.deepEqual(delta, { added: 2, removed: 0 });
+});
+
+test("attachEditFileLineDelta prefers the executor fileChangeDiff pair for apply_patch", () => {
+  const tool = {
+    toolName: "apply_patch",
+    phase: "succeeded",
+    headline: "Edited",
+    detailLines: [],
+    fileChangeDiff: { path: "m.ts", before: "a\nb\nc", after: "a\nB\nc\nd" },
+  };
+  const attached = attachEditFileLineDelta(tool, {
+    request: {
+      name: "apply_patch",
+      operation: { type: "update_file", path: "m.ts", diff: "-b\n+B" },
+    },
+  });
+  // The pair's LCS stat wins over the patch's marker counts (2 added, 1 removed here).
+  assert.deepEqual(attached.editLineDelta, { added: 2, removed: 1 });
 });

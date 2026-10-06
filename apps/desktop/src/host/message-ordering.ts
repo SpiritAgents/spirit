@@ -294,7 +294,7 @@ export function toolCallSummaryCopyForRequest(
             ? i18n.t("tool.edit", tOpts)
             : opType === "delete_file"
               ? i18n.t("tool.delete", tOpts)
-              : "Patch";
+              : i18n.t("tool.applyPatch", tOpts);
       return {
         headline: verb,
         headlineDetail: truncateSummaryDetail(basename),

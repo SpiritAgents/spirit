@@ -116,6 +116,21 @@ export interface ToolExecutionOutput {
 
 export interface ToolExecutionHostUi {
   lspWriteDiagnostics?: import("./lsp/types.js").LspWriteDiagnosticsUi;
+  /**
+   * apply_patch: the exact before/after file content the executor computed atomically with the
+   * write, so hosts can render a real diff (whole file, real line numbers) on the completed
+   * tool card. Absent when a side exceeded the size budget.
+   */
+  fileChangeDiff?: ToolExecutionFileChangeDiff;
+}
+
+export interface ToolExecutionFileChangeDiff {
+  /** Display path of the patched file (workspace-relative as given by the tool call). */
+  path: string;
+  /** Full content before the change; "" when the file was created. */
+  before: string;
+  /** Full content after the change; "" when the file was deleted. */
+  after: string;
 }
 
 export const DEFAULT_IMAGE_GENERATION_SIZE = "1024x1024";
