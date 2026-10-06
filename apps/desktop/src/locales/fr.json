@@ -404,7 +404,7 @@
     "modelName": "Nom du modèle",
     "modelCapabilities": "Capacités du modèle",
     "endpoint": "Endpoint",
-    "endpointPlaceholder": "ex. https://api.exemple.com/v1",
+    "endpointPlaceholder": "ex. https://api.example.com/v1",
     "endpointRequired": "L'endpoint ne peut pas être vide.",
     "optional": "Optionnel",
     "enterApiKey": "Saisir la clé API",
