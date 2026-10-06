@@ -539,7 +539,7 @@ export class DesktopRuntimeEventOrchestrator {
               phase: "running",
               headline: runningSummary.headline,
               detailLines: [],
-              argsExcerpt: truncateJson(event.request),
+              argsExcerpt: JSON.stringify(event.request, null, 2),
               ...(event.toolName === "todo_write"
                 ? { todoWriteBeforeTodos: [...this.todoWriteBeforeSnapshot(event.toolCallId)] }
                 : {}),
@@ -657,8 +657,8 @@ export class DesktopRuntimeEventOrchestrator {
       const argsExcerpt = providerUi?.inputExcerpt?.trim()
         ? providerUi.inputExcerpt
         : previewRequest !== undefined
-          ? truncateJson(previewRequest)
-          : truncateText(event.argumentsJson, 4_000);
+          ? JSON.stringify(previewRequest, null, 2)
+          : event.argumentsJson;
       const previewSummary = toolCallSummaryForStreamingPreview(
         messages,
         event.toolCallId,
@@ -894,7 +894,7 @@ export class DesktopRuntimeEventOrchestrator {
         phase: "pending-approval",
         headline: i18n.t("tool.awaitingInfo", { toolName: questions.toolName }),
         detailLines: [questions.questions.title ?? i18n.t("tool.answerFormQuestions")],
-        argsExcerpt: truncateJson(questions.questions),
+        argsExcerpt: JSON.stringify(questions.questions, null, 2),
       };
       this.options.assistantMessages.upsertToolMessage(
         toolMessageKey(questions),
@@ -999,9 +999,13 @@ export class DesktopRuntimeEventOrchestrator {
                       }
                     : this.toolSummaryOptions(),
               );
-      const argsExcerpt = existingSnapshot?.argsExcerpt?.trim()
-        ? existingSnapshot.argsExcerpt
-        : truncateJson(execution.request);
+      // The executed request is the authoritative full-fidelity record: refresh it on completion
+      // (the preview/approval-phase excerpt may be a different shape or stale). Responses
+      // built-in tools keep their curated provider-UI excerpt (e.g. the formula search query).
+      const curatedExcerpt = isResponsesBuiltInToolName(execution.toolName)
+        ? existingSnapshot?.argsExcerpt?.trim()
+        : undefined;
+      const argsExcerpt = curatedExcerpt || JSON.stringify(execution.request, null, 2);
       const fileToolDiffArgumentsJson = FILE_DIFF_TOOL_NAMES.has(execution.toolName)
         ? serializeFileToolDiffArgumentsJson(execution.request)
         : undefined;
@@ -1014,10 +1018,9 @@ export class DesktopRuntimeEventOrchestrator {
             headline: executionSummary.headline,
             detailLines: [],
             argsExcerpt,
-            outputExcerpt:
-              execution.toolName === "shell"
-                ? execution.output
-                : truncateText(execution.output, 4_000),
+            // Full output for every tool, matching the long-standing shell behavior; display
+            // caps live in the render layer (scroll frames), not in the stored snapshot.
+            outputExcerpt: execution.output,
             ...(existingSnapshot?.suppressExpand ? { suppressExpand: true } : {}),
             ...(fileToolDiffArgumentsJson ? { fileToolDiffArgumentsJson } : {}),
             ...(imagePaths.length > 0 ? { imagePaths } : {}),
@@ -1123,7 +1126,7 @@ export class DesktopRuntimeEventOrchestrator {
           phase: "running",
           headline: runningSummary.headline,
           detailLines: [],
-          argsExcerpt: truncateJson(event.request),
+          argsExcerpt: JSON.stringify(event.request, null, 2),
         },
         runningSummary,
       ),
@@ -1226,18 +1229,6 @@ function videoPathsFromExecution(execution: RuntimeToolExecution<DesktopToolRequ
   return (execution.artifacts ?? [])
     .filter((artifact) => artifact.kind === "video" && artifact.path.trim().length > 0)
     .map((artifact) => artifact.path.trim());
-}
-
-function truncateJson(value: unknown): string {
-  return truncateText(JSON.stringify(value, null, 2), 4_000);
-}
-
-function truncateText(value: string, maxChars: number): string {
-  const chars = Array.from(value);
-  if (chars.length <= maxChars) {
-    return value;
-  }
-  return `${chars.slice(0, maxChars).join("")}...<truncated>`;
 }
 
 function diagnosticsCheckingSummary(request: unknown): ToolCallSummaryCopy {

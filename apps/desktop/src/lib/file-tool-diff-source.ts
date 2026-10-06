@@ -48,7 +48,7 @@ function fileToolDiffArgumentsJsonForTool(tool: ToolBlockSnapshot): string | und
   return tool.fileToolDiffArgumentsJson ?? tool.streamingArgumentsJson;
 }
 
-/** On upsert during the approval/execution phases, keep the preview streaming arguments or the existing full JSON, so we are not left with only a truncated argsExcerpt. */
+/** On upsert during the approval/execution phases, keep the preview streaming arguments or the existing full JSON, so the diff resolver keeps a raw-request JSON even when the phase block's argsExcerpt is approval-shaped. */
 export function preserveFileToolDiffArguments(
   toolName: string,
   attached: ToolBlockSnapshot,

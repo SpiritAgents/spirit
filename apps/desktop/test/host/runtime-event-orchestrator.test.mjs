@@ -1351,6 +1351,43 @@ test("shell tool-execution-finished keeps full outputExcerpt without 4k truncati
   assert.ok(String(parsed.output).endsWith("TAIL_MARKER_OK"));
 });
 
+test("non-shell tool-execution-finished keeps full output and refreshes full args without truncation", () => {
+  const harness = createHarness();
+  harness.pushUser("grep big");
+
+  const longOutput = `${"match\n".repeat(2_000)}GREP_TAIL_OK`;
+  assert.ok(longOutput.length > 4_000);
+  const request = { name: "grep", pattern: "x".repeat(5_000), glob: "*.ts" };
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "grep-1",
+      toolName: "grep",
+      argumentsJson: JSON.stringify({ pattern: "x" }),
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "grep-1",
+        toolName: "grep",
+        request,
+        output: longOutput,
+        failed: false,
+      },
+    },
+  ]);
+
+  const tool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "grep-1")?.tool;
+  assert.equal(tool?.outputExcerpt, longOutput);
+  // Completion always refreshes args from the executed request, not the stale preview excerpt.
+  assert.equal(tool?.argsExcerpt, JSON.stringify(request, null, 2));
+  assert.equal(tool?.argsExcerpt?.includes("...<truncated>"), false);
+});
+
 test("shell tool-execution-output-chunk appends while phase stays running", () => {
   const harness = createHarness();
   harness.pushUser("stream lint");

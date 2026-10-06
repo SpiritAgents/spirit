@@ -64,14 +64,6 @@ function historyText(content: unknown): string {
   return "";
 }
 
-function truncateExcerpt(value: string, maxChars: number): string {
-  const trimmed = value.trim();
-  if (trimmed.length <= maxChars) {
-    return trimmed;
-  }
-  return `${trimmed.slice(0, maxChars)}…`;
-}
-
 function inferToolPhase(
   sessionStatus: SubagentViewerSessionStatus,
   hasOutput: boolean,
@@ -276,8 +268,9 @@ export function buildSubagentConversationSnapshots(
           phase,
           headline: toolCall.name,
           detailLines: [],
-          argsExcerpt: truncateExcerpt(toolCall.argumentsJson, 500),
-          ...(output ? { outputExcerpt: truncateExcerpt(output, 4_000) } : {}),
+          argsExcerpt: toolCall.argumentsJson.trim(),
+          // Full fidelity like the main timeline: display caps live in the viewer's render layer.
+          ...(output ? { outputExcerpt: output.trim() } : {}),
         };
         if (options.enrichToolBlock) {
           tool = options.enrichToolBlock({

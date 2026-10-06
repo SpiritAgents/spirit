@@ -1738,7 +1738,7 @@ export interface ToolBlockSnapshot {
   deleteFileBaselineText?: string;
   /** Full argument JSON during the preview phase, for the streaming Diff in the expanded area; cleared after completion. */
   streamingArgumentsJson?: string;
-  /** Completed file-type tool: the full request JSON (for Diff; separate from the UI's argsExcerpt truncation). */
+  /** Completed file-type tool: the full request JSON for Diff. Phase-stable counterpart of argsExcerpt (the pending-approval block carries the approval-shaped request, which lacks the raw content). */
   fileToolDiffArgumentsJson?: string;
   /** apply_patch: the exact before/after pair computed by the executor atomically with the write. */
   fileChangeDiff?: ToolExecutionFileChangeDiff;
