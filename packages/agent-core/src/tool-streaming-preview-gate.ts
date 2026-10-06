@@ -280,7 +280,9 @@ export function hostToolArgumentsReadyForEarlyStreamingPreview(
 ): boolean {
   switch (name) {
     case "apply_patch":
-      return tryExtractPartialApplyPatchPath(argumentsJson) !== undefined;
+      // Decoupled readiness: the model may stream the diff body (or the operation type) long
+      // before `path` arrives — any parseable piece readies the preview, not just the path.
+      return applyPatchStreamingPreviewSignature(argumentsJson) !== undefined;
     case "edit_file":
     case "create_file":
       return tryExtractPartialToolPath(argumentsJson) !== undefined;
@@ -382,8 +384,6 @@ export function hostToolArgumentsReadyForPreview(name: string, argumentsJson: st
   }
 }
 
-const STREAMING_PREVIEW_UPDATE_MIN_DELTA_CHARS = 400;
-
 function lazyToolGatewayStreamingPreviewSignature(argumentsJson: string): string | undefined {
   const fields = tryExtractPartialLazyToolGatewayFields(argumentsJson);
   const parts: string[] = [];
@@ -412,6 +412,48 @@ function lazyToolGatewayStreamingPreviewSignature(argumentsJson: string): string
     parts.push(`tr:${hourMatch[1]}:${minuteMatch[1]}`);
   }
 
+  return parts.length > 0 ? parts.join("|") : undefined;
+}
+
+/** Marker-line (+/-) counts in a possibly in-flight apply_patch diff. */
+function applyPatchDiffLineCounts(diff: string): { added: number; removed: number } | undefined {
+  let added = 0;
+  let removed = 0;
+  for (const rawLine of diff.split(/\r?\n/u)) {
+    const marker = rawLine === "" ? " " : rawLine[0];
+    if (marker === "+") {
+      added += 1;
+    } else if (marker === "-") {
+      removed += 1;
+    }
+    // " " context lines, "@@" anchors and "***" markers carry no delta.
+  }
+  return added === 0 && removed === 0 ? undefined : { added, removed };
+}
+
+/** Re-emit when the apply_patch operation type / target path parse state or the diff's +/- counts change. */
+function applyPatchStreamingPreviewSignature(argumentsJson: string): string | undefined {
+  const trimmed = argumentsJson.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const parts: string[] = [];
+  const typeMatch = trimmed.match(PARTIAL_APPLY_PATCH_OPERATION_TYPE_PATTERN);
+  if (typeMatch?.[1]) {
+    parts.push(`t:${typeMatch[1]}`);
+  }
+  const path = tryExtractPartialApplyPatchPath(trimmed);
+  if (path) {
+    parts.push(`p:${path}`);
+  }
+  const diff = tryExtractPartialEditFileStringField(trimmed, "diff");
+  if (diff !== undefined) {
+    const counts = applyPatchDiffLineCounts(diff);
+    if (counts) {
+      parts.push(`d:${counts.added}:${counts.removed}`);
+    }
+  }
   return parts.length > 0 ? parts.join("|") : undefined;
 }
 
@@ -478,10 +520,16 @@ export function shouldRepeatStreamingToolPreview(
     }
     return options?.previousDetailSignature !== nextSignature;
   }
-  if (toolName !== "apply_patch") {
-    return false;
+  if (toolName === "apply_patch") {
+    const nextSignature = options?.nextArgumentsJson
+      ? applyPatchStreamingPreviewSignature(options.nextArgumentsJson)
+      : undefined;
+    if (!nextSignature) {
+      return false;
+    }
+    return options?.previousDetailSignature !== nextSignature;
   }
-  return nextArgsLen >= previousArgsLen + STREAMING_PREVIEW_UPDATE_MIN_DELTA_CHARS;
+  return false;
 }
 
 /**
@@ -783,7 +831,9 @@ export function resolveStreamingToolPreviewEmit(
               ? subagentStreamingPreviewSignature(argumentsJson)
               : toolName === "tool_call" || toolName === "tool_describe"
                 ? lazyToolGatewayStreamingPreviewSignature(argumentsJson)
-                : undefined;
+                : toolName === "apply_patch"
+                  ? applyPatchStreamingPreviewSignature(argumentsJson)
+                  : undefined;
 
   const emit =
     !state.readyPreviewEmitted ||
