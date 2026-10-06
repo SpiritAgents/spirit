@@ -3,11 +3,13 @@ export function resolveEffectiveEmptySession(input: {
   subagentViewActive: boolean;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
+  approvalPreviewDemoActive: boolean;
   newChatBusy: boolean;
 }): boolean {
   if (
     input.compactionDemoActive ||
     input.longConversationListDemoActive ||
+    input.approvalPreviewDemoActive ||
     input.subagentViewActive
   ) {
     return false;

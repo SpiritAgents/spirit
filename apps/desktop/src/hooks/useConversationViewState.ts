@@ -18,6 +18,7 @@ import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
 import { isSubagentToolCallPending } from "@/lib/subagent-viewer-pending";
 import {
   CONVERSATION_COMPOSER_SCROLL_BED_FALLBACK_PX,
@@ -39,6 +40,7 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
+type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
 
 /** IPC snapshot data is all JSON-derived (no function / Date / circular references); undefined fields are treated as absent */
 export function jsonLikeEquals(a: unknown, b: unknown): boolean {
@@ -115,6 +117,7 @@ export type UseConversationViewStateOptions = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
+  approvalPreviewDemo: ApprovalPreviewDemo;
   t: TFunction;
   language: string;
   /** When true, composer interrupt/send state follows this pane snapshot, not global runtime. */
@@ -129,6 +132,7 @@ export function useConversationViewState({
   subagentViewer,
   compactionDemo,
   longConversationListDemo,
+  approvalPreviewDemo,
   t,
   language,
   useIsolatedPane = false,
@@ -184,6 +188,7 @@ export function useConversationViewState({
     subagentToolCallId: subagentViewer.toolCallId,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
   });
   const conversationRenderItems = useMemo(
     () => buildConversationRenderItems(messages, conversationListScopeKey),
@@ -241,10 +246,19 @@ export function useConversationViewState({
   const [processGroupManualOpen, setProcessGroupManualOpen] = useState<Record<string, boolean>>({});
   const turnContinue = useMemo(
     () =>
-      compactionDemo.active || longConversationListDemo.active || subagentViewActive
+      compactionDemo.active ||
+      longConversationListDemo.active ||
+      approvalPreviewDemo.active ||
+      subagentViewActive
         ? undefined
         : resolveTurnContinuePresentation(messages),
-    [compactionDemo.active, longConversationListDemo.active, messages, subagentViewActive],
+    [
+      compactionDemo.active,
+      longConversationListDemo.active,
+      approvalPreviewDemo.active,
+      messages,
+      subagentViewActive,
+    ],
   );
 
   const rewindWarnings = snapshot?.conversation.rewindWarnings ?? [];
@@ -261,6 +275,7 @@ export function useConversationViewState({
     subagentViewActive,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
     newChatBusy: false,
   });
   const { ref: composerDockRef, heightPx: composerDockHeightPx } =
@@ -361,9 +376,10 @@ export function useConversationViewState({
     (toolCallId: string) => {
       compactionDemo.stop();
       longConversationListDemo.stop();
+      approvalPreviewDemo.stop();
       void subagentViewer.open(toolCallId);
     },
-    [compactionDemo, longConversationListDemo, subagentViewer],
+    [compactionDemo, longConversationListDemo, approvalPreviewDemo, subagentViewer],
   );
 
   return {

@@ -12,6 +12,7 @@ import { findLastForkableAssistantMessageId } from "@/lib/fork-session-utils";
 import { useConversationPaneController } from "@/hooks/useConversationPaneController";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
@@ -23,6 +24,7 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
+type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
 export type ConversationPaneHostProps = {
@@ -46,6 +48,7 @@ export type ConversationPaneHostProps = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
+  approvalPreviewDemo: ApprovalPreviewDemo;
   newChatBusy: boolean;
   onNewChat?: () => void;
   deleteSessionBusy?: boolean;
@@ -57,6 +60,7 @@ export type ConversationPaneHostProps = {
   onOpenIntegrationsSettings: () => void;
   onCompactionDemoStop: () => void;
   onLongConversationListDemoStop: () => void;
+  onApprovalPreviewDemoStop: () => void;
   paneReorderEnabled: boolean;
   onPaneDragStart?: (paneId: string) => void;
   onPaneDragLeave?: () => void;
@@ -247,6 +251,10 @@ export function ConversationPaneHost({
         longConversationListDemoActive={pane.longConversationListDemoActive}
         onLongConversationListDemoStop={controllerInput.onLongConversationListDemoStop}
         longConversationListDemoStats={controllerInput.longConversationListDemo.stats}
+        approvalPreviewDemoActive={pane.approvalPreviewDemoActive}
+        onApprovalPreviewDemoStop={controllerInput.onApprovalPreviewDemoStop}
+        approvalPreviewDemoApprovals={pane.approvalPreviewDemoApprovals}
+        onPaneKeyDown={pane.onPaneKeyDown}
         rewindDraft={pane.rewindDraft}
         onRewindDraftClear={pane.onRewindDraftClear}
         conversationScrollBedPaddingPx={pane.conversationScrollBedPaddingPx}

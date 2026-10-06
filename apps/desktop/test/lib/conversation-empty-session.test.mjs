@@ -10,6 +10,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
+      approvalPreviewDemoActive: false,
       newChatBusy: true,
     }),
     true,
@@ -20,6 +21,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
+      approvalPreviewDemoActive: false,
       newChatBusy: false,
     }),
     false,
@@ -30,6 +32,7 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: false,
+      approvalPreviewDemoActive: false,
       newChatBusy: false,
     }),
     true,
@@ -40,6 +43,21 @@ test("resolveEffectiveEmptySession treats pending reset as empty even with stale
       subagentViewActive: false,
       compactionDemoActive: false,
       longConversationListDemoActive: true,
+      approvalPreviewDemoActive: false,
+      newChatBusy: false,
+    }),
+    false,
+  );
+});
+
+test("resolveEffectiveEmptySession treats the approval preview demo as non-empty", () => {
+  assert.equal(
+    resolveEffectiveEmptySession({
+      sessionMessageCount: 0,
+      subagentViewActive: false,
+      compactionDemoActive: false,
+      longConversationListDemoActive: false,
+      approvalPreviewDemoActive: true,
       newChatBusy: false,
     }),
     false,

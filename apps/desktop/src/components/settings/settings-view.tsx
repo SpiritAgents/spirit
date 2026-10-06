@@ -72,6 +72,7 @@ export function SettingsView({
   onGenerateHookNavigate,
   onStartCompactionUiDemo,
   onStartLongConversationListDemo,
+  onStartApprovalPreviewDemo,
   useTranslucency: _useTranslucency = false,
   getGitHubAuthStatus,
   beginGitHubDeviceLogin,
@@ -143,6 +144,7 @@ export function SettingsView({
               <DeveloperSettingsPanel
                 onStartCompactionUiDemo={onStartCompactionUiDemo}
                 onStartLongConversationListDemo={onStartLongConversationListDemo}
+                onStartApprovalPreviewDemo={onStartApprovalPreviewDemo}
               />
             ) : tab === "dreams" ? (
               <DreamSettingsPanel
