@@ -80,13 +80,7 @@ export function ComposerContextUsageRing({ usage }: { usage?: ConversationContex
           <span className="font-sans text-xs text-muted-foreground">{usage.percent}%</span>
         </button>
       </TooltipTrigger>
-      <TooltipContent
-        side="top"
-        align="end"
-        sideOffset={6}
-        appearance="detail"
-        className="px-3 py-2"
-      >
+      <TooltipContent side="top" sideOffset={6} appearance="detail" className="px-3 py-2">
         <ContextUsageDetailPanel usage={usage} />
       </TooltipContent>
     </Tooltip>
