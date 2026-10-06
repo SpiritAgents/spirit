@@ -289,7 +289,7 @@ export const DESKTOP_FORM_INPUT_INNER =
   "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-sm shadow-none dark:bg-transparent";
 
 export const DESKTOP_FORM_TEXTAREA_INNER =
-  "min-h-9 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-sm shadow-none dark:bg-transparent";
+  "min-h-8 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-[0.8rem] leading-4 shadow-none dark:bg-transparent";
 
 /** Select / custom trigger placed inside DESKTOP_FORM_INPUT_SHELL */
 export const DESKTOP_FORM_FIELD_TRIGGER_INNER =

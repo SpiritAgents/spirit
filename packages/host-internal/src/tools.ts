@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { product } from "@spiritagent/product";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
 import path from "node:path";
@@ -13,10 +13,19 @@ import {
   toolNamesFromDefinitions,
   type JsonValue,
   type PermissionMemoryTarget,
+  type ToolApprovalFileDiffPreview,
   type ToolApprovalRequest,
+  type ToolExecutionFileChangeDiff,
+  type ToolExecutionHostUi,
 } from "@spiritagent/agent-core";
 
 import { applyDiff } from "./apply-diff.js";
+import {
+  APPROVAL_FILE_PREVIEW_MAX_BYTES,
+  buildApprovalFileContentPreview,
+  buildApprovalFileDiffPreview,
+  type ApprovalFileDiffPreviewSource,
+} from "./approval-file-preview.js";
 import {
   GREP_TOOL_MAX_MATCHES,
   formatGrepToolOutput,
@@ -982,15 +991,9 @@ export class NodeHostToolService<
         if (bypassHighRiskApproval || metadata?.userInitiated) {
           return { kind: "allowed" };
         }
-        const shell = this.toolDefinitionEnvironment();
         return {
           kind: "need-approval",
-          approval: {
-            kind: "shell",
-            command: request.command,
-            reason: request.reason,
-            terminal: shell.shellDisplayName,
-          },
+          approval: this.describeShellApproval(request),
           rememberTarget: { kind: "shell", command: request.command },
         };
       }
@@ -1019,61 +1022,39 @@ export class NodeHostToolService<
           bypassHighRiskApproval || this.requestMetadataFor(request)?.userInitiated === true,
         );
       }
-      case "create_file":
+      case "create_file": {
         return {
           kind: "need-approval",
-          approval: {
-            kind: "create_file",
-            path: request.path,
-            contentChars: [...request.content].length,
-          },
+          approval: await this.describeCreateFileApproval(request),
         };
-      case "create_plan":
+      }
+      case "create_plan": {
         return {
           kind: "need-approval",
-          approval: {
-            kind: "create_plan",
-            planName: request.plan_name,
-            contentChars: [...request.content].length,
-          },
+          approval: await this.describeCreatePlanApproval(request),
         };
+      }
       case CREATE_AUTOMATION_TOOL_NAME:
         return {
           kind: "need-approval",
-          approval: {
-            kind: "create_automation",
-            title: request.title,
-            trigger: request.trigger as JsonValue,
-            approvalLevel: request.approval_level,
-            overviewChars: [...request.overview].length,
-          },
+          approval: this.describeCreateAutomationApproval(request),
         };
-      case "edit_file":
+      case "edit_file": {
         return {
           kind: "need-approval",
-          approval: {
-            kind: "edit_file",
-            path: request.path,
-            oldChars: [...request.old_text].length,
-            newChars: [...request.new_text].length,
-          },
+          approval: await this.describeEditFileApproval(request),
         };
-      case "delete_file":
+      }
+      case "delete_file": {
         return {
           kind: "need-approval",
-          approval: { kind: "delete_file", path: request.path },
+          approval: await this.describeDeleteFileApproval(request),
         };
+      }
       case APPLY_PATCH_HOST_TOOL_NAME: {
-        const diffLines =
-          request.operation.diff === undefined ? 0 : request.operation.diff.split(/\r?\n/).length;
         return {
           kind: "need-approval",
-          approval: {
-            kind: "apply_patch",
-            operation: request.operation.type,
-            path: request.operation.path,
-            ...(request.operation.type === "update_file" ? { diffLines } : {}),
-          },
+          approval: await this.describeApplyPatchApproval(request),
         };
       }
       case "dream_list":
@@ -1084,6 +1065,223 @@ export class NodeHostToolService<
       case "todo_list":
       case "todo_write":
         return { kind: "allowed" };
+    }
+  }
+
+  /**
+   * Structured approval descriptor for a call the host would auto-allow, used to enrich
+   * hook-gated approvals with the same rich form (ToolExecutor.describeApproval). Best-effort:
+   * unresolvable paths or unknown tools return undefined and the hook message stands alone.
+   */
+  async describeApproval(
+    request: HostToolRequest<QuestionSpec>,
+  ): Promise<ToolApprovalRequest | undefined> {
+    try {
+      switch (request.name) {
+        case "shell":
+          return this.describeShellApproval(request);
+        case "web_fetch":
+          return { kind: "web_fetch", url: request.url };
+        case "ls": {
+          const canonical = await this.resolveExistingAbsoluteDirectory(request.path);
+          return this.buildReadPathApprovalDescriptor(canonical, "ls");
+        }
+        case "read_file": {
+          const target = await this.resolveReadFileTarget(request.path);
+          return this.buildReadPathApprovalDescriptor(target.canonicalPath, "read_file");
+        }
+        case "create_file":
+          return this.describeCreateFileApproval(request);
+        case "create_plan":
+          return this.describeCreatePlanApproval(request);
+        case "edit_file":
+          return this.describeEditFileApproval(request);
+        case "delete_file":
+          return this.describeDeleteFileApproval(request);
+        case APPLY_PATCH_HOST_TOOL_NAME:
+          return this.describeApplyPatchApproval(request);
+        case CREATE_AUTOMATION_TOOL_NAME:
+          return this.describeCreateAutomationApproval(request);
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
+    }
+  }
+
+  private describeShellApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "shell" }>,
+  ): ToolApprovalRequest {
+    const shell = this.toolDefinitionEnvironment();
+    return {
+      kind: "shell",
+      command: request.command,
+      reason: request.reason,
+      terminal: shell.shellDisplayName,
+    };
+  }
+
+  private async describeCreateFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "create_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "create_file",
+      path: request.path,
+      content: request.content,
+    });
+    return {
+      kind: "create_file",
+      path: request.path,
+      contentChars: [...request.content].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeCreatePlanApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "create_plan" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "create_plan",
+      planName: request.plan_name,
+      content: request.content,
+    });
+    return {
+      kind: "create_plan",
+      planName: request.plan_name,
+      contentChars: [...request.content].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private describeCreateAutomationApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: typeof CREATE_AUTOMATION_TOOL_NAME }>,
+  ): ToolApprovalRequest {
+    return {
+      kind: "create_automation",
+      title: request.title,
+      trigger: request.trigger as JsonValue,
+      approvalLevel: request.approval_level,
+      overview: request.overview,
+      overviewChars: [...request.overview].length,
+    };
+  }
+
+  private async describeEditFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "edit_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "edit_file",
+      path: request.path,
+      oldText: request.old_text,
+      newText: request.new_text,
+    });
+    return {
+      kind: "edit_file",
+      path: request.path,
+      oldChars: [...request.old_text].length,
+      newChars: [...request.new_text].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeDeleteFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "delete_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "delete_file",
+      path: request.path,
+    });
+    return {
+      kind: "delete_file",
+      path: request.path,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeApplyPatchApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: typeof APPLY_PATCH_HOST_TOOL_NAME }>,
+  ): Promise<ToolApprovalRequest> {
+    const diffLines =
+      request.operation.diff === undefined ? 0 : request.operation.diff.split(/\r?\n/).length;
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "apply_patch",
+      operation: request.operation,
+    });
+    return {
+      kind: "apply_patch",
+      operation: request.operation.type,
+      path: request.operation.path,
+      ...(request.operation.type === "update_file" ? { diffLines } : {}),
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  /**
+   * Comparison roots for read approvals: the descriptor path is realpath'd, so the workspace
+   * root must be too (macOS /var -> /private/var and similar symlinked roots never match
+   * otherwise). A missing root falls back to the unresolved path — display concerns must not
+   * kill the descriptor.
+   */
+  private readPathWorkspaceRoots(): string[] {
+    const roots = [path.resolve(this.workspaceRoot)];
+    try {
+      const resolvedRoot = realpathSync(this.workspaceRoot);
+      if (resolvedRoot !== roots[0]) {
+        roots.push(resolvedRoot);
+      }
+    } catch {
+      // Keep the unresolved root.
+    }
+    return roots;
+  }
+
+  private async buildReadPathApprovalDescriptor(
+    canonical: string,
+    operation: "read_file" | "ls",
+  ): Promise<ToolApprovalRequest> {
+    // Best-effort like the diff previews: an unreadable/binary/over-sized target just drops the
+    // content preview, and the approval form falls back to the plain path text.
+    let fileContentPreview;
+    try {
+      fileContentPreview = await buildApprovalFileContentPreview(canonical, operation);
+    } catch {
+      fileContentPreview = undefined;
+    }
+    // Display path: workspace-relative when inside the workspace, else the global absolute path.
+    const withinRoot = this.readPathWorkspaceRoots().find((root) => isWithinRoot(canonical, root));
+    let displayPath = canonical;
+    if (withinRoot !== undefined) {
+      const relative = path.relative(withinRoot, canonical).replace(/\\/g, "/");
+      if (relative) {
+        displayPath = relative;
+      }
+    }
+    return {
+      kind: "read_path",
+      operation,
+      path: displayPath,
+      workspaceExternal: withinRoot === undefined,
+      ...(fileContentPreview
+        ? { fileContentPreview: { path: displayPath, content: fileContentPreview.content } }
+        : {}),
+    };
+  }
+
+  /**
+   * Best-effort diff preview for the approval form: the target may vanish or the patch may not
+   * apply between the tool call and the approval decision, so preview failures degrade to the
+   * plain text prompt instead of failing the authorization.
+   */
+  private async approvalFileDiffPreview(
+    source: ApprovalFileDiffPreviewSource,
+  ): Promise<ToolApprovalFileDiffPreview | undefined> {
+    try {
+      return await buildApprovalFileDiffPreview(source, (inputPath) =>
+        this.resolveWorkspaceWriteTarget(inputPath),
+      );
+    } catch {
+      return undefined;
     }
   }
 
@@ -1429,11 +1627,11 @@ export class NodeHostToolService<
    * built-in location fallback when NO rule matched. `foldAskToAllow` folds
    * every ask (rule or fallback) to allow under bypass-approval / userInitiated.
    */
-  private authorizeExternalReadPath(
+  private async authorizeExternalReadPath(
     canonical: string,
     operation: "read_file" | "ls",
     foldAskToAllow: boolean,
-  ): HostAuthorizationDecision<QuestionSpec> {
+  ): Promise<HostAuthorizationDecision<QuestionSpec>> {
     const evaluation = evaluateReadFilePermission(
       canonical,
       this.loadPermissionRules().read_file ?? {},
@@ -1450,11 +1648,7 @@ export class NodeHostToolService<
     }
     if (evaluation.matched !== undefined) {
       if (evaluation.verdict === "ask" && !foldAskToAllow) {
-        return {
-          kind: "need-approval",
-          approval: { kind: "read_path", operation, path: canonical },
-          rememberTarget: { kind: "read_file", path: canonical },
-        };
+        return this.needReadPathApproval(canonical, operation);
       }
       return { kind: "allowed" };
     }
@@ -1464,9 +1658,16 @@ export class NodeHostToolService<
     if (this.isAllowedReadLocation(canonical) || foldAskToAllow) {
       return { kind: "allowed" };
     }
+    return this.needReadPathApproval(canonical, operation);
+  }
+
+  private async needReadPathApproval(
+    canonical: string,
+    operation: "read_file" | "ls",
+  ): Promise<HostAuthorizationDecision<QuestionSpec>> {
     return {
       kind: "need-approval",
-      approval: { kind: "read_path", operation, path: canonical },
+      approval: await this.buildReadPathApprovalDescriptor(canonical, operation),
       rememberTarget: { kind: "read_file", path: canonical },
     };
   }

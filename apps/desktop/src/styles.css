@@ -358,6 +358,9 @@ html.spirit-theme-switching *::after {
  * Composer chrome (model picker, insert, send) must inherit none: restoring the whole
  * [data-spirit-surface="composer-surface"] made those triggers selectable. The Lexical
  * field is already covered by [contenteditable="true"].
+ * The pending-approval card is chrome (title, details, buttons): it is deliberately not in
+ * this list — its shell command, diff code, and guidance textarea stay selectable through
+ * their own selectors above.
  */
 html.spirit-desktop-native {
   -webkit-user-select: none;
@@ -373,7 +376,6 @@ html.spirit-desktop-native
     [data-spirit-selectable="text"],
     [data-spirit-surface="message-bubble"],
     [data-spirit-surface="turn-error-card"],
-    [data-spirit-surface="pending-approval-card"],
     [data-spirit-surface="pending-questions-card"],
     [data-spirit-markdown-root],
     .monaco-editor,

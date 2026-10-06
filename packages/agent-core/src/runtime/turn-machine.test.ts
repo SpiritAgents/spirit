@@ -1428,6 +1428,91 @@ test("processToolCalls hook ask triggers approval when host allows", async () =>
   }
 });
 
+test("processToolCalls hook ask on host-allowed call carries the described approval request", async () => {
+  const state = { messages: [] as Array<{ role: string; content: string }>, steps: 0 };
+  const described = {
+    kind: "read_path" as const,
+    operation: "read_file" as const,
+    path: "/w/notes.md",
+    fileContentPreview: { path: "/w/notes.md", content: "hi\n" },
+  };
+  const runtime = {
+    options: {
+      config: {},
+      hookRunner: createStubHookRunner(async () => ({
+        records: [],
+        denied: false,
+        permission: "ask",
+        userMessage: "hook confirmation required",
+        agentMessage: undefined,
+        updatedInput: undefined,
+        additionalContexts: [],
+        followupMessage: undefined,
+      })),
+      hookSessionContext: {
+        sessionId: "s1",
+        conversationPath: null,
+        workspaceRoot: "/w",
+        model: "m",
+      },
+      llmTransport: {
+        startToolAgentRound: async () => ({
+          kind: "failure",
+          error: "unused",
+          requestTrace: [],
+        }),
+        isContextOverflowError: () => false,
+      },
+      toolExecutor: {
+        toolDefinitionsJson: () => [],
+        requestFromFunctionCall: async (name: string) => ({ name }),
+        authorize: async () => ({ kind: "allowed" }),
+        describeApproval: async () => described,
+        execute: async () => ({ content: [], summaryText: "ok" }),
+      },
+      createToolAgentState: () => state,
+      appendToolResultMessage: (currentState: typeof state) => currentState,
+      extractAssistantText: () => undefined,
+    },
+    historyStore: [],
+    requestTraceStore: [],
+    pendingUserTurnStore: undefined,
+    pendingApproval: undefined,
+    pendingQuestions: undefined,
+    pendingToolAgentRound: undefined,
+    appendTrace: () => {},
+    clearStreamingUiState: () => {},
+    completeTurn: () => {},
+    emitEvent: () => {},
+    performToolExecution: async () => {
+      throw new Error("unused");
+    },
+    startBackgroundToolExecutionAsync: () => {
+      throw new Error("unused");
+    },
+    startHistoryCompactionAsync: () => {},
+    loopEnabled: () => false,
+  } as unknown as TurnMachineRuntime<{}, typeof state, { name: string }>;
+
+  const result = await processToolCalls(
+    runtime,
+    state,
+    "run read_file",
+    [{ id: "call_read", name: "read_file", argumentsJson: '{"path":"notes.md"}' }],
+    createTurnContext(),
+  );
+
+  assert.equal(result.kind, "requires-approval");
+  if (result.kind === "requires-approval") {
+    // The hook keeps its message; the described structured request rides along.
+    assert.deepEqual(result.approval.prompt, {
+      kind: "hook",
+      message: "hook confirmation required",
+      request: described,
+    });
+  }
+});
+
 test("processToolCalls auto-approval does not bypass hook ask permission", async () => {
   let performExecutionCount = 0;
   const state = { messages: [] as Array<{ role: string; content: string }>, steps: 0 };

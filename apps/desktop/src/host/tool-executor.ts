@@ -48,6 +48,7 @@ import {
   type McpToolRequest,
   type PermissionMemoryTarget,
   type ToolAgentMcpToolCatalogSnapshot,
+  type ToolApprovalRequest,
   type ToolExecutionOutput,
   ToolRequestExecutionMetadata,
   ToolExecutor,
@@ -361,6 +362,26 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     return this.tools.authorize(request);
   }
 
+  /**
+   * Only built-in host tools carry approval descriptors; MCP / lazy-gateway / LSP requests have
+   * no rich approval form and keep the hook message-only form.
+   */
+  async describeApproval(request: DesktopToolRequest): Promise<ToolApprovalRequest | undefined> {
+    if (this.mcp.isFetchMcpResourceToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (this.mcp.isLazyToolGatewayToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (this.mcp.isToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (isLspDiagnosticsToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    return this.tools.describeApproval(request);
+  }
+
   async rememberApproval(
     target: PermissionMemoryTarget,
     scope: "session" | "config",
@@ -607,6 +628,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
               title: preview.title,
               trigger: preview.trigger as JsonValue,
               approvalLevel: preview.approval_level,
+              overview: preview.overview,
               overviewChars: [...preview.overview].length,
             },
           };

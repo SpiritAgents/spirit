@@ -1769,9 +1769,40 @@ export interface MessageAuxSnapshot {
 export interface PendingToolApprovalSnapshot {
   toolName: string;
   prompt: string;
+  /** Shell approvals render the command as a syntax-highlighted block instead of the plain prompt. */
+  shellCommand?: string;
+  /** MCP tool_call approvals render the arguments as a Shiki JSON block instead of the plain prompt. */
+  mcpToolCallArgumentsJson?: string;
+  /** File-change approvals render diff preview frames instead of the plain prompt. */
+  fileDiffPreviews?: FileDiffPreviewPayload[];
+  /** Out-of-workspace read approvals render a line-numbered content frame instead of the plain prompt. */
+  fileContentPreview?: FileContentPreviewPayload;
+  /** Hook-gated approvals surface the hook's message as its own row above the content. */
+  hookMessage?: string;
+  /** Automation approvals carry the configured run approval level for the note line below the body. */
+  automationApprovalLevel?: ApprovalLevel;
   rememberTarget?: PermissionMemoryTarget;
   subagentSessionId?: string;
   autoReviewBlockReason?: string;
+}
+
+export interface FileDiffPreviewPayload {
+  relativePath: string;
+  languageId: string;
+  original: string;
+  modified: string;
+  /** Defaults to expanded; delete frames start collapsed. */
+  defaultOpen?: boolean;
+}
+
+export interface FileContentPreviewPayload {
+  relativePath: string;
+  languageId: string;
+  content: string;
+  /** Directory listings (ls) render a folder icon instead of a file icon. */
+  directory?: boolean;
+  /** Defaults to expanded. */
+  defaultOpen?: boolean;
 }
 
 export type DesktopApprovalDecision =
