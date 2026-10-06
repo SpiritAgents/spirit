@@ -1,16 +1,12 @@
 import type { JsonValue, ToolApprovalPrompt, ToolApprovalRequest } from "@spiritagent/agent-core";
+import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
 
+import { formatDesktopAutomationTimeOfDay } from "./automation-schedule.js";
 import type { DesktopAutomationTrigger } from "./automation-trigger.js";
-import {
-  formatDesktopAutomationTriggerLabel,
-  isValidDesktopAutomationTrigger,
-} from "./automation-trigger.js";
-import {
-  buildAutomationTriggerFormatLabels,
-  type AutomationTriggerTranslate,
-} from "./automation-trigger-i18n.js";
+import { isValidDesktopAutomationTrigger } from "./automation-trigger.js";
 
-export type ApprovalPromptTranslate = AutomationTriggerTranslate;
+export type ApprovalPromptTranslate = (key: string, options?: Record<string, unknown>) => string;
 
 export type ApprovalPromptView = {
   title: string;
@@ -51,110 +47,126 @@ function approvalViewTitle(
     if (reason) {
       return reason;
     }
+    return toolName;
   }
-  return toolName;
+  switch (request.kind) {
+    case "web_fetch":
+      return t("approval.title.fetchWebPage", { url: request.url });
+    case "read_path":
+      if (request.operation === "ls") {
+        return t("approval.title.listDirectory", { path: request.path });
+      }
+      // Ask rules and hook gates can also target workspace files; the "outside the workspace"
+      // title only fits truly external reads.
+      return request.workspaceExternal === false
+        ? t("approval.title.readFile")
+        : t("approval.title.readFileOutsideWorkspace");
+    case "create_file":
+      return t("approval.title.createFile");
+    case "create_plan":
+      return t("approval.title.createPlan");
+    case "edit_file":
+      return t("approval.title.editFile");
+    case "delete_file":
+      return t("approval.title.deleteFile");
+    case "apply_patch":
+      // Titled by the operation, matching the single-purpose file tool forms; the generic
+      // "Apply Patch" key remains the fallback for unknown operations.
+      if (request.operation === "create_file") {
+        return t("approval.title.createFile");
+      }
+      if (request.operation === "update_file") {
+        return t("approval.title.editFile");
+      }
+      if (request.operation === "delete_file") {
+        return t("approval.title.deleteFile");
+      }
+      return t("approval.title.applyPatch");
+    case "create_automation":
+      return automationStructuredTitle(request, t);
+    case "lazy_tool_call":
+      // MCP titles read "{Server} {Tool}" in UI casing (well-known overrides keep `ai` → `AI`);
+      // the built-in and unknown-provider forms keep their localized generic titles.
+      if (request.provider === "mcp") {
+        return `${formatTitleFromId(request.server, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES })} ${formatTitleFromId(request.tool, { casingOverrides: WELL_KNOWN_CASING_OVERRIDES })}`;
+      }
+      return request.provider === "built-in"
+        ? t("approval.title.lazyBuiltInToolCall")
+        : t("approval.title.lazyToolCall");
+    default:
+      return toolName;
+  }
 }
 
 function approvalViewBody(request: ToolApprovalRequest, t: ApprovalPromptTranslate): string {
   switch (request.kind) {
+    // Shell cards render the command as a Shiki block; the body stays the raw command for the
+    // timeline detail lines and notifications (the shell card filters the duplicated line).
     case "shell":
-      return [
-        t("approval.highRisk.shell"),
-        t("approval.field.terminal", { name: request.terminal }),
-        t("approval.field.command", { command: request.command }),
-      ].join("\n");
+      return request.command;
     case "web_fetch":
-      return [
-        t("approval.highRisk.fetchWebPage"),
-        t("approval.field.url", { url: request.url }),
-        "",
-        t("approval.webFetchWarning"),
-      ].join("\n");
+      // The URL lives in the title; the body stays empty (the card skips an empty body).
+      return "";
     case "read_path":
-      return [
-        request.operation === "ls"
-          ? t("approval.highRisk.listDirectoryOutsideWorkspace")
-          : t("approval.highRisk.readFileOutsideWorkspace"),
-        t("approval.field.path", { path: request.path }),
-      ].join("\n");
+      return t("approval.field.path", { path: request.path });
     case "create_file":
       return [
-        t("approval.highRisk.createFile"),
         t("approval.field.path", { path: request.path }),
         t("approval.field.contentLength", { chars: request.contentChars }),
       ].join("\n");
     case "create_plan":
       return [
-        t("approval.highRisk.createPlan"),
         t("approval.field.name", { name: request.planName }),
         t("approval.field.contentLength", { chars: request.contentChars }),
       ].join("\n");
     case "edit_file":
       return [
-        t("approval.highRisk.editFileExactReplacement"),
         t("approval.field.path", { path: request.path }),
         t("approval.field.oldTextLength", { chars: request.oldChars }),
         t("approval.field.newTextLength", { chars: request.newChars }),
       ].join("\n");
     case "delete_file":
-      return [
-        t("approval.highRisk.deleteFile"),
-        t("approval.field.path", { path: request.path }),
-      ].join("\n");
+      return t("approval.field.path", { path: request.path });
     case "apply_patch":
       return [
-        t("approval.highRisk.applyPatch", { operation: request.operation }),
         t("approval.field.path", { path: request.path }),
         ...(request.diffLines !== undefined
           ? [t("approval.field.diffLines", { lines: request.diffLines })]
           : []),
       ].join("\n");
     case "create_automation":
-      return [
-        t("approval.highRisk.createAutomation"),
-        t("approval.field.title", { title: request.title }),
-        t("approval.field.schedule", { schedule: automationScheduleLabel(request.trigger, t) }),
-        t("approval.field.runApproval", { level: automationApprovalLevelLabel(request, t) }),
-        t("approval.field.overviewLength", { characters: request.overviewChars }),
-      ].join("\n");
+      // The overview is the card's body; the schedule lives in the structured title and the run
+      // approval level in its own note line, so the body carries the overview verbatim.
+      return request.overview;
     case "extension_tool":
       return [
-        t("approval.highRisk.extensionTool"),
+        t("approval.extensionToolConfirmation"),
         t("approval.field.extension", { id: request.extensionId }),
         t("approval.field.tool", { tool: request.toolName }),
         "",
         t("approval.field.extensionArguments", { arguments: request.argumentsPreview }),
       ].join("\n");
     case "lazy_tool_call": {
+      // MCP cards render the arguments as a Shiki JSON block; the body is that same pretty JSON
+      // for the timeline detail lines and notifications (empty when there are no arguments).
+      if (request.provider === "mcp") {
+        return request.arguments === undefined ? "" : JSON.stringify(request.arguments, null, 2);
+      }
       const argsText =
         request.arguments === undefined
           ? t("approval.field.noArguments")
           : JSON.stringify(request.arguments, null, 2);
-      const headline =
-        request.provider === "built-in"
-          ? t("approval.highRisk.lazyBuiltInToolCall")
-          : request.provider === "mcp"
-            ? t("approval.highRisk.lazyMcpToolCall")
-            : [
-                t("approval.highRisk.lazyToolCall"),
-                t("approval.field.provider", { provider: request.provider }),
-              ].join("\n");
       return [
-        headline,
+        // Unknown providers keep their provider line since the title cannot carry it.
+        ...(request.provider !== "built-in" && request.provider !== "mcp"
+          ? [t("approval.field.provider", { provider: request.provider })]
+          : []),
         t("approval.field.server", { server: request.server }),
         t("approval.field.tool", { tool: request.tool }),
         t("approval.field.arguments", { arguments: argsText }),
       ].join("\n");
     }
   }
-}
-
-function automationScheduleLabel(trigger: JsonValue, t: ApprovalPromptTranslate): string {
-  const parsed = desktopTriggerFromJson(trigger);
-  if (!parsed) {
-    return JSON.stringify(trigger);
-  }
-  return formatDesktopAutomationTriggerLabel(parsed, buildAutomationTriggerFormatLabels(t));
 }
 
 function desktopTriggerFromJson(value: JsonValue): DesktopAutomationTrigger | undefined {
@@ -165,15 +177,30 @@ function desktopTriggerFromJson(value: JsonValue): DesktopAutomationTrigger | un
   return isValidDesktopAutomationTrigger(candidate) ? candidate : undefined;
 }
 
-function automationApprovalLevelLabel(
+/** "Create {title} to run {schedule}" titles, composed from the trigger's structured fields. */
+function automationStructuredTitle(
   request: Extract<ToolApprovalRequest, { kind: "create_automation" }>,
   t: ApprovalPromptTranslate,
 ): string {
-  if (request.approvalLevel === "auto-approval") {
-    return t("composer.approvalAuto");
+  const trigger = desktopTriggerFromJson(request.trigger);
+  if (!trigger) {
+    return t("approval.title.createAutomation");
   }
-  if (request.approvalLevel === "bypass-approval") {
-    return t("composer.approvalBypass");
+  const title = request.title;
+  if (trigger.kind === "time") {
+    const schedule = trigger.schedule;
+    if (schedule.kind === "hourly") {
+      return t("approval.title.createAutomationHourly", { title });
+    }
+    const time = formatDesktopAutomationTimeOfDay(schedule.hour, schedule.minute);
+    if (schedule.kind === "daily") {
+      return t("approval.title.createAutomationDaily", { title, time });
+    }
+    const weekday = t(`automations.schedule.weekday${schedule.weekday}`);
+    return t("approval.title.createAutomationWeekly", { title, weekday, time });
   }
-  return t("composer.approvalDefault");
+  const repo = `${trigger.owner}/${trigger.repo}`;
+  return trigger.event === "pull_request_created"
+    ? t("approval.title.createAutomationGithubPullRequest", { title, repo })
+    : t("approval.title.createAutomationGithubIssue", { title, repo });
 }

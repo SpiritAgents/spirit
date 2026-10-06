@@ -30,7 +30,7 @@ type ApprovalLevelMenuProps = {
   onApprovalLevelChange(level: ApprovalLevel): void;
 };
 
-const APPROVAL_LEVEL_ICONS: Record<ApprovalLevel, LucideIcon> = {
+export const APPROVAL_LEVEL_ICONS: Record<ApprovalLevel, LucideIcon> = {
   default: ShieldCheck,
   "auto-approval": Brain,
   "bypass-approval": ShieldBan,
