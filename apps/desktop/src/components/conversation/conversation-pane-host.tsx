@@ -13,6 +13,7 @@ import { useConversationPaneController } from "@/hooks/useConversationPaneContro
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
 import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
+import type { useToolCardPreviewDemo } from "@/hooks/useToolCardPreviewDemo";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
@@ -25,6 +26,7 @@ type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
 type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
+type ToolCardPreviewDemo = ReturnType<typeof useToolCardPreviewDemo>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
 export type ConversationPaneHostProps = {
@@ -49,6 +51,7 @@ export type ConversationPaneHostProps = {
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
   approvalPreviewDemo: ApprovalPreviewDemo;
+  toolCardPreviewDemo: ToolCardPreviewDemo;
   newChatBusy: boolean;
   onNewChat?: () => void;
   deleteSessionBusy?: boolean;
@@ -61,6 +64,7 @@ export type ConversationPaneHostProps = {
   onCompactionDemoStop: () => void;
   onLongConversationListDemoStop: () => void;
   onApprovalPreviewDemoStop: () => void;
+  onToolCardPreviewDemoStop: () => void;
   paneReorderEnabled: boolean;
   onPaneDragStart?: (paneId: string) => void;
   onPaneDragLeave?: () => void;
@@ -254,6 +258,9 @@ export function ConversationPaneHost({
         approvalPreviewDemoActive={pane.approvalPreviewDemoActive}
         onApprovalPreviewDemoStop={controllerInput.onApprovalPreviewDemoStop}
         approvalPreviewDemoApprovals={pane.approvalPreviewDemoApprovals}
+        toolCardPreviewDemoActive={pane.toolCardPreviewDemoActive}
+        onToolCardPreviewDemoStop={controllerInput.onToolCardPreviewDemoStop}
+        toolCardPreviewDemoTools={pane.toolCardPreviewDemoTools}
         onPaneKeyDown={pane.onPaneKeyDown}
         rewindDraft={pane.rewindDraft}
         onRewindDraftClear={pane.onRewindDraftClear}

@@ -4,12 +4,14 @@ export function resolveEffectiveEmptySession(input: {
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
   approvalPreviewDemoActive: boolean;
+  toolCardPreviewDemoActive: boolean;
   newChatBusy: boolean;
 }): boolean {
   if (
     input.compactionDemoActive ||
     input.longConversationListDemoActive ||
     input.approvalPreviewDemoActive ||
+    input.toolCardPreviewDemoActive ||
     input.subagentViewActive
   ) {
     return false;

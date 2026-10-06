@@ -35,6 +35,7 @@ export type UseAppSurfaceNavigationOptions = {
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
   approvalPreviewDemoActive: boolean;
+  toolCardPreviewDemoActive: boolean;
   newChatBusy: boolean;
   t: TFunction;
   composerAutomationApiRef?: MutableRefObject<FocusedPaneComposerControls | null>;
@@ -48,6 +49,7 @@ export function useAppSurfaceNavigation({
   compactionDemoActive,
   longConversationListDemoActive,
   approvalPreviewDemoActive,
+  toolCardPreviewDemoActive,
   newChatBusy,
   t,
   composerAutomationApiRef,
@@ -94,6 +96,7 @@ export function useAppSurfaceNavigation({
     compactionDemoActive,
     longConversationListDemoActive,
     approvalPreviewDemoActive,
+    toolCardPreviewDemoActive,
     newChatBusy,
   });
 
