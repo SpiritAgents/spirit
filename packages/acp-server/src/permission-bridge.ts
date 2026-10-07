@@ -56,8 +56,8 @@ export async function handleApprovalRequest(
 /**
  * Handles a questions-requested event by degrading to a simple allow/deny prompt.
  *
- * In MVP, we don't support the full questions UI, so we present the questions
- * as text and ask for allow/deny.
+ * The full questions UI is not supported; the questions are presented as text
+ * with an allow/deny prompt.
  */
 export async function handleQuestionsRequest(
   connection: AgentSideConnection,

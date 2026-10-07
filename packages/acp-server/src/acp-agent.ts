@@ -317,7 +317,7 @@ export class SpiritAcpAgent implements acp.Agent {
       return;
     }
 
-    // Handle questions-requested by degrading to permission prompt (MVP)
+    // Handle questions-requested by degrading to a permission prompt
     if (event.kind === "questions-requested") {
       const session = this.sessionManager.getSession(sessionId);
       if (session) {
