@@ -1,0 +1,325 @@
+import { isOpenAiGpt6AstraModel } from "./openai/gpt-reasoning-controls.js";
+import type { ModelReasoningProvider, ModelReasoningTransportKind } from "./reasoning-effort.js";
+
+/**
+ * Canonical per-model service tier preference stored in the host config (`serviceTier`).
+ * Providers that expose a Fast alias persist `fast`; only providers whose native protocol
+ * has no Fast alias (SpaceXAI `xai`, Google) persist `priority`.
+ */
+export type ModelServiceTier = "auto" | "default" | "flex" | "fast" | "priority" | "ultrafast";
+
+export const MODEL_SERVICE_TIERS: readonly ModelServiceTier[] = [
+  "auto",
+  "default",
+  "flex",
+  "fast",
+  "priority",
+  "ultrafast",
+];
+
+/**
+ * Upstream provider identity behind an aggregator route (Vercel AI Gateway / OpenRouter).
+ * Sourced from catalog facts (Vercel `owned_by`, OpenRouter `canonical_slug` author prefix)
+ * with a known model-ID prefix fallback when the catalog fact is missing.
+ */
+export type ServiceTierUpstreamProvider = "openai" | "anthropic" | "google" | "xai";
+
+export interface ModelServiceTierContext {
+  /** Host provider id (aligned with `ModelProviderId` / transport `llmVendor`). */
+  provider?: ModelReasoningProvider;
+  /** Model id as configured; aggregator routes may carry an `upstream/` prefix. */
+  model?: string;
+  transportKind?: ModelReasoningTransportKind;
+  /** Catalog-provided upstream identity fact; authoritative when present. */
+  upstreamProvider?: string;
+  /** Vertex AI location; Flex/Priority are gated to the global endpoint. */
+  vertexLocation?: string;
+}
+
+export interface ModelServiceTierOption {
+  value: ModelServiceTier;
+  label: string;
+}
+
+/** Raised when a stored `serviceTier` value is unknown or unsupported for the provider/model. */
+export class ModelServiceTierConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ModelServiceTierConfigError";
+  }
+}
+
+export function normalizeModelServiceTier(value: unknown): ModelServiceTier | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim().toLowerCase();
+  return (MODEL_SERVICE_TIERS as readonly string[]).includes(trimmed)
+    ? (trimmed as ModelServiceTier)
+    : undefined;
+}
+
+const UPSTREAM_PROVIDER_ALIASES: Readonly<Record<string, ServiceTierUpstreamProvider>> = {
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google",
+  xai: "xai",
+  // OpenRouter uses the `x-ai` author prefix for xAI models.
+  "x-ai": "xai",
+};
+
+export function normalizeServiceTierUpstreamProvider(
+  value: unknown,
+): ServiceTierUpstreamProvider | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  return UPSTREAM_PROVIDER_ALIASES[value.trim().toLowerCase()];
+}
+
+function parseModelIdUpstreamProvider(
+  model: string | undefined,
+): ServiceTierUpstreamProvider | undefined {
+  const trimmed = model?.trim() ?? "";
+  const slashIndex = trimmed.indexOf("/");
+  if (slashIndex <= 0) {
+    return undefined;
+  }
+  return normalizeServiceTierUpstreamProvider(trimmed.slice(0, slashIndex));
+}
+
+/**
+ * Aggregator upstream identity: a present catalog fact is authoritative (an unrecognized fact
+ * means "known but unsupported" and hides the control); the model-ID prefix is parsed only
+ * when the catalog fact is absent. Unknown identity yields `undefined` (no options).
+ */
+export function resolveServiceTierUpstreamProvider(
+  context: Pick<ModelServiceTierContext, "upstreamProvider" | "model">,
+): ServiceTierUpstreamProvider | undefined {
+  if (typeof context.upstreamProvider === "string" && context.upstreamProvider.trim() !== "") {
+    return normalizeServiceTierUpstreamProvider(context.upstreamProvider);
+  }
+  return parseModelIdUpstreamProvider(context.model);
+}
+
+/** Vertex AI Flex/Priority are available only on the global endpoint. */
+export function isVertexGlobalServiceTierEndpoint(vertexLocation: string | undefined): boolean {
+  return vertexLocation?.trim().toLowerCase() === "global";
+}
+
+/**
+ * Anthropic's native Fast mode is limited to current Claude Opus models (4.8 / 5 / 5.5).
+ * Matches exact model families with a boundary so other Opus generations are not let through.
+ */
+const ANTHROPIC_NATIVE_FAST_MODEL_ID = /^claude-opus-(?:4-8|5)(?:$|[-_.])/;
+
+export function isAnthropicNativeFastModel(model: string | undefined): boolean {
+  if (model === undefined) {
+    return false;
+  }
+  const normalized = model
+    .trim()
+    .toLowerCase()
+    .replace(/^anthropic\//, "")
+    .replace(/(\d)\.(\d)/g, "$1-$2");
+  return ANTHROPIC_NATIVE_FAST_MODEL_ID.test(normalized);
+}
+
+/**
+ * The native Anthropic Fast toggle exists only for the direct Anthropic provider; aggregator-routed
+ * Claude models never get it (OpenRouter maps its own `fast` service tier instead).
+ */
+export function modelSupportsAnthropicNativeFast(
+  context?: Pick<ModelServiceTierContext, "provider" | "model">,
+): boolean {
+  return context?.provider === "anthropic" && isAnthropicNativeFastModel(context.model);
+}
+
+function tierOption(value: ModelServiceTier): ModelServiceTierOption {
+  switch (value) {
+    case "auto":
+      return { value, label: "Auto" };
+    case "default":
+      return { value, label: "Default" };
+    case "flex":
+      return { value, label: "Flex" };
+    case "fast":
+      return { value, label: "Fast" };
+    case "priority":
+      return { value, label: "Priority" };
+    case "ultrafast":
+      return { value, label: "Ultrafast" };
+  }
+}
+
+function tierOptions(values: readonly ModelServiceTier[]): ModelServiceTierOption[] {
+  return values.map(tierOption);
+}
+
+function withAstraUltrafast(
+  context: ModelServiceTierContext | undefined,
+  values: readonly ModelServiceTier[],
+): ModelServiceTierOption[] {
+  const options = tierOptions(values);
+  if (isOpenAiGpt6AstraModel(context?.model ?? "")) {
+    options.push(tierOption("ultrafast"));
+  }
+  return options;
+}
+
+/**
+ * Service tier options offered for the model, per the provider/upstream capability matrix.
+ * An empty list means the Service Tier control is hidden. Anthropic's native Fast is a
+ * separate toggle (`modelSupportsAnthropicNativeFast`), not part of this list.
+ */
+export function modelServiceTierOptions(
+  context?: ModelServiceTierContext,
+): readonly ModelServiceTierOption[] {
+  const provider = context?.provider;
+  switch (provider) {
+    case "openai":
+      return withAstraUltrafast(context, ["auto", "default", "flex", "fast"]);
+    case "xai":
+      return tierOptions(["default", "priority"]);
+    case "google":
+      return tierOptions(["default", "flex", "priority"]);
+    case "google-vertex-ai":
+      return isVertexGlobalServiceTierEndpoint(context?.vertexLocation)
+        ? tierOptions(["default", "flex", "priority"])
+        : [];
+    case "vercel-ai-gateway": {
+      const upstream = resolveServiceTierUpstreamProvider(context ?? {});
+      if (upstream === "openai") {
+        return withAstraUltrafast(context, ["default", "flex", "fast"]);
+      }
+      if (upstream === "google") {
+        return tierOptions(["default", "flex", "fast"]);
+      }
+      if (upstream === "xai") {
+        return tierOptions(["default", "fast"]);
+      }
+      return [];
+    }
+    case "openrouter": {
+      const upstream = resolveServiceTierUpstreamProvider(context ?? {});
+      if (upstream === "openai") {
+        return withAstraUltrafast(context, ["default", "flex", "fast"]);
+      }
+      if (upstream === "google") {
+        return tierOptions(["default", "flex", "fast"]);
+      }
+      if (upstream === "anthropic" || upstream === "xai") {
+        return tierOptions(["default", "fast"]);
+      }
+      return [];
+    }
+    default:
+      return [];
+  }
+}
+
+/** Whether the inspector shows any service tier affordance (dropdown or Anthropic Fast toggle). */
+export function modelShowsServiceTierControl(context?: ModelServiceTierContext): boolean {
+  return modelServiceTierOptions(context).length > 0 || modelSupportsAnthropicNativeFast(context);
+}
+
+/** Effective tier when the preference is unset: OpenAI defaults to Auto, other matrix providers to Default. */
+export function defaultModelServiceTier(
+  context?: ModelServiceTierContext,
+): ModelServiceTier | undefined {
+  if (context?.provider === "openai") {
+    return "auto";
+  }
+  if (modelServiceTierOptions(context).length > 0) {
+    return "default";
+  }
+  return undefined;
+}
+
+/**
+ * Displayed tier for the picker: the configured value when offered, otherwise the provider default.
+ * Anthropic Fast resolves to `undefined` (off) unless `fast` is stored. Invalid stored values are a
+ * config error surfaced by `parseModelServiceTierConfig`; this function only drives display.
+ */
+export function resolveEffectiveModelServiceTier(
+  configured: ModelServiceTier | undefined,
+  context?: ModelServiceTierContext,
+): ModelServiceTier | undefined {
+  if (modelSupportsAnthropicNativeFast(context)) {
+    return configured === "fast" ? "fast" : undefined;
+  }
+  const options = modelServiceTierOptions(context);
+  if (options.length === 0) {
+    return undefined;
+  }
+  if (configured !== undefined && options.some((option) => option.value === configured)) {
+    return configured;
+  }
+  return defaultModelServiceTier(context);
+}
+
+function describeServiceTierContext(context: ModelServiceTierContext | undefined): string {
+  const provider = context?.provider ?? "unknown provider";
+  const model = context?.model?.trim();
+  return model ? `${provider} model ${model}` : provider;
+}
+
+/**
+ * Single validation entry for a stored `serviceTier` value; hosts reuse this instead of copying
+ * the capability matrix. Returns the tier when supported, `undefined` when unset, and throws
+ * `ModelServiceTierConfigError` on unknown or unsupported values (never silently rewrites).
+ */
+export function parseModelServiceTierConfig(
+  value: unknown,
+  context?: ModelServiceTierContext,
+): ModelServiceTier | undefined {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const tier = normalizeModelServiceTier(value);
+  const target = describeServiceTierContext(context);
+  if (tier === undefined) {
+    throw new ModelServiceTierConfigError(
+      `Unknown service tier ${JSON.stringify(value)} for ${target}; expected one of ${MODEL_SERVICE_TIERS.join(", ")}.`,
+    );
+  }
+  if (modelSupportsAnthropicNativeFast(context)) {
+    if (tier === "fast") {
+      return tier;
+    }
+    throw new ModelServiceTierConfigError(
+      `Service tier "${tier}" is not supported for ${target}; Anthropic native Fast is the only service tier preference here.`,
+    );
+  }
+  const options = modelServiceTierOptions(context);
+  if (options.length === 0) {
+    throw new ModelServiceTierConfigError(
+      `Service tier "${tier}" is not configurable for ${target}; this provider or route does not expose service tier options.`,
+    );
+  }
+  if (!options.some((option) => option.value === tier)) {
+    throw new ModelServiceTierConfigError(
+      `Service tier "${tier}" is not available for ${target}; supported values: ${options.map((option) => option.value).join(", ")}.`,
+    );
+  }
+  return tier;
+}
+
+/**
+ * Trigger suffix for the picker button: only Fast, Ultrafast, and Flex get a gray marker
+ * (appended after mode/effort markers). Auto, Default, and native Priority add nothing.
+ */
+export function modelServiceTierTriggerLabel(
+  tier: ModelServiceTier | undefined,
+): string | undefined {
+  switch (tier) {
+    case "fast":
+      return "Fast";
+    case "flex":
+      return "Flex";
+    case "ultrafast":
+      return "Ultrafast";
+    default:
+      return undefined;
+  }
+}
