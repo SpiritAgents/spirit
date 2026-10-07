@@ -1,3 +1,5 @@
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+
 import type { ModelProviderId } from "./model-provider-presets.js";
 
 export const SPIRIT_CONFIG_SCHEMA_VERSION = 2 as const;
@@ -49,6 +51,17 @@ export interface ModelEntryV2 {
   contextLength?: number;
   supportsThinkingType?: "only";
   supportsThinkingSwitch?: boolean;
+  /**
+   * Optional per-model service tier preference (canonical agent-core value). Unknown or
+   * unsupported values fail transport resolution with `ModelServiceTierConfigError`; they are
+   * never silently dropped or rewritten.
+   */
+  serviceTier?: ModelServiceTier;
+  /**
+   * Aggregator upstream identity fact captured from the model catalog (Vercel `owned_by`,
+   * OpenRouter `canonical_slug` author prefix); normalized downstream by agent-core.
+   */
+  upstreamProvider?: string;
 }
 
 export interface ProviderGroupV2 {
