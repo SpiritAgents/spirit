@@ -784,6 +784,8 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Réflexion",
     "modelPickerNotThinking": "Pas de réflexion",
+    "modelPickerServiceTier": "Niveau de service",
+    "modelPickerFastMode": "Mode rapide",
     "reasoningThinkingActive": "Réflexion en cours",
     "reasoningThinkingIdle": "Réflexion terminée",
     "noModelsAvailable": "Aucun modèle disponible",

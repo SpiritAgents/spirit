@@ -13,9 +13,17 @@ import {
   modelSupportsThinkingSwitch,
   resolveModelThinkingEnabled,
 } from "@spiritagent/agent-core/model-thinking-controls";
+import {
+  modelServiceTierOptions,
+  modelShowsServiceTierControl,
+  modelSupportsAnthropicNativeFast,
+  resolveEffectiveModelServiceTier,
+} from "@spiritagent/agent-core/model-service-tier";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
 import { modelCatalogHasDetailBody } from "@/lib/model-catalog-detail";
+import { modelServiceTierContextFromProfile } from "@/lib/model-service-tier-context";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -47,6 +55,9 @@ export function modelPickerInspectorNeedsWideLayout(
   catalogEntry?: PreviewModelCatalogEntry,
 ): boolean {
   if (modelCatalogHasDetailBody({ model, catalogEntry })) {
+    return true;
+  }
+  if (modelShowsServiceTierControl(modelServiceTierContextFromProfile(model, catalogEntry))) {
     return true;
   }
   const modelContext = {
@@ -84,6 +95,15 @@ type ModelPickerInspectorPanelProps = {
   onReasoningEffortChange: (modelRef: ModelRef, effort: DesktopModelReasoningEffort) => void;
   onReasoningModeChange?: (modelRef: ModelRef, mode: DesktopModelReasoningMode) => void;
   onThinkingEnabledChange?: (modelRef: ModelRef, enabled: boolean) => void | Promise<boolean>;
+  /**
+   * `undefined` tier clears the stored preference (Anthropic Fast toggled off). The tier
+   * controls render only when this callback is provided, so read-only and standalone pickers
+   * never show a preference that cannot be saved.
+   */
+  onServiceTierChange?: (
+    modelRef: ModelRef,
+    tier: ModelServiceTier | undefined,
+  ) => void | Promise<boolean>;
 };
 
 export function ModelPickerInspectorPanel({
@@ -94,6 +114,7 @@ export function ModelPickerInspectorPanel({
   onReasoningEffortChange,
   onReasoningModeChange,
   onThinkingEnabledChange,
+  onServiceTierChange,
 }: ModelPickerInspectorPanelProps) {
   const { t } = useTranslation();
   const isList = density === "list";
@@ -123,6 +144,36 @@ export function ModelPickerInspectorPanel({
   const effortOptions = showReasoningEffort ? modelReasoningEffortOptions(modelContext) : [];
   const showReasoningMode = modelSupportsReasoningModeControl(modelContext);
   const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
+  const serviceTierContext = modelServiceTierContextFromProfile(model, catalogEntry);
+  const serviceTierOptions = onServiceTierChange ? modelServiceTierOptions(serviceTierContext) : [];
+  const showAnthropicFastSwitch = Boolean(
+    onServiceTierChange && modelSupportsAnthropicNativeFast(serviceTierContext),
+  );
+  const [pendingServiceTier, setPendingServiceTier] = useState<{
+    value: ModelServiceTier | undefined;
+  } | null>(null);
+  useEffect(() => {
+    setPendingServiceTier(null);
+  }, [model.name, model.serviceTier]);
+  const effectiveServiceTier = resolveEffectiveModelServiceTier(
+    model.serviceTier,
+    serviceTierContext,
+  );
+  const displayedServiceTier = pendingServiceTier ? pendingServiceTier.value : effectiveServiceTier;
+  const displayedServiceTierLabel = serviceTierOptions.find(
+    (option) => option.value === displayedServiceTier,
+  )?.label;
+  const handleServiceTierChange = (tier: ModelServiceTier | undefined) => {
+    if (!onServiceTierChange) {
+      return;
+    }
+    setPendingServiceTier({ value: tier });
+    void Promise.resolve(onServiceTierChange(modelRef, tier)).then((ok) => {
+      if (ok === false) {
+        setPendingServiceTier(null);
+      }
+    });
+  };
   const effortLabelKey =
     modelEffortControlLabelKind(modelContext) === "effort"
       ? "app.modelPickerEffort"
@@ -131,7 +182,11 @@ export function ModelPickerInspectorPanel({
   const selectTriggerClass = cn(isList ? "h-7" : "h-8", DESKTOP_GHOST_SELECT_TRIGGER);
 
   const modelControls =
-    supportsThinkingSwitch || effortOptions.length > 1 || showReasoningMode ? (
+    supportsThinkingSwitch ||
+    effortOptions.length > 1 ||
+    showReasoningMode ||
+    (serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined) ||
+    showAnthropicFastSwitch ? (
       <div className="space-y-2">
         {supportsThinkingSwitch ? (
           <div className="flex items-center justify-between gap-2">
@@ -197,6 +252,42 @@ export function ModelPickerInspectorPanel({
                 <SelectItem value="pro">{t("app.modelPickerReasoningModePro")}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        ) : null}
+        {serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined ? (
+          <div className="flex items-center justify-between gap-2">
+            <Label className={labelClass}>{t("app.modelPickerServiceTier")}</Label>
+            <Select
+              value={displayedServiceTier}
+              onValueChange={(value) => {
+                handleServiceTierChange(value as ModelServiceTier);
+              }}
+            >
+              <SelectTrigger className={selectTriggerClass}>
+                <SelectValue>{displayedServiceTierLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent className="z-[110]">
+                {serviceTierOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+        {showAnthropicFastSwitch ? (
+          <div className="flex items-center justify-between gap-2">
+            <Label className={labelClass} htmlFor={`model-fast-mode-${model.name}`}>
+              {t("app.modelPickerFastMode")}
+            </Label>
+            <Switch
+              id={`model-fast-mode-${model.name}`}
+              checked={displayedServiceTier === "fast"}
+              onCheckedChange={(checked) => {
+                handleServiceTierChange(checked ? "fast" : undefined);
+              }}
+            />
           </div>
         ) : null}
       </div>

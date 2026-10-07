@@ -58,6 +58,12 @@ interface RemoteDesktopRuntimeInput {
   webToolExposure?: { webSearchEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
+  /**
+   * Force `session.replaceConfig` on attach even when the daemon session already runs the
+   * requested model; inference-preference-only updates (reasoning/thinking/service tier) change
+   * config.json without changing the model name, which the attach-time name comparison cannot see.
+   */
+  refreshDaemonConfig?: boolean;
   sessionKind?: "default" | "dream-collector";
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
@@ -255,10 +261,13 @@ function daemonSessionModelDiffersFromRef(
 
 async function syncDaemonSessionModelIfNeeded(
   client: Awaited<ReturnType<typeof sharedDesktopServerClient>>,
-  input: Pick<RemoteDesktopRuntimeInput, "dataDir" | "modelRef">,
+  input: Pick<RemoteDesktopRuntimeInput, "dataDir" | "modelRef" | "refreshDaemonConfig">,
   attached: SessionAttachResult,
 ): Promise<SessionAttachResult> {
-  if (!daemonSessionModelDiffersFromRef(input.dataDir, input.modelRef, attached.session.model)) {
+  if (
+    input.refreshDaemonConfig !== true &&
+    !daemonSessionModelDiffersFromRef(input.dataDir, input.modelRef, attached.session.model)
+  ) {
     return attached;
   }
   await client.call("session.replaceConfig", {

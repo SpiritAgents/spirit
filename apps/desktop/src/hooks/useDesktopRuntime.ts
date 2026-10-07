@@ -14,6 +14,7 @@ import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translu
 import type { SettingsFormState } from "@/components/settings/types";
 import { useHostApi } from "@/hooks/useHostApi";
 import { emptyModelRef, modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelRef } from "@/types";
 import {
   buildPaneComposerDraftKey,
@@ -2579,6 +2580,52 @@ export function useDesktopRuntime() {
     [api, applySnapshot, snapshot],
   );
 
+  const setModelServiceTier = useCallback(
+    async (modelRef: ModelRef, serviceTier: ModelServiceTier | undefined): Promise<boolean> => {
+      if (!api || !snapshot) {
+        return false;
+      }
+
+      const model = snapshot.config.models.find((item) =>
+        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
+      );
+      if (!model) {
+        return false;
+      }
+
+      const previousSettings = settingsRef.current;
+      const next = {
+        ...previousSettings,
+        activeModel: modelRef,
+        apiBase: model.apiBase,
+      };
+      settingsRef.current = next;
+      setSettings(next);
+
+      try {
+        const res = await api.updateConfig({
+          ...updateConfigFromSettingsForm(next, {
+            enabled: next.webHostEnabled,
+            host: next.webHostHost,
+            port: next.webHostPort,
+          }),
+          // `undefined` clears the stored preference (e.g. Anthropic Fast toggled off).
+          serviceTier: serviceTier ?? null,
+        });
+        applySnapshot(res);
+        setRuntimeError("");
+        setSettings((current) => ({ ...current, apiKey: "" }));
+        return true;
+      } catch (error) {
+        settingsRef.current = previousSettings;
+        setSettings(previousSettings);
+        setRuntimeError(describeError(error));
+        return false;
+      }
+    },
+    [api, applySnapshot, snapshot],
+  );
+
   const resetWebHostPairing = useCallback(async () => {
     if (!api) {
       return;
@@ -4075,6 +4122,7 @@ export function useDesktopRuntime() {
     setModelReasoningEffort,
     setModelReasoningMode,
     setModelThinkingEnabled,
+    setModelServiceTier,
     setApprovalGuidance,
     setAgentModeChipDismissed,
     setComposerLocalFileAttachments,

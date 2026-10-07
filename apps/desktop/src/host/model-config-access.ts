@@ -84,6 +84,8 @@ export function resolveModelProfileFromParts(
     ...(model.contextLength !== undefined ? { contextLength: model.contextLength } : {}),
     ...(model.supportsThinkingType ? { supportsThinkingType: model.supportsThinkingType } : {}),
     ...(model.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+    ...(model.serviceTier !== undefined ? { serviceTier: model.serviceTier } : {}),
+    ...(model.upstreamProvider !== undefined ? { upstreamProvider: model.upstreamProvider } : {}),
   };
 }
 

@@ -784,6 +784,8 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Pensando",
     "modelPickerNotThinking": "Sin pensar",
+    "modelPickerServiceTier": "Nivel de servicio",
+    "modelPickerFastMode": "Modo rápido",
     "reasoningThinkingActive": "Pensando",
     "reasoningThinkingIdle": "Pensado",
     "noModelsAvailable": "No hay modelos disponibles",

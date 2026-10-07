@@ -1125,6 +1125,16 @@ function normalizeModelEntry(
     ...(supportsThinkingSwitch ? { supportsThinkingSwitch } : {}),
   };
   const resolvedReasoningMode = resolveModelReasoningMode(record.reasoningMode, reasoningContext);
+  // Preserved verbatim (string shape only); capability validation happens at transport
+  // resolution / update time via parseModelServiceTierConfig, never here.
+  const serviceTier =
+    typeof record.serviceTier === "string" && record.serviceTier.trim().length > 0
+      ? record.serviceTier
+      : undefined;
+  const upstreamProvider =
+    typeof record.upstreamProvider === "string" && record.upstreamProvider.trim().length > 0
+      ? record.upstreamProvider.trim()
+      : undefined;
   return {
     name,
     reasoningEffort: resolveModelReasoningEffortForContext(
@@ -1143,6 +1153,10 @@ function normalizeModelEntry(
     ...(supportsThinkingType ? { supportsThinkingType } : {}),
     ...(supportsThinkingSwitch ? { supportsThinkingSwitch } : {}),
     ...(record.thinkingEnabled === false ? { thinkingEnabled: false } : {}),
+    ...(serviceTier !== undefined
+      ? { serviceTier: serviceTier as ModelEntryV2["serviceTier"] }
+      : {}),
+    ...(upstreamProvider !== undefined ? { upstreamProvider } : {}),
   };
 }
 

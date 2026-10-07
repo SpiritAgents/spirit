@@ -377,6 +377,7 @@ export class SessionRegistry {
     bundle.pendingUnboundFileChangeIds = [];
     bundle.nextTimelineAssistantSegmentKind = "initial";
     bundle.deferredRuntimeRefreshWhileBusy = false;
+    bundle.deferredInferencePreferenceRefreshWhileBusy = false;
   }
 
   private evictIfNeeded(): void {
