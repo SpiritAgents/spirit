@@ -41,6 +41,8 @@ fn profile_transport_signature(
     crate::model_registry::ModelTransportKind,
     Option<String>,
     Option<String>,
+    Option<String>,
+    Option<String>,
 ) {
     (
         profile.api_base.clone(),
@@ -48,6 +50,8 @@ fn profile_transport_signature(
         profile.transport_kind(),
         profile.reasoning_effort.clone(),
         profile.reasoning_mode.clone(),
+        profile.service_tier.clone(),
+        profile.upstream_provider.clone(),
     )
 }
 
@@ -391,6 +395,13 @@ pub(crate) fn resolve_transport_config_json_for(
         {
             obj.insert("effort".to_string(), json!(effort));
         }
+        // Mirrors the TS buildTransportFromProfile anthropic branch: serviceTier only,
+        // never upstreamProvider.
+        if let Some(service_tier) = active.service_tier.as_deref()
+            && let Some(obj) = transport.as_object_mut()
+        {
+            obj.insert("serviceTier".to_string(), json!(service_tier));
+        }
         if let Some(provider) = active.provider
             && provider != ModelProvider::Anthropic
             && provider != ModelProvider::AmazonBedrock
@@ -426,6 +437,20 @@ pub(crate) fn resolve_transport_config_json_for(
         {
             obj.insert("reasoningMode".to_string(), json!(reasoning_mode));
         }
+        // The TS mantle branch returns its own open-responses shape without tier fields,
+        // so only the plain open-responses path stamps them.
+        if !is_mantle_openai {
+            if let Some(service_tier) = active.service_tier.as_deref()
+                && let Some(obj) = transport.as_object_mut()
+            {
+                obj.insert("serviceTier".to_string(), json!(service_tier));
+            }
+            if let Some(upstream_provider) = active.upstream_provider.as_deref()
+                && let Some(obj) = transport.as_object_mut()
+            {
+                obj.insert("upstreamProvider".to_string(), json!(upstream_provider));
+            }
+        }
     } else if active.transport_kind() == crate::model_registry::ModelTransportKind::Bedrock
         && !(active.provider == Some(ModelProvider::AmazonBedrock)
             && crate::bedrock_mantle::is_bedrock_mantle_openai_model(&active.name))
@@ -453,6 +478,16 @@ pub(crate) fn resolve_transport_config_json_for(
             && let Some(obj) = transport.as_object_mut()
         {
             obj.insert("reasoningMode".to_string(), json!(reasoning_mode));
+        }
+        if let Some(service_tier) = active.service_tier.as_deref()
+            && let Some(obj) = transport.as_object_mut()
+        {
+            obj.insert("serviceTier".to_string(), json!(service_tier));
+        }
+        if let Some(upstream_provider) = active.upstream_provider.as_deref()
+            && let Some(obj) = transport.as_object_mut()
+        {
+            obj.insert("upstreamProvider".to_string(), json!(upstream_provider));
         }
     }
     attach_image_generation_config(host, &mut transport, config)?;
