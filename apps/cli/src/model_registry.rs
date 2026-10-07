@@ -260,6 +260,24 @@ pub struct ModelEntry {
         skip_serializing_if = "Option::is_none"
     )]
     pub supports_thinking_switch: Option<bool>,
+    /// Optional per-model service tier preference ("auto" / "default" / "flex" / "fast" /
+    /// "priority" / "ultrafast") from the shared config.json. Pure pass-through: capability
+    /// gating, validation, and request mapping are owned by the TS host
+    /// (`packages/agent-core` service tier policy); the CLI must not normalize this value.
+    #[serde(
+        rename = "serviceTier",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub service_tier: Option<String>,
+    /// Upstream provider identity fact recorded by the model catalog (e.g. "OpenAI", "x-ai").
+    /// Pure pass-through owned by the TS host capability policy; the CLI must not normalize it.
+    #[serde(
+        rename = "upstreamProvider",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub upstream_provider: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -399,6 +417,22 @@ pub struct ModelProfile {
         skip_serializing_if = "Option::is_none"
     )]
     pub context_length: Option<u64>,
+    /// Pass-through from `ModelEntry::service_tier`; capability policy is owned by the TS host.
+    #[serde(
+        rename = "serviceTier",
+        alias = "service_tier",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub service_tier: Option<String>,
+    /// Pass-through from `ModelEntry::upstream_provider`; capability policy is owned by the TS host.
+    #[serde(
+        rename = "upstreamProvider",
+        alias = "upstream_provider",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub upstream_provider: Option<String>,
     #[serde(flatten, default, skip_serializing_if = "Map::is_empty")]
     pub extra: Map<String, Value>,
 }
@@ -1021,6 +1055,8 @@ pub fn resolve_model_profile_from_parts(
         reasoning_effort: model.reasoning_effort.clone(),
         reasoning_mode: model.reasoning_mode.clone(),
         context_length: model.context_length,
+        service_tier: model.service_tier.clone(),
+        upstream_provider: model.upstream_provider.clone(),
         extra,
     })
 }
@@ -1407,6 +1443,8 @@ pub fn make_test_app_config_with_models(
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
     }
@@ -2023,6 +2061,8 @@ mod tests {
             reasoning_effort: None,
             reasoning_mode: None,
             context_length: None,
+            service_tier: None,
+            upstream_provider: None,
             extra: serde_json::Map::new(),
         }
     }
@@ -2578,6 +2618,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         let serialized_without = serialize_config(&cfg).expect("serialize config");
@@ -2591,6 +2633,91 @@ mod tests {
                 .and_then(Value::as_array)
                 .and_then(|models| models.first())
                 .and_then(|model| model.get("contextLength")),
+            None
+        );
+    }
+
+    #[test]
+    fn roundtrips_model_service_tier_fields() {
+        let config = r#"
+{
+  "schemaVersion": 2,
+  "providerGroups": [
+    {
+      "id": "custom",
+      "provider": "custom",
+      "apiBase": "https://example.invalid/v1",
+      "models": [
+        { "name": "custom-model", "serviceTier": "flex", "upstreamProvider": "acme-upstream" }
+      ]
+    }
+  ],
+  "activeModel": { "groupId": "custom", "name": "custom-model" }
+}
+"#;
+
+        let parsed = deserialize_config(config, Path::new("config.json")).expect("parse config");
+        let active = parsed.active_model_profile().expect("active model");
+        assert_eq!(active.service_tier.as_deref(), Some("flex"));
+        assert_eq!(active.upstream_provider.as_deref(), Some("acme-upstream"));
+
+        let serialized = serialize_config(&parsed).expect("serialize config");
+        let json: Value = serde_json::from_str(&serialized).expect("json value");
+        let model = json
+            .get("providerGroups")
+            .and_then(Value::as_array)
+            .and_then(|groups| groups.first())
+            .and_then(|group| group.get("models"))
+            .and_then(Value::as_array)
+            .and_then(|models| models.first());
+        assert_eq!(
+            model
+                .and_then(|model| model.get("serviceTier"))
+                .and_then(Value::as_str),
+            Some("flex")
+        );
+        assert_eq!(
+            model
+                .and_then(|model| model.get("upstreamProvider"))
+                .and_then(Value::as_str),
+            Some("acme-upstream")
+        );
+
+        let without_fields = r#"
+{
+  "schemaVersion": 2,
+  "providerGroups": [
+    {
+      "id": "custom",
+      "provider": "custom",
+      "apiBase": "https://example.invalid/v1",
+      "models": [{ "name": "custom-model" }]
+    }
+  ],
+  "activeModel": { "groupId": "custom", "name": "custom-model" }
+}
+"#;
+        let parsed_without =
+            deserialize_config(without_fields, Path::new("config.json")).expect("parse config");
+        let active_without = parsed_without.active_model_profile().expect("active model");
+        assert_eq!(active_without.service_tier, None);
+        assert_eq!(active_without.upstream_provider, None);
+
+        let serialized_without = serialize_config(&parsed_without).expect("serialize config");
+        let json_without: Value = serde_json::from_str(&serialized_without).expect("json value");
+        let model_without = json_without
+            .get("providerGroups")
+            .and_then(Value::as_array)
+            .and_then(|groups| groups.first())
+            .and_then(|group| group.get("models"))
+            .and_then(Value::as_array)
+            .and_then(|models| models.first());
+        assert_eq!(
+            model_without.and_then(|model| model.get("serviceTier")),
+            None
+        );
+        assert_eq!(
+            model_without.and_then(|model| model.get("upstreamProvider")),
             None
         );
     }
@@ -2975,6 +3102,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         assert_eq!(
@@ -2997,6 +3126,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         assert!(cfg.provider_groups[0].z_ai_billing_mode.is_none());
@@ -3024,6 +3155,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         cfg.active_model = ModelRef {
@@ -3061,6 +3194,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         cfg.active_model = ModelRef {

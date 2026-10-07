@@ -200,6 +200,8 @@ mod tests {
                 context_length: None,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             })
             .collect();
         AppConfig {

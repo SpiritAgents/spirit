@@ -662,6 +662,8 @@ impl TuiShell {
                 context_length,
                 supports_thinking_type: None,
                 supports_thinking_switch: None,
+                service_tier: None,
+                upstream_provider: None,
             },
         );
         config.active_model = crate::model_registry::ModelRef {
