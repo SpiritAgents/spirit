@@ -47,6 +47,11 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
   supportsThinkingSwitch?: boolean;
   /** Defaults to enabled; when false, sends `thinking.type: disabled`. */
   vendorExtendedThinking?: boolean;
+  /**
+   * Per-model service tier preference (canonical Spirit value). The direct Anthropic provider
+   * persists `fast` for eligible Claude Opus models, mapped to `speed: "fast"` at request time.
+   */
+  serviceTier?: import("../model-service-tier.js").ModelServiceTier;
 }
 
 export interface AnthropicRequestTrace extends JsonObject {

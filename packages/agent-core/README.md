@@ -8,6 +8,7 @@ TypeScript core runtime for [Spirit](https://github.com/SpiritAgents/spirit) —
 - **Agent / Plan / Ask / Debug modes** — full tool access, planning-only workflows, read-only Q&A with edit tools stripped at the contract layer, or structured debugging with log-point hypotheses.
 - **Subagents** — `subagent` delegates focused work to child runs with their own tool surface.
 - **Model transports** — OpenAI-compatible, Open Responses, and Anthropic routes behind one runtime (OpenAI, DeepSeek, Anthropic, Google, Bedrock, Vertex, Gateway, OpenRouter, Alibaba, and others).
+- **Service tier preferences** — the renderer-safe `model-service-tier` module defines the canonical per-model `serviceTier` config value, provider/upstream capability gating, validation (`parseModelServiceTierConfig`), and trigger-label resolution; transports map the preference to native request fields (OpenAI `service_tier`, Anthropic `speed: "fast"`, Google/Vertex service tier options, Gateway/OpenRouter mappings).
 - **Host tool contracts** — built-in tools defined once (name, description, JSON Schema); hosts implement execution for workspace files, shell, web, delegation, planning, multimodal output, Dreams memory, and LSP diagnostics.
 - **System context** — rules, skills, MCP client/registry, and mode prompts assembled for the model without duplicating tool lists in system text.
 

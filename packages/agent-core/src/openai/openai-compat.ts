@@ -5,6 +5,7 @@ import type {
   LlmWebToolExposure,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
+import type { ModelServiceTier } from "../model-service-tier.js";
 import { resolveOpenAiTransportReasoningEffortForContext } from "../reasoning-effort.js";
 import {
   modelSupportsOpenAiGpt56ReasoningControls,
@@ -158,6 +159,16 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
   vertexGoogleAuthOptions?: Record<string, unknown>;
   /** Cloudflare AI Gateway name; injected as `cf-aig-gateway-id` on requests. */
   cloudflareGatewayId?: string;
+  /**
+   * Per-model service tier preference (canonical Spirit value). Mapped to provider-specific
+   * request fields at request time; unsupported combinations are rejected at config parse time.
+   */
+  serviceTier?: ModelServiceTier;
+  /**
+   * Aggregator upstream identity fact from the model catalog (Vercel `owned_by` / OpenRouter
+   * `canonical_slug` author prefix); used to map `serviceTier` behind aggregator routes.
+   */
+  upstreamProvider?: string;
 }
 
 export interface OpenAiRequestTrace extends JsonObject {
