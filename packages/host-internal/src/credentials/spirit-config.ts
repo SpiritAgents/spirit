@@ -55,6 +55,8 @@ function resolveSpiritModelProfile(
     ...(group.vertexProject ? { vertexProject: group.vertexProject } : {}),
     ...(group.vertexLocation ? { vertexLocation: group.vertexLocation } : {}),
     ...(model.contextLength !== undefined ? { contextLength: model.contextLength } : {}),
+    ...(model.serviceTier !== undefined ? { serviceTier: model.serviceTier } : {}),
+    ...(model.upstreamProvider !== undefined ? { upstreamProvider: model.upstreamProvider } : {}),
   };
 }
 

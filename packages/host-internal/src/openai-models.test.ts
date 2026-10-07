@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   moonshotK3SupportedReasoningEfforts,
   moonshotSupportedReasoningEfforts,
+  dedupeProviderListedModelEntries,
   parseAnthropicModelEntriesPayload,
   parseGoogleModelEntriesPayload,
   parseOpenAiCompatibleModelEntriesPayload,
@@ -2232,4 +2233,81 @@ test("mergeCohereModelPages dedupes models across paginated responses", () => {
     merged.map((entry) => entry.id),
     ["command-a-plus-05-2026", "command-r7b-12-2024"],
   );
+});
+
+test("parseVercelAiGatewayModelEntriesPayload extracts owned_by as upstreamProvider", () => {
+  const entries = parseVercelAiGatewayModelEntriesPayload({
+    data: [
+      { id: "openai/gpt-5.4", type: "language", owned_by: "OpenAI" },
+      { id: "xai/grok-4.3", type: "language", owned_by: "xAI" },
+      { id: "openai/gpt-image-1", type: "image", owned_by: "OpenAI" },
+      { id: "meta/llama-4-scout", type: "language" },
+      { id: "google/gemini-3-pro", type: "language", owned_by: "   " },
+    ],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => ({ id: entry.id, upstreamProvider: entry.upstreamProvider })),
+    [
+      { id: "openai/gpt-5.4", upstreamProvider: "OpenAI" },
+      { id: "xai/grok-4.3", upstreamProvider: "xAI" },
+      { id: "openai/gpt-image-1", upstreamProvider: "OpenAI" },
+      { id: "meta/llama-4-scout", upstreamProvider: undefined },
+      { id: "google/gemini-3-pro", upstreamProvider: undefined },
+    ],
+  );
+  // The raw catalog value is preserved verbatim; normalization happens downstream in agent-core.
+  assert.equal(entries[0]?.upstreamProvider, "OpenAI");
+  // Legacy payloads without owned_by parse without the field (e.g. cached old entries).
+  const legacy = entries.find((entry) => entry.id === "meta/llama-4-scout");
+  assert.ok(legacy);
+  assert.equal("upstreamProvider" in legacy, false);
+});
+
+test("parseOpenRouterModelEntriesPayload extracts canonical_slug author as upstreamProvider", () => {
+  const entries = parseOpenRouterModelEntriesPayload({
+    data: [
+      { id: "openai/gpt-5.4", canonical_slug: "openai/gpt-5.4" },
+      { id: "x-ai/grok-4.3", canonical_slug: "x-ai/grok-4.3" },
+      {
+        id: "google/imagen-4",
+        canonical_slug: "google/imagen-4",
+        architecture: { output_modalities: ["image"] },
+      },
+      // Missing canonical_slug: the model id prefix is deliberately NOT parsed here;
+      // agent-core's prefix fallback handles that at resolution time.
+      { id: "openai/gpt-4o" },
+      { id: "noslash", canonical_slug: "noslash" },
+      { id: "leading-slash", canonical_slug: "/openai" },
+    ],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => ({
+      id: entry.id,
+      upstreamProvider: entry.upstreamProvider,
+      supportsImageGeneration: entry.supportsImageGeneration,
+    })),
+    [
+      { id: "openai/gpt-5.4", upstreamProvider: "openai", supportsImageGeneration: undefined },
+      { id: "x-ai/grok-4.3", upstreamProvider: "x-ai", supportsImageGeneration: undefined },
+      { id: "google/imagen-4", upstreamProvider: "google", supportsImageGeneration: true },
+      { id: "openai/gpt-4o", upstreamProvider: undefined, supportsImageGeneration: undefined },
+      { id: "noslash", upstreamProvider: undefined, supportsImageGeneration: undefined },
+      { id: "leading-slash", upstreamProvider: undefined, supportsImageGeneration: undefined },
+    ],
+  );
+});
+
+test("dedupeProviderListedModelEntries preserves upstreamProvider from the first entry", () => {
+  const entries = dedupeProviderListedModelEntries([
+    { id: "openai/gpt-5.4", upstreamProvider: "openai" },
+    { id: "openai/gpt-5.4", upstreamProvider: "duplicate-wins-never" },
+    { id: "x-ai/grok-4.3" },
+  ]);
+
+  assert.deepEqual(entries, [
+    { id: "openai/gpt-5.4", upstreamProvider: "openai" },
+    { id: "x-ai/grok-4.3" },
+  ]);
 });
