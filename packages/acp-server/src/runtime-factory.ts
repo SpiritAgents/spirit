@@ -78,7 +78,7 @@ export interface AcpRuntimeResult {
  * Key differences from the daemon-backed server runtime:
  * - No WebSocket session attach (ACP uses ndJSON on stdio)
  * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
- * - No LSP, extensions, todos, or image/video generation for MVP
+ * - No LSP, extensions, todos, or image/video generation
  */
 function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
   if (isBedrockTransportConfig(config)) {
