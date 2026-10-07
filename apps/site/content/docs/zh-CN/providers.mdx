@@ -205,12 +205,12 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 ### MiniMax
 
-在对应站点的控制台创建 API Key：[中国站](https://platform.minimaxi.com/console/) 或 [国际站](https://platform.minimax.io/console/)。
+在对应站点的控制台创建 API Key：[中国站](https://platform.minimax.cn/console/) 或 [国际站](https://platform.minimax.io/console/)。
 
 固定 **Messages API**（`anthropic`）。国际 Messages Base：`https://api.minimax.io/anthropic/v1`。
 
 - **国际**（默认）— `https://api.minimax.io/v1`（Chat 形态）/ `https://api.minimax.io/anthropic/v1`（Messages）
-- **中国** — `https://api.minimaxi.com/v1`
+- **中国** — `https://api.minimax.cn/v1`
 
 导入后即可对话。上游 `/models` 没有多模态字段；只有 M3 被当作支持图 / 视频输入。经 Vercel AI Gateway 的 Open Responses，MiniMax M3 不会返回可展示的思考流。
 

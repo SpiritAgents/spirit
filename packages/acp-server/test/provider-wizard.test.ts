@@ -14,6 +14,6 @@ test("resolveProfileApiBase uses anthropic endpoint for minimax without explicit
       provider: "minimax",
       providerSite: "cn",
     }),
-    "https://api.minimaxi.com/anthropic/v1",
+    "https://api.minimax.cn/anthropic/v1",
   );
 });

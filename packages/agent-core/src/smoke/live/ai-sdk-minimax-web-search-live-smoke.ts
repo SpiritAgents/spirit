@@ -38,7 +38,7 @@ function createLiveMinimaxWebSearchSmokeConfig(apiKey: string): AnthropicTranspo
     transportKind: "anthropic",
     apiKey,
     model: process.env.MINIMAX_MODEL?.trim() || "MiniMax-M3",
-    baseUrl: process.env.MINIMAX_BASE_URL?.trim() || "https://api.minimaxi.com/anthropic/v1",
+    baseUrl: process.env.MINIMAX_BASE_URL?.trim() || "https://api.minimax.cn/anthropic/v1",
     llmVendor: "minimax",
   };
 }

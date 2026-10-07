@@ -148,7 +148,7 @@ test("resolveTransportConfig defaults minimax to anthropic transport with llmVen
           {
             id: "minimax",
             provider: "minimax",
-            apiBase: "https://api.minimaxi.com/anthropic/v1",
+            apiBase: "https://api.minimax.cn/anthropic/v1",
             providerSite: "cn",
             models: [
               {
@@ -184,7 +184,7 @@ test("resolveTransportConfig defaults minimax to anthropic transport with llmVen
     assert.equal(transport.transportKind, "anthropic");
     if (transport.transportKind === "anthropic") {
       assert.equal(transport.llmVendor, "minimax");
-      assert.equal(transport.baseUrl, "https://api.minimaxi.com/anthropic/v1");
+      assert.equal(transport.baseUrl, "https://api.minimax.cn/anthropic/v1");
       assert.equal(transport.apiKey, "stored-key");
     }
   } finally {

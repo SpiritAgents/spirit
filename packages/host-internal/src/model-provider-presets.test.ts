@@ -383,11 +383,11 @@ test("resolveProviderConnectApiBase prefers site apiBase for minimax", () => {
   assert.equal(defaultProviderConnectSite("minimax"), "intl");
   assert.equal(
     resolveProviderConnectApiBase("minimax", "openai-compatible", { site: "cn" }),
-    "https://api.minimaxi.com/v1",
+    "https://api.minimax.cn/v1",
   );
   assert.equal(
     resolveProviderConnectApiBase("minimax", "anthropic", { site: "cn" }),
-    "https://api.minimaxi.com/anthropic/v1",
+    "https://api.minimax.cn/anthropic/v1",
   );
   assert.equal(
     resolveProviderConnectApiBase("minimax", "anthropic", { site: "intl" }),

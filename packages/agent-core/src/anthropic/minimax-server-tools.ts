@@ -35,7 +35,7 @@ function isMinimaxAnthropicMessagesUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return (
-      (parsed.hostname === "api.minimaxi.com" || parsed.hostname === "api.minimax.io") &&
+      (parsed.hostname === "api.minimax.cn" || parsed.hostname === "api.minimax.io") &&
       parsed.pathname.includes("/messages")
     );
   } catch {

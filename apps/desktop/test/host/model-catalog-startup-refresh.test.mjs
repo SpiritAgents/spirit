@@ -57,7 +57,7 @@ function minimaxGroup(models) {
   return {
     id: minimaxGroupId,
     provider: "minimax",
-    apiBase: "https://api.minimaxi.com/v1",
+    apiBase: "https://api.minimax.cn/v1",
     models,
   };
 }
@@ -188,7 +188,7 @@ test("syncExistingModelsFromCatalog upgrades chat-only profiles from catalog", (
     {
       groupId: minimaxGroupId,
       name: "MiniMax-M3",
-      apiBase: "https://api.minimaxi.com/v1",
+      apiBase: "https://api.minimax.cn/v1",
       provider: "minimax",
       capabilities: ["languageModel"],
       reasoningEffort: "medium",

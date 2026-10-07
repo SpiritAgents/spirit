@@ -41,16 +41,16 @@ import {
 
 test("minimaxOpenAiCompatibleListingBaseFromConnectBase preserves site from anthropic connect base", () => {
   assert.equal(
-    minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimaxi.com/anthropic/v1"),
-    "https://api.minimaxi.com/v1",
+    minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimax.cn/anthropic/v1"),
+    "https://api.minimax.cn/v1",
   );
   assert.equal(
     minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimax.io/anthropic/v1"),
     "https://api.minimax.io/v1",
   );
   assert.equal(
-    minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimaxi.com/v1"),
-    "https://api.minimaxi.com/v1",
+    minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimax.cn/v1"),
+    "https://api.minimax.cn/v1",
   );
 });
 

@@ -116,7 +116,7 @@
         "cn": {
           "labelKey": "providers.minimaxSite.cn",
           "fallbackLabel": "China",
-          "apiBase": "https://api.minimaxi.com/v1"
+          "apiBase": "https://api.minimax.cn/v1"
         },
         "intl": {
           "labelKey": "providers.minimaxSite.intl",
