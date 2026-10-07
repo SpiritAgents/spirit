@@ -50,7 +50,7 @@ test("createMinimaxAnthropicServerToolsFetch injects web_search tool into messag
   };
 
   const patched = createMinimaxAnthropicServerToolsFetch(fetchImpl, { webSearchEnabled: true });
-  await patched("https://api.minimaxi.com/anthropic/v1/messages", {
+  await patched("https://api.minimax.cn/anthropic/v1/messages", {
     method: "POST",
     body: JSON.stringify({ model: "MiniMax-M3", messages: [] }),
   });

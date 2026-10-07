@@ -9,7 +9,7 @@ import { normalizeOpenAiCompatibleApiBase } from "./moonshot-files.js";
 
 /**
  * MiniMax video understanding: uploaded via the Files API, purpose must be video_understanding.
- * Docs: https://platform.minimaxi.com/docs/api-reference/file-management-upload
+ * Docs: https://platform.minimax.cn/docs/api-reference/file-management-upload
  * Image upload is left for a later unification pass; it does not use the Files API here.
  */
 const DEFAULT_MINIMAX_FILES_API_BASE = "https://api.minimax.io/v1";
@@ -82,7 +82,7 @@ export async function uploadMinimaxVideoFile(
 
 /**
  * MiniMax Files API: `{ file: { file_id: <int64> } }`. `file.file_id` is the unique identifier.
- * Docs: https://platform.minimaxi.com/docs/api-reference/file-management-upload
+ * Docs: https://platform.minimax.cn/docs/api-reference/file-management-upload
  */
 function readMinimaxUploadedFileId(payload: unknown): string | undefined {
   if (typeof payload !== "object" || payload === null) {

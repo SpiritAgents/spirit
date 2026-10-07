@@ -245,7 +245,7 @@ pub(crate) fn model_add_minimax_site_api_base(
     transport_kind: ModelTransportKind,
 ) -> Option<String> {
     let origin = match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => "https://api.minimaxi.com",
+        "cn" => "https://api.minimax.cn",
         "intl" => "https://api.minimax.io",
         _ => return None,
     };
@@ -903,11 +903,11 @@ mod tests {
         assert_eq!(
             super::model_add_minimax_site_api_base("cn", ModelTransportKind::OpenAiCompatible)
                 .as_deref(),
-            Some("https://api.minimaxi.com/v1")
+            Some("https://api.minimax.cn/v1")
         );
         assert_eq!(
             super::model_add_minimax_site_api_base("cn", ModelTransportKind::Anthropic).as_deref(),
-            Some("https://api.minimaxi.com/anthropic/v1")
+            Some("https://api.minimax.cn/anthropic/v1")
         );
         assert_eq!(
             super::model_add_minimax_site_api_base("intl", ModelTransportKind::OpenAiCompatible)

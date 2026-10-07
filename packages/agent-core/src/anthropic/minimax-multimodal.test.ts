@@ -13,10 +13,7 @@ test("isMinimaxAnthropicConfig matches minimax anthropic base URLs", () => {
     true,
   );
   assert.equal(isMinimaxAnthropicConfig({ baseUrl: "https://api.minimax.io/anthropic/v1" }), true);
-  assert.equal(
-    isMinimaxAnthropicConfig({ baseUrl: "https://api.minimaxi.com/anthropic/v1" }),
-    true,
-  );
+  assert.equal(isMinimaxAnthropicConfig({ baseUrl: "https://api.minimax.cn/anthropic/v1" }), true);
   assert.equal(isMinimaxAnthropicConfig({ baseUrl: "https://api.anthropic.com/v1" }), false);
 });
 

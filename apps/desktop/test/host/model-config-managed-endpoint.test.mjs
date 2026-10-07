@@ -68,7 +68,7 @@ test("buildPrimaryTransportConfig routes minimax to anthropic transport", () => 
   const config = buildPrimaryTransportConfig({
     apiKey: "test-key",
     model: "MiniMax-M3",
-    baseUrl: "https://api.minimaxi.com/anthropic/v1",
+    baseUrl: "https://api.minimax.cn/anthropic/v1",
     workspaceRoot: "/tmp",
     profile: {
       provider: "minimax",

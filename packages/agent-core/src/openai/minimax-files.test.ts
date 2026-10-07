@@ -21,8 +21,8 @@ test("normalizeMinimaxFilesApiBase strips anthropic suffix", () => {
     "https://api.minimax.io/v1",
   );
   assert.equal(
-    normalizeMinimaxFilesApiBase("https://api.minimaxi.com/anthropic/v1"),
-    "https://api.minimaxi.com/v1",
+    normalizeMinimaxFilesApiBase("https://api.minimax.cn/anthropic/v1"),
+    "https://api.minimax.cn/v1",
   );
   assert.equal(
     normalizeMinimaxFilesApiBase("https://api.minimax.io/v1"),

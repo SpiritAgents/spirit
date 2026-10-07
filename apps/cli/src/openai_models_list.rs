@@ -319,9 +319,9 @@ mod tests {
     fn minimax_openai_compatible_listing_base_preserves_site_from_anthropic_connect_base() {
         assert_eq!(
             minimax_openai_compatible_listing_base_from_connect_base(
-                "https://api.minimaxi.com/anthropic/v1"
+                "https://api.minimax.cn/anthropic/v1"
             ),
-            "https://api.minimaxi.com/v1"
+            "https://api.minimax.cn/v1"
         );
         assert_eq!(
             minimax_openai_compatible_listing_base_from_connect_base(
@@ -330,8 +330,8 @@ mod tests {
             "https://api.minimax.io/v1"
         );
         assert_eq!(
-            minimax_openai_compatible_listing_base_from_connect_base("https://api.minimaxi.com/v1"),
-            "https://api.minimaxi.com/v1"
+            minimax_openai_compatible_listing_base_from_connect_base("https://api.minimax.cn/v1"),
+            "https://api.minimax.cn/v1"
         );
     }
 

@@ -2865,7 +2865,7 @@ mod tests {
         let profile = test_profile(
             "minimax",
             "MiniMax-M3",
-            "https://api.minimaxi.com/anthropic/v1",
+            "https://api.minimax.cn/anthropic/v1",
             ModelProvider::Minimax,
         );
         assert_eq!(profile.transport_kind(), ModelTransportKind::Anthropic);

@@ -205,12 +205,12 @@ Google GeminiとVertex AIは常にChat Completionsを使用します。プロフ
 
 ### MiniMax
 
-使用するサイトの MiniMax コンソールで API キーを作成します: [中国](https://platform.minimaxi.com/console/) または [国際](https://platform.minimax.io/console/)。
+使用するサイトの MiniMax コンソールで API キーを作成します: [中国](https://platform.minimax.cn/console/) または [国際](https://platform.minimax.io/console/)。
 
 **Messages API** (`anthropic`) に固定。国際 Messages ベース: `https://api.minimax.io/anthropic/v1`。
 
 - **国際** (デフォルト) — `https://api.minimax.io/v1` (Chat 形式) / `https://api.minimax.io/anthropic/v1` (Messages)
-- **中国** — `https://api.minimaxi.com/v1`
+- **中国** — `https://api.minimax.cn/v1`
 
 インポート後にチャット可能。上流の `/models` リストにはマルチモーダルフラグがなく、M3 のみが画像 / ビデオ入力をサポートするものとして扱われます。Vercel AI Gateway 経由の Open Responses では、MiniMax M3 は表示可能な思考ストリームを返しません。
 
