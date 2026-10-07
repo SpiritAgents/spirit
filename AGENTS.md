@@ -8,6 +8,12 @@
 
 Use this exact owner/name for `gh`, GitHub search, clone URLs, and issue/PR links. Do not invent nearby slugs.
 
+## npm Scope
+
+- Scope: `@spiritagent`
+
+Use this exact scope for `pnpm --filter`, `pnpm --filter ... exec`, and any package reference. Do not invent nearby scopes. Before filtering or executing against a package, read its `name` field from that package's `package.json` instead of guessing.
+
 ## Layering and Specialized Guides
 
 - Capability and host boundary: `.github/instructions/agent-core-host-boundary.instructions.md`
