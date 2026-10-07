@@ -292,6 +292,10 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       typeof record.inferenceProvider === "string" && record.inferenceProvider.trim().length > 0
         ? record.inferenceProvider.trim()
         : undefined;
+    const upstreamProvider =
+      typeof record.upstreamProvider === "string" && record.upstreamProvider.trim().length > 0
+        ? record.upstreamProvider.trim()
+        : undefined;
     normalized.push({
       id,
       ...(displayName !== undefined ? { displayName } : {}),
@@ -304,6 +308,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(supportsThinkingType !== undefined ? { supportsThinkingType } : {}),
       ...(supportsThinkingSwitch !== undefined ? { supportsThinkingSwitch } : {}),
       ...(inferenceProvider !== undefined ? { inferenceProvider } : {}),
+      ...(upstreamProvider !== undefined ? { upstreamProvider } : {}),
     });
   }
 
@@ -502,5 +507,6 @@ function clonePreviewModelCatalog(
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
+    ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
   }));
 }

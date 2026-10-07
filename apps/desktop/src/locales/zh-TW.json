@@ -784,6 +784,8 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "思考中",
     "modelPickerNotThinking": "不思考",
+    "modelPickerServiceTier": "服務層級",
+    "modelPickerFastMode": "快速模式",
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "已思考",
     "noModelsAvailable": "無可用模型",

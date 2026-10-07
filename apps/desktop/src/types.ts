@@ -9,6 +9,7 @@ import type {
   SpiritConfigSchemaVersion,
 } from "@spiritagent/host-internal/config-v2";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { LspWriteDiagnosticsUi, PermissionMemoryTarget } from "@spiritagent/agent-core";
 import type { ToolExecutionFileChangeDiff } from "@spiritagent/agent-core";
 
@@ -90,6 +91,11 @@ export interface UpdateConfigRequest {
   reasoningMode?: DesktopModelReasoningMode;
   /** Vendor extended thinking; false disables it. Absent means no change. */
   thinkingEnabled?: boolean;
+  /**
+   * Per-model service tier preference for the active model. Absent means no change;
+   * `null` clears the stored preference (provider default behavior).
+   */
+  serviceTier?: ModelServiceTier | null;
   uiLocale?: string;
   apiKey?: string;
   /** Desktop window-level translucent material (Off / Sidebar / All); absent means no change to the saved value. */
@@ -248,6 +254,8 @@ export interface PreviewModelCatalogEntry {
   supportsThinkingSwitch?: boolean;
   /** Hugging Face Hub media models: Inference Providers routing hint. */
   inferenceProvider?: string;
+  /** Aggregator upstream identity fact (Vercel `owned_by` raw, OpenRouter `canonical_slug` author prefix); feeds service tier capability gating. */
+  upstreamProvider?: string;
   /** DeepInfra `is_partner`: partner model (data forwarded to a third party); first version keeps it as catalog metadata only, no filtering. */
   isPartner?: boolean;
 }
@@ -1582,6 +1590,10 @@ export interface ModelProfileSnapshot {
   reasoningMode?: DesktopModelReasoningMode;
   /** Vendor extended thinking; defaults to true. Only thinking-type models persist false. */
   thinkingEnabled?: boolean;
+  /** Per-model service tier preference; absent means provider default behavior. */
+  serviceTier?: ModelServiceTier;
+  /** Aggregator upstream identity fact persisted from the model catalog (see `ModelEntryV2.upstreamProvider`). */
+  upstreamProvider?: string;
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
   capabilities?: DesktopModelCapability[];
   /** Persistence origin; absent means a legacy custom configuration. */

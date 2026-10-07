@@ -133,6 +133,7 @@ export function previewModelCatalogForTransport(input: {
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
+    ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
     ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
   }));
 }
@@ -181,6 +182,9 @@ export function previewCatalogMapForTransport(input: {
         ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
         ...(entry.inferenceProvider !== undefined
           ? { inferenceProvider: entry.inferenceProvider }
+          : {}),
+        ...(entry.upstreamProvider !== undefined
+          ? { upstreamProvider: entry.upstreamProvider }
           : {}),
         ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
       },

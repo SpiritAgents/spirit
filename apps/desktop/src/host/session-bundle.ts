@@ -54,6 +54,12 @@ export interface SessionBundle {
   pendingUnboundFileChangeIds: string[];
   nextTimelineAssistantSegmentKind: DesktopTimelineSegmentKind;
   deferredRuntimeRefreshWhileBusy: boolean;
+  /**
+   * Set when an inference-preference-only refresh (reasoning/thinking/service tier) was deferred
+   * while the runtime was busy; flushed as a light refresh that still pushes the re-resolved
+   * transport config to the daemon via `session.replaceConfig`.
+   */
+  deferredInferencePreferenceRefreshWhileBusy: boolean;
   deferredRuntimeHostEvents: RuntimeEvent<DesktopToolRequest>[];
   /** Provider builtin preview callIds applied in a prior drain (for deferring terminal previews). */
   responsesBuiltInPreviewSeenCallIds: Set<string>;
@@ -127,6 +133,7 @@ export function createEmptySessionBundle(workspaceRoot: string, id = "__draft__"
     pendingUnboundFileChangeIds: [],
     nextTimelineAssistantSegmentKind: "initial",
     deferredRuntimeRefreshWhileBusy: false,
+    deferredInferencePreferenceRefreshWhileBusy: false,
     deferredRuntimeHostEvents: [],
     responsesBuiltInPreviewSeenCallIds: new Set(),
     queuedUserTurns: [],
@@ -172,6 +179,7 @@ export function sessionBundleFromRestored(
     pendingUnboundFileChangeIds: [],
     nextTimelineAssistantSegmentKind: "initial",
     deferredRuntimeRefreshWhileBusy: false,
+    deferredInferencePreferenceRefreshWhileBusy: false,
     deferredRuntimeHostEvents: [],
     responsesBuiltInPreviewSeenCallIds: new Set(),
     queuedUserTurns: restored.queuedUserTurns ? [...restored.queuedUserTurns] : [],
@@ -212,6 +220,7 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.pendingUnboundFileChangeIds = [];
   bundle.nextTimelineAssistantSegmentKind = "initial";
   bundle.deferredRuntimeRefreshWhileBusy = false;
+  bundle.deferredInferencePreferenceRefreshWhileBusy = false;
   bundle.deferredRuntimeHostEvents = [];
   bundle.responsesBuiltInPreviewSeenCallIds = new Set();
   bundle.cachedTodoSnapshot = undefined;

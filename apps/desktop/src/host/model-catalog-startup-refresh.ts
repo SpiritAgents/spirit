@@ -183,6 +183,7 @@ type StartupMergedProfile = {
   zhipuBillingMode?: import("../types.js").DesktopGlmCodingPlanBillingMode;
   vertexProject?: string;
   vertexLocation?: string;
+  upstreamProvider?: string;
 };
 
 export function mergeNewCatalogModelsIntoConfig(
@@ -236,6 +237,9 @@ export function mergeNewCatalogModelsIntoConfig(
     }
     if (catalogEntry?.capabilities) {
       merged.capabilities = catalogEntry.capabilities;
+    }
+    if (catalogEntry?.upstreamProvider !== undefined) {
+      merged.upstreamProvider = catalogEntry.upstreamProvider;
     }
     merged.provider = provider;
     if (
@@ -293,6 +297,9 @@ export function mergeNewCatalogModelsIntoConfig(
           }
         : {}),
       ...(merged.capabilities !== undefined ? { capabilities: merged.capabilities } : {}),
+      ...(merged.upstreamProvider !== undefined
+        ? { upstreamProvider: merged.upstreamProvider }
+        : {}),
     });
   }
 
@@ -415,6 +422,16 @@ export function applyCatalogEntryToStoredModel(
     changed = true;
   }
 
+  // Aggregator upstream identity fact: write when the catalog provides it and the stored value
+  // differs; never delete when the catalog lacks it (the model-ID prefix fallback covers gaps).
+  if (
+    catalogEntry.upstreamProvider !== undefined &&
+    model.upstreamProvider !== catalogEntry.upstreamProvider
+  ) {
+    model.upstreamProvider = catalogEntry.upstreamProvider;
+    changed = true;
+  }
+
   return changed;
 }
 
@@ -472,6 +489,9 @@ export function syncExistingModelsFromCatalog(
         }
         if (resolved.supportsThinkingSwitch === true) {
           model.supportsThinkingSwitch = true;
+        }
+        if (resolved.upstreamProvider !== undefined) {
+          model.upstreamProvider = resolved.upstreamProvider;
         }
         updated += 1;
       }

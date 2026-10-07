@@ -17,6 +17,7 @@ import {
   type ModelReasoningEffort,
 } from "@spiritagent/agent-core/reasoning-effort";
 import { shouldPinReasoningEffortToDefault } from "@spiritagent/agent-core/model-thinking-controls";
+import { parseModelServiceTierConfig } from "@spiritagent/agent-core/model-service-tier";
 
 import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
 import { parseTranslucencyPreference } from "../lib/translucency.js";
@@ -446,6 +447,7 @@ export async function updateConfigCommand(
           thinkingEnabled: prevActiveModelProfile.thinkingEnabled,
           reasoningEffort: prevActiveModelProfile.reasoningEffort,
           reasoningMode: prevActiveModelProfile.reasoningMode,
+          serviceTier: prevActiveModelProfile.serviceTier,
         }
       : undefined;
 
@@ -458,6 +460,7 @@ export async function updateConfigCommand(
     const reasoningEffort = request.reasoningEffort;
     const reasoningMode = request.reasoningMode;
     const thinkingEnabled = request.thinkingEnabled;
+    const serviceTier = request.serviceTier;
     let activeEntry: ModelEntryLocation | null = null;
     if (!isEmptyModelRef(activeRef)) {
       activeEntry = findModelEntryInConfig(state.config, activeRef);
@@ -517,6 +520,23 @@ export async function updateConfigCommand(
           model.reasoningEffort = asModelEntryReasoningEffort(
             resolveModelReasoningEffortForContext("default", modelContext),
           );
+        }
+      }
+      if (serviceTier !== undefined) {
+        // Validate against the provider/model capability matrix BEFORE writing; an unknown or
+        // unsupported value throws ModelServiceTierConfigError and rejects the whole update,
+        // so the config file is left untouched and the UI rolls back.
+        const parsedServiceTier = parseModelServiceTierConfig(serviceTier, {
+          ...(resolved.provider ? { provider: resolved.provider } : {}),
+          model: model.name,
+          transportKind: resolveDesktopTransportKind(resolved),
+          ...(model.upstreamProvider ? { upstreamProvider: model.upstreamProvider } : {}),
+          ...(resolved.vertexLocation ? { vertexLocation: resolved.vertexLocation } : {}),
+        });
+        if (parsedServiceTier === undefined) {
+          delete model.serviceTier;
+        } else {
+          model.serviceTier = parsedServiceTier;
         }
       }
       state.config.activeModel = {
@@ -694,14 +714,15 @@ export async function updateConfigCommand(
     const modelOrEndpointChanged =
       !modelRefsEqual(state.config.activeModel, prevActiveModel) ||
       currentApiBase(state.config) !== prevApiBase;
-    const imageGenerationModelChanged = !modelRefsEqual(
-      state.config.imageGenerationModel,
-      prevImageGenerationModel,
-    );
-    const videoGenerationModelChanged = !modelRefsEqual(
-      state.config.videoGenerationModel,
-      prevVideoGenerationModel,
-    );
+    // modelRefsEqual(undefined, undefined) is false, so a config without the slot would
+    // permanently read as "changed" and defeat the inference-preference light refresh below;
+    // the reference check keeps an untouched (or both-unset) slot at "unchanged".
+    const imageGenerationModelChanged =
+      state.config.imageGenerationModel !== prevImageGenerationModel &&
+      !modelRefsEqual(state.config.imageGenerationModel, prevImageGenerationModel);
+    const videoGenerationModelChanged =
+      state.config.videoGenerationModel !== prevVideoGenerationModel &&
+      !modelRefsEqual(state.config.videoGenerationModel, prevVideoGenerationModel);
 
     if (agentModeNow !== prevAgentMode) {
       state.metadata = await loadHostMetadata(state.workspaceRoot, agentModeNow, {
@@ -746,7 +767,8 @@ export async function updateConfigCommand(
       modelRefsEqual(state.config.activeModel, prevActiveModel) &&
       (activeModelProfile.thinkingEnabled !== prevActiveModelInference.thinkingEnabled ||
         activeModelProfile.reasoningEffort !== prevActiveModelInference.reasoningEffort ||
-        activeModelProfile.reasoningMode !== prevActiveModelInference.reasoningMode);
+        activeModelProfile.reasoningMode !== prevActiveModelInference.reasoningMode ||
+        activeModelProfile.serviceTier !== prevActiveModelInference.serviceTier);
     const deferRuntimeRefresh = wasBusy && transportOrPlanChanged && !request.apiKey?.trim();
 
     if (deferRuntimeRefresh) {
@@ -1253,6 +1275,9 @@ export async function addProviderModelsCommand(
       if (catalogEntry?.supportsThinkingSwitch === true) {
         entry.supportsThinkingSwitch = true;
       }
+      if (catalogEntry?.upstreamProvider !== undefined) {
+        entry.upstreamProvider = catalogEntry.upstreamProvider;
+      }
       toAdd.push(entry);
     }
 
@@ -1531,6 +1556,9 @@ export async function addModelCommand(
     }
     if (catalogEntry?.supportsThinkingSwitch === true) {
       modelEntry.supportsThinkingSwitch = true;
+    }
+    if (catalogEntry?.upstreamProvider !== undefined) {
+      modelEntry.upstreamProvider = catalogEntry.upstreamProvider;
     }
     if (request.contextLength !== undefined) {
       const contextLength = parseModelContextLength(request.contextLength);

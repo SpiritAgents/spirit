@@ -679,3 +679,34 @@ test("hugging-face provider preserves inferenceProvider in preview catalog", () 
     },
   ]);
 });
+
+test("aggregator providers preserve upstreamProvider through preview and catalog map", () => {
+  const preview = previewModelCatalogForTransport({
+    provider: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      { id: "openai/gpt-5.4", upstreamProvider: "OpenAI" },
+      { id: "meta/llama-4-maverick" },
+    ],
+  });
+
+  assert.deepEqual(preview, [
+    {
+      id: "openai/gpt-5.4",
+      capabilities: ["languageModel"],
+      upstreamProvider: "OpenAI",
+    },
+    {
+      id: "meta/llama-4-maverick",
+      capabilities: ["languageModel"],
+    },
+  ]);
+
+  const catalogMap = previewCatalogMapForTransport({
+    provider: "openrouter",
+    transportKind: "openai-compatible",
+    modelCatalog: [{ id: "x-ai/grok-4.3", upstreamProvider: "x-ai" }],
+  });
+
+  assert.equal(catalogMap.get("x-ai/grok-4.3")?.upstreamProvider, "x-ai");
+});

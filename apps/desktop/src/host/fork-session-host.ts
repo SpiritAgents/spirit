@@ -66,6 +66,7 @@ export function populateForkedBundleFromSource(
   forkBundle.currentTurnSkills = [];
   forkBundle.pendingUnboundFileChangeIds = [];
   forkBundle.deferredRuntimeRefreshWhileBusy = false;
+  forkBundle.deferredInferencePreferenceRefreshWhileBusy = false;
   forkBundle.deferredRuntimeHostEvents = [];
   forkBundle.responsesBuiltInPreviewSeenCallIds = new Set();
   forkBundle.queuedUserTurns = [];
