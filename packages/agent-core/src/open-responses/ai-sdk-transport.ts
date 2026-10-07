@@ -66,7 +66,7 @@ import { isResponsesBuiltInToolName } from "./responses-built-in-tools.js";
 import { xaiResponsesRejectsLocalFunctionTools } from "./web-search-eligibility.js";
 import {
   buildResponsesGenerateTools,
-  buildResponsesProviderOptions,
+  buildResponsesProviderOptionsWithServiceTier,
   createResponsesLanguageModel,
 } from "./model-factory.js";
 import {
@@ -167,7 +167,7 @@ export class AiSdkOpenResponsesTransport
         allowSystemInMessages: true,
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
-        providerOptions: buildResponsesProviderOptions(config),
+        providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
         maxRetries: 2,
       });
       const output = cloneJsonValue(result.object as JsonValue) as T;
@@ -234,7 +234,10 @@ export class AiSdkOpenResponsesTransport
                   }
                 : {}),
               ...(sdkWebSearchStopWhen ? { stopWhen: sdkWebSearchStopWhen } : {}),
-              providerOptions: buildResponsesProviderOptions(config, roundInput.previousResponseId),
+              providerOptions: buildResponsesProviderOptionsWithServiceTier(
+                config,
+                roundInput.previousResponseId,
+              ),
               maxRetries: 2,
             });
 
@@ -357,7 +360,10 @@ export class AiSdkOpenResponsesTransport
       beginApplyPatchBridgeRound();
       const generateTools = buildResponsesGenerateTools(config, normalizedTools);
       const hasGenerateTools = Object.keys(generateTools).length > 0;
-      const providerOptions = buildResponsesProviderOptions(config, roundInput.previousResponseId);
+      const providerOptions = buildResponsesProviderOptionsWithServiceTier(
+        config,
+        roundInput.previousResponseId,
+      );
       const sdkMessages = openAiMessagesToResponsesAiSdkMessages(roundInput.apiMessages, config);
       const sdkWebSearchStopWhen = buildSdkProviderWebSearchStopWhen(config);
       const result: { stream: AsyncIterable<unknown> } & Parameters<typeof readAiSdkUsage>[0] =
@@ -462,7 +468,7 @@ export class AiSdkOpenResponsesTransport
           model: createResponsesLanguageModel(compactConfig) as any,
           messages: promptMessages as any,
           allowSystemInMessages: true,
-          providerOptions: buildResponsesProviderOptions(compactConfig),
+          providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
           maxRetries: 2,
         });
 
@@ -492,7 +498,7 @@ export class AiSdkOpenResponsesTransport
         model: createResponsesLanguageModel(compactConfig) as any,
         messages: promptMessages as any,
         allowSystemInMessages: true,
-        providerOptions: buildResponsesProviderOptions(compactConfig),
+        providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
         maxRetries: 2,
       });
       summary = result.text;

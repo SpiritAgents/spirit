@@ -107,6 +107,8 @@ export interface OpenResponsesRequestTrace extends JsonObject {
   stepIndex: number;
   model: string;
   stream: boolean;
+  /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
+  serviceTier?: ModelServiceTier;
   input?: JsonValue;
   tools?: JsonValue[];
   store?: boolean;
@@ -331,6 +333,7 @@ export function buildOpenResponsesRequestTrace(
     stepIndex,
     model: config.model,
     stream,
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     input: input.map((item) => cloneJsonValue(item)),
     ...(tools.length > 0 ? { tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)) } : {}),
     ...(extras?.store !== undefined ? { store: extras.store } : {}),

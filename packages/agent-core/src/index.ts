@@ -10,6 +10,7 @@ export * from "./llm-tool-agent.js";
 export * from "./json-schema.js";
 export * from "./reasoning-effort.js";
 export * from "./model-service-tier.js";
+export * from "./service-tier-request.js";
 export * from "./llm-fetch.js";
 export * from "./llm-retry.js";
 export * from "./transport-factory.js";
