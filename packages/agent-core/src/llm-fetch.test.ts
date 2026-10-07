@@ -6,7 +6,9 @@ import {
   buildSpiritUserAgent,
   configureLlmClientVersion,
   configureLlmHttpVersion,
+  FLEX_SERVICE_TIER_WAIT_MS,
   getLlmClientVersion,
+  getLlmDispatcherConstructionsForTests,
   getLlmFetch,
   getLlmHttpVersion,
   mergeLlmFetchInit,
@@ -98,6 +100,90 @@ test("getLlmFetch applies Spirit User-Agent on outbound calls", async () => {
     assert.equal(
       (capturedInit.headers as Headers).get("User-Agent"),
       `${encodeURIComponent(product.name)}/4.5.6`,
+    );
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+});
+
+function flexConstructions() {
+  return getLlmDispatcherConstructionsForTests().filter((entry) => entry.kind === "flex");
+}
+
+test("flex dispatcher is constructed with the extended wait window", async () => {
+  const before = flexConstructions().length;
+  setLlmFetchTransportOverrideForTests(async () => new Response("ok"));
+  try {
+    await getLlmFetch({ flexWaiting: true })("https://example.com/v1/responses", {
+      method: "POST",
+    });
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+
+  const constructions = flexConstructions();
+  assert.ok(constructions.length >= before);
+  const flex = constructions.at(-1);
+  assert.ok(flex);
+  assert.equal(flex.options.headersTimeout, FLEX_SERVICE_TIER_WAIT_MS);
+  assert.equal(flex.options.bodyTimeout, FLEX_SERVICE_TIER_WAIT_MS);
+  assert.equal(FLEX_SERVICE_TIER_WAIT_MS, 1_800_000);
+  // Same connection semantics as the standard dispatcher.
+  assert.equal(flex.options.allowH2, getLlmHttpVersion() === "http2");
+  assert.equal(flex.options.pipelining, 0);
+});
+
+test("default and explicitly non-flex fetches keep the standard dispatcher", async () => {
+  const flexBefore = flexConstructions().length;
+  const standardBefore = getLlmDispatcherConstructionsForTests().filter(
+    (entry) => entry.kind === "standard",
+  ).length;
+
+  setLlmFetchTransportOverrideForTests(async () => new Response("ok"));
+  try {
+    await getLlmFetch()("https://example.com/v1/chat/completions", { method: "POST" });
+    await getLlmFetch({})("https://example.com/v1/chat/completions", { method: "POST" });
+    await getLlmFetch({ flexWaiting: false })("https://example.com/v1/chat/completions", {
+      method: "POST",
+    });
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
+  }
+
+  assert.equal(flexConstructions().length, flexBefore);
+  const standard = getLlmDispatcherConstructionsForTests()
+    .filter((entry) => entry.kind === "standard")
+    .at(-1);
+  assert.ok(getLlmDispatcherConstructionsForTests().some((entry) => entry.kind === "standard"));
+  assert.ok(standard);
+  assert.equal(standard.options.headersTimeout, undefined);
+  assert.equal(standard.options.bodyTimeout, undefined);
+  assert.ok(
+    getLlmDispatcherConstructionsForTests().filter((entry) => entry.kind === "standard").length >=
+      standardBefore,
+  );
+});
+
+test("flex fetch keeps UA merge and passes the abort signal through", async () => {
+  configureLlmClientVersion("7.7.7");
+  let capturedInit: RequestInit | undefined;
+  setLlmFetchTransportOverrideForTests(async (_input, init) => {
+    capturedInit = init;
+    return new Response("ok");
+  });
+
+  const controller = new AbortController();
+  try {
+    const response = await getLlmFetch({ flexWaiting: true })("https://example.com/v1/responses", {
+      method: "POST",
+      signal: controller.signal,
+    });
+    assert.equal(response.status, 200);
+    assert.equal(capturedInit?.signal, controller.signal);
+    assert.ok(capturedInit?.headers instanceof Headers);
+    assert.equal(
+      (capturedInit.headers as Headers).get("User-Agent"),
+      `${encodeURIComponent(product.name)}/7.7.7`,
     );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);

@@ -6,6 +6,7 @@ import type {
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 import type { ModelServiceTier } from "../model-service-tier.js";
+import { resolveServiceTierRequestPlan } from "../service-tier-request.js";
 import { resolveOpenAiTransportReasoningEffortForContext } from "../reasoning-effort.js";
 import {
   modelSupportsOpenAiGpt56ReasoningControls,
@@ -182,6 +183,8 @@ export interface OpenAiRequestTrace extends JsonObject {
   stepIndex: number;
   model: string;
   stream: boolean;
+  /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
+  serviceTier?: ModelServiceTier;
   /** OpenAI-compatible chat.completions request field. */
   reasoning_effort?: JsonValue;
   toolChoice?: "auto";
@@ -310,6 +313,8 @@ export function openAiVendorChatCompletionBodyExtras(
     | "vendorExtendedThinking"
     | "transportRequestProfile"
     | "supportsThinkingSwitch"
+    | "serviceTier"
+    | "upstreamProvider"
   >,
 ): Record<string, unknown> {
   const extras: Record<string, unknown> = {};
@@ -349,6 +354,19 @@ export function openAiVendorChatCompletionBodyExtras(
     }
   }
 
+  // OpenRouter Chat Completions has no AI SDK service tier option; the top-level body field is
+  // merged alongside the other vendor extras by the fetch wrapper.
+  const serviceTierPlan = resolveServiceTierRequestPlan({
+    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
+    model: config.model,
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
+    ...(config.upstreamProvider !== undefined ? { upstreamProvider: config.upstreamProvider } : {}),
+    surface: "chat-completions",
+  });
+  if (serviceTierPlan.bodyServiceTier !== undefined) {
+    extras.service_tier = serviceTierPlan.bodyServiceTier;
+  }
+
   return extras;
 }
 
@@ -386,6 +404,7 @@ export function buildOpenAiRequestTrace(
     stepIndex,
     model: config.model,
     stream,
+    ...(config.serviceTier === undefined ? {} : { serviceTier: config.serviceTier }),
     ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
     ...(gpt56Reasoning !== undefined ? { reasoning: gpt56Reasoning as JsonValue } : {}),
     ...(openRouterClaude && vendorExtras.reasoning !== undefined

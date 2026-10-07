@@ -59,6 +59,8 @@ export interface AnthropicRequestTrace extends JsonObject {
   stepIndex: number;
   model: string;
   stream: boolean;
+  /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
+  serviceTier?: import("../model-service-tier.js").ModelServiceTier;
   messages: JsonValue[];
   tools?: JsonValue[];
   providerOptions?: JsonValue;
@@ -127,6 +129,7 @@ export function buildAnthropicProviderOptions(
     | "transportRequestProfile"
     | "llmVendor"
     | "supportsThinkingSwitch"
+    | "serviceTier"
   >,
 ): Record<string, JsonObject> {
   const thinking = isMeituanAnthropicThinkingSwitchConfig(config)
@@ -136,6 +139,12 @@ export function buildAnthropicProviderOptions(
     toolStreaming: true,
     ...(thinking !== undefined ? { thinking: thinking as unknown as JsonValue } : {}),
   };
+
+  // Native Fast mode: the SDK maps speed "fast" onto the body and merges the fast-mode beta header.
+  // Off/unset sends nothing (never `speed: "standard"`).
+  if (config.serviceTier === "fast") {
+    options.speed = "fast";
+  }
 
   if (config.effort !== undefined) {
     options.effort = config.effort;
@@ -174,6 +183,7 @@ export function buildAnthropicRequestTrace(
     stepIndex,
     model: config.model,
     stream,
+    ...(config.serviceTier === undefined ? {} : { serviceTier: config.serviceTier }),
     messages: messages.map((message) => cloneJsonValue(message)),
     ...(tools.length > 0 ? { tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)) } : {}),
     ...(Object.keys(providerOptions).length > 0
