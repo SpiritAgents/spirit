@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const TS_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
-const DOC_EXTENSIONS = new Set([".md", ".mdx"]);
+const DOC_EXTENSIONS = new Set([".md"]);
 const OXFMT_EXTENSIONS = new Set([
   ".ts",
   ".tsx",
@@ -20,7 +20,6 @@ const OXFMT_EXTENSIONS = new Set([
   ".jsonc",
   ".css",
   ".md",
-  ".mdx",
 ]);
 const LINT_ROOTS = ["packages/", "apps/desktop/", "apps/site/"];
 
