@@ -78,11 +78,11 @@ test("desktop todo tools are exposed on the main agent executor", () => {
 
 test("replaceAll restores rewind todo snapshot per session", async () => {
   const tempRoot = await mkdtemp(path.join(tmpdir(), "spirit-todos-rewind-"));
-  const previousAppData = process.env.APPDATA;
+  const previousDataDir = process.env.SPIRIT_DATA_DIR;
   const sessionKey = path.join(tempRoot, "session-rewind.json");
 
   try {
-    process.env.APPDATA = tempRoot;
+    process.env.SPIRIT_DATA_DIR = tempRoot;
     const store = createHostTodoStore({
       spiritDataDir: spiritDataDir(),
       scope: { sessionKey },
@@ -100,10 +100,10 @@ test("replaceAll restores rewind todo snapshot per session", async () => {
     assert.equal(restored.length, 1);
     assert.equal(restored[0]?.title, "Before rewind");
   } finally {
-    if (previousAppData === undefined) {
-      delete process.env.APPDATA;
+    if (previousDataDir === undefined) {
+      delete process.env.SPIRIT_DATA_DIR;
     } else {
-      process.env.APPDATA = previousAppData;
+      process.env.SPIRIT_DATA_DIR = previousDataDir;
     }
     await rm(tempRoot, { recursive: true, force: true });
   }

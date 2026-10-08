@@ -1,7 +1,5 @@
 import { test } from "vitest";
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 
 import {
@@ -32,29 +30,17 @@ test("buildEmptyAutomationArchive seeds empty daemon session archive", () => {
   assert.equal(archive.approvalLevel, "auto-approval");
 });
 
-test("buildAutomationRemoteRuntimeCreateInput aligns conversationKey with resolved session path", async () => {
-  const tempRoot = await mkdtemp(path.join(os.tmpdir(), "spirit-automation-runtime-"));
-  const previousAppData = process.env.APPDATA;
-  process.env.APPDATA = tempRoot;
-  try {
-    const sessionPath = path.join(tempRoot, "chats", "chat-automation-abc-123.json");
-    const input = buildAutomationRemoteRuntimeCreateInput({
-      definition: sampleDefinition,
-      config: { activeModel: sampleDefinition.modelRef },
-      sessionPath,
-    });
-    assert.equal(input.conversationKey, path.resolve(sessionPath));
-    assert.equal(input.todoSessionKey, path.resolve(sessionPath));
-    assert.equal(input.agentMode, "agent");
-    assert.deepEqual(input.modelRef, sampleDefinition.modelRef);
-    assert.equal(input.approvalLevel, "bypass-approval");
-    assert.deepEqual(input.archive.llmHistory, []);
-  } finally {
-    if (previousAppData === undefined) {
-      delete process.env.APPDATA;
-    } else {
-      process.env.APPDATA = previousAppData;
-    }
-    await rm(tempRoot, { recursive: true, force: true });
-  }
+test("buildAutomationRemoteRuntimeCreateInput aligns conversationKey with resolved session path", () => {
+  const sessionPath = path.join("chats", "chat-automation-abc-123.json");
+  const input = buildAutomationRemoteRuntimeCreateInput({
+    definition: sampleDefinition,
+    config: { activeModel: sampleDefinition.modelRef },
+    sessionPath,
+  });
+  assert.equal(input.conversationKey, path.resolve(sessionPath));
+  assert.equal(input.todoSessionKey, path.resolve(sessionPath));
+  assert.equal(input.agentMode, "agent");
+  assert.deepEqual(input.modelRef, sampleDefinition.modelRef);
+  assert.equal(input.approvalLevel, "bypass-approval");
+  assert.deepEqual(input.archive.llmHistory, []);
 });
