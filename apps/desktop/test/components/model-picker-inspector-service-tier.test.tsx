@@ -152,7 +152,7 @@ test("providers outside the matrix render no Service Tier control", () => {
     onServiceTierChange: vi.fn(),
   });
   expect(screen.queryByText("Service Tier")).toBeNull();
-  expect(screen.queryByText("Fast Mode")).toBeNull();
+  expect(screen.queryByText("Fast")).toBeNull();
 });
 
 test("a Vercel route uses the catalog upstreamProvider fact when the profile lacks one", async () => {
@@ -188,8 +188,8 @@ test("Anthropic Opus 4.8 shows the Fast switch instead of the Service Tier dropd
   );
 
   expect(screen.queryByText("Service Tier")).toBeNull();
-  expect(screen.getByText("Fast Mode")).toBeTruthy();
-  const toggle = screen.getByRole("switch", { name: "Fast Mode" });
+  expect(screen.getByText("Fast")).toBeTruthy();
+  const toggle = screen.getByRole("switch", { name: "Fast" });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
 
   fireEvent.click(toggle);
@@ -211,7 +211,7 @@ test("Anthropic Fast toggle off clears the preference with undefined", () => {
     { onServiceTierChange },
   );
 
-  const toggle = screen.getByRole("switch", { name: "Fast Mode" });
+  const toggle = screen.getByRole("switch", { name: "Fast" });
   expect(toggle.getAttribute("aria-checked")).toBe("true");
 
   fireEvent.click(toggle);
@@ -231,7 +231,7 @@ test("Anthropic Sonnet renders neither the Fast switch nor the Service Tier drop
     { onServiceTierChange: vi.fn() },
   );
 
-  expect(screen.queryByText("Fast Mode")).toBeNull();
+  expect(screen.queryByText("Fast")).toBeNull();
   expect(screen.queryByText("Service Tier")).toBeNull();
 });
 
@@ -275,7 +275,7 @@ test("without the callback the tier controls do not render", () => {
   renderInspector(
     tierModel({ name: "claude-opus-4-8", provider: "anthropic", transportKind: "anthropic" }),
   );
-  expect(screen.queryByText("Fast Mode")).toBeNull();
+  expect(screen.queryByText("Fast")).toBeNull();
 });
 
 test("modelPickerInspectorNeedsWideLayout includes models with a tier control", () => {

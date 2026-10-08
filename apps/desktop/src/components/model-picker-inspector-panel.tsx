@@ -279,7 +279,7 @@ export function ModelPickerInspectorPanel({
         {showAnthropicFastSwitch ? (
           <div className="flex items-center justify-between gap-2">
             <Label className={labelClass} htmlFor={`model-fast-mode-${model.name}`}>
-              {t("app.modelPickerFastMode")}
+              {t("app.modelPickerFast")}
             </Label>
             <Switch
               id={`model-fast-mode-${model.name}`}
