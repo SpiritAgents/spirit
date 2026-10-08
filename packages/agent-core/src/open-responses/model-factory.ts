@@ -6,6 +6,11 @@ import { createXai } from "@ai-sdk/xai";
 import { createHuggingFace } from "@ai-sdk/huggingface";
 
 import { getLlmFetch } from "../llm-fetch.js";
+import {
+  mergeServiceTierProviderOptions,
+  resolveServiceTierRequestPlan,
+  type ServiceTierRequestPlan,
+} from "../service-tier-request.js";
 import { isArkLlmVendor } from "../ark/ark-provider.js";
 import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
 import type { JsonObject } from "../ports.js";
@@ -20,6 +25,7 @@ import {
 } from "./responses-stored-state-fetch.js";
 import { createApplyPatchAwareFetch } from "./apply-patch-responses-fetch.js";
 import { createOpenRouterReasoningAwareFetch } from "./openrouter-reasoning-responses-fetch.js";
+import { createServiceTierResponsesFetch } from "./service-tier-responses-fetch.js";
 import {
   resolveBedrockMantleOpenResponsesApiKey,
   wrapFetchForBedrockMantleIamAuth,
@@ -114,8 +120,29 @@ function resolveGatewaySdkBaseUrl(config: OpenResponsesTransportConfig): string 
   }
 }
 
+/**
+ * Per-request service tier plan for the open-responses transport. The Vercel web-search route
+ * speaks the gateway v3 language-model protocol; everything else on this transport is a Responses
+ * surface (official OpenAI SDK or generic Open Responses).
+ */
+function resolveResponsesServiceTierPlan(
+  config: OpenResponsesTransportConfig,
+): ServiceTierRequestPlan {
+  if (config.serviceTier === undefined) {
+    return {};
+  }
+  return resolveServiceTierRequestPlan({
+    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
+    model: config.model,
+    serviceTier: config.serviceTier,
+    ...(config.upstreamProvider !== undefined ? { upstreamProvider: config.upstreamProvider } : {}),
+    surface: shouldUseGatewayWebSearch(config) ? "gateway-v3" : "responses",
+  });
+}
+
 function responsesFetchForConfig(config: OpenResponsesTransportConfig): typeof fetch {
-  let fetchFn: typeof fetch = getLlmFetch();
+  const serviceTierPlan = resolveResponsesServiceTierPlan(config);
+  let fetchFn: typeof fetch = getLlmFetch({ flexWaiting: serviceTierPlan.flexWaiting });
   if (shouldUseAlibabaResponsesBuiltInTools(config)) {
     fetchFn = createAlibabaResponsesAwareFetch(config, fetchFn);
   }
@@ -126,6 +153,7 @@ function responsesFetchForConfig(config: OpenResponsesTransportConfig): typeof f
     fetchFn = createResponsesStoredStateAwareFetch(config, fetchFn);
   }
   fetchFn = createOpenRouterReasoningAwareFetch(config, fetchFn);
+  fetchFn = createServiceTierResponsesFetch(serviceTierPlan, fetchFn);
   if (shouldUseApplyPatchFileTools(config)) {
     fetchFn = createApplyPatchAwareFetch(config, fetchFn);
   }
@@ -468,4 +496,19 @@ export function buildResponsesProviderOptions(
   }
 
   return { openai: openaiOptions };
+}
+
+/**
+ * `buildResponsesProviderOptions` has many early-return vendor branches; the service tier fragment
+ * is merged into its result here instead of editing each branch, so existing reasoning/store/
+ * previousResponseId options are never dropped.
+ */
+export function buildResponsesProviderOptionsWithServiceTier(
+  config: OpenResponsesTransportConfig,
+  previousResponseId?: string,
+): Record<string, JsonObject> {
+  return mergeServiceTierProviderOptions(
+    buildResponsesProviderOptions(config, previousResponseId),
+    resolveResponsesServiceTierPlan(config),
+  );
 }

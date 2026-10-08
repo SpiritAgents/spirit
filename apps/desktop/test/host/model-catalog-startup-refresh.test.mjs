@@ -318,6 +318,62 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
   assert.equal(config.providerGroups[0].models[0].contextLength, 128000);
 });
 
+test("syncExistingModelsFromCatalog writes catalog upstreamProvider onto stored models", () => {
+  const config = {
+    providerGroups: [
+      gatewayGroup([
+        {
+          name: "openai/gpt-4.1",
+          reasoningEffort: "medium",
+          capabilities: ["languageModel"],
+        },
+        {
+          name: "xai/grok-4",
+          reasoningEffort: "medium",
+          capabilities: ["languageModel"],
+          upstreamProvider: "xAI",
+        },
+      ]),
+    ],
+  };
+
+  const synced = syncExistingModelsFromCatalog(config, gatewayScopeProfile, {
+    modelIds: ["openai/gpt-4.1", "xai/grok-4"],
+    fromCache: false,
+    modelCatalog: [
+      { id: "openai/gpt-4.1", capabilities: ["languageModel"], upstreamProvider: "OpenAI" },
+      // Catalog lacks the fact for this entry: the stored value must be kept, not deleted.
+      { id: "xai/grok-4", capabilities: ["languageModel"] },
+    ],
+  });
+
+  assert.equal(synced, 1);
+  assert.equal(config.providerGroups[0].models[0].upstreamProvider, "OpenAI");
+  assert.equal(config.providerGroups[0].models[1].upstreamProvider, "xAI");
+});
+
+test("mergeNewCatalogModelsIntoConfig persists catalog upstreamProvider for auto-added models", () => {
+  const config = {
+    providerGroups: [gatewayGroup([])],
+    activeModel: { groupId: "", name: "" },
+  };
+
+  const merged = mergeNewCatalogModelsIntoConfig(
+    config,
+    { ...gatewayScopeProfile, name: "openai/gpt-5.4" },
+    {
+      modelIds: ["openai/gpt-5.4"],
+      fromCache: false,
+      modelCatalog: [
+        { id: "openai/gpt-5.4", capabilities: ["languageModel"], upstreamProvider: "OpenAI" },
+      ],
+    },
+  );
+
+  assert.equal(merged, 1);
+  assert.equal(config.providerGroups[0].models[0].upstreamProvider, "OpenAI");
+});
+
 test("applyCatalogEntryToStoredModel backfills contextLength only when unset", () => {
   const model = {
     name: "openai/gpt-4.1",

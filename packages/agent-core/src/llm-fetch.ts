@@ -14,10 +14,40 @@ const defaultClientVersion = (require("../package.json") as { version: string })
 
 const LLM_HTTP_VERSIONS: readonly LlmHttpVersion[] = ["http1.1", "http2"];
 
+/**
+ * Extended headers/body idle wait for Flex service tier requests (30 minutes). Standard-tier
+ * requests keep the undici defaults; only requests whose resolved plan carries `flexWaiting`
+ * use the flex dispatcher.
+ */
+export const FLEX_SERVICE_TIER_WAIT_MS = 1_800_000;
+
 let configuredVersion: LlmHttpVersion = "http2";
 let llmDispatcher: Agent | undefined;
+let flexLlmDispatcher: Agent | undefined;
 let configuredClientVersion: string = defaultClientVersion;
 let llmFetchTransportOverride: typeof fetch | undefined;
+
+interface LlmDispatcherOptions {
+  allowH2: boolean;
+  pipelining: number;
+  headersTimeout?: number;
+  bodyTimeout?: number;
+}
+
+export interface LlmDispatcherConstruction {
+  kind: "standard" | "flex";
+  options: LlmDispatcherOptions;
+}
+
+const llmDispatcherConstructions: LlmDispatcherConstruction[] = [];
+
+/** @internal Unit tests read recorded dispatcher options instead of waiting on real timeouts. */
+export function getLlmDispatcherConstructionsForTests(): readonly LlmDispatcherConstruction[] {
+  return llmDispatcherConstructions.map((entry) => ({
+    kind: entry.kind,
+    options: { ...entry.options },
+  }));
+}
 
 /** @internal Unit tests may replace the underlying transport after UA merge. */
 export function setLlmFetchTransportOverrideForTests(fetchImpl: typeof fetch | undefined): void {
@@ -93,19 +123,40 @@ export function configureLlmHttpVersion(version: LlmHttpVersion): void {
   }
   configuredVersion = normalized;
   llmDispatcher = undefined;
+  flexLlmDispatcher = undefined;
 }
 
 function llmDispatcherInstance(): Agent {
-  llmDispatcher ??= new Agent({
-    allowH2: configuredVersion === "http2",
-    pipelining: 0,
-  });
+  if (llmDispatcher === undefined) {
+    const options: LlmDispatcherOptions = {
+      allowH2: configuredVersion === "http2",
+      pipelining: 0,
+    };
+    llmDispatcherConstructions.push({ kind: "standard", options });
+    llmDispatcher = new Agent(options);
+  }
   return llmDispatcher;
 }
 
+/** Flex tier requests get an extended header/body idle wait; cancellation via AbortSignal is unchanged. */
+function flexLlmDispatcherInstance(): Agent {
+  if (flexLlmDispatcher === undefined) {
+    const options: LlmDispatcherOptions = {
+      allowH2: configuredVersion === "http2",
+      pipelining: 0,
+      headersTimeout: FLEX_SERVICE_TIER_WAIT_MS,
+      bodyTimeout: FLEX_SERVICE_TIER_WAIT_MS,
+    };
+    llmDispatcherConstructions.push({ kind: "flex", options });
+    flexLlmDispatcher = new Agent(options);
+  }
+  return flexLlmDispatcher;
+}
+
 /** LLM outbound requests: undici fetch; HTTP/2 is config-driven (TLS ALPN, falls back to HTTP/1.1 when the peer does not support it). */
-export function getLlmFetch(): typeof fetch {
-  const dispatcher = llmDispatcherInstance();
+export function getLlmFetch(options?: { flexWaiting?: boolean | undefined }): typeof fetch {
+  const dispatcher =
+    options?.flexWaiting === true ? flexLlmDispatcherInstance() : llmDispatcherInstance();
   const fetchWithDispatcher = async (input: RequestInfo | URL, init?: RequestInit) => {
     const mergedInit = mergeLlmFetchInit(init);
     if (llmFetchTransportOverride) {

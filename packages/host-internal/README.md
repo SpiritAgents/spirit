@@ -18,6 +18,14 @@ This is a direct default-root change: there is no old-directory lookup, automati
 
 MCP file discovery is supplied through `createHostMcpService(workspaceRoot, spiritDataDir, includeWorkspace, options)`. It injects a configuration source into Agent Core, so a daemon's selected data root is also used for MCP reads. MCP and Hooks path helpers live in this package rather than Agent Core.
 
+## Model service tier preferences
+
+Each model entry in `config.json` (`providerGroups[].models[]`) may carry an optional `serviceTier` — a canonical Agent Core value: `auto`, `default`, `flex`, `fast`, `priority`, or `ultrafast`. The field is optional; `schemaVersion` stays `2` and no migration rewrites existing entries. When unset, OpenAI behaves as Auto and the other supported providers as Default, matching previous request behavior. For the direct Anthropic provider, the native Fast toggle is stored as `fast` and is valid only for eligible Claude Opus models.
+
+Aggregator model entries may also carry `upstreamProvider`, a raw catalog fact identifying the upstream provider behind the route (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix). It is preserved verbatim from the catalog and normalized by Agent Core when computing or validating service tier options.
+
+Unknown or unsupported `serviceTier` values are never silently dropped or rewritten: transport resolution (`resolveTransportConfig` / `tryResolveTransportConfig`, and therefore the daemon's `session.replaceConfig`) throws `ModelServiceTierConfigError` and leaves `config.json` untouched for the user to fix.
+
 ## Requirements
 
 - Node.js 24+

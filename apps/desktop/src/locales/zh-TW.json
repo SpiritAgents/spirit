@@ -784,6 +784,15 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "思考中",
     "modelPickerNotThinking": "不思考",
+    "modelPickerServiceTier": "服務層級",
+    "modelPickerServiceTierValues": {
+      "auto": "自動",
+      "default": "預設",
+      "flex": "彈性",
+      "fast": "快速",
+      "priority": "優先",
+      "ultrafast": "超高速"
+    },
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "已思考",
     "noModelsAvailable": "無可用模型",

@@ -4,6 +4,7 @@ import type {
   LlmWebToolExposure,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
+import type { ModelServiceTier } from "../model-service-tier.js";
 import type {
   OpenAiImageGenerationConfig,
   OpenAiLlmVendor,
@@ -81,6 +82,16 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   transportRequestProfile?: TransportRequestProfile;
   /** Vendor extended thinking; false disables the Claude / DeepSeek style thinking toggle. */
   vendorExtendedThinking?: boolean;
+  /**
+   * Per-model service tier preference (canonical Spirit value). Mapped to provider-specific
+   * request fields at request time; unsupported combinations are rejected at config parse time.
+   */
+  serviceTier?: ModelServiceTier;
+  /**
+   * Aggregator upstream identity fact from the model catalog (Vercel `owned_by` / OpenRouter
+   * `canonical_slug` author prefix); used to map `serviceTier` behind aggregator routes.
+   */
+  upstreamProvider?: string;
 }
 
 export type OpenResponsesRequestTraceKind =
@@ -96,6 +107,8 @@ export interface OpenResponsesRequestTrace extends JsonObject {
   stepIndex: number;
   model: string;
   stream: boolean;
+  /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
+  serviceTier?: ModelServiceTier;
   input?: JsonValue;
   tools?: JsonValue[];
   store?: boolean;
@@ -320,6 +333,7 @@ export function buildOpenResponsesRequestTrace(
     stepIndex,
     model: config.model,
     stream,
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     input: input.map((item) => cloneJsonValue(item)),
     ...(tools.length > 0 ? { tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)) } : {}),
     ...(extras?.store !== undefined ? { store: extras.store } : {}),

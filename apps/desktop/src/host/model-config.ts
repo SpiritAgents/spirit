@@ -20,6 +20,7 @@ import {
   resolveVendorExtendedThinking,
   shouldPinReasoningEffortToDefault,
 } from "@spiritagent/agent-core/model-thinking-controls";
+import { parseModelServiceTierConfig } from "@spiritagent/agent-core/model-service-tier";
 import {
   listProviderModels,
   listProviderConnectSiteOptions,
@@ -371,10 +372,25 @@ export function buildPrimaryTransportConfig(input: {
     | "vertexLocation"
     | "supportsThinkingType"
     | "supportsThinkingSwitch"
+    | "serviceTier"
+    | "upstreamProvider"
   >;
 }): LlmTransportConfig {
   const agentMode = input.agentMode ?? "agent";
   const transportKind = resolveDesktopTransportKind(input.profile);
+  // Validates a configured tier against the provider/model capability matrix; unknown or
+  // unsupported values throw ModelServiceTierConfigError and propagate to the caller
+  // (mirrors host-internal buildTransportFromProfile; the config file is left untouched).
+  const serviceTier = parseModelServiceTierConfig(input.profile?.serviceTier, {
+    ...(input.profile?.provider ? { provider: input.profile.provider } : {}),
+    model: input.model,
+    transportKind,
+    ...(input.profile?.upstreamProvider
+      ? { upstreamProvider: input.profile.upstreamProvider }
+      : {}),
+    ...(input.profile?.vertexLocation ? { vertexLocation: input.profile.vertexLocation } : {}),
+  });
+  const upstreamProvider = input.profile?.upstreamProvider;
 
   if (input.profile?.provider === "amazon-bedrock" && isBedrockMantleOpenAiModel(input.model)) {
     const region = input.profile.awsRegion?.trim();
@@ -475,6 +491,8 @@ export function buildPrimaryTransportConfig(input: {
       ...(responsesProvider ? { responsesProvider } : {}),
       ...(llmVendor ? { llmVendor } : {}),
       ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+      ...(serviceTier ? { serviceTier } : {}),
+      ...(upstreamProvider ? { upstreamProvider } : {}),
       ...(input.profile?.capabilities
         ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
         : {}),
@@ -514,6 +532,7 @@ export function buildPrimaryTransportConfig(input: {
       workspaceRoot: input.workspaceRoot,
       ...(llmVendor ? { llmVendor } : {}),
       ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+      ...(serviceTier ? { serviceTier } : {}),
       ...(input.profile?.capabilities
         ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
         : {}),
@@ -587,6 +606,8 @@ export function buildPrimaryTransportConfig(input: {
     workspaceRoot: input.workspaceRoot,
     ...(llmVendor ? { llmVendor } : {}),
     ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+    ...(serviceTier ? { serviceTier } : {}),
+    ...(upstreamProvider ? { upstreamProvider } : {}),
     ...(vertexProject ? { vertexProject } : {}),
     ...(vertexLocation ? { vertexLocation } : {}),
     ...(vertexClientEmail ? { vertexClientEmail } : {}),

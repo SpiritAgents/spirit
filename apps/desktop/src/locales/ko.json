@@ -784,6 +784,15 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "생각 중",
     "modelPickerNotThinking": "생각 안 함",
+    "modelPickerServiceTier": "서비스 티어",
+    "modelPickerServiceTierValues": {
+      "auto": "자동",
+      "default": "기본",
+      "flex": "플렉스",
+      "fast": "빠름",
+      "priority": "우선",
+      "ultrafast": "초고속"
+    },
     "reasoningThinkingActive": "생각 중",
     "reasoningThinkingIdle": "생각 완료",
     "noModelsAvailable": "사용 가능한 모델이 없습니다",

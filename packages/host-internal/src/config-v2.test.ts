@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "vitest";
 
 import {
@@ -15,6 +18,8 @@ import {
   SPIRIT_CONFIG_SCHEMA_VERSION,
 } from "./config-v2.js";
 import type { ProviderGroupV2 } from "./config-v2.js";
+import { loadModelProfile, loadSpiritConfig, saveSpiritConfig } from "./credentials/index.js";
+import type { SpiritConfigFile } from "./credentials/types.js";
 
 test("assertSpiritConfigSchemaVersion rejects missing or wrong version", () => {
   assert.throws(() => assertSpiritConfigSchemaVersion({}), SpiritConfigSchemaError);
@@ -69,4 +74,54 @@ test("modelRef helpers", () => {
   assert.equal(modelRefKey(ref), "openai::gpt-4.1");
   assert.equal(modelRefsEqual(ref, { ...ref }), true);
   assert.equal(isEmptyModelRef(emptyModelRef()), true);
+});
+
+test("config.json round trip preserves serviceTier and upstreamProvider without a schema bump", async () => {
+  const spiritDataDir = mkdtempSync(join(tmpdir(), "spirit-config-v2-tier-"));
+  const config: SpiritConfigFile = {
+    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+    providerGroups: [
+      {
+        id: "openrouter",
+        provider: "openrouter",
+        apiBase: "https://openrouter.ai/api/v1",
+        models: [
+          {
+            name: "openai/gpt-5.4",
+            reasoningEffort: "medium",
+            serviceTier: "flex",
+            upstreamProvider: "openai",
+          },
+          { name: "x-ai/grok-4.3", reasoningEffort: "medium" },
+        ],
+      },
+    ],
+    activeModel: { groupId: "openrouter", name: "openai/gpt-5.4" },
+  };
+
+  await saveSpiritConfig(spiritDataDir, config);
+  const loaded = loadSpiritConfig(spiritDataDir);
+  assert.ok(loaded);
+  assert.equal(loaded.schemaVersion, 2);
+
+  const entry = findModelByRef(loaded.providerGroups, loaded.activeModel)?.model;
+  assert.equal(entry?.serviceTier, "flex");
+  assert.equal(entry?.upstreamProvider, "openai");
+
+  // Entries without the fields stay bare: no defaults are injected on load/save.
+  const bare = findModelByRef(loaded.providerGroups, {
+    groupId: "openrouter",
+    name: "x-ai/grok-4.3",
+  })?.model;
+  assert.ok(bare);
+  assert.equal("serviceTier" in bare, false);
+  assert.equal("upstreamProvider" in bare, false);
+
+  // The fields flow from the stored entry into the resolved model profile.
+  const profile = loadModelProfile(spiritDataDir, {
+    groupId: "openrouter",
+    name: "openai/gpt-5.4",
+  });
+  assert.equal(profile?.serviceTier, "flex");
+  assert.equal(profile?.upstreamProvider, "openai");
 });

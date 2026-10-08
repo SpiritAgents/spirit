@@ -311,6 +311,8 @@ mod tests {
             reasoning_effort: None,
             reasoning_mode: None,
             context_length: None,
+            service_tier: None,
+            upstream_provider: None,
             extra: serde_json::Map::new(),
         }];
         let titles = build_model_display_titles(&models);

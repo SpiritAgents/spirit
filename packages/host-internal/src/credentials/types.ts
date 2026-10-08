@@ -1,3 +1,5 @@
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+
 import type {
   ModelEntryV2,
   ModelRef,
@@ -35,6 +37,10 @@ export interface SpiritModelProfile {
   vertexProject?: string;
   vertexLocation?: string;
   contextLength?: number;
+  /** Per-model service tier preference (see `ModelEntryV2.serviceTier`). */
+  serviceTier?: ModelServiceTier;
+  /** Aggregator upstream identity fact (see `ModelEntryV2.upstreamProvider`). */
+  upstreamProvider?: string;
 }
 
 /** Action a single permission rule applies when its pattern matches. */

@@ -70,6 +70,12 @@ export interface ProviderListedModelEntry {
   inferenceProvider?: string;
   /** DeepInfra `is_partner`: partner models (data forwarded to third parties); kept as catalog metadata only in this first version, not filtered. */
   isPartner?: boolean;
+  /**
+   * Raw catalog fact for the upstream provider behind an aggregator route
+   * (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix);
+   * normalized downstream by agent-core when mapping service tier options.
+   */
+  upstreamProvider?: string;
 }
 
 export const OPENAI_MODELS_PATH = "/models";
@@ -2374,6 +2380,9 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
     if (typeof id !== "string" || id.trim().length === 0) {
       continue;
     }
+    // Raw `owned_by` upstream identity fact (e.g. "OpenAI", "xAI"); normalized downstream.
+    const upstreamProvider = readOptionalTrimmedString(record.owned_by);
+    const upstreamProviderFact = upstreamProvider ? { upstreamProvider } : {};
 
     const type = typeof record.type === "string" ? record.type.trim().toLowerCase() : undefined;
     if (type && SKIPPED_VERCEL_GATEWAY_MODEL_TYPES.has(type)) {
@@ -2382,7 +2391,11 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
 
     if (!type) {
       entries.push(
-        attachListedModelMetadata({ id: id.trim() }, record, readVercelGatewayPricing(record)),
+        attachListedModelMetadata(
+          { id: id.trim(), ...upstreamProviderFact },
+          record,
+          readVercelGatewayPricing(record),
+        ),
       );
       continue;
     }
@@ -2390,7 +2403,7 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
     if (type === "image") {
       entries.push(
         attachListedModelMetadata(
-          { id: id.trim(), supportsImageGeneration: true },
+          { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
           record,
           readVercelGatewayPricing(record),
         ),
@@ -2399,7 +2412,7 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
     }
 
     if (type === "language") {
-      const modelEntry: ProviderListedModelEntry = { id: id.trim() };
+      const modelEntry: ProviderListedModelEntry = { id: id.trim(), ...upstreamProviderFact };
       const contextLength = readPositiveIntegerModelTrait(record, "context_window");
       if (contextLength !== undefined) {
         modelEntry.contextLength = contextLength;
@@ -2414,7 +2427,7 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
     if (type === "video") {
       entries.push(
         attachListedModelMetadata(
-          { id: id.trim(), supportsVideoGeneration: true },
+          { id: id.trim(), supportsVideoGeneration: true, ...upstreamProviderFact },
           record,
           readVercelGatewayPricing(record),
         ),
@@ -2423,7 +2436,11 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
     }
 
     entries.push(
-      attachListedModelMetadata({ id: id.trim() }, record, readVercelGatewayPricing(record)),
+      attachListedModelMetadata(
+        { id: id.trim(), ...upstreamProviderFact },
+        record,
+        readVercelGatewayPricing(record),
+      ),
     );
   }
   return entries.map(attachGatewayModelReasoningEfforts);
@@ -2454,6 +2471,23 @@ function readOpenRouterOutputModalities(record: Record<string, unknown>): string
 }
 
 /**
+ * OpenRouter `canonical_slug` author prefix (text before the first `/`, e.g. `openai`, `x-ai`)
+ * as the raw upstream identity fact; the model id itself is deliberately not parsed here —
+ * agent-core's prefix fallback handles that at resolution time when this fact is absent.
+ */
+function readOpenRouterCanonicalSlugAuthor(value: unknown): string | undefined {
+  const slug = readOptionalTrimmedString(value);
+  if (!slug) {
+    return undefined;
+  }
+  const slashIndex = slug.indexOf("/");
+  if (slashIndex <= 0) {
+    return undefined;
+  }
+  return slug.slice(0, slashIndex);
+}
+
+/**
  * OpenRouter /models: distinguishes chat vs image generation solely via output_modalities; model id and pricing are not used for inference.
  * Contains image but not text → image generation; contains text → chat; neither → skip; missing → defaults to chat.
  */
@@ -2476,6 +2510,8 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
     if (typeof id !== "string" || id.trim().length === 0) {
       continue;
     }
+    const upstreamProvider = readOpenRouterCanonicalSlugAuthor(record.canonical_slug);
+    const upstreamProviderFact = upstreamProvider ? { upstreamProvider } : {};
 
     const outputModalities = readOpenRouterOutputModalities(record);
     if (outputModalities.length > 0) {
@@ -2488,7 +2524,7 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
         entries.push(
           attachOpenRouterAnthropicReasoningEfforts(
             attachListedModelMetadata(
-              { id: id.trim(), supportsImageGeneration: true },
+              { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
               record,
               readOpenRouterPricing(record),
             ),
@@ -2498,7 +2534,7 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
       }
     }
 
-    const modelEntry: ProviderListedModelEntry = { id: id.trim() };
+    const modelEntry: ProviderListedModelEntry = { id: id.trim(), ...upstreamProviderFact };
     const supportedReasoningEfforts = readOpenRouterSupportedReasoningEfforts(record);
     if (supportedReasoningEfforts !== undefined) {
       modelEntry.supportedReasoningEfforts = supportedReasoningEfforts;
@@ -3132,7 +3168,7 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
-function dedupeProviderListedModelEntries(
+export function dedupeProviderListedModelEntries(
   entries: readonly ProviderListedModelEntry[],
 ): ProviderListedModelEntry[] {
   const seen = new Set<string>();
@@ -3174,6 +3210,7 @@ function dedupeProviderListedModelEntries(
         ? { defaultReasoningEffort: entry.defaultReasoningEffort }
         : {}),
       ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
+      ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
     });
   }
   return deduped;

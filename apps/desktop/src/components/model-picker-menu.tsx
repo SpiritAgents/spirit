@@ -48,6 +48,15 @@ import {
   modelSupportsThinkingSwitch,
   resolveModelThinkingEnabled,
 } from "@spiritagent/agent-core/model-thinking-controls";
+import {
+  modelServiceTierTriggerTier,
+  resolveEffectiveModelServiceTier,
+} from "@spiritagent/agent-core/model-service-tier";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import {
+  modelServiceTierContextFromProfile,
+  serviceTierValueLabelKey,
+} from "@/lib/model-service-tier-context";
 import { groupModelsForPicker } from "@/lib/model-picker-groups";
 import { DESKTOP_MENU_TRIGGER_TEXT_CLASS } from "@/lib/desktop-typography";
 import type {
@@ -145,6 +154,10 @@ export type ModelPickerMenuProps = {
   onModelReasoningEffortSelect?(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
+  onModelServiceTierSelect?(
+    ref: ModelRef,
+    serviceTier: ModelServiceTier | undefined,
+  ): void | Promise<boolean>;
   triggerClassName?: string;
   menuContentClassName?: string;
 };
@@ -162,6 +175,7 @@ export function ModelPickerMenu({
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
   onModelThinkingEnabledSelect,
+  onModelServiceTierSelect,
   triggerClassName,
   menuContentClassName,
 }: ModelPickerMenuProps) {
@@ -427,6 +441,7 @@ export function ModelPickerMenu({
                   onThinkingEnabledChange={(modelRef, enabled) => {
                     onModelThinkingEnabledSelect?.(modelRef, enabled);
                   }}
+                  onServiceTierChange={onModelServiceTierSelect}
                 />
               );
             }}
@@ -467,6 +482,12 @@ function ModelPickerTriggerLabel({
   const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
   const supportsThinkingSwitch = modelSupportsThinkingSwitch(modelContext);
   const thinkingEnabled = resolveModelThinkingEnabled(model.thinkingEnabled);
+  const serviceTierTriggerTier = modelServiceTierTriggerTier(
+    resolveEffectiveModelServiceTier(
+      model.serviceTier,
+      modelServiceTierContextFromProfile(model, catalogEntry),
+    ),
+  );
 
   const secondaryLabels: string[] = [];
   if (supportsReasoningMode && reasoningMode === "pro") {
@@ -479,6 +500,9 @@ function ModelPickerTriggerLabel({
       : modelReasoningEffortLabel(reasoningEffort);
 
   secondaryLabels.push(effortOrThinkingLabel);
+  if (serviceTierTriggerTier !== undefined) {
+    secondaryLabels.push(t(serviceTierValueLabelKey(serviceTierTriggerTier)));
+  }
 
   return (
     <span className="inline-flex min-w-0 max-w-full items-baseline gap-1.5">
