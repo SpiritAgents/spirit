@@ -5,6 +5,7 @@ import {
   type LlmTransportConfig,
   type OpenResponsesSdkProvider,
 } from "@spiritagent/agent-core";
+import { parseModelServiceTierConfig } from "@spiritagent/agent-core/model-service-tier";
 import {
   resolveAnthropicTransportReasoningEffortForContext,
   resolveGroqTransportReasoningEffortForContext,
@@ -78,6 +79,17 @@ function buildTransportFromProfile(
     profile.transportKind,
   );
   const model = profile.name;
+  // Validates a configured tier against the provider/model capability matrix; unknown or
+  // unsupported values throw ModelServiceTierConfigError and propagate to the caller
+  // (the config file is left untouched for the user to fix).
+  const serviceTier = parseModelServiceTierConfig(profile.serviceTier, {
+    ...(profile.provider ? { provider: profile.provider } : {}),
+    model,
+    transportKind,
+    ...(profile.upstreamProvider ? { upstreamProvider: profile.upstreamProvider } : {}),
+    ...(profile.vertexLocation ? { vertexLocation: profile.vertexLocation } : {}),
+  });
+  const upstreamProvider = profile.upstreamProvider;
 
   if (profile.provider === "amazon-bedrock" && isBedrockMantleOpenAiModel(model)) {
     const region = profile.awsRegion?.trim();
@@ -170,6 +182,8 @@ function buildTransportFromProfile(
       ...(responsesProvider ? { responsesProvider } : {}),
       ...(llmVendor ? { llmVendor } : {}),
       ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+      ...(serviceTier ? { serviceTier } : {}),
+      ...(upstreamProvider ? { upstreamProvider } : {}),
       ...(profile.capabilities
         ? { modelCapabilities: modelCapabilitiesFromConfig(profile.capabilities) }
         : {}),
@@ -200,6 +214,7 @@ function buildTransportFromProfile(
       workspaceRoot,
       ...(llmVendor ? { llmVendor } : {}),
       ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+      ...(serviceTier ? { serviceTier } : {}),
       ...(profile.capabilities
         ? { modelCapabilities: modelCapabilitiesFromConfig(profile.capabilities) }
         : {}),
@@ -276,6 +291,8 @@ function buildTransportFromProfile(
     workspaceRoot,
     ...(llmVendor ? { llmVendor } : {}),
     ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
+    ...(serviceTier ? { serviceTier } : {}),
+    ...(upstreamProvider ? { upstreamProvider } : {}),
     ...(vertexProject ? { vertexProject } : {}),
     ...(vertexLocation ? { vertexLocation } : {}),
     ...(vertexClientEmail ? { vertexClientEmail } : {}),

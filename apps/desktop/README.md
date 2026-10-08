@@ -31,7 +31,7 @@ Docked panels attach to the active workspace:
 
 ### Configuration and extensibility
 
-- **Models** — configure inference providers, API keys, reasoning effort, and a secondary language model.
+- **Models** — configure inference providers, API keys, reasoning effort, and a secondary language model. The model inspector's **Service Tier** dropdown — or a **Fast** / **Priority** switch on rows with a single non-default tier (Anthropic Opus, SpaceXAI and equivalent aggregator rows) — sets the per-model _requested_ tier preference; the gray trigger suffix (Fast / Flex / Priority / Ultrafast) marks that requested preference, not the tier actually granted by the upstream provider.
 - **Skills and Rules** — discover workspace and user-level skills; manage Spirit rule slots (`AGENTS.md`, `.spirit/rule.md`, and user `rule.md`).
 - **MCP servers** — add stdio or HTTP Model Context Protocol servers from settings.
 - **Extensions** — import ZIP packages from the Extensions page; extensions can contribute tools, Desktop CSS, CLI hooks, and settings pages.

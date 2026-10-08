@@ -158,6 +158,8 @@ fn resolve_transport_config_json_uses_azure_official_responses_provider() {
             context_length: None,
             supports_thinking_type: None,
             supports_thinking_switch: None,
+            service_tier: None,
+            upstream_provider: None,
         },
     );
     next.active_model = ModelRef {
@@ -208,6 +210,116 @@ fn transport_config_will_change_detects_model_knobs() {
         entry.reasoning_effort = Some("low".to_string());
     }
     assert!(transport_config_will_change(&stored, &next));
+
+    let mut next = stored.clone();
+    if let Some(entry) = next.active_model_entry_mut() {
+        entry.service_tier = Some("flex".to_string());
+    }
+    assert!(transport_config_will_change(&stored, &next));
+
+    let mut next = stored.clone();
+    if let Some(entry) = next.active_model_entry_mut() {
+        entry.upstream_provider = Some("acme-upstream".to_string());
+    }
+    assert!(transport_config_will_change(&stored, &next));
+}
+
+#[test]
+fn resolve_transport_config_json_bridges_service_tier_fields() {
+    let fixture = TestTransportFixture::new();
+    let host = fixture.host();
+
+    let mut next = fixture.config.clone();
+    if let Some(entry) = next.active_model_entry_mut() {
+        entry.service_tier = Some("flex".to_string());
+        entry.upstream_provider = Some("acme-upstream".to_string());
+    }
+    let transport =
+        resolve_transport_config_json_for(&host, &next).expect("resolve transport config");
+    assert_eq!(
+        transport.get("transportKind").and_then(Value::as_str),
+        Some("open-responses")
+    );
+    assert_eq!(
+        transport.get("serviceTier").and_then(Value::as_str),
+        Some("flex")
+    );
+    assert_eq!(
+        transport.get("upstreamProvider").and_then(Value::as_str),
+        Some("acme-upstream")
+    );
+
+    let mut next = fixture.config.clone();
+    if let Some(group) = next.active_provider_group_mut() {
+        group.provider = ModelProvider::Custom;
+    }
+    if let Some(entry) = next.active_model_entry_mut() {
+        entry.service_tier = Some("flex".to_string());
+        entry.upstream_provider = Some("acme-upstream".to_string());
+    }
+    let transport =
+        resolve_transport_config_json_for(&host, &next).expect("resolve transport config");
+    assert_eq!(
+        transport.get("serviceTier").and_then(Value::as_str),
+        Some("flex")
+    );
+    assert_eq!(
+        transport.get("upstreamProvider").and_then(Value::as_str),
+        Some("acme-upstream")
+    );
+
+    let mut next = fixture.config.clone();
+    if let Some(group) = next.active_provider_group_mut() {
+        group.provider = ModelProvider::Anthropic;
+        group.transport_kind = Some("anthropic".to_string());
+    }
+    if let Some(entry) = next.active_model_entry_mut() {
+        entry.service_tier = Some("fast".to_string());
+        entry.upstream_provider = Some("acme-upstream".to_string());
+    }
+    let transport =
+        resolve_transport_config_json_for(&host, &next).expect("resolve transport config");
+    assert_eq!(
+        transport.get("serviceTier").and_then(Value::as_str),
+        Some("fast")
+    );
+    assert_eq!(transport.get("upstreamProvider"), None);
+
+    let mut next = fixture.config.clone();
+    next.add_model_to_group(
+        "bedrock-tier-test",
+        ModelProvider::AmazonBedrock,
+        "https://bedrock.example.invalid".to_string(),
+        ProviderGroupConnectDraft {
+            aws_region: Some("us-east-1".to_string()),
+            ..Default::default()
+        },
+        ModelEntry {
+            name: "anthropic.claude-sonnet-4".to_string(),
+            reasoning_effort: None,
+            reasoning_mode: None,
+            thinking_enabled: None,
+            supported_reasoning_efforts: None,
+            capabilities: None,
+            context_length: None,
+            supports_thinking_type: None,
+            supports_thinking_switch: None,
+            service_tier: Some("flex".to_string()),
+            upstream_provider: Some("acme-upstream".to_string()),
+        },
+    );
+    next.active_model = ModelRef {
+        group_id: "bedrock-tier-test".to_string(),
+        name: "anthropic.claude-sonnet-4".to_string(),
+    };
+    let transport =
+        resolve_transport_config_json_for(&host, &next).expect("resolve transport config");
+    assert_eq!(
+        transport.get("transportKind").and_then(Value::as_str),
+        Some("bedrock")
+    );
+    assert_eq!(transport.get("serviceTier"), None);
+    assert_eq!(transport.get("upstreamProvider"), None);
 }
 
 #[test]
@@ -230,6 +342,8 @@ fn resolve_transport_config_json_includes_image_generation_model() {
             context_length: None,
             supports_thinking_type: None,
             supports_thinking_switch: None,
+            service_tier: None,
+            upstream_provider: None,
         },
     );
     next.image_generation_model = Some(ModelRef {

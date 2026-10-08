@@ -3067,7 +3067,7 @@ export class DesktopHostService {
     // Preserve bundle.currentTurnSkills: slash-activated turn skills must be injected into the user message meta at startUserTurnStreaming
     const effectiveActiveModel = resolveEffectivePaneActiveModel(bundle, state);
     if (inferencePreferenceOnly && bundle.runtime?.isBusy()) {
-      bundle.deferredRuntimeRefreshWhileBusy = true;
+      bundle.deferredInferencePreferenceRefreshWhileBusy = true;
       return;
     }
     const desktopMessages = bundle.messageTimeline.toMessages();
@@ -3101,6 +3101,9 @@ export class DesktopHostService {
         webFetchEnabled: state.config.agents.webFetch.enabled,
       },
       ...(bundle.basicInfoHost ? { basicInfoHost: bundle.basicInfoHost } : {}),
+      // Inference-preference-only updates (reasoning/thinking/service tier) must reach the
+      // daemon even when the model ref is unchanged; attach forces `session.replaceConfig`.
+      ...(inferencePreferenceOnly ? { refreshDaemonConfig: true } : {}),
       onActivity: () => {
         this.sessionPump.ensureRunning();
         this.requestThrottledLiveSnapshotEmit();
@@ -3716,14 +3719,23 @@ export class DesktopHostService {
   private async flushDeferredRuntimeRefreshIfIdle(
     bundle: SessionBundle = this.activeBundle(),
   ): Promise<void> {
-    if (!bundle.deferredRuntimeRefreshWhileBusy) {
+    const fullRefreshDeferred = bundle.deferredRuntimeRefreshWhileBusy;
+    const inferencePreferenceDeferred = bundle.deferredInferencePreferenceRefreshWhileBusy;
+    if (!fullRefreshDeferred && !inferencePreferenceDeferred) {
       return;
     }
     if (bundle.runtime?.isBusy()) {
       return;
     }
     bundle.deferredRuntimeRefreshWhileBusy = false;
-    await this.refreshRuntimeForBundle(bundle);
+    bundle.deferredInferencePreferenceRefreshWhileBusy = false;
+    // A full refresh supersedes a pending inference-preference refresh (a changed model re-resolves
+    // the daemon transport via session.replaceConfig on attach); the light path forces that same
+    // replaceConfig so a same-model preference change still reaches the daemon.
+    await this.refreshRuntimeForBundle(
+      bundle,
+      fullRefreshDeferred ? {} : { inferencePreferenceOnly: true },
+    );
     if (bundle.id === this.sessionRegistry.activeSessionId()) {
       this.syncActiveRuntimePointer();
     }

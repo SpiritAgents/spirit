@@ -788,6 +788,15 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Думать",
     "modelPickerNotThinking": "Без размышлений",
+    "modelPickerServiceTier": "Уровень обслуживания",
+    "modelPickerServiceTierValues": {
+      "auto": "Авто",
+      "default": "По умолчанию",
+      "flex": "Флекс",
+      "fast": "Быстрый",
+      "priority": "Приоритет",
+      "ultrafast": "Ультрабыстрый"
+    },
     "reasoningThinkingActive": "Думает",
     "reasoningThinkingIdle": "Подумал",
     "noModelsAvailable": "Нет доступных моделей",

@@ -47,6 +47,7 @@ import type {
   DesktopSnapshot,
   ModelRef,
 } from "@/types";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 function isComposerChromeInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -82,6 +83,10 @@ export type ComposerSurfaceProps = {
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
+  onModelServiceTierSelect?(
+    ref: ModelRef,
+    serviceTier: ModelServiceTier | undefined,
+  ): void | Promise<boolean>;
   onAgentModeChange(mode: DesktopAgentMode): void;
   onLoopEnabledChange?(enabled: boolean): void;
   richInputRef?: RefObject<ComposerRichInputHandle | null>;
@@ -128,6 +133,7 @@ export function ComposerSurface({
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
   onModelThinkingEnabledSelect,
+  onModelServiceTierSelect,
   onAgentModeChange,
   onLoopEnabledChange,
   richInputRef,
@@ -283,6 +289,7 @@ export function ComposerSurface({
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
               onModelReasoningModeSelect={onModelReasoningModeSelect}
               onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
+              onModelServiceTierSelect={onModelServiceTierSelect}
               triggerClassName={DESKTOP_COMPOSER_GHOST_HOVER}
               menuContentClassName="z-[100]"
             />

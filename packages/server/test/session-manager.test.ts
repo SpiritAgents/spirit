@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
 
+import { ModelServiceTierConfigError } from "@spiritagent/agent-core/model-service-tier";
 import { setKeyringStoreForTests, groupKeyAccount } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
@@ -42,6 +43,25 @@ function withMockKeyring(run: () => Promise<void>): Promise<void> {
   // The canonical Desktop/CLI account scheme: group::{groupId}.
   store.set(`Spirit/${groupKeyAccount("openai")}`, "test-key");
   return run().finally(() => setKeyringStoreForTests(undefined));
+}
+
+/** Rewrites config.json keeping the fixture shape, with a per-model service tier preference. */
+function writeServiceTierConfig(dir: string, serviceTier: string): void {
+  writeFileSync(
+    join(dir, "config.json"),
+    JSON.stringify({
+      schemaVersion: 2,
+      providerGroups: [
+        {
+          id: "openai",
+          provider: "openai",
+          apiBase: "https://api.openai.com/v1",
+          models: [{ name: "gpt-4o-mini", serviceTier }, { name: "gpt-4o-mini-pane" }],
+        },
+      ],
+      activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+    }),
+  );
 }
 
 describe("SessionManager", () => {
@@ -399,5 +419,58 @@ describe("SessionManager", () => {
 
     await manager.closeSession(created.sessionId);
     await manager.shutdown();
+  });
+
+  it("replaceConfig re-reads config.json and surfaces invalid service tier config", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+      const created = await manager.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "cli",
+      });
+
+      // Same model with a new tier preference: the daemon re-resolves from config.json.
+      writeServiceTierConfig(dataDir, "flex");
+      await manager.replaceConfig(created.sessionId);
+      assert.equal(manager.getSession(created.sessionId)?.model, "gpt-4o-mini");
+
+      // An unsupported manual tier fails resolution with ModelServiceTierConfigError;
+      // the config file is left untouched for the user to fix.
+      writeServiceTierConfig(dataDir, "priority");
+      const untouched = readFileSync(join(dataDir, "config.json"), "utf8");
+      await assert.rejects(manager.replaceConfig(created.sessionId), ModelServiceTierConfigError);
+      assert.equal(readFileSync(join(dataDir, "config.json"), "utf8"), untouched);
+      assert.ok(manager.getSession(created.sessionId));
+
+      await manager.shutdown();
+    });
+  });
+
+  it("createSession rejects an unsupported service tier instead of degrading", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      writeServiceTierConfig(dataDir, "priority");
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+
+      await assert.rejects(
+        manager.createSession({ workspaceRoot: tmpdir(), hostKind: "cli" }),
+        ModelServiceTierConfigError,
+      );
+
+      await manager.shutdown();
+    });
   });
 });

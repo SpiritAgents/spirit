@@ -409,6 +409,8 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                     context_length,
                     supports_thinking_type: None,
                     supports_thinking_switch: None,
+                    service_tier: None,
+                    upstream_provider: None,
                 };
                 cfg.add_model_to_group(
                     &group_id,

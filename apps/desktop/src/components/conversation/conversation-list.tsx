@@ -573,6 +573,7 @@ export function ConversationList({
         onModelReasoningEffortSelect={runtime.setModelReasoningEffort}
         onModelReasoningModeSelect={runtime.setModelReasoningMode}
         onModelThinkingEnabledSelect={runtime.setModelThinkingEnabled}
+        onModelServiceTierSelect={runtime.setModelServiceTier}
         onAgentModeChange={onComposerAgentModeChange}
         readManagedImagePreviewDataUrl={runtime.readManagedImagePreviewDataUrl}
         readManagedVideoPreviewUrl={runtime.readManagedVideoPreviewUrl}

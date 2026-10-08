@@ -784,6 +784,15 @@
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Denken",
     "modelPickerNotThinking": "Kein Denken",
+    "modelPickerServiceTier": "Service-Tier",
+    "modelPickerServiceTierValues": {
+      "auto": "Auto",
+      "default": "Standard",
+      "flex": "Flex",
+      "fast": "Schnell",
+      "priority": "Priorität",
+      "ultrafast": "Ultraschnell"
+    },
     "reasoningThinkingActive": "Denken",
     "reasoningThinkingIdle": "Nachgedacht",
     "noModelsAvailable": "Keine Modelle verfügbar",

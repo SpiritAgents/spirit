@@ -101,6 +101,11 @@ export function modelHasCatalogDetail(entry: PreviewModelCatalogEntry | undefine
   if (entry.displayName?.trim()) {
     return true;
   }
+  // The upstream identity fact feeds service tier capability gating in the picker even when
+  // the entry carries no display detail.
+  if (entry.upstreamProvider?.trim()) {
+    return true;
+  }
   if (entry.description?.trim()) {
     return true;
   }

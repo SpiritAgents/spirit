@@ -46,6 +46,7 @@ import type {
   ModelRef,
   PendingAssistantAux,
 } from "@/types";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 function MessageCardImpl({
   composerSessionKey,
@@ -81,6 +82,7 @@ function MessageCardImpl({
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
   onModelThinkingEnabledSelect,
+  onModelServiceTierSelect,
   onAgentModeChange,
   pendingAuxState,
   showThinkingCollapsible: showThinkingCollapsibleEligible,
@@ -163,6 +165,10 @@ function MessageCardImpl({
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
+  onModelServiceTierSelect?(
+    ref: ModelRef,
+    serviceTier: ModelServiceTier | undefined,
+  ): void | Promise<boolean>;
   onAgentModeChange(mode: DesktopAgentMode): void;
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
@@ -288,6 +294,7 @@ function MessageCardImpl({
             onModelReasoningEffortSelect={onModelReasoningEffortSelect}
             onModelReasoningModeSelect={onModelReasoningModeSelect}
             onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
+            onModelServiceTierSelect={onModelServiceTierSelect}
             onAgentModeChange={onAgentModeChange}
             onLoopEnabledChange={() => {}}
             canSend={rewindCanSubmit}

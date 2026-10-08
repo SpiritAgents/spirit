@@ -129,6 +129,11 @@ import { generateStepfunImage } from "../image-generation/stepfun-backend.js";
 import { isCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
+import {
+  mergeServiceTierProviderOptions,
+  resolveServiceTierRequestPlan,
+  type ServiceTierRequestPlan,
+} from "../service-tier-request.js";
 import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
 import { createAlibabaChatCompletionsAwareFetch } from "../open-responses/alibaba-chat-completions-fetch.js";
 import {
@@ -355,7 +360,7 @@ export class AiSdkOpenAiCompatibleTransport
         allowSystemInMessages: true,
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
-        providerOptions: buildAiSdkProviderOptions(config),
+        providerOptions: buildAiSdkProviderOptionsWithServiceTier(config),
         maxRetries: 2,
       });
       const output = cloneJsonValue(result.object as JsonValue) as T;
@@ -407,7 +412,7 @@ export class AiSdkOpenAiCompatibleTransport
               tools: buildAiSdkTools(normalizedTools) as any,
               toolChoice: "auto" as const,
             }),
-        providerOptions: buildAiSdkProviderOptions(config),
+        providerOptions: buildAiSdkProviderOptionsWithServiceTier(config),
         maxRetries: 2,
       });
 
@@ -511,7 +516,7 @@ export class AiSdkOpenAiCompatibleTransport
               tools: buildAiSdkTools(normalizedTools) as any,
               toolChoice: "auto" as const,
             }),
-        providerOptions: buildAiSdkProviderOptions(config),
+        providerOptions: buildAiSdkProviderOptionsWithServiceTier(config),
         include: { rawChunks: true },
         maxRetries: 2,
         abortSignal: abortController.signal,
@@ -597,7 +602,7 @@ export class AiSdkOpenAiCompatibleTransport
           model: createAiSdkLanguageModel(compactConfig),
           messages: promptMessages as any,
           allowSystemInMessages: true,
-          providerOptions: buildAiSdkProviderOptions(compactConfig),
+          providerOptions: buildAiSdkProviderOptionsWithServiceTier(compactConfig),
           maxRetries: 2,
         });
 
@@ -627,7 +632,7 @@ export class AiSdkOpenAiCompatibleTransport
         model: createAiSdkLanguageModel(compactConfig),
         messages: promptMessages as any,
         allowSystemInMessages: true,
-        providerOptions: buildAiSdkProviderOptions(compactConfig),
+        providerOptions: buildAiSdkProviderOptionsWithServiceTier(compactConfig),
         maxRetries: 2,
       });
       summary = result.text;
@@ -834,6 +839,8 @@ function createAiSdkOpenAiCompatibleProvider(
   options: { includeChatVendorExtras?: boolean } = {},
 ) {
   const transportConfig = config as OpenAiTransportConfig;
+  // Image/video generation configs never carry serviceTier, so this stays the standard dispatcher there.
+  const llmFetch = llmFetchForChatServiceTier(transportConfig);
   const vendorExtras =
     options.includeChatVendorExtras === false
       ? {}
@@ -845,7 +852,7 @@ function createAiSdkOpenAiCompatibleProvider(
     : async (input: RequestInfo | URL, init?: RequestInit) => {
         const body = tryParseRequestBody(init?.body);
         if (!isJsonObject(body)) {
-          return getLlmFetch()(input, init);
+          return llmFetch(input, init);
         }
 
         const requestUrl =
@@ -855,7 +862,7 @@ function createAiSdkOpenAiCompatibleProvider(
             ? takeMoonshotChatCompletionMessages()
             : undefined;
 
-        return getLlmFetch()(input, {
+        return llmFetch(input, {
           ...init,
           body: JSON.stringify({
             ...body,
@@ -873,7 +880,7 @@ function createAiSdkOpenAiCompatibleProvider(
 
   let resolvedFetch = wrapFetchForCloudflareAiGateway(
     transportConfig.cloudflareGatewayId,
-    fetchWrapper ?? getLlmFetch(),
+    fetchWrapper ?? llmFetch,
   );
   // Neither TokenHub Chat `web_search_options` nor Responses `/v1/responses` web search is integrated:
   // the former was tested and the upstream still performed no effective real-time retrieval after injection; the latter is supported by only a few models and does not match the existing Chat Completions matrix, so the maintenance cost is not worthwhile.
@@ -928,7 +935,7 @@ function createAiSdkGoogleProvider(config: OpenAiTransportConfig) {
   return createGoogle({
     apiKey: config.apiKey,
     baseURL: config.baseUrl ?? DEFAULT_GOOGLE_BASE_URL,
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChatServiceTier(config),
   });
 }
 
@@ -943,7 +950,7 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
   if (expressOnly) {
     return createVertex({
       apiKey,
-      fetch: getLlmFetch(),
+      fetch: llmFetchForChatServiceTier(config),
     } as Parameters<typeof createVertex>[0]);
   }
 
@@ -963,7 +970,7 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     ...(googleAuthOptions ? { googleAuthOptions } : {}),
     ...(apiKey ? ({ apiKey } as Record<string, string>) : {}),
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChatServiceTier(config),
   } as Parameters<typeof createVertex>[0]);
 }
 
@@ -1156,15 +1163,50 @@ function createAiSdkGatewayProvider(config: OpenAiTransportConfig) {
   // Gateway chat uses the v3 AI protocol (default …/v3/ai/language-model); it cannot use the model catalog's preset /v1 baseUrl.
   return createGateway({
     apiKey: config.apiKey,
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChatServiceTier(config),
   });
+}
+
+/**
+ * Per-request service tier plan for chat surfaces. The Vercel chat route speaks the gateway v3
+ * language-model protocol; every other vendor on this transport is chat-completions.
+ */
+function resolveChatServiceTierPlan(config: OpenAiTransportConfig): ServiceTierRequestPlan {
+  if (config.serviceTier === undefined) {
+    return {};
+  }
+  return resolveServiceTierRequestPlan({
+    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
+    model: config.model,
+    serviceTier: config.serviceTier,
+    ...(config.upstreamProvider !== undefined ? { upstreamProvider: config.upstreamProvider } : {}),
+    ...(config.vertexLocation !== undefined ? { vertexLocation: config.vertexLocation } : {}),
+    surface: isVercelAiGatewayProvider(config) ? "gateway-v3" : "chat-completions",
+  });
+}
+
+/** Flex tier requests switch to the extended-wait dispatcher; everything else keeps the singleton. */
+function llmFetchForChatServiceTier(config: OpenAiTransportConfig): typeof fetch {
+  return getLlmFetch({ flexWaiting: resolveChatServiceTierPlan(config).flexWaiting });
+}
+
+/**
+ * The vendor provider-options builder has many early-return branches; the service tier fragment is
+ * merged into its result here instead of editing each branch, so existing options are never dropped.
+ */
+function buildAiSdkProviderOptionsWithServiceTier(
+  config: OpenAiTransportConfig,
+): Record<string, JsonObject> {
+  return mergeServiceTierProviderOptions(
+    buildAiSdkProviderOptions(config),
+    resolveChatServiceTierPlan(config),
+  );
 }
 
 function buildAiSdkProviderOptions(config: OpenAiTransportConfig): Record<string, JsonObject> {
   if (shouldUseGatewayCodeCompletionProviderOptions(config)) {
     return buildGatewayCodeCompletionProviderOptions(config);
   }
-
   if (
     isVercelAiGatewayProvider(config) &&
     isGatewayAnthropicClaudeModel(config.llmVendor, config.model)
