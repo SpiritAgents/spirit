@@ -785,8 +785,14 @@
     "modelPickerThinking": "Thinking",
     "modelPickerNotThinking": "No Thinking",
     "modelPickerServiceTier": "Service Tier",
-    "modelPickerFast": "Fast",
-    "modelPickerPriority": "Priority",
+    "modelPickerServiceTierValues": {
+      "auto": "Auto",
+      "default": "Default",
+      "flex": "Flex",
+      "fast": "Fast",
+      "priority": "Priority",
+      "ultrafast": "Ultrafast"
+    },
     "reasoningThinkingActive": "Thinking",
     "reasoningThinkingIdle": "Thought",
     "noModelsAvailable": "No models available",

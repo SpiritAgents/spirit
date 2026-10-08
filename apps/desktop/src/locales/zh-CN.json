@@ -782,8 +782,14 @@
     "modelPickerThinking": "思考",
     "modelPickerNotThinking": "不思考",
     "modelPickerServiceTier": "服务档位",
-    "modelPickerFast": "快速",
-    "modelPickerPriority": "优先",
+    "modelPickerServiceTierValues": {
+      "auto": "自动",
+      "default": "默认",
+      "flex": "弹性",
+      "fast": "快速",
+      "priority": "优先",
+      "ultrafast": "超高速"
+    },
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "已思考",
     "noModelsAvailable": "无可用模型",

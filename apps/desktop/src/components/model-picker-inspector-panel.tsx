@@ -23,7 +23,10 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 
 import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
 import { modelCatalogHasDetailBody } from "@/lib/model-catalog-detail";
-import { modelServiceTierContextFromProfile } from "@/lib/model-service-tier-context";
+import {
+  modelServiceTierContextFromProfile,
+  serviceTierValueLabelKey,
+} from "@/lib/model-service-tier-context";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -168,9 +171,10 @@ export function ModelPickerInspectorPanel({
     serviceTierContext,
   );
   const displayedServiceTier = pendingServiceTier ? pendingServiceTier.value : effectiveServiceTier;
-  const displayedServiceTierLabel = serviceTierOptions.find(
-    (option) => option.value === displayedServiceTier,
-  )?.label;
+  const displayedServiceTierLabel =
+    displayedServiceTier !== undefined && serviceTierOptions.includes(displayedServiceTier)
+      ? t(serviceTierValueLabelKey(displayedServiceTier))
+      : undefined;
   const handleServiceTierChange = (tier: ModelServiceTier | undefined) => {
     if (!onServiceTierChange) {
       return;
@@ -276,8 +280,8 @@ export function ModelPickerInspectorPanel({
               </SelectTrigger>
               <SelectContent className="z-[110]">
                 {serviceTierOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                  <SelectItem key={option} value={option}>
+                    {t(serviceTierValueLabelKey(option))}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -287,7 +291,7 @@ export function ModelPickerInspectorPanel({
         {switchTier !== undefined ? (
           <div className="flex items-center justify-between gap-2">
             <Label className={labelClass} htmlFor={`model-tier-switch-${model.name}`}>
-              {t(switchTier === "fast" ? "app.modelPickerFast" : "app.modelPickerPriority")}
+              {t(serviceTierValueLabelKey(switchTier))}
             </Label>
             <Switch
               id={`model-tier-switch-${model.name}`}
