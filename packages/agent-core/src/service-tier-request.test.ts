@@ -254,12 +254,24 @@ test("vercel gateway-v3 maps google and xai upstreams", () => {
     plan({
       provider: "vercel-ai-gateway",
       model: "google/gemini-2.5-flash",
-      serviceTier: "fast",
+      serviceTier: "priority",
       upstreamProvider: "google",
       surface: "gateway-v3",
     }),
-    { providerOptions: { gateway: { serviceTier: "fast" } } },
+    { providerOptions: { gateway: { serviceTier: "priority" } } },
   );
+  assert.deepEqual(
+    plan({
+      provider: "vercel-ai-gateway",
+      model: "xai/grok-4.3",
+      serviceTier: "priority",
+      upstreamProvider: "xai",
+      surface: "gateway-v3",
+    }),
+    { providerOptions: { gateway: { serviceTier: "priority" } } },
+  );
+  // Non-OpenAI upstreams have no Fast alias; the canonical fast value maps to nothing here
+  // (the config parser rejects it before a request is built).
   assert.deepEqual(
     plan({
       provider: "vercel-ai-gateway",
@@ -268,7 +280,7 @@ test("vercel gateway-v3 maps google and xai upstreams", () => {
       upstreamProvider: "xai",
       surface: "gateway-v3",
     }),
-    { providerOptions: { gateway: { serviceTier: "fast" } } },
+    {},
   );
 });
 
@@ -332,11 +344,11 @@ test("openrouter chat-completions patches body service_tier per upstream", () =>
     plan({
       provider: "openrouter",
       model: "anthropic/claude-opus-4-8",
-      serviceTier: "fast",
+      serviceTier: "priority",
       upstreamProvider: "anthropic",
       surface: "chat-completions",
     }),
-    { bodyServiceTier: "fast" },
+    { bodyServiceTier: "priority" },
   );
   assert.deepEqual(
     plan({
@@ -378,11 +390,11 @@ test("openrouter responses surface mirrors chat-completions", () => {
     plan({
       provider: "openrouter",
       model: "x-ai/grok-4.3",
-      serviceTier: "fast",
+      serviceTier: "priority",
       upstreamProvider: "x-ai",
       surface: "responses",
     }),
-    { bodyServiceTier: "fast" },
+    { bodyServiceTier: "priority" },
   );
 });
 

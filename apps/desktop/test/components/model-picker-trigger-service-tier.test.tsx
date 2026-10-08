@@ -98,11 +98,11 @@ test("Auto, Default, and unset tiers add no trigger suffix", () => {
   }
 });
 
-test("a native Priority tier adds no trigger suffix", () => {
+test("a Priority tier appends the Priority suffix", () => {
   const trigger = renderPickerTrigger(
     triggerModel({ name: "grok-4", provider: "xai", serviceTier: "priority" }),
   );
-  expect(trigger.textContent).not.toContain("Priority");
+  expect(trigger.textContent).toContain("Priority");
 });
 
 test("the suffix resolves the upstream identity from the catalog hint when the profile lacks it", () => {

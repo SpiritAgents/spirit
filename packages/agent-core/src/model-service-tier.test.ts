@@ -135,15 +135,25 @@ test("anthropic direct exposes no dropdown; native fast only for claude opus 4.8
       model: "anthropic/claude-opus-4-8",
       upstreamProvider: "anthropic",
     }),
-    true, // dropdown with default/fast, not the native toggle
+    true, // dropdown with default/priority, not the native toggle
   );
   assert.equal(
-    parseModelServiceTierConfig("fast", {
+    parseModelServiceTierConfig("priority", {
       provider: "openrouter",
       model: "anthropic/claude-opus-4-8",
       upstreamProvider: "anthropic",
     }),
-    "fast",
+    "priority",
+  );
+  // Aggregator-routed Claude has no Fast alias: the canonical fast value is rejected.
+  assert.throws(
+    () =>
+      parseModelServiceTierConfig("fast", {
+        provider: "openrouter",
+        model: "anthropic/claude-opus-4-8",
+        upstreamProvider: "anthropic",
+      }),
+    ModelServiceTierConfigError,
   );
 });
 
@@ -188,16 +198,16 @@ test("vercel options depend on upstream identity", () => {
   );
   assert.deepEqual(
     optionValues({ provider: "vercel-ai-gateway", model: "google/gemini-3.1-pro" }),
-    ["default", "flex", "fast"],
+    ["default", "flex", "priority"],
   );
   assert.deepEqual(optionValues({ provider: "vercel-ai-gateway", model: "xai/grok-4" }), [
     "default",
-    "fast",
+    "priority",
   ]);
-  // Vercel routes current xAI models under the spacexai prefix / owned_by fact.
+  // Vercel routes current SpaceXAI models under the spacexai prefix / owned_by fact.
   assert.deepEqual(optionValues({ provider: "vercel-ai-gateway", model: "spacexai/grok-4.7" }), [
     "default",
-    "fast",
+    "priority",
   ]);
   assert.deepEqual(
     optionValues({
@@ -205,18 +215,23 @@ test("vercel options depend on upstream identity", () => {
       model: "spacexai/grok-4.7",
       upstreamProvider: "SpaceXAI",
     }),
-    ["default", "fast"],
+    ["default", "priority"],
   );
 });
 
 test("openrouter options depend on upstream identity", () => {
   assert.deepEqual(optionValues({ provider: "openrouter", model: "anthropic/claude-opus-5" }), [
     "default",
-    "fast",
+    "priority",
   ]);
   assert.deepEqual(optionValues({ provider: "openrouter", model: "x-ai/grok-4" }), [
     "default",
-    "fast",
+    "priority",
+  ]);
+  assert.deepEqual(optionValues({ provider: "openrouter", model: "google/gemini-3.1-pro" }), [
+    "default",
+    "flex",
+    "priority",
   ]);
   assert.deepEqual(optionValues({ provider: "openrouter", model: "meta/llama-4" }), []);
 });
@@ -298,12 +313,12 @@ test("effective tier: openai auto vs explicit default stay distinct", () => {
   );
 });
 
-test("trigger labels only mark fast, ultrafast, and flex", () => {
+test("trigger labels mark fast, ultrafast, flex, and priority", () => {
   assert.equal(modelServiceTierTriggerLabel("fast"), "Fast");
   assert.equal(modelServiceTierTriggerLabel("ultrafast"), "Ultrafast");
   assert.equal(modelServiceTierTriggerLabel("flex"), "Flex");
+  assert.equal(modelServiceTierTriggerLabel("priority"), "Priority");
   assert.equal(modelServiceTierTriggerLabel("auto"), undefined);
   assert.equal(modelServiceTierTriggerLabel("default"), undefined);
-  assert.equal(modelServiceTierTriggerLabel("priority"), undefined);
   assert.equal(modelServiceTierTriggerLabel(undefined), undefined);
 });
