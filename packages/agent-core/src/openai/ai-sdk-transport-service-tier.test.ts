@@ -139,14 +139,14 @@ test("OpenRouter chat service_tier survives the Claude early-return provider opt
     baseUrl: "https://openrouter.ai/api/v1",
     llmVendor: "openrouter",
     upstreamProvider: "anthropic",
-    serviceTier: "fast",
+    serviceTier: "priority",
     reasoningEffort: "high",
     workspaceRoot: process.cwd(),
   });
 
   assert.equal(result.kind, "success");
   const body = lastBody(requests);
-  assert.equal(body.service_tier, "fast");
+  assert.equal(body.service_tier, "priority");
   // The OpenRouter Claude reasoning body from the vendor extras coexists with the tier.
   assert.ok(isJsonObject(body.reasoning as JsonValue));
 });
@@ -341,7 +341,7 @@ test("Vercel gateway chat default and unset write no service tier", async () => 
   }
 });
 
-test("Vercel gateway chat maps google flex and xai fast to the gateway namespace", async () => {
+test("Vercel gateway chat maps google flex and xai priority to the gateway namespace", async () => {
   const google = await runChatRound({
     apiKey: "test-key",
     model: "google/gemini-2.5-flash",
@@ -362,7 +362,7 @@ test("Vercel gateway chat maps google flex and xai fast to the gateway namespace
     model: "xai/grok-4.3",
     llmVendor: "vercel-ai-gateway",
     upstreamProvider: "xai",
-    serviceTier: "fast",
+    serviceTier: "priority",
     workspaceRoot: process.cwd(),
   });
   assert.equal(xai.result.kind, "success");
@@ -370,7 +370,7 @@ test("Vercel gateway chat maps google flex and xai fast to the gateway namespace
     string,
     Record<string, unknown>
   >;
-  assert.equal(xaiOptions.gateway?.serviceTier, "fast");
+  assert.equal(xaiOptions.gateway?.serviceTier, "priority");
 });
 
 test("Vercel gateway chat injects nothing for anthropic upstreams", async () => {

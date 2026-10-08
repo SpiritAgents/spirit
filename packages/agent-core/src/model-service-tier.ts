@@ -3,8 +3,9 @@ import type { ModelReasoningProvider, ModelReasoningTransportKind } from "./reas
 
 /**
  * Canonical per-model service tier preference stored in the host config (`serviceTier`).
- * Providers that expose a Fast alias persist `fast`; only providers whose native protocol
- * has no Fast alias (SpaceXAI `xai`, Google) persist `priority`.
+ * Routes whose native protocol speaks Fast (OpenAI `service_tier: "fast"`, Anthropic native
+ * `speed: "fast"`) persist `fast`; routes whose upstream tier is priority-processing
+ * (SpaceXAI `xai`, Google, and aggregator rows to non-OpenAI upstreams) persist `priority`.
  */
 export type ModelServiceTier = "auto" | "default" | "flex" | "fast" | "priority" | "ultrafast";
 
@@ -195,10 +196,10 @@ export function modelServiceTierOptions(
         return withAstraUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
-        return tierOptions(["default", "flex", "fast"]);
+        return tierOptions(["default", "flex", "priority"]);
       }
       if (upstream === "xai") {
-        return tierOptions(["default", "fast"]);
+        return tierOptions(["default", "priority"]);
       }
       return [];
     }
@@ -208,10 +209,10 @@ export function modelServiceTierOptions(
         return withAstraUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
-        return tierOptions(["default", "flex", "fast"]);
+        return tierOptions(["default", "flex", "priority"]);
       }
       if (upstream === "anthropic" || upstream === "xai") {
-        return tierOptions(["default", "fast"]);
+        return tierOptions(["default", "priority"]);
       }
       return [];
     }
@@ -308,8 +309,8 @@ export function parseModelServiceTierConfig(
 }
 
 /**
- * Trigger suffix for the picker button: only Fast, Ultrafast, and Flex get a gray marker
- * (appended after mode/effort markers). Auto, Default, and native Priority add nothing.
+ * Trigger suffix for the picker button: Fast, Ultrafast, Flex, and Priority get a gray marker
+ * (appended after mode/effort markers). Auto and Default add nothing.
  */
 export function modelServiceTierTriggerLabel(
   tier: ModelServiceTier | undefined,
@@ -319,6 +320,8 @@ export function modelServiceTierTriggerLabel(
       return "Fast";
     case "flex":
       return "Flex";
+    case "priority":
+      return "Priority";
     case "ultrafast":
       return "Ultrafast";
     default:

@@ -206,17 +206,20 @@ function vercelUpstreamServiceTierValue(
   upstream: ServiceTierUpstreamProvider,
   tier: ModelServiceTier,
   model: string | undefined,
-): "flex" | "fast" | "ultrafast" | undefined {
+): "flex" | "fast" | "priority" | "ultrafast" | undefined {
   switch (upstream) {
     case "openai":
       if (tier === "ultrafast") {
         return isAstraModel(model) ? "ultrafast" : undefined;
       }
+      // OpenAI upstreams natively speak Fast; the gateway forwards it.
       return tier === "flex" || tier === "fast" ? tier : undefined;
     case "google":
-      return tier === "flex" || tier === "fast" ? tier : undefined;
+      // Google upstream tiers are priority processing, not Fast aliases.
+      return tier === "flex" || tier === "priority" ? tier : undefined;
     case "xai":
-      return tier === "fast" ? "fast" : undefined;
+      // SpaceXAI upstream tiers are priority processing, not Fast aliases.
+      return tier === "priority" ? "priority" : undefined;
     default:
       // Anthropic and unknown upstreams get no service tier injection behind Vercel.
       return undefined;
@@ -277,13 +280,14 @@ function openRouterServiceTierPlan(
         ? withFlexWaiting({ bodyServiceTier: tier }, tier)
         : {};
     case "google":
-      return tier === "default" || tier === "flex" || tier === "fast"
+      return tier === "default" || tier === "flex" || tier === "priority"
         ? withFlexWaiting({ bodyServiceTier: tier }, tier)
         : {};
     case "anthropic":
     case "xai":
-      // OpenRouter maps `fast` for these upstreams itself; Spirit never injects Anthropic speed/beta here.
-      return tier === "default" || tier === "fast" ? { bodyServiceTier: tier } : {};
+      // OpenRouter maps `priority` for these upstreams itself; Spirit never injects Anthropic
+      // speed/beta here.
+      return tier === "default" || tier === "priority" ? { bodyServiceTier: tier } : {};
     default:
       return {};
   }
