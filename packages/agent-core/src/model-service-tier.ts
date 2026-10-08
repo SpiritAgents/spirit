@@ -66,6 +66,8 @@ const UPSTREAM_PROVIDER_ALIASES: Readonly<Record<string, ServiceTierUpstreamProv
   xai: "xai",
   // OpenRouter uses the `x-ai` author prefix for xAI models.
   "x-ai": "xai",
+  // Vercel AI Gateway routes xAI models under the `spacexai` prefix / `owned_by` fact.
+  spacexai: "xai",
 };
 
 export function normalizeServiceTierUpstreamProvider(
