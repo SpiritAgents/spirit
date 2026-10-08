@@ -194,6 +194,19 @@ test("vercel options depend on upstream identity", () => {
     "default",
     "fast",
   ]);
+  // Vercel routes current xAI models under the spacexai prefix / owned_by fact.
+  assert.deepEqual(optionValues({ provider: "vercel-ai-gateway", model: "spacexai/grok-4.7" }), [
+    "default",
+    "fast",
+  ]);
+  assert.deepEqual(
+    optionValues({
+      provider: "vercel-ai-gateway",
+      model: "spacexai/grok-4.7",
+      upstreamProvider: "SpaceXAI",
+    }),
+    ["default", "fast"],
+  );
 });
 
 test("openrouter options depend on upstream identity", () => {
@@ -221,7 +234,9 @@ test("catalog identity wins over a conflicting model id prefix", () => {
   );
   // Prefix parsing only fills in when the catalog fact is missing.
   assert.equal(resolveServiceTierUpstreamProvider({ model: "x-ai/grok-4" }), "xai");
+  assert.equal(resolveServiceTierUpstreamProvider({ model: "spacexai/grok-4.7" }), "xai");
   assert.equal(normalizeServiceTierUpstreamProvider(" xAI "), "xai");
+  assert.equal(normalizeServiceTierUpstreamProvider("SpaceXAI"), "xai");
 });
 
 test("unsupported providers hide the control and reject stored values", () => {
