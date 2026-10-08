@@ -102,7 +102,7 @@ export function SessionSidebarShell({
   );
 
   const shellWidth = sessionSidebarShellWidth(open, widthPx);
-  const innerWidth = `calc(0.25rem + ${widthPx}px)`;
+  const innerWidth = `${widthPx}px`;
 
   return (
     <div

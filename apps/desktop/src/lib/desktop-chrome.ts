@@ -425,5 +425,5 @@ export function computeSessionSidebarMaxWidthPx(): number {
 }
 
 export function sessionSidebarShellWidth(open: boolean, widthPx: number): string {
-  return open ? `calc(0.25rem + ${widthPx}px)` : "0px";
+  return open ? `${widthPx}px` : "0px";
 }
