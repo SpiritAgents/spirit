@@ -1,4 +1,7 @@
-import type { ModelServiceTierContext } from "@spiritagent/agent-core/model-service-tier";
+import type {
+  ModelServiceTier,
+  ModelServiceTierContext,
+} from "@spiritagent/agent-core/model-service-tier";
 
 import type { ModelProfileSnapshot, PreviewModelCatalogEntry } from "@/types";
 
@@ -18,4 +21,9 @@ export function modelServiceTierContextFromProfile(
     ...(upstreamProvider ? { upstreamProvider } : {}),
     ...(model.vertexLocation ? { vertexLocation: model.vertexLocation } : {}),
   };
+}
+
+/** i18n key for a service tier value label (dropdown options, switch labels, trigger suffix). */
+export function serviceTierValueLabelKey(tier: ModelServiceTier): string {
+  return `app.modelPickerServiceTierValues.${tier}`;
 }

@@ -7,8 +7,8 @@ import {
   isAnthropicNativeFastModel,
   isVertexGlobalServiceTierEndpoint,
   modelServiceTierOptions,
-  modelServiceTierTriggerLabel,
   modelServiceTierControlKind,
+  modelServiceTierTriggerTier,
   modelShowsServiceTierControl,
   modelSupportsAnthropicNativeFast,
   normalizeModelServiceTier,
@@ -20,7 +20,7 @@ import {
 } from "./model-service-tier.js";
 
 function optionValues(context?: Parameters<typeof modelServiceTierOptions>[0]): ModelServiceTier[] {
-  return (modelServiceTierOptions(context) ?? []).map((option) => option.value);
+  return [...(modelServiceTierOptions(context) ?? [])];
 }
 
 test("openai exposes auto/default/flex/fast and no priority", () => {
@@ -358,12 +358,12 @@ test("control kind: switches for binary rows, dropdown for wider matrices", () =
   assert.equal(modelServiceTierControlKind({ provider: "openai", model: "gpt-6" }), "select");
 });
 
-test("trigger labels mark fast, ultrafast, flex, and priority", () => {
-  assert.equal(modelServiceTierTriggerLabel("fast"), "Fast");
-  assert.equal(modelServiceTierTriggerLabel("ultrafast"), "Ultrafast");
-  assert.equal(modelServiceTierTriggerLabel("flex"), "Flex");
-  assert.equal(modelServiceTierTriggerLabel("priority"), "Priority");
-  assert.equal(modelServiceTierTriggerLabel("auto"), undefined);
-  assert.equal(modelServiceTierTriggerLabel("default"), undefined);
-  assert.equal(modelServiceTierTriggerLabel(undefined), undefined);
+test("trigger suffix tiers are fast, ultrafast, flex, and priority", () => {
+  assert.equal(modelServiceTierTriggerTier("fast"), "fast");
+  assert.equal(modelServiceTierTriggerTier("ultrafast"), "ultrafast");
+  assert.equal(modelServiceTierTriggerTier("flex"), "flex");
+  assert.equal(modelServiceTierTriggerTier("priority"), "priority");
+  assert.equal(modelServiceTierTriggerTier("auto"), undefined);
+  assert.equal(modelServiceTierTriggerTier("default"), undefined);
+  assert.equal(modelServiceTierTriggerTier(undefined), undefined);
 });

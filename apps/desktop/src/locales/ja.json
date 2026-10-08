@@ -785,8 +785,14 @@
     "modelPickerThinking": "思考中",
     "modelPickerNotThinking": "思考なし",
     "modelPickerServiceTier": "サービスティア",
-    "modelPickerFast": "高速",
-    "modelPickerPriority": "優先",
+    "modelPickerServiceTierValues": {
+      "auto": "自動",
+      "default": "デフォルト",
+      "flex": "フレックス",
+      "fast": "高速",
+      "priority": "優先",
+      "ultrafast": "超高速"
+    },
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "思考済み",
     "noModelsAvailable": "利用可能なモデルがありません",

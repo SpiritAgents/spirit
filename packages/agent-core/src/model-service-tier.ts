@@ -37,11 +37,6 @@ export interface ModelServiceTierContext {
   vertexLocation?: string;
 }
 
-export interface ModelServiceTierOption {
-  value: ModelServiceTier;
-  label: string;
-}
-
 /** Raised when a stored `serviceTier` value is unknown or unsupported for the provider/model. */
 export class ModelServiceTierConfigError extends Error {
   constructor(message: string) {
@@ -138,34 +133,13 @@ export function modelSupportsAnthropicNativeFast(
   return context?.provider === "anthropic" && isAnthropicNativeFastModel(context.model);
 }
 
-function tierOption(value: ModelServiceTier): ModelServiceTierOption {
-  switch (value) {
-    case "auto":
-      return { value, label: "Auto" };
-    case "default":
-      return { value, label: "Default" };
-    case "flex":
-      return { value, label: "Flex" };
-    case "fast":
-      return { value, label: "Fast" };
-    case "priority":
-      return { value, label: "Priority" };
-    case "ultrafast":
-      return { value, label: "Ultrafast" };
-  }
-}
-
-function tierOptions(values: readonly ModelServiceTier[]): ModelServiceTierOption[] {
-  return values.map(tierOption);
-}
-
 function withAstraUltrafast(
   context: ModelServiceTierContext | undefined,
   values: readonly ModelServiceTier[],
-): ModelServiceTierOption[] {
-  const options = tierOptions(values);
+): ModelServiceTier[] {
+  const options = [...values];
   if (isOpenAiGpt6AstraModel(context?.model ?? "")) {
-    options.push(tierOption("ultrafast"));
+    options.push("ultrafast");
   }
   return options;
 }
@@ -174,21 +148,23 @@ function withAstraUltrafast(
  * Service tier options offered for the model, per the provider/upstream capability matrix.
  * An empty list means the Service Tier control is hidden. Anthropic's native Fast is a
  * separate toggle (`modelSupportsAnthropicNativeFast`), not part of this list.
+ * Labels are not attached: renderers localize values via their own i18n (Desktop maps them to
+ * `app.modelPickerServiceTierValues.*`).
  */
 export function modelServiceTierOptions(
   context?: ModelServiceTierContext,
-): readonly ModelServiceTierOption[] {
+): readonly ModelServiceTier[] {
   const provider = context?.provider;
   switch (provider) {
     case "openai":
       return withAstraUltrafast(context, ["auto", "default", "flex", "fast"]);
     case "xai":
-      return tierOptions(["default", "priority"]);
+      return ["default", "priority"];
     case "google":
-      return tierOptions(["default", "flex", "priority"]);
+      return ["default", "flex", "priority"];
     case "google-vertex-ai":
       return isVertexGlobalServiceTierEndpoint(context?.vertexLocation)
-        ? tierOptions(["default", "flex", "priority"])
+        ? ["default", "flex", "priority"]
         : [];
     case "vercel-ai-gateway": {
       const upstream = resolveServiceTierUpstreamProvider(context ?? {});
@@ -196,10 +172,10 @@ export function modelServiceTierOptions(
         return withAstraUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
-        return tierOptions(["default", "flex", "priority"]);
+        return ["default", "flex", "priority"];
       }
       if (upstream === "xai") {
-        return tierOptions(["default", "priority"]);
+        return ["default", "priority"];
       }
       return [];
     }
@@ -209,10 +185,10 @@ export function modelServiceTierOptions(
         return withAstraUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
-        return tierOptions(["default", "flex", "priority"]);
+        return ["default", "flex", "priority"];
       }
       if (upstream === "anthropic" || upstream === "xai") {
-        return tierOptions(["default", "priority"]);
+        return ["default", "priority"];
       }
       return [];
     }
@@ -244,11 +220,11 @@ export function modelServiceTierControlKind(
   if (options.length === 0) {
     return "none";
   }
-  if (options.length === 2 && options[0]?.value === "default") {
-    if (options[1]?.value === "fast") {
+  if (options.length === 2 && options[0] === "default") {
+    if (options[1] === "fast") {
       return "fast-switch";
     }
-    if (options[1]?.value === "priority") {
+    if (options[1] === "priority") {
       return "priority-switch";
     }
   }
@@ -284,7 +260,7 @@ export function resolveEffectiveModelServiceTier(
   if (options.length === 0) {
     return undefined;
   }
-  if (configured !== undefined && options.some((option) => option.value === configured)) {
+  if (configured !== undefined && options.includes(configured)) {
     return configured;
   }
   return defaultModelServiceTier(context);
@@ -329,30 +305,28 @@ export function parseModelServiceTierConfig(
       `Service tier "${tier}" is not configurable for ${target}; this provider or route does not expose service tier options.`,
     );
   }
-  if (!options.some((option) => option.value === tier)) {
+  if (!options.includes(tier)) {
     throw new ModelServiceTierConfigError(
-      `Service tier "${tier}" is not available for ${target}; supported values: ${options.map((option) => option.value).join(", ")}.`,
+      `Service tier "${tier}" is not available for ${target}; supported values: ${options.join(", ")}.`,
     );
   }
   return tier;
 }
 
 /**
- * Trigger suffix for the picker button: Fast, Ultrafast, Flex, and Priority get a gray marker
- * (appended after mode/effort markers). Auto and Default add nothing.
+ * Tiers that get a gray trigger suffix on the picker button (appended after mode/effort markers):
+ * Fast, Ultrafast, Flex, and Priority; Auto and Default add nothing. Returns the tier to mark —
+ * the renderer localizes it (Desktop maps it to `app.modelPickerServiceTierValues.*`).
  */
-export function modelServiceTierTriggerLabel(
+export function modelServiceTierTriggerTier(
   tier: ModelServiceTier | undefined,
-): string | undefined {
+): ModelServiceTier | undefined {
   switch (tier) {
     case "fast":
-      return "Fast";
     case "flex":
-      return "Flex";
     case "priority":
-      return "Priority";
     case "ultrafast":
-      return "Ultrafast";
+      return tier;
     default:
       return undefined;
   }

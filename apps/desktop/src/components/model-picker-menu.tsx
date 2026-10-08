@@ -49,11 +49,14 @@ import {
   resolveModelThinkingEnabled,
 } from "@spiritagent/agent-core/model-thinking-controls";
 import {
-  modelServiceTierTriggerLabel,
+  modelServiceTierTriggerTier,
   resolveEffectiveModelServiceTier,
 } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
-import { modelServiceTierContextFromProfile } from "@/lib/model-service-tier-context";
+import {
+  modelServiceTierContextFromProfile,
+  serviceTierValueLabelKey,
+} from "@/lib/model-service-tier-context";
 import { groupModelsForPicker } from "@/lib/model-picker-groups";
 import { DESKTOP_MENU_TRIGGER_TEXT_CLASS } from "@/lib/desktop-typography";
 import type {
@@ -479,7 +482,7 @@ function ModelPickerTriggerLabel({
   const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
   const supportsThinkingSwitch = modelSupportsThinkingSwitch(modelContext);
   const thinkingEnabled = resolveModelThinkingEnabled(model.thinkingEnabled);
-  const serviceTierLabel = modelServiceTierTriggerLabel(
+  const serviceTierTriggerTier = modelServiceTierTriggerTier(
     resolveEffectiveModelServiceTier(
       model.serviceTier,
       modelServiceTierContextFromProfile(model, catalogEntry),
@@ -497,8 +500,8 @@ function ModelPickerTriggerLabel({
       : modelReasoningEffortLabel(reasoningEffort);
 
   secondaryLabels.push(effortOrThinkingLabel);
-  if (serviceTierLabel !== undefined) {
-    secondaryLabels.push(serviceTierLabel);
+  if (serviceTierTriggerTier !== undefined) {
+    secondaryLabels.push(t(serviceTierValueLabelKey(serviceTierTriggerTier)));
   }
 
   return (
