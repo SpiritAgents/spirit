@@ -786,6 +786,7 @@
     "modelPickerNotThinking": "思考なし",
     "modelPickerServiceTier": "サービスティア",
     "modelPickerFast": "高速",
+    "modelPickerPriority": "優先",
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "思考済み",
     "noModelsAvailable": "利用可能なモデルがありません",

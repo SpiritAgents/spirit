@@ -108,17 +108,44 @@ test("gpt-6-astra additionally offers Ultrafast", async () => {
   ]);
 });
 
-test("xAI models offer Default/Priority and resolve Default by default", async () => {
-  renderInspector(tierModel({ name: "grok-4", provider: "xai" }), {
-    onServiceTierChange: vi.fn(),
-  });
+test("direct SpaceXAI models show a Priority switch instead of the dropdown", () => {
+  const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
+  renderInspector(tierModel({ name: "grok-4", provider: "xai" }), { onServiceTierChange });
 
-  const trigger = serviceTierTrigger();
-  expect(trigger.textContent).toBe("Default");
+  expect(screen.queryByText("Service Tier")).toBeNull();
+  const toggle = screen.getByRole("switch", { name: "Priority" });
+  expect(toggle.getAttribute("aria-checked")).toBe("false");
 
-  fireEvent.keyDown(trigger, { key: "ArrowDown" });
-  const options = await screen.findAllByRole("option");
-  expect(options.map((option) => option.textContent)).toEqual(["Default", "Priority"]);
+  fireEvent.click(toggle);
+  expect(onServiceTierChange).toHaveBeenCalledWith({ groupId: "", name: "grok-4" }, "priority");
+});
+
+test("aggregator Default/Priority rows (Vercel SpaceXAI, OpenRouter) show the Priority switch", () => {
+  const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
+  const { unmount } = renderInspector(
+    tierModel({ name: "spacexai/grok-4.7", provider: "vercel-ai-gateway" }),
+    { onServiceTierChange },
+  );
+  expect(screen.queryByText("Service Tier")).toBeNull();
+  fireEvent.click(screen.getByRole("switch", { name: "Priority" }));
+  expect(onServiceTierChange).toHaveBeenCalledWith(
+    { groupId: "", name: "spacexai/grok-4.7" },
+    "priority",
+  );
+  unmount();
+
+  renderInspector(
+    tierModel({
+      name: "x-ai/grok-4",
+      provider: "openrouter",
+      serviceTier: "priority",
+    }),
+    { onServiceTierChange },
+  );
+  const toggle = screen.getByRole("switch", { name: "Priority" });
+  expect(toggle.getAttribute("aria-checked")).toBe("true");
+  fireEvent.click(toggle);
+  expect(onServiceTierChange).toHaveBeenCalledWith({ groupId: "", name: "x-ai/grok-4" }, undefined);
 });
 
 test("Vertex AI hides the control on regional endpoints and shows it on the global endpoint", async () => {

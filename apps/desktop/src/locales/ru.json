@@ -790,6 +790,7 @@
     "modelPickerNotThinking": "Без размышлений",
     "modelPickerServiceTier": "Уровень обслуживания",
     "modelPickerFast": "Быстрый",
+    "modelPickerPriority": "Приоритет",
     "reasoningThinkingActive": "Думает",
     "reasoningThinkingIdle": "Подумал",
     "noModelsAvailable": "Нет доступных моделей",

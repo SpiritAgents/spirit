@@ -786,6 +786,7 @@
     "modelPickerNotThinking": "No Thinking",
     "modelPickerServiceTier": "Service Tier",
     "modelPickerFast": "Fast",
+    "modelPickerPriority": "Priority",
     "reasoningThinkingActive": "Thinking",
     "reasoningThinkingIdle": "Thought",
     "noModelsAvailable": "No models available",

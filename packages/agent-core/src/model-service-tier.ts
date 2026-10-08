@@ -221,9 +221,38 @@ export function modelServiceTierOptions(
   }
 }
 
-/** Whether the inspector shows any service tier affordance (dropdown or Anthropic Fast toggle). */
+/** Whether the inspector shows any service tier affordance (dropdown or tier switch). */
 export function modelShowsServiceTierControl(context?: ModelServiceTierContext): boolean {
-  return modelServiceTierOptions(context).length > 0 || modelSupportsAnthropicNativeFast(context);
+  return modelServiceTierControlKind(context) !== "none";
+}
+
+export type ModelServiceTierControlKind = "select" | "fast-switch" | "priority-switch" | "none";
+
+/**
+ * Inspector presentation for the service tier capability. A binary Default-plus-one-tier choice —
+ * direct Anthropic native Fast, and rows offering exactly Default/Priority (direct SpaceXAI and
+ * aggregator xAI/Anthropic routes) — renders as a switch named by the non-default tier. Rows with
+ * three or more options (Flex present, or Auto for OpenAI) keep the Service Tier dropdown.
+ */
+export function modelServiceTierControlKind(
+  context?: ModelServiceTierContext,
+): ModelServiceTierControlKind {
+  if (modelSupportsAnthropicNativeFast(context)) {
+    return "fast-switch";
+  }
+  const options = modelServiceTierOptions(context);
+  if (options.length === 0) {
+    return "none";
+  }
+  if (options.length === 2 && options[0]?.value === "default") {
+    if (options[1]?.value === "fast") {
+      return "fast-switch";
+    }
+    if (options[1]?.value === "priority") {
+      return "priority-switch";
+    }
+  }
+  return "select";
 }
 
 /** Effective tier when the preference is unset: OpenAI defaults to Auto, other matrix providers to Default. */

@@ -8,6 +8,7 @@ import {
   isVertexGlobalServiceTierEndpoint,
   modelServiceTierOptions,
   modelServiceTierTriggerLabel,
+  modelServiceTierControlKind,
   modelShowsServiceTierControl,
   modelSupportsAnthropicNativeFast,
   normalizeModelServiceTier,
@@ -135,7 +136,7 @@ test("anthropic direct exposes no dropdown; native fast only for claude opus 4.8
       model: "anthropic/claude-opus-4-8",
       upstreamProvider: "anthropic",
     }),
-    true, // dropdown with default/priority, not the native toggle
+    true, // Default/Priority switch, not the native toggle
   );
   assert.equal(
     parseModelServiceTierConfig("priority", {
@@ -311,6 +312,50 @@ test("effective tier: openai auto vs explicit default stay distinct", () => {
     resolveEffectiveModelServiceTier("fast", { provider: "azure", model: "gpt-6" }),
     undefined,
   );
+});
+
+test("control kind: switches for binary rows, dropdown for wider matrices", () => {
+  assert.equal(
+    modelServiceTierControlKind({ provider: "anthropic", model: "claude-opus-4-8" }),
+    "fast-switch",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "anthropic", model: "claude-sonnet-4-6" }),
+    "none",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "xai", model: "grok-4" }),
+    "priority-switch",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "vercel-ai-gateway", model: "spacexai/grok-4.7" }),
+    "priority-switch",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "openrouter", model: "x-ai/grok-4" }),
+    "priority-switch",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "openrouter", model: "anthropic/claude-opus-5" }),
+    "priority-switch",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "google", model: "gemini-3.1-pro" }),
+    "select",
+  );
+  assert.equal(
+    modelServiceTierControlKind({ provider: "vercel-ai-gateway", model: "google/gemini-3.1-pro" }),
+    "select",
+  );
+  assert.equal(
+    modelServiceTierControlKind({
+      provider: "google-vertex-ai",
+      model: "gemini-3.1-pro",
+      vertexLocation: "us-central1",
+    }),
+    "none",
+  );
+  assert.equal(modelServiceTierControlKind({ provider: "openai", model: "gpt-6" }), "select");
 });
 
 test("trigger labels mark fast, ultrafast, flex, and priority", () => {
