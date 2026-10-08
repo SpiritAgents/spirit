@@ -785,7 +785,7 @@
     "modelPickerThinking": "생각 중",
     "modelPickerNotThinking": "생각 안 함",
     "modelPickerServiceTier": "서비스 티어",
-    "modelPickerFastMode": "빠른 모드",
+    "modelPickerFast": "빠름",
     "reasoningThinkingActive": "생각 중",
     "reasoningThinkingIdle": "생각 완료",
     "noModelsAvailable": "사용 가능한 모델이 없습니다",
