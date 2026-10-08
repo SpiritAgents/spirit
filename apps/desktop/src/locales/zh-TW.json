@@ -786,6 +786,7 @@
     "modelPickerNotThinking": "不思考",
     "modelPickerServiceTier": "服務層級",
     "modelPickerFast": "快速",
+    "modelPickerPriority": "優先",
     "reasoningThinkingActive": "思考中",
     "reasoningThinkingIdle": "已思考",
     "noModelsAvailable": "無可用模型",

@@ -14,9 +14,9 @@ import {
   resolveModelThinkingEnabled,
 } from "@spiritagent/agent-core/model-thinking-controls";
 import {
+  modelServiceTierControlKind,
   modelServiceTierOptions,
   modelShowsServiceTierControl,
-  modelSupportsAnthropicNativeFast,
   resolveEffectiveModelServiceTier,
 } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
@@ -145,10 +145,18 @@ export function ModelPickerInspectorPanel({
   const showReasoningMode = modelSupportsReasoningModeControl(modelContext);
   const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
   const serviceTierContext = modelServiceTierContextFromProfile(model, catalogEntry);
-  const serviceTierOptions = onServiceTierChange ? modelServiceTierOptions(serviceTierContext) : [];
-  const showAnthropicFastSwitch = Boolean(
-    onServiceTierChange && modelSupportsAnthropicNativeFast(serviceTierContext),
-  );
+  const serviceTierControl = onServiceTierChange
+    ? modelServiceTierControlKind(serviceTierContext)
+    : "none";
+  const serviceTierOptions =
+    serviceTierControl === "select" ? modelServiceTierOptions(serviceTierContext) : [];
+  // Binary Default-plus-one-tier rows render as a switch named by the non-default tier.
+  const switchTier: "fast" | "priority" | undefined =
+    serviceTierControl === "fast-switch"
+      ? "fast"
+      : serviceTierControl === "priority-switch"
+        ? "priority"
+        : undefined;
   const [pendingServiceTier, setPendingServiceTier] = useState<{
     value: ModelServiceTier | undefined;
   } | null>(null);
@@ -186,7 +194,7 @@ export function ModelPickerInspectorPanel({
     effortOptions.length > 1 ||
     showReasoningMode ||
     (serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined) ||
-    showAnthropicFastSwitch ? (
+    switchTier !== undefined ? (
       <div className="space-y-2">
         {supportsThinkingSwitch ? (
           <div className="flex items-center justify-between gap-2">
@@ -276,16 +284,16 @@ export function ModelPickerInspectorPanel({
             </Select>
           </div>
         ) : null}
-        {showAnthropicFastSwitch ? (
+        {switchTier !== undefined ? (
           <div className="flex items-center justify-between gap-2">
-            <Label className={labelClass} htmlFor={`model-fast-mode-${model.name}`}>
-              {t("app.modelPickerFast")}
+            <Label className={labelClass} htmlFor={`model-tier-switch-${model.name}`}>
+              {t(switchTier === "fast" ? "app.modelPickerFast" : "app.modelPickerPriority")}
             </Label>
             <Switch
-              id={`model-fast-mode-${model.name}`}
-              checked={displayedServiceTier === "fast"}
+              id={`model-tier-switch-${model.name}`}
+              checked={displayedServiceTier === switchTier}
               onCheckedChange={(checked) => {
-                handleServiceTierChange(checked ? "fast" : undefined);
+                handleServiceTierChange(checked ? switchTier : undefined);
               }}
             />
           </div>
