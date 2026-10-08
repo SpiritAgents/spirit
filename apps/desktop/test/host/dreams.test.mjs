@@ -28,10 +28,10 @@ function functionToolNames(definitions) {
 
 test("desktop dreams context is injected into the main agent system message", async () => {
   const tempRoot = await mkdtemp(path.join(tmpdir(), "spirit-dreams-"));
-  const previousAppData = process.env.APPDATA;
+  const previousDataDir = process.env.SPIRIT_DATA_DIR;
 
   try {
-    process.env.APPDATA = tempRoot;
+    process.env.SPIRIT_DATA_DIR = tempRoot;
 
     const dreamStore = createHostDreamStore({
       spiritDataDir: spiritDataDir(),
@@ -87,10 +87,10 @@ test("desktop dreams context is injected into the main agent system message", as
       /Keep the summaries as background continuity rather than authoritative state\./,
     );
   } finally {
-    if (previousAppData === undefined) {
-      delete process.env.APPDATA;
+    if (previousDataDir === undefined) {
+      delete process.env.SPIRIT_DATA_DIR;
     } else {
-      process.env.APPDATA = previousAppData;
+      process.env.SPIRIT_DATA_DIR = previousDataDir;
     }
     await rm(tempRoot, { recursive: true, force: true });
   }

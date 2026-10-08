@@ -13,6 +13,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Redirect the Spirit data dir into per-test-file temp dirs (swept by the
+    // global teardown) so tests can never touch the developer's real ~/.spirit.
+    globalSetup: ["test/global-setup-data-dir.mjs"],
+    setupFiles: ["test/setup-isolated-data-dir.mjs"],
     // Component tests (.tsx) opt into jsdom individually via docblock pragma.
     include: ["test/**/*.test.mjs", "test/**/*.test.tsx"],
     // Never collect compiled Electron output or dependencies.
