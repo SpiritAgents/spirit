@@ -17,6 +17,7 @@ import {
   GIT_CHANGES_HISTORY_SPLIT_SHELL_DIVIDER_ATTR,
   GIT_HISTORY_HEADER_SHELL_DIVIDER_ATTR,
 } from "@/lib/workspace-tools-panel-edge";
+import { DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS } from "@/lib/desktop-chrome";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { cn } from "@/lib/utils";
 import type { GitCommitAttachment } from "@/lib/git-commit-attachment";
@@ -140,7 +141,7 @@ export function WorkspaceGitTab({
     changesHistorySplitterRef,
     {
       enabled: true,
-      edge: "top",
+      edge: "bottom",
       dividerAttr: GIT_CHANGES_HISTORY_SPLIT_SHELL_DIVIDER_ATTR,
       watchRefs: [splitContainerRef],
     },
@@ -439,8 +440,16 @@ export function WorkspaceGitTab({
         onPointerCancel={endSplitResize}
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div ref={historyHeaderRef} className="shrink-0 px-2 py-1.5">
-          <h3 className="text-xs font-normal text-foreground">{t("workspace.git.history")}</h3>
+        <div
+          ref={historyHeaderRef}
+          className={cn(
+            "flex shrink-0 items-center px-2 py-1.5",
+            DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
+          )}
+        >
+          <h3 className="text-xs font-normal leading-none text-foreground">
+            {t("workspace.git.history")}
+          </h3>
         </div>
         <GitCommitGraph
           className="flex-1"

@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import {
   DESKTOP_FILES_EXPLORER_TOOLBAR_ICON_BTN,
   DESKTOP_SHELL_LAYOUT_TRANSITION,
+  DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
 } from "@/lib/desktop-chrome";
 import { desktopTranslucencyFileDetailSurfaceClass } from "@/lib/desktop-translucency-surface";
 import {
@@ -228,6 +229,7 @@ function WorkspaceFilesExplorerToolbar({
       ref={toolbarRef}
       className={cn(
         "flex shrink-0 items-center gap-1 py-1.5 pl-1 pr-2",
+        DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
         fileOpen && "justify-between",
       )}
       role="toolbar"

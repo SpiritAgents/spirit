@@ -90,6 +90,9 @@ export const DESKTOP_SIDEBAR_ONLY_SPLIT_LINE_CLASS =
 export const DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS =
   "bg-black/5 transition-colors group-hover:bg-black/10 dark:bg-white/5 dark:group-hover:bg-white/9";
 
+/** 右侧面板各 section 头部（Files 工具栏、Git Changes/History 栏）统一的最小高度，锁定一致的呼吸感：内容允许更高，不允许更矮 */
+export const DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS = "min-h-10";
+
 /** Default title-bar text/icon color, aligned with the sidebar's `sidebarItemDefaultTextClass` */
 export const DESKTOP_CHROME_MUTED_TEXT = "text-chrome-label";
 
