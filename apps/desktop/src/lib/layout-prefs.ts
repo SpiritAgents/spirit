@@ -298,7 +298,8 @@ const GIT_CHANGES_RATIO_LOOSE_MAX = 0.85;
 
 export const GIT_CHANGES_MIN_PX = 88;
 export const GIT_HISTORY_MIN_PX = 120;
-export const GIT_HISTORY_HEADER_PX = 32;
+/** Git history header 的渲染高度（DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS = 40px），供分栏钳制计算使用 */
+export const GIT_HISTORY_HEADER_PX = 40;
 export const GIT_SPLITTER_PX = 4;
 
 function clampRatio(ratio: number, min: number, max: number): number {

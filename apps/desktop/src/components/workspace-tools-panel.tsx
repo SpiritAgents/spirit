@@ -1020,7 +1020,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               )}
             >
               {item.kind === "files" ? (
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-2 pb-2 pt-0">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-0">
                   <WorkspaceFilesTab
                     workspaceRoot={workspaceRoot}
                     plan={plan}
@@ -1151,7 +1151,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   />
                 </div>
               ) : (
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-2 pb-2 pt-2">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspaceGitTab
                     gitSnapshot={gitSnapshot}
                     isActive={selected}
