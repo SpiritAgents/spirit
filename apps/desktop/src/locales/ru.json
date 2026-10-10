@@ -200,7 +200,7 @@
     "font": "Шрифт",
     "typographySection": "Типографика",
     "translucency": "Полупрозрачность",
-    "fontDescription": "По умолчанию Geist.",
+    "fontDescription": "По умолчанию — системный шрифт.",
     "fontSmoothing": "Сглаживание шрифта",
     "fontSmoothingDescription": "Использовать встроенное сглаживание macOS.",
     "fontSystem": "Системный",

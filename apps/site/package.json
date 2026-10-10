@@ -19,8 +19,6 @@
     "markdown-companions": "tsx scripts/generate-markdown-companions.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "^5.2.8",
-    "@fontsource-variable/noto-sans-sc": "^5.2.10",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@shikijs/langs": "^4.3.1",
     "@shikijs/themes": "^4.3.1",
