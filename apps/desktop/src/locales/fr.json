@@ -200,7 +200,7 @@
     "font": "Police",
     "typographySection": "Typographie",
     "translucency": "Translucidité",
-    "fontDescription": "Par défaut Geist.",
+    "fontDescription": "Par défaut, la police système.",
     "fontSmoothing": "Lissage des polices",
     "fontSmoothingDescription": "Utiliser l'anticrénelage natif de macOS.",
     "fontSystem": "Système",

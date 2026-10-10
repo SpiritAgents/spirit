@@ -200,7 +200,7 @@
     "font": "Fonte",
     "typographySection": "Tipografia",
     "translucency": "Translucidez",
-    "fontDescription": "Padrão: Geist.",
+    "fontDescription": "Padrão: fonte do sistema.",
     "fontSmoothing": "Suavização de Fonte",
     "fontSmoothingDescription": "Usar o anti-aliasing nativo do macOS.",
     "fontSystem": "Sistema",

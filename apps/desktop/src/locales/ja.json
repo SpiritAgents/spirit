@@ -200,7 +200,7 @@
     "font": "フォント",
     "typographySection": "タイポグラフィ",
     "translucency": "半透明",
-    "fontDescription": "デフォルトは Geist です。",
+    "fontDescription": "デフォルトはシステムフォントです。",
     "fontSmoothing": "フォントスムージング",
     "fontSmoothingDescription": "macOS ネイティブのアンチエイリアスを使用します。",
     "fontSystem": "システム",

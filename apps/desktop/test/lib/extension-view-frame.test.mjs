@@ -21,7 +21,7 @@ import {
 test("srcdoc injects live cssText and the View default-export contract", () => {
   const html = buildExtensionViewSrcdoc({
     cssText: ":root { --foreground: black; } .text-muted-foreground { color: gray; }",
-    chrome: { htmlClassName: "dark", htmlStyle: "font-family: Geist" },
+    chrome: { htmlClassName: "dark", htmlStyle: "font-family: Example Sans" },
     viewUrl: extensionViewFileUrl("built-in/demo", "main"),
     params: { step: 1 },
     requestId: "test-request-id",

@@ -200,7 +200,7 @@
     "font": "Font",
     "typographySection": "Typography",
     "translucency": "Translucency",
-    "fontDescription": "Defaults to Geist.",
+    "fontDescription": "Defaults to the system font.",
     "fontSmoothing": "Font Smoothing",
     "fontSmoothingDescription": "Use native macOS anti-aliasing.",
     "fontSystem": "System",
