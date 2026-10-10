@@ -122,7 +122,7 @@
     "@ai-sdk/togetherai": "3.0.40",
     "@ai-sdk/xai": "4.0.47",
     "@aws/bedrock-token-generator": "1.1.0",
-    "@huggingface/inference": "4.13.25",
+    "@huggingface/inference": "4.13.32",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@spiritagent/product": "workspace:*",
     "ai": "7.0.83",
