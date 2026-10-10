@@ -126,7 +126,7 @@
     "@modelcontextprotocol/sdk": "1.30.0",
     "@spiritagent/product": "workspace:*",
     "ai": "7.0.83",
-    "undici": "7.29.0"
+    "undici": "8.11.2"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

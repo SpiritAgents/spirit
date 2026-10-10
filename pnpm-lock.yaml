@@ -643,8 +643,8 @@ importers:
         specifier: 7.0.83
         version: 7.0.83(zod@4.4.3)
       undici:
-        specifier: 7.29.0
-        version: 7.29.0
+        specifier: 8.11.2
+        version: 8.11.2
     devDependencies:
       '@types/node':
         specifier: 24.13.3
@@ -7027,6 +7027,10 @@ packages:
 
   undici@8.10.2:
     resolution: {integrity: sha512-/y4/bH9YNU5hi9NIrpOuvGXFcxrj3CMrV+/AYpowAYTpHn8gX/XPFjNy766FPoYY0miQhdW977JFWKGNhBdwyQ==}
+    engines: {node: '>=22.19.0'}
+
+  undici@8.11.2:
+    resolution: {integrity: sha512-u4UB2/IrKdU6lFxumHmmo1a3fCQO5tzQllRorfoRS63txhrB7xTpSn1PftwC4qEHkOaqP95fCWW4lJzwErwzhQ==}
     engines: {node: '>=22.19.0'}
 
   unified@11.0.5:
@@ -14203,6 +14207,8 @@ snapshots:
   undici@7.29.0: {}
 
   undici@8.10.2: {}
+
+  undici@8.11.2: {}
 
   unified@11.0.5:
     dependencies:
