@@ -57,7 +57,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/aws/aws-bedrock-token-generator-js
 - **@huggingface/inference** 4.13.25 — MIT
   - https://github.com/huggingface/huggingface.js
-- **@modelcontextprotocol/sdk** 1.30.0 — MIT
+- **@modelcontextprotocol/sdk** 1.32.1 — MIT
   - https://github.com/modelcontextprotocol/typescript-sdk
 - **@types/node** 24.13.3 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
@@ -399,7 +399,7 @@ SOFTWARE.
 
 **Used by:**
 
-- @modelcontextprotocol/sdk 1.30.0
+- @modelcontextprotocol/sdk 1.32.1
 
 ```
 MIT License
