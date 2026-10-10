@@ -123,7 +123,7 @@
     "@ai-sdk/xai": "4.0.47",
     "@aws/bedrock-token-generator": "1.1.0",
     "@huggingface/inference": "4.13.25",
-    "@modelcontextprotocol/sdk": "1.30.0",
+    "@modelcontextprotocol/sdk": "1.32.1",
     "@spiritagent/product": "workspace:*",
     "ai": "7.0.83",
     "undici": "8.11.2"
