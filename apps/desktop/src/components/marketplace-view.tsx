@@ -68,13 +68,6 @@ import type {
 /** h-8: the whitespace above the title; it scrolls away with the title before the search bar docks */
 const MARKETPLACE_HEADER_TOP_GAP_PX = 32;
 
-declare global {
-  /** Not yet in TS lib.dom; runtime support is detected via `typeof ScrollTimeline`. */
-  class ScrollTimeline extends AnimationTimeline {
-    constructor(options?: { source?: Element | null; axis?: "block" | "inline" });
-  }
-}
-
 export function reviewStatusBadgeVariant(status: DesktopMarketplaceReviewStatus) {
   if (status === "verified") {
     return "secondary" as const;
