@@ -25,6 +25,13 @@ overrides:
   # it declares joi ^18.2.3
   joi: 18.2.8
 
+peerDependencyRules:
+  # i18next / react-i18next declare peer typescript "^5 || ^6" for their own
+  # type-testing matrix only; their runtime and d.ts work on TS 7 (all our
+  # tsconfigs use skipLibCheck). Acknowledge the intentional mismatch.
+  allowedVersions:
+    typescript: "7"
+
 allowBuilds:
   electron: true
   electron-winstaller: true
