@@ -3,7 +3,6 @@
 @import "fumadocs-ui/css/shadcn.css";
 @import "fumadocs-ui/css/preset.css";
 @import "@spiritagent/ui/theme.css";
-@import "@fontsource-variable/geist";
 @source "../../../packages/ui/src";
 
 @property --chrome-mask-top-alpha {
@@ -98,7 +97,7 @@ body {
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: -apple-system, BlinkMacSystemFont, "Geist Variable", system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --color-site-muted: var(--site-muted);
   --ease-collapsible-expand: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-collapsible-collapse: cubic-bezier(0.4, 0, 0.2, 1);
@@ -195,26 +194,26 @@ html.dark,
 
   html:lang(zh-CN) {
     --font-sans:
-      -apple-system, BlinkMacSystemFont, "Geist Variable", "Noto Sans SC Variable", "Noto Sans SC",
+      -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
       "Segoe UI", sans-serif;
   }
 
   html:lang(zh-TW) {
     --font-sans:
-      -apple-system, BlinkMacSystemFont, "Geist Variable", "Noto Sans TC", "PingFang TC",
-      "Microsoft JhengHei", "Segoe UI", sans-serif;
+      -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
+      "Segoe UI", sans-serif;
   }
 
   html:lang(ja) {
     --font-sans:
-      -apple-system, BlinkMacSystemFont, "Geist Variable", "Noto Sans JP", "Hiragino Sans",
-      "Yu Gothic", "Segoe UI", sans-serif;
+      -apple-system, BlinkMacSystemFont, "Noto Sans JP", "Hiragino Sans", "Yu Gothic", "Segoe UI",
+      sans-serif;
   }
 
   html:lang(ko) {
     --font-sans:
-      -apple-system, BlinkMacSystemFont, "Geist Variable", "Noto Sans KR", "Apple SD Gothic Neo",
-      "Malgun Gothic", "Segoe UI", sans-serif;
+      -apple-system, BlinkMacSystemFont, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic",
+      "Segoe UI", sans-serif;
   }
 
   pre {

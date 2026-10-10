@@ -200,7 +200,7 @@
     "font": "字体",
     "typographySection": "排版",
     "translucency": "半透明",
-    "fontDescription": "默认 Geist。",
+    "fontDescription": "默认系统字体。",
     "fontSmoothing": "字体平滑",
     "fontSmoothingDescription": "使用 macOS 原生抗锯齿。",
     "fontSystem": "跟随系统",

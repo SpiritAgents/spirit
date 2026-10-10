@@ -200,7 +200,7 @@
     "font": "Schriftart",
     "typographySection": "Typografie",
     "translucency": "Transluzenz",
-    "fontDescription": "Standardmäßig Geist.",
+    "fontDescription": "Standardmäßig die Systemschriftart.",
     "fontSmoothing": "Schriftglättung",
     "fontSmoothingDescription": "Natives macOS-Antialiasing verwenden.",
     "fontSystem": "System",
