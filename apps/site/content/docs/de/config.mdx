@@ -46,8 +46,28 @@ Kernfelder:
 - `providerGroups` – verbundene Häuser, API-Basis, Transport, Modelle
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` – Zulassungsregeln für Berechtigungen
 
 Schlüssel sind **nicht** in dieser Datei. Sie befinden sich im [Schlüsselbund](./security.mdx).
+
+### permission
+
+`permission` legt fest, was einzelne Shell-Befehle und Dateipfade dürfen – zusätzlich zur [Genehmigungsstufe](./agent/approvals.mdx) der Sitzung. Schlüssel sind Toolnamen (`shell`, `read_file`); Werte bilden Platzhaltermuster auf `allow`, `ask` oder `deny` ab.
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` ist absolut – keine Genehmigungsstufe, kein Hook und kein Sitzungsgedächtnis setzt es außer Kraft. Mustersyntax, Pfadsemantik und die vollständige Aktionsliste finden Sie unter [Genehmigungen](./agent/approvals.mdx). Regeln ohne Ausführung überprüfen: `spirit permission check --shell "git status"`.
+
+Die alte `tool-permissions.json` (von der Schaltfläche „Immer vertrauen“ geschrieben) ist veraltet: Der Code liest und schreibt sie nicht mehr, und es gibt keine automatische Migration. Übrig gebliebene Dateien sind wirkungslos – löschen Sie sie manuell.
 
 ## Arbeitsbereich `{{product.workspaceDataFolderName}}/`
 

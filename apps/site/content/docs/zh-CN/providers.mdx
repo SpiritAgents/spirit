@@ -1,11 +1,11 @@
 ---
 title: 提供商
-description: 自带密钥，走连接向导，换一家不必换 Agent 工作流。
+description: 自带密钥，运行连接向导；更换提供商时，Agent 工作流保持不变。
 ---
 
-{{product.name|mdx}} 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，{{product.name|mdx}} 写入操作系统钥匙串。换一家不会改变打开工作区、审批编辑或跑 Agent 的方式。
+{{product.name|mdx}} 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，{{product.name|mdx}} 写入操作系统钥匙串。更换提供商不会改变你打开工作区、审批编辑或运行 Agent 的方式。
 
-连接向导在 Desktop 是 **设置 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。附加字段只在该家需要时出现。
+连接向导在 Desktop 是 **设置 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。附加字段只在该提供商需要时出现。
 
 {{product.name|mdx}} 用下面四种传输之一和提供商通信。向导会固定类型，或让你选。
 
@@ -16,7 +16,7 @@ description: 自带密钥，走连接向导，换一家不必换 Agent 工作流
 | `anthropic`         | Messages API                       | Anthropic、MiniMax，以及可选的 Messages 兼容端点                   |
 | `bedrock`           | Amazon Bedrock                     | 仅 Amazon Bedrock                                                  |
 
-Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Responses 或 Messages，{{product.name|mdx}} 会回落到 `openai-compatible`。
+Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Responses 或 Messages，{{product.name|mdx}} 会回落到 `openai-compatible`。
 
 有的提供商在 Key 之外还有第二维：
 
@@ -52,7 +52,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在 [Google AI Studio](https://aistudio.google.com/apikey) 创建 API Key。
 
-固定 **Chat Completions API**（`openai-compatible`）。若配置要了 Responses 或 Messages，会回落到 Chat Completions。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
+固定 **Chat Completions API**（`openai-compatible`）。若配置请求 Responses 或 Messages，会回落到 Chat Completions。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
 
 导入后即可对话。生图只在目录标了时再指定。要用 GCP 项目 / 位置，走 [Google Vertex AI](#google-vertex-ai)。
 
@@ -70,7 +70,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 固定 **Open Responses API**（`open-responses`）。默认 Base：`https://ai-gateway.vercel.sh/v1`。
 
-对话以及网关目录里标出的能力。生图以目录的 `type=image` 为准，不用 tags 推断。
+导入后即可对话，其他能力取决于网关目录暴露的内容。生图以目录的 `type=image` 为准，不从 tags 推断。
 
 不要用 tags 推断视觉或生图。经此网关的 MiniMax M3 在 Open Responses 下不会返回可展示的思考流。
 
@@ -78,7 +78,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在 [Cloudflare 控制台](https://developers.cloudflare.com/ai-gateway/) 创建 API token，并准备好账户 ID。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。Base 由账户拼出：`https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。Base 由账户拼出：`https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
 
 - **账户 ID**（必填）— 32 位十六进制
 - **Gateway ID**（可选）
@@ -97,15 +97,15 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在 [OpenRouter](https://openrouter.ai/keys) 创建 Key。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。默认 Base：`https://openrouter.ai/api/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。默认 Base：`https://openrouter.ai/api/v1`。
 
-对话，以及 OpenRouter 目录标了生图 / 生视频时的对应槽位。
+导入后即可对话；OpenRouter 目录标出生图 / 生视频能力时，再指定对应槽位。
 
 ### Fireworks AI
 
 在 [Fireworks 控制台](https://app.fireworks.ai/settings/users/api-keys) 创建 API Key。
 
-可选手： **Chat Completions**、**Messages** 或 **Open Responses**。Chat / Responses Base：`https://api.fireworks.ai/inference/v1`。Messages Base：`https://api.fireworks.ai/inference`。
+选择器：**Chat Completions**、**Messages** 或 **Open Responses**。Chat / Responses Base：`https://api.fireworks.ai/inference/v1`。Messages Base：`https://api.fireworks.ai/inference`。
 
 导入后即可对话。其他能力跟 Fireworks 目录走。
 
@@ -158,7 +158,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 - **国际**（默认）— `https://api.moonshot.ai/v1`
 - **中国** — `https://api.moonshot.cn/v1`
 
-这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。moonshot-ai 的内置搜索不走 Kimi Code 托管搜索路径。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条连接，不要混用。
+这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。moonshot-ai 的内置搜索不走 Kimi Code 托管搜索路径。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条不同的连接。
 
 ### Kimi Code
 
@@ -166,7 +166,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 固定 **Chat Completions API**。默认 Base：`https://api.kimi.com/coding/v1`。Messages Base 为 `https://api.kimi.com/coding`，但向导不提供选择器。
 
-导入后即可对话。托管搜索（若有）只属于这家，不属于 moonshot-ai。
+导入后即可对话。托管搜索（若有）只属于该提供商，不属于 moonshot-ai。
 
 ### Z.ai
 
@@ -226,7 +226,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在对应站点的控制台创建 API Key：[国际站](https://cloud.siliconflow.com/me/account/ak) 或 [中国站](https://cloud.siliconflow.cn/me/account/ak)。
 
-可选手： **Chat Completions** 或 **Messages**。
+选择器：**Chat Completions** 或 **Messages**。
 
 - **国际**（默认）— `https://api.siliconflow.com/v1`
 - **中国** — `https://api.siliconflow.cn/v1`
@@ -250,7 +250,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在 [火山引擎方舟控制台](https://console.volcengine.com/ark/apiKey) 创建 API Key。
 
-可选手： **Chat Completions** 或 **Responses API**。默认 Base：`https://ark.cn-beijing.volces.com/api/v3`。
+选择器：**Chat Completions** 或 **Responses API**。默认 Base：`https://ark.cn-beijing.volces.com/api/v3`。
 
 导入后即可对话。其他能力跟目录走。
 
@@ -258,7 +258,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 在 [BytePlus Ark 控制台](https://console.byteplus.com/ark/apiKey) 创建 API Key。
 
-可选手： **Chat Completions** 或 **Responses API**。默认 Base：`https://ark.ap-southeast.bytepluses.com/api/v3`。
+选择器：**Chat Completions** 或 **Responses API**。默认 Base：`https://ark.ap-southeast.bytepluses.com/api/v3`。
 
 导入后即可对话。其他能力跟目录走。
 
@@ -324,7 +324,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 使用已开通 Vertex AI 的 GCP 项目。认证是 ADC、服务账号或 Express API Key，不是普通 OpenAI Key。
 
-固定 **Chat Completions API**。若配置要了 Responses 或 Messages，会回落到 Chat Completions。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
+固定 **Chat Completions API**。若配置请求 Responses 或 Messages，会回落到 Chat Completions。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
 
 - **GCP 项目 ID** 和 **位置**（必填），例如 `us-central1`
 - **认证**
@@ -338,7 +338,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 
 使用该端点要求的 API Key。{{product.name|mdx}} 不托管自定义提供商。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。必须填写 **Base URL**。留空时占位默认是 `https://api.openai.com/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。必须填写 **Base URL**。留空时占位默认是 `https://api.openai.com/v1`。
 
 填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 {{product.name|mdx}} 不会猜路径。
 

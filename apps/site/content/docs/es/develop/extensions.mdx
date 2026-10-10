@@ -238,7 +238,7 @@ Requieren la capability correspondiente. `contributes.mcp`, `contributes.hooks`,
 
 Si están declarados pero el archivo falta o es inválido, la instalación falla. Los archivos no declarados se ignoran y nunca se cargan.
 
-`command` y `cwd` relativos se resuelven respecto a la raíz de la extensión. Si un MCP stdio omite `cwd`, el valor predeterminado es la raíz de la extensión.
+`command` y `cwd` relativos se resuelven respecto a la raíz de la extensión. Si un MCP stdio omite `cwd`, el valor predeterminado es la raíz de la extensión. Los comandos que solo usan PATH no cambian.
 
 Estas contribuciones se superponen en la sesión cuando la extensión está habilitada. No aparecen en **Ajustes → MCPs | Hooks | Skills | Rules**. En un conflicto de nombres: espacio de trabajo > usuario > extensión.
 
@@ -369,7 +369,7 @@ Un mercado de extensiones remoto es un directorio servible con un índice `{{pro
 <Tabs items={["Repositorio de plantilla", "Manual"]}>
 <Tab value="Repositorio de plantilla">
 
-[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) crea tu propio repositorio de mercado a partir de `SpiritAgents/extension-template`.
+[Usa esta plantilla](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) para crear tu propio repositorio de mercado a partir de `SpiritAgents/extension-template`.
 
 La plantilla incluye la estructura de registro, dos extensiones de ejemplo y CI que valida el registro en cada push y pull request. Para publicar una extensión:
 

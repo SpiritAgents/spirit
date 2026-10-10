@@ -1,7 +1,7 @@
 ---
 title: Approbations
-description: Par défaut, approbation automatique et contournement de
-  l'approbation. Ce que chaque niveau arrête encore.
+description: Niveaux d'approbation et liste d'autorisations des permissions. Ce
+  que signifient allow, ask et deny.
 ---
 
 Chaque appel d'outil risqué peut attendre votre accord. {{product.name|mdx}} dispose de trois niveaux d'approbation. Desktop les affiche comme **Default Approval**, **Auto Approval** et **Bypass Approval**. Le CLI utilise `/approval` ou `-a`.
@@ -10,20 +10,111 @@ Chaque appel d'outil risqué peut attendre votre accord. {{product.name|mdx}} di
 | ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default Approval | `default`         | Vous approuvez vous-même les modifications de fichiers, le shell et d'autres outils à haut risque.                                         |
 | Auto Approval    | `auto-approval`   | Un modèle de langue secondaire examine les appels à haut risque. Vous n'êtes pas invité à moins que cet examen (ou un hook) ne le demande. |
-| Bypass Approval  | `bypass-approval` | Les outils à haut risque s'exécutent sans la demande d'approbation.                                                                        |
+| Bypass Approval  | `bypass-approval` | Les outils à haut risque s'exécutent sans la demande d'approbation. Les règles `deny` s'appliquent toujours.                              |
+
+## Liste d'autorisations des permissions
+
+En plus du niveau d'approbation, `config.json` peut fixer précisément ce que les commandes et chemins individuels peuvent faire. Les règles vivent sous le champ de premier niveau `permission`, regroupées par nom d'outil :
+
+```json
+{
+  "schemaVersion": 2,
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "git push *": "ask",
+      "rm -rf *": "deny",
+      "sudo *": "deny"
+    },
+    "read_file": {
+      "*": "allow",
+      "*/.env*": "ask",
+      "~/.ssh/*": "deny"
+    }
+  }
+}
+```
+
+Chaque clé est un motif, chaque valeur une action :
+
+| Action  | Effet                                                                                                                        |
+| ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `allow` | Exécuter sans demande                                                                                                        |
+| `ask`   | Afficher la demande d'approbation                                                                                            |
+| `deny`  | Refuser catégoriquement. Aucune demande ; le modèle reçoit un résultat d'échec d'outil `[denied by permission rule] …` |
+
+Les règles `read_file` couvrent également les vérifications de chemins externes de `ls`. D'autres domaines pourront venir plus tard.
+
+### Syntaxe des motifs
+
+- `*` correspond à zéro ou plusieurs caractères quelconques, y compris `/`. Tout autre caractère est littéral. Pas de `?`, `[]` ni `{}`.
+- Correspondance sur la chaîne entière, sensible à la casse.
+- Un motif se terminant par `" *"` correspond aussi à la commande nue : `"git *"` correspond à la fois à `git` et à `git status`.
+
+L'ordre des règles n'a pas d'importance : tout `deny` correspondant l'emporte, puis `ask`, puis `allow`. Quand rien ne correspond, le shell retombe sur `ask` (sécurité par défaut). Attention : une entrée `"*": "ask"` correspond à tout et l'emporte donc sur toute règle `allow` — la sécurité par défaut demande déjà en l'absence de correspondance, donc une entrée `ask` qui correspond à tout n'est utile que comme documentation, pas comme repli.
+
+### deny est absolu
+
+Une règle `deny` ne peut être outrepassée ni par l'ordre des règles, ni par la mémoire de session, ni par un hook retournant `allow`, ni par le niveau `bypass-approval`, ni par un outil que vous exécutez vous-même.
+
+### Commandes shell composites
+
+{{product.name|mdx}} découpe une commande shell en commandes simples qui seraient exécutées — en respectant les guillemets et les échappements, à travers `&&`, `||`, `;`, `|`, `|&`, `&`, les sauts de ligne et les sous-shells, y compris le contenu de `$(...)` et des backticks — et évalue chaque segment. Un seul segment refusé refuse toute la commande. Une commande que {{product.name|mdx}} ne peut pas analyser demande par prudence.
+
+### Chemins de read_file
+
+Les motifs correspondent au chemin absolu canonique (realpath). Un `~/` en tête s'étend vers votre répertoire personnel. Les motifs commençant par `*` comptent comme absolus — le joker initial absorbe le séparateur racine, donc `*` et `"*/.env*"` correspondent à des chemins canoniques n'importe où. Un motif commençant par un segment relatif littéral (par exemple `"src/*.ts"`) a une sémantique relative à l'espace de travail : il ne correspond qu'aux chemins à l'intérieur de l'espace de travail courant, jamais aux chemins extérieurs, et produit un avertissement de lint de configuration.
+
+Quand aucune règle ne correspond, un repli d'emplacement intégré s'applique : les chemins internes à l'espace de travail et gérés par {{product.name|mdx}} sont autorisés, les autres chemins externes demandent. Les règles peuvent aussi resserrer les chemins internes à l'espace de travail — `"*/.env*": "ask"` fonctionne à l'intérieur de l'espace de travail.
+
+Les entrées invalides (motifs vides, actions inconnues, blocs non objets) sont ignorées avec des avertissements de lint.
+
+## Mémoriser les approbations
+
+La demande d'approbation offre trois choix :
+
+- **Allow once** — exécuter cet appel uniquement.
+- **Always Allow** — ajouter une règle `allow` à correspondance exacte (la commande verbatim ou le chemin canonique) à `permission.shell` / `permission.read_file` dans config.json. Aucune inférence de joker.
+- **Deny** — refuser, avec une indication en texte libre facultative que le modèle lit.
+
+Les approbations des outils MCP et de la passerelle paresseuse intégrée sont ponctuelles ; aucune mémorisation n'est proposée. Sous les niveaux default et auto-approval, un `tool_call` MCP ne saute la demande que lorsque l'outil déclare `readOnlyHint: true` et `openWorldHint: false`. Les indications manquantes suivent les valeurs par défaut de la spécification (non en lecture seule, monde ouvert) et demandent toujours, comme le font les outils en lecture seule à monde ouvert et les appels de la passerelle paresseuse intégrée. Via [ACP](../acp.mdx), « allow always » est limité à la session et la persistance dans config.json n'est pas exposée ; la mémoire de session n'outrepasse jamais une règle `deny`.
+
+## Les hooks resserrent, ne relâchent jamais
+
+Les [hooks preToolUse](../customize/hooks.mdx) s'exécutent avant l'évaluation de la liste d'autorisations et ne peuvent que resserrer ou bloquer. Un `deny` de hook ou un `deny` de la liste d'autorisations refuse ; un `ask` de hook ou un `ask` de la liste d'autorisations demande ; un hook retournant `allow` ne saute pas l'approbation de l'hôte.
 
 ## Ce que le contournement ne saute pas
 
-`bypass-approval` s'arrête encore pour :
+`bypass-approval` (et les exécutions d'outils que vous démarrez vous-même) se contente de replier `ask` dans `allow`. Il s'arrête encore pour :
 
+- Les règles `deny` de la liste d'autorisations
 - [ask_questions](./ask-questions.mdx)
 - Les flux d'extension qui nécessitent des questions
 - Un hook qui retourne `ask` sur `preToolUse`
 
 L'approbation automatique ne peut pas non plus outrepasser un `ask` de hook.
 
+## Tester les règles hors ligne
+
+```bash
+spirit permission check --shell "git push origin main"
+spirit permission check --read-file ~/.ssh/id_rsa
+```
+
+Affiche le verdict, la règle correspondante et le détail par segment sans rien exécuter. L'évaluation s'effectue côté démon, donc un démon {{product.name|mdx}} accessible est requis.
+
+Il n'y a pas encore d'interface de paramètres pour les règles. Modifiez `config.json` et vérifiez avec `spirit permission check`.
+
+## Déprécié : tool-permissions.json
+
+<Callout type="warn" title="Déprécié">
+
+`tool-permissions.json`, le stockage à correspondance exacte écrit par l'ancien bouton « Always Trust », n'est plus lu ni écrit. Les fichiers restants sont inertes ; supprimez-les manuellement. Il n'y a pas de migration automatique — recréez les règles que vous souhaitez conserver sous `permission` dans `config.json`.
+
+</Callout>
+
 ## Quand utiliser quoi
 
 Restez sur **default** jusqu'à ce que vous ayez vu l'agent faire quelques bonnes modifications. Utilisez **auto-approval** lorsque vous voulez de la rapidité mais que vous souhaitez toujours une seconde vérification. Utilisez **bypass** uniquement sur une branche jetable ou une tâche que vous surveillez.
 
-`spirit -p` sans interface échoue si un appel nécessite une approbation. Passez `-a auto-approval` ou `-a bypass-approval`, ou utilisez le TUI.
+`spirit -p` sans interface échoue si un appel nécessite une approbation. Passez `-a auto-approval` ou `-a bypass-approval`, ou utilisez le TUI. Les règles `allow` s'y exécutent aussi sans demande.

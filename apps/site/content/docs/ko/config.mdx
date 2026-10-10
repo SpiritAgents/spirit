@@ -45,8 +45,28 @@ CLI 바이너리는 SPIRIT_HOME을 사용합니다. Unix에서는 Stable 설치�
 - `providerGroups` — 연결된 하우스, API 베이스, 전송, 모델
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` — 권한 허용 목록 규칙
 
 키(Key)는 이 파일에 **없습니다**. 키는 [키링](./security.mdx)에 있습니다.
+
+### permission
+
+`permission`은 세션 [승인 수준](./agent/approvals.mdx) 위에 개별 셸 명령과 파일 경로가 무엇을 할 수 있는지 고정합니다. 키는 도구 이름(`shell`, `read_file`)이고, 값은 와일드카드 패턴을 `allow`, `ask` 또는 `deny`에 매핑합니다.
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny`는 절대적입니다——어떤 승인 수준, 훅, 세션 메모리도 재정의할 수 없습니다. 패턴 구문, 경로 의미, 전체 액션 목록은 [승인](./agent/approvals.mdx)에 있습니다. 아무것도 실행하지 않고 규칙을 검증합니다: `spirit permission check --shell "git status"`.
+
+이전 `tool-permissions.json`("Always Trust" 버튼이 작성)은 사용 중단되었습니다: 코드가 더 이상 읽거나 쓰지 않으며 자동 마이그레이션도 없습니다. 남은 파일은 비활성이므로 수동으로 삭제하세요.
 
 ## 작업공간 `{{product.workspaceDataFolderName}}/`
 
