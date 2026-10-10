@@ -55,7 +55,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/vercel/ai
 - **@aws/bedrock-token-generator** 1.1.0 — Apache-2.0
   - https://github.com/aws/aws-bedrock-token-generator-js
-- **@huggingface/inference** 4.13.25 — MIT
+- **@huggingface/inference** 4.13.32 — MIT
   - https://github.com/huggingface/huggingface.js
 - **@modelcontextprotocol/sdk** 1.32.1 — MIT
   - https://github.com/modelcontextprotocol/typescript-sdk
@@ -369,7 +369,7 @@ END OF TERMS AND CONDITIONS
 
 **Used by:**
 
-- @huggingface/inference 4.13.25
+- @huggingface/inference 4.13.32
 
 ```
 MIT License
