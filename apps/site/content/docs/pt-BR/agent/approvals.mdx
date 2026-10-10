@@ -1,7 +1,7 @@
 ---
 title: Aprovações
-description: Padrão, aprovação automática e bypass de aprovação. O que cada
-  nível ainda bloqueia.
+description: Níveis de aprovação e a lista de permissões. O que allow, ask e
+  deny significam.
 ---
 
 Toda chamada de ferramenta arriscada pode esperar por você. O {{product.name|mdx}} tem três níveis de aprovação. O Desktop os mostra como **Aprovação Padrão**, **Aprovação Automática** e **Bypass de Aprovação**. O CLI usa `/approval` ou `-a`.
@@ -10,20 +10,111 @@ Toda chamada de ferramenta arriscada pode esperar por você. O {{product.name|md
 | -------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Aprovação Padrão     | `default`         | Você aprova edições de arquivos, shell e outras ferramentas de alto risco pessoalmente.                                            |
 | Aprovação Automática | `auto-approval`   | Um modelo de linguagem secundário revisa chamadas de alto risco. Você não é solicitado a menos que essa revisão (ou um hook) peça. |
-| Bypass de Aprovação  | `bypass-approval` | Ferramentas de alto risco são executadas sem o prompt de aprovação.                                                                |
+| Bypass de Aprovação  | `bypass-approval` | Ferramentas de alto risco são executadas sem o prompt de aprovação. As regras `deny` ainda se aplicam.                             |
+
+## Lista de permissões
+
+Além do nível de aprovação, o `config.json` pode fixar o que comandos e caminhos individuais podem fazer. As regras ficam no campo de nível superior `permission`, agrupadas por nome de ferramenta:
+
+```json
+{
+  "schemaVersion": 2,
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "git push *": "ask",
+      "rm -rf *": "deny",
+      "sudo *": "deny"
+    },
+    "read_file": {
+      "*": "allow",
+      "*/.env*": "ask",
+      "~/.ssh/*": "deny"
+    }
+  }
+}
+```
+
+Cada chave é um padrão, cada valor uma ação:
+
+| Ação    | Efeito                                                                                                                          |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `allow` | Executa sem prompt                                                                                                              |
+| `ask`   | Mostra o prompt de aprovação                                                                                                    |
+| `deny`  | Recusa de imediato. Sem prompt; o modelo recebe um resultado de falha de ferramenta `[denied by permission rule] …`             |
+
+As regras de `read_file` também cobrem as verificações de caminhos externos de `ls`. Mais domínios podem surgir depois.
+
+### Sintaxe de padrões
+
+- `*` corresponde a zero ou mais caracteres quaisquer, incluindo `/`. Todos os outros caracteres são literais. Sem `?`, `[]` ou `{}`.
+- Correspondência de string completa, com distinção entre maiúsculas e minúsculas.
+- Um padrão que termina em `" *"` também corresponde ao comando simples: `"git *"` corresponde tanto a `git` quanto a `git status`.
+
+A ordem das regras não importa: qualquer `deny` correspondente vence, depois `ask`, depois `allow`. Quando nada corresponde, o shell retorna a `ask` (fail-safe). Cuidado: uma entrada `"*": "ask"` corresponde a tudo e, portanto, tem precedência sobre toda regra `allow` — o fail-safe já pergunta quando não há correspondência, então uma entrada `ask` que corresponde a tudo só é útil como documentação, não como fallback.
+
+### deny é absoluto
+
+Uma regra `deny` não pode ser anulada pela ordem das regras, pela memória da sessão, por um hook que retorna `allow`, pelo nível `bypass-approval` ou por uma execução de ferramenta iniciada por você.
+
+### Comandos de shell compostos
+
+O {{product.name|mdx}} divide um comando de shell nos comandos simples que seriam executados — respeitando aspas e escapes, entre `&&`, `||`, `;`, `|`, `|&`, `&`, quebras de linha e subshells, incluindo o conteúdo de `$(...)` e de crases — e avalia cada segmento. Um segmento negado nega o comando inteiro. Um comando que o {{product.name|mdx}} não consegue analisar pede aprovação de forma conservadora.
+
+### Caminhos de read_file
+
+Os padrões correspondem ao caminho absoluto canônico (realpath). `~/` no início expande para o seu diretório home. Padrões que começam com `*` contam como absolutos — o curinga inicial absorve o separador de raiz, então `*` e `"*/.env*"` correspondem a caminhos canônicos em qualquer lugar. Um padrão que começa com um segmento relativo literal (por exemplo `"src/*.ts"`) tem semântica relativa ao workspace: corresponde apenas a caminhos dentro do workspace atual, nunca a caminhos externos, e produz um aviso de lint de configuração.
+
+Quando nenhuma regra corresponde, aplica-se um fallback de localização integrado: caminhos internos ao workspace e gerenciados pelo {{product.name|mdx}} recebem `allow`; outros caminhos externos recebem `ask`. As regras também podem restringir caminhos internos ao workspace — `"*/.env*": "ask"` funciona dentro do workspace.
+
+Entradas inválidas (padrões vazios, ações desconhecidas, blocos que não são objetos) são descartadas com avisos de lint.
+
+## Lembrando aprovações
+
+O prompt de aprovação oferece três opções:
+
+- **Permitir uma vez** — executa apenas esta chamada.
+- **Sempre Permitir** — anexa uma regra `allow` de correspondência exata (o comando verbatim ou o caminho canônico) a `permission.shell` / `permission.read_file` no config.json. Sem inferência de curingas.
+- **Negar** — recusa, com orientação opcional em texto livre que o modelo lê.
+
+Aprovações de ferramentas MCP e do lazy-gateway integrado são pontuais; nenhuma opção de lembrar é oferecida. Nos níveis padrão e de aprovação automática, um `tool_call` MCP pula o prompt somente quando a ferramenta declara `readOnlyHint: true` e `openWorldHint: false`. Hints ausentes seguem os padrões da especificação (não somente leitura, mundo aberto) e ainda perguntam, assim como ferramentas somente leitura de mundo aberto e chamadas do lazy-gateway integrado. Via [ACP](../acp.mdx), "allow always" tem escopo de sessão e a persistência no config.json não é exposta; a memória da sessão nunca anula uma regra `deny`.
+
+## Hooks restringem, nunca afrouxam
+
+[Hooks `preToolUse`](../customize/hooks.mdx) são executados antes da avaliação da lista de permissões e só podem restringir ou bloquear. Um `deny` de hook ou um `deny` da lista de permissões nega; um `ask` de hook ou um `ask` da lista de permissões solicita; um hook que retorna `allow` não pula a aprovação do host.
 
 ## O que o bypass não pula
 
-`bypass-approval` ainda para para:
+`bypass-approval` (e execuções de ferramentas iniciadas por você) apenas converte `ask` em `allow`. Ele ainda para para:
 
+- Regras `deny` na lista de permissões
 - [ask_questions](./ask-questions.mdx)
 - Fluxos de extensão que precisam de perguntas
 - Um hook que retorna `ask` em `preToolUse`
 
 A aprovação automática também não pode substituir um hook `ask`.
 
+## Teste regras offline
+
+```bash
+spirit permission check --shell "git push origin main"
+spirit permission check --read-file ~/.ssh/id_rsa
+```
+
+Imprime o veredito, a regra correspondente e o detalhe por segmento sem executar nada. A avaliação é executada no lado do daemon, portanto é necessário um daemon do {{product.name|mdx}} acessível.
+
+Ainda não há interface de configurações para regras. Edite o `config.json` e verifique com `spirit permission check`.
+
+## Obsoleto: tool-permissions.json
+
+<Callout type="warn" title="Obsoleto">
+
+`tool-permissions.json`, o armazenamento de correspondência exata gravado pelo antigo botão "Always Trust", não é mais lido nem gravado. Arquivos remanescentes são inertes; exclua-os manualmente. Não há migração automática — recrie as regras que você ainda deseja em `permission` no `config.json`.
+
+</Callout>
+
 ## Quando usar cada um
 
 Permaneça no **padrão** até ver o agente fazer algumas boas edições. Use **aprovação automática** quando quiser velocidade, mas ainda quiser uma segunda verificação. Use **bypass** apenas em um branch descartável ou em uma tarefa que você está monitorando.
 
-O `spirit -p` headless falha se uma chamada precisar de aprovação. Passe `-a auto-approval` ou `-a bypass-approval`, ou use o TUI.
+O `spirit -p` headless falha se uma chamada precisar de aprovação. Passe `-a auto-approval` ou `-a bypass-approval`, ou use o TUI. As regras com `allow` também são executadas sem prompt lá.

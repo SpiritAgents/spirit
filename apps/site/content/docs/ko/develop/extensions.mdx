@@ -237,7 +237,7 @@ my-extension/
 
 선언했는데 파일이 없거나 잘못된 경우 설치가 실패합니다. 선언되지 않은 파일은 무시되며 로드되지 않습니다.
 
-상대 `command` / `cwd`는 확장 프로그램 루트 기준입니다. MCP stdio에서 `cwd`를 생략하면 확장 프로그램 루트가 기본값입니다.
+상대 `command` / `cwd`는 확장 프로그램 루트 기준입니다. MCP stdio에서 `cwd`를 생략하면 확장 프로그램 루트가 기본값입니다. PATH-only 명령은 변경되지 않습니다.
 
 확장 프로그램이 켜져 있을 때만 세션에 overlay되며 **설정 → MCPs | Hooks | Skills | Rules** 목록에는 나타나지 않습니다. 이름 충돌은 workspace > user > extension입니다.
 

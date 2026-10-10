@@ -1,29 +1,120 @@
 ---
 title: Aprobaciones
-description: Predeterminado, aprobación automática y aprobación omitida. Qué
-  detiene cada nivel.
+description: Niveles de aprobación y la lista de permitidos de permission.
+  Qué significan allow, ask y deny.
 ---
 
 Cada llamada de herramienta de alto riesgo puede esperar por ti. {{product.name|mdx}} tiene tres niveles de aprobación. Desktop los muestra como **Aprobación predeterminada**, **Aprobación automática** y **Aprobación omitida**. La CLI usa `/approval` o `-a`.
 
 | Nivel                     | Id                | Comportamiento                                                                                                                                    |
 | ------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Aprobación predeterminada | `default`         | Usted aprueba personalmente las ediciones de archivos, shell y otras herramientas de alto riesgo.                                                 |
-| Aprobación automática     | `auto-approval`   | Un modelo de lenguaje secundario revisa las llamadas de alto riesgo. No se le solicita confirmación a menos que esa revisión (o un hook) lo pida. |
-| Aprobación omitida        | `bypass-approval` | Las herramientas de alto riesgo se ejecutan sin la solicitud de aprobación.                                                                       |
+| Aprobación predeterminada | `default`         | Apruebas personalmente las ediciones de archivos, shell y otras herramientas de alto riesgo.                                                      |
+| Aprobación automática     | `auto-approval`   | Un modelo de lenguaje secundario revisa las llamadas de alto riesgo. No se te solicita confirmación a menos que esa revisión (o un hook) lo pida. |
+| Aprobación omitida        | `bypass-approval` | Las herramientas de alto riesgo se ejecutan sin la solicitud de aprobación. Las reglas `deny` siguen aplicándose.                                 |
+
+## Lista de permitidos de permission
+
+Además del nivel de aprobación, `config.json` puede fijar qué pueden hacer comandos y rutas individuales. Las reglas viven bajo el campo de nivel superior `permission`, agrupadas por nombre de herramienta:
+
+```json
+{
+  "schemaVersion": 2,
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "git push *": "ask",
+      "rm -rf *": "deny",
+      "sudo *": "deny"
+    },
+    "read_file": {
+      "*": "allow",
+      "*/.env*": "ask",
+      "~/.ssh/*": "deny"
+    }
+  }
+}
+```
+
+Cada clave es un patrón, cada valor una acción:
+
+| Acción  | Efecto                                                                                                                  |
+| ------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `allow` | Se ejecuta sin solicitar confirmación                                                                                   |
+| `ask`   | Muestra la solicitud de aprobación                                                                                      |
+| `deny`  | Rechaza directamente. Sin solicitud; el modelo recibe un resultado de fallo de herramienta `[denied by permission rule] …` |
+
+Las reglas de `read_file` también cubren las comprobaciones de rutas externas de `ls`. Puede que lleguen más dominios más adelante.
+
+### Sintaxis de patrones
+
+- `*` coincide con cero o más caracteres cualesquiera, incluido `/`. Todos los demás caracteres son literales. No hay `?`, `[]` ni `{}`.
+- Coincidencia de cadena completa, con distinción de mayúsculas y minúsculas.
+- Un patrón que termina en `" *"` también coincide con el comando sin argumentos: `"git *"` coincide tanto con `git` como con `git status`.
+
+El orden de las reglas no importa: cualquier `deny` que coincida gana, luego `ask`, luego `allow`. Cuando nada coincide, shell recurre a `ask` (a prueba de fallos). Ojo: una entrada `"*": "ask"` coincide con todo y por tanto supera a todas las reglas `allow` — el comportamiento a prueba de fallos ya pregunta cuando no hay coincidencia, así que una entrada `ask` que coincide con todo solo sirve como documentación, no como respaldo.
+
+### deny es absoluto
+
+Una regla `deny` no puede ser anulada por el orden de las reglas, la memoria de sesión, un hook que devuelva `allow`, el nivel `bypass-approval` ni una ejecución de herramienta que inicies tú mismo.
+
+### Comandos shell compuestos
+
+{{product.name|mdx}} divide un comando shell en los comandos simples que se ejecutarían — respetando comillas y escapes, a través de `&&`, `||`, `;`, `|`, `|&`, `&`, saltos de línea y subshells, incluidos los contenidos de `$(...)` y de backticks — y evalúa cada segmento. Un solo segmento denegado deniega el comando completo. Un comando que {{product.name|mdx}} no puede analizar pregunta por precaución.
+
+### Rutas de read_file
+
+Los patrones coinciden con la ruta absoluta canónica (realpath). Un `~/` inicial se expande a tu directorio personal. Los patrones que empiezan con `*` cuentan como absolutos: el comodín inicial absorbe el separador de raíz, así que `*` y `"*/.env*"` coinciden con rutas canónicas en cualquier lugar. Un patrón que empieza con un segmento relativo literal (por ejemplo `"src/*.ts"`) tiene semántica relativa al espacio de trabajo: solo coincide con rutas dentro del espacio de trabajo actual, nunca con rutas externas, y produce una advertencia de lint de configuración.
+
+Cuando ninguna regla coincide, se aplica un respaldo por ubicación integrado: las rutas internas del espacio de trabajo y las gestionadas por {{product.name|mdx}} se permiten, y las demás rutas externas preguntan. Las reglas también pueden endurecer las rutas internas del espacio de trabajo — `"*/.env*": "ask"` funciona dentro del espacio de trabajo.
+
+Las entradas inválidas (patrones vacíos, acciones desconocidas, bloques que no son objetos) se descartan con advertencias de lint.
+
+## Recordar aprobaciones
+
+La solicitud de aprobación ofrece tres opciones:
+
+- **Permitir una vez** — ejecuta solo esta llamada.
+- **Permitir siempre** — añade una regla `allow` de coincidencia exacta (el comando literal o la ruta canónica) a `permission.shell` / `permission.read_file` en config.json. Sin inferencia de comodines.
+- **Denegar** — rechaza, con una orientación opcional en texto libre que el modelo lee.
+
+Las aprobaciones de herramientas MCP y del lazy-gateway integrado son de un solo uso; no se ofrece recordar. Con default y auto-approval, un `tool_call` de MCP omite la solicitud solo cuando la herramienta declara `readOnlyHint: true` y `openWorldHint: false`. Los hints ausentes siguen los valores predeterminados de la especificación (no solo lectura, mundo abierto) y aún preguntan, igual que las herramientas de solo lectura de mundo abierto y las llamadas del lazy-gateway integrado. A través de [ACP](../acp.mdx), «permitir siempre» tiene alcance de sesión y persistir en config.json no está expuesto; la memoria de sesión nunca anula una regla `deny`.
+
+## Los hooks endurecen, nunca aflojan
+
+Los [hooks preToolUse](../customize/hooks.mdx) se ejecutan antes de la evaluación de la lista de permitidos y solo pueden endurecer o bloquear. Un `deny` de hook o un `deny` de la lista de permitidos deniega; un `ask` de hook o un `ask` de la lista de permitidos solicita confirmación; un hook que devuelve `allow` no omite la aprobación del host.
 
 ## Lo que la omisión no evita
 
-`bypass-approval` aún se detiene por:
+`bypass-approval` (y las ejecuciones de herramientas que inicias tú mismo) solo convierte `ask` en `allow`. Aún se detiene por:
 
+- Reglas `deny` en la lista de permitidos
 - [ask_questions](./ask-questions.mdx)
 - Flujos de extensiones que necesitan preguntas
 - Un hook que devuelve `ask` en `preToolUse`
 
 La aprobación automática tampoco puede anular un `ask` de un hook.
 
+## Probar las reglas sin conexión
+
+```bash
+spirit permission check --shell "git push origin main"
+spirit permission check --read-file ~/.ssh/id_rsa
+```
+
+Imprime el veredicto, la regla coincidente y el detalle por segmento sin ejecutar nada. La evaluación se ejecuta en el lado del daemon, así que se requiere un daemon de {{product.name|mdx}} accesible.
+
+Todavía no hay una interfaz de ajustes para las reglas. Edita `config.json` y verifica con `spirit permission check`.
+
+## Obsoleto: tool-permissions.json
+
+<Callout type="warn" title="Obsoleto">
+
+`tool-permissions.json`, el almacén de coincidencia exacta que escribía el antiguo botón «Confiar siempre», ya no se lee ni se escribe. Los archivos sobrantes son inertes; elimínalos manualmente. No hay migración automática — vuelve a crear las reglas que aún quieras bajo `permission` en `config.json`.
+
+</Callout>
+
 ## Cuándo usar cada uno
 
 Mantente en **predeterminado** hasta que veas que el agente hace algunas buenas ediciones. Usa **aprobación automática** cuando quieras velocidad pero aún quieras una segunda revisión. Usa **omisión** solo en una rama desechable o en una tarea que estés supervisando.
 
-Sin interfaz gráfica, `spirit -p` falla si una llamada necesita aprobación. Pasa `-a auto-approval` o `-a bypass-approval`, o usa la TUI.
+Sin interfaz gráfica, `spirit -p` falla si una llamada necesita aprobación. Pasa `-a auto-approval` o `-a bypass-approval`, o usa la TUI. Las reglas con `allow` también se ejecutan allí sin solicitar confirmación.

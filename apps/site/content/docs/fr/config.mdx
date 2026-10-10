@@ -46,8 +46,28 @@ Champs principaux :
 - `providerGroups` — maisons connectées, base API, transport, modèles
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` — règles de la liste d'autorisations des permissions
 
 Les clés ne sont **pas** dans ce fichier. Elles vivent dans le [trousseau](./security.mdx).
+
+### permission
+
+`permission` fixe précisément ce que les commandes shell et les chemins de fichiers individuels peuvent faire, en plus du [niveau d'approbation](./agent/approvals.mdx) de la session. Les clés sont des noms d'outils (`shell`, `read_file`) ; les valeurs associent des motifs à jokers à `allow`, `ask` ou `deny`.
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` est absolu — aucun niveau d'approbation, hook ou mémoire de session ne l'outrepasse. La syntaxe des motifs, la sémantique des chemins et la liste complète des actions sont dans [Approbations](./agent/approvals.mdx). Vérifiez les règles sans rien exécuter : `spirit permission check --shell "git status"`.
+
+L'ancien `tool-permissions.json` (écrit par le bouton « Always Trust ») est déprécié : le code ne le lit ni ne l'écrit plus, et il n'y a pas de migration automatique. Les fichiers restants sont inertes — supprimez-les manuellement.
 
 ## Espace de travail `{{product.workspaceDataFolderName}}/`
 

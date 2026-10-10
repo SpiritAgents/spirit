@@ -45,8 +45,28 @@ CLI バイナリには SPIRIT_HOME を使用します。Unix では Stable の�
 - `providerGroups` — 接続済みのハウス、API ベース、トランスポート、モデル
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` — 許可リストのルール
 
 キーはこのファイルには含まれません。キーは [キーリング](./security.mdx) に保存されます。
+
+### permission
+
+`permission` は、セッションの [承認レベル](./agent/approvals.mdx) に加えて、個々のシェルコマンドやファイルパスが何をしてよいかを細かく定めます。キーはツール名（`shell`、`read_file`）で、値はワイルドカードパターンから `allow`、`ask`、`deny` へのマッピングです。
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` は絶対です。承認レベル、フック、セッションメモリのいずれによっても上書きできません。パターン構文、パスの意味、アクションの全リストは [承認](./agent/approvals.mdx) を参照してください。何も実行せずにルールを確認できます: `spirit permission check --shell "git status"`。
+
+古い `tool-permissions.json`（「Always Trust」ボタンが書き込んでいたもの）は非推奨です。コードは読み取りも書き込みも行わず、自動移行もありません。残っているファイルは動作に影響しません。手動で削除してください。
 
 ## ワークスペースの `{{product.workspaceDataFolderName}}/`
 

@@ -1,7 +1,7 @@
 ---
 title: Genehmigungen
-description: Standard, automatische Genehmigung und Genehmigung umgehen. Was
-  jede Stufe noch stoppt.
+description: Genehmigungsstufen und die Berechtigungs-Zulassungsliste. Was
+  allow, ask und deny bedeuten.
 ---
 
 Jeder riskante Tool-Aufruf kann auf Sie warten. {{product.name|mdx}} hat drei Genehmigungsstufen. Desktop zeigt sie als **Standard-Genehmigung**, **Automatische Genehmigung** und **Genehmigung umgehen**. Die CLI verwendet `/approval` oder `-a`.
@@ -10,20 +10,111 @@ Jeder riskante Tool-Aufruf kann auf Sie warten. {{product.name|mdx}} hat drei Ge
 | ------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Standard-Genehmigung     | `default`         | Sie genehmigen Dateibearbeitungen, Shell und andere risikoreiche Tools selbst.                                                                |
 | Automatische Genehmigung | `auto-approval`   | Ein sekundäres Sprachmodell überprüft risikoreiche Aufrufe. Sie werden nur aufgefordert, wenn diese Überprüfung (oder ein Hook) danach fragt. |
-| Genehmigung umgehen      | `bypass-approval` | Risikoreiche Tools werden ohne Genehmigungsaufforderung ausgeführt.                                                                           |
+| Genehmigung umgehen      | `bypass-approval` | Risikoreiche Tools werden ohne Genehmigungsaufforderung ausgeführt. `deny`-Regeln gelten weiterhin.                                           |
+
+## Berechtigungs-Zulassungsliste
+
+Zusätzlich zur Genehmigungsstufe kann `config.json` festlegen, was einzelne Befehle und Pfade dürfen. Regeln liegen unter dem Top-Level-Feld `permission`, gruppiert nach Toolname:
+
+```json
+{
+  "schemaVersion": 2,
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "git push *": "ask",
+      "rm -rf *": "deny",
+      "sudo *": "deny"
+    },
+    "read_file": {
+      "*": "allow",
+      "*/.env*": "ask",
+      "~/.ssh/*": "deny"
+    }
+  }
+}
+```
+
+Jeder Schlüssel ist ein Muster, jeder Wert eine Aktion:
+
+| Aktion  | Wirkung                                                                                                          |
+| ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `allow` | Ohne Aufforderung ausführen                                                                                      |
+| `ask`   | Die Genehmigungsaufforderung anzeigen                                                                            |
+| `deny`  | Direkt verweigern. Keine Aufforderung; das Modell erhält ein `[denied by permission rule] …`-Tool-Fehlerergebnis |
+
+`read_file`-Regeln decken auch die Prüfungen externer Pfade von `ls` ab. Weitere Domänen können später hinzukommen.
+
+### Mustersyntax
+
+- `*` passt auf null oder mehr beliebige Zeichen, einschließlich `/`. Jedes andere Zeichen ist wörtlich. Kein `?`, `[]` oder `{}`.
+- Vollständiger String-Abgleich, Groß-/Kleinschreibung wird unterschieden.
+- Ein Muster, das auf `" *"` endet, passt auch auf den bloßen Befehl: `"git *"` passt sowohl auf `git` als auch auf `git status`.
+
+Die Reihenfolge der Regeln spielt keine Rolle: Ein passendes `deny` gewinnt, dann `ask`, dann `allow`. Wenn nichts passt, fällt die Shell auf `ask` zurück (fail-safe). Beachten Sie, dass ein Eintrag `"*": "ask"` auf alles passt und daher jede `allow`-Regel übertrumpft – der Fail-safe fragt bereits nach, wenn nichts passt, daher ist ein Alles-erfassender `ask`-Eintrag nur als Dokumentation nützlich, nicht als Rückfallebene.
+
+### deny ist absolut
+
+Eine `deny`-Regel kann nicht durch die Regelreihenfolge, das Sitzungsgedächtnis, einen Hook, der `allow` zurückgibt, die Stufe `bypass-approval` oder eine von Ihnen selbst gestartete Tool-Ausführung außer Kraft gesetzt werden.
+
+### Zusammengesetzte Shell-Befehle
+
+{{product.name|mdx}} zerlegt einen Shell-Befehl in die einfachen Befehle, die ausgeführt würden – unter Beachtung von Anführungszeichen und Escapes, über `&&`, `||`, `;`, `|`, `|&`, `&`, Zeilenumbrüche und Subshells hinweg, einschließlich `$(...)`- und Backtick-Inhalten – und wertet jedes Segment aus. Ein verweigertes Segment verweigert den gesamten Befehl. Ein Befehl, den {{product.name|mdx}} nicht parsen kann, fragt vorsichtshalber nach.
+
+### read_file-Pfade
+
+Muster passen auf den kanonischen absoluten Pfad (realpath). `~/` am Anfang wird zu Ihrem Home-Verzeichnis expandiert. Muster, die mit `*` beginnen, gelten als absolut – der führende Platzhalter absorbiert das Wurzeltrennzeichen, sodass `*` und `"*/.env*"` auf kanonische Pfade überall passen. Ein Muster, das mit einem wörtlichen relativen Segment beginnt (zum Beispiel `"src/*.ts"`), hat arbeitsbereichsrelative Semantik: Es passt nur auf Pfade innerhalb des aktuellen Arbeitsbereichs, niemals auf Pfade außerhalb, und erzeugt eine Config-Lint-Warnung.
+
+Wenn keine Regel passt, greift ein eingebauter Standort-Fallback: Arbeitsbereichsinterne und von {{product.name|mdx}} verwaltete Pfade erlauben, andere externe Pfade fragen nach. Regeln können auch arbeitsbereichsinterne Pfade verschärfen – `"*/.env*": "ask"` funktioniert innerhalb des Arbeitsbereichs.
+
+Ungültige Einträge (leere Muster, unbekannte Aktionen, Nicht-Objekt-Blöcke) werden mit Lint-Warnungen verworfen.
+
+## Genehmigungen merken
+
+Die Genehmigungsaufforderung bietet drei Optionen:
+
+- **Einmal erlauben** – nur diesen Aufruf ausführen.
+- **Immer erlauben** – eine `allow`-Regel für exakte Übereinstimmung (der wörtliche Befehl oder kanonische Pfad) an `permission.shell` / `permission.read_file` in config.json anhängen. Keine Platzhalter-Ableitung.
+- **Verweigern** – ablehnen, mit optionaler Freitext-Anleitung, die das Modell liest.
+
+MCP- und integrierte Lazy-Gateway-Tool-Genehmigungen sind einmalig; ein Merken wird nicht angeboten. Unter Standard- und Auto-Genehmigung überspringt ein MCP-`tool_call` die Aufforderung nur, wenn das Tool `readOnlyHint: true` und `openWorldHint: false` deklariert. Fehlende Hinweise folgen den Standardwerten der Spezifikation (nicht schreibgeschützt, offene Welt) und fragen weiterhin nach, ebenso wie schreibgeschützte Open-World-Tools und integrierte Lazy-Gateway-Aufrufe. Über [ACP](../acp.mdx) ist „immer erlauben“ auf die Sitzung beschränkt, und das Persistieren in config.json ist nicht verfügbar; das Sitzungsgedächtnis setzt niemals eine `deny`-Regel außer Kraft.
+
+## Hooks verschärfen, lockern nie
+
+[preToolUse-Hooks](../customize/hooks.mdx) laufen vor der Auswertung der Zulassungsliste und können nur verschärfen oder blockieren. Ein Hook-`deny` oder ein Zulassungslisten-`deny` verweigert; ein Hook-`ask` oder ein Zulassungslisten-`ask` fordert auf; ein Hook, der `allow` zurückgibt, überspringt nicht die Host-Genehmigung.
 
 ## Was die Umgehung nicht überspringt
 
-`bypass-approval` stoppt weiterhin für:
+`bypass-approval` (und von Ihnen selbst gestartete Tool-Ausführungen) wandeln lediglich `ask` in `allow` um. `bypass-approval` stoppt weiterhin für:
 
+- `deny`-Regeln in der Zulassungsliste
 - [ask_questions](./ask-questions.mdx)
 - Erweiterungsabläufe, die Fragen benötigen
 - Einen Hook, der bei `preToolUse` `ask` zurückgibt
 
 Die automatische Genehmigung kann auch ein Hook-`ask` nicht außer Kraft setzen.
 
+## Regeln offline testen
+
+```bash
+spirit permission check --shell "git push origin main"
+spirit permission check --read-file ~/.ssh/id_rsa
+```
+
+Gibt das Urteil, die passende Regel und Details pro Segment aus, ohne etwas auszuführen. Die Auswertung läuft auf der Daemon-Seite, daher ist ein erreichbarer {{product.name|mdx}}-Daemon erforderlich.
+
+Es gibt noch keine Einstellungsoberfläche für Regeln. Bearbeiten Sie `config.json` und überprüfen Sie sie mit `spirit permission check`.
+
+## Veraltet: tool-permissions.json
+
+<Callout type="warn" title="Veraltet">
+
+`tool-permissions.json`, der Speicher für exakte Übereinstimmungen der alten Schaltfläche „Immer vertrauen“, wird nicht mehr gelesen oder geschrieben. Übrig gebliebene Dateien sind wirkungslos; löschen Sie sie manuell. Es gibt keine automatische Migration – erstellen Sie die Regeln, die Sie noch benötigen, unter `permission` in `config.json` neu.
+
+</Callout>
+
 ## Wann welche verwenden
 
 Bleiben Sie bei **Standard**, bis Sie gesehen haben, dass der Agent ein paar gute Bearbeitungen vornimmt. Verwenden Sie **automatische Genehmigung**, wenn Sie Geschwindigkeit wünschen, aber dennoch eine zweite Prüfung möchten. Verwenden Sie **Umgehen** nur auf einem Wegwerf-Zweig oder bei einer Aufgabe, die Sie beobachten.
 
-Headless `spirit -p` schlägt fehl, wenn ein Aufruf eine Genehmigung benötigt. Übergeben Sie `-a auto-approval` oder `-a bypass-approval`, oder verwenden Sie die TUI.
+Headless `spirit -p` schlägt fehl, wenn ein Aufruf eine Genehmigung benötigt. Übergeben Sie `-a auto-approval` oder `-a bypass-approval`, oder verwenden Sie die TUI. Regeln mit `allow` werden auch dort ohne Aufforderung ausgeführt.

@@ -46,8 +46,28 @@ Campos principales:
 - `providerGroups` — casas conectadas, base de API, transporte, modelos
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` — reglas de la lista de permitidos
 
 Las claves **no** están en este archivo. Viven en el [keyring](./security.mdx).
+
+### permission
+
+`permission` fija qué pueden hacer comandos shell y rutas de archivo individuales, además del [nivel de aprobación](./agent/approvals.mdx) de la sesión. Las claves son nombres de herramientas (`shell`, `read_file`); los valores asignan patrones con comodines a `allow`, `ask` o `deny`.
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` es absoluto — ningún nivel de aprobación, hook o memoria de sesión lo anula. La sintaxis de patrones, la semántica de rutas y la lista completa de acciones están en [Aprobaciones](./agent/approvals.mdx). Verifica las reglas sin ejecutar nada: `spirit permission check --shell "git status"`.
+
+El antiguo `tool-permissions.json` (escrito por el botón «Confiar siempre») está obsoleto: el código ya no lo lee ni lo escribe, y no hay migración automática. Los archivos sobrantes son inertes — elimínalos manualmente.
 
 ## Espacio de trabajo `{{product.workspaceDataFolderName}}/`
 

@@ -45,8 +45,28 @@ CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料
 - `providerGroups` — 已連線的家、API 基礎、傳輸、模型
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `permission` — 權限允許清單規則
 
 金鑰**不**在此檔案中。它們位於[金鑰圈](./security.mdx)中。
+
+### permission
+
+`permission` 在工作階段[核准層級](./agent/approvals.mdx)之上，明確限定個別 shell 命令與檔案路徑可執行的操作。鍵為工具名稱（`shell`、`read_file`）；值將萬用字元模式對應到 `allow`、`ask` 或 `deny`。
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` 是絕對的——任何核准層級、鉤子或工作階段記憶都無法覆寫它。模式語法、路徑語意與完整動作清單請參閱[核准](./agent/approvals.mdx)。不實際執行任何操作即可驗證規則：`spirit permission check --shell "git status"`。
+
+舊的 `tool-permissions.json`（由「永遠信任」按鈕寫入）已棄用：程式碼不再讀取或寫入它，且沒有自動遷移。殘留的檔案不會產生任何作用——請手動刪除。
 
 ## 工作區 `{{product.workspaceDataFolderName}}/`
 
