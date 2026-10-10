@@ -4,7 +4,6 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
-import ts from "typescript";
 
 import { ProductManifestSchema, ProductSchema, resolveProduct } from "../schema.ts";
 import {
@@ -179,23 +178,31 @@ test("generates deterministically from a changed root manifest and runs Rust wit
       const first = await generateProduct({ root, quality, outDir });
       const second = await generateProduct({ root, quality, outDir });
       assert.deepEqual(first.files, second.files);
-      const program = ts.createProgram(
-        [path.join(outDir, "index.d.ts"), path.join(outDir, "product.ts")],
-        {
-          noEmit: true,
-          strict: true,
-          target: ts.ScriptTarget.ESNext,
-          module: ts.ModuleKind.NodeNext,
-          moduleResolution: ts.ModuleResolutionKind.NodeNext,
-          types: [],
-        },
+      // TypeScript 7 ships no stable programmatic API (`createProgram` and friends
+      // are removed from the runtime package), so this check drives the `tsc` CLI
+      // instead of holding a Program in-process. Known limitation: exit status plus
+      // printed diagnostics is a coarser signal than getPreEmitDiagnostics. TS 7.1 is
+      // expected to restore a stable API; switch back to a programmatic check then.
+      const tsc = spawnSync(
+        process.platform === "win32" ? "tsc.cmd" : "tsc",
+        [
+          "--noEmit",
+          "--strict",
+          "--target",
+          "esnext",
+          "--module",
+          "nodenext",
+          "--moduleResolution",
+          "nodenext",
+          // TS >= 6 defaults `types` to [], so no @types auto-inclusion needs disabling;
+          // --ignoreConfig keeps CLI file arguments legal next to our tsconfig.json.
+          "--ignoreConfig",
+          path.join(outDir, "index.d.ts"),
+          path.join(outDir, "product.ts"),
+        ],
+        { encoding: "utf8" },
       );
-      assert.deepEqual(
-        ts
-          .getPreEmitDiagnostics(program)
-          .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
-        [],
-      );
+      assert.equal(tsc.status, 0, tsc.stdout + tsc.stderr);
       const baked = await import(pathToFileURL(path.join(outDir, "index.js")));
       assert.deepEqual(baked.product, resolveProduct(manifest, quality));
       assert.equal(Object.isFrozen(baked.product), true);
