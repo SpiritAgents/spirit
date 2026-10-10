@@ -22,9 +22,9 @@ test("collects live stylesheet cssText instead of a second token file", () => {
 
 test("copies html class and inline style for theme sync", () => {
   document.documentElement.className = "dark";
-  document.documentElement.setAttribute("style", "--font-sans: Geist");
+  document.documentElement.setAttribute("style", "--font-sans: Example Sans");
   assert.deepEqual(collectHostDocumentChrome(document), {
     htmlClassName: "dark",
-    htmlStyle: "--font-sans: Geist",
+    htmlStyle: "--font-sans: Example Sans",
   });
 });

@@ -1,9 +1,7 @@
 import { createMermaidPlugin } from "@streamdown/mermaid";
 import type { MermaidConfig } from "mermaid";
 
-import { DEFAULT_FONT_ID } from "@/lib/font";
-
-const MERMAID_FONT_FAMILY = `'${DEFAULT_FONT_ID === "geist" ? "Geist Variable" : "Geist Variable"}', sans-serif`;
+const MERMAID_FONT_FAMILY = "system-ui, sans-serif";
 
 /** Void semantic colors: aligned with the dark-mode tokens in styles.css, avoiding Mermaid's default yellow/purple subgraph */
 function buildVoidMermaidThemeVariables(resolvedDark: boolean): MermaidConfig["themeVariables"] {

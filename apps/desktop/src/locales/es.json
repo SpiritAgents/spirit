@@ -200,7 +200,7 @@
     "font": "Fuente",
     "typographySection": "Tipografía",
     "translucency": "Traslucidez",
-    "fontDescription": "Por defecto Geist.",
+    "fontDescription": "Por defecto, la fuente del sistema.",
     "fontSmoothing": "Suavizado de fuentes",
     "fontSmoothingDescription": "Usar el suavizado nativo de macOS.",
     "fontSystem": "Sistema",

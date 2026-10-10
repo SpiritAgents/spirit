@@ -200,7 +200,7 @@
     "font": "글꼴",
     "typographySection": "타이포그래피",
     "translucency": "반투명",
-    "fontDescription": "기본값은 Geist입니다.",
+    "fontDescription": "기본값은 시스템 글꼴입니다.",
     "fontSmoothing": "글꼴 다듬기",
     "fontSmoothingDescription": "macOS 고유 안티앨리어싱을 사용합니다.",
     "fontSystem": "시스템",

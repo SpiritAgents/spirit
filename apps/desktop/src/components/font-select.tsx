@@ -14,8 +14,6 @@ import {
   DESKTOP_SELECT_TRIGGER,
 } from "@/lib/desktop-chrome";
 import {
-  DEFAULT_FONT_ID,
-  DEFAULT_FONT_LABEL,
   SYSTEM_FONT_ID,
   SYSTEM_FONT_STACK,
   toFontPreferenceStack,
@@ -102,11 +100,11 @@ export function FontSelect({
     const values = new Set<string>();
     for (const font of sourceFonts) {
       const trimmed = font.trim();
-      if (trimmed && trimmed !== DEFAULT_FONT_ID && trimmed !== SYSTEM_FONT_ID) {
+      if (trimmed && trimmed !== SYSTEM_FONT_ID) {
         values.add(trimmed);
       }
     }
-    if (value !== DEFAULT_FONT_ID && value !== SYSTEM_FONT_ID && value.trim()) {
+    if (value !== SYSTEM_FONT_ID && value.trim()) {
       values.add(value.trim());
     }
     return Array.from(values).sort((a, b) =>
@@ -116,7 +114,6 @@ export function FontSelect({
 
   const allOptions = useMemo<FontOption[]>(
     () => [
-      { id: DEFAULT_FONT_ID, label: DEFAULT_FONT_LABEL },
       { id: SYSTEM_FONT_ID, label: t("settings.fontSystem"), fontFamily: SYSTEM_FONT_STACK },
       ...fontOptions.map((font) => ({
         id: font,
@@ -135,12 +132,7 @@ export function FontSelect({
     return allOptions.filter((option) => option.label.toLowerCase().includes(normalizedFilter));
   }, [allOptions, normalizedFilter]);
 
-  const currentLabel =
-    value === DEFAULT_FONT_ID
-      ? DEFAULT_FONT_LABEL
-      : value === SYSTEM_FONT_ID
-        ? t("settings.fontSystem")
-        : value;
+  const currentLabel = value === SYSTEM_FONT_ID ? t("settings.fontSystem") : value;
 
   const selectValue = (next: FontPreference) => {
     onValueChange(next);
@@ -175,7 +167,7 @@ export function FontSelect({
               <span
                 className="min-w-0 truncate text-left"
                 style={
-                  value === DEFAULT_FONT_ID
+                  value === SYSTEM_FONT_ID
                     ? undefined
                     : { fontFamily: toFontPreferenceStack(value) }
                 }
