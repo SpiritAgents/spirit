@@ -61,6 +61,15 @@ test("openai responses ultrafast uses the official SDK enum plus the direct-only
     providerOptions: { openai: { serviceTier: "ultrafast" } },
     headers: { "OpenAI-Service-Tier": "ultrafast" },
   });
+  assert.deepEqual(
+    plan({
+      provider: "openai",
+      model: "gpt-6.1-sol",
+      serviceTier: "ultrafast",
+      surface: "responses",
+    }),
+    astra,
+  );
 
   assert.deepEqual(
     plan({ provider: "openai", model: "gpt-5.4", serviceTier: "ultrafast", surface: "responses" }),

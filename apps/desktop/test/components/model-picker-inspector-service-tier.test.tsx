@@ -94,8 +94,8 @@ test("OpenAI models show a Service Tier select with Auto/Default/Flex/Fast and r
   expect(options.map((option) => option.textContent)).toEqual(["Auto", "Default", "Flex", "Fast"]);
 });
 
-test("gpt-6-astra additionally offers Ultrafast", async () => {
-  renderInspector(tierModel({ name: "gpt-6-astra" }), { onServiceTierChange: vi.fn() });
+test.each(["gpt-6-astra", "gpt-6.1-sol"])("%s additionally offers Ultrafast", async (name) => {
+  renderInspector(tierModel({ name }), { onServiceTierChange: vi.fn() });
 
   fireEvent.keyDown(serviceTierTrigger(), { key: "ArrowDown" });
   const options = await screen.findAllByRole("option");

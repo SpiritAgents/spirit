@@ -88,6 +88,12 @@ export function isOpenAiGpt6AstraModel(modelId: string): boolean {
   return /^gpt-6-astra(?:$|[-_])/.test(resolved);
 }
 
+/** OpenAI Ultrafast is offered for GPT-6 Astra and GPT-6.1 Sol, including dated or sized suffixes. */
+export function isOpenAiUltrafastModel(modelId: string): boolean {
+  const resolved = resolveOpenAiModelIdForVersionCheck(modelId).trim().toLowerCase();
+  return /^(?:gpt-6-astra|gpt-6\.1-sol)(?:$|[-_])/.test(resolved);
+}
+
 export function openAiGpt56SupportedReasoningEfforts(
   modelId?: string,
 ): readonly OpenAiGpt56ReasoningEffort[] {

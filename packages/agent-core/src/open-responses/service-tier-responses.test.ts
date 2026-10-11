@@ -129,7 +129,7 @@ test("OpenAI responses ultrafast patches body and adds the direct-only header", 
   assert.equal(request.headers.get("OpenAI-Service-Tier"), "ultrafast");
 });
 
-test("OpenAI responses ultrafast on a non-astra model injects nothing", async () => {
+test("OpenAI responses ultrafast on an ineligible model injects nothing", async () => {
   const { result, requests } = await runResponsesRound(openAiConfig("ultrafast", "gpt-5.4"));
 
   assert.equal(result.kind, "success");

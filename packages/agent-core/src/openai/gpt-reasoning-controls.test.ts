@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   isOpenAiGpt56OrLaterModel,
   isOpenAiGpt6AstraModel,
+  isOpenAiUltrafastModel,
   modelSupportsOpenAiGpt56ReasoningControls,
   openAiGpt56SupportedReasoningEfforts,
   resolveModelReasoningMode,
@@ -105,6 +106,22 @@ test("gpt-6-astra excludes none effort across routed openai model ids", () => {
   );
   assert.equal(resolveModelReasoningEffortForContext("none", context), "default");
   assert.equal(resolveOpenAiTransportReasoningEffortForContext("none", context), undefined);
+});
+
+test("ultrafast covers gpt-6-astra and gpt-6.1-sol without changing sol reasoning efforts", () => {
+  for (const modelId of [
+    "gpt-6-astra",
+    "openai/gpt-6-astra-max",
+    "gpt-6.1-sol",
+    "openai/gpt-6.1-sol",
+  ]) {
+    assert.equal(isOpenAiUltrafastModel(modelId), true);
+  }
+  assert.equal(isOpenAiUltrafastModel("gpt-6"), false);
+  assert.equal(isOpenAiUltrafastModel("gpt-6.1"), false);
+  assert.equal(isOpenAiUltrafastModel("openai/gpt-5.6-sol"), false);
+  assert.equal(isOpenAiGpt6AstraModel("gpt-6.1-sol"), false);
+  assert.ok(openAiGpt56SupportedReasoningEfforts("gpt-6.1-sol").includes("none"));
 });
 
 test("modelSupportsReasoningModeControl matches gpt-5.6 routed openai models", () => {

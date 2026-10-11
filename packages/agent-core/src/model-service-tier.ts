@@ -1,4 +1,4 @@
-import { isOpenAiGpt6AstraModel } from "./openai/gpt-reasoning-controls.js";
+import { isOpenAiUltrafastModel } from "./openai/gpt-reasoning-controls.js";
 import type { ModelReasoningProvider, ModelReasoningTransportKind } from "./reasoning-effort.js";
 
 /**
@@ -133,12 +133,12 @@ export function modelSupportsAnthropicNativeFast(
   return context?.provider === "anthropic" && isAnthropicNativeFastModel(context.model);
 }
 
-function withAstraUltrafast(
+function withOpenAiUltrafast(
   context: ModelServiceTierContext | undefined,
   values: readonly ModelServiceTier[],
 ): ModelServiceTier[] {
   const options = [...values];
-  if (isOpenAiGpt6AstraModel(context?.model ?? "")) {
+  if (isOpenAiUltrafastModel(context?.model ?? "")) {
     options.push("ultrafast");
   }
   return options;
@@ -157,7 +157,7 @@ export function modelServiceTierOptions(
   const provider = context?.provider;
   switch (provider) {
     case "openai":
-      return withAstraUltrafast(context, ["auto", "default", "flex", "fast"]);
+      return withOpenAiUltrafast(context, ["auto", "default", "flex", "fast"]);
     case "xai":
       return ["default", "priority"];
     case "google":
@@ -169,7 +169,7 @@ export function modelServiceTierOptions(
     case "vercel-ai-gateway": {
       const upstream = resolveServiceTierUpstreamProvider(context ?? {});
       if (upstream === "openai") {
-        return withAstraUltrafast(context, ["default", "flex", "fast"]);
+        return withOpenAiUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
         return ["default", "flex", "priority"];
@@ -182,7 +182,7 @@ export function modelServiceTierOptions(
     case "openrouter": {
       const upstream = resolveServiceTierUpstreamProvider(context ?? {});
       if (upstream === "openai") {
-        return withAstraUltrafast(context, ["default", "flex", "fast"]);
+        return withOpenAiUltrafast(context, ["default", "flex", "fast"]);
       }
       if (upstream === "google") {
         return ["default", "flex", "priority"];
