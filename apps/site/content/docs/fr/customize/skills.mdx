@@ -1,11 +1,11 @@
 ---
-title: Compétences
-description: Compétences utilisateur, {{product.workspaceDataFolderName}} et
+title: Skills
+description: Skills utilisateur, {{product.workspaceDataFolderName}} et
   .agents, plus create-rule, create-skill, create-hook et create-extension
   intégrés.
 ---
 
-Une compétence est un dossier avec un `SKILL.md`. {{product.name|mdx}} découvre les compétences à partir de trois emplacements :
+Une Skill est un dossier avec un `SKILL.md`. {{product.name|mdx}} découvre les Skills à partir de trois emplacements :
 
 | Portée                           | Chemin                                       |
 | -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
@@ -13,7 +13,7 @@ Une compétence est un dossier avec un `SKILL.md`. {{product.name|mdx}} découvr
 | Espace de travail {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
 | Agents de l'espace de travail    | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-Lorsque vous mentionnez une compétence dans un tour, {{product.name|mdx}} peut joindre son texte complet à ce message utilisateur. Il ne déverse pas chaque compétence dans le prompt système.
+Lorsque vous mentionnez une Skill dans un tour, {{product.name|mdx}} peut joindre son texte complet à ce message utilisateur. Il ne déverse pas chaque Skill dans le prompt système.
 
 ## Frontmatter
 
@@ -21,16 +21,16 @@ Lorsque vous mentionnez une compétence dans un tour, {{product.name|mdx}} peut 
 
 | Champ         | Description                                                                                                                              |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`        | Requis. Nom de la compétence ; doit correspondre au nom du dossier. 1 à 64 caractères, uniquement lettres minuscules, chiffres et tirets |
+| `name`        | Requis. Nom de la Skill ; doit correspondre au nom du dossier. 1 à 64 caractères, uniquement lettres minuscules, chiffres et tirets |
 | `description` | Requis. Description courte                                                                                                               |
 
-## Compétences intégrées
+## Skills intégrées
 
 Celles-ci sont fournies avec {{product.name|mdx}} (ce ne sont pas des fichiers dans votre répertoire de données) :
 
 - `create-rule` — rédigez une [règle](./rules.mdx)
-- `create-skill` — rédigez une [compétence](./skills.mdx)
+- `create-skill` — rédigez une [Skill](./skills.mdx)
 - `create-hook` — rédigez un [hook](./hooks.mdx)
 - `create-extension` — rédigez une [extension](../develop/extensions.mdx)
 
-Gérez les compétences dans **Paramètres → Compétences**. Les pastilles Git commit / push / merge sont de l'interface hôte, pas des compétences groupées. Voir [Desktop](../desktop.mdx). Les skills bundlées dans une [extension](../develop/extensions.mdx) sont disponibles lorsque cette extension est activée. Elles n'apparaissent pas dans cette liste de paramètres.
+Gérez les Skills dans **Paramètres → Skills**. Les pastilles Git commit / push / merge sont de l'interface hôte, pas des Skills groupées. Voir [Desktop](../desktop.mdx). Les Skills bundlées dans une [extension](../develop/extensions.mdx) sont disponibles lorsque cette extension est activée. Elles n'apparaissent pas dans cette liste de paramètres.

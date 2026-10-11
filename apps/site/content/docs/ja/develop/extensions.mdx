@@ -10,7 +10,7 @@ description: npm create ウィザードまたは手動で拡張機能を作成�
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-これは [Skills](../customize/skills.mdx)（`SKILL.md` フォルダー）、[MCP](../customize/mcp.mdx)（外部サーバー）、[Hooks](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットにスタイルを適用するもので、`hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言すれば、同じファイル群を*バンドル*することもできます。
+これは [スキル](../customize/skills.mdx)（`SKILL.md` フォルダー）、[MCP](../customize/mcp.mdx)（外部サーバー）、[Hooks](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットにスタイルを適用するもので、`hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言すれば、同じファイル群を*バンドル*することもできます。
 
 インストール済みの各拡張機能には有効スイッチがあります。無効化またはアンインストールすると貢献は停止します。拡張機能を有効にすることは、宣言された MCP サーバー、エージェントフック、スキル、ルールの実行に同意することを意味します。
 
@@ -224,7 +224,7 @@ my-extension/
 }
 ```
 
-### バンドルする MCP、hooks、skills、rules
+### バンドルする MCP、hooks、スキル、rules
 
 対応する capability が必要です。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` は `true` または `{}` です。パスは規約どおりで、カスタム path はできません。
 
@@ -232,14 +232,14 @@ my-extension/
 | ----------- | ---------- | ---------------------------------------------------------------------------------------------------- |
 | MCP         | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
 | Agent hooks | `hooks`    | パッケージルートの `hooks.json`（agent hooks と同じ schema。`contributes.cli.hooks` ではありません） |
-| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
+| スキル      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
 | Rules       | `rules`    | パッケージルートの `rule.md`                                                                         |
 
 宣言したのにファイルが無い、または不正な場合はインストールに失敗します。宣言されていないファイルは無視され、読み込まれません。
 
 相対 `command` / `cwd` は拡張機能ルート基準です。MCP stdio で `cwd` を省略すると拡張機能ルートになります。
 
-拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | Hooks | Skills | Rules** には出ません。名前の衝突は workspace > user > extension です。
+拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | Hooks | スキル | Rules** には出ません。名前の衝突は workspace > user > extension です。
 
 `tools/call` 中、クライアントが `experimental["spirit/ui"]` を宣言していれば、同梱 MCP は JSON-RPC の `spirit/ui/open`（`{ viewId, params }`）を送れます。{{product.name|mdx}} は同じ拡張の `contributes.desktop.views` だけを開きます。ユーザー / ワークスペース MCP は拒否されます。Dialog はその `tools/call` をブロックし、`close(result)` は同じリクエストに戻ります。ウィンドウのないホストは `{ "kind": "unavailable", "reason": "host-has-no-ui" }` を返し、ツール側でフォールバックします。
 

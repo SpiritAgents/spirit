@@ -136,7 +136,7 @@
     "hooksFailClosed": "Fallar cerrado en errores",
     "generateHookTooltip": "Ir al área de chat principal, preconfigurar /create-hook y describir requisitos en lenguaje natural",
     "generateHook": "Generar Hooks",
-    "skills": "Habilidades",
+    "skills": "Skills",
     "rules": "Reglas",
     "dreams": "Dreams",
     "general": "General",
@@ -318,7 +318,7 @@
     "content": "Contenido",
     "skillNamePlaceholder": "ej. code-review",
     "skillDescPlaceholder": "Describe brevemente cuándo usarlo y qué hace",
-    "skillContentPlaceholder": "Escribe el cuerpo del skill: pasos, ejemplos, casos límite y referencias a rutas relativas",
+    "skillContentPlaceholder": "Escribe el cuerpo del Skill: pasos, ejemplos, casos límite y referencias a rutas relativas",
     "settingsPage": "Página de configuración",
     "addMcp": "Añadir MCP",
     "noMcpsConfigured": "No hay servidores MCP configurados",
@@ -1222,8 +1222,8 @@
   },
   "error": {
     "runtimeBusy": "Ya se está procesando una respuesta o aprobación. Por favor, espera.",
-    "runtimeBusySkill": "Hay una respuesta o aprobación en curso. Intenta añadir la habilidad más tarde.",
-    "runtimeBusyDeleteSkill": "Hay una respuesta o aprobación en curso. Intenta eliminar la habilidad más tarde.",
+    "runtimeBusySkill": "Hay una respuesta o aprobación en curso. Intenta añadir la Skill más tarde.",
+    "runtimeBusyDeleteSkill": "Hay una respuesta o aprobación en curso. Intenta eliminar la Skill más tarde.",
     "runtimeBusyRule": "Hay una respuesta o aprobación en curso. Intenta añadir la regla más tarde.",
     "runtimeBusyDeleteRule": "Hay una respuesta o aprobación en curso. Intenta eliminar la regla más tarde.",
     "workspaceRulesUnavailable": "Las reglas del espacio de trabajo no están disponibles sin un enlace al espacio de trabajo.",
@@ -1260,7 +1260,7 @@
     "extensionZipRequired": "El contenido ZIP de la extensión no puede estar vacío.",
     "extensionIdRequired": "El ID de la extensión no puede estar vacío.",
     "secretKeyRequired": "La clave secreta no puede estar vacía.",
-    "skillNameRequired": "El nombre del skill no puede estar vacío.",
+    "skillNameRequired": "El nombre del Skill no puede estar vacío.",
     "messageRequired": "El mensaje no puede estar vacío.",
     "readonlySessionCompact": "La sesión de depuración actual es de solo lectura y no puede compactar el historial.",
     "pendingApprovalCompact": "Actualmente esperando aprobación o cuestionario; no se puede compactar el historial.",
@@ -1593,7 +1593,7 @@
     "plan": "Planificar sin editar código: redactar planes de implementación y guiarte para empezar a implementar cuando estés listo",
     "ask": "Ayuda de solo lectura: explicar, navegar y buscar en la base de código",
     "debug": "Investigación sistemática de errores: jerarquizar hipótesis, añadir puntos de registro, iterar la causa raíz a partir de los registros",
-    "activateSkillPrompt": "Por favor, maneja la tarea actual según la habilidad \"{{skillName}}\"."
+    "activateSkillPrompt": "Por favor, maneja la tarea actual según la Skill \"{{skillName}}\"."
   },
   "workspaceTrust": {
     "title": "¿Confiar en las capacidades del espacio de trabajo?",
