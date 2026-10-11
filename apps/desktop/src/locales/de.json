@@ -136,7 +136,7 @@
     "hooksFailClosed": "Bei Fehlern blockieren",
     "generateHookTooltip": "Gehe zum Hauptchatbereich, füge /create-hook ein und beschreibe die Anforderungen in natürlicher Sprache",
     "generateHook": "Hooks generieren",
-    "skills": "Fähigkeiten",
+    "skills": "Skills",
     "rules": "Regeln",
     "dreams": "Dreams",
     "general": "Allgemein",
@@ -1222,8 +1222,8 @@
   },
   "error": {
     "runtimeBusy": "Eine Antwort oder Genehmigung wird bereits verarbeitet. Bitte warten.",
-    "runtimeBusySkill": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, die Fähigkeit später hinzuzufügen.",
-    "runtimeBusyDeleteSkill": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, die Fähigkeit später zu löschen.",
+    "runtimeBusySkill": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, den Skill später hinzuzufügen.",
+    "runtimeBusyDeleteSkill": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, den Skill später zu löschen.",
     "runtimeBusyRule": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, später eine Regel hinzuzufügen.",
     "runtimeBusyDeleteRule": "Eine Antwort oder Genehmigung läuft gerade. Bitte versuche, die Regel später zu löschen.",
     "workspaceRulesUnavailable": "Arbeitsbereichsregeln sind ohne eine Arbeitsbereichsbindung nicht verfügbar.",
@@ -1593,7 +1593,7 @@
     "plan": "Planen ohne Code zu bearbeiten: Implementierungspläne entwerfen und Sie anleiten, mit der Implementierung zu beginnen, wenn Sie bereit sind",
     "ask": "Nur-Lesen-Hilfe: Erklären, Durchsuchen und Suchen der Codebasis",
     "debug": "Systematische Fehleruntersuchung: Hypothesen bewerten, Log-Punkte hinzufügen, Ursache aus Logs iterieren",
-    "activateSkillPrompt": "Bitte bearbeiten Sie die aktuelle Aufgabe gemäß der Fähigkeit \"{{skillName}}\"."
+    "activateSkillPrompt": "Bitte bearbeiten Sie die aktuelle Aufgabe gemäß dem Skill \"{{skillName}}\"."
   },
   "workspaceTrust": {
     "title": "Workspace-Funktionen vertrauen?",

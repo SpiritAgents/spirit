@@ -136,7 +136,7 @@
     "hooksFailClosed": "Falhar fechado em erros",
     "generateHookTooltip": "Ir para a área de chat principal, pré-preencha /create-hook e descreva os requisitos em linguagem natural",
     "generateHook": "Gerar Hooks",
-    "skills": "Habilidades",
+    "skills": "Skills",
     "rules": "Regras",
     "dreams": "Dreams",
     "general": "Geral",
@@ -318,7 +318,7 @@
     "content": "Conteúdo",
     "skillNamePlaceholder": "ex: code-review",
     "skillDescPlaceholder": "Descreva brevemente quando usar e o que faz",
-    "skillContentPlaceholder": "Escreva o corpo da skill: passos, exemplos, casos de borda e referências de caminho relativo",
+    "skillContentPlaceholder": "Escreva o corpo da Skill: passos, exemplos, casos de borda e referências de caminho relativo",
     "settingsPage": "Página de Configurações",
     "addMcp": "Adicionar MCP",
     "noMcpsConfigured": "Nenhum servidor MCP configurado",
@@ -1260,7 +1260,7 @@
     "extensionZipRequired": "O conteúdo ZIP da extensão não pode estar vazio.",
     "extensionIdRequired": "O ID da extensão não pode estar vazio.",
     "secretKeyRequired": "A chave secreta não pode estar vazia.",
-    "skillNameRequired": "O nome da skill não pode estar vazio.",
+    "skillNameRequired": "O nome da Skill não pode estar vazio.",
     "messageRequired": "A mensagem não pode estar vazia.",
     "readonlySessionCompact": "A sessão de debug atual é somente leitura e não pode compactar o histórico.",
     "pendingApprovalCompact": "Aguardando aprovação ou questionário; não é possível compactar o histórico.",
@@ -1593,7 +1593,7 @@
     "plan": "Planejar sem editar código: elaborar planos de implementação e guiá-lo para começar a implementar quando estiver pronto",
     "ask": "Ajuda somente leitura: explicar, navegar e pesquisar a base de código",
     "debug": "Investigação sistemática de bugs: classificar hipóteses, adicionar pontos de log, iterar causa raiz a partir de logs",
-    "activateSkillPrompt": "Por favor, execute a tarefa atual de acordo com a habilidade \"{{skillName}}\"."
+    "activateSkillPrompt": "Por favor, execute a tarefa atual de acordo com a Skill \"{{skillName}}\"."
   },
   "workspaceTrust": {
     "title": "Confiar nas capacidades do espaço de trabalho?",

@@ -13,7 +13,7 @@ Uma extensão é uma pasta com um `{{product.workspaceDataFolderName}}/extension
 
 Isso é diferente de [Skills](../customize/skills.mdx) (pastas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) e [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` estiliza slots da TUI da CLI. Não é `hooks.json`. Uma extensão ainda pode _empacotar_ esses mesmos arquivos quando declara `mcp`, `hooks`, `skills` ou `rules`.
 
-Cada extensão instalada tem um interruptor de ativação. Desative ou desinstale para interromper suas contribuições. Ligar a extensão é consentimento para executar os servidores MCP, hooks de agente, skills e rules que ela declarou.
+Cada extensão instalada tem um interruptor de ativação. Desative ou desinstale para interromper suas contribuições. Ligar a extensão é consentimento para executar os servidores MCP, hooks de agente, Skills e rules que ela declarou.
 
 ## Criar uma extensão
 
@@ -225,7 +225,7 @@ Papéis de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success
 }
 ```
 
-### MCP, hooks, skills e rules empacotados
+### MCP, hooks, Skills e rules empacotados
 
 Exigem a capability correspondente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` e `contributes.rules` são `true` ou `{}`. Os caminhos são convencionais; caminhos personalizados não são permitidos.
 

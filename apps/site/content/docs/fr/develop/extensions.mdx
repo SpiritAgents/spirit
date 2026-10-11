@@ -13,7 +13,7 @@ Une extension est un dossier contenant un `{{product.workspaceDataFolderName}}/e
 
 Cela diffère des [Skills](../customize/skills.mdx) (dossiers `SKILL.md`), de [MCP](../customize/mcp.mdx) (serveurs externes) et des [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` stylise les emplacements de la TUI CLI. Ce n'est pas `hooks.json`. Une extension peut néanmoins _regrouper_ ces mêmes fichiers lorsqu'elle déclare `mcp`, `hooks`, `skills` ou `rules`.
 
-Chaque extension installée possède un interrupteur d'activation. Désactivez-la ou désinstallez-la pour arrêter ses contributions. Activer l'extension vaut consentement à exécuter les serveurs MCP, hooks d'agent, skills et rules qu'elle déclare.
+Chaque extension installée possède un interrupteur d'activation. Désactivez-la ou désinstallez-la pour arrêter ses contributions. Activer l'extension vaut consentement à exécuter les serveurs MCP, hooks d'agent, Skills et rules qu'elle déclare.
 
 ## Créer une extension
 
@@ -225,7 +225,7 @@ Rôles de jeton : `default`, `primary`, `secondary`, `muted`, `accent`, `success
 }
 ```
 
-### MCP, hooks, skills et rules bundlés
+### MCP, hooks, Skills et rules bundlés
 
 Exigent la capability correspondante. `contributes.mcp`, `contributes.hooks`, `contributes.skills` et `contributes.rules` valent `true` ou `{}`. Les chemins sont conventionnels ; les chemins personnalisés ne sont pas autorisés.
 

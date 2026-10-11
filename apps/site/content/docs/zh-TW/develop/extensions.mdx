@@ -10,9 +10,9 @@ description: 用 npm create 精靈或手動建立擴充功能，並搭建你自�
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-這與 [Skills](../customize/skills.mdx)（`SKILL.md` 資料夾）、[MCP](../customize/mcp.mdx)（外部伺服器）、[Hooks](../customize/hooks.mdx)（`hooks.json` 腳本）不同。`contributes.cli.hooks` 用來為 CLI TUI 插槽加樣式，不是 `hooks.json`。擴充功能也可以在宣告 `mcp`、`hooks`、`skills` 或 `rules` 後，用同樣的檔案規範捆綁這些資源。
+這與 [技能](../customize/skills.mdx)（`SKILL.md` 資料夾）、[MCP](../customize/mcp.mdx)（外部伺服器）、[Hooks](../customize/hooks.mdx)（`hooks.json` 腳本）不同。`contributes.cli.hooks` 用來為 CLI TUI 插槽加樣式，不是 `hooks.json`。擴充功能也可以在宣告 `mcp`、`hooks`、`skills` 或 `rules` 後，用同樣的檔案規範捆綁這些資源。
 
-每個已安裝擴充功能都有啟用開關。停用或解除安裝後即停止貢獻。打開開關即同意執行它宣告的 MCP、agent hooks、skills 和 rules。
+每個已安裝擴充功能都有啟用開關。停用或解除安裝後即停止貢獻。打開開關即同意執行它宣告的 MCP、agent hooks、技能和 rules。
 
 ## 建立擴充功能
 
@@ -224,7 +224,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 }
 ```
 
-### 捆綁的 MCP、Hooks、Skills 與 Rules
+### 捆綁的 MCP、Hooks、技能與 Rules
 
 須與對應能力成對。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路徑是約定路徑，不允許自訂 path。
 
@@ -232,14 +232,14 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 | ----------- | -------- | --------------------------------------------------------------------------------- |
 | MCP         | `mcp`    | 套件根目錄 `mcp.json`（與使用者/工作區 MCP 同 schema）                            |
 | Agent hooks | `hooks`  | 套件根目錄 `hooks.json`（與 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
-| Skills      | `skills` | `skills/<name>/SKILL.md`                                                          |
+| 技能      | `skills` | `skills/<name>/SKILL.md`                                                          |
 | Rules       | `rules`  | 套件根目錄 `rule.md`                                                              |
 
 已宣告但檔案缺失或非法則安裝失敗。套件內有檔案但未宣告則忽略，永不載入。
 
 這些檔案裡的相對 `command` 與 `cwd` 相對擴充功能根目錄解析。MCP stdio 省略 `cwd` 時預設為擴充功能根目錄。PATH 上的裸命令不變。
 
-擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | Skills | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
+擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | Hooks | 技能 | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
 
 在 `tools/call` 期間，若客戶端宣告了 `experimental["spirit/ui"]`，捆綁 MCP 可發出 JSON-RPC 請求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只開啟同一擴充功能在 `contributes.desktop.views` 宣告的 View；使用者/工作區 MCP 一律拒絕。Dialog 會擋住這次 `tools/call`，`close(result)` 的結果回到同一條請求。無視窗宿主回傳 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具應自行降級。
 

@@ -1,11 +1,11 @@
 ---
 title: Skills
-description: Habilidades de usuario, {{product.workspaceDataFolderName}} y
+description: Skills de usuario, {{product.workspaceDataFolderName}} y
   .agents, además de create-rule, create-skill, create-hook y create-extension
   integrados.
 ---
 
-Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre habilidades desde tres lugares:
+Una Skill es una carpeta con un `SKILL.md`. {{product.name|mdx}} descubre Skills desde tres lugares:
 
 | Alcance                         | Ruta                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
@@ -21,10 +21,10 @@ Cuando mencionas una Skill en un turno, {{product.name|mdx}} puede adjuntar su t
 
 | Campo         | Descripción                                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`        | Obligatorio. Nombre de la habilidad; debe coincidir con el nombre de la carpeta. 1–64 caracteres, solo letras minúsculas, dígitos y guiones |
+| `name`        | Obligatorio. Nombre de la Skill; debe coincidir con el nombre de la carpeta. 1–64 caracteres, solo letras minúsculas, dígitos y guiones |
 | `description` | Obligatorio. Descripción breve                                                                                                              |
 
-## Habilidades integradas
+## Skills integradas
 
 Estas vienen con {{product.name|mdx}} (no son archivos en tu directorio de datos):
 
@@ -33,4 +33,4 @@ Estas vienen con {{product.name|mdx}} (no son archivos en tu directorio de datos
 - `create-hook` — redacta un [hook](./hooks.mdx)
 - `create-extension` — redacta una [extensión](../develop/extensions.mdx)
 
-Gestiona las habilidades en **Ajustes → Skills**. Los chips de git commit / push / merge son de la interfaz del host, no Skills incluidas. Consulta [Desktop](../desktop.mdx). Las skills empaquetadas en una [extensión](../develop/extensions.mdx) están disponibles cuando esa extensión está habilitada. No aparecen en esta lista de ajustes.
+Gestiona las Skills en **Ajustes → Skills**. Los chips de git commit / push / merge son de la interfaz del host, no Skills incluidas. Consulta [Desktop](../desktop.mdx). Las Skills empaquetadas en una [extensión](../develop/extensions.mdx) están disponibles cuando esa extensión está habilitada. No aparecen en esta lista de ajustes.
