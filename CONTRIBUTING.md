@@ -1,5 +1,7 @@
 # Contributing to Spirit
 
+[简体中文](docs/CONTRIBUTING_zh-CN.md) · [繁體中文](docs/CONTRIBUTING_zh-TW.md) · [日本語](docs/CONTRIBUTING_ja.md) · [한국어](docs/CONTRIBUTING_ko.md) · [Deutsch](docs/CONTRIBUTING_de.md) · [Français](docs/CONTRIBUTING_fr.md) · [Español](docs/CONTRIBUTING_es.md) · [Português do Brasil](docs/CONTRIBUTING_pt-BR.md) · [Русский](docs/CONTRIBUTING_ru.md)
+
 Thank you for your interest in Spirit! This project is an open-source, tool-using coding agent monorepo — Desktop (Electron), CLI (Rust), a shared daemon (`packages/server`), and the core runtime (`packages/agent-core`). Whether you are fixing docs, squashing bugs, or building new features, we welcome your help. If you are unsure where to start, feel free to open an Issue and say hello.
 
 ## Before you contribute
