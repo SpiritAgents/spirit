@@ -120,13 +120,13 @@ test("OpenAI responses without a tier sends no service_tier key", async () => {
   assert.equal("service_tier" in lastRequest(requests).body, false);
 });
 
-test("OpenAI responses ultrafast patches body and adds the direct-only header", async () => {
+test("OpenAI responses ultrafast patches body service_tier and sends no service-tier header", async () => {
   const { result, requests } = await runResponsesRound(openAiConfig("ultrafast", "gpt-6-astra"));
 
   assert.equal(result.kind, "success");
   const request = lastRequest(requests);
   assert.equal(request.body.service_tier, "ultrafast");
-  assert.equal(request.headers.get("OpenAI-Service-Tier"), "ultrafast");
+  assert.equal(request.headers.get("OpenAI-Service-Tier"), null);
 });
 
 test("OpenAI responses ultrafast on an ineligible model injects nothing", async () => {
@@ -298,7 +298,7 @@ test("Vercel v3 responses path astra ultrafast uses the openai namespace only", 
   const namespaces = providerOptions as Record<string, Record<string, unknown>>;
   assert.equal(namespaces.openai?.serviceTier, "ultrafast");
   assert.equal(namespaces.gateway?.serviceTier, undefined);
-  // Ultrafast is not patched into the body or headers on aggregator routes.
+  // Ultrafast is forwarded through provider options, not a top-level body field or header.
   assert.equal(lastRequest(requests).body.service_tier, undefined);
   assert.equal(lastRequest(requests).headers.get("OpenAI-Service-Tier"), null);
 });
@@ -337,10 +337,10 @@ test("Vercel generic responses surface resolves a top-level body patch", () => {
   assert.deepEqual(plan, { bodyServiceTier: "fast" });
 });
 
-test("createServiceTierResponsesFetch patches body service_tier and merges headers", async () => {
+test("createServiceTierResponsesFetch patches body service_tier and keeps existing headers", async () => {
   let captured: CapturedRequest | undefined;
   const fetchFn = createServiceTierResponsesFetch(
-    { bodyServiceTier: "ultrafast", headers: { "OpenAI-Service-Tier": "ultrafast" } },
+    { bodyServiceTier: "ultrafast" },
     async (input, init) => {
       captured = {
         url: String(input),
@@ -360,7 +360,7 @@ test("createServiceTierResponsesFetch patches body service_tier and merges heade
   assert.ok(captured);
   assert.equal(captured.body.service_tier, "ultrafast");
   assert.equal(captured.body.model, "gpt-6-astra");
-  assert.equal(captured.headers.get("OpenAI-Service-Tier"), "ultrafast");
+  assert.equal(captured.headers.get("OpenAI-Service-Tier"), null);
   assert.equal(captured.headers.get("X-Existing"), "keep");
   assert.equal(captured.headers.get("Content-Type"), "application/json");
 });

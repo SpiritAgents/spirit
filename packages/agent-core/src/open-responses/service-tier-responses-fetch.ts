@@ -5,16 +5,15 @@ import { isJsonObject } from "../tool-agent.js";
 type FetchFn = typeof fetch;
 
 /**
- * Applies the parts of a resolved service tier plan that AI SDK provider options cannot express:
- * patches the serialized top-level body `service_tier` and adds plan headers (direct OpenAI
- * Ultrafast's user-specified `OpenAI-Service-Tier` header) after SDK serialization, preserving
- * the remaining body, headers, signal, and streaming behavior.
+ * Applies the part of a resolved service tier plan that AI SDK provider options cannot express:
+ * patches the serialized top-level body `service_tier` after SDK serialization, preserving the
+ * remaining body, headers, signal, and streaming behavior.
  */
 export function createServiceTierResponsesFetch(
   plan: ServiceTierRequestPlan,
   baseFetch: FetchFn,
 ): FetchFn {
-  if (plan.bodyServiceTier === undefined && plan.headers === undefined) {
+  if (plan.bodyServiceTier === undefined) {
     return baseFetch;
   }
 
@@ -40,14 +39,6 @@ function patchServiceTierRequestInit(
     } catch {
       // Non-JSON bodies (e.g. multipart uploads) are left untouched.
     }
-  }
-
-  if (plan.headers !== undefined) {
-    const headers = new Headers(next.headers);
-    for (const [name, value] of Object.entries(plan.headers)) {
-      headers.set(name, value);
-    }
-    next = { ...next, headers };
   }
 
   return next;

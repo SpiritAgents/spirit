@@ -45,12 +45,11 @@ test("openai responses maps auto/default/flex/fast to SDK provider options", () 
     });
     assert.deepEqual(result.providerOptions, { openai: { serviceTier: tier } });
     assert.equal(result.bodyServiceTier, undefined);
-    assert.equal(result.headers, undefined);
     assert.equal(result.flexWaiting, tier === "flex" ? true : undefined);
   }
 });
 
-test("openai responses ultrafast uses the official SDK enum plus the direct-only header", () => {
+test("openai responses ultrafast uses the official SDK serviceTier enum", () => {
   const astra = plan({
     provider: "openai",
     model: "gpt-6-astra",
@@ -59,7 +58,6 @@ test("openai responses ultrafast uses the official SDK enum plus the direct-only
   });
   assert.deepEqual(astra, {
     providerOptions: { openai: { serviceTier: "ultrafast" } },
-    headers: { "OpenAI-Service-Tier": "ultrafast" },
   });
   assert.deepEqual(
     plan({
@@ -313,17 +311,6 @@ test("vercel responses surface patches top-level body service_tier", () => {
       surface: "responses",
     }),
     { bodyServiceTier: "ultrafast" },
-  );
-  // Ultrafast is never given the user-specified direct-OpenAI header on aggregators.
-  assert.equal(
-    plan({
-      provider: "vercel-ai-gateway",
-      model: "openai/gpt-6-astra",
-      serviceTier: "ultrafast",
-      upstreamProvider: "openai",
-      surface: "responses",
-    }).headers,
-    undefined,
   );
 });
 
