@@ -14,7 +14,7 @@ TypeScript core runtime for [Spirit](https://github.com/SpiritAgents/spirit) —
 
 `service-tier-request.ts` maps the canonical per-model `serviceTier` to each transport's native fields via `resolveServiceTierRequestPlan` (per-surface: chat completions, Open Responses, Gateway v3, Anthropic Messages). Unset tiers and routes outside the capability matrix send nothing, preserving the previous request byte-for-byte; the configured value is recorded on the request trace.
 
-- Direct OpenAI Responses: `auto`/`default`/`flex`/`fast` map to the SDK `openai.serviceTier` provider option; Ultrafast (astra models only) sends the body field plus the `OpenAI-Service-Tier` header — the header is never sent through aggregators.
+- Direct OpenAI Responses: `auto`/`default`/`flex`/`fast` map to the SDK `openai.serviceTier` provider option; Ultrafast (GPT-6 Astra and GPT-6.1 Sol) sends the body field plus the `OpenAI-Service-Tier` header — the header is never sent through aggregators.
 - Anthropic: `fast` maps to native `speed: "fast"` and the `fast-mode-2026-02-01` beta header (added by the SDK); off/unset sends nothing, never `speed: "standard"`. Aggregators never inject `speed`/beta.
 - Google: `default`/`flex`/`priority` map to the `google.serviceTier` provider option (serialized as a top-level body field). Vertex: Flex and Priority map to the `vertex.sharedRequestType` / `requestType: "shared"` provider options (serialized as `X-Vertex-AI-LLM-*` request headers), gated to the `global` endpoint.
 - Vercel AI Gateway: on the v3 gateway surface, supported tiers map to the `gateway.serviceTier` unified enum (Ultrafast forwards through the `openai` namespace instead); on the generic Responses route they map to a top-level body `service_tier`.

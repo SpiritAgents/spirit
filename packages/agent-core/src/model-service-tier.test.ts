@@ -158,7 +158,7 @@ test("anthropic direct exposes no dropdown; native fast only for claude opus 4.8
   );
 });
 
-test("ultrafast requires gpt-6-astra behind an openai-capable route", () => {
+test("ultrafast requires gpt-6-astra or gpt-6.1-sol behind an openai-capable route", () => {
   assert.deepEqual(optionValues({ provider: "openai", model: "gpt-6-astra" }), [
     "auto",
     "default",
@@ -166,8 +166,21 @@ test("ultrafast requires gpt-6-astra behind an openai-capable route", () => {
     "fast",
     "ultrafast",
   ]);
-  // Aggregator prefixes are normalized before the astra check.
+  assert.deepEqual(optionValues({ provider: "openai", model: "gpt-6.1-sol" }), [
+    "auto",
+    "default",
+    "flex",
+    "fast",
+    "ultrafast",
+  ]);
+  // Aggregator prefixes are normalized before the ultrafast check.
   assert.deepEqual(optionValues({ provider: "openrouter", model: "openai/gpt-6-astra-max" }), [
+    "default",
+    "flex",
+    "fast",
+    "ultrafast",
+  ]);
+  assert.deepEqual(optionValues({ provider: "openrouter", model: "openai/gpt-6.1-sol" }), [
     "default",
     "flex",
     "fast",
@@ -181,8 +194,17 @@ test("ultrafast requires gpt-6-astra behind an openai-capable route", () => {
     }),
     ["default", "flex", "fast", "ultrafast"],
   );
-  // Non-astra GPT models and non-openai upstreams never see ultrafast.
+  assert.deepEqual(
+    optionValues({
+      provider: "vercel-ai-gateway",
+      model: "openai/gpt-6.1-sol",
+      upstreamProvider: "openai",
+    }),
+    ["default", "flex", "fast", "ultrafast"],
+  );
+  // Other GPT models and non-openai upstreams never see ultrafast.
   assert.ok(!optionValues({ provider: "openai", model: "gpt-6" }).includes("ultrafast"));
+  assert.ok(!optionValues({ provider: "openai", model: "gpt-6.1" }).includes("ultrafast"));
   assert.ok(
     !optionValues({ provider: "openrouter", model: "google/gemini-3.1-pro" }).includes("ultrafast"),
   );

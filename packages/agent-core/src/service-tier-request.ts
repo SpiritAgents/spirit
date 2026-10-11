@@ -6,7 +6,7 @@ import {
   resolveServiceTierUpstreamProvider,
   type ServiceTierUpstreamProvider,
 } from "./model-service-tier.js";
-import { isOpenAiGpt6AstraModel } from "./openai/gpt-reasoning-controls.js";
+import { isOpenAiUltrafastModel } from "./openai/gpt-reasoning-controls.js";
 
 /**
  * Wire surface a language-model request is serialized for. `gateway-v3` is the Vercel AI Gateway
@@ -105,8 +105,8 @@ function withFlexWaiting(
   return tier === "flex" ? { ...plan, flexWaiting: true } : plan;
 }
 
-function isAstraModel(model: string | undefined): boolean {
-  return isOpenAiGpt6AstraModel(model ?? "");
+function isUltrafastModel(model: string | undefined): boolean {
+  return isOpenAiUltrafastModel(model ?? "");
 }
 
 function openAiDirectServiceTierPlan(
@@ -119,7 +119,7 @@ function openAiDirectServiceTierPlan(
   }
 
   if (tier === "ultrafast") {
-    if (!isAstraModel(context.model)) {
+    if (!isUltrafastModel(context.model)) {
       return {};
     }
     // @ai-sdk/openai >= 4.0.58 accepts "ultrafast" in its official serviceTier enum, so the
@@ -210,7 +210,7 @@ function vercelUpstreamServiceTierValue(
   switch (upstream) {
     case "openai":
       if (tier === "ultrafast") {
-        return isAstraModel(model) ? "ultrafast" : undefined;
+        return isUltrafastModel(model) ? "ultrafast" : undefined;
       }
       // OpenAI upstreams natively speak Fast; the gateway forwards it.
       return tier === "flex" || tier === "fast" ? tier : undefined;
@@ -274,7 +274,7 @@ function openRouterServiceTierPlan(
   switch (upstream) {
     case "openai":
       if (tier === "ultrafast") {
-        return isAstraModel(context.model) ? { bodyServiceTier: "ultrafast" } : {};
+        return isUltrafastModel(context.model) ? { bodyServiceTier: "ultrafast" } : {};
       }
       return tier === "default" || tier === "flex" || tier === "fast"
         ? withFlexWaiting({ bodyServiceTier: tier }, tier)
