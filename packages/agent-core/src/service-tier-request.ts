@@ -122,11 +122,11 @@ function openAiDirectServiceTierPlan(
     if (!isAstraModel(context.model)) {
       return {};
     }
-    // The installed @ai-sdk/openai serviceTier enum does not accept "ultrafast", so the value is
-    // patched into the serialized body instead of SDK provider options. The extra header is
-    // user-specified behavior for direct OpenAI only and is never sent to aggregators.
+    // @ai-sdk/openai >= 4.0.58 accepts "ultrafast" in its official serviceTier enum, so the
+    // value rides the SDK provider option. The extra header is user-specified behavior for
+    // direct OpenAI only and is never sent to aggregators.
     return {
-      bodyServiceTier: "ultrafast",
+      providerOptions: { openai: { serviceTier: "ultrafast" } },
       headers: { [OPENAI_ULTRAFAST_HEADER]: "ultrafast" },
     };
   }
