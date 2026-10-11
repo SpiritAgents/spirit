@@ -165,7 +165,6 @@ test("OpenRouter chat allows ultrafast for openai-upstream astra models", async 
   assert.equal(result.kind, "success");
   const body = lastBody(requests);
   assert.equal(body.service_tier, "ultrafast");
-  // The direct-OpenAI-only header is never sent to aggregators.
   assert.equal(requests.at(-1)?.headers.get("OpenAI-Service-Tier"), null);
 });
 

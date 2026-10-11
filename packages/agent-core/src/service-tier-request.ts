@@ -38,13 +38,9 @@ export interface ServiceTierRequestPlan {
   providerOptions?: Record<string, JsonObject>;
   /** Top-level body `service_tier` patch for surfaces without SDK support. */
   bodyServiceTier?: string;
-  /** Extra request headers (direct OpenAI Ultrafast only; never on aggregators). */
-  headers?: Record<string, string>;
   /** True when the canonical tier is `flex`; selects the extended-wait dispatcher. */
   flexWaiting?: boolean;
 }
-
-const OPENAI_ULTRAFAST_HEADER = "OpenAI-Service-Tier";
 
 /**
  * Maps the canonical per-model `serviceTier` preference to per-route request fields. Routes and
@@ -123,12 +119,8 @@ function openAiDirectServiceTierPlan(
       return {};
     }
     // @ai-sdk/openai >= 4.0.58 accepts "ultrafast" in its official serviceTier enum, so the
-    // value rides the SDK provider option. The extra header is user-specified behavior for
-    // direct OpenAI only and is never sent to aggregators.
-    return {
-      providerOptions: { openai: { serviceTier: "ultrafast" } },
-      headers: { [OPENAI_ULTRAFAST_HEADER]: "ultrafast" },
-    };
+    // value rides the SDK provider option and is serialized as body service_tier.
+    return { providerOptions: { openai: { serviceTier: "ultrafast" } } };
   }
 
   if (tier === "auto" || tier === "default" || tier === "flex" || tier === "fast") {
