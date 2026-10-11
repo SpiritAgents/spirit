@@ -2,7 +2,10 @@ import type { LlmTransportConfig } from "../../provider-config.js";
 import { transportKindForConfig } from "../../provider-config.js";
 import type { OpenAiTransportConfig } from "../../openai/openai-compat.js";
 
-export function shouldUseMoonshotFormulaWebSearch(config: LlmTransportConfig): boolean {
+export function shouldUseMoonshotFormulaWebSearch(config: LlmTransportConfig | undefined): boolean {
+  if (!config) {
+    return false;
+  }
   if (config.webSearchEnabled === false) {
     return false;
   }
