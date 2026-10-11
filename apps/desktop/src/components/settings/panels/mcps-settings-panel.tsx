@@ -242,7 +242,7 @@ export function McpsSettingsPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <h1 className={DESKTOP_PAGE_TITLE_CLASS}>MCPs</h1>
+          <h1 className={DESKTOP_PAGE_TITLE_CLASS}>{t("settings.mcps")}</h1>
           {workspaceBindingDisabled ? (
             <p className="text-xs text-muted-foreground">{t("app.noWorkspaceBindingHint")}</p>
           ) : null}

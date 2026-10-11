@@ -239,7 +239,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 这些文件里的相对 `command` 与 `cwd` 相对扩展根解析。MCP stdio 省略 `cwd` 时默认扩展根。PATH 上的裸命令不变。
 
-扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCPs | 挂钩 | 技能 | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
+扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCP | 挂钩 | 技能 | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
 
 在 `tools/call` 期间，捆绑 MCP 可以在客户端声明了 `experimental["spirit/ui"]` 时发出 JSON-RPC 请求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只打开同一扩展在 `contributes.desktop.views` 里声明的 View；用户/工作区 MCP 一律拒绝。Dialog 会挡住这次 `tools/call`，`close(result)` 的结果回到同一条请求。无窗口宿主返回 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具应自行降级。
 
