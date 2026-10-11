@@ -12,7 +12,6 @@ import { createDeepInfra } from "@ai-sdk/deepinfra";
 import { createGoogle, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { createMoonshotAI, type MoonshotAILanguageModelOptions } from "@ai-sdk/moonshotai";
-import { createXai } from "@ai-sdk/xai";
 import { createGateway } from "@ai-sdk/gateway";
 import {
   createOpenAICompatible,
@@ -173,7 +172,6 @@ import {
 } from "./json-schema.js";
 
 const DEFAULT_OPENAI_COMPATIBLE_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_XAI_BASE_URL = "https://api.x.ai/v1";
 const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_DEEPINFRA_BASE_URL = "https://api.deepinfra.com/v1";
 const STREAMING_TOOL_CALL_PLACEHOLDER_PREFIX = "stream-tool-call-";
@@ -763,7 +761,12 @@ function createAiSdkLanguageModel(config: OpenAiTransportConfig): any {
   }
 
   if (isXaiOfficialAiSdkProvider(config)) {
-    return createAiSdkXaiProvider(config).chat(config.model);
+    // @ai-sdk/xai 5 removed the Chat Completions implementation entirely (xAI deprecated the
+    // endpoint); the supported xAI surface is Responses, selected via transportKind
+    // open-responses. Throwing here mirrors the OpenAI-official branch below.
+    throw new Error(
+      "xAI Chat Completions is no longer supported; use transportKind open-responses.",
+    );
   }
 
   if (isAlibabaOfficialAiSdkProvider(config)) {
@@ -920,14 +923,6 @@ function createAiSdkMoonshotProvider(config: OpenAiTransportConfig) {
     apiKey: config.apiKey,
     baseURL: normalizeMoonshotApiBase(config.baseUrl),
     fetch: fetchWrapper,
-  });
-}
-
-function createAiSdkXaiProvider(config: OpenAiTransportConfig) {
-  return createXai({
-    apiKey: config.apiKey,
-    baseURL: config.baseUrl ?? DEFAULT_XAI_BASE_URL,
-    fetch: getLlmFetch(),
   });
 }
 

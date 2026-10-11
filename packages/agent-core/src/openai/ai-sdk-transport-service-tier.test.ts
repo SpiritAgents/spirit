@@ -169,36 +169,6 @@ test("OpenRouter chat allows ultrafast for openai-upstream astra models", async 
   assert.equal(requests.at(-1)?.headers.get("OpenAI-Service-Tier"), null);
 });
 
-test("xAI chat serializes service_tier default and priority", async () => {
-  for (const tier of ["default", "priority"] as const) {
-    const { result, requests } = await runChatRound({
-      apiKey: "test-key",
-      model: "grok-4.3",
-      baseUrl: "https://api.x.ai/v1",
-      llmVendor: "xai",
-      serviceTier: tier,
-      workspaceRoot: process.cwd(),
-    });
-
-    assert.equal(result.kind, "success");
-    assert.match(requests.at(-1)?.url ?? "", /api\.x\.ai\/v1/);
-    assert.equal(lastBody(requests).service_tier, tier);
-  }
-});
-
-test("xAI chat without a tier sends no service_tier", async () => {
-  const { result, requests } = await runChatRound({
-    apiKey: "test-key",
-    model: "grok-4.3",
-    baseUrl: "https://api.x.ai/v1",
-    llmVendor: "xai",
-    workspaceRoot: process.cwd(),
-  });
-
-  assert.equal(result.kind, "success");
-  assert.equal("service_tier" in lastBody(requests), false);
-});
-
 test("Google chat maps tiers to top-level body serviceTier", async () => {
   const expectations = { default: "standard", flex: "flex", priority: "priority" } as const;
   for (const [tier, wire] of Object.entries(expectations)) {
@@ -393,9 +363,10 @@ test("Vercel gateway chat injects nothing for anthropic upstreams", async () => 
 test("chat request trace records the configured service tier", async () => {
   const { result } = await runChatRound({
     apiKey: "test-key",
-    model: "grok-4.3",
-    baseUrl: "https://api.x.ai/v1",
-    llmVendor: "xai",
+    model: "anthropic/claude-opus-4-8",
+    baseUrl: "https://openrouter.ai/api/v1",
+    llmVendor: "openrouter",
+    upstreamProvider: "anthropic",
     serviceTier: "priority",
     workspaceRoot: process.cwd(),
   });

@@ -52,6 +52,9 @@ async function main(): Promise<void> {
               item: {
                 type: "reasoning",
                 id: "rs_stream_1",
+                // OpenAI Responses reasoning items always carry `summary` (possibly empty);
+                // newer @ai-sdk/open-responses reads it unguarded, so keep the fixture compliant.
+                summary: [],
                 status: "in_progress",
               },
             }),
@@ -74,6 +77,7 @@ async function main(): Promise<void> {
                 type: "reasoning",
                 id: "rs_stream_1",
                 status: "completed",
+                summary: [],
                 content: [{ type: "reasoning_text", text: "Think first, then check the tool." }],
               },
             }),

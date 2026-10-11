@@ -50,7 +50,7 @@ test("openai responses maps auto/default/flex/fast to SDK provider options", () 
   }
 });
 
-test("openai responses ultrafast is a body+header patch for astra only", () => {
+test("openai responses ultrafast uses the official SDK enum plus the direct-only header", () => {
   const astra = plan({
     provider: "openai",
     model: "gpt-6-astra",
@@ -58,7 +58,7 @@ test("openai responses ultrafast is a body+header patch for astra only", () => {
     surface: "responses",
   });
   assert.deepEqual(astra, {
-    bodyServiceTier: "ultrafast",
+    providerOptions: { openai: { serviceTier: "ultrafast" } },
     headers: { "OpenAI-Service-Tier": "ultrafast" },
   });
 

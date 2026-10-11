@@ -11,47 +11,47 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 ## Components
 
-- **@ai-sdk/alibaba** 2.0.37 — Apache-2.0
+- **@ai-sdk/alibaba** 2.0.65 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/amazon-bedrock** 5.0.66 — Apache-2.0
+- **@ai-sdk/amazon-bedrock** 5.0.113 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/anthropic** 4.0.44 — Apache-2.0
+- **@ai-sdk/anthropic** 4.0.78 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/azure** 4.0.52 — Apache-2.0
+- **@ai-sdk/azure** 4.0.99 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/baseten** 2.1.17 — Apache-2.0
+- **@ai-sdk/baseten** 2.1.45 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/cohere** 4.0.33 — Apache-2.0
+- **@ai-sdk/cohere** 4.0.59 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/deepinfra** 3.0.39 — Apache-2.0
+- **@ai-sdk/deepinfra** 3.0.67 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/deepseek** 3.0.35 — Apache-2.0
+- **@ai-sdk/deepseek** 3.0.63 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/fireworks** 3.0.42 — Apache-2.0
+- **@ai-sdk/fireworks** 3.0.70 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/gateway** 4.0.67 — Apache-2.0
+- **@ai-sdk/gateway** 4.0.110 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/google** 4.0.54 — Apache-2.0
+- **@ai-sdk/google** 4.0.93 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/google-vertex** 5.0.66 — Apache-2.0
+- **@ai-sdk/google-vertex** 5.0.109 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/groq** 4.0.33 — Apache-2.0
+- **@ai-sdk/groq** 4.0.59 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/huggingface** 2.0.39 — Apache-2.0
+- **@ai-sdk/huggingface** 2.0.67 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/minimax** 3.0.20 — Apache-2.0
+- **@ai-sdk/minimax** 3.0.55 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/moonshotai** 3.0.41 — Apache-2.0
+- **@ai-sdk/moonshotai** 3.0.67 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/open-responses** 2.0.34 — Apache-2.0
+- **@ai-sdk/open-responses** 2.0.63 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/openai** 4.0.50 — Apache-2.0
+- **@ai-sdk/openai** 4.0.91 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/openai-compatible** 3.0.39 — Apache-2.0
+- **@ai-sdk/openai-compatible** 3.0.67 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/togetherai** 3.0.40 — Apache-2.0
+- **@ai-sdk/togetherai** 3.0.68 — Apache-2.0
   - https://github.com/vercel/ai
-- **@ai-sdk/xai** 4.0.47 — Apache-2.0
+- **@ai-sdk/xai** 5.0.20 — Apache-2.0
   - https://github.com/vercel/ai
 - **@aws/bedrock-token-generator** 1.1.0 — Apache-2.0
   - https://github.com/aws/aws-bedrock-token-generator-js
@@ -61,7 +61,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/modelcontextprotocol/typescript-sdk
 - **@types/node** 24.13.3 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
-- **ai** 7.0.83 — Apache-2.0
+- **ai** 7.0.137 — Apache-2.0
   - https://github.com/vercel/ai
 - **typescript** 7.0.2 — Apache-2.0
   - https://github.com/microsoft/TypeScript
@@ -76,28 +76,28 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 **Used by:**
 
-- @ai-sdk/alibaba 2.0.37
-- @ai-sdk/amazon-bedrock 5.0.66
-- @ai-sdk/anthropic 4.0.44
-- @ai-sdk/azure 4.0.52
-- @ai-sdk/baseten 2.1.17
-- @ai-sdk/cohere 4.0.33
-- @ai-sdk/deepinfra 3.0.39
-- @ai-sdk/deepseek 3.0.35
-- @ai-sdk/fireworks 3.0.42
-- @ai-sdk/gateway 4.0.67
-- @ai-sdk/google 4.0.54
-- @ai-sdk/google-vertex 5.0.66
-- @ai-sdk/groq 4.0.33
-- @ai-sdk/huggingface 2.0.39
-- @ai-sdk/minimax 3.0.20
-- @ai-sdk/moonshotai 3.0.41
-- @ai-sdk/open-responses 2.0.34
-- @ai-sdk/openai 4.0.50
-- @ai-sdk/openai-compatible 3.0.39
-- @ai-sdk/togetherai 3.0.40
-- @ai-sdk/xai 4.0.47
-- ai 7.0.83
+- @ai-sdk/alibaba 2.0.65
+- @ai-sdk/amazon-bedrock 5.0.113
+- @ai-sdk/anthropic 4.0.78
+- @ai-sdk/azure 4.0.99
+- @ai-sdk/baseten 2.1.45
+- @ai-sdk/cohere 4.0.59
+- @ai-sdk/deepinfra 3.0.67
+- @ai-sdk/deepseek 3.0.63
+- @ai-sdk/fireworks 3.0.70
+- @ai-sdk/gateway 4.0.110
+- @ai-sdk/google 4.0.93
+- @ai-sdk/google-vertex 5.0.109
+- @ai-sdk/groq 4.0.59
+- @ai-sdk/huggingface 2.0.67
+- @ai-sdk/minimax 3.0.55
+- @ai-sdk/moonshotai 3.0.67
+- @ai-sdk/open-responses 2.0.63
+- @ai-sdk/openai 4.0.91
+- @ai-sdk/openai-compatible 3.0.67
+- @ai-sdk/togetherai 3.0.68
+- @ai-sdk/xai 5.0.20
+- ai 7.0.137
 
 ```
 Copyright 2023 Vercel, Inc.
