@@ -9,7 +9,7 @@ Cada llamada de herramienta de alto riesgo puede esperar por ti. {{product.name|
 | Nivel                     | Id                | Comportamiento                                                                                                                                    |
 | ------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Aprobación predeterminada | `default`         | Apruebas personalmente las ediciones de archivos, shell y otras herramientas de alto riesgo.                                                      |
-| Aprobación automática     | `auto-approval`   | Un modelo de lenguaje secundario revisa las llamadas de alto riesgo. No se te solicita confirmación a menos que esa revisión (o un hook) lo pida. |
+| Aprobación automática     | `auto-approval`   | Un modelo de lenguaje secundario revisa las llamadas de alto riesgo. No se te solicita confirmación a menos que esa revisión (o un Hook) lo pida. |
 | Aprobación omitida        | `bypass-approval` | Las herramientas de alto riesgo se ejecutan sin la solicitud de aprobación. Las reglas `deny` siguen aplicándose.                                 |
 
 ## Lista de permitidos de permission
@@ -55,7 +55,7 @@ El orden de las reglas no importa: cualquier `deny` que coincida gana, luego `as
 
 ### deny es absoluto
 
-Una regla `deny` no puede ser anulada por el orden de las reglas, la memoria de sesión, un hook que devuelva `allow`, el nivel `bypass-approval` ni una ejecución de herramienta que inicies tú mismo.
+Una regla `deny` no puede ser anulada por el orden de las reglas, la memoria de sesión, un Hook que devuelva `allow`, el nivel `bypass-approval` ni una ejecución de herramienta que inicies tú mismo.
 
 ### Comandos shell compuestos
 
@@ -79,9 +79,9 @@ La solicitud de aprobación ofrece tres opciones:
 
 Las aprobaciones de herramientas MCP y del lazy-gateway integrado son de un solo uso; no se ofrece recordar. Con default y auto-approval, un `tool_call` de MCP omite la solicitud solo cuando la herramienta declara `readOnlyHint: true` y `openWorldHint: false`. Los hints ausentes siguen los valores predeterminados de la especificación (no solo lectura, mundo abierto) y aún preguntan, igual que las herramientas de solo lectura de mundo abierto y las llamadas del lazy-gateway integrado. A través de [ACP](../acp.mdx), «permitir siempre» tiene alcance de sesión y persistir en config.json no está expuesto; la memoria de sesión nunca anula una regla `deny`.
 
-## Los hooks endurecen, nunca aflojan
+## Los Hooks endurecen, nunca aflojan
 
-Los [hooks preToolUse](../customize/hooks.mdx) se ejecutan antes de la evaluación de la lista de permitidos y solo pueden endurecer o bloquear. Un `deny` de hook o un `deny` de la lista de permitidos deniega; un `ask` de hook o un `ask` de la lista de permitidos solicita confirmación; un hook que devuelve `allow` no omite la aprobación del host.
+Los [Hooks preToolUse](../customize/hooks.mdx) se ejecutan antes de la evaluación de la lista de permitidos y solo pueden endurecer o bloquear. Un `deny` de Hook o un `deny` de la lista de permitidos deniega; un `ask` de Hook o un `ask` de la lista de permitidos solicita confirmación; un Hook que devuelve `allow` no omite la aprobación del host.
 
 ## Lo que la omisión no evita
 
@@ -90,9 +90,9 @@ Los [hooks preToolUse](../customize/hooks.mdx) se ejecutan antes de la evaluaci�
 - Reglas `deny` en la lista de permitidos
 - [ask_questions](./ask-questions.mdx)
 - Flujos de extensiones que necesitan preguntas
-- Un hook que devuelve `ask` en `preToolUse`
+- Un Hook que devuelve `ask` en `preToolUse`
 
-La aprobación automática tampoco puede anular un `ask` de un hook.
+La aprobación automática tampoco puede anular un `ask` de un Hook.
 
 ## Probar las reglas sin conexión
 

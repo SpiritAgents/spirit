@@ -4,7 +4,7 @@ description: Ejecuta scripts en eventos de sesión, herramienta y subagente.
   Pueden permitir, denegar o preguntar.
 ---
 
-Los hooks son scripts que {{product.name|mdx}} ejecuta en puntos fijos. Pueden permitir una herramienta, denegarla o forzar un aviso de aprobación (`ask`).
+Los Hooks son scripts que {{product.name|mdx}} ejecuta en puntos fijos. Pueden permitir una herramienta, denegarla o forzar un aviso de aprobación (`ask`).
 
 ## Eventos
 
@@ -27,7 +27,7 @@ Los hooks son scripts que {{product.name|mdx}} ejecuta en puntos fijos. Pueden p
 
 En el mismo evento, las entradas de usuario y las del espacio de trabajo se concatenan en ese orden. No se sobrescriben entre sí.
 
-Gestionarlos en **Configuración → Hooks**. Valida desde la CLI con `spirit hook list` y `spirit hook validate`. La Skill integrada `create-hook` redacta un hook. Los hooks empaquetados en una [extensión](../develop/extensions.mdx) se ejecutan cuando esa extensión está habilitada. No aparecen en esta lista de ajustes.
+Gestionarlos en **Configuración → Hooks**. Valida desde la CLI con `spirit hook list` y `spirit hook validate`. La Skill integrada `create-hook` redacta un Hook. Los Hooks empaquetados en una [extensión](../develop/extensions.mdx) se ejecutan cuando esa extensión está habilitada. No aparecen en esta lista de ajustes.
 
 ## Campos del archivo
 
@@ -36,9 +36,9 @@ El objeto raíz debe incluir `version` y `hooks`. `version` actualmente solo ace
 | Campo     | Descripción                                                                                             |
 | --------- | ------------------------------------------------------------------------------------------------------- |
 | `version` | Requerido. Debe ser `1`                                                                                 |
-| `hooks`   | Requerido. Objeto. Las claves son nombres de eventos; los valores son arreglos de hooks para ese evento |
+| `hooks`   | Requerido. Objeto. Las claves son nombres de eventos; los valores son arreglos de Hooks para ese evento |
 
-### Cada hook
+### Cada Hook
 
 | Campo        | Descripción                                                                                                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

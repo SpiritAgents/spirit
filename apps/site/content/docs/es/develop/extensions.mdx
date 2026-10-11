@@ -13,7 +13,7 @@ Una extensión es una carpeta con un `{{product.workspaceDataFolderName}}/extens
 
 Esto es diferente de [Skills](../customize/skills.mdx) (carpetas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) y [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` da estilo a los slots de la TUI de la CLI. No es `hooks.json`. Una extensión aún puede _empaquetar_ esos mismos archivos cuando declara `mcp`, `hooks`, `skills` o `rules`.
 
-Cada extensión instalada tiene un interruptor de activación. Desactívala o desinstálala para detener sus contribuciones. Activar la extensión es consentir la ejecución de los servidores MCP, hooks de agente, Skills y rules que declaró.
+Cada extensión instalada tiene un interruptor de activación. Desactívala o desinstálala para detener sus contribuciones. Activar la extensión es consentir la ejecución de los servidores MCP, Hooks de agente, Skills y rules que declaró.
 
 ## Crear una extensión
 
@@ -225,14 +225,14 @@ Roles de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success`,
 }
 ```
 
-### MCP, hooks, Skills y rules empaquetados
+### MCP, Hooks, Skills y rules empaquetados
 
 Requieren la capability correspondiente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` y `contributes.rules` son `true` o `{}`. Las rutas son convencionales; no se permiten rutas personalizadas.
 
 | Contribución | Capability | Archivo                                                                                                 |
 | ------------ | ---------- | ------------------------------------------------------------------------------------------------------- |
 | MCP          | `mcp`      | `mcp.json` en la raíz del paquete (mismo schema que el MCP de usuario/espacio de trabajo)               |
-| Agent hooks  | `hooks`    | `hooks.json` en la raíz del paquete (mismo schema que los hooks del agente; no `contributes.cli.hooks`) |
+| Agent Hooks  | `hooks`    | `hooks.json` en la raíz del paquete (mismo schema que los Hooks del agente; no `contributes.cli.hooks`) |
 | Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                                |
 | Rules        | `rules`    | `rule.md` en la raíz del paquete                                                                        |
 

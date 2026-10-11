@@ -65,7 +65,7 @@ As chaves **não** estão neste arquivo. Elas ficam no [keyring](./security.mdx)
 }
 ```
 
-`deny` é absoluto — nenhum nível de aprovação, hook ou memória de sessão o anula. A sintaxe de padrões, a semântica de caminhos e a lista completa de ações estão em [Aprovações](./agent/approvals.mdx). Verifique regras sem executar nada: `spirit permission check --shell "git status"`.
+`deny` é absoluto — nenhum nível de aprovação, Hook ou memória de sessão o anula. A sintaxe de padrões, a semântica de caminhos e a lista completa de ações estão em [Aprovações](./agent/approvals.mdx). Verifique regras sem executar nada: `spirit permission check --shell "git status"`.
 
 O antigo `tool-permissions.json` (gravado pelo botão "Always Trust") está obsoleto: o código não o lê nem o grava mais, e não há migração automática. Arquivos remanescentes são inertes — exclua-os manualmente.
 

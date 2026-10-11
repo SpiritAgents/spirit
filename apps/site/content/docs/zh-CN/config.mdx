@@ -64,7 +64,7 @@ Key **不在**这个文件里。它们在[钥匙串](./security.mdx)。
 }
 ```
 
-`deny` 是绝对的——任何审批档位、hook 或会话记忆都无法覆盖它。模式语法、路径语义和完整动作列表见[审批](./agent/approvals.mdx)。不实际运行即可验证规则：`spirit permission check --shell "git status"`。
+`deny` 是绝对的——任何审批档位、挂钩或会话记忆都无法覆盖它。模式语法、路径语义和完整动作列表见[审批](./agent/approvals.mdx)。不实际运行即可验证规则：`spirit permission check --shell "git status"`。
 
 旧的 `tool-permissions.json`（由「始终信任」按钮写入）已废弃：代码不再读取或写入它，也没有自动迁移。残留文件已失效——请手动删除。
 
@@ -75,7 +75,7 @@ Key **不在**这个文件里。它们在[钥匙串](./security.mdx)。
 | `{{product.workspaceDataFolderName}}/rule.md`    | 工作区 [rule](./customize/rules.mdx)    |
 | `{{product.workspaceDataFolderName}}/skills/`    | 工作区 [技能](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | 工作区 [MCP](./customize/mcp.mdx)       |
-| `{{product.workspaceDataFolderName}}/hooks.json` | 工作区 [hooks](./customize/hooks.mdx)   |
+| `{{product.workspaceDataFolderName}}/hooks.json` | 工作区 [挂钩](./customize/hooks.mdx)   |
 
 另外还会用：`{workspace}/AGENTS.md`、`{workspace}/.agents/skills/`、`{workspace}/plans/`。
 

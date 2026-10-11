@@ -920,7 +920,7 @@
       "noArguments": "(없음)"
     },
     "extensionToolConfirmation": "확장 도구 확인 필요",
-    "hookFallback": "Hook이 {{tool}} 승인을 요청했습니다."
+    "hookFallback": "훅이 {{tool}} 승인을 요청했습니다."
   },
   "workspace": {
     "planNotCreated": "계획이 아직 생성되지 않았습니다.",
@@ -1602,7 +1602,7 @@
     "allowOnce": "한 번 허용",
     "deny": "거부",
     "alwaysTrust": "항상 신뢰",
-    "hooksSection": "실행될 Hook",
+    "hooksSection": "실행될 훅",
     "openHookScript": "기본 편집기에서 스크립트 열기",
     "riskTasks": "이 워크스페이스는 프로젝트에서 명령을 실행하는 작업을 정의합니다. 이 코드베이스를 신뢰하는 경우에만 계속하세요.",
     "riskBoth": "이 워크스페이스는 프로젝트에서 스크립트 또는 명령을 실행하는 훅과 작업을 정의합니다. 이 코드베이스를 신뢰하는 경우에만 계속하세요.",

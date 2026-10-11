@@ -8,7 +8,7 @@ description: 审批档位与权限允许列表。allow、ask 和 deny 分别意�
 | 档位     | Id                | 行为                                                                                     |
 | -------- | ----------------- | ---------------------------------------------------------------------------------------- |
 | 默认审批 | `default`         | 文件编辑、shell 和其他高风险工具由你逐一审批。                                           |
-| 自动审批 | `auto-approval`   | 次要语言模型审查高风险调用。除非这次审查（或某个 hook）要求询问，否则不再弹出审批提示。 |
+| 自动审批 | `auto-approval`   | 次要语言模型审查高风险调用。除非这次审查（或某个挂钩）要求询问，否则不再弹出审批提示。 |
 | 绕过审批 | `bypass-approval` | 高风险工具不经审批提示直接运行。`deny` 规则仍然生效。                                    |
 
 ## 权限允许列表
@@ -54,7 +54,7 @@ description: 审批档位与权限允许列表。allow、ask 和 deny 分别意�
 
 ### `deny` 是绝对的
 
-`deny` 规则无法被规则顺序、会话记忆、返回 `allow` 的 hook、`bypass-approval` 档位或你自己发起的工具运行所覆盖。
+`deny` 规则无法被规则顺序、会话记忆、返回 `allow` 的挂钩、`bypass-approval` 档位或你自己发起的工具运行所覆盖。
 
 ### 复合 shell 命令
 
@@ -78,9 +78,9 @@ description: 审批档位与权限允许列表。allow、ask 和 deny 分别意�
 
 MCP 与内置 lazy-gateway 工具的审批都是一次性的，不提供记住选项。在默认审批和自动审批下，MCP `tool_call` 仅当工具声明了 `readOnlyHint: true` 且 `openWorldHint: false` 时才跳过提示。缺失的 hint 按规范默认值处理（非只读、开放世界），仍然会询问；开放世界的只读工具和内置 lazy-gateway 调用也一样会询问。通过 [ACP](../acp.mdx) 时，「始终允许」只在会话范围内生效，不暴露持久化到 config.json 的选项；会话记忆永远不能覆盖 `deny` 规则。
 
-## hook 只会收紧，不会放宽
+## 挂钩只会收紧，不会放宽
 
-[preToolUse hook](../customize/hooks.mdx) 在允许列表评估之前运行，只能收紧或阻止。hook 的 `deny` 或允许列表的 `deny` 都会拒绝；hook 的 `ask` 或允许列表的 `ask` 都会弹出提示；hook 返回 `allow` 不会跳过宿主审批。
+[preToolUse 挂钩](../customize/hooks.mdx) 在允许列表评估之前运行，只能收紧或阻止。挂钩的 `deny` 或允许列表的 `deny` 都会拒绝；挂钩的 `ask` 或允许列表的 `ask` 都会弹出提示；挂钩返回 `allow` 不会跳过宿主审批。
 
 ## 绕过审批不会跳过的环节
 
@@ -89,9 +89,9 @@ MCP 与内置 lazy-gateway 工具的审批都是一次性的，不提供记住�
 - 允许列表中的 `deny` 规则
 - [ask_questions](./ask-questions.mdx)
 - 需要提问的扩展流程
-- 在 `preToolUse` 返回 `ask` 的 hook
+- 在 `preToolUse` 返回 `ask` 的挂钩
 
-自动审批同样无法覆盖 hook 的 `ask`。
+自动审批同样无法覆盖挂钩的 `ask`。
 
 ## 离线测试规则
 

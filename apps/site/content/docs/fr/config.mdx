@@ -65,7 +65,7 @@ Les clés ne sont **pas** dans ce fichier. Elles vivent dans le [trousseau](./se
 }
 ```
 
-`deny` est absolu — aucun niveau d'approbation, hook ou mémoire de session ne l'outrepasse. La syntaxe des motifs, la sémantique des chemins et la liste complète des actions sont dans [Approbations](./agent/approvals.mdx). Vérifiez les règles sans rien exécuter : `spirit permission check --shell "git status"`.
+`deny` est absolu — aucun niveau d'approbation, Hook ou mémoire de session ne l'outrepasse. La syntaxe des motifs, la sémantique des chemins et la liste complète des actions sont dans [Approbations](./agent/approvals.mdx). Vérifiez les règles sans rien exécuter : `spirit permission check --shell "git status"`.
 
 L'ancien `tool-permissions.json` (écrit par le bouton « Always Trust ») est déprécié : le code ne le lit ni ne l'écrit plus, et il n'y a pas de migration automatique. Les fichiers restants sont inertes — supprimez-les manuellement.
 
@@ -76,7 +76,7 @@ L'ancien `tool-permissions.json` (écrit par le bouton « Always Trust ») est d
 | `{{product.workspaceDataFolderName}}/rule.md`    | Règle d'espace de travail [règle](./customize/rules.mdx)              |
 | `{{product.workspaceDataFolderName}}/skills/`    | Skills d'espace de travail [Skills](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | MCP d'espace de travail [MCP](./customize/mcp.mdx)                    |
-| `{{product.workspaceDataFolderName}}/hooks.json` | Hooks d'espace de travail [hooks](./customize/hooks.mdx)              |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Hooks d'espace de travail [Hooks](./customize/hooks.mdx)              |
 
 Également utilisés : `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

@@ -920,7 +920,7 @@
       "noArguments": "（なし）"
     },
     "extensionToolConfirmation": "拡張ツールの確認が必要です",
-    "hookFallback": "Hook が {{tool}} の承認を要求しました。"
+    "hookFallback": "フックが {{tool}} の承認を要求しました。"
   },
   "workspace": {
     "planNotCreated": "計画はまだ作成されていません。",
