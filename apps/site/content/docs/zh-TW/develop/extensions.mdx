@@ -239,7 +239,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 這些檔案裡的相對 `command` 與 `cwd` 相對擴充功能根目錄解析。MCP stdio 省略 `cwd` 時預設為擴充功能根目錄。PATH 上的裸命令不變。
 
-擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCPs | 掛鉤 | 技能 | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
+擴充功能啟用後，這些貢獻會 overlay 進工作階段執行階段，**不會**出現在 **設定 → MCP | 掛鉤 | 技能 | Rules**。同名衝突：工作區優先於使用者，使用者優先於擴充功能。
 
 在 `tools/call` 期間，若客戶端宣告了 `experimental["spirit/ui"]`，捆綁 MCP 可發出 JSON-RPC 請求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只開啟同一擴充功能在 `contributes.desktop.views` 宣告的 View；使用者/工作區 MCP 一律拒絕。Dialog 會擋住這次 `tools/call`，`close(result)` 的結果回到同一條請求。無視窗宿主回傳 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具應自行降級。
 

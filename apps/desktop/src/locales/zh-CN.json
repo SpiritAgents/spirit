@@ -114,7 +114,7 @@
   "settings": {
     "title": "设置",
     "models": "模型",
-    "mcps": "MCPs",
+    "mcps": "MCP",
     "hooks": "挂钩",
     "hooksScope": "作用域",
     "hooksScopeUser": "用户",

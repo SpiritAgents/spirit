@@ -239,7 +239,7 @@ my-extension/
 
 相対 `command` / `cwd` は拡張機能ルート基準です。MCP stdio で `cwd` を省略すると拡張機能ルートになります。
 
-拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | フック | スキル | Rules** には出ません。名前の衝突は workspace > user > extension です。
+拡張機能が有効なときだけセッションに overlay され、**設定 → MCP | フック | スキル | Rules** には出ません。名前の衝突は workspace > user > extension です。
 
 `tools/call` 中、クライアントが `experimental["spirit/ui"]` を宣言していれば、同梱 MCP は JSON-RPC の `spirit/ui/open`（`{ viewId, params }`）を送れます。{{product.name|mdx}} は同じ拡張の `contributes.desktop.views` だけを開きます。ユーザー / ワークスペース MCP は拒否されます。Dialog はその `tools/call` をブロックし、`close(result)` は同じリクエストに戻ります。ウィンドウのないホストは `{ "kind": "unavailable", "reason": "host-has-no-ui" }` を返し、ツール側でフォールバックします。
 
