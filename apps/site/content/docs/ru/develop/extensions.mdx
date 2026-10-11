@@ -11,7 +11,7 @@ description: Создавайте расширения мастером npm crea
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-Это отличается от [Навыки](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Hooks](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` стилизует слоты TUI CLI. Это не `hooks.json`. Расширение всё же может _поставлять_ те же файлы, если объявляет `mcp`, `hooks`, `skills` или `rules`.
+Это отличается от [Навыки](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Хуки](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` стилизует слоты TUI CLI. Это не `hooks.json`. Расширение всё же может _поставлять_ те же файлы, если объявляет `mcp`, `hooks`, `skills` или `rules`.
 
 У каждого установленного расширения есть переключатель включения. Отключите или удалите его, чтобы остановить его вклады. Включение расширения — это согласие на запуск объявленных им MCP-серверов, хуков агента, навыков и правил.
 
@@ -225,14 +225,14 @@ my-extension/
 }
 ```
 
-### Встроенные MCP, hooks, навыки и rules
+### Встроенные MCP, хуки, навыки и rules
 
 Требуют соответствующую capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills` и `contributes.rules` равны `true` или `{}`. Пути фиксированные; свои пути задавать нельзя.
 
 | Вклад       | Capability | Файл                                                                                         |
 | ----------- | ---------- | -------------------------------------------------------------------------------------------- |
 | MCP         | `mcp`      | `mcp.json` в корне пакета (та же схема, что у пользовательского/рабочего MCP)                |
-| Agent hooks | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent hooks; это не `contributes.cli.hooks`) |
+| Agent хуки | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent хуки; это не `contributes.cli.hooks`) |
 | Навыки      | `skills`   | `skills/<name>/SKILL.md`                                                                     |
 | Rules       | `rules`    | `rule.md` в корне пакета                                                                     |
 
@@ -240,7 +240,7 @@ my-extension/
 
 Относительные `command` и `cwd` считаются от корня расширения. Если у MCP stdio нет `cwd`, по умолчанию используется корень расширения. Команды, разрешаемые только через PATH, не изменяются.
 
-Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Hooks | Навыки | Rules**. При конфликте имён: workspace > user > extension.
+Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Хуки | Навыки | Rules**. При конфликте имён: workspace > user > extension.
 
 Во время `tools/call` встроенный MCP может отправить `spirit/ui/open` (`{ viewId, params }`), если клиент объявил `experimental["spirit/ui"]`. {{product.name|mdx}} открывает только view того же расширения из `contributes.desktop.views`. Пользовательский и workspace MCP отклоняются. Диалог блокирует этот вызов; `close(result)` возвращается в том же запросе. Хост без окна отвечает `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — инструмент должен деградировать.
 

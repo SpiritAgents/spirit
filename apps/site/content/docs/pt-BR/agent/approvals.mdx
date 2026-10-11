@@ -9,7 +9,7 @@ Toda chamada de ferramenta arriscada pode esperar por você. O {{product.name|md
 | Nível                | ID                | Comportamento                                                                                                                      |
 | -------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Aprovação Padrão     | `default`         | Você aprova edições de arquivos, shell e outras ferramentas de alto risco pessoalmente.                                            |
-| Aprovação Automática | `auto-approval`   | Um modelo de linguagem secundário revisa chamadas de alto risco. Você não é solicitado a menos que essa revisão (ou um hook) peça. |
+| Aprovação Automática | `auto-approval`   | Um modelo de linguagem secundário revisa chamadas de alto risco. Você não é solicitado a menos que essa revisão (ou um Hook) peça. |
 | Bypass de Aprovação  | `bypass-approval` | Ferramentas de alto risco são executadas sem o prompt de aprovação. As regras `deny` ainda se aplicam.                             |
 
 ## Lista de permissões
@@ -55,7 +55,7 @@ A ordem das regras não importa: qualquer `deny` correspondente vence, depois `a
 
 ### deny é absoluto
 
-Uma regra `deny` não pode ser anulada pela ordem das regras, pela memória da sessão, por um hook que retorna `allow`, pelo nível `bypass-approval` ou por uma execução de ferramenta iniciada por você.
+Uma regra `deny` não pode ser anulada pela ordem das regras, pela memória da sessão, por um Hook que retorna `allow`, pelo nível `bypass-approval` ou por uma execução de ferramenta iniciada por você.
 
 ### Comandos de shell compostos
 
@@ -81,7 +81,7 @@ Aprovações de ferramentas MCP e do lazy-gateway integrado são pontuais; nenhu
 
 ## Hooks restringem, nunca afrouxam
 
-[Hooks `preToolUse`](../customize/hooks.mdx) são executados antes da avaliação da lista de permissões e só podem restringir ou bloquear. Um `deny` de hook ou um `deny` da lista de permissões nega; um `ask` de hook ou um `ask` da lista de permissões solicita; um hook que retorna `allow` não pula a aprovação do host.
+[Hooks `preToolUse`](../customize/hooks.mdx) são executados antes da avaliação da lista de permissões e só podem restringir ou bloquear. Um `deny` de Hook ou um `deny` da lista de permissões nega; um `ask` de Hook ou um `ask` da lista de permissões solicita; um Hook que retorna `allow` não pula a aprovação do host.
 
 ## O que o bypass não pula
 
@@ -90,9 +90,9 @@ Aprovações de ferramentas MCP e do lazy-gateway integrado são pontuais; nenhu
 - Regras `deny` na lista de permissões
 - [ask_questions](./ask-questions.mdx)
 - Fluxos de extensão que precisam de perguntas
-- Um hook que retorna `ask` em `preToolUse`
+- Um Hook que retorna `ask` em `preToolUse`
 
-A aprovação automática também não pode substituir um hook `ask`.
+A aprovação automática também não pode substituir um Hook `ask`.
 
 ## Teste regras offline
 

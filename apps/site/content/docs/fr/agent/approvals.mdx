@@ -9,7 +9,7 @@ Chaque appel d'outil risqué peut attendre votre accord. {{product.name|mdx}} di
 | Niveau           | Id                | Comportement                                                                                                                               |
 | ---------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Default Approval | `default`         | Vous approuvez vous-même les modifications de fichiers, le shell et d'autres outils à haut risque.                                         |
-| Auto Approval    | `auto-approval`   | Un modèle de langue secondaire examine les appels à haut risque. Vous n'êtes pas invité à moins que cet examen (ou un hook) ne le demande. |
+| Auto Approval    | `auto-approval`   | Un modèle de langue secondaire examine les appels à haut risque. Vous n'êtes pas invité à moins que cet examen (ou un Hook) ne le demande. |
 | Bypass Approval  | `bypass-approval` | Les outils à haut risque s'exécutent sans la demande d'approbation. Les règles `deny` s'appliquent toujours.                              |
 
 ## Liste d'autorisations des permissions
@@ -55,7 +55,7 @@ L'ordre des règles n'a pas d'importance : tout `deny` correspondant l'emporte, 
 
 ### deny est absolu
 
-Une règle `deny` ne peut être outrepassée ni par l'ordre des règles, ni par la mémoire de session, ni par un hook retournant `allow`, ni par le niveau `bypass-approval`, ni par un outil que vous exécutez vous-même.
+Une règle `deny` ne peut être outrepassée ni par l'ordre des règles, ni par la mémoire de session, ni par un Hook retournant `allow`, ni par le niveau `bypass-approval`, ni par un outil que vous exécutez vous-même.
 
 ### Commandes shell composites
 
@@ -79,9 +79,9 @@ La demande d'approbation offre trois choix :
 
 Les approbations des outils MCP et de la passerelle paresseuse intégrée sont ponctuelles ; aucune mémorisation n'est proposée. Sous les niveaux default et auto-approval, un `tool_call` MCP ne saute la demande que lorsque l'outil déclare `readOnlyHint: true` et `openWorldHint: false`. Les indications manquantes suivent les valeurs par défaut de la spécification (non en lecture seule, monde ouvert) et demandent toujours, comme le font les outils en lecture seule à monde ouvert et les appels de la passerelle paresseuse intégrée. Via [ACP](../acp.mdx), « allow always » est limité à la session et la persistance dans config.json n'est pas exposée ; la mémoire de session n'outrepasse jamais une règle `deny`.
 
-## Les hooks resserrent, ne relâchent jamais
+## Les Hooks resserrent, ne relâchent jamais
 
-Les [hooks preToolUse](../customize/hooks.mdx) s'exécutent avant l'évaluation de la liste d'autorisations et ne peuvent que resserrer ou bloquer. Un `deny` de hook ou un `deny` de la liste d'autorisations refuse ; un `ask` de hook ou un `ask` de la liste d'autorisations demande ; un hook retournant `allow` ne saute pas l'approbation de l'hôte.
+Les [Hooks preToolUse](../customize/hooks.mdx) s'exécutent avant l'évaluation de la liste d'autorisations et ne peuvent que resserrer ou bloquer. Un `deny` de Hook ou un `deny` de la liste d'autorisations refuse ; un `ask` de Hook ou un `ask` de la liste d'autorisations demande ; un Hook retournant `allow` ne saute pas l'approbation de l'hôte.
 
 ## Ce que le contournement ne saute pas
 
@@ -90,9 +90,9 @@ Les [hooks preToolUse](../customize/hooks.mdx) s'exécutent avant l'évaluation 
 - Les règles `deny` de la liste d'autorisations
 - [ask_questions](./ask-questions.mdx)
 - Les flux d'extension qui nécessitent des questions
-- Un hook qui retourne `ask` sur `preToolUse`
+- Un Hook qui retourne `ask` sur `preToolUse`
 
-L'approbation automatique ne peut pas non plus outrepasser un `ask` de hook.
+L'approbation automatique ne peut pas non plus outrepasser un `ask` de Hook.
 
 ## Tester les règles hors ligne
 

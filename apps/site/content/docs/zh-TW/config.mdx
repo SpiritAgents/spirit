@@ -64,7 +64,7 @@ CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料
 }
 ```
 
-`deny` 是絕對的——任何核准層級、鉤子或工作階段記憶都無法覆寫它。模式語法、路徑語意與完整動作清單請參閱[核准](./agent/approvals.mdx)。不實際執行任何操作即可驗證規則：`spirit permission check --shell "git status"`。
+`deny` 是絕對的——任何核准層級、掛鉤或工作階段記憶都無法覆寫它。模式語法、路徑語意與完整動作清單請參閱[核准](./agent/approvals.mdx)。不實際執行任何操作即可驗證規則：`spirit permission check --shell "git status"`。
 
 舊的 `tool-permissions.json`（由「永遠信任」按鈕寫入）已棄用：程式碼不再讀取或寫入它，且沒有自動遷移。殘留的檔案不會產生任何作用——請手動刪除。
 
@@ -75,7 +75,7 @@ CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料
 | `{{product.workspaceDataFolderName}}/rule.md`    | 工作區[規則](./customize/rules.mdx)  |
 | `{{product.workspaceDataFolderName}}/skills/`    | 工作區[技能](./customize/skills.mdx) |
 | `{{product.workspaceDataFolderName}}/mcp.json`   | 工作區 [MCP](./customize/mcp.mdx)    |
-| `{{product.workspaceDataFolderName}}/hooks.json` | 工作區[鉤子](./customize/hooks.mdx)  |
+| `{{product.workspaceDataFolderName}}/hooks.json` | 工作區[掛鉤](./customize/hooks.mdx)  |
 
 也使用：`{workspace}/AGENTS.md`、`{workspace}/.agents/skills/`、`{workspace}/plans/`。
 

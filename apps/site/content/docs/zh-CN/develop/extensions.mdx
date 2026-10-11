@@ -10,9 +10,9 @@ description: 用 npm create 向导或手动创建扩展，并搭建你自己的�
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-这与 [技能](../customize/skills.mdx)（`SKILL.md` 文件夹）、[MCP](../customize/mcp.mdx)（外部 server）、[Hooks](../customize/hooks.mdx)（`hooks.json` 脚本）不同。`contributes.cli.hooks` 用来给 CLI TUI 槽位加样式，不是 `hooks.json`。扩展也可以在声明 `mcp`、`hooks`、`skills` 或 `rules` 后，用同样的文件规范捆绑这些资源。
+这与 [技能](../customize/skills.mdx)（`SKILL.md` 文件夹）、[MCP](../customize/mcp.mdx)（外部 server）、[挂钩](../customize/hooks.mdx)（`hooks.json` 脚本）不同。`contributes.cli.hooks` 用来给 CLI TUI 槽位加样式，不是 `hooks.json`。扩展也可以在声明 `mcp`、`hooks`、`skills` 或 `rules` 后，用同样的文件规范捆绑这些资源。
 
-每个已安装扩展都有启用开关。禁用或卸载后即停止贡献。打开开关即同意运行它声明的 MCP、agent hooks、技能和 rules。
+每个已安装扩展都有启用开关。禁用或卸载后即停止贡献。打开开关即同意运行它声明的 MCP、agent 挂钩、技能和 rules。
 
 ## 创建扩展
 
@@ -224,14 +224,14 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 }
 ```
 
-### 捆绑的 MCP、Hooks、技能与 Rules
+### 捆绑的 MCP、挂钩、技能与 Rules
 
 须与对应能力成对。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` 取 `true` 或 `{}`。路径是约定路径，不允许自定义 path。
 
 | 贡献面      | 能力     | 文件                                                                        |
 | ----------- | -------- | --------------------------------------------------------------------------- |
 | MCP         | `mcp`    | 包根 `mcp.json`（与用户/工作区 MCP 同 schema）                              |
-| Agent hooks | `hooks`  | 包根 `hooks.json`（与 agent hooks 同 schema；不是 `contributes.cli.hooks`） |
+| Agent 挂钩 | `hooks`  | 包根 `hooks.json`（与 agent 挂钩同 schema；不是 `contributes.cli.hooks`） |
 | 技能      | `skills` | `skills/<name>/SKILL.md`                                                    |
 | Rules       | `rules`  | 包根 `rule.md`                                                              |
 
@@ -239,7 +239,7 @@ Token 角色：`default`、`primary`、`secondary`、`muted`、`accent`、`succe
 
 这些文件里的相对 `command` 与 `cwd` 相对扩展根解析。MCP stdio 省略 `cwd` 时默认扩展根。PATH 上的裸命令不变。
 
-扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCPs | Hooks | 技能 | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
+扩展启用后，这些贡献会 overlay 进会话运行时，**不会**出现在 **设置 → MCPs | 挂钩 | 技能 | Rules**。同名冲突：工作区优先于用户，用户优先于扩展。
 
 在 `tools/call` 期间，捆绑 MCP 可以在客户端声明了 `experimental["spirit/ui"]` 时发出 JSON-RPC 请求 `spirit/ui/open`（`{ viewId, params }`）。{{product.name|mdx}} 只打开同一扩展在 `contributes.desktop.views` 里声明的 View；用户/工作区 MCP 一律拒绝。Dialog 会挡住这次 `tools/call`，`close(result)` 的结果回到同一条请求。无窗口宿主返回 `{ "kind": "unavailable", "reason": "host-has-no-ui" }`，工具应自行降级。
 

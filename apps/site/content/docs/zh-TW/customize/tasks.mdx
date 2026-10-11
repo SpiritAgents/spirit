@@ -32,7 +32,7 @@ description: 從命令選擇區執行工作區任務，於 {{product.workspaceDa
 
 工作區任務檔案隨存放庫一起送達，因此屬於未受信任的資料：`{{product.workspaceDataFolderName}}/tasks.json` 與 `.vscode/tasks.json` 只有在你核准工作區內容後才會載入。使用者層級的 `tasks.json`（{{product.name|mdx}} 資料目錄）一律受信任，一律載入。
 
-當 {{product.name|mdx}} Desktop 偵測到工作區任務檔案（或其變更）時，會詢問一次：對話框列出將可用的任務及其命令，點擊條目會開啟來源檔案。如果工作區鉤子也需要核准，兩個清單會合併在同一個對話框中。
+當 {{product.name|mdx}} Desktop 偵測到工作區任務檔案（或其變更）時，會詢問一次：對話框列出將可用的任務及其命令，點擊條目會開啟來源檔案。如果工作區掛鉤也需要核准，兩個清單會合併在同一個對話框中。
 
 - **允許一次** — 任務僅在本次工作階段載入。
 - **永遠信任** — 記住目前確切的檔案內容。
@@ -201,4 +201,4 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - `package` 在執行時解析 `${workspaceFolder}`，並將 `CHANNEL` 加入處理程序環境。
 - `watch` 保持不打擾（`silent` 僅在非零結束時才顯示面板），且其結束絕不計為失敗。請注意，任何任務都不得相依於它 — 指向背景任務的 `dependsOn` 項目會被隱藏。
 
-相關頁面：[自動化](./automations.mdx)介紹按排程或 GitHub 事件執行的 Agent 任務，[Hooks](./hooks.mdx)介紹由 Agent 與工作階段事件觸發的指令碼。
+相關頁面：[自動化](./automations.mdx)介紹按排程或 GitHub 事件執行的 Agent 任務，[掛鉤](./hooks.mdx)介紹由 Agent 與工作階段事件觸發的指令碼。

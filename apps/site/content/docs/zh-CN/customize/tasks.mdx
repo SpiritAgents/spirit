@@ -32,7 +32,7 @@ description: 从命令面板运行工作区任务：在 {{product.workspaceDataF
 
 工作区任务文件随仓库一起到来，因此属于不可信数据：`{{product.workspaceDataFolderName}}/tasks.json` 和 `.vscode/tasks.json` 只有在你批准工作区内容后才会加载。用户级 `tasks.json`（{{product.name|mdx}} 数据目录）始终受信任，始终加载。
 
-当 {{product.name|mdx}} Desktop 检测到工作区任务文件（或其变更）时，会询问一次：提示框列出将可用的任务及其命令，点击条目会打开源文件。如果工作区 Hooks 也需要批准，两类列表会合并在同一个对话框中。
+当 {{product.name|mdx}} Desktop 检测到工作区任务文件（或其变更）时，会询问一次：提示框列出将可用的任务及其命令，点击条目会打开源文件。如果工作区挂钩也需要批准，两类列表会合并在同一个对话框中。
 
 - **允许一次** — 任务仅在本次会话中加载。
 - **始终信任** — 记住当前确切的文件内容。
@@ -201,4 +201,4 @@ SPIRIT_DESKTOP_TASKS_DEBUG=1
 - `package` 在运行时解析 `${workspaceFolder}`，并把 `CHANNEL` 加进进程环境。
 - `watch` 不碍事（`silent` 只在非零退出时展开），它的退出永远不算失败。注意任何任务都不能依赖它——指向后台任务的 `dependsOn` 条目会被隐藏。
 
-相关页面：[自动化](./automations.mdx) 介绍按计划或 GitHub 事件运行的 Agent 任务，[Hooks](./hooks.mdx) 介绍由 Agent 和会话事件触发的脚本。
+相关页面：[自动化](./automations.mdx) 介绍按计划或 GitHub 事件运行的 Agent 任务，[挂钩](./hooks.mdx) 介绍由 Agent 和会话事件触发的脚本。

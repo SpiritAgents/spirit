@@ -13,7 +13,7 @@ Uma extensão é uma pasta com um `{{product.workspaceDataFolderName}}/extension
 
 Isso é diferente de [Skills](../customize/skills.mdx) (pastas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) e [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` estiliza slots da TUI da CLI. Não é `hooks.json`. Uma extensão ainda pode _empacotar_ esses mesmos arquivos quando declara `mcp`, `hooks`, `skills` ou `rules`.
 
-Cada extensão instalada tem um interruptor de ativação. Desative ou desinstale para interromper suas contribuições. Ligar a extensão é consentimento para executar os servidores MCP, hooks de agente, Skills e rules que ela declarou.
+Cada extensão instalada tem um interruptor de ativação. Desative ou desinstale para interromper suas contribuições. Ligar a extensão é consentimento para executar os servidores MCP, Hooks de agente, Skills e rules que ela declarou.
 
 ## Criar uma extensão
 
@@ -225,14 +225,14 @@ Papéis de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success
 }
 ```
 
-### MCP, hooks, Skills e rules empacotados
+### MCP, Hooks, Skills e rules empacotados
 
 Exigem a capability correspondente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` e `contributes.rules` são `true` ou `{}`. Os caminhos são convencionais; caminhos personalizados não são permitidos.
 
 | Contribuição | Capability | Arquivo                                                                                          |
 | ------------ | ---------- | ------------------------------------------------------------------------------------------------ |
 | MCP          | `mcp`      | `mcp.json` na raiz do pacote (mesmo schema do MCP de usuário/workspace)                          |
-| Agent hooks  | `hooks`    | `hooks.json` na raiz do pacote (mesmo schema dos hooks do agente; não é `contributes.cli.hooks`) |
+| Agent Hooks  | `hooks`    | `hooks.json` na raiz do pacote (mesmo schema dos Hooks do agente; não é `contributes.cli.hooks`) |
 | Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                         |
 | Rules        | `rules`    | `rule.md` na raiz do pacote                                                                      |
 

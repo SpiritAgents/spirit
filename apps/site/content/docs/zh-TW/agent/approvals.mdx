@@ -8,7 +8,7 @@ description: 核准層級與權限允許清單。allow、ask 與 deny 的意義�
 | 層級     | ID                | 行為                                                                     |
 | -------- | ----------------- | ------------------------------------------------------------------------ |
 | 預設核准 | `default`         | 您自行核准檔案編輯、Shell 及其他高風險工具。                             |
-| 自動核准 | `auto-approval`   | 次要語言模型會審查高風險呼叫。除非該審查（或鉤子）要求，否則不會提示您。 |
+| 自動核准 | `auto-approval`   | 次要語言模型會審查高風險呼叫。除非該審查（或掛鉤）要求，否則不會提示您。 |
 | 略過核准 | `bypass-approval` | 高風險工具執行時不會顯示核准提示。`deny` 規則仍適用。                    |
 
 ## 權限允許清單
@@ -54,7 +54,7 @@ description: 核准層級與權限允許清單。allow、ask 與 deny 的意義�
 
 ### deny 是絕對的
 
-`deny` 規則無法被規則順序、工作階段記憶、傳回 `allow` 的鉤子、`bypass-approval` 層級，或您自行啟動的工具執行所覆寫。
+`deny` 規則無法被規則順序、工作階段記憶、傳回 `allow` 的掛鉤、`bypass-approval` 層級，或您自行啟動的工具執行所覆寫。
 
 ### 複合 Shell 命令
 
@@ -78,9 +78,9 @@ description: 核准層級與權限允許清單。allow、ask 與 deny 的意義�
 
 MCP 與內建 lazy-gateway 工具的核准皆為一次性；不提供記住選項。在預設與自動核准下，MCP `tool_call` 僅在工具宣告 `readOnlyHint: true` 且 `openWorldHint: false` 時才會跳過提示。缺少這些提示時遵循規格預設值（非唯讀、開放世界），仍會詢問；開放世界的唯讀工具與內建 lazy-gateway 呼叫亦然。透過 [ACP](../acp.mdx) 時，「永遠允許」僅限當前工作階段，且不提供儲存至 config.json 的功能；工作階段記憶永遠不會覆寫 `deny` 規則。
 
-## 鉤子只會收緊，絕不放寬
+## 掛鉤只會收緊，絕不放寬
 
-[preToolUse 鉤子](../customize/hooks.mdx)會在允許清單評估之前執行，且只能收緊或封鎖。鉤子的 `deny` 或允許清單的 `deny` 都會拒絕；鉤子的 `ask` 或允許清單的 `ask` 都會提示；鉤子傳回 `allow` 不會跳過主機核准。
+[preToolUse 掛鉤](../customize/hooks.mdx)會在允許清單評估之前執行，且只能收緊或封鎖。掛鉤的 `deny` 或允許清單的 `deny` 都會拒絕；掛鉤的 `ask` 或允許清單的 `ask` 都會提示；掛鉤傳回 `allow` 不會跳過主機核准。
 
 ## 略過核准不會跳過的項目
 
@@ -89,9 +89,9 @@ MCP 與內建 lazy-gateway 工具的核准皆為一次性；不提供記住選�
 - 允許清單中的 `deny` 規則
 - [ask_questions](./ask-questions.mdx)
 - 需要問題的擴充功能流程
-- 在 `preToolUse` 上傳回 `ask` 的鉤子
+- 在 `preToolUse` 上傳回 `ask` 的掛鉤
 
-自動核准也無法覆寫鉤子的 `ask`。
+自動核准也無法覆寫掛鉤的 `ask`。
 
 ## 離線測試規則
 
