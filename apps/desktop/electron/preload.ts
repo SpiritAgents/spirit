@@ -671,8 +671,8 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   openSystemTerminal(cwd: string) {
     return ipcRenderer.invoke("desktop:open-system-terminal", cwd);
   },
-  openExternalUrl(url: string) {
-    return ipcRenderer.invoke("desktop:open-external-url", { url });
+  openBrowserUrl(url: string) {
+    return ipcRenderer.invoke("desktop:open-browser-url", { url });
   },
   subscribeBrowserOpenUrl(callback: (url: string) => void) {
     const onOpen = (_event: Electron.IpcRendererEvent, payload: { url?: string }) => {

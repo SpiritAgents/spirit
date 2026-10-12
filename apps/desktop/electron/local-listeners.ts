@@ -525,7 +525,7 @@ export async function startLocalListenersScan(
 /** Warm-up at app startup: silently scan once in the background and store the result in the cache */
 scanningPromise = startLocalListenersScan();
 
-export function isAllowedExternalUrl(url: string): boolean {
+export function isHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";

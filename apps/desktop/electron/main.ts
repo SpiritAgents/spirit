@@ -57,7 +57,7 @@ import {
 import { openSystemTerminalInDirectory } from "./open-system-terminal.js";
 import { WorkspacePtyManager } from "./workspace-pty.js";
 import {
-  isAllowedExternalUrl,
+  isHttpUrl,
   getCachedLocalListeningEndpoints,
   getScanningPromise,
   startLocalListenersScan,
@@ -1130,7 +1130,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
   window.webContents.setWindowOpenHandler((details) => {
     const url = typeof details.url === "string" ? details.url.trim() : "";
-    if (url && isAllowedExternalUrl(url) && !window.webContents.isDestroyed()) {
+    if (url && isHttpUrl(url) && !window.webContents.isDestroyed()) {
       window.webContents.send("desktop:browser-open-url", { url });
     }
     return { action: "deny" };
@@ -1659,10 +1659,10 @@ if (gotSpiritSingleInstanceLock) {
       openSystemTerminalInDirectory(cwd);
     });
 
-    ipcMain.handle("desktop:open-external-url", async (event, payload: { url?: string }) => {
+    ipcMain.handle("desktop:open-browser-url", async (event, payload: { url?: string }) => {
       const url = typeof payload?.url === "string" ? payload.url.trim() : "";
-      if (!url || !isAllowedExternalUrl(url)) {
-        throw new Error("Invalid external URL");
+      if (!url || !isHttpUrl(url)) {
+        throw new Error("Invalid browser URL");
       }
       if (event.sender.isDestroyed()) {
         return;

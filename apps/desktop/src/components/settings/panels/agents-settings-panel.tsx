@@ -90,9 +90,9 @@ export function AgentsSettingsPanel({
                   underline={false}
                   aria-label={t("settings.webSearchLearnMoreAria")}
                   onClick={(event) => {
-                    if (window.spiritDesktop?.openExternalUrl) {
+                    if (window.spiritDesktop?.openBrowserUrl) {
                       event.preventDefault();
-                      void window.spiritDesktop.openExternalUrl(webSearchDocsUrl);
+                      void window.spiritDesktop.openBrowserUrl(webSearchDocsUrl);
                     }
                   }}
                 >
