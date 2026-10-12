@@ -567,6 +567,7 @@
     "view": "View",
     "window": "Window",
     "help": "Help",
+    "documentation": "Documentation",
     "appMenu": "Application Menu",
     "newChat": "New Chat",
     "quit": "Quit",

@@ -6,6 +6,7 @@ import { editCommandDisabled, type EditCommand } from "@/lib/edit-command-state"
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionSidebarShellRightInsetPx } from "@/hooks/useSessionSidebarShellRightInsetPx";
 import { spiritAgentTitleBarIconSrc } from "@/lib/brand-icon";
+import { siteDocsUrl } from "@/lib/docs-links";
 import { sessionSidebarShellWidth } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTitleBarTintClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
@@ -160,7 +161,7 @@ function TitleBarMenuCluster({
   useTranslucency: boolean;
   onOpenSettings: () => void;
 } & TitleBarZoomMenuProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDevChrome = isViteDev;
   return (
     <div className="electron-no-drag flex shrink-0 items-center gap-1">
@@ -260,6 +261,16 @@ function TitleBarMenuCluster({
             {t("titleBar.help")}
           </MenubarTrigger>
           <MenubarContent>
+            <MenubarItem
+              onSelect={() => {
+                const url = siteDocsUrl(i18n.language, "");
+                if (window.spiritDesktop?.openExternalUrl) {
+                  void window.spiritDesktop.openExternalUrl(url);
+                }
+              }}
+            >
+              {t("titleBar.documentation")}
+            </MenubarItem>
             <MenubarItem onSelect={() => execWindowAction("showAbout")}>
               {t("titleBar.about")}
             </MenubarItem>

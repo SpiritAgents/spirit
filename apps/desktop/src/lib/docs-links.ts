@@ -1,6 +1,6 @@
 import { product } from "@spiritagent/product";
 
-import { isValidLanguage, type ValidLanguage } from "./ui-locale";
+import { isValidLanguage, type ValidLanguage } from "./ui-locale.js";
 
 /** Site docs locales match the desktop languages except English (en → en-US). */
 const SITE_DOCS_LOCALE_BY_LANGUAGE: Record<ValidLanguage, string> = {
