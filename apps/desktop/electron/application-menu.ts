@@ -9,7 +9,7 @@ import {
   type EditCommandState,
 } from "../src/lib/edit-command-state.js";
 import i18nHost from "../src/lib/i18n-host.js";
-import { isAllowedExternalUrl } from "./local-listeners.js";
+import { isHttpUrl } from "./local-listeners.js";
 import { setStartDictationMenuEnabled } from "./macos-appkit.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 
@@ -166,7 +166,7 @@ function openDocumentation(win?: BrowserWindow): void {
     return;
   }
   const url = siteDocsUrl(i18nHost.language, "");
-  if (!isAllowedExternalUrl(url)) {
+  if (!isHttpUrl(url)) {
     return;
   }
   target.webContents.send("desktop:browser-open-url", { url });

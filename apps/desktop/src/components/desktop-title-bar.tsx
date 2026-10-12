@@ -264,8 +264,8 @@ function TitleBarMenuCluster({
             <MenubarItem
               onSelect={() => {
                 const url = siteDocsUrl(i18n.language, "");
-                if (window.spiritDesktop?.openExternalUrl) {
-                  void window.spiritDesktop.openExternalUrl(url);
+                if (window.spiritDesktop?.openBrowserUrl) {
+                  void window.spiritDesktop.openBrowserUrl(url);
                 }
               }}
             >

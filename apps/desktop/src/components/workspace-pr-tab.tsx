@@ -735,8 +735,8 @@ export function WorkspacePrTab({
     }
   }, [viewMode, detail, t]);
 
-  const openExternalUrl = (url: string) => {
-    void window.spiritDesktop?.openExternalUrl(url);
+  const openBrowserUrl = (url: string) => {
+    void window.spiritDesktop?.openBrowserUrl(url);
   };
 
   const isInitialPrLoad = viewMode === "detail" && (loadingBranch || loadingDetail) && !detail;
@@ -818,7 +818,7 @@ export function WorkspacePrTab({
                 checksHasMore={checksSnapshot?.hasMore ?? false}
                 onLoadMoreChecks={loadMoreChecks}
                 actionBusy={prActionBusy}
-                onOpenExternal={openExternalUrl}
+                onOpenExternal={openBrowserUrl}
                 onMerge={handleMergePullRequest}
                 onMarkReady={handleMarkPullRequestReady}
                 onPrDiffAddToChat={onPrDiffAddToChat}

@@ -341,7 +341,7 @@ declare global {
     ptyResize(id: string, cols: number, rows: number): void;
     ptyKill(id: string): Promise<void>;
     openSystemTerminal(cwd: string): Promise<void>;
-    openExternalUrl(url: string): Promise<void>;
+    openBrowserUrl(url: string): Promise<void>;
     subscribeBrowserOpenUrl(callback: (url: string) => void): () => void;
     listLocalListeningEndpoints(): Promise<
       Array<{ port: number; address?: string; processName?: string; url?: string; title?: string }>

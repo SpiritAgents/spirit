@@ -55,8 +55,8 @@ export function IntegrationsSettingsPanel({
     showDesktopErrorToast(error ?? "", "github-integration-error");
   }, [isElectronShell, dialogOpen, error]);
 
-  const openExternalUrl = useCallback((url: string) => {
-    void window.spiritDesktop?.openExternalUrl(url);
+  const openBrowserUrl = useCallback((url: string) => {
+    void window.spiritDesktop?.openBrowserUrl(url);
   }, []);
 
   const handleConnectClick = useCallback(() => {
@@ -152,7 +152,7 @@ export function IntegrationsSettingsPanel({
         challenge={deviceChallenge}
         error={error}
         onCancel={handleDialogCancel}
-        onOpenDevicePage={openExternalUrl}
+        onOpenDevicePage={openBrowserUrl}
       />
     </div>
   );
