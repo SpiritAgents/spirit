@@ -62,6 +62,21 @@
    added specificity so hover/focus utilities still win over the translucent base. */
 @custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
 
+/*
+ * Opt-in for in-app frosted surfaces (CSS backdrop-blur, not native window material).
+ * Chromium 118+ `prefers-reduced-transparency: reduce` paints an opaque theme
+ * background (`--background`: white in light, black in dark) and drops the blur.
+ * Unlayered so it wins over Tailwind `dark:` / `supports-[backdrop-filter]:` fills.
+ * Native vibrancy / Mica is not marked with this class; the OS already disables it.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .spirit-reduced-transparency-opaque {
+    background-color: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
 :root {
   --background: oklch(1 0 0);
   /* Default body text color (non-emphasis state); sidebar interaction default see --chrome-label */

@@ -16,6 +16,7 @@ export {
   DESKTOP_COMPOSER_SURFACE_SOLID,
   DESKTOP_ELEVATION_SHADOW_SM,
   DESKTOP_OVERLAY_LIGHT_SHADOW,
+  DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
   desktopComposerChipSurfaceClass,
   desktopComposerSurfaceBackdropClass,
 } from "@/lib/desktop-translucency-surface";

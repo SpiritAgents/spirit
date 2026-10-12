@@ -4,6 +4,7 @@ import { test } from "vitest";
 import {
   DESKTOP_COMPOSER_SURFACE_BACKDROP,
   DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT,
+  DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
   DESKTOP_TRANSLUCENCY_BROWSER_TINT_CLASS,
   DESKTOP_TRANSLUCENCY_CONTENT_TINT_CLASS,
   DESKTOP_TRANSLUCENCY_TERMINAL_TINT_CLASS,
@@ -64,6 +65,16 @@ test("desktopComposerSurfaceBackdropClass keeps glass when translucency is off",
   assert.equal(desktopComposerSurfaceBackdropClass(false), DESKTOP_COMPOSER_SURFACE_BACKDROP);
   assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /backdrop-blur/);
   assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /dark:bg-input/);
+  assert.match(DESKTOP_COMPOSER_SURFACE_BACKDROP, /spirit-reduced-transparency-opaque/);
+});
+
+test("reduced transparency opaque class is the shared in-app frosted fallback", () => {
+  assert.equal(DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS, "spirit-reduced-transparency-opaque");
+  assert.match(desktopComposerChipSurfaceClass(false), /spirit-reduced-transparency-opaque/);
+  assert.doesNotMatch(
+    DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT,
+    /spirit-reduced-transparency-opaque/,
+  );
 });
 
 test("desktopComposerSurfaceBackdropClass uses translucent tint without blur when translucency is on", () => {
