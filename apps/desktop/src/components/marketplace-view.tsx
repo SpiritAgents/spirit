@@ -149,6 +149,32 @@ export function MarketplaceView({
   /** Install / update in flight for these catalog ids; other rows stay clickable. */
   const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  // MarketplaceView mounts when navigation lands on this page, the same moment
+  // the session page moves focus into the Composer. The control that opened the
+  // page still holds DOM focus, so schedule the search field the same way: a
+  // microtask for the current turn, then a frame in case a later effect moves
+  // focus back. Cleanup covers Strict Mode's remount, which would otherwise
+  // leave the first schedule pointing at a detached input.
+  useLayoutEffect(() => {
+    const input = searchInputRef.current;
+    if (!input) {
+      return;
+    }
+    let cancelled = false;
+    const focus = () => {
+      if (cancelled || !input.isConnected) {
+        return;
+      }
+      input.focus({ preventScroll: true });
+    };
+    queueMicrotask(focus);
+    const frame = requestAnimationFrame(focus);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, []);
   const [listScrollRoot, setListScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
     null,
   );
@@ -769,6 +795,7 @@ export function MarketplaceView({
                     strokeWidth={1.75}
                   />
                   <Input
+                    ref={searchInputRef}
                     value={searchText}
                     onChange={(event) => setSearchText(event.target.value)}
                     placeholder={t("marketplace.searchPlaceholder")}
