@@ -1,6 +1,6 @@
 import { BrowserWindow, Menu, app, dialog } from "electron";
 
-import i18nHost from "../src/lib/i18n-host.js";
+import { siteDocsUrl } from "../src/lib/docs-links.js";
 import {
   DISABLED_EDIT_COMMAND_STATE,
   EDIT_MENU_ITEM_IDS,
@@ -8,6 +8,8 @@ import {
   type EditCommand,
   type EditCommandState,
 } from "../src/lib/edit-command-state.js";
+import i18nHost from "../src/lib/i18n-host.js";
+import { isAllowedExternalUrl } from "./local-listeners.js";
 import { setStartDictationMenuEnabled } from "./macos-appkit.js";
 import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 
@@ -158,6 +160,27 @@ function macOSEditMenuSystemBeacons(): Electron.MenuItemConstructorOptions[] {
   return [beacon("cut"), beacon("copy"), beacon("paste"), beacon("selectAll")];
 }
 
+function openDocumentation(win?: BrowserWindow): void {
+  const target = focusedWindow(win);
+  if (!target || target.webContents.isDestroyed()) {
+    return;
+  }
+  const url = siteDocsUrl(i18nHost.language, "");
+  if (!isAllowedExternalUrl(url)) {
+    return;
+  }
+  target.webContents.send("desktop:browser-open-url", { url });
+}
+
+function documentationMenuItem(win?: BrowserWindow): Electron.MenuItemConstructorOptions {
+  return {
+    label: menuLabel("documentation"),
+    click: (_item, focused) => {
+      openDocumentation(focused instanceof BrowserWindow ? focused : win);
+    },
+  };
+}
+
 function viewMenuItems(win?: BrowserWindow): Electron.MenuItemConstructorOptions[] {
   return [
     ...(isDevChrome
@@ -278,6 +301,7 @@ function buildSectionTemplate(
       ];
     case "help":
       return [
+        documentationMenuItem(win),
         {
           label: menuLabel("about"),
           click: () => {
@@ -341,6 +365,13 @@ function buildMacOSApplicationMenuTemplate(): Electron.MenuItemConstructorOption
         { role: "front", label: menuLabel("bringAllToFront") },
       ],
     },
+    {
+      // AppKit adds the Help search field and system items such as Send Feedback to Apple
+      // only after this menu is registered as the application Help menu.
+      role: "help",
+      label: menuLabel("help"),
+      submenu: [documentationMenuItem()],
+    },
   ];
 }
 
@@ -366,6 +397,7 @@ function buildLinuxApplicationMenuTemplate(): Electron.MenuItemConstructorOption
     {
       label: menuLabel("help"),
       submenu: [
+        documentationMenuItem(),
         {
           label: menuLabel("about"),
           click: () => {

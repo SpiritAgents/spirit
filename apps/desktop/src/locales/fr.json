@@ -567,6 +567,7 @@
     "view": "Affichage",
     "window": "Fenêtre",
     "help": "Aide",
+    "documentation": "Documentation",
     "appMenu": "Menu de l'application",
     "newChat": "Nouvelle discussion",
     "quit": "Quitter",
