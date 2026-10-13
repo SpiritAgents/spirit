@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { test } from "node:test";
@@ -16,9 +17,7 @@ import {
 } from "../scripts/generate.mjs";
 
 async function fixture(run) {
-  const parent = path.join(repoRoot, "tmp");
-  await mkdir(parent, { recursive: true });
-  const root = await mkdtemp(path.join(parent, "product-test-"));
+  const root = await mkdtemp(path.join(tmpdir(), "spirit-product-test-"));
   try {
     for (const input of productInputs) {
       const destination = path.join(root, input);
@@ -33,9 +32,7 @@ async function fixture(run) {
 }
 
 test("development quality defaults are overridden only by valid explicit values", async () => {
-  const parent = path.join(repoRoot, "tmp");
-  await mkdir(parent, { recursive: true });
-  const root = await mkdtemp(path.join(parent, "product-entry-"));
+  const root = await mkdtemp(path.join(tmpdir(), "spirit-product-entry-"));
   try {
     const probe = path.join(root, "quality-probe.mjs");
     await writeFile(probe, "console.log(process.env.SPIRIT_PRODUCT_QUALITY);\n");

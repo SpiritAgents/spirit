@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm, access } from "node:fs/promises";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -18,8 +18,7 @@ for (const entry of [
     );
   }
 }
-await mkdir(path.join(root, "tmp"), { recursive: true });
-const fixture = await mkdtemp(path.join(root, "tmp", `product-validation-${Date.now()}-`));
+const fixture = await mkdtemp(path.join(tmpdir(), `spirit-product-validation-${Date.now()}-`));
 const home = path.join(fixture, "home");
 await mkdir(home);
 const env = {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { fork } from "node:child_process";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -65,9 +66,9 @@ for (const changedManifest of [false, true]) {
     `${changedManifest ? "changed" : "repository"} manifest drives isolated users and shared workspace consumers`,
     { timeout: 30000 },
     async () => {
-      const parent = path.join(repoRoot, "tmp");
-      await mkdir(parent, { recursive: true });
-      const fixture = await mkdtemp(path.join(parent, `product-acceptance-${Date.now()}-`));
+      const fixture = await mkdtemp(
+        path.join(tmpdir(), `spirit-product-acceptance-${Date.now()}-`),
+      );
       const workers = [];
       try {
         for (const input of productInputs) {
