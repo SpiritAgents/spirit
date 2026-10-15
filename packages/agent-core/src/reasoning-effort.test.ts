@@ -211,6 +211,38 @@ test("google models normalize reasoning efforts to supported values", () => {
     "none",
   );
   assert.equal(
+    resolveModelReasoningEffortForContext("none", {
+      provider: "google",
+      model: "gemini-2.5-pro",
+      transportKind: "openai-compatible",
+    }),
+    "default",
+  );
+  assert.equal(
+    resolveOpenAiTransportReasoningEffortForContext("none", {
+      provider: "google",
+      model: "gemini-2.5-flash-lite",
+      transportKind: "openai-compatible",
+    }),
+    "none",
+  );
+  assert.equal(
+    resolveModelReasoningEffortForContext("minimal", {
+      provider: "google",
+      model: "gemini-3.7-flash-batch",
+      transportKind: "openai-compatible",
+    }),
+    "default",
+  );
+  assert.equal(
+    resolveModelReasoningEffortForContext("minimal", {
+      provider: "google",
+      model: "gemini-3.8-flash-lite",
+      transportKind: "openai-compatible",
+    }),
+    "default",
+  );
+  assert.equal(
     resolveOpenAiTransportReasoningEffortForContext("none", {
       provider: "google",
       model: "gemini-3-flash-preview",
@@ -276,6 +308,46 @@ test("gateway gemini models use google effort options", () => {
   assert.deepEqual(
     gemini25Options.map((option) => option.value),
     ["default", "none", "low", "medium", "high"],
+  );
+
+  const gemini25FlashLiteOptions = modelReasoningEffortOptions({
+    provider: "google",
+    model: "gemini-2.5-flash-lite",
+    transportKind: "openai-compatible",
+  });
+  assert.deepEqual(
+    gemini25FlashLiteOptions.map((option) => option.value),
+    ["default", "none", "low", "medium", "high"],
+  );
+
+  const gemini25ProOptions = modelReasoningEffortOptions({
+    provider: "google",
+    model: "gemini-2.5-pro",
+    transportKind: "openai-compatible",
+  });
+  assert.deepEqual(
+    gemini25ProOptions.map((option) => option.value),
+    ["default", "low", "medium", "high"],
+  );
+
+  const gemini37FlashOptions = modelReasoningEffortOptions({
+    provider: "google",
+    model: "gemini-3.7-flash-lite",
+    transportKind: "openai-compatible",
+  });
+  assert.deepEqual(
+    gemini37FlashOptions.map((option) => option.value),
+    ["default", "low", "medium", "high"],
+  );
+
+  const gemini4Options = modelReasoningEffortOptions({
+    provider: "vercel-ai-gateway",
+    model: "google/gemini-4-argon",
+    transportKind: "open-responses",
+  });
+  assert.deepEqual(
+    gemini4Options.map((option) => option.value),
+    ["default", "low", "medium", "high"],
   );
 
   assert.equal(
