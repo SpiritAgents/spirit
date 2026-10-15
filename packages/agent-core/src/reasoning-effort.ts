@@ -12,6 +12,7 @@ import { isMoonshotKimiK3Model } from "./openai/moonshot-thinking-switch.js";
 export { isXiaomiResponsesReasoningEffortContext } from "./openai/gateway-xiaomi-thinking.js";
 import {
   isGatewayGoogleGeminiModel,
+  isGoogleGemini25ProModel,
   isGoogleGeminiMinimalThinkingLevelModel,
   isGoogleGeminiThinkingLevelModel,
 } from "./openai/gateway-google-thinking.js";
@@ -209,6 +210,11 @@ export const GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS: ReadonlyArray<
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
 ];
+
+/** Gemini 2.5 Pro has no None: the API rejects thinkingBudget 0. */
+export const GOOGLE_GEMINI_25_PRO_REASONING_EFFORT_OPTIONS: ReadonlyArray<
+  ModelReasoningEffortOption<GoogleReasoningEffort>
+> = GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS.filter((option) => option.value !== "none");
 
 export const GOOGLE_REASONING_EFFORT_OPTIONS = GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS;
 
@@ -553,6 +559,9 @@ export function googleReasoningEffortOptionsForContext(
   if (isGoogleGeminiThinkingLevelModel(model)) {
     return GOOGLE_GEMINI_LEVEL_REASONING_EFFORT_OPTIONS;
   }
+  if (isGoogleGemini25ProModel(model)) {
+    return GOOGLE_GEMINI_25_PRO_REASONING_EFFORT_OPTIONS;
+  }
   return GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS;
 }
 
@@ -704,7 +713,7 @@ function resolveCompatibleModelReasoningEffort(
         if (isGoogleGeminiMinimalThinkingLevelModel(model)) {
           return "minimal";
         }
-        if (isGoogleGeminiThinkingLevelModel(model)) {
+        if (isGoogleGeminiThinkingLevelModel(model) || isGoogleGemini25ProModel(model)) {
           return "default";
         }
         return "none";
@@ -712,7 +721,7 @@ function resolveCompatibleModelReasoningEffort(
         if (isGoogleGeminiMinimalThinkingLevelModel(model)) {
           return "minimal";
         }
-        if (isGoogleGeminiThinkingLevelModel(model)) {
+        if (isGoogleGeminiThinkingLevelModel(model) || isGoogleGemini25ProModel(model)) {
           return "default";
         }
         return "none";

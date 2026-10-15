@@ -20,24 +20,75 @@ function normalizeGoogleGeminiModelId(model: string): string {
   return slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
 }
 
-export function isGoogleGemini3Model(model: string): boolean {
-  return normalizeGoogleGeminiModelId(model).includes("gemini-3");
+function parseGoogleGeminiModelVersion(
+  model: string,
+): { major: number; minor: number } | undefined {
+  const match = /^gemini-(\d+)(?:\.(\d+))?/.exec(normalizeGoogleGeminiModelId(model));
+  if (!match) {
+    return undefined;
+  }
+
+  const major = Number(match[1]);
+  const minor = match[2] === undefined ? 0 : Number(match[2]);
+  if (!Number.isInteger(major) || !Number.isInteger(minor)) {
+    return undefined;
+  }
+
+  return { major, minor };
 }
 
-/** Gemini 3+ uses thinkingLevel; 2.5 and earlier use thinkingBudget. */
+/**
+ * Gemini 3 and newer use thinkingLevel. Earlier models use thinkingBudget.
+ * The cut is the numeric version in the id (`gemini-<major>[.<minor>]`),
+ * so Gemini 4 and later stay on thinkingLevel.
+ */
 export function isGoogleGeminiThinkingLevelModel(model: string): boolean {
-  const normalized = normalizeGoogleGeminiModelId(model);
-  return normalized.includes("gemini-3");
+  const version = parseGoogleGeminiModelVersion(model);
+  return version !== undefined && version.major >= 3;
 }
 
-/** Flash / Flash-Lite Gemini 3+ models support API thinkingLevel=minimal (Pro does not). */
+/**
+ * Gemini 3.7 / 3.8 Flash reject thinkingLevel=minimal with HTTP 400.
+ * Match any id that contains "flash", so suffixes such as -lite and -batch are included.
+ */
+function isGoogleGemini37Or38FlashModel(model: string): boolean {
+  const version = parseGoogleGeminiModelVersion(model);
+  if (
+    version === undefined ||
+    version.major !== 3 ||
+    (version.minor !== 7 && version.minor !== 8)
+  ) {
+    return false;
+  }
+
+  return normalizeGoogleGeminiModelId(model).includes("flash");
+}
+
+/**
+ * Flash / Flash-Lite on thinkingLevel models support thinkingLevel=minimal.
+ * Pro does not. Gemini 3.7 / 3.8 Flash, including suffixed ids, do not.
+ */
 export function isGoogleGeminiMinimalThinkingLevelModel(model: string): boolean {
-  if (!isGoogleGeminiThinkingLevelModel(model)) {
+  if (!isGoogleGeminiThinkingLevelModel(model) || isGoogleGemini37Or38FlashModel(model)) {
+    return false;
+  }
+
+  return normalizeGoogleGeminiModelId(model).includes("flash");
+}
+
+/** Gemini 2.5 Pro rejects thinkingBudget 0. 2.5 Flash and Flash-Lite still accept it. */
+export function isGoogleGemini25ProModel(model: string): boolean {
+  const version = parseGoogleGeminiModelVersion(model);
+  if (version === undefined || version.major !== 2 || version.minor !== 5) {
     return false;
   }
 
   const normalized = normalizeGoogleGeminiModelId(model);
-  return normalized.includes("flash");
+  if (normalized.includes("flash")) {
+    return false;
+  }
+
+  return /(?:^|[-_])pro(?:$|[-_])/.test(normalized);
 }
 
 function googleGemini25ThinkingBudgetForEffort(effort: string): number | undefined {
@@ -71,11 +122,17 @@ export function buildGoogleThinkingConfigForEffort(
 
   if (effort === "none") {
     if (isGoogleGeminiThinkingLevelModel(model)) {
-      // Internal paths like code completion still write none; Flash models map to API minimal.
+      // Code completion still writes none. Flash models that accept minimal map to it.
+      // Gemini 3.7 / 3.8 Flash reject minimal, so none is omitted like Pro.
       if (isGoogleGeminiMinimalThinkingLevelModel(model)) {
         return { thinkingLevel: "minimal" };
       }
 
+      return undefined;
+    }
+
+    // Gemini 2.5 Pro rejects thinkingBudget 0. Flash and Flash-Lite still accept it.
+    if (isGoogleGemini25ProModel(model)) {
       return undefined;
     }
 
@@ -114,7 +171,7 @@ export function gatewayGoogleGeminiSupportedEfforts(model: string): readonly str
     return ["minimal", "low", "medium", "high"];
   }
 
-  if (isGoogleGeminiThinkingLevelModel(model)) {
+  if (isGoogleGeminiThinkingLevelModel(model) || isGoogleGemini25ProModel(model)) {
     return ["low", "medium", "high"];
   }
 
