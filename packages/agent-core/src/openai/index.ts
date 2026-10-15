@@ -28,6 +28,10 @@ export {
   routedAnthropicClaudeSupportedEfforts,
   resolveRoutedAnthropicClaudeCapabilities,
 } from "./routed-anthropic-claude-capabilities.js";
+export {
+  isMuseReasoningEffortModel,
+  museSupportedReasoningEfforts,
+} from "./muse-reasoning-effort.js";
 export type {
   OpenAiLlmVendor,
   OpenAiModelCapabilities,

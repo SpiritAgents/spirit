@@ -13,6 +13,7 @@ import {
 import { parseGatewayUpstreamSlug } from "./openai/gateway-code-completion-thinking.js";
 import { isMinimaxM3ThinkingSwitchModel } from "./openai/gateway-minimax-thinking.js";
 import { isThinkingSwitchDisabledModel } from "./openai/thinking-switch-disabled-models.js";
+import { isMuseReasoningEffortModel } from "./openai/muse-reasoning-effort.js";
 import { isMoonshotThinkingSwitchModel } from "./openai/moonshot-thinking-switch.js";
 import {
   isXiaomiResponsesReasoningEffortContext,
@@ -190,6 +191,9 @@ function isGatewayReasoningEffortPrimaryControlModel(
 export function modelUsesReasoningEffortPrimaryControl(
   context?: ModelReasoningEffortContext,
 ): boolean {
+  if (isMuseReasoningEffortModel(context?.model ?? "")) {
+    return true;
+  }
   if (isAnthropicClaudeSwitchableThinkingModel(context)) {
     return false;
   }
@@ -239,7 +243,10 @@ export function modelUsesReasoningEffortPrimaryControl(
 }
 
 export function modelSupportsThinkingSwitch(context?: ModelReasoningEffortContext): boolean {
-  if (isThinkingSwitchDisabledModel(context?.model ?? "")) {
+  if (
+    isThinkingSwitchDisabledModel(context?.model ?? "") ||
+    isMuseReasoningEffortModel(context?.model ?? "")
+  ) {
     return false;
   }
   if (isAnthropicClaudeSwitchableThinkingModel(context)) {

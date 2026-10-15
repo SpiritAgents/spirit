@@ -2,6 +2,7 @@ import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
 import {
   gatewayGoogleGeminiSupportedEfforts,
+  museSupportedReasoningEfforts,
   routedAnthropicClaudeSupportedEfforts,
 } from "@spiritagent/agent-core";
 import type { ProviderListedModelEntry } from "@spiritagent/host-internal";
@@ -250,6 +251,13 @@ function resolvePreviewSupportedReasoningEffortsForEntry(
       supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
         moonshotK3SupportedReasoningEfforts(),
       ),
+    };
+  }
+
+  const inferredMuse = museSupportedReasoningEfforts(entry.id);
+  if (inferredMuse !== undefined) {
+    return {
+      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(inferredMuse),
     };
   }
 

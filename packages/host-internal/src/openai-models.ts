@@ -5,6 +5,7 @@
 import {
   gatewayAnthropicClaudeSupportedEfforts,
   gatewayGoogleGeminiSupportedEfforts,
+  museSupportedReasoningEfforts,
   routedAnthropicClaudeSupportedEfforts,
 } from "@spiritagent/agent-core";
 
@@ -2309,12 +2310,28 @@ function attachGatewayOpenAiGpt56ReasoningEfforts(
   };
 }
 
+function attachMuseReasoningEfforts(
+  modelEntry: ProviderListedModelEntry,
+): ProviderListedModelEntry {
+  const supportedReasoningEfforts = museSupportedReasoningEfforts(modelEntry.id);
+  if (supportedReasoningEfforts === undefined) {
+    return modelEntry;
+  }
+
+  return {
+    ...modelEntry,
+    supportedReasoningEfforts: [...supportedReasoningEfforts],
+  };
+}
+
 function attachGatewayModelReasoningEfforts(
   modelEntry: ProviderListedModelEntry,
 ): ProviderListedModelEntry {
-  return attachGatewayOpenAiGpt56ReasoningEfforts(
-    attachGatewayMoonshotReasoningEfforts(
-      attachGatewayGeminiReasoningEfforts(attachGatewayAnthropicReasoningEfforts(modelEntry)),
+  return attachMuseReasoningEfforts(
+    attachGatewayOpenAiGpt56ReasoningEfforts(
+      attachGatewayMoonshotReasoningEfforts(
+        attachGatewayGeminiReasoningEfforts(attachGatewayAnthropicReasoningEfforts(modelEntry)),
+      ),
     ),
   );
 }
@@ -2522,11 +2539,13 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
       }
       if (hasImage && !hasText) {
         entries.push(
-          attachOpenRouterAnthropicReasoningEfforts(
-            attachListedModelMetadata(
-              { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
-              record,
-              readOpenRouterPricing(record),
+          attachMuseReasoningEfforts(
+            attachOpenRouterAnthropicReasoningEfforts(
+              attachListedModelMetadata(
+                { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
+                record,
+                readOpenRouterPricing(record),
+              ),
             ),
           ),
         );
@@ -2541,8 +2560,10 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
     }
 
     entries.push(
-      attachOpenRouterAnthropicReasoningEfforts(
-        attachListedModelMetadata(modelEntry, record, readOpenRouterPricing(record)),
+      attachMuseReasoningEfforts(
+        attachOpenRouterAnthropicReasoningEfforts(
+          attachListedModelMetadata(modelEntry, record, readOpenRouterPricing(record)),
+        ),
       ),
     );
   }

@@ -8,6 +8,10 @@ import { parseGatewayUpstreamSlug } from "./openai/gateway-code-completion-think
 import { isXiaomiResponsesReasoningEffortContext } from "./openai/gateway-xiaomi-thinking.js";
 import { isTokenHubReasoningEffortModel } from "./openai/tokenhub-reasoning-effort.js";
 import { isMoonshotKimiK3Model } from "./openai/moonshot-thinking-switch.js";
+import {
+  isMuseReasoningEffortModel,
+  museSupportedReasoningEfforts,
+} from "./openai/muse-reasoning-effort.js";
 
 export { isXiaomiResponsesReasoningEffortContext } from "./openai/gateway-xiaomi-thinking.js";
 import {
@@ -99,6 +103,15 @@ export type XaiReasoningEffort = "default" | "none" | "low" | "medium" | "high";
 export type GoogleReasoningEffort = "default" | "none" | "minimal" | "low" | "medium" | "high";
 
 export type AnthropicReasoningEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
+
+export type MuseReasoningEffort =
+  | "default"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh"
+  | "max";
 
 export interface ModelReasoningEffortOption<T extends string = string> {
   value: T;
@@ -218,6 +231,18 @@ export const GOOGLE_GEMINI_25_PRO_REASONING_EFFORT_OPTIONS: ReadonlyArray<
 
 export const GOOGLE_REASONING_EFFORT_OPTIONS = GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS;
 
+export const MUSE_REASONING_EFFORT_OPTIONS: ReadonlyArray<
+  ModelReasoningEffortOption<MuseReasoningEffort>
+> = [
+  { value: "default", label: "Default" },
+  { value: "minimal", label: "Minimal" },
+  { value: "low", label: "Low" },
+  { value: "medium", label: "Medium" },
+  { value: "high", label: "High" },
+  { value: "xhigh", label: "Extra High" },
+  { value: "max", label: "Max" },
+];
+
 export const ANTHROPIC_REASONING_EFFORT_OPTIONS: ReadonlyArray<
   ModelReasoningEffortOption<AnthropicReasoningEffort>
 > = [
@@ -239,6 +264,7 @@ const ALL_REASONING_EFFORT_OPTIONS = dedupeReasoningEffortOptions([
   ...GOOGLE_GEMINI_MINIMAL_REASONING_EFFORT_OPTIONS,
   ...GOOGLE_GEMINI_LEVEL_REASONING_EFFORT_OPTIONS,
   ...GOOGLE_GEMINI_BUDGET_REASONING_EFFORT_OPTIONS,
+  ...MUSE_REASONING_EFFORT_OPTIONS,
   ...ANTHROPIC_REASONING_EFFORT_OPTIONS,
 ]);
 
@@ -333,12 +359,29 @@ export function defaultModelReasoningEffort(
     return defaultGroqModelReasoningEffort(context);
   }
 
+  if (isMuseReasoningEffortModel(context?.model ?? "")) {
+    return "default";
+  }
+
   return DEFAULT_MODEL_REASONING_EFFORT;
+}
+
+function museReasoningEffortOptionsForModel(
+  model: string,
+): ReadonlyArray<ModelReasoningEffortOption<MuseReasoningEffort>> {
+  const supported = new Set(museSupportedReasoningEfforts(model) ?? []);
+  return MUSE_REASONING_EFFORT_OPTIONS.filter(
+    (option) => option.value === "default" || supported.has(option.value),
+  );
 }
 
 export function modelReasoningEffortOptions(
   context?: ModelReasoningEffortContext,
 ): ReadonlyArray<ModelReasoningEffortOption<ModelReasoningEffort>> {
+  if (isMuseReasoningEffortModel(context?.model ?? "")) {
+    return museReasoningEffortOptionsForModel(context?.model ?? "");
+  }
+
   // DeepSeek routes (direct or Gateway deepseek/*) only expose reasoning_effort in thinking mode on V4.
   if (isDeepSeekRouteContext(context) && !isDeepSeekV4ReasoningEffortModel(context)) {
     return [{ value: "default", label: "Default" }];
@@ -616,11 +659,33 @@ function isDeepSeekRouteContext(context?: ModelReasoningEffortContext): boolean 
   );
 }
 
+function resolveMuseReasoningEffort(
+  normalized: ModelReasoningEffort,
+  model: string,
+): ModelReasoningEffort {
+  if (normalized === "none") {
+    return "default";
+  }
+
+  const supported = new Set(museSupportedReasoningEfforts(model) ?? []);
+  if (normalized === "max" && !supported.has("max")) {
+    return "xhigh";
+  }
+  if (normalized === "default" || supported.has(normalized)) {
+    return normalized;
+  }
+  return "default";
+}
+
 function resolveCompatibleModelReasoningEffort(
   value: ModelReasoningEffort | undefined,
   context?: ModelReasoningEffortContext,
 ): ModelReasoningEffort {
   const normalized = value ?? defaultModelReasoningEffort(context);
+
+  if (isMuseReasoningEffortModel(context?.model ?? "")) {
+    return resolveMuseReasoningEffort(normalized, context?.model ?? "");
+  }
 
   if (isDeepSeekV4ReasoningEffortModel(context)) {
     switch (normalized) {

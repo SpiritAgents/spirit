@@ -710,3 +710,33 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
 
   assert.equal(catalogMap.get("x-ai/grok-4.3")?.upstreamProvider, "x-ai");
 });
+
+test("muse model ids override stale catalog reasoning efforts on any provider", () => {
+  const preview = previewModelCatalogForTransport({
+    provider: "custom",
+    transportKind: "openai-compatible",
+    listedModels: [
+      {
+        id: "meta/muse-spark-1.3-contributor",
+        supportedReasoningEfforts: ["none", "max"],
+      },
+      { id: "muse-wonder-1.0" },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.supportedReasoningEfforts, [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(preview?.[1]?.supportedReasoningEfforts, [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
+});

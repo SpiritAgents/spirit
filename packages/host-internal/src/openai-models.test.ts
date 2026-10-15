@@ -522,6 +522,25 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
   ]);
 });
 
+test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts for muse models", () => {
+  const entries = parseVercelAiGatewayModelEntriesPayload({
+    data: [
+      { id: "meta/muse-spark-1.2-contributor", type: "language" },
+      { id: "meta/muse-spark-1.3", type: "language" },
+      { id: "meta/muse-wonder-1.0", type: "language" },
+    ],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => entry.supportedReasoningEfforts),
+    [
+      ["minimal", "low", "medium", "high", "xhigh"],
+      ["minimal", "low", "medium", "high", "xhigh", "max"],
+      ["minimal", "low", "medium", "high", "xhigh", "max"],
+    ],
+  );
+});
+
 test("parseOpenAiCompatibleModelEntriesPayload routes vercel-ai-gateway to typed parser", () => {
   const entries = parseOpenAiCompatibleModelEntriesPayload(
     {
@@ -756,6 +775,44 @@ test("parseOpenRouterModelEntriesPayload infers claude efforts when api omits re
     "xhigh",
     "max",
   ]);
+});
+
+test("parseOpenRouterModelEntriesPayload replaces upstream efforts for muse model ids", () => {
+  const entries = parseOpenRouterModelEntriesPayload({
+    data: [
+      {
+        id: "meta/muse-spark-1.3-contributor",
+        architecture: { output_modalities: ["text"] },
+        reasoning: { supported_efforts: ["none", "max"] },
+      },
+      {
+        id: "meta/muse-wonder-1.1",
+        architecture: { output_modalities: ["text"] },
+      },
+    ],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => entry.supportedReasoningEfforts),
+    [
+      ["minimal", "low", "medium", "high", "xhigh"],
+      ["minimal", "low", "medium", "high", "xhigh", "max"],
+    ],
+  );
+});
+
+test("parseOpenAiCompatibleModelEntriesPayload infers muse efforts from the bare model id", () => {
+  const entries = parseOpenAiCompatibleModelEntriesPayload({
+    data: [{ id: "muse-spark-1.3" }, { id: "muse-spark-1.1" }],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => entry.supportedReasoningEfforts),
+    [
+      ["minimal", "low", "medium", "high", "xhigh", "max"],
+      ["minimal", "low", "medium", "high", "xhigh"],
+    ],
+  );
 });
 
 test("parseXiaomiModelEntriesPayload marks multimodal allowlist models", () => {

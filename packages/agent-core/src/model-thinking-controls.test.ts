@@ -493,3 +493,24 @@ test("Groq reasoning models use reasoning effort primary control", () => {
   assert.equal(modelShowsReasoningEffortControl(context, true), true);
   assert.equal(modelShowsReasoningEffortControl(context, false), true);
 });
+
+test("Muse models keep reasoning effort and hide the thinking switch on every route", () => {
+  const gateway = {
+    provider: "vercel-ai-gateway" as const,
+    model: "meta/muse-spark-1.3",
+    transportKind: "open-responses" as const,
+    supportsThinkingSwitch: true as const,
+  };
+  assert.equal(modelUsesReasoningEffortPrimaryControl(gateway), true);
+  assert.equal(modelSupportsThinkingSwitch(gateway), false);
+  assert.equal(modelShowsReasoningEffortControl(gateway, false), true);
+  assert.equal(shouldPinReasoningEffortToDefault(false, gateway), false);
+
+  const custom = {
+    provider: "custom" as const,
+    model: "muse-wonder-1.0",
+    transportKind: "openai-compatible" as const,
+  };
+  assert.equal(modelSupportsThinkingSwitch(custom), false);
+  assert.equal(modelShowsReasoningEffortControl(custom, undefined), true);
+});

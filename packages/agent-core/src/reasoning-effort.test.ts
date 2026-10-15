@@ -531,3 +531,39 @@ test("Kimi Code without think_efforts still omits reasoning_effort by default", 
   assert.equal(resolveOpenAiTransportReasoningEffortForContext("max", context), "high");
   assert.equal(resolveOpenAiTransportReasoningEffortForContext(undefined, context), undefined);
 });
+
+test("muse model ids expose effort tiers and never a thinking-off value", () => {
+  const spark12 = {
+    provider: "openrouter" as const,
+    model: "meta/muse-spark-1.2-contributor",
+    transportKind: "openai-compatible" as const,
+  };
+  assert.deepEqual(
+    modelReasoningEffortOptions(spark12).map((option) => option.value),
+    ["default", "minimal", "low", "medium", "high", "xhigh"],
+  );
+  assert.equal(resolveModelReasoningEffortForContext("none", spark12), "default");
+  assert.equal(resolveModelReasoningEffortForContext("max", spark12), "xhigh");
+  assert.equal(resolveModelReasoningEffortForContext("minimal", spark12), "minimal");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("none", spark12), undefined);
+
+  const spark13 = {
+    provider: "vercel-ai-gateway" as const,
+    model: "meta/muse-spark-1.3",
+    transportKind: "open-responses" as const,
+  };
+  assert.deepEqual(
+    modelReasoningEffortOptions(spark13).map((option) => option.value),
+    ["default", "minimal", "low", "medium", "high", "xhigh", "max"],
+  );
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext("max", spark13), "max");
+
+  const wonder = {
+    provider: "custom" as const,
+    model: "muse-wonder-1.0",
+    transportKind: "openai-compatible" as const,
+  };
+  assert.equal(defaultModelReasoningEffort(wonder), "default");
+  assert.equal(resolveModelReasoningEffortForContext("max", wonder), "max");
+  assert.equal(resolveOpenAiTransportReasoningEffortForContext(undefined, wonder), undefined);
+});
