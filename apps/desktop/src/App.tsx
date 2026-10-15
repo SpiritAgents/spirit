@@ -353,14 +353,17 @@ export default function App() {
     syncLaunchSplashChromeToDocument(shellOverlayPhase);
   }, [shellOverlayPhase]);
 
-  const focusComposerEnabled =
+  const conversationSurfaceActive = surfaceNav.activeSurface === "conversation";
+  // In-page settle (session switch, split layout, launch overlay) stays separate
+  // from which surface is showing, so re-entering the conversation page focuses
+  // the composer even when the session key is unchanged.
+  const focusComposerReady =
     snapshot != null &&
-    surfaceNav.activeSurface === "conversation" &&
-    !surfaceNav.settingsMode &&
     !sessionNavigationBusy &&
     !runtime.layoutNavigationPending &&
     !newChatBusy &&
     !shellUnderlayHidden;
+  const focusComposerEnabled = conversationSurfaceActive && focusComposerReady;
 
   const handleOnboardingDone = useCallback(() => {
     void (async () => {
@@ -511,7 +514,8 @@ export default function App() {
                     >
                       <ConversationSessionFocusComposerBridge
                         composerSessionKey={conversation.composerSessionKey}
-                        enabled={focusComposerEnabled}
+                        surfaceActive={conversationSurfaceActive}
+                        ready={focusComposerReady}
                         composerAutomationApiRef={composerAutomationApiRef}
                       />
                       <ConversationTypingFocusRedirectBridge enabled={focusComposerEnabled} />

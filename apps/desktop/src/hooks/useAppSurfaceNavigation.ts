@@ -87,6 +87,9 @@ export function useAppSurfaceNavigation({
   const marketplaceMode = activeSurface === "marketplace";
   const automationsMode = activeSurface === "automations" || activeSurface === "automation-detail";
   const automationDetailMode = activeSurface === "automation-detail";
+  // Settings hides the conversation tree instead of unmounting it. Remounting
+  // ConversationView reloads the PR tools panel into its skeleton. Returning
+  // still focuses the composer; that path keys off surface re-entry, not a remount.
   const preserveConversationSurface =
     activeSurface === "conversation" || (settingsMode && lastNonSettingsSurface === "conversation");
 

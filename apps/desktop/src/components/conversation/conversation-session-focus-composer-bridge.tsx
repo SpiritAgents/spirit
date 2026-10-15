@@ -6,18 +6,22 @@ import type { FocusedPaneComposerControls } from "@/lib/focused-pane-composer-co
 
 export type ConversationSessionFocusComposerBridgeProps = {
   composerSessionKey: string;
-  enabled: boolean;
+  surfaceActive: boolean;
+  ready: boolean;
   composerAutomationApiRef?: MutableRefObject<FocusedPaneComposerControls | null>;
 };
 
 /** Routes session-focus and automation seeding to the focused pane composer. */
 export function ConversationSessionFocusComposerBridge({
   composerSessionKey,
-  enabled,
+  surfaceActive,
+  ready,
   composerAutomationApiRef,
 }: ConversationSessionFocusComposerBridgeProps) {
   const split = useConversationSplit();
   const focusComposer = useCallback(() => {
+    // Read at call time. Split layout stays mounted across settings, and the
+    // pane that was focused before leaving is still the one that should receive the caret.
     split.getFocusedPaneComposerControls()?.focusComposer();
   }, [split.getFocusedPaneComposerControls]);
 
@@ -37,7 +41,8 @@ export function ConversationSessionFocusComposerBridge({
   useConversationSessionFocusComposer({
     composerSessionKey,
     focusComposer,
-    enabled,
+    surfaceActive,
+    ready,
   });
 
   return null;
