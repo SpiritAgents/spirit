@@ -811,6 +811,7 @@
         "openai-compatible": "https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}"
       },
       "credentials": { "kind": "vertex" },
+      "expressApiBase": "https://aiplatform.googleapis.com/v1/publishers/google",
       "catalog": { "parser": "google-vertex-models", "endpoint": "/publishers/google/models" }
     }
   ]

@@ -62,6 +62,8 @@ export interface ProviderPreset {
   imageApi?: string;
   videoApi?: string;
   catalog?: ProviderPresetCatalog;
+  /** apiKey-only express connect base (e.g. Vertex Express), used when the wizard picks the plain apiKey credential form for a preset whose default credential kind differs. */
+  expressApiBase?: string;
 }
 
 export interface CustomProviderPreset {
