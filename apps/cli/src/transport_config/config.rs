@@ -270,6 +270,11 @@ fn build_transport_from_profile(
                     json!(supports_thinking_switch),
                 );
             }
+            if profile.thinking_enabled == Some(false)
+                && let Some(obj) = transport.as_object_mut()
+            {
+                obj.insert("vendorExtendedThinking".to_string(), json!(false));
+            }
             transport
         }
         ModelTransportKind::OpenAiCompatible => {
@@ -318,6 +323,11 @@ fn build_transport_from_profile(
                     "supportsThinkingSwitch".to_string(),
                     json!(supports_thinking_switch),
                 );
+            }
+            if profile.thinking_enabled == Some(false)
+                && let Some(obj) = transport.as_object_mut()
+            {
+                obj.insert("vendorExtendedThinking".to_string(), json!(false));
             }
             transport
         }

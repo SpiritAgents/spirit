@@ -236,6 +236,13 @@ pub struct CredentialSlot {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ModelEntry {
     pub name: String,
+    /// User thinking on/off state; model-level only and never inherited (absent = on).
+    #[serde(
+        rename = "thinkingEnabled",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub thinking_enabled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub capabilities: Option<Vec<String>>,
     #[serde(
@@ -555,6 +562,12 @@ pub struct ModelProfile {
         skip_serializing_if = "Option::is_none"
     )]
     pub thinking_switch: Option<Value>,
+    #[serde(
+        rename = "thinkingEnabled",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub thinking_enabled: Option<bool>,
     #[serde(
         rename = "serviceTiers",
         default,
@@ -897,6 +910,7 @@ pub fn resolve_model_profile_from_parts(
             .thinking_switch
             .clone()
             .or_else(|| provider.thinking_switch.clone()),
+        thinking_enabled: model.thinking_enabled,
         service_tiers: model
             .service_tiers
             .clone()

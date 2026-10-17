@@ -51,6 +51,8 @@ export interface SpiritModelProfile {
   supportsThinkingType?: "only";
   supportsThinkingSwitch?: boolean;
   thinkingSwitch?: ThinkingSwitchDeclaration;
+  /** User thinking on/off state (model-level only; see `ModelEntry.thinkingEnabled`). */
+  thinkingEnabled?: boolean;
   serviceTiers?: SpiritServiceTiersDeclaration;
   serviceTier?: ModelServiceTier;
 }

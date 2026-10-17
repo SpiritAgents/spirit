@@ -228,6 +228,7 @@ function buildTransportFromProfile(
       ...(profile.supportsThinkingSwitch !== undefined
         ? { supportsThinkingSwitch: profile.supportsThinkingSwitch }
         : {}),
+      ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
       ...declarations,
     };
   }
@@ -265,6 +266,7 @@ function buildTransportFromProfile(
     ...(profile.supportsThinkingSwitch !== undefined
       ? { supportsThinkingSwitch: profile.supportsThinkingSwitch }
       : {}),
+    ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
     ...declarations,
   };
 }

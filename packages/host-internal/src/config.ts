@@ -109,6 +109,12 @@ export interface ModelInheritableFields {
 
 export interface ModelEntry extends ModelInheritableFields {
   name: string;
+  /**
+   * User's thinking on/off state (user state, not a capability declaration); meaningful only when
+   * `supportsThinkingSwitch` is declared — setting it otherwise is a schema error. Absent = on.
+   * Model-level only; never inherited from the provider entry.
+   */
+  thinkingEnabled?: boolean;
 }
 
 export interface ProviderEntry extends ModelInheritableFields {
@@ -232,7 +238,11 @@ const MODEL_INHERITABLE_KEYS = [
   "serviceTier",
 ] as const;
 
-const MODEL_ENTRY_KEYS: ReadonlySet<string> = new Set(["name", ...MODEL_INHERITABLE_KEYS]);
+const MODEL_ENTRY_KEYS: ReadonlySet<string> = new Set([
+  "name",
+  "thinkingEnabled",
+  ...MODEL_INHERITABLE_KEYS,
+]);
 
 const PROVIDER_ENTRY_KEYS: ReadonlySet<string> = new Set([
   "id",
@@ -645,6 +655,24 @@ function validateModelEntry(model: unknown, context: string): void {
   rejectUnknownKeys(model, MODEL_ENTRY_KEYS, context);
   readRequiredNonBlankString(model, "name", context);
   validateInheritableFields(model, context);
+  if (model["thinkingEnabled"] !== undefined && typeof model["thinkingEnabled"] !== "boolean") {
+    throw new SpiritConfigSchemaError(`${context}: "thinkingEnabled" must be a boolean.`);
+  }
+}
+
+function validateThinkingEnabledRule(
+  model: UnknownRecord,
+  effective: UnknownRecord,
+  context: string,
+): void {
+  if (model["thinkingEnabled"] === undefined) {
+    return;
+  }
+  if (effective["supportsThinkingSwitch"] !== true) {
+    throw new SpiritConfigSchemaError(
+      `${context}: "thinkingEnabled" is set but "supportsThinkingSwitch" is not declared.`,
+    );
+  }
 }
 
 function validateProviderEntry(entry: unknown, context: string): void {
@@ -740,6 +768,7 @@ function validateProviderEntry(entry: unknown, context: string): void {
     const effective = mergeRawInheritableFields(entry, model);
     validateServiceTierRule(effective, modelContext);
     validateReasoningRules(effective, modelContext);
+    validateThinkingEnabledRule(model as UnknownRecord, effective, modelContext);
   });
 }
 
@@ -855,6 +884,9 @@ export function resolveModelEntry(
     return undefined;
   }
   const resolved: ModelEntry = { name: model.name };
+  if (model.thinkingEnabled !== undefined) {
+    resolved.thinkingEnabled = model.thinkingEnabled;
+  }
   const capabilities = model.capabilities ?? provider.capabilities;
   if (capabilities !== undefined) {
     resolved.capabilities = capabilities;
