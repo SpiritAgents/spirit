@@ -1,10 +1,13 @@
 import type { JsonObject, JsonValue, AgentMode } from "../ports.js";
+import type { FileUploadConfig } from "../file-upload/uploader.js";
 import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
+  ThinkingSwitchDeclaration,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 import type { ModelServiceTier } from "../model-service-tier.js";
+import type { ProviderToolEntry } from "../provider-tools/types.js";
 import type {
   OpenAiImageGenerationConfig,
   OpenAiLlmVendor,
@@ -92,6 +95,24 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
    * `canonical_slug` author prefix); used to map `serviceTier` behind aggregator routes.
    */
   upstreamProvider?: string;
+  /** Full npm package name of the SDK adapter (e.g. `@ai-sdk/openai`); absent = inferred by `resolveOpenResponsesSdkProvider`. */
+  sdk?: string;
+  /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */
+  headers?: Record<string, string>;
+  /** Literal fields merged unconditionally into every request body top level; escape hatch, prefer structured declarations. */
+  body?: JsonObject;
+  /** Declared provider tools; injected, recognized, and executed purely by declaration. */
+  providerTools?: ProviderToolEntry[];
+  /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
+  fileUpload?: FileUploadConfig;
+  /** Transport option namespace; the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
+  options?: Record<string, unknown>;
+  /** Declared output token limit for the model. */
+  outputLimit?: number;
+  /** Declared reasoning mode set; the picker and validation source for `reasoningMode`. */
+  supportedReasoningModes?: readonly ModelReasoningMode[];
+  /** Declared wire encoding of the thinking on/off switch; absent = transport default encoding. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
 }
 
 export type OpenResponsesRequestTraceKind =

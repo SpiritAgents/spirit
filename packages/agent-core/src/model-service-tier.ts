@@ -1,4 +1,5 @@
 import { isOpenAiUltrafastModel } from "./openai/gpt-reasoning-controls.js";
+import type { JsonObject } from "./ports.js";
 import type { ModelReasoningProvider, ModelReasoningTransportKind } from "./reasoning-effort.js";
 
 /**
@@ -17,6 +18,19 @@ export const MODEL_SERVICE_TIERS: readonly ModelServiceTier[] = [
   "priority",
   "ultrafast",
 ];
+
+/**
+ * Literal `serviceTiers` form: per-tier wire effects declared verbatim (headers/body patches), so
+ * the runtime applies the selected tier's literals with zero internal mapping. Used for routes
+ * whose mapping varies per upstream (e.g. aggregation gateways).
+ */
+export interface ModelServiceTierWireDeclaration {
+  headers?: Record<string, string>;
+  body?: JsonObject;
+}
+
+/** Literal `serviceTiers` map: tier name → wire declaration. The simple form is `ModelServiceTier[]`. */
+export type ModelServiceTiersLiteralDeclaration = Record<string, ModelServiceTierWireDeclaration>;
 
 /**
  * Upstream provider identity behind an aggregator route (Vercel AI Gateway / OpenRouter).
