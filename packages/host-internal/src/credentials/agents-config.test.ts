@@ -3,7 +3,10 @@ import { test } from "vitest";
 
 import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config-v2.js";
 import type { SpiritConfigFile } from "./types.js";
-import { resolveAgentsWebToolExposure } from "./agents-config.js";
+import {
+  resolveAgentsProviderToolsExposure,
+  resolveAgentsWebToolExposure,
+} from "./agents-config.js";
 
 function configWithAgents(agents: unknown): SpiritConfigFile {
   return {
@@ -61,5 +64,42 @@ test("resolveAgentsWebToolExposure treats malformed sections as enabled", () => 
       configWithAgents({ webSearch: "broken", webFetch: { enabled: 0 } }),
     ),
     { webSearchEnabled: true, webFetchEnabled: true },
+  );
+});
+
+test("resolveAgentsProviderToolsExposure defaults to enabled", () => {
+  assert.deepEqual(resolveAgentsProviderToolsExposure(undefined), { providerToolsEnabled: true });
+  assert.deepEqual(resolveAgentsProviderToolsExposure(configWithAgents(undefined)), {
+    providerToolsEnabled: true,
+  });
+  assert.deepEqual(resolveAgentsProviderToolsExposure(configWithAgents({})), {
+    providerToolsEnabled: true,
+  });
+  assert.deepEqual(resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: {} })), {
+    providerToolsEnabled: true,
+  });
+  assert.deepEqual(resolveAgentsProviderToolsExposure(configWithAgents("broken")), {
+    providerToolsEnabled: true,
+  });
+  assert.deepEqual(
+    resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: { enabled: 0 } })),
+    { providerToolsEnabled: true },
+  );
+  assert.deepEqual(
+    resolveAgentsProviderToolsExposure(configWithAgents({ webSearch: { enabled: false } })),
+    {
+      providerToolsEnabled: true,
+    },
+  );
+});
+
+test("resolveAgentsProviderToolsExposure honors explicit false", () => {
+  assert.deepEqual(
+    resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: { enabled: false } })),
+    { providerToolsEnabled: false },
+  );
+  assert.deepEqual(
+    resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: { enabled: true } })),
+    { providerToolsEnabled: true },
   );
 });

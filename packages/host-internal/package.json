@@ -52,6 +52,10 @@
       "types": "./dist/config-v2.d.ts",
       "default": "./dist/config-v2.js"
     },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
+    },
     "./model-provider-presets": {
       "types": "./dist/model-provider-presets.d.ts",
       "default": "./dist/model-provider-presets.js"
