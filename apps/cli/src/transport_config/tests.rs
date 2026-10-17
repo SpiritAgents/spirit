@@ -299,6 +299,43 @@ fn anthropic_shape_filters_efforts_to_the_protocol_enum() {
 }
 
 #[test]
+fn thinking_enabled_false_stamps_vendor_extended_thinking() {
+    let config = config_from(json!({
+        "schemaVersion": 1,
+        "providers": [{
+            "id": "acme",
+            "apiBase": "https://api.acme.invalid/v1",
+            "models": [{
+                "name": "acme-1",
+                "supportsThinkingSwitch": true,
+                "thinkingEnabled": false
+            }]
+        }],
+        "activeModel": { "providerId": "acme", "name": "acme-1" }
+    }));
+    let fixture = TestTransportFixture::new(config, StubSecretStore::default());
+    let transport = resolve_transport_config_json_for(&fixture.host(), &fixture.config)
+        .expect("resolve transport config");
+    assert_eq!(
+        transport
+            .get("vendorExtendedThinking")
+            .and_then(Value::as_bool),
+        Some(false)
+    );
+    assert!(transport.get("thinkingEnabled").is_none());
+
+    // Absent or true state omits the field entirely (default = thinking on).
+    let mut config = fixture.config.clone();
+    config
+        .active_model_entry_mut()
+        .expect("model entry")
+        .thinking_enabled = Some(true);
+    let transport = resolve_transport_config_json_for(&fixture.host(), &config)
+        .expect("resolve transport config");
+    assert!(transport.get("vendorExtendedThinking").is_none());
+}
+
+#[test]
 fn open_responses_shape_includes_agent_mode_and_service_tier() {
     let config = config_from(json!({
         "schemaVersion": 1,

@@ -50,6 +50,7 @@ const PROFILE_MODEL_KEYS = [
   "supportsThinkingType",
   "supportsThinkingSwitch",
   "thinkingSwitch",
+  "thinkingEnabled",
   "serviceTiers",
   "serviceTier",
 ] as const;

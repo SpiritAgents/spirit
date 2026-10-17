@@ -984,6 +984,48 @@ test("reasoning selections are checked against declared lists, with spec asymmet
   );
 });
 
+test("thinkingEnabled requires a declared supportsThinkingSwitch", () => {
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          models: [{ name: "m", supportsThinkingSwitch: true, thinkingEnabled: false }],
+        }),
+      ]),
+    ),
+  );
+  // Provider-level flat declaration of the switch satisfies the model-level state.
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          supportsThinkingSwitch: true,
+          models: [{ name: "m", thinkingEnabled: false }],
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ models: [{ name: "m", thinkingEnabled: false }] })]),
+      ),
+    '"thinkingEnabled" is set but "supportsThinkingSwitch" is not declared',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ models: [{ name: "m", thinkingEnabled: "off" }] })]),
+      ),
+    '"thinkingEnabled" must be a boolean',
+  );
+  // The user state is model-level only: a provider-level key is rejected as unknown.
+  assertSchemaError(
+    () => validateSpiritConfig(validConfig([validProvider({ thinkingEnabled: false })])),
+    'unknown key "thinkingEnabled"',
+  );
+});
+
 test("provider-level flat declarations are validated and inherited by models", () => {
   assert.doesNotThrow(() =>
     validateSpiritConfig(
@@ -1085,6 +1127,7 @@ test("resolveModelEntry merges provider defaults with model overrides", () => {
         serviceTiers: ["default", "priority"],
         serviceTier: "priority",
         supportsThinkingSwitch: false,
+        thinkingEnabled: false,
       },
     ],
   };
@@ -1115,7 +1158,10 @@ test("resolveModelEntry merges provider defaults with model overrides", () => {
   assert.deepEqual(tuned.serviceTiers, ["default", "priority"]);
   assert.equal(tuned.serviceTier, "priority");
   assert.equal(tuned.supportsThinkingSwitch, false);
+  assert.equal(tuned.thinkingEnabled, false);
   assert.deepEqual(tuned.thinkingSwitch, thinkingSwitch);
+  // thinkingEnabled is model-level state and never inherits from the provider.
+  assert.equal("thinkingEnabled" in bare, false);
 
   assert.equal(resolveModelEntry(provider, "missing"), undefined);
 
