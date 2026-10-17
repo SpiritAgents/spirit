@@ -222,6 +222,25 @@ test("google-vertex-ai requires project/location template values", () => {
   assert.equal(entry.sdk, "@ai-sdk/google-vertex");
 });
 
+test("google-vertex-ai with the apiKey credential form materializes the Express base", () => {
+  const entry = materializeProviderPreset({
+    presetId: "google-vertex-ai",
+    credentialKind: "apiKey",
+  });
+  assert.equal(entry.apiBase, "https://aiplatform.googleapis.com/v1/publishers/google");
+  assert.equal(entry.sdk, "@ai-sdk/google-vertex");
+  assert.equal(entry.options, undefined);
+});
+
+test("amazon-bedrock with the apiKey credential form keeps the regional base (no express path)", () => {
+  const entry = materializeProviderPreset({
+    presetId: "amazon-bedrock",
+    credentialKind: "apiKey",
+    templateValues: { awsRegion: "us-west-2" },
+  });
+  assert.equal(entry.apiBase, "https://bedrock.us-west-2.amazonaws.com");
+});
+
 test("anthropic has no provider tools today (server-side search was never integrated)", () => {
   const entry = materializeProviderPreset({ presetId: "anthropic" });
   assert.equal(entry.transportKind, "anthropic");

@@ -7,6 +7,7 @@ import {
   resolvePresetApiBase,
 } from "./api-base.js";
 import { CUSTOM_PROVIDER_PRESET, findProviderPreset } from "./loader.js";
+import type { ProviderPresetCredentialKind } from "./types.js";
 
 export class ProviderPresetMaterializeError extends Error {
   constructor(message: string) {
@@ -52,6 +53,11 @@ export interface MaterializeProviderPresetInput {
   apiBaseOverride?: string;
   /** `{placeholder}` substitutions for templated bases (`{resourceName}`, `{accountId}`, …). */
   templateValues?: Record<string, string>;
+  /**
+   * The credential form the wizard collected. `"apiKey"` on a preset whose default credential
+   * kind differs (e.g. Vertex) selects the preset's `expressApiBase` when it declares one.
+   */
+  credentialKind?: ProviderPresetCredentialKind;
 }
 
 /**
@@ -124,8 +130,14 @@ export function materializeProviderPreset(
 
   const transportKind = input.transportKind ?? preset.defaultTransport;
   const apiBaseOverride = input.apiBaseOverride?.trim();
+  // Plain-apiKey credential form on a non-apiKey preset (e.g. Vertex Express) uses the express base.
+  const expressApiBase =
+    input.credentialKind === "apiKey" && preset.credentials.kind !== "apiKey"
+      ? preset.expressApiBase?.trim() || undefined
+      : undefined;
   const apiBase =
     apiBaseOverride ||
+    expressApiBase ||
     resolvePresetApiBase(preset, {
       transportKind,
       ...(input.siteId !== undefined ? { siteId: input.siteId } : {}),

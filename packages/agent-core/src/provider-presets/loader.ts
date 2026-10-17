@@ -233,6 +233,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
   }
   const imageApi = readOptionalString(value, "imageApi", context);
   const videoApi = readOptionalString(value, "videoApi", context);
+  const expressApiBase = readOptionalString(value, "expressApiBase", context);
   const catalog =
     value["catalog"] === undefined
       ? undefined
@@ -250,6 +251,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(fileUpload !== undefined ? { fileUpload } : {}),
     ...(imageApi !== undefined ? { imageApi } : {}),
     ...(videoApi !== undefined ? { videoApi } : {}),
+    ...(expressApiBase !== undefined ? { expressApiBase } : {}),
     ...(catalog !== undefined ? { catalog } : {}),
   };
 }
