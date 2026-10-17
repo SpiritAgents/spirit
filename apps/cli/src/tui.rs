@@ -150,11 +150,8 @@ pub(crate) struct ApplyModelAddParams<'a> {
     pub provider: Option<ModelProvider>,
     pub transport_kind: crate::model_registry::ModelTransportKind,
     pub context_length: Option<u64>,
-    pub azure_resource_name: Option<&'a str>,
-    pub cloudflare_account_id: Option<&'a str>,
+    /// Materializes into the literal `cf-aig-gateway-id` header on the provider entry.
     pub cloudflare_gateway_id: Option<&'a str>,
-    pub provider_site: Option<&'a str>,
-    pub alibaba_workspace_id: Option<&'a str>,
 }
 
 impl TuiShell {
@@ -607,11 +604,7 @@ impl TuiShell {
             provider,
             transport_kind,
             context_length,
-            azure_resource_name,
-            cloudflare_account_id,
             cloudflare_gateway_id,
-            provider_site,
-            alibaba_workspace_id,
         } = params;
         let mut config = self.runtime.config().clone();
         if config.has_model_name(name) {
@@ -619,55 +612,33 @@ impl TuiShell {
         }
 
         let provider = provider.unwrap_or(ModelProvider::Custom);
-        let group_id = crate::model_registry::default_preset_provider_group_id(provider);
-        let connect = crate::model_registry::ProviderGroupConnectDraft {
-            transport_kind: (transport_kind
-                == crate::model_registry::ModelTransportKind::Anthropic
-                || transport_kind == crate::model_registry::ModelTransportKind::OpenResponses)
-                .then(|| transport_kind.as_str().to_string()),
-            provider_site: provider_site
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            alibaba_workspace_id: alibaba_workspace_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            azure_resource_name: azure_resource_name
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            cloudflare_account_id: cloudflare_account_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            cloudflare_gateway_id: cloudflare_gateway_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            ..Default::default()
-        };
-        config.add_model_to_group(
-            &group_id,
-            provider,
+        let provider_id = crate::model_registry::default_preset_provider_id(provider);
+        // Sites, workspace ids, Azure resource names, and the Cloudflare account id were
+        // already materialized into `api_base` by the connect form; the Cloudflare gateway id
+        // materializes into a literal header (`cf-aig-gateway-id`).
+        let mut connect =
+            crate::model_provider_presets::preset_connect_draft(provider, transport_kind);
+        if let Some(gateway_id) = cloudflare_gateway_id
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            connect.headers = Some(std::collections::BTreeMap::from([(
+                "cf-aig-gateway-id".to_string(),
+                gateway_id.to_string(),
+            )]));
+        }
+        config.add_model_to_provider(
+            &provider_id,
             api_base.to_string(),
             connect,
             crate::model_registry::ModelEntry {
                 name: name.to_string(),
-                reasoning_effort: None,
-                reasoning_mode: None,
-                thinking_enabled: None,
-                supported_reasoning_efforts: None,
-                capabilities: None,
                 context_length,
-                supports_thinking_type: None,
-                supports_thinking_switch: None,
-                service_tier: None,
-                upstream_provider: None,
+                ..Default::default()
             },
         );
         config.active_model = crate::model_registry::ModelRef {
-            group_id,
+            provider_id: provider_id.clone(),
             name: name.to_string(),
         };
 
@@ -675,10 +646,13 @@ impl TuiShell {
             return Err(err.to_string());
         }
 
-        if !api_key.trim().is_empty() {
-            if let Err(err) = self.secret_store.save_model_api_key(name, api_key) {
-                return Err(t!("tui.model_add.key_save_failed", err = err).into_owned());
-            }
+        if !api_key.trim().is_empty()
+            && let Err(err) = self.secret_store.save_provider_secret(
+                &crate::model_registry::provider_key_account(&provider_id),
+                api_key,
+            )
+        {
+            return Err(t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned());
         }
 
         if let Err(err) = self.config_store.save(&config) {

@@ -222,7 +222,7 @@ Under this boundary, the current repo should be understood as:
 - `packages/host-internal/src/lsp/` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery, post-write diagnostic append, workspace cache).
 - `packages/agent-core/src/lsp/` keeps only the LSP tool contract (`get_diagnostics` auto-routed by path extension), supported-extension constants, and LLM-visible diagnostic formatting.
 - `packages/server` carries the shared daemon: single source of truth for sessions/turns/approvals, WS transport, and instance registry; CLI and Desktop main sessions, Automation, and Dream Collector all have no in-process fallback
-- `packages/host-internal/src/credentials/` carries shared config and credential reading (`config.json` + OS keyring, with `group::{groupId}` as the canonical account scheme), used by server and acp-server to resolve transports in-process.
+- `packages/host-internal/src/credentials/` carries shared config and credential reading (`config.json` + OS keyring, with `provider::{id}` / `provider::{id}::{slot}` as the canonical account scheme), used by server and acp-server to resolve transports in-process.
 - `apps/desktop` carries dreams settings, background scheduling, and Commit consumption.
 - Host tool implementations and rules / skills / plan discovery and management currently duplicated between CLI and Desktop should converge into the host-internal library.
 - `agent-core` should not absorb these discovery and management implementations, because that would incorrectly lift Host / UI responsibilities into the Agent SDK.

@@ -684,7 +684,6 @@ impl DaemonRuntime {
         TransportHost {
             workspace_root: &self.workspace_root,
             secret_store: self.secret_store.as_ref(),
-            stored_config: &self.config,
         }
     }
 

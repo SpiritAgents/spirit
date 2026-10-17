@@ -1,5 +1,3 @@
-import type { DesktopModelProvider } from "@/types";
-
 const MODELS_DEV_LOGO_ORIGIN = "https://models.dev";
 
 /** Probe timeout for models.dev reachability (logo CDN). */
@@ -16,7 +14,7 @@ const MODELS_DEV_PROBE_URL = `${MODELS_DEV_LOGO_ORIGIN}/logos/openai.svg`;
  * Spirit `ModelProviderId` → models.dev provider folder id.
  * models.dev serves a default sparkles SVG for unknown ids instead of a 404.
  */
-const MODELS_DEV_LOGO_ID_ALIASES: Partial<Record<DesktopModelProvider, string>> = {
+const MODELS_DEV_LOGO_ID_ALIASES: Partial<Record<string, string>> = {
   "vercel-ai-gateway": "vercel",
   "moonshot-ai": "moonshotai",
   "kimi-code": "moonshotai",
@@ -33,12 +31,12 @@ const MODELS_DEV_LOGO_ID_ALIASES: Partial<Record<DesktopModelProvider, string>> 
 let modelsDevReachableCache: boolean | null = null;
 let modelsDevReachabilityProbe: Promise<boolean> | null = null;
 
-export function modelsDevProviderLogoId(providerId: DesktopModelProvider): string {
+export function modelsDevProviderLogoId(providerId: string): string {
   return MODELS_DEV_LOGO_ID_ALIASES[providerId] ?? providerId;
 }
 
 /** models.dev CDN logo URL. */
-export function modelsDevProviderLogoUrl(providerId: DesktopModelProvider): string {
+export function modelsDevProviderLogoUrl(providerId: string): string {
   return `${MODELS_DEV_LOGO_ORIGIN}/logos/${encodeURIComponent(modelsDevProviderLogoId(providerId))}.svg`;
 }
 

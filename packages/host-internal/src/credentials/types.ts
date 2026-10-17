@@ -1,46 +1,58 @@
+import type { JsonObject } from "@spiritagent/agent-core";
+import type { FileUploadConfig } from "@spiritagent/agent-core/file-upload";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import type { MaterializeProviderPresetInput } from "@spiritagent/agent-core/provider-presets";
+import type { ProviderToolEntry } from "@spiritagent/agent-core/provider-tools";
 
 import type {
-  ModelEntryV2,
+  ModelEntry,
   ModelRef,
-  ProviderGroupV2,
-  SpiritConfigSchemaVersion,
-  SpiritModelCapabilityV2,
-  SpiritModelReasoningEffortV2,
-} from "../config-v2.js";
-import type { ModelProviderId, ProviderModelTransportKind } from "../model-provider-presets.js";
+  ProviderCredentialSlot,
+  ProviderKeyringReference,
+  ProviderOptions,
+  SpiritModelCapability,
+  SpiritModelReasoningEffort,
+  SpiritModelReasoningMode,
+  SpiritServiceTiersDeclaration,
+  SpiritTransportKind,
+  ThinkingSwitchDeclaration,
+} from "../config.js";
 
-export type SpiritModelCapability = SpiritModelCapabilityV2;
-export type SpiritModelReasoningEffort = SpiritModelReasoningEffortV2;
-
-/** Resolved profile for host transports (group connect fields + model entry). */
+/**
+ * Resolved profile for host transports: the provider entry's connection fields and credential
+ * channel declarations plus the effective (post-inheritance) model fields from
+ * `resolveModelEntry`. Vendor-free: every field is a wire fact or a mechanism name.
+ */
 export interface SpiritModelProfile {
-  groupId: string;
+  providerId: string;
   ref: ModelRef;
   name: string;
   apiBase: string;
+  transportKind?: SpiritTransportKind;
+  sdk?: string;
+  headers?: Record<string, string>;
+  body?: JsonObject;
+  options?: ProviderOptions;
+  providerTools?: ProviderToolEntry[];
+  fileUpload?: FileUploadConfig;
+  imageApi?: string;
+  videoApi?: string;
+  apiKey?: string;
+  apiKeyEnv?: string;
+  apiKeyKeyring?: ProviderKeyringReference;
+  credentials?: Record<string, ProviderCredentialSlot>;
+  capabilities?: SpiritModelCapability[];
+  contextLength?: number;
+  outputLimit?: number;
   reasoningEffort?: SpiritModelReasoningEffort;
   supportedReasoningEfforts?: SpiritModelReasoningEffort[];
-  capabilities?: SpiritModelCapability[];
-  provider?: ModelProviderId;
-  transportKind?: ProviderModelTransportKind;
-  providerSite?: string;
-  alibabaWorkspaceId?: string;
-  alibabaBillingMode?: ProviderGroupV2["alibabaBillingMode"];
-  stepfunBillingMode?: ProviderGroupV2["stepfunBillingMode"];
-  zAiBillingMode?: ProviderGroupV2["zAiBillingMode"];
-  zhipuBillingMode?: ProviderGroupV2["zhipuBillingMode"];
-  awsRegion?: string;
-  azureResourceName?: string;
-  cloudflareAccountId?: string;
-  cloudflareGatewayId?: string;
-  vertexProject?: string;
-  vertexLocation?: string;
-  contextLength?: number;
-  /** Per-model service tier preference (see `ModelEntryV2.serviceTier`). */
+  reasoningMode?: SpiritModelReasoningMode;
+  supportedReasoningModes?: SpiritModelReasoningMode[];
+  supportsThinkingType?: "only";
+  supportsThinkingSwitch?: boolean;
+  thinkingSwitch?: ThinkingSwitchDeclaration;
+  serviceTiers?: SpiritServiceTiersDeclaration;
   serviceTier?: ModelServiceTier;
-  /** Aggregator upstream identity fact (see `ModelEntryV2.upstreamProvider`). */
-  upstreamProvider?: string;
 }
 
 /** Action a single permission rule applies when its pattern matches. */
@@ -59,39 +71,19 @@ export interface PermissionConfig {
   read_file?: PermissionDomainRules;
 }
 
-/** Minimal `config.json` fields read/written by hosts; other Desktop fields are preserved on merge. */
-export interface SpiritConfigFile {
-  schemaVersion: SpiritConfigSchemaVersion;
-  providerGroups: ProviderGroupV2[];
-  activeModel: ModelRef;
-  imageGenerationModel?: ModelRef;
-  videoGenerationModel?: ModelRef;
-  secondaryLanguageModel?: ModelRef;
-  permission?: PermissionConfig;
-  [key: string]: unknown;
-}
-
-export type { ModelEntryV2, ModelRef, ProviderGroupV2 };
-
-export interface BedrockSetupCredentials {
-  apiKey?: string;
-  accessKeyId?: string;
-  secretAccessKey?: string;
-}
-
-export interface GoogleVertexSetupCredentials {
-  apiKey?: string;
-  clientEmail?: string;
-  privateKey?: string;
-}
-
-/** Result collected by a setup flow before persistence. */
+/** Result collected by a connect/reconnect wizard flow before persistence. */
 export interface ProviderSetupResult {
-  groupId: string;
-  model: ModelEntryV2;
-  providerScope: ModelProviderId;
-  group: Omit<ProviderGroupV2, "models">;
-  apiKey?: string;
-  bedrock?: BedrockSetupCredentials;
-  vertex?: GoogleVertexSetupCredentials;
+  /** Preset materialization input (preset id, transport, site, billing plan, endpoint override). */
+  materialize: MaterializeProviderPresetInput;
+  /** Wizard-owned transport options written onto the entry (e.g. `{ awsRegion }` for bedrock). */
+  options?: ProviderOptions;
+  /**
+   * Internal-keyring secret writes: credentials slot name -> secret; the `apiKey` slot writes
+   * account `provider::{id}`, other slots write `provider::{id}::{slot}`. Blank values are skipped.
+   */
+  credentials?: Record<string, string>;
+  /** Wizard/catalog-known models upserted by name; user-added models survive the merge. */
+  models?: ModelEntry[];
+  /** Model activated after the merge; defaults to the first of `models` when present. */
+  activeModel?: ModelRef;
 }

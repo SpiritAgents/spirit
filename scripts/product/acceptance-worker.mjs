@@ -164,9 +164,9 @@ try {
     [path.join(workspaceData, "tasks.json")],
   );
   const config = {
-    schemaVersion: 2,
-    providerGroups: [],
-    activeModel: { groupId: "", name: "" },
+    schemaVersion: 1,
+    providers: [],
+    activeModel: { providerId: "", name: "" },
     fixture: product.quality,
   };
   await host.saveSpiritConfig(dataDir, config);
@@ -246,7 +246,7 @@ try {
     overview: "No execution",
     trigger: { kind: "time", schedule: { kind: "hourly" } },
     workspaceRoot: workspace,
-    modelRef: { groupId: "fixture", name: "fixture" },
+    modelRef: { providerId: "fixture", name: "fixture" },
     approvalLevel: "default",
   });
   assert.equal(

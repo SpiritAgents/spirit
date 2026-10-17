@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parseModelRef, type ModelRef } from "./config-v2.js";
+import { parseModelRef, type ModelRef } from "./config.js";
 import type { ModelReasoningEffort } from "./reasoning-effort.js";
 import { normalizeApprovalLevel, type ApprovalLevel } from "./tools.js";
 

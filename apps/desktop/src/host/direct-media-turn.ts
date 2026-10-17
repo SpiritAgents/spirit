@@ -17,9 +17,11 @@ import {
   resolveComposerDirectMediaTool,
   type DirectMediaTool,
 } from "../lib/composer-direct-media.js";
+import type { LlmTransportConfig } from "@spiritagent/agent-core";
+
 import type { DesktopToolRequest } from "./contracts.js";
 import {
-  buildMediaOnlyTransportConfig,
+  modelCapabilitiesFromConfig,
   type DirectMediaTool as HostDirectMediaTool,
 } from "./model-config.js";
 import type { SessionBundle } from "./session-bundle.js";
@@ -27,8 +29,8 @@ import { isWorktreeBootstrapInFlight } from "./worktree-bootstrap-card.js";
 import { syncRuntimeHistoryFromBundleArchive } from "./conversation-continuation.js";
 import type { SessionTurnOrchestratorContext } from "./session-turn-orchestrator.js";
 import type { DesktopConfigFile } from "./storage.js";
-import type { ModelRef } from "../types.js";
-import { flattenProviderGroups, resolveModelProfile } from "./model-config-access.js";
+import type { ModelProfileSnapshot, ModelRef } from "../types.js";
+import { flattenProviders, resolveModelProfile } from "./model-config-access.js";
 import type { DesktopToolExecutor } from "./tool-executor.js";
 
 export interface DirectMediaTurnInput {
@@ -37,6 +39,34 @@ export interface DirectMediaTurnInput {
   prompt: string;
   userMessageId: number;
   beforeUserCheckpoint: unknown;
+}
+
+/**
+ * Media-only turn shell: the resolved profile carries the materialized apiBase; the generation
+ * backend reads the `imageGeneration` / `videoGeneration` sub-config off the transport config.
+ */
+function buildMediaOnlyTransportConfig(
+  toolName: DirectMediaTool,
+  input: { profile: ModelProfileSnapshot; apiKey: string },
+): LlmTransportConfig {
+  const subConfig = {
+    apiKey: input.apiKey,
+    model: input.profile.name,
+    baseUrl: input.profile.apiBase,
+    ...(input.profile.capabilities
+      ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
+      : {}),
+  };
+  const shell = {
+    transportKind: "openai-compatible" as const,
+    apiKey: input.apiKey,
+    model: input.profile.name,
+    baseUrl: input.profile.apiBase,
+  };
+  if (toolName === "generate_image") {
+    return { ...shell, imageGeneration: subConfig } as LlmTransportConfig;
+  }
+  return { ...shell, videoGeneration: subConfig } as LlmTransportConfig;
 }
 
 function buildMediaToolRequest(toolName: DirectMediaTool, prompt: string): DesktopToolRequest {
@@ -304,7 +334,7 @@ export function shouldUseComposerDirectMediaTurn(
     return null;
   }
   const directMediaTool = resolveComposerDirectMediaTool(activeModel, {
-    models: flattenProviderGroups(config).map((model) => ({
+    models: flattenProviders(config).map((model) => ({
       name: model.name,
       capabilities: model.capabilities,
     })),

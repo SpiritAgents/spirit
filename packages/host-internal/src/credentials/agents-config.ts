@@ -1,31 +1,40 @@
-import type { SpiritConfigFile } from "./types.js";
+import type { SpiritConfigFile } from "../config.js";
 
 export interface AgentsProviderToolsExposure {
   providerToolsEnabled: boolean;
 }
 
-export interface AgentsWebToolExposure {
-  webSearchEnabled: boolean;
+export interface AgentsWebFetchExposure {
   webFetchEnabled: boolean;
 }
 
 /**
- * Reads `agents.webSearch.enabled` / `agents.webFetch.enabled` from config.json.
- * Both are opt-out switches for the built-in web tools: only an explicit `false` disables;
- * missing keys, malformed sections, or a missing config file all mean enabled.
+ * Reads `agents.providerTools.enabled` from config.json. Opt-out switch for provider-declared
+ * tools: only an explicit `false` disables; missing keys, malformed sections, or a missing
+ * config file all mean enabled.
  */
-export function resolveAgentsWebToolExposure(
+export function resolveAgentsProviderToolsExposure(
   config: SpiritConfigFile | undefined,
-): AgentsWebToolExposure {
-  const agents = config?.["agents"];
+): AgentsProviderToolsExposure {
+  return { providerToolsEnabled: readToggleEnabled(agentsSection(config)?.["providerTools"]) };
+}
+
+/**
+ * Reads `agents.webFetch.enabled` from config.json. Opt-out switch for the built-in web_fetch
+ * tool: only an explicit `false` disables.
+ */
+export function resolveAgentsWebFetchExposure(
+  config: SpiritConfigFile | undefined,
+): AgentsWebFetchExposure {
+  return { webFetchEnabled: readToggleEnabled(agentsSection(config)?.["webFetch"]) };
+}
+
+function agentsSection(config: SpiritConfigFile | undefined): Record<string, unknown> | undefined {
+  const agents: unknown = config?.["agents"];
   if (typeof agents !== "object" || agents === null || Array.isArray(agents)) {
-    return { webSearchEnabled: true, webFetchEnabled: true };
+    return undefined;
   }
-  const record = agents as Record<string, unknown>;
-  return {
-    webSearchEnabled: readToggleEnabled(record["webSearch"]),
-    webFetchEnabled: readToggleEnabled(record["webFetch"]),
-  };
+  return agents as Record<string, unknown>;
 }
 
 function readToggleEnabled(section: unknown): boolean {
@@ -33,22 +42,4 @@ function readToggleEnabled(section: unknown): boolean {
     return true;
   }
   return (section as Record<string, unknown>)["enabled"] !== false;
-}
-
-/**
- * Reads `agents.providerTools.enabled` from config.json. Opt-out switch for provider-declared
- * tools: only an explicit `false` disables; missing keys, malformed sections, or a missing
- * config file all mean enabled. Takes the raw record so both the schemaVersion 2 and
- * schemaVersion 1 config types can use it.
- */
-export function resolveAgentsProviderToolsExposure(
-  config: Record<string, unknown> | undefined,
-): AgentsProviderToolsExposure {
-  const agents = config?.["agents"];
-  if (typeof agents !== "object" || agents === null || Array.isArray(agents)) {
-    return { providerToolsEnabled: true };
-  }
-  return {
-    providerToolsEnabled: readToggleEnabled((agents as Record<string, unknown>)["providerTools"]),
-  };
 }

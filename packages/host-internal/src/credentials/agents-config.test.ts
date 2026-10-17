@@ -1,71 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config-v2.js";
-import type { SpiritConfigFile } from "./types.js";
+import { SPIRIT_CONFIG_SCHEMA_VERSION, type SpiritConfigFile } from "../config.js";
+
 import {
   resolveAgentsProviderToolsExposure,
-  resolveAgentsWebToolExposure,
+  resolveAgentsWebFetchExposure,
 } from "./agents-config.js";
 
 function configWithAgents(agents: unknown): SpiritConfigFile {
   return {
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups: [],
-    activeModel: { groupId: "g", name: "m" },
+    providers: [],
+    activeModel: { providerId: "g", name: "m" },
     agents,
   };
 }
-
-test("resolveAgentsWebToolExposure defaults to enabled without a config", () => {
-  assert.deepEqual(resolveAgentsWebToolExposure(undefined), {
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-});
-
-test("resolveAgentsWebToolExposure defaults to enabled without agents keys", () => {
-  assert.deepEqual(resolveAgentsWebToolExposure(configWithAgents(undefined)), {
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-  assert.deepEqual(resolveAgentsWebToolExposure(configWithAgents({})), {
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-  assert.deepEqual(resolveAgentsWebToolExposure(configWithAgents({ webSearch: {} })), {
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-});
-
-test("resolveAgentsWebToolExposure honors explicit false toggles", () => {
-  assert.deepEqual(
-    resolveAgentsWebToolExposure(
-      configWithAgents({ webSearch: { enabled: false }, webFetch: { enabled: false } }),
-    ),
-    { webSearchEnabled: false, webFetchEnabled: false },
-  );
-  assert.deepEqual(
-    resolveAgentsWebToolExposure(
-      configWithAgents({ webSearch: { enabled: false }, webFetch: { enabled: true } }),
-    ),
-    { webSearchEnabled: false, webFetchEnabled: true },
-  );
-});
-
-test("resolveAgentsWebToolExposure treats malformed sections as enabled", () => {
-  assert.deepEqual(resolveAgentsWebToolExposure(configWithAgents("broken")), {
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-  assert.deepEqual(
-    resolveAgentsWebToolExposure(
-      configWithAgents({ webSearch: "broken", webFetch: { enabled: 0 } }),
-    ),
-    { webSearchEnabled: true, webFetchEnabled: true },
-  );
-});
 
 test("resolveAgentsProviderToolsExposure defaults to enabled", () => {
   assert.deepEqual(resolveAgentsProviderToolsExposure(undefined), { providerToolsEnabled: true });
@@ -85,11 +35,10 @@ test("resolveAgentsProviderToolsExposure defaults to enabled", () => {
     resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: { enabled: 0 } })),
     { providerToolsEnabled: true },
   );
+  // The legacy agents.webSearch key no longer gates anything.
   assert.deepEqual(
     resolveAgentsProviderToolsExposure(configWithAgents({ webSearch: { enabled: false } })),
-    {
-      providerToolsEnabled: true,
-    },
+    { providerToolsEnabled: true },
   );
 });
 
@@ -101,5 +50,37 @@ test("resolveAgentsProviderToolsExposure honors explicit false", () => {
   assert.deepEqual(
     resolveAgentsProviderToolsExposure(configWithAgents({ providerTools: { enabled: true } })),
     { providerToolsEnabled: true },
+  );
+});
+
+test("resolveAgentsWebFetchExposure defaults to enabled", () => {
+  assert.deepEqual(resolveAgentsWebFetchExposure(undefined), { webFetchEnabled: true });
+  assert.deepEqual(resolveAgentsWebFetchExposure(configWithAgents(undefined)), {
+    webFetchEnabled: true,
+  });
+  assert.deepEqual(resolveAgentsWebFetchExposure(configWithAgents({})), { webFetchEnabled: true });
+  assert.deepEqual(resolveAgentsWebFetchExposure(configWithAgents({ webFetch: {} })), {
+    webFetchEnabled: true,
+  });
+  assert.deepEqual(resolveAgentsWebFetchExposure(configWithAgents("broken")), {
+    webFetchEnabled: true,
+  });
+});
+
+test("resolveAgentsWebFetchExposure honors explicit false toggles", () => {
+  assert.deepEqual(
+    resolveAgentsWebFetchExposure(configWithAgents({ webFetch: { enabled: false } })),
+    { webFetchEnabled: false },
+  );
+  assert.deepEqual(
+    resolveAgentsWebFetchExposure(
+      configWithAgents({ webFetch: { enabled: false }, providerTools: { enabled: false } }),
+    ),
+    { webFetchEnabled: false },
+  );
+  // webFetch does not read the renamed providerTools key.
+  assert.deepEqual(
+    resolveAgentsWebFetchExposure(configWithAgents({ providerTools: { enabled: false } })),
+    { webFetchEnabled: true },
   );
 });

@@ -26,31 +26,31 @@ function functionToolNames(definitions) {
     : [];
 }
 
-test("defaultAgentsConfig exposes web tools by default", () => {
+test("defaultAgentsConfig exposes provider tools by default", () => {
   const agents = defaultAgentsConfig();
-  assert.equal(agents.webSearch.enabled, true);
+  assert.equal(agents.providerTools.enabled, true);
   assert.equal(agents.webFetch.enabled, true);
 });
 
 test("normalizeAgentsConfig treats missing or dirty web tool fields as enabled", () => {
   for (const raw of [
     {},
-    { webSearch: {} },
+    { providerTools: {} },
     { webFetch: { enabled: "no" } },
-    { webSearch: null, webFetch: 42 },
+    { providerTools: null, webFetch: 42 },
   ]) {
     const agents = normalizeAgentsConfig(raw);
-    assert.equal(agents.webSearch.enabled, true, JSON.stringify(raw));
+    assert.equal(agents.providerTools.enabled, true, JSON.stringify(raw));
     assert.equal(agents.webFetch.enabled, true, JSON.stringify(raw));
   }
 });
 
-test("normalizeAgentsConfig honors explicit web tool opt-out", () => {
+test("normalizeAgentsConfig honors explicit provider tool opt-out", () => {
   const agents = normalizeAgentsConfig({
-    webSearch: { enabled: false },
+    providerTools: { enabled: false },
     webFetch: { enabled: false },
   });
-  assert.equal(agents.webSearch.enabled, false);
+  assert.equal(agents.providerTools.enabled, false);
   assert.equal(agents.webFetch.enabled, false);
 });
 
@@ -63,6 +63,8 @@ test("loadConfig round-trips web tool toggles from config.json", async () => {
       `${JSON.stringify(
         {
           schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+          providers: [],
+          activeModel: { providerId: "", name: "" },
           agents: { webFetch: { enabled: false } },
         },
         null,
@@ -71,7 +73,7 @@ test("loadConfig round-trips web tool toggles from config.json", async () => {
       "utf8",
     );
     const config = await loadConfig();
-    assert.equal(config.agents.webSearch.enabled, true);
+    assert.equal(config.agents.providerTools.enabled, true);
     assert.equal(config.agents.webFetch.enabled, false);
   } finally {
     setSpiritDataDirOverride(undefined);

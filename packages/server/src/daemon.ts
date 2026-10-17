@@ -474,7 +474,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
             : {}),
           ...(modelRef &&
           typeof modelRef === "object" &&
-          typeof (modelRef as Record<string, unknown>)["groupId"] === "string" &&
+          typeof (modelRef as Record<string, unknown>)["providerId"] === "string" &&
           typeof (modelRef as Record<string, unknown>)["name"] === "string"
             ? { modelRef: modelRef as never }
             : {}),
@@ -711,9 +711,9 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           readSessionId(params),
           modelRef &&
             typeof modelRef === "object" &&
-            typeof (modelRef as Record<string, unknown>)["groupId"] === "string" &&
+            typeof (modelRef as Record<string, unknown>)["providerId"] === "string" &&
             typeof (modelRef as Record<string, unknown>)["name"] === "string"
-            ? (modelRef as { groupId: string; name: string })
+            ? (modelRef as { providerId: string; name: string })
             : undefined,
         );
         return { ok: true };

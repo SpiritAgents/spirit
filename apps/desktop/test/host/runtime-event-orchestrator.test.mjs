@@ -1082,6 +1082,7 @@ function createContextUsageHarness(options = {}) {
     bindFileChangesToToolMessage: () => {},
     resolveActiveModel: options.resolveActiveModel,
     resolveCatalogHints: options.resolveCatalogHints ?? (() => []),
+    supportsCatalogRefresh: options.supportsCatalogRefresh,
     setContextUsage: (usage) => {
       contextUsage = usage;
     },
@@ -1104,10 +1105,11 @@ test("context-usage-updated queues catalog refresh without clearing cached usage
     resolveActiveModel: () => ({
       name: "openai/gpt-5",
       apiBase: "https://gateway.example/v1",
-      provider: "vercel-ai-gateway",
+      providerId: "vercel-ai-gateway",
       transportKind: "openai-compatible",
     }),
     resolveCatalogHints: () => [],
+    supportsCatalogRefresh: () => true,
   });
 
   harness.orchestrator.applyRuntimeHostEvents([
@@ -1125,7 +1127,7 @@ test("context-usage-updated clears usage when provider cannot resolve context le
     resolveActiveModel: () => ({
       name: "custom-model",
       apiBase: "https://example.invalid/v1",
-      provider: "custom",
+      providerId: "custom-local",
     }),
   });
 
@@ -1142,7 +1144,7 @@ test("context-usage-updated updates usage when context length is already known",
     resolveActiveModel: () => ({
       name: "custom-model",
       apiBase: "https://example.invalid/v1",
-      provider: "custom",
+      providerId: "custom-local",
       contextLength: 128000,
     }),
   });

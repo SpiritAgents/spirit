@@ -28,19 +28,26 @@ afterEach(() => {
   HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
 });
 
+const OPENAI_TIERS = ["auto", "default", "flex", "fast"] as const;
+
 function triggerModel(overrides: Partial<ModelProfileSnapshot> = {}): ModelProfileSnapshot {
+  const name = overrides.name ?? "gpt-5";
+  const providerId = overrides.providerId ?? "openai";
   return {
-    name: "gpt-5",
+    name,
     apiBase: "https://api.openai.com/v1",
     reasoningEffort: "medium",
-    provider: "openai",
+    providerId,
+    ref: { providerId, name },
+    supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+    serviceTiers: [...OPENAI_TIERS],
     transportKind: "openai-compatible",
     ...overrides,
   };
 }
 
 function modelRefOf(model: ModelProfileSnapshot): ModelRef {
-  return { groupId: "", name: model.name };
+  return model.ref;
 }
 
 function renderPickerTrigger(
@@ -72,7 +79,11 @@ test("a Flex tier appends the Flex suffix to the trigger label", () => {
 
 test("an Ultrafast tier appends the Ultrafast suffix after the effort label", () => {
   const trigger = renderPickerTrigger(
-    triggerModel({ name: "gpt-6-astra", serviceTier: "ultrafast" }),
+    triggerModel({
+      name: "gpt-6-astra",
+      serviceTier: "ultrafast",
+      serviceTiers: [...OPENAI_TIERS, "ultrafast"],
+    }),
   );
   const text = trigger.textContent ?? "";
   expect(text).toContain("Ultrafast");
@@ -85,7 +96,7 @@ test("Auto, Default, and unset tiers add no trigger suffix", () => {
       <TooltipProvider>
         <ModelPickerMenu
           models={[triggerModel(serviceTier === undefined ? {} : { serviceTier })]}
-          activeModelRef={{ groupId: "", name: "gpt-5" }}
+          activeModelRef={{ providerId: "openai", name: "gpt-5" }}
           onModelSelect={() => {}}
         />
       </TooltipProvider>,
@@ -100,25 +111,30 @@ test("Auto, Default, and unset tiers add no trigger suffix", () => {
 
 test("a Priority tier appends the Priority suffix", () => {
   const trigger = renderPickerTrigger(
-    triggerModel({ name: "grok-4", provider: "xai", serviceTier: "priority" }),
+    triggerModel({
+      name: "grok-4",
+      providerId: "xai",
+      serviceTier: "priority",
+      serviceTiers: ["default", "priority"],
+    }),
   );
   expect(trigger.textContent).toContain("Priority");
 });
 
-test("the suffix resolves the upstream identity from the catalog hint when the profile lacks it", () => {
+test("the suffix resolves declared tiers from the catalog hint when the model lacks them", () => {
   const model = triggerModel({
     name: "my-gateway-model",
     apiBase: "https://gateway.example/v1",
-    provider: "openrouter",
+    providerId: "openrouter",
     serviceTier: "fast",
+    serviceTiers: undefined,
   });
   const catalogHints: DesktopModelCatalogHint[] = [
     {
-      provider: "openrouter",
-      transportKind: "openai-compatible",
+      providerId: "openrouter",
       apiBase: "https://gateway.example/v1",
       modelIds: ["my-gateway-model"],
-      modelCatalog: [{ id: "my-gateway-model", upstreamProvider: "openai" }],
+      modelCatalog: [{ id: "my-gateway-model", serviceTiers: ["default", "flex", "fast"] }],
       fetchedAtUnixMs: 1,
     },
   ];
@@ -127,13 +143,14 @@ test("the suffix resolves the upstream identity from the catalog hint when the p
   expect(withCatalog.textContent).toContain("Fast");
 });
 
-test("an unknown aggregator upstream identity hides the suffix", () => {
+test("a model without declared tiers anywhere hides the suffix", () => {
   const trigger = renderPickerTrigger(
     triggerModel({
       name: "my-gateway-model",
       apiBase: "https://gateway.example/v1",
-      provider: "openrouter",
+      providerId: "openrouter",
       serviceTier: "fast",
+      serviceTiers: undefined,
     }),
   );
   expect(trigger.textContent).not.toContain("Fast");
@@ -143,9 +160,10 @@ test("an Anthropic model with the stored fast tier shows the Fast suffix", () =>
   const trigger = renderPickerTrigger(
     triggerModel({
       name: "claude-opus-4-8",
-      provider: "anthropic",
+      providerId: "anthropic",
       transportKind: "anthropic",
       serviceTier: "fast",
+      serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
     }),
   );
   expect(trigger.textContent).toContain("Fast");

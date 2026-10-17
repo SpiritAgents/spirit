@@ -53,8 +53,8 @@ import {
   modelDisplayTitleFromMap,
 } from "@/lib/model-catalog-detail";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
-import type { DesktopModelProvider, ProviderGroupV2 } from "@/types";
-import { modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import type { DesktopProviderConfigEntry } from "@/types";
+import { modelRefsEqual } from "@/lib/model-ref";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { isElectronChrome } from "@/lib/desktop-shell";
 import {
@@ -107,7 +107,7 @@ export function ModelsSettingsPanel({
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   /** Increments on each connection attempt in this session; used as ProviderConnectDialog's key to remount and reset the form. */
   const [connectTarget, setConnectTarget] = useState<{
-    provider: DesktopModelProvider;
+    provider: string;
     session: number;
   } | null>(null);
   const [modelDefaultsDialogTarget, setModelDefaultsDialogTarget] = useState<string | null>(null);
@@ -122,7 +122,7 @@ export function ModelsSettingsPanel({
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<string | null>(null);
 
   const models = snapshot?.config.models ?? [];
-  const configProviderGroups = snapshot?.config.providerGroups ?? [];
+  const configProviders = snapshot?.config.providers ?? [];
   const activeModel = resolveEffectiveModelRef(settings.activeModel, snapshot?.config.activeModel);
   const imageGenerationModel =
     settings.imageGenerationModel ?? snapshot?.config.imageGenerationModel;
@@ -196,24 +196,24 @@ export function ModelsSettingsPanel({
     [models, snapshot?.config.modelCatalogHints],
   );
 
-  function groupDisplayLabel(group: ProviderGroupV2): string {
-    const custom = group.label?.trim();
+  function groupDisplayLabel(entry: DesktopProviderConfigEntry): string {
+    const custom = entry.label?.trim();
     if (custom) {
       return custom;
     }
-    return providerLabel(group.provider);
+    return providerLabel(entry.id);
   }
 
-  function modelsForGroup(group: ProviderGroupV2): SettingsModelProfile[] {
-    return group.models
-      .map((entry) =>
-        models.find((model) => model.groupId === group.id && model.name === entry.name),
+  function modelsForProvider(entry: DesktopProviderConfigEntry): SettingsModelProfile[] {
+    return entry.models
+      .map((modelEntry) =>
+        models.find((model) => model.providerId === entry.id && model.name === modelEntry.name),
       )
       .filter((model): model is SettingsModelProfile => model !== undefined);
   }
 
-  function providerLabel(provider: DesktopModelProvider): string {
-    return providerPickerLabel((key, options) => String(t(key, options)), provider);
+  function providerLabel(providerId: string): string {
+    return providerPickerLabel((key, options) => String(t(key, options)), providerId);
   }
 
   const openProviderPicker = () => {
@@ -221,7 +221,7 @@ export function ModelsSettingsPanel({
     setProviderDialogOpen(true);
   };
 
-  const startConnect = (id: DesktopModelProvider) => {
+  const startConnect = (id: string) => {
     setProviderDialogOpen(false);
     setConnectTarget((prev) => ({ provider: id, session: (prev?.session ?? 0) + 1 }));
     setConnectDialogOpen(true);
@@ -466,15 +466,18 @@ export function ModelsSettingsPanel({
           </div>
         ) : (
           <>
-            {configProviderGroups.map((group) => {
-              const groupModels = modelsForGroup(group);
+            {configProviders.map((providerEntry) => {
+              const groupModels = modelsForProvider(providerEntry);
               if (groupModels.length === 0) {
                 return null;
               }
               const groupHasKey = groupModels.some((m) => m.keyConfigured);
-              const groupLabel = groupDisplayLabel(group);
+              const groupLabel = groupDisplayLabel(providerEntry);
               return (
-                <div key={group.id} className={cn(DESKTOP_CANVAS_CARD_SURFACE, "overflow-hidden")}>
+                <div
+                  key={providerEntry.id}
+                  className={cn(DESKTOP_CANVAS_CARD_SURFACE, "overflow-hidden")}
+                >
                   <div className="flex items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>{groupLabel}</span>
@@ -493,7 +496,7 @@ export function ModelsSettingsPanel({
                       size="sm"
                       className="shrink-0"
                       disabled={modelsBusy || modelsPreviewBusy}
-                      onClick={() => setDeleteGroupTarget(group.id)}
+                      onClick={() => setDeleteGroupTarget(providerEntry.id)}
                     >
                       {t("settings.deleteGroup")}
                     </Button>
@@ -857,11 +860,10 @@ export function ModelsSettingsPanel({
         }}
         title={t("settings.deleteProviderGroupConfirmTitle", {
           provider: deleteGroupTarget
-            ? configProviderGroups.find((group) => group.id === deleteGroupTarget)
-              ? groupDisplayLabel(
-                  configProviderGroups.find((group) => group.id === deleteGroupTarget)!,
-                )
-              : deleteGroupTarget
+            ? (() => {
+                const target = configProviders.find((entry) => entry.id === deleteGroupTarget);
+                return target ? groupDisplayLabel(target) : deleteGroupTarget;
+              })()
             : "",
         })}
         description={t("settings.deleteProviderGroupConfirmDescription")}
@@ -869,12 +871,12 @@ export function ModelsSettingsPanel({
         cancelLabel={t("common.cancel")}
         busy={modelsBusy}
         onConfirm={async () => {
-          const groupId = deleteGroupTarget;
-          if (!groupId) {
+          const providerId = deleteGroupTarget;
+          if (!providerId) {
             return;
           }
           try {
-            await onRemoveProviderModels(groupId);
+            await onRemoveProviderModels(providerId);
             setDeleteGroupTarget(null);
           } catch {
             /* runtimeError */

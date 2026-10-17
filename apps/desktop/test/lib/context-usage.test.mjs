@@ -20,13 +20,12 @@ test("resolveModelContextLength prefers profile contextLength over catalog", () 
   const activeModel = {
     name: "my-model",
     apiBase: "https://example.invalid/v1",
-    provider: "custom",
+    providerId: "custom-local",
     contextLength: 200000,
   };
   const catalogHints = [
     {
-      provider: "vercel-ai-gateway",
-      transportKind: "openai-compatible",
+      providerId: "vercel-ai-gateway",
       apiBase: "https://gateway.example/v1",
       modelIds: ["openai/gpt-5"],
       modelCatalog: [{ id: "openai/gpt-5", contextLength: 999999 }],
@@ -41,13 +40,11 @@ test("resolveModelContextLength uses catalog for gateway when profile has no ove
   const activeModel = {
     name: "openai/gpt-5",
     apiBase: "https://gateway.example/v1",
-    provider: "vercel-ai-gateway",
-    transportKind: "openai-compatible",
+    providerId: "vercel-ai-gateway",
   };
   const catalogHints = [
     {
-      provider: "vercel-ai-gateway",
-      transportKind: "openai-compatible",
+      providerId: "vercel-ai-gateway",
       apiBase: "https://gateway.example/v1",
       modelIds: ["openai/gpt-5"],
       modelCatalog: [{ id: "openai/gpt-5", contextLength: 128000 }],
@@ -58,17 +55,15 @@ test("resolveModelContextLength uses catalog for gateway when profile has no ove
   assert.equal(resolveModelContextLength(activeModel, catalogHints), 128000);
 });
 
-test("resolveModelContextLength uses catalog for moonshot-ai when profile has no override", () => {
+test("resolveModelContextLength uses the provider entry's catalog hint", () => {
   const activeModel = {
     name: "kimi-k2.5",
     apiBase: "https://api.moonshot.cn/v1",
-    provider: "moonshot-ai",
-    transportKind: "openai-compatible",
+    providerId: "moonshot-ai",
   };
   const catalogHints = [
     {
-      provider: "moonshot-ai",
-      transportKind: "openai-compatible",
+      providerId: "moonshot-ai",
       apiBase: "https://api.moonshot.cn/v1",
       modelIds: ["kimi-k2.5"],
       modelCatalog: [{ id: "kimi-k2.5", contextLength: 256000 }],
@@ -83,7 +78,7 @@ test("resolveModelContextLength returns undefined for custom without profile ove
   const activeModel = {
     name: "my-model",
     apiBase: "https://example.invalid/v1",
-    provider: "custom",
+    providerId: "custom-local",
   };
 
   assert.equal(resolveModelContextLength(activeModel, []), undefined);

@@ -57,7 +57,6 @@ import type {
   WriteWorkspaceTextFileRequest,
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
-  DesktopModelProvider,
   MarketplaceInstallCommandResult,
   MarketplaceSourceCommandResult,
   MarketplaceUpdateCommandResult,
@@ -156,7 +155,7 @@ export function createWebHostApi(): HostApi {
     removeModel(name: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/remove", { name });
     },
-    removeProviderModels(provider: DesktopModelProvider) {
+    removeProviderModels(provider: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/remove-provider", { provider });
     },
     removeProviderGroup(request: import("../types").RemoveProviderGroupRequest) {

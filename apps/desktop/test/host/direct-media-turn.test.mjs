@@ -12,9 +12,9 @@ import {
   shouldUseComposerDirectMediaTurn,
 } from "../../dist-electron/src/host/direct-media-turn.js";
 
-const openAiGroupId = "openai";
+const openAiProviderId = "openai";
 
-const imageRef = { groupId: openAiGroupId, name: "dall-e-3" };
+const imageRef = { providerId: openAiProviderId, name: "dall-e-3" };
 
 const imageModel = {
   name: "dall-e-3",
@@ -22,10 +22,9 @@ const imageModel = {
 };
 
 const config = {
-  providerGroups: [
+  providers: [
     {
-      id: openAiGroupId,
-      provider: "openai",
+      id: openAiProviderId,
       apiBase: "https://api.openai.com/v1",
       models: [imageModel],
     },

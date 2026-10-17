@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, it } from "vitest";
 
 import { toolNamesFromDefinitions } from "@spiritagent/agent-core";
-import { setKeyringStoreForTests, groupKeyAccount } from "@spiritagent/host-internal";
+import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
 
 import { createServerRuntime } from "../src/runtime-factory.js";
 import { SessionManager } from "../src/session-manager.js";
@@ -15,16 +15,16 @@ function freshDataDir(): string {
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify({
-      schemaVersion: 2,
-      providerGroups: [
+      schemaVersion: 1,
+      providers: [
         {
           id: "openai",
-          provider: "openai",
           apiBase: "https://api.openai.com/v1",
+          transportKind: "open-responses",
           models: [{ name: "gpt-4o-mini" }],
         },
       ],
-      activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      activeModel: { providerId: "openai", name: "gpt-4o-mini" },
     }),
   );
   return dir;
@@ -41,7 +41,7 @@ function withMockKeyring(run: () => Promise<void>): Promise<void> {
       store.delete(`${service}/${account}`);
     },
   });
-  store.set(`Spirit/${groupKeyAccount("openai")}`, "test-key");
+  store.set(`Spirit/${providerInternalKeyAccount("openai")}`, "test-key");
   return run().finally(() => setKeyringStoreForTests(undefined));
 }
 
@@ -63,7 +63,7 @@ describe("dream-collector session", () => {
           displayName: "Source chat",
           savedAtUnixMs: Date.now(),
         },
-        modelRef: { groupId: "openai", name: "gpt-4o-mini" },
+        modelRef: { providerId: "openai", name: "gpt-4o-mini" },
         onEvent: () => {},
       });
 
@@ -106,7 +106,7 @@ describe("dream-collector session", () => {
         dreamSourceSession: {
           path: join(workspaceRoot, "chats", "pending.json"),
         },
-        modelRef: { groupId: "openai", name: "gpt-4o-mini" },
+        modelRef: { providerId: "openai", name: "gpt-4o-mini" },
       });
 
       assert.ok(created.sessionId.startsWith("sess_"));

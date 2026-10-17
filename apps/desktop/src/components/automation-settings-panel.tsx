@@ -26,11 +26,7 @@ import type {
   ModelRef,
   SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
-import {
-  emptyModelRef,
-  isEmptyModelRef,
-  modelRefsEqual,
-} from "@spiritagent/host-internal/config-v2";
+import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@/lib/model-ref";
 import { resolveWorkspaceBindingForStoredRoot } from "@/lib/workspace-display-label";
 
 type AutomationSettingsPanelProps = {
@@ -231,17 +227,14 @@ export function AutomationSettingsPanel({
                 <ModelPickerMenu
                   models={snapshot.config.models}
                   catalogHints={snapshot.config.modelCatalogHints}
-                  providerGroups={snapshot.config.providerGroups}
+                  providers={snapshot.config.providers}
                   activeModelRef={modelRef}
                   activeReasoningEffort={reasoningEffort}
                   disabled={disabled}
                   onModelSelect={(ref) => {
                     setModelRef(ref);
                     const profile = snapshot.config.models.find((model) =>
-                      modelRefsEqual(
-                        model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-                        ref,
-                      ),
+                      modelRefsEqual(model.ref, ref),
                     );
                     setReasoningEffort(profile?.reasoningEffort);
                   }}

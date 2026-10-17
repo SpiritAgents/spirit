@@ -55,7 +55,7 @@ interface RemoteDesktopRuntimeInput {
   approvalLevel: "default" | "auto-approval" | "bypass-approval";
   todoSessionKey?: string;
   /** Current web tool toggles; pushed on attach so reused daemon sessions re-sync with config.json. */
-  webToolExposure?: { webSearchEnabled: boolean; webFetchEnabled: boolean };
+  webToolExposure?: { providerToolsEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
   /**
@@ -237,8 +237,10 @@ async function applyRemoteSessionPreferences(
   // Same re-sync rationale as setMode: the daemon session resolves the toggles at creation,
   // so a reused session can lag behind a config.json edit made while it was running.
   if (input.webToolExposure) {
+    // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI's daemon
+    // runtime flips with it (P8); agent-core reads it as the providerTools bridge.
     await runtime.clientCall("session.setWebToolExposure", {
-      webSearchEnabled: input.webToolExposure.webSearchEnabled,
+      webSearchEnabled: input.webToolExposure.providerToolsEnabled,
       webFetchEnabled: input.webToolExposure.webFetchEnabled,
     });
   }

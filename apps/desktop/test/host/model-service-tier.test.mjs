@@ -5,9 +5,7 @@ import path from "node:path";
 import { test, vi } from "vitest";
 
 import { SPIRIT_CONFIG_SCHEMA_VERSION } from "@spiritagent/host-internal";
-import { ModelServiceTierConfigError } from "@spiritagent/agent-core/model-service-tier";
 
-import { buildPrimaryTransportConfig } from "../../dist-electron/src/host/model-config.js";
 import { updateConfigCommand } from "../../dist-electron/src/host/host-model-commands.js";
 import { loadConfig, setSpiritDataDirOverride } from "../../dist-electron/src/host/storage.js";
 import {
@@ -18,200 +16,7 @@ import { createEmptySessionBundle } from "../../dist-electron/src/host/session-b
 import { attachRemoteDesktopRuntime } from "../../dist-electron/src/host/remote-runtime.js";
 
 // ---------------------------------------------------------------------------
-// buildPrimaryTransportConfig: stamp + validate
-// ---------------------------------------------------------------------------
-
-test("buildPrimaryTransportConfig stamps tier and upstream provider for aggregator routes", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "openai/gpt-5.4",
-    baseUrl: "https://openrouter.ai/api/v1",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "openrouter",
-      transportKind: "openai-compatible",
-      reasoningEffort: "medium",
-      capabilities: ["languageModel"],
-      serviceTier: "flex",
-      upstreamProvider: "OpenAI",
-    },
-  });
-  assert.equal(config.serviceTier, "flex");
-  assert.equal(config.upstreamProvider, "OpenAI");
-});
-
-test("buildPrimaryTransportConfig stamps tier on the OpenAI responses transport", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "gpt-5.4",
-    baseUrl: "https://api.openai.com/v1",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "openai",
-      transportKind: "open-responses",
-      reasoningEffort: "medium",
-      capabilities: ["languageModel"],
-      serviceTier: "flex",
-    },
-  });
-  assert.equal(config.transportKind, "open-responses");
-  assert.equal(config.serviceTier, "flex");
-  assert.equal("upstreamProvider" in config, false);
-});
-
-test("buildPrimaryTransportConfig stamps Anthropic native Fast on the anthropic transport", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "claude-opus-4-8",
-    baseUrl: "https://api.anthropic.com",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "anthropic",
-      transportKind: "anthropic",
-      reasoningEffort: "medium",
-      capabilities: ["languageModel"],
-      serviceTier: "fast",
-    },
-  });
-  assert.equal(config.transportKind, "anthropic");
-  assert.equal(config.serviceTier, "fast");
-  assert.equal("upstreamProvider" in config, false);
-});
-
-test("buildPrimaryTransportConfig rejects Anthropic Flex (native Fast only)", () => {
-  assert.throws(
-    () =>
-      buildPrimaryTransportConfig({
-        apiKey: "test-key",
-        model: "claude-opus-4-8",
-        baseUrl: "https://api.anthropic.com",
-        workspaceRoot: "/tmp",
-        profile: {
-          provider: "anthropic",
-          transportKind: "anthropic",
-          capabilities: ["languageModel"],
-          serviceTier: "flex",
-        },
-      }),
-    ModelServiceTierConfigError,
-  );
-});
-
-test("buildPrimaryTransportConfig rejects OpenAI priority (not offered upstream)", () => {
-  assert.throws(
-    () =>
-      buildPrimaryTransportConfig({
-        apiKey: "test-key",
-        model: "gpt-5.4",
-        baseUrl: "https://api.openai.com/v1",
-        workspaceRoot: "/tmp",
-        profile: {
-          provider: "openai",
-          transportKind: "open-responses",
-          capabilities: ["languageModel"],
-          serviceTier: "priority",
-        },
-      }),
-    ModelServiceTierConfigError,
-  );
-});
-
-test("buildPrimaryTransportConfig rejects an unknown tier value", () => {
-  assert.throws(
-    () =>
-      buildPrimaryTransportConfig({
-        apiKey: "test-key",
-        model: "gpt-5.4",
-        baseUrl: "https://api.openai.com/v1",
-        workspaceRoot: "/tmp",
-        profile: {
-          provider: "openai",
-          transportKind: "open-responses",
-          capabilities: ["languageModel"],
-          serviceTier: "turbo",
-        },
-      }),
-    ModelServiceTierConfigError,
-  );
-});
-
-test("buildPrimaryTransportConfig allows Vertex Flex on the global endpoint", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "gemini-3.1-pro-preview",
-    baseUrl: "https://aiplatform.googleapis.com",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "google-vertex-ai",
-      transportKind: "openai-compatible",
-      vertexProject: "spirit-test-project",
-      vertexLocation: "global",
-      capabilities: ["languageModel"],
-      serviceTier: "flex",
-    },
-  });
-  assert.equal(config.serviceTier, "flex");
-  assert.equal(config.vertexLocation, "global");
-});
-
-test("buildPrimaryTransportConfig rejects Vertex Flex on a regional endpoint", () => {
-  assert.throws(
-    () =>
-      buildPrimaryTransportConfig({
-        apiKey: "test-key",
-        model: "gemini-3.1-pro-preview",
-        baseUrl: "https://aiplatform.googleapis.com",
-        workspaceRoot: "/tmp",
-        profile: {
-          provider: "google-vertex-ai",
-          transportKind: "openai-compatible",
-          vertexProject: "spirit-test-project",
-          vertexLocation: "us-central1",
-          capabilities: ["languageModel"],
-          serviceTier: "flex",
-        },
-      }),
-    ModelServiceTierConfigError,
-  );
-});
-
-test("buildPrimaryTransportConfig omits the tier keys when none is configured", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "gpt-5.4",
-    baseUrl: "https://api.openai.com/v1",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "openai",
-      transportKind: "open-responses",
-      reasoningEffort: "medium",
-      capabilities: ["languageModel"],
-    },
-  });
-  assert.equal("serviceTier" in config, false);
-  assert.equal("upstreamProvider" in config, false);
-});
-
-test("buildPrimaryTransportConfig never stamps a tier on the bedrock transport", () => {
-  const config = buildPrimaryTransportConfig({
-    apiKey: "test-key",
-    model: "anthropic.claude-sonnet-4-5",
-    baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
-    workspaceRoot: "/tmp",
-    profile: {
-      provider: "amazon-bedrock",
-      transportKind: "bedrock",
-      awsRegion: "us-east-1",
-      capabilities: ["languageModel"],
-    },
-  });
-  assert.equal(config.transportKind, "bedrock");
-  assert.equal("serviceTier" in config, false);
-  assert.equal("upstreamProvider" in config, false);
-});
-
-// ---------------------------------------------------------------------------
-// Model catalog cache: upstreamProvider round-trip and legacy entries
+// Model catalog cache: entry round-trip and sparse entries
 // ---------------------------------------------------------------------------
 
 async function withCatalogCacheDir(run) {
@@ -225,14 +30,9 @@ async function withCatalogCacheDir(run) {
   }
 }
 
-const OPENROUTER_CACHE_ARGS = [
-  "https://openrouter.ai/api/v1",
-  undefined,
-  "openrouter",
-  "openai-compatible",
-];
+const OPENROUTER_CACHE_ARGS = ["https://openrouter.ai/api/v1", "test-key", "openrouter"];
 
-test("model catalog cache round-trips upstreamProvider", async () => {
+test("model catalog cache round-trips upstreamProvider display metadata", async () => {
   await withCatalogCacheDir(async () => {
     await writeModelCatalogCache(
       "https://openrouter.ai/api/v1",
@@ -248,7 +48,6 @@ test("model catalog cache round-trips upstreamProvider", async () => {
         { id: "x-ai/grok-4.3", capabilities: ["languageModel"], contextLength: 256000 },
       ],
       "openrouter",
-      "openai-compatible",
     );
 
     const entry = await readModelCatalogCache(...OPENROUTER_CACHE_ARGS);
@@ -256,10 +55,11 @@ test("model catalog cache round-trips upstreamProvider", async () => {
     const [first, second] = entry.modelCatalog;
     assert.equal(first.upstreamProvider, "OpenAI");
     assert.equal("upstreamProvider" in second, false);
+    assert.equal(entry.providerId, "openrouter");
   });
 });
 
-test("model catalog cache parses legacy entries without upstreamProvider", async () => {
+test("model catalog cache parses sparse entries", async () => {
   await withCatalogCacheDir(async (dir) => {
     await writeModelCatalogCache(
       "https://openrouter.ai/api/v1",
@@ -274,10 +74,9 @@ test("model catalog cache parses legacy entries without upstreamProvider", async
         },
       ],
       "openrouter",
-      "openai-compatible",
     );
 
-    // Rewrite the single cache file with the field stripped, mimicking a pre-upgrade cache.
+    // Rewrite the single cache file with the field stripped, mimicking a sparse entry.
     const cacheDir = path.join(dir, "model-catalog-cache");
     const [fileName] = await readdir(cacheDir);
     const filePath = path.join(cacheDir, fileName);
@@ -296,29 +95,19 @@ test("model catalog cache parses legacy entries without upstreamProvider", async
 // updateConfigCommand: set / clear / reject + inference-preference refresh
 // ---------------------------------------------------------------------------
 
-const openAiGroup = (models) => ({
+const openAiProvider = (models) => ({
   id: "openai",
-  provider: "openai",
   apiBase: "https://api.openai.com/v1",
   transportKind: "open-responses",
+  sdk: "@ai-sdk/openai",
   models,
 });
 
-const anthropicGroup = (models) => ({
+const anthropicProvider = (models) => ({
   id: "anthropic",
-  provider: "anthropic",
   apiBase: "https://api.anthropic.com",
   transportKind: "anthropic",
-  models,
-});
-
-const vertexGroup = (vertexLocation, models) => ({
-  id: "vertex",
-  provider: "google-vertex-ai",
-  apiBase: "https://aiplatform.googleapis.com",
-  transportKind: "openai-compatible",
-  vertexProject: "spirit-test-project",
-  vertexLocation,
+  sdk: "@ai-sdk/anthropic",
   models,
 });
 
@@ -386,27 +175,35 @@ function createUpdateConfigContext({ config, busy = false }) {
   return { ctx, calls, bundle };
 }
 
-const readDiskModel = async (dir, groupIndex = 0, modelIndex = 0) => {
+const readDiskModel = async (dir, providerIndex = 0, modelIndex = 0) => {
   const written = JSON.parse(await readFile(path.join(dir, "config.json"), "utf8"));
-  return written.providerGroups[groupIndex].models[modelIndex];
+  return written.providers[providerIndex].models[modelIndex];
 };
 
 test("updateConfigCommand persists serviceTier via the inference-preference refresh path", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      providers: [
+        openAiProvider([
+          {
+            name: "gpt-5.4",
+            reasoningEffort: "medium",
+            serviceTiers: ["auto", "default", "flex", "fast"],
+          },
+        ]),
+      ],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     async ({ config, dir }) => {
       const { ctx, calls } = createUpdateConfigContext({ config });
       const snapshot = await updateConfigCommand(ctx, {
-        activeModel: { groupId: "openai", name: "gpt-5.4" },
+        activeModel: { providerId: "openai", name: "gpt-5.4" },
         apiBase: "https://api.openai.com/v1",
         serviceTier: "flex",
       });
 
       assert.deepEqual(snapshot, { ok: true });
-      assert.equal(config.providerGroups[0].models[0].serviceTier, "flex");
+      assert.equal(config.providers[0].models[0].serviceTier, "flex");
       assert.equal((await readDiskModel(dir)).serviceTier, "flex");
       // Same-model tier change: light transport-config refresh, not a full runtime restart.
       assert.equal(calls.refreshActiveModelTransportConfig, 1);
@@ -420,20 +217,27 @@ test("updateConfigCommand persists serviceTier via the inference-preference refr
 test("updateConfigCommand clears a stored serviceTier with null", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [
-        openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium", serviceTier: "flex" }]),
+      providers: [
+        openAiProvider([
+          {
+            name: "gpt-5.4",
+            reasoningEffort: "medium",
+            serviceTiers: ["default", "flex"],
+            serviceTier: "flex",
+          },
+        ]),
       ],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     async ({ config, dir }) => {
       const { ctx, calls } = createUpdateConfigContext({ config });
       await updateConfigCommand(ctx, {
-        activeModel: { groupId: "openai", name: "gpt-5.4" },
+        activeModel: { providerId: "openai", name: "gpt-5.4" },
         apiBase: "https://api.openai.com/v1",
         serviceTier: null,
       });
 
-      assert.equal("serviceTier" in config.providerGroups[0].models[0], false);
+      assert.equal("serviceTier" in config.providers[0].models[0], false);
       assert.equal("serviceTier" in (await readDiskModel(dir)), false);
       assert.equal(calls.refreshActiveModelTransportConfig, 1);
       assert.equal(calls.refreshRuntime, 0);
@@ -441,24 +245,28 @@ test("updateConfigCommand clears a stored serviceTier with null", async () => {
   );
 });
 
-test("updateConfigCommand rejects an unsupported tier without touching the disk", async () => {
+test("updateConfigCommand rejects an undeclared tier without touching the disk", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      providers: [
+        openAiProvider([
+          { name: "gpt-5.4", reasoningEffort: "medium", serviceTiers: ["default", "flex"] },
+        ]),
+      ],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     async ({ config, dir }) => {
       const { ctx, calls } = createUpdateConfigContext({ config });
       await assert.rejects(
         updateConfigCommand(ctx, {
-          activeModel: { groupId: "openai", name: "gpt-5.4" },
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
           apiBase: "https://api.openai.com/v1",
           serviceTier: "priority",
         }),
-        ModelServiceTierConfigError,
+        /not in the declared serviceTiers/,
       );
 
-      assert.equal("serviceTier" in config.providerGroups[0].models[0], false);
+      assert.equal("serviceTier" in config.providers[0].models[0], false);
       assert.equal("serviceTier" in (await readDiskModel(dir)), false);
       assert.equal(calls.refreshActiveModelTransportConfig, 0);
       assert.equal(calls.refreshRuntime, 0);
@@ -466,49 +274,57 @@ test("updateConfigCommand rejects an unsupported tier without touching the disk"
   );
 });
 
-test("updateConfigCommand rejects an unknown tier value", async () => {
+test("updateConfigCommand rejects a tier when the model declares no serviceTiers", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      providers: [openAiProvider([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     async ({ config }) => {
       const { ctx } = createUpdateConfigContext({ config });
       await assert.rejects(
         updateConfigCommand(ctx, {
-          activeModel: { groupId: "openai", name: "gpt-5.4" },
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
           apiBase: "https://api.openai.com/v1",
-          serviceTier: "turbo",
+          serviceTier: "flex",
         }),
-        ModelServiceTierConfigError,
+        /declares no serviceTiers/,
       );
-      assert.equal("serviceTier" in config.providerGroups[0].models[0], false);
+      assert.equal("serviceTier" in config.providers[0].models[0], false);
     },
   );
 });
 
-test("updateConfigCommand sets and clears Anthropic native Fast", async () => {
+test("updateConfigCommand sets and clears a declared tier on an anthropic entry", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [anthropicGroup([{ name: "claude-opus-4-8", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "anthropic", name: "claude-opus-4-8" },
+      providers: [
+        anthropicProvider([
+          {
+            name: "claude-opus-4-8",
+            reasoningEffort: "medium",
+            serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
+          },
+        ]),
+      ],
+      activeModel: { providerId: "anthropic", name: "claude-opus-4-8" },
     },
     async ({ config, dir }) => {
       const { ctx, calls } = createUpdateConfigContext({ config });
       await updateConfigCommand(ctx, {
-        activeModel: { groupId: "anthropic", name: "claude-opus-4-8" },
+        activeModel: { providerId: "anthropic", name: "claude-opus-4-8" },
         apiBase: "https://api.anthropic.com",
         serviceTier: "fast",
       });
-      assert.equal(config.providerGroups[0].models[0].serviceTier, "fast");
+      assert.equal(config.providers[0].models[0].serviceTier, "fast");
       assert.equal((await readDiskModel(dir)).serviceTier, "fast");
 
       await updateConfigCommand(ctx, {
-        activeModel: { groupId: "anthropic", name: "claude-opus-4-8" },
+        activeModel: { providerId: "anthropic", name: "claude-opus-4-8" },
         apiBase: "https://api.anthropic.com",
         serviceTier: null,
       });
-      assert.equal("serviceTier" in config.providerGroups[0].models[0], false);
+      assert.equal("serviceTier" in config.providers[0].models[0], false);
       assert.equal("serviceTier" in (await readDiskModel(dir)), false);
       assert.equal(calls.refreshActiveModelTransportConfig, 2);
       assert.equal(calls.refreshRuntime, 0);
@@ -516,67 +332,30 @@ test("updateConfigCommand sets and clears Anthropic native Fast", async () => {
   );
 });
 
-test("updateConfigCommand rejects Anthropic Flex (native Fast only)", async () => {
+test("updateConfigCommand rejects a tier missing from the literal declaration map", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [anthropicGroup([{ name: "claude-opus-4-8", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "anthropic", name: "claude-opus-4-8" },
+      providers: [
+        anthropicProvider([
+          {
+            name: "claude-opus-4-8",
+            reasoningEffort: "medium",
+            serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
+          },
+        ]),
+      ],
+      activeModel: { providerId: "anthropic", name: "claude-opus-4-8" },
     },
     async ({ config }) => {
       const { ctx } = createUpdateConfigContext({ config });
       await assert.rejects(
         updateConfigCommand(ctx, {
-          activeModel: { groupId: "anthropic", name: "claude-opus-4-8" },
+          activeModel: { providerId: "anthropic", name: "claude-opus-4-8" },
           apiBase: "https://api.anthropic.com",
           serviceTier: "flex",
         }),
-        ModelServiceTierConfigError,
+        /not in the declared serviceTiers/,
       );
-    },
-  );
-});
-
-test("updateConfigCommand allows Vertex Flex on the global endpoint", async () => {
-  await withUpdateConfigFixture(
-    {
-      providerGroups: [
-        vertexGroup("global", [{ name: "gemini-3.1-pro-preview", reasoningEffort: "medium" }]),
-      ],
-      activeModel: { groupId: "vertex", name: "gemini-3.1-pro-preview" },
-    },
-    async ({ config, dir }) => {
-      const { ctx, calls } = createUpdateConfigContext({ config });
-      await updateConfigCommand(ctx, {
-        activeModel: { groupId: "vertex", name: "gemini-3.1-pro-preview" },
-        apiBase: "https://aiplatform.googleapis.com",
-        serviceTier: "flex",
-      });
-      assert.equal(config.providerGroups[0].models[0].serviceTier, "flex");
-      assert.equal((await readDiskModel(dir)).serviceTier, "flex");
-      assert.equal(calls.refreshActiveModelTransportConfig, 1);
-    },
-  );
-});
-
-test("updateConfigCommand rejects Vertex Flex on a regional endpoint", async () => {
-  await withUpdateConfigFixture(
-    {
-      providerGroups: [
-        vertexGroup("us-central1", [{ name: "gemini-3.1-pro-preview", reasoningEffort: "medium" }]),
-      ],
-      activeModel: { groupId: "vertex", name: "gemini-3.1-pro-preview" },
-    },
-    async ({ config }) => {
-      const { ctx } = createUpdateConfigContext({ config });
-      await assert.rejects(
-        updateConfigCommand(ctx, {
-          activeModel: { groupId: "vertex", name: "gemini-3.1-pro-preview" },
-          apiBase: "https://aiplatform.googleapis.com",
-          serviceTier: "flex",
-        }),
-        ModelServiceTierConfigError,
-      );
-      assert.equal("serviceTier" in config.providerGroups[0].models[0], false);
     },
   );
 });
@@ -584,18 +363,26 @@ test("updateConfigCommand rejects Vertex Flex on a regional endpoint", async () 
 test("updateConfigCommand routes a same-model tier change to the light refresh even when busy", async () => {
   await withUpdateConfigFixture(
     {
-      providerGroups: [openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      providers: [
+        openAiProvider([
+          {
+            name: "gpt-5.4",
+            reasoningEffort: "medium",
+            serviceTiers: ["auto", "default", "flex", "fast"],
+          },
+        ]),
+      ],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     async ({ config }) => {
       const { ctx, calls, bundle } = createUpdateConfigContext({ config, busy: true });
       await updateConfigCommand(ctx, {
-        activeModel: { groupId: "openai", name: "gpt-5.4" },
+        activeModel: { providerId: "openai", name: "gpt-5.4" },
         apiBase: "https://api.openai.com/v1",
         serviceTier: "flex",
       });
 
-      assert.equal(config.providerGroups[0].models[0].serviceTier, "flex");
+      assert.equal(config.providers[0].models[0].serviceTier, "flex");
       // Busy deferral happens inside the host's light refresh, not in the command.
       assert.equal(calls.refreshActiveModelTransportConfig, 1);
       assert.equal(calls.refreshRuntime, 0);
@@ -683,8 +470,8 @@ async function withRemoteDataDir(run) {
       `${JSON.stringify(
         {
           schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-          providerGroups: [openAiGroup([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
-          activeModel: { groupId: "openai", name: "gpt-5.4" },
+          providers: [openAiProvider([{ name: "gpt-5.4", reasoningEffort: "medium" }])],
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
         },
         null,
         2,
@@ -700,7 +487,7 @@ async function withRemoteDataDir(run) {
 const remoteAttachInput = (dataDir, extra = {}) => ({
   dataDir,
   workspaceRoot: daemon.workspaceRoot,
-  modelRef: { groupId: "openai", name: "gpt-5.4" },
+  modelRef: { providerId: "openai", name: "gpt-5.4" },
   agentMode: "agent",
   archive: { messages: [], assistantAux: [], llmHistory: [], subagentSessions: [] },
   approvalLevel: "default",
@@ -731,7 +518,7 @@ test("remote attach forces session.replaceConfig for inference-preference update
     assert.equal(replaceConfigCalls().length, 1);
     assert.deepEqual(replaceConfigCalls()[0].params, {
       sessionId: "sess-1",
-      modelRef: { groupId: "openai", name: "gpt-5.4" },
+      modelRef: { providerId: "openai", name: "gpt-5.4" },
     });
     await runtime.close();
   });
@@ -763,8 +550,8 @@ async function withHostService(run) {
     workspaceBinding: "project",
     config: {
       schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-      providerGroups: [],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
+      providers: [],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
     },
     metadata: {},
   };

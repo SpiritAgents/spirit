@@ -313,10 +313,13 @@ pub trait SecretStore: Send + Sync {
     fn load_global_api_key(&self) -> Result<Option<String>>;
     fn save_global_api_key(&self, api_key: &str) -> Result<()>;
     fn remove_global_api_key(&self) -> Result<()>;
-    fn load_model_api_key(&self, model_name: &str) -> Result<Option<String>>;
-    fn save_model_api_key(&self, model_name: &str, api_key: &str) -> Result<()>;
-    fn remove_model_api_key(&self, model_name: &str) -> Result<()>;
-    fn has_model_api_key(&self, model_name: &str) -> Result<bool>;
+    /// Reads an arbitrary keyring entry — internal `Spirit` accounts (`provider::{id}[::{slot}]`)
+    /// and external `apiKeyKeyring` / `credentials` slot references alike; missing or blank
+    /// values resolve to `None`.
+    fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>>;
+    /// Writes an internal keyring account (a blank value clears the entry).
+    fn save_provider_secret(&self, account: &str, secret: &str) -> Result<()>;
+    fn remove_provider_secret(&self, account: &str) -> Result<()>;
 }
 
 #[derive(Clone, Debug)]

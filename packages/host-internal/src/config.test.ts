@@ -607,6 +607,26 @@ test("credentials slots are scoped by mechanism and conflict with flat keys", ()
     "clientEmail",
     "privateKey",
   ]);
+  assert.deepEqual(providerCredentialSlotNames("open-responses", undefined, {}), ["apiKey"]);
+  assert.deepEqual(
+    providerCredentialSlotNames("open-responses", undefined, { auth: "aws-sigv4" }),
+    ["apiKey", "accessKeyId", "secretAccessKey"],
+  );
+
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          transportKind: "open-responses",
+          options: { auth: "aws-sigv4" },
+          credentials: {
+            accessKeyId: { env: "AWS_ACCESS_KEY_ID" },
+            secretAccessKey: { keyring: { service: "Vault", account: "bedrock" } },
+          },
+        }),
+      ]),
+    ),
+  );
 
   assert.doesNotThrow(() =>
     validateSpiritConfig(

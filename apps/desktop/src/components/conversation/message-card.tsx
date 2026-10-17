@@ -81,7 +81,6 @@ function MessageCardImpl({
   onModelSelect,
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
-  onModelThinkingEnabledSelect,
   onModelServiceTierSelect,
   onAgentModeChange,
   pendingAuxState,
@@ -164,7 +163,6 @@ function MessageCardImpl({
   onModelSelect(ref: ModelRef): void;
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
-  onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
     ref: ModelRef,
     serviceTier: ModelServiceTier | undefined,
@@ -293,7 +291,6 @@ function MessageCardImpl({
             onModelSelect={onModelSelect}
             onModelReasoningEffortSelect={onModelReasoningEffortSelect}
             onModelReasoningModeSelect={onModelReasoningModeSelect}
-            onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
             onModelServiceTierSelect={onModelServiceTierSelect}
             onAgentModeChange={onAgentModeChange}
             onLoopEnabledChange={() => {}}

@@ -1,6 +1,6 @@
 import type { JsonValue, ToolApprovalPrompt, ToolApprovalRequest } from "@spiritagent/agent-core";
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { formatDesktopAutomationTimeOfDay } from "./automation-schedule.js";
 import type { DesktopAutomationTrigger } from "./automation-trigger.js";
