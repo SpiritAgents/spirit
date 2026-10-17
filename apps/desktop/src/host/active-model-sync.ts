@@ -6,7 +6,7 @@ import { resolvePaneModelRef } from "./model-config-access.js";
 import type { SessionBundle } from "./session-bundle.js";
 
 export interface HostActiveModelState {
-  config: Pick<DesktopConfigFile, "activeModel" | "providerGroups">;
+  config: Pick<DesktopConfigFile, "activeModel" | "providers">;
 }
 
 export function resolveEffectivePaneActiveModel(

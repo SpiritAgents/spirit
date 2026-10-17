@@ -22,10 +22,18 @@ struct CustomProviderPreset {
 #[serde(rename_all = "camelCase")]
 struct ProviderPresetEntry {
     id: String,
+    label: Option<String>,
     default_transport: String,
+    sdk: Option<String>,
     transports: BTreeMap<String, String>,
     sites: Option<ProviderPresetSites>,
     billing_plans: Option<Vec<ProviderPresetBillingPlan>>,
+    /// Materialization templates copied verbatim onto the config entry at connect time
+    /// (`providers[].providerTools` / `fileUpload` / `imageApi` / `videoApi`).
+    provider_tools: Option<Vec<serde_json::Value>>,
+    file_upload: Option<serde_json::Value>,
+    image_api: Option<String>,
+    video_api: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -196,21 +204,6 @@ fn resolve_preset_api_base(
     substitute_templates(&raw, workspace_id)
 }
 
-fn resolve_site_api_base(
-    provider: crate::model_registry::ModelProvider,
-    transport_kind: ModelTransportKind,
-    site: &str,
-    workspace_id: &str,
-) -> Option<String> {
-    resolve_preset_api_base(
-        preset_entry(provider.as_str())?,
-        transport_kind,
-        Some(site),
-        None,
-        Some(workspace_id),
-    )
-}
-
 /// The provider's endpoint for a transport, without site or billing-plan overrides.
 pub(crate) fn model_add_preset_api_base(
     provider: crate::model_registry::ModelProvider,
@@ -278,41 +271,8 @@ fn model_add_site_id_from_choice(provider_id: &str, selected: usize) -> &'static
     }
 }
 
-fn host_of(api_base: &str) -> Option<&str> {
-    let after_scheme = api_base
-        .trim()
-        .strip_prefix("https://")
-        .or_else(|| api_base.trim().strip_prefix("http://"))?;
-    after_scheme.split('/').next()?.split(':').next()
-}
-
-fn model_add_site_id_from_api_base(provider_id: &str, api_base: &str) -> Option<&'static str> {
-    let host = host_of(api_base)?;
-    let sites = &preset_entry(provider_id)?.sites.as_ref()?.items;
-    sites
-        .iter()
-        .find(|site| {
-            site.api_base
-                .as_deref()
-                .into_iter()
-                .chain(
-                    site.transports
-                        .as_ref()
-                        .map(|transports| transports.values().map(String::as_str))
-                        .into_iter()
-                        .flatten(),
-                )
-                .any(|base| host_of(base) == Some(host))
-        })
-        .map(|site| site.id.as_str())
-}
-
 pub(crate) fn model_add_kimi_code_site_id_from_choice(selected: usize) -> &'static str {
     model_add_site_id_from_choice("kimi-code", selected)
-}
-
-pub(crate) fn model_add_kimi_code_site_id_from_api_base(api_base: &str) -> Option<&'static str> {
-    model_add_site_id_from_api_base("kimi-code", api_base)
 }
 
 pub(crate) fn model_add_default_custom_api_base(transport_kind: ModelTransportKind) -> String {
@@ -366,34 +326,6 @@ pub(crate) fn azure_api_base_from_resource_name(resource_name: &str) -> String {
     format!("https://{trimmed}.openai.azure.com/openai/v1")
 }
 
-pub(crate) fn extract_azure_resource_name_from_api_base(base_url: &str) -> Option<String> {
-    let normalized = base_url.trim().trim_end_matches('/');
-    let lower = normalized.to_ascii_lowercase();
-    if !lower.starts_with("https://") {
-        return None;
-    }
-    let after_scheme = &normalized[8..];
-    let host_end = after_scheme.find('/').unwrap_or(after_scheme.len());
-    let host = &after_scheme[..host_end];
-    const SUFFIX: &str = ".openai.azure.com";
-    if !host.to_ascii_lowercase().ends_with(SUFFIX) {
-        return None;
-    }
-    let resource = host[..host.len() - SUFFIX.len()].trim();
-    if resource.is_empty() || !is_valid_azure_resource_name(resource) {
-        None
-    } else {
-        Some(resource.to_string())
-    }
-}
-
-pub(crate) fn resolve_azure_resource_name(
-    explicit: Option<String>,
-    api_base: &str,
-) -> Option<String> {
-    explicit.or_else(|| extract_azure_resource_name_from_api_base(api_base))
-}
-
 pub(crate) fn is_valid_cloudflare_account_id(account_id: &str) -> bool {
     let trimmed = account_id.trim();
     trimmed.len() == 32 && trimmed.bytes().all(|byte| byte.is_ascii_hexdigit())
@@ -422,6 +354,73 @@ pub(crate) fn cloudflare_ai_gateway_api_base_from_account_id(account_id: &str) -
         );
     }
     format!("https://api.cloudflare.com/client/v4/accounts/{trimmed}/ai/v1")
+}
+
+/// The preset's `defaultTransport` (the unflagged transport for `model add`).
+pub(crate) fn preset_default_transport_kind(
+    provider: crate::model_registry::ModelProvider,
+) -> ModelTransportKind {
+    preset_entry(provider.as_str())
+        .and_then(|preset| preset.default_transport.parse().ok())
+        .unwrap_or(ModelTransportKind::OpenAiCompatible)
+}
+
+/// The preset manifest's `transports` keys declare the provider's supported transport set.
+pub(crate) fn preset_supports_transport(
+    provider: crate::model_registry::ModelProvider,
+    transport_kind: ModelTransportKind,
+) -> bool {
+    preset_entry(provider.as_str())
+        .is_some_and(|preset| preset.transports.contains_key(transport_kind.as_str()))
+}
+
+/// SDK adapter fallback when the wizard picks a non-default transport: the preset's `sdk`
+/// names its default transport's adapter; alternates use the transport's generic adapter
+/// (bedrock is a self-held implementation with no adapter). Mirrors agent-core
+/// `fallbackSdkPackageName`.
+fn fallback_sdk_package_name(transport_kind: ModelTransportKind) -> Option<&'static str> {
+    match transport_kind {
+        ModelTransportKind::OpenAiCompatible => Some("@ai-sdk/openai-compatible"),
+        ModelTransportKind::OpenResponses => Some("@ai-sdk/open-responses"),
+        ModelTransportKind::Anthropic => Some("@ai-sdk/anthropic"),
+        ModelTransportKind::Bedrock => None,
+    }
+}
+
+/// The wizard-owned declarations a connect writes onto the provider entry, mirroring
+/// agent-core `materializeProviderPreset`: `transportKind` is omitted for the default
+/// transport, `sdk` follows the preset (or the transport fallback), and the
+/// `providerTools` / `fileUpload` / `imageApi` / `videoApi` templates are copied verbatim.
+/// `custom` connections declare nothing beyond a non-default transport.
+pub(crate) fn preset_connect_draft(
+    provider: crate::model_registry::ModelProvider,
+    transport_kind: ModelTransportKind,
+) -> crate::model_registry::ProviderConnectDraft {
+    use crate::model_registry::ProviderConnectDraft;
+
+    let declared_transport = (transport_kind != ModelTransportKind::OpenAiCompatible)
+        .then(|| transport_kind.as_str().to_string());
+    let Some(preset) = preset_entry(provider.as_str()) else {
+        return ProviderConnectDraft {
+            transport_kind: declared_transport,
+            ..ProviderConnectDraft::default()
+        };
+    };
+    let sdk = if transport_kind.as_str() == preset.default_transport {
+        preset.sdk.clone()
+    } else {
+        fallback_sdk_package_name(transport_kind).map(str::to_string)
+    };
+    ProviderConnectDraft {
+        label: preset.label.clone(),
+        transport_kind: declared_transport,
+        sdk,
+        provider_tools: preset.provider_tools.clone(),
+        file_upload: preset.file_upload.clone(),
+        image_api: preset.image_api.clone(),
+        video_api: preset.video_api.clone(),
+        ..ProviderConnectDraft::default()
+    }
 }
 
 pub(crate) fn model_add_picker_order_ids() -> &'static [String] {
@@ -619,129 +618,6 @@ pub(crate) fn model_add_requires_manual_single_provider(
         crate::model_registry::ModelProvider::Azure
             | crate::model_registry::ModelProvider::CloudflareAiGateway
     )
-}
-
-/// Aligned with Desktop `resolveProfileApiBase`: hosted providers recompute the endpoint from `providerSite` etc. instead of blindly reading `apiBase`.
-pub(crate) fn resolve_profile_api_base(profile: &crate::model_registry::ModelProfile) -> String {
-    use crate::model_registry::{DEFAULT_API_BASE, ModelProvider};
-
-    if profile.provider == Some(ModelProvider::AmazonBedrock)
-        && let Some(region) = profile.aws_region()
-    {
-        if crate::bedrock_mantle::is_bedrock_mantle_openai_model(&profile.name) {
-            return crate::bedrock_mantle::bedrock_mantle_api_base_from_region(&region);
-        }
-        return bedrock_api_base_from_region(&region);
-    }
-
-    if profile.provider == Some(ModelProvider::GoogleVertexAi) {
-        if let (Some(project), Some(location)) =
-            (profile.vertex_project(), profile.vertex_location())
-        {
-            return crate::vertex_models_list::vertex_api_base_from_project_and_location(
-                &project, &location,
-            );
-        }
-        let trimmed = profile.api_base.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
-        return String::new();
-    }
-
-    if profile.provider == Some(ModelProvider::Azure) {
-        if let Some(resource_name) = profile.azure_resource_name() {
-            return azure_api_base_from_resource_name(&resource_name);
-        }
-        let trimmed = profile.api_base.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
-        return azure_api_base_from_resource_name("");
-    }
-
-    if profile.provider == Some(ModelProvider::CloudflareAiGateway) {
-        if let Some(account_id) = profile.cloudflare_account_id() {
-            return cloudflare_ai_gateway_api_base_from_account_id(&account_id);
-        }
-        let trimmed = profile.api_base.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
-        return cloudflare_ai_gateway_api_base_from_account_id("");
-    }
-
-    if profile.provider == Some(ModelProvider::Alibaba)
-        && profile.alibaba_billing_mode().as_deref() == Some("token-plan")
-        && let Some(base) = model_add_alibaba_token_plan_api_base(profile.transport_kind())
-    {
-        return base;
-    }
-
-    if profile.provider == Some(ModelProvider::Stepfun) {
-        let step_plan = profile.stepfun_billing_mode().as_deref() == Some("step-plan");
-        if let Some(base) = model_add_stepfun_api_base(
-            profile.transport_kind(),
-            step_plan,
-            profile.provider_site().as_deref(),
-        ) {
-            return base;
-        }
-    }
-
-    if profile.provider == Some(ModelProvider::ZAi) {
-        let glm_coding_plan = profile.z_ai_billing_mode().as_deref() == Some("glm-coding-plan");
-        if let Some(base) = model_add_z_ai_api_base(glm_coding_plan) {
-            return base;
-        }
-    }
-
-    if profile.provider == Some(ModelProvider::ZhipuAi) {
-        let glm_coding_plan = profile.zhipu_billing_mode().as_deref() == Some("glm-coding-plan");
-        if let Some(base) = model_add_zhipu_ai_api_base(glm_coding_plan) {
-            return base;
-        }
-    }
-
-    if let Some(provider) = profile.provider
-        && provider != ModelProvider::Custom
-    {
-        let inferred_kimi_site = (provider == ModelProvider::KimiCode)
-            .then(|| model_add_kimi_code_site_id_from_api_base(&profile.api_base))
-            .flatten();
-        return default_api_base_for_transport(
-            provider,
-            profile.transport_kind(),
-            profile.provider_site().as_deref().or(inferred_kimi_site),
-            profile.alibaba_workspace_id().as_deref().unwrap_or(""),
-        );
-    }
-
-    let trimmed = profile.api_base.trim();
-    if trimmed.is_empty() {
-        DEFAULT_API_BASE.to_string()
-    } else {
-        trimmed.to_string()
-    }
-}
-
-fn bedrock_api_base_from_region(region: &str) -> String {
-    format!("https://bedrock.{}.amazonaws.com", region.trim())
-}
-
-fn default_api_base_for_transport(
-    provider: crate::model_registry::ModelProvider,
-    transport_kind: ModelTransportKind,
-    site: Option<&str>,
-    workspace_id: &str,
-) -> String {
-    if let Some(site) = site
-        && let Some(base) = resolve_site_api_base(provider, transport_kind, site, workspace_id)
-    {
-        return base;
-    }
-    model_add_preset_api_base(provider, transport_kind)
-        .unwrap_or_else(|| model_add_default_custom_api_base(transport_kind))
 }
 
 #[cfg(test)]
@@ -965,53 +841,6 @@ mod tests {
     }
 
     #[test]
-    fn kimi_code_site_id_from_api_base_matches_host() {
-        assert_eq!(
-            super::model_add_kimi_code_site_id_from_api_base("https://api.kimi.com/coding/v1"),
-            Some("cn")
-        );
-        assert_eq!(
-            super::model_add_kimi_code_site_id_from_api_base("https://api.kimi.ai/coding"),
-            Some("intl")
-        );
-        assert_eq!(
-            super::model_add_kimi_code_site_id_from_api_base("https://api.example.com/v1"),
-            None
-        );
-    }
-
-    #[test]
-    fn resolve_profile_api_base_prefers_kimi_code_cn_site_over_stored_api_base() {
-        let profile: crate::model_registry::ModelProfile =
-            serde_json::from_value(serde_json::json!({
-                "name": "kimi-for-coding",
-                "apiBase": "https://api.kimi.ai/coding/v1",
-                "provider": "kimi-code",
-                "providerSite": "cn"
-            }))
-            .expect("parse model profile");
-        assert_eq!(
-            resolve_profile_api_base(&profile),
-            "https://api.kimi.com/coding/v1"
-        );
-    }
-
-    #[test]
-    fn resolve_profile_api_base_infers_kimi_code_cn_site_from_stored_api_base() {
-        let profile: crate::model_registry::ModelProfile =
-            serde_json::from_value(serde_json::json!({
-                "name": "kimi-for-coding",
-                "apiBase": "https://api.kimi.com/coding/v1",
-                "provider": "kimi-code"
-            }))
-            .expect("parse model profile");
-        assert_eq!(
-            resolve_profile_api_base(&profile),
-            "https://api.kimi.com/coding/v1"
-        );
-    }
-
-    #[test]
     fn stepfun_api_base_resolves_site_and_step_plan() {
         assert_eq!(
             super::model_add_stepfun_api_base(ModelTransportKind::OpenAiCompatible, false, None)
@@ -1073,22 +902,6 @@ mod tests {
         assert_eq!(
             super::model_add_tencent_tokenhub_site_api_base("intl").as_deref(),
             Some("https://tokenhub-intl.tencentmaas.com/v1")
-        );
-    }
-
-    #[test]
-    fn resolve_profile_api_base_prefers_moonshot_cn_site_over_stored_api_base() {
-        let profile: crate::model_registry::ModelProfile =
-            serde_json::from_value(serde_json::json!({
-                "name": "kimi-k2.7-code",
-                "apiBase": "https://api.moonshot.ai/v1",
-                "provider": "moonshot-ai",
-                "providerSite": "cn"
-            }))
-            .expect("parse model profile");
-        assert_eq!(
-            resolve_profile_api_base(&profile),
-            "https://api.moonshot.cn/v1"
         );
     }
 
@@ -1206,32 +1019,6 @@ mod tests {
         assert_eq!(
             model_add_default_custom_api_base(ModelTransportKind::Anthropic),
             "https://api.anthropic.com/v1"
-        );
-    }
-
-    #[test]
-    fn extract_azure_resource_name_from_api_base_parses_host() {
-        assert_eq!(
-            super::extract_azure_resource_name_from_api_base(
-                "https://my-openai-resource.openai.azure.com/openai/v1"
-            )
-            .as_deref(),
-            Some("my-openai-resource")
-        );
-        assert!(
-            super::extract_azure_resource_name_from_api_base("https://api.openai.com/v1").is_none()
-        );
-    }
-
-    #[test]
-    fn resolve_azure_resource_name_prefers_explicit_value() {
-        assert_eq!(
-            super::resolve_azure_resource_name(
-                Some("explicit".to_string()),
-                "https://other.openai.azure.com/openai/v1"
-            )
-            .as_deref(),
-            Some("explicit")
         );
     }
 

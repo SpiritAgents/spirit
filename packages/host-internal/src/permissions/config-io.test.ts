@@ -4,7 +4,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "vitest";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config-v2.js";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config.js";
 import { configFilePath } from "../credentials/spirit-config.js";
 import {
   createPermissionConfigLoader,
@@ -16,8 +16,8 @@ import {
 function baseConfig(extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups: [],
-    activeModel: { groupId: "g", name: "m" },
+    providers: [],
+    activeModel: { providerId: "g", name: "m" },
     ...extra,
   };
 }
@@ -182,7 +182,7 @@ test("savePermissionRule preserves unrelated config fields and unknown domains",
 
     const raw = JSON.parse(await readFile(configFilePath(dir), "utf8")) as Record<string, unknown>;
     assert.equal(raw["schemaVersion"], SPIRIT_CONFIG_SCHEMA_VERSION);
-    assert.deepEqual(raw["activeModel"], { groupId: "g", name: "m" });
+    assert.deepEqual(raw["activeModel"], { providerId: "g", name: "m" });
     assert.deepEqual(raw["someOtherField"], { nested: true });
     assert.deepEqual(raw["permission"], {
       web_fetch: { "*": "allow" },

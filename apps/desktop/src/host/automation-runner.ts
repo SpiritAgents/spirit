@@ -22,8 +22,7 @@ import {
 } from "./automation-runtime.js";
 import { createDesktopRewindMetadata } from "./rewind.js";
 import { buildStoredDesktopSession } from "./sessions.js";
-import { modelExistsInGroup } from "./model-config-access.js";
-import { modelRefKey } from "@spiritagent/host-internal/config-v2";
+import { modelExistsInProvider, modelRefKey } from "@spiritagent/host-internal";
 import {
   chatsDirPath,
   resolveApiKeyForConfigModel,
@@ -80,7 +79,7 @@ export async function runDesktopAutomationOnce(
 
   try {
     const modelRef = input.definition.modelRef;
-    if (!modelExistsInGroup(input.config, modelRef.groupId, modelRef.name)) {
+    if (!modelExistsInProvider(input.config.providers, modelRef.providerId, modelRef.name)) {
       throw new Error(`Model not found: ${modelRefKey(modelRef)}`);
     }
     const apiKey = await resolveApiKeyForConfigModel(input.config, modelRef);

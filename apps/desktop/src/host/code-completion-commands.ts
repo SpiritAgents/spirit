@@ -1,13 +1,11 @@
 import { createJsonSchemaTransport } from "@spiritagent/agent-core";
-import { CodeCompletionService } from "@spiritagent/host-internal";
+import { applyCodeCompletionTransportProfile } from "@spiritagent/agent-core";
+import { CodeCompletionService, tryResolveTransportConfig } from "@spiritagent/host-internal";
 import type { CodeCompletionResult } from "@spiritagent/agent-core";
 
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
 import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
-import { buildCodeCompletionTransportConfig } from "./model-config.js";
-import { currentApiBase } from "./service-utils.js";
 import type { DesktopConfigFile } from "./storage.js";
-import { resolveApiKeyForConfigModel } from "./storage.js";
+import { spiritDataDir } from "./storage.js";
 import type {
   RecordCodeCompletionFileStateRequest,
   RequestCodeCompletionRequest,
@@ -60,6 +58,29 @@ export function abortCodeCompletionCommand(workspaceRoot: string): void {
   abortControllersByWorkspaceRoot.delete(workspaceRoot);
 }
 
+/**
+ * The code-completion transport for the configured secondary model: host-internal resolves the
+ * declared profile + credentials from config.json, then the agent-core code-completion profile
+ * strips reasoning/thinking. Returns undefined when setup is incomplete.
+ */
+export function resolveCodeCompletionTransportConfig(
+  context: CodeCompletionCommandContext,
+): ReturnType<typeof applyCodeCompletionTransportProfile> | undefined {
+  const resolved = resolveSecondaryLanguageModelProfile(context.config);
+  if (!resolved) {
+    return undefined;
+  }
+  const resolvedTransport = tryResolveTransportConfig({
+    workspaceRoot: context.workspaceRoot,
+    spiritDataDir: spiritDataDir(),
+    modelRef: resolved.profile.ref,
+  });
+  if (!resolvedTransport.ok) {
+    return undefined;
+  }
+  return applyCodeCompletionTransportProfile(resolvedTransport.config);
+}
+
 export async function requestCodeCompletionCommand(
   context: CodeCompletionCommandContext,
   request: RequestCodeCompletionRequest,
@@ -75,19 +96,10 @@ export async function requestCodeCompletionCommand(
       return { operations: [] };
     }
 
-    const apiKey = await resolveApiKeyForConfigModel(context.config, resolved.profile.ref);
-    if (!apiKey) {
+    const transportConfig = resolveCodeCompletionTransportConfig(context);
+    if (!transportConfig) {
       return { operations: [] };
     }
-
-    const transportConfig = buildCodeCompletionTransportConfig({
-      apiKey,
-      model: resolved.name,
-      baseUrl: resolved.profile.apiBase ?? currentApiBase(context.config),
-      workspaceRoot: context.workspaceRoot,
-      profile: resolved.profile,
-      agentMode: resolveDesktopAgentMode(context.config),
-    });
     const transport = createJsonSchemaTransport(transportConfig);
     const service = getService(context.workspaceRoot);
 
@@ -105,7 +117,7 @@ export async function requestCodeCompletionCommand(
         transport,
         transportConfig,
         modelName: resolved.name,
-        ...(resolved.profile.provider ? { providerId: resolved.profile.provider } : {}),
+        providerId: resolved.profile.providerId,
       },
     );
 

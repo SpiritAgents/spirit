@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,
   AddProviderModelsRequest,
-  DesktopModelProvider,
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
@@ -55,7 +54,7 @@ export function OnboardingConnectControls({
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   /** Increments on each connection attempt in this session; used as ProviderConnectDialog's key to remount and reset the form. */
   const [connectTarget, setConnectTarget] = useState<{
-    provider: DesktopModelProvider;
+    provider: string;
     session: number;
   } | null>(null);
   const scrollRootRef = useRef<HTMLDivElement>(null);
@@ -66,7 +65,7 @@ export function OnboardingConnectControls({
     query,
   );
 
-  const startConnect = (id: DesktopModelProvider) => {
+  const startConnect = (id: string) => {
     setConnectTarget((prev) => ({ provider: id, session: (prev?.session ?? 0) + 1 }));
     setConnectDialogOpen(true);
   };

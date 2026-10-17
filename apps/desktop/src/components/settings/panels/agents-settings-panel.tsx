@@ -105,8 +105,10 @@ export function AgentsSettingsPanel({
             <div className="flex justify-end">
               <Switch
                 id="settings-web-search"
-                checked={settings.webSearchEnabled}
-                onCheckedChange={(value) => void onSavePatch({ webSearchEnabled: value === true })}
+                checked={settings.providerToolsEnabled}
+                onCheckedChange={(value) =>
+                  void onSavePatch({ providerToolsEnabled: value === true })
+                }
               />
             </div>
           </AgentsSettingsRow>

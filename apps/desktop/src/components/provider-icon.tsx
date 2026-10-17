@@ -6,10 +6,9 @@ import {
   probeModelsDevReachability,
 } from "@/lib/models-dev-provider-logo";
 import { cn } from "@/lib/utils";
-import type { DesktopModelProvider } from "@/types";
 
 type ProviderIconProps = {
-  providerId: DesktopModelProvider;
+  providerId: string;
   className?: string;
 };
 
@@ -23,7 +22,7 @@ function ProviderFallbackIcon({ className }: { className?: string }) {
   );
 }
 
-function modelsDevLogoMaskStyle(providerId: DesktopModelProvider): CSSProperties {
+function modelsDevLogoMaskStyle(providerId: string): CSSProperties {
   const url = modelsDevProviderLogoUrl(providerId);
   return {
     WebkitMaskImage: `url("${url}")`,

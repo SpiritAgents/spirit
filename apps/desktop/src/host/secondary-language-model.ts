@@ -1,7 +1,7 @@
 import type { ModelRef } from "../types.js";
 import type { DesktopConfigFile } from "./storage.js";
 import {
-  flattenProviderGroups,
+  flattenProviders,
   modelSupportsLanguageModel,
   resolveModelProfile,
   type ResolvedModelProfile,
@@ -9,7 +9,7 @@ import {
 
 export type SecondaryLanguageModelResolveInput = Pick<
   DesktopConfigFile,
-  "activeModel" | "secondaryLanguageModel" | "providerGroups"
+  "activeModel" | "secondaryLanguageModel" | "providers"
 >;
 
 export { modelSupportsLanguageModel };
@@ -18,7 +18,7 @@ export const SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS = ["deepseek-v4-flash"] 
 
 export function normalizeSecondaryLanguageModel(
   value: ModelRef | undefined,
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
 ): ModelRef | undefined {
   const profile = resolveModelProfile(config, value);
   return profile && modelSupportsLanguageModel(profile) ? profile.ref : undefined;
@@ -32,7 +32,7 @@ export function resolveSecondaryLanguageModelName(
     return explicit;
   }
 
-  const models = flattenProviderGroups(config);
+  const models = flattenProviders(config);
   for (const pattern of SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS) {
     const lowerPattern = pattern.toLowerCase();
     const match = models.find(

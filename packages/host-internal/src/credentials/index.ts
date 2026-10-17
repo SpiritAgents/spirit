@@ -1,10 +1,11 @@
 export {
   resolveAgentsProviderToolsExposure,
-  resolveAgentsWebToolExposure,
+  resolveAgentsWebFetchExposure,
   type AgentsProviderToolsExposure,
-  type AgentsWebToolExposure,
+  type AgentsWebFetchExposure,
 } from "./agents-config.js";
 export {
+  KEYRING_SERVICE,
   providerInternalKeyAccount,
   providerInternalSlotAccount,
   resolveProviderApiKey,
@@ -13,6 +14,7 @@ export {
   resolveProviderCredentialSlotResolution,
   type ProviderKeyChannelMiss,
   type ProviderKeyChannelSource,
+  type ProviderKeyChannels,
   type ProviderKeyResolution,
   type ResolveProviderKeyOptions,
 } from "./provider-key-channels.js";
@@ -20,40 +22,24 @@ export {
   hasResolvableCredentials,
   loadActiveModelProfile,
   loadModelProfile,
-  loadSpiritConfig,
-  readBedrockCredentials,
-  readGoogleVertexCredentials,
+  profileKeyChannels,
+  resolveProfileCredentialSlot,
   resolveStoredApiKeyForProfile,
   saveProviderSetup,
-  saveSpiritConfig,
 } from "./credentials.js";
-export { configFilePath, resolveSpiritDataDir } from "./spirit-config.js";
-export { setKeyringStoreForTests, type KeyringStore } from "./keyring-store.js";
 export {
-  KEYRING_GLOBAL_ACCOUNT,
-  KEYRING_SERVICE,
-  groupAccessKeyIdAccount,
-  groupKeyAccount,
-  groupSecretAccessKeyAccount,
-  groupVertexClientEmailAccount,
-  groupVertexPrivateKeyAccount,
-  modelKeyAccount,
-  modelProviderKeyScope,
-  providerAccessKeyIdAccount,
-  providerKeyAccount,
-  providerSecretAccessKeyAccount,
-  providerVertexClientEmailAccount,
-  providerVertexPrivateKeyAccount,
-} from "./provider-accounts.js";
+  configFilePath,
+  loadSpiritConfig,
+  resolveSpiritDataDir,
+  resolveSpiritModelProfile,
+  saveSpiritConfig,
+  SpiritConfigSchemaError,
+} from "./spirit-config.js";
+export { setKeyringStoreForTests, type KeyringStore } from "./keyring-store.js";
 export type {
-  BedrockSetupCredentials,
-  GoogleVertexSetupCredentials,
   PermissionConfig,
   PermissionDomainRules,
   PermissionRuleAction,
   ProviderSetupResult,
-  SpiritConfigFile,
-  SpiritModelCapability,
   SpiritModelProfile,
-  SpiritModelReasoningEffort,
 } from "./types.js";

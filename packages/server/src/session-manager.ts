@@ -1078,9 +1078,9 @@ export class SessionManager {
   /** Re-resolve the transport from config.json and rebuild the runtime, preserving history. */
   async replaceConfig(sessionId: string, modelRef?: ModelRef): Promise<void> {
     const session = this.requireSession(sessionId);
-    if (modelRef?.groupId?.trim() && modelRef?.name?.trim()) {
+    if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
       session.createParams.modelRef = {
-        groupId: modelRef.groupId.trim(),
+        providerId: modelRef.providerId.trim(),
         name: modelRef.name.trim(),
       };
     } else {

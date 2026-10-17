@@ -31,7 +31,7 @@ import { Button } from "@/components/ui/button";
 import type { SaveLocalImageAs } from "@/components/tool-call/tool-call-types";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DesktopAgentMode } from "@/lib/agent-mode";
-import { modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { modelRefsEqual } from "@/lib/model-ref";
 import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
 import {
   DESKTOP_COMPOSER_GHOST_HOVER,
@@ -68,7 +68,7 @@ export type ComposerSurfaceProps = {
   agentModeChipPlaceholder?: string;
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
-  providerGroups?: DesktopSnapshot["config"]["providerGroups"];
+  providers?: DesktopSnapshot["config"]["providers"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   loopEnabled: boolean;
@@ -82,7 +82,6 @@ export type ComposerSurfaceProps = {
   onModelSelect(ref: ModelRef): void;
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
-  onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
     ref: ModelRef,
     serviceTier: ModelServiceTier | undefined,
@@ -118,7 +117,7 @@ export function ComposerSurface({
   agentModeChipPlaceholder,
   models,
   catalogHints,
-  providerGroups,
+  providers,
   activeModel,
   agentMode,
   loopEnabled = false,
@@ -132,7 +131,6 @@ export function ComposerSurface({
   onModelSelect,
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
-  onModelThinkingEnabledSelect,
   onModelServiceTierSelect,
   onAgentModeChange,
   onLoopEnabledChange,
@@ -158,13 +156,7 @@ export function ComposerSurface({
   const { t } = useTranslation();
   const [fileDragOver, setFileDragOver] = useState(false);
   const activeModelProfile = useMemo(
-    () =>
-      models.find((model) =>
-        modelRefsEqual(
-          model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-          activeModel,
-        ),
-      ),
+    () => models.find((model) => modelRefsEqual(model.ref, activeModel)),
     [activeModel, models],
   );
 
@@ -281,14 +273,13 @@ export function ComposerSurface({
             <ModelPickerMenu
               models={models}
               catalogHints={catalogHints}
-              providerGroups={providerGroups}
+              providers={providers}
               activeModelRef={activeModel}
               activeReasoningEffort={activeModelProfile?.reasoningEffort}
               disabled={readOnly}
               onModelSelect={onModelSelect}
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
               onModelReasoningModeSelect={onModelReasoningModeSelect}
-              onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
               onModelServiceTierSelect={onModelServiceTierSelect}
               triggerClassName={DESKTOP_COMPOSER_GHOST_HOVER}
               menuContentClassName="z-[100]"

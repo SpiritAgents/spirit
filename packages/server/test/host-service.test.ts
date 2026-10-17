@@ -28,8 +28,8 @@ async function writeConfig(dir: string, permission: unknown): Promise<void> {
     configFilePath(dir),
     `${JSON.stringify({
       schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-      providerGroups: [],
-      activeModel: { groupId: "g", name: "m" },
+      providers: [],
+      activeModel: { providerId: "g", name: "m" },
       permission,
     })}\n`,
     "utf8",

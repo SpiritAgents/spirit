@@ -8,8 +8,8 @@ import { useTranslation } from "react-i18next";
 
 import { ArrowLeft, Blocks, Folder, Sparkles, Store, Trash2 } from "lucide-react";
 
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";

@@ -12,38 +12,34 @@ import {
   type SessionTitleModelConfig,
 } from "./session-title.js";
 
-const openAiGroupId = "openai";
-const exampleGroupId = "example";
+const mainProviderId = "main";
+const exampleProviderId = "example";
 
 const config: SessionTitleModelConfig = {
-  providerGroups: [
+  providers: [
     {
-      id: openAiGroupId,
-      provider: "openai",
-      apiBase: "https://api.openai.com/v1",
+      id: mainProviderId,
+      apiBase: "https://api.main.test/v1",
       models: [
         {
           name: "gpt-4o-mini",
-          reasoningEffort: "medium",
           capabilities: ["languageModel", "image"],
         },
-        { name: "dall-e-3", reasoningEffort: "medium", capabilities: ["imageGeneration"] },
+        { name: "dall-e-3", capabilities: ["imageGeneration"] },
       ],
     },
     {
-      id: exampleGroupId,
-      provider: "custom",
+      id: exampleProviderId,
       apiBase: "https://api.example.com/v1",
       models: [
         {
           name: "deepseek/deepseek-v4-flash",
-          reasoningEffort: "medium",
           capabilities: ["languageModel"],
         },
       ],
     },
   ],
-  activeModel: { groupId: openAiGroupId, name: "gpt-4o-mini" },
+  activeModel: { providerId: mainProviderId, name: "gpt-4o-mini" },
 };
 
 test("buildSessionTitlePrompt includes user message and language rule", () => {
@@ -79,11 +75,11 @@ test("deriveSessionTitleFallbackSeed truncates empty and long text", () => {
 
 test("resolveSessionTitleModelRef prefers vision-capable active model when secondary lacks image", () => {
   const ref = resolveSessionTitleModelRef(config, { needsImage: true });
-  assert.deepEqual(ref, { groupId: openAiGroupId, name: "gpt-4o-mini" });
+  assert.deepEqual(ref, { providerId: mainProviderId, name: "gpt-4o-mini" });
 });
 
 test("resolveSessionTitleModelRef keeps secondary when no media is required", () => {
   const ref = resolveSecondaryLanguageModelRef(config);
-  assert.deepEqual(ref, { groupId: exampleGroupId, name: "deepseek/deepseek-v4-flash" });
+  assert.deepEqual(ref, { providerId: exampleProviderId, name: "deepseek/deepseek-v4-flash" });
   assert.deepEqual(resolveSessionTitleModelRef(config), ref);
 });

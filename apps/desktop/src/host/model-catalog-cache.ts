@@ -3,13 +3,12 @@ import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { normalizeOpenAiApiBase } from "@spiritagent/host-internal";
+import { normalizeOpenAiApiBase } from "@spiritagent/agent-core/model-catalog/openai-api-base";
 
 import type {
   DesktopModelCapability,
-  DesktopModelProvider,
   DesktopModelReasoningEffort,
-  DesktopTransportKind,
+  DesktopModelReasoningMode,
   PreviewModelCatalogEntry,
   PreviewModelCatalogPricing,
 } from "../types.js";
@@ -19,18 +18,20 @@ import { spiritDataDir } from "./storage.js";
 /** Model catalog cache TTL (24h). */
 export const MODEL_CATALOG_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-/** The Hugging Face catalog fluctuates a lot, so it uses a shorter TTL. */
+/**
+ * The Hugging Face catalog fluctuates a lot, so it uses a shorter TTL. Keyed by provider entry id
+ * (catalog-pipeline knowledge; runtime request paths never branch on it).
+ */
 export const HUGGING_FACE_MODEL_CATALOG_CACHE_TTL_MS = 15 * 60 * 1000;
 
-const PROVIDER_MODEL_CATALOG_CACHE_TTL_MS: Partial<Record<DesktopModelProvider, number>> = {
+const PROVIDER_MODEL_CATALOG_CACHE_TTL_MS: Record<string, number> = {
   "hugging-face": HUGGING_FACE_MODEL_CATALOG_CACHE_TTL_MS,
 };
 
-function modelCatalogCacheTtlMs(provider?: DesktopModelProvider): number {
-  if (provider && PROVIDER_MODEL_CATALOG_CACHE_TTL_MS[provider] !== undefined) {
-    return PROVIDER_MODEL_CATALOG_CACHE_TTL_MS[provider] as number;
-  }
-  return MODEL_CATALOG_CACHE_TTL_MS;
+function modelCatalogCacheTtlMs(providerId?: string): number {
+  return (
+    (providerId && PROVIDER_MODEL_CATALOG_CACHE_TTL_MS[providerId]) || MODEL_CATALOG_CACHE_TTL_MS
+  );
 }
 
 /** Matches the `apiKeyFingerprint` written by `writeModelCatalogCache`, for callers to compare against. */
@@ -44,30 +45,22 @@ function modelCatalogCacheDir(): string {
   return path.join(spiritDataDir(), CACHE_DIR_NAME);
 }
 
-function modelCatalogCacheKey(
-  apiBase: string,
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
-): string {
+/** Cache scope: one provider entry's listing at its materialized apiBase. */
+function modelCatalogCacheKey(apiBase: string, providerId: string): string {
   const normalized = normalizeOpenAiApiBase(apiBase);
-  return `${provider ?? "custom"}::${transportKind ?? "openai-compatible"}::${normalized}`;
+  return `${providerId}::${normalized}`;
 }
 
-function modelCatalogCacheFilePath(
-  apiBase: string,
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
-): string {
+function modelCatalogCacheFilePath(apiBase: string, providerId: string): string {
   const hash = createHash("sha256")
-    .update(modelCatalogCacheKey(apiBase, provider, transportKind), "utf8")
+    .update(modelCatalogCacheKey(apiBase, providerId), "utf8")
     .digest("hex")
     .slice(0, 32);
   return path.join(modelCatalogCacheDir(), `${hash}.json`);
 }
 
 export interface ModelCatalogCacheEntry {
-  provider?: DesktopModelProvider;
-  transportKind?: DesktopTransportKind;
+  providerId?: string;
   apiBase: string;
   fetchedAtUnixMs: number;
   modelIds: string[];
@@ -100,70 +93,18 @@ function parseCacheEntry(raw: string): ModelCatalogCacheEntry | undefined {
   }
   const fpRaw = obj.apiKeyFingerprint;
   const apiKeyFingerprint = typeof fpRaw === "string" && fpRaw.length > 0 ? fpRaw : undefined;
-  const provider =
-    typeof obj.provider === "string" && obj.provider.trim().length > 0
-      ? (obj.provider.trim() as DesktopModelProvider)
+  const providerId =
+    typeof obj.providerId === "string" && obj.providerId.trim().length > 0
+      ? obj.providerId.trim()
       : undefined;
-  const transportKind =
-    obj.transportKind === "openai-compatible" ||
-    obj.transportKind === "open-responses" ||
-    obj.transportKind === "anthropic"
-      ? obj.transportKind
-      : undefined;
-  const entry: ModelCatalogCacheEntry = {
+  return {
     apiBase: base.trim(),
     fetchedAtUnixMs: fetchedAt,
     modelIds: ids,
     ...(modelCatalog !== undefined ? { modelCatalog } : {}),
-    ...(provider !== undefined ? { provider } : {}),
-    ...(transportKind !== undefined ? { transportKind } : {}),
+    ...(providerId !== undefined ? { providerId } : {}),
     ...(apiKeyFingerprint !== undefined ? { apiKeyFingerprint } : {}),
   };
-  if (isContextUsageCatalogCacheStale(entry)) {
-    return undefined;
-  }
-  if (isMeituanThinkingCatalogCacheStale(entry)) {
-    return undefined;
-  }
-  if (isTencentTokenHubCatalogCacheStale(entry)) {
-    return undefined;
-  }
-  return entry;
-}
-
-/** Legacy TokenHub caches that only contain modelIds and lack the catalog displayName must be re-fetched. */
-function isTencentTokenHubCatalogCacheStale(entry: ModelCatalogCacheEntry): boolean {
-  if (entry.provider !== "tencent-tokenhub") {
-    return false;
-  }
-  return !entry.modelCatalog?.some(
-    (item) => typeof item.displayName === "string" && item.displayName.trim().length > 0,
-  );
-}
-
-/** Legacy Meituan LongCat caches missing supportsThinkingSwitch must have their details re-fetched. */
-function isMeituanThinkingCatalogCacheStale(entry: ModelCatalogCacheEntry): boolean {
-  if (entry.provider !== "meituan" || !entry.modelCatalog?.length) {
-    return false;
-  }
-  const longCat = entry.modelCatalog.find((item) => item.id === "LongCat-2.0");
-  if (!longCat) {
-    return false;
-  }
-  return longCat.supportsThinkingSwitch !== true;
-}
-
-/** The Gateway/OpenRouter ring chart depends on contextLength; treat legacy entries missing the field as a miss to trigger a re-fetch. */
-function isContextUsageCatalogCacheStale(entry: ModelCatalogCacheEntry): boolean {
-  if (entry.provider !== "vercel-ai-gateway" && entry.provider !== "openrouter") {
-    return false;
-  }
-  if (!entry.modelCatalog || entry.modelCatalog.length === 0) {
-    return false;
-  }
-  return !entry.modelCatalog.some(
-    (item) => typeof item.contextLength === "number" && item.contextLength > 0,
-  );
 }
 
 /**
@@ -171,12 +112,11 @@ function isContextUsageCatalogCacheStale(entry: ModelCatalogCacheEntry): boolean
  */
 export async function readModelCatalogCache(
   apiBase: string,
-  apiKey?: string,
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
+  apiKey: string | undefined,
+  providerId: string,
 ): Promise<ModelCatalogCacheEntry | undefined> {
   try {
-    const raw = await readFile(modelCatalogCacheFilePath(apiBase, provider, transportKind), "utf8");
+    const raw = await readFile(modelCatalogCacheFilePath(apiBase, providerId), "utf8");
     const entry = parseCacheEntry(raw);
     if (!entry) {
       return undefined;
@@ -197,11 +137,10 @@ export async function readModelCatalogCache(
 /** Synchronous read (only used by the host thread for snapshot assembly). */
 export function readModelCatalogCacheSync(
   apiBase: string,
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
+  providerId: string,
 ): ModelCatalogCacheEntry | undefined {
   try {
-    const raw = readFileSync(modelCatalogCacheFilePath(apiBase, provider, transportKind), "utf8");
+    const raw = readFileSync(modelCatalogCacheFilePath(apiBase, providerId), "utf8");
     return parseCacheEntry(raw);
   } catch {
     return undefined;
@@ -212,9 +151,8 @@ export async function writeModelCatalogCache(
   apiBase: string,
   modelIds: string[],
   apiKey: string,
-  modelCatalog?: PreviewModelCatalogEntry[],
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
+  modelCatalog: PreviewModelCatalogEntry[] | undefined,
+  providerId: string,
 ): Promise<void> {
   const dir = modelCatalogCacheDir();
   await mkdir(dir, { recursive: true });
@@ -225,10 +163,9 @@ export async function writeModelCatalogCache(
     modelIds: [...modelIds],
     ...(modelCatalog !== undefined ? { modelCatalog: clonePreviewModelCatalog(modelCatalog) } : {}),
     apiKeyFingerprint: modelCatalogApiKeyFingerprint(apiKey),
-    ...(provider ? { provider } : {}),
-    ...(transportKind ? { transportKind } : {}),
+    providerId,
   };
-  const filePath = modelCatalogCacheFilePath(apiBase, provider, transportKind);
+  const filePath = modelCatalogCacheFilePath(apiBase, providerId);
   const tempPath = `${filePath}.${String(process.pid)}.${String(Math.random()).slice(2)}.tmp`;
   await writeFile(tempPath, `${JSON.stringify(entry)}\n`, "utf8");
   await rename(tempPath, filePath);
@@ -242,7 +179,7 @@ export function isModelCatalogCacheFresh(
   if (forceRefresh) {
     return false;
   }
-  const ttlMs = modelCatalogCacheTtlMs(entry.provider);
+  const ttlMs = modelCatalogCacheTtlMs(entry.providerId);
   return nowMs - entry.fetchedAtUnixMs < ttlMs;
 }
 
@@ -284,6 +221,12 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       record.contextLength > 0
         ? Math.trunc(record.contextLength)
         : undefined;
+    const outputLimit = normalizeCachedPositiveInt(record.outputLimit);
+    const maxCompletionTokens = normalizeCachedPositiveInt(record.maxCompletionTokens);
+    const supportedReasoningModes = normalizeCachedSupportedReasoningModes(
+      record.supportedReasoningModes,
+    );
+    const serviceTiers = normalizeCachedServiceTiers(record.serviceTiers);
     const supportsThinkingType =
       record.supportsThinkingType === "only" ? ("only" as const) : undefined;
     const supportsThinkingSwitch =
@@ -305,6 +248,10 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(supportedReasoningEfforts !== undefined ? { supportedReasoningEfforts } : {}),
       ...(defaultReasoningEffort !== undefined ? { defaultReasoningEffort } : {}),
       ...(contextLength !== undefined ? { contextLength } : {}),
+      ...(outputLimit !== undefined ? { outputLimit } : {}),
+      ...(maxCompletionTokens !== undefined ? { maxCompletionTokens } : {}),
+      ...(supportedReasoningModes !== undefined ? { supportedReasoningModes } : {}),
+      ...(serviceTiers !== undefined ? { serviceTiers } : {}),
       ...(supportsThinkingType !== undefined ? { supportsThinkingType } : {}),
       ...(supportsThinkingSwitch !== undefined ? { supportsThinkingSwitch } : {}),
       ...(inferenceProvider !== undefined ? { inferenceProvider } : {}),
@@ -449,6 +396,37 @@ function normalizeCachedCapabilities(value: unknown): DesktopModelCapability[] |
   return normalized.length > 0 ? normalized : undefined;
 }
 
+function normalizeCachedPositiveInt(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : undefined;
+}
+
+function normalizeCachedSupportedReasoningModes(
+  value: unknown,
+): DesktopModelReasoningMode[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const modes = value.filter(
+    (item): item is DesktopModelReasoningMode => item === "standard" || item === "pro",
+  );
+  const unique = [...new Set(modes)];
+  return unique.length > 0 ? unique : undefined;
+}
+
+function normalizeCachedServiceTiers(value: unknown): PreviewModelCatalogEntry["serviceTiers"] {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const tiers = value.filter(
+    (item): item is NonNullable<PreviewModelCatalogEntry["serviceTiers"]>[number] =>
+      typeof item === "string",
+  );
+  const unique = [...new Set(tiers)];
+  return unique.length > 0 ? unique : undefined;
+}
+
 function normalizeCachedSupportedReasoningEfforts(
   value: unknown,
 ): DesktopModelReasoningEffort[] | undefined {
@@ -500,6 +478,14 @@ function clonePreviewModelCatalog(
       ? { defaultReasoningEffort: entry.defaultReasoningEffort }
       : {}),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
+    ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
+    ...(entry.maxCompletionTokens !== undefined
+      ? { maxCompletionTokens: entry.maxCompletionTokens }
+      : {}),
+    ...(entry.supportedReasoningModes !== undefined
+      ? { supportedReasoningModes: [...entry.supportedReasoningModes] }
+      : {}),
+    ...(entry.serviceTiers !== undefined ? { serviceTiers: [...entry.serviceTiers] } : {}),
     ...(entry.supportsThinkingType !== undefined
       ? { supportsThinkingType: entry.supportsThinkingType }
       : {}),

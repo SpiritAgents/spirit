@@ -2,16 +2,12 @@ import {
   buildDreamReadHostToolDefinitions,
   type LlmExtensionSystemPrompt,
   type LlmToolAgentBasicInfo,
-  type LlmTransportConfig,
 } from "@spiritagent/agent-core";
-import { generateWorktreeNamesFromTask } from "@spiritagent/host-internal";
+import { generateWorktreeNamesFromTask, resolveTransportConfig } from "@spiritagent/host-internal";
 
 import i18n from "../lib/i18n-host.js";
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
-import type { ModelProfileSnapshot } from "../types.js";
-import { currentApiBase } from "./service-utils.js";
-import type { DesktopConfigFile, HostMetadataSummary } from "./storage.js";
-import { buildPrimaryTransportConfig } from "./model-config.js";
+import type { ModelRef } from "../types.js";
+import { spiritDataDir, type HostMetadataSummary } from "./storage.js";
 import { buildDreamContextText } from "./dreams.js";
 import type { DesktopToolExecutor } from "./tool-executor.js";
 import type { GeneratedWorktreeNames } from "./worktree-naming.js";
@@ -19,10 +15,8 @@ import type { GeneratedWorktreeNames } from "./worktree-naming.js";
 interface BackgroundLlmTaskContext {
   workspaceRoot: string;
   gitBranch?: string;
-  config: DesktopConfigFile;
-  taskModel: string;
-  taskProfile?: ModelProfileSnapshot;
-  apiKey: string;
+  /** The task model; transport resolution (credentials, declarations) happens via host-internal. */
+  taskModelRef: ModelRef;
   metadata: HostMetadataSummary;
   extensionSystemPrompts: LlmExtensionSystemPrompt[];
   toolExecutor: DesktopToolExecutor;
@@ -64,13 +58,10 @@ export async function generateWorktreeNamesFromModelTask(
   });
 }
 
-function buildTaskTransportConfig(context: BackgroundLlmTaskContext): LlmTransportConfig {
-  return buildPrimaryTransportConfig({
-    apiKey: context.apiKey,
-    model: context.taskModel,
-    baseUrl: currentApiBase(context.config),
+function buildTaskTransportConfig(context: BackgroundLlmTaskContext) {
+  return resolveTransportConfig({
     workspaceRoot: context.workspaceRoot,
-    profile: context.taskProfile,
-    agentMode: resolveDesktopAgentMode(context.config),
+    spiritDataDir: spiritDataDir(),
+    modelRef: context.taskModelRef,
   });
 }

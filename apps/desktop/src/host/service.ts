@@ -345,7 +345,13 @@ import {
 } from "./active-model-sync.js";
 import { findModelRefByName, resolveModelProfile } from "./model-config-access.js";
 import { deleteSessionCommand, type SessionDeleteContext } from "./session-delete.js";
-import { modelRefKey, modelRefsEqual, tryResolveTransportConfig } from "@spiritagent/host-internal";
+import {
+  findProviderEntry,
+  modelRefKey,
+  modelRefsEqual,
+  tryResolveTransportConfig,
+} from "@spiritagent/host-internal";
+import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 import type { ModelRef } from "../types.js";
 import { renameSessionCommand, type SessionRenameContext } from "./session-rename.js";
 import { setSessionPinnedCommand, type SessionPinContext } from "./session-pin.js";
@@ -442,7 +448,7 @@ import {
 import {
   applyConfiguredModelCatalogRefreshResults,
   fetchConfiguredModelCatalogsOnStartup,
-  forceRefreshModelCatalogForProfile,
+  forceRefreshModelCatalogForProvider,
 } from "./model-catalog-startup-refresh.js";
 import {
   defaultNewSessionPath,
@@ -455,7 +461,6 @@ import {
   createDesktopExtensionStateStore,
   loadConfig,
   saveConfig,
-  removeModelApiKey,
   spiritDataDir,
   normalizeWorkspaceBinding,
   resolveDesktopHomeDirectory,
@@ -837,7 +842,7 @@ export class DesktopHostService {
    * session; a failed push is logged and dropped (the next attach re-syncs).
    */
   private async applyWebToolExposureToRuntimes(exposure: {
-    webSearchEnabled: boolean;
+    providerToolsEnabled: boolean;
     webFetchEnabled: boolean;
   }): Promise<void> {
     const runtimes = new Set<DesktopHostRuntime>();
@@ -852,7 +857,12 @@ export class DesktopHostService {
     await Promise.all(
       [...runtimes].map(async (runtime) => {
         try {
-          await runtime.clientCall("session.setWebToolExposure", { ...exposure });
+          // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI's
+          // daemon runtime flips with it (P8); agent-core reads it as the providerTools bridge.
+          await runtime.clientCall("session.setWebToolExposure", {
+            webSearchEnabled: exposure.providerToolsEnabled,
+            webFetchEnabled: exposure.webFetchEnabled,
+          });
         } catch (error) {
           console.warn("[desktop-host] setWebToolExposure push failed", error);
         }
@@ -1490,6 +1500,10 @@ export class DesktopHostService {
         return resolveModelProfile(state.config, activeModelRef) ?? undefined;
       },
       resolveCatalogHints: () => buildModelCatalogHints(this.requireState().config),
+      // Only providers whose preset declares a catalog can re-fetch a missing context length.
+      supportsCatalogRefresh: (model) =>
+        model.providerId !== undefined &&
+        findProviderPreset(model.providerId)?.catalog !== undefined,
       setContextUsage: (usage) => {
         bundle.contextUsage = usage;
       },
@@ -1567,9 +1581,6 @@ export class DesktopHostService {
           );
           if (summary.merged > 0 || summary.synced > 0 || summary.pruned > 0) {
             await saveConfig(applyState.config);
-            for (const name of summary.prunedModelNames) {
-              await removeModelApiKey(name);
-            }
             if (this.runtime?.isBusy() !== true) {
               await this.refreshRuntime();
             }
@@ -1880,7 +1891,7 @@ export class DesktopHostService {
           ...(this.runtimeTransport.llmSystemPromptsForExport() as Record<string, unknown>),
           tool_agent: buildToolAgentHostPrompt(
             state.config.activeModel.name,
-            resolveModelProfile(state.config, state.config.activeModel)?.provider,
+            resolveModelProfile(state.config, state.config.activeModel)?.providerId,
           ),
           ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
           ...(skillsCatalogSystemPrompt === undefined
@@ -3097,7 +3108,7 @@ export class DesktopHostService {
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
       webToolExposure: {
-        webSearchEnabled: state.config.agents.webSearch.enabled,
+        providerToolsEnabled: state.config.agents.providerTools.enabled,
         webFetchEnabled: state.config.agents.webFetch.enabled,
       },
       ...(bundle.basicInfoHost ? { basicInfoHost: bundle.basicInfoHost } : {}),
@@ -3764,7 +3775,7 @@ export class DesktopHostService {
     usage: { inputTokens: number },
     activeModel: ContextUsageModelProfile,
   ): Promise<void> {
-    if (!activeModel.provider) {
+    if (!activeModel.providerId) {
       return;
     }
     this.pendingContextUsageCatalogRefresh = { bundle, usage, activeModel };
@@ -3800,15 +3811,17 @@ export class DesktopHostService {
   }): Promise<void> {
     const { bundle, usage, activeModel } = input;
     const state = this.state;
-    if (!state || !activeModel.provider) {
+    if (!state || !activeModel.providerId) {
       return;
     }
     const activeRef = findModelRefByName(state.config, activeModel.name);
-    const profile = activeRef ? resolveModelProfile(state.config, activeRef) : undefined;
-    if (!profile) {
+    const provider = activeRef
+      ? findProviderEntry(state.config.providers, activeRef.providerId)
+      : undefined;
+    if (!provider) {
       return;
     }
-    const refreshed = await forceRefreshModelCatalogForProfile(state.config, profile);
+    const refreshed = await forceRefreshModelCatalogForProvider(provider);
     if (!refreshed) {
       return;
     }
@@ -4424,10 +4437,7 @@ export class DesktopHostService {
     return generateWorktreeNamesFromModelTask({
       workspaceRoot: state.workspaceRoot,
       gitBranch: state.git.branch,
-      config: state.config,
-      taskModel: secondaryModel.name,
-      taskProfile: secondaryModel.profile,
-      apiKey,
+      taskModelRef: secondaryModel.profile.ref,
       metadata: {
         ...state.metadata,
         rules: { ...state.metadata.rules, enabledRules: overlay.rules },

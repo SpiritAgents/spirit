@@ -183,7 +183,8 @@ const DEFAULT_SDK_BY_TRANSPORT_KIND: Record<SpiritTransportKind, string | undefi
   bedrock: undefined,
 };
 
-const GOOGLE_VERTEX_SDK_PACKAGE_NAME = "@ai-sdk/google-vertex";
+/** The Google Vertex SDK adapter package: its credential shape adds the `clientEmail` / `privateKey` slots and the `project` / `location` options. */
+export const GOOGLE_VERTEX_SDK_PACKAGE_NAME = "@ai-sdk/google-vertex";
 
 const CAPABILITY_TOKENS: ReadonlySet<string> = new Set([
   "languageModel",
@@ -533,13 +534,17 @@ export function resolveProviderSdkPackageName(
   return provider.sdk ?? defaultSdkPackageName(resolveProviderTransportKind(provider));
 }
 
-/** Valid `credentials` slot names for a mechanism combination: `apiKey` plus transport/sdk slots. */
+/**
+ * Valid `credentials` slot names for a mechanism combination: `apiKey` plus transport/sdk slots.
+ * `options.auth: "aws-sigv4"` signs requests with IAM credentials, adding the IAM slots.
+ */
 export function providerCredentialSlotNames(
   transportKind: SpiritTransportKind,
   sdk: string | undefined,
+  options?: Pick<ProviderOptions, "auth">,
 ): string[] {
   const slots = ["apiKey"];
-  if (transportKind === "bedrock") {
+  if (transportKind === "bedrock" || options?.auth === "aws-sigv4") {
     slots.push("accessKeyId", "secretAccessKey");
   }
   if (sdk === GOOGLE_VERTEX_SDK_PACKAGE_NAME) {
@@ -601,13 +606,14 @@ function validateCredentials(
   value: unknown,
   transportKind: SpiritTransportKind,
   sdk: string | undefined,
+  options: ProviderOptions | undefined,
   hasFlatKeyChannel: boolean,
   context: string,
 ): void {
   if (!isPlainObject(value)) {
     throw new SpiritConfigSchemaError(`${context}: "credentials" must be an object.`);
   }
-  const slots = new Set(providerCredentialSlotNames(transportKind, sdk));
+  const slots = new Set(providerCredentialSlotNames(transportKind, sdk, options));
   for (const [slot, slotValue] of Object.entries(value)) {
     if (!slots.has(slot)) {
       throw new SpiritConfigSchemaError(
@@ -710,7 +716,14 @@ function validateProviderEntry(entry: unknown, context: string): void {
     entry["apiKeyEnv"] !== undefined ||
     entry["apiKeyKeyring"] !== undefined;
   if (entry["credentials"] !== undefined) {
-    validateCredentials(entry["credentials"], transportKind, sdk, hasFlatKeyChannel, context);
+    validateCredentials(
+      entry["credentials"],
+      transportKind,
+      sdk,
+      entry["options"] as ProviderOptions | undefined,
+      hasFlatKeyChannel,
+      context,
+    );
   }
 
   validateInheritableFields(entry, context);

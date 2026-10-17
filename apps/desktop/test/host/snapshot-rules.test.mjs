@@ -8,8 +8,8 @@ test("buildDesktopSnapshot maps rulesList from metadata entries", () => {
     workspaceRoot: "C:/workspace/demo",
     config: {
       models: [],
-      providerGroups: [],
-      activeModel: { groupId: "", name: "" },
+      providers: [],
+      activeModel: { providerId: "", name: "" },
       recentWorkspaces: [],
       dreams: {},
       networks: { llmHttpVersion: "http2" },

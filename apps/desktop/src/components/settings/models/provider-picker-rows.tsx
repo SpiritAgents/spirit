@@ -1,28 +1,36 @@
 import { ProviderIcon } from "@/components/provider-icon";
-import { PROVIDER_PICKER_ROWS } from "@spiritagent/host-internal/model-provider-presets";
-import type { DesktopModelProvider } from "@/types";
+import {
+  listProviderPresets,
+  CUSTOM_PROVIDER_PRESET_ID,
+} from "@spiritagent/agent-core/provider-presets";
+
+import { providerLabelKey, providerLabelMetadata } from "@/lib/model-picker-groups";
 
 /** Minimal signature compatible with react-i18next `t`, avoiding a direct dependency on the TFunction generic. */
 export type ProviderLabelTranslate = (key: string, options?: { defaultValue?: string }) => string;
 
 export type LocalizedProviderRow = {
-  id: DesktopModelProvider;
+  id: string;
   label: string;
 };
 
-export function providerPickerLabel(
-  t: ProviderLabelTranslate,
-  provider: DesktopModelProvider,
-): string {
-  const row = PROVIDER_PICKER_ROWS.find((item) => item.id === provider);
-  return row ? String(t(row.labelKey, { defaultValue: row.fallbackLabel })) : provider;
+export function providerPickerLabel(t: ProviderLabelTranslate, providerId: string): string {
+  const { labelKey, fallbackLabel } = providerLabelMetadata(providerId);
+  return String(t(labelKey, { defaultValue: fallbackLabel }));
 }
 
+/** Picker rows: the preset manifest order, with the custom connection last. */
 export function localizedProviderRows(t: ProviderLabelTranslate): LocalizedProviderRow[] {
-  return PROVIDER_PICKER_ROWS.map((row) => ({
-    id: row.id,
-    label: providerPickerLabel(t, row.id),
-  }));
+  return [
+    ...listProviderPresets().map((preset) => ({
+      id: preset.id,
+      label: providerPickerLabel(t, preset.id),
+    })),
+    {
+      id: CUSTOM_PROVIDER_PRESET_ID,
+      label: String(t(providerLabelKey(CUSTOM_PROVIDER_PRESET_ID), { defaultValue: "Custom" })),
+    },
+  ];
 }
 
 /** Live-filters by localized display name (case-insensitive); an empty query returns everything. */
@@ -43,7 +51,7 @@ export function ProviderPickerRowButton({
   onSelect,
 }: {
   row: LocalizedProviderRow;
-  onSelect: (id: DesktopModelProvider) => void;
+  onSelect: (id: string) => void;
 }) {
   return (
     <button

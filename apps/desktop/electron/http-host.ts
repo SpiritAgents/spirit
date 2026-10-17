@@ -5,11 +5,6 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { isIP } from "node:net";
 import path from "node:path";
 
-import {
-  parseModelProviderId,
-  parsePresetModelProviderId,
-} from "@spiritagent/host-internal/model-provider-presets";
-
 import type { HostCommandName } from "../src/host/contracts.js";
 
 import i18nHost from "../src/lib/i18n-host.js";
@@ -427,7 +422,10 @@ async function handleApiRequest({
     const modelIds = Array.isArray(jsonBody?.modelIds)
       ? jsonBody.modelIds.filter((id: unknown): id is string => typeof id === "string")
       : [];
-    const provider = parseModelProviderId(jsonBody?.provider);
+    const provider =
+      typeof jsonBody?.provider === "string" && jsonBody.provider.trim()
+        ? jsonBody.provider.trim()
+        : undefined;
     writeJson(
       request,
       response,
@@ -456,7 +454,10 @@ async function handleApiRequest({
   }
 
   if (request.method === "POST" && pathname === "/api/models/remove-provider") {
-    const provider = parsePresetModelProviderId(jsonBody?.provider);
+    const provider =
+      typeof jsonBody?.provider === "string" && jsonBody.provider.trim()
+        ? jsonBody.provider.trim()
+        : undefined;
     if (!provider) {
       writeJson(request, response, 400, { error: i18nHost.t("webHost.error.invalidProvider") });
       return;
@@ -1321,16 +1322,16 @@ async function handleApiRequest({
           modelRef:
             typeof jsonBody?.modelRef === "object" && jsonBody.modelRef !== null
               ? {
-                  groupId:
-                    typeof (jsonBody.modelRef as { groupId?: unknown }).groupId === "string"
-                      ? (jsonBody.modelRef as { groupId: string }).groupId
+                  providerId:
+                    typeof (jsonBody.modelRef as { providerId?: unknown }).providerId === "string"
+                      ? (jsonBody.modelRef as { providerId: string }).providerId
                       : "",
                   name:
                     typeof (jsonBody.modelRef as { name?: unknown }).name === "string"
                       ? (jsonBody.modelRef as { name: string }).name
                       : "",
                 }
-              : { groupId: "", name: "" },
+              : { providerId: "", name: "" },
         },
       }),
     );

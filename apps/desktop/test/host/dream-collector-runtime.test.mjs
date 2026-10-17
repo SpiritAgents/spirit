@@ -7,7 +7,7 @@ test("buildDreamCollectorRemoteCreateInput shapes daemon session.create payload"
   const input = buildDreamCollectorRemoteCreateInput({
     workspaceRoot: "/tmp/workspace",
     gitBranch: "main",
-    modelRef: { groupId: "openai", name: "gpt-test" },
+    modelRef: { providerId: "openai", name: "gpt-test" },
     dreamSourceSession: {
       path: "/tmp/workspace/chats/source.json",
       displayName: "Source chat",
@@ -35,7 +35,7 @@ test("buildDreamCollectorRemoteCreateInput defaults approval to auto-approval", 
   const input = buildDreamCollectorRemoteCreateInput({
     workspaceRoot: "/tmp/workspace",
     gitBranch: "feature",
-    modelRef: { groupId: "openai", name: "gpt-test" },
+    modelRef: { providerId: "openai", name: "gpt-test" },
     dreamSourceSession: { path: "/tmp/workspace/chats/source.json" },
   });
   assert.equal(input.approvalLevel, "auto-approval");

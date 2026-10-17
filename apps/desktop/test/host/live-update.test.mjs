@@ -21,7 +21,7 @@ function snapshot(overrides = {}) {
     git: { isRepo: true, dirty: false },
     dreams: { settings: { enabled: false } },
     runtimeReady: true,
-    config: { activeModel: { groupId: "g", name: "m" }, models: [] },
+    config: { activeModel: { providerId: "g", name: "m" }, providers: [], models: [] },
     conversation: {
       revision: 1,
       messages,

@@ -20,26 +20,12 @@ export * from "./extensions.js";
 export * from "./extension-contributions.js";
 export * from "./marketplace/index.js";
 export * from "./file-rewind.js";
-export * from "./google-gemini-endpoints.js";
-export * from "./google-vertex-endpoints.js";
-export * from "./google-vertex-models.js";
-export * from "./bedrock-models.js";
-export * from "./bedrock-region.js";
 export * from "./azure-resource.js";
 export * from "./cloudflare-ai-gateway-resource.js";
-export * from "./bedrock-mantle.js";
-export * from "./model-provider-presets.js";
-// Explicit re-export: the openai-models shim also re-exports agent-core's structural aliases of
-// these names; the named export pins the canonical union types and resolves the star ambiguity.
-export type { ModelProviderId, ProviderModelTransportKind } from "./model-provider-presets.js";
-export * from "./config-v2.js";
+export * from "./config.js";
 export * from "./credentials/index.js";
 export * from "./permissions/index.js";
-export * from "./provider-setup.js";
 export * from "./resolve-transport.js";
-export * from "./id-display-title.js";
-export * from "./openai-api-base.js";
-export * from "./openai-models.js";
 export * from "./reasoning-effort.js";
 export * from "./runtime.js";
 export * from "./session-title.js";

@@ -705,7 +705,8 @@ fn model_add_transport_kind(form: &BottomFormView, provider: ModelProvider) -> M
         },
         ModelProvider::Azure | ModelProvider::Openai => ModelTransportKind::OpenResponses,
         ModelProvider::Minimax => ModelTransportKind::Anthropic,
-        _ => ModelTransportKind::OpenAiCompatible,
+        // The preset manifest's `defaultTransport` is the unchosen default.
+        _ => crate::model_provider_presets::preset_default_transport_kind(provider),
     }
 }
 
@@ -1293,6 +1294,9 @@ pub(crate) fn new_model_add_form() -> BottomFormView {
 }
 
 /// Parses the "connect provider" bottom form; semantics are aligned with the Desktop settings page (single / bulk).
+/// Sites, billing plans, workspace ids, Azure resource names, and Cloudflare account ids are
+/// materialized into `api_base` here; only values that land in config.json (`options`) or the
+/// internal keyring are carried on the result.
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedModelAddForm {
     pub provider: ModelProvider,
@@ -1302,19 +1306,12 @@ pub(crate) struct ParsedModelAddForm {
     pub api_base: String,
     pub api_key: String,
     pub context_length: Option<u64>,
-    pub azure_resource_name: Option<String>,
-    pub cloudflare_account_id: Option<String>,
+    /// Materializes into the literal `cf-aig-gateway-id` header.
     pub cloudflare_gateway_id: Option<String>,
     pub vertex_project: Option<String>,
     pub vertex_location: Option<String>,
     pub vertex_client_email: Option<String>,
     pub vertex_private_key: Option<String>,
-    pub provider_site: Option<String>,
-    pub alibaba_workspace_id: Option<String>,
-    pub alibaba_billing_mode: Option<String>,
-    pub stepfun_billing_mode: Option<String>,
-    pub z_ai_billing_mode: Option<String>,
-    pub zhipu_billing_mode: Option<String>,
 }
 
 pub(crate) fn new_rules_form(entries: &[RuleEntry]) -> BottomFormView {
@@ -1958,19 +1955,11 @@ pub(crate) fn parse_model_add_connection(
             api_base: azure_api_base_from_resource_name(&azure_resource_name),
             api_key,
             context_length,
-            azure_resource_name: Some(azure_resource_name),
-            cloudflare_account_id: None,
             cloudflare_gateway_id: None,
             vertex_project: None,
             vertex_location: None,
             vertex_client_email: None,
             vertex_private_key: None,
-            provider_site: None,
-            alibaba_workspace_id: None,
-            alibaba_billing_mode: None,
-            stepfun_billing_mode: None,
-            z_ai_billing_mode: None,
-            zhipu_billing_mode: None,
         });
     }
 
@@ -2008,19 +1997,11 @@ pub(crate) fn parse_model_add_connection(
             api_base: cloudflare_ai_gateway_api_base_from_account_id(&cloudflare_account_id),
             api_key,
             context_length,
-            azure_resource_name: None,
-            cloudflare_account_id: Some(cloudflare_account_id),
             cloudflare_gateway_id: Some(cloudflare_gateway_id),
             vertex_project: None,
             vertex_location: None,
             vertex_client_email: None,
             vertex_private_key: None,
-            provider_site: None,
-            alibaba_workspace_id: None,
-            alibaba_billing_mode: None,
-            stepfun_billing_mode: None,
-            z_ai_billing_mode: None,
-            zhipu_billing_mode: None,
         });
     }
 
@@ -2056,12 +2037,6 @@ pub(crate) fn parse_model_add_connection(
     }
 
     let bulk = model_add_mode_bulk(form, provider_idx);
-    let mut provider_site = None;
-    let mut alibaba_workspace_id = None;
-    let mut alibaba_billing_mode = None;
-    let mut stepfun_billing_mode = None;
-    let mut z_ai_billing_mode = None;
-    let mut zhipu_billing_mode = None;
     let api_base = if provider == ModelProvider::Siliconflow {
         let site_selected = match form.fields.get(2).map(|f| &f.editor) {
             Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
@@ -2070,7 +2045,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 1,
         };
         let site = model_add_siliconflow_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         model_add_siliconflow_site_api_base(site)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::Moonshot {
@@ -2081,7 +2055,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 1,
         };
         let site = model_add_moonshot_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         model_add_moonshot_site_api_base(site)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::TencentTokenhub {
@@ -2092,7 +2065,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 0,
         };
         let site = model_add_tencent_tokenhub_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         model_add_tencent_tokenhub_site_api_base(site)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::KimiCode {
@@ -2103,7 +2075,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 1,
         };
         let site = model_add_kimi_code_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         model_add_kimi_code_site_api_base(site, transport_kind)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::Minimax {
@@ -2114,7 +2085,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 1,
         };
         let site = model_add_minimax_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         model_add_minimax_site_api_base(site, transport_kind)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::Alibaba {
@@ -2125,7 +2095,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 0,
         };
         if billing_selected == 1 {
-            alibaba_billing_mode = Some("token-plan".to_string());
             model_add_alibaba_token_plan_api_base(transport_kind)
                 .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
         } else {
@@ -2142,12 +2111,6 @@ pub(crate) fn parse_model_add_connection(
             if model_add_alibaba_site_requires_workspace_id(site) && workspace_id.is_empty() {
                 return Err(t!("form.model.validation.alibaba_workspace_id_required").into_owned());
             }
-            provider_site = Some(site.to_string());
-            alibaba_workspace_id = if workspace_id.is_empty() {
-                None
-            } else {
-                Some(workspace_id.clone())
-            };
             model_add_alibaba_site_api_base(site, &workspace_id, transport_kind)
                 .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
         }
@@ -2165,11 +2128,7 @@ pub(crate) fn parse_model_add_connection(
             _ => 1,
         };
         let site = model_add_stepfun_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
         let step_plan = billing_selected == 1;
-        if step_plan {
-            stepfun_billing_mode = Some("step-plan".to_string());
-        }
         model_add_stepfun_api_base(transport_kind, step_plan, Some(site))
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::ZAi {
@@ -2180,9 +2139,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 0,
         };
         let glm_coding_plan = billing_selected == 1;
-        if glm_coding_plan {
-            z_ai_billing_mode = Some("glm-coding-plan".to_string());
-        }
         model_add_z_ai_api_base(glm_coding_plan)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::ZhipuAi {
@@ -2193,9 +2149,6 @@ pub(crate) fn parse_model_add_connection(
             _ => 0,
         };
         let glm_coding_plan = billing_selected == 1;
-        if glm_coding_plan {
-            zhipu_billing_mode = Some("glm-coding-plan".to_string());
-        }
         model_add_zhipu_ai_api_base(glm_coding_plan)
             .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
     } else if provider == ModelProvider::GoogleVertexAi {
@@ -2250,19 +2203,11 @@ pub(crate) fn parse_model_add_connection(
         api_base,
         api_key,
         context_length,
-        azure_resource_name: None,
-        cloudflare_account_id: None,
         cloudflare_gateway_id: None,
         vertex_project,
         vertex_location,
         vertex_client_email,
         vertex_private_key,
-        provider_site,
-        alibaba_workspace_id,
-        alibaba_billing_mode,
-        stepfun_billing_mode,
-        z_ai_billing_mode,
-        zhipu_billing_mode,
     })
 }
 
@@ -3058,7 +3003,9 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider, ModelProvider::Deepseek);
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.deepseek.com/v1");
+        // DeepSeek's preset default transport is open-responses; the form materializes its base.
+        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
+        assert_eq!(parsed.api_base, "https://api.deepseek.com");
         assert_eq!(parsed.api_key, "sk-secret");
         assert!(parsed.model_name.is_none());
     }
@@ -3202,9 +3149,6 @@ mod tests {
             "https://ws-cn.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
         );
         assert_eq!(parsed.api_key, "sk-ali");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn-beijing"));
-        assert_eq!(parsed.alibaba_workspace_id.as_deref(), Some("ws-cn"));
-        assert!(parsed.alibaba_billing_mode.is_none());
     }
 
     #[test]
@@ -3235,9 +3179,6 @@ mod tests {
             "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
         );
         assert_eq!(parsed.api_key, "sk-ali-token");
-        assert_eq!(parsed.alibaba_billing_mode.as_deref(), Some("token-plan"));
-        assert!(parsed.provider_site.is_none());
-        assert!(parsed.alibaba_workspace_id.is_none());
     }
 
     #[test]
@@ -3293,8 +3234,6 @@ mod tests {
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
-        assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
     }
 
     #[test]
@@ -3317,8 +3256,6 @@ mod tests {
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.stepfun.ai/v1");
         assert_eq!(parsed.api_key, "sk-stepfun-intl");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
-        assert_eq!(parsed.stepfun_billing_mode, None);
     }
 
     #[test]
@@ -3353,8 +3290,6 @@ mod tests {
         // The step-plan billing plan pins the China host regardless of the selected site.
         assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun-intl-plan");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
-        assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
     }
 
     #[test]
@@ -3382,8 +3317,6 @@ mod tests {
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.z.ai/api/coding/paas/v4");
         assert_eq!(parsed.api_key, "sk-zai");
-        assert_eq!(parsed.z_ai_billing_mode.as_deref(), Some("glm-coding-plan"));
-        assert!(parsed.zhipu_billing_mode.is_none());
     }
 
     #[test]
@@ -3414,11 +3347,6 @@ mod tests {
             "https://open.bigmodel.cn/api/coding/paas/v4"
         );
         assert_eq!(parsed.api_key, "sk-zhipu");
-        assert_eq!(
-            parsed.zhipu_billing_mode.as_deref(),
-            Some("glm-coding-plan")
-        );
-        assert!(parsed.z_ai_billing_mode.is_none());
     }
 
     #[test]
@@ -3505,7 +3433,6 @@ mod tests {
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.siliconflow.com/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-sf");
     }
 
@@ -3534,7 +3461,6 @@ mod tests {
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.moonshot.cn/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
         assert_eq!(parsed.api_key, "sk-moon");
     }
 
@@ -3557,7 +3483,6 @@ mod tests {
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.kimi.ai/coding/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
@@ -3582,7 +3507,6 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider, ModelProvider::KimiCode);
         assert_eq!(parsed.api_base, "https://api.kimi.com/coding/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
@@ -3611,7 +3535,6 @@ mod tests {
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.minimax.io/anthropic/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-mm");
     }
 
@@ -3641,10 +3564,6 @@ mod tests {
             "https://my-openai-resource.openai.azure.com/openai/v1"
         );
         assert_eq!(parsed.api_key, "azure-key");
-        assert_eq!(
-            parsed.azure_resource_name.as_deref(),
-            Some("my-openai-resource")
-        );
     }
 
     #[test]
@@ -3681,10 +3600,6 @@ mod tests {
             "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/ai/v1"
         );
         assert_eq!(parsed.api_key, "cf-token");
-        assert_eq!(
-            parsed.cloudflare_account_id.as_deref(),
-            Some("0123456789abcdef0123456789abcdef")
-        );
         assert_eq!(parsed.cloudflare_gateway_id.as_deref(), Some("my-gateway"));
     }
 

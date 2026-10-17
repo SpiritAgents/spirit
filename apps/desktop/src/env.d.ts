@@ -15,7 +15,6 @@ import type {
   DesktopDreamOverviewItem,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
-  DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
@@ -78,7 +77,7 @@ declare global {
     addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
     previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
     removeModel(name: string): Promise<DesktopSnapshot>;
-    removeProviderModels(provider: DesktopModelProvider): Promise<DesktopSnapshot>;
+    removeProviderModels(provider: string): Promise<DesktopSnapshot>;
     removeProviderGroup(
       request: import("./types").RemoveProviderGroupRequest,
     ): Promise<DesktopSnapshot>;

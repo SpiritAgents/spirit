@@ -89,7 +89,7 @@ test("AgentsSettingsPanel places the Context group with web tool toggles above L
   // The separator helper lives in @spiritagent/ui/cjk; the panel only consumes it.
   assert.match(source, /needsSpaceBeforeInlineContent/);
   assert.doesNotMatch(source, /export function needsSpaceBeforeInlineContent/);
-  assert.match(source, /webSearchEnabled/);
+  assert.match(source, /providerToolsEnabled/);
   assert.match(source, /webFetchEnabled/);
   assert.match(source, /settings-web-search/);
   assert.match(source, /settings-web-fetch/);

@@ -36,7 +36,6 @@ import {
   type ContextUsageModelProfile,
   parseModelContextLength,
   resolveModelContextLength,
-  supportsContextUsageProvider,
 } from "../lib/context-usage.js";
 import type {
   ConversationContextUsageSnapshot,
@@ -100,6 +99,8 @@ export interface DesktopRuntimeEventOrchestratorOptions {
   /** delete_file: reads the full file from disk by path before deletion as the baseline */
   deleteFileBaselineForPath?: (inputPath: string) => string | undefined;
   resolveActiveModel?: () => ContextUsageModelProfile | undefined;
+  /** Gates the one-shot catalog re-fetch for unknown context lengths (provider has a catalog descriptor). */
+  supportsCatalogRefresh?: (model: ContextUsageModelProfile) => boolean;
   resolveCatalogHints?: () => DesktopModelCatalogHint[] | undefined;
   setContextUsage?: (usage: ConversationContextUsageSnapshot | undefined) => void;
   refreshContextUsageCatalog?: (input: {
@@ -386,10 +387,12 @@ export class DesktopRuntimeEventOrchestrator {
           activeModel,
           this.options.resolveCatalogHints?.(),
         );
+        // A missing context length triggers one catalog re-fetch when the provider entry has a
+        // catalog descriptor; the fetch itself no-ops without resolvable credentials.
         const shouldRefreshCatalog =
           activeModel !== undefined &&
           contextLength === undefined &&
-          supportsContextUsageProvider(activeModel.provider) &&
+          (this.options.supportsCatalogRefresh?.(activeModel) ?? false) &&
           parseModelContextLength(activeModel.contextLength) === undefined;
         if (shouldRefreshCatalog) {
           this.options.refreshContextUsageCatalog?.({

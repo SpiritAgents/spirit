@@ -1,7 +1,20 @@
-import type { ProviderCredentialSlot, ProviderEntry, ProviderKeyringReference } from "../config.js";
+import type { ProviderCredentialSlot, ProviderKeyringReference } from "../config.js";
 
 import { keyringStore } from "./keyring-store.js";
-import { KEYRING_SERVICE } from "./provider-accounts.js";
+
+export const KEYRING_SERVICE = "Spirit";
+
+/**
+ * The credential channel declarations key resolution needs: structurally satisfied by
+ * `ProviderEntry`, and rebuilt from a `SpiritModelProfile` at the transport boundary.
+ */
+export interface ProviderKeyChannels {
+  id: string;
+  apiKey?: string;
+  apiKeyEnv?: string;
+  apiKeyKeyring?: ProviderKeyringReference;
+  credentials?: Record<string, ProviderCredentialSlot>;
+}
 
 export type ProviderKeyChannelSource = "value" | "env" | "keyring" | "internalKeyring";
 
@@ -100,7 +113,7 @@ function pushSlotAttempts(
  * resolving yields undefined (callers render the error).
  */
 export function resolveProviderApiKeyResolution(
-  provider: ProviderEntry,
+  provider: ProviderKeyChannels,
   options: ResolveProviderKeyOptions = {},
 ): ProviderKeyResolution {
   const env = options.env ?? process.env;
@@ -144,7 +157,7 @@ export function resolveProviderApiKeyResolution(
 
 /** `credentials` slot resolution: `value` → `env` → `keyring` → internal keyring `provider::{id}::{slot}`. */
 export function resolveProviderCredentialSlotResolution(
-  provider: ProviderEntry,
+  provider: ProviderKeyChannels,
   slot: string,
   options: ResolveProviderKeyOptions = {},
 ): ProviderKeyResolution {
@@ -164,14 +177,14 @@ export function resolveProviderCredentialSlotResolution(
 }
 
 export function resolveProviderApiKey(
-  provider: ProviderEntry,
+  provider: ProviderKeyChannels,
   options: ResolveProviderKeyOptions = {},
 ): string | undefined {
   return resolveProviderApiKeyResolution(provider, options).value;
 }
 
 export function resolveProviderCredentialSlot(
-  provider: ProviderEntry,
+  provider: ProviderKeyChannels,
   slot: string,
   options: ResolveProviderKeyOptions = {},
 ): string | undefined {

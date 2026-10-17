@@ -4,9 +4,8 @@ use std::{env, path::PathBuf};
 use crate::{
     chat_store, logging,
     model_registry::{
-        AppConfig, config_file_path, has_model_api_key, keyring_entry, load_config,
-        load_group_api_key_from_keyring, remove_model_api_key, save_config, save_group_api_key,
-        save_model_api_key,
+        AppConfig, config_file_path, keyring_entry, load_config, read_external_keyring_secret,
+        remove_provider_secret, save_config, save_provider_secret,
     },
     ports::{AppPaths, ChatArchive, ChatRepository, ConfigStore, SecretStore},
 };
@@ -61,19 +60,6 @@ impl ConfigStore for JsonConfigStore {
 
 pub struct KeyringSecretStore;
 
-impl KeyringSecretStore {
-    pub fn load_group_api_key(&self, group_id: &str) -> Result<Option<String>> {
-        match load_group_api_key_from_keyring(group_id) {
-            Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
-            Ok(_) | Err(_) => Ok(None),
-        }
-    }
-
-    pub fn save_group_api_key(&self, group_id: &str, api_key: &str) -> Result<()> {
-        save_group_api_key(group_id, api_key)
-    }
-}
-
 impl SecretStore for KeyringSecretStore {
     fn load_global_api_key(&self) -> Result<Option<String>> {
         let entry = keyring_entry()?;
@@ -99,31 +85,16 @@ impl SecretStore for KeyringSecretStore {
         }
     }
 
-    fn load_model_api_key(&self, model_name: &str) -> Result<Option<String>> {
-        let account = format!("model::{}", model_name);
-        let entry = keyring::Entry::new("Spirit", &account)
-            .with_context(|| format!("Failed to initialize keyring entry: {}", account))?;
-        match entry.get_password() {
-            Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
-            Ok(_) | Err(keyring::Error::NoEntry) => Ok(None),
-            Err(err) => Err(anyhow!(
-                "Failed to read API Key for model {}: {}",
-                model_name,
-                err
-            )),
-        }
+    fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>> {
+        Ok(read_external_keyring_secret(service, account))
     }
 
-    fn save_model_api_key(&self, model_name: &str, api_key: &str) -> Result<()> {
-        save_model_api_key(model_name, api_key)
+    fn save_provider_secret(&self, account: &str, secret: &str) -> Result<()> {
+        save_provider_secret(account, secret)
     }
 
-    fn remove_model_api_key(&self, model_name: &str) -> Result<()> {
-        remove_model_api_key(model_name)
-    }
-
-    fn has_model_api_key(&self, model_name: &str) -> Result<bool> {
-        has_model_api_key(model_name)
+    fn remove_provider_secret(&self, account: &str) -> Result<()> {
+        remove_provider_secret(account)
     }
 }
 

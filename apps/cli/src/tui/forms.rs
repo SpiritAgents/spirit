@@ -420,11 +420,7 @@ impl TuiShell {
                     provider: Some(parsed.provider),
                     transport_kind: parsed.transport_kind,
                     context_length: parsed.context_length,
-                    azure_resource_name: parsed.azure_resource_name.as_deref(),
-                    cloudflare_account_id: parsed.cloudflare_account_id.as_deref(),
                     cloudflare_gateway_id: parsed.cloudflare_gateway_id.as_deref(),
-                    provider_site: parsed.provider_site.as_deref(),
-                    alibaba_workspace_id: parsed.alibaba_workspace_id.as_deref(),
                 }) {
                     Ok(()) => {
                         self.messages.push(ChatMessage {
@@ -615,48 +611,55 @@ impl TuiShell {
             if config.has_model_name(id) {
                 continue;
             }
-            let group_id = crate::model_registry::default_preset_provider_group_id(parsed.provider);
-            let connect = crate::model_registry::ProviderGroupConnectDraft {
-                transport_kind: (parsed.transport_kind
-                    == crate::model_registry::ModelTransportKind::Anthropic
-                    || parsed.transport_kind
-                        == crate::model_registry::ModelTransportKind::OpenResponses)
-                    .then(|| parsed.transport_kind.as_str().to_string()),
-                provider_site: parsed.provider_site.clone(),
-                alibaba_workspace_id: parsed.alibaba_workspace_id.clone(),
-                alibaba_billing_mode: parsed.alibaba_billing_mode.clone(),
-                stepfun_billing_mode: parsed.stepfun_billing_mode.clone(),
-                z_ai_billing_mode: parsed.z_ai_billing_mode.clone(),
-                zhipu_billing_mode: parsed.zhipu_billing_mode.clone(),
-                vertex_project: parsed.vertex_project.clone(),
-                vertex_location: parsed.vertex_location.clone(),
-                cloudflare_account_id: parsed.cloudflare_account_id.clone(),
-                cloudflare_gateway_id: parsed.cloudflare_gateway_id.clone(),
-                ..Default::default()
-            };
-            config.add_model_to_group(
-                &group_id,
+            let provider_id = crate::model_registry::default_preset_provider_id(parsed.provider);
+            // Sites, billing plans, and workspace ids were already materialized into
+            // `parsed.api_base` by the connect form; Vertex keeps its project/location in
+            // `options` (mirrors the Desktop wizard's `buildSetupOptions`).
+            let mut connect = crate::model_provider_presets::preset_connect_draft(
                 parsed.provider,
+                parsed.transport_kind,
+            );
+            if parsed.provider == crate::model_registry::ModelProvider::GoogleVertexAi {
+                let mut options = serde_json::Map::new();
+                if let Some(project) = parsed
+                    .vertex_project
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    options.insert(
+                        "project".to_string(),
+                        serde_json::Value::String(project.to_string()),
+                    );
+                }
+                if let Some(location) = parsed
+                    .vertex_location
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    options.insert(
+                        "location".to_string(),
+                        serde_json::Value::String(location.to_string()),
+                    );
+                }
+                if !options.is_empty() {
+                    connect.options = Some(options);
+                }
+            }
+            config.add_model_to_provider(
+                &provider_id,
                 parsed.api_base.clone(),
                 connect,
                 crate::model_registry::ModelEntry {
                     name: id.clone(),
-                    reasoning_effort: None,
-                    reasoning_mode: None,
-                    thinking_enabled: None,
-                    supported_reasoning_efforts: None,
-                    capabilities: None,
-                    context_length: None,
-                    supports_thinking_type: None,
-                    supports_thinking_switch: None,
-                    service_tier: None,
-                    upstream_provider: None,
+                    ..Default::default()
                 },
             );
             if parsed.provider == crate::model_registry::ModelProvider::GoogleVertexAi {
                 if !parsed.api_key.trim().is_empty() {
-                    if let Err(err) = crate::model_registry::save_group_api_key(
-                        &group_id,
+                    if let Err(err) = crate::model_registry::save_provider_api_key(
+                        &provider_id,
                         parsed.api_key.as_str(),
                     ) {
                         return Err(
@@ -665,20 +668,33 @@ impl TuiShell {
                     }
                 } else if parsed.vertex_client_email.is_some()
                     && parsed.vertex_private_key.is_some()
-                    && let Err(err) = crate::model_registry::save_group_vertex_credentials(
-                        &group_id,
-                        parsed.vertex_client_email.as_deref().unwrap_or(""),
-                        parsed.vertex_private_key.as_deref().unwrap_or(""),
-                    )
                 {
-                    return Err(
-                        t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                    );
+                    // Service account slots land in `provider::{id}::clientEmail` /
+                    // `provider::{id}::privateKey` (the internal keyring account scheme).
+                    if let Err(err) = crate::model_registry::save_provider_slot_secret(
+                        &provider_id,
+                        "clientEmail",
+                        parsed.vertex_client_email.as_deref().unwrap_or(""),
+                    ) {
+                        return Err(
+                            t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
+                        );
+                    }
+                    if let Err(err) = crate::model_registry::save_provider_slot_secret(
+                        &provider_id,
+                        "privateKey",
+                        parsed.vertex_private_key.as_deref().unwrap_or(""),
+                    ) {
+                        return Err(
+                            t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
+                        );
+                    }
                 }
             } else if !parsed.api_key.trim().is_empty() {
-                if let Err(err) =
-                    crate::model_registry::save_group_api_key(&group_id, parsed.api_key.as_str())
-                {
+                if let Err(err) = crate::model_registry::save_provider_api_key(
+                    &provider_id,
+                    parsed.api_key.as_str(),
+                ) {
                     return Err(
                         t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
                     );
@@ -695,9 +711,9 @@ impl TuiShell {
         }
 
         let active = first_new.expect("added > 0");
-        let group_id = crate::model_registry::default_preset_provider_group_id(parsed.provider);
+        let provider_id = crate::model_registry::default_preset_provider_id(parsed.provider);
         config.active_model = crate::model_registry::ModelRef {
-            group_id,
+            provider_id,
             name: active.clone(),
         };
 
