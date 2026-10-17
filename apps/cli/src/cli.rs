@@ -15,9 +15,8 @@ use crate::{
         model_add_alibaba_site_requires_workspace_id, model_add_default_custom_api_base,
         model_add_kimi_code_api_base, model_add_kimi_code_site_api_base,
         model_add_minimax_site_api_base, model_add_moonshot_site_api_base,
-        model_add_preset_api_base_by_provider, model_add_siliconflow_site_api_base,
-        model_add_stepfun_api_base, model_add_tencent_tokenhub_site_api_base,
-        validate_azure_resource_name,
+        model_add_preset_api_base, model_add_siliconflow_site_api_base, model_add_stepfun_api_base,
+        model_add_tencent_tokenhub_site_api_base, validate_azure_resource_name,
     },
     model_registry::{
         AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelProvider, ModelRef,
@@ -337,7 +336,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                         return base;
                     }
                     if let Some(provider) = provider
-                        && let Some(preset) = model_add_preset_api_base_by_provider(provider)
+                        && let Some(preset) = model_add_preset_api_base(provider, transport_kind)
                     {
                         return preset;
                     }
@@ -348,7 +347,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                         ModelTransportKind::Bedrock => {
                             if let Some(provider) = provider
                                 && let Some(preset) =
-                                    model_add_preset_api_base_by_provider(provider)
+                                    model_add_preset_api_base(provider, transport_kind)
                             {
                                 return preset;
                             }

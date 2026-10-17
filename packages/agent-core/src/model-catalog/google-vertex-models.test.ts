@@ -23,7 +23,8 @@ test("parseVertexModelEntriesPayload maps publisherModels", () => {
   assert.equal(entries.length, 2);
   assert.equal(entries[0]?.id, "gemini-2.5-flash");
   assert.equal(entries[0]?.displayName, "Gemini 2.5 Flash");
-  assert.equal(entries[0]?.contextLength, 1500);
+  assert.equal(entries[0]?.contextLength, 1000);
+  assert.equal(entries[0]?.outputLimit, 500);
   assert.equal(entries[0]?.supportsReasoning, true);
   assert.equal(entries[1]?.id, "text-embedding-004");
 });

@@ -1,4 +1,5 @@
-import { cloudflareAiGatewayApiBaseFromAccountId } from "./cloudflare-ai-gateway-resource.js";
+import { cloudflareAiGatewayApiBaseFromAccountId } from "@spiritagent/agent-core/cloudflare-ai-gateway-resource";
+
 import {
   resolveProviderConnectApiBase,
   type ModelProviderId,

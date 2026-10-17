@@ -1,0 +1,26 @@
+{
+  "models": [
+    {
+      "match": "deepseek-v4-",
+      "declare": {
+        "supportedReasoningEfforts": ["high", "max"],
+        "supportsThinkingSwitch": true
+      },
+      "note": "DeepSeek V4 (pro, flash, flash-vision-exp, …): hybrid thinking — the API accepts reasoning_effort high/max only while thinking is enabled (isDeepSeekV4ReasoningEffortModel, modelSupportsReasoningEffortWhileThinking)."
+    },
+    {
+      "match": "deepseek-r1",
+      "declare": {
+        "supportsThinkingType": "only"
+      },
+      "note": "DeepSeek R1 always thinks and has no thinking toggle (isDeepSeekReasoningOnlyModel; the source additionally gates on the direct deepseek provider)."
+    },
+    {
+      "match": "deepseek-reasoner",
+      "declare": {
+        "supportsThinkingType": "only"
+      },
+      "note": "DeepSeek R1 always thinks and has no thinking toggle (isDeepSeekReasoningOnlyModel; the source additionally gates on the direct deepseek provider)."
+    }
+  ]
+}

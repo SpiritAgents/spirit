@@ -1,0 +1,30 @@
+{
+  "models": [
+    {
+      "match": "gpt-6-astra(?:$|[-_])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportedReasoningModes": ["standard", "pro"],
+        "serviceTiers": ["auto", "default", "flex", "fast", "ultrafast"]
+      },
+      "note": "GPT-6 Astra rejects reasoning effort `none` (isOpenAiGpt6AstraModel) and offers the Ultrafast tier (isOpenAiUltrafastModel). The Bedrock Mantle `openai.` form is deliberately not matched here: the source checks Astra/Ultrafast without the Mantle strip."
+    },
+    {
+      "match": "gpt-6\\.1-sol(?:$|[-_])",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "supportedReasoningModes": ["standard", "pro"],
+        "serviceTiers": ["auto", "default", "flex", "fast", "ultrafast"]
+      },
+      "note": "GPT-6.1 Sol keeps `none` but offers the Ultrafast tier (isOpenAiUltrafastModel)."
+    },
+    {
+      "match": "(?:openai\\.)?gpt-(?:(?:[6-9]|[1-9]\\d+)(?:\\.\\d+)?(?:$|[-_.])|5\\.(?:[6-9]|[1-9]\\d+))",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max"],
+        "supportedReasoningModes": ["standard", "pro"]
+      },
+      "note": "GPT-5.6 and later expose the extended effort ladder and the pro reasoning mode (gpt-reasoning-controls.ts). The optional `openai.` prefix covers Bedrock Mantle ids, matching parseOpenAiGptModelVersion."
+    }
+  ]
+}

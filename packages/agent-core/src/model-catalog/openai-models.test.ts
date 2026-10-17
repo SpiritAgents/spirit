@@ -1211,7 +1211,8 @@ test("parseGoogleModelEntriesPayload maps displayName, description, and contextL
       id: "gemini-3.1-pro-preview",
       displayName: "Gemini 3.1 Pro Preview",
       description: "Preview model for advanced reasoning.",
-      contextLength: 1048576 + 8192,
+      contextLength: 1048576,
+      outputLimit: 8192,
     },
   ]);
 });
@@ -1240,7 +1241,8 @@ test("parseGoogleModelEntriesPayload prefers baseModelId and skips non-generateC
     {
       id: "gemini-2.0-flash",
       displayName: "Gemini 2.0 Flash",
-      contextLength: 1500,
+      contextLength: 1000,
+      outputLimit: 500,
     },
   ]);
 });
@@ -1273,7 +1275,8 @@ test("parseGoogleModelEntriesPayload skips models without generateContent suppor
     {
       id: "gemini-2.0-flash",
       displayName: "Gemini 2.0 Flash",
-      contextLength: 1500,
+      contextLength: 1000,
+      outputLimit: 500,
     },
   ]);
 });
@@ -1298,7 +1301,8 @@ test("parseOpenAiCompatibleModelEntriesPayload routes google provider to native 
     {
       id: "gemini-2.5-flash",
       displayName: "Gemini 2.5 Flash",
-      contextLength: 150,
+      contextLength: 100,
+      outputLimit: 50,
     },
   ]);
 });
@@ -2366,5 +2370,15 @@ test("dedupeProviderListedModelEntries preserves upstreamProvider from the first
   assert.deepEqual(entries, [
     { id: "openai/gpt-5.4", upstreamProvider: "openai" },
     { id: "x-ai/grok-4.3" },
+  ]);
+});
+
+test("dedupeProviderListedModelEntries carries outputLimit", () => {
+  const entries = dedupeProviderListedModelEntries([
+    { id: "gemini-3.1-pro-preview", contextLength: 1048576, outputLimit: 8192 },
+  ]);
+
+  assert.deepEqual(entries, [
+    { id: "gemini-3.1-pro-preview", contextLength: 1048576, outputLimit: 8192 },
   ]);
 });

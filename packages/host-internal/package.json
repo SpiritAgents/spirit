@@ -176,7 +176,7 @@
     "test:lsp": "vitest run src/lsp",
     "smoke:lsp": "npm run build && node dist/smoke/lsp-pyright-smoke.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "smoke:openai-models-parse": "npm run build && node dist/smoke/openai-models-parse-smoke.js && vitest run src/bedrock-models.test.ts src/google-vertex-endpoints.test.ts src/google-vertex-models.test.ts",
+    "smoke:openai-models-parse": "npm run build && node dist/smoke/openai-models-parse-smoke.js",
     "notice": "node scripts/gen-notice.mjs",
     "notice:production": "node scripts/gen-notice.mjs --production",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"

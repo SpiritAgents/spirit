@@ -1,6 +1,2 @@
-/** Renderer-safe OpenAI API base helpers (no Node / SDK dependencies). */
-
-/** Trim and remove trailing slashes from API root (e.g. `https://host/v1`). */
-export function normalizeOpenAiApiBase(baseUrl: string): string {
-  return baseUrl.trim().replace(/\/+$/, "");
-}
+/** Compatibility shim: the implementation moved to agent-core; re-exported to keep this subpath stable. */
+export * from "@spiritagent/agent-core/model-catalog/openai-api-base";

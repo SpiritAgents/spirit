@@ -45,6 +45,54 @@
       "types": "./dist/model-knowledge/index.d.ts",
       "default": "./dist/model-knowledge/index.js"
     },
+    "./model-catalog": {
+      "types": "./dist/model-catalog/index.d.ts",
+      "default": "./dist/model-catalog/index.js"
+    },
+    "./model-catalog/openai-models": {
+      "types": "./dist/model-catalog/openai-models.d.ts",
+      "default": "./dist/model-catalog/openai-models.js"
+    },
+    "./model-catalog/openai-api-base": {
+      "types": "./dist/model-catalog/openai-api-base.d.ts",
+      "default": "./dist/model-catalog/openai-api-base.js"
+    },
+    "./model-catalog/google-gemini-endpoints": {
+      "types": "./dist/model-catalog/google-gemini-endpoints.d.ts",
+      "default": "./dist/model-catalog/google-gemini-endpoints.js"
+    },
+    "./model-catalog/google-vertex-endpoints": {
+      "types": "./dist/model-catalog/google-vertex-endpoints.d.ts",
+      "default": "./dist/model-catalog/google-vertex-endpoints.js"
+    },
+    "./model-catalog/google-vertex-models": {
+      "types": "./dist/model-catalog/google-vertex-models.d.ts",
+      "default": "./dist/model-catalog/google-vertex-models.js"
+    },
+    "./model-catalog/bedrock-models": {
+      "types": "./dist/model-catalog/bedrock-models.d.ts",
+      "default": "./dist/model-catalog/bedrock-models.js"
+    },
+    "./model-catalog/bedrock-region": {
+      "types": "./dist/model-catalog/bedrock-region.d.ts",
+      "default": "./dist/model-catalog/bedrock-region.js"
+    },
+    "./model-catalog/bedrock-mantle": {
+      "types": "./dist/model-catalog/bedrock-mantle.d.ts",
+      "default": "./dist/model-catalog/bedrock-mantle.js"
+    },
+    "./model-catalog/id-display-title": {
+      "types": "./dist/model-catalog/id-display-title.d.ts",
+      "default": "./dist/model-catalog/id-display-title.js"
+    },
+    "./model-catalog/well-known-casing": {
+      "types": "./dist/model-catalog/well-known-casing.d.ts",
+      "default": "./dist/model-catalog/well-known-casing.js"
+    },
+    "./provider-presets": {
+      "types": "./dist/provider-presets/index.d.ts",
+      "default": "./dist/provider-presets/index.js"
+    },
     "./shell-tool-result": {
       "types": "./dist/shell-tool-result.d.ts",
       "default": "./dist/shell-tool-result.js"
