@@ -7,6 +7,8 @@ import {
   resolvePresetApiBase,
 } from "./api-base.js";
 import { CUSTOM_PROVIDER_PRESET, findProviderPreset } from "./loader.js";
+import type { JsonObject } from "../ports.js";
+import type { ThinkingSwitchDeclaration } from "../llm-provider-shared.js";
 import type { ProviderPresetCredentialKind } from "./types.js";
 
 export class ProviderPresetMaterializeError extends Error {
@@ -74,6 +76,8 @@ export interface MaterializedProviderEntry {
   sdk?: string;
   providerTools?: ProviderToolEntry[];
   fileUpload?: FileUploadConfig;
+  body?: JsonObject;
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   imageApi?: string;
   videoApi?: string;
   options?: Record<string, unknown>;
@@ -162,6 +166,10 @@ export function materializeProviderPreset(
       ? { providerTools: structuredClone(preset.providerTools) }
       : {}),
     ...(preset.fileUpload !== undefined ? { fileUpload: structuredClone(preset.fileUpload) } : {}),
+    ...(preset.body !== undefined ? { body: structuredClone(preset.body) } : {}),
+    ...(preset.thinkingSwitch !== undefined
+      ? { thinkingSwitch: structuredClone(preset.thinkingSwitch) }
+      : {}),
     ...(preset.imageApi !== undefined ? { imageApi: preset.imageApi } : {}),
     ...(preset.videoApi !== undefined ? { videoApi: preset.videoApi } : {}),
     models: [],

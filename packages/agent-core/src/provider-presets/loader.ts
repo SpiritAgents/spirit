@@ -1,5 +1,6 @@
 import { validateFileUploadConfig } from "../file-upload/config.js";
-import type { LlmTransportKind } from "../llm-provider-shared.js";
+import type { LlmTransportKind, ThinkingSwitchDeclaration } from "../llm-provider-shared.js";
+import type { JsonObject } from "../ports.js";
 import { validateProviderToolEntries } from "../provider-tools/types.js";
 import rawManifest from "./provider-presets.json" with { type: "json" };
 import type {
@@ -234,6 +235,28 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
   const imageApi = readOptionalString(value, "imageApi", context);
   const videoApi = readOptionalString(value, "videoApi", context);
   const expressApiBase = readOptionalString(value, "expressApiBase", context);
+  const body = value["body"];
+  if (body !== undefined && !isRecord(body)) {
+    fail(`${context}.body must be an object.`);
+  }
+  const thinkingSwitch = value["thinkingSwitch"];
+  if (thinkingSwitch !== undefined) {
+    if (!isRecord(thinkingSwitch)) {
+      fail(`${context}.thinkingSwitch must be an object.`);
+    }
+    for (const state of ["on", "off"] as const) {
+      const patch = thinkingSwitch[state];
+      if (patch !== undefined && !isRecord(patch)) {
+        fail(`${context}.thinkingSwitch.${state} must be an object.`);
+      }
+      if (isRecord(patch) && patch["headers"] !== undefined && !isRecord(patch["headers"])) {
+        fail(`${context}.thinkingSwitch.${state}.headers must be an object.`);
+      }
+      if (isRecord(patch) && patch["body"] !== undefined && !isRecord(patch["body"])) {
+        fail(`${context}.thinkingSwitch.${state}.body must be an object.`);
+      }
+    }
+  }
   const catalog =
     value["catalog"] === undefined
       ? undefined
@@ -252,6 +275,10 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(imageApi !== undefined ? { imageApi } : {}),
     ...(videoApi !== undefined ? { videoApi } : {}),
     ...(expressApiBase !== undefined ? { expressApiBase } : {}),
+    ...(body !== undefined ? { body: body as JsonObject } : {}),
+    ...(thinkingSwitch !== undefined
+      ? { thinkingSwitch: thinkingSwitch as ThinkingSwitchDeclaration }
+      : {}),
     ...(catalog !== undefined ? { catalog } : {}),
   };
 }

@@ -1,5 +1,6 @@
 import type { FileUploadConfig } from "../file-upload/uploader.js";
-import type { LlmTransportKind } from "../llm-provider-shared.js";
+import type { LlmTransportKind, ThinkingSwitchDeclaration } from "../llm-provider-shared.js";
+import type { JsonObject } from "../ports.js";
 import type { ProviderToolEntry } from "../provider-tools/types.js";
 
 /** One selectable site of a preset provider; `apiBase` or per-transport `transports` bases. */
@@ -59,6 +60,10 @@ export interface ProviderPreset {
   /** Materialization templates copied verbatim into the config `providers[]` entry. */
   providerTools?: ProviderToolEntry[];
   fileUpload?: FileUploadConfig;
+  /** Provider-level literal body merge template (e.g. kimi-code's `stream_options.include_usage`). */
+  body?: JsonObject;
+  /** Provider-level thinking on/off wire encoding template (e.g. Meituan LongCat's `thinking.type`). */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   imageApi?: string;
   videoApi?: string;
   catalog?: ProviderPresetCatalog;

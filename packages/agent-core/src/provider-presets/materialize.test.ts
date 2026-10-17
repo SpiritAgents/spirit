@@ -241,6 +241,24 @@ test("amazon-bedrock with the apiKey credential form keeps the regional base (no
   assert.equal(entry.apiBase, "https://bedrock.us-west-2.amazonaws.com");
 });
 
+test("kimi-code carries the stream_options include_usage body template", () => {
+  const entry = materializeProviderPreset({ presetId: "kimi-code" });
+  assert.deepEqual(entry.body, { stream_options: { include_usage: true } });
+  (entry.body as { stream_options?: unknown }).stream_options = { include_usage: false };
+  const manifestEntry = PROVIDER_PRESET_MANIFEST.providers.find(
+    (preset) => preset.id === "kimi-code",
+  );
+  assert.deepEqual(manifestEntry?.body, { stream_options: { include_usage: true } });
+});
+
+test("meituan carries the thinking.type switch encoding template", () => {
+  const entry = materializeProviderPreset({ presetId: "meituan" });
+  assert.deepEqual(entry.thinkingSwitch, {
+    on: { body: { thinking: { type: "enabled" } } },
+    off: { body: { thinking: { type: "disabled" } } },
+  });
+});
+
 test("anthropic has no provider tools today (server-side search was never integrated)", () => {
   const entry = materializeProviderPreset({ presetId: "anthropic" });
   assert.equal(entry.transportKind, "anthropic");
