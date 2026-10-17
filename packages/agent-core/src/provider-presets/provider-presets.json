@@ -278,6 +278,7 @@
         ]
       },
       "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
       "providerTools": [
         {
           "label": "Web Search",
@@ -736,6 +737,10 @@
         "anthropic": "https://api.longcat.chat/anthropic/v1"
       },
       "credentials": { "kind": "apiKey" },
+      "thinkingSwitch": {
+        "on": { "body": { "thinking": { "type": "enabled" } } },
+        "off": { "body": { "thinking": { "type": "disabled" } } }
+      },
       "catalog": { "parser": "meituan-models", "endpoint": "/models" }
     },
     {
