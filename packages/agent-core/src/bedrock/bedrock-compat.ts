@@ -1,8 +1,12 @@
+import type { FileUploadConfig } from "../file-upload/uploader.js";
+import type { ModelReasoningMode } from "../openai/gpt-reasoning-controls.js";
 import type { JsonObject, JsonValue } from "../ports.js";
+import type { ProviderToolEntry } from "../provider-tools/types.js";
 import { cloneJsonValue } from "../tool-agent.js";
 import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
+  ThinkingSwitchDeclaration,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 
@@ -37,6 +41,24 @@ export interface BedrockTransportConfig extends LlmWebToolExposure {
   supportedReasoningEfforts?: readonly BedrockReasoningEffort[];
   /** Policy profile for lightweight non-Agent requests such as code completion; defaults to agent-path behavior. */
   transportRequestProfile?: TransportRequestProfile;
+  /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */
+  headers?: Record<string, string>;
+  /** Literal fields merged unconditionally into every request body top level; escape hatch, prefer structured declarations. */
+  body?: JsonObject;
+  /** Declared provider tools; injected, recognized, and executed purely by declaration. */
+  providerTools?: ProviderToolEntry[];
+  /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
+  fileUpload?: FileUploadConfig;
+  /** Transport option namespace (e.g. `awsRegion`); the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
+  options?: Record<string, unknown>;
+  /** Declared output token limit for the model. */
+  outputLimit?: number;
+  /** Declared reasoning mode; `"standard"` or absent sends nothing on the wire. */
+  reasoningMode?: ModelReasoningMode;
+  /** Declared reasoning mode set; the picker and validation source for `reasoningMode`. */
+  supportedReasoningModes?: readonly ModelReasoningMode[];
+  /** Declared wire encoding of the thinking on/off switch; absent = transport default encoding. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
 }
 
 export interface BedrockRequestTrace extends JsonObject {

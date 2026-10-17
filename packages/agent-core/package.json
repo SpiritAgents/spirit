@@ -33,6 +33,18 @@
       "types": "./dist/model-service-tier.d.ts",
       "default": "./dist/model-service-tier.js"
     },
+    "./provider-tools": {
+      "types": "./dist/provider-tools/index.d.ts",
+      "default": "./dist/provider-tools/index.js"
+    },
+    "./file-upload": {
+      "types": "./dist/file-upload/index.d.ts",
+      "default": "./dist/file-upload/index.js"
+    },
+    "./model-knowledge": {
+      "types": "./dist/model-knowledge/index.d.ts",
+      "default": "./dist/model-knowledge/index.js"
+    },
     "./shell-tool-result": {
       "types": "./dist/shell-tool-result.d.ts",
       "default": "./dist/shell-tool-result.js"
