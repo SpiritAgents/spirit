@@ -85,7 +85,7 @@ async function main(): Promise<void> {
       apiKey: "test-key",
       model: GOOGLE_MODEL,
       baseUrl,
-      llmVendor: "google",
+      sdk: "@ai-sdk/google",
     },
     state,
     [],

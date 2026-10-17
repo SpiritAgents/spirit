@@ -36,11 +36,11 @@ test("resolveOpenResponsesReasoningSummary disables summary for Bedrock Mantle",
   );
 });
 
-test("resolveOpenResponsesReasoningSummary disables summary for volcengine", () => {
+test("resolveOpenResponsesReasoningSummary is suppressed for adapters whose wire drops it", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "doubao-seed-1-8-251228",
-      llmVendor: "volcengine",
+      model: "some-model",
+      sdk: "@ai-sdk/huggingface",
       reasoningEffort: "medium",
       reasoningSummary: "auto",
     }),

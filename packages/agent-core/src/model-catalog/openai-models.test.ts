@@ -721,6 +721,26 @@ test("parseOpenRouterModelEntriesPayload extracts display metadata and pricing",
 });
 
 test("parseOpenRouterModelEntriesPayload reads reasoning supported_efforts from api", () => {
+  // A model id the knowledge module does not cover: the listing's own field is the source.
+  const entries = parseOpenRouterModelEntriesPayload({
+    data: [
+      {
+        id: "acme/sonnetish-9000",
+        architecture: { output_modalities: ["text"] },
+        reasoning: { supported_efforts: ["high", "medium", "low"] },
+      },
+    ],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "acme/sonnetish-9000",
+      supportedReasoningEfforts: ["high", "medium", "low"],
+    },
+  ]);
+});
+
+test("parseOpenRouterModelEntriesPayload lets knowledge records win over the api list", () => {
   const entries = parseOpenRouterModelEntriesPayload({
     data: [
       {
@@ -734,16 +754,18 @@ test("parseOpenRouterModelEntriesPayload reads reasoning supported_efforts from 
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      supportedReasoningEfforts: ["high", "medium", "low"],
+      supportedReasoningEfforts: ["low", "medium", "high"],
     },
   ]);
 });
 
-test("parseOpenRouterModelEntriesPayload keeps explicit empty supported_efforts without claude fallback", () => {
+test("parseOpenRouterModelEntriesPayload keeps explicit empty supported_efforts for unknown models", () => {
+  // OpenRouter explicitly returns [] to indicate effort selection is unsupported; for models the
+  // knowledge module does not cover, that signal survives.
   const entries = parseOpenRouterModelEntriesPayload({
     data: [
       {
-        id: "anthropic/claude-sonnet-4.6",
+        id: "acme/sonnetish-9000",
         architecture: { output_modalities: ["text"] },
         reasoning: { supported_efforts: [] },
       },
@@ -752,7 +774,7 @@ test("parseOpenRouterModelEntriesPayload keeps explicit empty supported_efforts 
 
   assert.deepEqual(entries, [
     {
-      id: "anthropic/claude-sonnet-4.6",
+      id: "acme/sonnetish-9000",
       supportedReasoningEfforts: [],
     },
   ]);
@@ -972,10 +994,15 @@ test("parseOpenAiCompatibleModelEntriesPayload marks deepseek-v4-flash-vision-ex
     "deepseek",
   );
 
+  // The knowledge module folds the DeepSeek V4 effort ladder into every v4 entry.
   assert.deepEqual(entries, [
-    { id: "deepseek-v4-flash" },
-    { id: "deepseek-v4-flash-vision-exp", supportsImageInput: true },
-    { id: "deepseek-v4-pro" },
+    { id: "deepseek-v4-flash", supportedReasoningEfforts: ["high", "max"] },
+    {
+      id: "deepseek-v4-flash-vision-exp",
+      supportsImageInput: true,
+      supportedReasoningEfforts: ["high", "max"],
+    },
+    { id: "deepseek-v4-pro", supportedReasoningEfforts: ["high", "max"] },
   ]);
 });
 

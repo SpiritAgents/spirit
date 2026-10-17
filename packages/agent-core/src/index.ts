@@ -11,6 +11,8 @@ export * from "./json-schema.js";
 export * from "./reasoning-effort.js";
 export * from "./model-service-tier.js";
 export * from "./service-tier-request.js";
+export * from "./thinking-switch.js";
+export * from "./llm-declared-wire-fetch.js";
 export * from "./provider-tools/index.js";
 export * from "./file-upload/index.js";
 export * from "./model-knowledge/index.js";

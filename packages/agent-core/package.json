@@ -25,10 +25,6 @@
       "types": "./dist/reasoning-effort.d.ts",
       "default": "./dist/reasoning-effort.js"
     },
-    "./model-thinking-controls": {
-      "types": "./dist/model-thinking-controls.d.ts",
-      "default": "./dist/model-thinking-controls.js"
-    },
     "./model-service-tier": {
       "types": "./dist/model-service-tier.d.ts",
       "default": "./dist/model-service-tier.js"

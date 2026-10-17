@@ -5,10 +5,6 @@ import type { JsonValue } from "../ports.js";
 import { buildResponsesTraceTools } from "./apply-patch-bridge.js";
 import { buildResponsesProviderOptions } from "./model-factory.js";
 import {
-  XAI_WEB_SEARCH_WITH_LOCAL_TOOLS_ENABLED,
-  xaiResponsesRejectsLocalFunctionTools,
-} from "./web-search-eligibility.js";
-import {
   buildOpenResponsesRequestTrace,
   resolveOpenResponsesSdkProvider,
   type OpenResponsesTransportConfig,
@@ -20,6 +16,7 @@ const xaiConfig: OpenResponsesTransportConfig = {
   model: "grok-4.3",
   baseUrl: "https://api.x.ai/v1",
   llmVendor: "xai",
+  sdk: "@ai-sdk/xai",
   reasoningEffort: "medium",
 };
 
@@ -42,11 +39,6 @@ test("xAI responses provider resolves official SDK, options, and trace kind", ()
     trace && typeof trace === "object" && !Array.isArray(trace) ? trace.kind : undefined,
     "xai_sdk_responses",
   );
-});
-
-test("xAI responses allows local function tools when provider web search is enabled", () => {
-  assert.equal(XAI_WEB_SEARCH_WITH_LOCAL_TOOLS_ENABLED, true);
-  assert.equal(xaiResponsesRejectsLocalFunctionTools(xaiConfig, 1), false);
 });
 
 test("xAI responses trace lists web_search alongside host tools when eligible", () => {

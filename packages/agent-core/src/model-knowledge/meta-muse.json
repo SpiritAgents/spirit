@@ -5,7 +5,7 @@
       "declare": {
         "supportedReasoningEfforts": ["minimal", "low", "medium", "high", "xhigh"]
       },
-      "note": "Spark 1.3+ contributor builds still omit max even though the base 1.3 generation gained it (museSupportsMaxEffort)."
+      "note": "Spark 1.3+ contributor builds still omit max even though the base 1.3 generation gained it."
     },
     {
       "match": "muse-spark-(?:0(?:\\.\\d+)?(?:$|[-_.])|1(?:\\.[0-2])?(?:$|[-_]))",

@@ -47,7 +47,7 @@ async function runDeepInfraChatRound(
       {
         apiKey: "test-key",
         model: "acme/chat-model",
-        llmVendor: "deepinfra",
+        sdk: "@ai-sdk/deepinfra",
         workspaceRoot: process.cwd(),
         ...overrides,
       },
@@ -93,26 +93,29 @@ test("DeepInfra transport omits reasoning_effort when effort is default", async 
   assert.equal("reasoning_effort" in captured[0]!.body, false);
 });
 
-test("DeepInfra transport injects reasoning.enabled=false when thinking is disabled", async () => {
-  // When thinking is disabled, the host pins effort to default (shouldPinReasoningEffortToDefault),
-  // so reasoning_effort is not injected here; only reasoning.enabled=false is injected.
+test("DeepInfra transport merges the declared thinkingSwitch off patch", async () => {
+  // The catalog/wizard materializes the endpoint's disable encoding as the thinkingSwitch off
+  // patch; the runtime applies it verbatim.
   const captured = await runDeepInfraChatRound({
     baseUrl: "https://api.deepinfra.com/v1/openai",
-    reasoningEffort: "default",
     vendorExtendedThinking: false,
+    supportsThinkingSwitch: true,
+    thinkingSwitch: { off: { body: { reasoning: { enabled: false } } } },
   });
   assert.deepEqual(captured[0]?.body.reasoning, { enabled: false });
   assert.equal("reasoning_effort" in captured[0]!.body, false);
 });
 
-test("DeepInfra code-completion profile omits reasoning_effort and disables reasoning", async () => {
+test("DeepInfra code-completion profile omits reasoning_effort and merges the declared off patch", async () => {
   const captured = await runDeepInfraChatRound(
     applyCodeCompletionTransportProfile({
       apiKey: "test-key",
       model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
       baseUrl: "https://api.deepinfra.com/v1/openai",
-      llmVendor: "deepinfra",
+      sdk: "@ai-sdk/deepinfra",
       reasoningEffort: "medium",
+      supportsThinkingSwitch: true,
+      thinkingSwitch: { off: { body: { reasoning: { enabled: false } } } },
       workspaceRoot: process.cwd(),
     }) as OpenAiTransportConfig,
   );

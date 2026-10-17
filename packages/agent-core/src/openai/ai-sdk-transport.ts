@@ -4,14 +4,14 @@ import { product } from "@spiritagent/product";
 import { createAlibaba } from "@ai-sdk/alibaba";
 import { createFireworks } from "@ai-sdk/fireworks";
 import { createBaseten } from "@ai-sdk/baseten";
-import { createGroq, type GroqLanguageModelOptions } from "@ai-sdk/groq";
+import { createGroq } from "@ai-sdk/groq";
 import { createTogetherAI } from "@ai-sdk/togetherai";
 import { createCohere } from "@ai-sdk/cohere";
-import { createDeepSeek, type DeepSeekLanguageModelOptions } from "@ai-sdk/deepseek";
+import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createDeepInfra } from "@ai-sdk/deepinfra";
 import { createGoogle, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { createVertex } from "@ai-sdk/google-vertex";
-import { createMoonshotAI, type MoonshotAILanguageModelOptions } from "@ai-sdk/moonshotai";
+import { createMoonshotAI } from "@ai-sdk/moonshotai";
 import { createGateway } from "@ai-sdk/gateway";
 import {
   createOpenAICompatible,
@@ -73,73 +73,24 @@ import { finishTaskStreamingPreviewReady } from "../finish-task-preview.js";
 import {
   buildOpenAiRequestTrace,
   openAiReasoningEffort,
-  openAiReasoningMode,
-  openAiVendorChatCompletionBodyExtras,
-  openAiStreamingUsageBodyExtras,
   resolveOpenAiModelCompatibilityProfile,
   type OpenAiImageGenerationConfig,
   type OpenAiTransportConfig,
 } from "./openai-compat.js";
-import { modelSupportsOpenAiGpt56ReasoningControls } from "./gpt-reasoning-controls.js";
-import {
-  buildGatewayMinimaxProviderOptions,
-  isGatewayMinimaxModel,
-} from "./gateway-minimax-thinking.js";
-import {
-  buildGatewayAlibabaProviderOptions,
-  isGatewayAlibabaModel,
-} from "./gateway-alibaba-thinking.js";
-import {
-  buildGatewayAnthropicProviderOptions,
-  isGatewayAnthropicClaudeModel,
-} from "./gateway-anthropic-thinking.js";
-import {
-  buildGatewayCodeCompletionProviderOptions,
-  shouldUseGatewayCodeCompletionProviderOptions,
-} from "./gateway-code-completion-thinking.js";
-import {
-  buildGatewayDeepSeekProviderOptions,
-  isGatewayDeepSeekModel,
-} from "./gateway-deepseek-thinking.js";
-import {
-  buildGatewayMoonshotProviderOptions,
-  isGatewayMoonshotModel,
-  isMoonshotThinkingSwitchModel,
-} from "./moonshot-thinking-switch.js";
-import {
-  buildGatewayXiaomiProviderOptions,
-  isGatewayXiaomiModel,
-} from "./gateway-xiaomi-thinking.js";
-import { buildGatewayZaiProviderOptions, isGatewayZaiModel } from "./gateway-zai-thinking.js";
-import {
-  buildGatewayXaiProviderOptions,
-  isGatewayXaiModel,
-  resolveXaiProviderReasoningEffort,
-} from "./gateway-xai-reasoning.js";
-import {
-  buildGatewayGoogleProviderOptions,
-  buildGoogleThinkingConfigForEffort,
-  isGatewayGoogleGeminiModel,
-} from "./gateway-google-thinking.js";
-import { isOpenRouterAnthropicClaudeModel } from "./openrouter-anthropic-reasoning.js";
 import { generateSiliconFlowImage } from "../image-generation/siliconflow-backend.js";
 import { generateHuggingFaceImage } from "../image-generation/huggingface-backend.js";
 import { generateStepfunImage } from "../image-generation/stepfun-backend.js";
-import { isCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
+import { createAlibabaChatCompletionsAwareFetch } from "../open-responses/alibaba-chat-completions-fetch.js";
+import { shouldPatchAlibabaChatCompletionsExtraBody } from "../open-responses/alibaba-built-in-tools.js";
+import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
 import {
   mergeServiceTierProviderOptions,
   resolveServiceTierRequestPlan,
   type ServiceTierRequestPlan,
+  type ServiceTierRequestSurface,
 } from "../service-tier-request.js";
-import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
-import { createAlibabaChatCompletionsAwareFetch } from "../open-responses/alibaba-chat-completions-fetch.js";
-import {
-  buildAlibabaChatCompletionsExtraBody,
-  shouldPatchAlibabaChatCompletionsExtraBody,
-  shouldUseAlibabaChatCompletionsBuiltInTools,
-} from "../open-responses/alibaba-built-in-tools.js";
 import {
   clearMoonshotChatCompletionMessages,
   openAiMessagesContainVideoUrl,
@@ -154,11 +105,7 @@ import { resolveXiaomiVideoUrlsInOpenAiMessages } from "./xiaomi-video-messages.
 import { resolveDeepInfraVideoUrlsInOpenAiMessages } from "./deepinfra-video-messages.js";
 import { resolveStepfunVideoUrlsInOpenAiMessages } from "./stepfun-video-messages.js";
 import { normalizeMoonshotApiBase } from "./moonshot-files.js";
-import {
-  buildMoonshotFormulaTraceToolEntries,
-  createMoonshotFormulaChatCompletionsAwareFetch,
-} from "../moonshot/formula/moonshot-chat-completions-fetch.js";
-import { shouldUseMoonshotFormulaWebSearch } from "../moonshot/formula/formula-eligibility.js";
+import { createMoonshotFormulaChatCompletionsAwareFetch } from "../moonshot/formula/moonshot-chat-completions-fetch.js";
 import { buildMoonshotFormulaStreamingToolPreviewArgumentsJson } from "../moonshot/formula/moonshot-formula-tool-loop.js";
 import { buildStepfunWebSearchStreamingPreviewArgumentsJson } from "../stepfun/stepfun-web-search-tool-loop.js";
 import { buildKimiCodeWebSearchStreamingPreviewArgumentsJson } from "../kimi-code/kimi-code-web-search-tool-loop.js";
@@ -289,7 +236,10 @@ export class AiSdkOpenAiCompatibleTransport
       // endpoints, do not blindly forward WIDTHxHEIGHT. Translate this shared size
       // field per selected provider/model instead.
       result = await generateAiImage({
-        model: createAiSdkImageModel(imageConfig),
+        model: createAiSdkImageModel(imageConfig, {
+          ...(config.headers !== undefined ? { headers: config.headers } : {}),
+          ...(config.body !== undefined ? { body: config.body } : {}),
+        }),
         prompt: request.prompt,
         size: request.size as `${number}x${number}`,
         maxRetries: 2,
@@ -356,6 +306,7 @@ export class AiSdkOpenAiCompatibleTransport
         model: createAiSdkLanguageModel(config),
         messages: openAiMessagesToAiSdkMessages(config, messages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
         providerOptions: buildAiSdkProviderOptionsWithServiceTier(config),
@@ -403,6 +354,7 @@ export class AiSdkOpenAiCompatibleTransport
         model: createAiSdkLanguageModel(config),
         messages: openAiMessagesToAiSdkMessages(config, requestMessages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         include: { responseBody: true },
         ...(normalizedTools.length === 0
           ? {}
@@ -508,6 +460,7 @@ export class AiSdkOpenAiCompatibleTransport
         model: createAiSdkLanguageModel(config),
         messages: openAiMessagesToAiSdkMessages(config, requestMessages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         ...(normalizedTools.length === 0
           ? {}
           : {
@@ -600,6 +553,9 @@ export class AiSdkOpenAiCompatibleTransport
           model: createAiSdkLanguageModel(compactConfig),
           messages: promptMessages as any,
           allowSystemInMessages: true,
+          ...(compactConfig.outputLimit !== undefined
+            ? { maxOutputTokens: compactConfig.outputLimit }
+            : {}),
           providerOptions: buildAiSdkProviderOptionsWithServiceTier(compactConfig),
           maxRetries: 2,
         });
@@ -630,6 +586,9 @@ export class AiSdkOpenAiCompatibleTransport
         model: createAiSdkLanguageModel(compactConfig),
         messages: promptMessages as any,
         allowSystemInMessages: true,
+        ...(compactConfig.outputLimit !== undefined
+          ? { maxOutputTokens: compactConfig.outputLimit }
+          : {}),
         providerOptions: buildAiSdkProviderOptionsWithServiceTier(compactConfig),
         maxRetries: 2,
       });
@@ -693,165 +652,150 @@ function buildAiSdkRequestTrace(
   tools: readonly unknown[],
   stream = false,
 ): JsonValue[] {
-  const requestTrace = buildOpenAiRequestTrace(config, stepIndex, messages, tools, stream);
-  if (
-    !isDeepSeekOfficialAiSdkProvider(config) &&
-    !isXaiOfficialAiSdkProvider(config) &&
-    !isMoonshotOfficialAiSdkProvider(config) &&
-    !isAlibabaOfficialAiSdkProvider(config) &&
-    !isVercelAiGatewayProvider(config) &&
-    !isGoogleOfficialAiSdkProvider(config) &&
-    !isGoogleVertexOfficialAiSdkProvider(config)
-  ) {
-    return requestTrace;
-  }
-
-  const firstTrace = requestTrace[0];
-  if (!isJsonObject(firstTrace)) {
-    return requestTrace;
-  }
-
-  const kind = isDeepSeekOfficialAiSdkProvider(config)
-    ? "deepseek_sdk_chat_completions"
-    : isXaiOfficialAiSdkProvider(config)
-      ? "xai_sdk_chat_completions"
-      : isMoonshotOfficialAiSdkProvider(config)
-        ? "moonshot_sdk_chat_completions"
-        : isAlibabaOfficialAiSdkProvider(config)
-          ? "alibaba_sdk_chat_completions"
-          : isVercelAiGatewayProvider(config)
-            ? "gateway_sdk_chat_completions"
-            : isGoogleVertexOfficialAiSdkProvider(config)
-              ? "google_vertex_sdk_generate_content"
-              : "google_sdk_generate_content";
-
-  const alibabaExtraBody =
-    isAlibabaOfficialAiSdkProvider(config) && shouldUseAlibabaChatCompletionsBuiltInTools(config)
-      ? buildAlibabaChatCompletionsExtraBody({
-          streaming: stream,
-          webSearch: config.webSearchEnabled !== false,
-        })
-      : undefined;
-  const moonshotFormulaTraceTools =
-    isMoonshotOfficialAiSdkProvider(config) && shouldUseMoonshotFormulaWebSearch(config)
-      ? buildMoonshotFormulaTraceToolEntries()
-      : undefined;
-
-  return [
-    {
-      ...firstTrace,
-      kind,
-      ...(alibabaExtraBody ? { extra_body: alibabaExtraBody } : {}),
-      ...(moonshotFormulaTraceTools && isJsonObject(firstTrace)
-        ? {
-            tools: [
-              ...((Array.isArray(firstTrace.tools) ? firstTrace.tools : []) as JsonValue[]),
-              ...moonshotFormulaTraceTools.map((tool) => tool as JsonValue),
-            ],
-          }
-        : {}),
-    },
-    ...requestTrace.slice(1),
-  ];
+  return buildOpenAiRequestTrace(config, stepIndex, messages, tools, stream);
 }
 
+/**
+ * Adapter dispatch on the declared `sdk` (full npm package name); absent = the transport's generic
+ * `@ai-sdk/openai-compatible` adapter. Unknown packages fail fast — the config schema already
+ * rejects values outside the bundled adapter set.
+ */
 function createAiSdkLanguageModel(config: OpenAiTransportConfig): any {
-  if (isDeepSeekOfficialAiSdkProvider(config)) {
-    return createAiSdkDeepSeekProvider(config).chat(config.model);
+  switch (config.sdk ?? "@ai-sdk/openai-compatible") {
+    case "@ai-sdk/deepseek":
+      return createAiSdkDeepSeekProvider(config).chat(config.model);
+    case "@ai-sdk/xai":
+      // @ai-sdk/xai 5 removed the Chat Completions implementation entirely (xAI deprecated the
+      // endpoint); the supported xAI surface is Responses, selected via transportKind
+      // open-responses. Throwing here mirrors the OpenAI-official branch below.
+      throw new Error(
+        "xAI Chat Completions is no longer supported; use transportKind open-responses.",
+      );
+    case "@ai-sdk/alibaba":
+      return createAiSdkAlibabaProvider(config).chatModel(config.model);
+    case "@ai-sdk/gateway":
+      return createAiSdkGatewayProvider(config)(config.model);
+    case "@ai-sdk/openai":
+      throw new Error(
+        "OpenAI official Chat Completions is no longer supported; use transportKind open-responses.",
+      );
+    case "@ai-sdk/google":
+      return createAiSdkGoogleProvider(config).chat(config.model);
+    case "@ai-sdk/google-vertex":
+      return createAiSdkGoogleVertexProvider(config)(config.model);
+    case "@ai-sdk/moonshotai":
+      return createAiSdkMoonshotProvider(config).chatModel(config.model);
+    case "@ai-sdk/fireworks":
+      return createAiSdkFireworksProvider(config)(config.model);
+    case "@ai-sdk/togetherai":
+      return createAiSdkTogetherProvider(config)(config.model);
+    case "@ai-sdk/baseten":
+      return createAiSdkBasetenProvider(config)(config.model);
+    case "@ai-sdk/groq":
+      return createAiSdkGroqProvider(config)(config.model);
+    case "@ai-sdk/deepinfra":
+      return createAiSdkDeepInfraProvider(config)(config.model);
+    case "@ai-sdk/cohere":
+      return createAiSdkCohereProvider(config)(config.model);
+    case "@ai-sdk/openai-compatible":
+      return createAiSdkOpenAiCompatibleProvider(config).chatModel(config.model);
+    default:
+      throw new Error(`Unknown SDK adapter package ${JSON.stringify(config.sdk)}.`);
   }
-
-  if (isXaiOfficialAiSdkProvider(config)) {
-    // @ai-sdk/xai 5 removed the Chat Completions implementation entirely (xAI deprecated the
-    // endpoint); the supported xAI surface is Responses, selected via transportKind
-    // open-responses. Throwing here mirrors the OpenAI-official branch below.
-    throw new Error(
-      "xAI Chat Completions is no longer supported; use transportKind open-responses.",
-    );
-  }
-
-  if (isAlibabaOfficialAiSdkProvider(config)) {
-    return createAiSdkAlibabaProvider(config).chatModel(config.model);
-  }
-
-  if (isVercelAiGatewayProvider(config)) {
-    return createAiSdkGatewayProvider(config)(config.model);
-  }
-
-  if (config.llmVendor === "openai") {
-    throw new Error(
-      "OpenAI official Chat Completions is no longer supported; use transportKind open-responses.",
-    );
-  }
-
-  if (isGoogleOfficialAiSdkProvider(config)) {
-    return createAiSdkGoogleProvider(config).chat(config.model);
-  }
-
-  if (isGoogleVertexOfficialAiSdkProvider(config)) {
-    return createAiSdkGoogleVertexProvider(config)(config.model);
-  }
-
-  if (isMoonshotOfficialAiSdkProvider(config)) {
-    return createAiSdkMoonshotProvider(config).chatModel(config.model);
-  }
-
-  if (isFireworksOfficialAiSdkProvider(config)) {
-    return createAiSdkFireworksProvider(config)(config.model);
-  }
-
-  if (isTogetherOfficialAiSdkProvider(config)) {
-    return createAiSdkTogetherProvider(config)(config.model);
-  }
-
-  if (isBasetenOfficialAiSdkProvider(config)) {
-    return createAiSdkBasetenProvider(config)(config.model);
-  }
-
-  if (isGroqOfficialAiSdkProvider(config)) {
-    return createAiSdkGroqProvider(config)(config.model);
-  }
-
-  if (isDeepInfraOfficialAiSdkProvider(config)) {
-    return createAiSdkDeepInfraProvider(config)(config.model);
-  }
-
-  if (isCohereOfficialAiSdkProvider(config)) {
-    return createAiSdkCohereProvider(config)(config.model);
-  }
-
-  return createAiSdkOpenAiCompatibleProvider(config).chatModel(config.model);
 }
 
-function createAiSdkImageModel(config: OpenAiImageGenerationConfig): any {
-  if (isVercelAiGatewayImageConfig(config)) {
+function createAiSdkImageModel(
+  imageConfig: OpenAiImageGenerationConfig,
+  declarations?: Pick<OpenAiTransportConfig, "headers" | "body">,
+): any {
+  if (isVercelAiGatewayImageConfig(imageConfig)) {
     // Gateway image generation uses the v3 image-model protocol; it cannot reuse the chat-preset /v1 baseUrl.
-    return createGateway({ apiKey: config.apiKey, fetch: getLlmFetch() }).image(config.model);
+    return createGateway({ apiKey: imageConfig.apiKey, fetch: getLlmFetch() }).image(
+      imageConfig.model,
+    );
   }
 
-  if (isTogetherOfficialAiSdkImageConfig(config)) {
-    return createAiSdkTogetherProvider(config).image(config.model);
+  if (isTogetherOfficialAiSdkImageConfig(imageConfig)) {
+    return createAiSdkTogetherProvider(imageConfig).image(imageConfig.model);
   }
 
-  return createAiSdkOpenAiCompatibleProvider(config, { includeChatVendorExtras: false }).imageModel(
-    config.model,
+  return createAiSdkOpenAiCompatibleProvider(imageConfig, declarations).imageModel(
+    imageConfig.model,
+  );
+}
+
+/**
+ * Per-request service tier plan for chat surfaces. The `@ai-sdk/gateway` chat route speaks the
+ * gateway v3 language-model protocol; every other adapter on this transport is chat-completions.
+ */
+function chatServiceTierSurface(config: OpenAiTransportConfig): ServiceTierRequestSurface {
+  if (config.sdk === "@ai-sdk/gateway") {
+    return "gateway-v3";
+  }
+  // The Gemini adapters speak generateContent, whose service tier vocabulary is not the
+  // OpenAI-family `service_tier` field; tier effects arrive via literal serviceTiers declarations.
+  if (config.sdk === "@ai-sdk/google" || config.sdk === "@ai-sdk/google-vertex") {
+    return "generate-content";
+  }
+  return "chat-completions";
+}
+
+function resolveChatServiceTierPlan(config: OpenAiTransportConfig): ServiceTierRequestPlan {
+  if (config.serviceTier === undefined) {
+    return {};
+  }
+  return resolveServiceTierRequestPlan({
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
+    ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    surface: chatServiceTierSurface(config),
+  });
+}
+
+/**
+ * Adapters without a native reasoning effort option carry the declared selection through the
+ * chat.completions `reasoning_effort` body field (merged after SDK serialization).
+ */
+function chatReasoningEffortBodyBase(config: OpenAiTransportConfig): JsonObject | undefined {
+  switch (config.sdk) {
+    case "@ai-sdk/moonshotai":
+    // The adapter's reasoningEffort enum (low|high|max) is narrower than the values the upstream
+    // accepts, so the declared effort goes through the wire field instead of the SDK option.
+    case "@ai-sdk/fireworks":
+    case "@ai-sdk/togetherai":
+    case "@ai-sdk/baseten":
+    case "@ai-sdk/deepinfra":
+    case "@ai-sdk/cohere":
+    case "@ai-sdk/alibaba": {
+      const reasoningEffort = openAiReasoningEffort(config);
+      return reasoningEffort === undefined ? undefined : { reasoning_effort: reasoningEffort };
+    }
+    default:
+      return undefined;
+  }
+}
+
+/** Chat fetch: flex dispatcher + declared headers/body/thinkingSwitch/serviceTier merge. */
+function llmFetchForChat(config: OpenAiTransportConfig): typeof fetch {
+  const plan = resolveChatServiceTierPlan(config);
+  return createDeclaredWireMergeFetch(
+    config,
+    chatServiceTierSurface(config),
+    getLlmFetch({ flexWaiting: plan.flexWaiting }),
+    { bodyBase: chatReasoningEffortBodyBase(config) },
   );
 }
 
 function createAiSdkOpenAiCompatibleProvider(
   config: OpenAiTransportConfig | OpenAiImageGenerationConfig,
-  options: { includeChatVendorExtras?: boolean } = {},
+  declarations?: Pick<OpenAiTransportConfig, "headers" | "body">,
 ) {
   const transportConfig = config as OpenAiTransportConfig;
-  // Image/video generation configs never carry serviceTier, so this stays the standard dispatcher there.
-  const llmFetch = llmFetchForChatServiceTier(transportConfig);
-  const vendorExtras =
-    options.includeChatVendorExtras === false
-      ? {}
-      : openAiVendorChatCompletionBodyExtras(transportConfig);
   const needsVideoStash = usesOpenAiCompatibleVideoMessageStash(transportConfig.llmVendor);
-  const needsFetchWrapper = needsVideoStash || Object.keys(vendorExtras).length > 0;
-  const fetchWrapper = !needsFetchWrapper
-    ? undefined
+  // Image/video generation role configs carry no declarations of their own; the provider-level
+  // literal `headers`/`body` still apply to every outbound request of the provider.
+  const llmFetch = llmFetchForChat({ ...transportConfig, ...declarations });
+  const fetchWrapper = !needsVideoStash
+    ? llmFetch
     : async (input: RequestInfo | URL, init?: RequestInit) => {
         const body = tryParseRequestBody(init?.body);
         if (!isJsonObject(body)) {
@@ -860,18 +804,18 @@ function createAiSdkOpenAiCompatibleProvider(
 
         const requestUrl =
           typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
-        const stashedMessages =
-          needsVideoStash && requestUrl.includes("/chat/completions")
-            ? takeMoonshotChatCompletionMessages()
-            : undefined;
+        const stashedMessages = requestUrl.includes("/chat/completions")
+          ? takeMoonshotChatCompletionMessages()
+          : undefined;
+        if (!stashedMessages) {
+          return llmFetch(input, init);
+        }
 
         return llmFetch(input, {
           ...init,
           body: JSON.stringify({
             ...body,
-            ...vendorExtras,
-            ...openAiStreamingUsageBodyExtras(transportConfig, body.stream === true),
-            ...(stashedMessages ? { messages: stashedMessages } : {}),
+            messages: stashedMessages,
           }),
         });
       };
@@ -881,48 +825,28 @@ function createAiSdkOpenAiCompatibleProvider(
     ...(config.project ? { "OpenAI-Project": config.project } : {}),
   };
 
-  let resolvedFetch = wrapFetchForCloudflareAiGateway(
-    transportConfig.cloudflareGatewayId,
-    fetchWrapper ?? llmFetch,
-  );
-  // Neither TokenHub Chat `web_search_options` nor Responses `/v1/responses` web search is integrated:
-  // the former was tested and the upstream still performed no effective real-time retrieval after injection; the latter is supported by only a few models and does not match the existing Chat Completions matrix, so the maintenance cost is not worthwhile.
-
   return createOpenAICompatible({
     apiKey: config.apiKey,
     name: "openai",
     baseURL: config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
     supportsStructuredOutputs: true,
-    // api.kimi.com/coding omits usage from streaming responses unless the request carries
-    // stream_options.include_usage; without usage the host cannot track context usage.
-    ...(transportConfig.llmVendor === "kimi-code" ? { includeUsage: true } : {}),
     ...(Object.keys(headers).length === 0 ? {} : { headers }),
-    fetch: resolvedFetch,
+    fetch: fetchWrapper,
   });
 }
 
 function createAiSdkMoonshotProvider(config: OpenAiTransportConfig) {
-  const reasoningEffort = openAiReasoningEffort(config);
-  const formulaAwareFetch = createMoonshotFormulaChatCompletionsAwareFetch(config, getLlmFetch());
-  const fetchWrapper = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const body = tryParseRequestBody(init?.body);
-    if (!isJsonObject(body)) {
-      return formulaAwareFetch(input, init);
-    }
-
-    return formulaAwareFetch(input, {
-      ...init,
-      body: JSON.stringify({
-        ...body,
-        ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
-      }),
-    });
-  };
+  const fetch = createDeclaredWireMergeFetch(
+    config,
+    "chat-completions",
+    createMoonshotFormulaChatCompletionsAwareFetch(config, getLlmFetch()),
+    { bodyBase: chatReasoningEffortBodyBase(config) },
+  );
 
   return createMoonshotAI({
     apiKey: config.apiKey,
     baseURL: normalizeMoonshotApiBase(config.baseUrl),
-    fetch: fetchWrapper,
+    fetch,
   });
 }
 
@@ -930,7 +854,7 @@ function createAiSdkGoogleProvider(config: OpenAiTransportConfig) {
   return createGoogle({
     apiKey: config.apiKey,
     baseURL: config.baseUrl ?? DEFAULT_GOOGLE_BASE_URL,
-    fetch: llmFetchForChatServiceTier(config),
+    fetch: llmFetchForChat(config),
   });
 }
 
@@ -945,7 +869,7 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
   if (expressOnly) {
     return createVertex({
       apiKey,
-      fetch: llmFetchForChatServiceTier(config),
+      fetch: llmFetchForChat(config),
     } as Parameters<typeof createVertex>[0]);
   }
 
@@ -965,92 +889,49 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     ...(googleAuthOptions ? { googleAuthOptions } : {}),
     ...(apiKey ? ({ apiKey } as Record<string, string>) : {}),
-    fetch: llmFetchForChatServiceTier(config),
+    fetch: llmFetchForChat(config),
   } as Parameters<typeof createVertex>[0]);
 }
 
 function createAiSdkDeepSeekProvider(config: OpenAiTransportConfig) {
-  const reasoningEffort = openAiReasoningEffort(config);
-  const fetchWrapper =
-    reasoningEffort === undefined
-      ? undefined
-      : async (input: RequestInfo | URL, init?: RequestInit) => {
-          const body = tryParseRequestBody(init?.body);
-          if (!isJsonObject(body)) {
-            return getLlmFetch()(input, init);
-          }
-
-          return getLlmFetch()(input, {
-            ...init,
-            body: JSON.stringify({
-              ...body,
-              reasoning_effort: reasoningEffort,
-            }),
-          });
-        };
-
   return createDeepSeek({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: fetchWrapper ?? getLlmFetch(),
+    fetch: llmFetchForChat(config),
   });
 }
 
 function createAiSdkFireworksProvider(config: OpenAiTransportConfig) {
-  const reasoningEffort = openAiReasoningEffort(config);
-  const fetchWrapper = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const body = tryParseRequestBody(init?.body);
-    if (!isJsonObject(body)) {
-      return getLlmFetch()(input, init);
-    }
-
-    const requestUrl =
-      typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
-    if (!requestUrl.includes("/chat/completions")) {
-      return getLlmFetch()(input, init);
-    }
-
-    return getLlmFetch()(input, {
-      ...init,
-      body: JSON.stringify({
-        ...body,
-        ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
-      }),
-    });
-  };
-
   return createFireworks({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: fetchWrapper,
+    fetch: llmFetchForChat(config),
   });
 }
 
-function createAiSdkTogetherProvider(
-  config: Pick<OpenAiTransportConfig, "apiKey" | "baseUrl"> | OpenAiImageGenerationConfig,
-) {
-  // The SDK defaults to api.together.xyz; the connection config's api.together.ai/v1 must explicitly override it.
+function createAiSdkTogetherProvider(config: OpenAiTransportConfig) {
+  // The SDK defaults to api.together.xyz; the connection config's api.together.ai/v1 must explicitly override baseURL.
   return createTogetherAI({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChat(config),
   });
 }
 
-function createAiSdkBasetenProvider(config: Pick<OpenAiTransportConfig, "apiKey" | "baseUrl">) {
+function createAiSdkBasetenProvider(config: OpenAiTransportConfig) {
   return createBaseten({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChat(config),
   });
 }
 
-function createAiSdkGroqProvider(config: Pick<OpenAiTransportConfig, "apiKey" | "baseUrl">) {
+function createAiSdkGroqProvider(config: OpenAiTransportConfig) {
   // The SDK defaults to https://api.groq.com/openai/v1; the connection config must explicitly override baseURL.
   return createGroq({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChat(config),
   });
 }
 
@@ -1067,90 +948,61 @@ function normalizeDeepInfraSdkBaseUrl(baseUrl: string | undefined): string | und
   return trimmed.endsWith("/openai") ? trimmed.slice(0, -"/openai".length) : trimmed;
 }
 
-const DEEPINFRA_REASONING_EFFORTS = new Set([
-  "none",
-  "minimal",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-  "max",
-]);
-
-/**
- * Injected only when the user explicitly selects an effort level; when unset, the field is omitted so the server default applies
- * (no medium fallback via openAiReasoningEffort, to avoid sending it to non-reasoning models by mistake).
- */
-function resolveDeepInfraReasoningEffort(
-  config: Pick<OpenAiTransportConfig, "reasoningEffort">,
-): string | undefined {
-  const raw = config.reasoningEffort;
-  if (typeof raw !== "string") {
-    return undefined;
-  }
-  const normalized = raw.trim().toLowerCase();
-  return DEEPINFRA_REASONING_EFFORTS.has(normalized) ? normalized : undefined;
-}
-
 function createAiSdkDeepInfraProvider(config: OpenAiTransportConfig) {
-  const isCodeCompletion = isCodeCompletionTransportProfile(config);
-  const reasoningEffort = isCodeCompletion ? undefined : resolveDeepInfraReasoningEffort(config);
-  const thinkingDisabled = isCodeCompletion || config.vendorExtendedThinking === false;
   // deepinfra uses the official SDK instead of createAiSdkOpenAiCompatibleProvider, so stash restoration must also happen inside this wrapper.
   const needsVideoStash = usesOpenAiCompatibleVideoMessageStash(config.llmVendor);
-  const needsFetchWrapper = needsVideoStash || reasoningEffort !== undefined || thinkingDisabled;
-  const fetchWrapper = !needsFetchWrapper
-    ? undefined
+  const llmFetch = llmFetchForChat(config);
+  const fetchWrapper = !needsVideoStash
+    ? llmFetch
     : async (input: RequestInfo | URL, init?: RequestInit) => {
         const body = tryParseRequestBody(init?.body);
         if (!isJsonObject(body)) {
-          return getLlmFetch()(input, init);
+          return llmFetch(input, init);
         }
 
         const requestUrl =
           typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
         if (!requestUrl.includes("/chat/completions")) {
-          return getLlmFetch()(input, init);
+          return llmFetch(input, init);
         }
 
-        // DeepInfra OpenAPI supports flat reasoning_effort and reasoning.enabled to disable thinking;
-        // runtime fields are authoritative (more reliable than the can-disable-reasoning tag from /models/list), so the tag is not read.
-        const stashedMessages = needsVideoStash ? takeMoonshotChatCompletionMessages() : undefined;
-        return getLlmFetch()(input, {
+        const stashedMessages = takeMoonshotChatCompletionMessages();
+        if (!stashedMessages) {
+          return llmFetch(input, init);
+        }
+
+        return llmFetch(input, {
           ...init,
-          body: JSON.stringify({
-            ...body,
-            ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
-            ...(thinkingDisabled ? { reasoning: { enabled: false } } : {}),
-            ...(stashedMessages ? { messages: stashedMessages } : {}),
-          }),
+          body: JSON.stringify({ ...body, messages: stashedMessages }),
         });
       };
 
   return createDeepInfra({
     apiKey: config.apiKey,
     baseURL: normalizeDeepInfraSdkBaseUrl(config.baseUrl) ?? DEFAULT_DEEPINFRA_BASE_URL,
-    fetch: fetchWrapper ?? getLlmFetch(),
+    fetch: fetchWrapper,
   });
 }
 
-function createAiSdkCohereProvider(config: Pick<OpenAiTransportConfig, "apiKey" | "baseUrl">) {
+function createAiSdkCohereProvider(config: OpenAiTransportConfig) {
   return createCohere({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: getLlmFetch(),
+    fetch: llmFetchForChat(config),
   });
 }
 
 function createAiSdkAlibabaProvider(config: OpenAiTransportConfig) {
-  const fetchWrapper = shouldPatchAlibabaChatCompletionsExtraBody(config)
+  const baseFetch = shouldPatchAlibabaChatCompletionsExtraBody(config)
     ? createAlibabaChatCompletionsAwareFetch(config, getLlmFetch())
     : getLlmFetch();
 
   return createAlibaba({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: fetchWrapper,
+    fetch: createDeclaredWireMergeFetch(config, "chat-completions", baseFetch, {
+      bodyBase: chatReasoningEffortBodyBase(config),
+    }),
   });
 }
 
@@ -1158,36 +1010,13 @@ function createAiSdkGatewayProvider(config: OpenAiTransportConfig) {
   // Gateway chat uses the v3 AI protocol (default …/v3/ai/language-model); it cannot use the model catalog's preset /v1 baseUrl.
   return createGateway({
     apiKey: config.apiKey,
-    fetch: llmFetchForChatServiceTier(config),
+    fetch: llmFetchForChat(config),
   });
 }
 
 /**
- * Per-request service tier plan for chat surfaces. The Vercel chat route speaks the gateway v3
- * language-model protocol; every other vendor on this transport is chat-completions.
- */
-function resolveChatServiceTierPlan(config: OpenAiTransportConfig): ServiceTierRequestPlan {
-  if (config.serviceTier === undefined) {
-    return {};
-  }
-  return resolveServiceTierRequestPlan({
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-    serviceTier: config.serviceTier,
-    ...(config.upstreamProvider !== undefined ? { upstreamProvider: config.upstreamProvider } : {}),
-    ...(config.vertexLocation !== undefined ? { vertexLocation: config.vertexLocation } : {}),
-    surface: isVercelAiGatewayProvider(config) ? "gateway-v3" : "chat-completions",
-  });
-}
-
-/** Flex tier requests switch to the extended-wait dispatcher; everything else keeps the singleton. */
-function llmFetchForChatServiceTier(config: OpenAiTransportConfig): typeof fetch {
-  return getLlmFetch({ flexWaiting: resolveChatServiceTierPlan(config).flexWaiting });
-}
-
-/**
- * The vendor provider-options builder has many early-return branches; the service tier fragment is
- * merged into its result here instead of editing each branch, so existing options are never dropped.
+ * The service tier fragment (gateway v3 namespace) is merged into the options builder result here
+ * instead of editing each branch, so existing reasoning options are never dropped.
  */
 function buildAiSdkProviderOptionsWithServiceTier(
   config: OpenAiTransportConfig,
@@ -1198,238 +1027,121 @@ function buildAiSdkProviderOptionsWithServiceTier(
   );
 }
 
+/**
+ * Adapter plumbing for the declared reasoning effort: each branch is the adapter's native effort
+ * option, keyed on the declared `sdk` package name. Adapters without a native option carry the
+ * effort through the `reasoning_effort` body field instead (see `chatReasoningEffortBodyBase`);
+ * the declared value is never clamped or gated by model.
+ */
 function buildAiSdkProviderOptions(config: OpenAiTransportConfig): Record<string, JsonObject> {
-  if (shouldUseGatewayCodeCompletionProviderOptions(config)) {
-    return buildGatewayCodeCompletionProviderOptions(config);
-  }
-  if (
-    isVercelAiGatewayProvider(config) &&
-    isGatewayAnthropicClaudeModel(config.llmVendor, config.model)
-  ) {
-    return buildGatewayAnthropicProviderOptions(config);
-  }
-
-  if (
-    isVercelAiGatewayProvider(config) &&
-    isGatewayGoogleGeminiModel(config.llmVendor, config.model)
-  ) {
-    return buildGatewayGoogleProviderOptions(config, openAiReasoningEffort(config));
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayDeepSeekModel(config.llmVendor, config.model)) {
-    return buildGatewayDeepSeekProviderOptions(config);
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayMoonshotModel(config.llmVendor, config.model)) {
-    const moonshotOptions = buildGatewayMoonshotProviderOptions(config);
-    if (Object.keys(moonshotOptions).length > 0) {
-      return moonshotOptions;
-    }
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayXiaomiModel(config.llmVendor, config.model)) {
-    const xiaomiOptions = buildGatewayXiaomiProviderOptions(config);
-    if (Object.keys(xiaomiOptions).length > 0) {
-      return xiaomiOptions;
-    }
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayZaiModel(config.llmVendor, config.model)) {
-    const zaiOptions = buildGatewayZaiProviderOptions(config);
-    if (Object.keys(zaiOptions).length > 0) {
-      return zaiOptions;
-    }
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayAlibabaModel(config.llmVendor, config.model)) {
-    const alibabaOptions = buildGatewayAlibabaProviderOptions(config);
-    if (Object.keys(alibabaOptions).length > 0) {
-      return alibabaOptions;
-    }
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayMinimaxModel(config.llmVendor, config.model)) {
-    const minimaxOptions = buildGatewayMinimaxProviderOptions(config);
-    if (Object.keys(minimaxOptions).length > 0) {
-      return minimaxOptions;
-    }
-  }
-
-  if (isVercelAiGatewayProvider(config) && isGatewayXaiModel(config.llmVendor, config.model)) {
-    const xaiOptions = buildGatewayXaiProviderOptions(
-      config.llmVendor,
-      config.model,
-      openAiReasoningEffort(config),
-    );
-    if (Object.keys(xaiOptions).length > 0) {
-      return xaiOptions;
-    }
-  }
-
-  if (isOpenRouterAnthropicClaudeModel(config.llmVendor, config.model)) {
+  const reasoningEffort = openAiReasoningEffort(config);
+  if (reasoningEffort === undefined) {
     return {};
   }
 
-  if (isAlibabaOfficialAiSdkProvider(config)) {
-    if (isCodeCompletionTransportProfile(config)) {
+  switch (config.sdk ?? "@ai-sdk/openai-compatible") {
+    case "@ai-sdk/google": {
+      const thinkingConfig = buildGeminiThinkingConfigForEffort(config.model, reasoningEffort);
+      if (thinkingConfig === undefined) {
+        return {};
+      }
+      const googleOptions = {
+        thinkingConfig,
+      } satisfies GoogleLanguageModelOptions;
+      return { google: googleOptions as JsonObject };
+    }
+    case "@ai-sdk/google-vertex": {
+      const thinkingConfig = buildGeminiThinkingConfigForEffort(config.model, reasoningEffort);
+      if (thinkingConfig === undefined) {
+        return {};
+      }
+      const vertexOptions = {
+        thinkingConfig,
+      } satisfies GoogleLanguageModelOptions;
+      return { vertex: vertexOptions as JsonObject };
+    }
+    case "@ai-sdk/deepseek": {
+      // Declared values are gated by the catalog's supportedReasoningEfforts; the adapter's enum
+      // (low|high|max) is narrower than the shared token vocabulary, hence the cast.
       return {
-        alibaba: {
-          enableThinking: false,
+        deepseek: {
+          reasoningEffort: reasoningEffort as "low" | "high" | "max",
         } as JsonObject,
       };
     }
-
-    const alibabaOptions: JsonObject = {};
-    if (config.vendorExtendedThinking === false) {
-      alibabaOptions.enableThinking = false;
+    case "@ai-sdk/groq": {
+      // Same catalog-gated cast; the adapter enum is none|default|low|medium|high.
+      return {
+        groq: {
+          reasoningEffort: reasoningEffort as "none" | "default" | "low" | "medium" | "high",
+        } as JsonObject,
+      };
     }
-
-    const extraBody = shouldUseAlibabaChatCompletionsBuiltInTools(config)
-      ? buildAlibabaChatCompletionsExtraBody({
-          streaming: true,
-          webSearch: config.webSearchEnabled !== false,
-        })
-      : undefined;
-
-    if (extraBody !== undefined) {
-      alibabaOptions.extraBody = extraBody;
+    case "@ai-sdk/openai-compatible": {
+      return {
+        openai: {
+          reasoningEffort:
+            reasoningEffort as OpenAICompatibleLanguageModelChatOptions["reasoningEffort"],
+        } as JsonObject,
+      };
     }
-
-    if (Object.keys(alibabaOptions).length === 0) {
+    default:
       return {};
+  }
+}
+
+/**
+ * Gemini thinking plumbing: Gemini 3+ speaks `thinkingLevel`, earlier generations speak
+ * `thinkingBudget` (the era is read off the model id's major version). The declared effort passes
+ * verbatim — the catalog's `supportedReasoningEfforts` withholds the values an era rejects (e.g.
+ * Gemini 2.5 Pro has no `none`), so nothing is suppressed or clamped here.
+ */
+function buildGeminiThinkingConfigForEffort(
+  model: string,
+  effort: string | undefined,
+): GoogleLanguageModelOptions["thinkingConfig"] | undefined {
+  if (effort === undefined) {
+    return undefined;
+  }
+
+  const major = parseGeminiMajorVersion(model);
+  if (major !== undefined && major >= 3) {
+    switch (effort) {
+      case "minimal":
+        return { thinkingLevel: "minimal" };
+      case "low":
+      case "medium":
+      case "high":
+        return { thinkingLevel: effort, includeThoughts: true };
+      default:
+        return undefined;
     }
-
-    return {
-      alibaba: alibabaOptions,
-    };
   }
 
-  if (isDeepSeekOfficialAiSdkProvider(config)) {
-    const deepseekOptions = {
-      thinking: {
-        type: config.vendorExtendedThinking === false ? "disabled" : "enabled",
-      },
-    } satisfies DeepSeekLanguageModelOptions;
-
-    return {
-      deepseek: deepseekOptions as JsonObject,
-    };
+  switch (effort) {
+    case "none":
+      return { thinkingBudget: 0 };
+    case "low":
+      return { thinkingBudget: 1024, includeThoughts: true };
+    case "medium":
+      return { thinkingBudget: 4096, includeThoughts: true };
+    case "high":
+      return { thinkingBudget: 8192, includeThoughts: true };
+    default:
+      return undefined;
   }
+}
 
-  if (isMoonshotOfficialAiSdkProvider(config)) {
-    const moonshotContext = {
-      provider: "moonshot-ai" as const,
-      model: config.model,
-      transportKind: "openai-compatible" as const,
-    };
-    if (!isMoonshotThinkingSwitchModel(moonshotContext)) {
-      return {};
-    }
-
-    const moonshotaiOptions = {
-      thinking: {
-        type: config.vendorExtendedThinking === false ? "disabled" : "enabled",
-      },
-    } satisfies MoonshotAILanguageModelOptions;
-
-    return {
-      moonshotai: moonshotaiOptions as JsonObject,
-    };
+function parseGeminiMajorVersion(model: string): number | undefined {
+  const normalized = model.trim().toLowerCase();
+  const slashIndex = normalized.lastIndexOf("/");
+  const bareId = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
+  const match = /^gemini-(\d+)/.exec(bareId);
+  if (!match) {
+    return undefined;
   }
-
-  if (isXaiOfficialAiSdkProvider(config)) {
-    const reasoningEffort = resolveXaiProviderReasoningEffort(openAiReasoningEffort(config));
-    if (reasoningEffort === undefined) {
-      return {};
-    }
-
-    return {
-      xai: {
-        reasoningEffort,
-      } as JsonObject,
-    };
-  }
-
-  if (isGoogleOfficialAiSdkProvider(config)) {
-    const thinkingConfig = buildGoogleThinkingConfigForEffort(
-      config.model,
-      openAiReasoningEffort(config),
-    );
-    if (thinkingConfig === undefined) {
-      return {};
-    }
-
-    const googleOptions = {
-      thinkingConfig,
-    } satisfies GoogleLanguageModelOptions;
-
-    return {
-      google: googleOptions as JsonObject,
-    };
-  }
-
-  if (isGoogleVertexOfficialAiSdkProvider(config)) {
-    const thinkingConfig = buildGoogleThinkingConfigForEffort(
-      config.model,
-      openAiReasoningEffort(config),
-    );
-    if (thinkingConfig === undefined) {
-      return {};
-    }
-
-    const vertexOptions = {
-      thinkingConfig,
-    } satisfies GoogleLanguageModelOptions;
-
-    return {
-      vertex: vertexOptions as JsonObject,
-    };
-  }
-
-  if (isFireworksOfficialAiSdkProvider(config)) {
-    return {};
-  }
-
-  if (isGroqOfficialAiSdkProvider(config)) {
-    const reasoningEffort = resolveGroqProviderReasoningEffort(config);
-    if (reasoningEffort === undefined) {
-      return {};
-    }
-
-    const groqOptions = {
-      reasoningEffort,
-    } satisfies GroqLanguageModelOptions;
-
-    return {
-      groq: groqOptions as JsonObject,
-    };
-  }
-
-  if (
-    modelSupportsOpenAiGpt56ReasoningControls({
-      ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-      model: config.model,
-    })
-  ) {
-    // GPT-5.6+ reasoning is written as a nested reasoning object via the fetch wrapper; do not inject top-level reasoning_effort via AI SDK openai.* anymore.
-    return {};
-  }
-
-  const reasoningEffort = openAiReasoningEffort(config) as
-    | OpenAICompatibleLanguageModelChatOptions["reasoningEffort"]
-    | undefined;
-  const reasoningMode = openAiReasoningMode(config);
-
-  if (reasoningEffort === undefined && reasoningMode === undefined) {
-    return {};
-  }
-
-  return {
-    openai: {
-      ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
-      ...(reasoningMode !== undefined ? { reasoningMode } : {}),
-    } as JsonObject,
-  };
+  const major = Number(match[1]);
+  return Number.isInteger(major) ? major : undefined;
 }
 
 export function buildAiSdkProviderOptionsForTests(
@@ -1477,7 +1189,7 @@ function buildAiSdkTools(
 }
 
 function openAiMessagesToAiSdkMessages(
-  config: Pick<OpenAiTransportConfig, "llmVendor">,
+  config: Pick<OpenAiTransportConfig, "sdk">,
   messages: JsonValue[],
 ): Array<Record<string, unknown>> {
   const toolCallNames = buildToolCallNameIndex(messages);
@@ -2164,92 +1876,21 @@ function sanitizeMessageForCompatibility(
   return cloned;
 }
 
-function isDeepSeekOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "deepseek";
-}
-
-function isXaiOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "xai";
-}
-
-function isMoonshotOfficialAiSdkProvider(
-  config: Pick<OpenAiTransportConfig, "llmVendor">,
-): boolean {
-  return config.llmVendor === "moonshot-ai";
-}
-
-function isFireworksOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "fireworks-ai";
-}
-
-function isTogetherOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "together-ai";
-}
-
-function isBasetenOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "baseten";
-}
-
-function isGroqOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "groq";
-}
-
-function isDeepInfraOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "deepinfra";
-}
-
-function resolveGroqProviderReasoningEffort(
-  config: Pick<OpenAiTransportConfig, "reasoningEffort">,
-): GroqLanguageModelOptions["reasoningEffort"] | undefined {
-  const raw = config.reasoningEffort;
-  if (raw === undefined || raw === "minimal") {
-    return undefined;
-  }
-
-  // Groq Qwen requires passing default explicitly; do not map default to undefined via openAiReasoningEffort.
-  const normalized = typeof raw === "string" ? raw.trim().toLowerCase() : "";
-  switch (normalized) {
-    case "none":
-    case "default":
-    case "low":
-    case "medium":
-    case "high":
-      return normalized;
-    default:
-      return undefined;
-  }
-}
-
-function isCohereOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "cohere";
+function isMoonshotOfficialAiSdkProvider(config: Pick<OpenAiTransportConfig, "sdk">): boolean {
+  return config.sdk === "@ai-sdk/moonshotai";
 }
 
 function isTogetherOfficialAiSdkImageConfig(config: OpenAiImageGenerationConfig): boolean {
   return config.llmVendor === "together-ai";
 }
 
+/** These adapters emit structured reasoning stream events instead of raw reasoning_text deltas. */
 function usesStructuredReasoningStreamEvents(config: OpenAiTransportConfig): boolean {
-  return isDeepSeekOfficialAiSdkProvider(config) || isMoonshotOfficialAiSdkProvider(config);
-}
-
-function isAlibabaOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "alibaba";
-}
-
-function isVercelAiGatewayProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "vercel-ai-gateway";
+  return config.sdk === "@ai-sdk/deepseek" || config.sdk === "@ai-sdk/moonshotai";
 }
 
 function isVercelAiGatewayImageConfig(config: OpenAiImageGenerationConfig): boolean {
   return config.llmVendor === "vercel-ai-gateway";
-}
-
-function isGoogleOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "google";
-}
-
-function isGoogleVertexOfficialAiSdkProvider(config: OpenAiTransportConfig): boolean {
-  return config.llmVendor === "google-vertex-ai";
 }
 
 function buildAiSdkImageGenerationUrl(config: OpenAiImageGenerationConfig): string {
@@ -2268,7 +1909,7 @@ function logAiSdkChatCompletionFailure(
 ): void {
   console.error("[agent-core][chat-completions] request.failed", {
     adapter: "ai-sdk",
-    vendor: config.llmVendor ?? "custom",
+    sdk: config.sdk ?? "@ai-sdk/openai-compatible",
     model: config.model,
     baseUrl: config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
     streaming: context.streaming,

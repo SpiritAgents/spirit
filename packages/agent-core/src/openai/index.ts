@@ -6,32 +6,6 @@ export {
   resolveOpenAiModelCompatibilityProfile,
   isDeepSeekV4VisionModelId,
 } from "./openai-compat.js";
-export {
-  buildGatewayAnthropicProviderOptions,
-  gatewayAnthropicClaudeSupportedEfforts,
-  isGatewayAnthropicClaudeModel,
-  resolveGatewayAnthropicClaudeCapabilities,
-} from "./gateway-anthropic-thinking.js";
-export {
-  buildGatewayGoogleProviderOptions,
-  buildGoogleThinkingConfigForEffort,
-  gatewayGoogleGeminiSupportedEfforts,
-  isGatewayGoogleGeminiModel,
-} from "./gateway-google-thinking.js";
-export {
-  buildOpenRouterClaudeReasoningBody,
-  isOpenRouterAnthropicClaudeModel,
-  shouldInjectOpenRouterClaudeReasoning,
-} from "./openrouter-anthropic-reasoning.js";
-export {
-  isRoutedAnthropicClaudeModel,
-  routedAnthropicClaudeSupportedEfforts,
-  resolveRoutedAnthropicClaudeCapabilities,
-} from "./routed-anthropic-claude-capabilities.js";
-export {
-  isMuseReasoningEffortModel,
-  museSupportedReasoningEfforts,
-} from "./muse-reasoning-effort.js";
 export type {
   OpenAiLlmVendor,
   OpenAiModelCapabilities,

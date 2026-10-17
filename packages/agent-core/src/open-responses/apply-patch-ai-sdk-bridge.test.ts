@@ -15,31 +15,35 @@ const openAiConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "gpt-5.1",
-  llmVendor: "openai" as const,
-  responsesProvider: "openai" as const,
+  sdk: "@ai-sdk/openai" as const,
+  options: { applyPatch: true },
 };
 
+// The v3 language-model path is still selected by the legacy gateway web-search predicate
+// (pending providerTools rewiring); the fixture carries both the legacy marker and the
+// declaration-driven keys.
 const gatewayOpenAiConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "openai/gpt-5.4-mini",
   llmVendor: "vercel-ai-gateway" as const,
+  sdk: "@ai-sdk/gateway" as const,
+  options: { applyPatch: true },
 };
 
 const gatewayAnthropicConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "anthropic/claude-sonnet-4",
-  llmVendor: "vercel-ai-gateway" as const,
-  responsesProvider: "open-responses-compatible" as const,
+  sdk: "@ai-sdk/gateway" as const,
+  options: { applyPatch: true },
 };
 
 const openrouterConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "openai/gpt-5.4",
-  llmVendor: "openrouter" as const,
-  responsesProvider: "open-responses-compatible" as const,
+  options: { applyPatch: true },
 };
 
 test("normalizeApplyPatchToolCallArgumentsJson injects callId for AI SDK", () => {

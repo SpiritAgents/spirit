@@ -10,14 +10,15 @@ import {
   runWithResponsesStoredStateRequestContext,
 } from "./responses-incremental-input.js";
 
-test("responsesUsesStoredState is true for openai and azure providers", () => {
+test("responsesUsesStoredState follows the sdk adapters and the options.storedState declaration", () => {
+  // The official OpenAI/Azure adapters speak store/previous_response_id natively; generic Open
+  // Responses endpoints opt in via `options.storedState`.
   assert.equal(
     responsesUsesStoredState({
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     }),
     true,
   );
@@ -26,8 +27,7 @@ test("responsesUsesStoredState is true for openai and azure providers", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "deploy",
-      responsesProvider: "azure",
-      llmVendor: "azure",
+      sdk: "@ai-sdk/azure",
       azureResourceName: "r",
     }),
     true,
@@ -37,7 +37,7 @@ test("responsesUsesStoredState is true for openai and azure providers", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "qwen3-max",
-      llmVendor: "alibaba",
+      options: { storedState: true },
     }),
     true,
   );
@@ -46,7 +46,7 @@ test("responsesUsesStoredState is true for openai and azure providers", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "doubao-seed-1-8-251228",
-      llmVendor: "volcengine",
+      options: { storedState: true },
     }),
     true,
   );
@@ -55,8 +55,7 @@ test("responsesUsesStoredState is true for openai and azure providers", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "grok-3",
-      responsesProvider: "xai",
-      llmVendor: "xai",
+      sdk: "@ai-sdk/xai",
     }),
     false,
   );
@@ -66,8 +65,7 @@ test("responsesUsesStoredState is true for openai and azure providers", () => {
       apiKey: "k",
       model: "openai.gpt-5.5",
       baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     }),
     false,
   );
@@ -84,8 +82,7 @@ test("buildResponsesRoundInput returns full messages without a response chain", 
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     },
     1,
   );
@@ -111,8 +108,7 @@ test("buildResponsesRoundInput slices delta after anchored assistant", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     },
     1,
   );
@@ -142,8 +138,7 @@ test("buildResponsesRoundInput tool loop sends only post-anchor delta", () => {
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     },
     2,
   );
@@ -170,8 +165,7 @@ test("buildResponsesRoundInput cross-turn includes system and user only", () => 
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     },
     1,
   );
@@ -198,8 +192,7 @@ test("buildResponsesRoundInput reads top-level openAiResponses from history spre
       transportKind: "open-responses",
       apiKey: "k",
       model: "gpt-5",
-      responsesProvider: "openai",
-      llmVendor: "openai",
+      sdk: "@ai-sdk/openai",
     },
     1,
   );

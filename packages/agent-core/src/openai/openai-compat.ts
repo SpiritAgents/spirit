@@ -1,5 +1,4 @@
 import type { JsonObject, JsonValue } from "../ports.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
 import type { FileUploadConfig } from "../file-upload/uploader.js";
 import type {
   LlmModelCapabilities,
@@ -7,26 +6,16 @@ import type {
   ThinkingSwitchDeclaration,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
-import type { ModelServiceTier } from "../model-service-tier.js";
+import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
 import type { ProviderToolEntry } from "../provider-tools/types.js";
-import { resolveServiceTierRequestPlan } from "../service-tier-request.js";
-import { resolveOpenAiTransportReasoningEffortForContext } from "../reasoning-effort.js";
-import {
-  modelSupportsOpenAiGpt56ReasoningControls,
-  resolveOpenAiTransportReasoningModeForContext,
-  type ModelReasoningMode,
-} from "../openai/gpt-reasoning-controls.js";
+import { resolveDeclaredReasoningEffort, type ModelReasoningMode } from "../reasoning-effort.js";
 import { cloneJsonValue } from "../tool-agent.js";
-import {
-  isThinkingSwitchDisabledModel,
-  normalizeUpstreamModelId,
-} from "./thinking-switch-disabled-models.js";
-import {
-  buildOpenRouterClaudeReasoningBody,
-  isOpenRouterAnthropicClaudeModel,
-} from "./openrouter-anthropic-reasoning.js";
 
-/** Aligned with the host's `ModelProfile.provider`; used to attach vendor extension fields on OpenAI-form APIs. */
+/**
+ * Legacy host vendor label. New runtime paths must not branch on it — behavior is driven by the
+ * declared `sdk` (adapter package name) and the literal declarations below. The field remains only
+ * for vendor tool modules still awaiting declaration-driven rewiring; the host no longer writes it.
+ */
 export type OpenAiLlmVendor =
   | "deepseek"
   | "xai"
@@ -71,8 +60,8 @@ export interface OpenAiModelCompatibilityProfile {
    * 2. the provider's `file` capability warning is too broad to map reliably onto our own image/audio/video input semantics;
    * 3. once unsupported content stays in the history, every subsequent request triggers the same warning again.
    *
-   * So for providers/models with known compatibility sensitivity, maintain an explicit capabilities table
-   * and trim upfront before serialization; unknown models are left as-is, with no arbitrary downgrade.
+   * The declared `capabilities` of the model entry are the only source; undeclared models are left
+   * as-is, with no arbitrary downgrade.
    */
   hasExplicitCapabilities: boolean;
   capabilities: OpenAiModelCapabilities;
@@ -112,12 +101,14 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
   compactModel?: string;
   workspaceRoot?: string;
   /**
-   * The provider of the current model in the config (lowercase). When unset, no vendor-specific request body fields are attached.
+   * Legacy host vendor label, no longer written by the host. Runtime request shaping keys on the
+   * declared `sdk` and literal declarations instead; retained only for not-yet-rewired vendor
+   * tool modules.
    */
   llmVendor?: OpenAiLlmVendor;
   /**
-   * User-configured explicit model capabilities. When provided, these override
-   * provider/model inference for compatibility decisions such as image input.
+   * Declared model capabilities; when present, they are the only source for compatibility
+   * decisions such as image input trimming.
    */
   modelCapabilities?: OpenAiModelCapabilities;
   /**
@@ -129,21 +120,19 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
    */
   videoGeneration?: OpenAiVideoGenerationConfig;
   /**
-   * Abstract reasoning effort; `default` means unspecified, leaving it to the upstream or the model's default behavior.
-   * When not `default`, it maps directly to the official OpenAI chat.completions field `reasoning_effort`.
+   * Declared reasoning effort selection; sent to the wire verbatim. `default`/absent sends nothing.
    */
   reasoningEffort?: "default" | "minimal" | "none" | "low" | "medium" | "high" | "xhigh" | "max";
+  /** Declared reasoning mode; only `"pro"` produces a wire parameter (Open Responses `reasoning`). */
   reasoningMode?: ModelReasoningMode;
   /**
-   * Only for `deepseek` / `moonshot-ai`: whether to include
-   * `thinking: { type: 'enabled' | 'disabled' }` in every chat.completions request body through this transport
-   * (main conversation, tool rounds, and history compaction).
-   * Defaults to `true` (enabled); when set to `false`, `disabled` is sent.
+   * User thinking-switch state: `false` selects the `thinkingSwitch.off` encoding (or the
+   * transport default disable encoding when no off patch is declared). Absent = on.
    */
   vendorExtendedThinking?: boolean;
   /**
-   * Catalog flag: the model supports the `thinking.type` switch (e.g. Meituan LongCat).
-   * The thinking parameter is sent to `meituan` only when this is true.
+   * Catalog flag: the model supports the thinking on/off switch. Capability marker for pickers;
+   * the wire encoding is declared by `thinkingSwitch`.
    */
   supportsThinkingSwitch?: boolean;
   /** Google Vertex AI project ID (may be omitted in Express mode). */
@@ -161,18 +150,13 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
    * If `vertexClientEmail` / `vertexPrivateKey` are set, the host-built credentials take precedence over this field.
    */
   vertexGoogleAuthOptions?: Record<string, unknown>;
-  /** Cloudflare AI Gateway name; injected as `cf-aig-gateway-id` on requests. */
-  cloudflareGatewayId?: string;
   /**
-   * Per-model service tier preference (canonical Spirit value). Mapped to provider-specific
-   * request fields at request time; unsupported combinations are rejected at config parse time.
+   * Selected service tier (validated at config load). The wire effect comes from the fixed
+   * transport API table (simple form) or the tier's literal `serviceTiers` declaration.
    */
   serviceTier?: ModelServiceTier;
-  /**
-   * Aggregator upstream identity fact from the model catalog (Vercel `owned_by` / OpenRouter
-   * `canonical_slug` author prefix); used to map `serviceTier` behind aggregator routes.
-   */
-  upstreamProvider?: string;
+  /** Declared service tiers: a tier-name list (simple form) or a tier → wire-patch map (literal). */
+  serviceTiers?: ModelServiceTiersDeclaration;
   /** Full npm package name of the SDK adapter (e.g. `@ai-sdk/openai-compatible`); absent = default for the transport kind. */
   sdk?: string;
   /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */
@@ -185,7 +169,7 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
   fileUpload?: FileUploadConfig;
   /** Transport option namespace; the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
   options?: Record<string, unknown>;
-  /** Declared output token limit for the model. */
+  /** Declared output token limit for the model; mapped to the transport's wire parameter (`max_tokens` here). */
   outputLimit?: number;
   /** Declared reasoning mode set; the picker and validation source for `reasoningMode`. */
   supportedReasoningModes?: readonly ModelReasoningMode[];
@@ -194,76 +178,26 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
 }
 
 export interface OpenAiRequestTrace extends JsonObject {
-  kind:
-    | "openai_sdk_chat_completions"
-    | "deepseek_sdk_chat_completions"
-    | "xai_sdk_chat_completions"
-    | "moonshot_sdk_chat_completions"
-    | "alibaba_sdk_chat_completions"
-    | "gateway_sdk_chat_completions";
+  kind: "openai_sdk_chat_completions";
   stepIndex: number;
   model: string;
   stream: boolean;
   /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
   serviceTier?: ModelServiceTier;
-  /** OpenAI-compatible chat.completions request field. */
+  /** Declared reasoning effort as sent on the wire (`reasoning_effort`). */
   reasoning_effort?: JsonValue;
   toolChoice?: "auto";
   messages: JsonValue[];
   tools?: JsonValue[];
-  /** Genuine vendor extension sent alongside the SDK request body (if any), e.g. DeepSeek/Moonshot's `thinking`. */
-  vendorExtras?: JsonValue;
 }
 
 export function resolveOpenAiModelCompatibilityProfile(
-  config: Pick<OpenAiTransportConfig, "llmVendor" | "model" | "modelCapabilities">,
+  config: Pick<OpenAiTransportConfig, "model" | "modelCapabilities">,
 ): OpenAiModelCompatibilityProfile {
   if (config.modelCapabilities !== undefined) {
     return {
       hasExplicitCapabilities: true,
       capabilities: { ...config.modelCapabilities },
-    };
-  }
-
-  if (config.llmVendor === "deepseek") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: isDeepSeekV4VisionModelId(config.model) ? { imageInput: true } : {},
-    };
-  }
-
-  if (config.llmVendor === "moonshot-ai" || config.llmVendor === "kimi-code") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: {},
-    };
-  }
-
-  if (config.llmVendor === "xiaomi") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: {},
-    };
-  }
-
-  if (config.llmVendor === "deepinfra") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: {},
-    };
-  }
-
-  if (config.llmVendor === "minimax") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: {},
-    };
-  }
-
-  if (config.llmVendor === "siliconflow") {
-    return {
-      hasExplicitCapabilities: true,
-      capabilities: {},
     };
   }
 
@@ -275,136 +209,20 @@ export function resolveOpenAiModelCompatibilityProfile(
 
 /** Official experimental vision model; GA names will not keep a `-vision` suffix. */
 export function isDeepSeekV4VisionModelId(model: string): boolean {
-  return normalizeUpstreamModelId(model) === "deepseek-v4-flash-vision-exp";
+  const normalized = model.trim().toLowerCase();
+  const slashIndex = normalized.lastIndexOf("/");
+  const bareId = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
+  return bareId === "deepseek-v4-flash-vision-exp";
 }
 
 /**
- * OpenAI's official chat.completions reasoning effort field.
+ * The declared reasoning effort for the wire, verbatim; `default`/absent leaves it to the upstream
+ * or the model's default behavior. Maps to the chat.completions `reasoning_effort` field.
  */
 export function openAiReasoningEffort(
-  config: Pick<OpenAiTransportConfig, "llmVendor" | "model" | "reasoningEffort">,
+  config: Pick<OpenAiTransportConfig, "reasoningEffort">,
 ): string | undefined {
-  return resolveOpenAiTransportReasoningEffortForContext(config.reasoningEffort, {
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-    transportKind: "openai-compatible",
-  });
-}
-
-export function openAiReasoningMode(
-  config: Pick<OpenAiTransportConfig, "llmVendor" | "model" | "reasoningMode">,
-): ModelReasoningMode | undefined {
-  return resolveOpenAiTransportReasoningModeForContext(config.reasoningMode, {
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-  });
-}
-
-function buildOpenAiGpt56ReasoningBody(
-  config: Pick<OpenAiTransportConfig, "llmVendor" | "model" | "reasoningEffort" | "reasoningMode">,
-): Record<string, unknown> | undefined {
-  if (
-    !modelSupportsOpenAiGpt56ReasoningControls({
-      ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-      model: config.model,
-    })
-  ) {
-    return undefined;
-  }
-
-  const mode = openAiReasoningMode(config);
-  const effort = openAiReasoningEffort(config);
-  if (mode === undefined && effort === undefined) {
-    return undefined;
-  }
-
-  return {
-    ...(mode !== undefined ? { mode } : {}),
-    ...(effort !== undefined ? { effort } : {}),
-  };
-}
-
-export function openAiVendorChatCompletionBodyExtras(
-  config: Pick<
-    OpenAiTransportConfig,
-    | "llmVendor"
-    | "model"
-    | "reasoningEffort"
-    | "reasoningMode"
-    | "vendorExtendedThinking"
-    | "transportRequestProfile"
-    | "supportsThinkingSwitch"
-    | "serviceTier"
-    | "upstreamProvider"
-  >,
-): Record<string, unknown> {
-  const extras: Record<string, unknown> = {};
-  if (config.llmVendor === "meituan" && config.supportsThinkingSwitch === true) {
-    const enabled = config.vendorExtendedThinking !== false;
-    extras.thinking = { type: enabled ? "enabled" : "disabled" };
-  } else if (
-    config.llmVendor === "deepseek" ||
-    config.llmVendor === "z-ai" ||
-    config.llmVendor === "zhipu-ai" ||
-    config.llmVendor === "xiaomi" ||
-    isArkLlmVendor(config.llmVendor)
-  ) {
-    const enabled = config.vendorExtendedThinking !== false;
-    extras.thinking = { type: enabled ? "enabled" : "disabled" };
-  } else if (
-    config.llmVendor === "tencent-tokenhub" &&
-    !isThinkingSwitchDisabledModel(config.model)
-  ) {
-    const enabled = config.vendorExtendedThinking !== false;
-    extras.thinking = { type: enabled ? "enabled" : "disabled" };
-  }
-
-  if (config.llmVendor === "siliconflow" && config.transportRequestProfile === "code-completion") {
-    extras.enable_thinking = false;
-  } else if (config.llmVendor === "siliconflow" && config.vendorExtendedThinking === false) {
-    extras.enable_thinking = false;
-  }
-
-  const openRouterReasoning = buildOpenRouterClaudeReasoningBody(config);
-  if (openRouterReasoning !== undefined) {
-    extras.reasoning = openRouterReasoning;
-  } else {
-    const gpt56Reasoning = buildOpenAiGpt56ReasoningBody(config);
-    if (gpt56Reasoning !== undefined) {
-      extras.reasoning = gpt56Reasoning;
-    }
-  }
-
-  // OpenRouter Chat Completions has no AI SDK service tier option; the top-level body field is
-  // merged alongside the other vendor extras by the fetch wrapper.
-  const serviceTierPlan = resolveServiceTierRequestPlan({
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
-    ...(config.upstreamProvider !== undefined ? { upstreamProvider: config.upstreamProvider } : {}),
-    surface: "chat-completions",
-  });
-  if (serviceTierPlan.bodyServiceTier !== undefined) {
-    extras.service_tier = serviceTierPlan.bodyServiceTier;
-  }
-
-  return extras;
-}
-
-/** Ark streaming Chat Completions only returns usage in the final chunk when the request body carries stream_options. */
-export function openAiStreamingUsageBodyExtras(
-  config: Pick<OpenAiTransportConfig, "llmVendor">,
-  stream: boolean,
-): Record<string, unknown> {
-  if (!stream || !isArkLlmVendor(config.llmVendor)) {
-    return {};
-  }
-
-  return {
-    stream_options: {
-      include_usage: true,
-    },
-  };
+  return resolveDeclaredReasoningEffort(config.reasoningEffort);
 }
 
 export function buildOpenAiRequestTrace(
@@ -414,12 +232,7 @@ export function buildOpenAiRequestTrace(
   tools: readonly unknown[],
   stream = false,
 ): JsonValue[] {
-  const openRouterClaude = isOpenRouterAnthropicClaudeModel(config.llmVendor, config.model);
-  const gpt56Reasoning = openRouterClaude ? undefined : buildOpenAiGpt56ReasoningBody(config);
-  const reasoningEffort =
-    openRouterClaude || gpt56Reasoning !== undefined ? undefined : openAiReasoningEffort(config);
-  const vendorExtras = openAiVendorChatCompletionBodyExtras(config);
-  const streamingUsageExtras = openAiStreamingUsageBodyExtras(config, stream);
+  const reasoningEffort = openAiReasoningEffort(config);
   const trace: OpenAiRequestTrace = {
     kind: "openai_sdk_chat_completions",
     stepIndex,
@@ -427,20 +240,12 @@ export function buildOpenAiRequestTrace(
     stream,
     ...(config.serviceTier === undefined ? {} : { serviceTier: config.serviceTier }),
     ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
-    ...(gpt56Reasoning !== undefined ? { reasoning: gpt56Reasoning as JsonValue } : {}),
-    ...(openRouterClaude && vendorExtras.reasoning !== undefined
-      ? { reasoning: vendorExtras.reasoning as JsonValue }
-      : {}),
     messages: messages.map((message) => cloneJsonValue(message)),
     ...(tools.length > 0
       ? {
           toolChoice: "auto",
           tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)),
         }
-      : {}),
-    ...(Object.keys(vendorExtras).length > 0 ? { vendorExtras: vendorExtras as JsonValue } : {}),
-    ...(Object.keys(streamingUsageExtras).length > 0
-      ? { streamingUsageExtras: streamingUsageExtras as JsonValue }
       : {}),
   };
 

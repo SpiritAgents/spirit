@@ -5,14 +5,30 @@
       "declare": {
         "supportsThinkingType": "only"
       },
-      "note": "MiniMax M2.5/M2.7: thinking is always on and cannot be disabled (thinking-switch-disabled-models.ts); the source matches the bare ids exactly, so suffixed variants are not covered."
+      "note": "MiniMax M2.5/M2.7: thinking is always on and cannot be disabled; the record matches the bare ids exactly, so suffixed variants are not covered."
     },
     {
       "match": "minimax-m3",
       "declare": {
-        "supportsThinkingSwitch": true
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "adaptive"
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            }
+          }
+        }
       },
-      "note": "MiniMax M3 supports the adaptive/disabled thinking switch (isMinimaxM3ThinkingSwitchModel); the source matches a bare `m3` substring, prefix-anchored here for canonical ids."
+      "note": "MiniMax M3 supports the adaptive/disabled thinking switch on the Anthropic Messages adapter; the record is prefix-anchored for canonical ids."
     }
   ]
 }

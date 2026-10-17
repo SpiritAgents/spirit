@@ -4,6 +4,7 @@ import { extname, isAbsolute, resolve } from "node:path";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 
 import { getLlmFetch } from "../llm-fetch.js";
+import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
 import {
   generateObject,
   generateText,
@@ -144,6 +145,7 @@ export class AiSdkBedrockTransport
         model: createBedrockLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedMessages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
         providerOptions: buildBedrockProviderOptions(config),
@@ -186,6 +188,7 @@ export class AiSdkBedrockTransport
         model: createBedrockLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         ...(normalizedTools.length === 0
           ? {}
           : {
@@ -264,6 +267,7 @@ export class AiSdkBedrockTransport
         model: createBedrockLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         ...(normalizedTools.length === 0
           ? {}
           : {
@@ -344,6 +348,9 @@ export class AiSdkBedrockTransport
           model: createBedrockLanguageModel(compactConfig),
           messages: promptMessages as any,
           allowSystemInMessages: true,
+          ...(compactConfig.outputLimit !== undefined
+            ? { maxOutputTokens: compactConfig.outputLimit }
+            : {}),
           providerOptions: buildBedrockProviderOptions(compactConfig),
           maxRetries: 2,
         });
@@ -374,6 +381,9 @@ export class AiSdkBedrockTransport
         model: createBedrockLanguageModel(compactConfig),
         messages: promptMessages as any,
         allowSystemInMessages: true,
+        ...(compactConfig.outputLimit !== undefined
+          ? { maxOutputTokens: compactConfig.outputLimit }
+          : {}),
         providerOptions: buildBedrockProviderOptions(compactConfig),
         maxRetries: 2,
       });
@@ -442,7 +452,7 @@ function createBedrockLanguageModel(config: BedrockTransportConfig): any {
         }
       : {}),
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: getLlmFetch(),
+    fetch: createDeclaredWireMergeFetch(config, "bedrock", getLlmFetch()),
   });
   return provider(config.model);
 }

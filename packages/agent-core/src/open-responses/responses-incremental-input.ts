@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { JsonValue } from "../ports.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
 import { cloneJsonValue, isJsonObject } from "../tool-agent.js";
 import { findAnchorIndexForResponseId, findPreviousResponseId } from "./provider-state.js";
 import {
@@ -26,14 +25,18 @@ function responsesStoredStateRequestStore(previousResponseId: string | undefined
   return previousResponseId !== undefined ? { previousResponseId } : {};
 }
 
-/** Official OpenAI/Azure SDKs, plus Bailian/Volcengine Ark Responses (store / previous_response_id injected via fetch). */
+/**
+ * Server-side stored state (`store` / `previous_response_id` continuation): the official
+ * OpenAI/Azure adapters speak it natively; a generic Open Responses endpoint opts in via the
+ * declared `options.storedState`. Bedrock Mantle uses the OpenAI adapter shape but does not
+ * support the OpenAI-style remote store chain.
+ */
 export function responsesUsesStoredState(config: OpenResponsesTransportConfig): boolean {
-  // Bedrock Mantle uses responsesProvider: openai, but does not support the OpenAI-style remote store chain.
   if (isBedrockMantleOpenResponsesConfig(config)) {
     return false;
   }
 
-  if (config.llmVendor === "alibaba" || isArkLlmVendor(config.llmVendor)) {
+  if (config.options?.storedState === true) {
     return true;
   }
 

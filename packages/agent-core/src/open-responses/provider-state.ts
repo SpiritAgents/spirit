@@ -84,7 +84,7 @@ export function readResponseIdFromProviderState(message: JsonObject): string | u
 const BUILT_IN_OUTPUT_ITEMS_KEY = "builtInOutputItems";
 
 function openResponsesProviderKey(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "responsesProvider" | "model">,
+  config: Pick<OpenResponsesTransportConfig, "sdk">,
 ): (typeof RESPONSE_ID_PROVIDER_KEYS)[number] {
   return resolveOpenResponsesSdkProvider(config) === "openai" ? "openAiResponses" : "openResponses";
 }

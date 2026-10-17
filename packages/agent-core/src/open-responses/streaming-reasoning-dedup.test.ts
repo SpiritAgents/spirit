@@ -12,7 +12,7 @@ const config: OpenResponsesTransportConfig = {
   apiKey: "test",
   model: "openrouter/auto",
   llmVendor: "openrouter",
-  responsesProvider: "open-responses-compatible",
+  sdk: "@ai-sdk/open-responses",
 };
 
 async function collectThinkingChunks(
@@ -118,7 +118,7 @@ test("responses streaming persists web_search_call items on the assistant messag
     apiKey: "test",
     model: "deepseek-v4-flash",
     llmVendor: "deepseek",
-    responsesProvider: "open-responses-compatible",
+    sdk: "@ai-sdk/open-responses",
   };
 
   async function* stream(): AsyncGenerator<TextStreamPart<any>> {
@@ -179,7 +179,7 @@ test("responses streaming falls back to raw reasoning when reasoning-delta is ab
     apiKey: "test",
     model: "doubao-seed-2-1-pro-260628",
     llmVendor: "volcengine",
-    responsesProvider: "open-responses-compatible",
+    sdk: "@ai-sdk/open-responses",
   };
 
   async function* stream(): AsyncGenerator<TextStreamPart<any>> {

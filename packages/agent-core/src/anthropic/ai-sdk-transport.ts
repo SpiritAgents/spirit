@@ -5,10 +5,9 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createMiniMax } from "@ai-sdk/minimax";
 
 import { getLlmFetch } from "../llm-fetch.js";
-import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
+import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
 import { isStepfunApiHostname } from "../stepfun/stepfun-api-hosts.js";
 import { createStepfunAnthropicAwareFetch } from "../stepfun/stepfun-anthropic-fetch.js";
-import { createMeituanAnthropicAwareFetch } from "../meituan/meituan-anthropic-fetch.js";
 import {
   generateObject,
   generateText,
@@ -68,7 +67,6 @@ import {
   DEFAULT_ANTHROPIC_BASE_URL,
   type AnthropicTransportConfig,
 } from "./anthropic-compat.js";
-import { buildMinimaxProviderOptions } from "./minimax-provider-options.js";
 import {
   buildMinimaxWebSearchServerToolEntry,
   createMinimaxAnthropicServerToolsFetch,
@@ -180,9 +178,10 @@ export class AiSdkAnthropicTransport
         model: createAnthropicLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedMessages, config) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
-        providerOptions: buildAnthropicTransportProviderOptions(config),
+        providerOptions: buildAnthropicProviderOptions(config),
         maxRetries: 2,
       });
       const output = cloneJsonValue(result.object as JsonValue) as T;
@@ -227,13 +226,14 @@ export class AiSdkAnthropicTransport
         model: createAnthropicLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages, config) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         ...(normalizedTools.length === 0
           ? {}
           : {
               tools: buildAiSdkTools(normalizedTools) as any,
               toolChoice: "auto" as const,
             }),
-        providerOptions: buildAnthropicTransportProviderOptions(config),
+        providerOptions: buildAnthropicProviderOptions(config),
         maxRetries: 2,
       });
 
@@ -314,13 +314,14 @@ export class AiSdkAnthropicTransport
         model: createAnthropicLanguageModel(config),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages, config) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         ...(normalizedTools.length === 0
           ? {}
           : {
               tools: buildAiSdkTools(normalizedTools) as any,
               toolChoice: "auto" as const,
             }),
-        providerOptions: buildAnthropicTransportProviderOptions(config),
+        providerOptions: buildAnthropicProviderOptions(config),
         ...(minimaxWebSearchEnabled ? { include: { rawChunks: true } } : {}),
         maxRetries: 2,
         abortSignal: abortController.signal,
@@ -396,7 +397,10 @@ export class AiSdkAnthropicTransport
           model: createAnthropicLanguageModel(compactConfig),
           messages: promptMessages as any,
           allowSystemInMessages: true,
-          providerOptions: buildAnthropicTransportProviderOptions(compactConfig),
+          ...(compactConfig.outputLimit !== undefined
+            ? { maxOutputTokens: compactConfig.outputLimit }
+            : {}),
+          providerOptions: buildAnthropicProviderOptions(compactConfig),
           maxRetries: 2,
         });
 
@@ -426,7 +430,10 @@ export class AiSdkAnthropicTransport
         model: createAnthropicLanguageModel(compactConfig),
         messages: promptMessages as any,
         allowSystemInMessages: true,
-        providerOptions: buildAnthropicTransportProviderOptions(compactConfig),
+        ...(compactConfig.outputLimit !== undefined
+          ? { maxOutputTokens: compactConfig.outputLimit }
+          : {}),
+        providerOptions: buildAnthropicProviderOptions(compactConfig),
         maxRetries: 2,
       });
       summary = result.text;
@@ -482,25 +489,19 @@ export class AiSdkAnthropicTransport
   }
 }
 
-function buildAnthropicTransportProviderOptions(
-  config: AnthropicTransportConfig,
-): Record<string, JsonObject> {
-  return {
-    ...buildAnthropicProviderOptions(config),
-    ...buildMinimaxProviderOptions(config),
-  };
-}
-
+/**
+ * Adapter dispatch on the declared `sdk`: `@ai-sdk/minimax` uses the MiniMax Messages adapter,
+ * anything else defaults to the official Anthropic adapter.
+ */
 function createAnthropicLanguageModel(config: AnthropicTransportConfig): any {
-  const baseFetch = wrapFetchForCloudflareAiGateway(config.cloudflareGatewayId, getLlmFetch());
+  // Declared headers/body/thinkingSwitch/serviceTier merge innermost so declarations win over
+  // every other request patch.
+  const baseFetch = createDeclaredWireMergeFetch(config, "messages", getLlmFetch());
   let fetch = isStepfunAnthropicBaseUrl(config.baseUrl)
     ? createStepfunAnthropicAwareFetch(baseFetch)
     : baseFetch;
-  if (config.llmVendor === "meituan" && config.supportsThinkingSwitch === true) {
-    fetch = createMeituanAnthropicAwareFetch(fetch, config);
-  }
 
-  if (config.llmVendor === "minimax") {
+  if (config.sdk === "@ai-sdk/minimax") {
     if (shouldUseMinimaxServerToolsWebSearch(config)) {
       fetch = createMinimaxAnthropicServerToolsFetch(fetch, { webSearchEnabled: true });
     }

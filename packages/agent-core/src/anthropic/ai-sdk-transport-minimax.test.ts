@@ -38,7 +38,7 @@ test("MiniMax anthropic transport uses minimax anthropic endpoint", async () => 
         apiKey: "test-key",
         model: "MiniMax-M3",
         baseUrl: "https://api.minimax.io/anthropic/v1",
-        llmVendor: "minimax",
+        sdk: "@ai-sdk/minimax",
         workspaceRoot: process.cwd(),
       },
       { messages: [{ role: "user", content: "hi" }], steps: 0 },
@@ -52,13 +52,18 @@ test("MiniMax anthropic transport uses minimax anthropic endpoint", async () => 
   }
 });
 
-test("MiniMax anthropic code-completion profile disables M3 thinking", () => {
+test("MiniMax anthropic code-completion profile turns thinking off via the declared switch", () => {
   const profiled = applyCodeCompletionTransportProfile({
     transportKind: "anthropic",
     apiKey: "test-key",
     model: "MiniMax-M3",
     baseUrl: "https://api.minimax.io/anthropic/v1",
-    llmVendor: "minimax",
+    sdk: "@ai-sdk/minimax",
+    supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
   });
 
   assert.equal(profiled.transportRequestProfile, "code-completion");
