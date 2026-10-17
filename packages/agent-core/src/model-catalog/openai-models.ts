@@ -3,10 +3,7 @@
  */
 
 import type { LlmTransportKind } from "../llm-provider-shared.js";
-import { gatewayAnthropicClaudeSupportedEfforts } from "../openai/gateway-anthropic-thinking.js";
-import { gatewayGoogleGeminiSupportedEfforts } from "../openai/gateway-google-thinking.js";
-import { museSupportedReasoningEfforts } from "../openai/muse-reasoning-effort.js";
-import { routedAnthropicClaudeSupportedEfforts } from "../openai/routed-anthropic-claude-capabilities.js";
+import { lookupModelKnowledge } from "../model-knowledge/index.js";
 import { findProviderPreset, resolvePresetApiBase } from "../provider-presets/index.js";
 import { assertGoogleGeminiApiBase, googleNativeModelsListUrl } from "./google-gemini-endpoints.js";
 import { extractAwsRegionFromBedrockApiBase } from "./bedrock-region.js";
@@ -2196,11 +2193,23 @@ function vercelGatewayModelSupportsImageInput(record: Record<string, unknown>): 
   return tags.some((tag) => typeof tag === "string" && tag.trim().toLowerCase() === "vision");
 }
 
-function attachGatewayAnthropicReasoningEfforts(
+/**
+ * Folds the model-knowledge module's declared reasoning effort list into a listed entry
+ * (knowledge wins when it declares). Aggregator-route prefixes are stripped by the knowledge
+ * loader's normalization, so `anthropic/claude-…` / `openai/gpt-…` ids match canonical records.
+ */
+function attachModelKnowledgeReasoningEfforts(
   modelEntry: ProviderListedModelEntry,
 ): ProviderListedModelEntry {
-  const supportedReasoningEfforts = gatewayAnthropicClaudeSupportedEfforts(modelEntry.id);
-  if (supportedReasoningEfforts === undefined) {
+  const declaration = lookupModelKnowledge(modelEntry.id);
+  const declared = declaration?.["supportedReasoningEfforts"];
+  if (!Array.isArray(declared)) {
+    return modelEntry;
+  }
+  const supportedReasoningEfforts = declared.filter(
+    (effort): effort is string => typeof effort === "string",
+  );
+  if (supportedReasoningEfforts.length === 0) {
     return modelEntry;
   }
 
@@ -2210,144 +2219,10 @@ function attachGatewayAnthropicReasoningEfforts(
   };
 }
 
-function attachGatewayGeminiReasoningEfforts(
-  modelEntry: ProviderListedModelEntry,
-): ProviderListedModelEntry {
-  const supportedReasoningEfforts = gatewayGoogleGeminiSupportedEfforts(modelEntry.id);
-  if (supportedReasoningEfforts === undefined) {
-    return modelEntry;
-  }
-
-  return {
-    ...modelEntry,
-    supportedReasoningEfforts: [...supportedReasoningEfforts],
-  };
-}
-
-function attachGatewayMoonshotReasoningEfforts(
-  modelEntry: ProviderListedModelEntry,
-): ProviderListedModelEntry {
-  const normalizedId = modelEntry.id.trim().toLowerCase();
-  const bareId = normalizedId.includes("/")
-    ? normalizedId.slice(normalizedId.lastIndexOf("/") + 1)
-    : normalizedId;
-  if (!/^kimi-k3(?:-|$)/.test(bareId)) {
-    return modelEntry;
-  }
-
-  return {
-    ...modelEntry,
-    supportedReasoningEfforts: moonshotK3SupportedReasoningEfforts(),
-  };
-}
-
-const OPENAI_GPT56_REASONING_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"] as const;
-
-function isListedOpenAiGpt6AstraModel(modelId: string): boolean {
-  const resolved = normalizeListedOpenAiModelIdForVersionCheck(modelId).toLowerCase();
-  return /^gpt-6-astra(?:$|[-_])/.test(resolved);
-}
-
-function listedOpenAiGpt56ReasoningEfforts(modelId: string): readonly string[] {
-  if (isListedOpenAiGpt6AstraModel(modelId)) {
-    return OPENAI_GPT56_REASONING_EFFORTS.filter((effort) => effort !== "none");
-  }
-
-  return OPENAI_GPT56_REASONING_EFFORTS;
-}
-
-function normalizeListedOpenAiModelIdForVersionCheck(modelId: string): string {
-  const trimmed = modelId.trim();
-  const lower = trimmed.toLowerCase();
-  if (lower.startsWith("openai/")) {
-    return trimmed.slice("openai/".length).trim();
-  }
-  if (lower.startsWith("openai.")) {
-    return trimmed.slice("openai.".length).trim();
-  }
-  return trimmed;
-}
-
-function parseListedOpenAiGptModelVersion(
-  modelId: string,
-): { major: number; minor: number } | undefined {
-  const normalized = normalizeListedOpenAiModelIdForVersionCheck(modelId).toLowerCase();
-
-  const versioned = /^gpt-(\d+)\.(\d+)/.exec(normalized);
-  if (versioned) {
-    return {
-      major: Number.parseInt(versioned[1] ?? "", 10),
-      minor: Number.parseInt(versioned[2] ?? "", 10),
-    };
-  }
-
-  const majorOnly = /^gpt-(\d+)(?:$|[-_])/.exec(normalized);
-  if (majorOnly) {
-    return {
-      major: Number.parseInt(majorOnly[1] ?? "", 10),
-      minor: 0,
-    };
-  }
-
-  return undefined;
-}
-
-function isListedOpenAiGpt56OrLaterModel(modelId: string): boolean {
-  const version = parseListedOpenAiGptModelVersion(modelId);
-  if (!version) {
-    return false;
-  }
-
-  if (version.major > 5) {
-    return true;
-  }
-
-  return version.major === 5 && version.minor >= 6;
-}
-
-function attachGatewayOpenAiGpt56ReasoningEfforts(
-  modelEntry: ProviderListedModelEntry,
-): ProviderListedModelEntry {
-  const normalizedId = modelEntry.id.trim().toLowerCase();
-  const isGatewayOpenAiRoute = normalizedId.startsWith("openai/");
-  const isDirectOpenAiGpt = !normalizedId.includes("/") && normalizedId.startsWith("gpt-");
-  if (!isGatewayOpenAiRoute && !isDirectOpenAiGpt) {
-    return modelEntry;
-  }
-  if (!isListedOpenAiGpt56OrLaterModel(modelEntry.id)) {
-    return modelEntry;
-  }
-
-  return {
-    ...modelEntry,
-    supportedReasoningEfforts: [...listedOpenAiGpt56ReasoningEfforts(modelEntry.id)],
-  };
-}
-
-function attachMuseReasoningEfforts(
-  modelEntry: ProviderListedModelEntry,
-): ProviderListedModelEntry {
-  const supportedReasoningEfforts = museSupportedReasoningEfforts(modelEntry.id);
-  if (supportedReasoningEfforts === undefined) {
-    return modelEntry;
-  }
-
-  return {
-    ...modelEntry,
-    supportedReasoningEfforts: [...supportedReasoningEfforts],
-  };
-}
-
 function attachGatewayModelReasoningEfforts(
   modelEntry: ProviderListedModelEntry,
 ): ProviderListedModelEntry {
-  return attachMuseReasoningEfforts(
-    attachGatewayOpenAiGpt56ReasoningEfforts(
-      attachGatewayMoonshotReasoningEfforts(
-        attachGatewayGeminiReasoningEfforts(attachGatewayAnthropicReasoningEfforts(modelEntry)),
-      ),
-    ),
-  );
+  return attachModelKnowledgeReasoningEfforts(modelEntry);
 }
 
 function readOpenRouterSupportedReasoningEfforts(
@@ -2370,26 +2245,9 @@ function readOpenRouterSupportedReasoningEfforts(
     }
   }
 
-  // OpenRouter explicitly returns [] to indicate effort selection is unsupported; this must be distinguished from a missing field (undefined → fallback allowed).
+  // OpenRouter explicitly returns [] to indicate effort selection is unsupported (distinct from a
+  // missing field); a model-knowledge record's declared list still wins on top when one exists.
   return efforts;
-}
-
-function attachOpenRouterAnthropicReasoningEfforts(
-  modelEntry: ProviderListedModelEntry,
-): ProviderListedModelEntry {
-  if (modelEntry.supportedReasoningEfforts !== undefined) {
-    return modelEntry;
-  }
-
-  const supportedReasoningEfforts = routedAnthropicClaudeSupportedEfforts(modelEntry.id);
-  if (supportedReasoningEfforts === undefined) {
-    return modelEntry;
-  }
-
-  return {
-    ...modelEntry,
-    supportedReasoningEfforts,
-  };
 }
 
 export function parseVercelAiGatewayModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
@@ -2553,13 +2411,11 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
       }
       if (hasImage && !hasText) {
         entries.push(
-          attachMuseReasoningEfforts(
-            attachOpenRouterAnthropicReasoningEfforts(
-              attachListedModelMetadata(
-                { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
-                record,
-                readOpenRouterPricing(record),
-              ),
+          attachModelKnowledgeReasoningEfforts(
+            attachListedModelMetadata(
+              { id: id.trim(), supportsImageGeneration: true, ...upstreamProviderFact },
+              record,
+              readOpenRouterPricing(record),
             ),
           ),
         );
@@ -2574,10 +2430,8 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
     }
 
     entries.push(
-      attachMuseReasoningEfforts(
-        attachOpenRouterAnthropicReasoningEfforts(
-          attachListedModelMetadata(modelEntry, record, readOpenRouterPricing(record)),
-        ),
+      attachModelKnowledgeReasoningEfforts(
+        attachListedModelMetadata(modelEntry, record, readOpenRouterPricing(record)),
       ),
     );
   }

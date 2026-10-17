@@ -18,6 +18,7 @@ import {
   type SpiritModelReasoningMode,
   type ThinkingSwitchDeclaration,
 } from "./config.js";
+import type { SpiritServiceTiersDeclaration } from "./config.js";
 import {
   loadActiveModelProfile,
   loadModelProfile,
@@ -89,6 +90,7 @@ function anthropicSupportedEfforts(
 /** Declaration fields carried verbatim onto transport configs; every member is optional. */
 interface TransportDeclarationFields {
   sdk?: string;
+  serviceTiers?: SpiritServiceTiersDeclaration;
   headers?: Record<string, string>;
   body?: JsonObject;
   providerTools?: ProviderToolEntry[];
@@ -118,6 +120,7 @@ function transportDeclarationFields(
       ? { supportedReasoningModes: profile.supportedReasoningModes }
       : {}),
     ...(profile.thinkingSwitch !== undefined ? { thinkingSwitch: profile.thinkingSwitch } : {}),
+    ...(profile.serviceTiers !== undefined ? { serviceTiers: profile.serviceTiers } : {}),
   };
 }
 

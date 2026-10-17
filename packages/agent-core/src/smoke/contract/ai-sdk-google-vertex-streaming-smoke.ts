@@ -88,7 +88,7 @@ async function main(): Promise<void> {
       apiKey: "",
       model: VERTEX_MODEL,
       baseUrl,
-      llmVendor: "google-vertex-ai",
+      sdk: "@ai-sdk/google-vertex",
       vertexProject: VERTEX_PROJECT,
       vertexLocation: VERTEX_LOCATION,
       vertexGoogleAuthOptions: {

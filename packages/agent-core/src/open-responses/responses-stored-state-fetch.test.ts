@@ -5,20 +5,24 @@ import { createResponsesStoredStateAwareFetch } from "./responses-stored-state-f
 import { runWithResponsesStoredStateRequestContext } from "./responses-incremental-input.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
+// Generic Open Responses endpoints opt into server-side stored state via `options.storedState`.
 const alibabaResponsesConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test-key",
   model: "qwen3-max",
   baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  llmVendor: "alibaba",
+  options: { storedState: true },
 };
 
+// The Ark input-item status patch is a legacy quirk still keyed on the legacy vendor field; the
+// stored-state injection it rides on is declared via `options.storedState`.
 const volcengineResponsesConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test-key",
   model: "doubao-seed-1-8-251228",
   baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
   llmVendor: "volcengine",
+  options: { storedState: true },
 };
 
 test("volcengine responses fetch injects completed status on input items", async () => {

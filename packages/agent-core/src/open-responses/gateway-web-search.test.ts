@@ -116,8 +116,7 @@ test("createApplyPatchAwareFetch injects stashed apply_patch output for OpenRout
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "openai/gpt-5.4",
-      llmVendor: "openrouter",
-      responsesProvider: "open-responses-compatible",
+      options: { applyPatch: true },
     };
     const fetchFn = createApplyPatchAwareFetch(openrouterConfig, async (_input, init) => {
       patchedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;

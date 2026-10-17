@@ -11,7 +11,7 @@ const config: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test",
   model: "test",
-  responsesProvider: "open-responses-compatible",
+  sdk: "@ai-sdk/open-responses",
 };
 
 async function* streamWithDuplicateToolCallParts(): AsyncGenerator<TextStreamPart<any>> {

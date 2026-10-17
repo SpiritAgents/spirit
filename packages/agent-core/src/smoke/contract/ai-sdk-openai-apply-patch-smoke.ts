@@ -46,7 +46,8 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "gpt-5.1",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    responsesProvider: "openai" as const,
+    sdk: "@ai-sdk/openai" as const,
+    options: { applyPatch: true },
     llmVendor: "openai" as const,
     store: false,
   };

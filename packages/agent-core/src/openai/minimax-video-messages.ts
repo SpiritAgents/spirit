@@ -1,7 +1,6 @@
 import type { JsonObject, JsonValue } from "../ports.js";
 import type { AnthropicTransportConfig } from "../anthropic/anthropic-compat.js";
 import { isMinimaxAnthropicConfig } from "../anthropic/minimax-multimodal.js";
-import { isMinimaxM3ThinkingSwitchModel } from "./gateway-minimax-thinking.js";
 import { uploadMinimaxVideoFile } from "./minimax-files.js";
 import type { OpenAiTransportConfig } from "./openai-compat.js";
 import { resolveLocalMediaPath } from "./openai-multimodal-media-path.js";
@@ -70,10 +69,6 @@ export async function resolveMinimaxVideoInAnthropicMessages(
   }
 
   if (!config.modelCapabilities?.videoInput) {
-    return;
-  }
-
-  if (!isMinimaxM3ThinkingSwitchModel(config.model)) {
     return;
   }
 

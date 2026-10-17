@@ -53,7 +53,8 @@ async function main(): Promise<void> {
     model: "openai/gpt-5.4",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
     llmVendor: "vercel-ai-gateway" as const,
-    responsesProvider: "open-responses-compatible" as const,
+    sdk: "@ai-sdk/gateway" as const,
+    options: { applyPatch: true },
     store: false,
   };
 

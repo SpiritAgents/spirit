@@ -1,5 +1,5 @@
 import type { FileUploadConfig } from "../file-upload/uploader.js";
-import type { ModelReasoningMode } from "../openai/gpt-reasoning-controls.js";
+import type { ModelReasoningMode } from "../reasoning-effort.js";
 import type { JsonObject, JsonValue } from "../ports.js";
 import type { ProviderToolEntry } from "../provider-tools/types.js";
 import { cloneJsonValue } from "../tool-agent.js";

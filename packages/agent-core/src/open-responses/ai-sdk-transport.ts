@@ -63,7 +63,6 @@ import {
 } from "./apply-patch-bridge.js";
 import { shouldUseOpenAiSdkApplyPatchTool } from "./apply-patch-eligibility.js";
 import { isResponsesBuiltInToolName } from "./responses-built-in-tools.js";
-import { xaiResponsesRejectsLocalFunctionTools } from "./web-search-eligibility.js";
 import {
   buildResponsesGenerateTools,
   buildResponsesProviderOptionsWithServiceTier,
@@ -165,6 +164,7 @@ export class AiSdkOpenResponsesTransport
         model: createResponsesLanguageModel(config) as any,
         messages: openAiMessagesToResponsesAiSdkMessages(messages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
         providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
@@ -205,14 +205,6 @@ export class AiSdkOpenResponsesTransport
       traceExtras,
     );
 
-    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length)) {
-      return {
-        kind: "failure",
-        error: xaiResponsesLocalToolsUnsupportedMessage(),
-        requestTrace: tracedRequest,
-      };
-    }
-
     try {
       return await runWithResponsesStoredStateRequestContext(roundInput.previousResponseId, () =>
         withDeepSeekBuiltInInputContext(config, roundInput.apiMessages, () =>
@@ -227,6 +219,7 @@ export class AiSdkOpenResponsesTransport
                 config,
               ) as any,
               allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
               ...(hasGenerateTools
                 ? {
                     tools: generateTools as any,
@@ -344,18 +337,6 @@ export class AiSdkOpenResponsesTransport
 
     const abortController = new AbortController();
 
-    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length)) {
-      return {
-        eventStream: emptyResponsesEventStream(),
-        completion: Promise.resolve({
-          kind: "failure",
-          error: xaiResponsesLocalToolsUnsupportedMessage(),
-          requestTrace,
-        }),
-        cancel: () => abortController.abort(),
-      };
-    }
-
     try {
       beginApplyPatchBridgeRound();
       const generateTools = buildResponsesGenerateTools(config, normalizedTools);
@@ -373,6 +354,7 @@ export class AiSdkOpenResponsesTransport
               model: createResponsesLanguageModel(config) as any,
               messages: sdkMessages as any,
               allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
               ...(hasGenerateTools
                 ? {
                     tools: generateTools as any,
@@ -468,6 +450,9 @@ export class AiSdkOpenResponsesTransport
           model: createResponsesLanguageModel(compactConfig) as any,
           messages: promptMessages as any,
           allowSystemInMessages: true,
+          ...(compactConfig.outputLimit !== undefined
+            ? { maxOutputTokens: compactConfig.outputLimit }
+            : {}),
           providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
           maxRetries: 2,
         });
@@ -498,6 +483,9 @@ export class AiSdkOpenResponsesTransport
         model: createResponsesLanguageModel(compactConfig) as any,
         messages: promptMessages as any,
         allowSystemInMessages: true,
+        ...(compactConfig.outputLimit !== undefined
+          ? { maxOutputTokens: compactConfig.outputLimit }
+          : {}),
         providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
         maxRetries: 2,
       });
@@ -567,7 +555,3 @@ async function* emptyResponsesEventStream(): AsyncGenerator<
   void,
   undefined
 > {}
-
-function xaiResponsesLocalToolsUnsupportedMessage(): string {
-  return "SpaceXAI Responses API does not support local function tools yet; please use the Chat Completions transport instead.";
-}

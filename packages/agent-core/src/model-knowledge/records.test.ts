@@ -7,6 +7,11 @@ const CLAUDE_5_FULL_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
 const GPT56_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"];
 const GPT56_MODES = ["standard", "pro"];
 const MUSE_BASE_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"];
+const ANTHROPIC_OFF_DISABLED = { body: { thinking: { type: "disabled" } } };
+const THINKING_TYPE_SWITCH = {
+  on: { body: { thinking: { type: "enabled" } } },
+  off: ANTHROPIC_OFF_DISABLED,
+};
 const MUSE_EFFORTS_WITH_MAX = [...MUSE_BASE_EFFORTS, "max"];
 
 test("registry bundles every family file in deterministic alphabetical order", () => {
@@ -49,20 +54,35 @@ test("declare payloads only use config declaration keys", () => {
 });
 
 test("claude opus 5.x resolves adaptive thinking with full efforts across id forms", () => {
-  const expected = {
+  const opus5 = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      off: ANTHROPIC_OFF_DISABLED,
+    },
   };
-  assert.deepEqual(lookupModelKnowledge("claude-opus-5.5"), expected);
-  assert.deepEqual(lookupModelKnowledge("anthropic/claude-opus-5.5"), expected);
-  assert.deepEqual(lookupModelKnowledge("anthropic.claude-opus-5-5-v1"), expected);
-  assert.deepEqual(lookupModelKnowledge("claude-sonnet-5"), expected);
+  assert.deepEqual(lookupModelKnowledge("claude-opus-5.5"), opus5);
+  assert.deepEqual(lookupModelKnowledge("anthropic/claude-opus-5.5"), opus5);
+  assert.deepEqual(lookupModelKnowledge("anthropic.claude-opus-5-5-v1"), opus5);
+  assert.deepEqual(lookupModelKnowledge("claude-sonnet-5"), {
+    supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
+    supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: ANTHROPIC_OFF_DISABLED,
+    },
+  });
 });
 
 test("claude fable/mythos 5 are always-on thinking without a switch", () => {
+  // Always-on: only the on encoding is declared (adaptive + summarized display).
   const expected = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingType: "only",
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+    },
   };
   assert.deepEqual(lookupModelKnowledge("claude-fable-5"), expected);
   assert.deepEqual(lookupModelKnowledge("anthropic/claude-mythos-5"), expected);
@@ -72,24 +92,40 @@ test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)"
   const expected = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      off: ANTHROPIC_OFF_DISABLED,
+    },
   };
   assert.deepEqual(lookupModelKnowledge("claude-opus-4.8"), expected);
   assert.deepEqual(lookupModelKnowledge("claude-opus-4-7"), expected);
 });
 
 test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
+  const adaptive = {
+    on: { body: { thinking: { type: "adaptive" } } },
+    off: ANTHROPIC_OFF_DISABLED,
+  };
   assert.deepEqual(lookupModelKnowledge("claude-opus-4.6"), {
     supportedReasoningEfforts: ["low", "medium", "high", "max"],
     supportsThinkingSwitch: true,
+    thinkingSwitch: adaptive,
   });
   assert.deepEqual(lookupModelKnowledge("anthropic/claude-sonnet-4.6"), {
     supportedReasoningEfforts: ["low", "medium", "high"],
     supportsThinkingSwitch: true,
+    thinkingSwitch: adaptive,
   });
 });
 
 test("legacy claude models are budget thinking: switch without effort levels", () => {
-  const expected = { supportsThinkingSwitch: true };
+  const expected = {
+    supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+      off: ANTHROPIC_OFF_DISABLED,
+    },
+  };
   for (const model of [
     "claude-sonnet-4-5",
     "claude-opus-4-5",
@@ -192,9 +228,10 @@ test("kimi k3 is thinking-only with fixed low/high/max efforts", () => {
 });
 
 test("kimi k2.5+ supports the thinking switch; k2.7-code shadows to an empty declare", () => {
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), { supportsThinkingSwitch: true });
+  const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
+  assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), expected);
+  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), expected);
+  assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), expected);
   assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code"), {});
   assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code-highspeed"), {});
   assert.equal(lookupModelKnowledge("kimi-k2"), undefined);
@@ -205,6 +242,7 @@ test("deepseek v4 is a thinking switch with high/max efforts; r1/reasoner are th
   const v4 = {
     supportedReasoningEfforts: ["high", "max"],
     supportsThinkingSwitch: true,
+    thinkingSwitch: THINKING_TYPE_SWITCH,
   };
   assert.deepEqual(lookupModelKnowledge("deepseek-v4-pro"), v4);
   assert.deepEqual(lookupModelKnowledge("deepseek/deepseek-v4-flash-vision-exp"), v4);
@@ -217,20 +255,29 @@ test("deepseek v4 is a thinking switch with high/max efforts; r1/reasoner are th
 test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
   assert.deepEqual(lookupModelKnowledge("minimax-m2.5"), { supportsThinkingType: "only" });
   assert.deepEqual(lookupModelKnowledge("minimax-m2.7"), { supportsThinkingType: "only" });
-  assert.deepEqual(lookupModelKnowledge("minimax/MiniMax-M3"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("minimax/minimax-m3"), { supportsThinkingSwitch: true });
+  const m3 = {
+    supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: ANTHROPIC_OFF_DISABLED,
+    },
+  };
+  assert.deepEqual(lookupModelKnowledge("minimax/MiniMax-M3"), m3);
+  assert.deepEqual(lookupModelKnowledge("minimax/minimax-m3"), m3);
 });
 
 test("glm-4.5+ supports the thinking switch; glm-4 does not", () => {
-  assert.deepEqual(lookupModelKnowledge("glm-4.5"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("zai/glm-4.7"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("glm-5.2"), { supportsThinkingSwitch: true });
+  const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
+  assert.deepEqual(lookupModelKnowledge("glm-4.5"), expected);
+  assert.deepEqual(lookupModelKnowledge("zai/glm-4.7"), expected);
+  assert.deepEqual(lookupModelKnowledge("glm-5.2"), expected);
   assert.equal(lookupModelKnowledge("glm-4"), undefined);
 });
 
 test("mimo v-series supports the thinking switch except mimo-v2-flash", () => {
-  assert.deepEqual(lookupModelKnowledge("mimo-v2.5"), { supportsThinkingSwitch: true });
-  assert.deepEqual(lookupModelKnowledge("xiaomi/mimo-v2.5-pro"), { supportsThinkingSwitch: true });
+  const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
+  assert.deepEqual(lookupModelKnowledge("mimo-v2.5"), expected);
+  assert.deepEqual(lookupModelKnowledge("xiaomi/mimo-v2.5-pro"), expected);
   assert.equal(lookupModelKnowledge("mimo-v2-flash"), undefined);
   assert.equal(lookupModelKnowledge("mimo-v2-flash-8b"), undefined);
 });

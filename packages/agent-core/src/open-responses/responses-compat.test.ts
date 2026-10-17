@@ -18,106 +18,32 @@ test("normalizeGatewayOpenAiModelId", () => {
   assert.equal(normalizeGatewayOpenAiModelId("anthropic/claude-sonnet-4"), undefined);
 });
 
-test("resolveOpenResponsesSdkProvider gateway openai route stays open-responses for reasoning", () => {
-  // Gateway-routed OpenAI models must NOT use `@ai-sdk/openai` (which strips the
-  // `openai/` prefix and suppresses gateway reasoning streaming). Default to the
-  // generic open-responses provider.
+test("resolveOpenResponsesSdkProvider keys on the declared sdk package name", () => {
+  assert.equal(resolveOpenResponsesSdkProvider({ sdk: "@ai-sdk/openai" }), "openai");
+  assert.equal(resolveOpenResponsesSdkProvider({ sdk: "@ai-sdk/xai" }), "xai");
+  assert.equal(resolveOpenResponsesSdkProvider({ sdk: "@ai-sdk/azure" }), "azure");
+});
+
+test("resolveOpenResponsesSdkProvider defaults to the generic open-responses adapter", () => {
+  assert.equal(resolveOpenResponsesSdkProvider({}), "open-responses-compatible");
+  // Gateway-routed OpenAI models must NOT use `@ai-sdk/openai` (which strips the `openai/` prefix
+  // and suppresses gateway reasoning streaming); the preset declares @ai-sdk/gateway.
   assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "vercel-ai-gateway",
-      model: "openai/gpt-5.1",
-    }),
+    resolveOpenResponsesSdkProvider({ sdk: "@ai-sdk/gateway" }),
     "open-responses-compatible",
   );
   assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "vercel-ai-gateway",
-      model: "openai/gpt-5.1",
-      responsesProvider: "open-responses-compatible",
-    }),
-    "open-responses-compatible",
-  );
-});
-
-test("resolveOpenResponsesSdkProvider honors explicit openai provider override", () => {
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "vercel-ai-gateway",
-      model: "openai/gpt-5.1",
-      responsesProvider: "openai",
-    }),
-    "openai",
-  );
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "fireworks-ai",
-      model: "accounts/fireworks/models/deepseek-v3p1",
-      responsesProvider: "openai",
-    }),
-    "openai",
-  );
-});
-
-test("resolveOpenResponsesSdkProvider gateway non-openai route stays compatible", () => {
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "vercel-ai-gateway",
-      model: "anthropic/claude-sonnet-4",
-    }),
+    resolveOpenResponsesSdkProvider({ sdk: "@ai-sdk/open-responses" }),
     "open-responses-compatible",
   );
 });
 
-test("resolveOpenResponsesLanguageModelId strips gateway openai prefix", () => {
+test("resolveOpenResponsesLanguageModelId passes the declared model id through", () => {
   assert.equal(
-    resolveOpenResponsesLanguageModelId({
-      llmVendor: "vercel-ai-gateway",
-      model: "openai/gpt-5.4-mini",
-    }),
-    "gpt-5.4-mini",
+    resolveOpenResponsesLanguageModelId({ model: "openai/gpt-5.4-mini" }),
+    "openai/gpt-5.4-mini",
   );
-  assert.equal(
-    resolveOpenResponsesLanguageModelId({
-      llmVendor: "openrouter",
-      model: "openai/gpt-5.4-mini",
-    }),
-    "gpt-5.4-mini",
-  );
-  assert.equal(
-    resolveOpenResponsesLanguageModelId({
-      llmVendor: "openai",
-      model: "gpt-5.1",
-    }),
-    "gpt-5.1",
-  );
-});
-
-test("resolveOpenResponsesSdkProvider openrouter stays open-responses-compatible", () => {
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "openrouter",
-      model: "openai/gpt-5.1",
-    }),
-    "open-responses-compatible",
-  );
-});
-
-test("resolveOpenResponsesSdkProvider azure uses official azure sdk", () => {
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "azure",
-      model: "my-gpt4o-deploy",
-    }),
-    "azure",
-  );
-  assert.equal(
-    resolveOpenResponsesSdkProvider({
-      llmVendor: "azure",
-      model: "my-gpt4o-deploy",
-      responsesProvider: "azure",
-    }),
-    "azure",
-  );
+  assert.equal(resolveOpenResponsesLanguageModelId({ model: "gpt-5.1" }), "gpt-5.1");
 });
 
 test("resolveAzureResourceName prefers explicit azureResourceName", () => {
@@ -158,11 +84,11 @@ test("isGatewayOpenAiRoutedModel", () => {
   assert.equal(isGatewayOpenAiRoutedModel("gpt-5.1"), false);
 });
 
-test("openResponsesReasoningTrace gpt-5.6 pro max includes mode and effort", () => {
+test("openResponsesReasoningTrace passes declared effort and pro mode verbatim", () => {
   assert.deepEqual(
     openResponsesReasoningTrace({
-      llmVendor: "vercel-ai-gateway",
-      model: "openai/gpt-5.6-sol",
+      model: "gpt-5.6-sol",
+      sdk: "@ai-sdk/openai",
       reasoningEffort: "max",
       reasoningMode: "pro",
     }),
@@ -170,52 +96,103 @@ test("openResponsesReasoningTrace gpt-5.6 pro max includes mode and effort", () 
   );
 });
 
-test("openResponsesReasoningTrace gpt-5.6 standard omits mode", () => {
+test("openResponsesReasoningTrace omits mode for standard and downgrades nothing", () => {
   assert.deepEqual(
     openResponsesReasoningTrace({
-      llmVendor: "openai",
-      model: "gpt-5.6-sol",
-      reasoningEffort: "medium",
+      model: "gpt-5.5",
+      sdk: "@ai-sdk/openai",
+      reasoningEffort: "max",
       reasoningMode: "standard",
     }),
-    { effort: "medium", summary: "auto" },
+    { effort: "max", summary: "auto" },
   );
 });
 
-test("openResponsesReasoningTrace gpt-5.5 ignores mode and downgrades max", () => {
-  assert.deepEqual(
-    openResponsesReasoningTrace({
-      llmVendor: "openai",
-      model: "gpt-5.5",
-      reasoningEffort: "max",
-      reasoningMode: "pro",
-    }),
-    { effort: "xhigh", summary: "auto" },
+test("openResponsesReasoningTrace sends nothing when nothing is declared and the adapter drops summaries", () => {
+  assert.equal(
+    openResponsesReasoningTrace({ model: "some-model", sdk: "@ai-sdk/huggingface" }),
+    undefined,
   );
 });
 
-test("buildOpenResponsesRequestTrace uses deepseek_open_responses kind", () => {
-  const trace = buildOpenResponsesRequestTrace(
-    {
-      transportKind: "open-responses",
-      apiKey: "k",
-      model: "deepseek-v4-flash",
-      llmVendor: "deepseek",
-    },
-    1,
-    [],
-    [],
-  );
-  assert.equal((trace[0] as { kind?: string }).kind, "deepseek_open_responses");
+test("openResponsesReasoningTrace defaults the reasoning summary to auto on eligible adapters", () => {
+  assert.deepEqual(openResponsesReasoningTrace({ model: "gpt-5.5", sdk: "@ai-sdk/openai" }), {
+    summary: "auto",
+  });
 });
 
-test("resolveOpenResponsesReasoningSummary omits deepseek", () => {
+test("resolveOpenResponsesReasoningSummary is sdk-keyed: ineligible adapters send nothing", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      llmVendor: "deepseek",
-      model: "deepseek-v4-flash",
+      model: "some-model",
+      sdk: "@ai-sdk/huggingface",
       reasoningEffort: "high",
     }),
     undefined,
   );
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({ model: "some-model", reasoningEffort: "high" }),
+    "auto",
+  );
+});
+
+test("resolveOpenResponsesReasoningSummary honors off and effort none", () => {
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({
+      model: "gpt-5.5",
+      sdk: "@ai-sdk/openai",
+      reasoningEffort: "none",
+    }),
+    undefined,
+  );
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({
+      model: "gpt-5.5",
+      sdk: "@ai-sdk/openai",
+      reasoningSummary: "off",
+    }),
+    undefined,
+  );
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({
+      model: "gpt-5.5",
+      sdk: "@ai-sdk/openai",
+      reasoningSummary: "detailed",
+    }),
+    "detailed",
+  );
+});
+
+test("resolveOpenResponsesReasoningSummary omits Bedrock Mantle endpoints", () => {
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({
+      model: "openai.gpt-5.5",
+      sdk: "@ai-sdk/openai",
+      baseUrl: "https://bedrock-mantle.us-west-2.api.aws/openai/v1",
+      reasoningEffort: "high",
+    }),
+    undefined,
+  );
+});
+
+test("buildOpenResponsesRequestTrace keys the trace kind on the declared sdk", () => {
+  const base = {
+    transportKind: "open-responses",
+    apiKey: "k",
+    model: "m",
+  } as const;
+  const kind = (sdk?: string) =>
+    (
+      buildOpenResponsesRequestTrace(
+        { ...base, ...(sdk !== undefined ? { sdk } : {}) },
+        1,
+        [],
+        [],
+      )[0] as { kind?: string }
+    ).kind;
+  assert.equal(kind("@ai-sdk/openai"), "openai_sdk_responses");
+  assert.equal(kind("@ai-sdk/xai"), "xai_sdk_responses");
+  assert.equal(kind("@ai-sdk/azure"), "azure_sdk_responses");
+  assert.equal(kind(), "open_responses_sdk_responses");
+  assert.equal(kind("@ai-sdk/open-responses"), "open_responses_sdk_responses");
 });

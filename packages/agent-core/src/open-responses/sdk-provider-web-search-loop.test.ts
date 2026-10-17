@@ -26,6 +26,7 @@ const openAiConfig: OpenResponsesTransportConfig = {
   apiKey: "test",
   model: "gpt-5.4",
   llmVendor: "openai",
+  sdk: "@ai-sdk/openai",
 };
 
 test("shouldUseSdkProviderWebSearchMultiStep matches gateway and openai", () => {

@@ -3,9 +3,25 @@
     {
       "match": "mimo-v(?!2-flash(?:-|$))",
       "declare": {
-        "supportsThinkingSwitch": true
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "enabled"
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            }
+          }
+        }
       },
-      "note": "MiMo v-series supports the thinking switch except mimo-v2-flash, which has no deep thinking mode (isXiaomiThinkingSwitchEligibleModel). On the open-responses transport the control surfaces as reasoning effort instead — the materializing provider's transport decides."
+      "note": "MiMo v-series supports the thinking switch except mimo-v2-flash, which has no deep thinking mode. On the open-responses transport the control surfaces as reasoning effort instead — the materializing provider's transport decides."
     }
   ]
 }

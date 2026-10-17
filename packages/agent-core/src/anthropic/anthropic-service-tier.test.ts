@@ -146,7 +146,6 @@ function betaList(request: CapturedRequest): string[] {
 
 test("buildAnthropicProviderOptions maps fast onto native speed", () => {
   const options = buildAnthropicProviderOptions({
-    model: TEST_MODEL,
     serviceTier: "fast",
   });
   assert.equal(options.anthropic?.speed, "fast");
@@ -155,10 +154,7 @@ test("buildAnthropicProviderOptions maps fast onto native speed", () => {
 
 test("buildAnthropicProviderOptions sends nothing for default and unset tiers", () => {
   for (const serviceTier of [undefined, "default", "flex", "ultrafast"] as const) {
-    const options = buildAnthropicProviderOptions({
-      model: TEST_MODEL,
-      ...(serviceTier === undefined ? {} : { serviceTier }),
-    });
+    const options = buildAnthropicProviderOptions(serviceTier === undefined ? {} : { serviceTier });
     assert.equal(options.anthropic?.speed, undefined, `speed must stay unset for ${serviceTier}`);
   }
 });
@@ -249,4 +245,79 @@ test("buildAnthropicRequestTrace omits serviceTier when unset", () => {
   const [trace] = buildAnthropicRequestTrace(baseConfig(), 1, [], []);
   assert.ok(isJsonObject(trace));
   assert.equal("serviceTier" in trace, false);
+});
+
+test("anthropic literal serviceTiers merge the declared header and body verbatim", async () => {
+  const { completion, requests } = await runRound({
+    ...baseConfig(),
+    serviceTier: "fast",
+    serviceTiers: {
+      fast: {
+        headers: { "anthropic-beta": FAST_MODE_BETA },
+        body: { speed: "fast" },
+      },
+    },
+  });
+
+  assert.equal(completion.kind, "success");
+  const request = lastRequest(requests);
+  assert.equal(request.body.speed, "fast");
+  assert.ok(betaList(request).includes(FAST_MODE_BETA));
+});
+
+test("anthropic thinkingSwitch on patch merges into the serialized body", async () => {
+  const { completion, requests } = await runRound({
+    ...baseConfig(),
+    supportsThinkingSwitch: true,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  });
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, {
+    type: "adaptive",
+    display: "summarized",
+  });
+});
+
+test("anthropic thinkingSwitch off patch wins over the transport default disable encoding", async () => {
+  const { completion, requests } = await runRound({
+    ...baseConfig(),
+    supportsThinkingSwitch: true,
+    vendorExtendedThinking: false,
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  });
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, { type: "disabled" });
+});
+
+test("anthropic off state without a declared off patch uses the transport default encoding", async () => {
+  const { completion, requests } = await runRound({
+    ...baseConfig(),
+    supportsThinkingSwitch: true,
+    vendorExtendedThinking: false,
+  });
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, { type: "disabled" });
+});
+
+test("anthropic sends no thinking field when nothing is declared", async () => {
+  const { completion, requests } = await runRound(baseConfig());
+
+  assert.equal(completion.kind, "success");
+  assert.equal(lastRequest(requests).body.thinking, undefined);
+});
+
+test("anthropic maps the declared outputLimit to max_tokens", async () => {
+  const { completion, requests } = await runRound({ ...baseConfig(), outputLimit: 8192 });
+
+  assert.equal(completion.kind, "success");
+  assert.equal(lastRequest(requests).body.max_tokens, 8192);
 });

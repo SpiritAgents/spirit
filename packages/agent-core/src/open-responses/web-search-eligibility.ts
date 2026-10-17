@@ -92,18 +92,3 @@ export function buildProviderWebSearchPromptSection(
 export function buildWebSearchResponsesTraceToolEntry(): JsonObject {
   return { type: "web_search" };
 }
-
-/** xAI Responses rejects host function tools unless provider web search is enabled. */
-export function xaiResponsesRejectsLocalFunctionTools(
-  config: OpenResponsesTransportConfig,
-  localFunctionToolCount: number,
-): boolean {
-  if (config.llmVendor !== "xai" || localFunctionToolCount === 0) {
-    return false;
-  }
-
-  // When the user opts out of web search on xAI, local function tools cannot be sent either
-  // (the API rejects them without provider web search), so the turn inherits the same failure
-  // path as a provider that never qualified for web search.
-  return !shouldUseProviderWebSearch(config);
-}

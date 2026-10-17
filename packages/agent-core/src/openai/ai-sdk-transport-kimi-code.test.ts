@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import type { LlmStreamEvent } from "../ports.js";
+import type { JsonObject, LlmStreamEvent } from "../ports.js";
 import { clearMoonshotChatCompletionMessages } from "./moonshot-chat-completion-messages.js";
 import { clearMoonshotVideoUploadCache } from "./moonshot-files.js";
 import { AiSdkOpenAiCompatibleTransport } from "./ai-sdk-transport.js";
@@ -41,7 +41,7 @@ const STREAM_CHUNKS: Record<string, unknown>[] = [
 ];
 
 async function runStreamingRound(
-  llmVendor: "kimi-code" | "custom",
+  body: JsonObject | undefined,
   capturedBodies: Record<string, unknown>[],
 ) {
   setLlmFetchTransportOverrideForTests(async (_input, init) => {
@@ -56,7 +56,7 @@ async function runStreamingRound(
         apiKey: "test-key",
         model: "k3",
         baseUrl: "https://api.kimi.com/coding/v1",
-        llmVendor,
+        ...(body !== undefined ? { body } : {}),
         workspaceRoot: process.cwd(),
       },
       { messages: [{ role: "user", content: "hi" }], steps: 0 },
@@ -71,9 +71,12 @@ async function runStreamingRound(
   }
 }
 
-test("Kimi Code streaming chat completions request includes stream_options.include_usage", async () => {
+test("a declared provider body merges stream_options.include_usage into streaming requests", async () => {
   const capturedBodies: Record<string, unknown>[] = [];
-  const completion = await runStreamingRound("kimi-code", capturedBodies);
+  const completion = await runStreamingRound(
+    { stream_options: { include_usage: true } },
+    capturedBodies,
+  );
 
   const chatCompletionBody = capturedBodies.at(-1);
   assert.ok(chatCompletionBody);
@@ -88,9 +91,9 @@ test("Kimi Code streaming chat completions request includes stream_options.inclu
   assert.equal(completion.result.usage?.totalTokens, 12);
 });
 
-test("other openai-compatible vendors still omit stream_options.include_usage", async () => {
+test("requests without a declared body omit stream_options.include_usage", async () => {
   const capturedBodies: Record<string, unknown>[] = [];
-  const completion = await runStreamingRound("custom", capturedBodies);
+  const completion = await runStreamingRound(undefined, capturedBodies);
 
   const chatCompletionBody = capturedBodies.at(-1);
   assert.ok(chatCompletionBody);
@@ -254,7 +257,7 @@ test("Kimi Code transport drops video_url without videoInput", async () => {
   }
 });
 
-test("Kimi Code transport drops video_url when catalog capabilities are omitted", async () => {
+test("Kimi Code transport passes video_url through when capabilities are undeclared", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-kimi-code-video-omitted-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   const captured: CapturedRequest[] = [];
@@ -315,9 +318,10 @@ test("Kimi Code transport drops video_url when catalog capabilities are omitted"
     );
     const chatBody = captured.find((entry) => entry.body !== undefined);
     assert.ok(chatBody);
+    // Undeclared capabilities: the compat layer does not trim; the declared video reference or
+    // inline data reaches the wire as-is (unknown models are left untouched, never downgraded).
     const wire = JSON.stringify(chatBody.body?.messages ?? "");
-    assert.equal(wire.includes("video_url"), false);
-    assert.equal(wire.includes(videoPath), false);
+    assert.equal(wire.includes("video_url") || wire.includes("data:video"), true);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
     clearMoonshotChatCompletionMessages();

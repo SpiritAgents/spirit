@@ -6,135 +6,83 @@ import {
   resolveAnthropicThinkingConfig,
 } from "./anthropic-compat.js";
 
-test("resolveAnthropicThinkingConfig disables thinking for known unsupported metadata", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-3-haiku-20240307",
-      supportedEfforts: [],
-    }),
-    { type: "disabled" },
-  );
+test("resolveAnthropicThinkingConfig sends nothing by default (upstream default applies)", () => {
+  assert.equal(resolveAnthropicThinkingConfig({}), undefined);
 });
 
-test("resolveAnthropicThinkingConfig enables thinking when effort is explicitly selected", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-future-reasoner",
-      effort: "max",
-    }),
-    { type: "enabled", budgetTokens: 12_000 },
-  );
+test("resolveAnthropicThinkingConfig disables thinking for the code-completion profile", () => {
+  assert.deepEqual(resolveAnthropicThinkingConfig({ transportRequestProfile: "code-completion" }), {
+    type: "disabled",
+  });
 });
 
-test("resolveAnthropicThinkingConfig keeps known adaptive defaults", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-opus-4-7",
-    }),
-    { type: "adaptive", display: "summarized" },
-  );
+test("resolveAnthropicThinkingConfig encodes the user-off state as the protocol disabled", () => {
+  assert.deepEqual(resolveAnthropicThinkingConfig({ vendorExtendedThinking: false }), {
+    type: "disabled",
+  });
 });
 
-test("resolveAnthropicThinkingConfig keeps Claude 5 generation adaptive defaults", () => {
+test("resolveAnthropicThinkingConfig prefers explicit thinking over every default", () => {
   assert.deepEqual(
     resolveAnthropicThinkingConfig({
-      model: "claude-fable-5",
-    }),
-    { type: "adaptive", display: "summarized" },
-  );
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-sonnet-5",
-    }),
-    { type: "adaptive" },
-  );
-});
-
-test("resolveAnthropicThinkingConfig leaves unknown models undefined", () => {
-  assert.equal(
-    resolveAnthropicThinkingConfig({
-      model: "custom-anthropic-compatible-model",
-    }),
-    undefined,
-  );
-});
-
-test("resolveAnthropicThinkingConfig disables thinking for code-completion profile", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-sonnet-4-6",
       transportRequestProfile: "code-completion",
-    }),
-    { type: "disabled" },
-  );
-});
-
-test("resolveAnthropicThinkingConfig prefers explicit thinking over code-completion default", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      model: "claude-sonnet-4-6",
-      transportRequestProfile: "code-completion",
+      vendorExtendedThinking: false,
       thinking: { type: "enabled", budgetTokens: 1024 },
     }),
     { type: "enabled", budgetTokens: 1024 },
   );
-});
-
-test("buildAnthropicProviderOptions emits disabled thinking for code-completion profile", () => {
   assert.deepEqual(
-    buildAnthropicProviderOptions({
-      model: "claude-sonnet-4-6",
-      transportRequestProfile: "code-completion",
+    resolveAnthropicThinkingConfig({
+      thinking: { type: "adaptive", display: "summarized" },
     }),
-    {
-      anthropic: {
-        thinking: { type: "disabled" },
-        toolStreaming: true,
-      },
-    },
+    { type: "adaptive", display: "summarized" },
   );
 });
 
-test("buildAnthropicProviderOptions emits disabled thinking for unsupported models", () => {
-  assert.deepEqual(
-    buildAnthropicProviderOptions({
-      model: "claude-3-haiku-20240307",
-      supportedEfforts: [],
-    }),
-    {
-      anthropic: {
-        thinking: { type: "disabled" },
-        toolStreaming: true,
-      },
+test("buildAnthropicProviderOptions emits disabled thinking for the code-completion profile", () => {
+  assert.deepEqual(buildAnthropicProviderOptions({ transportRequestProfile: "code-completion" }), {
+    anthropic: {
+      thinking: { type: "disabled" },
+      toolStreaming: true,
     },
-  );
+  });
 });
 
-test("buildAnthropicProviderOptions omits thinking for unknown models", () => {
-  assert.deepEqual(
-    buildAnthropicProviderOptions({
-      model: "custom-anthropic-compatible-model",
-    }),
-    {
-      anthropic: {
-        toolStreaming: true,
-      },
+test("buildAnthropicProviderOptions omits thinking by default", () => {
+  assert.deepEqual(buildAnthropicProviderOptions({}), {
+    anthropic: {
+      toolStreaming: true,
     },
-  );
+  });
 });
 
-test("buildAnthropicProviderOptions omits anthropic thinking for meituan switch models", () => {
-  assert.deepEqual(
-    buildAnthropicProviderOptions({
-      model: "LongCat-2.0",
-      llmVendor: "meituan",
-      supportsThinkingSwitch: true,
+test("buildAnthropicProviderOptions passes the declared effort through verbatim", () => {
+  assert.deepEqual(buildAnthropicProviderOptions({ effort: "high" }), {
+    anthropic: {
       effort: "high",
+      toolStreaming: true,
+    },
+  });
+});
+
+test("buildAnthropicProviderOptions maps the fast tier onto the native speed parameter", () => {
+  const options = buildAnthropicProviderOptions({ serviceTier: "fast" });
+  assert.equal(options.anthropic?.speed, "fast");
+});
+
+test("buildAnthropicProviderOptions passes through protocol options", () => {
+  assert.deepEqual(
+    buildAnthropicProviderOptions({
+      sendReasoning: false,
+      disableParallelToolUse: true,
+      structuredOutputMode: "jsonTool",
     }),
     {
       anthropic: {
-        effort: "high",
         toolStreaming: true,
+        sendReasoning: false,
+        disableParallelToolUse: true,
+        structuredOutputMode: "jsonTool",
       },
     },
   );

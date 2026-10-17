@@ -4,7 +4,6 @@ import { test } from "vitest";
 import type { JsonValue } from "../ports.js";
 import { buildResponsesTraceTools } from "./apply-patch-bridge.js";
 import { buildResponsesProviderOptions } from "./model-factory.js";
-import { xaiResponsesRejectsLocalFunctionTools } from "./web-search-eligibility.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const alibabaResponsesConfig: OpenResponsesTransportConfig = {
@@ -15,9 +14,10 @@ const alibabaResponsesConfig: OpenResponsesTransportConfig = {
   llmVendor: "alibaba",
 };
 
-test("alibaba responses provider options enable thinking", () => {
+test("alibaba responses provider options carry no vendor thinking field", () => {
+  // The thinking wire encoding arrives via the declared thinkingSwitch merge, not providerOptions.
   const options = buildResponsesProviderOptions(alibabaResponsesConfig);
-  assert.equal(options.alibaba?.enable_thinking, true);
+  assert.equal(options.alibaba, undefined);
 });
 
 test("alibaba responses trace lists builtin tools with host function tools", () => {
@@ -43,10 +43,6 @@ test("alibaba responses trace lists builtin tools with host function tools", () 
         (tool as { type?: string }).type === "function",
     ),
   );
-});
-
-test("xai local-tool rejection does not apply to alibaba", () => {
-  assert.equal(xaiResponsesRejectsLocalFunctionTools(alibabaResponsesConfig, 2), false);
 });
 
 function demoToolDefinition(): JsonValue {
