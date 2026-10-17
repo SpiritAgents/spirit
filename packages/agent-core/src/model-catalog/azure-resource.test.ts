@@ -7,7 +7,7 @@ import {
   isValidAzureResourceName,
   normalizeAzureResourceName,
   validateAzureResourceName,
-} from "./azure-resource.js";
+} from "../azure-resource.js";
 
 test("normalizeAzureResourceName trims whitespace", () => {
   assert.equal(normalizeAzureResourceName("  my-resource  "), "my-resource");

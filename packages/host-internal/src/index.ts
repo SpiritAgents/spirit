@@ -29,6 +29,9 @@ export * from "./azure-resource.js";
 export * from "./cloudflare-ai-gateway-resource.js";
 export * from "./bedrock-mantle.js";
 export * from "./model-provider-presets.js";
+// Explicit re-export: the openai-models shim also re-exports agent-core's structural aliases of
+// these names; the named export pins the canonical union types and resolves the star ambiguity.
+export type { ModelProviderId, ProviderModelTransportKind } from "./model-provider-presets.js";
 export * from "./config-v2.js";
 export * from "./credentials/index.js";
 export * from "./permissions/index.js";

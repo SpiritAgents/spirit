@@ -1,106 +1,334 @@
-//! Same source as `packages/host-internal/src/model-provider-presets.json` (TUI preset root URLs and order).
+//! Reads `packages/agent-core/src/provider-presets/provider-presets.json` (TUI preset endpoints and picker order).
 
 use crate::model_registry::ModelTransportKind;
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ModelProviderPresetsFile {
+struct ProviderPresetsFile {
+    custom: CustomProviderPreset,
+    providers: Vec<ProviderPresetEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CustomProviderPreset {
+    default_api_base: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderPresetEntry {
+    id: String,
+    default_transport: String,
+    transports: BTreeMap<String, String>,
+    sites: Option<ProviderPresetSites>,
+    billing_plans: Option<Vec<ProviderPresetBillingPlan>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProviderPresetSites {
     #[allow(dead_code)]
-    default_custom_api_base: String,
-    preset_api_base_by_provider: std::collections::BTreeMap<String, String>,
+    default: String,
+    items: Vec<ProviderPresetSite>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderPresetSite {
+    id: String,
+    api_base: Option<String>,
+    transports: Option<BTreeMap<String, String>>,
+    requires_workspace_id: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderPresetBillingPlan {
+    id: String,
+    api_base: Option<String>,
+    transports: Option<BTreeMap<String, String>>,
+}
+
+struct Presets {
+    file: ProviderPresetsFile,
+    /// Picker order is the manifest array order; `custom` is the wizard-only last row.
     picker_order: Vec<String>,
 }
 
-static PRESETS: OnceLock<ModelProviderPresetsFile> = OnceLock::new();
+static PRESETS: OnceLock<Presets> = OnceLock::new();
 
-fn presets() -> &'static ModelProviderPresetsFile {
+fn presets() -> &'static Presets {
     PRESETS.get_or_init(|| {
-        serde_json::from_str(include_str!(concat!(
+        let file: ProviderPresetsFile = serde_json::from_str(include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../../packages/host-internal/src/model-provider-presets.json"
+            "/../../packages/agent-core/src/provider-presets/provider-presets.json"
         )))
-        .expect("parse packages/host-internal/src/model-provider-presets.json")
+        .expect("parse packages/agent-core/src/provider-presets/provider-presets.json");
+        let picker_order = file
+            .providers
+            .iter()
+            .map(|provider| provider.id.clone())
+            .chain(std::iter::once("custom".to_string()))
+            .collect();
+        Presets { file, picker_order }
     })
 }
 
-/// `selected` matches the bottom form "Provider" option index and aligns with `pickerOrder` in the JSON.
-pub(crate) fn model_add_preset_api_base_by_choice_index(selected: usize) -> Option<String> {
-    let p = presets();
-    let id = p.picker_order.get(selected)?;
-    if id == "custom" {
-        return None;
-    }
-    p.preset_api_base_by_provider.get(id).cloned()
+fn preset_entry(provider_id: &str) -> Option<&'static ProviderPresetEntry> {
+    presets()
+        .file
+        .providers
+        .iter()
+        .find(|provider| provider.id == provider_id)
 }
 
+fn pick_transport_base(
+    transports: &BTreeMap<String, String>,
+    transport_kind: ModelTransportKind,
+    default_transport: &str,
+) -> Option<String> {
+    transports
+        .get(transport_kind.as_str())
+        .or_else(|| transports.get(default_transport))
+        .cloned()
+}
+
+/// Legacy display placeholders: the old flat preset bases carried `YOUR_*` sentinel text shown in
+/// wizard default endpoints; the manifest now carries `{placeholder}` templates. The CLI keeps
+/// resolving the old literals until the runtime flip (the v1 wizard substitutes real values).
+fn legacy_template_value(key: &str) -> Option<&'static str> {
+    match key {
+        "resourceName" => Some("YOUR_RESOURCE_NAME"),
+        "accountId" => Some("YOUR_ACCOUNT_ID"),
+        "awsRegion" => Some("us-east-1"),
+        "project" => Some("YOUR_PROJECT_ID"),
+        "location" => Some("us-central1"),
+        _ => None,
+    }
+}
+
+/// Substitutes `{placeholder}` occurrences: the wizard workspace id wins for `{workspaceId}`, then
+/// the legacy display placeholders. A `{workspaceId}` without a non-empty value fails the
+/// resolution (None); unknown placeholders stay literal.
+fn substitute_templates(base: &str, workspace_id: Option<&str>) -> Option<String> {
+    let mut resolved = String::with_capacity(base.len());
+    let mut rest = base;
+    while let Some(start) = rest.find('{') {
+        let Some(end_offset) = rest[start..].find('}') else {
+            break;
+        };
+        let end = start + end_offset;
+        let key = &rest[start + 1..end];
+        resolved.push_str(&rest[..start]);
+        let value = if key == "workspaceId" {
+            workspace_id
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+        } else {
+            legacy_template_value(key)
+        };
+        match value {
+            Some(value) => resolved.push_str(value),
+            None if key == "workspaceId" => return None,
+            None => resolved.push_str(&rest[start..=end]),
+        }
+        rest = &rest[end + 1..];
+    }
+    resolved.push_str(rest);
+    Some(resolved)
+}
+
+/// Mirrors `resolvePresetApiBase` in agent-core: billing plan override, then the selected site
+/// (`site.transports[transport]` falling back to the default transport slot, then the provider
+/// slots), then the provider-level `transports[transport] ?? transports[defaultTransport]`, then
+/// `{placeholder}` substitution. Unknown providers / sites / plans resolve to None.
+fn resolve_preset_api_base(
+    preset: &ProviderPresetEntry,
+    transport_kind: ModelTransportKind,
+    site: Option<&str>,
+    billing_plan: Option<&str>,
+    workspace_id: Option<&str>,
+) -> Option<String> {
+    let raw = if let Some(plan_id) = billing_plan {
+        let plan = preset
+            .billing_plans
+            .as_ref()?
+            .iter()
+            .find(|plan| plan.id == plan_id)?;
+        match &plan.transports {
+            Some(transports) => {
+                pick_transport_base(transports, transport_kind, &preset.default_transport)
+                    .or_else(|| plan.api_base.clone())
+            }
+            None => plan.api_base.clone(),
+        }
+    } else if let Some(site_id) = site {
+        let site = preset
+            .sites
+            .as_ref()?
+            .items
+            .iter()
+            .find(|site| site.id == site_id)?;
+        match &site.transports {
+            Some(transports) => {
+                pick_transport_base(transports, transport_kind, &preset.default_transport).or_else(
+                    || {
+                        pick_transport_base(
+                            &preset.transports,
+                            transport_kind,
+                            &preset.default_transport,
+                        )
+                    },
+                )
+            }
+            None => site.api_base.clone(),
+        }
+    } else {
+        pick_transport_base(
+            &preset.transports,
+            transport_kind,
+            &preset.default_transport,
+        )
+    }?;
+    substitute_templates(&raw, workspace_id)
+}
+
+fn resolve_site_api_base(
+    provider: crate::model_registry::ModelProvider,
+    transport_kind: ModelTransportKind,
+    site: &str,
+    workspace_id: &str,
+) -> Option<String> {
+    resolve_preset_api_base(
+        preset_entry(provider.as_str())?,
+        transport_kind,
+        Some(site),
+        None,
+        Some(workspace_id),
+    )
+}
+
+/// The provider's endpoint for a transport, without site or billing-plan overrides.
+pub(crate) fn model_add_preset_api_base(
+    provider: crate::model_registry::ModelProvider,
+    transport_kind: ModelTransportKind,
+) -> Option<String> {
+    if provider == crate::model_registry::ModelProvider::Custom {
+        return None;
+    }
+    resolve_preset_api_base(
+        preset_entry(provider.as_str())?,
+        transport_kind,
+        None,
+        None,
+        None,
+    )
+}
+
+/// `selected` matches the bottom form "Provider" option index (manifest array order, then `custom`).
+#[cfg(test)]
+pub(crate) fn model_add_preset_api_base_by_choice_index(selected: usize) -> Option<String> {
+    let provider = model_add_provider_at_choice_index(selected)?;
+    model_add_preset_api_base_by_provider(provider)
+}
+
+/// The provider's default-transport endpoint (the preset's `defaultTransport` slot).
 pub(crate) fn model_add_preset_api_base_by_provider(
     provider: crate::model_registry::ModelProvider,
 ) -> Option<String> {
     if provider == crate::model_registry::ModelProvider::Custom {
         return None;
     }
-    presets()
-        .preset_api_base_by_provider
-        .get(provider.as_str())
-        .cloned()
+    let preset = preset_entry(provider.as_str())?;
+    let default_transport = preset
+        .default_transport
+        .parse()
+        .unwrap_or(ModelTransportKind::OpenAiCompatible);
+    resolve_preset_api_base(preset, default_transport, None, None, None)
 }
 
-/// Aligned with `presetApiBaseByTransport.kimi-code` / `providerSiteSelection.kimi-code`.
 pub(crate) fn model_add_kimi_code_site_api_base(
     site: &str,
     transport_kind: ModelTransportKind,
 ) -> Option<String> {
-    let origin = match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => "https://api.kimi.com",
-        "intl" => "https://api.kimi.ai",
-        _ => return None,
-    };
-    match transport_kind {
-        ModelTransportKind::Anthropic => Some(format!("{origin}/coding")),
-        ModelTransportKind::OpenAiCompatible => Some(format!("{origin}/coding/v1")),
-        _ => None,
-    }
+    resolve_preset_api_base(
+        preset_entry("kimi-code")?,
+        transport_kind,
+        Some(site),
+        None,
+        None,
+    )
 }
 
 pub(crate) fn model_add_kimi_code_api_base(transport_kind: ModelTransportKind) -> Option<String> {
     model_add_kimi_code_site_api_base("intl", transport_kind)
 }
 
-pub(crate) fn model_add_kimi_code_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+fn model_add_site_id_from_choice(provider_id: &str, selected: usize) -> &'static str {
+    let sites = preset_entry(provider_id).and_then(|preset| preset.sites.as_ref());
+    match sites {
+        Some(sites) if !sites.items.is_empty() => {
+            let index = selected.min(sites.items.len() - 1);
+            &sites.items[index].id
+        }
+        _ => "",
+    }
 }
 
-pub(crate) fn model_add_kimi_code_site_id_from_api_base(api_base: &str) -> Option<&'static str> {
+fn host_of(api_base: &str) -> Option<&str> {
     let after_scheme = api_base
         .trim()
         .strip_prefix("https://")
         .or_else(|| api_base.trim().strip_prefix("http://"))?;
-    let host = after_scheme.split('/').next()?.split(':').next()?;
-    match host {
-        "api.kimi.com" => Some("cn"),
-        "api.kimi.ai" => Some("intl"),
-        _ => None,
-    }
+    after_scheme.split('/').next()?.split(':').next()
+}
+
+fn model_add_site_id_from_api_base(provider_id: &str, api_base: &str) -> Option<&'static str> {
+    let host = host_of(api_base)?;
+    let sites = &preset_entry(provider_id)?.sites.as_ref()?.items;
+    sites
+        .iter()
+        .find(|site| {
+            site.api_base
+                .as_deref()
+                .into_iter()
+                .chain(
+                    site.transports
+                        .as_ref()
+                        .map(|transports| transports.values().map(String::as_str))
+                        .into_iter()
+                        .flatten(),
+                )
+                .any(|base| host_of(base) == Some(host))
+        })
+        .map(|site| site.id.as_str())
+}
+
+pub(crate) fn model_add_kimi_code_site_id_from_choice(selected: usize) -> &'static str {
+    model_add_site_id_from_choice("kimi-code", selected)
+}
+
+pub(crate) fn model_add_kimi_code_site_id_from_api_base(api_base: &str) -> Option<&'static str> {
+    model_add_site_id_from_api_base("kimi-code", api_base)
 }
 
 pub(crate) fn model_add_default_custom_api_base(transport_kind: ModelTransportKind) -> String {
     let p = presets();
     match transport_kind {
         ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-            p.default_custom_api_base.clone()
+            p.file.custom.default_api_base.clone()
         }
-        ModelTransportKind::Anthropic => p
-            .preset_api_base_by_provider
-            .get("anthropic")
-            .cloned()
-            .unwrap_or_else(|| p.default_custom_api_base.clone()),
-        ModelTransportKind::Bedrock => p
-            .preset_api_base_by_provider
-            .get("amazon-bedrock")
-            .cloned()
-            .unwrap_or_else(|| p.default_custom_api_base.clone()),
+        ModelTransportKind::Anthropic => {
+            model_add_preset_api_base_by_provider(crate::model_registry::ModelProvider::Anthropic)
+                .unwrap_or_else(|| p.file.custom.default_api_base.clone())
+        }
+        ModelTransportKind::Bedrock => model_add_preset_api_base_by_provider(
+            crate::model_registry::ModelProvider::AmazonBedrock,
+        )
+        .unwrap_or_else(|| p.file.custom.default_api_base.clone()),
     }
 }
 
@@ -200,73 +428,74 @@ pub(crate) fn model_add_picker_order_ids() -> &'static [String] {
     &presets().picker_order
 }
 
-/// Aligned with `providerSiteSelection.siliconflow` in `model-provider-presets.json`.
 pub(crate) fn model_add_siliconflow_site_api_base(site: &str) -> Option<String> {
-    match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => Some("https://api.siliconflow.cn/v1".to_string()),
-        "intl" => Some("https://api.siliconflow.com/v1".to_string()),
-        _ => None,
-    }
+    resolve_preset_api_base(
+        preset_entry("siliconflow")?,
+        ModelTransportKind::OpenAiCompatible,
+        Some(site),
+        None,
+        None,
+    )
 }
 
 pub(crate) fn model_add_siliconflow_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+    model_add_site_id_from_choice("siliconflow", selected)
 }
 
-/// Aligned with `providerSiteSelection.moonshot-ai` in `model-provider-presets.json`.
 pub(crate) fn model_add_moonshot_site_api_base(site: &str) -> Option<String> {
-    match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => Some("https://api.moonshot.cn/v1".to_string()),
-        "intl" => Some("https://api.moonshot.ai/v1".to_string()),
-        _ => None,
-    }
+    resolve_preset_api_base(
+        preset_entry("moonshot-ai")?,
+        ModelTransportKind::OpenAiCompatible,
+        Some(site),
+        None,
+        None,
+    )
 }
 
 pub(crate) fn model_add_moonshot_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+    model_add_site_id_from_choice("moonshot-ai", selected)
 }
 
-/// Aligned with `providerSiteSelection.tencent-tokenhub` in `model-provider-presets.json`.
 pub(crate) fn model_add_tencent_tokenhub_site_api_base(site: &str) -> Option<String> {
-    match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => Some("https://tokenhub.tencentmaas.com/v1".to_string()),
-        "intl" => Some("https://tokenhub-intl.tencentmaas.com/v1".to_string()),
-        _ => None,
-    }
+    resolve_preset_api_base(
+        preset_entry("tencent-tokenhub")?,
+        ModelTransportKind::OpenAiCompatible,
+        Some(site),
+        None,
+        None,
+    )
 }
 
 pub(crate) fn model_add_tencent_tokenhub_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+    model_add_site_id_from_choice("tencent-tokenhub", selected)
 }
 
-/// Aligned with `providerSiteSelection.minimax` in `model-provider-presets.json`.
 pub(crate) fn model_add_minimax_site_api_base(
     site: &str,
     transport_kind: ModelTransportKind,
 ) -> Option<String> {
-    let origin = match site.trim().to_ascii_lowercase().as_str() {
-        "cn" => "https://api.minimax.cn",
-        "intl" => "https://api.minimax.io",
-        _ => return None,
-    };
-    match transport_kind {
-        ModelTransportKind::Anthropic => Some(format!("{origin}/anthropic/v1")),
-        _ => Some(format!("{origin}/v1")),
-    }
+    resolve_preset_api_base(
+        preset_entry("minimax")?,
+        transport_kind,
+        Some(site),
+        None,
+        None,
+    )
 }
 
 pub(crate) fn model_add_minimax_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+    model_add_site_id_from_choice("minimax", selected)
 }
 
-/// Aligned with `providerSiteSelection.alibaba` in `model-provider-presets.json`.
+static ALIBABA_SITE_IDS: OnceLock<Vec<&'static str>> = OnceLock::new();
+
 pub(crate) fn model_add_alibaba_site_ids() -> &'static [&'static str] {
-    &[
-        "cn-beijing",
-        "ap-southeast-1",
-        "us-virginia",
-        "eu-central-1",
-    ]
+    ALIBABA_SITE_IDS.get_or_init(|| {
+        preset_entry("alibaba")
+            .and_then(|preset| preset.sites.as_ref())
+            .map(|sites| sites.items.iter().map(|site| site.id.as_str()).collect())
+            .unwrap_or_default()
+    })
 }
 
 pub(crate) fn model_add_alibaba_site_id_from_choice(selected: usize) -> &'static str {
@@ -277,26 +506,30 @@ pub(crate) fn model_add_alibaba_site_id_from_choice(selected: usize) -> &'static
 }
 
 pub(crate) fn model_add_alibaba_site_requires_workspace_id(site: &str) -> bool {
-    matches!(
-        site.trim(),
-        "cn-beijing" | "ap-southeast-1" | "eu-central-1"
-    )
+    let Some(site) = preset_entry("alibaba")
+        .and_then(|preset| preset.sites.as_ref())
+        .and_then(|sites| sites.items.iter().find(|item| item.id == site.trim()))
+    else {
+        return false;
+    };
+    if site.requires_workspace_id == Some(true) {
+        return true;
+    }
+    site.api_base
+        .as_deref()
+        .into_iter()
+        .chain(
+            site.transports
+                .as_ref()
+                .map(|transports| transports.values().map(String::as_str))
+                .into_iter()
+                .flatten(),
+        )
+        .any(|base| base.contains("{workspaceId}"))
 }
 
-/// Aligned with `alibabaTokenPlan.compatibleApiBase` in `model-provider-presets.json`.
-const ALIBABA_TOKEN_PLAN_COMPATIBLE_API_BASE: &str =
-    "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
-
-/// Aligned with `zAiGlmCodingPlan.compatibleApiBase` in `model-provider-presets.json`.
-const Z_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE: &str = "https://api.z.ai/api/coding/paas/v4";
-
-/// Aligned with `zhipuAiGlmCodingPlan.compatibleApiBase` in `model-provider-presets.json`.
-const ZHIPU_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE: &str =
-    "https://open.bigmodel.cn/api/coding/paas/v4";
-
-/// Aligned with `providerSiteSelection.stepfun` in `model-provider-presets.json`.
 pub(crate) fn model_add_stepfun_site_id_from_choice(selected: usize) -> &'static str {
-    if selected == 0 { "cn" } else { "intl" }
+    model_add_site_id_from_choice("stepfun", selected)
 }
 
 pub(crate) fn model_add_stepfun_api_base(
@@ -304,40 +537,36 @@ pub(crate) fn model_add_stepfun_api_base(
     step_plan: bool,
     site: Option<&str>,
 ) -> Option<String> {
-    let origin = match site.unwrap_or("cn").trim().to_ascii_lowercase().as_str() {
-        "cn" => "https://api.stepfun.com",
-        "intl" => "https://api.stepfun.ai",
-        _ => return None,
-    };
+    let preset = preset_entry("stepfun")?;
     if step_plan {
-        return match transport_kind {
-            ModelTransportKind::Anthropic => Some(format!("{origin}/step_plan")),
-            ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-                Some(format!("{origin}/step_plan/v1"))
-            }
-            _ => None,
-        };
+        // The plan pins its own per-transport bases; the selected site no longer influences them.
+        return resolve_preset_api_base(preset, transport_kind, None, Some("step-plan"), None);
     }
-
-    match transport_kind {
-        ModelTransportKind::Anthropic => Some(origin.to_string()),
-        ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-            Some(format!("{origin}/v1"))
-        }
-        _ => None,
-    }
+    resolve_preset_api_base(preset, transport_kind, site, None, None)
 }
 
 pub(crate) fn model_add_z_ai_api_base(glm_coding_plan: bool) -> Option<String> {
     if glm_coding_plan {
-        return Some(Z_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE.to_string());
+        return resolve_preset_api_base(
+            preset_entry("z-ai")?,
+            ModelTransportKind::OpenAiCompatible,
+            None,
+            Some("glm-coding-plan"),
+            None,
+        );
     }
     model_add_preset_api_base_by_provider(crate::model_registry::ModelProvider::ZAi)
 }
 
 pub(crate) fn model_add_zhipu_ai_api_base(glm_coding_plan: bool) -> Option<String> {
     if glm_coding_plan {
-        return Some(ZHIPU_AI_GLM_CODING_PLAN_COMPATIBLE_API_BASE.to_string());
+        return resolve_preset_api_base(
+            preset_entry("zhipu-ai")?,
+            ModelTransportKind::OpenAiCompatible,
+            None,
+            Some("glm-coding-plan"),
+            None,
+        );
     }
     model_add_preset_api_base_by_provider(crate::model_registry::ModelProvider::ZhipuAi)
 }
@@ -345,55 +574,13 @@ pub(crate) fn model_add_zhipu_ai_api_base(glm_coding_plan: bool) -> Option<Strin
 pub(crate) fn model_add_alibaba_token_plan_api_base(
     transport_kind: ModelTransportKind,
 ) -> Option<String> {
-    match transport_kind {
-        ModelTransportKind::Anthropic => {
-            model_add_alibaba_anthropic_site_api_base(ALIBABA_TOKEN_PLAN_COMPATIBLE_API_BASE)
-        }
-        ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-            Some(ALIBABA_TOKEN_PLAN_COMPATIBLE_API_BASE.to_string())
-        }
-        _ => None,
-    }
-}
-
-fn model_add_alibaba_compatible_site_api_base(site: &str, workspace_id: &str) -> Option<String> {
-    match site.trim() {
-        "cn-beijing" => {
-            let workspace = workspace_id.trim();
-            if workspace.is_empty() {
-                return None;
-            }
-            Some(format!(
-                "https://{workspace}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-            ))
-        }
-        "us-virginia" => Some("https://dashscope-us.aliyuncs.com/compatible-mode/v1".to_string()),
-        "ap-southeast-1" => {
-            let workspace = workspace_id.trim();
-            if workspace.is_empty() {
-                return None;
-            }
-            Some(format!(
-                "https://{workspace}.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
-            ))
-        }
-        "eu-central-1" => {
-            let workspace = workspace_id.trim();
-            if workspace.is_empty() {
-                return None;
-            }
-            Some(format!(
-                "https://{workspace}.eu-central-1.maas.aliyuncs.com/compatible-mode/v1"
-            ))
-        }
-        _ => None,
-    }
-}
-
-fn model_add_alibaba_anthropic_site_api_base(compatible_base: &str) -> Option<String> {
-    let trimmed = compatible_base.trim().trim_end_matches('/');
-    let origin = trimmed.strip_suffix("/compatible-mode/v1")?;
-    Some(format!("{origin}/apps/anthropic"))
+    resolve_preset_api_base(
+        preset_entry("alibaba")?,
+        transport_kind,
+        None,
+        Some("token-plan"),
+        None,
+    )
 }
 
 pub(crate) fn model_add_alibaba_site_api_base(
@@ -401,16 +588,13 @@ pub(crate) fn model_add_alibaba_site_api_base(
     workspace_id: &str,
     transport_kind: ModelTransportKind,
 ) -> Option<String> {
-    let compatible_base = model_add_alibaba_compatible_site_api_base(site, workspace_id)?;
-    match transport_kind {
-        ModelTransportKind::Anthropic => {
-            model_add_alibaba_anthropic_site_api_base(&compatible_base)
-        }
-        ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses => {
-            Some(compatible_base)
-        }
-        _ => None,
-    }
+    resolve_preset_api_base(
+        preset_entry("alibaba")?,
+        transport_kind,
+        Some(site),
+        None,
+        Some(workspace_id),
+    )
 }
 
 pub(crate) fn model_add_provider_id_at_choice_index(selected: usize) -> Option<&'static str> {
@@ -556,48 +740,24 @@ fn default_api_base_for_transport(
     {
         return base;
     }
-    if provider == crate::model_registry::ModelProvider::KimiCode
-        && let Some(base) = model_add_kimi_code_api_base(transport_kind)
-    {
-        return base;
-    }
-    model_add_preset_api_base_by_provider(provider)
+    model_add_preset_api_base(provider, transport_kind)
         .unwrap_or_else(|| model_add_default_custom_api_base(transport_kind))
-}
-
-fn resolve_site_api_base(
-    provider: crate::model_registry::ModelProvider,
-    transport_kind: ModelTransportKind,
-    site: &str,
-    workspace_id: &str,
-) -> Option<String> {
-    match provider {
-        crate::model_registry::ModelProvider::Moonshot => model_add_moonshot_site_api_base(site),
-        crate::model_registry::ModelProvider::Siliconflow => {
-            model_add_siliconflow_site_api_base(site)
-        }
-        crate::model_registry::ModelProvider::Minimax => {
-            model_add_minimax_site_api_base(site, transport_kind)
-        }
-        crate::model_registry::ModelProvider::Alibaba => {
-            model_add_alibaba_site_api_base(site, workspace_id, transport_kind)
-        }
-        crate::model_registry::ModelProvider::TencentTokenhub => {
-            model_add_tencent_tokenhub_site_api_base(site)
-        }
-        crate::model_registry::ModelProvider::KimiCode => {
-            model_add_kimi_code_site_api_base(site, transport_kind)
-        }
-        crate::model_registry::ModelProvider::Stepfun => {
-            model_add_stepfun_api_base(transport_kind, false, Some(site))
-        }
-        _ => None,
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn picker_order_is_manifest_order_with_custom_last() {
+        let ids = model_add_picker_order_ids();
+        assert_eq!(ids.len(), 33);
+        assert_eq!(ids[0], "openai");
+        assert_eq!(ids[31], "google-vertex-ai");
+        assert_eq!(ids[32], "custom");
+        assert_eq!(model_add_provider_id_at_choice_index(32), Some("custom"));
+        assert!(model_add_provider_id_at_choice_index(33).is_none());
+    }
 
     #[test]
     fn preset_bases_match_canonical_order() {
@@ -625,9 +785,10 @@ mod tests {
             model_add_preset_api_base_by_choice_index(5).as_deref(),
             Some("https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT_ID/ai/v1")
         );
+        // deepseek's default transport is open-responses; the default slot is the Responses base.
         assert_eq!(
             model_add_preset_api_base_by_choice_index(6).as_deref(),
-            Some("https://api.deepseek.com/v1")
+            Some("https://api.deepseek.com")
         );
         assert_eq!(
             model_add_preset_api_base_by_choice_index(7).as_deref(),
@@ -735,6 +896,34 @@ mod tests {
     }
 
     #[test]
+    fn preset_api_base_resolves_per_transport_from_the_manifest() {
+        assert_eq!(
+            model_add_preset_api_base(
+                crate::model_registry::ModelProvider::Deepseek,
+                ModelTransportKind::OpenAiCompatible,
+            )
+            .as_deref(),
+            Some("https://api.deepseek.com/v1")
+        );
+        assert_eq!(
+            model_add_preset_api_base(
+                crate::model_registry::ModelProvider::Deepseek,
+                ModelTransportKind::Anthropic,
+            )
+            .as_deref(),
+            Some("https://api.deepseek.com/anthropic")
+        );
+        assert_eq!(
+            model_add_preset_api_base(
+                crate::model_registry::ModelProvider::KimiCode,
+                ModelTransportKind::Anthropic,
+            )
+            .as_deref(),
+            Some("https://api.kimi.ai/coding")
+        );
+    }
+
+    #[test]
     fn kimi_code_api_base_resolves_openai_and_anthropic_transports() {
         assert_eq!(
             super::model_add_kimi_code_api_base(ModelTransportKind::OpenAiCompatible).as_deref(),
@@ -744,7 +933,11 @@ mod tests {
             super::model_add_kimi_code_api_base(ModelTransportKind::Anthropic).as_deref(),
             Some("https://api.kimi.ai/coding")
         );
-        assert!(super::model_add_kimi_code_api_base(ModelTransportKind::OpenResponses).is_none());
+        // Undeclared transports fall back to the default transport slot.
+        assert_eq!(
+            super::model_add_kimi_code_api_base(ModelTransportKind::OpenResponses).as_deref(),
+            Some("https://api.kimi.ai/coding/v1")
+        );
     }
 
     #[test]
@@ -830,6 +1023,7 @@ mod tests {
                 .as_deref(),
             Some("https://api.stepfun.ai")
         );
+        // The step-plan billing plan pins the China host regardless of the selected site.
         assert_eq!(
             super::model_add_stepfun_api_base(
                 ModelTransportKind::OpenAiCompatible,
@@ -837,7 +1031,7 @@ mod tests {
                 Some("intl")
             )
             .as_deref(),
-            Some("https://api.stepfun.ai/step_plan/v1")
+            Some("https://api.stepfun.com/step_plan/v1")
         );
         assert_eq!(
             super::model_add_stepfun_api_base(ModelTransportKind::Anthropic, true, Some("cn"))

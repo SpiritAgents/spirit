@@ -1,4 +1,6 @@
 import {
+  bedrockMantleApiBaseFromRegion,
+  isBedrockMantleOpenAiModel,
   resolveOpenResponsesReasoningSummary,
   type AnthropicTransportConfig,
   type LlmModelCapabilities,
@@ -12,7 +14,6 @@ import {
   resolveOpenAiTransportReasoningEffortForContext,
 } from "@spiritagent/agent-core/reasoning-effort";
 
-import { bedrockMantleApiBaseFromRegion, isBedrockMantleOpenAiModel } from "./bedrock-mantle.js";
 import type { ModelProviderId } from "./model-provider-presets.js";
 import {
   loadActiveModelProfile,

@@ -1,0 +1,296 @@
+import assert from "node:assert/strict";
+
+import { test } from "vitest";
+
+import { ProviderPresetApiBaseError } from "./api-base.js";
+import { PROVIDER_PRESET_MANIFEST } from "./loader.js";
+import {
+  fallbackSdkPackageName,
+  materializeProviderPreset,
+  ProviderPresetMaterializeError,
+  slugifyCustomProviderLabel,
+} from "./materialize.js";
+
+test("minimax materializes the anthropic default with the server-tool and upload templates", () => {
+  const entry = materializeProviderPreset({ presetId: "minimax" });
+  assert.deepEqual(entry, {
+    id: "minimax",
+    label: "MiniMax",
+    apiBase: "https://api.minimax.io/anthropic/v1",
+    transportKind: "anthropic",
+    sdk: "@ai-sdk/minimax",
+    providerTools: [
+      {
+        label: "Web Search",
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+      },
+    ],
+    fileUpload: {
+      url: "https://api.minimax.io/v1/files/upload",
+      purpose: { video: "video_understanding" },
+      idPath: "file.file_id",
+      refTemplate: "mm_file://{id}",
+    },
+    models: [],
+  });
+});
+
+test("kimi-code materializes the spec's variant A shape (transportKind omitted, host-executed search)", () => {
+  const entry = materializeProviderPreset({ presetId: "kimi-code", siteId: "cn" });
+  assert.equal(entry.apiBase, "https://api.kimi.com/coding/v1");
+  assert.equal(entry.transportKind, undefined);
+  assert.equal(entry.sdk, "@ai-sdk/openai-compatible");
+  assert.deepEqual(entry.fileUpload, {
+    path: "/files",
+    purpose: { video: "video" },
+    refTemplate: "ms://{id}",
+  });
+  const tool = entry.providerTools?.[0];
+  assert.equal(tool?.label, "Web Search");
+  assert.deepEqual(tool?.execute, {
+    path: "/search",
+    body: { text_query: "{arg.query}" },
+    resultsPath: "search_results",
+    fields: {
+      title: "title",
+      url: "url",
+      site: "site_name",
+      time: "date",
+      snippet: "snippet",
+      content: "content",
+    },
+  });
+  const toolEntry = tool?.tools?.[0];
+  assert.ok(toolEntry);
+  const schema = (
+    toolEntry as { function: { parameters: { properties: Record<string, unknown> } } }
+  ).function.parameters;
+  assert.equal("max_results" in schema.properties, false);
+});
+
+test("moonshot-ai materializes the formula entry with ciphertext UI lockdown", () => {
+  const entry = materializeProviderPreset({ presetId: "moonshot-ai" });
+  const tool = entry.providerTools?.[0];
+  assert.deepEqual(tool?.tools, [
+    {
+      type: "moonshot_formula",
+      formula_uri: "moonshot/web-search:latest",
+      function_name: "web_search",
+    },
+  ]);
+  assert.deepEqual(tool?.toolsFrom, { path: "/formulas/moonshot/web-search:latest/tools" });
+  assert.deepEqual(tool?.execute, {
+    path: "/formulas/moonshot/web-search:latest/fibers",
+    body: { name: "{toolName}", arguments: "{argumentsJson}" },
+    statusPath: "status",
+    okValue: "succeeded",
+    errorPath: ["error", "context.error", "context.output"],
+    resultPath: ["context.encrypted_output", "context.output"],
+  });
+  assert.deepEqual(tool?.ui, { expand: false });
+  assert.equal(entry.sdk, "@ai-sdk/moonshotai");
+});
+
+test("z-ai and zhipu-ai bake their static search bodies into the execute declaration", () => {
+  const zai = materializeProviderPreset({ presetId: "z-ai" });
+  assert.deepEqual(zai.providerTools?.[0]?.execute?.body, {
+    search_engine: "search-prime",
+    search_query: "{arg.query}",
+    count: "{arg.max_results}",
+  });
+  const zhipu = materializeProviderPreset({ presetId: "zhipu-ai" });
+  assert.deepEqual(zhipu.providerTools?.[0]?.execute?.body, {
+    search_engine: "search_std",
+    search_intent: false,
+    search_query: "{arg.query}",
+    count: "{arg.max_results}",
+  });
+  assert.equal(zai.providerTools?.[0]?.execute?.path, "/web_search");
+});
+
+test("openai, xai, deepseek and the gateway carry their literal server-side search entries", () => {
+  const openai = materializeProviderPreset({ presetId: "openai" });
+  assert.deepEqual(openai.providerTools, [
+    { label: "Web Search", tools: [{ type: "web_search" }] },
+  ]);
+  assert.equal(openai.transportKind, "open-responses");
+  assert.equal(openai.sdk, "@ai-sdk/openai");
+  assert.equal(openai.imageApi, "openai-images");
+
+  const xai = materializeProviderPreset({ presetId: "xai" });
+  assert.equal(xai.transportKind, "open-responses");
+  assert.equal(xai.sdk, "@ai-sdk/xai");
+  assert.deepEqual(xai.providerTools, [{ label: "Web Search", tools: [{ type: "web_search" }] }]);
+
+  const deepseek = materializeProviderPreset({ presetId: "deepseek" });
+  assert.equal(deepseek.transportKind, "open-responses");
+  assert.equal(deepseek.sdk, "@ai-sdk/open-responses");
+  assert.deepEqual(deepseek.providerTools, [
+    { label: "Web Search", tools: [{ type: "web_search" }] },
+  ]);
+
+  const gateway = materializeProviderPreset({ presetId: "vercel-ai-gateway" });
+  assert.equal(gateway.sdk, "@ai-sdk/gateway");
+  assert.deepEqual(gateway.providerTools, [
+    {
+      label: "Perplexity Search",
+      tools: [{ type: "provider", id: "gateway.perplexity_search", args: {} }],
+    },
+  ]);
+  assert.equal(gateway.videoApi, "vercel-gateway-videos");
+});
+
+test("alibaba materializes body-only tool entries and the token plan override", () => {
+  const standard = materializeProviderPreset({ presetId: "alibaba" });
+  assert.deepEqual(standard.providerTools, [
+    {
+      label: "Web Search",
+      body: { enable_search: true, search_options: { search_strategy: "agent_max" } },
+    },
+    { label: "Code Interpreter", body: { enable_code_interpreter: true } },
+  ]);
+  assert.equal(standard.sdk, "@ai-sdk/alibaba");
+
+  const plan = materializeProviderPreset({ presetId: "alibaba", billingPlanId: "token-plan" });
+  assert.equal(plan.apiBase, "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
+
+  const site = materializeProviderPreset({
+    presetId: "alibaba",
+    siteId: "cn-beijing",
+    workspaceId: "ws-9",
+  });
+  assert.equal(site.apiBase, "https://ws-9.cn-beijing.maas.aliyuncs.com/compatible-mode/v1");
+});
+
+test("stepfun materializes the step plan base per transport", () => {
+  const entry = materializeProviderPreset({
+    presetId: "stepfun",
+    billingPlanId: "step-plan",
+    transportKind: "anthropic",
+  });
+  assert.equal(entry.apiBase, "https://api.stepfun.com/step_plan");
+  assert.equal(entry.transportKind, "anthropic");
+  // Anthropic is not stepfun's default transport: the sdk falls back to the transport adapter.
+  assert.equal(entry.sdk, "@ai-sdk/anthropic");
+});
+
+test("a non-default transport falls back to the transport-generic sdk", () => {
+  const siliconflow = materializeProviderPreset({
+    presetId: "siliconflow",
+    transportKind: "anthropic",
+    siteId: "cn",
+  });
+  assert.equal(siliconflow.apiBase, "https://api.siliconflow.cn/v1");
+  assert.equal(siliconflow.sdk, "@ai-sdk/anthropic");
+  assert.equal(siliconflow.transportKind, "anthropic");
+
+  const openrouter = materializeProviderPreset({
+    presetId: "openrouter",
+    transportKind: "open-responses",
+  });
+  assert.equal(openrouter.sdk, "@ai-sdk/open-responses");
+});
+
+test("amazon-bedrock omits the sdk (self-held transport) and substitutes the region", () => {
+  const entry = materializeProviderPreset({
+    presetId: "amazon-bedrock",
+    templateValues: { awsRegion: "us-east-1" },
+  });
+  assert.equal(entry.apiBase, "https://bedrock.us-east-1.amazonaws.com");
+  assert.equal(entry.transportKind, "bedrock");
+  assert.equal("sdk" in entry, false);
+  assert.equal(entry.providerTools, undefined);
+});
+
+test("google-vertex-ai requires project/location template values", () => {
+  assert.throws(
+    () => materializeProviderPreset({ presetId: "google-vertex-ai" }),
+    (error) => {
+      assert.ok(error instanceof ProviderPresetApiBaseError);
+      assert.match(error.message, /unresolved placeholders/);
+      return true;
+    },
+  );
+  const entry = materializeProviderPreset({
+    presetId: "google-vertex-ai",
+    templateValues: { project: "p", location: "us-central1" },
+  });
+  assert.equal(
+    entry.apiBase,
+    "https://us-central1-aiplatform.googleapis.com/v1/projects/p/locations/us-central1",
+  );
+  assert.equal(entry.sdk, "@ai-sdk/google-vertex");
+});
+
+test("anthropic has no provider tools today (server-side search was never integrated)", () => {
+  const entry = materializeProviderPreset({ presetId: "anthropic" });
+  assert.equal(entry.transportKind, "anthropic");
+  assert.equal(entry.sdk, "@ai-sdk/anthropic");
+  assert.equal(entry.providerTools, undefined);
+});
+
+test("custom materializes the default base, a label-derived slug id, and no sdk", () => {
+  const plain = materializeProviderPreset({ presetId: "custom" });
+  assert.deepEqual(plain, {
+    id: "custom",
+    apiBase: "https://api.openai.com/v1",
+    models: [],
+  });
+
+  const labeled = materializeProviderPreset({
+    presetId: "custom",
+    label: "My Lab LLM",
+    apiBaseOverride: "http://192.168.1.10:8000/v1",
+    transportKind: "anthropic",
+  });
+  assert.deepEqual(labeled, {
+    id: "my-lab-llm",
+    label: "My Lab LLM",
+    apiBase: "http://192.168.1.10:8000/v1",
+    transportKind: "anthropic",
+    models: [],
+  });
+});
+
+test("slugifyCustomProviderLabel mirrors the legacy group-label slug behavior", () => {
+  assert.equal(slugifyCustomProviderLabel("My Lab LLM"), "my-lab-llm");
+  assert.equal(slugifyCustomProviderLabel("  Spaces  And  Case  "), "spaces-and-case");
+  assert.equal(slugifyCustomProviderLabel("!!!"), "custom-group");
+  assert.equal(slugifyCustomProviderLabel("x".repeat(80)), "x".repeat(64));
+});
+
+test("label overrides the preset fallback label; unknown presets throw", () => {
+  const entry = materializeProviderPreset({ presetId: "openai", label: "Company OpenAI" });
+  assert.equal(entry.label, "Company OpenAI");
+  assert.throws(
+    () => materializeProviderPreset({ presetId: "nope" }),
+    ProviderPresetMaterializeError,
+  );
+});
+
+test("azure requires the resource name template value", () => {
+  assert.throws(() => materializeProviderPreset({ presetId: "azure" }), /unresolved placeholders/);
+  const entry = materializeProviderPreset({
+    presetId: "azure",
+    templateValues: { resourceName: "my-resource" },
+  });
+  assert.equal(entry.apiBase, "https://my-resource.openai.azure.com/openai/v1");
+  assert.equal(entry.sdk, "@ai-sdk/azure");
+});
+
+test("materialized templates are deep copies that never alias the manifest", () => {
+  const entry = materializeProviderPreset({ presetId: "kimi-code" });
+  assert.ok(entry.providerTools);
+  entry.providerTools[0]!.label = "Mutated";
+  const manifestEntry = PROVIDER_PRESET_MANIFEST.providers.find(
+    (preset) => preset.id === "kimi-code",
+  );
+  assert.equal(manifestEntry?.providerTools?.[0]?.label, "Web Search");
+});
+
+test("fallbackSdkPackageName maps transports to their generic adapters", () => {
+  assert.equal(fallbackSdkPackageName("openai-compatible"), "@ai-sdk/openai-compatible");
+  assert.equal(fallbackSdkPackageName("open-responses"), "@ai-sdk/open-responses");
+  assert.equal(fallbackSdkPackageName("anthropic"), "@ai-sdk/anthropic");
+  assert.equal(fallbackSdkPackageName("bedrock"), undefined);
+});

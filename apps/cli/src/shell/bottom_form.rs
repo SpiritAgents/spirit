@@ -18,13 +18,12 @@ use crate::{
         model_add_kimi_code_site_api_base, model_add_kimi_code_site_id_from_choice,
         model_add_minimax_site_api_base, model_add_minimax_site_id_from_choice,
         model_add_moonshot_site_api_base, model_add_moonshot_site_id_from_choice,
-        model_add_picker_order_ids, model_add_preset_api_base_by_choice_index,
-        model_add_provider_at_choice_index, model_add_provider_id_at_choice_index,
-        model_add_requires_manual_single_provider, model_add_siliconflow_site_api_base,
-        model_add_siliconflow_site_id_from_choice, model_add_stepfun_api_base,
-        model_add_stepfun_site_id_from_choice, model_add_tencent_tokenhub_site_api_base,
-        model_add_tencent_tokenhub_site_id_from_choice, model_add_z_ai_api_base,
-        model_add_zhipu_ai_api_base,
+        model_add_picker_order_ids, model_add_preset_api_base, model_add_provider_at_choice_index,
+        model_add_provider_id_at_choice_index, model_add_requires_manual_single_provider,
+        model_add_siliconflow_site_api_base, model_add_siliconflow_site_id_from_choice,
+        model_add_stepfun_api_base, model_add_stepfun_site_id_from_choice,
+        model_add_tencent_tokenhub_site_api_base, model_add_tencent_tokenhub_site_id_from_choice,
+        model_add_z_ai_api_base, model_add_zhipu_ai_api_base,
     },
     model_registry::{ModelProvider, ModelTransportKind},
     rules::{RuleEntry, RuleScope},
@@ -2204,7 +2203,7 @@ pub(crate) fn parse_model_add_connection(
             vertex_project.as_deref().unwrap_or(""),
             vertex_location.as_deref().unwrap_or(""),
         )
-    } else if let Some(preset) = model_add_preset_api_base_by_choice_index(provider_idx) {
+    } else if let Some(preset) = model_add_preset_api_base(provider, transport_kind) {
         preset
     } else {
         let base_idx = match form.fields.len() {
@@ -3351,7 +3350,8 @@ mod tests {
         assert_eq!(parsed.provider, ModelProvider::Stepfun);
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.stepfun.ai/step_plan/v1");
+        // The step-plan billing plan pins the China host regardless of the selected site.
+        assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun-intl-plan");
         assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));

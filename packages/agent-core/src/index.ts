@@ -14,6 +14,11 @@ export * from "./service-tier-request.js";
 export * from "./provider-tools/index.js";
 export * from "./file-upload/index.js";
 export * from "./model-knowledge/index.js";
+export * from "./provider-presets/index.js";
+export * from "./model-catalog/index.js";
+// Explicit re-export: `bedrockApiBaseFromRegion` exists in both ./bedrock (runtime compat)
+// and ./model-catalog (identical region helper); the named export resolves the star ambiguity.
+export { bedrockApiBaseFromRegion } from "./bedrock/index.js";
 export * from "./llm-fetch.js";
 export * from "./llm-retry.js";
 export * from "./transport-factory.js";
