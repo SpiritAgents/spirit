@@ -428,7 +428,14 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                         })
                         .collect();
                 if !options.is_empty() {
-                    connect.options = Some(options);
+                    // Wizard input wins per key over the preset's mechanism-option template.
+                    connect.options = Some(match connect.options {
+                        Some(mut template) => {
+                            template.extend(options);
+                            template
+                        }
+                        None => options,
+                    });
                 }
                 let entry = ModelEntry {
                     name: name.clone(),

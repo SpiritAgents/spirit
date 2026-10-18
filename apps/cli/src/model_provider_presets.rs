@@ -44,13 +44,15 @@ pub(crate) struct ProviderPresetEntry {
     credentials: Option<ProviderPresetCredentials>,
     /// Materialization templates copied verbatim onto the config entry at connect time
     /// (`providers[].providerTools` / `fileUpload` / `body` / `thinkingSwitch` /
-    /// `imageApi` / `videoApi`).
+    /// `imageApi` / `videoApi` / `options`).
     provider_tools: Option<Vec<Value>>,
     file_upload: Option<Value>,
     body: Option<Map<String, Value>>,
     thinking_switch: Option<Value>,
     image_api: Option<String>,
     video_api: Option<String>,
+    /// Mechanism option flags materialized onto the entry (e.g. `toolsRejectReasoningEffort`).
+    options: Option<Map<String, Value>>,
     /// apiKey-only express connect base (e.g. Vertex Express), used when the wizard collects
     /// the plain apiKey credential form for a preset whose default credential kind differs.
     express_api_base: Option<String>,
@@ -471,9 +473,9 @@ fn fallback_sdk_package_name(transport_kind: ModelTransportKind) -> Option<&'sta
 /// The wizard-owned declarations a connect writes onto the provider entry, mirroring
 /// agent-core `materializeProviderPreset`: `transportKind` is omitted for the default
 /// transport, `sdk` follows the preset (or the transport fallback), and the
-/// `providerTools` / `fileUpload` / `body` / `thinkingSwitch` / `imageApi` / `videoApi`
-/// templates are copied verbatim. `custom` connections declare nothing beyond a non-default
-/// transport.
+/// `providerTools` / `fileUpload` / `body` / `thinkingSwitch` / `imageApi` / `videoApi` /
+/// `options` templates are copied verbatim (options keys scoped to a different transport
+/// are dropped). `custom` connections declare nothing beyond a non-default transport.
 pub(crate) fn preset_connect_draft(
     preset_id: &str,
     transport_kind: ModelTransportKind,
@@ -501,8 +503,32 @@ pub(crate) fn preset_connect_draft(
         thinking_switch: preset.thinking_switch.clone(),
         image_api: preset.image_api.clone(),
         video_api: preset.video_api.clone(),
+        options: preset_options_for_transport(preset, transport_kind),
         ..ProviderConnectDraft::default()
     }
+}
+
+/// Mechanism option keys whose transport scope differs from the selected one are dropped
+/// (mirrors agent-core `PRESET_OPTIONS_TRANSPORT_SCOPE`); unknown keys pass through.
+fn preset_options_for_transport(
+    preset: &ProviderPresetEntry,
+    transport_kind: ModelTransportKind,
+) -> Option<Map<String, Value>> {
+    let options = preset.options.as_ref()?;
+    let scoped: Map<String, Value> = options
+        .iter()
+        .filter(|(key, _)| match key.as_str() {
+            "toolsRejectReasoningEffort" | "maxInlineMediaBytes" => {
+                transport_kind == ModelTransportKind::OpenAiCompatible
+            }
+            "echoServerToolCalls" | "defaultInputItemStatus" => {
+                transport_kind == ModelTransportKind::OpenResponses
+            }
+            _ => true,
+        })
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+    (!scoped.is_empty()).then_some(scoped)
 }
 
 /// Whether the wizard can bulk-import the model list for this connection: the preset's
@@ -941,6 +967,43 @@ mod tests {
         assert_eq!(draft.transport_kind.as_deref(), Some("anthropic"));
         assert!(draft.sdk.is_none());
         assert!(draft.provider_tools.is_none());
+
+        // Mechanism option templates materialize with transport scoping.
+        let draft = preset_connect_draft(
+            "cloudflare-ai-gateway",
+            ModelTransportKind::OpenAiCompatible,
+        );
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("toolsRejectReasoningEffort")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("deepseek", ModelTransportKind::OpenResponses);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("echoServerToolCalls")),
+            Some(&serde_json::json!(true))
+        );
+        // volcengine's default transport is openai-compatible: the open-responses-scoped key drops.
+        let draft = preset_connect_draft("volcengine", ModelTransportKind::OpenAiCompatible);
+        assert!(
+            draft
+                .options
+                .as_ref()
+                .is_none_or(|options| !options.contains_key("defaultInputItemStatus"))
+        );
+        let draft = preset_connect_draft("xiaomi", ModelTransportKind::OpenAiCompatible);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("maxInlineMediaBytes")),
+            Some(&serde_json::json!(52428800))
+        );
     }
 
     #[test]
