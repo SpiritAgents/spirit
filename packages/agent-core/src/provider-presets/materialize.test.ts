@@ -167,7 +167,7 @@ test("openai, xai, deepseek and the gateway carry their literal server-side sear
   assert.deepEqual(gateway.providerTools, [
     {
       label: "Perplexity Search",
-      tools: [{ type: "provider", id: "gateway.perplexity_search", args: {} }],
+      tools: [{ type: "provider", id: "gateway.perplexity_search", name: "web_search", args: {} }],
     },
   ]);
   assert.equal(gateway.videoApi, "vercel-gateway-videos");

@@ -304,7 +304,9 @@ test("validateSpiritConfig accepts the spec's full example", () => {
         providerTools: [
           {
             label: "Perplexity Search",
-            tools: [{ type: "provider", id: "gateway.perplexity_search", args: {} }],
+            tools: [
+              { type: "provider", id: "gateway.perplexity_search", name: "web_search", args: {} },
+            ],
           },
         ],
         capabilities: ["languageModel"],
