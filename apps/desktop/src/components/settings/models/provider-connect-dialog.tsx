@@ -43,6 +43,7 @@ import {
 import {
   CUSTOM_PROVIDER_PRESET_ID,
   findProviderPreset,
+  type ProviderPresetCredentialKind,
 } from "@spiritagent/agent-core/provider-presets";
 import { DESKTOP_FORM_FIELD_TRIGGER_INNER, DESKTOP_FORM_INPUT_SHELL } from "@/lib/desktop-chrome";
 import { DESKTOP_EDITOR_TAB_CLASS } from "@/lib/desktop-typography";
@@ -52,6 +53,7 @@ import type {
   AddModelRequest,
   AddProviderModelsRequest,
   DesktopModelCapability,
+  DesktopProviderPickerPreset,
   DesktopTransportKind,
   PreviewModelsRequest,
   PreviewModelsResponse,
@@ -65,6 +67,10 @@ import {
 export type ProviderConnectDialogProps = {
   /** Provider preset id (or `custom`) to connect; the parent remounts this component with a new key on each connection attempt to reset the form. */
   provider: string;
+  /** Preset picker rows from the host snapshot (fallback label for the dialog title). */
+  providerPresets: readonly DesktopProviderPickerPreset[];
+  /** True when the config already has this provider's entry: reconnecting re-materializes the wizard-owned keys (the helper line says so). */
+  reconnect?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   busy: boolean;
@@ -81,6 +87,8 @@ export type ProviderConnectDialogProps = {
  */
 export function ProviderConnectDialog({
   provider,
+  providerPresets,
+  reconnect = false,
   open,
   onOpenChange,
   busy,
@@ -127,11 +135,30 @@ export function ProviderConnectDialog({
   const [connectAlibabaWorkspaceId, setConnectAlibabaWorkspaceId] = useState("");
   const [customConnectMode, setCustomConnectMode] = useState<"single" | "bulk">("single");
   const [bedrockConnectMode, setBedrockConnectMode] = useState<"bearer" | "iam">("bearer");
-  const [vertexConnectMode, setVertexConnectMode] = useState<"adc" | "service-account">("adc");
+  const [vertexConnectMode, setVertexConnectMode] = useState<"service-account" | "express">(
+    "service-account",
+  );
   const [connectCustomGroupLabel, setConnectCustomGroupLabel] = useState("");
 
   const connectPreset =
     provider === CUSTOM_PROVIDER_PRESET_ID ? undefined : findProviderPreset(provider);
+  /** The preset's declared credential shape drives which credential form the wizard collects. */
+  const connectCredentialKind: ProviderPresetCredentialKind =
+    connectPreset?.credentials.kind ?? "apiKey";
+  /**
+   * The credential form currently in view, as a materialization input: the plain apiKey form on a
+   * non-apiKey preset (Vertex Express) selects the preset's `expressApiBase`.
+   */
+  const credentialKindForRequest: ProviderPresetCredentialKind =
+    connectCredentialKind === "bedrock"
+      ? bedrockConnectMode === "iam"
+        ? "bedrock"
+        : "apiKey"
+      : connectCredentialKind === "vertex"
+        ? vertexConnectMode === "express"
+          ? "apiKey"
+          : "vertex"
+        : "apiKey";
   const connectSiteOptions = connectPreset?.sites?.items ?? [];
   const connectSiteRequiresWorkspaceId = (siteId: string): boolean =>
     connectSiteOptions.find((item) => item.id === siteId)?.requiresWorkspaceId === true;
@@ -139,6 +166,7 @@ export function ProviderConnectDialog({
   const selectedProviderLabel = providerPickerLabel(
     (key, options) => String(t(key, options)),
     provider,
+    providerPresets,
   );
 
   const connectTransportKindForRequest = resolveConnectTransportKindForProvider(
@@ -198,7 +226,7 @@ export function ProviderConnectDialog({
       if (!connectVertexProject.trim() || !connectVertexLocation.trim()) {
         throw new Error(t("settings.vertexProjectLocationRequired"));
       }
-      if (vertexConnectMode === "service-account" && !hasVertexCatalogCredentials) {
+      if (!hasVertexCatalogCredentials) {
         throw new Error(t("settings.vertexCatalogServiceAccountRequired"));
       }
     } else if (provider === "custom") {
@@ -215,6 +243,7 @@ export function ProviderConnectDialog({
       apiBase: provider === CUSTOM_PROVIDER_PRESET_ID ? connectApiBase.trim() : "",
       apiKey: connectApiKey,
       provider,
+      credentialKind: credentialKindForRequest,
       ...(provider === "amazon-bedrock"
         ? {
             awsRegion: connectAwsRegion.trim(),
@@ -251,6 +280,7 @@ export function ProviderConnectDialog({
       modelIds: res.modelIds,
       ...(res.models ? { modelCatalog: res.models } : {}),
       provider,
+      credentialKind: credentialKindForRequest,
       ...(provider === "amazon-bedrock"
         ? {
             awsRegion: connectAwsRegion.trim(),
@@ -320,6 +350,41 @@ export function ProviderConnectDialog({
     onOpenChange(false);
   };
 
+  /**
+   * Vertex Express: the plain apiKey credential form on the vertex preset. The express endpoint
+   * cannot list models, so this path adds one manually entered model instead of syncing the catalog.
+   */
+  const saveVertexExpressSingle = async () => {
+    if (provider !== "google-vertex-ai" || vertexConnectMode !== "express") {
+      return;
+    }
+    const name = connectName.trim();
+    if (!name) {
+      throw new Error(t("settings.modelNameRequired"));
+    }
+    if (!connectApiKey.trim()) {
+      throw new Error(t("settings.apiKeyRequired"));
+    }
+    const contextLengthRaw = connectContextLength.trim();
+    let contextLength: number | undefined;
+    if (contextLengthRaw) {
+      const parsed = parseModelContextLength(Number(contextLengthRaw));
+      if (parsed === undefined) {
+        throw new Error(t("settings.contextLengthInvalid"));
+      }
+      contextLength = parsed;
+    }
+    await onAddModel({
+      name,
+      apiBase: "",
+      apiKey: connectApiKey,
+      provider: "google-vertex-ai",
+      credentialKind: "apiKey",
+      ...(contextLength !== undefined ? { contextLength } : {}),
+    });
+    onOpenChange(false);
+  };
+
   const saveBedrockBearerSingle = async () => {
     if (provider !== "amazon-bedrock") {
       return;
@@ -350,6 +415,7 @@ export function ProviderConnectDialog({
       apiKey: connectApiKey,
       provider: "amazon-bedrock",
       transportKind: "bedrock",
+      credentialKind: "apiKey",
       awsRegion,
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
@@ -392,6 +458,7 @@ export function ProviderConnectDialog({
       apiKey: connectApiKey,
       provider: "azure",
       transportKind: "open-responses",
+      credentialKind: "apiKey",
       azureResourceName,
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
@@ -439,6 +506,7 @@ export function ProviderConnectDialog({
       provider: "cloudflare-ai-gateway",
       transportKind:
         connectTransportKindForRequest ?? defaultConnectTransportKind("cloudflare-ai-gateway"),
+      credentialKind: "apiKey",
       cloudflareAccountId: accountId,
       cloudflareGatewayId: gatewayId,
       ...(contextLength !== undefined ? { contextLength } : {}),
@@ -473,6 +541,12 @@ export function ProviderConnectDialog({
                             : t("settings.providerSimpleDescription")}
           </DialogDescription>
         </DialogHeader>
+
+        {reconnect ? (
+          <p className="rounded-md border border-border/40 bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            {t("settings.providerReconnectHint")}
+          </p>
+        ) : null}
 
         <div className="grid gap-3 py-1">
           {provider === "alibaba" ? (
@@ -728,7 +802,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" ? (
+          {connectCredentialKind === "bedrock" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-aws-region">{t("settings.bedrockRegion")}</Label>
               <DesktopFormInput
@@ -740,7 +814,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" ? (
+          {connectCredentialKind === "bedrock" ? (
             <div className="grid gap-2">
               <Label>{t("settings.bedrockAuthMode")}</Label>
               <div
@@ -771,7 +845,7 @@ export function ProviderConnectDialog({
               </div>
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-bedrock-model-name">{t("settings.modelName")}</Label>
               <DesktopFormInput
@@ -783,7 +857,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-context-length-bedrock">{t("settings.contextLength")}</Label>
               <DesktopFormInput
@@ -899,11 +973,11 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {(provider !== "amazon-bedrock" || bedrockConnectMode === "bearer") &&
-          provider !== "google-vertex-ai" ? (
+          {connectCredentialKind === "apiKey" ||
+          (connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer") ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-api-key">
-                {provider === "amazon-bedrock"
+                {connectCredentialKind === "bedrock"
                   ? t("settings.bedrockApiKeyLabel")
                   : provider === "cloudflare-ai-gateway"
                     ? t("settings.cloudflareAiGatewayApiToken")
@@ -921,14 +995,14 @@ export function ProviderConnectDialog({
                 }
                 autoComplete="off"
               />
-              {provider === "amazon-bedrock" ? (
+              {connectCredentialKind === "bedrock" ? (
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t("settings.bedrockBearerHint")}
                 </p>
               ) : null}
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "iam" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "iam" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-access-key-id">{t("settings.bedrockAccessKeyId")}</Label>
@@ -958,7 +1032,7 @@ export function ProviderConnectDialog({
               </p>
             </>
           ) : null}
-          {provider === "google-vertex-ai" ? (
+          {connectCredentialKind === "vertex" ? (
             <div className="grid gap-2">
               <Label>{t("settings.vertexAuthMode")}</Label>
               <div
@@ -966,7 +1040,7 @@ export function ProviderConnectDialog({
                 aria-label={t("settings.vertexAuthMode")}
                 className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
               >
-                {(["adc", "service-account"] as const).map((value) => (
+                {(["service-account", "express"] as const).map((value) => (
                   <button
                     key={value}
                     type="button"
@@ -981,15 +1055,28 @@ export function ProviderConnectDialog({
                     disabled={busy || previewBusy}
                     onClick={() => setVertexConnectMode(value)}
                   >
-                    {value === "adc"
-                      ? t("settings.vertexAuthAdc")
-                      : t("settings.vertexAuthServiceAccount")}
+                    {value === "service-account"
+                      ? t("settings.vertexAuthServiceAccount")
+                      : t("settings.vertexAuthExpress")}
                   </button>
                 ))}
               </div>
             </div>
           ) : null}
-          {provider === "google-vertex-ai" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="connect-vertex-api-key">API Key</Label>
+              <DesktopFormInput
+                id="connect-vertex-api-key"
+                type="password"
+                value={connectApiKey}
+                onChange={(e) => setConnectApiKey(e.target.value)}
+                placeholder={t("settings.enterApiKey")}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+          {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-vertex-project">{t("settings.vertexProject")}</Label>
@@ -1013,10 +1100,34 @@ export function ProviderConnectDialog({
               </div>
             </>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "adc" ? (
-            <p className="text-xs leading-5 text-muted-foreground">{t("settings.vertexAdcHint")}</p>
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="connect-vertex-model-name">{t("settings.modelName")}</Label>
+              <DesktopFormInput
+                id="connect-vertex-model-name"
+                value={connectName}
+                onChange={(e) => setConnectName(e.target.value)}
+                placeholder={t("settings.vertexModelNamePlaceholder")}
+                autoComplete="off"
+              />
+            </div>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "service-account" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="connect-context-length-vertex">{t("settings.contextLength")}</Label>
+              <DesktopFormInput
+                id="connect-context-length-vertex"
+                type="number"
+                min={1}
+                step={1}
+                value={connectContextLength}
+                onChange={(e) => setConnectContextLength(e.target.value)}
+                placeholder={t("settings.optional")}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+          {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-vertex-client-email">
@@ -1100,7 +1211,7 @@ export function ProviderConnectDialog({
                 {t("settings.addProvider")}
               </Button>
             ) : null}
-            {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+            {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1125,7 +1236,7 @@ export function ProviderConnectDialog({
                 {t("settings.addThisModel")}
               </Button>
             ) : null}
-            {provider === "amazon-bedrock" && bedrockConnectMode === "iam" ? (
+            {connectCredentialKind === "bedrock" && bedrockConnectMode === "iam" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1148,7 +1259,7 @@ export function ProviderConnectDialog({
                 {t("settings.addProvider")}
               </Button>
             ) : null}
-            {provider === "google-vertex-ai" ? (
+            {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1157,7 +1268,7 @@ export function ProviderConnectDialog({
                   previewBusy ||
                   !connectVertexProject.trim() ||
                   !connectVertexLocation.trim() ||
-                  (vertexConnectMode === "service-account" && !hasVertexCatalogCredentials)
+                  !hasVertexCatalogCredentials
                 }
                 onClick={() => {
                   void (async () => {
@@ -1173,6 +1284,25 @@ export function ProviderConnectDialog({
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : null}
                 {t("settings.addProvider")}
+              </Button>
+            ) : null}
+            {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy || previewBusy || !connectName.trim() || !connectApiKey.trim()}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await saveVertexExpressSingle();
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.addThisModel")}
               </Button>
             ) : null}
             {provider === "azure" ? (
@@ -1227,9 +1357,8 @@ export function ProviderConnectDialog({
               </Button>
             ) : null}
             {provider !== "custom" &&
-            provider !== "amazon-bedrock" &&
+            connectCredentialKind === "apiKey" &&
             provider !== "azure" &&
-            provider !== "google-vertex-ai" &&
             provider !== "cloudflare-ai-gateway" ? (
               <Button
                 type="button"

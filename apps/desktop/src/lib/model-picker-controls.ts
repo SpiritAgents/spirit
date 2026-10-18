@@ -23,7 +23,20 @@ type DeclaredControlModel = Pick<
   | "serviceTier"
   | "reasoningEffort"
   | "reasoningMode"
+  | "supportsThinkingSwitch"
+  | "supportsThinkingType"
+  | "thinkingEnabled"
 >;
+
+/** The thinking toggle shows only when the model declares the switch; `only` means always-on (hidden). */
+export function showsThinkingSwitchControl(model: DeclaredControlModel): boolean {
+  return model.supportsThinkingSwitch === true && model.supportsThinkingType !== "only";
+}
+
+/** The user's thinking state; absent config means on (spec: `thinkingEnabled` defaults to enabled). */
+export function effectiveThinkingEnabled(model: DeclaredControlModel): boolean {
+  return model.thinkingEnabled ?? true;
+}
 
 export type ReasoningEffortOption = { value: DesktopModelReasoningEffort; label: string };
 

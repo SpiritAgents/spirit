@@ -178,6 +178,7 @@ export function CreateAutomationDialog({
                   models={snapshot.config.models}
                   catalogHints={snapshot.config.modelCatalogHints}
                   providers={snapshot.config.providers}
+                  providerPresets={snapshot.config.providerPickerPresets}
                   activeModelRef={modelRef}
                   activeReasoningEffort={reasoningEffort}
                   disabled={disabled}

@@ -392,6 +392,114 @@ test("updateConfigCommand routes a same-model tier change to the light refresh e
 });
 
 // ---------------------------------------------------------------------------
+// updateConfigCommand: thinkingEnabled (user state gated on supportsThinkingSwitch)
+// ---------------------------------------------------------------------------
+
+test("updateConfigCommand persists thinkingEnabled=false via the inference-preference refresh path", async () => {
+  await withUpdateConfigFixture(
+    {
+      providers: [openAiProvider([{ name: "gpt-5.4", supportsThinkingSwitch: true }])],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
+    },
+    async ({ config, dir }) => {
+      const { ctx, calls } = createUpdateConfigContext({ config });
+      await updateConfigCommand(ctx, {
+        activeModel: { providerId: "openai", name: "gpt-5.4" },
+        apiBase: "https://api.openai.com/v1",
+        thinkingEnabled: false,
+      });
+
+      assert.equal(config.providers[0].models[0].thinkingEnabled, false);
+      assert.equal((await readDiskModel(dir)).thinkingEnabled, false);
+      assert.equal(calls.refreshActiveModelTransportConfig, 1);
+      assert.equal(calls.refreshRuntime, 0);
+      assert.equal(calls.refreshLspSnapshot, 0);
+    },
+  );
+});
+
+test("updateConfigCommand stores absent=on by deleting the key when re-enabled", async () => {
+  await withUpdateConfigFixture(
+    {
+      providers: [
+        openAiProvider([{ name: "gpt-5.4", supportsThinkingSwitch: true, thinkingEnabled: false }]),
+      ],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
+    },
+    async ({ config, dir }) => {
+      const { ctx, calls } = createUpdateConfigContext({ config });
+      await updateConfigCommand(ctx, {
+        activeModel: { providerId: "openai", name: "gpt-5.4" },
+        apiBase: "https://api.openai.com/v1",
+        thinkingEnabled: true,
+      });
+
+      assert.equal("thinkingEnabled" in config.providers[0].models[0], false);
+      assert.equal("thinkingEnabled" in (await readDiskModel(dir)), false);
+      assert.equal(calls.refreshActiveModelTransportConfig, 1);
+      assert.equal(calls.refreshRuntime, 0);
+    },
+  );
+});
+
+test("updateConfigCommand rejects thinkingEnabled without a declared supportsThinkingSwitch", async () => {
+  await withUpdateConfigFixture(
+    {
+      providers: [openAiProvider([{ name: "gpt-5.4" }])],
+      activeModel: { providerId: "openai", name: "gpt-5.4" },
+    },
+    async ({ config, dir }) => {
+      const { ctx, calls } = createUpdateConfigContext({ config });
+      await assert.rejects(
+        updateConfigCommand(ctx, {
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
+          apiBase: "https://api.openai.com/v1",
+          thinkingEnabled: false,
+        }),
+        /declares no supportsThinkingSwitch/,
+      );
+
+      assert.equal("thinkingEnabled" in config.providers[0].models[0], false);
+      assert.equal("thinkingEnabled" in (await readDiskModel(dir)), false);
+      assert.equal(calls.refreshActiveModelTransportConfig, 0);
+      assert.equal(calls.refreshRuntime, 0);
+    },
+  );
+});
+
+test("updateConfigCommand accepts thinkingEnabled when the provider entry declares the switch", async () => {
+  await withUpdateConfigFixture(
+    {
+      providers: [
+        {
+          id: "meituan",
+          apiBase: "https://api.longcat.chat/openai/v1",
+          sdk: "@ai-sdk/openai-compatible",
+          supportsThinkingSwitch: true,
+          thinkingSwitch: {
+            on: { body: { thinking: { type: "enabled" } } },
+            off: { body: { thinking: { type: "disabled" } } },
+          },
+          models: [{ name: "longcat-2.5-preview" }],
+        },
+      ],
+      activeModel: { providerId: "meituan", name: "longcat-2.5-preview" },
+    },
+    async ({ config, dir }) => {
+      const { ctx } = createUpdateConfigContext({ config });
+      await updateConfigCommand(ctx, {
+        activeModel: { providerId: "meituan", name: "longcat-2.5-preview" },
+        apiBase: "https://api.longcat.chat/openai/v1",
+        thinkingEnabled: false,
+      });
+
+      assert.equal(config.providers[0].models[0].thinkingEnabled, false);
+      assert.equal((await readDiskModel(dir)).thinkingEnabled, false);
+    },
+  );
+});
+
+// ---------------------------------------------------------------------------
 // Remote daemon attach: refreshDaemonConfig forces session.replaceConfig
 // ---------------------------------------------------------------------------
 

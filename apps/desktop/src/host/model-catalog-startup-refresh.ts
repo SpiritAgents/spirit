@@ -201,6 +201,9 @@ export function catalogEntryToModelEntry(
   if (catalogEntry.supportsThinkingSwitch === true) {
     entry.supportsThinkingSwitch = true;
   }
+  if (catalogEntry.thinkingSwitch !== undefined) {
+    entry.thinkingSwitch = structuredClone(catalogEntry.thinkingSwitch);
+  }
   if (catalogEntry.serviceTiers !== undefined) {
     entry.serviceTiers = [...catalogEntry.serviceTiers];
   }
@@ -381,6 +384,18 @@ export function applyCatalogEntryToStoredModel(
 
   if (catalogEntry.supportsThinkingSwitch === true && model.supportsThinkingSwitch !== true) {
     model.supportsThinkingSwitch = true;
+    changed = true;
+  }
+
+  // The thinkingSwitch wire encoding is catalog-owned (knowledge-folded): written when declared,
+  // cleared when the fresh catalog entry drops it.
+  if (catalogEntry.thinkingSwitch !== undefined) {
+    if (JSON.stringify(model.thinkingSwitch) !== JSON.stringify(catalogEntry.thinkingSwitch)) {
+      model.thinkingSwitch = structuredClone(catalogEntry.thinkingSwitch);
+      changed = true;
+    }
+  } else if (model.thinkingSwitch !== undefined) {
+    delete model.thinkingSwitch;
     changed = true;
   }
 

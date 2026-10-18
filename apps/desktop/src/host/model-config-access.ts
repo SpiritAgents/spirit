@@ -68,6 +68,14 @@ export function resolveModelProfileFromParts(
     ...(effective.supportsThinkingSwitch !== undefined
       ? { supportsThinkingSwitch: effective.supportsThinkingSwitch }
       : {}),
+    ...(effective.thinkingEnabled !== undefined
+      ? { thinkingEnabled: effective.thinkingEnabled }
+      : {}),
+    ...(provider.providerTools !== undefined && provider.providerTools.length > 0
+      ? { hasProviderTools: true }
+      : {}),
+    ...(provider.imageApi !== undefined ? { imageApi: provider.imageApi } : {}),
+    ...(provider.videoApi !== undefined ? { videoApi: provider.videoApi } : {}),
     ...(effective.serviceTiers !== undefined ? { serviceTiers: effective.serviceTiers } : {}),
     ...(effective.serviceTier !== undefined ? { serviceTier: effective.serviceTier } : {}),
   };

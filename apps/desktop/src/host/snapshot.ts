@@ -17,6 +17,7 @@ import type {
   McpStatusSnapshot,
 } from "../types.js";
 import type { ProviderEntry } from "@spiritagent/host-internal";
+import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
 
 import { readModelCatalogCacheSync } from "./model-catalog-cache.js";
 import { flattenProviders } from "./model-config-access.js";
@@ -114,6 +115,11 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
     ...(input.runtimeError ? { runtimeError: input.runtimeError } : {}),
     config: {
       providers: snapshotProviders(input.config),
+      // Picker row data rides the snapshot so the renderer never imports the preset manifest.
+      providerPickerPresets: listProviderPresets().map((preset) => ({
+        id: preset.id,
+        label: preset.label,
+      })),
       models: flattenedModels.map((model) => ({
         ...model,
         keyConfigured: input.modelKeyPresence[model.name] ?? false,

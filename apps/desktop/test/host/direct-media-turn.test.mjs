@@ -180,6 +180,120 @@ test("executeDirectMediaTurn emits succeeded generate_image tool card and archiv
   assert.equal(harness.bundle.runtime.history()[1].toolCalls?.[0]?.name, "generate_image");
 });
 
+test("executeDirectMediaTurn passes the provider entry's declared imageApi into the generation sub-config", async () => {
+  const harness = createDirectMediaHarness();
+  const gatewayConfig = {
+    providers: [
+      {
+        id: "vercel-ai-gateway",
+        apiBase: "https://ai-gateway.vercel.sh/v1",
+        imageApi: "vercel-gateway-images",
+        videoApi: "vercel-gateway-videos",
+        models: [
+          {
+            name: "openai/gpt-image-2.5-flare",
+            capabilities: ["imageGeneration", "videoGeneration"],
+          },
+        ],
+      },
+    ],
+    activeModel: { providerId: "vercel-ai-gateway", name: "openai/gpt-image-2.5-flare" },
+    imageGenerationModel: { providerId: "vercel-ai-gateway", name: "openai/gpt-image-2.5-flare" },
+  };
+  harness.ctx.requireConfig = () => gatewayConfig;
+
+  let seenConfig;
+  harness.bundle.runtimeTransport.generateImage = async (mediaConfig, request, saveGenerated) => {
+    seenConfig = mediaConfig;
+    await saveGenerated({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: "image/png",
+      prompt: request.prompt,
+      model: "openai/gpt-image-2.5-flare",
+    });
+    return {
+      content: [
+        { type: "text", text: "[generated image]" },
+        { type: "image", path: "generated/direct-test.png" },
+      ],
+      summaryText: "[generated image]",
+    };
+  };
+
+  await executeDirectMediaTurn(harness.ctx, {
+    bundle: harness.bundle,
+    toolName: "generate_image",
+    prompt: "draw a square poster",
+    userMessageId: 1,
+    beforeUserCheckpoint: undefined,
+  });
+
+  assert.equal(seenConfig?.imageGeneration?.imageApi, "vercel-gateway-images");
+  assert.equal(seenConfig?.imageGeneration?.model, "openai/gpt-image-2.5-flare");
+  assert.equal(seenConfig?.imageGeneration?.baseUrl, "https://ai-gateway.vercel.sh/v1");
+});
+
+test("executeDirectMediaTurn passes the provider entry's declared videoApi into the generation sub-config", async () => {
+  const harness = createDirectMediaHarness();
+  const gatewayConfig = {
+    providers: [
+      {
+        id: "vercel-ai-gateway",
+        apiBase: "https://ai-gateway.vercel.sh/v1",
+        imageApi: "vercel-gateway-images",
+        videoApi: "vercel-gateway-videos",
+        models: [
+          {
+            name: "alibaba/wan-v2.5-t2v-preview",
+            capabilities: ["videoGeneration"],
+          },
+        ],
+      },
+    ],
+    activeModel: { providerId: "vercel-ai-gateway", name: "alibaba/wan-v2.5-t2v-preview" },
+    videoGenerationModel: { providerId: "vercel-ai-gateway", name: "alibaba/wan-v2.5-t2v-preview" },
+  };
+  harness.ctx.requireConfig = () => gatewayConfig;
+
+  let seenConfig;
+  harness.bundle.runtimeTransport.generateVideo = async (mediaConfig, request, saveGenerated) => {
+    seenConfig = mediaConfig;
+    await saveGenerated({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: "video/mp4",
+      prompt: request.prompt,
+      model: "alibaba/wan-v2.5-t2v-preview",
+    });
+    return {
+      content: [
+        { type: "text", text: "[generated video]" },
+        { type: "video", path: "generated/direct-test.mp4" },
+      ],
+      summaryText: "[generated video]",
+    };
+  };
+  harness.ctx.ensureToolExecutor = async () => ({
+    async saveGeneratedVideo(request) {
+      return {
+        path: "generated/direct-test.mp4",
+        mimeType: request.mediaType,
+        markdownRef: `${product.urlProtocol}://generated/video/direct-test.mp4`,
+      };
+    },
+  });
+
+  await executeDirectMediaTurn(harness.ctx, {
+    bundle: harness.bundle,
+    toolName: "generate_video",
+    prompt: "animate the poster",
+    userMessageId: 1,
+    beforeUserCheckpoint: undefined,
+  });
+
+  assert.equal(seenConfig?.videoGeneration?.videoApi, "vercel-gateway-videos");
+  assert.equal(seenConfig?.videoGeneration?.model, "alibaba/wan-v2.5-t2v-preview");
+});
+
 test("isSessionBundleBusy includes direct media in-flight flag", () => {
   assert.equal(isSessionBundleBusy(undefined), false);
   assert.equal(isSessionBundleBusy({ runtime: { isBusy: () => false } }), false);

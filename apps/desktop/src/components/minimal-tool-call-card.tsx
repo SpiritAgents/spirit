@@ -243,13 +243,14 @@ export function MinimalToolSummary({
   );
 }
 
-function ResponsesBuiltInToolExpandedBody({
+function ProviderToolExpandedBody({
   tool,
   shimmerActive,
 }: {
   tool: ToolBlockSnapshot;
   shimmerActive: boolean;
 }) {
+  const { t } = useTranslation();
   const input = tool.argsExcerpt?.trim() ?? "";
   const output = tool.outputExcerpt?.trim() ?? "";
 
@@ -257,13 +258,17 @@ function ResponsesBuiltInToolExpandedBody({
     <div className="space-y-3">
       {input ? (
         <div className="space-y-1">
-          <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">Input</p>
+          <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">
+            {t("tool.input")}
+          </p>
           <ToolCallDetailScrollPre>{input}</ToolCallDetailScrollPre>
         </div>
       ) : null}
       {output ? (
         <div className="space-y-1">
-          <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">Output</p>
+          <p className="text-[10px] font-normal tracking-wide text-muted-foreground/70">
+            {t("tool.output")}
+          </p>
           <ToolCallDetailScrollPre>{output}</ToolCallDetailScrollPre>
         </div>
       ) : shimmerActive ? (
@@ -681,7 +686,8 @@ export function MinimalToolCallCard({
     [tool.phase, tool.toolName, tool.editLineDelta, tool.argsExcerpt],
   );
   const isFileDiff = isFileDiffTool(tool.toolName);
-  const isResponsesBuiltIn = isResponsesBuiltInToolCard(tool.toolName);
+  const isProviderToolCard =
+    isResponsesBuiltInToolCard(tool.toolName) || Boolean(tool.providerToolLabel?.trim());
   const shellCommand = useMemo(
     () => (isShell ? resolveShellToolExpandedCommand(tool) : undefined),
     [isShell, tool.argsExcerpt, tool.detailLines, tool.headlineDetail],
@@ -789,8 +795,8 @@ export function MinimalToolCallCard({
         <ShellToolExpandedBody tool={tool} command={shellCommand} onAbortShell={onAbortShell} />
       ) : isFileDiff ? (
         <FileToolDiffExpandedBody tool={tool} open={open} />
-      ) : isResponsesBuiltIn ? (
-        <ResponsesBuiltInToolExpandedBody tool={tool} shimmerActive={shimmerActive} />
+      ) : isProviderToolCard ? (
+        <ProviderToolExpandedBody tool={tool} shimmerActive={shimmerActive} />
       ) : (
         <GenericToolExpandedBody tool={tool} />
       )}

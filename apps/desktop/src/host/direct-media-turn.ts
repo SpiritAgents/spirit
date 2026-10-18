@@ -44,6 +44,8 @@ export interface DirectMediaTurnInput {
 /**
  * Media-only turn shell: the resolved profile carries the materialized apiBase; the generation
  * backend reads the `imageGeneration` / `videoGeneration` sub-config off the transport config.
+ * The provider entry's declared `imageApi` / `videoApi` shape names key the backend registry
+ * (absent = the default `openai-images` shape; unknown shape names fail fast in agent-core).
  */
 function buildMediaOnlyTransportConfig(
   toolName: DirectMediaTool,
@@ -64,9 +66,21 @@ function buildMediaOnlyTransportConfig(
     baseUrl: input.profile.apiBase,
   };
   if (toolName === "generate_image") {
-    return { ...shell, imageGeneration: subConfig } as LlmTransportConfig;
+    return {
+      ...shell,
+      imageGeneration: {
+        ...subConfig,
+        ...(input.profile.imageApi !== undefined ? { imageApi: input.profile.imageApi } : {}),
+      },
+    } as LlmTransportConfig;
   }
-  return { ...shell, videoGeneration: subConfig } as LlmTransportConfig;
+  return {
+    ...shell,
+    videoGeneration: {
+      ...subConfig,
+      ...(input.profile.videoApi !== undefined ? { videoApi: input.profile.videoApi } : {}),
+    },
+  } as LlmTransportConfig;
 }
 
 function buildMediaToolRequest(toolName: DirectMediaTool, prompt: string): DesktopToolRequest {

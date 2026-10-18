@@ -136,6 +136,8 @@ export type ModelPickerMenuProps = {
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
   providers?: DesktopSnapshot["config"]["providers"];
+  /** Preset picker rows from the host snapshot: group order + fallback labels in the menu. */
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModelRef: ModelRef;
   activeReasoningEffort?: DesktopModelReasoningEffort;
   disabled?: boolean;
@@ -144,6 +146,7 @@ export type ModelPickerMenuProps = {
   onModelSelect(ref: ModelRef): void;
   onModelReasoningEffortSelect?(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
+  onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
     ref: ModelRef,
     serviceTier: ModelServiceTier | undefined,
@@ -156,6 +159,7 @@ export function ModelPickerMenu({
   models,
   catalogHints,
   providers,
+  providerPresets,
   activeModelRef,
   activeReasoningEffort,
   disabled,
@@ -164,6 +168,7 @@ export function ModelPickerMenu({
   onModelSelect,
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
+  onModelThinkingEnabledSelect,
   onModelServiceTierSelect,
   triggerClassName,
   menuContentClassName,
@@ -201,8 +206,8 @@ export function ModelPickerMenu({
     [catalogHints, models],
   );
   const modelGroups = useMemo(
-    () => groupModelsForPicker(models, catalogHints, providers),
-    [catalogHints, models, providers],
+    () => groupModelsForPicker(models, catalogHints, providers, providerPresets),
+    [catalogHints, models, providers, providerPresets],
   );
   const filteredModelGroups = useMemo(() => {
     const query = modelFilter.trim().toLowerCase();
@@ -427,6 +432,7 @@ export function ModelPickerMenu({
                     onModelReasoningModeSelect?.(modelRef, mode);
                     onModelSelect(modelRef);
                   }}
+                  onThinkingEnabledChange={onModelThinkingEnabledSelect}
                   onServiceTierChange={onModelServiceTierSelect}
                 />
               );

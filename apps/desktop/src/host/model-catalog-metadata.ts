@@ -11,6 +11,7 @@ import type {
   DesktopTransportKind,
   PreviewModelCatalogEntry,
 } from "../types.js";
+import type { ThinkingSwitchDeclaration } from "@spiritagent/host-internal/config";
 
 /**
  * The catalog parser (API shape) driving a provider entry's listing: the materialized preset's
@@ -120,6 +121,20 @@ function knowledgeDeclaredServiceTiers(
 }
 
 /**
+ * The thinkingSwitch wire-encoding companion block folded from knowledge; the declaration is a
+ * literal config shape (validated by the knowledge module's own tests and again at config load).
+ */
+function knowledgeDeclaredThinkingSwitch(
+  declaration: Record<string, unknown>,
+): ThinkingSwitchDeclaration | undefined {
+  const value = declaration["thinkingSwitch"];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as ThinkingSwitchDeclaration;
+}
+
+/**
  * One catalog write entry = the listing's API facts with model-knowledge declarations folded in
  * (knowledge wins on the keys it declares; it is the curated source — data bugs get fixed in the
  * knowledge module, never in a runtime patch).
@@ -135,6 +150,9 @@ function previewEntryFromListedEntry(
   const knowledgeThinkingSwitch = knowledge?.["supportsThinkingSwitch"] === true ? true : undefined;
   const knowledgeThinkingType =
     knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
+  const knowledgeThinkingSwitchEncoding = knowledge
+    ? knowledgeDeclaredThinkingSwitch(knowledge)
+    : undefined;
 
   return {
     id: entry.id,
@@ -166,6 +184,9 @@ function previewEntryFromListedEntry(
         : {}),
     ...(knowledgeThinkingSwitch === true || entry.supportsThinkingSwitch === true
       ? { supportsThinkingSwitch: true }
+      : {}),
+    ...(knowledgeThinkingSwitchEncoding !== undefined
+      ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
       : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }

@@ -69,6 +69,7 @@ export type ComposerSurfaceProps = {
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
   providers?: DesktopSnapshot["config"]["providers"];
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   loopEnabled: boolean;
@@ -82,6 +83,7 @@ export type ComposerSurfaceProps = {
   onModelSelect(ref: ModelRef): void;
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
+  onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
     ref: ModelRef,
     serviceTier: ModelServiceTier | undefined,
@@ -118,6 +120,7 @@ export function ComposerSurface({
   models,
   catalogHints,
   providers,
+  providerPresets,
   activeModel,
   agentMode,
   loopEnabled = false,
@@ -131,6 +134,7 @@ export function ComposerSurface({
   onModelSelect,
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
+  onModelThinkingEnabledSelect,
   onModelServiceTierSelect,
   onAgentModeChange,
   onLoopEnabledChange,
@@ -274,12 +278,14 @@ export function ComposerSurface({
               models={models}
               catalogHints={catalogHints}
               providers={providers}
+              providerPresets={providerPresets}
               activeModelRef={activeModel}
               activeReasoningEffort={activeModelProfile?.reasoningEffort}
               disabled={readOnly}
               onModelSelect={onModelSelect}
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
               onModelReasoningModeSelect={onModelReasoningModeSelect}
+              onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
               onModelServiceTierSelect={onModelServiceTierSelect}
               triggerClassName={DESKTOP_COMPOSER_GHOST_HOVER}
               menuContentClassName="z-[100]"
