@@ -266,6 +266,59 @@ test("resolveDeclaredVideoInputsInMessages embeds local video as base64 without 
   }
 });
 
+test("resolveDeclaredVideoInputsInMessages enforces options.maxInlineMediaBytes on the inline path", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-inline-cap-"));
+  const videoPath = join(workspaceRoot, "clip.mp4");
+  try {
+    await writeFile(videoPath, MINIMAL_MP4_HEADER);
+    const encodedBytes = Buffer.byteLength(MINIMAL_MP4_HEADER.toString("base64"), "utf8");
+
+    const buildMessages = () => [
+      llmMessageToOpenAiMessage(
+        {
+          role: "user",
+          content: [createLlmVideoContentPart(videoPath)],
+        },
+        workspaceRoot,
+      ),
+    ];
+
+    // Cap below the encoded size: the inline rewrite fails with the declared-limit error.
+    await assert.rejects(
+      resolveDeclaredVideoInputsInMessages(
+        {
+          apiKey: "test-key",
+          baseUrl: "https://api.xiaomimimo.com/v1",
+          modelCapabilities: { videoInput: true },
+          options: { maxInlineMediaBytes: encodedBytes - 1 },
+        },
+        buildMessages(),
+        workspaceRoot,
+      ),
+      /must not exceed .* MB after Base64 encoding/,
+    );
+
+    // Cap at the encoded size: the inline rewrite applies.
+    const messages = buildMessages();
+    await resolveDeclaredVideoInputsInMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.xiaomimimo.com/v1",
+        modelCapabilities: { videoInput: true },
+        options: { maxInlineMediaBytes: encodedBytes },
+      },
+      messages,
+      workspaceRoot,
+    );
+    const url =
+      (messages[0] as { content: Array<{ video_url: { url: string } }> }).content[0]?.video_url
+        .url ?? "";
+    assert.match(url, /^data:video\/mp4;base64,/);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("resolveDeclaredVideoInputsInMessages inlines when the purpose map does not cover video", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-inline-purpose-"));
   const videoPath = join(workspaceRoot, "clip.mp4");

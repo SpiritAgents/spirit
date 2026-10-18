@@ -595,6 +595,190 @@ test("options keys are scoped by transportKind and sdk", () => {
   );
 });
 
+test("mechanism options keys validate value shapes and transport scope", () => {
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          options: { toolsRejectReasoningEffort: true, maxInlineMediaBytes: 52428800 },
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ options: { toolsRejectReasoningEffort: false } })]),
+      ),
+    '"options.toolsRejectReasoningEffort" must be true',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "open-responses",
+            options: { toolsRejectReasoningEffort: true },
+          }),
+        ]),
+      ),
+    'unknown "options" key "toolsRejectReasoningEffort" for transportKind "open-responses"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ options: { maxInlineMediaBytes: "50MB" } })]),
+      ),
+    '"options.maxInlineMediaBytes" must be a positive integer',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(validConfig([validProvider({ options: { maxInlineMediaBytes: 0 } })])),
+    '"options.maxInlineMediaBytes" must be a positive integer',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ options: { maxInlineMediaBytes: 1024.5 } })]),
+      ),
+    '"options.maxInlineMediaBytes" must be a positive integer',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({ transportKind: "open-responses", options: { maxInlineMediaBytes: 1 } }),
+        ]),
+      ),
+    'unknown "options" key "maxInlineMediaBytes" for transportKind "open-responses"',
+  );
+
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          transportKind: "open-responses",
+          options: { echoServerToolCalls: true, defaultInputItemStatus: "completed" },
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "open-responses",
+            options: { echoServerToolCalls: false },
+          }),
+        ]),
+      ),
+    '"options.echoServerToolCalls" must be true',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ options: { echoServerToolCalls: true } })]),
+      ),
+    'unknown "options" key "echoServerToolCalls" for transportKind "openai-compatible"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "open-responses",
+            options: { defaultInputItemStatus: "" },
+          }),
+        ]),
+      ),
+    '"options.defaultInputItemStatus" must be a non-empty string',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "open-responses",
+            options: { defaultInputItemStatus: true },
+          }),
+        ]),
+      ),
+    '"options.defaultInputItemStatus" must be a non-empty string',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "anthropic",
+            options: { defaultInputItemStatus: "completed" },
+          }),
+        ]),
+      ),
+    'unknown "options" key "defaultInputItemStatus" for transportKind "anthropic"',
+  );
+});
+
+test("preset mechanism options round trip through save/load", async () => {
+  const spiritDataDir = mkdtempSync(join(tmpdir(), "spirit-config-options-"));
+  const config: SpiritConfigFile = {
+    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+    providers: [
+      {
+        id: "cloudflare-ai-gateway",
+        apiBase: "https://api.cloudflare.com/client/v4/accounts/acc/ai/v1",
+        sdk: "@ai-sdk/openai-compatible",
+        options: { toolsRejectReasoningEffort: true },
+        models: [{ name: "openai/gpt-5.5" }],
+      },
+      {
+        id: "deepseek",
+        apiBase: "https://api.deepseek.com",
+        transportKind: "open-responses",
+        sdk: "@ai-sdk/open-responses",
+        options: { echoServerToolCalls: true },
+        models: [{ name: "deepseek-v4-flash" }],
+      },
+      {
+        id: "volcengine",
+        apiBase: "https://ark.cn-beijing.volces.com/api/v3",
+        transportKind: "open-responses",
+        sdk: "@ai-sdk/open-responses",
+        options: { defaultInputItemStatus: "completed" },
+        models: [{ name: "doubao-seed-2-0" }],
+      },
+      {
+        id: "byteplus",
+        apiBase: "https://ark.ap-southeast.bytepluses.com/api/v3",
+        transportKind: "open-responses",
+        sdk: "@ai-sdk/open-responses",
+        options: { defaultInputItemStatus: "completed" },
+        models: [{ name: "seed-2-0" }],
+      },
+      {
+        id: "xiaomi",
+        apiBase: "https://api.xiaomimimo.com/v1",
+        sdk: "@ai-sdk/openai-compatible",
+        options: { maxInlineMediaBytes: 52428800 },
+        models: [{ name: "mimo-v2.5" }],
+      },
+    ],
+    activeModel: { providerId: "deepseek", name: "deepseek-v4-flash" },
+  };
+  await saveSpiritConfig(spiritDataDir, config);
+  const loaded = loadSpiritConfig(spiritDataDir);
+  assert.ok(loaded);
+  const byId = new Map(loaded.providers.map((provider) => [provider.id, provider]));
+  assert.deepEqual(byId.get("cloudflare-ai-gateway")?.options, {
+    toolsRejectReasoningEffort: true,
+  });
+  assert.deepEqual(byId.get("deepseek")?.options, { echoServerToolCalls: true });
+  assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
+  assert.deepEqual(byId.get("byteplus")?.options, { defaultInputItemStatus: "completed" });
+  assert.deepEqual(byId.get("xiaomi")?.options, { maxInlineMediaBytes: 52428800 });
+});
+
 test("credentials slots are scoped by mechanism and conflict with flat keys", () => {
   assert.deepEqual(providerCredentialSlotNames("openai-compatible", undefined), ["apiKey"]);
   assert.deepEqual(providerCredentialSlotNames("bedrock", undefined), [

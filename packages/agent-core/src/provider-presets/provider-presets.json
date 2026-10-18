@@ -87,7 +87,8 @@
         "open-responses": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1",
         "anthropic": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1"
       },
-      "credentials": { "kind": "apiKey" }
+      "credentials": { "kind": "apiKey" },
+      "options": { "toolsRejectReasoningEffort": true }
     },
     {
       "id": "deepseek",
@@ -106,6 +107,7 @@
           "tools": [{ "type": "web_search" }]
         }
       ],
+      "options": { "echoServerToolCalls": true },
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {
@@ -583,6 +585,7 @@
         "open-responses": "https://api.xiaomimimo.com/v1"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "maxInlineMediaBytes": 52428800 },
       "catalog": { "parser": "xiaomi-models", "endpoint": "/models" }
     },
     {
@@ -711,6 +714,7 @@
         "open-responses": "https://ark.cn-beijing.volces.com/api/v3"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "defaultInputItemStatus": "completed" },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
     },
@@ -724,6 +728,7 @@
         "open-responses": "https://ark.ap-southeast.bytepluses.com/api/v3"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "defaultInputItemStatus": "completed" },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
     },

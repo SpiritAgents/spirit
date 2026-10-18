@@ -98,6 +98,7 @@ export interface DeclaredMediaConfig {
   baseUrl?: string;
   fileUpload?: FileUploadConfig;
   modelCapabilities?: { videoInput?: true };
+  options?: Record<string, unknown>;
 }
 
 /**
@@ -109,9 +110,31 @@ function urlHasWireScheme(url: string): boolean {
   return /^data:/i.test(url) || /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
 }
 
-function pathToInlineVideoDataUrl(absolutePath: string): string {
+/**
+ * `options.maxInlineMediaBytes`: cap on the base64-encoded inline payload size, enforced before
+ * the data URL is built (Xiaomi MiMo's 50 MB inline-video limit is the declaring preset).
+ */
+function readMaxInlineMediaBytes(config: DeclaredMediaConfig): number | undefined {
+  const value = config.options?.maxInlineMediaBytes;
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function formatInlineMediaCapMb(maxBytes: number): string {
+  const mb = maxBytes / (1024 * 1024);
+  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
+}
+
+function pathToInlineVideoDataUrl(absolutePath: string, maxInlineMediaBytes?: number): string {
   const bytes = readFileSync(absolutePath);
   const base64 = Buffer.from(bytes).toString("base64");
+  if (
+    maxInlineMediaBytes !== undefined &&
+    Buffer.byteLength(base64, "utf8") > maxInlineMediaBytes
+  ) {
+    throw new Error(
+      `Inline video must not exceed ${formatInlineMediaCapMb(maxInlineMediaBytes)} MB after Base64 encoding (the provider entry's options.maxInlineMediaBytes); use a public URL or shorten the video instead.`,
+    );
+  }
   return `data:${guessVideoMimeFromPath(absolutePath)};base64,${base64}`;
 }
 
@@ -147,6 +170,7 @@ export async function resolveDeclaredVideoInputsInMessages(
   if (config.modelCapabilities?.videoInput !== true) {
     return;
   }
+  const maxInlineMediaBytes = readMaxInlineMediaBytes(config);
 
   for (const message of messages) {
     if (!isJsonObject(message) || message.role !== "user" || !Array.isArray(message.content)) {
@@ -190,7 +214,7 @@ export async function resolveDeclaredVideoInputsInMessages(
         }
         // kind === "inline": the purpose map does not cover video — fall through to inline.
       }
-      rawVideoUrl["url"] = pathToInlineVideoDataUrl(absolutePath);
+      rawVideoUrl["url"] = pathToInlineVideoDataUrl(absolutePath, maxInlineMediaBytes);
     }
   }
 }

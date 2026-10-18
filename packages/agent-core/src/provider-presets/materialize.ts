@@ -40,6 +40,34 @@ export function fallbackSdkPackageName(transportKind: LlmTransportKind): string 
   return FALLBACK_SDK_BY_TRANSPORT_KIND[transportKind];
 }
 
+/**
+ * Transport scope of the mechanism `options` keys a preset may template. A preset entry declares
+ * the template flat (e.g. an open-responses continuation convention), but the wizard may
+ * materialize a different transport of the same provider; keys scoped to another transport are
+ * dropped here so the written entry always passes the config schema's transportKind-scoped keyset.
+ * Keys without a known scope pass through verbatim — deep value validation is the config load's
+ * fail-fast job.
+ */
+const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<string, LlmTransportKind> = {
+  toolsRejectReasoningEffort: "openai-compatible",
+  maxInlineMediaBytes: "openai-compatible",
+  echoServerToolCalls: "open-responses",
+  defaultInputItemStatus: "open-responses",
+};
+
+function materializePresetOptions(
+  presetOptions: JsonObject,
+  transportKind: LlmTransportKind,
+): JsonObject | undefined {
+  const scoped = Object.fromEntries(
+    Object.entries(presetOptions).filter(([key]) => {
+      const scope = PRESET_OPTIONS_TRANSPORT_SCOPE[key];
+      return scope === undefined || scope === transportKind;
+    }),
+  );
+  return Object.keys(scoped).length > 0 ? scoped : undefined;
+}
+
 export interface MaterializeProviderPresetInput {
   /** A preset id from the manifest, or `"custom"`. */
   presetId: string;
@@ -155,6 +183,10 @@ export function materializeProviderPreset(
 
   const sdk =
     transportKind === preset.defaultTransport ? preset.sdk : fallbackSdkPackageName(transportKind);
+  const options =
+    preset.options !== undefined
+      ? materializePresetOptions(preset.options, transportKind)
+      : undefined;
 
   return {
     id: preset.id,
@@ -170,6 +202,7 @@ export function materializeProviderPreset(
     ...(preset.thinkingSwitch !== undefined
       ? { thinkingSwitch: structuredClone(preset.thinkingSwitch) }
       : {}),
+    ...(options !== undefined ? { options: structuredClone(options) } : {}),
     ...(preset.imageApi !== undefined ? { imageApi: preset.imageApi } : {}),
     ...(preset.videoApi !== undefined ? { videoApi: preset.videoApi } : {}),
     models: [],

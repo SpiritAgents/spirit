@@ -125,7 +125,7 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
   providerTools?: ProviderToolEntry[];
   /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
   fileUpload?: FileUploadConfig;
-  /** Transport option namespace; the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
+  /** Transport option namespace (e.g. `toolsRejectReasoningEffort` / `maxInlineMediaBytes`); the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
   options?: Record<string, unknown>;
   /** Declared output token limit for the model; mapped to the transport's wire parameter (`max_tokens` here). */
   outputLimit?: number;

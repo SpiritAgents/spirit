@@ -80,7 +80,7 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   providerTools?: ProviderToolEntry[];
   /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
   fileUpload?: FileUploadConfig;
-  /** Transport option namespace (`auth` / `storedState` / `applyPatch`); unknown keys are rejected at config load. */
+  /** Transport option namespace (`auth` / `storedState` / `applyPatch` / `echoServerToolCalls` / `defaultInputItemStatus`); unknown keys are rejected at config load. */
   options?: Record<string, unknown>;
   /** Declared output token limit for the model; mapped to the Responses `max_output_tokens` parameter. */
   outputLimit?: number;

@@ -86,6 +86,14 @@ export interface ProviderOptions {
   auth?: "aws-sigv4";
   storedState?: true;
   applyPatch?: true;
+  /** openai-compatible: the upstream rejects function tools with a non-`none` reasoning effort. */
+  toolsRejectReasoningEffort?: true;
+  /** openai-compatible: byte cap on base64-encoded inline media payloads. */
+  maxInlineMediaBytes?: number;
+  /** open-responses: echo server-side tool call items back into the next round's input. */
+  echoServerToolCalls?: true;
+  /** open-responses: status value filled onto replayed input items that lack one. */
+  defaultInputItemStatus?: string;
 }
 
 /**
@@ -279,8 +287,14 @@ const FILE_UPLOAD_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
-  "openai-compatible": [],
-  "open-responses": ["auth", "storedState", "applyPatch"],
+  "openai-compatible": ["toolsRejectReasoningEffort", "maxInlineMediaBytes"],
+  "open-responses": [
+    "auth",
+    "storedState",
+    "applyPatch",
+    "echoServerToolCalls",
+    "defaultInputItemStatus",
+  ],
   anthropic: [],
   bedrock: ["awsRegion"],
 };
@@ -594,7 +608,7 @@ function validateProviderOptions(
       );
     }
   }
-  for (const key of ["awsRegion", "project", "location"] as const) {
+  for (const key of ["awsRegion", "project", "location", "defaultInputItemStatus"] as const) {
     const entry = value[key];
     if (entry !== undefined && (typeof entry !== "string" || entry.trim().length === 0)) {
       throw new SpiritConfigSchemaError(`${context}: "options.${key}" must be a non-empty string.`);
@@ -603,12 +617,28 @@ function validateProviderOptions(
   if (value["auth"] !== undefined && value["auth"] !== "aws-sigv4") {
     throw new SpiritConfigSchemaError(`${context}: "options.auth" must be "aws-sigv4".`);
   }
-  for (const key of ["storedState", "applyPatch"] as const) {
+  for (const key of [
+    "storedState",
+    "applyPatch",
+    "toolsRejectReasoningEffort",
+    "echoServerToolCalls",
+  ] as const) {
     if (value[key] !== undefined && value[key] !== true) {
       throw new SpiritConfigSchemaError(
         `${context}: "options.${key}" must be true; omit the key otherwise.`,
       );
     }
+  }
+  const maxInlineMediaBytes = value["maxInlineMediaBytes"];
+  if (
+    maxInlineMediaBytes !== undefined &&
+    (typeof maxInlineMediaBytes !== "number" ||
+      !Number.isInteger(maxInlineMediaBytes) ||
+      maxInlineMediaBytes <= 0)
+  ) {
+    throw new SpiritConfigSchemaError(
+      `${context}: "options.maxInlineMediaBytes" must be a positive integer.`,
+    );
   }
 }
 

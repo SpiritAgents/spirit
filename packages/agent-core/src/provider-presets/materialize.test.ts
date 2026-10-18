@@ -259,6 +259,47 @@ test("meituan carries the thinking.type switch encoding template", () => {
   });
 });
 
+test("mechanism options templates materialize scoped to the selected transport", () => {
+  const cloudflare = materializeProviderPreset({
+    presetId: "cloudflare-ai-gateway",
+    templateValues: { accountId: "acc-1" },
+  });
+  assert.deepEqual(cloudflare.options, { toolsRejectReasoningEffort: true });
+
+  const deepseek = materializeProviderPreset({ presetId: "deepseek" });
+  assert.equal(deepseek.transportKind, "open-responses");
+  assert.deepEqual(deepseek.options, { echoServerToolCalls: true });
+  // The echo convention is open-responses-scoped: the chat-completions transport drops the key.
+  const deepseekChat = materializeProviderPreset({
+    presetId: "deepseek",
+    transportKind: "openai-compatible",
+  });
+  assert.equal(deepseekChat.options, undefined);
+
+  const volcengineResponses = materializeProviderPreset({
+    presetId: "volcengine",
+    transportKind: "open-responses",
+  });
+  assert.deepEqual(volcengineResponses.options, { defaultInputItemStatus: "completed" });
+  const byteplusResponses = materializeProviderPreset({
+    presetId: "byteplus",
+    transportKind: "open-responses",
+  });
+  assert.deepEqual(byteplusResponses.options, { defaultInputItemStatus: "completed" });
+  // Ark's default transport is openai-compatible: the input-item status patch does not apply there.
+  const volcengineChat = materializeProviderPreset({ presetId: "volcengine" });
+  assert.equal(volcengineChat.transportKind, undefined);
+  assert.equal(volcengineChat.options, undefined);
+
+  const xiaomi = materializeProviderPreset({ presetId: "xiaomi" });
+  assert.deepEqual(xiaomi.options, { maxInlineMediaBytes: 52428800 });
+
+  // The materialized options are a deep copy that never aliases the manifest.
+  xiaomi.options!["maxInlineMediaBytes"] = 1;
+  const manifestEntry = PROVIDER_PRESET_MANIFEST.providers.find((preset) => preset.id === "xiaomi");
+  assert.equal(manifestEntry?.options?.["maxInlineMediaBytes"], 52428800);
+});
+
 test("anthropic has no provider tools today (server-side search was never integrated)", () => {
   const entry = materializeProviderPreset({ presetId: "anthropic" });
   assert.equal(entry.transportKind, "anthropic");

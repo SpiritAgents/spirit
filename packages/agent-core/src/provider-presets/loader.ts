@@ -239,6 +239,10 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
   if (body !== undefined && !isRecord(body)) {
     fail(`${context}.body must be an object.`);
   }
+  const options = value["options"];
+  if (options !== undefined && !isRecord(options)) {
+    fail(`${context}.options must be an object.`);
+  }
   const thinkingSwitch = value["thinkingSwitch"];
   if (thinkingSwitch !== undefined) {
     if (!isRecord(thinkingSwitch)) {
@@ -276,6 +280,7 @@ function readProviderPreset(value: unknown, index: number): ProviderPreset {
     ...(videoApi !== undefined ? { videoApi } : {}),
     ...(expressApiBase !== undefined ? { expressApiBase } : {}),
     ...(body !== undefined ? { body: body as JsonObject } : {}),
+    ...(options !== undefined ? { options: options as JsonObject } : {}),
     ...(thinkingSwitch !== undefined
       ? { thinkingSwitch: thinkingSwitch as ThinkingSwitchDeclaration }
       : {}),
