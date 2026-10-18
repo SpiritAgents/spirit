@@ -5,7 +5,7 @@ description: Old config, headless blocks, pairing locks, missing keys, and insta
 
 ## config.json is rejected
 
-The file must be `schemaVersion: 2`. Delete the old file and [reconnect a provider](./providers.mdx). Keys were never in that file — they are in the [keyring](./security.mdx).
+The file must be `schemaVersion: 1`. Any other version is rejected — delete the old file and [reconnect a provider](./providers.mdx). Unless you declared a plaintext `apiKey`, keys are not in that file — they are in the [keyring](./security.mdx).
 
 ## CLI installed, settings empty
 

@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: Répertoires de données, config.json v2,
+description: Répertoires de données, config.json v1,
   {{product.workspaceDataFolderName}}/, et variables d'environnement.
 ---
 
@@ -37,18 +37,75 @@ Fichiers typiques :
 
 Les binaires CLI utilisent SPIRIT_HOME. Sous Unix, l'installation Stable et les données partagées peuvent avoir le même répertoire parent ; bin/ et cli/ restent des fichiers d'installation. Ce réglage ne choisit pas le répertoire des données partagées.
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` doit être `2`. La version 1 est rejetée — supprimez l'ancien fichier et [reconnectez un fournisseur](./providers.mdx).
+`schemaVersion` doit être `1`. Toute autre valeur est rejetée — supprimez l'ancien fichier et [reconnectez un fournisseur](./providers.mdx). Il n'y a pas de migration depuis les formes plus anciennes.
 
 Champs principaux :
 
-- `providerGroups` — maisons connectées, base API, transport, modèles
+- `providers` — fournisseurs connectés : point de terminaison, transport, identifiants, modèles
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — interrupteurs de l'agent comme `agents.providerTools.enabled`
 - `permission` — règles de la liste d'autorisations des permissions
 
-Les clés ne sont **pas** dans ce fichier. Elles vivent dans le [trousseau](./security.mdx).
+`activeModel` et les autres emplacements de modèle sont des références de modèle : `{ "providerId": "…", "name": "…" }`, où `providerId` est un `providers[].id` et `name` est l'un de ses `models[].name`.
+
+### Entrées de fournisseur
+
+Chaque entrée de `providers[]` est une connexion entièrement déclarative — ce que l'assistant de connexion écrit est exactement ce que le runtime lit. Le runtime ne redérive jamais `apiBase` de l'identité du fournisseur ; les choix de site, de plan et de cloud sont matérialisés dans l'URL finale au moment de la connexion.
+
+Champs de niveau connexion :
+
+- `id` (requis) — identifiant unique de l'entrée. Les références de modèle et le compte du trousseau interne y pointent
+- `label` — nom d'affichage facultatif
+- `apiBase` (requis) — le point de terminaison, seule source de vérité
+- `transportKind` — protocole wire : `openai-compatible` (par défaut) / `open-responses` / `anthropic` / `bedrock`
+- `sdk` — nom complet du paquet npm de l'adaptateur SDK embarqué (par exemple `@ai-sdk/openai-compatible`). Absent = la valeur par défaut du transport ; un nom de paquet inconnu est rejeté au chargement
+- `headers` — en-têtes de requête littéraux supplémentaires fusionnés dans chaque requête sortante
+- `body` — champs littéraux fusionnés au niveau racine de chaque corps de requête. Une trappe de secours pour les bizarreries du wire — préférez une déclaration structurée quand il en existe une
+- `providerTools` — outils que le fournisseur expose (recherche web, interpréteur de code). Voir [Outils du fournisseur](./agent/tools.mdx#provider-tools)
+- `fileUpload` — le canal de téléversement pour les fichiers locaux qui ne doivent pas passer en ligne (`path` / `url`, `purpose`, `idPath`, `refTemplate`, `maxBytes`). Absent = les médias passent en ligne
+- `imageApi` / `videoApi` — noms de forme d'API pour la génération d'images / vidéos ; absent = pas de génération correspondante
+- `options` — paramètres de transport ; l'ensemble de clés valides dépend de `transportKind` × `sdk` (`awsRegion` pour bedrock, `project` / `location` pour `@ai-sdk/google-vertex`, les interrupteurs `auth` / `storedState` / `applyPatch` sur open-responses). Les clés inconnues sont rejetées
+- `models` (tableau requis, peut être vide)
+
+Les champs de niveau modèle — `capabilities`, `contextLength`, `outputLimit`, `reasoningEffort`, `supportedReasoningEfforts`, `reasoningMode`, `supportedReasoningModes`, `supportsThinkingType`, `supportsThinkingSwitch`, `thinkingSwitch`, `serviceTiers`, `serviceTier` — peuvent aussi être déclarés à plat sur l'entrée du fournisseur comme valeurs par défaut héritées par tous ses modèles ; la déclaration propre au modèle l'emporte. Dans `models[]`, tout sauf `name` est facultatif, et absent signifie non déclaré, pas une valeur par défaut.
+
+- Jetons de `capabilities` : `languageModel`, `image`, `audio`, `video`, `imageGeneration`, `videoGeneration`
+- `outputLimit` est le plafond de tokens de sortie, distinct de `contextLength`
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` sont la seule source du sélecteur et de la validation — une sélection hors de la liste est une erreur au chargement, jamais silencieusement bornée
+- `thinkingEnabled` est votre état thinking activé/désactivé (pas une capacité) ; il est propre au modèle et exige `supportsThinkingSwitch` déclaré
+
+### Canaux de clés
+
+Les clés n'ont pas à vivre dans ce fichier — l'assistant de connexion les écrit par défaut dans le [trousseau](./security.mdx). La config peut déclarer un canal à la place, résolu dans cet ordre :
+
+1. `apiKey` — texte en clair. Non recommandé ; trappe de secours uniquement
+2. `apiKeyEnv` — le nom d'une variable d'environnement où lire la clé
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`, une entrée dans un trousseau externe
+4. Trousseau interne — le repli implicite écrit par l'assistant (compte `provider::{id}`)
+
+Les identifiants composites (IAM Bedrock, comptes de service Vertex) utilisent une carte de slots `credentials` à la place des clés plates :
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+Les noms de slots sont des champs du protocole — `apiKey`, `accessKeyId` / `secretAccessKey` (IAM Bedrock / SigV4), `clientEmail` / `privateKey` (Vertex) — et les slots inconnus sont rejetés. Chaque slot se résout en `value` → `env` → `keyring` → trousseau interne (`provider::{id}::{slot}` ; le slot `apiKey` est simplement `provider::{id}`). Les clés plates et `credentials.apiKey` ne peuvent pas coexister dans une même entrée.
+
+### agents.providerTools
+
+`agents.providerTools.enabled` contrôle d'un coup tous les outils déclarés par les fournisseurs (renommé depuis `agents.webSearch.enabled` ; la sémantique n'a pas changé : opt-out, activé par défaut). Mis à `false`, aucune entrée d'outil de fournisseur ni interrupteur de body n'atteint les requêtes.
+
+### Actualisation du catalogue et reconnexion
+
+Les actualisations de routine du catalogue réécrivent les champs de déclaration de modèle que le catalogue possède (`capabilities`, `supportedReasoningEfforts`, `supportedReasoningModes`, `serviceTiers`, …) — les faits sur les modèles viennent du catalogue comme seule source de vérité, donc vos modifications manuelles de ces champs sont écrasées à la prochaine actualisation. Les matérialisations de niveau fournisseur (`apiBase`, `sdk`, `providerTools`, `fileUpload`, `options`, `imageApi` / `videoApi`) ne changent que lorsque vous reconnectez le fournisseur. La reconnexion réinitialise les clés que possède l'assistant (vos modifications y sont écrasées) et conserve tout le reste : `label`, canaux d'identifiants, `headers` / `body`, valeurs de modèle par défaut à plat, et les modèles ajoutés à la main.
 
 ### permission
 

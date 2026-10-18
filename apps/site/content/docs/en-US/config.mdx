@@ -1,6 +1,6 @@
 ---
 title: Config
-description: Data directories, config.json v2,
+description: Data directories, config.json v1,
   {{product.workspaceDataFolderName}}/, and environment variables.
 ---
 
@@ -37,18 +37,75 @@ Typical files:
 
 CLI binaries use SPIRIT_HOME. On Unix, the Stable install and shared data may have the same parent directory; bin/ and cli/ remain installation files. The installer setting does not select the shared-data directory.
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` must be `2`. Version 1 is rejected — delete the old file and [reconnect a provider](./providers.mdx).
+`schemaVersion` must be `1`. Any other value is rejected — delete the old file and [reconnect a provider](./providers.mdx). There is no migration from older shapes.
 
 Core fields:
 
-- `providerGroups` — connected houses, API base, transport, models
+- `providers` — connected providers: endpoint, transport, credentials, models
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — agent toggles such as `agents.providerTools.enabled`
 - `permission` — permission allowlist rules
 
-Keys are **not** in this file. They live in the [keyring](./security.mdx).
+`activeModel` and the other model slots are model refs: `{ "providerId": "…", "name": "…" }`, where `providerId` is a `providers[].id` and `name` is one of its `models[].name`.
+
+### Provider entries
+
+Each `providers[]` entry is a fully declarative connection — what the connect wizard writes is what the runtime reads. The runtime never re-derives `apiBase` from the provider's identity; site, plan, and cloud choices are baked into the final URL at connect time.
+
+Connection-level fields:
+
+- `id` (required) — unique entry id. Model refs and the internal keyring account point at it
+- `label` — optional display name
+- `apiBase` (required) — the endpoint, the single source of truth
+- `transportKind` — wire protocol: `openai-compatible` (default) / `open-responses` / `anthropic` / `bedrock`
+- `sdk` — full npm package name of the bundled SDK adapter (for example `@ai-sdk/openai-compatible`). Absent = the transport default; an unknown package name is rejected at load
+- `headers` — literal extra request headers merged into every outbound request
+- `body` — literal fields merged into every request body. An escape hatch for odd wire quirks — prefer a structured declaration where one exists
+- `providerTools` — tools the provider exposes (web search, code interpreter). See [Provider Tools](./agent/tools.mdx#provider-tools)
+- `fileUpload` — the upload channel for local files that should not go inline (`path` / `url`, `purpose`, `idPath`, `refTemplate`, `maxBytes`). Absent = media go inline
+- `imageApi` / `videoApi` — API shape names for image / video generation; absent = no such generation
+- `options` — transport parameters; the legal key set depends on `transportKind` × `sdk` (`awsRegion` for bedrock, `project` / `location` for `@ai-sdk/google-vertex`, `auth` / `storedState` / `applyPatch` switches on open-responses). Unknown keys are rejected
+- `models` (required array, may be empty)
+
+Model-level fields — `capabilities`, `contextLength`, `outputLimit`, `reasoningEffort`, `supportedReasoningEfforts`, `reasoningMode`, `supportedReasoningModes`, `supportsThinkingType`, `supportsThinkingSwitch`, `thinkingSwitch`, `serviceTiers`, `serviceTier` — may also be declared flat on the provider entry as defaults inherited by every model; a model's own declaration wins. Inside `models[]`, everything except `name` is optional, and absent means undeclared, not a default.
+
+- `capabilities` tokens: `languageModel`, `image`, `audio`, `video`, `imageGeneration`, `videoGeneration`
+- `outputLimit` is the output token cap, separate from `contextLength`
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` are the sole picker and validation sources — an out-of-list selection is a load-time error, never silently clamped
+- `thinkingEnabled` is your thinking on/off state (not a capability); it is model-level only and requires `supportsThinkingSwitch` declared
+
+### Key channels
+
+Keys do not have to live in this file — the connect wizard writes them to the [keyring](./security.mdx) by default. Config may instead declare a channel, resolved in this order:
+
+1. `apiKey` — plaintext. Not recommended; an escape hatch only
+2. `apiKeyEnv` — the name of an environment variable to read the key from
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`, an entry in an external keyring
+4. Internal keyring — the implicit fallback written by the wizard (account `provider::{id}`)
+
+Composite credentials (Bedrock IAM, Vertex service accounts) use a `credentials` slot map instead of the flat keys:
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+Slot names are protocol fields — `apiKey`, `accessKeyId` / `secretAccessKey` (Bedrock IAM / SigV4), `clientEmail` / `privateKey` (Vertex) — and unknown slots are rejected. Each slot resolves `value` → `env` → `keyring` → internal keyring (`provider::{id}::{slot}`; the `apiKey` slot is plain `provider::{id}`). Flat keys and `credentials.apiKey` cannot coexist in one entry.
+
+### agents.providerTools
+
+`agents.providerTools.enabled` gates all provider-declared tools at once (renamed from `agents.webSearch.enabled`; the semantics did not change: opt-out, on by default). Set to `false`, no provider tool entries or body switches reach requests.
+
+### Catalog refresh and reconnect
+
+Routine catalog refreshes rewrite the model declaration fields the catalog owns (`capabilities`, `supportedReasoningEfforts`, `supportedReasoningModes`, `serviceTiers`, …) — model facts come from the catalog as the single source of truth, so manual edits to those fields are overwritten on the next refresh. Provider-level materializations (`apiBase`, `sdk`, `providerTools`, `fileUpload`, `options`, `imageApi` / `videoApi`) change only when you reconnect the provider. Reconnect resets the wizard-owned keys (edits you made to them are overwritten) and preserves everything else: `label`, credential channels, `headers` / `body`, flat model defaults, and models you added by hand.
 
 ### permission
 

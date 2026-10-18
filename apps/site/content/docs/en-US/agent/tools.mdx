@@ -17,7 +17,6 @@ These tools operate on the workspace you opened. Ask mode can read and search; i
 | `ls`              | List one directory, not recursive. Path must be absolute                                                                                                        |
 | `shell`           | Run a command with `reason` and `command`. Ask mode cannot call it                                                                                              |
 | `web_fetch`       | Fetch an `http` or `https` URL and return Markdown. A host tool, not provider search                                                                            |
-| `web_search`      | Exposed when the current model provider supports web search. Returns titles, URLs, and snippets                                                                 |
 | `generate_image`  | Exposed after you assign an image model in **Settings → Models**. Generates one image. Ask mode cannot call it                                                  |
 | `generate_video`  | Exposed after you assign a video model in **Settings → Models**. Generates a short video. Ask mode cannot call it                                               |
 | `get_diagnostics` | Exposed when a language server is ready. Pass paths; returns errors and warnings. Ask mode can use it                                                           |
@@ -33,3 +32,11 @@ These tools operate on the workspace you opened. Ask mode can read and search; i
 Edits and deletes wait for [approval](./approvals.mdx) on the default level. `shell` waits too.
 
 Configured [MCP](../customize/mcp.mdx) servers and extensions add more tools to the same list.
+
+## Provider Tools [#provider-tools]
+
+Providers can expose their own tools — web search, code interpreters, and similar. Which tools exist comes from the connected provider's declaration in [config.json](../config.mdx) (written by the connect wizard), not from a built-in {{product.name|mdx}} tool: a provider that declares no tools exposes none.
+
+Depending on the declaration, a call either runs inside the upstream request or is executed by {{product.name|mdx}} over plain HTTP and written back as the tool result. Either way it renders like an MCP tool call, and the runtime never second-guesses the declared parameters.
+
+The **Provider Tools** toggle in **Settings → Agents** (`agents.providerTools.enabled`, on by default) gates all of them at once. The per-house list of declared tools is in [Providers](../providers.mdx).

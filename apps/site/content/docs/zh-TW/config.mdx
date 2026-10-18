@@ -1,6 +1,6 @@
 ---
 title: 設定
-description: 資料目錄、config.json v2、{{product.workspaceDataFolderName}}/ 和環境變數。
+description: 資料目錄、config.json v1、{{product.workspaceDataFolderName}}/ 和環境變數。
 ---
 
 共用使用者資料依建置 quality 選擇目錄，不再使用作業系統的應用程式資料目錄。
@@ -36,18 +36,75 @@ Breaking Change：不會自動讀取或遷移舊平台資料目錄；仍支援�
 
 CLI 二進位檔使用 SPIRIT_HOME。在 Unix 上，Stable 安裝與共用資料可以共用父目錄；bin/ 和 cli/ 仍屬於安裝檔案。安裝設定不決定共用資料目錄。
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` 必須是 `2`。版本 1 會被拒絕——刪除舊檔案並[重新連線提供者](./providers.mdx)。
+`schemaVersion` 必須是 `1`。其他值一律拒絕——刪除舊檔案並[重新連接供應商](./providers.mdx)。不從舊形狀遷移。
 
 核心欄位：
 
-- `providerGroups` — 已連線的家、API 基礎、傳輸、模型
+- `providers` — 已連線的供應商：端點、傳輸、憑證、模型
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — 智慧體開關，例如 `agents.providerTools.enabled`
 - `permission` — 權限允許清單規則
 
-金鑰**不**在此檔案中。它們位於[金鑰圈](./security.mdx)中。
+`activeModel` 等模型位置是模型參照：`{ "providerId": "…", "name": "…" }`，其中 `providerId` 是某個 `providers[].id`，`name` 是它某個 `models[].name`。
+
+### 供應商條目
+
+每個 `providers[]` 條目都是完全宣告式的連線——精靈寫什麼，執行階段就讀什麼。執行階段不會依供應商身份重新推導 `apiBase`；站點、方案、雲端選擇在連線時已物化進最終 URL。
+
+連線級欄位：
+
+- `id`（必填）— 條目唯一身份。模型參照與內部鑰匙圈帳戶都指向它
+- `label` — 可選顯示名稱
+- `apiBase`（必填）— 端點，唯一真相
+- `transportKind` — wire 協定：`openai-compatible`（預設）/ `open-responses` / `anthropic` / `bedrock`
+- `sdk` — 隨套件捆綁的 SDK 配接器的完整 npm 套件名（例如 `@ai-sdk/openai-compatible`）。缺省 = 依傳輸推導；未知名稱在載入時報錯
+- `headers` — 字面附加請求標頭，合併進每個出站請求
+- `body` — 字面請求主體欄位，合併進每個請求主體。逃生口——能用結構化宣告表達時不要用它
+- `providerTools` — 供應商暴露的工具（網路搜尋、程式碼解譯器）。請參閱[供應商工具](./agent/tools.mdx#provider-tools)
+- `fileUpload` — 不適合內嵌的本機檔案的上傳通道（`path` / `url`、`purpose`、`idPath`、`refTemplate`、`maxBytes`）。缺席 = 媒體走內嵌
+- `imageApi` / `videoApi` — 影像 / 影片生成的 API 形狀名；缺席 = 無對應生成能力
+- `options` — 傳輸參數；合法鍵集依 `transportKind` × `sdk` 定義（bedrock 的 `awsRegion`、`@ai-sdk/google-vertex` 的 `project` / `location`、open-responses 的 `auth` / `storedState` / `applyPatch` 開關）。未知鍵拒絕
+- `models`（必填陣列，可為空）
+
+模型級欄位——`capabilities`、`contextLength`、`outputLimit`、`reasoningEffort`、`supportedReasoningEfforts`、`reasoningMode`、`supportedReasoningModes`、`supportsThinkingType`、`supportsThinkingSwitch`、`thinkingSwitch`、`serviceTiers`、`serviceTier`——也可以平鋪在供應商條目上，作為全部模型繼承的預設值；模型自己的宣告勝出。`models[]` 裡除 `name` 外全部可選，缺席 = 未宣告，不是預設值。
+
+- `capabilities` 取值：`languageModel`、`image`、`audio`、`video`、`imageGeneration`、`videoGeneration`
+- `outputLimit` 是輸出 token 上限，與 `contextLength` 分開
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` 是選擇器與驗證的唯一來源——選了清單之外的值會在載入時報錯，不會被靜默鉗制
+- `thinkingEnabled` 是你的 thinking 開關狀態（不是能力宣告）；僅模型級，且要求已宣告 `supportsThinkingSwitch`
+
+### 金鑰通道
+
+金鑰不一定要放在此檔案——連線精靈預設直接寫進[鑰匙圈](./security.mdx)。config 也可以宣告通道，依以下順序解析：
+
+1. `apiKey` — 明文。不建議，僅作逃生口
+2. `apiKeyEnv` — 從指定環境變數讀取
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`，外部鑰匙圈中的條目
+4. 內部鑰匙圈 — 精靈寫入的隱式兜底（帳戶 `provider::{id}`）
+
+複合憑證（Bedrock IAM、Vertex 服務帳戶）改用 `credentials` 槽位對應：
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+槽名是協定欄位——`apiKey`、`accessKeyId` / `secretAccessKey`（Bedrock IAM / SigV4）、`clientEmail` / `privateKey`（Vertex）——未知槽名拒絕。每個槽位依 `value` → `env` → `keyring` → 內部鑰匙圈解析（`provider::{id}::{slot}`；`apiKey` 槽就是 `provider::{id}`）。扁平三鍵與 `credentials.apiKey` 不得同時出現。
+
+### agents.providerTools
+
+`agents.providerTools.enabled` 統一控制所有供應商宣告的工具（由 `agents.webSearch.enabled` 改名而來，語意不變：opt-out、預設開啟）。設為 `false` 時，供應商工具條目與 body 開關都不進請求。
+
+### 目錄重新整理與重新連線
+
+例行目錄重新整理會重寫目錄擁有的模型宣告欄位（`capabilities`、`supportedReasoningEfforts`、`supportedReasoningModes`、`serviceTiers` 等）——模型事實以目錄為唯一來源，你對這些欄位的手動修改會在下次重新整理時被覆寫。供應商級物化（`apiBase`、`sdk`、`providerTools`、`fileUpload`、`options`、`imageApi` / `videoApi`）只在重新連線時變化。重新連線會重置精靈擁有的鍵（你對它們的修改被覆寫），其餘全部保留：`label`、憑證通道、`headers` / `body`、平鋪的模型預設值，以及你手動新增的模型。
 
 ### permission
 

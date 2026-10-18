@@ -7,7 +7,9 @@ description: 鑰匙圈、核准與迴圈精靈。無遙測。
 
 API 金鑰、Bedrock / Vertex 機密、擴充功能機密，以及 GitHub 整合權杖都儲存在作業系統的鑰匙圈中。服務名稱為 `{{product.name}}`。
 
-`config.json` 存放提供者群組與模型參照，而非機密本身。大型機密可能會在鑰匙圈中分片儲存。
+連線精靈寫入的供應商金鑰使用帳戶方案 `provider::{id}`——每個 `config.json` 供應商條目一個；Bedrock IAM、Vertex 服務帳戶這類複合憑證槽位使用 `provider::{id}::{slot}`。大型機密可能會在鑰匙圈中分片儲存。
+
+`config.json` 存放供應商條目與模型參照，而非機密本身——除非你明確宣告了逃生口：明文 `apiKey`（不建議）、`apiKeyEnv` 環境變數參照，或指向外部鑰匙圈條目的 `apiKeyKeyring` / 槽位級 `keyring` 參照。請參閱[設定](./config.mdx)。
 
 ## 核准
 

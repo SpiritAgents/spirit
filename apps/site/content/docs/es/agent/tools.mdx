@@ -17,7 +17,6 @@ Estas herramientas operan en el espacio de trabajo que abriste. El modo Ask pued
 | `ls`              | Lista un directorio, no recursivo. La ruta debe ser absoluta                                                                                                                    |
 | `shell`           | Ejecuta un comando con `reason` y `command`. El modo Ask no puede llamarlo                                                                                                      |
 | `web_fetch`       | Obtiene una URL `http` o `https` y devuelve Markdown. Es una herramienta del host, no una búsqueda del proveedor                                                                |
-| `web_search`      | Se expone cuando el proveedor de modelos actual soporta búsqueda web. Devuelve títulos, URLs y fragmentos                                                                       |
 | `generate_image`  | Se expone después de que asignas un modelo de imagen en **Settings → Models**. Genera una imagen. El modo Ask no puede llamarlo                                                 |
 | `generate_video`  | Se expone después de que asignas un modelo de video en **Settings → Models**. Genera un video corto. El modo Ask no puede llamarlo                                              |
 | `get_diagnostics` | Se expone cuando un servidor de lenguaje está listo. Pasa rutas; devuelve errores y advertencias. El modo Ask puede usarlo                                                      |
@@ -33,3 +32,11 @@ Estas herramientas operan en el espacio de trabajo que abriste. El modo Ask pued
 Las ediciones y eliminaciones esperan la [aprobación](./approvals.mdx) en el nivel predeterminado. `shell` también espera.
 
 Los servidores y extensiones [MCP](../customize/mcp.mdx) configurados agregan más herramientas a la misma lista.
+
+## Herramientas del proveedor [#provider-tools]
+
+Los proveedores pueden exponer sus propias herramientas: búsqueda web, intérpretes de código y similares. Qué herramientas existen depende de la declaración del proveedor conectado en [config.json](../config.mdx) (escrita por el asistente de conexión), no de una herramienta incorporada de {{product.name|mdx}}: un proveedor que no declara herramientas no expone ninguna.
+
+Según la declaración, una llamada se ejecuta dentro de la solicitud al upstream o la ejecuta {{product.name|mdx}} por HTTP según lo declarado y se escribe de vuelta como resultado de la herramienta. En ambos casos se muestra como una llamada de herramienta MCP, y el runtime nunca altera por su cuenta los parámetros declarados.
+
+El interruptor **Herramientas del proveedor** en **Configuración → Agents** (`agents.providerTools.enabled`, activado por defecto) las controla todas a la vez. La lista por casa de las herramientas declaradas está en [Proveedores](../providers.mdx).

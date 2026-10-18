@@ -17,7 +17,6 @@ description: Agent 可以调用的工具。有的只在模型、槽位或模式�
 | `ls`              | 列出一个目录，不递归。路径必须是绝对路径                                                                                        |
 | `shell`           | 跑命令。带上 `reason` 和 `command`。Ask 模式不能调用                                                                            |
 | `web_fetch`       | 抓取 `http` 或 `https` URL，返回 Markdown。宿主工具，不是提供商搜索                                                             |
-| `web_search`      | 当前模型提供商支持联网搜索时才暴露。搜网页，返回标题、URL 和摘要                                                                |
 | `generate_image`  | 在 **设置 → 模型** 指定了生图模型后才暴露。生成一张图。Ask 模式不能调用                                                         |
 | `generate_video`  | 在 **设置 → 模型** 指定了生视频模型后才暴露。生成一小段视频。Ask 模式不能调用                                                   |
 | `get_diagnostics` | 语言服务器就绪时才暴露。传入路径，返回错误和警告。Ask 模式也能用                                                                |
@@ -33,3 +32,11 @@ description: Agent 可以调用的工具。有的只在模型、槽位或模式�
 默认审批下，编辑和删除会等你[批准](./approvals.mdx)。`shell` 同样先给你看再执行。
 
 已配置的 [MCP](../customize/mcp.mdx) 服务器和扩展会把更多工具并进同一份列表。
+
+## 提供商工具 [#provider-tools]
+
+提供商可以暴露自己的工具——联网搜索、代码解释器等。有哪些工具取决于已连接提供商在 [config.json](../config.mdx) 里的声明（由连接向导写入），而不是 {{product.name|mdx}} 的内置工具：没声明工具的提供商就不暴露。
+
+按声明不同，一次调用要么由上游在请求内执行，要么由 {{product.name|mdx}} 按声明发 HTTP 执行并回填为工具结果。两种形态的渲染都和 MCP 工具调用一致，运行时也不会擅自改动声明的参数。
+
+**设置 → 智能体**里的**提供商工具**开关（`agents.providerTools.enabled`，默认开启）统一控制所有这些工具。每家声明了哪些工具见[提供商](../providers.mdx)。
