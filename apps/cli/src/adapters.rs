@@ -1,10 +1,10 @@
-use anyhow::{Context, Result, anyhow};
+use anyhow::Result;
 use std::{env, path::PathBuf};
 
 use crate::{
     chat_store, logging,
     model_registry::{
-        AppConfig, config_file_path, keyring_entry, load_config, read_external_keyring_secret,
+        AppConfig, config_file_path, load_config, read_external_keyring_secret,
         remove_provider_secret, save_config, save_provider_secret,
     },
     ports::{AppPaths, ChatArchive, ChatRepository, ConfigStore, SecretStore},
@@ -61,30 +61,6 @@ impl ConfigStore for JsonConfigStore {
 pub struct KeyringSecretStore;
 
 impl SecretStore for KeyringSecretStore {
-    fn load_global_api_key(&self) -> Result<Option<String>> {
-        let entry = keyring_entry()?;
-        match entry.get_password() {
-            Ok(value) if !value.trim().is_empty() => Ok(Some(value)),
-            Ok(_) | Err(keyring::Error::NoEntry) => Ok(None),
-            Err(err) => Err(anyhow!("Failed to read API Key from keyring: {}", err)),
-        }
-    }
-
-    fn save_global_api_key(&self, api_key: &str) -> Result<()> {
-        let entry = keyring_entry()?;
-        entry
-            .set_password(api_key.trim())
-            .context("Failed to write to keyring")
-    }
-
-    fn remove_global_api_key(&self) -> Result<()> {
-        let entry = keyring_entry()?;
-        match entry.delete_password() {
-            Ok(_) | Err(keyring::Error::NoEntry) => Ok(()),
-            Err(err) => Err(anyhow!("Failed to delete keyring API Key: {}", err)),
-        }
-    }
-
     fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>> {
         Ok(read_external_keyring_secret(service, account))
     }

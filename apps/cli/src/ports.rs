@@ -310,9 +310,6 @@ pub trait ConfigStore: Send + Sync {
 }
 
 pub trait SecretStore: Send + Sync {
-    fn load_global_api_key(&self) -> Result<Option<String>>;
-    fn save_global_api_key(&self, api_key: &str) -> Result<()>;
-    fn remove_global_api_key(&self) -> Result<()>;
     /// Reads an arbitrary keyring entry — internal `Spirit` accounts (`provider::{id}[::{slot}]`)
     /// and external `apiKeyKeyring` / `credentials` slot references alike; missing or blank
     /// values resolve to `None`.
