@@ -638,12 +638,18 @@ impl TuiShell {
             )]));
         }
         if !options.is_empty() {
-            connect.options = Some(
-                options
-                    .iter()
-                    .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
-                    .collect(),
-            );
+            // Wizard input wins per key over the preset's mechanism-option template.
+            let wizard_options: serde_json::Map<String, serde_json::Value> = options
+                .iter()
+                .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+                .collect();
+            connect.options = Some(match connect.options {
+                Some(mut template) => {
+                    template.extend(wizard_options);
+                    template
+                }
+                None => wizard_options,
+            });
         }
         config.add_model_to_provider(
             provider_id,
