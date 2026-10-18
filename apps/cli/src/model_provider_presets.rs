@@ -125,6 +125,8 @@ pub(crate) struct ProviderPresetSite {
     pub(crate) label: Option<String>,
     api_base: Option<String>,
     transports: Option<BTreeMap<String, String>>,
+    /// Per-site upload channel override (e.g. a region-pinned upload host).
+    file_upload: Option<Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -479,6 +481,7 @@ fn fallback_sdk_package_name(transport_kind: ModelTransportKind) -> Option<&'sta
 pub(crate) fn preset_connect_draft(
     preset_id: &str,
     transport_kind: ModelTransportKind,
+    site_id: Option<&str>,
 ) -> ProviderConnectDraft {
     let declared_transport = (transport_kind != ModelTransportKind::OpenAiCompatible)
         .then(|| transport_kind.as_str().to_string());
@@ -493,12 +496,18 @@ pub(crate) fn preset_connect_draft(
     } else {
         fallback_sdk_package_name(transport_kind).map(str::to_string)
     };
+    // A site can pin its own upload channel (e.g. a region-pinned upload host).
+    let file_upload = site_id
+        .or_else(|| preset.default_site_id())
+        .and_then(|id| preset.sites().iter().find(|site| site.id == id))
+        .and_then(|site| site.file_upload.clone())
+        .or_else(|| preset.file_upload.clone());
     ProviderConnectDraft {
         label: preset.label.clone(),
         transport_kind: declared_transport,
         sdk,
         provider_tools: preset.provider_tools.clone(),
-        file_upload: preset.file_upload.clone(),
+        file_upload,
         body: preset.body.clone(),
         thinking_switch: preset.thinking_switch.clone(),
         image_api: preset.image_api.clone(),
@@ -935,7 +944,7 @@ mod tests {
 
     #[test]
     fn connect_draft_copies_materialization_templates() {
-        let draft = preset_connect_draft("kimi-code", ModelTransportKind::OpenAiCompatible);
+        let draft = preset_connect_draft("kimi-code", ModelTransportKind::OpenAiCompatible, None);
         assert!(draft.transport_kind.is_none());
         assert_eq!(draft.sdk.as_deref(), Some("@ai-sdk/openai-compatible"));
         assert!(draft.provider_tools.is_some());
@@ -949,21 +958,21 @@ mod tests {
         );
 
         // A non-default transport declares transportKind and falls back to the generic adapter.
-        let draft = preset_connect_draft("kimi-code", ModelTransportKind::Anthropic);
+        let draft = preset_connect_draft("kimi-code", ModelTransportKind::Anthropic, None);
         assert_eq!(draft.transport_kind.as_deref(), Some("anthropic"));
         assert_eq!(draft.sdk.as_deref(), Some("@ai-sdk/anthropic"));
 
         // thinkingSwitch templates (meituan) materialize onto the entry.
-        let draft = preset_connect_draft("meituan", ModelTransportKind::OpenAiCompatible);
+        let draft = preset_connect_draft("meituan", ModelTransportKind::OpenAiCompatible, None);
         assert!(draft.thinking_switch.is_some());
 
         // Bedrock declares no sdk (self-held transport implementation).
-        let draft = preset_connect_draft("amazon-bedrock", ModelTransportKind::Bedrock);
+        let draft = preset_connect_draft("amazon-bedrock", ModelTransportKind::Bedrock, None);
         assert_eq!(draft.transport_kind.as_deref(), Some("bedrock"));
         assert!(draft.sdk.is_none());
 
         // Custom connections declare nothing beyond a non-default transport.
-        let draft = preset_connect_draft("custom", ModelTransportKind::Anthropic);
+        let draft = preset_connect_draft("custom", ModelTransportKind::Anthropic, None);
         assert_eq!(draft.transport_kind.as_deref(), Some("anthropic"));
         assert!(draft.sdk.is_none());
         assert!(draft.provider_tools.is_none());
@@ -972,6 +981,7 @@ mod tests {
         let draft = preset_connect_draft(
             "cloudflare-ai-gateway",
             ModelTransportKind::OpenAiCompatible,
+            None,
         );
         assert_eq!(
             draft
@@ -980,7 +990,7 @@ mod tests {
                 .and_then(|options| options.get("toolsRejectReasoningEffort")),
             Some(&serde_json::json!(true))
         );
-        let draft = preset_connect_draft("deepseek", ModelTransportKind::OpenResponses);
+        let draft = preset_connect_draft("deepseek", ModelTransportKind::OpenResponses, None);
         assert_eq!(
             draft
                 .options
@@ -989,20 +999,38 @@ mod tests {
             Some(&serde_json::json!(true))
         );
         // volcengine's default transport is openai-compatible: the open-responses-scoped key drops.
-        let draft = preset_connect_draft("volcengine", ModelTransportKind::OpenAiCompatible);
+        let draft = preset_connect_draft("volcengine", ModelTransportKind::OpenAiCompatible, None);
         assert!(
             draft
                 .options
                 .as_ref()
                 .is_none_or(|options| !options.contains_key("defaultInputItemStatus"))
         );
-        let draft = preset_connect_draft("xiaomi", ModelTransportKind::OpenAiCompatible);
+        let draft = preset_connect_draft("xiaomi", ModelTransportKind::OpenAiCompatible, None);
         assert_eq!(
             draft
                 .options
                 .as_ref()
                 .and_then(|options| options.get("maxInlineMediaBytes")),
             Some(&serde_json::json!(52428800))
+        );
+    }
+
+    #[test]
+    fn connect_draft_applies_per_site_file_upload_override() {
+        // MiniMax's cn site pins the upload channel to the regional host.
+        let draft = preset_connect_draft("minimax", ModelTransportKind::Anthropic, Some("cn"));
+        let file_upload = draft.file_upload.expect("fileUpload");
+        assert_eq!(
+            file_upload.get("url").and_then(Value::as_str),
+            Some("https://api.minimax.cn/v1/files/upload")
+        );
+
+        let draft = preset_connect_draft("minimax", ModelTransportKind::Anthropic, Some("intl"));
+        let file_upload = draft.file_upload.expect("fileUpload");
+        assert_eq!(
+            file_upload.get("url").and_then(Value::as_str),
+            Some("https://api.minimax.io/v1/files/upload")
         );
     }
 

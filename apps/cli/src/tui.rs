@@ -153,6 +153,8 @@ pub(crate) struct ApplyModelAddParams<'a> {
     pub context_length: Option<u64>,
     /// Materializes into the literal `cf-aig-gateway-id` header on the provider entry.
     pub cloudflare_gateway_id: Option<&'a str>,
+    /// Selected preset site; per-site templates (e.g. fileUpload overrides) resolve against it.
+    pub site_id: Option<&'a str>,
     /// Transport `options` declarations (awsRegion / project / location).
     pub options: &'a std::collections::BTreeMap<String, String>,
     /// Non-apiKey credential slots stored in the internal keyring (`provider::{id}::{slot}`).
@@ -610,6 +612,7 @@ impl TuiShell {
             transport_kind,
             context_length,
             cloudflare_gateway_id,
+            site_id,
             options,
             credential_slots,
         } = params;
@@ -626,8 +629,11 @@ impl TuiShell {
         // Sites, workspace ids, and `{placeholder}` template values were already materialized
         // into `api_base` by the connect form; the Cloudflare gateway id materializes into a
         // literal header (`cf-aig-gateway-id`).
-        let mut connect =
-            crate::model_provider_presets::preset_connect_draft(provider_id, transport_kind);
+        let mut connect = crate::model_provider_presets::preset_connect_draft(
+            provider_id,
+            transport_kind,
+            site_id,
+        );
         if let Some(gateway_id) = cloudflare_gateway_id
             .map(str::trim)
             .filter(|value| !value.is_empty())

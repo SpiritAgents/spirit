@@ -123,12 +123,23 @@ function readSites(value: unknown, context: string): ProviderPresetSiteSelection
     if (itemRaw["requiresWorkspaceId"] !== undefined && itemRaw["requiresWorkspaceId"] !== true) {
       fail(`${itemContext}: "requiresWorkspaceId" must be true when present.`);
     }
+    let fileUpload: ProviderPresetSite["fileUpload"];
+    if (itemRaw["fileUpload"] !== undefined) {
+      try {
+        fileUpload = validateFileUploadConfig(itemRaw["fileUpload"]);
+      } catch (error) {
+        fail(
+          `${itemContext}.fileUpload: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
     return {
       id,
       label,
       ...(apiBase !== undefined ? { apiBase } : {}),
       ...(transports !== undefined ? { transports } : {}),
       ...(itemRaw["requiresWorkspaceId"] === true ? { requiresWorkspaceId: true } : {}),
+      ...(fileUpload !== undefined ? { fileUpload } : {}),
     };
   });
   if (!seen.has(defaultSite)) {

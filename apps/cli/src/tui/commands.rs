@@ -90,6 +90,7 @@ impl TuiShell {
                     transport_kind: crate::model_registry::ModelTransportKind::OpenAiCompatible,
                     context_length: None,
                     cloudflare_gateway_id: None,
+                    site_id: None,
                     options: &Default::default(),
                     credential_slots: &[],
                 }) {
