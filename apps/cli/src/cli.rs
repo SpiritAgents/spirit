@@ -10,17 +10,17 @@ use crate::{
         example_github_mcp_config, load_mcp_config, save_mcp_config, set_server_enabled,
         user_mcp_config_path, workspace_mcp_config_path,
     },
-    model_provider_presets::{
-        CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, is_known_preset_id,
-        list_base_template_keys, model_add_default_custom_api_base, preset_connect_api_base,
-        preset_connect_draft, preset_credential_kind, preset_entry, validate_azure_resource_name,
-    },
     model_registry::{
         AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelRef, ModelTransportKind,
         env_channel_value, model_refs_equal, resolve_provider_api_key, save_provider_api_key,
         save_provider_slot_secret,
     },
     ports::{AppPaths, ConfigStore, SecretStore},
+    provider_presets::{
+        CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, is_known_preset_id,
+        list_base_template_keys, model_add_default_custom_api_base, preset_connect_api_base,
+        preset_connect_draft, preset_credential_kind, preset_entry, validate_azure_resource_name,
+    },
 };
 
 const ENV_API_KEY: &str = "SPIRIT_API_KEY";
@@ -28,7 +28,7 @@ const ENV_API_KEY: &str = "SPIRIT_API_KEY";
 pub struct ModelAddCommand {
     pub name: String,
     pub api_base: Option<String>,
-    /// Preset id from the presets manifest (`model_provider_presets`), or `custom`.
+    /// Preset id from the presets manifest (`provider_presets`), or `custom`.
     pub provider: Option<String>,
     pub transport_kind: Option<String>,
     pub reasoning_effort: Option<String>,
@@ -728,7 +728,7 @@ fn parse_model_transport_kind(
         // The preset manifest's `defaultTransport` is the unflagged default.
         None => match provider {
             Some(provider) if provider != CUSTOM_PROVIDER_PRESET_ID => {
-                crate::model_provider_presets::preset_default_transport_kind(provider)
+                crate::provider_presets::preset_default_transport_kind(provider)
             }
             _ => ModelTransportKind::OpenAiCompatible,
         },
@@ -739,7 +739,7 @@ fn parse_model_transport_kind(
         // (the bedrock preset declares only the bedrock transport).
         (Some(provider), transport_kind)
             if provider != CUSTOM_PROVIDER_PRESET_ID
-                && !crate::model_provider_presets::preset_supports_transport(
+                && !crate::provider_presets::preset_supports_transport(
                     provider,
                     transport_kind,
                 ) =>

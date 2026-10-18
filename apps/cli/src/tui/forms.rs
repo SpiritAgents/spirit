@@ -633,7 +633,7 @@ impl TuiShell {
             // Sites, billing plans, and `{placeholder}` template values were already
             // materialized into `parsed.api_base` by the connect form; transport options
             // (vertex `project` / `location`, bedrock `awsRegion`) land in `options`.
-            let mut connect = crate::model_provider_presets::preset_connect_draft(
+            let mut connect = crate::provider_presets::preset_connect_draft(
                 provider_id,
                 parsed.transport_kind,
                 parsed.site_id.as_deref(),

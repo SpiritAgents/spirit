@@ -622,18 +622,15 @@ impl TuiShell {
         }
 
         let provider_id = if provider_id.trim().is_empty() {
-            crate::model_provider_presets::CUSTOM_PROVIDER_PRESET_ID
+            crate::provider_presets::CUSTOM_PROVIDER_PRESET_ID
         } else {
             provider_id
         };
         // Sites, workspace ids, and `{placeholder}` template values were already materialized
         // into `api_base` by the connect form; the Cloudflare gateway id materializes into a
         // literal header (`cf-aig-gateway-id`).
-        let mut connect = crate::model_provider_presets::preset_connect_draft(
-            provider_id,
-            transport_kind,
-            site_id,
-        );
+        let mut connect =
+            crate::provider_presets::preset_connect_draft(provider_id, transport_kind, site_id);
         if let Some(gateway_id) = cloudflare_gateway_id
             .map(str::trim)
             .filter(|value| !value.is_empty())

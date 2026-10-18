@@ -9,7 +9,8 @@ use crate::{
     host_protocol::CliExtensionEntry,
     mcp::{McpCapabilityToggles, McpScope, McpServerConfig, McpTransportConfig},
     mcp_types::McpDiscoveredPrompt,
-    model_provider_presets::{
+    model_registry::ModelTransportKind,
+    provider_presets::{
         CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, ProviderPresetSite,
         is_valid_azure_resource_name, is_valid_cloudflare_account_id,
         is_valid_cloudflare_gateway_id, list_base_template_keys, model_add_picker_order_ids,
@@ -17,7 +18,6 @@ use crate::{
         preset_connect_base_template, preset_default_transport_kind, preset_entry,
         preset_supports_bulk_listing,
     },
-    model_registry::ModelTransportKind,
     rules::{RuleEntry, RuleScope},
     skills::{SkillEntry, SkillScope},
     view::{

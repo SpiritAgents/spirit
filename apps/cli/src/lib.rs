@@ -23,7 +23,6 @@ pub mod logging;
 pub mod mcp;
 pub mod mcp_types;
 pub mod model_catalog_display;
-pub mod model_provider_presets;
 pub mod model_registry;
 pub mod openai_models_list;
 pub mod permissions;
@@ -31,6 +30,7 @@ pub mod permissions_types;
 pub mod plan;
 pub mod ports;
 pub mod product;
+pub mod provider_presets;
 #[cfg(feature = "tui")]
 pub mod relative_time;
 pub mod rewind;
