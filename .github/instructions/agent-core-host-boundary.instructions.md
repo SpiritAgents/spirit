@@ -12,66 +12,7 @@ There is only one core principle:
 
 `agent-core` is the single Agent capability library; the host-internal library owns host-side discovery, management, and execution details; the app layer only does thin adaptation and UI.
 
-## Provider Built-in Tools (Open Responses)
-
-- **Do not** register an executable `web_search` host tool in `host-internal` (Moonshot `$web_search` is also out of scope).
-- **OpenAI / xAI official Responses**: `tools.webSearch()` from `@ai-sdk/openai` / `@ai-sdk/xai`.
-- **Vercel AI Gateway (`vercel-ai-gateway`) Open Responses**: `createGateway().tools.perplexitySearch()` from `@ai-sdk/gateway`, injected as `web_search`; the language model must go through Gateway v3 `language-model` (`createGateway().languageModel()`), because `@ai-sdk/open-responses` drops provider tools.
-- **Alibaba (`alibaba`) dual path** (`alibaba-built-in-tools` + `web-search-eligibility`):
-  - **Chat Completions**: via `extra_body` (`enable_search`, `enable_thinking`, `enable_code_interpreter`, `search_options`, etc.); the code interpreter requires streaming on the Chat API. Use the host `web_fetch` to fetch the body of a specific URL.
-  - **Open Responses**: inject `{ type: web_search }` and `code_interpreter` via HTTP `tools` (no `web_extractor`; use the host `web_fetch` for URL bodies).
-- Visibility is gated by the eligibility and fetch layers. **Do not** append provider built-in usage instructions to the system message (the model already sees them from the request `tools`); when Chat Completions capabilities go through `extra_body` and there is no function name to declare, **do not** write system essays either. Details: `llm-visible-copy.instructions.md`.
-
-## Moonshot Formula (Chat Completions)
-
-- **Moonshot AI direct** (`llmVendor: moonshot-ai`, `openai-compatible`): injects the remote schema `moonshot/web-search:latest` via the Formula API; when the model triggers `web_search`, `agent-core` calls `/formulas/{uri}/fibers` and writes `encrypted_output` back into the tool message.
-- **Out of scope**: Kimi Code (`kimi-code`), Moonshot routed via Vercel Gateway, legacy `$web_search` builtin_function.
-- **Do not** register an executable `web_search` in `host-internal`; Formula execution stays in `agent-core` `moonshot/formula/`.
-- UI: `encrypted_output` is not displayable; Moonshot Formula `web_search` cards are barred from expansion via `_spiritUi.suppressExpand`.
-
-## Kimi Code / StepFun / Z.ai Managed `web_search` (non-Formula)
-
-- **Kimi Code** (`llmVendor: kimi-code` or `api.kimi.com`): `agent-core` injects a local `web_search` function schema; on execution it `POST https://api.kimi.com/coding/v1/search` (body `text_query`) and writes the result back into the tool message.
-- **StepFun** (`llmVendor: stepfun` or `api.stepfun.com` / `api.stepfun.ai`): same kind of managed tool; on execution it posts to `{origin}/v1/search` derived from the configured base (optional `n`).
-- **Z.ai / Zhipu AI** (`llmVendor: z-ai` / `zhipu-ai`, or `api.z.ai` / `open.bigmodel.cn`): same kind of managed tool; on execution it posts to `{baseUrl}/web_search` (works on both the PaaS and Coding Plan bases) with `search_engine` + `search_query` and optional `count` (1-50). Z.ai always uses `search-prime`; Zhipu AI uses `search_std` plus the required `search_intent: false`.
-- **Do not** register an executable `web_search` in `host-internal`; execution stays in `agent-core` (`kimi-code/`, `stepfun/`, `zai/`), via the managed provider turn handler.
-- UI: expandable preview (shares `_spiritUi` with StepFun, no `suppressExpand`).
-
-## MiniMax Server Tools (Anthropic Messages)
-
-- **MiniMax direct** (`llmVendor: minimax`, `transportKind: anthropic`): injects the Server Tool `{ type: web_search_20250305, name: web_search }` via the Messages API (source: [minimax.io server-tools](https://platform.minimaxi.io/docs/guides/server-tools.md), version `20250305`); **Messages API only**, not Chat Completions.
-- Response blocks `server_tool_use` / `web_search_tool_result` are parsed by `agent-core` `anthropic/minimax-web-search-stream.ts`; the search executes server-side and the host **does not** send back a `tool_result`.
-- **Do not** register an executable `web_search` in `host-internal`; injection and stream mapping stay in `agent-core` `anthropic/minimax-server-tools.ts`.
-- UI: reuses the Responses built-in `web_search` card (`toolName: web_search` + `_spiritUi`); Detail shows the search keywords, and expanded Input/Output matches the Vercel AI Gateway web search card.
-
-## Terminology
-
-### Tool Definition
-
-"Tool definition" here means only the model-visible tool contract, not the host execution implementation.
-
-It contains only:
-
-- Tool name
-- Tool purpose description
-- JSON Schema parameter definition
-
-It does not contain:
-
-- Host-internal request types
-- Parameter parsing implementation
-- Approval and authorization implementation
-- Actual execution implementations for shell / file / search / network
-
-### Tool Implementation
-
-"Tool implementation" means the local capabilities the host provides to fulfill the tool contract, including:
-
-- Parsing function calls into host request objects
-- Parameter validation and error copy
-- Authorization, approval, and question flows
-- Concrete execution logic
-- Platform-specific adaptation
+One correction to the old framing: `agent-core` is an **internal** capability library. The hypothetical "agent-core published as a public SDK" premise is abandoned — if a public SDK ever appears, it will be a separate facade package that depends on `agent-core`, not `agent-core` itself. TODO, automations, Dreams, and every other piece of agent logic belong to `agent-core` by default.
 
 ## Layering Boundaries
 
@@ -88,7 +29,11 @@ It owns:
 - MCP protocol, MCP tool / resource / prompt semantics and runtime integration
 - Model-visible contracts of dream tools and collector system prompt semantics
 - Generic orchestration capabilities such as Agent runtime, turn machine, streaming, tool rounds
+- LLM transports (`openai-compatible` / `open-responses` / `anthropic` / `bedrock`) and the SDK adapter packages behind them
+- The provider tool mechanism (`providerTools`): injection, recognition, declared HTTP execution, result rendering
+- The file upload mechanism (`fileUpload`): the generic uploader driven by the upload declaration
 - Host-facing interface definitions
+- **The write-time materialization zone**: `src/provider-presets/` (the built-in preset manifest `provider-presets.json`, its loader, and the materializer), `src/model-catalog/` (catalog parsers named by API shape), and `src/model-knowledge/` (per-model facts keyed by canonical model ID, stored as JSON data). This is where vendor knowledge legitimately lives — it is consumed only at write time (connect wizard, catalog refresh), never read by the runtime request path.
 
 It does not own:
 
@@ -100,14 +45,16 @@ It does not own:
 
 Conclusion:
 
-`agent-core` owns "what the model sees" and "how the runtime consumes these capabilities", not "how the host wires these capabilities to the local machine".
+`agent-core` owns "what the model sees", "how the runtime consumes these capabilities", and "what the wizard / catalog write into config" — not "how the host wires these capabilities to the local machine".
 
 ### 2. Host-Internal Library
 
-The host-internal library is the shared implementation of the Host / UI layer, not a public Agent SDK.
+The host-internal library is the shared implementation of the Host / UI layer. It is in a transitional role: it currently still owns the shared host config and credentials, and its recorded endgame direction is to be gradually hollowed out into `agent-core`. That hollowing is **not** done in the current change — only the presets and the wizard/catalog materialization core moved to `agent-core`; the rest follows opportunistically.
 
 It owns:
 
+- `config.json` schema, fail-fast validation, load/save (the v1 declarative provider contract)
+- Credential channel resolution and the OS keyring (account scheme `provider::{id}` / `provider::{id}::{slot}`)
 - Discovery logic for `rules`, `skills`, `plan`
 - Enabling, disabling, state persistence, and parsing of this metadata
 - The registry of host implementations for built-in tools
@@ -123,11 +70,12 @@ It does not own:
 - Redefining a second set of model-visible tool names, tool descriptions, JSON Schemas
 - Duplicating the system prompt text
 - Re-explaining the semantics of Rules / Skills / Plan to the model
+- Provider presets, catalog parsers, or model knowledge (those live in `agent-core`'s materialization zone)
 - Replacing `agent-core` as a second "capability library"
 
 Conclusion:
 
-The host-internal library is the implementation-side companion of `agent-core`, not a second Agent Core.
+The host-internal library is the implementation-side companion of `agent-core`, not a second Agent Core — and over time it shrinks into it.
 
 ### 3. apps
 
@@ -139,6 +87,7 @@ It owns:
 - Wiring platform events, UI interactions, and permission confirmation results into the host-internal library
 - Wiring the host-internal library into `agent-core`
 - Host consumption entry points such as the Desktop dreams settings page, background scheduler, and Commit
+- The connect wizard's forms (site / plan / credential form choices) as UI, fed by the preset manifest's data
 
 It does not own:
 
@@ -174,6 +123,70 @@ Conclusion:
 
 Server is where the runtime is hosted, not a fourth semantic layer; apps must stay thin after degrading into clients.
 
+## The No-Vendor-Runtime Rule
+
+The config.json model/provider section is fully declarative. Runtime code (agent-core's request paths, host-internal's transport resolution, CLI / Desktop runtime reads) must not branch on provider identity — the provider entry's declared fields are the only inputs.
+
+- The dividing line is **wire fact vs behavior name**, not how many implementers exist. Config may hold any vendor-flavored literal identifiable on the wire — URLs, headers, request body fields, literal tool entries, URI schemes the other server resolves — and may name code mechanisms: transport protocol names (`openai-compatible`, `anthropic`, …) and npm adapter package names (`@ai-sdk/openai-compatible`, …). `bedrock` is a published protocol name; `ms://` is the other server's scheme; both are legal even with a single implementer.
+- Forbidden are **behavior names**: concepts that exist only inside Spirit and never appear on the wire (the old `minimax-files`, `kimi-code-managed`, `llmVendor`, `upstreamProvider` family). They are vendor branches in disguise.
+- The runtime may branch, but the branch key must be a mechanism name declared in config (`transportKind`, `sdk`, `options.auth`, …), and the branch body must be that mechanism's generic implementation. It must never change behavior semantics based on "whose service this is".
+- The rule is enforced structurally, not by convention: `packages/agent-core/scripts/check-no-vendor-runtime.mjs` builds a forbidden-token list from the preset manifest (preset ids + declared endpoint hostnames) plus the legacy field names and fails `agent-core`'s test script on any hit in runtime sources. The materialization zone directories (`provider-presets`, `model-catalog`, `model-knowledge`, plus `smoke` / `eval`) are excluded from the scan — write-time knowledge is legitimate there.
+
+## Declarative Providers (config.json v1)
+
+`schemaVersion` is `1`; any other value is rejected with a delete-and-reconnect error. There is no migration from older shapes.
+
+- `apiBase` is the single source of truth. The runtime never re-derives it; site, billing-plan, and cloud differences are materialized into the final URL by the wizard at write time.
+- `transportKind` selects the wire protocol; `sdk` names the npm adapter package. Built-in presets always declare `sdk` explicitly; custom entries may omit it for the transport default. Unknown package names are fail-fast config errors (Spirit ships bundled adapters; no runtime package installation).
+- `headers` / `body` are literal merge points the runtime does not understand; they are the designated outlet for long-tail wire quirks, not the preferred form.
+- Key channels, in resolution order: `apiKey` (plaintext escape hatch, not recommended) → `apiKeyEnv` (environment variable name) → `apiKeyKeyring` (external keyring entry) → the internal OS keyring (implicit fallback, account `provider::{id}`). Composite credentials (Bedrock IAM, Vertex service accounts) use `credentials` slot maps; each slot resolves `value` → `env` → `keyring` → internal keyring (`provider::{id}::{slot}`; the `apiKey` slot is `provider::{id}`).
+- `options` carries transport parameters keyed by `transportKind` × `sdk` (`awsRegion`, `project` / `location`, `auth`, `storedState`, `applyPatch`); unknown keys are rejected.
+- Model-level fields declared flat on the provider entry inherit to all its models; a model's own declaration wins. `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` are the sole picker and validation sources — out-of-list values are fail-fast config errors, never silently clamped.
+
+## Provider Tools (`providerTools`)
+
+Provider-exposed tools (web search, code interpreters, …) are a declaration block on the provider entry. The runtime does not understand entry semantics; it only injects, recognizes, and executes as declared. This one mechanism replaces the old vendor-specific built-in tool sections (OpenAI / xAI Responses tools, Vercel gateway tools, Alibaba body switches, Moonshot formula, Kimi Code / StepFun / Z.ai managed search, MiniMax server tools) — those shapes are now preset materialization templates in `agent-core`'s `provider-presets.json`.
+
+- An entry carries literal `tools` entries merged into the request `tools[]`, and/or `toolsFrom` (tool definitions fetched over GET + Bearer from the declared path/URL), and/or entry-level `body` fields merged into the request body while the entry is enabled. At least one of the three is required.
+- `execute` absent = the upstream executes inside the request; the runtime recognizes calls to the declared names as provider tool calls and waits for the transport's in-band result shapes. `execute` present = the host intercepts calls to the declared name set and performs the declared HTTP execution (path/url, body template with `{toolName}` / `{argumentsJson}` / `{arg.<path>}` placeholders, `statusPath` / `errorPath` / `resultPath` / `resultsPath` + `fields` extraction).
+- `ui.expand: false` forbids expanding the tool-call details — a display restriction dictated by the other side's data nature (e.g. server-side ciphertext), the only display fact that belongs in config. Spirit's own display behavior stays in code.
+- The global toggle is `agents.providerTools.enabled` (opt-out, on by default). `false` means no injection, no recognition, no body merges.
+- Name collisions with local (host / MCP / extension) tools resolve per-name in favor of the local tool, with a console warning per skipped name.
+- Materialized literal entries carry full JSON schemas; argument validation against the declared schema is fail-fast — out-of-bounds or missing required arguments come back as tool argument errors to the model, never silently clamped.
+
+## File Upload (`fileUpload`)
+
+A purpose-agnostic upload declaration for "this turn references a local file that should not go inline": `path` / `url` (endpoint, `url` wins), `purpose` (string shorthand or per-purpose map; a purpose absent from the map goes inline), `idPath` (dot path of the file id in the upload response, default `"id"`, stringified), `refTemplate` (required, must contain `{id}`; the scheme is the upstream server's resolution convention, passed through verbatim), `maxBytes` (local pre-upload cap). Absent `fileUpload` = media go through the transport's generic inline path. The constant HTTP mechanics (multipart POST, `file` field name, Bearer reuse, path + mtime cache) stay in code, at the same level as redirect handling.
+
+## Terminology
+
+### Tool Definition
+
+"Tool definition" here means only the model-visible tool contract, not the host execution implementation.
+
+It contains only:
+
+- Tool name
+- Tool purpose description
+- JSON Schema parameter definition
+
+It does not contain:
+
+- Host-internal request types
+- Parameter parsing implementation
+- Approval and authorization implementation
+- Actual execution implementations for shell / file / search / network
+
+### Tool Implementation
+
+"Tool implementation" means the local capabilities the host provides to fulfill the tool contract, including:
+
+- Parsing function calls into host request objects
+- Parameter validation and error copy
+- Authorization, approval, and question flows
+- Concrete execution logic
+- Platform-specific adaptation
+
 ## Ownership Table
 
 | Asset                                                                                                                | Owner                                                                                       |
@@ -186,8 +199,13 @@ Server is where the runtime is hosted, not a fourth semantic layer; apps must st
 | Session TODO tool name, description, JSON Schema (no separate todos system section)                                  | `agent-core`                                                                                |
 | LSP tool contract, `get_diagnostics` Schema (routed to per-language servers by extension), and diagnostic formatting | `agent-core`                                                                                |
 | MCP protocol, MCP tool / resource / prompt runtime                                                                   | `agent-core`                                                                                |
+| LLM transports and SDK adapters                                                                                      | `agent-core`                                                                                |
+| Provider tool / file upload / service tier / reasoning mechanisms (declaration-driven)                               | `agent-core`                                                                                |
+| Built-in provider presets, wizard/catalog materialization, catalog parsers, model knowledge data                     | `agent-core` (`src/provider-presets/`, `src/model-catalog/`, `src/model-knowledge/`)        |
 | Host interface definitions                                                                                           | `agent-core`                                                                                |
 | Agent Hooks schema, runtime attachment points, and `HookRunner` port                                                 | `agent-core`                                                                                |
+| `config.json` schema, validation, load/save                                                                          | host-internal library                                                                       |
+| Credential channel resolution and OS keyring access (`provider::{id}[::<slot>]`)                                     | host-internal library                                                                       |
 | Discovery and management of Rules / Skills / Plan                                                                    | host-internal library                                                                       |
 | Agent Hooks config merge, command execution, and `createHookRunner`                                                  | host-internal library                                                                       |
 | Host tool request types, parsing, validation, approval, execution                                                    | host-internal library                                                                       |
@@ -196,7 +214,7 @@ Server is where the runtime is hosted, not a fourth semantic layer; apps must st
 | Session TODO storage, `replaceAll`, and tool execution                                                               | host-internal library                                                                       |
 | LSP multi-provider processes, PATH detection, document sync, post-write append, and workspace cache                  | host-internal library                                                                       |
 | Platform adaptation for shell / search / file / web fetch                                                            | host-internal library                                                                       |
-| CLI / Desktop UI and platform wiring                                                                                 | apps                                                                                        |
+| CLI / Desktop UI and platform wiring, including the connect wizard's forms                                           | apps                                                                                        |
 | Desktop dreams settings page, background scheduling, and Commit consumption                                          | apps                                                                                        |
 | Desktop / CLI Composer TODO cards and strip UI                                                                       | apps                                                                                        |
 | Single source of truth for sessions/turns/approvals in the shared backend                                            | `packages/server`                                                                           |
@@ -211,36 +229,22 @@ To prevent future drift, the constraints are:
 2. Any host scanning, path, permission, or state persistence logic must not enter `agent-core`.
 3. No app entry point may define a new copy of tool Schemas or system prompts.
 4. The host-internal library may only implement the contracts exposed by `agent-core`; it must not rewrite contract semantics.
+5. No runtime code path may branch on provider identity; only on mechanism names declared in config. The structural check (`check-no-vendor-runtime.mjs`, wired into `agent-core`'s test script) is the enforcement — keep its token list honest.
+6. Vendor knowledge (preset bases, site templates, billing plans, tool shape templates, per-model reasoning/thinking facts) lives only in the `agent-core` materialization zone as write-time data, and lands in config as public declarations.
 
 ## How the Current Repo Maps to This
 
 Under this boundary, the current repo should be understood as:
 
-- `packages/agent-core` continues to carry the runtime, MCP, system prompts, and tool contracts.
+- `packages/agent-core` carries the runtime, MCP, system prompts, tool contracts, transports, and the materialization zone (`provider-presets/`, `model-catalog/`, `model-knowledge/`).
 - `packages/agent-core` carries dream tool contracts and the collector system prompt, but not Desktop session scanning or file storage.
-- `packages/host-internal` carries dream tool execution, the dream store, log directories, and other host capabilities.
+- `packages/host-internal` carries the `config.json` v1 schema and credential resolution, dream tool execution, the dream store, log directories, and other host capabilities.
 - `packages/host-internal/src/lsp/` carries the LSP host implementation (multi-language server processes, `LspOrchestrator` routing by extension, provider discovery, post-write diagnostic append, workspace cache).
 - `packages/agent-core/src/lsp/` keeps only the LSP tool contract (`get_diagnostics` auto-routed by path extension), supported-extension constants, and LLM-visible diagnostic formatting.
 - `packages/server` carries the shared daemon: single source of truth for sessions/turns/approvals, WS transport, and instance registry; CLI and Desktop main sessions, Automation, and Dream Collector all have no in-process fallback
 - `packages/host-internal/src/credentials/` carries shared config and credential reading (`config.json` + OS keyring, with `provider::{id}` / `provider::{id}::{slot}` as the canonical account scheme), used by server and acp-server to resolve transports in-process.
 - `apps/desktop` carries dreams settings, background scheduling, and Commit consumption.
-- Host tool implementations and rules / skills / plan discovery and management currently duplicated between CLI and Desktop should converge into the host-internal library.
-- `agent-core` should not absorb these discovery and management implementations, because that would incorrectly lift Host / UI responsibilities into the Agent SDK.
-
-## LLM Transport Families (transportKind)
-
-The host selects the underlying protocol via `LlmTransportConfig`; **do not** conflate Chat Completions and Responses into the same config default:
-
-| `transportKind`     | Protocol family                    | Typical SDK                                                                                                                                                                                                                                                                                                                      |
-| ------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openai-compatible` | OpenAI Chat Completions compatible | `@ai-sdk/openai-compatible`, etc.                                                                                                                                                                                                                                                                                                |
-| `open-responses`    | Responses / Open Responses         | OpenAI official: `responses` from `@ai-sdk/openai`; xAI: `responses` from `@ai-sdk/xai`; Azure: `@ai-sdk/azure` Responses callable by default (`provider=azure` is pinned to this transport, requires `azureResourceName` + deployment name, API Key only in this version); other compatible endpoints: `@ai-sdk/open-responses` |
-| `anthropic`         | Anthropic Messages                 | `@ai-sdk/anthropic`                                                                                                                                                                                                                                                                                                              |
-
-- `provider=openai` is **pinned to** `open-responses` (existing defaults or explicit `openai-compatible` are silently upgraded); no Chat Completions transport choice is offered.
-- `provider=azure` is **pinned to** `open-responses`; no transport choice is offered. Azure has no `/models` endpoint; the deployment name is written to `ModelProfile.name`.
-- OpenAI / Azure official Responses default to `store: true` and use `previous_response_id` for incremental continuation; on providers that support remote storage, `agent-core` sends only delta input
-- Whether an Open Responses compatible endpoint supports server-side storage depends on the user-configured upstream; when unsupported, the transport falls back to full input
+- Host tool implementations and rules / skills / plan discovery and management currently duplicated between CLI and Desktop should converge into the host-internal library — and the host-internal library itself shrinks into `agent-core` over time.
 
 ## Design Rationale
 
@@ -248,10 +252,8 @@ The host selects the underlying protocol via `LlmTransportConfig`; **do not** co
 
 On the contrary, this ensures:
 
-- `agent-core` only expresses capability contracts and runtime semantics
+- `agent-core` expresses capability contracts, runtime semantics, and the write-time knowledge that materializes public config declarations
 - The host-internal library only expresses how the local machine provides these capabilities
 - Apps stop reinventing the wheel
 
-If third parties integrate `agent-core` in the future, they should implement their own host discovery and management logic, rather than treating this repo's host scanning strategy as a hard-bound part of the SDK.
-
-This is exactly the boundary that should exist between an SDK and a Host.
+The same logic is why the preset manifest belongs to `agent-core`: its materialization templates contain model-visible copy (tool descriptions), which this document's own hard constraints assign to `agent-core`. And it is why the runtime stays declaration-driven: vendor identity on the request path would be a second, hidden capability library — one that no config can inspect and no structural check can see.
