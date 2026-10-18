@@ -547,6 +547,12 @@
             "transports": {
               "openai-compatible": "https://api.minimax.cn/v1",
               "anthropic": "https://api.minimax.cn/anthropic/v1"
+            },
+            "fileUpload": {
+              "url": "https://api.minimax.cn/v1/files/upload",
+              "purpose": { "video": "video_understanding" },
+              "idPath": "file.file_id",
+              "refTemplate": "mm_file://{id}"
             }
           },
           {

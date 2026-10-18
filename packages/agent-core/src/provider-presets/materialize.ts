@@ -187,6 +187,10 @@ export function materializeProviderPreset(
     preset.options !== undefined
       ? materializePresetOptions(preset.options, transportKind)
       : undefined;
+  // A site can pin its own upload channel (e.g. a region-pinned upload host).
+  const siteId = input.siteId ?? preset.sites?.default;
+  const fileUpload =
+    preset.sites?.items.find((item) => item.id === siteId)?.fileUpload ?? preset.fileUpload;
 
   return {
     id: preset.id,
@@ -197,7 +201,7 @@ export function materializeProviderPreset(
     ...(preset.providerTools !== undefined
       ? { providerTools: structuredClone(preset.providerTools) }
       : {}),
-    ...(preset.fileUpload !== undefined ? { fileUpload: structuredClone(preset.fileUpload) } : {}),
+    ...(fileUpload !== undefined ? { fileUpload: structuredClone(fileUpload) } : {}),
     ...(preset.body !== undefined ? { body: structuredClone(preset.body) } : {}),
     ...(preset.thinkingSwitch !== undefined
       ? { thinkingSwitch: structuredClone(preset.thinkingSwitch) }

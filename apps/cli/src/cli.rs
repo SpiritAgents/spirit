@@ -415,7 +415,8 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                     Some(value) => Some(value),
                 };
 
-                let mut connect = preset_connect_draft(&entry_id, transport_kind);
+                let mut connect =
+                    preset_connect_draft(&entry_id, transport_kind, provider_site.as_deref());
                 // Transport options materialized from wizard template values (bedrock
                 // `awsRegion`, vertex `project` / `location`); express connects write none.
                 let options: serde_json::Map<String, serde_json::Value> =

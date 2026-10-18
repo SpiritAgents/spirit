@@ -35,6 +35,15 @@ test("minimax materializes the anthropic default with the server-tool and upload
   });
 });
 
+test("minimax cn site overrides the upload channel with the region-pinned host", () => {
+  const entry = materializeProviderPreset({ presetId: "minimax", siteId: "cn" });
+  assert.equal(entry.apiBase, "https://api.minimax.cn/anthropic/v1");
+  assert.equal(entry.fileUpload?.url, "https://api.minimax.cn/v1/files/upload");
+  // The default (intl) site keeps the provider-level channel.
+  const intl = materializeProviderPreset({ presetId: "minimax", siteId: "intl" });
+  assert.equal(intl.fileUpload?.url, "https://api.minimax.io/v1/files/upload");
+});
+
 test("kimi-code materializes the spec's variant A shape (transportKind omitted, host-executed search)", () => {
   const entry = materializeProviderPreset({ presetId: "kimi-code", siteId: "cn" });
   assert.equal(entry.apiBase, "https://api.kimi.com/coding/v1");

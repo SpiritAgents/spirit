@@ -436,6 +436,7 @@ impl TuiShell {
                     transport_kind: parsed.transport_kind,
                     context_length: parsed.context_length,
                     cloudflare_gateway_id: parsed.cloudflare_gateway_id.as_deref(),
+                    site_id: parsed.site_id.as_deref(),
                     options: &parsed.options,
                     credential_slots: &parsed.credential_slots,
                 }) {
@@ -635,15 +636,22 @@ impl TuiShell {
             let mut connect = crate::model_provider_presets::preset_connect_draft(
                 provider_id,
                 parsed.transport_kind,
+                parsed.site_id.as_deref(),
             );
             if !parsed.options.is_empty() {
-                connect.options = Some(
-                    parsed
-                        .options
-                        .iter()
-                        .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
-                        .collect(),
-                );
+                // Wizard input wins per key over the preset's mechanism-option template.
+                let wizard_options: serde_json::Map<String, serde_json::Value> = parsed
+                    .options
+                    .iter()
+                    .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+                    .collect();
+                connect.options = Some(match connect.options {
+                    Some(mut template) => {
+                        template.extend(wizard_options);
+                        template
+                    }
+                    None => wizard_options,
+                });
             }
             config.add_model_to_provider(
                 provider_id,

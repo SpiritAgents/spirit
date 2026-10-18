@@ -14,6 +14,8 @@ export interface ProviderPresetSite {
   transports?: Partial<Record<LlmTransportKind, string>>;
   /** The base templates carry a `{workspaceId}` placeholder the wizard must fill. */
   requiresWorkspaceId?: boolean;
+  /** Per-site upload channel override (e.g. a region-pinned upload host). */
+  fileUpload?: FileUploadConfig;
 }
 
 export interface ProviderPresetSiteSelection {

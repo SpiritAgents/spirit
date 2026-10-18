@@ -945,6 +945,8 @@ pub(crate) struct ParsedModelAddForm {
     /// Preset id from the presets manifest, or `custom`.
     pub provider_id: String,
     pub transport_kind: ModelTransportKind,
+    /// Selected preset site; per-site templates resolve against it.
+    pub site_id: Option<String>,
     pub bulk: bool,
     pub model_name: Option<String>,
     pub api_base: String,
@@ -1165,6 +1167,7 @@ pub(crate) fn parse_model_add_connection(
     Ok(ParsedModelAddForm {
         provider_id: plan.provider_id,
         transport_kind: plan.transport_kind,
+        site_id: plan.site_id.clone(),
         bulk: plan.bulk,
         model_name,
         api_base,
