@@ -67,8 +67,12 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
       displayName: "Claude Sonnet 4.20250514",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "high", "max"],
-      // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-*.
+      // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-* (switch + encoding).
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
   ]);
 
@@ -111,8 +115,12 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
       capabilities: ["languageModel", "image"],
       supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
       contextLength: 256000,
-      // kimi-k2.5+ carries a model-knowledge thinking-switch declaration.
+      // kimi-k2.5+ carries a model-knowledge thinking-switch declaration (switch + wire encoding).
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "kimi-k2-turbo-preview",
@@ -151,6 +159,10 @@ test("openrouter provider passes through display metadata and pricing", () => {
       },
       capabilities: ["languageModel"],
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
   ]);
 
@@ -249,6 +261,10 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "openai/gpt-5",
@@ -277,6 +293,10 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "openai/gpt-5",
@@ -305,6 +325,10 @@ test("knowledge declarations win over empty catalog effort lists", () => {
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
   ]);
 });
@@ -357,6 +381,10 @@ test("xiaomi provider consumes Xiaomi model catalog metadata", () => {
       capabilities: ["languageModel", "image", "video"],
       // mimo-v2.5 carries a model-knowledge thinking-switch declaration (v2-flash is excluded).
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "mimo-v2-flash",
@@ -393,6 +421,10 @@ test("minimax provider consumes MiniMax model catalog metadata", () => {
       capabilities: ["languageModel", "image", "video"],
       // minimax-m3 knowledge record: thinking switch.
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "MiniMax-M2.5",
@@ -518,6 +550,10 @@ test("tencent-tokenhub provider preserves upstream displayName from models catal
       // deepseek-v4-* knowledge record: hybrid thinking tiers.
       supportedReasoningEfforts: ["high", "max"],
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
   ]);
 });
@@ -630,6 +666,10 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
       capabilities: ["languageModel"],
       contextLength: 200000,
       supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
   ]);
 });

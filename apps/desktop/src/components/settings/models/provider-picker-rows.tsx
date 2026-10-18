@@ -1,10 +1,11 @@
 import { ProviderIcon } from "@/components/provider-icon";
-import {
-  listProviderPresets,
-  CUSTOM_PROVIDER_PRESET_ID,
-} from "@spiritagent/agent-core/provider-presets";
+import { CUSTOM_PROVIDER_PRESET_ID } from "@spiritagent/agent-core/provider-presets";
 
-import { providerLabelKey, providerLabelMetadata } from "@/lib/model-picker-groups";
+import {
+  providerLabelKey,
+  providerLabelMetadata,
+  type ProviderPickerPresetRow,
+} from "@/lib/model-picker-groups";
 
 /** Minimal signature compatible with react-i18next `t`, avoiding a direct dependency on the TFunction generic. */
 export type ProviderLabelTranslate = (key: string, options?: { defaultValue?: string }) => string;
@@ -14,17 +15,24 @@ export type LocalizedProviderRow = {
   label: string;
 };
 
-export function providerPickerLabel(t: ProviderLabelTranslate, providerId: string): string {
-  const { labelKey, fallbackLabel } = providerLabelMetadata(providerId);
+export function providerPickerLabel(
+  t: ProviderLabelTranslate,
+  providerId: string,
+  presets: readonly ProviderPickerPresetRow[],
+): string {
+  const { labelKey, fallbackLabel } = providerLabelMetadata(providerId, presets);
   return String(t(labelKey, { defaultValue: fallbackLabel }));
 }
 
-/** Picker rows: the preset manifest order, with the custom connection last. */
-export function localizedProviderRows(t: ProviderLabelTranslate): LocalizedProviderRow[] {
+/** Picker rows: the snapshot's preset rows (manifest order), with the custom connection last. */
+export function localizedProviderRows(
+  t: ProviderLabelTranslate,
+  presets: readonly ProviderPickerPresetRow[],
+): LocalizedProviderRow[] {
   return [
-    ...listProviderPresets().map((preset) => ({
+    ...presets.map((preset) => ({
       id: preset.id,
-      label: providerPickerLabel(t, preset.id),
+      label: providerPickerLabel(t, preset.id, presets),
     })),
     {
       id: CUSTOM_PROVIDER_PRESET_ID,

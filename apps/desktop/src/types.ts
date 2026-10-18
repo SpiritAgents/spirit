@@ -7,6 +7,7 @@ import type {
   SpiritModelReasoningMode,
   SpiritServiceTiersDeclaration,
   SpiritTransportKind,
+  ThinkingSwitchDeclaration,
 } from "@spiritagent/host-internal/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
@@ -89,6 +90,11 @@ export interface UpdateConfigRequest {
   apiBase: string;
   reasoningEffort?: DesktopModelReasoningEffort;
   reasoningMode?: DesktopModelReasoningMode;
+  /**
+   * User thinking on/off state for the active model (model-level; absent = on). Only meaningful
+   * when the model declares `supportsThinkingSwitch`; the host rejects the write otherwise.
+   */
+  thinkingEnabled?: boolean;
   /**
    * Per-model service tier preference for the active model. Absent means no change;
    * `null` clears the stored preference (provider default behavior).
@@ -191,6 +197,9 @@ export interface DesktopDreamConfigUpdate {
 
 export type DesktopTransportKind = SpiritTransportKind;
 
+/** The wizard's credential form, forwarded to preset materialization (`apiKey` on a non-apiKey preset selects `expressApiBase`). */
+export type DesktopProviderCredentialKind = "apiKey" | "bedrock" | "vertex";
+
 /** Model reasoning effort string; declared per model in config (`supportedReasoningEfforts`). */
 export type DesktopModelReasoningEffort = ModelReasoningEffort;
 
@@ -238,6 +247,8 @@ export interface PreviewModelCatalogEntry {
   maxCompletionTokens?: number;
   supportsThinkingType?: "only";
   supportsThinkingSwitch?: boolean;
+  /** Thinking on/off wire encoding folded from model knowledge (companion of `supportsThinkingSwitch`). */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   /** Declared service tier options (array form) folded from model knowledge. */
   serviceTiers?: ModelServiceTier[];
   /** Hugging Face Hub media models: Inference Providers routing hint. */
@@ -255,6 +266,8 @@ export interface PreviewModelsRequest {
   /** Preset id from agent-core's provider-presets manifest, or `custom`/a custom entry id. */
   provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; mirrors the connect request so both resolve the same apiBase. */
+  credentialKind?: DesktopProviderCredentialKind;
   /** Site-based providers such as SiliconFlow: cn / intl. */
   siteId?: string;
   /** Alibaba MaaS `{workspaceId}` template value. */
@@ -294,6 +307,8 @@ export interface AddProviderModelsRequest {
   modelCatalog?: PreviewModelCatalogEntry[];
   provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
+  credentialKind?: DesktopProviderCredentialKind;
   /** Site-based providers such as SiliconFlow: cn / intl. */
   siteId?: string;
   /** Alibaba MaaS `{workspaceId}` template value. */
@@ -333,6 +348,8 @@ export interface AddModelRequest {
   /** Absent means the entry's materialized default transport. */
   provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
+  credentialKind?: DesktopProviderCredentialKind;
   capabilities?: DesktopModelCapability[];
   /** Optional; positive integer; used e.g. as the denominator of the context usage ring. */
   contextLength?: number;
@@ -1240,9 +1257,20 @@ export type DesktopProviderConfigEntry = Omit<
   "apiKey" | "apiKeyEnv" | "apiKeyKeyring" | "credentials"
 >;
 
+/**
+ * Picker row data for one built-in provider preset (id + fallback display label), delivered by the
+ * host snapshot in manifest order so the renderer never value-imports the preset manifest.
+ */
+export interface DesktopProviderPickerPreset {
+  id: string;
+  label: string;
+}
+
 export interface DesktopConfigSnapshot {
   /** Provider entries with credential material stripped (never send secrets to the renderer). */
   providers: DesktopProviderConfigEntry[];
+  /** Built-in provider preset picker rows (manifest order; the custom connection stays renderer-side). */
+  providerPickerPresets: DesktopProviderPickerPreset[];
   models: ModelProfileSnapshot[];
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
@@ -1606,6 +1634,14 @@ export interface ModelProfileSnapshot {
   supportsThinkingType?: "only";
   /** The model supports a thinking on/off switch (wire encoding declared by `thinkingSwitch` or the transport default). */
   supportsThinkingSwitch?: boolean;
+  /** User thinking on/off state (model-level user state; absent = on). */
+  thinkingEnabled?: boolean;
+  /** Presence-only capability marker: the model's provider entry declares `providerTools`. */
+  hasProviderTools?: boolean;
+  /** Declared image API shape name from the provider entry (`imageApi`); feeds generation sub-configs. */
+  imageApi?: string;
+  /** Declared video API shape name from the provider entry (`videoApi`); feeds generation sub-configs. */
+  videoApi?: string;
   /** Host snapshot: whether this model's provider entry has credentials in the system keychain (excludes environment variables). */
   keyConfigured?: boolean;
 }
@@ -1743,6 +1779,8 @@ export interface ToolBlockSnapshot {
   lspWriteDiagnostics?: LspWriteDiagnosticsUi;
   /** Provider tools like Moonshot Formula: forbid expanding to avoid showing encrypted gibberish. */
   suppressExpand?: boolean;
+  /** Declared provider tool entry label carried by the preview event; the card renders the MCP-style Calling/Called line with it. */
+  providerToolLabel?: string;
 }
 
 export interface MessageAuxSnapshot {

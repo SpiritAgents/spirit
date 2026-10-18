@@ -16,6 +16,7 @@ import {
   findProviderPreset,
   materializeProviderPreset,
   type MaterializeProviderPresetInput,
+  type ProviderPresetCredentialKind,
 } from "@spiritagent/agent-core/provider-presets";
 import { isValidAzureResourceName } from "@spiritagent/agent-core/azure-resource";
 import {
@@ -203,6 +204,22 @@ function assertDeclaredServiceTier(
   }
 }
 
+/**
+ * Fail-fast: `thinkingEnabled` is user state gated on the declared `supportsThinkingSwitch`
+ * capability (effective = model over provider inheritance), same fail-fast family as serviceTier.
+ */
+function assertDeclaredThinkingSwitch(
+  modelName: string,
+  provider: ProviderEntry,
+  model: ModelEntry,
+): void {
+  if ((model.supportsThinkingSwitch ?? provider.supportsThinkingSwitch) !== true) {
+    throw new Error(
+      `Model "${modelName}" declares no supportsThinkingSwitch; cannot set thinkingEnabled.`,
+    );
+  }
+}
+
 export async function updateConfigCommand(
   ctx: HostModelCommandContext,
   request: UpdateConfigRequest,
@@ -225,6 +242,7 @@ export async function updateConfigCommand(
           reasoningEffort: prevActiveModelProfile.reasoningEffort,
           reasoningMode: prevActiveModelProfile.reasoningMode,
           serviceTier: prevActiveModelProfile.serviceTier,
+          thinkingEnabled: prevActiveModelProfile.thinkingEnabled,
         }
       : undefined;
 
@@ -236,6 +254,7 @@ export async function updateConfigCommand(
     const apiBase = request.apiBase.trim();
     const reasoningEffort = request.reasoningEffort;
     const reasoningMode = request.reasoningMode;
+    const thinkingEnabled = request.thinkingEnabled;
     const serviceTier = request.serviceTier;
     let activeEntry: ModelEntryLocation | null = null;
     if (!isEmptyModelRef(activeRef)) {
@@ -286,6 +305,15 @@ export async function updateConfigCommand(
             model.serviceTiers ?? provider.serviceTiers,
           );
           model.serviceTier = serviceTier;
+        }
+      }
+      if (thinkingEnabled !== undefined) {
+        // Fail-fast: only a model declaring `supportsThinkingSwitch` may carry the user state.
+        assertDeclaredThinkingSwitch(model.name, provider, model);
+        if (thinkingEnabled) {
+          delete model.thinkingEnabled;
+        } else {
+          model.thinkingEnabled = false;
         }
       }
       state.config.activeModel = {
@@ -516,6 +544,7 @@ export async function updateConfigCommand(
       modelRefsEqual(state.config.activeModel, prevActiveModel) &&
       (activeModelProfile.reasoningEffort !== prevActiveModelInference.reasoningEffort ||
         activeModelProfile.reasoningMode !== prevActiveModelInference.reasoningMode ||
+        activeModelProfile.thinkingEnabled !== prevActiveModelInference.thinkingEnabled ||
         activeModelProfile.serviceTier !== prevActiveModelInference.serviceTier);
     const deferRuntimeRefresh = wasBusy && transportOrPlanChanged && !request.apiKey?.trim();
 
@@ -569,6 +598,8 @@ function buildMaterializeInput(input: {
   siteId?: string;
   workspaceId?: string;
   billingPlanId?: string;
+  /** The wizard credential form; `apiKey` on a non-apiKey preset selects the preset's `expressApiBase`. */
+  credentialKind?: ProviderPresetCredentialKind;
   awsRegion?: string;
   azureResourceName?: string;
   cloudflareAccountId?: string;
@@ -600,6 +631,7 @@ function buildMaterializeInput(input: {
     ...(input.billingPlanId ? { billingPlanId: input.billingPlanId } : {}),
     ...(input.customProviderLabel?.trim() ? { label: input.customProviderLabel.trim() } : {}),
     ...(input.apiBase.trim() ? { apiBaseOverride: input.apiBase.trim() } : {}),
+    ...(input.credentialKind ? { credentialKind: input.credentialKind } : {}),
     ...(Object.keys(templateValues).length > 0 ? { templateValues } : {}),
   };
 }
@@ -800,6 +832,7 @@ export async function previewModelsCommand(
     siteId: request.siteId,
     workspaceId: request.workspaceId,
     billingPlanId: request.billingPlanId,
+    credentialKind: request.credentialKind,
     awsRegion,
     azureResourceName: request.azureResourceName,
     cloudflareAccountId,
@@ -955,6 +988,7 @@ export async function addProviderModelsCommand(
       siteId: request.siteId,
       workspaceId: request.workspaceId,
       billingPlanId: request.billingPlanId,
+      credentialKind: request.credentialKind,
       awsRegion,
       azureResourceName: request.azureResourceName,
       cloudflareAccountId,
@@ -1129,6 +1163,7 @@ export async function addModelCommand(
       siteId: request.siteId,
       workspaceId: request.workspaceId,
       billingPlanId: request.billingPlanId,
+      credentialKind: request.credentialKind,
       awsRegion,
       azureResourceName,
       cloudflareAccountId,

@@ -67,6 +67,7 @@ function MessageCardImpl({
   canPickLocalFile,
   models,
   catalogHints,
+  providerPresets,
   activeModel,
   agentMode,
   onContinue,
@@ -81,6 +82,7 @@ function MessageCardImpl({
   onModelSelect,
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
+  onModelThinkingEnabledSelect,
   onModelServiceTierSelect,
   onAgentModeChange,
   pendingAuxState,
@@ -149,6 +151,7 @@ function MessageCardImpl({
   canPickLocalFile: boolean;
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   onContinue(message: ConversationMessageSnapshot): void;
@@ -163,6 +166,7 @@ function MessageCardImpl({
   onModelSelect(ref: ModelRef): void;
   onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
+  onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
     ref: ModelRef,
     serviceTier: ModelServiceTier | undefined,
@@ -285,12 +289,14 @@ function MessageCardImpl({
             placeholder={t("app.typeMessage")}
             models={models}
             catalogHints={catalogHints}
+            providerPresets={providerPresets}
             activeModel={activeModel}
             agentMode={agentMode}
             loopEnabled={false}
             onModelSelect={onModelSelect}
             onModelReasoningEffortSelect={onModelReasoningEffortSelect}
             onModelReasoningModeSelect={onModelReasoningModeSelect}
+            onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
             onModelServiceTierSelect={onModelServiceTierSelect}
             onAgentModeChange={onAgentModeChange}
             onLoopEnabledChange={() => {}}

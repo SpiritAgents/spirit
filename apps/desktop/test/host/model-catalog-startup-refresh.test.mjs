@@ -329,6 +329,40 @@ test("applyCatalogEntryToStoredModel syncs thinking declarations and resets stal
   );
   assert.equal(switchModel.supportsThinkingSwitch, true);
 
+  // The thinkingSwitch wire encoding is catalog-owned: written when declared, cleared when dropped.
+  const encodingModel = { name: "kimi-k2.6" };
+  const thinkingSwitch = {
+    on: { body: { thinking: { type: "enabled" } } },
+    off: { body: { thinking: { type: "disabled" } } },
+  };
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+      thinkingSwitch,
+    }),
+    true,
+  );
+  assert.deepEqual(encodingModel.thinkingSwitch, thinkingSwitch);
+
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+      thinkingSwitch,
+    }),
+    false,
+  );
+
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+    }),
+    true,
+  );
+  assert.equal("thinkingSwitch" in encodingModel, false);
+
   // A reasoning selection outside the fresh declaration resets to "send nothing".
   const effortModel = {
     name: "m",

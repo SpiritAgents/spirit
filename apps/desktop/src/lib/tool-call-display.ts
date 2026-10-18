@@ -315,7 +315,18 @@ export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummar
     }
   }
 
-  // Provider built-in web_search compact cards (DeepSeek/Moonshot): orchestrator sets headline.
+  // Declaration-driven provider tool calls (the preview event carried the entry label): the
+  // MCP-style Call verb re-translates by phase at render time; the label is declared config copy.
+  if (tool.providerToolLabel?.trim()) {
+    const ctx = phaseToVerbContext(tool.phase);
+    const tOpts = ctx ? { context: ctx } : {};
+    return {
+      headline: i18n.t("tool.lazyCall", tOpts),
+      detail: tool.providerToolLabel.trim(),
+    };
+  }
+
+  // Provider built-in web_search compact cards (in-band internal actions): orchestrator sets headline.
   if (tool.toolName === "web_search" && tool.suppressExpand) {
     return {
       headline,
@@ -443,13 +454,8 @@ function fileDiffToolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
   return Boolean(tool.argsExcerpt?.trim());
 }
 
-function responsesBuiltInToolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
-  if (tool.suppressExpand) {
-    return false;
-  }
-  if (!isResponsesBuiltInToolCard(tool.toolName)) {
-    return false;
-  }
+/** Provider tool cards (built-in or declaration-driven): expandable when input/output detail exists. */
+function providerToolCardHasExpandableContent(tool: ToolBlockSnapshot): boolean {
   return (
     Boolean(tool.outputExcerpt?.trim()) ||
     Boolean(tool.argsExcerpt?.trim()) ||
@@ -469,8 +475,8 @@ export function toolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
     return fileDiffToolHasExpandableContent(tool);
   }
 
-  if (isResponsesBuiltInToolCard(tool.toolName)) {
-    return responsesBuiltInToolHasExpandableContent(tool);
+  if (isResponsesBuiltInToolCard(tool.toolName) || tool.providerToolLabel?.trim()) {
+    return providerToolCardHasExpandableContent(tool);
   }
 
   if (tool.toolName === "shell") {

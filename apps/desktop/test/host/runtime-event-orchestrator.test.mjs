@@ -969,15 +969,17 @@ test("edit_file tool-execution-finished preserves lspWriteDiagnostics on tool sn
   assert.equal(toolMessage?.tool?.lspWriteDiagnostics?.items[0]?.severity, "error");
 });
 
-test("Moonshot Formula web_search tool-execution-finished preserves preview suppressExpand and argsExcerpt", () => {
+test("provider tool call with entry label renders MCP-style and keeps suppressExpand on completion", () => {
   const harness = createHarness();
   harness.pushUser("search DeepSeek");
 
+  // The Moonshot formula declaration (`label` + `ui.expand: false`) projects onto the preview
+  // event's `_spiritUi` block: ciphertext output stays collapsed, the outer line is Call + label.
   const argumentsJson = JSON.stringify({
     status: "completed",
     _spiritUi: {
+      label: "Web Search",
       inputExcerpt: "What is DeepSeek",
-      headlineDetail: "What is DeepSeek",
       suppressExpand: true,
     },
   });
@@ -996,7 +998,7 @@ test("Moonshot Formula web_search tool-execution-finished preserves preview supp
         toolCallId: "ws_formula_1",
         toolName: "web_search",
         request: { name: "web_search", argumentsJson: '{"query":"What is DeepSeek"}' },
-        output: "[moonshot formula web_search] completed",
+        output: "[provider tool web_search] completed",
         failed: false,
       },
     },
@@ -1006,9 +1008,82 @@ test("Moonshot Formula web_search tool-execution-finished preserves preview supp
     .toMessages()
     .find((message) => message.tool?.toolCallId === "ws_formula_1")?.tool;
   assert.equal(tool?.phase, "succeeded");
+  assert.equal(tool?.providerToolLabel, "Web Search");
   assert.equal(tool?.suppressExpand, true);
-  assert.equal(tool?.argsExcerpt, "What is DeepSeek");
-  assert.equal(tool?.headlineDetail, "What is DeepSeek");
+  assert.equal(tool?.headline, i18n.t("tool.lazyCall", { context: "succeeded" }));
+  assert.equal(tool?.headlineDetail, "Web Search");
+  assert.equal(tool?.argsExcerpt, JSON.stringify({ query: "What is DeepSeek" }, null, 2));
+});
+
+test("labeled provider tool card runs Calling/Called with input/output detail", () => {
+  const harness = createHarness();
+  harness.pushUser("search DeepSeek");
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "ws_kimi_1",
+      toolName: "web_search",
+      argumentsJson: JSON.stringify({
+        query: "DeepSeek V4",
+        status: "in_progress",
+        _spiritUi: {
+          label: "Web Search",
+          inputExcerpt: "DeepSeek V4",
+          headlineDetail: "DeepSeek V4",
+        },
+      }),
+    },
+  ]);
+
+  const previewTool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "ws_kimi_1")?.tool;
+  assert.equal(previewTool?.phase, "preview");
+  assert.equal(previewTool?.providerToolLabel, "Web Search");
+  assert.equal(previewTool?.headline, i18n.t("tool.lazyCall", { context: "running" }));
+  assert.equal(previewTool?.headlineDetail, "Web Search");
+  assert.equal(previewTool?.argsExcerpt, "DeepSeek V4");
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "ws_kimi_1",
+      toolName: "web_search",
+      argumentsJson: JSON.stringify({
+        query: "DeepSeek V4",
+        status: "completed",
+        _spiritUi: {
+          label: "Web Search",
+          inputExcerpt: "DeepSeek V4",
+          headlineDetail: "DeepSeek V4",
+          outputExcerpt: "1. https://www.deepseek.com/",
+        },
+      }),
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "ws_kimi_1",
+        toolName: "web_search",
+        request: { name: "web_search", argumentsJson: '{"query":"DeepSeek V4"}' },
+        output: "1. https://www.deepseek.com/",
+        failed: false,
+      },
+    },
+  ]);
+
+  const tool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "ws_kimi_1")?.tool;
+  assert.equal(tool?.phase, "succeeded");
+  assert.equal(tool?.providerToolLabel, "Web Search");
+  assert.equal(tool?.headline, i18n.t("tool.lazyCall", { context: "succeeded" }));
+  assert.equal(tool?.headlineDetail, "Web Search");
+  assert.equal(tool?.suppressExpand, undefined);
+  assert.equal(tool?.argsExcerpt, JSON.stringify({ query: "DeepSeek V4" }, null, 2));
+  assert.equal(tool?.outputExcerpt, "1. https://www.deepseek.com/");
 });
 
 test("failed llm turn reuses streamed error text instead of duplicating assistant rows", () => {

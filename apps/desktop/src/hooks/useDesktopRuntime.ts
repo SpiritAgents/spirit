@@ -2523,6 +2523,49 @@ export function useDesktopRuntime() {
     [api, applySnapshot, snapshot],
   );
 
+  const setModelThinkingEnabled = useCallback(
+    async (modelRef: ModelRef, enabled: boolean): Promise<boolean> => {
+      if (!api || !snapshot) {
+        return false;
+      }
+
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
+      if (!model) {
+        return false;
+      }
+
+      const previousSettings = settingsRef.current;
+      const next = {
+        ...previousSettings,
+        activeModel: modelRef,
+        apiBase: model.apiBase,
+      };
+      settingsRef.current = next;
+      setSettings(next);
+
+      try {
+        const res = await api.updateConfig({
+          ...updateConfigFromSettingsForm(next, {
+            enabled: next.webHostEnabled,
+            host: next.webHostHost,
+            port: next.webHostPort,
+          }),
+          thinkingEnabled: enabled,
+        });
+        applySnapshot(res);
+        setRuntimeError("");
+        setSettings((current) => ({ ...current, apiKey: "" }));
+        return true;
+      } catch (error) {
+        settingsRef.current = previousSettings;
+        setSettings(previousSettings);
+        setRuntimeError(describeError(error));
+        return false;
+      }
+    },
+    [api, applySnapshot, snapshot],
+  );
+
   const setModelServiceTier = useCallback(
     async (modelRef: ModelRef, serviceTier: ModelServiceTier | undefined): Promise<boolean> => {
       if (!api || !snapshot) {
@@ -4062,6 +4105,7 @@ export function useDesktopRuntime() {
     setActiveModel,
     setModelReasoningEffort,
     setModelReasoningMode,
+    setModelThinkingEnabled,
     setModelServiceTier,
     setApprovalGuidance,
     setAgentModeChipDismissed,

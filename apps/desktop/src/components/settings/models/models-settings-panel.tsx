@@ -213,7 +213,11 @@ export function ModelsSettingsPanel({
   }
 
   function providerLabel(providerId: string): string {
-    return providerPickerLabel((key, options) => String(t(key, options)), providerId);
+    return providerPickerLabel(
+      (key, options) => String(t(key, options)),
+      providerId,
+      snapshot?.config.providerPickerPresets ?? [],
+    );
   }
 
   const openProviderPicker = () => {
@@ -228,7 +232,10 @@ export function ModelsSettingsPanel({
   };
 
   const filteredProviders = filterProviderRows(
-    localizedProviderRows((key, options) => String(t(key, options))),
+    localizedProviderRows(
+      (key, options) => String(t(key, options)),
+      snapshot?.config.providerPickerPresets ?? [],
+    ),
     providerQuery,
   );
 
@@ -927,6 +934,8 @@ export function ModelsSettingsPanel({
         <ProviderConnectDialog
           key={`${connectTarget.provider}-${connectTarget.session}`}
           provider={connectTarget.provider}
+          providerPresets={snapshot?.config.providerPickerPresets ?? []}
+          reconnect={configProviders.some((entry) => entry.id === connectTarget.provider)}
           open={connectDialogOpen}
           onOpenChange={setConnectDialogOpen}
           busy={modelsBusy}

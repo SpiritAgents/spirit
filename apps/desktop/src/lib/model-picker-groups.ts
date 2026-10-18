@@ -1,24 +1,28 @@
-import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
-
 import type {
   DesktopModelCatalogHint,
   DesktopProviderConfigEntry,
   ModelProfileSnapshot,
 } from "@/types";
 
-/** Picker group ordering: the preset manifest array order; unknown (custom) ids sort last. */
-const PROVIDER_ORDER: readonly string[] = listProviderPresets().map((preset) => preset.id);
+/** Picker row data delivered by the host snapshot (`config.providerPickerPresets`). */
+export type ProviderPickerPresetRow = {
+  id: string;
+  label: string;
+};
 
 /** The i18n key for a preset id (`providers.<camelCaseId>`), e.g. `kimi-code` → `providers.kimiCode`. */
 export function providerLabelKey(providerId: string): string {
   return `providers.${providerId.replace(/-([a-z])/g, (_match, char: string) => char.toUpperCase())}`;
 }
 
-export function providerLabelMetadata(providerId: string): {
+export function providerLabelMetadata(
+  providerId: string,
+  presets: readonly ProviderPickerPresetRow[],
+): {
   labelKey: string;
   fallbackLabel: string;
 } {
-  const preset = listProviderPresets().find((item) => item.id === providerId);
+  const preset = presets.find((item) => item.id === providerId);
   return { labelKey: providerLabelKey(providerId), fallbackLabel: preset?.label ?? providerId };
 }
 
@@ -33,13 +37,16 @@ export type ModelPickerGroup = {
 /**
  * Main UI model dropdown: group by provider entry (`providers[].id`); within a group, the order
  * preferentially follows the upstream list order from `modelCatalogHints`.
+ * Group order follows the snapshot's preset picker rows (manifest order); unknown (custom) ids sort last.
  */
 export function groupModelsForPicker(
   models: ModelProfileSnapshot[],
   catalogHints: DesktopModelCatalogHint[] | undefined,
   providers?: readonly DesktopProviderConfigEntry[],
+  presets: readonly ProviderPickerPresetRow[] = [],
 ): ModelPickerGroup[] {
   const providerMeta = new Map((providers ?? []).map((entry) => [entry.id, entry] as const));
+  const presetOrder = new Map(presets.map((preset, index) => [preset.id, index] as const));
   const buckets = new Map<string, ModelProfileSnapshot[]>();
   for (const model of models) {
     const providerId = model.providerId || model.ref.providerId;
@@ -49,10 +56,13 @@ export function groupModelsForPicker(
   }
 
   const keys = [...buckets.keys()].sort((leftId, rightId) => {
-    const leftIndex = PROVIDER_ORDER.indexOf(leftId);
-    const rightIndex = PROVIDER_ORDER.indexOf(rightId);
+    const leftIndex = presetOrder.get(leftId);
+    const rightIndex = presetOrder.get(rightId);
     if (leftIndex !== rightIndex) {
-      return (leftIndex === -1 ? 99 : leftIndex) - (rightIndex === -1 ? 99 : rightIndex);
+      return (
+        (leftIndex === undefined ? presets.length : leftIndex) -
+        (rightIndex === undefined ? presets.length : rightIndex)
+      );
     }
     const leftLabel = providerMeta.get(leftId)?.label?.trim() ?? leftId;
     const rightLabel = providerMeta.get(rightId)?.label?.trim() ?? rightId;
@@ -72,7 +82,7 @@ export function groupModelsForPicker(
     return {
       providerId,
       customLabel: meta?.label?.trim() || undefined,
-      ...providerLabelMetadata(providerId),
+      ...providerLabelMetadata(providerId, presets),
       items,
     };
   });

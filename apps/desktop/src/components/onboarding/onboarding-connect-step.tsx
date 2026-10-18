@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,
   AddProviderModelsRequest,
+  DesktopProviderPickerPreset,
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
@@ -26,6 +27,8 @@ import type {
 type OnboardingConnectControlsProps = {
   modelsBusy: boolean;
   modelsPreviewBusy: boolean;
+  /** Preset picker rows from the host snapshot (list order + fallback labels). */
+  providerPickerPresets: readonly DesktopProviderPickerPreset[];
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
@@ -42,6 +45,7 @@ type OnboardingConnectControlsProps = {
 export function OnboardingConnectControls({
   modelsBusy,
   modelsPreviewBusy,
+  providerPickerPresets,
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
@@ -61,7 +65,7 @@ export function OnboardingConnectControls({
   const [hasMoreBelow, setHasMoreBelow] = useState(() => pinnedBottomFade ?? false);
 
   const filteredProviders = filterProviderRows(
-    localizedProviderRows((key, options) => String(t(key, options))),
+    localizedProviderRows((key, options) => String(t(key, options)), providerPickerPresets),
     query,
   );
 
@@ -139,6 +143,7 @@ export function OnboardingConnectControls({
         <ProviderConnectDialog
           key={`${connectTarget.provider}-${connectTarget.session}`}
           provider={connectTarget.provider}
+          providerPresets={providerPickerPresets}
           open={connectDialogOpen}
           onOpenChange={setConnectDialogOpen}
           busy={modelsBusy}

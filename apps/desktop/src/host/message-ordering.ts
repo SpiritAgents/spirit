@@ -868,6 +868,7 @@ export function normalizeToolBlockSnapshot(
   const detailLines = tool.detailLines.filter((line) => line.trim().length > 0);
   const argsExcerpt = tool.argsExcerpt?.trim() ? tool.argsExcerpt : undefined;
   const outputExcerpt = tool.outputExcerpt?.trim() ? tool.outputExcerpt : undefined;
+  const providerToolLabel = tool.providerToolLabel?.trim() || undefined;
   const imagePaths = tool.imagePaths?.map((entry) => entry.trim()).filter(Boolean);
   const videoPaths = tool.videoPaths?.map((entry) => entry.trim()).filter(Boolean);
   const lspWriteDiagnostics = normalizeLspWriteDiagnosticsSnapshot(tool.lspWriteDiagnostics);
@@ -881,6 +882,7 @@ export function normalizeToolBlockSnapshot(
     ...(headlineDetail ? { headlineDetail } : {}),
     ...(argsExcerpt ? { argsExcerpt } : {}),
     ...(outputExcerpt ? { outputExcerpt } : {}),
+    ...(providerToolLabel ? { providerToolLabel } : {}),
     ...(imagePaths && imagePaths.length > 0 ? { imagePaths } : {}),
     ...(videoPaths && videoPaths.length > 0 ? { videoPaths } : {}),
     ...(lspWriteDiagnostics ? { lspWriteDiagnostics } : {}),
@@ -1146,6 +1148,22 @@ function internalWebSearchActionHeadlineKey(
     default:
       return "tool.webSearch";
   }
+}
+
+/**
+ * Declaration-driven provider tool calls render like MCP tool calls: the outer line is the
+ * phase-aware Call verb with the declared entry label as the detail (`Calling Web Search`).
+ */
+export function providerToolCallSummaryCopy(
+  label: string,
+  phase: ToolBlockSnapshot["phase"],
+): ToolCallSummaryCopy {
+  const ctx = phaseToVerbContext(phase);
+  const tOpts = ctx ? { context: ctx } : {};
+  return {
+    headline: i18n.t("tool.lazyCall", tOpts),
+    headlineDetail: truncateSummaryDetail(label),
+  };
 }
 
 export function toolCallSummaryCopyForResponsesBuiltInTool(
