@@ -1,10 +1,9 @@
 import type { JsonObject } from "../ports.js";
 import { RESPONSES_BUILT_IN_SPIRIT_UI_KEY } from "../open-responses/responses-built-in-tools.js";
-import { isPlainJsonObject } from "./types.js";
 
 /**
- * Streaming preview bridge for host-executed provider tool calls. The emitted argumentsJson keeps
- * the `_spiritUi` card shape the current desktop reader understands; P7 replaces the contract.
+ * Streaming preview for host-executed provider tool calls: the emitted argumentsJson carries the
+ * `_spiritUi` card shape the desktop reads (label, excerpts, suppressExpand from `ui.expand`).
  */
 export interface ProviderToolPreviewInput {
   /** Entry `label`; carried for display, falling back to the tool name. */
@@ -51,54 +50,4 @@ export function buildProviderToolPreviewArgumentsJson(input: ProviderToolPreview
     [RESPONSES_BUILT_IN_SPIRIT_UI_KEY]: spiritUi,
   };
   return JSON.stringify(payload);
-}
-
-export type ParsedProviderToolSpiritUi = {
-  inputExcerpt: string;
-  headlineDetail?: string;
-  suppressExpand: boolean;
-};
-
-/**
- * @deprecated Bridge for the current desktop reader (`runtime-event-orchestrator`), which looks up
- * this exact export name; superseded by the P7 UI contract. Parses the `_spiritUi` block emitted
- * by host-executed provider tool previews.
- */
-export function parseMoonshotFormulaSpiritUiFromArgumentsJson(
-  argumentsJson: string,
-): ParsedProviderToolSpiritUi | undefined {
-  try {
-    const parsed = JSON.parse(argumentsJson) as JsonObject;
-    if (!isPlainJsonObject(parsed)) {
-      return undefined;
-    }
-
-    const raw = parsed[RESPONSES_BUILT_IN_SPIRIT_UI_KEY];
-    if (!isPlainJsonObject(raw)) {
-      return undefined;
-    }
-
-    const inputExcerpt = typeof raw.inputExcerpt === "string" ? raw.inputExcerpt : "";
-    if (!inputExcerpt.trim()) {
-      return undefined;
-    }
-
-    const headlineDetail =
-      typeof raw.headlineDetail === "string" && raw.headlineDetail.trim()
-        ? raw.headlineDetail.trim()
-        : undefined;
-
-    return {
-      inputExcerpt,
-      ...(headlineDetail ? { headlineDetail } : {}),
-      suppressExpand: raw.suppressExpand === true,
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-/** @deprecated Bridge companion of {@link parseMoonshotFormulaSpiritUiFromArgumentsJson}. */
-export function moonshotFormulaSpiritUiSuppressesExpand(argumentsJson: string): boolean {
-  return parseMoonshotFormulaSpiritUiFromArgumentsJson(argumentsJson)?.suppressExpand === true;
 }
