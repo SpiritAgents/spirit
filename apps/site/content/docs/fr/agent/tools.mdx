@@ -17,7 +17,6 @@ Ces outils opèrent sur l'espace de travail que vous avez ouvert. Le mode Demand
 | `ls`              | Lister un répertoire, non récursif. Le chemin doit être absolu                                                                                                             |
 | `shell`           | Exécuter une commande avec `reason` et `command`. Le mode Demander ne peut pas l'appeler                                                                                   |
 | `web_fetch`       | Récupérer une URL `http` ou `https` et renvoyer du Markdown. Un outil hôte, pas une recherche de fournisseur                                                               |
-| `web_search`      | Exposé lorsque le fournisseur du modèle actuel prend en charge la recherche Web. Renvoie les titres, les URL et des extraits                                               |
 | `generate_image`  | Exposé après avoir attribué un modèle d'image dans **Paramètres → Modèles**. Génère une image. Le mode Demander ne peut pas l'appeler                                      |
 | `generate_video`  | Exposé après avoir attribué un modèle vidéo dans **Paramètres → Modèles**. Génère une courte vidéo. Le mode Demander ne peut pas l'appeler                                 |
 | `get_diagnostics` | Exposé lorsqu'un serveur de langage est prêt. Passez des chemins ; renvoie les erreurs et avertissements. Le mode Demander peut l'utiliser                                 |
@@ -33,3 +32,11 @@ Ces outils opèrent sur l'espace de travail que vous avez ouvert. Le mode Demand
 Les modifications et suppressions attendent [approbation](./approvals.mdx) au niveau par défaut. `shell` attend aussi.
 
 Les serveurs [MCP](../customize/mcp.mdx) et extensions configurés ajoutent plus d'outils à la même liste.
+
+## Outils du fournisseur [#provider-tools]
+
+Les fournisseurs peuvent exposer leurs propres outils — recherche web, interpréteurs de code et assimilés. Les outils disponibles viennent de la déclaration du fournisseur connecté dans [config.json](../config.mdx) (écrite par l'assistant de connexion), et non d'un outil intégré à {{product.name|mdx}} : un fournisseur qui ne déclare aucun outil n'en expose aucun.
+
+Selon la déclaration, un appel s'exécute soit dans la requête amont, soit par {{product.name|mdx}} en HTTP conformément à la déclaration, puis le résultat est réécrit comme résultat d'outil. Dans les deux cas, il s'affiche comme un appel d'outil MCP, et le runtime ne modifie jamais de lui-même les paramètres déclarés.
+
+L'interrupteur **Outils du fournisseur** dans **Paramètres → Agents** (`agents.providerTools.enabled`, activé par défaut) les contrôle tous d'un coup. La liste par maison des outils déclarés est dans [Fournisseurs](../providers.mdx).

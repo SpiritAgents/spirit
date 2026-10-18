@@ -7,7 +7,9 @@ description: Llavero, aprobaciones y el daemon de bucle local. Sin telemetría.
 
 Las claves de API, los secretos de Bedrock / Vertex, los secretos de extensiones y el token de integración de GitHub se almacenan en el llavero del sistema operativo. El nombre del servicio es `{{product.name}}`.
 
-`config.json` contiene grupos de proveedores y referencias de modelos, no el secreto en sí. Los secretos grandes pueden dividirse en el llavero.
+Las claves de proveedor que escribe el asistente de conexión usan el esquema de cuenta `provider::{id}` — una por entrada de proveedor en `config.json` — o `provider::{id}::{slot}` para slots de credenciales compuestas como IAM de Bedrock o una cuenta de servicio de Vertex. Los secretos grandes pueden dividirse en el llavero.
+
+`config.json` contiene entradas de proveedor y referencias de modelos, no los secretos en sí — a menos que optes por una escotilla de escape declarada: un `apiKey` en texto plano (no recomendado), una referencia a variable de entorno `apiKeyEnv`, o una referencia `apiKeyKeyring` / `keyring` por slot a una entrada en un llavero externo. Ver [Config](./config.mdx).
 
 ## Aprobaciones
 

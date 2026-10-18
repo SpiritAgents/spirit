@@ -7,7 +7,9 @@ description: Keyring, aprovações e o daemon de loopback. Sem telemetria.
 
 Chaves de API, segredos do Bedrock / Vertex, segredos de extensões e o token de integração do GitHub são armazenados no keyring do sistema operacional. O nome do serviço é `{{product.name}}`.
 
-`config.json` contém grupos de provedores e referências de modelo, não o segredo em si. Segredos grandes podem ser fragmentados no keyring.
+As chaves de provedor gravadas pelo assistente de conexão usam o esquema de conta `provider::{id}` — uma por entrada de provedor no `config.json` — ou `provider::{id}::{slot}` para slots de credenciais compostas, como IAM do Bedrock ou uma conta de serviço do Vertex. Segredos grandes podem ser fragmentados no keyring.
+
+`config.json` contém entradas de provedor e referências de modelo, não os segredos em si — a menos que você opte por uma saída de escape declarada: um `apiKey` em texto simples (não recomendado), uma referência de variável de ambiente `apiKeyEnv`, ou uma referência `apiKeyKeyring` / `keyring` por slot para uma entrada em um keyring externo. Consulte [Configuração](./config.mdx).
 
 ## Aprovações
 
