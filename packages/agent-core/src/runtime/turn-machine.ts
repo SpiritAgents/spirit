@@ -20,9 +20,9 @@ import {
 import { emitContextUsageUpdated } from "./context-usage.js";
 import { isOpenResponsesTransportConfig } from "../provider-config.js";
 import {
-  handleManagedProviderToolCallInTurn,
-  handleManagedProviderToolCallInTurnAsync,
-} from "../moonshot/formula/moonshot-formula-turn-handler.js";
+  handleDeclaredProviderToolCallInTurn,
+  handleDeclaredProviderToolCallInTurnAsync,
+} from "./provider-tool-calls.js";
 import {
   buildApplyPatchToolResultProviderState,
   registerPendingApplyPatchCallIds,
@@ -641,7 +641,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
       break;
     }
 
-    const managedOutcome = await handleManagedProviderToolCallInTurn(
+    const declaredProviderToolOutcome = await handleDeclaredProviderToolCallInTurn(
       runtime,
       pendingUserInput,
       currentState,
@@ -649,11 +649,11 @@ export async function processToolCalls<Config, State, ToolRequest>(
       remaining,
       turn,
     );
-    if (managedOutcome.kind === "turn-result") {
-      return managedOutcome.result;
+    if (declaredProviderToolOutcome.kind === "turn-result") {
+      return declaredProviderToolOutcome.result;
     }
-    if (managedOutcome.kind === "advance") {
-      currentState = managedOutcome.state;
+    if (declaredProviderToolOutcome.kind === "advance") {
+      currentState = declaredProviderToolOutcome.state;
       continue;
     }
 
@@ -1177,7 +1177,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       break;
     }
 
-    const managedHandled = await handleManagedProviderToolCallInTurnAsync(
+    const declaredProviderToolHandled = await handleDeclaredProviderToolCallInTurnAsync(
       runtime,
       pendingUserInput,
       currentState,
@@ -1187,7 +1187,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       resumeAsStreaming,
       streamingEmitBeginResponse,
     );
-    if (managedHandled) {
+    if (declaredProviderToolHandled) {
       return;
     }
 

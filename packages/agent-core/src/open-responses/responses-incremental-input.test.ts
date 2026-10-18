@@ -28,7 +28,6 @@ test("responsesUsesStoredState follows the sdk adapters and the options.storedSt
       apiKey: "k",
       model: "deploy",
       sdk: "@ai-sdk/azure",
-      azureResourceName: "r",
     }),
     true,
   );
@@ -64,8 +63,8 @@ test("responsesUsesStoredState follows the sdk adapters and the options.storedSt
       transportKind: "open-responses",
       apiKey: "k",
       model: "openai.gpt-5.5",
-      baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
       sdk: "@ai-sdk/openai",
+      options: { auth: "aws-sigv4" },
     }),
     false,
   );

@@ -6,7 +6,7 @@ import {
   buildGatewaySdkProviderBuiltinToolResultArgumentsJson,
   buildResponsesBuiltInToolArgumentsJson,
   buildResponsesBuiltInToolCardData,
-  formatDeepSeekInternalWebSearchDetail,
+  formatInternalWebSearchActionDetail,
   isGenericProviderWebSearchQuery,
   isResponsesBuiltInToolName,
   parseResponsesBuiltInToolUiFromArgumentsJson,
@@ -186,9 +186,9 @@ test("accumulateResponsesBuiltInToolPreviewsFromRawChunk marks completed on outp
   assert.equal(ui?.sourceCount, undefined);
 });
 
-test("formatDeepSeekInternalWebSearchDetail joins search queries and strips call ids", () => {
+test("formatInternalWebSearchActionDetail joins search queries and strips call ids", () => {
   assert.equal(
-    formatDeepSeekInternalWebSearchDetail({
+    formatInternalWebSearchActionDetail({
       type: "search",
       queries: ["What is DeepSeek", "Which generation is GPT up to", "ws_call_id=call_00_abc"],
     }),
@@ -196,9 +196,9 @@ test("formatDeepSeekInternalWebSearchDetail joins search queries and strips call
   );
 });
 
-test("formatDeepSeekInternalWebSearchDetail shows open_page url without ws_call_id suffix", () => {
+test("formatInternalWebSearchActionDetail shows open_page url without ws_call_id suffix", () => {
   assert.equal(
-    formatDeepSeekInternalWebSearchDetail({
+    formatInternalWebSearchActionDetail({
       type: "open_page",
       url: "https://example.com/page#ws_call_id=call_01_xyz",
     }),

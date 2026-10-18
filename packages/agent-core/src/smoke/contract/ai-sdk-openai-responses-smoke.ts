@@ -44,7 +44,6 @@ async function main(): Promise<void> {
     model: "gpt-test-responses",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
     sdk: "@ai-sdk/openai" as const,
-    llmVendor: "openai" as const,
   };
   const tools = demoLookupToolDefinition();
 

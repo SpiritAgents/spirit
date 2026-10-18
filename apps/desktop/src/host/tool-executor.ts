@@ -56,10 +56,6 @@ import {
   isLspDiagnosticsToolRequest,
   requestFromGetDiagnosticsFunctionCall,
   executeGetDiagnostics,
-  shouldUseStepfunWebSearch,
-  buildStepfunWebSearchToolDefinition,
-  shouldUseKimiCodeWebSearch,
-  buildKimiCodeWebSearchToolDefinition,
 } from "@spiritagent/agent-core";
 import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/host-internal/lsp";
 import {
@@ -280,16 +276,6 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         ...this.planToolDefinitions,
         ...this.dreamToolDefinitions,
         ...this.todoToolDefinitions,
-        ...(this.activeTransportConfig !== undefined &&
-        this.activeTransportConfig.webSearchEnabled !== false &&
-        shouldUseStepfunWebSearch(this.activeTransportConfig)
-          ? [buildStepfunWebSearchToolDefinition()]
-          : []),
-        ...(this.activeTransportConfig !== undefined &&
-        this.activeTransportConfig.webSearchEnabled !== false &&
-        shouldUseKimiCodeWebSearch(this.activeTransportConfig)
-          ? [buildKimiCodeWebSearchToolDefinition()]
-          : []),
       ],
       this.agentMode,
     );

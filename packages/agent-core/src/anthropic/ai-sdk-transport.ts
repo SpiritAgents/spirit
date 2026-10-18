@@ -6,8 +6,6 @@ import { createMiniMax } from "@ai-sdk/minimax";
 
 import { getLlmFetch } from "../llm-fetch.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
-import { isStepfunApiHostname } from "../stepfun/stepfun-api-hosts.js";
-import { createStepfunAnthropicAwareFetch } from "../stepfun/stepfun-anthropic-fetch.js";
 import {
   generateObject,
   generateText,
@@ -64,32 +62,28 @@ import type { JsonSchemaTransport } from "../json-schema.js";
 import {
   buildAnthropicProviderOptions,
   buildAnthropicRequestTrace,
-  DEFAULT_ANTHROPIC_BASE_URL,
   type AnthropicTransportConfig,
 } from "./anthropic-compat.js";
 import {
-  buildMinimaxWebSearchServerToolEntry,
-  createMinimaxAnthropicServerToolsFetch,
-  shouldUseMinimaxServerToolsWebSearch,
-} from "./minimax-server-tools.js";
-import {
   appendStreamingTextAnthropicBlock,
-  buildMinimaxWebSearchAssistantMessageFields,
-  createMinimaxWebSearchStreamState,
-  filterAnthropicHostToolCalls,
-  handleMinimaxWebSearchStreamPart,
-  isMinimaxProviderBuiltinWebSearchToolName,
+  buildAnthropicServerToolAssistantMessageFields,
+  createAnthropicServerToolStreamState,
+  filterAnthropicServerToolCalls,
+  handleAnthropicServerToolStreamPart,
   readAnthropicAssistantContentBlocks,
-  resolveMinimaxWebSearchAssistantReplayText,
-  shouldSuppressMinimaxWebSearchStreamError,
-} from "./minimax-web-search-stream.js";
+  resolveAnthropicServerToolAssistantReplayText,
+  shouldSuppressAnthropicServerToolStreamError,
+  type AnthropicServerToolStreamState,
+} from "./server-tool-stream.js";
 import {
-  isMinimaxAnthropicConfig,
-  mapMinimaxAnthropicImageContentPart,
-  mapMinimaxAnthropicVideoContentPart,
-} from "./minimax-multimodal.js";
+  EMPTY_RESOLVED_PROVIDER_TOOLS,
+  resolveDeclaredProviderTools,
+  type ResolvedProviderTools,
+} from "../provider-tools/runtime.js";
+import { createProviderToolsWireFetch } from "../provider-tools/wire-fetch.js";
+import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import { pathToLocalVideoReference } from "../openai/openai-multimodal-media-path.js";
-import { resolveMinimaxVideoInAnthropicMessages } from "../openai/minimax-video-messages.js";
+import { resolveDeclaredVideoInputsInMessages } from "../openai/openai-multimodal-messages.js";
 
 type AnthropicToolCall = {
   toolCallId: string;
@@ -160,13 +154,12 @@ export class AiSdkAnthropicTransport
     const messages = buildJsonSchemaCompletionMessages(
       {
         model: config.model,
-        ...(config.llmVendor ? { llmVendor: config.llmVendor } : {}),
         ...(config.workspaceRoot ? { workspaceRoot: config.workspaceRoot } : {}),
       },
       request,
     );
     const normalizedMessages = prepareAnthropicToolStateMessages(config, messages);
-    await resolveMinimaxVideoInAnthropicMessages(
+    await resolveDeclaredVideoInputsInMessages(
       config,
       normalizedMessages,
       anthropicTransportAssetRoot(config),
@@ -208,22 +201,26 @@ export class AiSdkAnthropicTransport
 
     const requestMessages = nextState.messages.map((message) => cloneJsonValue(message));
     const normalizedRequestMessages = prepareAnthropicToolStateMessages(config, requestMessages);
-    await resolveMinimaxVideoInAnthropicMessages(
+    await resolveDeclaredVideoInputsInMessages(
       config,
       normalizedRequestMessages,
       anthropicTransportAssetRoot(config),
     );
-    const normalizedTools = normalizeToolDefinitions(tools);
+    const providerTools = await resolveDeclaredProviderTools(
+      config,
+      new Set(toolNamesFromDefinitions(tools)),
+    );
+    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
     const requestTrace = buildAnthropicRequestTrace(
       config,
       nextState.steps,
       normalizedRequestMessages,
-      normalizedTools,
+      [...normalizedTools, ...providerTools.literalEntries],
     );
 
     try {
       const result: any = await generateText({
-        model: createAnthropicLanguageModel(config),
+        model: createAnthropicLanguageModel(config, providerTools),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages, config) as any,
         allowSystemInMessages: true,
         ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
@@ -290,16 +287,23 @@ export class AiSdkAnthropicTransport
 
     const requestMessages = nextState.messages.map((message) => cloneJsonValue(message));
     const normalizedRequestMessages = prepareAnthropicToolStateMessages(config, requestMessages);
-    await resolveMinimaxVideoInAnthropicMessages(
+    await resolveDeclaredVideoInputsInMessages(
       config,
       normalizedRequestMessages,
       anthropicTransportAssetRoot(config),
     );
-    const normalizedTools = normalizeToolDefinitions(tools);
-    const minimaxWebSearchEnabled = shouldUseMinimaxServerToolsWebSearch(config);
-    const traceTools = minimaxWebSearchEnabled
-      ? [...normalizedTools, buildMinimaxWebSearchServerToolEntry()]
-      : normalizedTools;
+    const providerTools = await resolveDeclaredProviderTools(
+      config,
+      new Set(toolNamesFromDefinitions(tools)),
+    );
+    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
+    // Declared in-band server tools (entries without `execute`): their literal entries ride the
+    // request tools[] and their calls/results arrive as server-tool content blocks in the stream.
+    const serverToolNames = new Set(
+      [...providerTools.recognizedNames].filter((name) => !providerTools.executions.has(name)),
+    );
+    const serverToolsEnabled = serverToolNames.size > 0;
+    const traceTools = [...normalizedTools, ...providerTools.literalEntries];
     const requestTrace = buildAnthropicRequestTrace(
       config,
       nextState.steps,
@@ -311,7 +315,7 @@ export class AiSdkAnthropicTransport
 
     try {
       const result: any = streamText({
-        model: createAnthropicLanguageModel(config),
+        model: createAnthropicLanguageModel(config, providerTools),
         messages: toolStateMessagesToAiSdkMessages(normalizedRequestMessages, config) as any,
         allowSystemInMessages: true,
         ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
@@ -322,7 +326,7 @@ export class AiSdkAnthropicTransport
               toolChoice: "auto" as const,
             }),
         providerOptions: buildAnthropicProviderOptions(config),
-        ...(minimaxWebSearchEnabled ? { include: { rawChunks: true } } : {}),
+        ...(serverToolsEnabled ? { include: { rawChunks: true } } : {}),
         maxRetries: 2,
         abortSignal: abortController.signal,
       });
@@ -336,6 +340,7 @@ export class AiSdkAnthropicTransport
           nextState,
           requestTrace,
           completion,
+          serverToolNames,
         ),
         completion: completion.promise,
         cancel: () => abortController.abort(),
@@ -493,18 +498,26 @@ export class AiSdkAnthropicTransport
  * Adapter dispatch on the declared `sdk`: `@ai-sdk/minimax` uses the MiniMax Messages adapter,
  * anything else defaults to the official Anthropic adapter.
  */
-function createAnthropicLanguageModel(config: AnthropicTransportConfig): any {
-  // Declared headers/body/thinkingSwitch/serviceTier merge innermost so declarations win over
-  // every other request patch.
-  const baseFetch = createDeclaredWireMergeFetch(config, "messages", getLlmFetch());
-  let fetch = isStepfunAnthropicBaseUrl(config.baseUrl)
-    ? createStepfunAnthropicAwareFetch(baseFetch)
-    : baseFetch;
+/**
+ * Adapter dispatch on the declared `sdk`: `@ai-sdk/minimax` uses the MiniMax Messages adapter,
+ * anything else defaults to the official Anthropic adapter.
+ */
+function createAnthropicLanguageModel(
+  config: AnthropicTransportConfig,
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "literalEntries" | "bodyPatches"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
+): any {
+  // Declared provider tool literals/entry bodies merge innermost; the declared wire merge
+  // (provider-level headers/body, thinkingSwitch, serviceTier) wraps it so declarations win.
+  const fetch = createDeclaredWireMergeFetch(
+    config,
+    "messages",
+    createProviderToolsWireFetch(providerTools, getLlmFetch()),
+  );
 
   if (config.sdk === "@ai-sdk/minimax") {
-    if (shouldUseMinimaxServerToolsWebSearch(config)) {
-      fetch = createMinimaxAnthropicServerToolsFetch(fetch, { webSearchEnabled: true });
-    }
     return createMiniMax({
       apiKey: config.apiKey,
       ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
@@ -514,20 +527,10 @@ function createAnthropicLanguageModel(config: AnthropicTransportConfig): any {
 
   return createAnthropic({
     apiKey: config.apiKey,
-    baseURL: config.baseUrl ?? DEFAULT_ANTHROPIC_BASE_URL,
+    // The adapter's own default applies when unset; config apiBase is always materialized.
+    ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     fetch,
   }).chat(config.model);
-}
-
-function isStepfunAnthropicBaseUrl(baseUrl: string | undefined): boolean {
-  if (!baseUrl) {
-    return false;
-  }
-  try {
-    return isStepfunApiHostname(new URL(baseUrl).hostname);
-  } catch {
-    return false;
-  }
 }
 
 function normalizeToolDefinitions(tools: JsonValue): OpenAiStyleFunctionToolDefinition[] {
@@ -705,6 +708,59 @@ function projectSeparatedSystemMessageForAnthropic(message: JsonObject): JsonVal
   } satisfies JsonObject;
 }
 
+/**
+ * The `@ai-sdk/minimax` Messages adapter expects raw Anthropic content blocks for media (its
+ * file-part conversion does not cover them); the official `@ai-sdk/anthropic` adapter takes AI SDK
+ * file parts. Keyed on the declared `sdk`, never on endpoint identity.
+ */
+function usesRawAnthropicMediaBlocks(config: Pick<AnthropicTransportConfig, "sdk">): boolean {
+  return config.sdk === "@ai-sdk/minimax";
+}
+
+function parseDataUrlToAnthropicImageSource(
+  value: string,
+): { type: "url"; url: string } | { type: "base64"; media_type: string; data: string } | undefined {
+  const trimmed = value.trim();
+  const match = /^data:([^;]+);base64,(.+)$/i.exec(trimmed);
+  if (!match) {
+    return undefined;
+  }
+
+  const mediaType = match[1]?.trim();
+  const data = match[2]?.trim();
+  if (!mediaType || !data) {
+    return undefined;
+  }
+
+  return {
+    type: "base64",
+    media_type: mediaType,
+    data,
+  };
+}
+
+function mapAnthropicImageContentPart(imageUrl: string): Record<string, unknown> {
+  const trimmed = imageUrl.trim();
+  const source = parseDataUrlToAnthropicImageSource(trimmed) ?? {
+    type: "url" as const,
+    url: trimmed,
+  };
+  return {
+    type: "image",
+    source,
+  };
+}
+
+function mapAnthropicVideoContentPart(videoUrl: string): Record<string, unknown> {
+  return {
+    type: "video",
+    source: {
+      type: "url",
+      url: videoUrl.trim(),
+    },
+  };
+}
+
 function userContentToAiSdkContent(
   content: JsonValue | undefined,
   config: AnthropicTransportConfig,
@@ -731,8 +787,8 @@ function userContentToAiSdkContent(
         break;
       case "image_url":
         if (isJsonObject(part.image_url) && typeof part.image_url.url === "string") {
-          if (isMinimaxAnthropicConfig(config)) {
-            parts.push(mapMinimaxAnthropicImageContentPart(part.image_url.url));
+          if (usesRawAnthropicMediaBlocks(config)) {
+            parts.push(mapAnthropicImageContentPart(part.image_url.url));
           } else {
             parts.push(buildAiSdkUserImageFilePartFromUrl(part.image_url.url));
           }
@@ -740,8 +796,8 @@ function userContentToAiSdkContent(
         break;
       case "video_url":
         if (isJsonObject(part.video_url) && typeof part.video_url.url === "string") {
-          if (isMinimaxAnthropicConfig(config)) {
-            parts.push(mapMinimaxAnthropicVideoContentPart(part.video_url.url));
+          if (usesRawAnthropicMediaBlocks(config)) {
+            parts.push(mapAnthropicVideoContentPart(part.video_url.url));
           }
         }
         break;
@@ -756,7 +812,7 @@ function userContentToAiSdkContent(
 function assistantMessageToAiSdkMessage(message: JsonObject): Record<string, unknown> | undefined {
   const anthropicBlocks = readAnthropicAssistantContentBlocks(message);
   if (anthropicBlocks) {
-    const replayText = resolveMinimaxWebSearchAssistantReplayText(message, anthropicBlocks);
+    const replayText = resolveAnthropicServerToolAssistantReplayText(message, anthropicBlocks);
     if (replayText.length > 0) {
       const reasoningParts = extractStoredAnthropicReasoningParts(message);
       const reasoningText = extractAssistantReasoningContentFromJson(message);
@@ -942,11 +998,10 @@ async function* anthropicEventStreamToRuntimeEvents(
   nextState: ToolAgentState,
   requestTrace: JsonValue[],
   completion: Deferred<ToolAgentRoundCompletion<ToolAgentState>>,
+  serverToolNames: ReadonlySet<string>,
 ): AsyncGenerator<LlmStreamEvent, void, undefined> {
-  const minimaxWebSearchEnabled = shouldUseMinimaxServerToolsWebSearch(config);
-  const minimaxWebSearchState = minimaxWebSearchEnabled
-    ? createMinimaxWebSearchStreamState()
-    : undefined;
+  const serverToolState =
+    serverToolNames.size > 0 ? createAnthropicServerToolStreamState(serverToolNames) : undefined;
   const toolCalls = new Map<string, StreamingToolCallAccumulator>();
   const toolCallOrder: string[] = [];
   let assistantContent = "";
@@ -955,29 +1010,29 @@ async function* anthropicEventStreamToRuntimeEvents(
 
   try {
     for await (const part of stream) {
-      if (minimaxWebSearchState) {
-        const minimaxEvents: LlmStreamEvent[] = [];
-        const minimaxResult = handleMinimaxWebSearchStreamPart(
+      if (serverToolState) {
+        const serverToolEvents: LlmStreamEvent[] = [];
+        const serverToolResult = handleAnthropicServerToolStreamPart(
           part,
-          minimaxWebSearchState,
-          minimaxEvents,
+          serverToolState,
+          serverToolEvents,
         );
-        for (const event of minimaxEvents) {
+        for (const event of serverToolEvents) {
           yield event;
         }
-        if (minimaxResult.sawAnswerOrToolOutput) {
+        if (serverToolResult.sawAnswerOrToolOutput) {
           sawAnswerOrToolOutput = true;
         }
         if (
           part.type === "error" &&
-          shouldSuppressMinimaxWebSearchStreamError(
+          shouldSuppressAnthropicServerToolStreamError(
             (part as { error?: unknown }).error,
-            minimaxWebSearchState,
+            serverToolState,
           )
         ) {
           continue;
         }
-        if (minimaxResult.handled) {
+        if (serverToolResult.handled) {
           continue;
         }
       }
@@ -986,7 +1041,7 @@ async function* anthropicEventStreamToRuntimeEvents(
 
       if (rawType === "tool-call-streaming-start") {
         const streamingStart = part as unknown as AnthropicToolCallStreamingStartPart;
-        if (isMinimaxProviderBuiltinWebSearchToolName(streamingStart.toolName)) {
+        if (serverToolState?.serverToolNames.has(streamingStart.toolName)) {
           continue;
         }
         sawAnswerOrToolOutput = true;
@@ -1004,7 +1059,7 @@ async function* anthropicEventStreamToRuntimeEvents(
 
       if (rawType === "tool-call-delta") {
         const toolCallDelta = part as unknown as AnthropicToolCallDeltaPart;
-        if (isMinimaxProviderBuiltinWebSearchToolName(toolCallDelta.toolName)) {
+        if (serverToolState?.serverToolNames.has(toolCallDelta.toolName)) {
           continue;
         }
         sawAnswerOrToolOutput = true;
@@ -1066,14 +1121,14 @@ async function* anthropicEventStreamToRuntimeEvents(
           }
           sawAnswerOrToolOutput = true;
           assistantContent += normalizedText;
-          if (minimaxWebSearchState) {
-            appendStreamingTextAnthropicBlock(minimaxWebSearchState, normalizedText);
+          if (serverToolState) {
+            appendStreamingTextAnthropicBlock(serverToolState, normalizedText);
           }
           yield { kind: "assistant-chunk", text: normalizedText };
           break;
         }
         case "tool-call": {
-          if (isMinimaxProviderBuiltinWebSearchToolName(part.toolName)) {
+          if (serverToolState?.serverToolNames.has(part.toolName)) {
             sawAnswerOrToolOutput = true;
             break;
           }
@@ -1119,14 +1174,14 @@ async function* anthropicEventStreamToRuntimeEvents(
         await result.reasoning,
         toolCalls,
         toolCallOrder,
-        minimaxWebSearchState,
+        serverToolState,
       ),
     );
 
-    const calls = minimaxWebSearchState
-      ? filterAnthropicHostToolCalls(
+    const calls = serverToolState
+      ? filterAnthropicServerToolCalls(
           extractToolCallsFromStreamingMap(toolCalls, toolCallOrder),
-          minimaxWebSearchState,
+          serverToolState,
         )
       : extractToolCallsFromStreamingMap(toolCalls, toolCallOrder);
     const usage = await readAiSdkUsage(result);
@@ -1167,7 +1222,7 @@ function buildStreamingAssistantMessage(
   reasoning: unknown,
   toolCalls: Map<string, StreamingToolCallAccumulator>,
   order: readonly string[],
-  minimaxWebSearchState?: ReturnType<typeof createMinimaxWebSearchStreamState>,
+  serverToolState?: AnthropicServerToolStreamState,
 ): JsonValue {
   const functionToolCalls = order
     .map((toolCallId) => toolCalls.get(toolCallId))
@@ -1175,8 +1230,8 @@ function buildStreamingAssistantMessage(
     .filter(
       (call) =>
         !(
-          minimaxWebSearchState?.executedProviderBuiltinToolCallIds.has(call.toolCallId) &&
-          isMinimaxProviderBuiltinWebSearchToolName(call.toolName)
+          serverToolState?.executedProviderBuiltinToolCallIds.has(call.toolCallId) &&
+          serverToolState.serverToolNames.has(call.toolName)
         ),
     )
     .map((call) => ({
@@ -1194,8 +1249,8 @@ function buildStreamingAssistantMessage(
         role: "assistant",
         content: assistantContent || null,
         ...(functionToolCalls.length > 0 ? { tool_calls: functionToolCalls } : {}),
-        ...(minimaxWebSearchState
-          ? buildMinimaxWebSearchAssistantMessageFields(minimaxWebSearchState, assistantContent)
+        ...(serverToolState
+          ? buildAnthropicServerToolAssistantMessageFields(serverToolState, assistantContent)
           : {}),
       },
       normalizeAiSdkReasoningParts(reasoning),

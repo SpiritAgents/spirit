@@ -19,14 +19,10 @@ const openAiConfig = {
   options: { applyPatch: true },
 };
 
-// The v3 language-model path is still selected by the legacy gateway web-search predicate
-// (pending providerTools rewiring); the fixture carries both the legacy marker and the
-// declaration-driven keys.
 const gatewayOpenAiConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "openai/gpt-5.4-mini",
-  llmVendor: "vercel-ai-gateway" as const,
   sdk: "@ai-sdk/gateway" as const,
   options: { applyPatch: true },
 };

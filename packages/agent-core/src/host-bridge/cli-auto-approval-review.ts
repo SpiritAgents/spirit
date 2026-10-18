@@ -9,7 +9,8 @@ function providerIdForTransportConfig(config: LlmTransportConfig): string | unde
   if (isBedrockTransportConfig(config)) {
     return "bedrock";
   }
-  return config.llmVendor;
+  // Neutral mechanism label for the host prompt: the declared SDK adapter package.
+  return config.sdk;
 }
 
 /** When the CLI has no separate lightweight config, reuse the current transport's active model. */

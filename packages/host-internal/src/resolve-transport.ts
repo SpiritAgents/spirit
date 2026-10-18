@@ -348,8 +348,7 @@ export function tryResolveTransportConfig(
   const config = buildTransportFromProfile(profile, apiKey, context.workspaceRoot);
   // Stamp the user's opt-outs (agents.providerTools / agents.webFetch in config.json) so every
   // agent-core exposure gate can read them off the transport config; only an explicit false is
-  // stamped. webSearchEnabled mirrors providerToolsEnabled while agent-core's legacy gates still
-  // read the old field (the config key was renamed agents.webSearch -> agents.providerTools).
+  // stamped.
   const fullConfig = loadSpiritConfig(context.spiritDataDir);
   const providerTools = resolveAgentsProviderToolsExposure(fullConfig);
   const webFetch = resolveAgentsWebFetchExposure(fullConfig);
@@ -357,9 +356,7 @@ export function tryResolveTransportConfig(
     ok: true,
     config: {
       ...config,
-      ...(providerTools.providerToolsEnabled
-        ? {}
-        : { providerToolsEnabled: false, webSearchEnabled: false }),
+      ...(providerTools.providerToolsEnabled ? {} : { providerToolsEnabled: false }),
       ...(webFetch.webFetchEnabled ? {} : { webFetchEnabled: false }),
     },
   };

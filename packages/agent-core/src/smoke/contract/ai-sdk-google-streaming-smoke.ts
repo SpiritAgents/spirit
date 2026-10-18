@@ -127,9 +127,9 @@ async function main(): Promise<void> {
   }
 
   const traceEntry = completion.result.requestTrace[0];
-  if (!isJsonObject(traceEntry) || traceEntry.kind !== "google_sdk_generate_content") {
+  if (!isJsonObject(traceEntry) || traceEntry.kind !== "openai_sdk_chat_completions") {
     throw new Error(
-      "ai-sdk google streaming smoke did not mark the Google-specific request trace kind.",
+      "ai-sdk google streaming smoke did not write the chat-completions request trace kind.",
     );
   }
 }

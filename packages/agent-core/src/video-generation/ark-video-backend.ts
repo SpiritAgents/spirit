@@ -1,5 +1,4 @@
 import { getLlmFetch } from "../llm-fetch.js";
-import { defaultArkApiBase } from "../ark/ark-provider.js";
 import type { OpenAiVideoGenerationConfig } from "../openai/openai-compat.js";
 import type {
   GeneratedVideoFile,
@@ -24,14 +23,17 @@ interface ArkTaskStatusResponse {
 }
 
 export class ArkVideoBackend implements VideoGenerationBackend {
-  readonly id = "ark";
+  readonly id = "ark-videos";
 
   async generate(
     config: OpenAiVideoGenerationConfig,
     request: VideoGenerationRequest,
     saveGeneratedVideo: (request: GeneratedVideoSaveRequest) => Promise<GeneratedVideoFile>,
   ): Promise<ToolExecutionOutput> {
-    const baseUrl = (config.baseUrl ?? defaultArkApiBase(config.llmVendor)).replace(/\/$/, "");
+    const baseUrl = (config.baseUrl ?? "").replace(/\/$/, "");
+    if (!baseUrl) {
+      throw new Error("The ark-videos API shape requires a baseUrl.");
+    }
     const createUrl = `${baseUrl}/contents/generations/tasks`;
 
     console.error("[agent-core][generate-video] request.start", {

@@ -72,7 +72,7 @@ export function openAiMessagesToResponsesAiSdkMessages(
   messages: JsonValue[],
   config?: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "llmVendor" | "sdk" | "options" | "agentMode"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
 ): Array<Record<string, unknown>> {
   const useSdkApplyPatch = config !== undefined && shouldUseOpenAiSdkApplyPatchTool(config);

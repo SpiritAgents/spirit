@@ -3,20 +3,12 @@ import { test } from "vitest";
 
 import {
   buildApplyPatchFileToolsPromptSection,
-  normalizeGatewayOpenAiModelId,
   shouldUseApplyPatchFileTools,
   shouldUseApplyPatchFunctionTool,
   shouldUseBuiltInApplyPatchRequestItems,
   shouldOmitApplyPatchFromAiSdkMessages,
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
-
-test("normalizeGatewayOpenAiModelId", () => {
-  assert.equal(normalizeGatewayOpenAiModelId("openai/gpt-5.1"), "gpt-5.1");
-  assert.equal(normalizeGatewayOpenAiModelId("openai/gpt-5.4"), "gpt-5.4");
-  assert.equal(normalizeGatewayOpenAiModelId("anthropic/claude-sonnet-4"), undefined);
-  assert.equal(normalizeGatewayOpenAiModelId("gpt-5.1"), undefined);
-});
 
 test("apply_patch file tools require the options.applyPatch declaration on open-responses", () => {
   const declared = {
@@ -97,7 +89,7 @@ test("Bedrock Mantle takes the function-tool path on the OpenAI adapter", () => 
     sdk: "@ai-sdk/openai" as const,
     model: "openai.gpt-5.5",
     baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-    options: { applyPatch: true },
+    options: { auth: "aws-sigv4" as const, applyPatch: true },
   };
 
   assert.equal(shouldUseApplyPatchFileTools(mantleConfig), true);

@@ -1,6 +1,3 @@
-import { basename } from "node:path";
-import { product } from "@spiritagent/product";
-
 import { createAlibaba } from "@ai-sdk/alibaba";
 import { createFireworks } from "@ai-sdk/fireworks";
 import { createBaseten } from "@ai-sdk/baseten";
@@ -32,12 +29,9 @@ import { buildAiSdkUserVideoFilePartFromUrl } from "../ai-sdk-video-url-part.js"
 import {
   resolveStreamingToolPreviewEmit,
   shouldEmitStreamingToolNamePreview,
+  tryExtractPartialWebSearchQuery,
 } from "../tool-streaming-preview-gate.js";
-import {
-  DEFAULT_IMAGE_GENERATION_SIZE,
-  createLlmMessageContentFromTextAndImages,
-  llmMessageTextContent,
-} from "../ports.js";
+import { DEFAULT_IMAGE_GENERATION_SIZE, llmMessageTextContent } from "../ports.js";
 import type {
   GeneratedImageFile,
   GeneratedImageSaveRequest,
@@ -80,11 +74,19 @@ import {
 import { generateSiliconFlowImage } from "../image-generation/siliconflow-backend.js";
 import { generateHuggingFaceImage } from "../image-generation/huggingface-backend.js";
 import { generateStepfunImage } from "../image-generation/stepfun-backend.js";
+import { buildGeneratedImageToolOutput } from "../image-generation/output.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
-import { createAlibabaChatCompletionsAwareFetch } from "../open-responses/alibaba-chat-completions-fetch.js";
-import { shouldPatchAlibabaChatCompletionsExtraBody } from "../open-responses/alibaba-built-in-tools.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
+import {
+  EMPTY_RESOLVED_PROVIDER_TOOLS,
+  peekDeclaredProviderTools,
+  resolveDeclaredProviderTools,
+  type ResolvedProviderTools,
+} from "../provider-tools/runtime.js";
+import { createProviderToolsWireFetch } from "../provider-tools/wire-fetch.js";
+import { buildProviderToolPreviewArgumentsJson } from "../provider-tools/spirit-ui.js";
+import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import {
   mergeServiceTierProviderOptions,
   resolveServiceTierRequestPlan,
@@ -92,24 +94,15 @@ import {
   type ServiceTierRequestSurface,
 } from "../service-tier-request.js";
 import {
-  clearMoonshotChatCompletionMessages,
+  clearVideoPassthroughMessages,
   openAiMessagesContainVideoUrl,
-  stashMoonshotChatCompletionMessages,
-  takeMoonshotChatCompletionMessages,
-} from "./moonshot-chat-completion-messages.js";
+  stashVideoPassthroughMessages,
+  takeVideoPassthroughMessages,
+} from "./video-message-stash.js";
 import {
   llmHistoryToOpenAiMessages,
-  resolveMoonshotVideoUrlsInOpenAiMessages,
+  resolveDeclaredVideoInputsInMessages,
 } from "./openai-multimodal-messages.js";
-import { resolveXiaomiVideoUrlsInOpenAiMessages } from "./xiaomi-video-messages.js";
-import { resolveDeepInfraVideoUrlsInOpenAiMessages } from "./deepinfra-video-messages.js";
-import { resolveStepfunVideoUrlsInOpenAiMessages } from "./stepfun-video-messages.js";
-import { normalizeMoonshotApiBase } from "./moonshot-files.js";
-import { createMoonshotFormulaChatCompletionsAwareFetch } from "../moonshot/formula/moonshot-chat-completions-fetch.js";
-import { buildMoonshotFormulaStreamingToolPreviewArgumentsJson } from "../moonshot/formula/moonshot-formula-tool-loop.js";
-import { buildStepfunWebSearchStreamingPreviewArgumentsJson } from "../stepfun/stepfun-web-search-tool-loop.js";
-import { buildKimiCodeWebSearchStreamingPreviewArgumentsJson } from "../kimi-code/kimi-code-web-search-tool-loop.js";
-import { buildZaiWebSearchStreamingPreviewArgumentsJson } from "../zai/zai-web-search-tool-loop.js";
 import {
   buildJsonSchemaCompletionMessages,
   stringifyJsonSchemaCompletionOutput,
@@ -119,8 +112,6 @@ import {
 } from "./json-schema.js";
 
 const DEFAULT_OPENAI_COMPATIBLE_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_GOOGLE_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_DEEPINFRA_BASE_URL = "https://api.deepinfra.com/v1";
 const STREAMING_TOOL_CALL_PLACEHOLDER_PREFIX = "stream-tool-call-";
 
 type AiSdkToolCall = {
@@ -151,56 +142,7 @@ interface Deferred<T> {
   reject(error: unknown): void;
 }
 
-const MANAGED_GENERATED_ASSET_PROTOCOL = `${product.urlProtocol}:`;
-const MANAGED_GENERATED_ASSET_HOST = "generated";
-
-export function normalizeGeneratedImageMarkdownRef(markdownRef: string): string {
-  const trimmed = markdownRef.trim();
-  if (!trimmed) {
-    throw new Error("Host returned an empty generated image markdownRef.");
-  }
-
-  let url: URL;
-  try {
-    url = new URL(trimmed);
-  } catch {
-    throw new Error("Host returned an invalid generated image markdownRef.");
-  }
-
-  if (
-    url.protocol.toLowerCase() !== MANAGED_GENERATED_ASSET_PROTOCOL ||
-    url.hostname.toLowerCase() !== MANAGED_GENERATED_ASSET_HOST ||
-    url.search.length > 0 ||
-    url.hash.length > 0
-  ) {
-    throw new Error("Host returned an invalid generated image markdownRef.");
-  }
-
-  const segments = url.pathname.replace(/^\/+/, "").split("/").filter(Boolean);
-  if (segments.length !== 2 || segments[0]?.toLowerCase() !== "image") {
-    throw new Error("Host returned an invalid generated image markdownRef.");
-  }
-
-  let imageId: string;
-  try {
-    imageId = decodeURIComponent(segments[1] ?? "").trim();
-  } catch {
-    throw new Error("Host returned an invalid generated image markdownRef.");
-  }
-
-  if (
-    !imageId ||
-    imageId !== basename(imageId) ||
-    imageId === "." ||
-    imageId === ".." ||
-    imageId.includes("/") ||
-    imageId.includes("\\")
-  ) {
-    throw new Error("Host returned an invalid generated image markdownRef.");
-  }
-
-  return `${product.urlProtocol}://generated/image/${encodeURIComponent(imageId)}`;
-}
+export { normalizeGeneratedImageMarkdownRef } from "../image-generation/output.js";
 
 export class AiSdkOpenAiCompatibleTransport
   implements LlmTransport<OpenAiTransportConfig, ToolAgentState>, OpenAiJsonSchemaTransport
@@ -215,16 +157,26 @@ export class AiSdkOpenAiCompatibleTransport
       throw new Error("No image generation model is configured.");
     }
 
-    if (imageConfig.llmVendor === "siliconflow") {
+    // Backend selection keys off the declared `imageApi` shape name; the default shape is the
+    // transport-native OpenAI Images API (`openai-images`).
+    const imageApi = imageConfig.imageApi ?? "openai-images";
+
+    if (imageApi === "siliconflow-images") {
       return generateSiliconFlowImage(imageConfig, request, saveGeneratedImage);
     }
 
-    if (imageConfig.llmVendor === "hugging-face") {
+    if (imageApi === "huggingface-inference") {
       return generateHuggingFaceImage(imageConfig, request, saveGeneratedImage);
     }
 
-    if (imageConfig.llmVendor === "stepfun") {
+    if (imageApi === "stepfun-images") {
       return generateStepfunImage(imageConfig, request, saveGeneratedImage);
+    }
+
+    if (!KNOWN_AI_SDK_IMAGE_API_SHAPES.has(imageApi)) {
+      throw new Error(
+        `Unknown imageApi ${JSON.stringify(imageApi)}. Known image API shapes: ${[...KNOWN_IMAGE_API_SHAPES].join(", ")}.`,
+      );
     }
 
     const requestUrl = buildAiSdkImageGenerationUrl(imageConfig);
@@ -259,20 +211,7 @@ export class AiSdkOpenAiCompatibleTransport
 
     logAiSdkImageGenerationSuccess(imageConfig, requestUrl, saved);
 
-    const summaryLines = ["[generated image]"];
-    const markdownRef = normalizeGeneratedImageMarkdownRef(saved.markdownRef);
-    summaryLines.push(
-      `image_ref: ${markdownRef}`,
-      `read_file_path: ${markdownRef}`,
-      `embed_markdown: ![Generated image](${markdownRef})`,
-    );
-    summaryLines.push(`mime_type: ${saved.mimeType}`, `model: ${imageConfig.model}`);
-    const summaryText = summaryLines.join("\n");
-
-    return {
-      content: createLlmMessageContentFromTextAndImages(summaryText, [saved.path]),
-      summaryText,
-    };
+    return buildGeneratedImageToolOutput(saved, imageConfig.model);
   }
 
   async generateVideo(
@@ -293,7 +232,7 @@ export class AiSdkOpenAiCompatibleTransport
     request: OpenAiJsonSchemaCompletionRequest,
   ): Promise<OpenAiJsonSchemaCompletionResult<T>> {
     const rawMessages = buildJsonSchemaCompletionMessages(config, request);
-    await resolveOpenAiCompatibleVideoInputsInMessages(
+    await resolveDeclaredVideoInputsInMessages(
       config,
       rawMessages,
       openAiTransportAssetRoot(config),
@@ -334,13 +273,17 @@ export class AiSdkOpenAiCompatibleTransport
       steps: state.steps + 1,
     };
 
-    await resolveOpenAiCompatibleVideoInputsInMessages(
+    await resolveDeclaredVideoInputsInMessages(
       config,
       nextState.messages,
       openAiTransportAssetRoot(config),
     );
     const requestMessages = normalizeMessagesForRequest(config, nextState.messages);
-    const normalizedTools = normalizeToolDefinitions(tools);
+    const providerTools = await resolveDeclaredProviderTools(
+      config,
+      new Set(toolNamesFromDefinitions(tools)),
+    );
+    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
     const tracedRequest = buildAiSdkRequestTrace(
       config,
       nextState.steps,
@@ -348,10 +291,10 @@ export class AiSdkOpenAiCompatibleTransport
       normalizedTools,
     );
 
-    prepareMoonshotChatCompletionRequest(config, requestMessages);
+    prepareVideoPassthroughRequest(config, requestMessages);
     try {
       const result: any = await generateText({
-        model: createAiSdkLanguageModel(config),
+        model: createAiSdkLanguageModel(config, providerTools),
         messages: openAiMessagesToAiSdkMessages(config, requestMessages) as any,
         allowSystemInMessages: true,
         ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
@@ -409,7 +352,7 @@ export class AiSdkOpenAiCompatibleTransport
         requestTrace: tracedRequest,
       };
     } finally {
-      clearMoonshotChatCompletionRequest(config);
+      clearVideoPassthroughRequest(config);
     }
   }
 
@@ -424,13 +367,18 @@ export class AiSdkOpenAiCompatibleTransport
     };
 
     let requestMessages: JsonValue[];
+    let providerTools = EMPTY_RESOLVED_PROVIDER_TOOLS;
     try {
-      await resolveOpenAiCompatibleVideoInputsInMessages(
+      await resolveDeclaredVideoInputsInMessages(
         config,
         nextState.messages,
         openAiTransportAssetRoot(config),
       );
       requestMessages = normalizeMessagesForRequest(config, nextState.messages);
+      providerTools = await resolveDeclaredProviderTools(
+        config,
+        new Set(toolNamesFromDefinitions(tools)),
+      );
     } catch (error) {
       return {
         eventStream: emptyAiSdkEventStream(),
@@ -442,7 +390,7 @@ export class AiSdkOpenAiCompatibleTransport
         cancel: () => {},
       };
     }
-    const normalizedTools = normalizeToolDefinitions(tools);
+    const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
     const requestTrace = buildAiSdkRequestTrace(
       config,
       nextState.steps,
@@ -453,11 +401,11 @@ export class AiSdkOpenAiCompatibleTransport
 
     const abortController = new AbortController();
 
-    // Xiaomi/DeepInfra video: the stash must be cleaned up only after streamText has asynchronously issued the HTTP request, not in a synchronous finally.
-    prepareMoonshotChatCompletionRequest(config, requestMessages);
+    // Video passthrough: the stash must be cleaned up only after streamText has asynchronously issued the HTTP request, not in a synchronous finally.
+    prepareVideoPassthroughRequest(config, requestMessages);
     try {
       const result: any = streamText({
-        model: createAiSdkLanguageModel(config),
+        model: createAiSdkLanguageModel(config, providerTools),
         messages: openAiMessagesToAiSdkMessages(config, requestMessages) as any,
         allowSystemInMessages: true,
         ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
@@ -475,7 +423,7 @@ export class AiSdkOpenAiCompatibleTransport
       const completion = createDeferred<ToolAgentRoundCompletion<ToolAgentState>>();
 
       const completionPromise = completion.promise.finally(() => {
-        clearMoonshotChatCompletionRequest(config);
+        clearVideoPassthroughRequest(config);
       });
 
       return {
@@ -491,11 +439,11 @@ export class AiSdkOpenAiCompatibleTransport
         completion: completionPromise,
         cancel: () => {
           abortController.abort();
-          clearMoonshotChatCompletionRequest(config);
+          clearVideoPassthroughRequest(config);
         },
       };
     } catch (error) {
-      clearMoonshotChatCompletionRequest(config);
+      clearVideoPassthroughRequest(config);
       logAiSdkChatCompletionFailure(config, error, { streaming: true, phase: "start" });
       return {
         eventStream: emptyAiSdkEventStream(),
@@ -660,10 +608,16 @@ function buildAiSdkRequestTrace(
  * `@ai-sdk/openai-compatible` adapter. Unknown packages fail fast — the config schema already
  * rejects values outside the bundled adapter set.
  */
-function createAiSdkLanguageModel(config: OpenAiTransportConfig): any {
+function createAiSdkLanguageModel(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "literalEntries" | "bodyPatches"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
+): any {
   switch (config.sdk ?? "@ai-sdk/openai-compatible") {
     case "@ai-sdk/deepseek":
-      return createAiSdkDeepSeekProvider(config).chat(config.model);
+      return createAiSdkDeepSeekProvider(config, providerTools).chat(config.model);
     case "@ai-sdk/xai":
       // @ai-sdk/xai 5 removed the Chat Completions implementation entirely (xAI deprecated the
       // endpoint); the supported xAI surface is Responses, selected via transportKind
@@ -672,56 +626,92 @@ function createAiSdkLanguageModel(config: OpenAiTransportConfig): any {
         "xAI Chat Completions is no longer supported; use transportKind open-responses.",
       );
     case "@ai-sdk/alibaba":
-      return createAiSdkAlibabaProvider(config).chatModel(config.model);
+      return createAiSdkAlibabaProvider(config, providerTools).chatModel(config.model);
     case "@ai-sdk/gateway":
-      return createAiSdkGatewayProvider(config)(config.model);
+      return createAiSdkGatewayProvider(config, providerTools)(config.model);
     case "@ai-sdk/openai":
       throw new Error(
         "OpenAI official Chat Completions is no longer supported; use transportKind open-responses.",
       );
     case "@ai-sdk/google":
-      return createAiSdkGoogleProvider(config).chat(config.model);
+      return createAiSdkGoogleProvider(config, providerTools).chat(config.model);
     case "@ai-sdk/google-vertex":
-      return createAiSdkGoogleVertexProvider(config)(config.model);
+      return createAiSdkGoogleVertexProvider(config, providerTools)(config.model);
     case "@ai-sdk/moonshotai":
-      return createAiSdkMoonshotProvider(config).chatModel(config.model);
+      return createAiSdkMoonshotProvider(config, providerTools).chatModel(config.model);
     case "@ai-sdk/fireworks":
-      return createAiSdkFireworksProvider(config)(config.model);
+      return createAiSdkFireworksProvider(config, providerTools)(config.model);
     case "@ai-sdk/togetherai":
-      return createAiSdkTogetherProvider(config)(config.model);
+      return createAiSdkTogetherProvider(config, providerTools)(config.model);
     case "@ai-sdk/baseten":
-      return createAiSdkBasetenProvider(config)(config.model);
+      return createAiSdkBasetenProvider(config, providerTools)(config.model);
     case "@ai-sdk/groq":
-      return createAiSdkGroqProvider(config)(config.model);
+      return createAiSdkGroqProvider(config, providerTools)(config.model);
     case "@ai-sdk/deepinfra":
-      return createAiSdkDeepInfraProvider(config)(config.model);
+      return createAiSdkDeepInfraProvider(config, providerTools)(config.model);
     case "@ai-sdk/cohere":
-      return createAiSdkCohereProvider(config)(config.model);
+      return createAiSdkCohereProvider(config, providerTools)(config.model);
     case "@ai-sdk/openai-compatible":
-      return createAiSdkOpenAiCompatibleProvider(config).chatModel(config.model);
+      return createAiSdkOpenAiCompatibleProvider(config, { providerTools }).chatModel(config.model);
     default:
-      throw new Error(`Unknown SDK adapter package ${JSON.stringify(config.sdk)}.`);
+      throw new Error(
+        `Unknown SDK adapter package ${JSON.stringify(config.sdk)}. Bundled adapters: ${OPENAI_COMPATIBLE_SDK_ADAPTER_PACKAGES.join(", ")}.`,
+      );
   }
 }
+
+/** The bundled adapter set for the openai-compatible transport, keyed by the declared `sdk`. */
+const OPENAI_COMPATIBLE_SDK_ADAPTER_PACKAGES = [
+  "@ai-sdk/openai-compatible",
+  "@ai-sdk/alibaba",
+  "@ai-sdk/baseten",
+  "@ai-sdk/cohere",
+  "@ai-sdk/deepinfra",
+  "@ai-sdk/deepseek",
+  "@ai-sdk/fireworks",
+  "@ai-sdk/google",
+  "@ai-sdk/google-vertex",
+  "@ai-sdk/groq",
+  "@ai-sdk/gateway",
+  "@ai-sdk/moonshotai",
+  "@ai-sdk/togetherai",
+] as const;
+
+/** Image API shapes served by an AI SDK adapter's image model; the rest have dedicated backends. */
+const KNOWN_AI_SDK_IMAGE_API_SHAPES: ReadonlySet<string> = new Set([
+  "openai-images",
+  "vercel-gateway-images",
+  "together-images",
+]);
+
+const KNOWN_IMAGE_API_SHAPES: readonly string[] = [
+  ...KNOWN_AI_SDK_IMAGE_API_SHAPES,
+  "siliconflow-images",
+  "huggingface-inference",
+  "stepfun-images",
+];
 
 function createAiSdkImageModel(
   imageConfig: OpenAiImageGenerationConfig,
   declarations?: Pick<OpenAiTransportConfig, "headers" | "body">,
 ): any {
-  if (isVercelAiGatewayImageConfig(imageConfig)) {
+  const imageApi = imageConfig.imageApi ?? "openai-images";
+
+  if (imageApi === "vercel-gateway-images") {
     // Gateway image generation uses the v3 image-model protocol; it cannot reuse the chat-preset /v1 baseUrl.
     return createGateway({ apiKey: imageConfig.apiKey, fetch: getLlmFetch() }).image(
       imageConfig.model,
     );
   }
 
-  if (isTogetherOfficialAiSdkImageConfig(imageConfig)) {
+  if (imageApi === "together-images") {
     return createAiSdkTogetherProvider(imageConfig).image(imageConfig.model);
   }
 
-  return createAiSdkOpenAiCompatibleProvider(imageConfig, declarations).imageModel(
-    imageConfig.model,
-  );
+  return createAiSdkOpenAiCompatibleProvider(imageConfig, {
+    ...(declarations?.headers !== undefined ? { headers: declarations.headers } : {}),
+    ...(declarations?.body !== undefined ? { body: declarations.body } : {}),
+  }).imageModel(imageConfig.model);
 }
 
 /**
@@ -774,51 +764,74 @@ function chatReasoningEffortBodyBase(config: OpenAiTransportConfig): JsonObject 
   }
 }
 
-/** Chat fetch: flex dispatcher + declared headers/body/thinkingSwitch/serviceTier merge. */
-function llmFetchForChat(config: OpenAiTransportConfig): typeof fetch {
+/**
+ * Chat fetch: provider tool literal entries / entry bodies merge first (innermost), then the
+ * declared wire merge (provider-level headers/body, thinkingSwitch, serviceTier), then the
+ * video_url passthrough stash restore (outermost).
+ */
+function llmFetchForChat(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "literalEntries" | "bodyPatches"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
+): typeof fetch {
   const plan = resolveChatServiceTierPlan(config);
-  return createDeclaredWireMergeFetch(
-    config,
-    chatServiceTierSurface(config),
-    getLlmFetch({ flexWaiting: plan.flexWaiting }),
-    { bodyBase: chatReasoningEffortBodyBase(config) },
+  let fetch = createProviderToolsWireFetch(
+    providerTools,
+    createDeclaredWireMergeFetch(
+      config,
+      chatServiceTierSurface(config),
+      getLlmFetch({ flexWaiting: plan.flexWaiting }),
+      { bodyBase: chatReasoningEffortBodyBase(config) },
+    ),
   );
+  if (usesVideoPassthroughStash(config)) {
+    const innerFetch = fetch;
+    fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const body = tryParseRequestBody(init?.body);
+      if (!isJsonObject(body)) {
+        return innerFetch(input, init);
+      }
+
+      const requestUrl =
+        typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
+      const stashedMessages = requestUrl.includes("/chat/completions")
+        ? takeVideoPassthroughMessages()
+        : undefined;
+      if (!stashedMessages) {
+        return innerFetch(input, init);
+      }
+
+      return innerFetch(input, {
+        ...init,
+        body: JSON.stringify({
+          ...body,
+          messages: stashedMessages,
+        }),
+      });
+    };
+  }
+  return fetch;
 }
 
 function createAiSdkOpenAiCompatibleProvider(
   config: OpenAiTransportConfig | OpenAiImageGenerationConfig,
-  declarations?: Pick<OpenAiTransportConfig, "headers" | "body">,
+  options?: Pick<OpenAiTransportConfig, "headers" | "body"> & {
+    providerTools?: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">;
+  },
 ) {
   const transportConfig = config as OpenAiTransportConfig;
-  const needsVideoStash = usesOpenAiCompatibleVideoMessageStash(transportConfig.llmVendor);
   // Image/video generation role configs carry no declarations of their own; the provider-level
   // literal `headers`/`body` still apply to every outbound request of the provider.
-  const llmFetch = llmFetchForChat({ ...transportConfig, ...declarations });
-  const fetchWrapper = !needsVideoStash
-    ? llmFetch
-    : async (input: RequestInfo | URL, init?: RequestInit) => {
-        const body = tryParseRequestBody(init?.body);
-        if (!isJsonObject(body)) {
-          return llmFetch(input, init);
-        }
-
-        const requestUrl =
-          typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
-        const stashedMessages = requestUrl.includes("/chat/completions")
-          ? takeMoonshotChatCompletionMessages()
-          : undefined;
-        if (!stashedMessages) {
-          return llmFetch(input, init);
-        }
-
-        return llmFetch(input, {
-          ...init,
-          body: JSON.stringify({
-            ...body,
-            messages: stashedMessages,
-          }),
-        });
-      };
+  const llmFetch = llmFetchForChat(
+    {
+      ...transportConfig,
+      ...(options?.headers !== undefined ? { headers: options.headers } : {}),
+      ...(options?.body !== undefined ? { body: options.body } : {}),
+    },
+    options?.providerTools ?? EMPTY_RESOLVED_PROVIDER_TOOLS,
+  );
 
   const headers = {
     ...(config.organization ? { "OpenAI-Organization": config.organization } : {}),
@@ -831,34 +844,36 @@ function createAiSdkOpenAiCompatibleProvider(
     baseURL: config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
     supportsStructuredOutputs: true,
     ...(Object.keys(headers).length === 0 ? {} : { headers }),
-    fetch: fetchWrapper,
+    fetch: llmFetch,
   });
 }
 
-function createAiSdkMoonshotProvider(config: OpenAiTransportConfig) {
-  const fetch = createDeclaredWireMergeFetch(
-    config,
-    "chat-completions",
-    createMoonshotFormulaChatCompletionsAwareFetch(config, getLlmFetch()),
-    { bodyBase: chatReasoningEffortBodyBase(config) },
-  );
-
+function createAiSdkMoonshotProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createMoonshotAI({
     apiKey: config.apiKey,
-    baseURL: normalizeMoonshotApiBase(config.baseUrl),
-    fetch,
+    ...(config.baseUrl ? { baseURL: config.baseUrl.trim().replace(/\/+$/, "") } : {}),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkGoogleProvider(config: OpenAiTransportConfig) {
+function createAiSdkGoogleProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createGoogle({
     apiKey: config.apiKey,
-    baseURL: config.baseUrl ?? DEFAULT_GOOGLE_BASE_URL,
-    fetch: llmFetchForChat(config),
+    ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
+function createAiSdkGoogleVertexProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   const project = config.vertexProject?.trim();
   const location = config.vertexLocation?.trim();
   const apiKey = config.apiKey?.trim();
@@ -869,7 +884,7 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
   if (expressOnly) {
     return createVertex({
       apiKey,
-      fetch: llmFetchForChat(config),
+      fetch: llmFetchForChat(config, providerTools),
     } as Parameters<typeof createVertex>[0]);
   }
 
@@ -889,56 +904,72 @@ function createAiSdkGoogleVertexProvider(config: OpenAiTransportConfig) {
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     ...(googleAuthOptions ? { googleAuthOptions } : {}),
     ...(apiKey ? ({ apiKey } as Record<string, string>) : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   } as Parameters<typeof createVertex>[0]);
 }
 
-function createAiSdkDeepSeekProvider(config: OpenAiTransportConfig) {
+function createAiSdkDeepSeekProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createDeepSeek({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkFireworksProvider(config: OpenAiTransportConfig) {
+function createAiSdkFireworksProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createFireworks({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkTogetherProvider(config: OpenAiTransportConfig) {
-  // The SDK defaults to api.together.xyz; the connection config's api.together.ai/v1 must explicitly override baseURL.
+function createAiSdkTogetherProvider(
+  config: OpenAiTransportConfig | OpenAiImageGenerationConfig,
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "literalEntries" | "bodyPatches"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
+) {
   return createTogetherAI({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config as OpenAiTransportConfig, providerTools),
   });
 }
 
-function createAiSdkBasetenProvider(config: OpenAiTransportConfig) {
+function createAiSdkBasetenProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createBaseten({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkGroqProvider(config: OpenAiTransportConfig) {
-  // The SDK defaults to https://api.groq.com/openai/v1; the connection config must explicitly override baseURL.
+function createAiSdkGroqProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createGroq({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
 /**
- * baseURL dual-track: the connection config stores the OpenAI-compatible root (e.g. https://api.deepinfra.com/v1/openai),
- * while @ai-sdk/deepinfra's baseURL expects https://api.deepinfra.com/v1 (the SDK language model appends /openai/... itself).
- * So strip the trailing /openai suffix; custom roots without that suffix are passed through unchanged.
+ * baseURL dual-track: the connection config stores the OpenAI-compatible root (e.g. …/v1/openai),
+ * while @ai-sdk/deepinfra's baseURL expects the root without the /openai suffix (the SDK language
+ * model appends /openai/... itself). Custom roots without that suffix pass through unchanged.
  */
 function normalizeDeepInfraSdkBaseUrl(baseUrl: string | undefined): string | undefined {
   const trimmed = baseUrl?.trim().replace(/\/+$/, "");
@@ -948,69 +979,50 @@ function normalizeDeepInfraSdkBaseUrl(baseUrl: string | undefined): string | und
   return trimmed.endsWith("/openai") ? trimmed.slice(0, -"/openai".length) : trimmed;
 }
 
-function createAiSdkDeepInfraProvider(config: OpenAiTransportConfig) {
-  // deepinfra uses the official SDK instead of createAiSdkOpenAiCompatibleProvider, so stash restoration must also happen inside this wrapper.
-  const needsVideoStash = usesOpenAiCompatibleVideoMessageStash(config.llmVendor);
-  const llmFetch = llmFetchForChat(config);
-  const fetchWrapper = !needsVideoStash
-    ? llmFetch
-    : async (input: RequestInfo | URL, init?: RequestInit) => {
-        const body = tryParseRequestBody(init?.body);
-        if (!isJsonObject(body)) {
-          return llmFetch(input, init);
-        }
-
-        const requestUrl =
-          typeof input === "string" ? input : input instanceof URL ? input.toString() : "request";
-        if (!requestUrl.includes("/chat/completions")) {
-          return llmFetch(input, init);
-        }
-
-        const stashedMessages = takeMoonshotChatCompletionMessages();
-        if (!stashedMessages) {
-          return llmFetch(input, init);
-        }
-
-        return llmFetch(input, {
-          ...init,
-          body: JSON.stringify({ ...body, messages: stashedMessages }),
-        });
-      };
-
+function createAiSdkDeepInfraProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createDeepInfra({
     apiKey: config.apiKey,
-    baseURL: normalizeDeepInfraSdkBaseUrl(config.baseUrl) ?? DEFAULT_DEEPINFRA_BASE_URL,
-    fetch: fetchWrapper,
+    ...(() => {
+      const baseURL = normalizeDeepInfraSdkBaseUrl(config.baseUrl);
+      return baseURL !== undefined ? { baseURL } : {};
+    })(),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkCohereProvider(config: OpenAiTransportConfig) {
+function createAiSdkCohereProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createCohere({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkAlibabaProvider(config: OpenAiTransportConfig) {
-  const baseFetch = shouldPatchAlibabaChatCompletionsExtraBody(config)
-    ? createAlibabaChatCompletionsAwareFetch(config, getLlmFetch())
-    : getLlmFetch();
-
+function createAiSdkAlibabaProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   return createAlibaba({
     apiKey: config.apiKey,
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
-    fetch: createDeclaredWireMergeFetch(config, "chat-completions", baseFetch, {
-      bodyBase: chatReasoningEffortBodyBase(config),
-    }),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
-function createAiSdkGatewayProvider(config: OpenAiTransportConfig) {
+function createAiSdkGatewayProvider(
+  config: OpenAiTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+) {
   // Gateway chat uses the v3 AI protocol (default …/v3/ai/language-model); it cannot use the model catalog's preset /v1 baseUrl.
   return createGateway({
     apiKey: config.apiKey,
-    fetch: llmFetchForChat(config),
+    fetch: llmFetchForChat(config, providerTools),
   });
 }
 
@@ -1578,18 +1590,41 @@ function extractFallbackStreamingThinkingTextFromRawChunk(rawValue: unknown): st
   return chunks || undefined;
 }
 
+/**
+ * Streaming preview for a host-executed provider tool call: the raw argument JSON is rewritten to
+ * the card-friendly `{query?, status, _spiritUi}` preview shape (declared entry's `label` +
+ * `ui.expand` bridge for the current desktop reader).
+ */
 function resolveStreamingToolPreviewArgumentsJson(
   config: OpenAiTransportConfig,
   toolName: string,
   argumentsJson: string,
 ): string {
-  return (
-    buildMoonshotFormulaStreamingToolPreviewArgumentsJson(config, toolName, argumentsJson) ??
-    buildStepfunWebSearchStreamingPreviewArgumentsJson(config, toolName, argumentsJson) ??
-    buildKimiCodeWebSearchStreamingPreviewArgumentsJson(config, toolName, argumentsJson) ??
-    buildZaiWebSearchStreamingPreviewArgumentsJson(config, toolName, argumentsJson) ??
-    argumentsJson
-  );
+  const resolved = peekDeclaredProviderTools(config);
+  if (resolved === undefined || !resolved.recognizedNames.has(toolName)) {
+    return argumentsJson;
+  }
+
+  const display = resolved.display.get(toolName);
+  return buildProviderToolPreviewArgumentsJson({
+    toolName,
+    ...(display?.label !== undefined ? { label: display.label } : {}),
+    query: readPreviewQuery(argumentsJson),
+    status: "in_progress",
+    suppressExpand: display?.suppressExpand === true,
+  });
+}
+
+function readPreviewQuery(argumentsJson: string): string {
+  try {
+    const parsed = JSON.parse(argumentsJson) as JsonValue;
+    if (isJsonObject(parsed) && typeof parsed.query === "string") {
+      return parsed.query.trim();
+    }
+  } catch {
+    // Fall through to the partial-argument reader for in-flight JSON.
+  }
+  return tryExtractPartialWebSearchQuery(argumentsJson) ?? "";
 }
 
 function accumulateStreamingToolCallProgressFromRawChunk(
@@ -1802,45 +1837,33 @@ function openAiTransportAssetRoot(config: Pick<OpenAiTransportConfig, "workspace
   return config.workspaceRoot ?? process.cwd();
 }
 
-async function resolveOpenAiCompatibleVideoInputsInMessages(
-  config: OpenAiTransportConfig,
-  messages: JsonValue[],
-  assetRoot: string,
-): Promise<void> {
-  await resolveMoonshotVideoUrlsInOpenAiMessages(config, messages, assetRoot);
-  resolveXiaomiVideoUrlsInOpenAiMessages(config, messages, assetRoot);
-  resolveDeepInfraVideoUrlsInOpenAiMessages(config, messages, assetRoot);
-  await resolveStepfunVideoUrlsInOpenAiMessages(config, messages, assetRoot);
-}
-
-function prepareMoonshotChatCompletionRequest(
+function prepareVideoPassthroughRequest(
   config: OpenAiTransportConfig,
   requestMessages: JsonValue[],
 ): void {
-  if (
-    usesOpenAiCompatibleVideoMessageStash(config.llmVendor) &&
-    openAiMessagesContainVideoUrl(requestMessages)
-  ) {
-    stashMoonshotChatCompletionMessages(requestMessages);
+  if (usesVideoPassthroughStash(config) && openAiMessagesContainVideoUrl(requestMessages)) {
+    stashVideoPassthroughMessages(requestMessages);
   }
 }
 
-function clearMoonshotChatCompletionRequest(config: OpenAiTransportConfig): void {
-  if (usesOpenAiCompatibleVideoMessageStash(config.llmVendor)) {
-    clearMoonshotChatCompletionMessages();
+function clearVideoPassthroughRequest(config: OpenAiTransportConfig): void {
+  if (usesVideoPassthroughStash(config)) {
+    clearVideoPassthroughMessages();
   }
 }
 
-function usesOpenAiCompatibleVideoMessageStash(
-  vendor: OpenAiTransportConfig["llmVendor"],
-): boolean {
-  return (
-    vendor === "xiaomi" || vendor === "deepinfra" || vendor === "stepfun" || vendor === "kimi-code"
-  );
+/**
+ * The video_url passthrough stash restores the raw messages when the adapter's serializer would
+ * drop `video_url` parts. The `@ai-sdk/moonshotai` adapter converts video to native file parts
+ * itself and is the only exception. Content-gated: only requests actually carrying a video_url
+ * part (after capability trimming) are stashed.
+ */
+function usesVideoPassthroughStash(config: Pick<OpenAiTransportConfig, "sdk">): boolean {
+  return config.sdk !== "@ai-sdk/moonshotai";
 }
 
 function normalizeMessagesForRequest(
-  config: Pick<OpenAiTransportConfig, "llmVendor" | "model" | "modelCapabilities">,
+  config: Pick<OpenAiTransportConfig, "model" | "modelCapabilities">,
   messages: JsonValue[],
 ): JsonValue[] {
   const profile = resolveOpenAiModelCompatibilityProfile(config);
@@ -1880,22 +1903,15 @@ function isMoonshotOfficialAiSdkProvider(config: Pick<OpenAiTransportConfig, "sd
   return config.sdk === "@ai-sdk/moonshotai";
 }
 
-function isTogetherOfficialAiSdkImageConfig(config: OpenAiImageGenerationConfig): boolean {
-  return config.llmVendor === "together-ai";
-}
-
 /** These adapters emit structured reasoning stream events instead of raw reasoning_text deltas. */
 function usesStructuredReasoningStreamEvents(config: OpenAiTransportConfig): boolean {
   return config.sdk === "@ai-sdk/deepseek" || config.sdk === "@ai-sdk/moonshotai";
 }
 
-function isVercelAiGatewayImageConfig(config: OpenAiImageGenerationConfig): boolean {
-  return config.llmVendor === "vercel-ai-gateway";
-}
-
 function buildAiSdkImageGenerationUrl(config: OpenAiImageGenerationConfig): string {
-  if (isVercelAiGatewayImageConfig(config)) {
-    return "https://ai-gateway.vercel.sh/v3/ai/image-model";
+  if (config.imageApi === "vercel-gateway-images") {
+    // Log label only; the gateway adapter owns the absolute v3 image-model URL.
+    return "gateway-v3/image-model";
   }
 
   const baseUrl = (config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL).replace(/\/$/, "");
@@ -1924,12 +1940,7 @@ function logAiSdkImageGenerationStart(
   requestUrl: string,
 ): void {
   console.error("[agent-core][generate-image] request.start", {
-    adapter: isVercelAiGatewayImageConfig(config)
-      ? "ai-sdk-gateway-image"
-      : isTogetherOfficialAiSdkImageConfig(config)
-        ? "ai-sdk-togetherai-image"
-        : "openai-compatible-image",
-    vendor: config.llmVendor ?? "custom",
+    shape: config.imageApi ?? "openai-images",
     model: config.model,
     baseUrl: config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
     requestUrl,
@@ -1945,8 +1956,7 @@ function logAiSdkImageGenerationSuccess(
   saved: GeneratedImageFile,
 ): void {
   console.error("[agent-core][generate-image] request.success", {
-    adapter: "openai-compatible-image",
-    vendor: config.llmVendor ?? "custom",
+    shape: config.imageApi ?? "openai-images",
     model: config.model,
     requestUrl,
     savedPath: saved.path,
@@ -1961,8 +1971,7 @@ function logAiSdkImageGenerationFailure(
   error: unknown,
 ): void {
   console.error("[agent-core][generate-image] request.failed", {
-    adapter: "openai-compatible-image",
-    vendor: config.llmVendor ?? "custom",
+    shape: config.imageApi ?? "openai-images",
     model: config.model,
     baseUrl: config.baseUrl ?? DEFAULT_OPENAI_COMPATIBLE_BASE_URL,
     requestUrl,

@@ -81,7 +81,6 @@ async function main() {
         judgedAt: new Date().toISOString(),
         reviewerKind: 'llm',
         model: modelConfig.model,
-        ...(modelConfig.llmVendor ? { llmVendor: modelConfig.llmVendor } : {}),
         promptFingerprint,
         blindVariantMapping: {
           variantA: blindVariants.variantA.id,
@@ -115,7 +114,6 @@ async function main() {
         judgedAt: new Date().toISOString(),
         reviewerKind: 'llm',
         model: modelConfig.model,
-        ...(modelConfig.llmVendor ? { llmVendor: modelConfig.llmVendor } : {}),
         promptFingerprint,
         blindVariantMapping: {
           variantA: blindVariants.variantA.id,
@@ -138,7 +136,6 @@ function parseArgs(argv) {
     apiKey: undefined,
     baseUrl: undefined,
     model: undefined,
-    llmVendor: undefined,
     reasoningEffort: undefined,
     force: false,
   };
@@ -162,9 +159,6 @@ function parseArgs(argv) {
       case '--model':
         options.model = requiredArgValue(argv, ++index, '--model');
         break;
-      case '--llm-vendor':
-        options.llmVendor = requiredArgValue(argv, ++index, '--llm-vendor');
-        break;
       case '--reasoning-effort':
         options.reasoningEffort = requiredArgValue(argv, ++index, '--reasoning-effort');
         break;
@@ -187,7 +181,6 @@ function printHelp() {
   console.log('  --api-key <key>          Overrides OPENAI_API_KEY');
   console.log('  --base-url <url>         Overrides OPENAI_BASE_URL');
   console.log('  --model <id>             Overrides OPENAI_MODEL; falls back to the environment variable');
-  console.log('  --llm-vendor <vendor>    e.g. deepseek / moonshot-ai / custom');
   console.log('  --reasoning-effort <v>   e.g. low / medium / high');
   console.log('  --force                  Overwrites an existing completed judgeReview');
 }
@@ -214,9 +207,6 @@ function resolveModelConfig(options) {
     model,
     ...(options.baseUrl ?? process.env.OPENAI_BASE_URL
       ? { baseUrl: options.baseUrl ?? process.env.OPENAI_BASE_URL }
-      : {}),
-    ...(options.llmVendor ?? process.env.SPIRIT_AGENT_EVAL_LLM_VENDOR
-      ? { llmVendor: options.llmVendor ?? process.env.SPIRIT_AGENT_EVAL_LLM_VENDOR }
       : {}),
     ...(options.reasoningEffort ?? process.env.SPIRIT_AGENT_EVAL_REASONING_EFFORT
       ? { reasoningEffort: options.reasoningEffort ?? process.env.SPIRIT_AGENT_EVAL_REASONING_EFFORT }

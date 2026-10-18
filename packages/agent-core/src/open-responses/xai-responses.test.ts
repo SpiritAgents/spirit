@@ -6,7 +6,6 @@ import { buildResponsesTraceTools } from "./apply-patch-bridge.js";
 import { buildResponsesProviderOptions } from "./model-factory.js";
 import {
   buildOpenResponsesRequestTrace,
-  resolveOpenResponsesSdkProvider,
   type OpenResponsesTransportConfig,
 } from "./responses-compat.js";
 
@@ -15,13 +14,11 @@ const xaiConfig: OpenResponsesTransportConfig = {
   apiKey: "test-key",
   model: "grok-4.3",
   baseUrl: "https://api.x.ai/v1",
-  llmVendor: "xai",
   sdk: "@ai-sdk/xai",
   reasoningEffort: "medium",
 };
 
-test("xAI responses provider resolves official SDK, options, and trace kind", () => {
-  assert.equal(resolveOpenResponsesSdkProvider(xaiConfig), "xai");
+test("xAI responses provider options and trace kind key on the declared sdk", () => {
   assert.deepEqual(buildResponsesProviderOptions(xaiConfig), {
     xai: { reasoningEffort: "medium" },
   });
@@ -41,8 +38,11 @@ test("xAI responses provider resolves official SDK, options, and trace kind", ()
   );
 });
 
-test("xAI responses trace lists web_search alongside host tools when eligible", () => {
-  const traceTools = buildResponsesTraceTools(xaiConfig, [demoToolDefinition()]);
+test("xAI responses trace lists declared provider tools alongside host tools", () => {
+  const traceTools = buildResponsesTraceTools(xaiConfig, [demoToolDefinition()], {
+    functionTools: [],
+    literalEntries: [{ type: "web_search" }],
+  });
   assert.ok(
     traceTools.some(
       (tool) =>

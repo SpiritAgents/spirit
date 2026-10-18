@@ -11,44 +11,6 @@ import type { ProviderToolEntry } from "../provider-tools/types.js";
 import { resolveDeclaredReasoningEffort, type ModelReasoningMode } from "../reasoning-effort.js";
 import { cloneJsonValue } from "../tool-agent.js";
 
-/**
- * Legacy host vendor label. New runtime paths must not branch on it — behavior is driven by the
- * declared `sdk` (adapter package name) and the literal declarations below. The field remains only
- * for vendor tool modules still awaiting declaration-driven rewiring; the host no longer writes it.
- */
-export type OpenAiLlmVendor =
-  | "deepseek"
-  | "xai"
-  | "moonshot-ai"
-  | "kimi-code"
-  | "z-ai"
-  | "zhipu-ai"
-  | "minimax"
-  | "xiaomi"
-  | "siliconflow"
-  | "stepfun"
-  | "alibaba"
-  | "vercel-ai-gateway"
-  | "cloudflare-ai-gateway"
-  | "openrouter"
-  | "fireworks-ai"
-  | "together-ai"
-  | "groq"
-  | "deepinfra"
-  | "hugging-face"
-  | "baseten"
-  | "cohere"
-  | "openai"
-  | "google"
-  | "google-vertex-ai"
-  | "volcengine"
-  | "byteplus"
-  | "meituan"
-  | "tencent-tokenhub"
-  | "mistral"
-  | "azure"
-  | "custom";
-
 export type OpenAiModelCapabilities = LlmModelCapabilities;
 
 export interface OpenAiModelCompatibilityProfile {
@@ -73,7 +35,8 @@ export interface OpenAiImageGenerationConfig {
   baseUrl?: string;
   organization?: string;
   project?: string;
-  llmVendor?: OpenAiLlmVendor;
+  /** Declared image API shape name (`imageApi`); selects the generation backend. Absent = `openai-images`. */
+  imageApi?: string;
   modelCapabilities?: OpenAiModelCapabilities;
   /** Hugging Face Inference Providers routing hint (resolved from the Hub catalog). */
   inferenceProvider?: string;
@@ -85,7 +48,8 @@ export interface OpenAiVideoGenerationConfig {
   baseUrl?: string;
   organization?: string;
   project?: string;
-  llmVendor?: OpenAiLlmVendor;
+  /** Declared video API shape name (`videoApi`); selects the generation backend (fail-fast). */
+  videoApi?: string;
   modelCapabilities?: OpenAiModelCapabilities;
   /** Hugging Face Inference Providers routing hint (resolved from the Hub catalog). */
   inferenceProvider?: string;
@@ -100,12 +64,6 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
   project?: string;
   compactModel?: string;
   workspaceRoot?: string;
-  /**
-   * Legacy host vendor label, no longer written by the host. Runtime request shaping keys on the
-   * declared `sdk` and literal declarations instead; retained only for not-yet-rewired vendor
-   * tool modules.
-   */
-  llmVendor?: OpenAiLlmVendor;
   /**
    * Declared model capabilities; when present, they are the only source for compatibility
    * decisions such as image input trimming.
@@ -205,14 +163,6 @@ export function resolveOpenAiModelCompatibilityProfile(
     hasExplicitCapabilities: false,
     capabilities: {},
   };
-}
-
-/** Official experimental vision model; GA names will not keep a `-vision` suffix. */
-export function isDeepSeekV4VisionModelId(model: string): boolean {
-  const normalized = model.trim().toLowerCase();
-  const slashIndex = normalized.lastIndexOf("/");
-  const bareId = slashIndex >= 0 ? normalized.slice(slashIndex + 1) : normalized;
-  return bareId === "deepseek-v4-flash-vision-exp";
 }
 
 /**

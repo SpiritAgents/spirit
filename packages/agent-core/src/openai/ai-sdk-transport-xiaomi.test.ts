@@ -3,14 +3,14 @@ import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
 import {
-  clearMoonshotChatCompletionMessages,
+  clearVideoPassthroughMessages,
   openAiMessagesContainVideoUrl,
-  peekMoonshotChatCompletionMessages,
-  stashMoonshotChatCompletionMessages,
-} from "./moonshot-chat-completion-messages.js";
+  peekVideoPassthroughMessages,
+  stashVideoPassthroughMessages,
+} from "./video-message-stash.js";
 import { AiSdkOpenAiCompatibleTransport } from "./ai-sdk-transport.js";
 
-test("Xiaomi openai-compatible fetch restores stashed video messages", async () => {
+test("the fetch layer restores stashed video_url messages (adapter drops them)", async () => {
   const requestMessages = [
     {
       role: "user",
@@ -21,8 +21,8 @@ test("Xiaomi openai-compatible fetch restores stashed video messages", async () 
     },
   ];
   assert.equal(openAiMessagesContainVideoUrl(requestMessages), true);
-  stashMoonshotChatCompletionMessages(requestMessages);
-  assert.ok(peekMoonshotChatCompletionMessages());
+  stashVideoPassthroughMessages(requestMessages);
+  assert.ok(peekVideoPassthroughMessages());
 
   const capturedBodies: Record<string, unknown>[] = [];
   setLlmFetchTransportOverrideForTests(async (_input, init) => {
@@ -44,7 +44,6 @@ test("Xiaomi openai-compatible fetch restores stashed video messages", async () 
         apiKey: "test-key",
         model: "mimo-v2.5",
         baseUrl: "https://api.xiaomimimo.com/v1",
-        llmVendor: "xiaomi",
         workspaceRoot: process.cwd(),
         modelCapabilities: { imageInput: true, videoInput: true },
       },
@@ -60,6 +59,6 @@ test("Xiaomi openai-compatible fetch restores stashed video messages", async () 
     assert.deepEqual(chatCompletionBody.messages, requestMessages);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotChatCompletionMessages();
+    clearVideoPassthroughMessages();
   }
 });

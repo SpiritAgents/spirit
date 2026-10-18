@@ -11,17 +11,12 @@ import {
 } from "./apply-patch-bridge.js";
 import { resolveStreamingToolPreviewEmit } from "../tool-streaming-preview-gate.js";
 import { isJsonObject, type ToolAgentState } from "../tool-agent.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
-import {
-  attachBuiltInOutputItemsToAssistantMessage,
-  attachResponseIdToAssistantMessage,
-} from "./provider-state.js";
+import { attachResponseIdToAssistantMessage } from "./provider-state.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 import { renderResponsesTransportError } from "./ai-sdk-message-bridge.js";
 import {
   accumulateResponsesBuiltInToolPreviewsFromRawChunk,
   buildGatewaySdkProviderBuiltinToolResultArgumentsJson,
-  collectResponsesBuiltInOutputItemsForPassBack,
   createResponsesBuiltInPreviewStreamState,
   isResponsesBuiltInToolName,
 } from "./responses-built-in-tools.js";
@@ -31,8 +26,7 @@ import {
   persistProviderBuiltinToolRoundToState,
   resolveAiSdkStreamAssistantText,
   shouldResumeStreamingAfterProviderSearch,
-  shouldUseGatewaySdkProviderWebSearchStreamPatch,
-} from "./sdk-provider-web-search-loop.js";
+} from "./provider-builtin-tool-round.js";
 interface AggregatedStreamingToolCall {
   index: number;
   id: string;
@@ -79,8 +73,13 @@ export async function* responsesEventStreamToRuntimeEvents(
   const executedProviderBuiltinToolCallIds = new Set<string>();
   const providerBuiltinToolResults = new Map<string, AccumulatedProviderBuiltinToolResult>();
   let responseId: string | undefined;
-  /** The Open Responses SDK already emits reasoning-delta; the raw SSE mirrors the same content, and yielding it again would duplicate text ("TheThe" / "says says"). */
+  /**
+   * Reasoning arrives via the adapter's reasoning-delta parts or, for endpoints the adapter does
+   * not parse, via raw SSE chunks. Whichever channel delivers first owns the stream's reasoning —
+   * the other is a mirror of the same content and would duplicate text ("TheThe").
+   */
   let activeReasoningDeltaId: string | undefined;
+  let rawReasoningFallbackYielded = false;
   /** Whether a text-delta was received after a provider builtin tool-result (used to avoid an erroneous resume double-answer). */
   let hasPostToolAssistantText = false;
 
@@ -88,7 +87,7 @@ export async function* responsesEventStreamToRuntimeEvents(
     for await (const part of stream) {
       switch (part.type) {
         case "reasoning-delta": {
-          if (part.text) {
+          if (part.text && !rawReasoningFallbackYielded) {
             if (activeReasoningDeltaId !== undefined && part.id !== activeReasoningDeltaId) {
               break;
             }
@@ -110,7 +109,7 @@ export async function* responsesEventStreamToRuntimeEvents(
         case "tool-result": {
           sawAnswerOrToolOutput = true;
           if (
-            shouldUseGatewaySdkProviderWebSearchStreamPatch(config) &&
+            config.sdk === "@ai-sdk/gateway" &&
             typeof part.toolCallId === "string" &&
             isResponsesBuiltInToolName(part.toolName)
           ) {
@@ -146,7 +145,7 @@ export async function* responsesEventStreamToRuntimeEvents(
         case "tool-error": {
           sawAnswerOrToolOutput = true;
           if (
-            shouldUseGatewaySdkProviderWebSearchStreamPatch(config) &&
+            config.sdk === "@ai-sdk/gateway" &&
             typeof part.toolCallId === "string" &&
             isResponsesBuiltInToolName(part.toolName)
           ) {
@@ -283,12 +282,10 @@ export async function* responsesEventStreamToRuntimeEvents(
             responseId = rawResponseId;
           }
 
-          if (
-            activeReasoningDeltaId === undefined &&
-            shouldUseRawResponsesReasoningFallback(config)
-          ) {
+          if (activeReasoningDeltaId === undefined) {
             const rawReasoningText = extractOpenResponsesReasoningTextFromRawChunk(part.rawValue);
             if (rawReasoningText) {
+              rawReasoningFallbackYielded = true;
               reasoningContent += rawReasoningText;
               yield { kind: "thinking-chunk", text: rawReasoningText };
             }
@@ -327,8 +324,6 @@ export async function* responsesEventStreamToRuntimeEvents(
       resolvedAssistant,
       hasPostToolAssistantText,
     );
-    const builtInPassBackItems =
-      collectResponsesBuiltInOutputItemsForPassBack(providerPreviewState);
 
     if (executedProviderBuiltinToolCallIds.size > 0) {
       const pendingHostToolCallIds = new Set(calls.map((call) => call.id));
@@ -336,15 +331,11 @@ export async function* responsesEventStreamToRuntimeEvents(
         nextState,
         attachResponseIdToAssistantMessage(
           config,
-          attachBuiltInOutputItemsToAssistantMessage(
-            config,
-            buildStreamingAssistantMessage(
-              resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
-              resumeStreamingAfterProviderSearch ? reasoningContent : "",
-              toolCalls,
-              pendingHostToolCallIds,
-            ),
-            builtInPassBackItems,
+          buildStreamingAssistantMessage(
+            resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
+            resumeStreamingAfterProviderSearch ? reasoningContent : "",
+            toolCalls,
+            pendingHostToolCallIds,
           ),
           responseId,
         ),
@@ -355,15 +346,11 @@ export async function* responsesEventStreamToRuntimeEvents(
     if (!resumeStreamingAfterProviderSearch) {
       const assistantMessage = attachResponseIdToAssistantMessage(
         config,
-        attachBuiltInOutputItemsToAssistantMessage(
-          config,
-          buildStreamingAssistantMessage(
-            resolvedAssistantContent,
-            reasoningContent,
-            toolCalls,
-            executedProviderBuiltinToolCallIds,
-          ),
-          builtInPassBackItems,
+        buildStreamingAssistantMessage(
+          resolvedAssistantContent,
+          reasoningContent,
+          toolCalls,
+          executedProviderBuiltinToolCallIds,
         ),
         responseId,
       );
@@ -614,13 +601,9 @@ function accumulateOpenResponsesToolCallProgressFromRawChunk(
   return { events, nextToolIndex: toolIndex };
 }
 
-function shouldUseRawResponsesReasoningFallback(config: OpenResponsesTransportConfig): boolean {
-  // Ark Responses streams return reasoning_summary_text.delta only via raw SSE; the AI SDK does not emit reasoning-delta.
-  return isArkLlmVendor(config.llmVendor);
-}
-
 function shouldAggregateGatewaySdkToolCalls(config: OpenResponsesTransportConfig): boolean {
-  return config.llmVendor === "vercel-ai-gateway";
+  // The gateway v3 language-model stream carries parsed tool-input parts instead of Responses SSE.
+  return config.sdk === "@ai-sdk/gateway";
 }
 
 function findToolCallByStreamId(
