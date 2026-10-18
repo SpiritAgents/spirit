@@ -77,6 +77,30 @@ test("kimi-code materializes the spec's variant A shape (transportKind omitted, 
   assert.equal("max_results" in schema.properties, false);
 });
 
+test("non-default transports bake host-executed execute endpoints as absolute URLs on the openai-compatible root", () => {
+  // kimi-code on the anthropic transport: /search must still hit the coding/v1 root.
+  const entry = materializeProviderPreset({
+    presetId: "kimi-code",
+    transportKind: "anthropic",
+    siteId: "cn",
+  });
+  assert.equal(entry.apiBase, "https://api.kimi.com/coding");
+  assert.deepEqual(entry.providerTools?.[0]?.execute?.url, "https://api.kimi.com/coding/v1/search");
+  assert.equal(entry.providerTools?.[0]?.execute?.path, undefined);
+
+  const stepfun = materializeProviderPreset({
+    presetId: "stepfun",
+    transportKind: "anthropic",
+    siteId: "intl",
+  });
+  assert.deepEqual(stepfun.providerTools?.[0]?.execute?.url, "https://api.stepfun.ai/v1/search");
+
+  // The default transport keeps the relative path (joined against the chat base at runtime).
+  const kimiDefault = materializeProviderPreset({ presetId: "kimi-code", siteId: "cn" });
+  assert.equal(kimiDefault.providerTools?.[0]?.execute?.path, "/search");
+  assert.equal(kimiDefault.providerTools?.[0]?.execute?.url, undefined);
+});
+
 test("moonshot-ai materializes the formula entry with ciphertext UI lockdown", () => {
   const entry = materializeProviderPreset({ presetId: "moonshot-ai" });
   const tool = entry.providerTools?.[0];

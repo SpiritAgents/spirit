@@ -502,11 +502,23 @@ pub(crate) fn preset_connect_draft(
         .and_then(|id| preset.sites().iter().find(|site| site.id == id))
         .and_then(|site| site.file_upload.clone())
         .or_else(|| preset.file_upload.clone());
+    // Host-executed tool endpoints live on the provider's openai-compatible root; a non-default
+    // transport bakes them as absolute URLs (mirrors agent-core materializeProviderTools).
+    let provider_tools = preset.provider_tools.clone().map(|tools| {
+        if transport_kind == ModelTransportKind::OpenAiCompatible {
+            tools
+        } else {
+            match openai_compatible_base(preset, site_id) {
+                Some(base) => rewrite_execute_paths_as_absolute(tools, &base),
+                None => tools,
+            }
+        }
+    });
     ProviderConnectDraft {
         label: preset.label.clone(),
         transport_kind: declared_transport,
         sdk,
-        provider_tools: preset.provider_tools.clone(),
+        provider_tools,
         file_upload,
         body: preset.body.clone(),
         thinking_switch: preset.thinking_switch.clone(),
@@ -538,6 +550,63 @@ fn preset_options_for_transport(
         .map(|(key, value)| (key.clone(), value.clone()))
         .collect();
     (!scoped.is_empty()).then_some(scoped)
+}
+
+/// The provider's openai-compatible base for the selected site (site transports, site base, then
+/// the provider's transports map) — the root the host-executed helper endpoints live on.
+fn openai_compatible_base<'a>(
+    preset: &'a ProviderPresetEntry,
+    site_id: Option<&str>,
+) -> Option<&'a str> {
+    let site = site_id
+        .or_else(|| preset.default_site_id())
+        .and_then(|id| preset.sites().iter().find(|site| site.id == id));
+    site.and_then(|site| {
+        site.transports
+            .as_ref()
+            .and_then(|transports| transports.get("openai-compatible"))
+            .or(site.api_base.as_ref())
+            .map(String::as_str)
+    })
+    .or_else(|| {
+        preset
+            .transports
+            .get("openai-compatible")
+            .map(String::as_str)
+    })
+    .or_else(|| {
+        preset
+            .transports
+            .get(preset.default_transport.as_str())
+            .map(String::as_str)
+    })
+}
+
+/// Rewrites each entry's relative `execute.path` into an absolute `execute.url` joined onto
+/// `api_base` (mirrors agent-core `resolveProviderEndpointUrl`).
+fn rewrite_execute_paths_as_absolute(tools: Vec<Value>, api_base: &str) -> Vec<Value> {
+    let base = api_base.trim_end_matches('/');
+    tools
+        .into_iter()
+        .map(|mut tool| {
+            let Some(execute) = tool.get_mut("execute").and_then(Value::as_object_mut) else {
+                return tool;
+            };
+            if execute.contains_key("url") {
+                return tool;
+            }
+            let Some(path) = execute
+                .get("path")
+                .and_then(Value::as_str)
+                .map(|path| path.trim_start_matches('/').to_string())
+            else {
+                return tool;
+            };
+            execute.remove("path");
+            execute.insert("url".to_string(), Value::String(format!("{base}/{path}")));
+            tool
+        })
+        .collect()
 }
 
 /// Whether the wizard can bulk-import the model list for this connection: the preset's
@@ -1031,6 +1100,34 @@ mod tests {
         assert_eq!(
             file_upload.get("url").and_then(Value::as_str),
             Some("https://api.minimax.io/v1/files/upload")
+        );
+    }
+
+    #[test]
+    fn connect_draft_bakes_execute_urls_for_non_default_transports() {
+        // kimi-code on anthropic: the search endpoint stays on the openai-compatible root.
+        let draft = preset_connect_draft("kimi-code", ModelTransportKind::Anthropic, Some("cn"));
+        let tools = draft.provider_tools.expect("providerTools");
+        let execute = tools[0].get("execute").expect("execute");
+        assert_eq!(
+            execute.get("url").and_then(Value::as_str),
+            Some("https://api.kimi.com/coding/v1/search")
+        );
+        assert!(execute.get("path").is_none());
+
+        // The default transport keeps the relative path (joined against the chat base at runtime).
+        let draft = preset_connect_draft(
+            "kimi-code",
+            ModelTransportKind::OpenAiCompatible,
+            Some("cn"),
+        );
+        let tools = draft.provider_tools.expect("providerTools");
+        assert_eq!(
+            tools[0]
+                .get("execute")
+                .and_then(|execute| execute.get("path"))
+                .and_then(Value::as_str),
+            Some("/search")
         );
     }
 

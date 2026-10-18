@@ -1,5 +1,6 @@
 import type { FileUploadConfig } from "../file-upload/uploader.js";
 import type { LlmTransportKind } from "../llm-provider-shared.js";
+import { resolveProviderEndpointUrl } from "../provider-tools/resolve.js";
 import type { ProviderToolEntry } from "../provider-tools/types.js";
 import {
   listUnresolvedApiBaseTemplateKeys,
@@ -9,7 +10,7 @@ import {
 import { CUSTOM_PROVIDER_PRESET, findProviderPreset } from "./loader.js";
 import type { JsonObject } from "../ports.js";
 import type { ThinkingSwitchDeclaration } from "../llm-provider-shared.js";
-import type { ProviderPresetCredentialKind } from "./types.js";
+import type { ProviderPreset, ProviderPresetCredentialKind } from "./types.js";
 
 export class ProviderPresetMaterializeError extends Error {
   constructor(message: string) {
@@ -132,6 +133,40 @@ function assertNoUnresolvedTemplate(apiBase: string, presetId: string): void {
   }
 }
 
+/**
+ * Host-executed tool endpoints (search APIs, formula fibers) live on the provider's
+ * openai-compatible root; when the wizard picked another transport, bake the absolute URL so the
+ * runtime never joins the execute path against the chat transport's base.
+ */
+function materializeProviderTools(
+  entries: ProviderToolEntry[],
+  preset: ProviderPreset,
+  input: MaterializeProviderPresetInput,
+): ProviderToolEntry[] {
+  const cloned = structuredClone(entries);
+  const transportKind = input.transportKind ?? preset.defaultTransport;
+  if (transportKind === "openai-compatible") {
+    return cloned;
+  }
+  const apiBase = resolvePresetApiBase(preset, {
+    transportKind: "openai-compatible",
+    ...(input.siteId !== undefined ? { siteId: input.siteId } : {}),
+    ...(input.billingPlanId !== undefined ? { billingPlanId: input.billingPlanId } : {}),
+    templateValues: {
+      ...input.templateValues,
+      ...(input.workspaceId !== undefined ? { workspaceId: input.workspaceId } : {}),
+    },
+  });
+  for (const entry of cloned) {
+    const execute = entry.execute;
+    if (execute?.path !== undefined && execute.url === undefined) {
+      execute.url = resolveProviderEndpointUrl(apiBase, { path: execute.path });
+      delete execute.path;
+    }
+  }
+  return cloned;
+}
+
 function materializeCustomPreset(input: MaterializeProviderPresetInput): MaterializedProviderEntry {
   const apiBase = input.apiBaseOverride?.trim() || CUSTOM_PROVIDER_PRESET.defaultApiBase;
   const label = input.label?.trim();
@@ -199,7 +234,7 @@ export function materializeProviderPreset(
     ...(transportKind !== DEFAULT_PROVIDER_TRANSPORT_KIND ? { transportKind } : {}),
     ...(sdk !== undefined ? { sdk } : {}),
     ...(preset.providerTools !== undefined
-      ? { providerTools: structuredClone(preset.providerTools) }
+      ? { providerTools: materializeProviderTools(preset.providerTools, preset, input) }
       : {}),
     ...(fileUpload !== undefined ? { fileUpload: structuredClone(fileUpload) } : {}),
     ...(preset.body !== undefined ? { body: structuredClone(preset.body) } : {}),
