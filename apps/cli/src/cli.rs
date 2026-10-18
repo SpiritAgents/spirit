@@ -11,18 +11,14 @@ use crate::{
         user_mcp_config_path, workspace_mcp_config_path,
     },
     model_provider_presets::{
-        azure_api_base_from_resource_name, model_add_alibaba_site_api_base,
-        model_add_alibaba_site_requires_workspace_id, model_add_default_custom_api_base,
-        model_add_kimi_code_api_base, model_add_kimi_code_site_api_base,
-        model_add_minimax_site_api_base, model_add_moonshot_site_api_base,
-        model_add_preset_api_base, model_add_siliconflow_site_api_base, model_add_stepfun_api_base,
-        model_add_tencent_tokenhub_site_api_base, preset_connect_draft,
-        validate_azure_resource_name,
+        CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, is_known_preset_id,
+        list_base_template_keys, model_add_default_custom_api_base, preset_connect_api_base,
+        preset_connect_draft, preset_credential_kind, preset_entry, validate_azure_resource_name,
     },
     model_registry::{
-        AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelProvider, ModelRef,
-        ModelTransportKind, default_preset_provider_id, env_channel_value, model_refs_equal,
-        resolve_provider_api_key, save_provider_api_key,
+        AppConfig, DEFAULT_API_BASE, ModelEntry, ModelProfile, ModelRef, ModelTransportKind,
+        env_channel_value, model_refs_equal, resolve_provider_api_key, save_provider_api_key,
+        save_provider_slot_secret,
     },
     ports::{AppPaths, ConfigStore, SecretStore},
 };
@@ -32,6 +28,7 @@ const ENV_API_KEY: &str = "SPIRIT_API_KEY";
 pub struct ModelAddCommand {
     pub name: String,
     pub api_base: Option<String>,
+    /// Preset id from the presets manifest (`model_provider_presets`), or `custom`.
     pub provider: Option<String>,
     pub transport_kind: Option<String>,
     pub reasoning_effort: Option<String>,
@@ -40,7 +37,16 @@ pub struct ModelAddCommand {
     pub key: Option<String>,
     pub azure_resource_name: Option<String>,
     pub provider_site: Option<String>,
-    pub alibaba_workspace_id: Option<String>,
+    pub billing_plan: Option<String>,
+    /// `{workspaceId}` template value (e.g. Alibaba MaaS business space id).
+    pub workspace_id: Option<String>,
+    pub vertex_project: Option<String>,
+    pub vertex_location: Option<String>,
+    pub vertex_client_email: Option<String>,
+    pub vertex_private_key: Option<String>,
+    pub aws_region: Option<String>,
+    pub aws_access_key_id: Option<String>,
+    pub aws_secret_access_key: Option<String>,
 }
 
 pub enum ModelCommand {
@@ -58,13 +64,6 @@ pub enum ConfigCommand {
     ClearImageModel,
     SetVideoModel { name: String },
     ClearVideoModel,
-    Key { action: KeyCommand },
-}
-
-pub enum KeyCommand {
-    Set { value: Option<String> },
-    Remove,
-    Status,
 }
 
 pub enum McpCommand {
@@ -196,160 +195,216 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 key,
                 azure_resource_name,
                 provider_site,
-                alibaba_workspace_id,
+                billing_plan,
+                workspace_id,
+                vertex_project,
+                vertex_location,
+                vertex_client_email,
+                vertex_private_key,
+                aws_region,
+                aws_access_key_id,
+                aws_secret_access_key,
             } = *add;
             if cfg.has_model_name(&name) {
                 println!("{}", t!("cli.model.already_exists", name = name));
             } else {
                 let provider = parse_model_provider(provider)?;
-                let transport_kind = parse_model_transport_kind(transport_kind, provider)?;
+                let transport_kind =
+                    parse_model_transport_kind(transport_kind, provider.as_deref())?;
+                let explicit_custom = provider.as_deref() == Some(CUSTOM_PROVIDER_PRESET_ID);
+                let entry_id = provider.unwrap_or_else(|| CUSTOM_PROVIDER_PRESET_ID.to_string());
+                let is_custom = entry_id == CUSTOM_PROVIDER_PRESET_ID;
+
                 let azure_resource_name = azure_resource_name
                     .as_deref()
                     .map(str::trim)
                     .filter(|value| !value.is_empty())
                     .map(ToOwned::to_owned);
-                if provider == Some(ModelProvider::Azure) && azure_resource_name.is_none() {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.azure_resource_name_required")
-                    ));
-                }
-                if provider == Some(ModelProvider::Azure)
-                    && let Some(resource_name) = azure_resource_name.as_deref()
-                {
+                if let Some(resource_name) = azure_resource_name.as_deref() {
                     validate_azure_resource_name(resource_name).map_err(anyhow::Error::msg)?;
                 }
                 let reasoning_effort = parse_model_reasoning_effort(reasoning_effort)?;
-                if provider == Some(ModelProvider::Custom)
-                    && api_base.as_deref().map(str::trim).is_none_or(str::is_empty)
-                {
+                if explicit_custom && api_base.as_deref().map(str::trim).is_none_or(str::is_empty) {
                     return Err(anyhow!("{}", t!("cli.model.error.endpoint_empty")));
                 }
-                if provider == Some(ModelProvider::Alibaba)
-                    && let Some(site) = provider_site
+
+                // Vertex: project/location select the service-account credential form;
+                // without them the apiKey (Express) form materializes `expressApiBase`.
+                let vertex_project = vertex_project
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let vertex_location = vertex_location
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                if vertex_project.is_some() != vertex_location.is_some() {
+                    return Err(anyhow!(
+                        "{}",
+                        t!("cli.model.error.vertex_project_location_required")
+                    ));
+                }
+                let vertex_client_email = vertex_client_email
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let vertex_private_key = vertex_private_key
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                if vertex_client_email.is_some() != vertex_private_key.is_some() {
+                    return Err(anyhow!(
+                        "{}",
+                        t!("cli.model.error.vertex_service_account_incomplete")
+                    ));
+                }
+                let aws_access_key_id = aws_access_key_id
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let aws_secret_access_key = aws_secret_access_key
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                if aws_access_key_id.is_some() != aws_secret_access_key.is_some() {
+                    return Err(anyhow!(
+                        "{}",
+                        t!("cli.model.error.bedrock_credentials_incomplete")
+                    ));
+                }
+
+                let credential_kind = match preset_credential_kind(&entry_id) {
+                    "vertex" if vertex_project.is_some() => "vertex",
+                    "vertex" => "apiKey",
+                    kind => kind,
+                };
+
+                let provider_site = provider_site
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                let billing_plan = billing_plan
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(ToOwned::to_owned);
+                if !is_custom {
+                    if let Some(site) = provider_site.as_deref() {
+                        let known = preset_entry(&entry_id)
+                            .is_some_and(|preset| preset.sites().iter().any(|s| s.id == site));
+                        if !known {
+                            return Err(anyhow!(
+                                "{}",
+                                t!(
+                                    "cli.model.error.provider_site_invalid",
+                                    provider = entry_id,
+                                    site = site
+                                )
+                            ));
+                        }
+                    }
+                    if let Some(plan) = billing_plan.as_deref() {
+                        let known = preset_entry(&entry_id).is_some_and(|preset| {
+                            preset.billing_plans().iter().any(|p| p.id == plan)
+                        });
+                        if !known {
+                            return Err(anyhow!(
+                                "{}",
+                                t!(
+                                    "cli.model.error.billing_plan_invalid",
+                                    provider = entry_id,
+                                    plan = plan
+                                )
+                            ));
+                        }
+                    }
+                }
+
+                // `{placeholder}` template values collected from flags; `awsRegion` defaults
+                // to us-east-1 for the bedrock preset's templated endpoint.
+                let mut template_values = std::collections::BTreeMap::new();
+                if let Some(value) = azure_resource_name {
+                    template_values.insert("resourceName".to_string(), value);
+                }
+                if let Some(value) = workspace_id
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    template_values.insert("workspaceId".to_string(), value.to_string());
+                }
+                if let (Some(project), Some(location)) =
+                    (vertex_project.as_ref(), vertex_location.as_ref())
+                {
+                    template_values.insert("project".to_string(), project.clone());
+                    template_values.insert("location".to_string(), location.clone());
+                }
+                if credential_kind == "bedrock" {
+                    let region = aws_region
                         .as_deref()
                         .map(str::trim)
                         .filter(|value| !value.is_empty())
-                    && model_add_alibaba_site_requires_workspace_id(site)
-                    && alibaba_workspace_id
-                        .as_deref()
-                        .map(str::trim)
-                        .is_none_or(str::is_empty)
-                {
-                    return Err(anyhow!(
-                        "{}",
-                        t!("cli.model.error.alibaba_workspace_id_required")
-                    ));
+                        .unwrap_or("us-east-1");
+                    template_values.insert("awsRegion".to_string(), region.to_string());
                 }
-                let api_base = api_base.unwrap_or_else(|| {
-                    if provider == Some(ModelProvider::Azure) {
-                        return azure_api_base_from_resource_name(
-                            azure_resource_name.as_deref().unwrap_or(""),
-                        );
-                    }
-                    if provider == Some(ModelProvider::Siliconflow)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) = model_add_siliconflow_site_api_base(site)
-                    {
-                        return base;
-                    }
-                    if provider == Some(ModelProvider::Moonshot)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) = model_add_moonshot_site_api_base(site)
-                    {
-                        return base;
-                    }
-                    if provider == Some(ModelProvider::TencentTokenhub)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) = model_add_tencent_tokenhub_site_api_base(site)
-                    {
-                        return base;
-                    }
-                    if provider == Some(ModelProvider::KimiCode) {
-                        if let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                            && let Some(base) =
-                                model_add_kimi_code_site_api_base(site, transport_kind)
-                        {
-                            return base;
-                        }
-                        if let Some(base) = model_add_kimi_code_api_base(transport_kind) {
-                            return base;
-                        }
-                    }
-                    if provider == Some(ModelProvider::Minimax)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) = model_add_minimax_site_api_base(site, transport_kind)
-                    {
-                        return base;
-                    }
-                    if provider == Some(ModelProvider::Alibaba)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) = model_add_alibaba_site_api_base(
-                            site,
-                            alibaba_workspace_id.as_deref().unwrap_or(""),
-                            transport_kind,
-                        )
-                    {
-                        return base;
-                    }
-                    if provider == Some(ModelProvider::Stepfun)
-                        && let Some(site) = provider_site
-                            .as_deref()
-                            .map(str::trim)
-                            .filter(|value| !value.is_empty())
-                        && let Some(base) =
-                            model_add_stepfun_api_base(transport_kind, false, Some(site))
-                    {
-                        return base;
-                    }
-                    if let Some(provider) = provider
-                        && let Some(preset) = model_add_preset_api_base(provider, transport_kind)
-                    {
-                        return preset;
-                    }
-                    match transport_kind {
+
+                let api_base = match api_base
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                {
+                    Some(value) => value.to_string(),
+                    None if is_custom => match transport_kind {
                         ModelTransportKind::Anthropic => {
                             model_add_default_custom_api_base(ModelTransportKind::Anthropic)
                         }
-                        ModelTransportKind::Bedrock => {
-                            if let Some(provider) = provider
-                                && let Some(preset) =
-                                    model_add_preset_api_base(provider, transport_kind)
-                            {
-                                return preset;
-                            }
-                            "https://bedrock.us-east-1.amazonaws.com".to_string()
+                        _ => DEFAULT_API_BASE.to_string(),
+                    },
+                    None => {
+                        let selections = PresetConnectSelections {
+                            transport_kind: Some(transport_kind),
+                            site_id: provider_site.as_deref(),
+                            billing_plan_id: billing_plan.as_deref(),
+                            template_values: template_values.clone(),
+                            credential_kind: Some(credential_kind),
+                        };
+                        let base = preset_connect_api_base(&entry_id, &selections)
+                            .ok_or_else(|| anyhow!("{}", t!("cli.model.error.endpoint_empty")))?;
+                        let unresolved = list_base_template_keys(&base);
+                        if !unresolved.is_empty() {
+                            return Err(anyhow!(
+                                "{}",
+                                t!(
+                                    "cli.model.error.endpoint_template_unresolved",
+                                    provider = entry_id,
+                                    placeholders = unresolved.join(", ")
+                                )
+                            ));
                         }
-                        ModelTransportKind::OpenResponses
-                        | ModelTransportKind::OpenAiCompatible => DEFAULT_API_BASE.to_string(),
+                        base
                     }
-                });
-                let capabilities = normalize_model_capabilities(capabilities);
-                let key_value = match key {
-                    Some(v) => v,
-                    None => rpassword::prompt_password(&t!("cli.model.prompt_api_key"))
-                        .context(t!("cli.model.api_key_read_failed").into_owned())?,
                 };
-                let resolved_provider = provider.unwrap_or(ModelProvider::Custom);
-                if key_value.trim().is_empty() && resolved_provider != ModelProvider::Custom {
+                let capabilities = normalize_model_capabilities(capabilities);
+                // Composite credential forms (bedrock IAM pair, vertex service account)
+                // collect slot flags instead of the plain api key.
+                let needs_api_key = credential_kind == "apiKey";
+                let key_value = if needs_api_key {
+                    match key {
+                        Some(v) => v,
+                        None => rpassword::prompt_password(&t!("cli.model.prompt_api_key"))
+                            .context(t!("cli.model.api_key_read_failed").into_owned())?,
+                    }
+                } else {
+                    String::new()
+                };
+                if needs_api_key && key_value.trim().is_empty() && !is_custom {
                     return Err(anyhow!("{}", t!("cli.model.error.api_key_empty")));
                 }
                 let context_length = match context_length {
@@ -360,8 +415,21 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                     Some(value) => Some(value),
                 };
 
-                let provider_id = default_preset_provider_id(resolved_provider);
-                let connect = preset_connect_draft(resolved_provider, transport_kind);
+                let mut connect = preset_connect_draft(&entry_id, transport_kind);
+                // Transport options materialized from wizard template values (bedrock
+                // `awsRegion`, vertex `project` / `location`); express connects write none.
+                let options: serde_json::Map<String, serde_json::Value> =
+                    ["awsRegion", "project", "location"]
+                        .into_iter()
+                        .filter_map(|key| {
+                            template_values.get(key).map(|value| {
+                                (key.to_string(), serde_json::Value::String(value.clone()))
+                            })
+                        })
+                        .collect();
+                if !options.is_empty() {
+                    connect.options = Some(options);
+                }
                 let entry = ModelEntry {
                     name: name.clone(),
                     reasoning_effort: reasoning_effort.clone(),
@@ -373,9 +441,9 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                     context_length,
                     ..ModelEntry::default()
                 };
-                cfg.add_model_to_provider(&provider_id, api_base.clone(), connect, entry);
+                cfg.add_model_to_provider(&entry_id, api_base.clone(), connect, entry);
                 let model_ref = ModelRef {
-                    provider_id: provider_id.clone(),
+                    provider_id: entry_id.clone(),
                     name: name.clone(),
                 };
                 if cfg.image_generation_model.is_none()
@@ -394,15 +462,24 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 }
                 cfg.active_model = model_ref;
                 if !key_value.trim().is_empty() {
-                    save_provider_api_key(&provider_id, &key_value)?;
+                    save_provider_api_key(&entry_id, &key_value)?;
+                }
+                if let (Some(access_key_id), Some(secret_access_key)) =
+                    (aws_access_key_id, aws_secret_access_key)
+                {
+                    save_provider_slot_secret(&entry_id, "accessKeyId", &access_key_id)?;
+                    save_provider_slot_secret(&entry_id, "secretAccessKey", &secret_access_key)?;
+                }
+                if let (Some(client_email), Some(private_key)) =
+                    (vertex_client_email, vertex_private_key)
+                {
+                    save_provider_slot_secret(&entry_id, "clientEmail", &client_email)?;
+                    save_provider_slot_secret(&entry_id, "privateKey", &private_key)?;
                 }
                 config_store.save(&cfg)?;
                 println!("{}", t!("cli.model.added_and_active", name = name));
                 println!("api_base: {}", api_base);
-                println!(
-                    "provider: {}",
-                    format_model_provider(Some(resolved_provider))
-                );
+                println!("provider: {}", entry_id);
                 println!(
                     "reasoning_effort: {}",
                     reasoning_effort
@@ -413,7 +490,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 println!(
                     "capabilities: {}",
                     cfg.resolve_model_profile(&ModelRef {
-                        provider_id,
+                        provider_id: entry_id,
                         name: name.clone(),
                     })
                     .map(|profile| format_model_capabilities(&profile))
@@ -552,17 +629,6 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
                     }
                 )
             );
-            let keyring_saved = secret_store
-                .load_global_api_key()
-                .map(|v| v.is_some())
-                .unwrap_or(false);
-            println!(
-                "{}",
-                t!(
-                    "cli.config.keyring",
-                    status = common_key_status(keyring_saved)
-                )
-            );
             println!(
                 "{}",
                 t!("cli.config.api_key_priority", env_var = ENV_API_KEY)
@@ -625,51 +691,46 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
             config_store.save(&cfg)?;
             println!("{}", t!("cli.config.video_model_cleared"));
         }
-        ConfigCommand::Key { action } => handle_key_cli(action, &secret_store)?,
     }
 
     Ok(())
 }
 
-fn parse_model_provider(value: Option<String>) -> Result<Option<ModelProvider>> {
+/// `model add --provider` names a preset id from the presets manifest (or `custom`).
+fn parse_model_provider(value: Option<String>) -> Result<Option<String>> {
     match normalize_choice_arg(value) {
-        Some(provider) => provider
-            .parse()
-            .map(Some)
-            .map_err(|err: String| anyhow!(err)),
+        Some(provider) => {
+            let id = provider.to_ascii_lowercase();
+            if is_known_preset_id(&id) {
+                Ok(Some(id))
+            } else {
+                Err(anyhow!("Unsupported provider: {id}"))
+            }
+        }
         None => Ok(None),
     }
 }
 
 fn parse_model_transport_kind(
     value: Option<String>,
-    provider: Option<ModelProvider>,
+    provider: Option<&str>,
 ) -> Result<ModelTransportKind> {
     let parsed = match normalize_choice_arg(value) {
         Some(transport_kind) => transport_kind.parse().map_err(|err: String| anyhow!(err))?,
         // The preset manifest's `defaultTransport` is the unflagged default.
         None => match provider {
-            Some(provider) => {
+            Some(provider) if provider != CUSTOM_PROVIDER_PRESET_ID => {
                 crate::model_provider_presets::preset_default_transport_kind(provider)
             }
-            None => ModelTransportKind::OpenAiCompatible,
+            _ => ModelTransportKind::OpenAiCompatible,
         },
     };
 
     match (provider, parsed) {
-        (Some(ModelProvider::AmazonBedrock), transport_kind)
-            if transport_kind != ModelTransportKind::Bedrock =>
-        {
-            Err(anyhow!("{}", t!("cli.model.error.transport.bedrock_only")))
-        }
-        (Some(ModelProvider::Custom) | None, ModelTransportKind::Bedrock) => Err(anyhow!(
-            "{}",
-            t!("cli.model.error.transport.bedrock_exclusive")
-        )),
-        // The preset manifest's `transports` keys are the provider's supported set; custom
-        // endpoints accept any non-bedrock transport.
+        // The preset manifest's `transports` keys are the provider's supported set
+        // (the bedrock preset declares only the bedrock transport).
         (Some(provider), transport_kind)
-            if provider != ModelProvider::Custom
+            if provider != CUSTOM_PROVIDER_PRESET_ID
                 && !crate::model_provider_presets::preset_supports_transport(
                     provider,
                     transport_kind,
@@ -679,11 +740,17 @@ fn parse_model_transport_kind(
                 "{}",
                 t!(
                     "cli.model.error.transport.provider_transport_unsupported",
-                    provider = provider.as_str(),
+                    provider = provider,
                     transport = transport_kind.as_str()
                 )
             ))
         }
+        // Custom endpoints accept any non-bedrock transport (bedrock needs the preset's
+        // IAM credential flow).
+        (Some(CUSTOM_PROVIDER_PRESET_ID) | None, ModelTransportKind::Bedrock) => Err(anyhow!(
+            "{}",
+            t!("cli.model.error.transport.bedrock_exclusive")
+        )),
         _ => Ok(parsed),
     }
 }
@@ -738,12 +805,6 @@ fn model_key_resolves(secret_store: &KeyringSecretStore, model: &ModelProfile) -
         },
     )
     .is_some()
-}
-
-fn format_model_provider(provider: Option<ModelProvider>) -> String {
-    provider
-        .map(|value| value.as_str().to_string())
-        .unwrap_or_else(|| t!("cli.common.unset").into_owned())
 }
 
 fn normalize_model_capabilities(capabilities: Vec<String>) -> Vec<String> {
@@ -1300,60 +1361,6 @@ fn common_key_status(saved: bool) -> String {
     }
 }
 
-fn handle_key_cli(action: KeyCommand, secret_store: &KeyringSecretStore) -> Result<()> {
-    match action {
-        KeyCommand::Set { value } => {
-            let key = match value {
-                Some(v) => v,
-                None => rpassword::prompt_password(&t!("cli.key.prompt_api_key"))
-                    .context(t!("cli.key.api_key_read_failed").into_owned())?,
-            };
-
-            if key.trim().is_empty() {
-                return Err(anyhow!("{}", t!("cli.key.api_key_empty")));
-            }
-
-            secret_store.save_global_api_key(key.trim())?;
-            println!("{}", t!("cli.key.saved", env_var = ENV_API_KEY));
-        }
-        KeyCommand::Remove => {
-            secret_store.remove_global_api_key()?;
-            println!("{}", t!("cli.key.removed"));
-        }
-        KeyCommand::Status => {
-            let env_set = env::var(ENV_API_KEY)
-                .ok()
-                .map(|s| !s.trim().is_empty())
-                .unwrap_or(false);
-
-            let keyring_set = secret_store
-                .load_global_api_key()
-                .map(|v| v.is_some())
-                .unwrap_or(false);
-
-            println!(
-                "{}",
-                t!(
-                    "cli.key.env_var",
-                    name = ENV_API_KEY,
-                    status = if env_set {
-                        t!("cli.common.set").into_owned()
-                    } else {
-                        t!("cli.common.unset_env").into_owned()
-                    }
-                )
-            );
-            println!(
-                "{}",
-                t!("cli.key.keyring", status = common_key_status(keyring_set))
-            );
-            println!("{}", t!("cli.key.priority", env_var = ENV_API_KEY));
-        }
-    }
-
-    Ok(())
-}
-
 pub fn load_or_default_config() -> AppConfig {
     JsonConfigStore
         .load()
@@ -1362,7 +1369,8 @@ pub fn load_or_default_config() -> AppConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_model_reasoning_effort;
+    use super::{parse_model_provider, parse_model_reasoning_effort, parse_model_transport_kind};
+    use crate::model_registry::ModelTransportKind;
 
     #[test]
     fn parse_model_reasoning_effort_accepts_v1_tokens_verbatim() {
@@ -1376,5 +1384,71 @@ mod tests {
         );
         assert_eq!(parse_model_reasoning_effort(None).expect("parse"), None);
         assert!(parse_model_reasoning_effort(Some("extreme".to_string())).is_err());
+    }
+
+    #[test]
+    fn parse_model_provider_accepts_manifest_ids_and_custom() {
+        assert_eq!(
+            parse_model_provider(Some("kimi-code".to_string())).expect("parse"),
+            Some("kimi-code".to_string())
+        );
+        // Ids normalize to lowercase; `custom` is the wizard-only pseudo preset.
+        assert_eq!(
+            parse_model_provider(Some("Google-Vertex-AI".to_string())).expect("parse"),
+            Some("google-vertex-ai".to_string())
+        );
+        assert_eq!(
+            parse_model_provider(Some("custom".to_string())).expect("parse"),
+            Some("custom".to_string())
+        );
+        assert_eq!(parse_model_provider(None).expect("parse"), None);
+        assert!(parse_model_provider(Some("acme-unknown".to_string())).is_err());
+    }
+
+    #[test]
+    fn parse_model_transport_kind_defaults_to_the_preset_default_transport() {
+        assert_eq!(
+            parse_model_transport_kind(None, Some("deepseek")).expect("parse"),
+            ModelTransportKind::OpenResponses
+        );
+        assert_eq!(
+            parse_model_transport_kind(None, Some("amazon-bedrock")).expect("parse"),
+            ModelTransportKind::Bedrock
+        );
+        assert_eq!(
+            parse_model_transport_kind(None, None).expect("parse"),
+            ModelTransportKind::OpenAiCompatible
+        );
+    }
+
+    #[test]
+    fn parse_model_transport_kind_validates_against_the_manifest_transport_keys() {
+        // The bedrock preset declares only the bedrock transport.
+        assert!(
+            parse_model_transport_kind(
+                Some("openai-compatible".to_string()),
+                Some("amazon-bedrock")
+            )
+            .is_err()
+        );
+        assert_eq!(
+            parse_model_transport_kind(Some("bedrock".to_string()), Some("amazon-bedrock"))
+                .expect("parse"),
+            ModelTransportKind::Bedrock
+        );
+        // Custom endpoints accept any non-bedrock transport.
+        assert_eq!(
+            parse_model_transport_kind(Some("anthropic".to_string()), Some("custom"))
+                .expect("parse"),
+            ModelTransportKind::Anthropic
+        );
+        assert!(parse_model_transport_kind(Some("bedrock".to_string()), Some("custom")).is_err());
+        assert!(parse_model_transport_kind(Some("bedrock".to_string()), None).is_err());
+        assert!(
+            parse_model_transport_kind(Some("anthropic".to_string()), Some("kimi-code")).is_ok()
+        );
+        assert!(
+            parse_model_transport_kind(Some("bedrock".to_string()), Some("kimi-code")).is_err()
+        );
     }
 }

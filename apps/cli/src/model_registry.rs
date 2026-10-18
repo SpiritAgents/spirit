@@ -12,144 +12,6 @@ use std::{
 pub const DEFAULT_API_BASE: &str = "https://api.openai.com/v1";
 pub const SPIRIT_CONFIG_SCHEMA_VERSION: u64 = 1;
 const KEYRING_SERVICE: &str = "Spirit";
-const KEYRING_ACCOUNT_API_KEY: &str = "openai_api_key";
-
-/// Wizard-side provider identity (preset picker / `model add --provider`). Never parsed from
-/// `config.json`: the v1 provider entry carries no vendor field (deleted in P8 together with
-/// the wizard forms keyed on it).
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "lowercase")]
-pub enum ModelProvider {
-    Deepseek,
-    Xai,
-    #[serde(rename = "moonshot-ai")]
-    Moonshot,
-    #[serde(rename = "kimi-code")]
-    KimiCode,
-    #[serde(rename = "z-ai")]
-    ZAi,
-    #[serde(rename = "zhipu-ai")]
-    ZhipuAi,
-    Minimax,
-    Xiaomi,
-    Siliconflow,
-    Stepfun,
-    Alibaba,
-    Anthropic,
-    #[serde(rename = "vercel-ai-gateway", alias = "vercelaigateway")]
-    VercelAiGateway,
-    #[serde(rename = "cloudflare-ai-gateway", alias = "cloudflareaigateway")]
-    CloudflareAiGateway,
-    Openrouter,
-    #[serde(rename = "fireworks-ai")]
-    FireworksAi,
-    #[serde(rename = "together-ai")]
-    TogetherAi,
-    Groq,
-    Deepinfra,
-    #[serde(rename = "hugging-face")]
-    HuggingFace,
-    Baseten,
-    Openai,
-    Google,
-    #[serde(rename = "google-vertex-ai")]
-    GoogleVertexAi,
-    Volcengine,
-    Byteplus,
-    Meituan,
-    #[serde(rename = "tencent-tokenhub")]
-    TencentTokenhub,
-    Mistral,
-    #[serde(rename = "cohere")]
-    Cohere,
-    #[serde(rename = "amazon-bedrock")]
-    AmazonBedrock,
-    Azure,
-    Custom,
-}
-
-impl ModelProvider {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Deepseek => "deepseek",
-            Self::Xai => "xai",
-            Self::Moonshot => "moonshot-ai",
-            Self::KimiCode => "kimi-code",
-            Self::ZAi => "z-ai",
-            Self::ZhipuAi => "zhipu-ai",
-            Self::Minimax => "minimax",
-            Self::Xiaomi => "xiaomi",
-            Self::Siliconflow => "siliconflow",
-            Self::Stepfun => "stepfun",
-            Self::Alibaba => "alibaba",
-            Self::Anthropic => "anthropic",
-            Self::VercelAiGateway => "vercel-ai-gateway",
-            Self::CloudflareAiGateway => "cloudflare-ai-gateway",
-            Self::Openrouter => "openrouter",
-            Self::FireworksAi => "fireworks-ai",
-            Self::TogetherAi => "together-ai",
-            Self::Groq => "groq",
-            Self::Deepinfra => "deepinfra",
-            Self::HuggingFace => "hugging-face",
-            Self::Baseten => "baseten",
-            Self::Openai => "openai",
-            Self::Google => "google",
-            Self::GoogleVertexAi => "google-vertex-ai",
-            Self::Volcengine => "volcengine",
-            Self::Byteplus => "byteplus",
-            Self::Meituan => "meituan",
-            Self::TencentTokenhub => "tencent-tokenhub",
-            Self::Mistral => "mistral",
-            Self::Cohere => "cohere",
-            Self::AmazonBedrock => "amazon-bedrock",
-            Self::Azure => "azure",
-            Self::Custom => "custom",
-        }
-    }
-}
-
-impl FromStr for ModelProvider {
-    type Err = String;
-
-    fn from_str(value: &str) -> std::result::Result<Self, Self::Err> {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "deepseek" => Ok(Self::Deepseek),
-            "xai" => Ok(Self::Xai),
-            "moonshot-ai" => Ok(Self::Moonshot),
-            "kimi-code" => Ok(Self::KimiCode),
-            "z-ai" => Ok(Self::ZAi),
-            "zhipu-ai" => Ok(Self::ZhipuAi),
-            "minimax" => Ok(Self::Minimax),
-            "xiaomi" => Ok(Self::Xiaomi),
-            "siliconflow" => Ok(Self::Siliconflow),
-            "stepfun" => Ok(Self::Stepfun),
-            "alibaba" => Ok(Self::Alibaba),
-            "anthropic" => Ok(Self::Anthropic),
-            "vercel-ai-gateway" => Ok(Self::VercelAiGateway),
-            "cloudflare-ai-gateway" => Ok(Self::CloudflareAiGateway),
-            "openrouter" => Ok(Self::Openrouter),
-            "fireworks-ai" => Ok(Self::FireworksAi),
-            "together-ai" => Ok(Self::TogetherAi),
-            "groq" => Ok(Self::Groq),
-            "deepinfra" => Ok(Self::Deepinfra),
-            "hugging-face" => Ok(Self::HuggingFace),
-            "baseten" => Ok(Self::Baseten),
-            "openai" => Ok(Self::Openai),
-            "google" => Ok(Self::Google),
-            "google-vertex-ai" => Ok(Self::GoogleVertexAi),
-            "volcengine" => Ok(Self::Volcengine),
-            "byteplus" => Ok(Self::Byteplus),
-            "meituan" => Ok(Self::Meituan),
-            "tencent-tokenhub" => Ok(Self::TencentTokenhub),
-            "mistral" => Ok(Self::Mistral),
-            "cohere" => Ok(Self::Cohere),
-            "amazon-bedrock" => Ok(Self::AmazonBedrock),
-            "azure" => Ok(Self::Azure),
-            "custom" => Ok(Self::Custom),
-            other => Err(format!("Unsupported provider: {other}")),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelTransportKind {
@@ -845,10 +707,6 @@ impl Default for AppConfig {
     }
 }
 
-pub fn default_preset_provider_id(provider: ModelProvider) -> String {
-    provider.as_str().to_string()
-}
-
 /// Resolved profile: connection fields come from the provider entry; the model-level fields
 /// apply the shared inheritance rule (provider flat declarations are the defaults, the model's
 /// explicit declaration wins). Mirrors host-internal `resolveModelEntry` + profile build.
@@ -1221,8 +1079,8 @@ impl AppConfig {
 /// Wizard-owned declarations written when connecting a provider; reconnect rewrites them
 /// (an absent declaration clears the key), while everything else on the entry — `label`,
 /// credential channels, flat model-level defaults, user-added models — survives. Sites /
-/// billing plans / resource names are already materialized into `api_base` (or `headers`)
-/// by the wizard before this draft is built — they never land in config.json.
+/// billing plans / `{placeholder}` template values are already materialized into `api_base`
+/// (or `headers`) by the wizard before this draft is built — they never land in config.json.
 #[derive(Debug, Clone, Default)]
 pub struct ProviderConnectDraft {
     /// Creation-time display name; ignored on reconnect (the user's label survives).
@@ -1232,6 +1090,8 @@ pub struct ProviderConnectDraft {
     pub headers: Option<BTreeMap<String, String>>,
     pub provider_tools: Option<Vec<Value>>,
     pub file_upload: Option<Value>,
+    pub body: Option<Map<String, Value>>,
+    pub thinking_switch: Option<Value>,
     pub image_api: Option<String>,
     pub video_api: Option<String>,
     pub options: Option<Map<String, Value>>,
@@ -1244,6 +1104,8 @@ impl ProviderConnectDraft {
         provider.headers = self.headers.clone();
         provider.provider_tools = self.provider_tools.clone();
         provider.file_upload = self.file_upload.clone();
+        provider.body = self.body.clone();
+        provider.thinking_switch = self.thinking_switch.clone();
         provider.image_api = self.image_api.clone();
         provider.video_api = self.video_api.clone();
         provider.options = self.options.clone();
@@ -1425,11 +1287,6 @@ fn non_blank(value: &str) -> Option<String> {
 /// Reads a process env var as a credential channel source (blank = missing).
 pub fn env_channel_value(name: &str) -> Option<String> {
     env::var(name).ok().and_then(|value| non_blank(&value))
-}
-
-pub fn keyring_entry() -> Result<keyring::Entry> {
-    keyring::Entry::new(KEYRING_SERVICE, KEYRING_ACCOUNT_API_KEY)
-        .context("Failed to initialize keyring entry")
 }
 
 fn keyring_entry_for_account(account: &str) -> Result<keyring::Entry> {

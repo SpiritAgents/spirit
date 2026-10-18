@@ -22,9 +22,9 @@ use std::{
 use spirit::tui::InlineRecreate;
 use spirit::{
     ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, GlobalCliOptions, HookCommand,
-    KeyCommand, McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell,
-    bootstrap_config, handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli,
-    handle_model_cli, handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
+    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
+    handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli, handle_model_cli,
+    handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
     run_headless_prompt, run_serve, tui, ui,
 };
 
@@ -121,7 +121,8 @@ enum ModelAction {
         name: String,
         #[arg(long, value_name = "api_base")]
         api_base: Option<String>,
-        #[arg(long, value_name = "provider", value_parser = ["deepseek", "xai", "moonshot-ai", "kimi-code", "z-ai", "zhipu-ai", "minimax", "xiaomi", "siliconflow", "alibaba", "anthropic", "vercel-ai-gateway", "openrouter", "fireworks-ai", "together-ai", "groq", "deepinfra", "baseten", "hugging-face", "cohere", "openai", "google", "volcengine", "byteplus", "azure", "amazon-bedrock", "custom"])]
+        /// Preset id from the built-in provider presets manifest, or `custom`.
+        #[arg(long, value_name = "provider")]
         provider: Option<String>,
         #[arg(long, value_name = "transport_kind", value_parser = ["openai-compatible", "open-responses", "anthropic", "bedrock"])]
         transport_kind: Option<String>,
@@ -137,8 +138,24 @@ enum ModelAction {
         azure_resource_name: Option<String>,
         #[arg(long, value_name = "provider_site")]
         provider_site: Option<String>,
-        #[arg(long, value_name = "alibaba_workspace_id")]
-        alibaba_workspace_id: Option<String>,
+        #[arg(long, value_name = "billing_plan")]
+        billing_plan: Option<String>,
+        #[arg(long, value_name = "workspace_id")]
+        workspace_id: Option<String>,
+        #[arg(long, value_name = "vertex_project")]
+        vertex_project: Option<String>,
+        #[arg(long, value_name = "vertex_location")]
+        vertex_location: Option<String>,
+        #[arg(long, value_name = "vertex_client_email")]
+        vertex_client_email: Option<String>,
+        #[arg(long, value_name = "vertex_private_key")]
+        vertex_private_key: Option<String>,
+        #[arg(long, value_name = "aws_region")]
+        aws_region: Option<String>,
+        #[arg(long, value_name = "aws_access_key_id")]
+        aws_access_key_id: Option<String>,
+        #[arg(long, value_name = "aws_secret_access_key")]
+        aws_secret_access_key: Option<String>,
     },
     Remove {
         #[arg(value_name = "name")]
@@ -168,20 +185,6 @@ enum ConfigAction {
         name: String,
     },
     ClearVideoModel,
-    Key {
-        #[command(subcommand)]
-        action: KeyAction,
-    },
-}
-
-#[derive(Subcommand)]
-enum KeyAction {
-    Set {
-        #[arg(value_name = "value")]
-        value: Option<String>,
-    },
-    Remove,
-    Status,
 }
 
 #[derive(Subcommand)]
@@ -387,7 +390,15 @@ fn into_model_command(action: ModelAction) -> ModelCommand {
             key,
             azure_resource_name,
             provider_site,
-            alibaba_workspace_id,
+            billing_plan,
+            workspace_id,
+            vertex_project,
+            vertex_location,
+            vertex_client_email,
+            vertex_private_key,
+            aws_region,
+            aws_access_key_id,
+            aws_secret_access_key,
         } => ModelCommand::Add(Box::new(ModelAddCommand {
             name,
             api_base,
@@ -399,7 +410,15 @@ fn into_model_command(action: ModelAction) -> ModelCommand {
             key,
             azure_resource_name,
             provider_site,
-            alibaba_workspace_id,
+            billing_plan,
+            workspace_id,
+            vertex_project,
+            vertex_location,
+            vertex_client_email,
+            vertex_private_key,
+            aws_region,
+            aws_access_key_id,
+            aws_secret_access_key,
         })),
         ModelAction::Remove { name } => ModelCommand::Remove { name },
         ModelAction::Use { name } => ModelCommand::Use { name },
@@ -415,9 +434,6 @@ fn into_config_command(action: ConfigAction) -> ConfigCommand {
         ConfigAction::ClearImageModel => ConfigCommand::ClearImageModel,
         ConfigAction::SetVideoModel { name } => ConfigCommand::SetVideoModel { name },
         ConfigAction::ClearVideoModel => ConfigCommand::ClearVideoModel,
-        ConfigAction::Key { action } => ConfigCommand::Key {
-            action: into_key_command(action),
-        },
     }
 }
 
@@ -457,14 +473,6 @@ fn into_extension_marketplace_command(
         }
         ExtensionMarketplaceAction::List => ExtensionMarketplaceCommand::List,
         ExtensionMarketplaceAction::Remove { name } => ExtensionMarketplaceCommand::Remove { name },
-    }
-}
-
-fn into_key_command(action: KeyAction) -> KeyCommand {
-    match action {
-        KeyAction::Set { value } => KeyCommand::Set { value },
-        KeyAction::Remove => KeyCommand::Remove,
-        KeyAction::Status => KeyCommand::Status,
     }
 }
 

@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-/// Stub keyring: `(service, account) -> secret`; the global legacy entry stays empty.
+/// Stub keyring: `(service, account) -> secret`.
 #[derive(Default)]
 struct StubSecretStore {
     secrets: HashMap<(String, String), String>,
@@ -36,18 +36,6 @@ impl StubSecretStore {
 }
 
 impl SecretStore for StubSecretStore {
-    fn load_global_api_key(&self) -> Result<Option<String>> {
-        Ok(None)
-    }
-
-    fn save_global_api_key(&self, _api_key: &str) -> Result<()> {
-        Ok(())
-    }
-
-    fn remove_global_api_key(&self) -> Result<()> {
-        Ok(())
-    }
-
     fn read_keyring_secret(&self, service: &str, account: &str) -> Result<Option<String>> {
         Ok(self
             .secrets

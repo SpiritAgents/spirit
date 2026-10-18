@@ -86,10 +86,12 @@ impl TuiShell {
                     name: model,
                     api_base,
                     api_key,
-                    provider: None,
+                    provider_id: crate::model_provider_presets::CUSTOM_PROVIDER_PRESET_ID,
                     transport_kind: crate::model_registry::ModelTransportKind::OpenAiCompatible,
                     context_length: None,
                     cloudflare_gateway_id: None,
+                    options: &Default::default(),
+                    credential_slots: &[],
                 }) {
                     Ok(()) => {
                         self.messages.push(ChatMessage {

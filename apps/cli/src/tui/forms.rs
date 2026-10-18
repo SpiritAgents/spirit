@@ -364,25 +364,40 @@ impl TuiShell {
             self.forms.active = None;
 
             if parsed.bulk {
-                let list_result =
-                    if parsed.provider == crate::model_registry::ModelProvider::GoogleVertexAi {
+                let list_result = match &parsed.listing {
+                    Some(bottom_form::ModelAddListing::VertexServiceAccount) => {
                         crate::vertex_models_list::list_vertex_model_ids(
                             crate::vertex_models_list::VertexListOptions {
-                                project: parsed.vertex_project.clone().unwrap_or_default(),
-                                location: parsed.vertex_location.clone().unwrap_or_default(),
+                                project: parsed.options.get("project").cloned().unwrap_or_default(),
+                                location: parsed
+                                    .options
+                                    .get("location")
+                                    .cloned()
+                                    .unwrap_or_default(),
                                 api_key: parsed.api_key.clone(),
-                                client_email: parsed.vertex_client_email.clone(),
-                                private_key: parsed.vertex_private_key.clone(),
+                                client_email: parsed
+                                    .credential_slots
+                                    .iter()
+                                    .find(|(slot, _)| slot == "clientEmail")
+                                    .map(|(_, value)| value.clone()),
+                                private_key: parsed
+                                    .credential_slots
+                                    .iter()
+                                    .find(|(slot, _)| slot == "privateKey")
+                                    .map(|(_, value)| value.clone()),
                             },
                         )
-                    } else {
-                        openai_models_list::list_model_ids(
-                            parsed.api_base.as_str(),
-                            parsed.api_key.as_str(),
-                            parsed.transport_kind,
-                            Some(parsed.provider),
-                        )
-                    };
+                    }
+                    Some(bottom_form::ModelAddListing::Http {
+                        api_base,
+                        transport_kind,
+                    }) => openai_models_list::list_model_ids(
+                        api_base.as_str(),
+                        parsed.api_key.as_str(),
+                        *transport_kind,
+                    ),
+                    None => Err(t!("tui.model_add.list_empty").into_owned()),
+                };
                 match list_result {
                     Ok(ids) => match self.apply_model_add_bulk(&ids, &parsed) {
                         Ok(msg) => {
@@ -417,10 +432,12 @@ impl TuiShell {
                     name: name.as_str(),
                     api_base: parsed.api_base.as_str(),
                     api_key: parsed.api_key.as_str(),
-                    provider: Some(parsed.provider),
+                    provider_id: parsed.provider_id.as_str(),
                     transport_kind: parsed.transport_kind,
                     context_length: parsed.context_length,
                     cloudflare_gateway_id: parsed.cloudflare_gateway_id.as_deref(),
+                    options: &parsed.options,
+                    credential_slots: &parsed.credential_slots,
                 }) {
                     Ok(()) => {
                         self.messages.push(ChatMessage {
@@ -611,44 +628,25 @@ impl TuiShell {
             if config.has_model_name(id) {
                 continue;
             }
-            let provider_id = crate::model_registry::default_preset_provider_id(parsed.provider);
-            // Sites, billing plans, and workspace ids were already materialized into
-            // `parsed.api_base` by the connect form; Vertex keeps its project/location in
-            // `options` (mirrors the Desktop wizard's `buildSetupOptions`).
+            let provider_id = parsed.provider_id.as_str();
+            // Sites, billing plans, and `{placeholder}` template values were already
+            // materialized into `parsed.api_base` by the connect form; transport options
+            // (vertex `project` / `location`, bedrock `awsRegion`) land in `options`.
             let mut connect = crate::model_provider_presets::preset_connect_draft(
-                parsed.provider,
+                provider_id,
                 parsed.transport_kind,
             );
-            if parsed.provider == crate::model_registry::ModelProvider::GoogleVertexAi {
-                let mut options = serde_json::Map::new();
-                if let Some(project) = parsed
-                    .vertex_project
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    options.insert(
-                        "project".to_string(),
-                        serde_json::Value::String(project.to_string()),
-                    );
-                }
-                if let Some(location) = parsed
-                    .vertex_location
-                    .as_deref()
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                {
-                    options.insert(
-                        "location".to_string(),
-                        serde_json::Value::String(location.to_string()),
-                    );
-                }
-                if !options.is_empty() {
-                    connect.options = Some(options);
-                }
+            if !parsed.options.is_empty() {
+                connect.options = Some(
+                    parsed
+                        .options
+                        .iter()
+                        .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+                        .collect(),
+                );
             }
             config.add_model_to_provider(
-                &provider_id,
+                provider_id,
                 parsed.api_base.clone(),
                 connect,
                 crate::model_registry::ModelEntry {
@@ -656,45 +654,22 @@ impl TuiShell {
                     ..Default::default()
                 },
             );
-            if parsed.provider == crate::model_registry::ModelProvider::GoogleVertexAi {
-                if !parsed.api_key.trim().is_empty() {
-                    if let Err(err) = crate::model_registry::save_provider_api_key(
-                        &provider_id,
-                        parsed.api_key.as_str(),
-                    ) {
-                        return Err(
-                            t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                        );
-                    }
-                } else if parsed.vertex_client_email.is_some()
-                    && parsed.vertex_private_key.is_some()
-                {
-                    // Service account slots land in `provider::{id}::clientEmail` /
-                    // `provider::{id}::privateKey` (the internal keyring account scheme).
-                    if let Err(err) = crate::model_registry::save_provider_slot_secret(
-                        &provider_id,
-                        "clientEmail",
-                        parsed.vertex_client_email.as_deref().unwrap_or(""),
-                    ) {
-                        return Err(
-                            t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                        );
-                    }
-                    if let Err(err) = crate::model_registry::save_provider_slot_secret(
-                        &provider_id,
-                        "privateKey",
-                        parsed.vertex_private_key.as_deref().unwrap_or(""),
-                    ) {
-                        return Err(
-                            t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
-                        );
-                    }
-                }
-            } else if !parsed.api_key.trim().is_empty() {
+            if !parsed.api_key.trim().is_empty() {
                 if let Err(err) = crate::model_registry::save_provider_api_key(
-                    &provider_id,
+                    provider_id,
                     parsed.api_key.as_str(),
                 ) {
+                    return Err(
+                        t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
+                    );
+                }
+            }
+            // Composite credential slots (bedrock IAM pair, vertex service account) land in
+            // `provider::{id}::{slot}` internal keyring accounts.
+            for (slot, value) in &parsed.credential_slots {
+                if let Err(err) =
+                    crate::model_registry::save_provider_slot_secret(provider_id, slot, value)
+                {
                     return Err(
                         t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned()
                     );
@@ -711,9 +686,8 @@ impl TuiShell {
         }
 
         let active = first_new.expect("added > 0");
-        let provider_id = crate::model_registry::default_preset_provider_id(parsed.provider);
         config.active_model = crate::model_registry::ModelRef {
-            provider_id,
+            provider_id: parsed.provider_id.clone(),
             name: active.clone(),
         };
 
