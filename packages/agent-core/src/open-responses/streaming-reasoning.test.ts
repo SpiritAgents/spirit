@@ -7,7 +7,6 @@ import { resolveOpenResponsesReasoningSummary } from "./responses-compat.js";
 test("resolveOpenResponsesReasoningSummary defaults to auto", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "gpt-5",
       reasoningEffort: "medium",
     }),
     "auto",
@@ -17,7 +16,6 @@ test("resolveOpenResponsesReasoningSummary defaults to auto", () => {
 test("resolveOpenResponsesReasoningSummary respects none effort", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "gpt-5",
       reasoningEffort: "none",
       reasoningSummary: "auto",
     }),
@@ -25,11 +23,10 @@ test("resolveOpenResponsesReasoningSummary respects none effort", () => {
   );
 });
 
-test("resolveOpenResponsesReasoningSummary disables summary for Bedrock Mantle", () => {
+test("resolveOpenResponsesReasoningSummary disables summary for the SigV4 surface", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "openai.gpt-5.5",
-      baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
+      options: { auth: "aws-sigv4" },
       reasoningEffort: "medium",
     }),
     undefined,
@@ -39,7 +36,6 @@ test("resolveOpenResponsesReasoningSummary disables summary for Bedrock Mantle",
 test("resolveOpenResponsesReasoningSummary is suppressed for adapters whose wire drops it", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "some-model",
       sdk: "@ai-sdk/huggingface",
       reasoningEffort: "medium",
       reasoningSummary: "auto",

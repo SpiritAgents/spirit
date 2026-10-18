@@ -37,13 +37,21 @@ export function createBedrockMantleBearerAuthFetch(
   };
 }
 
+/**
+ * SigV4 (Bedrock Mantle) auth: declared via `options.auth: "aws-sigv4"`, with IAM credentials in
+ * the `bedrockMantleIam` slots. A static `apiKey` takes precedence when both are present.
+ */
 export function wrapFetchForBedrockMantleIamAuth(
   config: {
     apiKey?: string;
     bedrockMantleIam?: BedrockMantleIamCredentials;
+    options?: Record<string, unknown>;
   },
   baseFetch: typeof fetch,
 ): typeof fetch {
+  if (config.options?.auth !== "aws-sigv4") {
+    return baseFetch;
+  }
   if (config.apiKey?.trim() || !hasBedrockMantleIamCredentials(config.bedrockMantleIam)) {
     return baseFetch;
   }

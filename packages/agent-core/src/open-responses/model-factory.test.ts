@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import { buildResponsesGenerateTools, buildResponsesProviderOptions } from "./model-factory.js";
 import { applyCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
+import type { ResolvedProviderTools } from "../provider-tools/runtime.js";
 
 const hostTool = {
   type: "function",
@@ -13,39 +14,38 @@ const hostTool = {
   },
 } as const;
 
-test("buildResponsesGenerateTools adds web_search for the openai adapter when enabled", () => {
+const declaredWebSearchTool = {
+  type: "function",
+  function: {
+    name: "web_search",
+    description: "Search the web.",
+    parameters: { type: "object", properties: {} },
+  },
+} as const;
+
+function providerToolsWith(
+  functionTools: readonly (typeof declaredWebSearchTool)[],
+): Pick<ResolvedProviderTools, "functionTools"> {
+  return { functionTools: [...functionTools] };
+}
+
+test("buildResponsesGenerateTools merges declared provider function tools", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "gpt-5.4",
-      llmVendor: "openai",
       sdk: "@ai-sdk/openai",
     },
     [hostTool],
+    providerToolsWith([declaredWebSearchTool]),
   );
 
   assert.ok("web_search" in tools);
   assert.ok("grep" in tools);
 });
 
-test("buildResponsesGenerateTools adds web_search for the gateway adapter route", () => {
-  const tools = buildResponsesGenerateTools(
-    {
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "openai/gpt-5.4",
-      llmVendor: "vercel-ai-gateway",
-      sdk: "@ai-sdk/gateway",
-    },
-    [hostTool],
-  );
-
-  assert.ok("web_search" in tools);
-  assert.ok("grep" in tools);
-});
-
-test("buildResponsesGenerateTools uses the flat function apply_patch for declared Bedrock Mantle", () => {
+test("buildResponsesGenerateTools uses the flat function apply_patch for the SigV4 surface", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
@@ -53,7 +53,7 @@ test("buildResponsesGenerateTools uses the flat function apply_patch for declare
       model: "openai.gpt-5.5",
       baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
       sdk: "@ai-sdk/openai",
-      options: { applyPatch: true },
+      options: { auth: "aws-sigv4", applyPatch: true },
     },
     [hostTool],
   );
@@ -62,30 +62,12 @@ test("buildResponsesGenerateTools uses the flat function apply_patch for declare
   assert.equal("grep" in tools, true);
 });
 
-test("buildResponsesGenerateTools omits sdk web_search for Bedrock Mantle", () => {
-  const tools = buildResponsesGenerateTools(
-    {
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "openai.gpt-5.5",
-      baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-      sdk: "@ai-sdk/openai",
-      options: { applyPatch: true },
-    },
-    [hostTool],
-  );
-
-  assert.equal("web_search" in tools, false);
-  assert.ok("grep" in tools);
-});
-
 test("buildResponsesGenerateTools uses the SDK apply_patch tool on the openai adapter", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "gpt-5.4",
-      llmVendor: "openai",
       sdk: "@ai-sdk/openai",
       options: { applyPatch: true },
     },
@@ -111,21 +93,6 @@ test("buildResponsesGenerateTools adds no apply_patch without the options declar
   assert.ok("grep" in tools);
 });
 
-test("buildResponsesGenerateTools adds web_search for the xai adapter", () => {
-  const tools = buildResponsesGenerateTools(
-    {
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "grok-4",
-      llmVendor: "xai",
-      sdk: "@ai-sdk/xai",
-    },
-    [hostTool],
-  );
-
-  assert.ok("web_search" in tools);
-});
-
 test("buildResponsesProviderOptions passes the declared reasoning effort verbatim on xai", () => {
   assert.deepEqual(
     buildResponsesProviderOptions({
@@ -149,7 +116,6 @@ test("buildResponsesProviderOptions maps azure provider options", () => {
     apiKey: "test-key",
     model: "my-deploy",
     sdk: "@ai-sdk/azure",
-    azureResourceName: "my-resource",
     reasoningEffort: "low",
     store: false,
   });

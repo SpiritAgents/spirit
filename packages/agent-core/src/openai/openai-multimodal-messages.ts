@@ -9,15 +9,12 @@ import {
   type JsonValue,
   type LlmMessage,
 } from "../ports.js";
-import { uploadOpenAiCompatibleVideoFile } from "./moonshot-files.js";
+import { uploadDeclaredFile } from "../file-upload/uploader.js";
+import type { FileUploadConfig } from "../file-upload/config.js";
 import {
   pathToLocalVideoReference,
   resolveLocalMediaPath,
 } from "./openai-multimodal-media-path.js";
-import {
-  resolveOpenAiModelCompatibilityProfile,
-  type OpenAiTransportConfig,
-} from "./openai-compat.js";
 
 export function llmHistoryToOpenAiMessages(
   history: LlmMessage[],
@@ -95,18 +92,59 @@ export function llmMessageToOpenAiMessage(message: LlmMessage, assetRoot: string
   };
 }
 
-/** Moonshot AI / Kimi Code: uploads local video paths via the Files API (purpose=video) and rewrites them as ms:// references. */
-export async function resolveMoonshotVideoUrlsInOpenAiMessages(
-  config: OpenAiTransportConfig,
+/** Minimal structural read of a transport config for declaration-driven media resolution. */
+export interface DeclaredMediaConfig {
+  apiKey: string;
+  baseUrl?: string;
+  fileUpload?: FileUploadConfig;
+  modelCapabilities?: { videoInput?: true };
+}
+
+/**
+ * A URL already carrying a wire scheme (`https://`, `data:`, or an upstream reference scheme such
+ * as `ms://` / `stepfile://` / `mm_file://`) passes through literally; anything else is a local
+ * path. Windows drive letters (`C:\…`) are not schemes.
+ */
+function urlHasWireScheme(url: string): boolean {
+  return /^data:/i.test(url) || /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
+}
+
+function pathToInlineVideoDataUrl(absolutePath: string): string {
+  const bytes = readFileSync(absolutePath);
+  const base64 = Buffer.from(bytes).toString("base64");
+  return `data:${guessVideoMimeFromPath(absolutePath)};base64,${base64}`;
+}
+
+function guessVideoMimeFromPath(path: string): string {
+  switch (extname(path).toLowerCase()) {
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".wmv":
+      return "video/x-ms-wmv";
+    default:
+      return "video/mp4";
+  }
+}
+
+/**
+ * Declaration-driven video input resolution: with a `fileUpload` declaration, local video files
+ * upload through it and the produced reference (e.g. `ms://{id}`) goes into the `video_url` field
+ * verbatim; when the declared purpose map does not cover `"video"`, or there is no declaration at
+ * all, the transport's generic base64 inline path applies. Upload failures throw (a turn error,
+ * as before).
+ */
+export async function resolveDeclaredVideoInputsInMessages(
+  config: DeclaredMediaConfig,
   messages: JsonValue[],
   assetRoot = process.cwd(),
 ): Promise<void> {
-  if (config.llmVendor !== "moonshot-ai" && config.llmVendor !== "kimi-code") {
-    return;
-  }
-
-  const profile = resolveOpenAiModelCompatibilityProfile(config);
-  if (!profile.capabilities.videoInput) {
+  if (config.modelCapabilities?.videoInput !== true) {
     return;
   }
 
@@ -131,24 +169,30 @@ export async function resolveMoonshotVideoUrlsInOpenAiMessages(
       }
 
       const url = urlValue.trim();
-      if (!needsMoonshotVideoUpload(url)) {
+      if (url.length === 0 || urlHasWireScheme(url)) {
         continue;
       }
 
       const absolutePath = resolveLocalMediaPath(url, assetRoot);
-      rawVideoUrl["url"] = await uploadOpenAiCompatibleVideoFile(config, absolutePath);
+      if (config.fileUpload !== undefined) {
+        const upload = await uploadDeclaredFile(
+          config.fileUpload,
+          { apiBase: config.baseUrl ?? "", apiKey: config.apiKey },
+          absolutePath,
+          "video",
+        );
+        if (upload.kind === "failed") {
+          throw new Error(upload.error);
+        }
+        if (upload.kind === "uploaded") {
+          rawVideoUrl["url"] = upload.ref;
+          continue;
+        }
+        // kind === "inline": the purpose map does not cover video — fall through to inline.
+      }
+      rawVideoUrl["url"] = pathToInlineVideoDataUrl(absolutePath);
     }
   }
-}
-
-function needsMoonshotVideoUpload(url: string): boolean {
-  return (
-    url.length > 0 &&
-    !url.startsWith("http://") &&
-    !url.startsWith("https://") &&
-    !url.startsWith("data:") &&
-    !url.startsWith("ms://")
-  );
 }
 
 function pathToImageUrl(path: string, assetRoot: string): string {

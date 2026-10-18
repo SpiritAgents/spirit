@@ -220,7 +220,8 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "deepseek-v4-flash",
     baseUrl,
-    llmVendor: "deepseek" as const,
+    sdk: "@ai-sdk/open-responses" as const,
+    providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
   };
   const state = startOpenAiToolAgentState(
     [],
@@ -324,9 +325,9 @@ async function main(): Promise<void> {
   }
 
   const traceEntry = secondCompletion.result.requestTrace[0];
-  if (!isJsonObject(traceEntry) || traceEntry.kind !== "deepseek_open_responses") {
+  if (!isJsonObject(traceEntry) || traceEntry.kind !== "open_responses_sdk_responses") {
     throw new Error(
-      "ai-sdk deepseek streaming smoke did not mark the deepseek_open_responses trace kind.",
+      "ai-sdk deepseek streaming smoke did not mark the open_responses_sdk_responses trace kind.",
     );
   }
 
@@ -432,7 +433,8 @@ async function runDeepSeekVisionCapabilitySmoke(): Promise<void> {
         apiKey: "test-key",
         model: "deepseek-v4-pro",
         baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-        llmVendor: "deepseek",
+        // Declared text-only capability profile: the compat layer trims the image part upfront.
+        modelCapabilities: { languageModel: true },
       },
       state,
       demoLookupToolDefinition(),

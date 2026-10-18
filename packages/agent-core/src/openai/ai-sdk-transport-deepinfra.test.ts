@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import { clearMoonshotChatCompletionMessages } from "./moonshot-chat-completion-messages.js";
+import { clearVideoPassthroughMessages } from "./video-message-stash.js";
 import { applyCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import { AiSdkOpenAiCompatibleTransport } from "./ai-sdk-transport.js";
 import type { OpenAiTransportConfig } from "./openai-compat.js";
@@ -148,12 +148,11 @@ test("DeepInfra image generation reuses openai-compatible branch with preset /op
         apiKey: "test-key",
         model: "deepseek-ai/DeepSeek-V3",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
         imageGeneration: {
           apiKey: "test-key",
           model: "black-forest-labs/FLUX-1-schnell",
           baseUrl: "https://api.deepinfra.com/v1/openai",
-          llmVendor: "deepinfra",
+          imageApi: "openai-images",
         },
       },
       { prompt: "a red circle", size: "1024x1024" },
@@ -196,7 +195,6 @@ test("DeepInfra transport embeds local video input via stash restore", async () 
         apiKey: "test-key",
         model: "acme/video-chat",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
         workspaceRoot,
         modelCapabilities: { videoInput: true },
       },
@@ -234,7 +232,7 @@ test("DeepInfra transport embeds local video input via stash restore", async () 
     );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotChatCompletionMessages();
+    clearVideoPassthroughMessages();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });

@@ -2,7 +2,6 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import type { JsonValue } from "../../ports.js";
 import { AiSdkOpenAiCompatibleTransport } from "../../openai/ai-sdk-transport.js";
 import { AiSdkOpenResponsesTransport } from "../../open-responses/ai-sdk-transport.js";
 import {
@@ -13,12 +12,23 @@ import {
 import { printSmokeSection } from "../shared/index.js";
 import { buildOpenResponsesFinalTextBody } from "./open-responses-mock.js";
 
+// The providerTools entry-body mechanism: pure body-switch entries merge their `body` fields into
+// every request while provider tools are enabled (the alibaba preset materializes enable_search /
+// enable_code_interpreter this way).
+const DECLARED_PROVIDER_TOOLS = [
+  {
+    label: "Web Search",
+    body: { enable_search: true, search_options: { search_strategy: "agent_max" } },
+  },
+  { label: "Code Interpreter", body: { enable_code_interpreter: true } },
+];
+
 async function main(): Promise<void> {
-  await runAlibabaChatSmoke();
-  await runAlibabaResponsesSmoke();
+  await runChatCompletionsEntryBodySmoke();
+  await runOpenResponsesEntryBodySmoke();
 }
 
-async function runAlibabaChatSmoke(): Promise<void> {
+async function runChatCompletionsEntryBodySmoke(): Promise<void> {
   let capturedBody: Record<string, unknown> | undefined;
   const server = createServer(async (request, response) => {
     if (request.method !== "POST" || !request.url?.includes("/chat/completions")) {
@@ -43,7 +53,7 @@ async function runAlibabaChatSmoke(): Promise<void> {
         choices: [
           {
             index: 0,
-            message: { role: "assistant", content: "ALIBABA_CHAT_OK" },
+            message: { role: "assistant", content: "ENTRY_BODY_CHAT_OK" },
             finish_reason: "stop",
           },
         ],
@@ -65,12 +75,12 @@ async function runAlibabaChatSmoke(): Promise<void> {
     apiKey: "test-key",
     model: "qwen3-max",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    llmVendor: "alibaba" as const,
+    providerTools: DECLARED_PROVIDER_TOOLS,
   };
 
   const state = startOpenAiToolAgentState(
     [],
-    "Reply with exactly ALIBABA_CHAT_OK.",
+    "Reply with exactly ENTRY_BODY_CHAT_OK.",
     process.cwd(),
     [],
     [],
@@ -79,26 +89,20 @@ async function runAlibabaChatSmoke(): Promise<void> {
   const round = await transport.startToolAgentRound(config, state, []);
   server.close();
 
-  printSmokeSection("alibaba chat smoke", round);
+  printSmokeSection("chat-completions provider tool entry body smoke", round);
   if (round.kind !== "success" || round.result.step.kind !== "final-response-ready") {
-    throw new Error("alibaba chat smoke did not reach final-response-ready.");
+    throw new Error("chat-completions entry body smoke did not reach final-response-ready.");
   }
 
-  const extraBody = capturedBody?.extra_body as Record<string, unknown> | undefined;
-  if (extraBody?.enable_search !== true) {
-    throw new Error("alibaba chat smoke request body does not include enable_search.");
+  if (capturedBody?.enable_search !== true || capturedBody?.enable_code_interpreter !== true) {
+    throw new Error(
+      "chat-completions entry body smoke request body is missing the declared entry body fields.",
+    );
   }
-
-  const trace = round.result.requestTrace[0];
-  if (!isJsonObject(trace) || trace.kind !== "alibaba_sdk_chat_completions") {
-    throw new Error("alibaba chat smoke did not write an alibaba_sdk_chat_completions trace.");
-  }
-  if (!isJsonObject(trace.extra_body as JsonValue)) {
-    throw new Error("alibaba chat smoke trace is missing extra_body.");
-  }
+  assertSearchStrategy(capturedBody);
 }
 
-async function runAlibabaResponsesSmoke(): Promise<void> {
+async function runOpenResponsesEntryBodySmoke(): Promise<void> {
   let capturedBody: Record<string, unknown> | undefined;
   const server = createServer(async (request, response) => {
     if (request.method !== "POST" || !request.url?.includes("/responses")) {
@@ -114,9 +118,7 @@ async function runAlibabaResponsesSmoke(): Promise<void> {
     capturedBody = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
 
     response.writeHead(200, { "content-type": "application/json" });
-    response.end(
-      JSON.stringify(buildOpenResponsesFinalTextBody("qwen3-max", "ALIBABA_RESPONSES_OK")),
-    );
+    response.end(JSON.stringify(buildOpenResponsesFinalTextBody("qwen3-max", "RESP_OK")));
   });
 
   server.listen(0, "127.0.0.1");
@@ -133,12 +135,13 @@ async function runAlibabaResponsesSmoke(): Promise<void> {
     apiKey: "test-key",
     model: "qwen3-max",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    llmVendor: "alibaba" as const,
+    sdk: "@ai-sdk/open-responses",
+    providerTools: DECLARED_PROVIDER_TOOLS,
   };
 
   const state = startOpenAiToolAgentState(
     [],
-    "Reply with exactly ALIBABA_RESPONSES_OK.",
+    "Reply with exactly RESP_OK.",
     process.cwd(),
     [],
     [],
@@ -147,37 +150,35 @@ async function runAlibabaResponsesSmoke(): Promise<void> {
   const round = await transport.startToolAgentRound(config, state, []);
   server.close();
 
-  printSmokeSection("alibaba responses smoke", round);
+  printSmokeSection("open-responses provider tool entry body smoke", round);
   if (round.kind !== "success" || round.result.step.kind !== "final-response-ready") {
-    throw new Error("alibaba responses smoke did not reach final-response-ready.");
+    throw new Error("open-responses entry body smoke did not reach final-response-ready.");
   }
 
-  const tools = capturedBody?.tools as Array<{ type?: string }> | undefined;
-  for (const type of ["web_search", "code_interpreter"] as const) {
-    if (!tools?.some((tool) => tool.type === type)) {
-      throw new Error(`alibaba responses smoke request body is missing ${type}.`);
-    }
-  }
-
-  const assistantText = extractLastOpenAiAssistantText(round.result.state)?.trim();
-  if (assistantText !== "ALIBABA_RESPONSES_OK") {
+  if (capturedBody?.enable_search !== true || capturedBody?.enable_code_interpreter !== true) {
     throw new Error(
-      `alibaba responses smoke did not get the expected text: ${assistantText ?? "<empty>"}`,
+      "open-responses entry body smoke request body is missing the declared entry body fields.",
     );
   }
+  assertSearchStrategy(capturedBody);
 
-  const trace = round.result.requestTrace[0];
-  if (!isJsonObject(trace) || trace.kind !== "alibaba_open_responses") {
-    throw new Error("alibaba responses smoke did not write an alibaba_open_responses trace.");
+  const assistantText = extractLastOpenAiAssistantText(round.result.state)?.trim();
+  if (assistantText !== "RESP_OK") {
+    throw new Error(
+      `open-responses entry body smoke did not get the expected text: ${assistantText ?? "<empty>"}`,
+    );
   }
 }
 
-function isJsonObject(value: JsonValue | undefined): value is Record<string, JsonValue> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+function assertSearchStrategy(capturedBody: Record<string, unknown> | undefined): void {
+  const searchOptions = capturedBody?.search_options as Record<string, unknown> | undefined;
+  if (searchOptions?.search_strategy !== "agent_max") {
+    throw new Error("entry body smoke request body is missing the nested search_options.");
+  }
 }
 
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`ai-sdk alibaba built-in tools smoke failed: ${message}`);
+  console.error(`ai-sdk provider tool entry body smoke failed: ${message}`);
   process.exitCode = 1;
 });

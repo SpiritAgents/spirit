@@ -551,8 +551,6 @@ test("providerTools and webFetch opt-outs are stamped onto the transport config"
   });
   const config = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
   assert.equal(config.providerToolsEnabled, false);
-  // The renamed key also gates the legacy field until agent-core's gates move over.
-  assert.equal(config.webSearchEnabled, false);
   assert.equal(config.webFetchEnabled, false);
 });
 
@@ -566,7 +564,6 @@ test("exposure flags are absent by default", () => {
   );
   const config = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
   assert.equal("providerToolsEnabled" in config, false);
-  assert.equal("webSearchEnabled" in config, false);
   assert.equal("webFetchEnabled" in config, false);
 });
 

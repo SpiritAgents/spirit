@@ -5,21 +5,22 @@ import {
   readResponsesStoredStateRequestPreviousResponseId,
   responsesUsesStoredState,
 } from "./responses-incremental-input.js";
-import {
-  patchArkResponsesInputItemStatus,
-  shouldPatchArkResponsesInputItemStatus,
-} from "./compat-responses-input-status.js";
-import {
-  resolveOpenResponsesSdkProvider,
-  type OpenResponsesTransportConfig,
-} from "./responses-compat.js";
+import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 type FetchFn = typeof fetch;
 
-export function shouldUseResponsesStoredStateFetch(config: OpenResponsesTransportConfig): boolean {
+/**
+ * The official OpenAI/Azure adapters speak `store` / `previous_response_id` natively through their
+ * provider options; every other adapter gets the wire fields patched into the request body here,
+ * gated on the declared `options.storedState`.
+ */
+export function shouldUseResponsesStoredStateFetch(
+  config: Pick<OpenResponsesTransportConfig, "options" | "sdk">,
+): boolean {
   return (
-    responsesUsesStoredState(config) &&
-    resolveOpenResponsesSdkProvider(config) === "open-responses-compatible"
+    config.options?.storedState === true &&
+    config.sdk !== "@ai-sdk/openai" &&
+    config.sdk !== "@ai-sdk/azure"
   );
 }
 
@@ -56,9 +57,6 @@ export function patchResponsesStoredStateRequestInit(
     const previousResponseId = readResponsesStoredStateRequestPreviousResponseId();
     if (previousResponseId) {
       patched.previous_response_id = previousResponseId;
-    }
-    if (shouldPatchArkResponsesInputItemStatus(config)) {
-      patchArkResponsesInputItemStatus(patched);
     }
 
     return {

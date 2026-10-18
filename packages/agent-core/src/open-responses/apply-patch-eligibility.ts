@@ -4,13 +4,7 @@ import {
   type JsonValue,
   type AgentMode,
 } from "../ports.js";
-import {
-  isBedrockMantleOpenResponsesConfig,
-  type OpenResponsesTransportConfig,
-} from "./responses-compat.js";
-import { shouldUseGatewayWebSearch } from "./gateway-web-search.js";
-
-export { normalizeGatewayOpenAiModelId } from "./responses-compat.js";
+import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const LEGACY_FILE_TOOL_NAMES = new Set(["create_file", "edit_file", "delete_file"]);
 
@@ -30,7 +24,12 @@ function declaresApplyPatch(config: Pick<OpenResponsesTransportConfig, "options"
   return config.options?.applyPatch === true;
 }
 
-/** Official OpenAI: `@ai-sdk/openai` 3.x `openai.tools.applyPatch`; Gateway goes through fetch function_call. */
+/** The SigV4 (Bedrock Mantle) surface speaks the OpenAI Responses shape but has no SDK-native apply_patch tool. */
+function isSigV4Surface(config: Pick<OpenResponsesTransportConfig, "options">): boolean {
+  return config.options?.auth === "aws-sigv4";
+}
+
+/** Official OpenAI: `@ai-sdk/openai` 3.x `openai.tools.applyPatch`; Gateway/SigV4 go through fetch function_call. */
 export function shouldUseOpenAiSdkApplyPatchTool(
   config: Pick<
     OpenResponsesTransportConfig,
@@ -40,13 +39,13 @@ export function shouldUseOpenAiSdkApplyPatchTool(
   return (
     shouldUseApplyPatchFileTools(config) &&
     config.sdk === "@ai-sdk/openai" &&
-    !isBedrockMantleOpenResponsesConfig(config)
+    !isSigV4Surface(config)
   );
 }
 
 /**
- * The gateway v3 language-model protocol has no built-in `type: apply_patch`; a flat function tool
- * must be registered in tools. Bedrock Mantle takes the same flat function-tool path.
+ * The gateway v3 language-model protocol and the SigV4 surface have no built-in
+ * `type: apply_patch`; a flat function tool must be registered in tools.
  */
 export function shouldUseApplyPatchFunctionTool(
   config: Pick<
@@ -57,7 +56,7 @@ export function shouldUseApplyPatchFunctionTool(
   return (
     shouldUseApplyPatchFileTools(config) &&
     !shouldUseOpenAiSdkApplyPatchTool(config) &&
-    (config.sdk === "@ai-sdk/gateway" || isBedrockMantleOpenResponsesConfig(config))
+    (config.sdk === "@ai-sdk/gateway" || isSigV4Surface(config))
   );
 }
 
@@ -76,12 +75,13 @@ export function shouldUseBuiltInApplyPatchRequestItems(
 }
 
 /**
- * Gateway v3 language-model uses `prompt`; only the Open Responses fetch omits and stash/reinjects via body.input.
+ * The gateway v3 language-model uses `prompt`; only the Open Responses fetch omits and
+ * stash/reinjects apply_patch rounds via body.input.
  */
 export function shouldOmitApplyPatchFromAiSdkMessages(
   config: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode" | "llmVendor"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
 ): boolean {
   if (!shouldUseApplyPatchFileTools(config)) {
@@ -90,7 +90,7 @@ export function shouldOmitApplyPatchFromAiSdkMessages(
   if (shouldUseOpenAiSdkApplyPatchTool(config)) {
     return false;
   }
-  if (shouldUseGatewayWebSearch(config)) {
+  if (config.sdk === "@ai-sdk/gateway") {
     return false;
   }
   return true;

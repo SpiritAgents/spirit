@@ -15,12 +15,10 @@ export interface LlmModelCapabilities {
 
 /**
  * User-level opt-out switches for the built-in web tools and provider-declared tools, resolved by
- * the host from config.json (`agents.webSearch.enabled` / `agents.webFetch.enabled` /
- * `agents.providerTools.enabled`). Undefined means enabled; only an explicit `false` hides the
- * tool from the model.
+ * the host from config.json (`agents.webFetch.enabled` / `agents.providerTools.enabled`).
+ * Undefined means enabled; only an explicit `false` hides the tool from the model.
  */
 export interface LlmWebToolExposure {
-  webSearchEnabled?: boolean;
   webFetchEnabled?: boolean;
   providerToolsEnabled?: boolean;
 }

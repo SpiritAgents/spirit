@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import { isTogetherAiApiBase, resolveVideoGenerationBackend } from "./router.js";
+import { resolveVideoGenerationBackend } from "./router.js";
 import { resolveTogetherVideoApiBase, TogetherVideosBackend } from "./together-videos-backend.js";
 
 test("resolveTogetherVideoApiBase rewrites /v1 apiBase to /v2", () => {
@@ -15,20 +15,19 @@ test("resolveTogetherVideoApiBase rewrites /v1 apiBase to /v2", () => {
     resolveTogetherVideoApiBase("https://api.together.xyz/v1/"),
     "https://api.together.xyz/v2",
   );
-  assert.equal(resolveTogetherVideoApiBase(undefined), "https://api.together.ai/v2");
+  assert.throws(() => resolveTogetherVideoApiBase(undefined), /requires a baseUrl/);
 });
 
-test("resolveVideoGenerationBackend routes together-ai vendor and api base", () => {
+test("resolveVideoGenerationBackend routes by the declared videoApi shape", () => {
   assert.equal(
     resolveVideoGenerationBackend({
       apiKey: "test-key",
       model: "org/example-video-model",
-      llmVendor: "together-ai",
+      videoApi: "together-videos",
       baseUrl: "https://api.together.ai/v1",
     }).id,
     "together-videos",
   );
-  assert.equal(isTogetherAiApiBase("https://api.together.xyz/v1"), true);
 });
 
 test("TogetherVideosBackend create/poll/download success path", async () => {
@@ -76,7 +75,7 @@ test("TogetherVideosBackend create/poll/download success path", async () => {
         apiKey: "test-key",
         model: "org/example-video-model",
         baseUrl: "https://api.together.ai/v1",
-        llmVendor: "together-ai",
+        videoApi: "together-videos",
       },
       {
         prompt: "a cat walks",
@@ -130,7 +129,7 @@ test("TogetherVideosBackend surfaces failed status message", async () => {
             apiKey: "test-key",
             model: "org/example-video-model",
             baseUrl: "https://api.together.ai/v1",
-            llmVendor: "together-ai",
+            videoApi: "together-videos",
           },
           { prompt: "bad prompt" },
           async () => {

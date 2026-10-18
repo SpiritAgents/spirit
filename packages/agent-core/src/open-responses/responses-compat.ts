@@ -10,7 +10,6 @@ import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-se
 import type { ProviderToolEntry } from "../provider-tools/types.js";
 import type {
   OpenAiImageGenerationConfig,
-  OpenAiLlmVendor,
   OpenAiVideoGenerationConfig,
 } from "../openai/openai-compat.js";
 import {
@@ -20,9 +19,6 @@ import {
 } from "../reasoning-effort.js";
 import { extractAzureResourceNameFromApiBase } from "../azure-resource.js";
 import { cloneJsonValue } from "../tool-agent.js";
-
-/** Underlying AI SDK adapter: official OpenAI Responses, official Azure Responses, official xAI Responses, or a generic Open Responses compatible endpoint. */
-export type OpenResponsesSdkProvider = "openai" | "xai" | "azure" | "open-responses-compatible";
 
 export type OpenResponsesPreviousResponseMode = "disabled" | "stored" | "stateless";
 
@@ -37,12 +33,6 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   project?: string;
   compactModel?: string;
   workspaceRoot?: string;
-  /**
-   * Legacy host vendor label, no longer written by the host. Runtime request shaping keys on the
-   * declared `sdk` and literal declarations instead; retained only for not-yet-rewired vendor
-   * tool modules.
-   */
-  llmVendor?: OpenAiLlmVendor;
   modelCapabilities?: LlmModelCapabilities;
   /** Official OpenAI Responses: whether the conversation is stored server-side by OpenAI. Defaults to true when unset. */
   store?: boolean;
@@ -69,8 +59,6 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
     secretAccessKey: string;
     sessionToken?: string;
   };
-  /** Azure resource name; aligned with `@ai-sdk/azure`'s `resourceName`. */
-  azureResourceName?: string;
   /** Request policy profile for non-agent lightweight requests such as code completion; defaults to the agent path behavior. */
   transportRequestProfile?: TransportRequestProfile;
   /** User thinking-switch state: `false` selects the `thinkingSwitch.off` encoding. Absent = on. */
@@ -124,63 +112,22 @@ export interface OpenResponsesRequestTrace extends JsonObject {
 }
 
 /**
- * Adapter selection on the declared `sdk` package name; absent = the generic
- * `@ai-sdk/open-responses` adapter. Gateway-routed OpenAI models (e.g. `openai/gpt-5.5`) MUST NOT
- * use `@ai-sdk/openai`: it assumes a direct OpenAI endpoint, strips the `openai/` routing prefix
- * and injects direct-only request shaping, which makes the Vercel AI Gateway silently stop
- * streaming reasoning summaries. apply_patch stays available via the flat function-tool path
- * (shouldUseApplyPatchFunctionTool).
+ * Model id passed to the adapter's language model factory. Gateway-routed models keep their
+ * `openai/` prefix: the gateway adapter needs it for routing, and `@ai-sdk/openai` is never used
+ * for gateway-routed models (it assumes a direct OpenAI endpoint, strips the routing prefix, and
+ * injects direct-only request shaping).
  */
-export function resolveOpenResponsesSdkProvider(
-  config: Pick<OpenResponsesTransportConfig, "sdk">,
-): OpenResponsesSdkProvider {
-  switch (config.sdk) {
-    case "@ai-sdk/openai":
-      return "openai";
-    case "@ai-sdk/xai":
-      return "xai";
-    case "@ai-sdk/azure":
-      return "azure";
-    default:
-      return "open-responses-compatible";
-  }
-}
-
-/**
- * Strips Gateway-style `openai/` routing prefix. Other vendor prefixes return undefined.
- */
-export function normalizeGatewayOpenAiModelId(model: string): string | undefined {
-  const trimmed = model.trim();
-  const lower = trimmed.toLowerCase();
-  const prefix = "openai/";
-  if (!lower.startsWith(prefix)) {
-    return undefined;
-  }
-
-  return trimmed.slice(prefix.length).trim();
-}
-
-export function isGatewayOpenAiRoutedModel(model: string): boolean {
-  return normalizeGatewayOpenAiModelId(model) !== undefined;
-}
-
-/** Model id passed to the adapter's language model factory. */
 export function resolveOpenResponsesLanguageModelId(
   config: Pick<OpenResponsesTransportConfig, "model">,
 ): string {
   return config.model;
 }
 
-/** Bedrock Mantle Open Responses (e.g. openai.gpt-5.5 @ bedrock-mantle.*.api.aws/openai/v1). */
-export function isBedrockMantleOpenResponsesConfig(
-  config: Pick<OpenResponsesTransportConfig, "baseUrl" | "model">,
+/** `options.auth: "aws-sigv4"`: the Bedrock Mantle Open Responses surface (SigV4 IAM auth). */
+export function isAwsSigV4AuthConfig(
+  config: Pick<OpenResponsesTransportConfig, "options">,
 ): boolean {
-  const baseUrl = config.baseUrl?.trim().toLowerCase() ?? "";
-  if (baseUrl.includes("bedrock-mantle.") && baseUrl.includes("/openai/")) {
-    return true;
-  }
-
-  return /^openai\.gpt-/i.test(config.model.trim());
+  return config.options?.auth === "aws-sigv4";
 }
 
 /** The declared reasoning effort for the wire, verbatim; `default`/absent sends nothing. */
@@ -216,11 +163,11 @@ const RESPONSES_REASONING_SUMMARY_SDKS: ReadonlySet<string> = new Set([
 export function resolveOpenResponsesReasoningSummary(
   config: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "model" | "reasoningEffort" | "reasoningSummary" | "sdk"
+    "reasoningEffort" | "reasoningSummary" | "sdk" | "options"
   >,
 ): OpenResponsesReasoningSummary | undefined {
-  // Bedrock Mantle's Open Responses surface has no reasoning summary support.
-  if (isBedrockMantleOpenResponsesConfig(config)) {
+  // The SigV4 (Bedrock Mantle) Open Responses surface has no reasoning summary support.
+  if (isAwsSigV4AuthConfig(config)) {
     return undefined;
   }
 
@@ -242,7 +189,7 @@ export function resolveOpenResponsesReasoningSummary(
 export function openResponsesReasoningTrace(
   config: Pick<
     OpenResponsesTransportConfig,
-    "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary" | "sdk" | "baseUrl"
+    "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary" | "sdk" | "options"
   >,
 ): JsonObject | undefined {
   const effort = openResponsesReasoningEffort(config);
@@ -284,13 +231,12 @@ export function buildOpenResponsesRequestTrace(
     "store" | "previousResponseId" | "reasoning" | "truncation"
   >,
 ): JsonValue[] {
-  const provider = resolveOpenResponsesSdkProvider(config);
   const kind: OpenResponsesRequestTraceKind =
-    provider === "openai"
+    config.sdk === "@ai-sdk/openai"
       ? "openai_sdk_responses"
-      : provider === "xai"
+      : config.sdk === "@ai-sdk/xai"
         ? "xai_sdk_responses"
-        : provider === "azure"
+        : config.sdk === "@ai-sdk/azure"
           ? "azure_sdk_responses"
           : "open_responses_sdk_responses";
 
@@ -323,18 +269,19 @@ export function openResponsesPostUrl(baseUrl: string | undefined): string {
   return normalized.endsWith("/responses") ? normalized : `${normalized}/responses`;
 }
 
+/**
+ * The `@ai-sdk/azure` adapter's `resourceName`: parsed from the materialized apiBase
+ * (`https://{resourceName}.openai.azure.com/openai/v1`).
+ */
 export function resolveAzureResourceName(
-  config: Pick<OpenResponsesTransportConfig, "azureResourceName" | "baseUrl">,
+  config: Pick<OpenResponsesTransportConfig, "baseUrl">,
 ): string {
-  const explicit = config.azureResourceName?.trim();
-  if (explicit) {
-    return explicit;
-  }
-
   const fromBase = extractAzureResourceNameFromApiBase(config.baseUrl ?? "");
   if (fromBase) {
     return fromBase;
   }
 
-  throw new Error("Azure azureResourceName configuration is missing.");
+  throw new Error(
+    "Azure resource name cannot be parsed from apiBase (expected https://{resourceName}.openai.azure.com/...).",
+  );
 }

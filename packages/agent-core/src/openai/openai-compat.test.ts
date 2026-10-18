@@ -3,7 +3,6 @@ import { test } from "vitest";
 
 import {
   buildOpenAiRequestTrace,
-  isDeepSeekV4VisionModelId,
   openAiReasoningEffort,
   resolveOpenAiModelCompatibilityProfile,
   type OpenAiTransportConfig,
@@ -21,12 +20,6 @@ test("resolveOpenAiModelCompatibilityProfile trims only from declared capabiliti
   const undeclared = resolveOpenAiModelCompatibilityProfile({ model: "some-model" });
   assert.equal(undeclared.hasExplicitCapabilities, false);
   assert.deepEqual(undeclared.capabilities, {});
-});
-
-test("isDeepSeekV4VisionModelId recognizes the experimental vision model id", () => {
-  assert.equal(isDeepSeekV4VisionModelId("deepseek-v4-flash-vision-exp"), true);
-  assert.equal(isDeepSeekV4VisionModelId("deepseek/deepseek-v4-flash-vision-exp"), true);
-  assert.equal(isDeepSeekV4VisionModelId("deepseek-v4-flash"), false);
 });
 
 test("openAiReasoningEffort passes the declared tier verbatim and drops default", () => {

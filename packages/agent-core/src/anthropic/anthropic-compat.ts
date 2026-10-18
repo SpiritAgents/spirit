@@ -12,8 +12,6 @@ import type {
 } from "../llm-provider-shared.js";
 import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
 
-export const DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
-
 export type AnthropicThinkingConfig =
   | { type: "adaptive"; display?: "omitted" | "summarized" }
   | { type: "enabled"; budgetTokens: number; display?: "omitted" | "summarized" }
@@ -44,12 +42,6 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
   structuredOutputMode?: AnthropicStructuredOutputMode;
   /** Policy profile for lightweight non-Agent requests such as code completion; defaults to agent-path behavior. */
   transportRequestProfile?: TransportRequestProfile;
-  /**
-   * Legacy host vendor label, no longer written by the host. Runtime request shaping keys on the
-   * declared `sdk` and literal declarations instead; retained only for not-yet-rewired vendor
-   * tool modules.
-   */
-  llmVendor?: import("../openai/openai-compat.js").OpenAiLlmVendor;
   /**
    * Catalog flag: the model supports the thinking on/off switch. Capability marker for pickers;
    * the wire encoding is declared by `thinkingSwitch`.

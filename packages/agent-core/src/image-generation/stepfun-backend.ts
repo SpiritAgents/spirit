@@ -1,19 +1,26 @@
 import { getLlmFetch } from "../llm-fetch.js";
 import type { OpenAiImageGenerationConfig } from "../openai/openai-compat.js";
-import { normalizeGeneratedImageMarkdownRef } from "../openai/ai-sdk-transport.js";
-import { resolveStepfunV1Url } from "../stepfun/stepfun-api-hosts.js";
+import { buildGeneratedImageToolOutput } from "./output.js";
 import type {
   GeneratedImageFile,
   GeneratedImageSaveRequest,
   ImageGenerationRequest,
   ToolExecutionOutput,
 } from "../ports.js";
-import { createLlmMessageContentFromTextAndImages } from "../ports.js";
 
-export const STEPFUN_IMAGE_GENERATION_URL = resolveStepfunV1Url(undefined, "/images/generations");
+/**
+ * The `stepfun-images` API shape: OpenAI-images-style `/images/generations` under the origin's
+ * `/v1`, with `response_format` b64_json/url and a per-model size quirk. Selected via the provider
+ * entry's declared `imageApi`.
+ */
+const STEPFUN_IMAGES_PATH = "/v1/images/generations";
 
 function resolveStepfunImageGenerationUrl(config: OpenAiImageGenerationConfig): string {
-  return resolveStepfunV1Url(config.baseUrl, "/images/generations");
+  const trimmed = config.baseUrl?.trim() ?? "";
+  if (!trimmed) {
+    throw new Error("The stepfun-images API shape requires a baseUrl.");
+  }
+  return `${new URL(trimmed).origin}${STEPFUN_IMAGES_PATH}`;
 }
 
 interface StepfunImageGenerationResponse {
@@ -79,7 +86,7 @@ export async function generateStepfunImage(
   saveGeneratedImage: (request: GeneratedImageSaveRequest) => Promise<GeneratedImageFile>,
 ): Promise<ToolExecutionOutput> {
   console.error("[agent-core][generate-image] request.start", {
-    adapter: "stepfun",
+    adapter: "stepfun-images",
     model: config.model,
     createUrl: resolveStepfunImageGenerationUrl(config),
     size: request.size,
@@ -108,12 +115,12 @@ export async function generateStepfunImage(
       model: config.model,
     });
     console.error("[agent-core][generate-image] request.success", {
-      adapter: "stepfun",
+      adapter: "stepfun-images",
       model: config.model,
       mimeType: saved.mimeType,
       responseFormat: "b64_json",
     });
-    return buildStepfunImageToolOutput(saved, config.model);
+    return buildGeneratedImageToolOutput(saved, config.model);
   }
 
   const imageUrl = first?.url?.trim();
@@ -138,30 +145,10 @@ export async function generateStepfunImage(
   });
 
   console.error("[agent-core][generate-image] request.success", {
-    adapter: "stepfun",
+    adapter: "stepfun-images",
     model: config.model,
     mimeType: saved.mimeType,
   });
 
-  return buildStepfunImageToolOutput(saved, config.model);
-}
-
-function buildStepfunImageToolOutput(
-  saved: GeneratedImageFile,
-  model: string,
-): ToolExecutionOutput {
-  const summaryLines = ["[generated image]"];
-  const markdownRef = normalizeGeneratedImageMarkdownRef(saved.markdownRef);
-  summaryLines.push(
-    `image_ref: ${markdownRef}`,
-    `read_file_path: ${markdownRef}`,
-    `embed_markdown: ![Generated image](${markdownRef})`,
-  );
-  summaryLines.push(`mime_type: ${saved.mimeType}`, `model: ${model}`);
-  const summaryText = summaryLines.join("\n");
-
-  return {
-    content: createLlmMessageContentFromTextAndImages(summaryText, [saved.path]),
-    summaryText,
-  };
+  return buildGeneratedImageToolOutput(saved, config.model);
 }

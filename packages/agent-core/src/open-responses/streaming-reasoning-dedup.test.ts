@@ -11,7 +11,6 @@ const config: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test",
   model: "openrouter/auto",
-  llmVendor: "openrouter",
   sdk: "@ai-sdk/open-responses",
 };
 
@@ -39,7 +38,7 @@ async function collectThinkingChunks(
   return chunks;
 }
 
-test("responses streaming ignores duplicate raw reasoning when reasoning-delta exists", async () => {
+test("responses streaming does not duplicate reasoning when raw SSE mirrors reasoning-delta", async () => {
   async function* stream(): AsyncGenerator<TextStreamPart<any>> {
     yield {
       type: "raw",
@@ -49,6 +48,14 @@ test("responses streaming ignores duplicate raw reasoning when reasoning-delta e
       },
     };
     yield { type: "reasoning-delta", id: "rs_1", text: "The" };
+    // A faithful mirror carries every delta as a raw chunk too; the SDK deltas are suppressed.
+    yield {
+      type: "raw",
+      rawValue: {
+        type: "response.reasoning_text.delta",
+        delta: " user",
+      },
+    };
     yield { type: "reasoning-delta", id: "rs_1", text: " user" };
     yield { type: "text-delta", id: "t1", text: "OK" };
     yield {
@@ -112,73 +119,11 @@ test("responses streaming accepts a new reasoning-delta id after a built-in tool
   assert.deepEqual(chunks, ["Need sources.", " Search finished."]);
 });
 
-test("responses streaming persists web_search_call items on the assistant message", async () => {
-  const deepseekConfig: OpenResponsesTransportConfig = {
-    transportKind: "open-responses",
-    apiKey: "test",
-    model: "deepseek-v4-flash",
-    llmVendor: "deepseek",
-    sdk: "@ai-sdk/open-responses",
-  };
-
-  async function* stream(): AsyncGenerator<TextStreamPart<any>> {
-    yield {
-      type: "raw",
-      rawValue: {
-        type: "response.output_item.done",
-        item: {
-          type: "web_search_call",
-          id: "ws_persist",
-          status: "completed",
-          action: { type: "search", queries: ["xAI"] },
-        },
-      },
-    };
-    yield { type: "text-delta", id: "t4", text: "Answer" };
-    yield {
-      type: "raw",
-      rawValue: {
-        type: "response.completed",
-        response: { id: "resp-persist" },
-      },
-    };
-  }
-
-  const state: ToolAgentState = { messages: [], steps: 0 };
-  const completion = createDeferred<ToolAgentRoundCompletion<ToolAgentState>>();
-  for await (const _event of responsesEventStreamToRuntimeEvents(
-    deepseekConfig,
-    stream(),
-    {},
-    state,
-    [],
-    completion,
-  )) {
-    // drain
-  }
-  await completion.promise;
-
-  const assistant = state.messages.at(-1);
-  assert.ok(assistant && typeof assistant === "object" && !Array.isArray(assistant));
-  const providerState = (
-    assistant as { providerState?: { openResponses?: { builtInOutputItems?: unknown } } }
-  ).providerState;
-  assert.deepEqual(providerState?.openResponses?.builtInOutputItems, [
-    {
-      type: "web_search_call",
-      id: "ws_persist",
-      status: "completed",
-      action: { type: "search", queries: ["xAI"] },
-    },
-  ]);
-});
-
 test("responses streaming falls back to raw reasoning when reasoning-delta is absent", async () => {
   const volcengineConfig: OpenResponsesTransportConfig = {
     transportKind: "open-responses",
     apiKey: "test",
     model: "doubao-seed-2-1-pro-260628",
-    llmVendor: "volcengine",
     sdk: "@ai-sdk/open-responses",
   };
 
