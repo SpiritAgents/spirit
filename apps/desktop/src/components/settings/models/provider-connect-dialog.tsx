@@ -135,8 +135,8 @@ export function ProviderConnectDialog({
   const [connectAlibabaWorkspaceId, setConnectAlibabaWorkspaceId] = useState("");
   const [customConnectMode, setCustomConnectMode] = useState<"single" | "bulk">("single");
   const [bedrockConnectMode, setBedrockConnectMode] = useState<"bearer" | "iam">("bearer");
-  const [vertexConnectMode, setVertexConnectMode] = useState<"service-account" | "express">(
-    "service-account",
+  const [vertexConnectMode, setVertexConnectMode] = useState<"adc" | "service-account" | "express">(
+    "adc",
   );
   const [connectCustomGroupLabel, setConnectCustomGroupLabel] = useState("");
 
@@ -208,10 +208,13 @@ export function ProviderConnectDialog({
   const vertexConnectFields = {
     ...(connectVertexProject.trim() ? { vertexProject: connectVertexProject.trim() } : {}),
     ...(connectVertexLocation.trim() ? { vertexLocation: connectVertexLocation.trim() } : {}),
-    ...(connectVertexClientEmail.trim()
+    // ADC writes no credential slots: service-account secrets only leave the form in its own mode.
+    ...(vertexConnectMode === "service-account" && connectVertexClientEmail.trim()
       ? { vertexClientEmail: connectVertexClientEmail.trim() }
       : {}),
-    ...(connectVertexPrivateKey.trim() ? { vertexPrivateKey: connectVertexPrivateKey.trim() } : {}),
+    ...(vertexConnectMode === "service-account" && connectVertexPrivateKey.trim()
+      ? { vertexPrivateKey: connectVertexPrivateKey.trim() }
+      : {}),
   };
 
   const syncCatalogFromUpstream = async (forceRefresh: boolean) => {
@@ -226,7 +229,7 @@ export function ProviderConnectDialog({
       if (!connectVertexProject.trim() || !connectVertexLocation.trim()) {
         throw new Error(t("settings.vertexProjectLocationRequired"));
       }
-      if (!hasVertexCatalogCredentials) {
+      if (vertexConnectMode === "service-account" && !hasVertexCatalogCredentials) {
         throw new Error(t("settings.vertexCatalogServiceAccountRequired"));
       }
     } else if (provider === "custom") {
@@ -1040,7 +1043,7 @@ export function ProviderConnectDialog({
                 aria-label={t("settings.vertexAuthMode")}
                 className="inline-flex h-9 shrink-0 rounded-lg border border-border/40 bg-muted/30 p-0.5"
               >
-                {(["service-account", "express"] as const).map((value) => (
+                {(["adc", "service-account", "express"] as const).map((value) => (
                   <button
                     key={value}
                     type="button"
@@ -1055,9 +1058,11 @@ export function ProviderConnectDialog({
                     disabled={busy || previewBusy}
                     onClick={() => setVertexConnectMode(value)}
                   >
-                    {value === "service-account"
-                      ? t("settings.vertexAuthServiceAccount")
-                      : t("settings.vertexAuthExpress")}
+                    {value === "adc"
+                      ? t("settings.vertexAuthAdc")
+                      : value === "service-account"
+                        ? t("settings.vertexAuthServiceAccount")
+                        : t("settings.vertexAuthExpress")}
                   </button>
                 ))}
               </div>
@@ -1076,7 +1081,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode !== "express" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-vertex-project">{t("settings.vertexProject")}</Label>
@@ -1099,6 +1104,9 @@ export function ProviderConnectDialog({
                 />
               </div>
             </>
+          ) : null}
+          {connectCredentialKind === "vertex" && vertexConnectMode === "adc" ? (
+            <p className="text-xs leading-5 text-muted-foreground">{t("settings.vertexAdcHint")}</p>
           ) : null}
           {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
             <div className="grid gap-2">
@@ -1242,6 +1250,32 @@ export function ProviderConnectDialog({
                 size="sm"
                 disabled={
                   busy || previewBusy || !connectAwsRegion.trim() || !hasBedrockCatalogCredentials
+                }
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await syncCatalogFromUpstream(false);
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.addProvider")}
+              </Button>
+            ) : null}
+            {connectCredentialKind === "vertex" && vertexConnectMode === "adc" ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  busy ||
+                  previewBusy ||
+                  !connectVertexProject.trim() ||
+                  !connectVertexLocation.trim()
                 }
                 onClick={() => {
                   void (async () => {
