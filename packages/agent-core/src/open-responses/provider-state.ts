@@ -4,6 +4,9 @@ import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const RESPONSE_ID_PROVIDER_KEYS = ["openAiResponses", "openResponses"] as const;
 
+/** Assistant-message provider-state bucket key holding captured server-side tool output items. */
+const BUILT_IN_OUTPUT_ITEMS_KEY = "builtInOutputItems";
+
 function readResponseIdFromProviderBucket(bucket: unknown): string | undefined {
   if (!isJsonObject(bucket as JsonValue | undefined)) {
     return undefined;
@@ -121,6 +124,43 @@ export function attachResponseIdToAssistantMessage(
   return mergeOpenResponsesProviderBucket(message, openResponsesProviderKey(config), {
     responseId,
   });
+}
+
+/** Stores captured server-side tool output items (e.g. `web_search_call`) on the assistant message. */
+export function attachBuiltInOutputItemsToAssistantMessage(
+  config: OpenResponsesTransportConfig,
+  message: JsonValue,
+  items: readonly JsonObject[],
+): JsonValue {
+  if (items.length === 0 || !isJsonObject(message)) {
+    return message;
+  }
+
+  return mergeOpenResponsesProviderBucket(message, openResponsesProviderKey(config), {
+    [BUILT_IN_OUTPUT_ITEMS_KEY]: items.map((item) => cloneJsonValue(item)),
+  });
+}
+
+/** Reads back the items stored by `attachBuiltInOutputItemsToAssistantMessage` (both bucket spellings). */
+export function readBuiltInOutputItemsFromMessage(message: JsonObject): JsonObject[] {
+  const buckets: unknown[] = [];
+  if (isJsonObject(message.providerState)) {
+    buckets.push(message.providerState.openResponses, message.providerState.openAiResponses);
+  }
+  buckets.push(message.openResponses, message.openAiResponses);
+
+  for (const bucket of buckets) {
+    if (!isJsonObject(bucket as JsonValue)) {
+      continue;
+    }
+    const items = (bucket as JsonObject)[BUILT_IN_OUTPUT_ITEMS_KEY];
+    if (!Array.isArray(items)) {
+      continue;
+    }
+    return items.filter((item): item is JsonObject => isJsonObject(item as JsonValue));
+  }
+
+  return [];
 }
 
 export function extractResponseIdFromGenerateTextResult(result: {

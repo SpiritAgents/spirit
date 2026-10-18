@@ -11,12 +11,16 @@ import {
 } from "./apply-patch-bridge.js";
 import { resolveStreamingToolPreviewEmit } from "../tool-streaming-preview-gate.js";
 import { isJsonObject, type ToolAgentState } from "../tool-agent.js";
-import { attachResponseIdToAssistantMessage } from "./provider-state.js";
+import {
+  attachBuiltInOutputItemsToAssistantMessage,
+  attachResponseIdToAssistantMessage,
+} from "./provider-state.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 import { renderResponsesTransportError } from "./ai-sdk-message-bridge.js";
 import {
   accumulateResponsesBuiltInToolPreviewsFromRawChunk,
   buildGatewaySdkProviderBuiltinToolResultArgumentsJson,
+  collectResponsesBuiltInOutputItemsForPassBack,
   createResponsesBuiltInPreviewStreamState,
   isResponsesBuiltInToolName,
 } from "./responses-built-in-tools.js";
@@ -324,6 +328,12 @@ export async function* responsesEventStreamToRuntimeEvents(
       resolvedAssistant,
       hasPostToolAssistantText,
     );
+    // `options.echoServerToolCalls`: capture this round's server-side tool output items onto the
+    // assistant message so the next round can echo them back into `input`.
+    const builtInPassBackItems =
+      config.options?.echoServerToolCalls === true
+        ? collectResponsesBuiltInOutputItemsForPassBack(providerPreviewState)
+        : [];
 
     if (executedProviderBuiltinToolCallIds.size > 0) {
       const pendingHostToolCallIds = new Set(calls.map((call) => call.id));
@@ -331,11 +341,15 @@ export async function* responsesEventStreamToRuntimeEvents(
         nextState,
         attachResponseIdToAssistantMessage(
           config,
-          buildStreamingAssistantMessage(
-            resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
-            resumeStreamingAfterProviderSearch ? reasoningContent : "",
-            toolCalls,
-            pendingHostToolCallIds,
+          attachBuiltInOutputItemsToAssistantMessage(
+            config,
+            buildStreamingAssistantMessage(
+              resumeStreamingAfterProviderSearch ? resolvedAssistantContent : "",
+              resumeStreamingAfterProviderSearch ? reasoningContent : "",
+              toolCalls,
+              pendingHostToolCallIds,
+            ),
+            builtInPassBackItems,
           ),
           responseId,
         ),
@@ -346,11 +360,15 @@ export async function* responsesEventStreamToRuntimeEvents(
     if (!resumeStreamingAfterProviderSearch) {
       const assistantMessage = attachResponseIdToAssistantMessage(
         config,
-        buildStreamingAssistantMessage(
-          resolvedAssistantContent,
-          reasoningContent,
-          toolCalls,
-          executedProviderBuiltinToolCallIds,
+        attachBuiltInOutputItemsToAssistantMessage(
+          config,
+          buildStreamingAssistantMessage(
+            resolvedAssistantContent,
+            reasoningContent,
+            toolCalls,
+            executedProviderBuiltinToolCallIds,
+          ),
+          builtInPassBackItems,
         ),
         responseId,
       );

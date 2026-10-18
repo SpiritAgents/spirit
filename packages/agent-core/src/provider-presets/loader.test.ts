@@ -280,6 +280,19 @@ test("loader rejects a catalog without a parser", () => {
   assertLoadThrows(manifestOf([minimalPreset({ catalog: { endpoint: "/models" } })]), /parser/);
 });
 
+test("loader accepts an options template object and rejects non-objects", () => {
+  const manifest = loadProviderPresetManifest(
+    manifestOf([minimalPreset({ options: { echoServerToolCalls: true } })]),
+  );
+  assert.deepEqual(manifest.providers[0]?.options, { echoServerToolCalls: true });
+
+  assertLoadThrows(
+    manifestOf([minimalPreset({ options: "echoServerToolCalls" })]),
+    /options must be an object/,
+  );
+  assertLoadThrows(manifestOf([minimalPreset({ options: [] })]), /options must be an object/);
+});
+
 test("findProviderPreset matches exactly and ignores surrounding whitespace", () => {
   assert.equal(findProviderPreset("kimi-code")?.label, "Kimi Code");
   assert.equal(findProviderPreset(" kimi-code ")?.id, "kimi-code");

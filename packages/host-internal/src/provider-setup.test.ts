@@ -203,6 +203,47 @@ test("saveProviderSetup rejects an unknown preset id", async () => {
   );
 });
 
+test("saveProviderSetup writes preset mechanism options scoped to the materialized transport", async () => {
+  useMemoryKeyring();
+  const spiritDataDir = tempDataDir();
+
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "deepseek" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "deepseek-v4-flash" }],
+  });
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "xiaomi" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "mimo-v2.5" }],
+  });
+  // Default transport is openai-compatible: the open-responses-scoped template key is dropped.
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "volcengine" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "doubao-seed-2-0" }],
+  });
+
+  const connected = loadSpiritConfig(spiritDataDir);
+  assert.ok(connected);
+  const connectedById = new Map(connected.providers.map((provider) => [provider.id, provider]));
+  assert.deepEqual(connectedById.get("deepseek")?.options, { echoServerToolCalls: true });
+  assert.deepEqual(connectedById.get("xiaomi")?.options, { maxInlineMediaBytes: 52428800 });
+  assert.equal(connectedById.get("volcengine")?.options, undefined);
+
+  // Reconnecting over open-responses materializes the scoped template key.
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "volcengine", transportKind: "open-responses" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "doubao-seed-2-0" }],
+  });
+
+  const config = loadSpiritConfig(spiritDataDir);
+  assert.ok(config);
+  const byId = new Map(config.providers.map((provider) => [provider.id, provider]));
+  assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
+});
+
 test("loadModelProfile carries connection fields and evaluates inheritance", async () => {
   useMemoryKeyring();
   const spiritDataDir = tempDataDir();

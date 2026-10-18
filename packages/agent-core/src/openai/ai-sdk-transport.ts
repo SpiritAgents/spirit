@@ -78,6 +78,7 @@ import { buildGeneratedImageToolOutput } from "../image-generation/output.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { getLlmFetch } from "../llm-fetch.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
+import { createToolsRejectReasoningEffortFetch } from "./tools-reject-reasoning-effort-fetch.js";
 import {
   EMPTY_RESOLVED_PROVIDER_TOOLS,
   peekDeclaredProviderTools,
@@ -767,7 +768,9 @@ function chatReasoningEffortBodyBase(config: OpenAiTransportConfig): JsonObject 
 /**
  * Chat fetch: provider tool literal entries / entry bodies merge first (innermost), then the
  * declared wire merge (provider-level headers/body, thinkingSwitch, serviceTier), then the
- * video_url passthrough stash restore (outermost).
+ * video_url passthrough stash restore (outermost). The `toolsRejectReasoningEffort` patch wraps
+ * the base fetch so the force-to-`none` applies to the fully merged body — the upstream rejects
+ * the tools+effort combination, so no merge step may re-introduce it after the patch.
  */
 function llmFetchForChat(
   config: OpenAiTransportConfig,
@@ -782,7 +785,7 @@ function llmFetchForChat(
     createDeclaredWireMergeFetch(
       config,
       chatServiceTierSurface(config),
-      getLlmFetch({ flexWaiting: plan.flexWaiting }),
+      createToolsRejectReasoningEffortFetch(config, getLlmFetch({ flexWaiting: plan.flexWaiting })),
       { bodyBase: chatReasoningEffortBodyBase(config) },
     ),
   );

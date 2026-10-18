@@ -79,10 +79,18 @@ import {
   runWithResponsesStoredStateRequestContext,
 } from "./responses-incremental-input.js";
 import {
+  bindEchoServerToolCallsContextIfNeeded,
+  withEchoServerToolCallsContext,
+} from "./echo-server-tool-calls.js";
+import {
   buildOpenResponsesRequestTrace,
   buildOpenResponsesTraceExtras,
   type OpenResponsesTransportConfig,
 } from "./responses-compat.js";
+import {
+  xaiResponsesLocalToolsUnsupportedMessage,
+  xaiResponsesRejectsLocalFunctionTools,
+} from "./xai-responses-pre-guard.js";
 import { resolveDeclaredProviderTools } from "../provider-tools/runtime.js";
 import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import { createDeferred, responsesEventStreamToRuntimeEvents } from "./streaming.js";
@@ -206,98 +214,115 @@ export class AiSdkOpenResponsesTransport
       traceExtras,
     );
 
+    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length, providerTools)) {
+      return {
+        kind: "failure",
+        error: xaiResponsesLocalToolsUnsupportedMessage(),
+        requestTrace: tracedRequest,
+      };
+    }
+
     try {
       return await runWithResponsesStoredStateRequestContext(roundInput.previousResponseId, () =>
-        runWithApplyPatchBridgeContext(async () => {
-          const generateTools = buildResponsesGenerateTools(config, normalizedTools, providerTools);
-          const hasGenerateTools = Object.keys(generateTools).length > 0;
-          const providerToolStopWhen = buildProviderToolStopWhen(config);
-          const result = await generateText({
-            model: createResponsesLanguageModel(config, providerTools) as any,
-            messages: openAiMessagesToResponsesAiSdkMessages(roundInput.apiMessages, config) as any,
-            allowSystemInMessages: true,
-            ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
-            ...(hasGenerateTools
-              ? {
-                  tools: generateTools as any,
-                  toolChoice: "auto" as const,
-                }
-              : {}),
-            ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
-            providerOptions: buildResponsesProviderOptionsWithServiceTier(
+        withEchoServerToolCallsContext(config, roundInput.apiMessages, () =>
+          runWithApplyPatchBridgeContext(async () => {
+            const generateTools = buildResponsesGenerateTools(
               config,
-              roundInput.previousResponseId,
-            ),
-            maxRetries: 2,
-          });
-
-          const applyPatchCalls = shouldUseOpenAiSdkApplyPatchTool(config)
-            ? []
-            : takeLastExtractedApplyPatchCalls();
-          const executedProviderBuiltinToolCallIds =
-            collectExecutedProviderBuiltinToolCallIdsFromSteps(result.steps);
-          const pendingAssistantToolCalls = result.toolCalls.filter(
-            (toolCall) =>
-              !(
-                isResponsesBuiltInToolName(toolCall.toolName) &&
-                executedProviderBuiltinToolCallIds.has(toolCall.toolCallId)
+              normalizedTools,
+              providerTools,
+            );
+            const hasGenerateTools = Object.keys(generateTools).length > 0;
+            const providerToolStopWhen = buildProviderToolStopWhen(config);
+            const result = await generateText({
+              model: createResponsesLanguageModel(config, providerTools) as any,
+              messages: openAiMessagesToResponsesAiSdkMessages(
+                roundInput.apiMessages,
+                config,
+              ) as any,
+              allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
+              ...(hasGenerateTools
+                ? {
+                    tools: generateTools as any,
+                    toolChoice: "auto" as const,
+                  }
+                : {}),
+              ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
+              providerOptions: buildResponsesProviderOptionsWithServiceTier(
+                config,
+                roundInput.previousResponseId,
               ),
-          );
-          const assistantMessage = attachResponseIdToAssistantMessage(
-            config,
-            buildAssistantMessageFromResponsesGenerateText(
-              result.text,
-              pendingAssistantToolCalls,
-              result.reasoningText ?? "",
-            ),
-            extractResponseIdFromGenerateTextResult(result),
-          );
-          if (applyPatchCalls.length > 0 && isJsonObject(assistantMessage as JsonValue)) {
-            appendApplyPatchToolCallsToAssistantMessage(
-              assistantMessage as JsonObject,
+              maxRetries: 2,
+            });
+
+            const applyPatchCalls = shouldUseOpenAiSdkApplyPatchTool(config)
+              ? []
+              : takeLastExtractedApplyPatchCalls();
+            const executedProviderBuiltinToolCallIds =
+              collectExecutedProviderBuiltinToolCallIdsFromSteps(result.steps);
+            const pendingAssistantToolCalls = result.toolCalls.filter(
+              (toolCall) =>
+                !(
+                  isResponsesBuiltInToolName(toolCall.toolName) &&
+                  executedProviderBuiltinToolCallIds.has(toolCall.toolCallId)
+                ),
+            );
+            const assistantMessage = attachResponseIdToAssistantMessage(
+              config,
+              buildAssistantMessageFromResponsesGenerateText(
+                result.text,
+                pendingAssistantToolCalls,
+                result.reasoningText ?? "",
+              ),
+              extractResponseIdFromGenerateTextResult(result),
+            );
+            if (applyPatchCalls.length > 0 && isJsonObject(assistantMessage as JsonValue)) {
+              appendApplyPatchToolCallsToAssistantMessage(
+                assistantMessage as JsonObject,
+                applyPatchCalls,
+              );
+            }
+            nextState.messages.push(assistantMessage);
+
+            if (applyPatchCalls.length > 0) {
+              registerPendingApplyPatchCallIds(applyPatchCalls.map((call) => call.id));
+            }
+            const usage = await readAiSdkUsage(result);
+            const calls = mergeToolCallsWithApplyPatch(
+              filterPendingHostToolCalls(
+                extractToolCallsFromAiSdk(pendingAssistantToolCalls),
+                executedProviderBuiltinToolCallIds,
+              ),
               applyPatchCalls,
             );
-          }
-          nextState.messages.push(assistantMessage);
+            if (calls.length > 0) {
+              return {
+                kind: "success",
+                result: {
+                  state: nextState,
+                  step: {
+                    kind: "tool-calls",
+                    calls,
+                  },
+                  requestTrace: tracedRequest,
+                  ...(usage ? { usage } : {}),
+                },
+              } as ToolAgentRoundCompletion<ToolAgentState>;
+            }
 
-          if (applyPatchCalls.length > 0) {
-            registerPendingApplyPatchCallIds(applyPatchCalls.map((call) => call.id));
-          }
-          const usage = await readAiSdkUsage(result);
-          const calls = mergeToolCallsWithApplyPatch(
-            filterPendingHostToolCalls(
-              extractToolCallsFromAiSdk(pendingAssistantToolCalls),
-              executedProviderBuiltinToolCallIds,
-            ),
-            applyPatchCalls,
-          );
-          if (calls.length > 0) {
             return {
               kind: "success",
               result: {
                 state: nextState,
                 step: {
-                  kind: "tool-calls",
-                  calls,
+                  kind: "final-response-ready",
                 },
                 requestTrace: tracedRequest,
                 ...(usage ? { usage } : {}),
               },
             } as ToolAgentRoundCompletion<ToolAgentState>;
-          }
-
-          return {
-            kind: "success",
-            result: {
-              state: nextState,
-              step: {
-                kind: "final-response-ready",
-              },
-              requestTrace: tracedRequest,
-              ...(usage ? { usage } : {}),
-            },
-          } as ToolAgentRoundCompletion<ToolAgentState>;
-        }),
+          }),
+        ),
       );
     } catch (error) {
       return {
@@ -337,6 +362,18 @@ export class AiSdkOpenResponsesTransport
 
     const abortController = new AbortController();
 
+    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length, providerTools)) {
+      return {
+        eventStream: emptyResponsesEventStream(),
+        completion: Promise.resolve({
+          kind: "failure",
+          error: xaiResponsesLocalToolsUnsupportedMessage(),
+          requestTrace,
+        }),
+        cancel: () => abortController.abort(),
+      };
+    }
+
     try {
       beginApplyPatchBridgeRound();
       const generateTools = buildResponsesGenerateTools(config, normalizedTools, providerTools);
@@ -349,23 +386,25 @@ export class AiSdkOpenResponsesTransport
       const providerToolStopWhen = buildProviderToolStopWhen(config);
       const result: { stream: AsyncIterable<unknown> } & Parameters<typeof readAiSdkUsage>[0] =
         runInResponsesStoredStateRequestContextSync(roundInput.previousResponseId, () =>
-          streamText({
-            model: createResponsesLanguageModel(config, providerTools) as any,
-            messages: sdkMessages as any,
-            allowSystemInMessages: true,
-            ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
-            ...(hasGenerateTools
-              ? {
-                  tools: generateTools as any,
-                  toolChoice: "auto" as const,
-                }
-              : {}),
-            ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
-            providerOptions,
-            include: { rawChunks: true },
-            maxRetries: 2,
-            abortSignal: abortController.signal,
-          }),
+          withEchoServerToolCallsContext(config, roundInput.apiMessages, () =>
+            streamText({
+              model: createResponsesLanguageModel(config, providerTools) as any,
+              messages: sdkMessages as any,
+              allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
+              ...(hasGenerateTools
+                ? {
+                    tools: generateTools as any,
+                    toolChoice: "auto" as const,
+                  }
+                : {}),
+              ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
+              providerOptions,
+              include: { rawChunks: true },
+              maxRetries: 2,
+              abortSignal: abortController.signal,
+            }),
+          ),
         );
       const completion = createDeferred<ToolAgentRoundCompletion<ToolAgentState>>();
       void completion.promise.finally(() => {
@@ -375,9 +414,13 @@ export class AiSdkOpenResponsesTransport
       return {
         eventStream: responsesEventStreamToRuntimeEvents(
           config,
-          bindResponsesStoredStateRequestContextAsyncIterable(
-            roundInput.previousResponseId,
-            result.stream as any,
+          bindEchoServerToolCallsContextIfNeeded(
+            config,
+            roundInput.apiMessages,
+            bindResponsesStoredStateRequestContextAsyncIterable(
+              roundInput.previousResponseId,
+              result.stream as any,
+            ),
           ),
           result,
           nextState,

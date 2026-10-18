@@ -126,6 +126,9 @@ function resetWizardOwnedKeys(
   options: ProviderOptions | undefined,
 ): void {
   entry.apiBase = materialized.apiBase;
+  // `options` merges the preset's mechanism template (e.g. `echoServerToolCalls`) with the
+  // wizard-collected values (e.g. `awsRegion`); on a key conflict the explicit wizard input wins.
+  const mergedOptions = { ...materialized.options, ...options };
   const owned: Record<string, unknown> = {
     transportKind: materialized.transportKind,
     sdk: materialized.sdk,
@@ -133,7 +136,7 @@ function resetWizardOwnedKeys(
     fileUpload: materialized.fileUpload,
     imageApi: materialized.imageApi,
     videoApi: materialized.videoApi,
-    options,
+    options: Object.keys(mergedOptions).length > 0 ? mergedOptions : undefined,
   };
   const record = entry as unknown as Record<string, unknown>;
   for (const [key, value] of Object.entries(owned)) {
