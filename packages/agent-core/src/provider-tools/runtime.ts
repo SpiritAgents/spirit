@@ -4,6 +4,7 @@ import { fetchProviderToolsFrom } from "./tools-from.js";
 import {
   isOpenAiFunctionToolEntry,
   isPlainJsonObject,
+  isTraceMarkerToolEntry,
   type OpenAiFunctionToolEntry,
   type ProviderToolEntry,
   type ProviderToolExecuteDeclaration,
@@ -47,6 +48,11 @@ export interface ResolvedProviderTools {
    * tools), after the collision filter. Merged verbatim into the request `tools[]`.
    */
   literalEntries: JsonObject[];
+  /**
+   * Trace-marker literal entries (`function_name`-keyed, e.g. formula registrations), after the
+   * collision filter. Recognition and request-trace only — never wire-merged.
+   */
+  traceEntries: JsonObject[];
   /** Entry-level `body` patches in declaration order (merged only while provider tools are enabled). */
   bodyPatches: JsonObject[];
   /** Host-executed calls by tool name (entries carrying `execute`). */
@@ -60,6 +66,7 @@ export interface ResolvedProviderTools {
 export const EMPTY_RESOLVED_PROVIDER_TOOLS: ResolvedProviderTools = {
   functionTools: [],
   literalEntries: [],
+  traceEntries: [],
   bodyPatches: [],
   executions: new Map(),
   recognizedNames: new Set(),
@@ -114,7 +121,7 @@ export function declaredProviderToolWirePatches(config: DeclaredProviderToolsCon
   const bodyPatches: JsonObject[] = [];
   for (const entry of config.providerTools) {
     for (const tool of entry.tools ?? []) {
-      if (!isOpenAiFunctionToolEntry(tool)) {
+      if (!isOpenAiFunctionToolEntry(tool) && !isTraceMarkerToolEntry(tool)) {
         literalEntries.push(tool);
       }
     }
@@ -177,6 +184,7 @@ function resolveToolsAgainstLocal(
   const resolved: ResolvedProviderTools = {
     functionTools: [],
     literalEntries: [],
+    traceEntries: [],
     bodyPatches: [],
     executions: new Map(),
     recognizedNames: names,
@@ -195,6 +203,8 @@ function resolveToolsAgainstLocal(
       }
       if (isOpenAiFunctionToolEntry(tool)) {
         resolved.functionTools.push(tool);
+      } else if (isTraceMarkerToolEntry(tool)) {
+        resolved.traceEntries.push(tool);
       } else {
         resolved.literalEntries.push(tool);
       }
