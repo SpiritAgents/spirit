@@ -167,13 +167,14 @@ export function buildResponsesTraceTools(
   normalizedFunctionTools: readonly unknown[],
   providerTools: Pick<
     ResolvedProviderTools,
-    "functionTools" | "literalEntries"
+    "functionTools" | "literalEntries" | "traceEntries"
   > = EMPTY_RESOLVED_PROVIDER_TOOLS,
 ): JsonValue[] {
   const traceTools = [
     ...normalizedFunctionTools.map((tool) => cloneJsonValue(tool as JsonValue)),
     ...providerTools.functionTools.map((tool) => cloneJsonValue(tool as JsonValue)),
     ...providerTools.literalEntries.map((tool) => cloneJsonValue(tool as JsonValue)),
+    ...providerTools.traceEntries.map((tool) => cloneJsonValue(tool as JsonValue)),
   ];
   if (shouldUseApplyPatchFileTools(config)) {
     if (shouldUseOpenAiSdkApplyPatchTool(config)) {

@@ -102,8 +102,15 @@ test("resolveDeclaredProviderTools fetches toolsFrom entries and validates argum
   };
   const resolved = await resolveDeclaredProviderTools(config, new Set(), fetchImpl);
 
-  // The trace marker literal rides the wire; the fetched function tool is recognized + executed.
-  assert.equal(resolved.literalEntries.length, 1);
+  // The trace marker never rides the wire; it feeds recognition and the request trace only.
+  assert.equal(resolved.literalEntries.length, 0);
+  assert.deepEqual(resolved.traceEntries, [
+    {
+      type: "acme_formula",
+      formula_uri: "acme/search:latest",
+      function_name: "fiber_search",
+    },
+  ]);
   assert.deepEqual([...resolved.executions.keys()], ["fiber_search"]);
   assert.deepEqual(resolved.executions.get("fiber_search")?.parameters, {
     type: "object",
@@ -201,6 +208,11 @@ test("declaredProviderToolWirePatches reads literal entries and bodies synchrono
         tools: [
           { type: "web_search_20250305", name: "web_search" },
           {
+            type: "acme_formula",
+            formula_uri: "acme/search:latest",
+            function_name: "web_search",
+          },
+          {
             type: "function",
             function: { name: "web_search", parameters: { type: "object", properties: {} } },
           },
@@ -210,7 +222,8 @@ test("declaredProviderToolWirePatches reads literal entries and bodies synchrono
     ] as ProviderToolEntry[],
   };
   const patches = declaredProviderToolWirePatches(config);
-  // Only non-function literals pass through here; function-shaped tools ride the tools[] assembly.
+  // Only non-function wire literals pass through here; function-shaped tools ride the tools[]
+  // assembly and trace markers (`function_name`) never reach the wire.
   assert.deepEqual(patches.literalEntries, [{ type: "web_search_20250305", name: "web_search" }]);
   assert.deepEqual(patches.bodyPatches, [{ enable_search: true }]);
 });

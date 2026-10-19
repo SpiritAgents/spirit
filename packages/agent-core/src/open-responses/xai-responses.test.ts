@@ -46,6 +46,7 @@ test("xAI responses trace lists declared provider tools alongside host tools", (
   const traceTools = buildResponsesTraceTools(xaiConfig, [demoToolDefinition()], {
     functionTools: [],
     literalEntries: [{ type: "web_search" }],
+    traceEntries: [],
   });
   assert.ok(
     traceTools.some(

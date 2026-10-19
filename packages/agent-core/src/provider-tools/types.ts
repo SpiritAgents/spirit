@@ -59,7 +59,11 @@ export interface ProviderToolUiDeclaration {
  */
 export interface ProviderToolEntry {
   label?: string;
-  /** Literal tool entries merged verbatim into the request `tools[]` while the entry is enabled. */
+  /**
+   * Literal tool entries merged verbatim into the request `tools[]` while the entry is enabled.
+   * Trace-marker entries (`function_name`-keyed) are the exception: recognition and trace only,
+   * never wire-merged.
+   */
   tools?: JsonObject[];
   toolsFrom?: ProviderToolsFromDeclaration;
   /** Literal body fields merged into the request body top level while the entry is enabled. */
@@ -117,6 +121,20 @@ export function isOpenAiFunctionToolEntry(value: unknown): value is OpenAiFuncti
   }
   const name = value.function.name;
   return typeof name === "string" && name.trim().length > 0;
+}
+
+/**
+ * Trace-marker literal entries (formula-style registrations) key on `function_name`. They exist
+ * for recognition and the request trace only and must never reach the wire: upstream chat
+ * endpoints reject tool types they do not define.
+ */
+export function isTraceMarkerToolEntry(value: unknown): value is JsonObject {
+  return (
+    isPlainJsonObject(value) &&
+    !isOpenAiFunctionToolEntry(value) &&
+    typeof value.function_name === "string" &&
+    value.function_name.trim().length > 0
+  );
 }
 
 const ENTRY_KEYS = new Set(["label", "tools", "toolsFrom", "body", "execute", "ui"]);

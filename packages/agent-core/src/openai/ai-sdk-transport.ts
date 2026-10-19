@@ -285,12 +285,10 @@ export class AiSdkOpenAiCompatibleTransport
       new Set(toolNamesFromDefinitions(tools)),
     );
     const normalizedTools = [...normalizeToolDefinitions(tools), ...providerTools.functionTools];
-    const tracedRequest = buildAiSdkRequestTrace(
-      config,
-      nextState.steps,
-      requestMessages,
-      normalizedTools,
-    );
+    const tracedRequest = buildAiSdkRequestTrace(config, nextState.steps, requestMessages, [
+      ...normalizedTools,
+      ...providerTools.traceEntries,
+    ]);
 
     prepareVideoPassthroughRequest(config, requestMessages);
     try {
@@ -396,7 +394,7 @@ export class AiSdkOpenAiCompatibleTransport
       config,
       nextState.steps,
       requestMessages,
-      normalizedTools,
+      [...normalizedTools, ...providerTools.traceEntries],
       true,
     );
 
