@@ -284,6 +284,15 @@ test("kimi-code carries the stream_options include_usage body template", () => {
   assert.deepEqual(manifestEntry?.body, { stream_options: { include_usage: true } });
 });
 
+test("ark presets carry the stream_options include_usage body template", () => {
+  // Ark streaming Chat Completions only returns usage in the final chunk when the request body
+  // carries stream_options; dev sent it for the ark vendors unconditionally.
+  for (const presetId of ["volcengine", "byteplus"] as const) {
+    const entry = materializeProviderPreset({ presetId });
+    assert.deepEqual(entry.body, { stream_options: { include_usage: true } }, presetId);
+  }
+});
+
 test("meituan carries the thinking.type switch encoding template", () => {
   const entry = materializeProviderPreset({ presetId: "meituan" });
   assert.deepEqual(entry.thinkingSwitch, {

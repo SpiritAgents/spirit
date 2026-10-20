@@ -1035,6 +1035,19 @@ mod tests {
         let draft = preset_connect_draft("meituan", ModelTransportKind::OpenAiCompatible, None);
         assert!(draft.thinking_switch.is_some());
 
+        // Ark presets carry the stream_options usage template.
+        for preset_id in ["volcengine", "byteplus"] {
+            let draft = preset_connect_draft(preset_id, ModelTransportKind::OpenAiCompatible, None);
+            assert_eq!(
+                draft
+                    .body
+                    .as_ref()
+                    .and_then(|body| body.get("stream_options")),
+                Some(&serde_json::json!({ "include_usage": true })),
+                "{preset_id}"
+            );
+        }
+
         // Bedrock declares no sdk (self-held transport implementation).
         let draft = preset_connect_draft("amazon-bedrock", ModelTransportKind::Bedrock, None);
         assert_eq!(draft.transport_kind.as_deref(), Some("bedrock"));
