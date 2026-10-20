@@ -664,6 +664,41 @@ test("mechanism options keys validate value shapes and transport scope", () => {
       ),
     '"options.maxInlineMediaBytes" must be a positive integer',
   );
+  // openRouterAnthropicReasoning spans both OpenAI-family surfaces, never anthropic/bedrock.
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([validProvider({ options: { openRouterAnthropicReasoning: true } })]),
+    ),
+  );
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          transportKind: "open-responses",
+          options: { openRouterAnthropicReasoning: true },
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ options: { openRouterAnthropicReasoning: false } })]),
+      ),
+    '"options.openRouterAnthropicReasoning" must be true',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            transportKind: "anthropic",
+            options: { openRouterAnthropicReasoning: true },
+          }),
+        ]),
+      ),
+    'unknown "options" key "openRouterAnthropicReasoning" for transportKind "anthropic"',
+  );
   assertSchemaError(
     () =>
       validateSpiritConfig(

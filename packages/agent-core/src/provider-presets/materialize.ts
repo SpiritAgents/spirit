@@ -49,13 +49,19 @@ export function fallbackSdkPackageName(transportKind: LlmTransportKind): string 
  * Keys without a known scope pass through verbatim — deep value validation is the config load's
  * fail-fast job.
  */
-const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<string, LlmTransportKind> = {
+const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<
+  string,
+  LlmTransportKind | readonly LlmTransportKind[]
+> = {
   toolsRejectReasoningEffort: "openai-compatible",
   maxInlineMediaBytes: "openai-compatible",
   echoServerToolCalls: "open-responses",
   defaultInputItemStatus: "open-responses",
   applyPatch: "open-responses",
   reasoningSummary: "open-responses",
+  // OpenRouter's unified anthropic-route reasoning shape applies to both OpenAI-family surfaces;
+  // the anthropic transport speaks native Messages and does not take it.
+  openRouterAnthropicReasoning: ["openai-compatible", "open-responses"],
 };
 
 function materializePresetOptions(
@@ -65,7 +71,10 @@ function materializePresetOptions(
   const scoped = Object.fromEntries(
     Object.entries(presetOptions).filter(([key]) => {
       const scope = PRESET_OPTIONS_TRANSPORT_SCOPE[key];
-      return scope === undefined || scope === transportKind;
+      return (
+        scope === undefined ||
+        (typeof scope === "string" ? scope === transportKind : scope.includes(transportKind))
+      );
     }),
   );
   return Object.keys(scoped).length > 0 ? scoped : undefined;

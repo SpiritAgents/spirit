@@ -374,10 +374,19 @@ test("mechanism options templates materialize scoped to the selected transport",
     applyPatch: true,
     reasoningSummary: true,
   });
-  assert.equal(materializeProviderPreset({ presetId: "openrouter" }).options, undefined);
+  // openrouter's unified anthropic-route reasoning shape spans both OpenAI-family surfaces; the
+  // open-responses-scoped keys still drop on the default chat transport.
+  assert.deepEqual(materializeProviderPreset({ presetId: "openrouter" }).options, {
+    openRouterAnthropicReasoning: true,
+  });
   assert.deepEqual(
     materializeProviderPreset({ presetId: "openrouter", transportKind: "open-responses" }).options,
-    { applyPatch: true, reasoningSummary: true },
+    { applyPatch: true, reasoningSummary: true, openRouterAnthropicReasoning: true },
+  );
+  // The anthropic transport speaks native Messages: every OpenAI-surface key drops.
+  assert.equal(
+    materializeProviderPreset({ presetId: "openrouter", transportKind: "anthropic" }).options,
+    undefined,
   );
   assert.deepEqual(
     materializeProviderPreset({

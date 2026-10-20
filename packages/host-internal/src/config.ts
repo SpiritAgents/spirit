@@ -101,6 +101,11 @@ export interface ProviderOptions {
   reasoningSummary?: true;
   /** open-responses: status value filled onto replayed input items that lack one. */
   defaultInputItemStatus?: string;
+  /**
+   * openai-compatible / open-responses: `anthropic/claude-*` model ids take OpenRouter's unified
+   * reasoning shape (`{reasoning: {enabled, effort | max_tokens}}`) instead of `reasoning_effort`.
+   */
+  openRouterAnthropicReasoning?: true;
 }
 
 /**
@@ -294,7 +299,11 @@ const FILE_UPLOAD_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
-  "openai-compatible": ["toolsRejectReasoningEffort", "maxInlineMediaBytes"],
+  "openai-compatible": [
+    "toolsRejectReasoningEffort",
+    "maxInlineMediaBytes",
+    "openRouterAnthropicReasoning",
+  ],
   "open-responses": [
     "auth",
     "storedState",
@@ -302,6 +311,7 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
     "echoServerToolCalls",
     "reasoningSummary",
     "defaultInputItemStatus",
+    "openRouterAnthropicReasoning",
   ],
   anthropic: [],
   bedrock: ["awsRegion"],
@@ -634,6 +644,7 @@ function validateProviderOptions(
     "toolsRejectReasoningEffort",
     "echoServerToolCalls",
     "reasoningSummary",
+    "openRouterAnthropicReasoning",
   ] as const) {
     if (value[key] !== undefined && value[key] !== true) {
       throw new SpiritConfigSchemaError(
