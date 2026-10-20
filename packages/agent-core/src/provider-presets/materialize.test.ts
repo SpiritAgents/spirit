@@ -350,13 +350,20 @@ test("mechanism options templates materialize scoped to the selected transport",
     presetId: "volcengine",
     transportKind: "open-responses",
   });
-  assert.deepEqual(volcengineResponses.options, { defaultInputItemStatus: "completed" });
+  assert.deepEqual(volcengineResponses.options, {
+    defaultInputItemStatus: "completed",
+    storedState: true,
+  });
   const byteplusResponses = materializeProviderPreset({
     presetId: "byteplus",
     transportKind: "open-responses",
   });
-  assert.deepEqual(byteplusResponses.options, { defaultInputItemStatus: "completed" });
-  // Ark's default transport is openai-compatible: the input-item status patch does not apply there.
+  assert.deepEqual(byteplusResponses.options, {
+    defaultInputItemStatus: "completed",
+    storedState: true,
+  });
+  // Ark's default transport is openai-compatible: the input-item status patch and the stored-state
+  // continuation are open-responses-scoped and drop there.
   const volcengineChat = materializeProviderPreset({ presetId: "volcengine" });
   assert.equal(volcengineChat.transportKind, undefined);
   assert.equal(volcengineChat.options, undefined);
@@ -417,14 +424,19 @@ test("mechanism options templates materialize scoped to the selected transport",
   );
   assert.deepEqual(
     materializeProviderPreset({ presetId: "alibaba", transportKind: "open-responses" }).options,
-    { reasoningSummary: true },
+    { reasoningSummary: true, storedState: true },
   );
+  // Alibaba's default transport is openai-compatible: both open-responses-scoped keys drop there.
+  assert.equal(materializeProviderPreset({ presetId: "alibaba" }).options, undefined);
   assert.deepEqual(
     materializeProviderPreset({ presetId: "xiaomi", transportKind: "open-responses" }).options,
     { reasoningSummary: true },
   );
   assert.deepEqual(deepseek.options, { echoServerToolCalls: true });
-  assert.deepEqual(volcengineResponses.options, { defaultInputItemStatus: "completed" });
+  assert.deepEqual(volcengineResponses.options, {
+    defaultInputItemStatus: "completed",
+    storedState: true,
+  });
   assert.equal(
     materializeProviderPreset({ presetId: "stepfun", transportKind: "open-responses" }).options,
     undefined,

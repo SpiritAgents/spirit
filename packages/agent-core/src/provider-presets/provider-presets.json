@@ -548,7 +548,7 @@
           "body": { "enable_code_interpreter": true }
         }
       ],
-      "options": { "reasoningSummary": true },
+      "options": { "reasoningSummary": true, "storedState": true },
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {
@@ -743,7 +743,7 @@
       },
       "credentials": { "kind": "apiKey" },
       "body": { "stream_options": { "include_usage": true } },
-      "options": { "defaultInputItemStatus": "completed" },
+      "options": { "defaultInputItemStatus": "completed", "storedState": true },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
     },
@@ -758,7 +758,7 @@
       },
       "credentials": { "kind": "apiKey" },
       "body": { "stream_options": { "include_usage": true } },
-      "options": { "defaultInputItemStatus": "completed" },
+      "options": { "defaultInputItemStatus": "completed", "storedState": true },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
     },
