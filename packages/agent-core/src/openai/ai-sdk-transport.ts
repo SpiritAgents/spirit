@@ -80,6 +80,7 @@ import { getLlmFetch } from "../llm-fetch.js";
 import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
 import { buildGeminiThinkingConfigForEffort } from "./gemini-thinking-config.js";
 import { createToolsRejectReasoningEffortFetch } from "./tools-reject-reasoning-effort-fetch.js";
+import { createOpenRouterAnthropicReasoningFetch } from "../openrouter-anthropic-reasoning.js";
 import {
   EMPTY_RESOLVED_PROVIDER_TOOLS,
   peekDeclaredProviderTools,
@@ -769,7 +770,9 @@ function chatReasoningEffortBodyBase(config: OpenAiTransportConfig): JsonObject 
  * declared wire merge (provider-level headers/body, thinkingSwitch, serviceTier), then the
  * video_url passthrough stash restore (outermost). The `toolsRejectReasoningEffort` patch wraps
  * the base fetch so the force-to-`none` applies to the fully merged body — the upstream rejects
- * the tools+effort combination, so no merge step may re-introduce it after the patch.
+ * the tools+effort combination, so no merge step may re-introduce it after the patch. The
+ * `openRouterAnthropicReasoning` patch sits innermost so the unified shape replaces whatever
+ * reasoning/thinking encoding the merges produced for the route.
  */
 function llmFetchForChat(
   config: OpenAiTransportConfig,
@@ -784,7 +787,13 @@ function llmFetchForChat(
     createDeclaredWireMergeFetch(
       config,
       chatServiceTierSurface(config),
-      createToolsRejectReasoningEffortFetch(config, getLlmFetch({ flexWaiting: plan.flexWaiting })),
+      createToolsRejectReasoningEffortFetch(
+        config,
+        createOpenRouterAnthropicReasoningFetch(
+          config,
+          getLlmFetch({ flexWaiting: plan.flexWaiting }),
+        ),
+      ),
       { bodyBase: chatReasoningEffortBodyBase(config) },
     ),
   );

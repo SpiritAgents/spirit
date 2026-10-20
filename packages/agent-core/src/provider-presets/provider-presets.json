@@ -135,7 +135,11 @@
         "anthropic": "https://openrouter.ai/api/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "applyPatch": true, "reasoningSummary": true },
+      "options": {
+        "applyPatch": true,
+        "reasoningSummary": true,
+        "openRouterAnthropicReasoning": true
+      },
       "videoApi": "openrouter-videos",
       "catalog": { "parser": "openrouter-models", "endpoint": "/models" }
     },

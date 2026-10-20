@@ -41,6 +41,7 @@ import {
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
 import { responsesUsesStoredState } from "./responses-incremental-input.js";
+import { createOpenRouterAnthropicReasoningFetch } from "../openrouter-anthropic-reasoning.js";
 import { buildGatewayV3ProviderOptions } from "./gateway-v3-provider-options.js";
 import {
   openResponsesPostUrl,
@@ -121,12 +122,17 @@ function responsesFetchForConfig(
   const serviceTierPlan = resolveResponsesServiceTierPlan(config);
   // Provider tool literals/entry bodies merge first; the declared wire merge (provider-level
   // headers/body, thinkingSwitch, serviceTier) wraps it so explicit declarations win on conflict.
+  // The `openRouterAnthropicReasoning` patch sits innermost so the unified shape replaces whatever
+  // reasoning/thinking encoding the merges produced for the route.
   let fetchFn: typeof fetch = createProviderToolsWireFetch(
     providerTools,
     createDeclaredWireMergeFetch(
       config,
       responsesServiceTierSurface(config),
-      getLlmFetch({ flexWaiting: serviceTierPlan.flexWaiting }),
+      createOpenRouterAnthropicReasoningFetch(
+        config,
+        getLlmFetch({ flexWaiting: serviceTierPlan.flexWaiting }),
+      ),
     ),
   );
   // `options.echoServerToolCalls`: re-injects captured server-side tool call items into `input`;

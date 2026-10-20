@@ -553,6 +553,12 @@ fn preset_options_for_transport(
             | "defaultInputItemStatus"
             | "applyPatch"
             | "reasoningSummary" => transport_kind == ModelTransportKind::OpenResponses,
+            // OpenRouter's unified anthropic-route reasoning shape applies to both OpenAI-family
+            // surfaces; the anthropic transport speaks native Messages and does not take it.
+            "openRouterAnthropicReasoning" => matches!(
+                transport_kind,
+                ModelTransportKind::OpenAiCompatible | ModelTransportKind::OpenResponses
+            ),
             _ => true,
         })
         .map(|(key, value)| (key.clone(), value.clone()))
@@ -1150,6 +1156,31 @@ mod tests {
                 .as_ref()
                 .and_then(|options| options.get("applyPatch")),
             Some(&serde_json::json!(true))
+        );
+        // openRouterAnthropicReasoning spans both OpenAI-family surfaces; the anthropic transport
+        // (native Messages) drops it.
+        let draft = preset_connect_draft("openrouter", ModelTransportKind::OpenAiCompatible, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("openRouterAnthropicReasoning")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("openrouter", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("openRouterAnthropicReasoning")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("openrouter", ModelTransportKind::Anthropic, None);
+        assert!(
+            draft
+                .options
+                .as_ref()
+                .is_none_or(|options| !options.contains_key("openRouterAnthropicReasoning"))
         );
     }
 
