@@ -125,6 +125,29 @@ test("gemini literal declaration maps default onto the standard wire enum", () =
   });
 });
 
+test("literal form carries the gateway providerOptions fragment verbatim", () => {
+  // The vercel-gateway catalog materializes this literal map for openai-upstream routes; the
+  // gateway v3 language-model protocol carries the tier intent in call providerOptions, and an
+  // empty declaration (default) sends nothing.
+  const serviceTiers = {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+    ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } },
+  } as const;
+  assert.deepEqual(plan({ surface: "gateway-v3", serviceTier: "default", serviceTiers }), {});
+  assert.deepEqual(plan({ surface: "gateway-v3", serviceTier: "flex", serviceTiers }), {
+    providerOptions: { gateway: { serviceTier: "flex" } },
+    flexWaiting: true,
+  });
+  assert.deepEqual(plan({ surface: "gateway-v3", serviceTier: "fast", serviceTiers }), {
+    providerOptions: { gateway: { serviceTier: "fast" } },
+  });
+  assert.deepEqual(plan({ surface: "gateway-v3", serviceTier: "ultrafast", serviceTiers }), {
+    providerOptions: { openai: { serviceTier: "ultrafast" } },
+  });
+});
+
 test("mergeServiceTierProviderOptions joins namespaces instead of replacing them", () => {
   const merged = mergeServiceTierProviderOptions(
     { openai: { reasoningEffort: "high", store: true } },

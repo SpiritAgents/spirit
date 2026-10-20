@@ -379,6 +379,49 @@ test("applyCatalogEntryToStoredModel syncs thinking declarations and resets stal
   assert.equal("reasoningEffort" in effortModel, false);
 });
 
+test("applyCatalogEntryToStoredModel syncs literal serviceTiers and resets stale tier selections", () => {
+  const literalTiers = {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+  };
+
+  const model = { name: "openai/gpt-5.6" };
+  assert.equal(
+    applyCatalogEntryToStoredModel(model, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    true,
+  );
+  assert.deepEqual(model.serviceTiers, literalTiers);
+
+  // An unchanged declaration is a no-op.
+  assert.equal(
+    applyCatalogEntryToStoredModel(model, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    false,
+  );
+
+  // A tier selection outside the fresh declaration resets to "send nothing".
+  const selectedModel = {
+    name: "openai/gpt-5.6",
+    serviceTiers: literalTiers,
+    serviceTier: "priority",
+  };
+  assert.equal(
+    applyCatalogEntryToStoredModel(selectedModel, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    true,
+  );
+  assert.equal("serviceTier" in selectedModel, false);
+  assert.deepEqual(selectedModel.serviceTiers, literalTiers);
+});
+
 test("removeDelistedModelsFromCatalog drops entry models missing from upstream ids", () => {
   const gateway = gatewayProvider([
     {

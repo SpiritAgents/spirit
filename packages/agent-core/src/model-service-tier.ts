@@ -26,6 +26,11 @@ export const MODEL_SERVICE_TIERS: readonly ModelServiceTier[] = [
 export interface ModelServiceTierWireDeclaration {
   headers?: Record<string, string>;
   body?: JsonObject;
+  /**
+   * AI SDK providerOptions fragment (per upstream namespace) for surfaces that serialize call
+   * providerOptions (the gateway v3 language-model protocol); ignored elsewhere.
+   */
+  providerOptions?: JsonObject;
 }
 
 /** Literal `serviceTiers` map: tier name → wire declaration. The simple form is `ModelServiceTier[]`. */

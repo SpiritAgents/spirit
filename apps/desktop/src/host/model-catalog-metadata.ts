@@ -1,6 +1,7 @@
 import type { ProviderListedModelEntry } from "@spiritagent/agent-core/model-catalog";
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import { lookupModelKnowledge } from "@spiritagent/agent-core/model-knowledge";
 import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 
@@ -11,7 +12,10 @@ import type {
   DesktopTransportKind,
   PreviewModelCatalogEntry,
 } from "../types.js";
-import type { ThinkingSwitchDeclaration } from "@spiritagent/host-internal/config";
+import type {
+  SpiritServiceTiersDeclaration,
+  ThinkingSwitchDeclaration,
+} from "@spiritagent/host-internal/config";
 
 /**
  * The catalog parser (API shape) driving a provider entry's listing: the materialized preset's
@@ -110,14 +114,16 @@ function knowledgeDeclaredServiceTiers(
   declaration: Record<string, unknown>,
 ): PreviewModelCatalogEntry["serviceTiers"] {
   const value = declaration["serviceTiers"];
-  if (!Array.isArray(value)) {
-    return undefined;
+  if (Array.isArray(value)) {
+    const tiers = value.filter((item): item is ModelServiceTier => typeof item === "string");
+    return tiers.length > 0 ? [...new Set(tiers)] : undefined;
   }
-  const tiers = value.filter(
-    (item): item is NonNullable<PreviewModelCatalogEntry["serviceTiers"]>[number] =>
-      typeof item === "string",
-  );
-  return tiers.length > 0 ? [...new Set(tiers)] : undefined;
+  if (typeof value === "object" && value !== null) {
+    // Literal map form: a wire-declaration shape validated by the knowledge module's own tests
+    // and again at config load (same loose-fold contract as `thinkingSwitch`).
+    return value as SpiritServiceTiersDeclaration;
+  }
+  return undefined;
 }
 
 /**
@@ -146,7 +152,13 @@ function previewEntryFromListedEntry(
   const knowledge = lookupCatalogModelKnowledge(entry.id);
   const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
   const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
-  const knowledgeTiers = knowledge ? knowledgeDeclaredServiceTiers(knowledge) : undefined;
+  // Bedrock Converse has no service tier parameter, so provider-agnostic knowledge tier
+  // declarations (e.g. Claude Opus Fast) are withheld for bedrock listings instead of showing a
+  // no-op control.
+  const knowledgeTiers =
+    knowledge && parserName !== "bedrock-models"
+      ? knowledgeDeclaredServiceTiers(knowledge)
+      : undefined;
   const knowledgeThinkingSwitch = knowledge?.["supportsThinkingSwitch"] === true ? true : undefined;
   const knowledgeThinkingType =
     knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
@@ -170,7 +182,13 @@ function previewEntryFromListedEntry(
           }
         : {}),
     ...(knowledgeModes !== undefined ? { supportedReasoningModes: knowledgeModes } : {}),
-    ...(knowledgeTiers !== undefined ? { serviceTiers: knowledgeTiers } : {}),
+    // Aggregator parsers materialize the route-specific declaration; it beats the provider-agnostic
+    // knowledge record (an OpenAI-native auto tier, for example, would be wrong on a gateway route).
+    ...(entry.serviceTiers !== undefined
+      ? { serviceTiers: entry.serviceTiers as SpiritServiceTiersDeclaration }
+      : knowledgeTiers !== undefined
+        ? { serviceTiers: knowledgeTiers }
+        : {}),
     ...resolvePreviewDefaultReasoningEffortForEntry(entry),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
     ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),

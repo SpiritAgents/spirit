@@ -3,6 +3,7 @@
  */
 
 import type { LlmTransportKind } from "../llm-provider-shared.js";
+import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
 import { lookupModelKnowledge } from "../model-knowledge/index.js";
 import { findProviderPreset, resolvePresetApiBase } from "../provider-presets/index.js";
 import { assertGoogleGeminiApiBase, googleNativeModelsListUrl } from "./google-gemini-endpoints.js";
@@ -85,6 +86,15 @@ export interface ProviderListedModelEntry {
    * normalized downstream by agent-core when mapping service tier options.
    */
   upstreamProvider?: string;
+  /**
+   * Aggregator-route service tier declaration materialized by the listing parser (Vercel AI
+   * Gateway / OpenRouter): the per-upstream mapping is route-specific, so the parser writes the
+   * declaration directly — the literal providerOptions form on the gateway v3 protocol, the
+   * simple tier list on OpenRouter's OpenAI-family surfaces. An explicit empty list means the
+   * route declares no tiers (keeps provider-agnostic knowledge records from leaking a no-op
+   * control onto the entry).
+   */
+  serviceTiers?: ModelServiceTiersDeclaration;
 }
 
 export const OPENAI_MODELS_PATH = "/models";
@@ -2225,6 +2235,108 @@ function attachGatewayModelReasoningEfforts(
   return attachModelKnowledgeReasoningEfforts(modelEntry);
 }
 
+/** Upstream identities behind an aggregator route that carry a service tier mapping. */
+type ServiceTierUpstream = "openai" | "anthropic" | "google" | "xai";
+
+const SERVICE_TIER_UPSTREAM_ALIASES: Readonly<Record<string, ServiceTierUpstream>> = {
+  openai: "openai",
+  anthropic: "anthropic",
+  google: "google",
+  xai: "xai",
+  // OpenRouter uses the `x-ai` author prefix for xAI models.
+  "x-ai": "xai",
+  // Vercel AI Gateway routes xAI models under the `spacexai` prefix / `owned_by` fact.
+  spacexai: "xai",
+};
+
+/**
+ * Aggregator upstream identity: a present catalog fact is authoritative (an unrecognized fact
+ * means "known but unsupported" and materializes no tiers); the model id route prefix is parsed
+ * only when the catalog fact is absent. Unknown identity yields undefined.
+ */
+function resolveServiceTierUpstream(
+  upstreamProvider: string | undefined,
+  modelId: string,
+): ServiceTierUpstream | undefined {
+  const fact = upstreamProvider?.trim().toLowerCase();
+  if (fact) {
+    return SERVICE_TIER_UPSTREAM_ALIASES[fact];
+  }
+  const slashIndex = modelId.indexOf("/");
+  if (slashIndex <= 0) {
+    return undefined;
+  }
+  return SERVICE_TIER_UPSTREAM_ALIASES[modelId.slice(0, slashIndex).trim().toLowerCase()];
+}
+
+/** The knowledge record's ultrafast declaration is the curated model fact aggregators inherit. */
+function knowledgeDeclaresUltrafastTier(modelId: string): boolean {
+  const declared = lookupModelKnowledge(modelId)?.["serviceTiers"];
+  return Array.isArray(declared) && declared.includes("ultrafast");
+}
+
+/**
+ * Vercel AI Gateway per-upstream tier mapping as literal declarations: the gateway v3
+ * language-model protocol carries the unified flex/priority intent in the `gateway` provider
+ * options namespace; OpenAI Fast forwards through the same namespace and Ultrafast through the
+ * `openai` one. Anthropic and unrecognized upstreams get an explicit empty list so the
+ * provider-agnostic knowledge records never leak a no-op tier onto the route.
+ */
+function vercelGatewayServiceTiers(
+  upstreamProvider: string | undefined,
+  modelId: string,
+): ModelServiceTiersDeclaration {
+  const upstream = resolveServiceTierUpstream(upstreamProvider, modelId);
+  const gatewayTier = (serviceTier: string) => ({ providerOptions: { gateway: { serviceTier } } });
+  switch (upstream) {
+    case "openai": {
+      return {
+        default: {},
+        flex: gatewayTier("flex"),
+        fast: gatewayTier("fast"),
+        ...(knowledgeDeclaresUltrafastTier(modelId)
+          ? { ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } } }
+          : {}),
+      };
+    }
+    case "google":
+      return { default: {}, flex: gatewayTier("flex"), priority: gatewayTier("priority") };
+    case "xai":
+      return { default: {}, priority: gatewayTier("priority") };
+    default:
+      return [];
+  }
+}
+
+/**
+ * OpenRouter per-upstream tier ladder in the simple list form: the route speaks the OpenAI-family
+ * body `service_tier` on both the chat-completions and Responses surfaces (an explicit default
+ * overrides :nitro/:floor admission), and OpenRouter maps `priority` for Anthropic/xAI upstreams
+ * itself — Anthropic native speed never goes through it.
+ */
+function openRouterServiceTiers(
+  upstreamProvider: string | undefined,
+  modelId: string,
+): ModelServiceTiersDeclaration {
+  const upstream = resolveServiceTierUpstream(upstreamProvider, modelId);
+  switch (upstream) {
+    case "openai": {
+      const tiers: ModelServiceTier[] = ["default", "flex", "fast"];
+      if (knowledgeDeclaresUltrafastTier(modelId)) {
+        tiers.push("ultrafast");
+      }
+      return tiers;
+    }
+    case "google":
+      return ["default", "flex", "priority"];
+    case "anthropic":
+    case "xai":
+      return ["default", "priority"];
+    default:
+      return [];
+  }
+}
+
 function readOpenRouterSupportedReasoningEfforts(
   record: Record<string, unknown>,
 ): string[] | undefined {
@@ -2332,7 +2444,13 @@ export function parseVercelAiGatewayModelEntriesPayload(body: unknown): Provider
       ),
     );
   }
-  return entries.map(attachGatewayModelReasoningEfforts);
+  return entries.map((entry) =>
+    attachGatewayModelReasoningEfforts(
+      entry.supportsImageGeneration === true || entry.supportsVideoGeneration === true
+        ? entry
+        : { ...entry, serviceTiers: vercelGatewayServiceTiers(entry.upstreamProvider, entry.id) },
+    ),
+  );
 }
 
 function readOpenRouterModalities(value: unknown): string[] {
@@ -2423,7 +2541,11 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
       }
     }
 
-    const modelEntry: ProviderListedModelEntry = { id: id.trim(), ...upstreamProviderFact };
+    const modelEntry: ProviderListedModelEntry = {
+      id: id.trim(),
+      ...upstreamProviderFact,
+      serviceTiers: openRouterServiceTiers(upstreamProvider, id),
+    };
     const supportedReasoningEfforts = readOpenRouterSupportedReasoningEfforts(record);
     if (supportedReasoningEfforts !== undefined) {
       modelEntry.supportedReasoningEfforts = supportedReasoningEfforts;

@@ -70,8 +70,14 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
       // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-* (switch + encoding).
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
   ]);
@@ -118,8 +124,14 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
       // kimi-k2.5+ carries a model-knowledge thinking-switch declaration (switch + wire encoding).
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "enabled" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "enabled" } },
+          providerOptions: { moonshotai: { thinking: { type: "enabled" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { moonshotai: { thinking: { type: "disabled" } } },
+        },
       },
     },
     {
@@ -160,8 +172,14 @@ test("openrouter provider passes through display metadata and pricing", () => {
       capabilities: ["languageModel"],
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
   ]);
@@ -262,8 +280,14 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "adaptive" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
     {
@@ -294,8 +318,14 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "adaptive" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
     {
@@ -326,8 +356,14 @@ test("knowledge declarations win over empty catalog effort lists", () => {
       supportedReasoningEfforts: ["low", "medium", "high"],
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "adaptive" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
   ]);
@@ -422,8 +458,14 @@ test("minimax provider consumes MiniMax model catalog metadata", () => {
       // minimax-m3 knowledge record: thinking switch.
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "adaptive" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { minimax: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { minimax: { thinking: { type: "disabled" } } },
+        },
       },
     },
     {
@@ -551,8 +593,14 @@ test("tencent-tokenhub provider preserves upstream displayName from models catal
       supportedReasoningEfforts: ["high", "max"],
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "enabled" } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "enabled" } },
+          providerOptions: { deepseek: { thinking: { type: "enabled" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { deepseek: { thinking: { type: "disabled" } } },
+        },
       },
     },
   ]);
@@ -611,6 +659,12 @@ test("google provider uses upstream display metadata from native models catalog"
       contextLength: 1048576 + 8192,
       // gemini-3+ knowledge record: effort tiers.
       supportedReasoningEfforts: ["low", "medium", "high"],
+      // The gemini knowledge records declare the literal tier map (Gemini serviceTier wire enum).
+      serviceTiers: {
+        default: { body: { serviceTier: "standard" } },
+        flex: { body: { serviceTier: "flex" } },
+        priority: { body: { serviceTier: "priority" } },
+      },
     },
   ]);
 });
@@ -667,8 +721,14 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
       contextLength: 200000,
       supportsThinkingSwitch: true,
       thinkingSwitch: {
-        on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
-        off: { body: { thinking: { type: "disabled" } } },
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+        },
       },
     },
   ]);
@@ -774,6 +834,67 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
   });
 
   assert.equal(catalogMap.get("x-ai/grok-4.3")?.upstreamProvider, "x-ai");
+});
+
+test("parser-materialized serviceTiers win over the provider-agnostic knowledge record", () => {
+  // The vercel parser declares the route-specific literal map for openai-upstream routes; the
+  // provider-agnostic gpt-5.6+ knowledge list (with the OpenAI-native auto tier) must not win.
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      {
+        id: "openai/gpt-5.6",
+        upstreamProvider: "OpenAI",
+        serviceTiers: {
+          default: {},
+          flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+          fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+  });
+});
+
+test("an explicit empty parser declaration suppresses the knowledge tier fold", () => {
+  // anthropic/claude-opus-4.8 matches the Opus 4.8 knowledge record (native Fast); the vercel
+  // parser declares no tiers for anthropic upstreams, and the explicit empty list must hold.
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      { id: "anthropic/claude-opus-4.8", upstreamProvider: "Anthropic", serviceTiers: [] },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.serviceTiers, []);
+});
+
+test("bedrock listings withhold the provider-agnostic knowledge tier declaration", () => {
+  // Converse has no service tier parameter, so the Claude Opus Fast declaration must not fold
+  // onto a Bedrock entry (it would be a no-op control).
+  const preview = previewModelCatalogForTransport({
+    providerId: "amazon-bedrock",
+    transportKind: "bedrock",
+    listedModels: [{ id: "anthropic.claude-opus-5-5-v1" }],
+  });
+
+  assert.equal(preview?.[0]?.serviceTiers, undefined);
+
+  // Direct anthropic listings do fold it.
+  const direct = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [{ id: "claude-opus-5.5" }],
+  });
+
+  assert.deepEqual(direct?.[0]?.serviceTiers, ["fast"]);
 });
 
 test("muse model ids override stale catalog reasoning efforts on any provider", () => {

@@ -205,7 +205,7 @@ export function catalogEntryToModelEntry(
     entry.thinkingSwitch = structuredClone(catalogEntry.thinkingSwitch);
   }
   if (catalogEntry.serviceTiers !== undefined) {
-    entry.serviceTiers = [...catalogEntry.serviceTiers];
+    entry.serviceTiers = structuredClone(catalogEntry.serviceTiers);
   }
   if (catalogEntry.defaultReasoningEffort !== undefined) {
     entry.reasoningEffort = catalogEntry.defaultReasoningEffort as ModelEntry["reasoningEffort"];
@@ -400,11 +400,14 @@ export function applyCatalogEntryToStoredModel(
   }
 
   if (catalogEntry.serviceTiers !== undefined) {
-    if (!stringArrayEqual(model.serviceTiers as string[] | undefined, catalogEntry.serviceTiers)) {
-      model.serviceTiers = [...catalogEntry.serviceTiers];
+    if (JSON.stringify(model.serviceTiers) !== JSON.stringify(catalogEntry.serviceTiers)) {
+      model.serviceTiers = structuredClone(catalogEntry.serviceTiers);
       changed = true;
     }
-    if (model.serviceTier !== undefined && !catalogEntry.serviceTiers.includes(model.serviceTier)) {
+    const declaredTiers = Array.isArray(catalogEntry.serviceTiers)
+      ? catalogEntry.serviceTiers
+      : Object.keys(catalogEntry.serviceTiers);
+    if (model.serviceTier !== undefined && !declaredTiers.includes(model.serviceTier)) {
       delete model.serviceTier;
       changed = true;
     }

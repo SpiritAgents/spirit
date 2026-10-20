@@ -249,8 +249,8 @@ export interface PreviewModelCatalogEntry {
   supportsThinkingSwitch?: boolean;
   /** Thinking on/off wire encoding folded from model knowledge (companion of `supportsThinkingSwitch`). */
   thinkingSwitch?: ThinkingSwitchDeclaration;
-  /** Declared service tier options (array form) folded from model knowledge. */
-  serviceTiers?: ModelServiceTier[];
+  /** Declared service tier options (simple list or literal wire map) folded from the listing and model knowledge. */
+  serviceTiers?: SpiritServiceTiersDeclaration;
   /** Hugging Face Hub media models: Inference Providers routing hint. */
   inferenceProvider?: string;
   /** Aggregator upstream identity fact (Vercel `owned_by` raw, OpenRouter `canonical_slug` author prefix); display metadata only, never persisted onto config models. */

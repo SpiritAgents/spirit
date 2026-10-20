@@ -40,6 +40,27 @@ import {
   minimaxOpenAiCompatibleListingBaseFromConnectBase,
 } from "./openai-models.js";
 
+/** Materialized aggregator tier declarations shared across the parser expectations. */
+const VERCEL_OPENAI_TIERS = {
+  default: {},
+  flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+  fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+};
+const VERCEL_OPENAI_TIERS_ULTRAFAST = {
+  ...VERCEL_OPENAI_TIERS,
+  ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } },
+};
+const VERCEL_GOOGLE_TIERS = {
+  default: {},
+  flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+  priority: { providerOptions: { gateway: { serviceTier: "priority" } } },
+};
+const OPENROUTER_OPENAI_TIERS = ["default", "flex", "fast"];
+const OPENROUTER_ANTHROPIC_TIERS = ["default", "priority"];
+const OPENROUTER_GOOGLE_TIERS = ["default", "flex", "priority"];
+/** Anthropic / unrecognized upstreams declare no tiers; the explicit empty list suppresses knowledge leaks. */
+const NO_SERVICE_TIERS: string[] = [];
+
 test("minimaxOpenAiCompatibleListingBaseFromConnectBase preserves site from anthropic connect base", () => {
   assert.equal(
     minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimax.cn/anthropic/v1"),
@@ -177,6 +198,7 @@ test("parseVercelAiGatewayModelEntriesPayload infers kimi-k3 reasoning efforts",
     {
       id: "moonshotai/kimi-k3",
       supportedReasoningEfforts: moonshotK3SupportedReasoningEfforts(),
+      serviceTiers: NO_SERVICE_TIERS,
     },
   ]);
 });
@@ -195,6 +217,7 @@ test("parseVercelAiGatewayModelEntriesPayload infers max effort for gpt-5.6 open
     {
       id: "openai/gpt-5.6-sol",
       supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh", "max"],
+      serviceTiers: VERCEL_OPENAI_TIERS,
     },
   ]);
 });
@@ -239,6 +262,7 @@ test("parseVercelAiGatewayModelEntriesPayload omits none effort for openai/gpt-6
     {
       id: "openai/gpt-6-astra",
       supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+      serviceTiers: VERCEL_OPENAI_TIERS_ULTRAFAST,
     },
   ]);
 });
@@ -404,6 +428,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps language and image types", ()
       id: "openai/gpt-5",
       contextLength: 128000,
       supportsImageInput: true,
+      serviceTiers: VERCEL_OPENAI_TIERS,
     },
     {
       id: "google/imagen-4",
@@ -415,6 +440,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps language and image types", ()
     },
     {
       id: "legacy/model-without-type",
+      serviceTiers: NO_SERVICE_TIERS,
     },
   ]);
 });
@@ -444,13 +470,16 @@ test("parseVercelAiGatewayModelEntriesPayload maps vision tag to supportsImageIn
     {
       id: "openai/gpt-4o",
       supportsImageInput: true,
+      serviceTiers: VERCEL_OPENAI_TIERS,
     },
     {
       id: "alibaba/qwen-3-14b",
+      serviceTiers: NO_SERVICE_TIERS,
     },
     {
       id: "google/gemini-2.5-flash-image",
       supportedReasoningEfforts: ["none", "low", "medium", "high"],
+      serviceTiers: VERCEL_GOOGLE_TIERS,
     },
   ]);
 });
@@ -477,13 +506,16 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
     {
       id: "anthropic/claude-sonnet-4.6",
       supportedReasoningEfforts: ["low", "medium", "high"],
+      serviceTiers: NO_SERVICE_TIERS,
     },
     {
       id: "anthropic/claude-opus-4.7",
       supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+      serviceTiers: NO_SERVICE_TIERS,
     },
     {
       id: "openai/gpt-5",
+      serviceTiers: VERCEL_OPENAI_TIERS,
     },
   ]);
 });
@@ -510,10 +542,12 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
     {
       id: "google/gemini-3.1-pro-preview",
       supportedReasoningEfforts: ["low", "medium", "high"],
+      serviceTiers: VERCEL_GOOGLE_TIERS,
     },
     {
       id: "google/gemini-2.5-flash",
       supportedReasoningEfforts: ["none", "low", "medium", "high"],
+      serviceTiers: VERCEL_GOOGLE_TIERS,
     },
     {
       id: "google/imagen-4",
@@ -554,7 +588,7 @@ test("parseOpenAiCompatibleModelEntriesPayload routes vercel-ai-gateway to typed
   );
 
   assert.deepEqual(entries, [
-    { id: "openai/gpt-5" },
+    { id: "openai/gpt-5", serviceTiers: VERCEL_OPENAI_TIERS },
     { id: "google/imagen-4", supportsImageGeneration: true },
   ]);
 });
@@ -585,10 +619,10 @@ test("parseOpenRouterModelEntriesPayload classifies output_modalities", () => {
   });
 
   assert.deepEqual(entries, [
-    { id: "openai/gpt-4o" },
+    { id: "openai/gpt-4o", serviceTiers: OPENROUTER_OPENAI_TIERS },
     { id: "google/imagen-4", supportsImageGeneration: true },
-    { id: "openai/gpt-image-1" },
-    { id: "legacy/model-without-modalities" },
+    { id: "openai/gpt-image-1", serviceTiers: OPENROUTER_OPENAI_TIERS },
+    { id: "legacy/model-without-modalities", serviceTiers: NO_SERVICE_TIERS },
   ]);
 });
 
@@ -619,6 +653,7 @@ test("parseVercelAiGatewayModelEntriesPayload extracts display metadata and pric
         outputPerTokenUsd: "0.000002",
       },
       contextLength: 128000,
+      serviceTiers: VERCEL_OPENAI_TIERS,
     },
   ]);
 });
@@ -716,6 +751,7 @@ test("parseOpenRouterModelEntriesPayload extracts display metadata and pricing",
         outputPerTokenUsd: "0.000015",
         requestPerCallUsd: "0",
       },
+      serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
 });
@@ -736,6 +772,7 @@ test("parseOpenRouterModelEntriesPayload reads reasoning supported_efforts from 
     {
       id: "acme/sonnetish-9000",
       supportedReasoningEfforts: ["high", "medium", "low"],
+      serviceTiers: NO_SERVICE_TIERS,
     },
   ]);
 });
@@ -755,6 +792,7 @@ test("parseOpenRouterModelEntriesPayload lets knowledge records win over the api
     {
       id: "anthropic/claude-sonnet-4.6",
       supportedReasoningEfforts: ["low", "medium", "high"],
+      serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
 });
@@ -776,6 +814,7 @@ test("parseOpenRouterModelEntriesPayload keeps explicit empty supported_efforts 
     {
       id: "acme/sonnetish-9000",
       supportedReasoningEfforts: [],
+      serviceTiers: NO_SERVICE_TIERS,
     },
   ]);
 });
@@ -1194,6 +1233,7 @@ test("parseOpenAiCompatibleModelEntriesPayload routes openrouter to typed parser
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4",
+      serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
     { id: "stability/sdxl", supportsImageGeneration: true },
   ]);
@@ -1214,6 +1254,7 @@ test("parseOpenRouterModelEntriesPayload maps context_length", () => {
     {
       id: "anthropic/claude-sonnet-4",
       contextLength: 200000,
+      serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
 });
@@ -2385,6 +2426,94 @@ test("parseOpenRouterModelEntriesPayload extracts canonical_slug author as upstr
       { id: "leading-slash", upstreamProvider: undefined, supportsImageGeneration: undefined },
     ],
   );
+});
+
+test("parseVercelAiGatewayModelEntriesPayload materializes per-upstream service tier declarations", () => {
+  const entries = parseVercelAiGatewayModelEntriesPayload({
+    data: [
+      { id: "openai/gpt-5.6", type: "language", owned_by: "OpenAI" },
+      { id: "openai/gpt-6-astra", type: "language", owned_by: "OpenAI" },
+      { id: "google/gemini-3-pro", type: "language", owned_by: "Google" },
+      { id: "xai/grok-4.3", type: "language", owned_by: "xAI" },
+      { id: "spacexai/grok-4.5", type: "language", owned_by: "SpaceXAI" },
+      { id: "anthropic/claude-opus-4.8", type: "language", owned_by: "Anthropic" },
+      { id: "meta/llama-4-scout", type: "language" },
+      { id: "openai/gpt-image-1", type: "image", owned_by: "OpenAI" },
+    ],
+  });
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+
+  // OpenAI upstream: Fast forwards through the gateway namespace; default sends nothing.
+  assert.deepEqual(byId.get("openai/gpt-5.6")?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+  });
+  // Ultrafast-capable models (knowledge-declared) add the tier through the openai namespace.
+  assert.deepEqual(byId.get("openai/gpt-6-astra")?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+    ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } },
+  });
+  assert.deepEqual(byId.get("google/gemini-3-pro")?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    priority: { providerOptions: { gateway: { serviceTier: "priority" } } },
+  });
+  assert.deepEqual(byId.get("xai/grok-4.3")?.serviceTiers, {
+    default: {},
+    priority: { providerOptions: { gateway: { serviceTier: "priority" } } },
+  });
+  // The spacexai route prefix and owned_by fact alias to the same xai upstream.
+  assert.deepEqual(byId.get("spacexai/grok-4.5")?.serviceTiers, {
+    default: {},
+    priority: { providerOptions: { gateway: { serviceTier: "priority" } } },
+  });
+  // Anthropic and unrecognized upstreams declare no tiers; the explicit empty list keeps the
+  // provider-agnostic knowledge records (Claude Opus Fast) from leaking a no-op control.
+  assert.deepEqual(byId.get("anthropic/claude-opus-4.8")?.serviceTiers, []);
+  assert.deepEqual(byId.get("meta/llama-4-scout")?.serviceTiers, []);
+  // Media entries carry no tier declaration.
+  assert.equal(byId.get("openai/gpt-image-1")?.serviceTiers, undefined);
+});
+
+test("parseOpenRouterModelEntriesPayload materializes per-upstream service tier ladders", () => {
+  const entries = parseOpenRouterModelEntriesPayload({
+    data: [
+      { id: "openai/gpt-5.6", canonical_slug: "openai/gpt-5.6" },
+      { id: "openai/gpt-6.1-sol", canonical_slug: "openai/gpt-6.1-sol" },
+      { id: "google/gemini-3-pro", canonical_slug: "google/gemini-3-pro" },
+      { id: "anthropic/claude-opus-4.8", canonical_slug: "anthropic/claude-opus-4.8" },
+      { id: "x-ai/grok-4.3", canonical_slug: "x-ai/grok-4.3" },
+      { id: "meta/llama-4-scout", canonical_slug: "meta/llama-4-scout" },
+      // Missing canonical_slug: the model id route prefix is the fallback upstream identity.
+      { id: "openai/gpt-4o" },
+      {
+        id: "google/imagen-4",
+        canonical_slug: "google/imagen-4",
+        architecture: { output_modalities: ["image"] },
+      },
+    ],
+  });
+  const byId = new Map(entries.map((entry) => [entry.id, entry]));
+
+  assert.deepEqual(byId.get("openai/gpt-5.6")?.serviceTiers, ["default", "flex", "fast"]);
+  // Knowledge-declared ultrafast models add the tier.
+  assert.deepEqual(byId.get("openai/gpt-6.1-sol")?.serviceTiers, [
+    "default",
+    "flex",
+    "fast",
+    "ultrafast",
+  ]);
+  assert.deepEqual(byId.get("google/gemini-3-pro")?.serviceTiers, OPENROUTER_GOOGLE_TIERS);
+  // OpenRouter maps priority for Anthropic/xAI upstreams itself; native Anthropic speed is never declared.
+  assert.deepEqual(byId.get("anthropic/claude-opus-4.8")?.serviceTiers, ["default", "priority"]);
+  assert.deepEqual(byId.get("x-ai/grok-4.3")?.serviceTiers, ["default", "priority"]);
+  assert.deepEqual(byId.get("meta/llama-4-scout")?.serviceTiers, []);
+  assert.deepEqual(byId.get("openai/gpt-4o")?.serviceTiers, ["default", "flex", "fast"]);
+  // Media entries carry no tier declaration.
+  assert.equal(byId.get("google/imagen-4")?.serviceTiers, undefined);
 });
 
 test("dedupeProviderListedModelEntries preserves upstreamProvider from the first entry", () => {

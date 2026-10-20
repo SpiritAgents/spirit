@@ -4,6 +4,8 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { normalizeOpenAiApiBase } from "@spiritagent/agent-core/model-catalog/openai-api-base";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import type { SpiritServiceTiersDeclaration } from "@spiritagent/host-internal/config";
 
 import type {
   DesktopModelCapability,
@@ -416,15 +418,16 @@ function normalizeCachedSupportedReasoningModes(
 }
 
 function normalizeCachedServiceTiers(value: unknown): PreviewModelCatalogEntry["serviceTiers"] {
-  if (!Array.isArray(value)) {
-    return undefined;
+  if (Array.isArray(value)) {
+    const tiers = value.filter((item): item is ModelServiceTier => typeof item === "string");
+    // An explicit empty list is a declaration ("no tiers on this route"), not a missing key.
+    return [...new Set(tiers)];
   }
-  const tiers = value.filter(
-    (item): item is NonNullable<PreviewModelCatalogEntry["serviceTiers"]>[number] =>
-      typeof item === "string",
-  );
-  const unique = [...new Set(tiers)];
-  return unique.length > 0 ? unique : undefined;
+  if (typeof value === "object" && value !== null) {
+    // Literal map form (validated before it reached the cache); clone defensively.
+    return structuredClone(value) as SpiritServiceTiersDeclaration;
+  }
+  return undefined;
 }
 
 function normalizeCachedSupportedReasoningEfforts(
@@ -462,6 +465,12 @@ function normalizeCachedDefaultReasoningEffort(
   return effort;
 }
 
+function cloneServiceTiersDeclaration(
+  tiers: SpiritServiceTiersDeclaration,
+): SpiritServiceTiersDeclaration {
+  return Array.isArray(tiers) ? [...tiers] : structuredClone(tiers);
+}
+
 function clonePreviewModelCatalog(
   entries: readonly PreviewModelCatalogEntry[],
 ): PreviewModelCatalogEntry[] {
@@ -485,7 +494,9 @@ function clonePreviewModelCatalog(
     ...(entry.supportedReasoningModes !== undefined
       ? { supportedReasoningModes: [...entry.supportedReasoningModes] }
       : {}),
-    ...(entry.serviceTiers !== undefined ? { serviceTiers: [...entry.serviceTiers] } : {}),
+    ...(entry.serviceTiers !== undefined
+      ? { serviceTiers: cloneServiceTiersDeclaration(entry.serviceTiers) }
+      : {}),
     ...(entry.supportsThinkingType !== undefined
       ? { supportsThinkingType: entry.supportsThinkingType }
       : {}),

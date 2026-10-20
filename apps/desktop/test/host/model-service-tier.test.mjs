@@ -91,6 +91,50 @@ test("model catalog cache parses sparse entries", async () => {
   });
 });
 
+test("model catalog cache round-trips literal serviceTiers and the explicit empty declaration", async () => {
+  await withCatalogCacheDir(async () => {
+    await writeModelCatalogCache(
+      "https://ai-gateway.vercel.sh/v1",
+      ["openai/gpt-5.6", "anthropic/claude-opus-4.8"],
+      "test-key",
+      [
+        {
+          id: "openai/gpt-5.6",
+          capabilities: ["languageModel"],
+          upstreamProvider: "OpenAI",
+          serviceTiers: {
+            default: {},
+            flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+            fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+          },
+        },
+        {
+          id: "anthropic/claude-opus-4.8",
+          capabilities: ["languageModel"],
+          upstreamProvider: "Anthropic",
+          serviceTiers: [],
+        },
+      ],
+      "vercel-ai-gateway",
+    );
+
+    const entry = await readModelCatalogCache(
+      "https://ai-gateway.vercel.sh/v1",
+      "test-key",
+      "vercel-ai-gateway",
+    );
+    assert.ok(entry);
+    const [first, second] = entry.modelCatalog;
+    assert.deepEqual(first.serviceTiers, {
+      default: {},
+      flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+      fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+    });
+    // The explicit empty list survives the round-trip (it suppresses the knowledge fold).
+    assert.deepEqual(second.serviceTiers, []);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // updateConfigCommand: set / clear / reject + inference-preference refresh
 // ---------------------------------------------------------------------------
