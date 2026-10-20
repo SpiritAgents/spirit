@@ -105,6 +105,26 @@ test("literal form keeps name-keyed flex waiting and maps nothing for a missing 
   );
 });
 
+test("gemini literal declaration maps default onto the standard wire enum", () => {
+  // The google-gemini knowledge records declare this literal map verbatim; the Gemini Developer
+  // API speaks serviceTier standard/flex/priority, so the neutral default maps to standard.
+  const serviceTiers = {
+    default: { body: { serviceTier: "standard" } },
+    flex: { body: { serviceTier: "flex" } },
+    priority: { body: { serviceTier: "priority" } },
+  } as const;
+  assert.deepEqual(plan({ surface: "generate-content", serviceTier: "default", serviceTiers }), {
+    body: { serviceTier: "standard" },
+  });
+  assert.deepEqual(plan({ surface: "generate-content", serviceTier: "flex", serviceTiers }), {
+    body: { serviceTier: "flex" },
+    flexWaiting: true,
+  });
+  assert.deepEqual(plan({ surface: "generate-content", serviceTier: "priority", serviceTiers }), {
+    body: { serviceTier: "priority" },
+  });
+});
+
 test("mergeServiceTierProviderOptions joins namespaces instead of replacing them", () => {
   const merged = mergeServiceTierProviderOptions(
     { openai: { reasoningEffort: "high", store: true } },

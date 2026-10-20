@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "match": "grok-",
+      "declare": {
+        "serviceTiers": ["default", "priority"]
+      },
+      "note": "xAI Grok models take the priority-processing service tier on both the chat-completions and Responses surfaces (wire: body service_tier); default is the standard tier."
+    }
+  ]
+}
