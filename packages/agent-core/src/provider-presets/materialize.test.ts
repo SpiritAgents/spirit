@@ -340,14 +340,16 @@ test("mechanism options templates materialize scoped to the selected transport",
   // carry the key; openrouter / cloudflare-ai-gateway only over the open-responses transport.
   assert.deepEqual(materializeProviderPreset({ presetId: "openai" }).options, {
     applyPatch: true,
+    reasoningSummary: true,
   });
   assert.deepEqual(materializeProviderPreset({ presetId: "vercel-ai-gateway" }).options, {
     applyPatch: true,
+    reasoningSummary: true,
   });
   assert.equal(materializeProviderPreset({ presetId: "openrouter" }).options, undefined);
   assert.deepEqual(
     materializeProviderPreset({ presetId: "openrouter", transportKind: "open-responses" }).options,
-    { applyPatch: true },
+    { applyPatch: true, reasoningSummary: true },
   );
   assert.deepEqual(
     materializeProviderPreset({
@@ -355,7 +357,40 @@ test("mechanism options templates materialize scoped to the selected transport",
       transportKind: "open-responses",
       templateValues: { accountId: "acc-1" },
     }).options,
-    { applyPatch: true },
+    { applyPatch: true, reasoningSummary: true },
+  );
+
+  // reasoning.summary declarations: the Responses surfaces that honor OpenAI-style
+  // reasoning.summary opt in; deepseek / ark / stepfun reject the field and never declare it.
+  assert.deepEqual(materializeProviderPreset({ presetId: "xai" }).options, {
+    reasoningSummary: true,
+  });
+  assert.deepEqual(
+    materializeProviderPreset({ presetId: "azure", templateValues: { resourceName: "res" } })
+      .options,
+    { reasoningSummary: true },
+  );
+  assert.deepEqual(materializeProviderPreset({ presetId: "hugging-face" }).options, {
+    reasoningSummary: true,
+  });
+  assert.deepEqual(
+    materializeProviderPreset({ presetId: "fireworks-ai", transportKind: "open-responses" })
+      .options,
+    { reasoningSummary: true },
+  );
+  assert.deepEqual(
+    materializeProviderPreset({ presetId: "alibaba", transportKind: "open-responses" }).options,
+    { reasoningSummary: true },
+  );
+  assert.deepEqual(
+    materializeProviderPreset({ presetId: "xiaomi", transportKind: "open-responses" }).options,
+    { reasoningSummary: true },
+  );
+  assert.deepEqual(deepseek.options, { echoServerToolCalls: true });
+  assert.deepEqual(volcengineResponses.options, { defaultInputItemStatus: "completed" });
+  assert.equal(
+    materializeProviderPreset({ presetId: "stepfun", transportKind: "open-responses" }).options,
+    undefined,
   );
 
   // The materialized options are a deep copy that never aliases the manifest.

@@ -45,9 +45,9 @@ test("openResponsesReasoningTrace passes declared effort and pro mode verbatim",
   assert.deepEqual(
     openResponsesReasoningTrace({
       model: "gpt-5.6-sol",
-      sdk: "@ai-sdk/openai",
       reasoningEffort: "max",
       reasoningMode: "pro",
+      options: { reasoningSummary: true },
     }),
     { effort: "max", mode: "pro", summary: "auto" },
   );
@@ -57,57 +57,67 @@ test("openResponsesReasoningTrace omits mode for standard and downgrades nothing
   assert.deepEqual(
     openResponsesReasoningTrace({
       model: "gpt-5.5",
-      sdk: "@ai-sdk/openai",
       reasoningEffort: "max",
       reasoningMode: "standard",
+      options: { reasoningSummary: true },
     }),
     { effort: "max", summary: "auto" },
   );
 });
 
-test("openResponsesReasoningTrace sends nothing when nothing is declared and the adapter drops summaries", () => {
-  assert.equal(
-    openResponsesReasoningTrace({ model: "some-model", sdk: "@ai-sdk/huggingface" }),
-    undefined,
+test("openResponsesReasoningTrace sends nothing when nothing is declared", () => {
+  assert.equal(openResponsesReasoningTrace({ model: "some-model" }), undefined);
+});
+
+test("openResponsesReasoningTrace defaults the reasoning summary to auto when declared", () => {
+  assert.deepEqual(
+    openResponsesReasoningTrace({ model: "gpt-5.5", options: { reasoningSummary: true } }),
+    {
+      summary: "auto",
+    },
   );
 });
 
-test("openResponsesReasoningTrace defaults the reasoning summary to auto on eligible adapters", () => {
-  assert.deepEqual(openResponsesReasoningTrace({ model: "gpt-5.5", sdk: "@ai-sdk/openai" }), {
-    summary: "auto",
-  });
-});
-
-test("resolveOpenResponsesReasoningSummary is sdk-keyed: ineligible adapters send nothing", () => {
+test("resolveOpenResponsesReasoningSummary is opt-in via the options.reasoningSummary declaration", () => {
+  // A DeepSeek-shaped config (generic adapter, echoServerToolCalls, no summary declaration)
+  // sends no summary: the endpoint rejects OpenAI-style reasoning.summary.
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/huggingface",
       reasoningEffort: "high",
+      options: { echoServerToolCalls: true },
     }),
     undefined,
   );
-  assert.equal(resolveOpenResponsesReasoningSummary({ reasoningEffort: "high" }), "auto");
+  assert.equal(resolveOpenResponsesReasoningSummary({ reasoningEffort: "high" }), undefined);
+  // A declared endpoint gets the default auto summary.
+  assert.equal(
+    resolveOpenResponsesReasoningSummary({
+      reasoningEffort: "high",
+      options: { reasoningSummary: true },
+    }),
+    "auto",
+  );
 });
 
 test("resolveOpenResponsesReasoningSummary honors off and effort none", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/openai",
       reasoningEffort: "none",
+      options: { reasoningSummary: true },
     }),
     undefined,
   );
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/openai",
       reasoningSummary: "off",
+      options: { reasoningSummary: true },
     }),
     undefined,
   );
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/openai",
       reasoningSummary: "detailed",
+      options: { reasoningSummary: true },
     }),
     "detailed",
   );
@@ -116,8 +126,7 @@ test("resolveOpenResponsesReasoningSummary honors off and effort none", () => {
 test("resolveOpenResponsesReasoningSummary omits SigV4 (Bedrock Mantle) endpoints", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/openai",
-      options: { auth: "aws-sigv4" },
+      options: { auth: "aws-sigv4", reasoningSummary: true },
       reasoningEffort: "high",
     }),
     undefined,

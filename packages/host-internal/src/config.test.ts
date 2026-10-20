@@ -560,10 +560,29 @@ test("options keys are scoped by transportKind and sdk", () => {
       validConfig([
         validProvider({
           transportKind: "open-responses",
-          options: { auth: "aws-sigv4", storedState: true, applyPatch: true },
+          options: {
+            auth: "aws-sigv4",
+            storedState: true,
+            applyPatch: true,
+            reasoningSummary: true,
+          },
         }),
       ]),
     ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(validConfig([validProvider({ options: { reasoningSummary: true } })])),
+    'unknown "options" key "reasoningSummary" for transportKind "openai-compatible"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({ transportKind: "open-responses", options: { reasoningSummary: false } }),
+        ]),
+      ),
+    '"options.reasoningSummary" must be true',
   );
   assertSchemaError(
     () =>

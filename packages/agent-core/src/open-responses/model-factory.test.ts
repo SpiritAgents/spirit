@@ -118,6 +118,7 @@ test("buildResponsesProviderOptions maps azure provider options", () => {
     sdk: "@ai-sdk/azure",
     reasoningEffort: "low",
     store: false,
+    options: { reasoningSummary: true },
   });
 
   assert.deepEqual(options, {
@@ -140,6 +141,7 @@ test("buildResponsesProviderOptions passes effort, pro mode, and summary on the 
       reasoningEffort: "max",
       reasoningMode: "pro",
       reasoningSummary: "detailed",
+      options: { reasoningSummary: true },
     }),
     {
       openai: {
@@ -176,6 +178,7 @@ test("buildResponsesProviderOptions omits reasoning for the code-completion prof
     sdk: "@ai-sdk/openai",
     reasoningEffort: "high",
     reasoningSummary: "detailed",
+    options: { reasoningSummary: true },
   });
 
   assert.deepEqual(
@@ -218,6 +221,7 @@ test("buildResponsesProviderOptions uses the generic adapter namespace verbatim 
       model: "some-model",
       sdk: "@ai-sdk/open-responses",
       reasoningEffort: "medium",
+      options: { reasoningSummary: true },
     }),
     {
       spirit: {
@@ -228,13 +232,14 @@ test("buildResponsesProviderOptions uses the generic adapter namespace verbatim 
   );
 });
 
-test("buildResponsesProviderOptions generic adapter suppresses summary where the wire drops it", () => {
+test("buildResponsesProviderOptions generic adapter suppresses summary without the declaration", () => {
+  // DeepSeek-shaped: the generic adapter with no reasoningSummary declaration sends no summary.
   assert.deepEqual(
     buildResponsesProviderOptions({
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "some-model",
-      sdk: "@ai-sdk/minimax",
+      sdk: "@ai-sdk/open-responses",
       reasoningEffort: "medium",
     }),
     {
@@ -253,7 +258,7 @@ test("buildResponsesProviderOptions generic adapter honors options.storedState",
         apiKey: "test-key",
         model: "some-model",
         sdk: "@ai-sdk/open-responses",
-        options: { storedState: true },
+        options: { storedState: true, reasoningSummary: true },
       },
       "resp_prev",
     ),
@@ -275,6 +280,7 @@ test("buildResponsesProviderOptions generic adapter omits store without the stor
         apiKey: "test-key",
         model: "some-model",
         sdk: "@ai-sdk/open-responses",
+        options: { reasoningSummary: true },
       },
       "resp_prev",
     ),

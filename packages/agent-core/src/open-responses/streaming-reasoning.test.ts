@@ -4,10 +4,11 @@ import { test } from "vitest";
 import { extractOpenResponsesReasoningTextFromRawChunk } from "./streaming.js";
 import { resolveOpenResponsesReasoningSummary } from "./responses-compat.js";
 
-test("resolveOpenResponsesReasoningSummary defaults to auto", () => {
+test("resolveOpenResponsesReasoningSummary defaults to auto when declared", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
       reasoningEffort: "medium",
+      options: { reasoningSummary: true },
     }),
     "auto",
   );
@@ -18,6 +19,7 @@ test("resolveOpenResponsesReasoningSummary respects none effort", () => {
     resolveOpenResponsesReasoningSummary({
       reasoningEffort: "none",
       reasoningSummary: "auto",
+      options: { reasoningSummary: true },
     }),
     undefined,
   );
@@ -26,17 +28,16 @@ test("resolveOpenResponsesReasoningSummary respects none effort", () => {
 test("resolveOpenResponsesReasoningSummary disables summary for the SigV4 surface", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      options: { auth: "aws-sigv4" },
+      options: { auth: "aws-sigv4", reasoningSummary: true },
       reasoningEffort: "medium",
     }),
     undefined,
   );
 });
 
-test("resolveOpenResponsesReasoningSummary is suppressed for adapters whose wire drops it", () => {
+test("resolveOpenResponsesReasoningSummary is suppressed without the declaration", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      sdk: "@ai-sdk/huggingface",
       reasoningEffort: "medium",
       reasoningSummary: "auto",
     }),

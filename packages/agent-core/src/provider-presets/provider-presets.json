@@ -16,7 +16,7 @@
           "tools": [{ "type": "web_search" }]
         }
       ],
-      "options": { "applyPatch": true },
+      "options": { "applyPatch": true, "reasoningSummary": true },
       "imageApi": "openai-images",
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
@@ -57,6 +57,7 @@
           "tools": [{ "type": "web_search" }]
         }
       ],
+      "options": { "reasoningSummary": true },
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {
@@ -81,7 +82,7 @@
           ]
         }
       ],
-      "options": { "applyPatch": true },
+      "options": { "applyPatch": true, "reasoningSummary": true },
       "imageApi": "vercel-gateway-images",
       "videoApi": "vercel-gateway-videos",
       "catalog": { "parser": "vercel-gateway-models", "endpoint": "/models" }
@@ -97,7 +98,11 @@
         "anthropic": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "toolsRejectReasoningEffort": true, "applyPatch": true }
+      "options": {
+        "toolsRejectReasoningEffort": true,
+        "applyPatch": true,
+        "reasoningSummary": true
+      }
     },
     {
       "id": "deepseek",
@@ -130,7 +135,7 @@
         "anthropic": "https://openrouter.ai/api/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "applyPatch": true },
+      "options": { "applyPatch": true, "reasoningSummary": true },
       "videoApi": "openrouter-videos",
       "catalog": { "parser": "openrouter-models", "endpoint": "/models" }
     },
@@ -145,6 +150,7 @@
         "anthropic": "https://api.fireworks.ai/inference"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true },
       "catalog": {
         "parser": "fireworks-gateway-models",
         "endpoint": "https://api.fireworks.ai/v1/accounts/fireworks/models"
@@ -210,6 +216,7 @@
         "open-responses": "https://router.huggingface.co/v1"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true },
       "imageApi": "huggingface-inference",
       "videoApi": "huggingface-inference",
       "catalog": { "parser": "huggingface-models", "endpoint": "/models" }
@@ -537,6 +544,7 @@
           "body": { "enable_code_interpreter": true }
         }
       ],
+      "options": { "reasoningSummary": true },
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {
@@ -601,7 +609,7 @@
         "open-responses": "https://api.xiaomimimo.com/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "maxInlineMediaBytes": 52428800 },
+      "options": { "maxInlineMediaBytes": 52428800, "reasoningSummary": true },
       "catalog": { "parser": "xiaomi-models", "endpoint": "/models" }
     },
     {
@@ -818,7 +826,8 @@
       "transports": {
         "open-responses": "https://{resourceName}.openai.azure.com/openai/v1"
       },
-      "credentials": { "kind": "apiKey" }
+      "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true }
     },
     {
       "id": "amazon-bedrock",

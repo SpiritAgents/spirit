@@ -80,7 +80,7 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   providerTools?: ProviderToolEntry[];
   /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
   fileUpload?: FileUploadConfig;
-  /** Transport option namespace (`auth` / `storedState` / `applyPatch` / `echoServerToolCalls` / `defaultInputItemStatus`); unknown keys are rejected at config load. */
+  /** Transport option namespace (`auth` / `storedState` / `applyPatch` / `reasoningSummary` / `echoServerToolCalls` / `defaultInputItemStatus`); unknown keys are rejected at config load. */
   options?: Record<string, unknown>;
   /** Declared output token limit for the model; mapped to the Responses `max_output_tokens` parameter. */
   outputLimit?: number;
@@ -145,33 +145,21 @@ export function openResponsesReasoningMode(
 }
 
 /**
- * Responses-protocol adapters whose wire honors `reasoning.summary` (mechanism-keyed on the
- * declared `sdk` package). Other adapters silently drop or reject the field, so nothing is sent.
- */
-const RESPONSES_REASONING_SUMMARY_SDKS: ReadonlySet<string> = new Set([
-  "@ai-sdk/openai",
-  "@ai-sdk/azure",
-  "@ai-sdk/xai",
-  "@ai-sdk/open-responses",
-  "@ai-sdk/gateway",
-]);
-
-/**
  * Resolves whether to request a reasoning summary from Responses.
- * When not explicitly configured: disabled when reasoningEffort is none, otherwise defaults to auto (so the UI can show the thinking summary).
+ * Emission is opt-in via the `options.reasoningSummary` declaration: endpoints that reject or
+ * silently drop OpenAI-style `reasoning.summary` (DeepSeek, Ark, StepFun Responses) never declare
+ * it and nothing is sent. When declared and not explicitly configured: disabled when
+ * reasoningEffort is none, otherwise defaults to auto (so the UI can show the thinking summary).
  */
 export function resolveOpenResponsesReasoningSummary(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "reasoningEffort" | "reasoningSummary" | "sdk" | "options"
-  >,
+  config: Pick<OpenResponsesTransportConfig, "reasoningEffort" | "reasoningSummary" | "options">,
 ): OpenResponsesReasoningSummary | undefined {
   // The SigV4 (Bedrock Mantle) Open Responses surface has no reasoning summary support.
   if (isAwsSigV4AuthConfig(config)) {
     return undefined;
   }
 
-  if (!RESPONSES_REASONING_SUMMARY_SDKS.has(config.sdk ?? "@ai-sdk/open-responses")) {
+  if (config.options?.["reasoningSummary"] !== true) {
     return undefined;
   }
 
@@ -189,7 +177,7 @@ export function resolveOpenResponsesReasoningSummary(
 export function openResponsesReasoningTrace(
   config: Pick<
     OpenResponsesTransportConfig,
-    "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary" | "sdk" | "options"
+    "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary" | "options"
   >,
 ): JsonObject | undefined {
   const effort = openResponsesReasoningEffort(config);

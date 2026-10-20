@@ -55,6 +55,7 @@ const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<string, LlmTransportKind> = {
   echoServerToolCalls: "open-responses",
   defaultInputItemStatus: "open-responses",
   applyPatch: "open-responses",
+  reasoningSummary: "open-responses",
 };
 
 function materializePresetOptions(

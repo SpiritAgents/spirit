@@ -17,6 +17,7 @@ test("openai-routed models take the Responses reasoning payload in the openai na
   const options = buildGatewayV3ProviderOptions({
     model: "openai/gpt-5.6",
     reasoningEffort: "high",
+    options: { reasoningSummary: true },
   });
   assert.deepEqual(options, {
     openai: { reasoningEffort: "high", reasoningSummary: "auto" },
@@ -24,12 +25,21 @@ test("openai-routed models take the Responses reasoning payload in the openai na
 });
 
 test("unknown routes fall back to the openai namespace with the default summary", () => {
-  assert.deepEqual(buildGatewayV3ProviderOptions({ model: "meta/llama-4-scout" }), {
-    openai: { reasoningSummary: "auto" },
-  });
-  assert.deepEqual(buildGatewayV3ProviderOptions({ model: "gpt-5.6" }), {
-    openai: { reasoningSummary: "auto" },
-  });
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({
+      model: "meta/llama-4-scout",
+      options: { reasoningSummary: true },
+    }),
+    {
+      openai: { reasoningSummary: "auto" },
+    },
+  );
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({ model: "gpt-5.6", options: { reasoningSummary: true } }),
+    {
+      openai: { reasoningSummary: "auto" },
+    },
+  );
 });
 
 test("anthropic routes carry toolStreaming and the protocol effort enum only", () => {
@@ -158,6 +168,7 @@ test("zai / moonshotai routes keep the effort in the openai namespace and think 
       model: "zai/glm-5.2",
       reasoningEffort: "high",
       thinkingSwitch: zaiThinkingSwitch,
+      options: { reasoningSummary: true },
     }),
     {
       zai: { thinking: { type: "enabled" } },
@@ -176,6 +187,7 @@ test("zai / moonshotai routes keep the effort in the openai namespace and think 
       model: "moonshotai/kimi-k2.6",
       thinkingSwitch: kimiThinkingSwitch,
       vendorExtendedThinking: false,
+      options: { reasoningSummary: true },
     }),
     {
       moonshotai: { thinking: { type: "disabled" } },
@@ -195,15 +207,23 @@ test("minimax routes emit only the declared adaptive/disabled thinking patch", (
       providerOptions: { minimax: { thinking: { type: "disabled" } } },
     },
   };
-  assert.deepEqual(buildGatewayV3ProviderOptions({ model: "minimax/minimax-m3", thinkingSwitch }), {
-    minimax: { thinking: { type: "adaptive" } },
-    openai: { reasoningSummary: "auto" },
-  });
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({
+      model: "minimax/minimax-m3",
+      thinkingSwitch,
+      options: { reasoningSummary: true },
+    }),
+    {
+      minimax: { thinking: { type: "adaptive" } },
+      openai: { reasoningSummary: "auto" },
+    },
+  );
   assert.deepEqual(
     buildGatewayV3ProviderOptions({
       model: "minimax/minimax-m3",
       thinkingSwitch,
       vendorExtendedThinking: false,
+      options: { reasoningSummary: true },
     }),
     {
       minimax: { thinking: { type: "disabled" } },
@@ -225,13 +245,20 @@ test("a thinkingSwitch without a providerOptions form sends no thinking on the g
       reasoningEffort: "high",
       thinkingSwitch,
       vendorExtendedThinking: false,
+      options: { reasoningSummary: true },
     }),
     { openai: { reasoningEffort: "high", reasoningSummary: "auto" } },
   );
 });
 
-test("no declarations and no effort still yield the default summary for non-special routes", () => {
-  assert.deepEqual(buildGatewayV3ProviderOptions({ model: "openai/gpt-5.4" }), {
-    openai: { reasoningSummary: "auto" },
-  });
+test("the default summary follows the options.reasoningSummary declaration", () => {
+  // Declared (as the vercel-ai-gateway preset declares): non-special routes take the default.
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({ model: "openai/gpt-5.4", options: { reasoningSummary: true } }),
+    {
+      openai: { reasoningSummary: "auto" },
+    },
+  );
+  // Undeclared: nothing is emitted.
+  assert.deepEqual(buildGatewayV3ProviderOptions({ model: "openai/gpt-5.4" }), {});
 });
