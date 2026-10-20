@@ -146,6 +146,14 @@ function resetWizardOwnedKeys(
       record[key] = value;
     }
   }
+  // `body` / `thinkingSwitch` are owned only when the preset templates them: a template-less
+  // preset leaves a user's hand-written escape-hatch value intact across reconnect.
+  for (const key of ["body", "thinkingSwitch"] as const) {
+    const value = materialized[key];
+    if (value !== undefined) {
+      record[key] = value;
+    }
+  }
 }
 
 function writeSetupCredentials(
