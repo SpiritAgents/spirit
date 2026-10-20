@@ -101,7 +101,7 @@ function applyOpenResponsesCodeCompletionProfile(
 
 function applyBedrockCodeCompletionProfile(config: BedrockTransportConfig): BedrockTransportConfig {
   return {
-    ...withCodeCompletionProfile(config),
+    ...withThinkingOff(withCodeCompletionProfile(config)),
     reasoningEffort: "none",
   };
 }

@@ -163,6 +163,23 @@ test("bedrock: reasoning effort none maps to no reasoningConfig", () => {
   assert.deepEqual(buildBedrockProviderOptions(result), {});
 });
 
+test("bedrock: a declared thinking switch turns thinking off explicitly on the completion path", () => {
+  const input: BedrockTransportConfig = {
+    transportKind: "bedrock",
+    model: "anthropic.claude-sonnet-4-6",
+    region: "us-east-1",
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  };
+  const result = applyCodeCompletionTransportProfile(input) as BedrockTransportConfig;
+  assert.equal(result.vendorExtendedThinking, false);
+  assert.deepEqual(buildBedrockProviderOptions(result), {
+    bedrock: { reasoningConfig: { type: "disabled" } },
+  });
+});
+
 test("applyCodeCompletionTransportProfile tags anthropic, open-responses, and bedrock transports", () => {
   const anthropic: AnthropicTransportConfig = {
     transportKind: "anthropic",
