@@ -58,7 +58,6 @@ export function buildGatewayV3ProviderOptions(
     | "model"
     | "reasoningEffort"
     | "reasoningSummary"
-    | "sdk"
     | "options"
     | "thinkingSwitch"
     | "vendorExtendedThinking"

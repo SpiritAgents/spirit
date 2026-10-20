@@ -542,9 +542,10 @@ fn preset_options_for_transport(
             "toolsRejectReasoningEffort" | "maxInlineMediaBytes" => {
                 transport_kind == ModelTransportKind::OpenAiCompatible
             }
-            "echoServerToolCalls" | "defaultInputItemStatus" | "applyPatch" => {
-                transport_kind == ModelTransportKind::OpenResponses
-            }
+            "echoServerToolCalls"
+            | "defaultInputItemStatus"
+            | "applyPatch"
+            | "reasoningSummary" => transport_kind == ModelTransportKind::OpenResponses,
             _ => true,
         })
         .map(|(key, value)| (key.clone(), value.clone()))

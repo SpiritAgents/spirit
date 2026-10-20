@@ -97,6 +97,8 @@ export interface ProviderOptions {
   maxInlineMediaBytes?: number;
   /** open-responses: echo server-side tool call items back into the next round's input. */
   echoServerToolCalls?: true;
+  /** open-responses: the endpoint honors OpenAI-style `reasoning.summary`; absent = never sent. */
+  reasoningSummary?: true;
   /** open-responses: status value filled onto replayed input items that lack one. */
   defaultInputItemStatus?: string;
 }
@@ -298,6 +300,7 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
     "storedState",
     "applyPatch",
     "echoServerToolCalls",
+    "reasoningSummary",
     "defaultInputItemStatus",
   ],
   anthropic: [],
@@ -630,6 +633,7 @@ function validateProviderOptions(
     "applyPatch",
     "toolsRejectReasoningEffort",
     "echoServerToolCalls",
+    "reasoningSummary",
   ] as const) {
     if (value[key] !== undefined && value[key] !== true) {
       throw new SpiritConfigSchemaError(
