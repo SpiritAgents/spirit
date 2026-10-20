@@ -29,7 +29,6 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
   compactModel?: string;
   workspaceRoot?: string;
   modelCapabilities?: LlmModelCapabilities;
-  thinking?: AnthropicThinkingConfig;
   /** Declared reasoning effort, already filtered to the Anthropic protocol enum at config load. */
   effort?: AnthropicEffort;
   /**
@@ -91,21 +90,14 @@ export interface AnthropicRequestTrace extends JsonObject {
 }
 
 /**
- * Transport default thinking encoding: an explicit `thinking` wins; the code-completion profile
- * and the user-off state send the protocol's `{type: "disabled"}`; otherwise nothing is sent and
- * the upstream default applies (for adaptive-era Claude models that is thinking on). A declared
- * `thinkingSwitch` state patch overrides this encoding at the literal body merge layer.
+ * Transport default thinking encoding: the code-completion profile and the user-off state send
+ * the protocol's `{type: "disabled"}`; otherwise nothing is sent and the upstream default applies
+ * (for adaptive-era Claude models that is thinking on). A declared `thinkingSwitch` state patch
+ * overrides this encoding at the literal body merge layer.
  */
 export function resolveAnthropicThinkingConfig(
-  config: Pick<
-    AnthropicTransportConfig,
-    "thinking" | "vendorExtendedThinking" | "transportRequestProfile"
-  >,
+  config: Pick<AnthropicTransportConfig, "vendorExtendedThinking" | "transportRequestProfile">,
 ): AnthropicThinkingConfig | undefined {
-  if (config.thinking !== undefined) {
-    return config.thinking;
-  }
-
   if (isCodeCompletionTransportProfile(config)) {
     return { type: "disabled" };
   }
@@ -120,7 +112,6 @@ export function resolveAnthropicThinkingConfig(
 export function buildAnthropicProviderOptions(
   config: Pick<
     AnthropicTransportConfig,
-    | "thinking"
     | "vendorExtendedThinking"
     | "effort"
     | "sendReasoning"
