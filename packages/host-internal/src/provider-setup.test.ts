@@ -241,7 +241,10 @@ test("saveProviderSetup writes preset mechanism options scoped to the materializ
   const config = loadSpiritConfig(spiritDataDir);
   assert.ok(config);
   const byId = new Map(config.providers.map((provider) => [provider.id, provider]));
-  assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
+  assert.deepEqual(byId.get("volcengine")?.options, {
+    defaultInputItemStatus: "completed",
+    storedState: true,
+  });
 });
 
 test("saveProviderSetup writes preset body / thinkingSwitch templates and resets them on reconnect", async () => {
