@@ -59,6 +59,7 @@ const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<
   defaultInputItemStatus: "open-responses",
   applyPatch: "open-responses",
   reasoningSummary: "open-responses",
+  storedState: "open-responses",
   // OpenRouter's unified anthropic-route reasoning shape applies to both OpenAI-family surfaces;
   // the anthropic transport speaks native Messages and does not take it.
   openRouterAnthropicReasoning: ["openai-compatible", "open-responses"],

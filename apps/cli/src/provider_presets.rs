@@ -552,7 +552,8 @@ fn preset_options_for_transport(
             "echoServerToolCalls"
             | "defaultInputItemStatus"
             | "applyPatch"
-            | "reasoningSummary" => transport_kind == ModelTransportKind::OpenResponses,
+            | "reasoningSummary"
+            | "storedState" => transport_kind == ModelTransportKind::OpenResponses,
             // OpenRouter's unified anthropic-route reasoning shape applies to both OpenAI-family
             // surfaces; the anthropic transport speaks native Messages and does not take it.
             "openRouterAnthropicReasoning" => matches!(
@@ -1123,6 +1124,38 @@ mod tests {
                 .options
                 .as_ref()
                 .is_none_or(|options| !options.contains_key("defaultInputItemStatus"))
+        );
+        // storedState is open-responses-scoped too: ark and alibaba carry it only there.
+        let draft = preset_connect_draft("volcengine", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("storedState")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("byteplus", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("storedState")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("alibaba", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("storedState")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("alibaba", ModelTransportKind::OpenAiCompatible, None);
+        assert!(
+            draft
+                .options
+                .as_ref()
+                .is_none_or(|options| !options.contains_key("storedState"))
         );
         let draft = preset_connect_draft("xiaomi", ModelTransportKind::OpenAiCompatible, None);
         assert_eq!(
