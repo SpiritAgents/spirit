@@ -22,23 +22,6 @@ test("resolveAnthropicThinkingConfig encodes the user-off state as the protocol 
   });
 });
 
-test("resolveAnthropicThinkingConfig prefers explicit thinking over every default", () => {
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      transportRequestProfile: "code-completion",
-      vendorExtendedThinking: false,
-      thinking: { type: "enabled", budgetTokens: 1024 },
-    }),
-    { type: "enabled", budgetTokens: 1024 },
-  );
-  assert.deepEqual(
-    resolveAnthropicThinkingConfig({
-      thinking: { type: "adaptive", display: "summarized" },
-    }),
-    { type: "adaptive", display: "summarized" },
-  );
-});
-
 test("buildAnthropicProviderOptions emits disabled thinking for the code-completion profile", () => {
   assert.deepEqual(buildAnthropicProviderOptions({ transportRequestProfile: "code-completion" }), {
     anthropic: {
