@@ -1,6 +1,7 @@
 import { loadModelKnowledgeRecords, lookupModelKnowledgeRecord } from "./loader.js";
 import type { CompiledModelKnowledgeRecord } from "./types.js";
 
+import rawAmazonNova from "./amazon-nova.json" with { type: "json" };
 import rawAnthropicClaude from "./anthropic-claude.json" with { type: "json" };
 import rawDeepseek from "./deepseek.json" with { type: "json" };
 import rawGoogleGemini from "./google-gemini.json" with { type: "json" };
@@ -11,6 +12,8 @@ import rawOpenaiGpt from "./openai-gpt.json" with { type: "json" };
 import rawXiaomi from "./xiaomi.json" with { type: "json" };
 import rawZaiGlm from "./zai-glm.json" with { type: "json" };
 
+export const AMAZON_NOVA_RECORDS: readonly CompiledModelKnowledgeRecord[] =
+  loadModelKnowledgeRecords(rawAmazonNova, "amazon-nova.json");
 export const ANTHROPIC_CLAUDE_RECORDS: readonly CompiledModelKnowledgeRecord[] =
   loadModelKnowledgeRecords(rawAnthropicClaude, "anthropic-claude.json");
 export const DEEPSEEK_RECORDS: readonly CompiledModelKnowledgeRecord[] = loadModelKnowledgeRecords(
@@ -54,6 +57,7 @@ export interface ModelKnowledgeSource {
  * file, records are authored specific-first and the first match wins.
  */
 export const MODEL_KNOWLEDGE_SOURCES: readonly ModelKnowledgeSource[] = [
+  { source: "amazon-nova.json", records: AMAZON_NOVA_RECORDS },
   { source: "anthropic-claude.json", records: ANTHROPIC_CLAUDE_RECORDS },
   { source: "deepseek.json", records: DEEPSEEK_RECORDS },
   { source: "google-gemini.json", records: GOOGLE_GEMINI_RECORDS },
