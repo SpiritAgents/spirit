@@ -327,6 +327,28 @@ test("mechanism options templates materialize scoped to the selected transport",
   const xiaomi = materializeProviderPreset({ presetId: "xiaomi" });
   assert.deepEqual(xiaomi.options, { maxInlineMediaBytes: 52428800 });
 
+  // apply_patch declarations: openai / vercel-ai-gateway are pinned to open-responses and always
+  // carry the key; openrouter / cloudflare-ai-gateway only over the open-responses transport.
+  assert.deepEqual(materializeProviderPreset({ presetId: "openai" }).options, {
+    applyPatch: true,
+  });
+  assert.deepEqual(materializeProviderPreset({ presetId: "vercel-ai-gateway" }).options, {
+    applyPatch: true,
+  });
+  assert.equal(materializeProviderPreset({ presetId: "openrouter" }).options, undefined);
+  assert.deepEqual(
+    materializeProviderPreset({ presetId: "openrouter", transportKind: "open-responses" }).options,
+    { applyPatch: true },
+  );
+  assert.deepEqual(
+    materializeProviderPreset({
+      presetId: "cloudflare-ai-gateway",
+      transportKind: "open-responses",
+      templateValues: { accountId: "acc-1" },
+    }).options,
+    { applyPatch: true },
+  );
+
   // The materialized options are a deep copy that never aliases the manifest.
   xiaomi.options!["maxInlineMediaBytes"] = 1;
   const manifestEntry = PROVIDER_PRESET_MANIFEST.providers.find((preset) => preset.id === "xiaomi");

@@ -54,6 +54,7 @@ const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<string, LlmTransportKind> = {
   maxInlineMediaBytes: "openai-compatible",
   echoServerToolCalls: "open-responses",
   defaultInputItemStatus: "open-responses",
+  applyPatch: "open-responses",
 };
 
 function materializePresetOptions(

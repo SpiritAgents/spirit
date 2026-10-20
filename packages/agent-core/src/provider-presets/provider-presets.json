@@ -16,6 +16,7 @@
           "tools": [{ "type": "web_search" }]
         }
       ],
+      "options": { "applyPatch": true },
       "imageApi": "openai-images",
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
@@ -80,6 +81,7 @@
           ]
         }
       ],
+      "options": { "applyPatch": true },
       "imageApi": "vercel-gateway-images",
       "videoApi": "vercel-gateway-videos",
       "catalog": { "parser": "vercel-gateway-models", "endpoint": "/models" }
@@ -95,7 +97,7 @@
         "anthropic": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1"
       },
       "credentials": { "kind": "apiKey" },
-      "options": { "toolsRejectReasoningEffort": true }
+      "options": { "toolsRejectReasoningEffort": true, "applyPatch": true }
     },
     {
       "id": "deepseek",
@@ -128,6 +130,7 @@
         "anthropic": "https://openrouter.ai/api/v1"
       },
       "credentials": { "kind": "apiKey" },
+      "options": { "applyPatch": true },
       "videoApi": "openrouter-videos",
       "catalog": { "parser": "openrouter-models", "endpoint": "/models" }
     },
