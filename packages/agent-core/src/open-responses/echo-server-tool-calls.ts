@@ -11,7 +11,7 @@ type FetchFn = typeof fetch;
 /**
  * `options.echoServerToolCalls: true` — the endpoint expects server-side tool call items (e.g.
  * `web_search_call`) captured from assistant history to be passed back into the next round's
- * `input`, each inserted directly after the assistant item that produced it (the DeepSeek
+ * `input`, each inserted directly before the assistant item that produced it (the DeepSeek
  * Responses continuation convention). The insertions are collected from the round's messages at
  * the transport layer and applied to the serialized request body here, so the adapter's own
  * message conversion stays untouched.
