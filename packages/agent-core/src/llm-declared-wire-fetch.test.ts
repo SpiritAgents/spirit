@@ -152,6 +152,30 @@ test("merge precedence: transport bodyBase < provider body < thinkingSwitch patc
   });
 });
 
+test("the gateway v3 surface never merges the thinking body patch (providerOptions form only)", async () => {
+  const { fetch: base, captured } = capturingFetch();
+  const fetch = createDeclaredWireMergeFetch(
+    {
+      thinkingSwitch: {
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+      },
+    },
+    "gateway-v3",
+    base,
+  );
+
+  await fetch("https://gateway.example/v3/ai/language-model", {
+    method: "POST",
+    body: JSON.stringify({ model: "anthropic/claude-opus-5.5" }),
+  });
+
+  // No top-level `thinking` field: the v3 protocol carries the encoding in call providerOptions.
+  assert.deepEqual(captured[0]!.body, { model: "anthropic/claude-opus-5.5" });
+});
+
 test("serviceTier simple form maps to the OpenAI-family service_tier body field", async () => {
   const { fetch: base, captured } = capturingFetch();
   const fetch = createDeclaredWireMergeFetch(

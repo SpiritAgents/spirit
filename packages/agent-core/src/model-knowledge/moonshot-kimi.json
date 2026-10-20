@@ -23,12 +23,26 @@
               "thinking": {
                 "type": "enabled"
               }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
             }
           },
           "off": {
             "body": {
               "thinking": {
                 "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "disabled"
+                }
               }
             }
           }

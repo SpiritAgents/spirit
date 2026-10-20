@@ -10,12 +10,26 @@
               "thinking": {
                 "type": "enabled"
               }
+            },
+            "providerOptions": {
+              "zai": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
             }
           },
           "off": {
             "body": {
               "thinking": {
                 "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "zai": {
+                "thinking": {
+                  "type": "disabled"
+                }
               }
             }
           }

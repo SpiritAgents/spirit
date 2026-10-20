@@ -17,12 +17,26 @@
               "thinking": {
                 "type": "adaptive"
               }
+            },
+            "providerOptions": {
+              "minimax": {
+                "thinking": {
+                  "type": "adaptive"
+                }
+              }
             }
           },
           "off": {
             "body": {
               "thinking": {
                 "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "minimax": {
+                "thinking": {
+                  "type": "disabled"
+                }
               }
             }
           }

@@ -52,6 +52,11 @@ export type SpiritTransportKind = "openai-compatible" | "open-responses" | "anth
 export interface SpiritWirePatch {
   headers?: Record<string, string>;
   body?: JsonObject;
+  /**
+   * AI SDK providerOptions fragment (per upstream namespace) for surfaces that serialize call
+   * providerOptions (the gateway v3 language-model protocol); ignored elsewhere.
+   */
+  providerOptions?: JsonObject;
 }
 
 /**
@@ -273,7 +278,7 @@ const PROVIDER_ENTRY_KEYS: ReadonlySet<string> = new Set([
   ...MODEL_INHERITABLE_KEYS,
 ]);
 
-const WIRE_PATCH_KEYS: ReadonlySet<string> = new Set(["headers", "body"]);
+const WIRE_PATCH_KEYS: ReadonlySet<string> = new Set(["headers", "body", "providerOptions"]);
 const THINKING_SWITCH_KEYS: ReadonlySet<string> = new Set(["on", "off"]);
 const KEYRING_REFERENCE_KEYS: ReadonlySet<string> = new Set(["service", "account"]);
 const CREDENTIAL_SLOT_VALUE_KEYS: ReadonlySet<string> = new Set(["value", "env", "keyring"]);
@@ -388,6 +393,9 @@ function validateWirePatch(value: unknown, context: string): void {
   rejectUnknownKeys(value, WIRE_PATCH_KEYS, context);
   if (value["body"] !== undefined && !isPlainObject(value["body"])) {
     throw new SpiritConfigSchemaError(`${context}: "body" must be an object.`);
+  }
+  if (value["providerOptions"] !== undefined && !isPlainObject(value["providerOptions"])) {
+    throw new SpiritConfigSchemaError(`${context}: "providerOptions" must be an object.`);
   }
   if (value["headers"] !== undefined) {
     validateStringMap(value["headers"], `${context}.headers`);

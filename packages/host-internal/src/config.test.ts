@@ -1022,6 +1022,29 @@ test("thinkingSwitch wire patches are validated recursively", () => {
       ]),
     ),
   );
+  // The providerOptions form (gateway v3 surface) is a valid wire-patch member.
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          supportsThinkingSwitch: true,
+          thinkingSwitch: {
+            on: {
+              body: { thinking: { type: "enabled" } },
+              providerOptions: { anthropic: { thinking: { type: "enabled" } } },
+            },
+          },
+        }),
+      ]),
+    ),
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ thinkingSwitch: { on: { providerOptions: "anthropic" } } })]),
+      ),
+    'providers[0].thinkingSwitch.on: "providerOptions" must be an object',
+  );
   assertSchemaError(
     () =>
       validateSpiritConfig(
