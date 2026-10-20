@@ -74,7 +74,12 @@ export function modelHasCatalogDetail(entry: PreviewModelCatalogEntry | undefine
     return true;
   }
   // Declared service tiers feed the picker's tier control even without other display detail.
-  if (entry.serviceTiers && entry.serviceTiers.length > 0) {
+  if (
+    entry.serviceTiers &&
+    (Array.isArray(entry.serviceTiers)
+      ? entry.serviceTiers.length > 0
+      : Object.keys(entry.serviceTiers).length > 0)
+  ) {
     return true;
   }
   if (entry.description?.trim()) {

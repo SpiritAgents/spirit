@@ -56,7 +56,12 @@ export function resolveServiceTierRequestPlan(
     // Literal form: the tier's declared headers/body apply verbatim with zero internal mapping; a
     // tier missing from the map is a config-load error, so the runtime maps nothing here.
     const literal = (context.serviceTiers as ModelServiceTiersLiteralDeclaration)[tier];
-    return withFlexWaiting(literal !== undefined ? { ...literal } : {}, tier);
+    // The declaration's providerOptions is an opaque JsonObject (config-side convention); the
+    // plan narrows it to the per-namespace map the runtime merge iterates.
+    return withFlexWaiting(
+      literal !== undefined ? ({ ...literal } as ServiceTierRequestPlan) : {},
+      tier,
+    );
   }
 
   const plan = simpleFormPlan(context.surface, tier);
