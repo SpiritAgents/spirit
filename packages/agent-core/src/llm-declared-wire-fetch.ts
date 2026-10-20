@@ -41,12 +41,16 @@ export function createDeclaredWireMergeFetch(
   baseFetch: typeof fetch,
   options?: { bodyBase?: JsonObject | undefined },
 ): typeof fetch {
-  // The gateway v3 language-model protocol carries no raw upstream body: the thinking encoding
-  // travels in namespaced call providerOptions (the patch's `providerOptions` form), emitted by
-  // the open-responses provider-options builder. Merging the `body` patch at the v3 body top
-  // level would produce a stray field the protocol does not define.
+  // Surfaces whose protocol has no raw top-level thinking field skip the patch:
+  // - gateway v3: the language-model protocol carries the encoding in namespaced call
+  //   providerOptions (the patch's `providerOptions` form), emitted by the open-responses
+  //   provider-options builder; a top-level field is a stray the protocol does not define.
+  // - bedrock: Converse defines no top-level `thinking` field; the encoding travels in
+  //   `providerOptions.bedrock.reasoningConfig`, emitted by the bedrock provider-options builder.
   const thinkingPatch =
-    surface === "gateway-v3" ? undefined : resolveThinkingSwitchWirePatch(config);
+    surface === "gateway-v3" || surface === "bedrock"
+      ? undefined
+      : resolveThinkingSwitchWirePatch(config);
   const serviceTierPlan = resolveServiceTierRequestPlan({
     ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
