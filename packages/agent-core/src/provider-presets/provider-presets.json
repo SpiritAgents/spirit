@@ -730,6 +730,7 @@
         "open-responses": "https://ark.cn-beijing.volces.com/api/v3"
       },
       "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
       "options": { "defaultInputItemStatus": "completed" },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
@@ -744,6 +745,7 @@
         "open-responses": "https://ark.ap-southeast.bytepluses.com/api/v3"
       },
       "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
       "options": { "defaultInputItemStatus": "completed" },
       "videoApi": "ark-videos",
       "catalog": { "parser": "ark-models", "endpoint": "/models" }
