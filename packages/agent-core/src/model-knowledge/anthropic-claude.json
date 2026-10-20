@@ -1,7 +1,7 @@
 {
   "models": [
     {
-      "match": "(?:anthropic\\.)?claude-(?:fable|mythos)-5(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:fable|mythos)-5(?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingType": "only",
@@ -17,7 +17,7 @@
       "note": "Claude Fable/Mythos 5: always-on adaptive thinking that the API cannot disable, so only the on encoding is declared."
     },
     {
-      "match": "(?:anthropic\\.)?claude-opus-5(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-5(?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
@@ -34,10 +34,10 @@
           }
         }
       },
-      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder. The optional `anthropic.` prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1."
+      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder. The optional prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1, including regional inference-profile prefixes (us./eu./global./…)."
     },
     {
-      "match": "(?:anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
@@ -54,7 +54,7 @@
       }
     },
     {
-      "match": "(?:anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
@@ -74,7 +74,7 @@
       "note": "Claude Opus 4.7/4.8: adaptive thinking with the full effort ladder; the source normalizes 4.7/4.8 dotted ids to dashes, so both separators are accepted."
     },
     {
-      "match": "(?:anthropic\\.)?claude-opus-4[.-]6(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]6(?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "max"],
         "supportsThinkingSwitch": true,
@@ -91,7 +91,7 @@
       }
     },
     {
-      "match": "(?:anthropic\\.)?claude-sonnet-4[.-]6(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-4[.-]6(?:$|[-_.])",
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high"],
         "supportsThinkingSwitch": true,
@@ -108,7 +108,7 @@
       }
     },
     {
-      "match": "(?:anthropic\\.)?claude-(?:(?:haiku|opus|sonnet)-4[.-]5|(?:opus|sonnet)-4)(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:(?:haiku|opus|sonnet)-4[.-]5|(?:opus|sonnet)-4)(?:$|[-_.])",
       "declare": {
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {

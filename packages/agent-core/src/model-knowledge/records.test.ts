@@ -34,6 +34,7 @@ test("registry bundles every family file in deterministic alphabetical order", (
   assert.deepEqual(
     MODEL_KNOWLEDGE_SOURCES.map((entry) => entry.source),
     [
+      "amazon-nova.json",
       "anthropic-claude.json",
       "deepseek.json",
       "google-gemini.json",
@@ -84,6 +85,9 @@ test("claude opus 5.x resolves adaptive thinking with full efforts across id for
   assert.deepEqual(lookupModelKnowledge("claude-opus-5.5"), opus5);
   assert.deepEqual(lookupModelKnowledge("anthropic/claude-opus-5.5"), opus5);
   assert.deepEqual(lookupModelKnowledge("anthropic.claude-opus-5-5-v1"), opus5);
+  // Bedrock regional inference-profile prefixes resolve to the same record.
+  assert.deepEqual(lookupModelKnowledge("us.anthropic.claude-opus-5-5-v1"), opus5);
+  assert.deepEqual(lookupModelKnowledge("global.anthropic.claude-opus-5-5-v1"), opus5);
   assert.deepEqual(lookupModelKnowledge("claude-sonnet-5"), {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
@@ -167,9 +171,21 @@ test("legacy claude models are budget thinking: switch without effort levels", (
     "claude-opus-4-1",
     "claude-opus-4",
     "claude-sonnet-4",
+    // Bedrock ids, including regional inference-profile prefixes.
+    "anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us.anthropic.claude-opus-4-5-v1",
+    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
   ]) {
     assert.deepEqual(lookupModelKnowledge(model), expected, model);
   }
+});
+
+test("bedrock nova ids declare the low/medium/high reasoningConfig ladder", () => {
+  const expected = { supportedReasoningEfforts: ["low", "medium", "high"] };
+  assert.deepEqual(lookupModelKnowledge("amazon.nova-premier-v1:0"), expected);
+  assert.deepEqual(lookupModelKnowledge("us.amazon.nova-premier-v1:0"), expected);
+  assert.deepEqual(lookupModelKnowledge("eu.amazon.nova-2-lite-v1:0"), expected);
+  assert.equal(lookupModelKnowledge("amazon.titan-text-express-v1"), undefined);
 });
 
 test("gpt-5.6+ exposes the extended effort ladder and pro mode; gpt-5.5 does not", () => {
@@ -287,6 +303,15 @@ test("deepseek v4 is a thinking switch with high/max efforts; r1/reasoner are th
   assert.deepEqual(lookupModelKnowledge("deepseek-reasoner"), { supportsThinkingType: "only" });
   assert.equal(lookupModelKnowledge("deepseek-chat"), undefined);
   assert.equal(lookupModelKnowledge("deepseek-v3.2"), undefined);
+});
+
+test("bedrock deepseek.r1 ids are thinking-only with the budgetTokens effort ladder", () => {
+  const expected = {
+    supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+    supportsThinkingType: "only",
+  };
+  assert.deepEqual(lookupModelKnowledge("deepseek.r1-v1:0"), expected);
+  assert.deepEqual(lookupModelKnowledge("us.deepseek.r1-v1:0"), expected);
 });
 
 test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
