@@ -542,7 +542,7 @@ fn preset_options_for_transport(
             "toolsRejectReasoningEffort" | "maxInlineMediaBytes" => {
                 transport_kind == ModelTransportKind::OpenAiCompatible
             }
-            "echoServerToolCalls" | "defaultInputItemStatus" => {
+            "echoServerToolCalls" | "defaultInputItemStatus" | "applyPatch" => {
                 transport_kind == ModelTransportKind::OpenResponses
             }
             _ => true,
@@ -1082,6 +1082,31 @@ mod tests {
                 .as_ref()
                 .and_then(|options| options.get("maxInlineMediaBytes")),
             Some(&serde_json::json!(52428800))
+        );
+        // apply_patch declarations: pinned open-responses presets always carry the key; presets
+        // defaulting to openai-compatible only carry it over the open-responses transport.
+        let draft = preset_connect_draft("openai", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("applyPatch")),
+            Some(&serde_json::json!(true))
+        );
+        let draft = preset_connect_draft("openrouter", ModelTransportKind::OpenAiCompatible, None);
+        assert!(
+            draft
+                .options
+                .as_ref()
+                .is_none_or(|options| !options.contains_key("applyPatch"))
+        );
+        let draft = preset_connect_draft("openrouter", ModelTransportKind::OpenResponses, None);
+        assert_eq!(
+            draft
+                .options
+                .as_ref()
+                .and_then(|options| options.get("applyPatch")),
+            Some(&serde_json::json!(true))
         );
     }
 
