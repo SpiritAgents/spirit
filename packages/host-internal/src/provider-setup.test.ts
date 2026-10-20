@@ -244,6 +244,113 @@ test("saveProviderSetup writes preset mechanism options scoped to the materializ
   assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
 });
 
+test("saveProviderSetup writes preset body / thinkingSwitch templates and resets them on reconnect", async () => {
+  useMemoryKeyring();
+  const spiritDataDir = tempDataDir();
+
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "kimi-code" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "k2.5" }],
+  });
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "meituan" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "longcat-2.5-preview" }],
+  });
+
+  const connected = loadSpiritConfig(spiritDataDir);
+  assert.ok(connected);
+  const connectedById = new Map(connected.providers.map((provider) => [provider.id, provider]));
+  assert.deepEqual(connectedById.get("kimi-code")?.body, {
+    stream_options: { include_usage: true },
+  });
+  assert.deepEqual(connectedById.get("meituan")?.thinkingSwitch, {
+    on: { body: { thinking: { type: "enabled" } } },
+    off: { body: { thinking: { type: "disabled" } } },
+  });
+
+  // User edits to the templated keys are reset on reconnect.
+  const edited: SpiritConfigFile = {
+    ...connected,
+    providers: connected.providers.map((provider) =>
+      provider.id === "kimi-code"
+        ? { ...provider, body: { stream_options: { include_usage: false } } }
+        : provider.id === "meituan"
+          ? {
+              ...provider,
+              thinkingSwitch: { on: { body: { thinking: { type: "adaptive" } } } },
+            }
+          : provider,
+    ),
+  };
+  await saveSpiritConfig(spiritDataDir, edited);
+
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "kimi-code" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "k2.5" }],
+  });
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "meituan" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "longcat-2.5-preview" }],
+  });
+
+  const config = loadSpiritConfig(spiritDataDir);
+  assert.ok(config);
+  const byId = new Map(config.providers.map((provider) => [provider.id, provider]));
+  assert.deepEqual(byId.get("kimi-code")?.body, {
+    stream_options: { include_usage: true },
+  });
+  assert.deepEqual(byId.get("meituan")?.thinkingSwitch, {
+    on: { body: { thinking: { type: "enabled" } } },
+    off: { body: { thinking: { type: "disabled" } } },
+  });
+});
+
+test("reconnect on a template-less preset keeps the user's hand-written body / thinkingSwitch", async () => {
+  useMemoryKeyring();
+  const spiritDataDir = tempDataDir();
+
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "openai" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "gpt-5.4" }],
+  });
+
+  const connected = loadSpiritConfig(spiritDataDir);
+  assert.ok(connected);
+  const entry = connected.providers[0]!;
+  assert.equal(entry.body, undefined);
+  assert.equal(entry.thinkingSwitch, undefined);
+  // The openai preset declares no body / thinkingSwitch template; the user's escape hatch is
+  // not wizard-owned and must survive reconnect.
+  const edited: SpiritConfigFile = {
+    ...connected,
+    providers: [
+      {
+        ...entry,
+        body: { parallel_tool_calls: false },
+        thinkingSwitch: { off: { body: { reasoning: { effort: "none" } } } },
+      },
+    ],
+  };
+  await saveSpiritConfig(spiritDataDir, edited);
+
+  await saveProviderSetup(spiritDataDir, {
+    materialize: { presetId: "openai" },
+    credentials: { apiKey: "sk-test" },
+    models: [{ name: "gpt-5.4" }],
+  });
+
+  const config = loadSpiritConfig(spiritDataDir);
+  assert.ok(config);
+  const merged = config.providers[0]!;
+  assert.deepEqual(merged.body, { parallel_tool_calls: false });
+  assert.deepEqual(merged.thinkingSwitch, { off: { body: { reasoning: { effort: "none" } } } });
+});
+
 test("loadModelProfile carries connection fields and evaluates inheritance", async () => {
   useMemoryKeyring();
   const spiritDataDir = tempDataDir();
