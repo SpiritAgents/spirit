@@ -3,37 +3,62 @@
     {
       "match": "gemini-3\\.[78]\\S*flash",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high"]
+        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
       },
       "note": "Gemini 3.7/3.8 Flash (including -lite/-batch suffixes) reject thinkingLevel=minimal with HTTP 400, so minimal is withheld."
     },
     {
       "match": "gemini-(?:[3-9]|[1-9]\\d+)\\S*flash",
       "declare": {
-        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
       },
       "note": "Flash on thinkingLevel generations (Gemini 3+) accepts thinkingLevel=minimal; 3.7/3.8 Flash above are the exception."
     },
     {
       "match": "gemini-(?:[3-9]|[1-9]\\d+)",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high"]
+        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
       },
       "note": "thinkingLevel models (Gemini 3+ Pro and others): neither minimal nor none is accepted."
     },
     {
       "match": "(?!gemini-2\\.5\\S*flash)gemini-2\\.5\\S*pro(?:$|[-_])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high"]
+        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
       },
       "note": "Gemini 2.5 Pro rejects thinkingBudget 0, so `none` is withheld; 2.5 Flash ids (lookahead) keep it."
     },
     {
       "match": "gemini-",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high"],
+        "serviceTiers": {
+          "default": { "body": { "serviceTier": "standard" } },
+          "flex": { "body": { "serviceTier": "flex" } },
+          "priority": { "body": { "serviceTier": "priority" } }
+        }
       },
-      "note": "thinkingBudget-era Gemini (2.5 Flash, 2.0, …): none maps to thinkingBudget 0."
+      "note": "thinkingBudget-era Gemini (2.5 Flash, 2.0, …): none maps to thinkingBudget 0. The literal serviceTiers carry the Gemini serviceTier vocabulary (default maps to standard on the wire)."
     }
   ]
 }

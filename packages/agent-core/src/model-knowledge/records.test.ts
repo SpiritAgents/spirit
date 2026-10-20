@@ -29,6 +29,12 @@ function thinkingTypeSwitchWithGateway(namespace: string) {
   };
 }
 const MUSE_EFFORTS_WITH_MAX = [...MUSE_BASE_EFFORTS, "max"];
+/** Gemini service tier literal declaration shared by every gemini record (default → standard on the wire). */
+const GEMINI_SERVICE_TIERS = {
+  default: { body: { serviceTier: "standard" } },
+  flex: { body: { serviceTier: "flex" } },
+  priority: { body: { serviceTier: "priority" } },
+};
 
 test("registry bundles every family file in deterministic alphabetical order", () => {
   assert.deepEqual(
@@ -42,6 +48,7 @@ test("registry bundles every family file in deterministic alphabetical order", (
       "minimax.json",
       "moonshot-kimi.json",
       "openai-gpt.json",
+      "xai-grok.json",
       "xiaomi.json",
       "zai-glm.json",
     ],
@@ -74,6 +81,7 @@ test("claude opus 5.x resolves adaptive thinking with full efforts across id for
   const opus5 = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
+    serviceTiers: ["fast"],
     thinkingSwitch: {
       on: {
         body: { thinking: { type: "adaptive", display: "summarized" } },
@@ -118,7 +126,7 @@ test("claude fable/mythos 5 are always-on thinking without a switch", () => {
 });
 
 test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)", () => {
-  const expected = {
+  const shared = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
     thinkingSwitch: {
@@ -129,8 +137,9 @@ test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)"
       off: ANTHROPIC_OFF_DISABLED,
     },
   };
-  assert.deepEqual(lookupModelKnowledge("claude-opus-4.8"), expected);
-  assert.deepEqual(lookupModelKnowledge("claude-opus-4-7"), expected);
+  // Opus 4.8 additionally declares the native Fast tier; 4.7 does not have it.
+  assert.deepEqual(lookupModelKnowledge("claude-opus-4.8"), { ...shared, serviceTiers: ["fast"] });
+  assert.deepEqual(lookupModelKnowledge("claude-opus-4-7"), shared);
 });
 
 test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
@@ -192,6 +201,7 @@ test("gpt-5.6+ exposes the extended effort ladder and pro mode; gpt-5.5 does not
   const expected = {
     supportedReasoningEfforts: GPT56_EFFORTS,
     supportedReasoningModes: GPT56_MODES,
+    serviceTiers: ["auto", "default", "flex", "fast"],
   };
   assert.deepEqual(lookupModelKnowledge("gpt-5.6-sol"), expected);
   assert.deepEqual(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
@@ -214,21 +224,26 @@ test("gpt-6-astra rejects none and offers ultrafast; gpt-6.1-sol keeps none", ()
 });
 
 test("bedrock mantle gpt ids hit the generic gpt-5.6+ record without astra/ultrafast specifics", () => {
-  assert.deepEqual(lookupModelKnowledge("openai.gpt-6-astra"), {
+  const expected = {
     supportedReasoningEfforts: GPT56_EFFORTS,
     supportedReasoningModes: GPT56_MODES,
-  });
-  assert.deepEqual(lookupModelKnowledge("openai.gpt-5.6"), {
-    supportedReasoningEfforts: GPT56_EFFORTS,
-    supportedReasoningModes: GPT56_MODES,
-  });
+    serviceTiers: ["auto", "default", "flex", "fast"],
+  };
+  assert.deepEqual(lookupModelKnowledge("openai.gpt-6-astra"), expected);
+  assert.deepEqual(lookupModelKnowledge("openai.gpt-5.6"), expected);
 });
 
 test("gemini 2.5 pro withholds none while 2.5 flash keeps it", () => {
-  const withoutNone = { supportedReasoningEfforts: ["low", "medium", "high"] };
+  const withoutNone = {
+    supportedReasoningEfforts: ["low", "medium", "high"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
+  };
   assert.deepEqual(lookupModelKnowledge("gemini-2.5-pro"), withoutNone);
   assert.deepEqual(lookupModelKnowledge("google/gemini-2.5-pro-preview"), withoutNone);
-  const withNone = { supportedReasoningEfforts: ["none", "low", "medium", "high"] };
+  const withNone = {
+    supportedReasoningEfforts: ["none", "low", "medium", "high"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
+  };
   assert.deepEqual(lookupModelKnowledge("gemini-2.5-flash"), withNone);
   assert.deepEqual(lookupModelKnowledge("google/gemini-2.5-flash-lite"), withNone);
   assert.equal(lookupModelKnowledge("google/imagen-4"), undefined);
@@ -237,11 +252,16 @@ test("gemini 2.5 pro withholds none while 2.5 flash keeps it", () => {
 test("gemini 3+ flash accepts minimal except 3.7/3.8 (record order priority)", () => {
   assert.deepEqual(lookupModelKnowledge("google/gemini-3.5-flash"), {
     supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
   });
   assert.deepEqual(lookupModelKnowledge("gemini-4-flash"), {
     supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
   });
-  const levelOnly = { supportedReasoningEfforts: ["low", "medium", "high"] };
+  const levelOnly = {
+    supportedReasoningEfforts: ["low", "medium", "high"],
+    serviceTiers: GEMINI_SERVICE_TIERS,
+  };
   assert.deepEqual(lookupModelKnowledge("gemini-3.7-flash-lite"), levelOnly);
   assert.deepEqual(lookupModelKnowledge("google/gemini-3.8-flash-batch"), levelOnly);
   assert.deepEqual(lookupModelKnowledge("google/gemini-3.1-pro-preview"), levelOnly);
@@ -351,6 +371,13 @@ test("mimo v-series supports the thinking switch except mimo-v2-flash", () => {
   assert.deepEqual(lookupModelKnowledge("xiaomi/mimo-v2.5-pro"), expected);
   assert.equal(lookupModelKnowledge("mimo-v2-flash"), undefined);
   assert.equal(lookupModelKnowledge("mimo-v2-flash-8b"), undefined);
+});
+
+test("grok models declare the default/priority tier ladder", () => {
+  const expected = { serviceTiers: ["default", "priority"] };
+  assert.deepEqual(lookupModelKnowledge("grok-4.3"), expected);
+  assert.deepEqual(lookupModelKnowledge("x-ai/grok-4.20-reasoning"), expected);
+  assert.deepEqual(lookupModelKnowledge("spacexai/grok-4.5"), expected);
 });
 
 test("unknown models produce no declarations (safe default)", () => {

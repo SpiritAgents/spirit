@@ -9,6 +9,7 @@ import rawMetaMuse from "./meta-muse.json" with { type: "json" };
 import rawMinimax from "./minimax.json" with { type: "json" };
 import rawMoonshotKimi from "./moonshot-kimi.json" with { type: "json" };
 import rawOpenaiGpt from "./openai-gpt.json" with { type: "json" };
+import rawXaiGrok from "./xai-grok.json" with { type: "json" };
 import rawXiaomi from "./xiaomi.json" with { type: "json" };
 import rawZaiGlm from "./zai-glm.json" with { type: "json" };
 
@@ -34,6 +35,10 @@ export const MOONSHOT_KIMI_RECORDS: readonly CompiledModelKnowledgeRecord[] =
   loadModelKnowledgeRecords(rawMoonshotKimi, "moonshot-kimi.json");
 export const OPENAI_GPT_RECORDS: readonly CompiledModelKnowledgeRecord[] =
   loadModelKnowledgeRecords(rawOpenaiGpt, "openai-gpt.json");
+export const XAI_GROK_RECORDS: readonly CompiledModelKnowledgeRecord[] = loadModelKnowledgeRecords(
+  rawXaiGrok,
+  "xai-grok.json",
+);
 export const XIAOMI_RECORDS: readonly CompiledModelKnowledgeRecord[] = loadModelKnowledgeRecords(
   rawXiaomi,
   "xiaomi.json",
@@ -65,6 +70,7 @@ export const MODEL_KNOWLEDGE_SOURCES: readonly ModelKnowledgeSource[] = [
   { source: "minimax.json", records: MINIMAX_RECORDS },
   { source: "moonshot-kimi.json", records: MOONSHOT_KIMI_RECORDS },
   { source: "openai-gpt.json", records: OPENAI_GPT_RECORDS },
+  { source: "xai-grok.json", records: XAI_GROK_RECORDS },
   { source: "xiaomi.json", records: XIAOMI_RECORDS },
   { source: "zai-glm.json", records: ZAI_GLM_RECORDS },
 ];

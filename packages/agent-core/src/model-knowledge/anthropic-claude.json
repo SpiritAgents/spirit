@@ -21,6 +21,7 @@
       "declare": {
         "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
+        "serviceTiers": ["fast"],
         "thinkingSwitch": {
           "on": {
             "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
@@ -34,7 +35,7 @@
           }
         }
       },
-      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder. The optional prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1, including regional inference-profile prefixes (us./eu./global./…)."
+      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder, plus the native Fast service tier (the Messages `speed` parameter, applied by the anthropic transport). The optional prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1, including regional inference-profile prefixes (us./eu./global./…)."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
@@ -52,6 +53,27 @@
           }
         }
       }
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]8(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingSwitch": true,
+        "serviceTiers": ["fast"],
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Claude Opus 4.8 adds the native Fast service tier (Messages `speed`) on top of the shared Opus 4.7/4.8 declarations; the source normalizes 4.8 dotted ids to dashes, so both separators are accepted."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
