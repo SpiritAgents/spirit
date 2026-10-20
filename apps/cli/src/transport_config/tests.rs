@@ -416,6 +416,35 @@ fn bedrock_shape_reads_region_from_options_and_iam_from_slots() {
 }
 
 #[test]
+fn bedrock_shape_plumbs_thinking_enabled_off_state() {
+    let config = config_from(json!({
+        "schemaVersion": 1,
+        "providers": [{
+            "id": "amazon-bedrock",
+            "apiBase": "https://bedrock-runtime.us-east-1.amazonaws.com",
+            "transportKind": "bedrock",
+            "options": { "awsRegion": "us-east-1" },
+            "models": [{
+                "name": "anthropic.claude-opus-5-5-v1",
+                "thinkingEnabled": false
+            }]
+        }],
+        "activeModel": { "providerId": "amazon-bedrock", "name": "anthropic.claude-opus-5-5-v1" }
+    }));
+    let fixture = TestTransportFixture::new(config, StubSecretStore::default());
+    let transport = resolve_transport_config_json_for(&fixture.host(), &fixture.config)
+        .expect("resolve transport config");
+
+    assert_eq!(
+        transport
+            .get("vendorExtendedThinking")
+            .and_then(Value::as_bool),
+        Some(false)
+    );
+    assert!(transport.get("thinkingEnabled").is_none());
+}
+
+#[test]
 fn bedrock_iam_slots_fall_back_to_internal_keyring_accounts() {
     let config = config_from(json!({
         "schemaVersion": 1,

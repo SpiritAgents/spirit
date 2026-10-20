@@ -187,6 +187,11 @@ fn build_transport_from_profile(
             {
                 obj.insert("supportedReasoningEfforts".to_string(), json!(efforts));
             }
+            if profile.thinking_enabled == Some(false)
+                && let Some(obj) = transport.as_object_mut()
+            {
+                obj.insert("vendorExtendedThinking".to_string(), json!(false));
+            }
             transport
         }
         ModelTransportKind::OpenResponses => {

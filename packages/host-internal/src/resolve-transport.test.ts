@@ -391,6 +391,33 @@ test("bedrock transport accepts a Bearer api key instead of IAM slots", () => {
   assert.equal("accessKeyId" in config, false);
 });
 
+test("bedrock transport plumbs the model thinkingEnabled off state", () => {
+  useMemoryKeyring(internalKeyEntry("bedrock-upstream"));
+  const spiritDataDir = configDir(
+    providerWithActiveModel(
+      {
+        id: "bedrock-upstream",
+        apiBase: "https://bedrock.us-east-1.amazonaws.com",
+        transportKind: "bedrock",
+        options: { awsRegion: "us-east-1" },
+        models: [
+          {
+            name: "anthropic.claude-opus-5-5-v1",
+            supportsThinkingSwitch: true,
+            thinkingEnabled: false,
+          },
+        ],
+      },
+      "anthropic.claude-opus-5-5-v1",
+    ),
+  );
+  const config = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
+  if (config.transportKind !== "bedrock") {
+    assert.fail(`expected bedrock transport, got ${config.transportKind}`);
+  }
+  assert.equal(config.vendorExtendedThinking, false);
+});
+
 test("bedrock transport without options.awsRegion throws the region error", () => {
   useMemoryKeyring(internalKeyEntry("bedrock-upstream"));
   const spiritDataDir = configDir(

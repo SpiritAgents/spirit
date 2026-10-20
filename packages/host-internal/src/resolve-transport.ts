@@ -177,6 +177,7 @@ function buildTransportFromProfile(
       ...(profile.supportedReasoningEfforts !== undefined
         ? { supportedReasoningEfforts: profile.supportedReasoningEfforts }
         : {}),
+      ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
       ...declarations,
     };
   }

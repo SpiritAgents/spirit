@@ -59,6 +59,8 @@ export interface BedrockTransportConfig extends LlmWebToolExposure {
   supportedReasoningModes?: readonly ModelReasoningMode[];
   /** Declared wire encoding of the thinking on/off switch; absent = transport default encoding. */
   thinkingSwitch?: ThinkingSwitchDeclaration;
+  /** User thinking-switch state: `false` encodes thinking off as Converse `reasoningConfig: {type: "disabled"}`. */
+  vendorExtendedThinking?: boolean;
 }
 
 export interface BedrockRequestTrace extends JsonObject {
@@ -146,8 +148,22 @@ export function bedrockReasoningConfigFromEffort(
 }
 
 export function buildBedrockProviderOptions(
-  config: Pick<BedrockTransportConfig, "model" | "reasoningEffort">,
+  config: Pick<BedrockTransportConfig, "model" | "reasoningEffort" | "vendorExtendedThinking">,
 ): Record<string, JsonObject> {
+  // The user off state is Converse's public off encoding; it wins over any effort-derived
+  // config, mirroring the Anthropic transport's default `{thinking: {type: "disabled"}}`.
+  // Models outside the reasoningConfig whitelist take no reasoning parameter at all.
+  if (config.vendorExtendedThinking === false) {
+    if (!bedrockSupportsReasoningConfig(config.model)) {
+      return {};
+    }
+    return {
+      bedrock: {
+        reasoningConfig: { type: "disabled" },
+      },
+    };
+  }
+
   const reasoningConfig = bedrockReasoningConfigFromEffort(config.model, config.reasoningEffort);
   if (reasoningConfig === undefined) {
     return {};
