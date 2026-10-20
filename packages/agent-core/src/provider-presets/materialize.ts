@@ -136,21 +136,20 @@ function assertNoUnresolvedTemplate(apiBase: string, presetId: string): void {
 }
 
 /**
- * Host-executed tool endpoints (search APIs, formula fibers) live on the provider's
+ * Host-executed helper endpoints (tool executes, file uploads) live on the provider's
  * openai-compatible root; when the wizard picked another transport, bake the absolute URL so the
- * runtime never joins the execute path against the chat transport's base.
+ * runtime never joins the path against the chat transport's base. Returns undefined when the
+ * selected transport is openai-compatible (relative paths join against the chat base at runtime).
  */
-function materializeProviderTools(
-  entries: ProviderToolEntry[],
+function openAiCompatibleRootForBaking(
   preset: ProviderPreset,
   input: MaterializeProviderPresetInput,
-): ProviderToolEntry[] {
-  const cloned = structuredClone(entries);
+): string | undefined {
   const transportKind = input.transportKind ?? preset.defaultTransport;
   if (transportKind === "openai-compatible") {
-    return cloned;
+    return undefined;
   }
-  const apiBase = resolvePresetApiBase(preset, {
+  return resolvePresetApiBase(preset, {
     transportKind: "openai-compatible",
     ...(input.siteId !== undefined ? { siteId: input.siteId } : {}),
     ...(input.billingPlanId !== undefined ? { billingPlanId: input.billingPlanId } : {}),
@@ -159,12 +158,34 @@ function materializeProviderTools(
       ...(input.workspaceId !== undefined ? { workspaceId: input.workspaceId } : {}),
     },
   });
+}
+
+function materializeProviderTools(
+  entries: ProviderToolEntry[],
+  openAiCompatibleRoot: string | undefined,
+): ProviderToolEntry[] {
+  const cloned = structuredClone(entries);
+  if (openAiCompatibleRoot === undefined) {
+    return cloned;
+  }
   for (const entry of cloned) {
     const execute = entry.execute;
     if (execute?.path !== undefined && execute.url === undefined) {
-      execute.url = resolveProviderEndpointUrl(apiBase, { path: execute.path });
+      execute.url = resolveProviderEndpointUrl(openAiCompatibleRoot, { path: execute.path });
       delete execute.path;
     }
+  }
+  return cloned;
+}
+
+function materializeFileUpload(
+  fileUpload: FileUploadConfig,
+  openAiCompatibleRoot: string | undefined,
+): FileUploadConfig {
+  const cloned = structuredClone(fileUpload);
+  if (openAiCompatibleRoot !== undefined && cloned.path !== undefined && cloned.url === undefined) {
+    cloned.url = resolveProviderEndpointUrl(openAiCompatibleRoot, { path: cloned.path });
+    delete cloned.path;
   }
   return cloned;
 }
@@ -228,6 +249,7 @@ export function materializeProviderPreset(
   const siteId = input.siteId ?? preset.sites?.default;
   const fileUpload =
     preset.sites?.items.find((item) => item.id === siteId)?.fileUpload ?? preset.fileUpload;
+  const openAiCompatibleRoot = openAiCompatibleRootForBaking(preset, input);
 
   return {
     id: preset.id,
@@ -236,9 +258,11 @@ export function materializeProviderPreset(
     ...(transportKind !== DEFAULT_PROVIDER_TRANSPORT_KIND ? { transportKind } : {}),
     ...(sdk !== undefined ? { sdk } : {}),
     ...(preset.providerTools !== undefined
-      ? { providerTools: materializeProviderTools(preset.providerTools, preset, input) }
+      ? { providerTools: materializeProviderTools(preset.providerTools, openAiCompatibleRoot) }
       : {}),
-    ...(fileUpload !== undefined ? { fileUpload: structuredClone(fileUpload) } : {}),
+    ...(fileUpload !== undefined
+      ? { fileUpload: materializeFileUpload(fileUpload, openAiCompatibleRoot) }
+      : {}),
     ...(preset.body !== undefined ? { body: structuredClone(preset.body) } : {}),
     ...(preset.thinkingSwitch !== undefined
       ? { thinkingSwitch: structuredClone(preset.thinkingSwitch) }

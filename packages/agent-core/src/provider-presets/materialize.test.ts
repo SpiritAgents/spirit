@@ -101,6 +101,34 @@ test("non-default transports bake host-executed execute endpoints as absolute UR
   assert.equal(kimiDefault.providerTools?.[0]?.execute?.url, undefined);
 });
 
+test("non-default transports bake fileUpload.path as an absolute URL on the openai-compatible root", () => {
+  // kimi-code on the anthropic transport: /files must still hit the coding/v1 root.
+  const entry = materializeProviderPreset({
+    presetId: "kimi-code",
+    transportKind: "anthropic",
+    siteId: "cn",
+  });
+  assert.equal(entry.apiBase, "https://api.kimi.com/coding");
+  assert.deepEqual(entry.fileUpload, {
+    url: "https://api.kimi.com/coding/v1/files",
+    purpose: { video: "video" },
+    refTemplate: "ms://{id}",
+  });
+
+  const stepfun = materializeProviderPreset({
+    presetId: "stepfun",
+    transportKind: "anthropic",
+    siteId: "intl",
+  });
+  assert.equal(stepfun.fileUpload?.url, "https://api.stepfun.ai/v1/files");
+  assert.equal(stepfun.fileUpload?.path, undefined);
+
+  // The default transport keeps the relative path (joined against the chat base at runtime).
+  const kimiDefault = materializeProviderPreset({ presetId: "kimi-code", siteId: "cn" });
+  assert.equal(kimiDefault.fileUpload?.path, "/files");
+  assert.equal(kimiDefault.fileUpload?.url, undefined);
+});
+
 test("moonshot-ai materializes the formula entry with ciphertext UI lockdown", () => {
   const entry = materializeProviderPreset({ presetId: "moonshot-ai" });
   const tool = entry.providerTools?.[0];

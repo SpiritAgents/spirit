@@ -502,17 +502,24 @@ pub(crate) fn preset_connect_draft(
         .and_then(|id| preset.sites().iter().find(|site| site.id == id))
         .and_then(|site| site.file_upload.clone())
         .or_else(|| preset.file_upload.clone());
-    // Host-executed tool endpoints live on the provider's openai-compatible root; a non-default
-    // transport bakes them as absolute URLs (mirrors agent-core materializeProviderTools).
-    let provider_tools = preset.provider_tools.clone().map(|tools| {
-        if transport_kind == ModelTransportKind::OpenAiCompatible {
-            tools
-        } else {
-            match openai_compatible_base(preset, site_id) {
-                Some(base) => rewrite_execute_paths_as_absolute(tools, &base),
-                None => tools,
-            }
-        }
+    // Host-executed helper endpoints (tool executes, file uploads) live on the provider's
+    // openai-compatible root; a non-default transport bakes them as absolute URLs (mirrors
+    // agent-core materializeProviderPreset).
+    let baking_base = if transport_kind == ModelTransportKind::OpenAiCompatible {
+        None
+    } else {
+        openai_compatible_base(preset, site_id)
+    };
+    let provider_tools = preset
+        .provider_tools
+        .clone()
+        .map(|tools| match baking_base {
+            Some(base) => rewrite_execute_paths_as_absolute(tools, base),
+            None => tools,
+        });
+    let file_upload = file_upload.map(|upload| match baking_base {
+        Some(base) => rewrite_file_upload_path_as_absolute(upload, base),
+        None => upload,
     });
     ProviderConnectDraft {
         label: preset.label.clone(),
@@ -608,6 +615,28 @@ fn rewrite_execute_paths_as_absolute(tools: Vec<Value>, api_base: &str) -> Vec<V
             tool
         })
         .collect()
+}
+
+/// Rewrites a relative `fileUpload.path` into an absolute `fileUpload.url` joined onto
+/// `api_base` (mirrors agent-core `resolveProviderEndpointUrl`).
+fn rewrite_file_upload_path_as_absolute(mut upload: Value, api_base: &str) -> Value {
+    let base = api_base.trim_end_matches('/');
+    let Some(object) = upload.as_object_mut() else {
+        return upload;
+    };
+    if object.contains_key("url") {
+        return upload;
+    }
+    let Some(path) = object
+        .get("path")
+        .and_then(Value::as_str)
+        .map(|path| path.trim_start_matches('/').to_string())
+    else {
+        return upload;
+    };
+    object.remove("path");
+    object.insert("url".to_string(), Value::String(format!("{base}/{path}")));
+    upload
 }
 
 /// Whether the wizard can bulk-import the model list for this connection: the preset's
@@ -1154,6 +1183,14 @@ mod tests {
         );
         assert!(execute.get("path").is_none());
 
+        // The fileUpload path bakes onto the same openai-compatible root.
+        let file_upload = draft.file_upload.expect("fileUpload");
+        assert_eq!(
+            file_upload.get("url").and_then(Value::as_str),
+            Some("https://api.kimi.com/coding/v1/files")
+        );
+        assert!(file_upload.get("path").is_none());
+
         // The default transport keeps the relative path (joined against the chat base at runtime).
         let draft = preset_connect_draft(
             "kimi-code",
@@ -1168,6 +1205,12 @@ mod tests {
                 .and_then(Value::as_str),
             Some("/search")
         );
+        let file_upload = draft.file_upload.expect("fileUpload");
+        assert_eq!(
+            file_upload.get("path").and_then(Value::as_str),
+            Some("/files")
+        );
+        assert!(file_upload.get("url").is_none());
     }
 
     #[test]
