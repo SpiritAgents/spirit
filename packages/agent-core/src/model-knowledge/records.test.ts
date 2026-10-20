@@ -7,11 +7,27 @@ const CLAUDE_5_FULL_EFFORTS = ["low", "medium", "high", "xhigh", "max"];
 const GPT56_EFFORTS = ["none", "low", "medium", "high", "xhigh", "max"];
 const GPT56_MODES = ["standard", "pro"];
 const MUSE_BASE_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"];
-const ANTHROPIC_OFF_DISABLED = { body: { thinking: { type: "disabled" } } };
+const ANTHROPIC_OFF_DISABLED = {
+  body: { thinking: { type: "disabled" } },
+  providerOptions: { anthropic: { thinking: { type: "disabled" } } },
+};
 const THINKING_TYPE_SWITCH = {
   on: { body: { thinking: { type: "enabled" } } },
-  off: ANTHROPIC_OFF_DISABLED,
+  off: { body: { thinking: { type: "disabled" } } },
 };
+/** The chat-body encoding plus the gateway v3 providerOptions encoding for one upstream namespace. */
+function thinkingTypeSwitchWithGateway(namespace: string) {
+  return {
+    on: {
+      ...THINKING_TYPE_SWITCH.on,
+      providerOptions: { [namespace]: { thinking: { type: "enabled" } } },
+    },
+    off: {
+      ...THINKING_TYPE_SWITCH.off,
+      providerOptions: { [namespace]: { thinking: { type: "disabled" } } },
+    },
+  };
+}
 const MUSE_EFFORTS_WITH_MAX = [...MUSE_BASE_EFFORTS, "max"];
 
 test("registry bundles every family file in deterministic alphabetical order", () => {
@@ -58,7 +74,10 @@ test("claude opus 5.x resolves adaptive thinking with full efforts across id for
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
     thinkingSwitch: {
-      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      on: {
+        body: { thinking: { type: "adaptive", display: "summarized" } },
+        providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+      },
       off: ANTHROPIC_OFF_DISABLED,
     },
   };
@@ -69,7 +88,10 @@ test("claude opus 5.x resolves adaptive thinking with full efforts across id for
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
     thinkingSwitch: {
-      on: { body: { thinking: { type: "adaptive" } } },
+      on: {
+        body: { thinking: { type: "adaptive" } },
+        providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+      },
       off: ANTHROPIC_OFF_DISABLED,
     },
   });
@@ -81,7 +103,10 @@ test("claude fable/mythos 5 are always-on thinking without a switch", () => {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingType: "only",
     thinkingSwitch: {
-      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      on: {
+        body: { thinking: { type: "adaptive", display: "summarized" } },
+        providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+      },
     },
   };
   assert.deepEqual(lookupModelKnowledge("claude-fable-5"), expected);
@@ -93,7 +118,10 @@ test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)"
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
     thinkingSwitch: {
-      on: { body: { thinking: { type: "adaptive", display: "summarized" } } },
+      on: {
+        body: { thinking: { type: "adaptive", display: "summarized" } },
+        providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+      },
       off: ANTHROPIC_OFF_DISABLED,
     },
   };
@@ -103,7 +131,10 @@ test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)"
 
 test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
   const adaptive = {
-    on: { body: { thinking: { type: "adaptive" } } },
+    on: {
+      body: { thinking: { type: "adaptive" } },
+      providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+    },
     off: ANTHROPIC_OFF_DISABLED,
   };
   assert.deepEqual(lookupModelKnowledge("claude-opus-4.6"), {
@@ -122,7 +153,10 @@ test("legacy claude models are budget thinking: switch without effort levels", (
   const expected = {
     supportsThinkingSwitch: true,
     thinkingSwitch: {
-      on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+      on: {
+        body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+        providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+      },
       off: ANTHROPIC_OFF_DISABLED,
     },
   };
@@ -228,7 +262,10 @@ test("kimi k3 is thinking-only with fixed low/high/max efforts", () => {
 });
 
 test("kimi k2.5+ supports the thinking switch; k2.7-code shadows to an empty declare", () => {
-  const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
+  const expected = {
+    supportsThinkingSwitch: true,
+    thinkingSwitch: thinkingTypeSwitchWithGateway("moonshotai"),
+  };
   assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), expected);
   assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), expected);
   assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), expected);
@@ -242,7 +279,7 @@ test("deepseek v4 is a thinking switch with high/max efforts; r1/reasoner are th
   const v4 = {
     supportedReasoningEfforts: ["high", "max"],
     supportsThinkingSwitch: true,
-    thinkingSwitch: THINKING_TYPE_SWITCH,
+    thinkingSwitch: thinkingTypeSwitchWithGateway("deepseek"),
   };
   assert.deepEqual(lookupModelKnowledge("deepseek-v4-pro"), v4);
   assert.deepEqual(lookupModelKnowledge("deepseek/deepseek-v4-flash-vision-exp"), v4);
@@ -258,8 +295,14 @@ test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
   const m3 = {
     supportsThinkingSwitch: true,
     thinkingSwitch: {
-      on: { body: { thinking: { type: "adaptive" } } },
-      off: ANTHROPIC_OFF_DISABLED,
+      on: {
+        body: { thinking: { type: "adaptive" } },
+        providerOptions: { minimax: { thinking: { type: "adaptive" } } },
+      },
+      off: {
+        body: { thinking: { type: "disabled" } },
+        providerOptions: { minimax: { thinking: { type: "disabled" } } },
+      },
     },
   };
   assert.deepEqual(lookupModelKnowledge("minimax/MiniMax-M3"), m3);
@@ -267,7 +310,10 @@ test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
 });
 
 test("glm-4.5+ supports the thinking switch; glm-4 does not", () => {
-  const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
+  const expected = {
+    supportsThinkingSwitch: true,
+    thinkingSwitch: thinkingTypeSwitchWithGateway("zai"),
+  };
   assert.deepEqual(lookupModelKnowledge("glm-4.5"), expected);
   assert.deepEqual(lookupModelKnowledge("zai/glm-4.7"), expected);
   assert.deepEqual(lookupModelKnowledge("glm-5.2"), expected);

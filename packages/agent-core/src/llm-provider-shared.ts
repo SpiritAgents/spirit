@@ -27,6 +27,14 @@ export interface LlmWebToolExposure {
 export interface ThinkingSwitchWirePatch {
   body?: JsonObject;
   headers?: Record<string, string>;
+  /**
+   * AI SDK providerOptions fragment (per upstream namespace) for surfaces that serialize call
+   * providerOptions instead of a raw API body — the gateway v3 language-model protocol. When
+   * declared, that surface merges this fragment per namespace and the `body` form is not applied
+   * there; surfaces without providerOptions plumbing ignore it. Absent on a patch = the gateway
+   * v3 surface sends no thinking encoding for that state.
+   */
+  providerOptions?: JsonObject;
 }
 
 /**

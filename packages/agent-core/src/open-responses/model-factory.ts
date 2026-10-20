@@ -41,6 +41,7 @@ import {
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
 import { responsesUsesStoredState } from "./responses-incremental-input.js";
+import { buildGatewayV3ProviderOptions } from "./gateway-v3-provider-options.js";
 import {
   openResponsesPostUrl,
   openResponsesReasoningEffort,
@@ -316,7 +317,7 @@ export function buildResponsesProviderOptions(
   }
 
   if (sdk === "@ai-sdk/gateway") {
-    return {};
+    return buildGatewayV3ProviderOptions(config);
   }
 
   // Generic Open Responses adapter (`@ai-sdk/open-responses`): reasoning/store declarations pass

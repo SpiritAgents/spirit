@@ -11,12 +11,26 @@
               "thinking": {
                 "type": "enabled"
               }
+            },
+            "providerOptions": {
+              "deepseek": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
             }
           },
           "off": {
             "body": {
               "thinking": {
                 "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "deepseek": {
+                "thinking": {
+                  "type": "disabled"
+                }
               }
             }
           }

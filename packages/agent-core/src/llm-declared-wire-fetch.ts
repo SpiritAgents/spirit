@@ -41,7 +41,12 @@ export function createDeclaredWireMergeFetch(
   baseFetch: typeof fetch,
   options?: { bodyBase?: JsonObject | undefined },
 ): typeof fetch {
-  const thinkingPatch = resolveThinkingSwitchWirePatch(config);
+  // The gateway v3 language-model protocol carries no raw upstream body: the thinking encoding
+  // travels in namespaced call providerOptions (the patch's `providerOptions` form), emitted by
+  // the open-responses provider-options builder. Merging the `body` patch at the v3 body top
+  // level would produce a stray field the protocol does not define.
+  const thinkingPatch =
+    surface === "gateway-v3" ? undefined : resolveThinkingSwitchWirePatch(config);
   const serviceTierPlan = resolveServiceTierRequestPlan({
     ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
