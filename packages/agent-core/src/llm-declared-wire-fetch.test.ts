@@ -176,6 +176,30 @@ test("the gateway v3 surface never merges the thinking body patch (providerOptio
   assert.deepEqual(captured[0]!.body, { model: "anthropic/claude-opus-5.5" });
 });
 
+test("the bedrock surface never merges the thinking body patch (Converse has no such field)", async () => {
+  const { fetch: base, captured } = capturingFetch();
+  const fetch = createDeclaredWireMergeFetch(
+    {
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
+      vendorExtendedThinking: false,
+    },
+    "bedrock",
+    base,
+  );
+
+  await fetch("https://bedrock.us-east-1.amazonaws.com/model/m/converse", {
+    method: "POST",
+    body: JSON.stringify({ model: "us.anthropic.claude-sonnet-4-6" }),
+  });
+
+  // No top-level `thinking` field: Converse carries the off encoding in
+  // `providerOptions.bedrock.reasoningConfig`, emitted by the bedrock provider-options builder.
+  assert.deepEqual(captured[0]!.body, { model: "us.anthropic.claude-sonnet-4-6" });
+});
+
 test("serviceTier simple form maps to the OpenAI-family service_tier body field", async () => {
   const { fetch: base, captured } = capturingFetch();
   const fetch = createDeclaredWireMergeFetch(
