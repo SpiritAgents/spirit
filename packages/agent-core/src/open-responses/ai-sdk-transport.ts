@@ -47,10 +47,10 @@ import {
   renderResponsesTransportError,
 } from "./ai-sdk-message-bridge.js";
 import {
-  buildSdkProviderWebSearchStopWhen,
+  buildProviderToolStopWhen,
   collectExecutedProviderBuiltinToolCallIdsFromSteps,
   filterPendingHostToolCalls,
-} from "./sdk-provider-web-search-loop.js";
+} from "./provider-builtin-tool-round.js";
 import {
   appendApplyPatchToolCallsToAssistantMessage,
   beginApplyPatchBridgeRound,
@@ -63,7 +63,6 @@ import {
 } from "./apply-patch-bridge.js";
 import { shouldUseOpenAiSdkApplyPatchTool } from "./apply-patch-eligibility.js";
 import { isResponsesBuiltInToolName } from "./responses-built-in-tools.js";
-import { xaiResponsesRejectsLocalFunctionTools } from "./web-search-eligibility.js";
 import {
   buildResponsesGenerateTools,
   buildResponsesProviderOptionsWithServiceTier,
@@ -80,14 +79,20 @@ import {
   runWithResponsesStoredStateRequestContext,
 } from "./responses-incremental-input.js";
 import {
+  bindEchoServerToolCallsContextIfNeeded,
+  withEchoServerToolCallsContext,
+} from "./echo-server-tool-calls.js";
+import {
   buildOpenResponsesRequestTrace,
   buildOpenResponsesTraceExtras,
   type OpenResponsesTransportConfig,
 } from "./responses-compat.js";
 import {
-  bindDeepSeekBuiltInInputContextIfNeeded,
-  withDeepSeekBuiltInInputContext,
-} from "./deepseek-responses-fetch.js";
+  xaiResponsesLocalToolsUnsupportedMessage,
+  xaiResponsesRejectsLocalFunctionTools,
+} from "./xai-responses-pre-guard.js";
+import { resolveDeclaredProviderTools } from "../provider-tools/runtime.js";
+import { toolNamesFromDefinitions } from "../unknown-tool-error.js";
 import { createDeferred, responsesEventStreamToRuntimeEvents } from "./streaming.js";
 import { generateVideoWithRouter } from "../video-generation/router.js";
 import { AiSdkOpenAiCompatibleTransport } from "../openai/ai-sdk-transport.js";
@@ -153,7 +158,6 @@ export class AiSdkOpenResponsesTransport
     const messages = buildJsonSchemaCompletionMessages(
       {
         model: config.model,
-        ...(config.llmVendor ? { llmVendor: config.llmVendor } : {}),
         ...(config.workspaceRoot ? { workspaceRoot: config.workspaceRoot } : {}),
       },
       request,
@@ -165,6 +169,7 @@ export class AiSdkOpenResponsesTransport
         model: createResponsesLanguageModel(config) as any,
         messages: openAiMessagesToResponsesAiSdkMessages(messages) as any,
         allowSystemInMessages: true,
+        ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
         schema: jsonSchema(request.schema as Record<string, unknown>),
         schemaName: request.schemaName,
         providerOptions: buildResponsesProviderOptionsWithServiceTier(config),
@@ -194,18 +199,22 @@ export class AiSdkOpenResponsesTransport
 
     const requestMessages = nextState.messages.map((message) => cloneJsonValue(message));
     const normalizedTools = normalizeResponsesToolDefinitions(tools);
+    const providerTools = await resolveDeclaredProviderTools(
+      config,
+      new Set(toolNamesFromDefinitions(tools)),
+    );
     const roundInput = buildResponsesRoundInput(requestMessages, config, nextState.steps);
     const traceExtras = buildOpenResponsesTraceExtras(config, roundInput.previousResponseId);
     const tracedRequest = buildOpenResponsesRequestTrace(
       config,
       nextState.steps,
       roundInput.apiMessages,
-      buildResponsesTraceTools(config, normalizedTools),
+      buildResponsesTraceTools(config, normalizedTools, providerTools),
       false,
       traceExtras,
     );
 
-    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length)) {
+    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length, providerTools)) {
       return {
         kind: "failure",
         error: xaiResponsesLocalToolsUnsupportedMessage(),
@@ -215,25 +224,30 @@ export class AiSdkOpenResponsesTransport
 
     try {
       return await runWithResponsesStoredStateRequestContext(roundInput.previousResponseId, () =>
-        withDeepSeekBuiltInInputContext(config, roundInput.apiMessages, () =>
+        withEchoServerToolCallsContext(config, roundInput.apiMessages, () =>
           runWithApplyPatchBridgeContext(async () => {
-            const generateTools = buildResponsesGenerateTools(config, normalizedTools);
+            const generateTools = buildResponsesGenerateTools(
+              config,
+              normalizedTools,
+              providerTools,
+            );
             const hasGenerateTools = Object.keys(generateTools).length > 0;
-            const sdkWebSearchStopWhen = buildSdkProviderWebSearchStopWhen(config);
+            const providerToolStopWhen = buildProviderToolStopWhen(config);
             const result = await generateText({
-              model: createResponsesLanguageModel(config) as any,
+              model: createResponsesLanguageModel(config, providerTools) as any,
               messages: openAiMessagesToResponsesAiSdkMessages(
                 roundInput.apiMessages,
                 config,
               ) as any,
               allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
               ...(hasGenerateTools
                 ? {
                     tools: generateTools as any,
                     toolChoice: "auto" as const,
                   }
                 : {}),
-              ...(sdkWebSearchStopWhen ? { stopWhen: sdkWebSearchStopWhen } : {}),
+              ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
               providerOptions: buildResponsesProviderOptionsWithServiceTier(
                 config,
                 roundInput.previousResponseId,
@@ -331,20 +345,24 @@ export class AiSdkOpenResponsesTransport
 
     const requestMessages = nextState.messages.map((message) => cloneJsonValue(message));
     const normalizedTools = normalizeResponsesToolDefinitions(tools);
+    const providerTools = await resolveDeclaredProviderTools(
+      config,
+      new Set(toolNamesFromDefinitions(tools)),
+    );
     const roundInput = buildResponsesRoundInput(requestMessages, config, nextState.steps);
     const traceExtras = buildOpenResponsesTraceExtras(config, roundInput.previousResponseId);
     const requestTrace = buildOpenResponsesRequestTrace(
       config,
       nextState.steps,
       roundInput.apiMessages,
-      buildResponsesTraceTools(config, normalizedTools),
+      buildResponsesTraceTools(config, normalizedTools, providerTools),
       true,
       traceExtras,
     );
 
     const abortController = new AbortController();
 
-    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length)) {
+    if (xaiResponsesRejectsLocalFunctionTools(config, normalizedTools.length, providerTools)) {
       return {
         eventStream: emptyResponsesEventStream(),
         completion: Promise.resolve({
@@ -358,28 +376,29 @@ export class AiSdkOpenResponsesTransport
 
     try {
       beginApplyPatchBridgeRound();
-      const generateTools = buildResponsesGenerateTools(config, normalizedTools);
+      const generateTools = buildResponsesGenerateTools(config, normalizedTools, providerTools);
       const hasGenerateTools = Object.keys(generateTools).length > 0;
       const providerOptions = buildResponsesProviderOptionsWithServiceTier(
         config,
         roundInput.previousResponseId,
       );
       const sdkMessages = openAiMessagesToResponsesAiSdkMessages(roundInput.apiMessages, config);
-      const sdkWebSearchStopWhen = buildSdkProviderWebSearchStopWhen(config);
+      const providerToolStopWhen = buildProviderToolStopWhen(config);
       const result: { stream: AsyncIterable<unknown> } & Parameters<typeof readAiSdkUsage>[0] =
         runInResponsesStoredStateRequestContextSync(roundInput.previousResponseId, () =>
-          withDeepSeekBuiltInInputContext(config, roundInput.apiMessages, () =>
+          withEchoServerToolCallsContext(config, roundInput.apiMessages, () =>
             streamText({
-              model: createResponsesLanguageModel(config) as any,
+              model: createResponsesLanguageModel(config, providerTools) as any,
               messages: sdkMessages as any,
               allowSystemInMessages: true,
+              ...(config.outputLimit !== undefined ? { maxOutputTokens: config.outputLimit } : {}),
               ...(hasGenerateTools
                 ? {
                     tools: generateTools as any,
                     toolChoice: "auto" as const,
                   }
                 : {}),
-              ...(sdkWebSearchStopWhen ? { stopWhen: sdkWebSearchStopWhen } : {}),
+              ...(providerToolStopWhen ? { stopWhen: providerToolStopWhen } : {}),
               providerOptions,
               include: { rawChunks: true },
               maxRetries: 2,
@@ -395,7 +414,7 @@ export class AiSdkOpenResponsesTransport
       return {
         eventStream: responsesEventStreamToRuntimeEvents(
           config,
-          bindDeepSeekBuiltInInputContextIfNeeded(
+          bindEchoServerToolCallsContextIfNeeded(
             config,
             roundInput.apiMessages,
             bindResponsesStoredStateRequestContextAsyncIterable(
@@ -468,6 +487,9 @@ export class AiSdkOpenResponsesTransport
           model: createResponsesLanguageModel(compactConfig) as any,
           messages: promptMessages as any,
           allowSystemInMessages: true,
+          ...(compactConfig.outputLimit !== undefined
+            ? { maxOutputTokens: compactConfig.outputLimit }
+            : {}),
           providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
           maxRetries: 2,
         });
@@ -498,6 +520,9 @@ export class AiSdkOpenResponsesTransport
         model: createResponsesLanguageModel(compactConfig) as any,
         messages: promptMessages as any,
         allowSystemInMessages: true,
+        ...(compactConfig.outputLimit !== undefined
+          ? { maxOutputTokens: compactConfig.outputLimit }
+          : {}),
         providerOptions: buildResponsesProviderOptionsWithServiceTier(compactConfig),
         maxRetries: 2,
       });
@@ -567,7 +592,3 @@ async function* emptyResponsesEventStream(): AsyncGenerator<
   void,
   undefined
 > {}
-
-function xaiResponsesLocalToolsUnsupportedMessage(): string {
-  return "SpaceXAI Responses API does not support local function tools yet; please use the Chat Completions transport instead.";
-}

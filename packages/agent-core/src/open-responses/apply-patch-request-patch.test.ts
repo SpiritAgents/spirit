@@ -19,34 +19,35 @@ const openAiConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "gpt-5.1",
-  llmVendor: "openai" as const,
-  responsesProvider: "openai" as const,
+  sdk: "@ai-sdk/openai" as const,
+  options: { applyPatch: true },
 };
 
 const gatewayConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "openai/gpt-5.4",
-  llmVendor: "vercel-ai-gateway" as const,
+  sdk: "@ai-sdk/gateway" as const,
+  options: { applyPatch: true },
 };
 
 const gatewayAnthropicConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "anthropic/claude-sonnet-4",
-  llmVendor: "vercel-ai-gateway" as const,
-  responsesProvider: "open-responses-compatible" as const,
+  sdk: "@ai-sdk/gateway" as const,
+  options: { applyPatch: true },
 };
 
+// A generic Open Responses endpoint (e.g. an aggregator route) declaring apply_patch support.
 const openrouterConfig = {
   transportKind: "open-responses" as const,
   apiKey: "test",
   model: "openai/gpt-5.1",
-  llmVendor: "openrouter" as const,
-  responsesProvider: "open-responses-compatible" as const,
+  options: { applyPatch: true },
 };
 
-test("patchResponsesRequestBodyForApplyPatch openai uses built-in apply_patch_call items", () => {
+test("patchResponsesRequestBodyForApplyPatch generic endpoint uses built-in apply_patch_call items", () => {
   runWithApplyPatchBridgeContext(() => {
     const callId = "call_test_1";
     const operation = { type: "update_file", path: "README.md", diff: "+x\n" };
@@ -68,7 +69,7 @@ test("patchResponsesRequestBodyForApplyPatch openai uses built-in apply_patch_ca
       ],
     } as JsonObject;
 
-    patchResponsesRequestBodyForApplyPatch(body, openAiConfig);
+    patchResponsesRequestBodyForApplyPatch(body, openrouterConfig);
 
     const input = body.input as JsonObject[];
     assert.equal(input[0]?.type, "apply_patch_call");
@@ -76,7 +77,31 @@ test("patchResponsesRequestBodyForApplyPatch openai uses built-in apply_patch_ca
   });
 });
 
-test("patchResponsesRequestBodyForApplyPatch openrouter uses built-in apply_patch tool and call items", () => {
+test("patchResponsesRequestBodyForApplyPatch on the openai adapter leaves the SDK tool path alone", () => {
+  runWithApplyPatchBridgeContext(() => {
+    const callId = "call_sdk_1";
+    const operation = { type: "update_file", path: "README.md", diff: "+x\n" };
+    registerPendingApplyPatchCallIds([callId]);
+
+    const body = {
+      input: [
+        {
+          type: "function_call",
+          call_id: callId,
+          name: APPLY_PATCH_HOST_TOOL_NAME,
+          arguments: buildApplyPatchToolCallArgumentsJson(callId, operation),
+        },
+      ],
+    } as JsonObject;
+
+    patchResponsesRequestBodyForApplyPatch(body, openAiConfig);
+
+    const input = body.input as JsonObject[];
+    assert.equal(input[0]?.type, "function_call");
+  });
+});
+
+test("patchResponsesRequestBodyForApplyPatch generic endpoint uses the built-in apply_patch tool and call items", () => {
   runWithApplyPatchBridgeContext(() => {
     const callId = "call_openrouter_1";
     const operation = { type: "update_file", path: "README.md", diff: "+x\n" };

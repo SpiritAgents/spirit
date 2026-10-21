@@ -19,7 +19,6 @@ test("apply_patch streaming previews ladder as argument deltas arrive", async ()
     transportKind: "open-responses",
     apiKey: "test-key",
     model: "openai/gpt-6.1-sol",
-    llmVendor: "volcengine",
   } as OpenResponsesTransportConfig;
 
   const fullArguments = JSON.stringify({
@@ -118,7 +117,6 @@ test("apply_patch previews emit before the path when the diff streams first", as
     transportKind: "open-responses",
     apiKey: "test-key",
     model: "openai/gpt-6.1-sol",
-    llmVendor: "volcengine",
   } as OpenResponsesTransportConfig;
 
   // The observed failure mode: type and the diff body stream first, `path` arrives last.
@@ -185,7 +183,7 @@ test("apply_patch previews stay clean when the gateway stream emits both raw and
     transportKind: "open-responses",
     apiKey: "test-key",
     model: "openai/gpt-6.1-sol",
-    llmVendor: "vercel-ai-gateway",
+    sdk: "@ai-sdk/gateway" as const,
   } as OpenResponsesTransportConfig;
 
   // 2026-10-06 incident pin: the real Vercel AI Gateway fullStream carries every wire event

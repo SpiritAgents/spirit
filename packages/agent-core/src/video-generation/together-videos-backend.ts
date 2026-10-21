@@ -22,28 +22,13 @@ interface TogetherVideoStatusResponse {
   };
 }
 
-const DEFAULT_TOGETHER_VIDEO_API_BASE = "https://api.together.ai/v2";
-
-/** Derive Together `/v2` video API base from an openai-compatible `/v1` apiBase. */
+/** The together-videos shape serves video under `/v2` derived from the openai-compatible `/v1` apiBase. */
 export function resolveTogetherVideoApiBase(baseUrl: string | undefined): string {
   const trimmed = baseUrl?.trim();
   if (!trimmed) {
-    return DEFAULT_TOGETHER_VIDEO_API_BASE;
+    throw new Error("The together-videos API shape requires a baseUrl.");
   }
-
-  try {
-    const url = new URL(trimmed);
-    const hostname = url.hostname.toLowerCase();
-    if (!hostname.includes("together.ai") && !hostname.includes("together.xyz")) {
-      return trimmed.replace(/\/$/, "");
-    }
-    url.pathname = "/v2";
-    url.search = "";
-    url.hash = "";
-    return url.toString().replace(/\/$/, "");
-  } catch {
-    return trimmed.replace(/\/v1\/?$/i, "/v2").replace(/\/$/, "");
-  }
+  return trimmed.replace(/\/v1\/?$/i, "/v2").replace(/\/$/, "");
 }
 
 export class TogetherVideosBackend implements VideoGenerationBackend {

@@ -4,7 +4,7 @@ import type { DesktopSnapshot, SwitchPaneModelRequest } from "../types.js";
 import type { SessionBundle } from "./session-bundle.js";
 import type { SessionSplitHostContext } from "./session-split.js";
 import { freezePaneActiveModelIfNeeded } from "./active-model-sync.js";
-import { modelExistsInGroup } from "./model-config-access.js";
+import { modelExistsInProvider } from "@spiritagent/host-internal";
 
 export interface PaneModelHostContext extends SessionSplitHostContext {
   adoptActiveModelForForeground(modelRef: import("../types.js").ModelRef): Promise<void>;
@@ -27,7 +27,7 @@ export async function switchPaneModelCommand(
     }
 
     const modelRef = request.modelRef;
-    if (!modelRef.groupId.trim() || !modelRef.name.trim()) {
+    if (!modelRef.providerId.trim() || !modelRef.name.trim()) {
       throw new Error("Model ref is required.");
     }
 
@@ -38,8 +38,8 @@ export async function switchPaneModelCommand(
     }
 
     const state = ctx.requireState();
-    if (!modelExistsInGroup(state.config, modelRef.groupId, modelRef.name)) {
-      throw new Error(`Model not found: ${modelRef.groupId}::${modelRef.name}`);
+    if (!modelExistsInProvider(state.config.providers, modelRef.providerId, modelRef.name)) {
+      throw new Error(`Model not found: ${modelRef.providerId}::${modelRef.name}`);
     }
 
     const isForeground = registry.getActive() === bundle;

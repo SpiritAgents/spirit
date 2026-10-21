@@ -1,6 +1,6 @@
 ---
 title: 配置
-description: 数据目录、config.json v2、{{product.workspaceDataFolderName}}/ 和环境变量。
+description: 数据目录、config.json v1、{{product.workspaceDataFolderName}}/ 和环境变量。
 ---
 
 共享用户数据按构建 quality 选择目录，不再使用操作系统的应用数据目录。
@@ -36,18 +36,75 @@ Breaking Change：不会自动读取或迁移旧平台数据目录；仍支持�
 
 CLI 二进制使用 SPIRIT_HOME。在 Unix 上，Stable 安装与共享数据可以共用父目录；bin/ 和 cli/ 仍属于安装文件。安装设置不决定共享数据目录。
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` 必须是 `2`。版本 1 会被拒绝——删掉旧文件，再[重连提供商](./providers.mdx)。
+`schemaVersion` 必须是 `1`。其他值一律拒绝——删掉旧文件，再[重连提供商](./providers.mdx)。不从旧形状迁移。
 
 核心字段：
 
-- `providerGroups` — 已接的提供商、API Base、传输、模型
+- `providers` — 已连接的提供商：端点、传输、凭证、模型
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — Agent 开关，如 `agents.providerTools.enabled`
 - `permission` — 权限允许列表规则
 
-Key **不在**这个文件里。它们在[钥匙串](./security.mdx)。
+`activeModel` 等模型槽位是模型引用：`{ "providerId": "…", "name": "…" }`，其中 `providerId` 是某个 `providers[].id`，`name` 是它某个 `models[].name`。
+
+### 提供商条目
+
+每个 `providers[]` 条目都是完全声明式的连接——向导写什么，运行时读什么。运行时不会按提供商身份重新推导 `apiBase`；站点、套餐、云厂商选择在连接时已物化进最终 URL。
+
+连接级字段：
+
+- `id`（必填）— 条目唯一身份。模型引用和内部钥匙串账户都指向它
+- `label` — 可选显示名
+- `apiBase`（必填）— 端点，唯一真相
+- `transportKind` — wire 协议：`openai-compatible`（默认）/ `open-responses` / `anthropic` / `bedrock`
+- `sdk` — 随包捆绑的 SDK 适配器的完整 npm 包名（如 `@ai-sdk/openai-compatible`）。缺省 = 按传输推导；未知名称在加载时报错
+- `headers` — 字面附加请求头，合并进每个出站请求
+- `body` — 字面请求体字段，合并进每个请求体。逃生口——能用结构化声明表达时不要用它
+- `providerTools` — 提供商暴露的工具（联网搜索、代码解释器）。见[提供商工具](./agent/tools.mdx#provider-tools)
+- `fileUpload` — 不适合内联的本地文件的上传通道（`path` / `url`、`purpose`、`idPath`、`refTemplate`、`maxBytes`）。缺席 = 媒体走内联
+- `imageApi` / `videoApi` — 生图 / 生视频的 API 形状名；缺席 = 无对应生成能力
+- `options` — 传输参数；合法键集按 `transportKind` × `sdk` 定义（bedrock 的 `awsRegion`、`@ai-sdk/google-vertex` 的 `project` / `location`、open-responses 的 `auth` / `storedState` / `applyPatch` 开关）。未知键拒绝
+- `models`（必填数组，可为空）
+
+模型级字段——`capabilities`、`contextLength`、`outputLimit`、`reasoningEffort`、`supportedReasoningEfforts`、`reasoningMode`、`supportedReasoningModes`、`supportsThinkingType`、`supportsThinkingSwitch`、`thinkingSwitch`、`serviceTiers`、`serviceTier`——也可以平铺在提供商条目上，作为全部模型继承的默认值；模型自己的声明胜出。`models[]` 里除 `name` 外全部可选，缺席 = 未声明，不是默认值。
+
+- `capabilities` 取值：`languageModel`、`image`、`audio`、`video`、`imageGeneration`、`videoGeneration`
+- `outputLimit` 是输出 token 上限，与 `contextLength` 分开
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` 是选择器与校验的唯一来源——选了列表之外的值会在加载时报错，不会被静默钳制
+- `thinkingEnabled` 是你的 thinking 开关状态（不是能力声明）；只在模型级，且要求已声明 `supportsThinkingSwitch`
+
+### 密钥通道
+
+Key 不一定要放在这个文件里——连接向导默认直接写进[钥匙串](./security.mdx)。config 也可以声明通道，按以下顺序解析：
+
+1. `apiKey` — 明文。不推荐，仅作逃生口
+2. `apiKeyEnv` — 从指定环境变量读取
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`，外部钥匙串里的条目
+4. 内部钥匙串 — 向导写入的隐式兜底（账户 `provider::{id}`）
+
+复合凭证（Bedrock IAM、Vertex 服务账号）改用 `credentials` 槽位映射：
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+槽名是协议字段——`apiKey`、`accessKeyId` / `secretAccessKey`（Bedrock IAM / SigV4）、`clientEmail` / `privateKey`（Vertex）——未知槽名拒绝。每个槽位按 `value` → `env` → `keyring` → 内部钥匙串解析（`provider::{id}::{slot}`；`apiKey` 槽就是 `provider::{id}`）。扁平三键与 `credentials.apiKey` 不得同时出现。
+
+### agents.providerTools
+
+`agents.providerTools.enabled` 统一控制所有提供商声明的工具（由 `agents.webSearch.enabled` 改名而来，语义不变：opt-out、默认开启）。设为 `false` 时，提供商工具条目和 body 开关都不进请求。
+
+### 目录刷新与重连
+
+日常目录刷新会重写目录拥有的模型声明字段（`capabilities`、`supportedReasoningEfforts`、`supportedReasoningModes`、`serviceTiers` 等）——模型事实以目录为唯一来源，你对这些字段的手改会在下次刷新时被覆盖。提供商级物化（`apiBase`、`sdk`、`providerTools`、`fileUpload`、`options`、`imageApi` / `videoApi`）只在重连时变化。重连会重置向导拥有的键（你对它们的修改被覆盖），其余全部保留：`label`、凭证通道、`headers` / `body`、平铺的模型默认值，以及你手动添加的模型。
 
 ### permission
 

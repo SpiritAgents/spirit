@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench, type LucideIcon } from "lucide-react";
 
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";

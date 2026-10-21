@@ -83,15 +83,15 @@ test("AgentsSettingsPanel includes LSP section label and Attribution rows", asyn
 test("AgentsSettingsPanel places the Context group with web tool toggles above LSP", async () => {
   const source = await readFile(join(srcRoot, "panels/agents-settings-panel.tsx"), "utf8");
   assert.match(source, /settings\.contextSection/);
-  assert.match(source, /settings\.webSearchDescription/);
-  assert.match(source, /settings\.webSearchLearnMoreAria/);
+  assert.match(source, /settings\.providerToolsDescription/);
+  assert.match(source, /settings\.providerToolsLearnMoreAria/);
   assert.match(source, /settings\.webFetchDescription/);
   // The separator helper lives in @spiritagent/ui/cjk; the panel only consumes it.
   assert.match(source, /needsSpaceBeforeInlineContent/);
   assert.doesNotMatch(source, /export function needsSpaceBeforeInlineContent/);
-  assert.match(source, /webSearchEnabled/);
+  assert.match(source, /providerToolsEnabled/);
   assert.match(source, /webFetchEnabled/);
-  assert.match(source, /settings-web-search/);
+  assert.match(source, /settings-provider-tools/);
   assert.match(source, /settings-web-fetch/);
   assert.ok(
     source.indexOf("settings.contextSection") < source.indexOf("settings.lspSection"),

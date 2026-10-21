@@ -16,7 +16,7 @@ description: 自带密钥，运行连接向导；更换提供商时，Agent 工�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax，以及可选的 Messages 兼容端点                   |
 | `bedrock`           | Amazon Bedrock                     | 仅 Amazon Bedrock                                                  |
 
-Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Responses 或 Messages，{{product.name|mdx}} 会回落到 `openai-compatible`。
+Google 与 Vertex AI 预设固定走 Chat Completions——向导不提供传输选择器。
 
 有的提供商在 Key 之外还有第二维：
 
@@ -26,11 +26,13 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 没有这些维的提供商，向导就是：Key → 导入模型 → 选当前语言模型。
 
-{{product.name|mdx}} 会导入模型目录，并让你指定当前语言模型；目录标了生图 / 生视频 / 次要语言模型时再指定对应槽位。推理和提供商内置联网跟模型与传输走，不是 {{product.name|mdx}} 上的单独开关。
+{{product.name|mdx}} 会导入模型目录，并让你指定当前语言模型；目录标了生图 / 生视频 / 次要语言模型时再指定对应槽位。推理选项跟随各模型声明的 `supportedReasoningEfforts`。联网搜索等提供商暴露的工具按提供商声明，由**提供商工具**开关统一控制——见[工具](./agent/tools.mdx#provider-tools)。
+
+向导写入 `config.json` 的是完全声明式的条目：最终 API Base、传输、SDK 适配器，以及提供商工具 / 文件上传 / 生成 API 声明。运行时原样读取这些声明，不会按提供商身份重新推导——你的修改会保留，只有重连会重置向导拥有的键（见[配置](./config.mdx)）。
 
 ## 目录
 
-以下是连接选择器里的提供商，顺序一致。每家只写 Key、传输和附加字段。上面的 Desktop / CLI 向导对每家都一样。
+以下是连接选择器里的提供商，顺序一致。每家写 Key、传输、附加字段，以及向导在 Key 之外声明的内容。除非特别说明，凭证形态都是单个 API Key，存入钥匙串。上面的 Desktop / CLI 向导对每家都一样。
 
 ### OpenAI
 
@@ -39,6 +41,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 向导固定 **Responses API**（`open-responses`），没有传输选择器。默认 Base：`https://api.openai.com/v1`。
 
 导入后即可对话。推理跟模型走。生图 / 生视频只在目录标了对应能力时出现，到生图 / 生视频槽位里指定。
+
+声明：**联网搜索**提供商工具（由上游在请求内执行）和生图 API。
 
 ### Anthropic
 
@@ -52,7 +56,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 在 [Google AI Studio](https://aistudio.google.com/apikey) 创建 API Key。
 
-固定 **Chat Completions API**（`openai-compatible`）。若配置请求 Responses 或 Messages，会回落到 Chat Completions。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
+固定 **Chat Completions API**（`openai-compatible`），向导不提供传输选择器。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
 
 导入后即可对话。生图只在目录标了时再指定。要用 GCP 项目 / 位置，走 [Google Vertex AI](#google-vertex-ai)。
 
@@ -60,9 +64,11 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 在 [SpaceXAI 控制台](https://console.x.ai/team/default/api-keys) 创建 API Key。
 
-固定 **Chat Completions API**（`openai-compatible`）。默认 Base：`https://api.x.ai/v1`。
+固定 **Open Responses API**（`open-responses`）。默认 Base：`https://api.x.ai/v1`。
 
 导入后即可对话。推理、生图、生视频跟导入目录走，出现对应能力时再指定槽位。
+
+声明：**联网搜索**提供商工具（由上游在请求内执行）。
 
 ### Vercel AI Gateway
 
@@ -74,6 +80,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 不要用 tags 推断视觉或生图。经此网关的 MiniMax M3 在 Open Responses 下不会返回可展示的思考流。
 
+声明：**Perplexity Search** 提供商工具（由网关在请求内执行）和生图 / 生视频 API。
+
 ### Cloudflare AI Gateway
 
 在 [Cloudflare 控制台](https://developers.cloudflare.com/ai-gateway/) 创建 API token，并准备好账户 ID。
@@ -81,7 +89,7 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 选择器：**Chat Completions**、**Open Responses** 或 **Messages**。Base 由账户拼出：`https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
 
 - **账户 ID**（必填）— 32 位十六进制
-- **Gateway ID**（可选）
+- **Gateway ID**（可选）— 写成字面 `cf-aig-gateway-id` 请求头
 
 没有账户 ID，向导无法拼出 API Base。对话和其他能力跟网关暴露的模型走。
 
@@ -93,6 +101,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。推理跟模型走。
 
+声明：**联网搜索**提供商工具（由上游在请求内执行）。
+
 ### OpenRouter
 
 在 [OpenRouter](https://openrouter.ai/keys) 创建 Key。
@@ -100,6 +110,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 选择器：**Chat Completions**、**Open Responses** 或 **Messages**。默认 Base：`https://openrouter.ai/api/v1`。
 
 导入后即可对话；OpenRouter 目录标出生图 / 生视频能力时，再指定对应槽位。
+
+声明：生视频 API。
 
 ### Fireworks AI
 
@@ -117,6 +129,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。只有目录标了生图 / 生视频时再指定槽位。
 
+声明：生图和生视频 API。
+
 ### Groq
 
 在 [Groq 控制台](https://console.groq.com) 创建 API Key。
@@ -132,6 +146,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 固定 **Chat Completions API**。默认 Base：`https://api.deepinfra.com/v1/openai`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：生图和生视频 API。
 
 ### Baseten
 
@@ -149,6 +165,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。其他能力跟路由目录走。
 
+声明：生图和生视频 API。
+
 ### Moonshot AI
 
 在对应站点的控制台创建 API Key：[中国站](https://platform.kimi.com/console/api-keys) 或 [国际站](https://platform.kimi.ai/console/api-keys)。
@@ -158,7 +176,9 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 - **国际**（默认）— `https://api.moonshot.ai/v1`
 - **中国** — `https://api.moonshot.cn/v1`
 
-这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。moonshot-ai 的内置搜索不走 Kimi Code 托管搜索路径。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条不同的连接。
+这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条不同的连接。
+
+声明：**联网搜索**提供商工具（Moonshot formula——工具 schema 从 formula 端点拉取，调用由 {{product.name|mdx}} 对 formula 端点执行；产出是服务端密文，详情不可展开）和视频文件上传（`ms://` 文件引用）。
 
 ### Kimi Code
 
@@ -166,7 +186,9 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 固定 **Chat Completions API**。默认 Base：`https://api.kimi.com/coding/v1`。Messages Base 为 `https://api.kimi.com/coding`，但向导不提供选择器。
 
-导入后即可对话。托管搜索（若有）只属于该提供商，不属于 moonshot-ai。
+导入后即可对话。这里的托管搜索只属于该提供商，不属于 moonshot-ai。
+
+声明：**联网搜索**提供商工具（由宿主按声明的搜索端点执行）、视频文件上传（`ms://` 文件引用），以及字面 `stream_options` 请求体合并。
 
 ### Z.ai
 
@@ -178,6 +200,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。推理跟模型走。
 
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–50）。
+
 ### 智谱 AI
 
 在 [智谱 AI 控制台](https://bigmodel.cn/console) 创建 API Key。套餐说明见 [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start)。
@@ -187,6 +211,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 打开 **GLM Coding Plan** 后改用 `https://open.bigmodel.cn/api/coding/paas/v4`。
 
 导入后即可对话。推理跟模型走。
+
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–50）。
 
 ### 阿里巴巴
 
@@ -203,6 +229,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。其他能力跟目录走。
 
+声明：**联网搜索**和**代码解释器**提供商工具（请求体开关，由上游执行）。
+
 ### MiniMax
 
 在对应站点的控制台创建 API Key：[中国站](https://platform.minimax.cn/console/) 或 [国际站](https://platform.minimax.io/console/)。
@@ -213,6 +241,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 - **中国** — `https://api.minimax.cn/v1`
 
 导入后即可对话。上游 `/models` 没有多模态字段；只有 M3 被当作支持图 / 视频输入。经 Vercel AI Gateway 的 Open Responses，MiniMax M3 不会返回可展示的思考流。
+
+声明：**联网搜索**提供商工具（Messages API server tool，由上游执行）和视频文件上传（`mm_file://` 文件引用）。
 
 ### 小米
 
@@ -233,6 +263,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。其他能力跟目录走。
 
+声明：生图和生视频 API。
+
 ### 阶跃星辰
 
 在 [阶跃星辰中国站](https://platform.stepfun.com) 或 [国际站](https://platform.stepfun.ai) 创建 API Key。套餐说明见 [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
@@ -246,6 +278,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。推理跟模型走。
 
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–20）、视频文件上传（`stepfile://` 文件引用，128 MiB 上限）和生图 API。
+
 ### 火山引擎
 
 在 [火山引擎方舟控制台](https://console.volcengine.com/ark/apiKey) 创建 API Key。
@@ -253,6 +287,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 选择器：**Chat Completions** 或 **Responses API**。默认 Base：`https://ark.cn-beijing.volces.com/api/v3`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：生视频 API。
 
 ### BytePlus
 
@@ -262,6 +298,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 导入后即可对话。其他能力跟目录走。
 
+声明：生视频 API。
+
 ### 美团
 
 在 [LongCat 控制台](https://longcat.chat/platform/api_keys) 创建 API Key。
@@ -269,6 +307,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 固定 **Chat Completions API**。默认 Base：`https://api.longcat.chat/openai/v1`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：thinking 开关的 wire 编码（`thinkingSwitch`），带 thinking 开关的模型才有可用的切换。
 
 ### 腾讯 TokenHub
 
@@ -320,11 +360,13 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 选定模型后即可对话。其他能力跟该模型走。Bearer 只能做推理。`ListFoundationModels` 不接受 Bearer，所以导入目录需要 IAM。
 
+区域会物化进最终 API Base 和 `options.awsRegion`。Bearer 存为提供商 Key；IAM 存为 `accessKeyId` / `secretAccessKey` 凭证槽位。
+
 ### Google Vertex AI
 
 使用已开通 Vertex AI 的 GCP 项目。认证是 ADC、服务账号或 Express API Key，不是普通 OpenAI Key。
 
-固定 **Chat Completions API**。若配置请求 Responses 或 Messages，会回落到 Chat Completions。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
+固定 **Chat Completions API**，向导不提供传输选择器。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
 
 - **GCP 项目 ID** 和 **位置**（必填），例如 `us-central1`
 - **认证**
@@ -334,6 +376,8 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 选定模型后即可对话。没有 GCP 项目、只用 AI Studio Key 时，走 [Google](#google)。Express 模式不能导入模型列表。服务账号模式要同时有 email 和私钥才能列模型。
 
+服务账号存为 `clientEmail` / `privateKey` 凭证槽位，并带 `options.project` / `options.location`；Express 模式写入 Express API Base，不需要项目 / 位置。
+
 ### 自定义
 
 使用该端点要求的 API Key。{{product.name|mdx}} 不托管自定义提供商。
@@ -342,6 +386,6 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置请求 Respons
 
 填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 {{product.name|mdx}} 不会猜路径。
 
-还可以给提供商分组起显示名，方便区分多条自定义端点。
+还可以给提供商条目起显示名，方便区分多条自定义端点。
 
 连接后导入或手填模型 id。若端点没有 {{product.name|mdx}} 能读的目录，在向导里自行标记对话 / 生图 / 生视频能力。

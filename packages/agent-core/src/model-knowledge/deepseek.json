@@ -1,0 +1,64 @@
+{
+  "models": [
+    {
+      "match": "deepseek-v4-",
+      "declare": {
+        "supportedReasoningEfforts": ["high", "max"],
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "enabled"
+              }
+            },
+            "providerOptions": {
+              "deepseek": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "deepseek": {
+                "thinking": {
+                  "type": "disabled"
+                }
+              }
+            }
+          }
+        }
+      },
+      "note": "DeepSeek V4 (pro, flash, flash-vision-exp, …): hybrid thinking — the API accepts reasoning_effort high/max only while thinking is enabled."
+    },
+    {
+      "match": "deepseek-r1",
+      "declare": {
+        "supportsThinkingType": "only"
+      },
+      "note": "DeepSeek R1 always thinks and has no thinking toggle."
+    },
+    {
+      "match": "(?:[a-z0-9-]+\\.)?deepseek\\.r1(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingType": "only"
+      },
+      "note": "DeepSeek R1 on Bedrock (deepseek.r1-…, plus regional inference-profile prefixes such as us.deepseek.r1-…): always thinks (no toggle); Converse reasoningConfig maps the effort ladder onto budgetTokens."
+    },
+    {
+      "match": "deepseek-reasoner",
+      "declare": {
+        "supportsThinkingType": "only"
+      },
+      "note": "DeepSeek R1 always thinks and has no thinking toggle."
+    }
+  ]
+}

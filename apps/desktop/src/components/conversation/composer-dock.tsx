@@ -631,6 +631,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                 localFileAttachments={composerLocalFileAttachments}
                 models={models}
                 catalogHints={snapshot?.config.modelCatalogHints}
+                providerPresets={snapshot?.config.providerPickerPresets}
                 activeModel={snapshot?.config.activeModel ?? runtime.settings.activeModel}
                 agentMode={runtime.settings.agentMode}
                 loopEnabled={snapshot?.conversation.loopEnabled === true}

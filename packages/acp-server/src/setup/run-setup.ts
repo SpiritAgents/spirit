@@ -12,7 +12,9 @@ export async function runSetup(): Promise<void> {
   try {
     const setup = await runProviderWizard();
     await saveProviderSetup(resolveSpiritDataDir(), setup);
-    console.error(`\nSetup complete. Active model: ${setup.model.name}`);
+    console.error(
+      `\nSetup complete. Active model: ${setup.activeModel?.name ?? setup.models?.[0]?.name ?? ""}`,
+    );
     console.error("Return to your ACP client to authenticate and create a session.");
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

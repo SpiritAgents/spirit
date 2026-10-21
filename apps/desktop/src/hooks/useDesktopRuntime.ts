@@ -13,7 +13,7 @@ import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translu
 
 import type { SettingsFormState } from "@/components/settings/types";
 import { useHostApi } from "@/hooks/useHostApi";
-import { emptyModelRef, modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { emptyModelRef, modelRefsEqual } from "@/lib/model-ref";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelRef } from "@/types";
 import {
@@ -274,8 +274,8 @@ function updateConfigFromSettingsForm(
           enabled: s.prAttributionEnabled,
         },
       },
-      webSearch: {
-        enabled: s.webSearchEnabled,
+      providerTools: {
+        enabled: s.providerToolsEnabled,
       },
       webFetch: {
         enabled: s.webFetchEnabled,
@@ -437,7 +437,7 @@ export function useDesktopRuntime() {
     codeCompletionEnabled: true,
     commitAttributionEnabled: true,
     prAttributionEnabled: true,
-    webSearchEnabled: true,
+    providerToolsEnabled: true,
     webFetchEnabled: true,
     llmHttpVersion: "http2",
   });
@@ -786,10 +786,7 @@ export function useDesktopRuntime() {
       setRuntimeError(effectiveNext.runtimeError ?? "");
       setSettings((current) => {
         const activeModelProfile = effectiveNext.config.models.find((model) =>
-          modelRefsEqual(
-            model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-            effectiveNext.config.activeModel,
-          ),
+          modelRefsEqual(model.ref, effectiveNext.config.activeModel),
         );
         const configAgentMode = (effectiveNext.config.agentMode ?? "agent") as DesktopAgentMode;
         // While a turn is in flight, poll may still carry the old config.agentMode; do not overwrite the optimistic agentMode set by saveSettingsPatch after the user dismissed the Chip.
@@ -841,7 +838,7 @@ export function useDesktopRuntime() {
           codeCompletionEnabled: next.codeCompletion.userEnabled,
           commitAttributionEnabled: next.attribution.commitEnabled,
           prAttributionEnabled: next.attribution.prEnabled,
-          webSearchEnabled: next.webToolExposure.webSearchEnabled,
+          providerToolsEnabled: next.webToolExposure.providerToolsEnabled,
           webFetchEnabled: next.webToolExposure.webFetchEnabled,
           llmHttpVersion: next.config.networks.llmHttpVersion,
         };
@@ -1773,9 +1770,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       const current = settingsRef.current;
       const next: typeof settings = {
         ...current,
@@ -1897,14 +1892,14 @@ export function useDesktopRuntime() {
   );
 
   const removeProviderModels = useCallback(
-    async (groupId: string) => {
+    async (providerId: string) => {
       if (!api) {
         return;
       }
 
       setBusyAction("models");
       try {
-        const next = await api.removeProviderGroup({ groupId });
+        const next = await api.removeProviderGroup({ providerId });
         applySnapshot(next);
         setRuntimeError("");
       } catch (error) {
@@ -2384,10 +2379,7 @@ export function useDesktopRuntime() {
         patch.apiBase ??
         (patch.activeModel !== undefined
           ? (snapshotRef.current?.config.models.find((model) =>
-              modelRefsEqual(
-                model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-                nextActiveModel,
-              ),
+              modelRefsEqual(model.ref, nextActiveModel),
             )?.apiBase ?? prev.apiBase)
           : prev.apiBase);
       const s = {
@@ -2461,9 +2453,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return;
       }
@@ -2501,9 +2491,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return;
       }
@@ -2541,9 +2529,7 @@ export function useDesktopRuntime() {
         return false;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return false;
       }
@@ -2586,9 +2572,7 @@ export function useDesktopRuntime() {
         return false;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return false;
       }

@@ -1,19 +1,10 @@
 import type { AnthropicTransportConfig } from "../../anthropic/anthropic-compat.js";
 import type { BedrockTransportConfig } from "../../bedrock/bedrock-compat.js";
-import type { OpenAiLlmVendor, OpenAiTransportConfig } from "../../openai/openai-compat.js";
+import type { OpenAiTransportConfig } from "../../openai/openai-compat.js";
 
 import { requireEnv } from "../shared/env.js";
 
 export const LIVE_SMOKE_GATE_ENV = "SPIRIT_AGENT_ALLOW_LIVE_SMOKE";
-
-const OPENAI_LLM_VENDOR_ENV = "OPENAI_LLM_VENDOR";
-const LIVE_SMOKE_VENDOR_VALUES = new Set<OpenAiLlmVendor>([
-  "deepseek",
-  "moonshot-ai",
-  "minimax",
-  "alibaba",
-  "custom",
-]);
 
 export function shouldRunLiveSmoke(): boolean {
   if (process.env[LIVE_SMOKE_GATE_ENV] === "1") {
@@ -28,13 +19,11 @@ export function createLiveOpenAiCompatibleSmokeConfig(): OpenAiTransportConfig {
   const apiKey = requireEnv("OPENAI_API_KEY", "SPIRIT_API_KEY");
   const model = process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
   const baseUrl = process.env.OPENAI_BASE_URL ?? process.env.SPIRIT_API_BASE;
-  const llmVendor = parseLiveSmokeVendor(process.env[OPENAI_LLM_VENDOR_ENV]);
 
   return {
     apiKey,
     model,
     ...(baseUrl ? { baseUrl } : {}),
-    ...(llmVendor ? { llmVendor } : {}),
   };
 }
 
@@ -73,19 +62,4 @@ export function createLiveBedrockSmokeConfig(): BedrockTransportConfig {
     ...(accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : {}),
     ...(baseUrl ? { baseUrl } : {}),
   };
-}
-
-function parseLiveSmokeVendor(value: string | undefined): OpenAiLlmVendor | undefined {
-  if (!value || !value.trim()) {
-    return undefined;
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (!LIVE_SMOKE_VENDOR_VALUES.has(normalized as OpenAiLlmVendor)) {
-    throw new Error(
-      `${OPENAI_LLM_VENDOR_ENV} only supports ${Array.from(LIVE_SMOKE_VENDOR_VALUES).join(", ")}, got ${value}`,
-    );
-  }
-
-  return normalized as OpenAiLlmVendor;
 }

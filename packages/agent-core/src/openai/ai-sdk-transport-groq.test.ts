@@ -9,7 +9,7 @@ test("buildAiSdkProviderOptions maps GPT-OSS medium to groq.reasoningEffort", ()
       apiKey: "test-key",
       model: "openai/gpt-oss-20b",
       baseUrl: "https://api.groq.com/openai/v1",
-      llmVendor: "groq",
+      sdk: "@ai-sdk/groq",
       reasoningEffort: "medium",
       workspaceRoot: process.cwd(),
     }),
@@ -21,21 +21,18 @@ test("buildAiSdkProviderOptions maps GPT-OSS medium to groq.reasoningEffort", ()
   );
 });
 
-test("buildAiSdkProviderOptions maps Qwen default to groq.reasoningEffort explicitly", () => {
+test("buildAiSdkProviderOptions omits groq providerOptions for the default tier (sends nothing)", () => {
+  // "default" is the wire-neutral selection: no reasoning parameter is sent.
   assert.deepEqual(
     buildAiSdkProviderOptionsForTests({
       apiKey: "test-key",
       model: "qwen/qwen3.6-27b",
       baseUrl: "https://api.groq.com/openai/v1",
-      llmVendor: "groq",
+      sdk: "@ai-sdk/groq",
       reasoningEffort: "default",
       workspaceRoot: process.cwd(),
     }),
-    {
-      groq: {
-        reasoningEffort: "default",
-      },
-    },
+    {},
   );
 });
 
@@ -45,7 +42,7 @@ test("buildAiSdkProviderOptions omits groq providerOptions for non-reasoning mod
       apiKey: "test-key",
       model: "llama-3.3-70b-versatile",
       baseUrl: "https://api.groq.com/openai/v1",
-      llmVendor: "groq",
+      sdk: "@ai-sdk/groq",
       workspaceRoot: process.cwd(),
     }),
     {},
@@ -58,7 +55,7 @@ test("buildAiSdkProviderOptions omits groq providerOptions when reasoning effort
       apiKey: "test-key",
       model: "openai/gpt-oss-20b",
       baseUrl: "https://api.groq.com/openai/v1",
-      llmVendor: "groq",
+      sdk: "@ai-sdk/groq",
       workspaceRoot: process.cwd(),
     }),
     {},

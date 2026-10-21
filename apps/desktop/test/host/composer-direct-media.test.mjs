@@ -3,14 +3,14 @@ import { test } from "vitest";
 
 import { resolveComposerDirectMediaTool } from "../../dist-electron/src/host/model-config.js";
 
-const openAiGroupId = "openai";
-const volcengineGroupId = "volcengine";
-const exampleGroupId = "example";
+const openAiProviderId = "openai";
+const volcengineProviderId = "volcengine";
+const exampleProviderId = "example";
 
-const chatRef = { groupId: openAiGroupId, name: "gpt-4o-mini" };
-const imageRef = { groupId: openAiGroupId, name: "dall-e-3" };
-const videoRef = { groupId: volcengineGroupId, name: "doubao-seedance" };
-const dualMediaRef = { groupId: exampleGroupId, name: "dual-media" };
+const chatRef = { providerId: openAiProviderId, name: "gpt-4o-mini" };
+const imageRef = { providerId: openAiProviderId, name: "dall-e-3" };
+const videoRef = { providerId: volcengineProviderId, name: "doubao-seedance" };
+const dualMediaRef = { providerId: exampleProviderId, name: "dual-media" };
 
 const chatModel = {
   name: "gpt-4o-mini",
@@ -27,7 +27,6 @@ const imageModel = {
 const videoModel = {
   name: "doubao-seedance",
   apiBase: "https://ark.cn-beijing.volces.com/api/v3",
-  provider: "volcengine",
   capabilities: ["videoGeneration"],
 };
 
@@ -84,7 +83,7 @@ test("resolveComposerDirectMediaTool returns null when slot matches but capabili
 test("resolveComposerDirectMediaTool routes image-only active model without slot match", () => {
   assert.equal(
     resolveComposerDirectMediaTool(
-      { groupId: openAiGroupId, name: "openai/gpt-image-2" },
+      { providerId: openAiProviderId, name: "openai/gpt-image-2" },
       {
         models: [
           {
@@ -92,7 +91,7 @@ test("resolveComposerDirectMediaTool routes image-only active model without slot
             capabilities: ["imageGeneration"],
           },
         ],
-        imageGenerationModel: { groupId: openAiGroupId, name: "openai/gpt-image-1" },
+        imageGenerationModel: { providerId: openAiProviderId, name: "openai/gpt-image-1" },
       },
     ),
     "generate_image",

@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "match": "(?:[a-z0-9-]+\\.)?amazon\\.nova(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high"]
+      },
+      "note": "Amazon Nova on Bedrock (amazon.nova-…, plus regional inference-profile prefixes such as us.amazon.nova-…): Converse reasoningConfig carries maxReasoningEffort low/medium/high (higher levels clamp to high), so only the three wire-meaningful levels are declared. The family-wide match mirrors the transport's reasoningConfig whitelist."
+    }
+  ]
+}

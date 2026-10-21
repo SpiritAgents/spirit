@@ -32,36 +32,37 @@ async function toolNamesFor(config?: LlmTransportConfig): Promise<string[]> {
   return toolNamesFromDefinitions(executor.toolDefinitionsJson());
 }
 
-const STEPFUN_CONFIG: LlmTransportConfig = {
+const DECLARED_PROVIDER_TOOLS_CONFIG: LlmTransportConfig = {
   apiKey: "k",
   model: "step-3",
-  llmVendor: "stepfun",
+  providerTools: [
+    {
+      label: "Web Search",
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            parameters: { type: "object", properties: {} },
+          },
+        },
+      ],
+      execute: { path: "/search" },
+    },
+  ],
 };
 
-test("default exposure keeps web_fetch and managed web_search", async () => {
-  const names = await toolNamesFor(STEPFUN_CONFIG);
+test("default exposure keeps web_fetch", async () => {
+  const names = await toolNamesFor(DECLARED_PROVIDER_TOOLS_CONFIG);
   assert.ok(names.includes("web_fetch"));
-  assert.ok(names.includes("web_search"));
 });
 
-test("webFetchEnabled=false hides web_fetch but keeps managed web_search", async () => {
-  const names = await toolNamesFor({ ...STEPFUN_CONFIG, webFetchEnabled: false });
+test("webFetchEnabled=false hides web_fetch", async () => {
+  const names = await toolNamesFor({ ...DECLARED_PROVIDER_TOOLS_CONFIG, webFetchEnabled: false });
   assert.ok(!names.includes("web_fetch"));
-  assert.ok(names.includes("web_search"));
 });
 
-test("webSearchEnabled=false hides managed web_search but keeps web_fetch", async () => {
-  const names = await toolNamesFor({ ...STEPFUN_CONFIG, webSearchEnabled: false });
+test("provider tool declarations merge at the transport, not into host tool definitions", async () => {
+  const names = await toolNamesFor(DECLARED_PROVIDER_TOOLS_CONFIG);
   assert.ok(!names.includes("web_search"));
-  assert.ok(names.includes("web_fetch"));
-});
-
-test("explicit true keeps both tools exposed", async () => {
-  const names = await toolNamesFor({
-    ...STEPFUN_CONFIG,
-    webSearchEnabled: true,
-    webFetchEnabled: true,
-  });
-  assert.ok(names.includes("web_fetch"));
-  assert.ok(names.includes("web_search"));
 });

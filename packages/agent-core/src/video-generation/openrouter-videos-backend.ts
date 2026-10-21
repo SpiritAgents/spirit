@@ -29,7 +29,10 @@ export class OpenRouterVideosBackend implements VideoGenerationBackend {
     request: VideoGenerationRequest,
     saveGeneratedVideo: (request: GeneratedVideoSaveRequest) => Promise<GeneratedVideoFile>,
   ): Promise<ToolExecutionOutput> {
-    const baseUrl = (config.baseUrl ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
+    const baseUrl = (config.baseUrl ?? "").replace(/\/$/, "");
+    if (!baseUrl) {
+      throw new Error("The openrouter-videos API shape requires a baseUrl.");
+    }
     const createUrl = `${baseUrl}/videos`;
 
     console.error("[agent-core][generate-video] request.start", {

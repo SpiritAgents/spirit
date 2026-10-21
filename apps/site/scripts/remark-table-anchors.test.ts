@@ -111,9 +111,12 @@ test("the global MDX configuration compiles tool rows in every locale", async ()
     );
     const markup = renderToStaticMarkup(createElement(compiled.default));
 
-    assert.match(markup, /<tr id="web_search">/);
-    assert.doesNotMatch(markup, /id="web-search"/);
-    assert.equal([...markup.matchAll(/<tr id="/g)].length, 22);
-    assert.deepEqual(compiled.toc, []);
+    assert.match(markup, /<tr id="read_file">/);
+    assert.doesNotMatch(markup, /id="read-file"/);
+    assert.equal([...markup.matchAll(/<tr id="/g)].length, 21);
+    assert.deepEqual(
+      (compiled.toc as { url: string }[]).map((item) => item.url),
+      ["#provider-tools"],
+    );
   }
 });

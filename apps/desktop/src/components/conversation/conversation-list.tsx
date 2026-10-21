@@ -92,6 +92,7 @@ export type ConversationListProps = {
   rewindRichInputRef: RefObject<ComposerRichInputHandle | null>;
   models: DesktopSnapshot["config"]["models"];
   catalogHints: DesktopSnapshot["config"]["modelCatalogHints"] | undefined;
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   onOpenSubagentViewer: ((toolCallId: string) => void) | undefined;
@@ -136,6 +137,7 @@ export function ConversationList({
   rewindRichInputRef,
   models,
   catalogHints,
+  providerPresets,
   activeModel,
   agentMode,
   onOpenSubagentViewer,
@@ -558,6 +560,7 @@ export function ConversationList({
         rewindBusy={runtime.busyAction === "rewind"}
         models={rewindSelected ? models : EMPTY_MODELS}
         catalogHints={rewindSelected ? catalogHints : undefined}
+        providerPresets={providerPresets}
         activeModel={activeModel}
         agentMode={agentMode}
         onContinue={handleContinueMessage}

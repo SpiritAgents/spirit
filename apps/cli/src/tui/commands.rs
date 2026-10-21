@@ -86,14 +86,13 @@ impl TuiShell {
                     name: model,
                     api_base,
                     api_key,
-                    provider: None,
+                    provider_id: crate::provider_presets::CUSTOM_PROVIDER_PRESET_ID,
                     transport_kind: crate::model_registry::ModelTransportKind::OpenAiCompatible,
                     context_length: None,
-                    azure_resource_name: None,
-                    cloudflare_account_id: None,
                     cloudflare_gateway_id: None,
-                    provider_site: None,
-                    alibaba_workspace_id: None,
+                    site_id: None,
+                    options: &Default::default(),
+                    credential_slots: &[],
                 }) {
                     Ok(()) => {
                         self.messages.push(ChatMessage {
@@ -163,7 +162,13 @@ impl TuiShell {
                         tool_block: None,
                     });
                 } else {
-                    let _ = self.secret_store.remove_model_api_key(&model_ref.name);
+                    // When the removal emptied the provider entry, drop its internal
+                    // keyring account (`provider::{id}`).
+                    if config.find_provider_entry(&model_ref.provider_id).is_none() {
+                        let _ = self.secret_store.remove_provider_secret(
+                            &crate::model_registry::provider_key_account(&model_ref.provider_id),
+                        );
+                    }
                     self.runtime.replace_config(config);
                     self.messages.push(ChatMessage {
                         role: MessageRole::Agent,

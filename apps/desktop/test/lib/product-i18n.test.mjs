@@ -12,11 +12,11 @@ for (const lng of ["en", "de", "es", "fr", "ja", "ko", "pt-BR", "ru", "zh-CN", "
     assert.equal(i18n.t("tray.tooltip", { lng }), product.name);
     assert.equal(i18n.t("onboarding.welcomeTitle", { lng }), product.name);
     assert.ok(
-      i18n.t("settings.webSearchDescription", { lng }).includes(product.name),
-      `settings.webSearchDescription must interpolate product.name in ${lng}`,
+      i18n.t("settings.providerToolsDescription", { lng }).includes(product.name),
+      `settings.providerToolsDescription must interpolate product.name in ${lng}`,
     );
     assert.equal(
-      needsSpaceBeforeInlineContent(i18n.t("settings.webSearchDescription", { lng })),
+      needsSpaceBeforeInlineContent(i18n.t("settings.providerToolsDescription", { lng })),
       !NO_SPACE_BEFORE_LINK_LANGUAGES.has(lng),
       `learn-more link separator must match script typography in ${lng}`,
     );

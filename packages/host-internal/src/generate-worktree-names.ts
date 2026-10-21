@@ -34,6 +34,8 @@ export interface GenerateWorktreeNamesFromTaskInput {
   repoRoot: string;
   workspaceRoot: string;
   toolExecutor: ToolExecutor;
+  /** Config provider id, used as the prompt's provider display label. */
+  providerId?: string;
   enabledRules?: readonly LlmEnabledRule[];
   enabledSkillCatalog?: readonly LlmEnabledSkillCatalogEntry[];
   extensionSystemPrompts?: readonly LlmExtensionSystemPrompt[];
@@ -72,6 +74,7 @@ export async function generateWorktreeNamesFromTask(
     ...(input.dreamContextText !== undefined ? { dreamContextText: input.dreamContextText } : {}),
     extraToolDefinitions: input.extraToolDefinitions ?? [],
     errorMessages: input.errorMessages ?? defaultErrorMessages,
+    ...(input.providerId !== undefined ? { providerId: input.providerId } : {}),
   });
   return parseGeneratedWorktreeNamingResponse(assistantText);
 }
@@ -89,6 +92,7 @@ async function runWorktreeNamingToolAgentRounds(input: {
   dreamContextText?: string;
   extraToolDefinitions: JsonValue;
   errorMessages: WorktreeNamingErrorMessages;
+  providerId?: string;
 }): Promise<string> {
   const llmTransport = createLlmTransport(input.transport);
   const toolExecutor = input.toolExecutor as ToolExecutor & {
@@ -112,7 +116,7 @@ async function runWorktreeNamingToolAgentRounds(input: {
     undefined,
     undefined,
     undefined,
-    isBedrockTransportConfig(input.transport) ? "bedrock" : input.transport.llmVendor,
+    input.providerId ?? (isBedrockTransportConfig(input.transport) ? "bedrock" : undefined),
   );
 
   for (let round = 0; round < 6; round += 1) {

@@ -1,150 +1,239 @@
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
-import {
-  gatewayGoogleGeminiSupportedEfforts,
-  museSupportedReasoningEfforts,
-  routedAnthropicClaudeSupportedEfforts,
-} from "@spiritagent/agent-core";
-import type { ProviderListedModelEntry } from "@spiritagent/host-internal";
-import { moonshotK3SupportedReasoningEfforts } from "@spiritagent/host-internal/openai-models";
+import type { ProviderListedModelEntry } from "@spiritagent/agent-core/model-catalog";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import { lookupModelKnowledge } from "@spiritagent/agent-core/model-knowledge";
+import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 
 import type {
   DesktopModelCapability,
-  DesktopModelProvider,
   DesktopModelReasoningEffort,
+  DesktopModelReasoningMode,
   DesktopTransportKind,
   PreviewModelCatalogEntry,
 } from "../types.js";
+import type {
+  SpiritServiceTiersDeclaration,
+  ThinkingSwitchDeclaration,
+} from "@spiritagent/host-internal/config";
+
+/**
+ * The catalog parser (API shape) driving a provider entry's listing: the materialized preset's
+ * `catalog` descriptor names it; entries without a preset (custom connections) list via the
+ * generic parser of their transport. `undefined` = the provider has no model listing API.
+ */
+export function catalogParserNameForProvider(input: {
+  providerId?: string;
+  transportKind?: DesktopTransportKind;
+}): string | undefined {
+  const preset = input.providerId ? findProviderPreset(input.providerId) : undefined;
+  if (preset) {
+    return preset.catalog?.parser;
+  }
+  const transportKind = input.transportKind ?? "openai-compatible";
+  if (transportKind === "bedrock") {
+    return undefined;
+  }
+  return transportKind === "anthropic" ? "anthropic-models" : "openai-models";
+}
+
+/** Whether the upstream `GET /models` (or equivalent) can be called to list models for this scope. */
+export function providerSupportsModelCatalogListing(input: {
+  providerId?: string;
+  transportKind?: DesktopTransportKind;
+}): boolean {
+  return catalogParserNameForProvider(input) !== undefined;
+}
 
 export function usesAnthropicModelCatalogMetadata(input: {
-  provider?: DesktopModelProvider;
   transportKind?: DesktopTransportKind;
 }): boolean {
-  return input.transportKind === "anthropic" || input.provider === "anthropic";
-}
-
-function providerUsesUpstreamModelDisplayName(provider: DesktopModelProvider | undefined): boolean {
-  return provider === "vercel-ai-gateway" || provider === "openrouter";
-}
-
-/** Whether the upstream `GET /models` (or equivalent) can be called to list models; Azure has no catalog endpoint, and custom depends on the transport. */
-export function providerSupportsModelCatalogListing(input: {
-  provider?: DesktopModelProvider;
-  transportKind?: DesktopTransportKind;
-}): boolean {
-  if (!input.provider) {
-    return false;
-  }
-  if (input.provider === "azure" || input.provider === "cloudflare-ai-gateway") {
-    return false;
-  }
-  if (input.provider === "custom") {
-    const transportKind = input.transportKind ?? "openai-compatible";
-    return (
-      transportKind === "openai-compatible" ||
-      transportKind === "anthropic" ||
-      transportKind === "open-responses"
-    );
-  }
-  return true;
+  return input.transportKind === "anthropic";
 }
 
 export function usesProviderListedModelCatalogMetadata(input: {
-  provider?: DesktopModelProvider;
+  providerId?: string;
   transportKind?: DesktopTransportKind;
 }): boolean {
-  if (!providerSupportsModelCatalogListing(input)) {
-    return false;
-  }
-  if (input.provider === "moonshot-ai") {
-    return true;
-  }
-  if (input.provider === "meituan") {
-    return true;
-  }
-  if (input.provider === "tencent-tokenhub") {
-    return true;
-  }
-  if (input.provider === "mistral") {
-    return true;
-  }
-  if (input.provider === "cohere") {
-    return true;
-  }
-  if (input.provider === "xiaomi") {
-    return true;
-  }
-  if (input.provider === "siliconflow") {
-    return true;
-  }
-  if (
-    input.provider === "openai" ||
-    input.provider === "deepseek" ||
-    input.provider === "kimi-code" ||
-    input.provider === "xai" ||
-    input.provider === "z-ai" ||
-    input.provider === "zhipu-ai" ||
-    input.provider === "alibaba" ||
-    input.provider === "minimax" ||
-    input.provider === "vercel-ai-gateway" ||
-    input.provider === "openrouter" ||
-    input.provider === "fireworks-ai" ||
-    input.provider === "together-ai" ||
-    input.provider === "groq" ||
-    input.provider === "deepinfra" ||
-    input.provider === "hugging-face" ||
-    input.provider === "baseten" ||
-    input.provider === "volcengine" ||
-    input.provider === "byteplus" ||
-    input.provider === "stepfun" ||
-    input.provider === "google" ||
-    input.provider === "google-vertex-ai" ||
-    input.provider === "amazon-bedrock"
-  ) {
-    return true;
-  }
-  return usesAnthropicModelCatalogMetadata(input);
+  return providerSupportsModelCatalogListing(input);
 }
 
-export function previewModelCatalogForTransport(input: {
-  provider?: DesktopModelProvider;
-  transportKind?: DesktopTransportKind;
-  listedModels: readonly ProviderListedModelEntry[];
-}): PreviewModelCatalogEntry[] | undefined {
-  if (!usesProviderListedModelCatalogMetadata(input)) {
+/** Aggregator listing shapes keep the upstream display name (ids carry a route prefix). */
+const AGGREGATOR_CATALOG_PARSERS: ReadonlySet<string> = new Set([
+  "vercel-gateway-models",
+  "openrouter-models",
+]);
+
+/**
+ * Model-knowledge lookup for a catalog id. The loader strips a single aggregator prefix
+ * (`openai/gpt-5.5`); multi-slash path ids (Vertex `publishers/google/models/…`) are looked up
+ * by their trailing segment — the canonical model id — as a fallback.
+ */
+export function lookupCatalogModelKnowledge(modelId: string): Record<string, unknown> | undefined {
+  const direct = lookupModelKnowledge(modelId);
+  if (direct !== undefined) {
+    return direct;
+  }
+  const trimmed = modelId.trim();
+  const segments = trimmed.split("/");
+  if (segments.length > 2) {
+    const trailing = segments[segments.length - 1]!.trim();
+    if (trailing && trailing !== trimmed) {
+      return lookupModelKnowledge(trailing);
+    }
+  }
+  return undefined;
+}
+
+/** Reasoning/thinking/tier declaration keys the knowledge module may fold into a catalog entry. */
+function knowledgeDeclaredReasoningEfforts(
+  declaration: Record<string, unknown>,
+): DesktopModelReasoningEffort[] | undefined {
+  const value = declaration["supportedReasoningEfforts"];
+  if (!Array.isArray(value)) {
     return undefined;
   }
+  const efforts = value.filter((item): item is string => typeof item === "string");
+  return efforts.length > 0 ? normalizePreviewSupportedReasoningEfforts(efforts) : undefined;
+}
 
-  return input.listedModels.map((entry) => ({
+function knowledgeDeclaredReasoningModes(
+  declaration: Record<string, unknown>,
+): DesktopModelReasoningMode[] | undefined {
+  const value = declaration["supportedReasoningModes"];
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const modes = value.filter(
+    (item): item is DesktopModelReasoningMode => item === "standard" || item === "pro",
+  );
+  return modes.length > 0 ? [...new Set(modes)] : undefined;
+}
+
+function knowledgeDeclaredServiceTiers(
+  declaration: Record<string, unknown>,
+): PreviewModelCatalogEntry["serviceTiers"] {
+  const value = declaration["serviceTiers"];
+  if (Array.isArray(value)) {
+    const tiers = value.filter((item): item is ModelServiceTier => typeof item === "string");
+    return tiers.length > 0 ? [...new Set(tiers)] : undefined;
+  }
+  if (typeof value === "object" && value !== null) {
+    // Literal map form: a wire-declaration shape validated by the knowledge module's own tests
+    // and again at config load (same loose-fold contract as `thinkingSwitch`).
+    return value as SpiritServiceTiersDeclaration;
+  }
+  return undefined;
+}
+
+/**
+ * The thinkingSwitch wire-encoding companion block folded from knowledge; the declaration is a
+ * literal config shape (validated by the knowledge module's own tests and again at config load).
+ */
+function knowledgeDeclaredThinkingSwitch(
+  declaration: Record<string, unknown>,
+): ThinkingSwitchDeclaration | undefined {
+  const value = declaration["thinkingSwitch"];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as ThinkingSwitchDeclaration;
+}
+
+/**
+ * One catalog write entry = the listing's API facts with model-knowledge declarations folded in
+ * (knowledge wins on the keys it declares; it is the curated source — data bugs get fixed in the
+ * knowledge module, never in a runtime patch).
+ */
+function previewEntryFromListedEntry(
+  parserName: string | undefined,
+  entry: ProviderListedModelEntry,
+): PreviewModelCatalogEntry {
+  const knowledge = lookupCatalogModelKnowledge(entry.id);
+  const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
+  const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
+  // Bedrock Converse has no service tier parameter, so provider-agnostic knowledge tier
+  // declarations (e.g. Claude Opus Fast) are withheld for bedrock listings instead of showing a
+  // no-op control.
+  const knowledgeTiers =
+    knowledge && parserName !== "bedrock-models"
+      ? knowledgeDeclaredServiceTiers(knowledge)
+      : undefined;
+  const knowledgeThinkingSwitch = knowledge?.["supportsThinkingSwitch"] === true ? true : undefined;
+  const knowledgeThinkingType =
+    knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
+  const knowledgeThinkingSwitchEncoding = knowledge
+    ? knowledgeDeclaredThinkingSwitch(knowledge)
+    : undefined;
+
+  return {
     id: entry.id,
     capabilities: previewCapabilitiesFromListedEntry(entry),
-    ...resolvePreviewCatalogDisplayName(input.provider, entry),
+    ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
-    ...resolvePreviewSupportedReasoningEffortsForEntry(input.provider, entry),
+    ...(knowledgeEfforts !== undefined
+      ? { supportedReasoningEfforts: knowledgeEfforts }
+      : entry.supportedReasoningEfforts !== undefined
+        ? {
+            supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
+              entry.supportedReasoningEfforts,
+            ),
+          }
+        : {}),
+    ...(knowledgeModes !== undefined ? { supportedReasoningModes: knowledgeModes } : {}),
+    // Aggregator parsers materialize the route-specific declaration; it beats the provider-agnostic
+    // knowledge record (an OpenAI-native auto tier, for example, would be wrong on a gateway route).
+    ...(entry.serviceTiers !== undefined
+      ? { serviceTiers: entry.serviceTiers as SpiritServiceTiersDeclaration }
+      : knowledgeTiers !== undefined
+        ? { serviceTiers: knowledgeTiers }
+        : {}),
     ...resolvePreviewDefaultReasoningEffortForEntry(entry),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
+    ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
     ...(entry.maxCompletionTokens !== undefined
       ? { maxCompletionTokens: entry.maxCompletionTokens }
       : {}),
-    ...(entry.supportsThinkingType !== undefined
-      ? { supportsThinkingType: entry.supportsThinkingType }
+    ...(knowledgeThinkingType !== undefined
+      ? { supportsThinkingType: knowledgeThinkingType }
+      : entry.supportsThinkingType !== undefined
+        ? { supportsThinkingType: entry.supportsThinkingType }
+        : {}),
+    ...(knowledgeThinkingSwitch === true || entry.supportsThinkingSwitch === true
+      ? { supportsThinkingSwitch: true }
       : {}),
-    ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+    ...(knowledgeThinkingSwitchEncoding !== undefined
+      ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
+      : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
     ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
     ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
-  }));
+  };
+}
+
+export function previewModelCatalogForTransport(input: {
+  providerId?: string;
+  transportKind?: DesktopTransportKind;
+  listedModels: readonly ProviderListedModelEntry[];
+}): PreviewModelCatalogEntry[] | undefined {
+  const parserName = catalogParserNameForProvider(input);
+  if (parserName === undefined) {
+    return undefined;
+  }
+
+  return input.listedModels.map((entry) => previewEntryFromListedEntry(parserName, entry));
 }
 
 export function previewCatalogMapForTransport(input: {
-  provider?: DesktopModelProvider;
+  providerId?: string;
   transportKind?: DesktopTransportKind;
   modelCatalog?: readonly PreviewModelCatalogEntry[];
 }): Map<string, PreviewModelCatalogEntry> {
-  if (!usesProviderListedModelCatalogMetadata(input) || !Array.isArray(input.modelCatalog)) {
+  const parserName = catalogParserNameForProvider(input);
+  if (parserName === undefined || !Array.isArray(input.modelCatalog)) {
     return new Map();
   }
 
@@ -154,40 +243,22 @@ export function previewCatalogMapForTransport(input: {
     if (!id) {
       continue;
     }
+    // The wizard's preview entries already carry folded declarations; still fold knowledge here so
+    // hand-written preview payloads get the same treatment.
+    const folded = previewEntryFromListedEntry(parserName, {
+      ...entry,
+      // PreviewModelCatalogEntry carries resolved capabilities; re-derive the listed flags.
+      supportsImageInput: entry.capabilities?.includes("image") === true,
+      supportsVideoInput: entry.capabilities?.includes("video") === true,
+      supportsImageGeneration: entry.capabilities?.includes("imageGeneration") === true,
+      supportsVideoGeneration: entry.capabilities?.includes("videoGeneration") === true,
+    });
     normalized.push([
       id,
       {
-        id,
-        ...resolvePreviewCatalogDisplayName(input.provider, {
-          id,
-          displayName: entry.displayName,
-        }),
-        ...(entry.description !== undefined ? { description: entry.description } : {}),
-        ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
-        ...(entry.capabilities ? { capabilities: entry.capabilities } : {}),
-        ...(entry.supportedReasoningEfforts !== undefined
-          ? {
-              supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
-                entry.supportedReasoningEfforts,
-              ),
-            }
-          : {}),
-        ...resolvePreviewDefaultReasoningEffortForEntry(entry),
-        ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
-        ...(entry.maxCompletionTokens !== undefined
-          ? { maxCompletionTokens: entry.maxCompletionTokens }
-          : {}),
-        ...(entry.supportsThinkingType !== undefined
-          ? { supportsThinkingType: entry.supportsThinkingType }
-          : {}),
-        ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
-        ...(entry.inferenceProvider !== undefined
-          ? { inferenceProvider: entry.inferenceProvider }
-          : {}),
-        ...(entry.upstreamProvider !== undefined
-          ? { upstreamProvider: entry.upstreamProvider }
-          : {}),
-        ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
+        ...folded,
+        // Keep the wizard-provided display metadata verbatim (displayName already resolved).
+        ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
       },
     ]);
   }
@@ -196,14 +267,14 @@ export function previewCatalogMapForTransport(input: {
 }
 
 function resolvePreviewCatalogDisplayName(
-  provider: DesktopModelProvider | undefined,
+  parserName: string | undefined,
   entry: Pick<ProviderListedModelEntry, "id" | "displayName">,
 ): { displayName?: string } {
   const upstreamDisplayName = entry.displayName?.trim();
   if (upstreamDisplayName) {
     return { displayName: upstreamDisplayName };
   }
-  if (providerUsesUpstreamModelDisplayName(provider)) {
+  if (parserName !== undefined && AGGREGATOR_CATALOG_PARSERS.has(parserName)) {
     return {};
   }
   return {
@@ -232,66 +303,8 @@ function previewCapabilitiesFromListedEntry(
   return capabilities;
 }
 
-function isMoonshotKimiK3CatalogModelId(modelId: string): boolean {
-  const normalized = modelId.trim().toLowerCase();
-  const bareId = normalized.includes("/")
-    ? normalized.slice(normalized.lastIndexOf("/") + 1)
-    : normalized;
-  return /^kimi-k3(?:-|$)/.test(bareId);
-}
-
-function resolvePreviewSupportedReasoningEffortsForEntry(
-  provider: DesktopModelProvider | undefined,
-  entry: ProviderListedModelEntry,
-): { supportedReasoningEfforts?: DesktopModelReasoningEffort[] } {
-  // The catalog cache may still hold the K2.x minimal/low/medium/high values; K3 uses the fixed documented tiers.
-  // Kimi Code lists efforts via think_efforts; do not apply the Moonshot kimi-k3 override.
-  if (provider !== "kimi-code" && isMoonshotKimiK3CatalogModelId(entry.id)) {
-    return {
-      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
-        moonshotK3SupportedReasoningEfforts(),
-      ),
-    };
-  }
-
-  const inferredMuse = museSupportedReasoningEfforts(entry.id);
-  if (inferredMuse !== undefined) {
-    return {
-      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(inferredMuse),
-    };
-  }
-
-  if (entry.supportedReasoningEfforts !== undefined) {
-    return {
-      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
-        entry.supportedReasoningEfforts,
-      ),
-    };
-  }
-
-  if (provider !== "vercel-ai-gateway" && provider !== "openrouter") {
-    return {};
-  }
-
-  const inferredAnthropic = routedAnthropicClaudeSupportedEfforts(entry.id);
-  if (inferredAnthropic !== undefined) {
-    return {
-      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(inferredAnthropic),
-    };
-  }
-
-  const inferredGemini = gatewayGoogleGeminiSupportedEfforts(entry.id);
-  if (inferredGemini !== undefined) {
-    return {
-      supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(inferredGemini),
-    };
-  }
-
-  return {};
-}
-
 function normalizePreviewSupportedReasoningEfforts(
-  values: readonly DesktopModelReasoningEffort[],
+  values: readonly string[],
 ): DesktopModelReasoningEffort[] {
   const seen = new Set<string>();
   const normalized: DesktopModelReasoningEffort[] = [];

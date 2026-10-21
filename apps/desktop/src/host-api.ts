@@ -26,7 +26,6 @@ import type {
   DesktopUpdateAutomationRequest,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
-  DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
   AddMarketplaceSourceRequest,
@@ -124,7 +123,7 @@ export interface HostApi {
   addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
   removeModel(name: string): Promise<DesktopSnapshot>;
-  removeProviderModels(provider: DesktopModelProvider): Promise<DesktopSnapshot>;
+  removeProviderModels(provider: string): Promise<DesktopSnapshot>;
   removeProviderGroup(request: RemoveProviderGroupRequest): Promise<DesktopSnapshot>;
   addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
   deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;

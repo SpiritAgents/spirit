@@ -220,7 +220,8 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "deepseek-v4-flash",
     baseUrl,
-    llmVendor: "deepseek" as const,
+    sdk: "@ai-sdk/open-responses" as const,
+    providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
   };
   const state = startOpenAiToolAgentState(
     [],
@@ -324,14 +325,14 @@ async function main(): Promise<void> {
   }
 
   const traceEntry = secondCompletion.result.requestTrace[0];
-  if (!isJsonObject(traceEntry) || traceEntry.kind !== "deepseek_open_responses") {
+  if (!isJsonObject(traceEntry) || traceEntry.kind !== "open_responses_sdk_responses") {
     throw new Error(
-      "ai-sdk deepseek streaming smoke did not mark the deepseek_open_responses trace kind.",
+      "ai-sdk deepseek streaming smoke did not mark the open_responses_sdk_responses trace kind.",
     );
   }
 
   await runDeepSeekVisionCapabilitySmoke();
-  verifyKnownModelCapabilityTable();
+  verifyDeclaredCapabilitiesProfile();
 }
 
 async function runDeepSeekVisionCapabilitySmoke(): Promise<void> {
@@ -432,7 +433,8 @@ async function runDeepSeekVisionCapabilitySmoke(): Promise<void> {
         apiKey: "test-key",
         model: "deepseek-v4-pro",
         baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-        llmVendor: "deepseek",
+        // Declared text-only capability profile: the compat layer trims the image part upfront.
+        modelCapabilities: { languageModel: true },
       },
       state,
       demoLookupToolDefinition(),
@@ -495,52 +497,36 @@ interface DeepSeekSmokeWarningOptions {
 
 type DeepSeekSmokeWarningLogger = (options: DeepSeekSmokeWarningOptions) => void;
 
-function verifyKnownModelCapabilityTable(): void {
-  const deepSeek = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "deepseek",
+function verifyDeclaredCapabilitiesProfile(): void {
+  // Undeclared capabilities mean "no explicit profile": the compat layer trims nothing.
+  const undeclared = resolveOpenAiModelCompatibilityProfile({
     model: "deepseek-v4-pro",
   });
-  if (!deepSeek.hasExplicitCapabilities || deepSeek.capabilities.imageInput) {
+  if (undeclared.hasExplicitCapabilities) {
     throw new Error(
-      "DeepSeek capabilities table is abnormal: it should be explicitly declared and should not support imageInput.",
+      "Capabilities profile is abnormal: undeclared capabilities must not trim requests.",
     );
   }
 
-  const moonshotWithoutCatalog = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "moonshot-ai",
+  // Declared capabilities are honored verbatim, including trimming undeclared modalities.
+  const declared = resolveOpenAiModelCompatibilityProfile({
     model: "kimi-k2.5",
+    modelCapabilities: { languageModel: true },
   });
-  const moonshotWithImageInput = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "moonshot-ai",
+  if (!declared.hasExplicitCapabilities || declared.capabilities.imageInput) {
+    throw new Error(
+      "Capabilities profile is abnormal: declared capabilities should drop imageInput here.",
+    );
+  }
+
+  const withImageInput = resolveOpenAiModelCompatibilityProfile({
     model: "kimi-k2.5",
     modelCapabilities: { imageInput: true },
   });
-
-  if (
-    !moonshotWithoutCatalog.hasExplicitCapabilities ||
-    moonshotWithoutCatalog.capabilities.imageInput
-  ) {
+  if (!withImageInput.capabilities.imageInput) {
     throw new Error(
-      "Moonshot capabilities table is abnormal: imageInput should not be inferred without a catalog.",
+      "Capabilities profile is abnormal: explicit modelCapabilities should preserve imageInput.",
     );
-  }
-  if (!moonshotWithImageInput.capabilities.imageInput) {
-    throw new Error(
-      "Moonshot capabilities table is abnormal: explicit modelCapabilities should preserve imageInput.",
-    );
-  }
-
-  const explicitCustom = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "custom",
-    model: "custom-image-model",
-    modelCapabilities: { languageModel: true, imageInput: true, imageGeneration: true },
-  });
-  if (
-    !explicitCustom.hasExplicitCapabilities ||
-    !explicitCustom.capabilities.imageInput ||
-    !explicitCustom.capabilities.imageGeneration
-  ) {
-    throw new Error("Explicit modelCapabilities did not override the provider/model inference.");
   }
 }
 

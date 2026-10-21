@@ -61,13 +61,13 @@ function parseStoredSessionActiveModel(value: unknown): ModelRef | undefined {
     }
     const separatorIndex = trimmed.lastIndexOf("::");
     if (separatorIndex > 0) {
-      const groupId = trimmed.slice(0, separatorIndex).trim();
+      const providerId = trimmed.slice(0, separatorIndex).trim();
       const name = trimmed.slice(separatorIndex + 2).trim();
-      if (groupId && name) {
-        return { groupId, name };
+      if (providerId && name) {
+        return { providerId, name };
       }
     }
-    return { groupId: "", name: trimmed };
+    return { providerId: "", name: trimmed };
   }
   return undefined;
 }

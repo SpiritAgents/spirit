@@ -55,8 +55,7 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "test-open-responses",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    responsesProvider: "open-responses-compatible" as const,
-    llmVendor: "custom" as const,
+    sdk: "@ai-sdk/open-responses" as const,
   };
   const tools = demoLookupToolDefinition();
 

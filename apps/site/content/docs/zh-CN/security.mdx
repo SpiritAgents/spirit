@@ -7,7 +7,9 @@ description: 钥匙串、审批和本机 loopback 守护进程。无遥测。
 
 API Key、Bedrock / Vertex 密钥、扩展密钥和 GitHub 集成 token 存在操作系统钥匙串。服务名是 `{{product.name}}`。
 
-`config.json` 里是提供商分组和模型引用，不是密钥本身。过大的密钥可能在钥匙串里分片。
+连接向导写入的提供商 Key 使用账户方案 `provider::{id}`——每个 `config.json` 提供商条目一个；Bedrock IAM、Vertex 服务账号这类复合凭证槽位用 `provider::{id}::{slot}`。过大的密钥可能在钥匙串里分片。
+
+`config.json` 里是提供商条目和模型引用，不是密钥本身——除非你显式声明了逃生口：明文 `apiKey`（不推荐）、`apiKeyEnv` 环境变量引用，或指向外部钥匙串条目的 `apiKeyKeyring` / 槽位级 `keyring` 引用。见[配置](./config.mdx)。
 
 ## 审批
 

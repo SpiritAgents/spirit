@@ -109,9 +109,9 @@ export function ModelCatalogDetailPanel({
         >
           {providerLabel}
         </p>
-        {capabilities && capabilities.length > 0 ? (
+        {(capabilities && capabilities.length > 0) || model.hasProviderTools === true ? (
           <div className={cn("flex flex-wrap gap-1.5", isList ? "mt-1.5" : "mt-2")}>
-            {capabilities.map((capability) => (
+            {(capabilities ?? []).map((capability) => (
               <Badge
                 key={capability}
                 variant="secondary"
@@ -120,6 +120,12 @@ export function ModelCatalogDetailPanel({
                 {modelCapabilityLabel(capability)}
               </Badge>
             ))}
+            {/* Presence-only marker: the provider entry declares providerTools (no per-kind split). */}
+            {model.hasProviderTools === true ? (
+              <Badge variant="secondary" className="text-[10px] text-secondary-foreground">
+                {t("settings.capabilityProviderToolsLabel")}
+              </Badge>
+            ) : null}
           </div>
         ) : null}
       </div>

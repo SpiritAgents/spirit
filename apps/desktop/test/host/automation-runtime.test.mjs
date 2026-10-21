@@ -13,7 +13,7 @@ const sampleDefinition = {
   overview: "Run daily task",
   trigger: { kind: "time", schedule: { kind: "hourly" } },
   workspaceRoot: "/tmp/workspace",
-  modelRef: { groupId: "openai", name: "gpt-test" },
+  modelRef: { providerId: "openai", name: "gpt-test" },
   approvalLevel: "bypass-approval",
   enabled: true,
   createdAtUnixMs: 1,

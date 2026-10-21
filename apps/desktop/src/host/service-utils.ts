@@ -27,8 +27,7 @@ import {
   mergeRecentWorkspaceRoots,
   resolveDesktopHomeDirectory,
 } from "./storage.js";
-import { resolveProfileApiBase } from "./model-config.js";
-import { flattenProviderGroups, resolveActiveModelProfile } from "./model-config-access.js";
+import { flattenProviders, resolveActiveModelProfile } from "./model-config-access.js";
 import { DESKTOP_WEB_HOST_POLICY, getDesktopWebHostRuntimeStatus } from "./web-host-state.js";
 
 export function normalizeWorkspaceRootKey(workspaceRoot: string): string {
@@ -230,12 +229,10 @@ export function buildWebHostSnapshot(config: DesktopWebHostConfigFile): DesktopW
   };
 }
 
+/** The active model's materialized apiBase (config is the only truth; nothing is re-derived). */
 export function currentApiBase(config: DesktopConfigFile): string {
-  const profile = resolveActiveModelProfile(config) ?? flattenProviderGroups(config)[0];
-  if (!profile) {
-    return "";
-  }
-  return resolveProfileApiBase(profile);
+  const profile = resolveActiveModelProfile(config) ?? flattenProviders(config)[0];
+  return profile?.apiBase ?? "";
 }
 
 export function cloneChatArchive(archive: ChatArchive): ChatArchive {

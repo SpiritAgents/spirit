@@ -88,7 +88,7 @@ async function main(): Promise<void> {
       apiKey: "",
       model: VERTEX_MODEL,
       baseUrl,
-      llmVendor: "google-vertex-ai",
+      sdk: "@ai-sdk/google-vertex",
       vertexProject: VERTEX_PROJECT,
       vertexLocation: VERTEX_LOCATION,
       vertexGoogleAuthOptions: {
@@ -133,9 +133,9 @@ async function main(): Promise<void> {
   }
 
   const traceEntry = completion.result.requestTrace[0];
-  if (!isJsonObject(traceEntry) || traceEntry.kind !== "google_vertex_sdk_generate_content") {
+  if (!isJsonObject(traceEntry) || traceEntry.kind !== "openai_sdk_chat_completions") {
     throw new Error(
-      "ai-sdk google vertex streaming smoke did not mark the Vertex-specific request trace kind.",
+      "ai-sdk google vertex streaming smoke did not write the chat-completions request trace kind.",
     );
   }
 }

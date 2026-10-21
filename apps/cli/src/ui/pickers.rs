@@ -441,7 +441,7 @@ pub(in crate::ui) fn build_model_picker_lines(
     let mut lines = Vec::new();
     for (idx, model) in models.iter().enumerate().take(end).skip(start) {
         let is_selected = idx == selected;
-        let is_active = model.group_id == app.config.active_model.group_id
+        let is_active = model.provider_id == app.config.active_model.provider_id
             && model.name == app.config.active_model.name;
         let display_title = crate::model_catalog_display::model_display_title(
             &model.name,

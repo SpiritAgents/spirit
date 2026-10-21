@@ -1,11 +1,6 @@
 import i18n from "@/lib/i18n";
 import type { DesktopModelCapability, DesktopSnapshot, ModelRef } from "@/types";
-import {
-  emptyModelRef,
-  isEmptyModelRef,
-  modelRefKey,
-  modelRefsEqual,
-} from "@spiritagent/host-internal/config-v2";
+import { emptyModelRef, isEmptyModelRef, modelRefKey, modelRefsEqual } from "@/lib/model-ref";
 
 export const defaultCustomModelCapabilities: DesktopModelCapability[] = ["languageModel", "image"];
 
@@ -21,7 +16,7 @@ export type ModelDefaultAssignments = {
 export type ModelDefaultRole = keyof ModelDefaultAssignments;
 
 export function settingsModelRef(model: SettingsModelProfile): ModelRef {
-  return model.ref ?? { groupId: model.groupId ?? "", name: model.name };
+  return model.ref;
 }
 
 export function resolveEffectiveModelRef(

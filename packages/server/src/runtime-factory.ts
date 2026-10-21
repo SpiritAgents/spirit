@@ -15,7 +15,6 @@ import {
   mergeEnabledExtensionSystemPrompts,
   buildLoopModeSystemMessage,
   buildMcpCatalogSystemMessage,
-  buildProviderWebSearchPromptSection,
   buildRulesSystemMessage,
   buildSkillsCatalogSystemMessage,
   buildTodoHostToolDefinitions,
@@ -220,7 +219,8 @@ function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
   if (isBedrockTransportConfig(config)) {
     return "bedrock";
   }
-  return config.llmVendor;
+  // Neutral mechanism label for the host prompt: the declared SDK adapter package.
+  return config.sdk;
 }
 
 export async function createServerRuntime(
@@ -455,7 +455,6 @@ export async function createServerRuntime(
     transportConfig.transportKind === "open-responses"
       ? buildApplyPatchFileToolsPromptSection()
       : undefined;
-  const providerWebSearchPromptSection = buildProviderWebSearchPromptSection(transportConfig);
   const hostUiPromptSection = normalizeHostUiPromptSection(options.hostUiPromptSection);
   // apply_patch + optional host UI Markdown (Desktop Mermaid) share the trailing plain slot.
   const trailingHostPromptSection = joinHostPromptSections(
@@ -481,7 +480,7 @@ export async function createServerRuntime(
       undefined, // dreamsContextText — Desktop-only product surface, wired in a later phase
       basicInfo,
       trailingHostPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
@@ -501,7 +500,7 @@ export async function createServerRuntime(
       undefined,
       basicInfo,
       trailingHostPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
@@ -563,7 +562,7 @@ export async function createServerRuntime(
         undefined,
         basicInfo,
         trailingHostPromptSection,
-        providerWebSearchPromptSection,
+        undefined,
         loopEnabled,
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
@@ -755,8 +754,10 @@ export async function createServerRuntime(
       attribution = next;
     },
     setWebToolExposure: (next) => {
+      // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI end flips;
+      // it maps onto the providerTools exposure gate.
       if (next.webSearchEnabled !== undefined) {
-        transportConfig.webSearchEnabled = next.webSearchEnabled;
+        transportConfig.providerToolsEnabled = next.webSearchEnabled;
       }
       if (next.webFetchEnabled !== undefined) {
         transportConfig.webFetchEnabled = next.webFetchEnabled;

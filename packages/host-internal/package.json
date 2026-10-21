@@ -48,33 +48,9 @@
       "types": "./dist/hooks/trust.d.ts",
       "default": "./dist/hooks/trust.js"
     },
-    "./config-v2": {
-      "types": "./dist/config-v2.d.ts",
-      "default": "./dist/config-v2.js"
-    },
-    "./model-provider-presets": {
-      "types": "./dist/model-provider-presets.d.ts",
-      "default": "./dist/model-provider-presets.js"
-    },
-    "./id-display-title": {
-      "types": "./dist/id-display-title.d.ts",
-      "default": "./dist/id-display-title.js"
-    },
-    "./well-known-casing": {
-      "types": "./dist/well-known-casing.d.ts",
-      "default": "./dist/well-known-casing.js"
-    },
-    "./openai-models": {
-      "types": "./dist/openai-models.d.ts",
-      "default": "./dist/openai-models.js"
-    },
-    "./openai-api-base": {
-      "types": "./dist/openai-api-base.d.ts",
-      "default": "./dist/openai-api-base.js"
-    },
-    "./bedrock-region": {
-      "types": "./dist/bedrock-region.d.ts",
-      "default": "./dist/bedrock-region.js"
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
     },
     "./azure-resource": {
       "types": "./dist/azure-resource.d.ts",
@@ -83,14 +59,6 @@
     "./cloudflare-ai-gateway-resource": {
       "types": "./dist/cloudflare-ai-gateway-resource.d.ts",
       "default": "./dist/cloudflare-ai-gateway-resource.js"
-    },
-    "./bedrock-mantle": {
-      "types": "./dist/bedrock-mantle.d.ts",
-      "default": "./dist/bedrock-mantle.js"
-    },
-    "./google-vertex-endpoints": {
-      "types": "./dist/google-vertex-endpoints.d.ts",
-      "default": "./dist/google-vertex-endpoints.js"
     },
     "./reasoning-effort": {
       "types": "./dist/reasoning-effort.d.ts",
@@ -172,7 +140,6 @@
     "test:lsp": "vitest run src/lsp",
     "smoke:lsp": "npm run build && node dist/smoke/lsp-pyright-smoke.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "smoke:openai-models-parse": "npm run build && node dist/smoke/openai-models-parse-smoke.js && vitest run src/bedrock-models.test.ts src/google-vertex-endpoints.test.ts src/google-vertex-models.test.ts",
     "notice": "node scripts/gen-notice.mjs",
     "notice:production": "node scripts/gen-notice.mjs --production",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"

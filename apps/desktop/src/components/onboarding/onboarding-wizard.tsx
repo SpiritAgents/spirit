@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,
   AddProviderModelsRequest,
+  DesktopProviderPickerPreset,
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
@@ -78,6 +79,8 @@ type OnboardingWizardProps = {
   useTranslucency?: boolean;
   settings: SettingsFormState;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
+  /** Preset picker rows from the host snapshot (provider list order + fallback labels). */
+  providerPickerPresets: readonly DesktopProviderPickerPreset[];
   modelsBusy: boolean;
   modelsPreviewBusy: boolean;
   onAddModel: (request: AddModelRequest) => Promise<void>;
@@ -109,6 +112,7 @@ export function OnboardingWizard({
   useTranslucency = false,
   settings,
   onSavePatch,
+  providerPickerPresets,
   modelsBusy,
   modelsPreviewBusy,
   onAddModel,
@@ -209,6 +213,7 @@ export function OnboardingWizard({
           <OnboardingConnectStep
             modelsBusy={modelsBusy}
             modelsPreviewBusy={modelsPreviewBusy}
+            providerPickerPresets={providerPickerPresets}
             onAddModel={onAddModel}
             onAddProviderModels={onAddProviderModels}
             onPreviewModels={onPreviewModels}
@@ -465,6 +470,7 @@ function OnboardingAppearanceStep({
 function OnboardingConnectStep({
   modelsBusy,
   modelsPreviewBusy,
+  providerPickerPresets,
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
@@ -476,6 +482,7 @@ function OnboardingConnectStep({
 }: {
   modelsBusy: boolean;
   modelsPreviewBusy: boolean;
+  providerPickerPresets: readonly DesktopProviderPickerPreset[];
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
@@ -505,6 +512,7 @@ function OnboardingConnectStep({
       <OnboardingConnectControls
         modelsBusy={modelsBusy}
         modelsPreviewBusy={modelsPreviewBusy}
+        providerPickerPresets={providerPickerPresets}
         onAddModel={onAddModel}
         onAddProviderModels={onAddProviderModels}
         onPreviewModels={onPreviewModels}

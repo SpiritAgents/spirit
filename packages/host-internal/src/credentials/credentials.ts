@@ -1,210 +1,87 @@
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config-v2.js";
-import type { ModelProviderId } from "../model-provider-presets.js";
+import {
+  materializeProviderPreset,
+  type MaterializedProviderEntry,
+} from "@spiritagent/agent-core/provider-presets";
+
+import {
+  emptyModelRef,
+  GOOGLE_VERTEX_SDK_PACKAGE_NAME,
+  providerCredentialSlotNames,
+  resolveProviderSdkPackageName,
+  resolveProviderTransportKind,
+  SPIRIT_CONFIG_SCHEMA_VERSION,
+  type ModelEntry,
+  type ProviderEntry,
+  type ProviderOptions,
+  type SpiritConfigFile,
+} from "../config.js";
 
 import { keyringStore } from "./keyring-store.js";
 import {
-  KEYRING_GLOBAL_ACCOUNT,
   KEYRING_SERVICE,
-  groupAccessKeyIdAccount,
-  groupKeyAccount,
-  groupSecretAccessKeyAccount,
-  groupVertexClientEmailAccount,
-  groupVertexPrivateKeyAccount,
-  modelKeyAccount,
-  modelProviderKeyScope,
-  providerAccessKeyIdAccount,
-  providerKeyAccount,
-  providerSecretAccessKeyAccount,
-  providerVertexClientEmailAccount,
-  providerVertexPrivateKeyAccount,
-} from "./provider-accounts.js";
+  providerInternalSlotAccount,
+  resolveProviderApiKey,
+  resolveProviderCredentialSlot,
+  type ProviderKeyChannels,
+} from "./provider-key-channels.js";
 import {
   loadActiveModelProfile,
   loadModelProfile,
   loadSpiritConfig,
   saveSpiritConfig,
 } from "./spirit-config.js";
-import type {
-  BedrockSetupCredentials,
-  GoogleVertexSetupCredentials,
-  ProviderSetupResult,
-  SpiritConfigFile,
-  SpiritModelProfile,
-} from "./types.js";
+import type { ProviderSetupResult, SpiritModelProfile } from "./types.js";
 
 export { loadActiveModelProfile, loadModelProfile, loadSpiritConfig, saveSpiritConfig };
-export type { ProviderSetupResult, SpiritConfigFile, SpiritModelProfile };
+export type { ProviderSetupResult, SpiritModelProfile };
 
-function readAccount(account: string): string | undefined {
-  const value = keyringStore().getPassword(KEYRING_SERVICE, account);
-  const trimmed = value?.trim();
-  return trimmed || undefined;
-}
-
-/** Group-scoped key first (Desktop/CLI canonical), then provider scope (acp legacy). */
-function readScopedKey(groupId: string | undefined, providerId: string): string | undefined {
-  if (groupId?.trim()) {
-    const groupKey = readAccount(groupKeyAccount(groupId.trim()));
-    if (groupKey) {
-      return groupKey;
-    }
-  }
-  return readAccount(providerKeyAccount(providerId));
-}
-
-function readScopedSubKey(
-  groupId: string | undefined,
-  providerId: string,
-  groupAccount: (groupId: string) => string,
-  providerAccount: (providerId: string) => string,
-): string | undefined {
-  if (groupId?.trim()) {
-    const value = readAccount(groupAccount(groupId.trim()));
-    if (value) {
-      return value;
-    }
-  }
-  return readAccount(providerAccount(providerId));
-}
-
-function readModelKey(modelName: string): string | undefined {
-  return readAccount(modelKeyAccount(modelName));
-}
-
-function readGlobalKey(): string | undefined {
-  return readAccount(KEYRING_GLOBAL_ACCOUNT);
-}
-
-export function readBedrockCredentials(
-  providerId: ModelProviderId,
-  groupId?: string,
-): BedrockSetupCredentials {
-  const credentials: BedrockSetupCredentials = {};
-  const apiKey = readScopedKey(groupId, providerId);
-  if (apiKey) {
-    credentials.apiKey = apiKey;
-  }
-  const accessKeyId = readScopedSubKey(
-    groupId,
-    providerId,
-    groupAccessKeyIdAccount,
-    providerAccessKeyIdAccount,
-  );
-  if (accessKeyId) {
-    credentials.accessKeyId = accessKeyId;
-  }
-  const secretAccessKey = readScopedSubKey(
-    groupId,
-    providerId,
-    groupSecretAccessKeyAccount,
-    providerSecretAccessKeyAccount,
-  );
-  if (secretAccessKey) {
-    credentials.secretAccessKey = secretAccessKey;
-  }
-  return credentials;
-}
-
-export function readGoogleVertexCredentials(
-  providerId: ModelProviderId,
-  groupId?: string,
-): GoogleVertexSetupCredentials {
-  const credentials: GoogleVertexSetupCredentials = {};
-  const apiKey = readScopedKey(groupId, providerId);
-  if (apiKey) {
-    credentials.apiKey = apiKey;
-  }
-  const clientEmail = readScopedSubKey(
-    groupId,
-    providerId,
-    groupVertexClientEmailAccount,
-    providerVertexClientEmailAccount,
-  );
-  if (clientEmail) {
-    credentials.clientEmail = clientEmail;
-  }
-  const privateKey = readScopedSubKey(
-    groupId,
-    providerId,
-    groupVertexPrivateKeyAccount,
-    providerVertexPrivateKeyAccount,
-  );
-  if (privateKey) {
-    credentials.privateKey = privateKey;
-  }
-  return credentials;
-}
-
-function hasBedrockRuntimeCredentials(credentials: BedrockSetupCredentials): boolean {
-  if (credentials.apiKey?.trim()) {
-    return true;
-  }
-  return Boolean(credentials.accessKeyId?.trim() && credentials.secretAccessKey?.trim());
-}
-
-function hasGoogleVertexRuntimeCredentials(input: {
-  apiKey?: string;
-  clientEmail?: string;
-  privateKey?: string;
-  vertexProject?: string;
-  vertexLocation?: string;
-}): boolean {
-  if (input.apiKey?.trim()) {
-    return true;
-  }
-  if (input.clientEmail?.trim() && input.privateKey?.trim()) {
-    return Boolean(input.vertexProject?.trim() && input.vertexLocation?.trim());
-  }
-  return Boolean(input.vertexProject?.trim() && input.vertexLocation?.trim());
-}
-
-function hasProviderSecret(providerId: ModelProviderId, profile: SpiritModelProfile): boolean {
-  if (readScopedKey(profile.groupId, providerId)) {
-    return true;
-  }
-  if (providerId === "amazon-bedrock") {
-    return hasBedrockRuntimeCredentials(readBedrockCredentials("amazon-bedrock", profile.groupId));
-  }
-  if (providerId === "google-vertex-ai") {
-    const credentials = readGoogleVertexCredentials("google-vertex-ai", profile.groupId);
-    const vertexInput: {
-      apiKey?: string;
-      clientEmail?: string;
-      privateKey?: string;
-      vertexProject?: string;
-      vertexLocation?: string;
-    } = {};
-    if (credentials.apiKey) {
-      vertexInput.apiKey = credentials.apiKey;
-    }
-    if (credentials.clientEmail) {
-      vertexInput.clientEmail = credentials.clientEmail;
-    }
-    if (credentials.privateKey) {
-      vertexInput.privateKey = credentials.privateKey;
-    }
-    if (profile.vertexProject) {
-      vertexInput.vertexProject = profile.vertexProject;
-    }
-    if (profile.vertexLocation) {
-      vertexInput.vertexLocation = profile.vertexLocation;
-    }
-    return hasGoogleVertexRuntimeCredentials(vertexInput);
-  }
-  return false;
+/** Credential channel declarations carried by a resolved profile, fed to the channel resolvers. */
+export function profileKeyChannels(profile: SpiritModelProfile): ProviderKeyChannels {
+  return {
+    id: profile.providerId,
+    ...(profile.apiKey !== undefined ? { apiKey: profile.apiKey } : {}),
+    ...(profile.apiKeyEnv !== undefined ? { apiKeyEnv: profile.apiKeyEnv } : {}),
+    ...(profile.apiKeyKeyring !== undefined ? { apiKeyKeyring: profile.apiKeyKeyring } : {}),
+    ...(profile.credentials !== undefined ? { credentials: profile.credentials } : {}),
+  };
 }
 
 export function resolveStoredApiKeyForProfile(profile: SpiritModelProfile): string | undefined {
-  const scope = modelProviderKeyScope(profile.provider);
-  const scopedKey = readScopedKey(profile.groupId, scope);
-  if (scopedKey) {
-    return scopedKey;
+  return resolveProviderApiKey(profileKeyChannels(profile));
+}
+
+export function resolveProfileCredentialSlot(
+  profile: SpiritModelProfile,
+  slot: string,
+): string | undefined {
+  return resolveProviderCredentialSlot(profileKeyChannels(profile), slot);
+}
+
+function hasSigV4Auth(profile: SpiritModelProfile): boolean {
+  return (
+    resolveProviderTransportKind(profile) === "open-responses" &&
+    profile.options?.auth === "aws-sigv4"
+  );
+}
+
+/** Bearer key or IAM slots; bedrock and SigV4 (`options.auth`) entries authenticate either way. */
+function hasIamRuntimeCredentials(profile: SpiritModelProfile): boolean {
+  if (resolveStoredApiKeyForProfile(profile)) {
+    return true;
   }
-  const modelKey = readModelKey(profile.name);
-  if (modelKey) {
-    return modelKey;
+  return Boolean(
+    resolveProfileCredentialSlot(profile, "accessKeyId") &&
+    resolveProfileCredentialSlot(profile, "secretAccessKey"),
+  );
+}
+
+function hasGoogleVertexRuntimeCredentials(profile: SpiritModelProfile): boolean {
+  if (resolveStoredApiKeyForProfile(profile)) {
+    return true;
   }
-  return readGlobalKey();
+  // A service account (clientEmail/privateKey slots) still needs project/location; ADC works off
+  // the options alone, matching the previous vendor-keyed check.
+  return Boolean(profile.options?.project?.trim() && profile.options?.location?.trim());
 }
 
 export function hasResolvableCredentials(spiritDataDir: string): boolean {
@@ -212,60 +89,101 @@ export function hasResolvableCredentials(spiritDataDir: string): boolean {
   if (!profile) {
     return false;
   }
-  const scope = modelProviderKeyScope(profile.provider);
-  if (hasProviderSecret(scope, profile)) {
-    return true;
+  const transportKind = resolveProviderTransportKind(profile);
+  if (transportKind === "bedrock" || hasSigV4Auth(profile)) {
+    return hasIamRuntimeCredentials(profile);
   }
-  return Boolean(resolveStoredApiKeyForProfile(profile));
+  if (resolveProviderSdkPackageName(profile) === GOOGLE_VERTEX_SDK_PACKAGE_NAME) {
+    return hasGoogleVertexRuntimeCredentials(profile);
+  }
+  return resolveStoredApiKeyForProfile(profile) !== undefined;
 }
 
-function saveProviderApiKey(providerId: ModelProviderId, apiKey: string | undefined): void {
-  const store = keyringStore();
-  const account = providerKeyAccount(providerId);
-  if (apiKey?.trim()) {
-    store.setPassword(KEYRING_SERVICE, account, apiKey.trim());
+function mergeModelsByName(
+  existing: readonly ModelEntry[],
+  upserts: readonly ModelEntry[],
+): ModelEntry[] {
+  const models = [...existing];
+  for (const upsert of upserts) {
+    const at = models.findIndex((model) => model.name === upsert.name);
+    if (at >= 0) {
+      models[at] = upsert;
+    } else {
+      models.push(upsert);
+    }
+  }
+  return models;
+}
+
+/**
+ * Reconnect = key-level merge with ownership: the wizard rewrites exactly the keys it
+ * materializes; everything else (label, credential channels, headers/body, the flat model-level
+ * defaults, user-added models) survives. A user edit to an owned key is reset on reconnect.
+ */
+function resetWizardOwnedKeys(
+  entry: ProviderEntry,
+  materialized: MaterializedProviderEntry,
+  options: ProviderOptions | undefined,
+): void {
+  entry.apiBase = materialized.apiBase;
+  // `options` merges the preset's mechanism template (e.g. `echoServerToolCalls`) with the
+  // wizard-collected values (e.g. `awsRegion`); on a key conflict the explicit wizard input wins.
+  const mergedOptions = { ...materialized.options, ...options };
+  const owned: Record<string, unknown> = {
+    transportKind: materialized.transportKind,
+    sdk: materialized.sdk,
+    providerTools: materialized.providerTools,
+    fileUpload: materialized.fileUpload,
+    imageApi: materialized.imageApi,
+    videoApi: materialized.videoApi,
+    options: Object.keys(mergedOptions).length > 0 ? mergedOptions : undefined,
+  };
+  const record = entry as unknown as Record<string, unknown>;
+  for (const [key, value] of Object.entries(owned)) {
+    if (value === undefined) {
+      delete record[key];
+    } else {
+      record[key] = value;
+    }
+  }
+  // `body` / `thinkingSwitch` are owned only when the preset templates them: a template-less
+  // preset leaves a user's hand-written escape-hatch value intact across reconnect.
+  for (const key of ["body", "thinkingSwitch"] as const) {
+    const value = materialized[key];
+    if (value !== undefined) {
+      record[key] = value;
+    }
+  }
+}
+
+function writeSetupCredentials(
+  materialized: MaterializedProviderEntry,
+  setup: ProviderSetupResult,
+): void {
+  const credentials = setup.credentials ?? {};
+  const entries = Object.entries(credentials);
+  if (entries.length === 0) {
     return;
   }
-  store.deletePassword(KEYRING_SERVICE, account);
-}
-
-function saveBedrockCredentials(
-  providerId: ModelProviderId,
-  credentials: BedrockSetupCredentials,
-): void {
-  saveProviderApiKey(providerId, credentials.apiKey);
+  const slots = providerCredentialSlotNames(
+    resolveProviderTransportKind(materialized),
+    resolveProviderSdkPackageName(materialized),
+    setup.options,
+  );
   const store = keyringStore();
-  const accessKeyId = credentials.accessKeyId?.trim();
-  if (accessKeyId) {
-    store.setPassword(KEYRING_SERVICE, providerAccessKeyIdAccount(providerId), accessKeyId);
-  } else {
-    store.deletePassword(KEYRING_SERVICE, providerAccessKeyIdAccount(providerId));
-  }
-  const secretAccessKey = credentials.secretAccessKey?.trim();
-  if (secretAccessKey) {
-    store.setPassword(KEYRING_SERVICE, providerSecretAccessKeyAccount(providerId), secretAccessKey);
-  } else {
-    store.deletePassword(KEYRING_SERVICE, providerSecretAccessKeyAccount(providerId));
-  }
-}
-
-function saveGoogleVertexCredentials(
-  providerId: ModelProviderId,
-  credentials: GoogleVertexSetupCredentials,
-): void {
-  saveProviderApiKey(providerId, credentials.apiKey);
-  const store = keyringStore();
-  const clientEmail = credentials.clientEmail?.trim();
-  if (clientEmail) {
-    store.setPassword(KEYRING_SERVICE, providerVertexClientEmailAccount(providerId), clientEmail);
-  } else {
-    store.deletePassword(KEYRING_SERVICE, providerVertexClientEmailAccount(providerId));
-  }
-  const privateKey = credentials.privateKey?.trim();
-  if (privateKey) {
-    store.setPassword(KEYRING_SERVICE, providerVertexPrivateKeyAccount(providerId), privateKey);
-  } else {
-    store.deletePassword(KEYRING_SERVICE, providerVertexPrivateKeyAccount(providerId));
+  for (const [slot, secret] of entries) {
+    if (!slots.includes(slot)) {
+      throw new Error(
+        `Provider setup: unknown credentials slot ${JSON.stringify(slot)} for provider ${JSON.stringify(materialized.id)} (allowed: ${slots.join(", ")}).`,
+      );
+    }
+    const account = providerInternalSlotAccount(materialized.id, slot);
+    const trimmed = secret.trim();
+    if (trimmed) {
+      store.setPassword(KEYRING_SERVICE, account, trimmed);
+    } else {
+      store.deletePassword(KEYRING_SERVICE, account);
+    }
   }
 }
 
@@ -273,42 +191,45 @@ export async function saveProviderSetup(
   spiritDataDir: string,
   setup: ProviderSetupResult,
 ): Promise<void> {
-  const scope = setup.providerScope;
-  if (scope === "amazon-bedrock" && setup.bedrock) {
-    saveBedrockCredentials(scope, setup.bedrock);
-  } else if (scope === "google-vertex-ai" && setup.vertex) {
-    saveGoogleVertexCredentials(scope, setup.vertex);
-  } else if (setup.apiKey?.trim()) {
-    saveProviderApiKey(scope, setup.apiKey);
-  }
+  const materialized = materializeProviderPreset(setup.materialize);
+  writeSetupCredentials(materialized, setup);
 
   const existing = loadSpiritConfig(spiritDataDir);
-  const providerGroups = [...(existing?.providerGroups ?? [])];
-  const groupIndex = providerGroups.findIndex((group) => group.id === setup.groupId);
-  const activeModel = { groupId: setup.groupId, name: setup.model.name };
+  const providers = [...(existing?.providers ?? [])];
+  const index = providers.findIndex((provider) => provider.id === materialized.id);
+  const upsertModels = setup.models ?? [];
 
-  if (groupIndex >= 0) {
-    const currentGroup = providerGroups[groupIndex]!;
-    const models = currentGroup.models.filter((model) => model.name !== setup.model.name);
-    models.push(setup.model);
-    providerGroups[groupIndex] = {
-      ...currentGroup,
-      ...setup.group,
-      id: setup.groupId,
-      models,
+  if (index >= 0) {
+    const current = providers[index]!;
+    const merged: ProviderEntry = {
+      ...current,
+      models: mergeModelsByName(current.models, upsertModels),
     };
+    resetWizardOwnedKeys(merged, materialized, setup.options);
+    providers[index] = merged;
   } else {
-    providerGroups.push({
-      ...setup.group,
-      id: setup.groupId,
-      models: [setup.model],
-    });
+    const entry: ProviderEntry = {
+      id: materialized.id,
+      apiBase: materialized.apiBase,
+      models: [...upsertModels],
+    };
+    if (materialized.label !== undefined) {
+      entry.label = materialized.label;
+    }
+    resetWizardOwnedKeys(entry, materialized, setup.options);
+    providers.push(entry);
   }
+
+  const activeModel =
+    setup.activeModel ??
+    (upsertModels[0] !== undefined
+      ? { providerId: materialized.id, name: upsertModels[0].name }
+      : (existing?.activeModel ?? emptyModelRef()));
 
   const config: SpiritConfigFile = {
     ...existing,
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups,
+    providers,
     activeModel,
   };
   await saveSpiritConfig(spiritDataDir, config);

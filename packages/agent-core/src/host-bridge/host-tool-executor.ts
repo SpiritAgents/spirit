@@ -32,12 +32,6 @@ import {
   type HostToolDescriptionHint,
 } from "../host-tools.js";
 import { enrichUnknownToolError, toolNamesFromDefinitions } from "../unknown-tool-error.js";
-import { shouldUseStepfunWebSearch } from "../stepfun/stepfun-eligibility.js";
-import { buildStepfunWebSearchToolDefinition } from "../stepfun/stepfun-web-search-tool.js";
-import { shouldUseKimiCodeWebSearch } from "../kimi-code/kimi-code-eligibility.js";
-import { buildKimiCodeWebSearchToolDefinition } from "../kimi-code/kimi-code-web-search-tool.js";
-import { shouldUseZaiWebSearch } from "../zai/zai-eligibility.js";
-import { buildZaiWebSearchToolDefinition } from "../zai/zai-web-search-tool.js";
 import { buildLspHostToolDefinitions } from "../lsp/tool-definitions.js";
 import { executeGetDiagnostics } from "../lsp/execute-diagnostics.js";
 import {
@@ -675,20 +669,6 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     ) {
       hostDefinitions = filterLegacyHostFileToolDefinitions(hostDefinitions);
     }
-    const managedWebSearchDefinitions =
-      this.transportConfigForToolDefinitions?.webSearchEnabled === false
-        ? []
-        : [
-            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildStepfunWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildKimiCodeWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildZaiWebSearchToolDefinition()]
-              : []),
-          ];
     const mergedHostDefinitions = filterHostToolDefinitionsForAgentMode(
       Array.isArray(hostDefinitions)
         ? [
@@ -696,13 +676,11 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...managedWebSearchDefinitions,
           ]
         : [
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...managedWebSearchDefinitions,
           ],
       this.agentMode,
     );

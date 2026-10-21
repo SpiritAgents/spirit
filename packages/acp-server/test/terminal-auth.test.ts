@@ -10,15 +10,15 @@ import { TERMINAL_AUTH_ARGS, TERMINAL_AUTH_METHOD_ID } from "../src/auth/constan
 import { canCreateSession, createInitialAuthState } from "../src/auth/session-auth.js";
 import { loadBaseConfig } from "../src/config.js";
 import { hasResolvableCredentials, setKeyringStoreForTests } from "@spiritagent/host-internal";
-import { providerKeyAccount, resolveTransportConfig } from "@spiritagent/host-internal";
+import { providerInternalKeyAccount, resolveTransportConfig } from "@spiritagent/host-internal";
 import {
   validateAzureSetup,
   validateBedrockCredentials,
   validateCustomSetup,
   validateModelName,
-  buildSetupProfile,
+  buildProviderSetupResult,
 } from "../src/setup/provider-wizard.js";
-import { openAiGroup, v2ConfigFixture } from "./fixtures/v2-config.js";
+import { openAiProvider, v1ConfigFixture } from "./fixtures/v1-config.js";
 
 test("buildTerminalAuthMethod declares terminal setup args", () => {
   const method = buildTerminalAuthMethod();
@@ -45,13 +45,9 @@ test("buildAuthMethods returns terminal auth even when shared credentials exist"
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
-          openAiGroup([
-            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          ]),
-        ],
-        activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      v1ConfigFixture({
+        providers: [openAiProvider([{ name: "gpt-4o-mini", capabilities: ["languageModel"] }])],
+        activeModel: { providerId: "openai", name: "gpt-4o-mini" },
       }),
     ),
     "utf8",
@@ -67,7 +63,7 @@ test("buildAuthMethods returns terminal auth even when shared credentials exist"
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("openai"), "stored-key");
+  passwords.set(providerInternalKeyAccount("openai"), "stored-key");
 
   try {
     assert.equal(buildAuthMethods().length, 1);
@@ -81,13 +77,9 @@ test("logout allows authenticate to restore session creation", () => {
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
-          openAiGroup([
-            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          ]),
-        ],
-        activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      v1ConfigFixture({
+        providers: [openAiProvider([{ name: "gpt-4o-mini", capabilities: ["languageModel"] }])],
+        activeModel: { providerId: "openai", name: "gpt-4o-mini" },
       }),
     ),
     "utf8",
@@ -103,7 +95,7 @@ test("logout allows authenticate to restore session creation", () => {
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("openai"), "stored-key");
+  passwords.set(providerInternalKeyAccount("openai"), "stored-key");
 
   try {
     const config = loadBaseConfig();
@@ -126,13 +118,9 @@ test("createInitialAuthState pre-authenticates when shared credentials exist", (
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
-          openAiGroup([
-            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          ]),
-        ],
-        activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      v1ConfigFixture({
+        providers: [openAiProvider([{ name: "gpt-4o-mini", capabilities: ["languageModel"] }])],
+        activeModel: { providerId: "openai", name: "gpt-4o-mini" },
       }),
     ),
     "utf8",
@@ -148,7 +136,7 @@ test("createInitialAuthState pre-authenticates when shared credentials exist", (
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("openai"), "stored-key");
+  passwords.set(providerInternalKeyAccount("openai"), "stored-key");
 
   try {
     const config = loadBaseConfig();
@@ -166,13 +154,9 @@ test("canCreateSession requires authenticate when using shared credentials witho
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
-          openAiGroup([
-            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          ]),
-        ],
-        activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      v1ConfigFixture({
+        providers: [openAiProvider([{ name: "gpt-4o-mini", capabilities: ["languageModel"] }])],
+        activeModel: { providerId: "openai", name: "gpt-4o-mini" },
       }),
     ),
     "utf8",
@@ -188,7 +172,7 @@ test("canCreateSession requires authenticate when using shared credentials witho
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("openai"), "stored-key");
+  passwords.set(providerInternalKeyAccount("openai"), "stored-key");
 
   try {
     const config = loadBaseConfig();
@@ -216,13 +200,9 @@ test("resolveTransportConfig reads shared config and keyring", () => {
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
-          openAiGroup([
-            { name: "gpt-4o-mini", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          ]),
-        ],
-        activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      v1ConfigFixture({
+        providers: [openAiProvider([{ name: "gpt-4o-mini", capabilities: ["languageModel"] }])],
+        activeModel: { providerId: "openai", name: "gpt-4o-mini" },
       }),
     ),
     "utf8",
@@ -238,7 +218,7 @@ test("resolveTransportConfig reads shared config and keyring", () => {
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("openai"), "stored-key");
+  passwords.set(providerInternalKeyAccount("openai"), "stored-key");
 
   try {
     const config = loadBaseConfig();
@@ -264,13 +244,12 @@ test("setup validation helpers catch missing fields", () => {
   );
 });
 
-test("buildSetupProfile resolves preset provider api base", () => {
-  const profile = buildSetupProfile({
+test("buildProviderSetupResult materializes the preset entry", () => {
+  const setup = buildProviderSetupResult({
     provider: "openai",
     modelName: "gpt-4o-mini",
   });
-  assert.equal(profile.groupId, "openai");
-  assert.deepEqual(profile.ref, { groupId: "openai", name: "gpt-4o-mini" });
-  assert.equal(profile.provider, "openai");
-  assert.ok(profile.apiBase.includes("openai.com"));
+  assert.equal(setup.materialize.presetId, "openai");
+  assert.deepEqual(setup.activeModel, { providerId: "openai", name: "gpt-4o-mini" });
+  assert.equal(setup.models?.[0]?.name, "gpt-4o-mini");
 });

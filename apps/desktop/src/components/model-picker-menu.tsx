@@ -39,24 +39,15 @@ import {
   modelDisplayTitleFromMap,
 } from "@/lib/model-catalog-detail";
 import { toolCardSecondaryTextClass } from "@/lib/file-tool-lsp-diagnostics-display";
-import {
-  modelReasoningEffortLabel,
-  modelSupportsReasoningModeControl,
-  resolveModelReasoningMode,
-} from "@spiritagent/agent-core/reasoning-effort";
-import {
-  modelSupportsThinkingSwitch,
-  resolveModelThinkingEnabled,
-} from "@spiritagent/agent-core/model-thinking-controls";
-import {
-  modelServiceTierTriggerTier,
-  resolveEffectiveModelServiceTier,
-} from "@spiritagent/agent-core/model-service-tier";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import {
-  modelServiceTierContextFromProfile,
-  serviceTierValueLabelKey,
-} from "@/lib/model-service-tier-context";
+  effectiveDeclaredServiceTier,
+  reasoningEffortOptionLabel,
+  serviceTierTriggerSuffixTier,
+  showsReasoningModeControl,
+  effectiveReasoningMode,
+} from "@/lib/model-picker-controls";
+import { serviceTierValueLabelKey } from "@/lib/model-service-tier-context";
 import { groupModelsForPicker } from "@/lib/model-picker-groups";
 import { DESKTOP_MENU_TRIGGER_TEXT_CLASS } from "@/lib/desktop-typography";
 import type {
@@ -67,13 +58,13 @@ import type {
   ModelRef,
   PreviewModelCatalogEntry,
 } from "@/types";
-import { modelRefKey, modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { modelRefKey, modelRefsEqual } from "@/lib/model-ref";
 import { cn } from "@/lib/utils";
 
 type ModelPickerItem = DesktopSnapshot["config"]["models"][number];
 
 function modelPickerItemRef(model: ModelPickerItem): ModelRef {
-  return model.ref ?? { groupId: model.groupId ?? "", name: model.name };
+  return model.ref;
 }
 
 function resolveModelPickerDetailTooltipWidthClass(
@@ -144,7 +135,9 @@ const ModelPickerRow = memo(function ModelPickerRow({
 export type ModelPickerMenuProps = {
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
-  providerGroups?: DesktopSnapshot["config"]["providerGroups"];
+  providers?: DesktopSnapshot["config"]["providers"];
+  /** Preset picker rows from the host snapshot: group order + fallback labels in the menu. */
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModelRef: ModelRef;
   activeReasoningEffort?: DesktopModelReasoningEffort;
   disabled?: boolean;
@@ -165,7 +158,8 @@ export type ModelPickerMenuProps = {
 export function ModelPickerMenu({
   models,
   catalogHints,
-  providerGroups,
+  providers,
+  providerPresets,
   activeModelRef,
   activeReasoningEffort,
   disabled,
@@ -212,8 +206,8 @@ export function ModelPickerMenu({
     [catalogHints, models],
   );
   const modelGroups = useMemo(
-    () => groupModelsForPicker(models, catalogHints, providerGroups),
-    [catalogHints, models, providerGroups],
+    () => groupModelsForPicker(models, catalogHints, providers, providerPresets),
+    [catalogHints, models, providers, providerPresets],
   );
   const filteredModelGroups = useMemo(() => {
     const query = modelFilter.trim().toLowerCase();
@@ -365,7 +359,7 @@ export function ModelPickerMenu({
             {filteredModelGroups.length === 0
               ? null
               : filteredModelGroups.map((group) => (
-                  <div key={group.groupId} className="mb-2 last:mb-0">
+                  <div key={group.providerId} className="mb-2 last:mb-0">
                     <div className={DESKTOP_OVERLAY_LIST_GROUP_LABEL}>
                       {group.customLabel ??
                         t(group.labelKey, { defaultValue: group.fallbackLabel })}
@@ -375,7 +369,7 @@ export function ModelPickerMenu({
                       const modelRef = modelPickerItemRef(model);
                       return (
                         <ModelPickerRow
-                          key={`${group.groupId}:${modelRefKey(modelRef)}`}
+                          key={`${group.providerId}:${modelRefKey(modelRef)}`}
                           model={model}
                           displayTitle={displayTitle}
                           isActive={modelRefsEqual(
@@ -422,7 +416,7 @@ export function ModelPickerMenu({
                 group?.customLabel ??
                 (group
                   ? t(group.labelKey, { defaultValue: group.fallbackLabel })
-                  : (model.provider ?? model.name));
+                  : model.providerId);
               const catalogEntry = catalogDetailByModelName.get(modelCatalogScopeEntryKey(model));
 
               return (
@@ -438,9 +432,7 @@ export function ModelPickerMenu({
                     onModelReasoningModeSelect?.(modelRef, mode);
                     onModelSelect(modelRef);
                   }}
-                  onThinkingEnabledChange={(modelRef, enabled) => {
-                    onModelThinkingEnabledSelect?.(modelRef, enabled);
-                  }}
+                  onThinkingEnabledChange={onModelThinkingEnabledSelect}
                   onServiceTierChange={onModelServiceTierSelect}
                 />
               );
@@ -459,49 +451,32 @@ function ModelPickerTriggerLabel({
   catalogEntry,
 }: {
   name: string;
-  reasoningEffort: DesktopModelReasoningEffort;
+  reasoningEffort?: DesktopModelReasoningEffort;
   model: ModelProfileSnapshot;
   catalogEntry?: PreviewModelCatalogEntry;
 }) {
   const { t } = useTranslation();
-  const modelContext = {
-    ...(model.provider ? { provider: model.provider } : {}),
-    model: model.name,
-    ...(model.supportedReasoningEfforts !== undefined
-      ? { supportedEfforts: model.supportedReasoningEfforts }
-      : {}),
-    ...(model.transportKind ? { transportKind: model.transportKind } : {}),
-    ...((model.supportsThinkingType ?? catalogEntry?.supportsThinkingType)
-      ? { supportsThinkingType: model.supportsThinkingType ?? catalogEntry?.supportsThinkingType }
-      : {}),
-    ...((model.supportsThinkingSwitch ?? catalogEntry?.supportsThinkingSwitch) === true
-      ? { supportsThinkingSwitch: true as const }
-      : {}),
-  };
-  const supportsReasoningMode = modelSupportsReasoningModeControl(modelContext);
-  const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
-  const supportsThinkingSwitch = modelSupportsThinkingSwitch(modelContext);
-  const thinkingEnabled = resolveModelThinkingEnabled(model.thinkingEnabled);
-  const serviceTierTriggerTier = modelServiceTierTriggerTier(
-    resolveEffectiveModelServiceTier(
-      model.serviceTier,
-      modelServiceTierContextFromProfile(model, catalogEntry),
-    ),
+  const suffixTier = serviceTierTriggerSuffixTier(
+    effectiveDeclaredServiceTier(model, catalogEntry),
   );
 
   const secondaryLabels: string[] = [];
-  if (supportsReasoningMode && reasoningMode === "pro") {
+  if (showsReasoningModeControl(model) && effectiveReasoningMode(model) === "pro") {
     secondaryLabels.push(t("app.modelPickerReasoningModePro"));
   }
 
-  const effortOrThinkingLabel =
-    supportsThinkingSwitch && !thinkingEnabled
-      ? t("app.modelPickerNotThinking")
-      : modelReasoningEffortLabel(reasoningEffort);
-
-  secondaryLabels.push(effortOrThinkingLabel);
-  if (serviceTierTriggerTier !== undefined) {
-    secondaryLabels.push(t(serviceTierValueLabelKey(serviceTierTriggerTier)));
+  // The effort suffix only makes sense when the model declares effort options.
+  const declaredEffort =
+    reasoningEffort !== undefined &&
+    (model.supportedReasoningEfforts?.length ?? 0) > 0 &&
+    reasoningEffort !== "default"
+      ? reasoningEffort
+      : undefined;
+  if (declaredEffort !== undefined) {
+    secondaryLabels.push(reasoningEffortOptionLabel(declaredEffort));
+  }
+  if (suffixTier !== undefined) {
+    secondaryLabels.push(t(serviceTierValueLabelKey(suffixTier)));
   }
 
   return (

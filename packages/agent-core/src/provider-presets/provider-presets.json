@@ -1,0 +1,859 @@
+{
+  "custom": { "defaultApiBase": "https://api.openai.com/v1" },
+  "providers": [
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/openai",
+      "transports": {
+        "open-responses": "https://api.openai.com/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [{ "type": "web_search" }]
+        }
+      ],
+      "options": { "applyPatch": true, "reasoningSummary": true },
+      "imageApi": "openai-images",
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "anthropic",
+      "label": "Anthropic",
+      "defaultTransport": "anthropic",
+      "sdk": "@ai-sdk/anthropic",
+      "transports": {
+        "anthropic": "https://api.anthropic.com/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "anthropic-models", "endpoint": "/models" }
+    },
+    {
+      "id": "google",
+      "label": "Google",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/google",
+      "transports": {
+        "openai-compatible": "https://generativelanguage.googleapis.com/v1beta"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "google-gemini-models", "endpoint": "/models" }
+    },
+    {
+      "id": "xai",
+      "label": "SpaceXAI",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/xai",
+      "transports": {
+        "open-responses": "https://api.x.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [{ "type": "web_search" }]
+        }
+      ],
+      "options": { "reasoningSummary": true },
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "vercel-ai-gateway",
+      "label": "Vercel AI Gateway",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/gateway",
+      "transports": {
+        "open-responses": "https://ai-gateway.vercel.sh/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Perplexity Search",
+          "tools": [
+            {
+              "type": "provider",
+              "id": "gateway.perplexity_search",
+              "name": "web_search",
+              "args": {}
+            }
+          ]
+        }
+      ],
+      "options": { "applyPatch": true, "reasoningSummary": true },
+      "imageApi": "vercel-gateway-images",
+      "videoApi": "vercel-gateway-videos",
+      "catalog": { "parser": "vercel-gateway-models", "endpoint": "/models" }
+    },
+    {
+      "id": "cloudflare-ai-gateway",
+      "label": "Cloudflare AI Gateway",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1",
+        "open-responses": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1",
+        "anthropic": "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": {
+        "toolsRejectReasoningEffort": true,
+        "applyPatch": true,
+        "reasoningSummary": true
+      }
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/open-responses",
+      "transports": {
+        "openai-compatible": "https://api.deepseek.com/v1",
+        "anthropic": "https://api.deepseek.com/anthropic",
+        "open-responses": "https://api.deepseek.com"
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [{ "type": "web_search" }]
+        }
+      ],
+      "options": { "echoServerToolCalls": true },
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "openrouter",
+      "label": "OpenRouter",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://openrouter.ai/api/v1",
+        "open-responses": "https://openrouter.ai/api/v1",
+        "anthropic": "https://openrouter.ai/api/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": {
+        "applyPatch": true,
+        "reasoningSummary": true,
+        "openRouterAnthropicReasoning": true
+      },
+      "videoApi": "openrouter-videos",
+      "catalog": { "parser": "openrouter-models", "endpoint": "/models" }
+    },
+    {
+      "id": "fireworks-ai",
+      "label": "Fireworks AI",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/fireworks",
+      "transports": {
+        "openai-compatible": "https://api.fireworks.ai/inference/v1",
+        "open-responses": "https://api.fireworks.ai/inference/v1",
+        "anthropic": "https://api.fireworks.ai/inference"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true },
+      "catalog": {
+        "parser": "fireworks-gateway-models",
+        "endpoint": "https://api.fireworks.ai/v1/accounts/fireworks/models"
+      }
+    },
+    {
+      "id": "together-ai",
+      "label": "Together AI",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/togetherai",
+      "transports": {
+        "openai-compatible": "https://api.together.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "imageApi": "together-images",
+      "videoApi": "together-videos",
+      "catalog": { "parser": "together-models", "endpoint": "/models" }
+    },
+    {
+      "id": "groq",
+      "label": "Groq",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/groq",
+      "transports": {
+        "openai-compatible": "https://api.groq.com/openai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "groq-models", "endpoint": "/models" }
+    },
+    {
+      "id": "deepinfra",
+      "label": "DeepInfra",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/deepinfra",
+      "transports": {
+        "openai-compatible": "https://api.deepinfra.com/v1/openai"
+      },
+      "credentials": { "kind": "apiKey" },
+      "imageApi": "openai-images",
+      "videoApi": "deepinfra-videos",
+      "catalog": {
+        "parser": "deepinfra-models",
+        "endpoint": "https://api.deepinfra.com/models/list"
+      }
+    },
+    {
+      "id": "baseten",
+      "label": "Baseten",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/baseten",
+      "transports": {
+        "openai-compatible": "https://inference.baseten.co/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "baseten-models", "endpoint": "/models" }
+    },
+    {
+      "id": "hugging-face",
+      "label": "Hugging Face",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/huggingface",
+      "transports": {
+        "open-responses": "https://router.huggingface.co/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true },
+      "imageApi": "huggingface-inference",
+      "videoApi": "huggingface-inference",
+      "catalog": { "parser": "huggingface-models", "endpoint": "/models" }
+    },
+    {
+      "id": "moonshot-ai",
+      "label": "Moonshot AI",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/moonshotai",
+      "transports": {
+        "openai-compatible": "https://api.moonshot.ai/v1"
+      },
+      "sites": {
+        "default": "intl",
+        "items": [
+          { "id": "cn", "label": "China", "apiBase": "https://api.moonshot.cn/v1" },
+          { "id": "intl", "label": "International", "apiBase": "https://api.moonshot.ai/v1" }
+        ]
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [
+            {
+              "type": "moonshot_formula",
+              "formula_uri": "moonshot/web-search:latest",
+              "function_name": "web_search"
+            }
+          ],
+          "toolsFrom": { "path": "/formulas/moonshot/web-search:latest/tools" },
+          "execute": {
+            "path": "/formulas/moonshot/web-search:latest/fibers",
+            "body": { "name": "{toolName}", "arguments": "{argumentsJson}" },
+            "statusPath": "status",
+            "okValue": "succeeded",
+            "errorPath": ["error", "context.error", "context.output"],
+            "resultPath": ["context.encrypted_output", "context.output"]
+          },
+          "ui": { "expand": false }
+        }
+      ],
+      "fileUpload": {
+        "path": "/files",
+        "purpose": { "video": "video" },
+        "refTemplate": "ms://{id}"
+      },
+      "catalog": { "parser": "moonshot-models", "endpoint": "/models" }
+    },
+    {
+      "id": "kimi-code",
+      "label": "Kimi Code",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.kimi.ai/coding/v1",
+        "anthropic": "https://api.kimi.ai/coding"
+      },
+      "sites": {
+        "default": "intl",
+        "items": [
+          {
+            "id": "cn",
+            "label": "China",
+            "transports": {
+              "openai-compatible": "https://api.kimi.com/coding/v1",
+              "anthropic": "https://api.kimi.com/coding"
+            }
+          },
+          {
+            "id": "intl",
+            "label": "International",
+            "transports": {
+              "openai-compatible": "https://api.kimi.ai/coding/v1",
+              "anthropic": "https://api.kimi.ai/coding"
+            }
+          }
+        ]
+      },
+      "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search query." }
+                  },
+                  "required": ["query"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          ],
+          "execute": {
+            "path": "/search",
+            "body": { "text_query": "{arg.query}" },
+            "resultsPath": "search_results",
+            "fields": {
+              "title": "title",
+              "url": "url",
+              "site": "site_name",
+              "time": "date",
+              "snippet": "snippet",
+              "content": "content"
+            }
+          }
+        }
+      ],
+      "fileUpload": {
+        "path": "/files",
+        "purpose": { "video": "video" },
+        "refTemplate": "ms://{id}"
+      },
+      "catalog": { "parser": "kimi-code-models", "endpoint": "/models" }
+    },
+    {
+      "id": "z-ai",
+      "label": "Z.ai",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.z.ai/api/paas/v4"
+      },
+      "billingPlans": [
+        {
+          "id": "glm-coding-plan",
+          "label": "GLM Coding Plan",
+          "apiBase": "https://api.z.ai/api/coding/paas/v4",
+          "docUrl": "https://docs.z.ai/devpack/quick-start"
+        }
+      ],
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search query." },
+                    "max_results": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 50,
+                      "description": "Maximum number of results to return (default 10)."
+                    }
+                  },
+                  "required": ["query"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          ],
+          "execute": {
+            "path": "/web_search",
+            "body": {
+              "search_engine": "search-prime",
+              "search_query": "{arg.query}",
+              "count": "{arg.max_results}"
+            },
+            "resultsPath": "search_result",
+            "fields": {
+              "title": "title",
+              "url": "link",
+              "site": "media",
+              "time": "publish_date",
+              "content": "content"
+            }
+          }
+        }
+      ],
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "zhipu-ai",
+      "label": "Zhipu AI",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://open.bigmodel.cn/api/paas/v4"
+      },
+      "billingPlans": [
+        {
+          "id": "glm-coding-plan",
+          "label": "GLM Coding Plan",
+          "apiBase": "https://open.bigmodel.cn/api/coding/paas/v4",
+          "docUrl": "https://docs.bigmodel.cn/cn/coding-plan/quick-start"
+        }
+      ],
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search query." },
+                    "max_results": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 50,
+                      "description": "Maximum number of results to return (default 10)."
+                    }
+                  },
+                  "required": ["query"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          ],
+          "execute": {
+            "path": "/web_search",
+            "body": {
+              "search_engine": "search_std",
+              "search_intent": false,
+              "search_query": "{arg.query}",
+              "count": "{arg.max_results}"
+            },
+            "resultsPath": "search_result",
+            "fields": {
+              "title": "title",
+              "url": "link",
+              "site": "media",
+              "time": "publish_date",
+              "content": "content"
+            }
+          }
+        }
+      ],
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "alibaba",
+      "label": "Alibaba",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/alibaba",
+      "transports": {
+        "openai-compatible": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        "anthropic": "https://dashscope.aliyuncs.com/apps/anthropic",
+        "open-responses": "https://dashscope.aliyuncs.com/compatible-mode/v1"
+      },
+      "sites": {
+        "default": "cn-beijing",
+        "items": [
+          {
+            "id": "cn-beijing",
+            "label": "cn-beijing",
+            "requiresWorkspaceId": true,
+            "transports": {
+              "openai-compatible": "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+              "anthropic": "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+              "open-responses": "https://{workspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+            }
+          },
+          {
+            "id": "ap-southeast-1",
+            "label": "ap-southeast-1",
+            "requiresWorkspaceId": true,
+            "transports": {
+              "openai-compatible": "https://{workspaceId}.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1",
+              "anthropic": "https://{workspaceId}.ap-southeast-1.maas.aliyuncs.com/apps/anthropic",
+              "open-responses": "https://{workspaceId}.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"
+            }
+          },
+          {
+            "id": "us-virginia",
+            "label": "us-virginia",
+            "transports": {
+              "openai-compatible": "https://dashscope-us.aliyuncs.com/compatible-mode/v1",
+              "anthropic": "https://dashscope-us.aliyuncs.com/apps/anthropic",
+              "open-responses": "https://dashscope-us.aliyuncs.com/compatible-mode/v1"
+            }
+          },
+          {
+            "id": "eu-central-1",
+            "label": "eu-central-1",
+            "requiresWorkspaceId": true,
+            "transports": {
+              "openai-compatible": "https://{workspaceId}.eu-central-1.maas.aliyuncs.com/compatible-mode/v1",
+              "anthropic": "https://{workspaceId}.eu-central-1.maas.aliyuncs.com/apps/anthropic",
+              "open-responses": "https://{workspaceId}.eu-central-1.maas.aliyuncs.com/compatible-mode/v1"
+            }
+          }
+        ]
+      },
+      "billingPlans": [
+        {
+          "id": "token-plan",
+          "label": "Token Plan",
+          "transports": {
+            "openai-compatible": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+            "anthropic": "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic",
+            "open-responses": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+          },
+          "docUrl": "https://bailian.console.aliyun.com/cn-beijing?tab=doc#/doc/?type=model&url=3029020"
+        }
+      ],
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "body": { "enable_search": true, "search_options": { "search_strategy": "agent_max" } }
+        },
+        {
+          "label": "Code Interpreter",
+          "body": { "enable_code_interpreter": true }
+        }
+      ],
+      "options": { "reasoningSummary": true, "storedState": true },
+      "catalog": { "parser": "openai-models", "endpoint": "/models" }
+    },
+    {
+      "id": "minimax",
+      "label": "MiniMax",
+      "defaultTransport": "anthropic",
+      "sdk": "@ai-sdk/minimax",
+      "transports": {
+        "openai-compatible": "https://api.minimax.io/v1",
+        "anthropic": "https://api.minimax.io/anthropic/v1"
+      },
+      "sites": {
+        "default": "intl",
+        "items": [
+          {
+            "id": "cn",
+            "label": "China",
+            "transports": {
+              "openai-compatible": "https://api.minimax.cn/v1",
+              "anthropic": "https://api.minimax.cn/anthropic/v1"
+            },
+            "fileUpload": {
+              "url": "https://api.minimax.cn/v1/files/upload",
+              "purpose": { "video": "video_understanding" },
+              "idPath": "file.file_id",
+              "refTemplate": "mm_file://{id}"
+            }
+          },
+          {
+            "id": "intl",
+            "label": "International",
+            "transports": {
+              "openai-compatible": "https://api.minimax.io/v1",
+              "anthropic": "https://api.minimax.io/anthropic/v1"
+            }
+          }
+        ]
+      },
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [{ "type": "web_search_20250305", "name": "web_search" }]
+        }
+      ],
+      "fileUpload": {
+        "url": "https://api.minimax.io/v1/files/upload",
+        "purpose": { "video": "video_understanding" },
+        "idPath": "file.file_id",
+        "refTemplate": "mm_file://{id}"
+      },
+      "catalog": { "parser": "minimax-models", "endpoint": "/models" }
+    },
+    {
+      "id": "xiaomi",
+      "label": "Xiaomi",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.xiaomimimo.com/v1",
+        "anthropic": "https://api.xiaomimimo.com/anthropic",
+        "open-responses": "https://api.xiaomimimo.com/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": { "maxInlineMediaBytes": 52428800, "reasoningSummary": true },
+      "catalog": { "parser": "xiaomi-models", "endpoint": "/models" }
+    },
+    {
+      "id": "siliconflow",
+      "label": "SiliconFlow",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.siliconflow.com/v1",
+        "anthropic": "https://api.siliconflow.com/v1"
+      },
+      "sites": {
+        "default": "intl",
+        "items": [
+          { "id": "cn", "label": "China", "apiBase": "https://api.siliconflow.cn/v1" },
+          { "id": "intl", "label": "International", "apiBase": "https://api.siliconflow.com/v1" }
+        ]
+      },
+      "credentials": { "kind": "apiKey" },
+      "imageApi": "siliconflow-images",
+      "videoApi": "siliconflow-videos",
+      "catalog": { "parser": "siliconflow-models", "endpoint": "/models" }
+    },
+    {
+      "id": "stepfun",
+      "label": "StepFun",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.stepfun.com/v1",
+        "open-responses": "https://api.stepfun.com/v1",
+        "anthropic": "https://api.stepfun.com"
+      },
+      "sites": {
+        "default": "intl",
+        "items": [
+          {
+            "id": "cn",
+            "label": "China",
+            "transports": {
+              "openai-compatible": "https://api.stepfun.com/v1",
+              "open-responses": "https://api.stepfun.com/v1",
+              "anthropic": "https://api.stepfun.com"
+            }
+          },
+          {
+            "id": "intl",
+            "label": "International",
+            "transports": {
+              "openai-compatible": "https://api.stepfun.ai/v1",
+              "open-responses": "https://api.stepfun.ai/v1",
+              "anthropic": "https://api.stepfun.ai"
+            }
+          }
+        ]
+      },
+      "billingPlans": [
+        {
+          "id": "step-plan",
+          "label": "Step Plan",
+          "transports": {
+            "openai-compatible": "https://api.stepfun.com/step_plan/v1",
+            "open-responses": "https://api.stepfun.com/step_plan/v1",
+            "anthropic": "https://api.stepfun.com/step_plan"
+          },
+          "docUrl": "https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api"
+        }
+      ],
+      "credentials": { "kind": "apiKey" },
+      "providerTools": [
+        {
+          "label": "Web Search",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search query." },
+                    "max_results": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 20,
+                      "description": "Maximum number of results to return (default 10)."
+                    }
+                  },
+                  "required": ["query"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          ],
+          "execute": {
+            "path": "/search",
+            "body": { "query": "{arg.query}", "n": "{arg.max_results}" },
+            "resultsPath": "results",
+            "fields": {
+              "title": "title",
+              "url": "url",
+              "time": "time",
+              "snippet": "snippet",
+              "content": "content"
+            }
+          }
+        }
+      ],
+      "fileUpload": {
+        "path": "/files",
+        "purpose": { "video": "storage" },
+        "refTemplate": "stepfile://{id}",
+        "maxBytes": 134217728
+      },
+      "imageApi": "stepfun-images",
+      "catalog": { "parser": "stepfun-models", "endpoint": "/models" }
+    },
+    {
+      "id": "volcengine",
+      "label": "Volcengine",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://ark.cn-beijing.volces.com/api/v3",
+        "open-responses": "https://ark.cn-beijing.volces.com/api/v3"
+      },
+      "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
+      "options": { "defaultInputItemStatus": "completed", "storedState": true },
+      "videoApi": "ark-videos",
+      "catalog": { "parser": "ark-models", "endpoint": "/models" }
+    },
+    {
+      "id": "byteplus",
+      "label": "BytePlus",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://ark.ap-southeast.bytepluses.com/api/v3",
+        "open-responses": "https://ark.ap-southeast.bytepluses.com/api/v3"
+      },
+      "credentials": { "kind": "apiKey" },
+      "body": { "stream_options": { "include_usage": true } },
+      "options": { "defaultInputItemStatus": "completed", "storedState": true },
+      "videoApi": "ark-videos",
+      "catalog": { "parser": "ark-models", "endpoint": "/models" }
+    },
+    {
+      "id": "meituan",
+      "label": "Meituan",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.longcat.chat/openai/v1",
+        "anthropic": "https://api.longcat.chat/anthropic/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "thinkingSwitch": {
+        "on": { "body": { "thinking": { "type": "enabled" } } },
+        "off": { "body": { "thinking": { "type": "disabled" } } }
+      },
+      "catalog": { "parser": "meituan-models", "endpoint": "/models" }
+    },
+    {
+      "id": "tencent-tokenhub",
+      "label": "Tencent TokenHub",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://tokenhub.tencentmaas.com/v1"
+      },
+      "sites": {
+        "default": "cn",
+        "items": [
+          { "id": "cn", "label": "Guangzhou", "apiBase": "https://tokenhub.tencentmaas.com/v1" },
+          {
+            "id": "intl",
+            "label": "Singapore",
+            "apiBase": "https://tokenhub-intl.tencentmaas.com/v1"
+          }
+        ]
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "tencent-tokenhub-models", "endpoint": "/models" }
+    },
+    {
+      "id": "mistral",
+      "label": "Mistral",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
+      "transports": {
+        "openai-compatible": "https://api.mistral.ai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "mistral-models", "endpoint": "/models" }
+    },
+    {
+      "id": "cohere",
+      "label": "Cohere",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/cohere",
+      "transports": {
+        "openai-compatible": "https://api.cohere.com/v2"
+      },
+      "credentials": { "kind": "apiKey" },
+      "catalog": { "parser": "cohere-models", "endpoint": "https://api.cohere.com/v1/models" }
+    },
+    {
+      "id": "azure",
+      "label": "Azure",
+      "defaultTransport": "open-responses",
+      "sdk": "@ai-sdk/azure",
+      "transports": {
+        "open-responses": "https://{resourceName}.openai.azure.com/openai/v1"
+      },
+      "credentials": { "kind": "apiKey" },
+      "options": { "reasoningSummary": true }
+    },
+    {
+      "id": "amazon-bedrock",
+      "label": "Amazon Bedrock",
+      "defaultTransport": "bedrock",
+      "transports": {
+        "bedrock": "https://bedrock.{awsRegion}.amazonaws.com"
+      },
+      "credentials": { "kind": "bedrock" },
+      "catalog": { "parser": "bedrock-models" }
+    },
+    {
+      "id": "google-vertex-ai",
+      "label": "Google Vertex AI",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/google-vertex",
+      "transports": {
+        "openai-compatible": "https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}"
+      },
+      "credentials": { "kind": "vertex" },
+      "expressApiBase": "https://aiplatform.googleapis.com/v1/publishers/google",
+      "catalog": { "parser": "google-vertex-models", "endpoint": "/publishers/google/models" }
+    }
+  ]
+}

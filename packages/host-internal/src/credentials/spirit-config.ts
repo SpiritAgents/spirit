@@ -1,122 +1,89 @@
-import { existsSync, readFileSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import {
-  assertSpiritConfigSchemaVersion,
-  findModelByRef,
-  parseModelRef,
-  SPIRIT_CONFIG_SCHEMA_VERSION,
+  loadSpiritConfig,
+  resolveModelByRef,
   SpiritConfigSchemaError,
-  type ModelEntryV2,
+  type ModelEntry,
   type ModelRef,
-  type ProviderGroupV2,
-} from "../config-v2.js";
+  type ProviderEntry,
+} from "../config.js";
 
-import type { SpiritConfigFile, SpiritModelProfile } from "./types.js";
-
-const CONFIG_FILE_NAME = "config.json";
+import type { SpiritModelProfile } from "./types.js";
 
 export { SpiritConfigSchemaError };
 
+export { loadSpiritConfig, saveSpiritConfig } from "../config.js";
+
 export { resolveSpiritDataDir } from "../data-paths.js";
+
+const CONFIG_FILE_NAME = "config.json";
 
 export function configFilePath(spiritDataDir: string): string {
   return join(spiritDataDir, CONFIG_FILE_NAME);
 }
 
-function resolveSpiritModelProfile(
-  group: ProviderGroupV2,
-  model: ModelEntryV2,
+const PROFILE_PROVIDER_KEYS = [
+  "transportKind",
+  "sdk",
+  "headers",
+  "body",
+  "options",
+  "providerTools",
+  "fileUpload",
+  "imageApi",
+  "videoApi",
+  "apiKey",
+  "apiKeyEnv",
+  "apiKeyKeyring",
+  "credentials",
+] as const;
+
+const PROFILE_MODEL_KEYS = [
+  "capabilities",
+  "contextLength",
+  "outputLimit",
+  "reasoningEffort",
+  "supportedReasoningEfforts",
+  "reasoningMode",
+  "supportedReasoningModes",
+  "supportsThinkingType",
+  "supportsThinkingSwitch",
+  "thinkingSwitch",
+  "thinkingEnabled",
+  "serviceTiers",
+  "serviceTier",
+] as const;
+
+/**
+ * Builds the runtime profile for one model. `model` must be the effective entry produced by
+ * `resolveModelEntry` / `resolveModelByRef` (provider-level flat declarations already applied);
+ * connection-level fields come from the provider entry and never inherit.
+ */
+export function resolveSpiritModelProfile(
+  provider: ProviderEntry,
+  model: ModelEntry,
 ): SpiritModelProfile {
-  const ref: ModelRef = { groupId: group.id, name: model.name };
-  return {
-    groupId: group.id,
-    ref,
+  const profile: SpiritModelProfile = {
+    providerId: provider.id,
+    ref: { providerId: provider.id, name: model.name },
     name: model.name,
-    apiBase: group.apiBase,
-    reasoningEffort: model.reasoningEffort,
-    ...(model.supportedReasoningEfforts !== undefined
-      ? { supportedReasoningEfforts: model.supportedReasoningEfforts }
-      : {}),
-    ...(model.capabilities !== undefined ? { capabilities: model.capabilities } : {}),
-    provider: group.provider,
-    ...(group.transportKind ? { transportKind: group.transportKind } : {}),
-    ...(group.providerSite ? { providerSite: group.providerSite } : {}),
-    ...(group.alibabaWorkspaceId ? { alibabaWorkspaceId: group.alibabaWorkspaceId } : {}),
-    ...(group.alibabaBillingMode ? { alibabaBillingMode: group.alibabaBillingMode } : {}),
-    ...(group.stepfunBillingMode ? { stepfunBillingMode: group.stepfunBillingMode } : {}),
-    ...(group.zAiBillingMode ? { zAiBillingMode: group.zAiBillingMode } : {}),
-    ...(group.zhipuBillingMode ? { zhipuBillingMode: group.zhipuBillingMode } : {}),
-    ...(group.awsRegion ? { awsRegion: group.awsRegion } : {}),
-    ...(group.azureResourceName ? { azureResourceName: group.azureResourceName } : {}),
-    ...(group.cloudflareAccountId ? { cloudflareAccountId: group.cloudflareAccountId } : {}),
-    ...(group.cloudflareGatewayId ? { cloudflareGatewayId: group.cloudflareGatewayId } : {}),
-    ...(group.vertexProject ? { vertexProject: group.vertexProject } : {}),
-    ...(group.vertexLocation ? { vertexLocation: group.vertexLocation } : {}),
-    ...(model.contextLength !== undefined ? { contextLength: model.contextLength } : {}),
-    ...(model.serviceTier !== undefined ? { serviceTier: model.serviceTier } : {}),
-    ...(model.upstreamProvider !== undefined ? { upstreamProvider: model.upstreamProvider } : {}),
+    apiBase: provider.apiBase,
   };
-}
-
-function normalizeProviderGroups(raw: unknown): ProviderGroupV2[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-  return raw as ProviderGroupV2[];
-}
-
-function normalizeConfig(raw: Record<string, unknown>): SpiritConfigFile {
-  assertSpiritConfigSchemaVersion(raw);
-
-  const providerGroups = normalizeProviderGroups(raw["providerGroups"]);
-  const activeModel = parseModelRef(raw["activeModel"]) ?? { groupId: "", name: "" };
-  const imageGenerationModel = parseModelRef(raw["imageGenerationModel"]);
-  const videoGenerationModel = parseModelRef(raw["videoGenerationModel"]);
-  const secondaryLanguageModel = parseModelRef(raw["secondaryLanguageModel"]);
-
-  return {
-    ...raw,
-    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups,
-    activeModel,
-    ...(imageGenerationModel ? { imageGenerationModel } : {}),
-    ...(videoGenerationModel ? { videoGenerationModel } : {}),
-    ...(secondaryLanguageModel ? { secondaryLanguageModel } : {}),
-  };
-}
-
-export function loadSpiritConfig(spiritDataDir: string): SpiritConfigFile | undefined {
-  const filePath = configFilePath(spiritDataDir);
-  if (!existsSync(filePath)) {
-    return undefined;
-  }
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(filePath, "utf8"));
-    if (typeof parsed !== "object" || parsed === null) {
-      return undefined;
+  const writable = profile as unknown as Record<string, unknown>;
+  for (const key of PROFILE_PROVIDER_KEYS) {
+    const value = provider[key];
+    if (value !== undefined) {
+      writable[key] = value;
     }
-    return normalizeConfig(parsed as Record<string, unknown>);
-  } catch (err) {
-    if (err instanceof SpiritConfigSchemaError) {
-      return undefined;
-    }
-    return undefined;
   }
-}
-
-export async function saveSpiritConfig(
-  spiritDataDir: string,
-  config: SpiritConfigFile,
-): Promise<void> {
-  const filePath = configFilePath(spiritDataDir);
-  await mkdir(spiritDataDir, { recursive: true });
-  const payload: SpiritConfigFile = {
-    ...config,
-    schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-  };
-  await writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+  for (const key of PROFILE_MODEL_KEYS) {
+    const value = model[key];
+    if (value !== undefined) {
+      writable[key] = value;
+    }
+  }
+  return profile;
 }
 
 export function loadActiveModelProfile(spiritDataDir: string): SpiritModelProfile | undefined {
@@ -124,11 +91,8 @@ export function loadActiveModelProfile(spiritDataDir: string): SpiritModelProfil
   if (!config) {
     return undefined;
   }
-  const resolved = findModelByRef(config.providerGroups, config.activeModel);
-  if (!resolved) {
-    return undefined;
-  }
-  return resolveSpiritModelProfile(resolved.group, resolved.model);
+  const resolved = resolveModelByRef(config.providers, config.activeModel);
+  return resolved ? resolveSpiritModelProfile(resolved.provider, resolved.model) : undefined;
 }
 
 export function loadModelProfile(
@@ -139,6 +103,6 @@ export function loadModelProfile(
   if (!config) {
     return undefined;
   }
-  const resolved = findModelByRef(config.providerGroups, modelRef);
-  return resolved ? resolveSpiritModelProfile(resolved.group, resolved.model) : undefined;
+  const resolved = resolveModelByRef(config.providers, modelRef);
+  return resolved ? resolveSpiritModelProfile(resolved.provider, resolved.model) : undefined;
 }

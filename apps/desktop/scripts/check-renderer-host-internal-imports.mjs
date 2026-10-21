@@ -12,17 +12,10 @@ const desktopSrc = join(repoRoot, "apps", "desktop", "src");
 
 /** host-internal subpaths allowed for value import (no node dependencies). */
 const RENDERER_SAFE_HOST_INTERNAL_SUBPATHS = new Set([
-  "config-v2",
+  "config",
   "workspace-file-reference-query",
-  "model-provider-presets",
-  "id-display-title",
-  "well-known-casing",
-  "openai-api-base",
   "azure-resource",
-  "bedrock-region",
-  "bedrock-mantle",
   "cloudflare-ai-gateway-resource",
-  "google-vertex-endpoints",
   "skill-paths",
   "tool-output-archive-path",
   "github-pull-request-url",

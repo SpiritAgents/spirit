@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { mapSiliconFlowVideoImageSize } from "./siliconflow-backend.js";
-import { isSiliconFlowApiBase, resolveVideoGenerationBackend } from "./router.js";
+import { resolveVideoGenerationBackend } from "./router.js";
 
 test("mapSiliconFlowVideoImageSize maps aspect ratios to provider enums", () => {
   assert.equal(mapSiliconFlowVideoImageSize("16:9"), "1280x720");
@@ -16,10 +16,9 @@ test("resolveVideoGenerationBackend routes siliconflow vendor and api base", () 
     resolveVideoGenerationBackend({
       apiKey: "test-key",
       model: "Wan-AI/Wan2.2-T2V-A14B",
-      llmVendor: "siliconflow",
+      videoApi: "siliconflow-videos",
       baseUrl: "https://api.siliconflow.com/v1",
     }).id,
-    "siliconflow",
+    "siliconflow-videos",
   );
-  assert.equal(isSiliconFlowApiBase("https://api.siliconflow.cn/v1"), true);
 });

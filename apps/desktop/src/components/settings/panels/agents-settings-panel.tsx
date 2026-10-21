@@ -67,8 +67,8 @@ export function AgentsSettingsPanel({
   const { t, i18n } = useTranslation();
   const lsp = snapshot?.lsp;
   const listDisabled = !settings.lspEnabled;
-  const webSearchDocsUrl = siteDocsUrl(i18n.language, "/agent/tools#web_search");
-  const webSearchDescription = t("settings.webSearchDescription");
+  const providerToolsDocsUrl = siteDocsUrl(i18n.language, "/agent/tools#provider-tools");
+  const providerToolsDescription = t("settings.providerToolsDescription");
 
   return (
     <div className="space-y-6">
@@ -78,35 +78,37 @@ export function AgentsSettingsPanel({
         <p className="text-xs text-muted-foreground">{t("settings.contextSection")}</p>
         <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
           <AgentsSettingsRow
-            label={t("settings.webSearch")}
+            label={t("settings.providerTools")}
             description={
               <>
-                {webSearchDescription}
-                {needsSpaceBeforeInlineContent(webSearchDescription) ? " " : null}
+                {providerToolsDescription}
+                {needsSpaceBeforeInlineContent(providerToolsDescription) ? " " : null}
                 <TextLink
-                  href={webSearchDocsUrl}
+                  href={providerToolsDocsUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   underline={false}
-                  aria-label={t("settings.webSearchLearnMoreAria")}
+                  aria-label={t("settings.providerToolsLearnMoreAria")}
                   onClick={(event) => {
                     if (window.spiritDesktop?.openBrowserUrl) {
                       event.preventDefault();
-                      void window.spiritDesktop.openBrowserUrl(webSearchDocsUrl);
+                      void window.spiritDesktop.openBrowserUrl(providerToolsDocsUrl);
                     }
                   }}
                 >
-                  {t("settings.webSearchLearnMore")}
+                  {t("settings.providerToolsLearnMore")}
                 </TextLink>
               </>
             }
-            htmlFor="settings-web-search"
+            htmlFor="settings-provider-tools"
           >
             <div className="flex justify-end">
               <Switch
-                id="settings-web-search"
-                checked={settings.webSearchEnabled}
-                onCheckedChange={(value) => void onSavePatch({ webSearchEnabled: value === true })}
+                id="settings-provider-tools"
+                checked={settings.providerToolsEnabled}
+                onCheckedChange={(value) =>
+                  void onSavePatch({ providerToolsEnabled: value === true })
+                }
               />
             </div>
           </AgentsSettingsRow>

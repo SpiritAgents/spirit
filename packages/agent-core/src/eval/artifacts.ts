@@ -43,7 +43,6 @@ export interface EvalJudgeReview {
   judgedAt: string;
   reviewerKind: "llm";
   model: string;
-  llmVendor?: string;
   promptFingerprint?: string;
   blindVariantMapping: EvalJudgeBlindVariantMapping;
   artifactPaths?: string[];

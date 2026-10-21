@@ -15,11 +15,11 @@ import {
   setSpiritDataDirOverride,
 } from "../../dist-electron/src/host/storage.js";
 
-test("assertSpiritConfigSchemaVersion rejects legacy schemaVersion 1", () => {
-  assert.throws(() => assertSpiritConfigSchemaVersion({ schemaVersion: 1 }), ConfigSchemaError);
+test("assertSpiritConfigSchemaVersion rejects the legacy schemaVersion 2", () => {
+  assert.throws(() => assertSpiritConfigSchemaVersion({ schemaVersion: 2 }), ConfigSchemaError);
 });
 
-test("assertSpiritConfigSchemaVersion accepts schemaVersion 2", () => {
+test("assertSpiritConfigSchemaVersion accepts schemaVersion 1", () => {
   assert.doesNotThrow(() =>
     assertSpiritConfigSchemaVersion({ schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION }),
   );
@@ -31,7 +31,16 @@ async function withConfigFile(rawConfig, run) {
   try {
     await writeFile(
       path.join(dir, "config.json"),
-      `${JSON.stringify({ schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION, ...rawConfig }, null, 2)}\n`,
+      `${JSON.stringify(
+        {
+          schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+          providers: [],
+          activeModel: { providerId: "", name: "" },
+          ...rawConfig,
+        },
+        null,
+        2,
+      )}\n`,
       "utf8",
     );
     await run(await loadConfig());
@@ -57,64 +66,38 @@ test("loadConfig drops a non-object permission value", async () => {
   });
 });
 
-const openAiGroupWithModels = (models) => ({
+const openAiProviderWithModels = (models) => ({
   id: "openai",
-  provider: "openai",
   apiBase: "https://api.openai.com/v1",
   transportKind: "open-responses",
   models,
 });
 
-test("loadConfig preserves serviceTier and upstreamProvider on model entries", async () => {
+test("loadConfig preserves declared serviceTier on model entries", async () => {
   await withConfigFile(
     {
-      providerGroups: [
-        openAiGroupWithModels([
+      providers: [
+        openAiProviderWithModels([
           {
             name: "gpt-6-astra",
             reasoningEffort: "medium",
+            serviceTiers: ["auto", "default", "flex", "fast", "ultrafast"],
             serviceTier: "ultrafast",
-            upstreamProvider: "OpenAI",
           },
           { name: "gpt-5.4", reasoningEffort: "medium" },
         ]),
       ],
-      activeModel: { groupId: "openai", name: "gpt-6-astra" },
+      activeModel: { providerId: "openai", name: "gpt-6-astra" },
     },
     (config) => {
-      const [astra, plain] = config.providerGroups[0].models;
+      const [astra, plain] = config.providers[0].models;
       assert.equal(astra.serviceTier, "ultrafast");
-      assert.equal(astra.upstreamProvider, "OpenAI");
       assert.equal("serviceTier" in plain, false);
-      assert.equal("upstreamProvider" in plain, false);
     },
   );
 });
 
-test("loadConfig drops non-string serviceTier and upstreamProvider values", async () => {
-  await withConfigFile(
-    {
-      providerGroups: [
-        openAiGroupWithModels([
-          {
-            name: "gpt-5.4",
-            reasoningEffort: "medium",
-            serviceTier: 7,
-            upstreamProvider: { name: "openai" },
-          },
-        ]),
-      ],
-      activeModel: { groupId: "openai", name: "gpt-5.4" },
-    },
-    (config) => {
-      const [model] = config.providerGroups[0].models;
-      assert.equal("serviceTier" in model, false);
-      assert.equal("upstreamProvider" in model, false);
-    },
-  );
-});
-
-test("saveConfig after loadConfig keeps serviceTier and upstreamProvider on disk", async () => {
+test("loadConfig fails fast on undeclared or malformed model fields", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "spirit-config-schema-"));
   setSpiritDataDirOverride(dir);
   try {
@@ -123,17 +106,48 @@ test("saveConfig after loadConfig keeps serviceTier and upstreamProvider on disk
       `${JSON.stringify(
         {
           schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-          providerGroups: [
-            openAiGroupWithModels([
+          providers: [
+            openAiProviderWithModels([
               {
-                name: "gpt-6-astra",
-                reasoningEffort: "medium",
-                serviceTier: "flex",
-                upstreamProvider: "OpenAI",
+                name: "gpt-5.4",
+                serviceTier: 7,
               },
             ]),
           ],
-          activeModel: { groupId: "openai", name: "gpt-6-astra" },
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
+    // Invalid field values must surface as a schema error, never a silent rewrite.
+    await assert.rejects(loadConfig(), ConfigSchemaError);
+  } finally {
+    setSpiritDataDirOverride(undefined);
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("saveConfig after loadConfig keeps serviceTier on disk", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "spirit-config-schema-"));
+  setSpiritDataDirOverride(dir);
+  try {
+    await writeFile(
+      path.join(dir, "config.json"),
+      `${JSON.stringify(
+        {
+          schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
+          providers: [
+            openAiProviderWithModels([
+              {
+                name: "gpt-6-astra",
+                serviceTiers: ["default", "flex"],
+                serviceTier: "flex",
+              },
+            ]),
+          ],
+          activeModel: { providerId: "openai", name: "gpt-6-astra" },
         },
         null,
         2,
@@ -143,9 +157,8 @@ test("saveConfig after loadConfig keeps serviceTier and upstreamProvider on disk
     const config = await loadConfig();
     await saveConfig(config);
     const written = JSON.parse(await readFile(path.join(dir, "config.json"), "utf8"));
-    const [model] = written.providerGroups[0].models;
+    const [model] = written.providers[0].models;
     assert.equal(model.serviceTier, "flex");
-    assert.equal(model.upstreamProvider, "OpenAI");
   } finally {
     setSpiritDataDirOverride(undefined);
     await rm(dir, { recursive: true, force: true });

@@ -16,7 +16,7 @@ Use this exact scope for `pnpm --filter`, `pnpm --filter ... exec`, and any pack
 
 ## Layering and Specialized Guides
 
-- Capability and host boundary: `.github/instructions/agent-core-host-boundary.instructions.md`
+- Capability and host boundary (agent-core as the internal agent capability library — runtime, transports, tool contracts, plus the `provider-presets` / `model-catalog` / `model-knowledge` write-time materialization zone; the no-vendor-identity rule on runtime paths; host-internal's transitional role): `.github/instructions/agent-core-host-boundary.instructions.md`
 - Rust CLI: `.github/instructions/cli-rust.instructions.md`
 
 ## Branch Names

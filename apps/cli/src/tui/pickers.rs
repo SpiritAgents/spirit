@@ -145,7 +145,7 @@ impl TuiShell {
             return;
         };
         let selected = ModelRef {
-            group_id: profile.group_id.clone(),
+            provider_id: profile.provider_id.clone(),
             name: profile.name.clone(),
         };
 
@@ -412,7 +412,7 @@ impl TuiShell {
             .flatten_models()
             .iter()
             .position(|profile| {
-                profile.group_id == self.runtime.config().active_model.group_id
+                profile.provider_id == self.runtime.config().active_model.provider_id
                     && profile.name == self.runtime.config().active_model.name
             })
             .unwrap_or(0);

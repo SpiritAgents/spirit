@@ -1,8 +1,8 @@
 import type { JsonObject, JsonValue, LlmStreamEvent } from "../ports.js";
 import { isJsonObject } from "../tool-agent.js";
-import { ALIBABA_RESPONSES_BUILT_IN_TOOL_TYPES } from "./alibaba-built-in-tools.js";
 
-export const RESPONSES_BUILT_IN_TOOL_NAMES = [...ALIBABA_RESPONSES_BUILT_IN_TOOL_TYPES] as const;
+/** Responses-protocol built-in tool type names (`web_search_call` / `code_interpreter_call` items). */
+export const RESPONSES_BUILT_IN_TOOL_NAMES = ["web_search", "code_interpreter"] as const;
 
 const OUTPUT_ITEM_TYPE_TO_TOOL_NAME: Record<
   string,
@@ -15,25 +15,26 @@ const OUTPUT_ITEM_TYPE_TO_TOOL_NAME: Record<
 /** Embedded in streaming-tool-preview argumentsJson for Desktop UI mapping. */
 export const RESPONSES_BUILT_IN_SPIRIT_UI_KEY = "_spiritUi";
 
-export type DeepSeekInternalWebSearchActionType = "search" | "open_page" | "find_in_page";
+/** Responses-protocol internal web search action (`search` / `open_page` / `find_in_page`). */
+export type InternalWebSearchActionType = "search" | "open_page" | "find_in_page";
 
 export type ResponsesBuiltInToolSpiritUi = {
   headlineDetail?: string;
-  /** DeepSeek Responses internal action; drives Desktop headline (search vs fetch vs find-in-page). */
-  internalActionType?: DeepSeekInternalWebSearchActionType;
-  /** Set for completed web_search when action.sources is present (Bailian often omits real query text). */
+  /** Internal web search action; drives Desktop headline (search vs fetch vs find-in-page). */
+  internalActionType?: InternalWebSearchActionType;
+  /** Set for completed web_search when action.sources is present (some endpoints omit real query text). */
   sourceCount?: number;
   inputExcerpt: string;
   outputExcerpt?: string;
   detailLines?: string[];
-  /** DeepSeek / Moonshot-style compact cards: no expand, headline + detail only. */
+  /** Compact cards: no expand, headline + detail only. */
   suppressExpand?: boolean;
 };
 
 export type ResponsesBuiltInToolCardData = {
   status?: string;
   headlineDetail?: string;
-  internalActionType?: DeepSeekInternalWebSearchActionType;
+  internalActionType?: InternalWebSearchActionType;
   sourceCount?: number;
   inputExcerpt: string;
   outputExcerpt?: string;
@@ -128,7 +129,7 @@ export function parseResponsesBuiltInToolUiFromArgumentsJson(
         ? Math.floor(ui.sourceCount)
         : undefined;
     const suppressExpand = ui.suppressExpand === true;
-    const internalActionType = readDeepSeekInternalWebSearchActionType(ui.internalActionType);
+    const internalActionType = readInternalWebSearchActionType(ui.internalActionType);
     return {
       ...(headlineDetail ? { headlineDetail } : {}),
       ...(internalActionType ? { internalActionType } : {}),
@@ -172,16 +173,14 @@ function buildWebSearchCardData(
     readStringField(item, "search_query");
   const sources = formatWebSearchSources(action);
   const streamPhase = resolveResponsesBuiltInToolStreamPhase(item);
-  const deepSeekCompactDetail =
-    action && sources.sourceCount === 0 ? formatDeepSeekInternalWebSearchDetail(action) : undefined;
-  if (deepSeekCompactDetail) {
-    const actionType = readDeepSeekInternalWebSearchActionType(
-      readStringField(action ?? {}, "type"),
-    );
+  const internalActionDetail =
+    action && sources.sourceCount === 0 ? formatInternalWebSearchActionDetail(action) : undefined;
+  if (internalActionDetail) {
+    const actionType = readInternalWebSearchActionType(readStringField(action ?? {}, "type"));
     return {
       ...(status ? { status } : {}),
-      headlineDetail: deepSeekCompactDetail,
-      inputExcerpt: deepSeekCompactDetail,
+      headlineDetail: internalActionDetail,
+      inputExcerpt: internalActionDetail,
       suppressExpand: true,
       ...(actionType ? { internalActionType: actionType } : {}),
     };
@@ -202,44 +201,44 @@ function buildWebSearchCardData(
   };
 }
 
-/** Bailian Responses `web_search_call.action.query` is often the placeholder "Web search". */
+/** Some Responses endpoints send the placeholder "Web search" instead of the real query. */
 export function isGenericProviderWebSearchQuery(query: string): boolean {
   const normalized = query.trim().toLowerCase().replace(/\s+/g, " ");
   return normalized === "web search" || normalized === "websearch";
 }
 
-function isDeepSeekInternalWebSearchActionType(
+function isInternalWebSearchActionType(
   actionType: string | undefined,
-): actionType is DeepSeekInternalWebSearchActionType {
+): actionType is InternalWebSearchActionType {
   return actionType === "search" || actionType === "open_page" || actionType === "find_in_page";
 }
 
-function readDeepSeekInternalWebSearchActionType(
+function readInternalWebSearchActionType(
   value: JsonValue | undefined,
-): DeepSeekInternalWebSearchActionType | undefined {
-  return typeof value === "string" && isDeepSeekInternalWebSearchActionType(value)
-    ? value
-    : undefined;
+): InternalWebSearchActionType | undefined {
+  return typeof value === "string" && isInternalWebSearchActionType(value) ? value : undefined;
 }
 
-function stripDeepSeekWebSearchCallIdSuffix(value: string): string {
+// Some Responses endpoints tag internal action URLs/queries with a `#ws_call_id=` suffix or
+// `ws_call_id=` pseudo-query; both are stripped from display.
+function stripInternalWebSearchCallIdSuffix(value: string): string {
   return value.replace(/#ws_call_id=[^#\s]+$/u, "").trim();
 }
 
-function isDeepSeekWebSearchCallIdQuery(value: string): boolean {
+function isInternalWebSearchCallIdQuery(value: string): boolean {
   return value.trim().startsWith("ws_call_id=");
 }
 
-/** DeepSeek Responses internal actions omit client-visible sources; show compact headline detail like Moonshot. */
-export function formatDeepSeekInternalWebSearchDetail(action: JsonObject): string | undefined {
+/** Internal web search actions omit client-visible sources; show a compact headline detail. */
+export function formatInternalWebSearchActionDetail(action: JsonObject): string | undefined {
   const actionType = readStringField(action, "type");
-  if (!isDeepSeekInternalWebSearchActionType(actionType)) {
+  if (!isInternalWebSearchActionType(actionType)) {
     return undefined;
   }
 
   if (actionType === "open_page" || actionType === "find_in_page") {
     const url = readStringField(action, "url");
-    return url ? stripDeepSeekWebSearchCallIdSuffix(url) : undefined;
+    return url ? stripInternalWebSearchCallIdSuffix(url) : undefined;
   }
 
   const queries = action.queries;
@@ -247,7 +246,7 @@ export function formatDeepSeekInternalWebSearchDetail(action: JsonObject): strin
     const parts = queries
       .filter((entry): entry is string => typeof entry === "string")
       .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0 && !isDeepSeekWebSearchCallIdQuery(entry));
+      .filter((entry) => entry.length > 0 && !isInternalWebSearchCallIdQuery(entry));
     if (parts.length > 0) {
       return parts.join(" ");
     }
@@ -662,7 +661,11 @@ export function accumulateResponsesBuiltInToolPreviewsFromRawChunk(
   };
 }
 
-/** DeepSeek Responses: pass `web_search_call` items back as-is so the server restores search results. */
+/**
+ * `options.echoServerToolCalls` (the DeepSeek Responses continuation convention): pass captured
+ * `web_search_call` items back into the next round's `input` as-is so the server restores its
+ * search results.
+ */
 export function collectResponsesBuiltInOutputItemsForPassBack(
   state: ResponsesBuiltInPreviewStreamState,
 ): JsonObject[] {

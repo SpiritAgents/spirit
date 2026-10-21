@@ -1,46 +1,27 @@
-import { resolveModelDisplayTitle } from "@spiritagent/host-internal/id-display-title";
-import { normalizeOpenAiApiBase } from "@spiritagent/host-internal/openai-api-base";
+import { resolveModelDisplayTitle } from "@spiritagent/agent-core/model-catalog/id-display-title";
 
 import { formatCompactTokenCount } from "./format-compact-token-count.js";
 import { parseModelContextLength } from "./model-context-length.js";
 
 import type {
   DesktopModelCatalogHint,
-  DesktopModelProvider,
   ModelProfileSnapshot,
   PreviewModelCatalogEntry,
   PreviewModelCatalogPricing,
   PreviewModelCatalogVideoDurationPricing,
 } from "../types.js";
 
-const PROVIDERS_PRESERVE_RAW_MODEL_ID_WITHOUT_CATALOG = new Set<DesktopModelProvider>([
-  "vercel-ai-gateway",
-  "openrouter",
-  "fireworks-ai",
-  "together-ai",
-  "groq",
-  "deepinfra",
-  "hugging-face",
-  "baseten",
-  "cohere",
-  "moonshot-ai",
-  "kimi-code",
-]);
-
-/** Whether to keep the raw model id (e.g. openai/gpt-5) instead of formatting it when the catalog has no displayName. */
-export function providerSupportsModelCatalogDetail(
-  provider: DesktopModelProvider | undefined,
-): boolean {
-  return provider !== undefined && PROVIDERS_PRESERVE_RAW_MODEL_ID_WITHOUT_CATALOG.has(provider);
+/**
+ * Whether to keep the raw model id instead of formatting it when the catalog has no displayName:
+ * route-prefixed ids (`openai/gpt-5.5`, `publishers/google/models/…`) mangle badly when formatted.
+ */
+export function modelIdPreservesRawDisplayTitle(modelId: string): boolean {
+  return modelId.includes("/");
 }
 
-export function modelCatalogHintKey(input: {
-  provider?: DesktopModelProvider;
-  transportKind?: ModelProfileSnapshot["transportKind"];
-  apiBase: string;
-}): string {
-  const base = normalizeOpenAiApiBase(input.apiBase.trim() || "");
-  return `${input.provider ?? "custom"}::${input.transportKind ?? "openai-compatible"}::${base}`;
+/** Catalog hints are scoped to a provider entry (cache key `provider::{id}::apiBase`). */
+export function modelCatalogHintKey(input: { providerId: string }): string {
+  return input.providerId;
 }
 
 function catalogEntryIndexKey(hintKey: string, modelId: string): string {
@@ -49,14 +30,9 @@ function catalogEntryIndexKey(hintKey: string, modelId: string): string {
 
 /** Mapping key for display names / catalog details: the same model id can be independent under different providers. */
 export function modelCatalogScopeEntryKey(
-  model: Pick<ModelProfileSnapshot, "provider" | "transportKind" | "apiBase" | "name">,
+  model: Pick<ModelProfileSnapshot, "providerId" | "name">,
 ): string {
-  const hintKey = modelCatalogHintKey({
-    provider: model.provider,
-    transportKind: model.transportKind,
-    apiBase: model.apiBase,
-  });
-  return catalogEntryIndexKey(hintKey, model.name);
+  return catalogEntryIndexKey(modelCatalogHintKey({ providerId: model.providerId }), model.name);
 }
 
 export function buildModelCatalogEntryIndex(
@@ -64,11 +40,7 @@ export function buildModelCatalogEntryIndex(
 ): Map<string, PreviewModelCatalogEntry> {
   const index = new Map<string, PreviewModelCatalogEntry>();
   for (const hint of hints ?? []) {
-    const hintKey = modelCatalogHintKey({
-      provider: hint.provider,
-      transportKind: hint.transportKind,
-      apiBase: hint.apiBase,
-    });
+    const hintKey = modelCatalogHintKey({ providerId: hint.providerId });
     for (const entry of hint.modelCatalog ?? []) {
       const id = entry.id.trim();
       if (!id) {
@@ -86,11 +58,7 @@ export function findModelCatalogEntry(
   entryIndex?: Map<string, PreviewModelCatalogEntry>,
 ): PreviewModelCatalogEntry | undefined {
   const index = entryIndex ?? buildModelCatalogEntryIndex(hints);
-  const hintKey = modelCatalogHintKey({
-    provider: model.provider,
-    transportKind: model.transportKind,
-    apiBase: model.apiBase,
-  });
+  const hintKey = modelCatalogHintKey({ providerId: model.providerId });
   return index.get(catalogEntryIndexKey(hintKey, model.name));
 }
 
@@ -101,9 +69,17 @@ export function modelHasCatalogDetail(entry: PreviewModelCatalogEntry | undefine
   if (entry.displayName?.trim()) {
     return true;
   }
-  // The upstream identity fact feeds service tier capability gating in the picker even when
-  // the entry carries no display detail.
+  // The upstream identity fact is display metadata for aggregator routes.
   if (entry.upstreamProvider?.trim()) {
+    return true;
+  }
+  // Declared service tiers feed the picker's tier control even without other display detail.
+  if (
+    entry.serviceTiers &&
+    (Array.isArray(entry.serviceTiers)
+      ? entry.serviceTiers.length > 0
+      : Object.keys(entry.serviceTiers).length > 0)
+  ) {
     return true;
   }
   if (entry.description?.trim()) {
@@ -161,7 +137,7 @@ export function buildModelCatalogDisplayTitleMap(
 }
 
 export function modelDisplayTitleFromMap(
-  model: Pick<ModelProfileSnapshot, "provider" | "transportKind" | "apiBase" | "name">,
+  model: Pick<ModelProfileSnapshot, "providerId" | "name">,
   displayTitleByModelName: Map<string, string>,
 ): string {
   return displayTitleByModelName.get(modelCatalogScopeEntryKey(model)) ?? model.name;
@@ -174,7 +150,7 @@ export function modelCatalogDisplayTitle(
   return resolveModelDisplayTitle({
     modelId: model.name,
     catalogDisplayName: catalogEntry?.displayName,
-    preserveRawIdWithoutCatalogDisplayName: providerSupportsModelCatalogDetail(model.provider),
+    preserveRawIdWithoutCatalogDisplayName: modelIdPreservesRawDisplayTitle(model.name),
   });
 }
 
