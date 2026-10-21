@@ -69,6 +69,95 @@ test("toolHasExpandableContent: Moonshot Formula web_search with suppressExpand 
   );
 });
 
+test("getToolCallSummaryParts: provider tool cards render the Call verb with the declared label", () => {
+  assert.deepEqual(
+    getToolCallSummaryParts({
+      toolName: "web_search",
+      phase: "running",
+      headline: "Calling",
+      headlineDetail: "Web Search",
+      detailLines: [],
+      providerToolLabel: "Web Search",
+    }),
+    {
+      headline: i18n.t("tool.lazyCall", { context: "running" }),
+      detail: "Web Search",
+    },
+  );
+  assert.deepEqual(
+    getToolCallSummaryParts({
+      toolName: "web_search",
+      phase: "succeeded",
+      headline: "Called",
+      headlineDetail: "Web Search",
+      detailLines: [],
+      providerToolLabel: "Web Search",
+    }),
+    {
+      headline: i18n.t("tool.lazyCall", { context: "succeeded" }),
+      detail: "Web Search",
+    },
+  );
+  // A provider tool name outside the built-in set follows the same contract.
+  assert.deepEqual(
+    getToolCallSummaryParts({
+      toolName: "fiber_search",
+      phase: "failed",
+      headline: "Call",
+      headlineDetail: "Moonshot Formula",
+      detailLines: [],
+      providerToolLabel: "Moonshot Formula",
+    }),
+    {
+      headline: i18n.t("tool.lazyCall"),
+      detail: "Moonshot Formula",
+    },
+  );
+});
+
+test("toolHasExpandableContent: labeled provider tool cards expand with input/output detail", () => {
+  assert.equal(
+    toolHasExpandableContent({
+      toolName: "fiber_search",
+      phase: "succeeded",
+      headline: "Called",
+      headlineDetail: "Web Search",
+      detailLines: [],
+      argsExcerpt: '{\n  "query": "DeepSeek"\n}',
+      outputExcerpt: "1. https://www.deepseek.com/",
+      providerToolLabel: "Web Search",
+    }),
+    true,
+  );
+  // The ciphertext case (`ui.expand: false`) stays collapsed even with content present.
+  assert.equal(
+    toolHasExpandableContent({
+      toolName: "web_search",
+      phase: "succeeded",
+      headline: "Called",
+      headlineDetail: "Web Search",
+      detailLines: [],
+      argsExcerpt: '{\n  "query": "DeepSeek"\n}',
+      outputExcerpt: "ciphertext",
+      providerToolLabel: "Web Search",
+      suppressExpand: true,
+    }),
+    false,
+  );
+  // No input/output yet: nothing to expand into.
+  assert.equal(
+    toolHasExpandableContent({
+      toolName: "web_search",
+      phase: "running",
+      headline: "Calling",
+      headlineDetail: "Web Search",
+      detailLines: [],
+      providerToolLabel: "Web Search",
+    }),
+    false,
+  );
+});
+
 test("getToolCallSummaryParts: shell prefixes reason and keeps command as detail", () => {
   assert.deepEqual(
     getToolCallSummaryParts({

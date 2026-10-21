@@ -48,7 +48,7 @@ export type SettingsFormState = {
   codeCompletionEnabled: boolean;
   commitAttributionEnabled: boolean;
   prAttributionEnabled: boolean;
-  webSearchEnabled: boolean;
+  providerToolsEnabled: boolean;
   webFetchEnabled: boolean;
   llmHttpVersion: "http1.1" | "http2";
 };
@@ -80,7 +80,7 @@ export type SettingsViewProps = {
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
   onRemoveModel: (name: string) => Promise<void>;
-  onRemoveProviderModels: (groupId: string) => Promise<void>;
+  onRemoveProviderModels: (providerId: string) => Promise<void>;
   onAddMcpServer: (request: AddMcpServerRequest) => Promise<void>;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
   onUpdateExtensionSecret: (request: UpdateExtensionSecretRequest) => Promise<void>;

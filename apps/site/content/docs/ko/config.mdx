@@ -1,6 +1,6 @@
 ---
 title: 설정
-description: 데이터 디렉터리, config.json v2, {{product.workspaceDataFolderName}}/, 환경 변수.
+description: 데이터 디렉터리, config.json v1, {{product.workspaceDataFolderName}}/, 환경 변수.
 ---
 
 공유 사용자 데이터 경로는 빌드 quality에 따라 결정되며 OS의 애플리케이션 데이터 디렉터리를 사용하지 않습니다.
@@ -36,18 +36,75 @@ Breaking Change: 이전 플랫폼 디렉터리를 자동으로 읽거나 마이�
 
 CLI 바이너리는 SPIRIT_HOME을 사용합니다. Unix에서는 Stable 설치와 공유 데이터가 같은 상위 디렉터리를 사용할 수 있지만 bin/과 cli/는 설치 파일입니다. 설치 설정은 공유 데이터 디렉터리를 결정하지 않습니다.
 
-## config.json v2
+## config.json v1
 
-`schemaVersion`은 `2`여야 합니다. 버전 1은 거부됩니다 — 이전 파일을 삭제하고 [프로바이더를 다시 연결](./providers.mdx)하세요.
+`schemaVersion`은 `1`이어야 합니다. 다른 값은 모두 거부됩니다 — 이전 파일을 삭제하고 [프로바이더를 다시 연결](./providers.mdx)하세요. 이전 형태에서의 마이그레이션은 없습니다.
 
 핵심 필드:
 
-- `providerGroups` — 연결된 하우스, API 베이스, 전송, 모델
+- `providers` — 연결된 프로바이더: 엔드포인트, 전송, 자격 증명, 모델
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — `agents.providerTools.enabled` 같은 에이전트 토글
 - `permission` — 권한 허용 목록 규칙
 
-키(Key)는 이 파일에 **없습니다**. 키는 [키링](./security.mdx)에 있습니다.
+`activeModel` 등의 모델 슬롯은 모델 참조입니다: `{ "providerId": "…", "name": "…" }`. 여기서 `providerId`는 `providers[].id`이고 `name`은 그 `models[].name` 중 하나입니다.
+
+### 프로바이더 항목
+
+각 `providers[]` 항목은 완전한 선언적 연결입니다 — 연결 마법사가 쓴 내용이 곧 런타임이 읽는 내용입니다. 런타임은 프로바이더의 정체에서 `apiBase`를 다시 유도하지 않습니다. 사이트, 플랜, 클라우드 선택은 연결 시점에 최종 URL로 구체화됩니다.
+
+연결 수준 필드:
+
+- `id` (필수) — 항목의 고유 ID. 모델 참조와 내부 키링 계정이 이를 가리킵니다
+- `label` — 선택적 표시 이름
+- `apiBase` (필수) — 엔드포인트. 유일한 진실 공급원
+- `transportKind` — 와이어 프로토콜: `openai-compatible` (기본값) / `open-responses` / `anthropic` / `bedrock`
+- `sdk` — 번들된 SDK 어댑터의 전체 npm 패키지 이름 (예: `@ai-sdk/openai-compatible`). 생략 = 전송 기본값. 알 수 없는 패키지 이름은 로드 시 거부됩니다
+- `headers` — 모든 아웃바운드 요청에 병합되는 리터럴 추가 요청 헤더
+- `body` — 모든 요청 본문에 병합되는 리터럴 필드. 와이어상의 특이 사항을 흡수하는 이스케이프 해치입니다 — 구조화된 선언이 있으면 그것을 우선하세요
+- `providerTools` — 프로바이더가 노출하는 도구 (웹 검색, 코드 인터프리터). [프로바이더 도구](./agent/tools.mdx#provider-tools)를 참조하세요
+- `fileUpload` — 인라인에 적합하지 않은 로컬 파일의 업로드 채널 (`path` / `url`, `purpose`, `idPath`, `refTemplate`, `maxBytes`). 생략 = 미디어는 인라인으로 전송
+- `imageApi` / `videoApi` — 이미지 / 비디오 생성의 API 형태 이름. 생략 = 해당 생성 능력 없음
+- `options` — 전송 매개변수. 유효한 키 집합은 `transportKind` × `sdk`로 정의됩니다 (bedrock의 `awsRegion`, `@ai-sdk/google-vertex`의 `project` / `location`, open-responses의 `auth` / `storedState` / `applyPatch` 스위치). 알 수 없는 키는 거부됩니다
+- `models` (필수 배열, 비어 있을 수 있음)
+
+모델 수준 필드 — `capabilities`, `contextLength`, `outputLimit`, `reasoningEffort`, `supportedReasoningEfforts`, `reasoningMode`, `supportedReasoningModes`, `supportsThinkingType`, `supportsThinkingSwitch`, `thinkingSwitch`, `serviceTiers`, `serviceTier` — 는 프로바이더 항목에 플랫하게 선언하여 모든 모델이 상속하는 기본값으로 쓸 수 있으며, 모델 자체의 선언이 우선합니다. `models[]` 안에서는 `name` 외에는 모두 선택 사항이며, 생략은 기본값이 아니라 미선언을 의미합니다.
+
+- `capabilities` 토큰: `languageModel`, `image`, `audio`, `video`, `imageGeneration`, `videoGeneration`
+- `outputLimit`은 출력 토큰 상한으로, `contextLength`와 별개입니다
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers`는 선택기와 검증의 유일한 소스입니다 — 목록 밖의 값을 선택하면 로드 시 오류이며, 조용히 클램프되지 않습니다
+- `thinkingEnabled`는 사용자의 thinking 온/오프 상태입니다 (능력 선언이 아님). 모델 수준 전용이며 `supportsThinkingSwitch` 선언이 필요합니다
+
+### 키 채널
+
+키가 이 파일에 있을 필요는 없습니다 — 연결 마법사는 기본적으로 [키링](./security.mdx)에 바로 씁니다. config가 채널을 선언할 수도 있으며, 다음 순서로 해석됩니다:
+
+1. `apiKey` — 평문. 권장하지 않으며 이스케이프 해치일 뿐입니다
+2. `apiKeyEnv` — 키를 읽을 환경 변수 이름
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`, 외부 키링의 항목
+4. 내부 키링 — 마법사가 쓰는 암묵적 폴백 (계정 `provider::{id}`)
+
+복합 자격 증명 (Bedrock IAM, Vertex 서비스 계정)은 플랫 키 대신 `credentials` 슬롯 맵을 사용합니다:
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+슬롯 이름은 프로토콜 필드입니다 — `apiKey`, `accessKeyId` / `secretAccessKey` (Bedrock IAM / SigV4), `clientEmail` / `privateKey` (Vertex). 알 수 없는 슬롯은 거부됩니다. 각 슬롯은 `value` → `env` → `keyring` → 내부 키링 순으로 해석됩니다 (`provider::{id}::{slot}`; `apiKey` 슬롯은 그냥 `provider::{id}`). 플랫 키와 `credentials.apiKey`는 한 항목에 공존할 수 없습니다.
+
+### agents.providerTools
+
+`agents.providerTools.enabled`는 프로바이더가 선언한 모든 도구를 한 번에 제어합니다 (`agents.webSearch.enabled`에서 이름이 바뀌었으며 의미는 같습니다: 옵트아웃, 기본값 켜짐). `false`로 설정하면 프로바이더 도구 항목과 본문 스위치가 요청에 전혀 들어가지 않습니다.
+
+### 카탈로그 새로고침과 재연결
+
+일상적인 카탈로그 새로고침은 카탈로그가 소유한 모델 선언 필드 (`capabilities`, `supportedReasoningEfforts`, `supportedReasoningModes`, `serviceTiers` 등)를 다시 씁니다 — 모델 사실은 카탈로그가 유일한 진실 공급원이므로, 이 필드에 대한 수동 편집은 다음 새로고침에서 덮어써집니다. 프로바이더 수준의 구체화 (`apiBase`, `sdk`, `providerTools`, `fileUpload`, `options`, `imageApi` / `videoApi`)는 프로바이더를 재연결할 때만 바뀝니다. 재연결은 마법사 소유 키를 리셋하고 (그 키에 대한 편집은 덮어써집니다) 나머지는 모두 보존합니다: `label`, 자격 증명 채널, `headers` / `body`, 플랫 모델 기본값, 직접 추가한 모델.
 
 ### permission
 

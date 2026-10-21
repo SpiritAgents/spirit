@@ -1,13 +1,14 @@
 import type {
-  ModelProviderId,
-  ProviderConnectSiteId,
-} from "@spiritagent/host-internal/model-provider-presets";
-import type {
-  ModelEntryV2,
+  ModelEntry,
   ModelRef,
-  ProviderGroupV2,
+  ProviderEntry,
   SpiritConfigSchemaVersion,
-} from "@spiritagent/host-internal/config-v2";
+  SpiritModelCapability,
+  SpiritModelReasoningMode,
+  SpiritServiceTiersDeclaration,
+  SpiritTransportKind,
+  ThinkingSwitchDeclaration,
+} from "@spiritagent/host-internal/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { LspWriteDiagnosticsUi, PermissionMemoryTarget } from "@spiritagent/agent-core";
@@ -45,7 +46,7 @@ import type { ComposerChipNavigateMeta } from "./lib/composer-chip-navigate-meta
 import type { RichSegment } from "./lib/composer-segment-model.js";
 import type { ComposerLocalFileAttachmentView } from "./lib/local-file-attachments.js";
 
-export type { ModelRef, ModelEntryV2, ProviderGroupV2, SpiritConfigSchemaVersion };
+export type { ModelRef, ModelEntry, ProviderEntry, SpiritConfigSchemaVersion };
 
 export type DesktopWorkspaceBinding = "project" | "none";
 
@@ -89,7 +90,10 @@ export interface UpdateConfigRequest {
   apiBase: string;
   reasoningEffort?: DesktopModelReasoningEffort;
   reasoningMode?: DesktopModelReasoningMode;
-  /** Vendor extended thinking; false disables it. Absent means no change. */
+  /**
+   * User thinking on/off state for the active model (model-level; absent = on). Only meaningful
+   * when the model declares `supportsThinkingSwitch`; the host rejects the write otherwise.
+   */
   thinkingEnabled?: boolean;
   /**
    * Per-model service tier preference for the active model. Absent means no change;
@@ -139,7 +143,7 @@ export interface DesktopAgentsConfigUpdate {
       enabled?: boolean;
     };
   };
-  webSearch?: {
+  providerTools?: {
     enabled?: boolean;
   };
   webFetch?: {
@@ -173,7 +177,7 @@ export interface DesktopAttributionSnapshot {
 }
 
 export interface DesktopWebToolExposureSnapshot {
-  webSearchEnabled: boolean;
+  providerToolsEnabled: boolean;
   webFetchEnabled: boolean;
 }
 
@@ -191,24 +195,18 @@ export interface DesktopDreamConfigUpdate {
   debugMode?: boolean;
 }
 
-/** Model provider (same source as `ModelProviderId` in `packages/host-internal`). */
-export type DesktopModelProvider = ModelProviderId;
-export type DesktopProviderConnectSiteId = ProviderConnectSiteId;
+export type DesktopTransportKind = SpiritTransportKind;
 
-export type DesktopTransportKind = "openai-compatible" | "open-responses" | "anthropic" | "bedrock";
+/** The wizard's credential form, forwarded to preset materialization (`apiKey` on a non-apiKey preset selects `expressApiBase`). */
+export type DesktopProviderCredentialKind = "apiKey" | "bedrock" | "vertex";
 
-/** Model reasoning effort string; allowed values are constrained by provider / transportKind in agent-core. */
+/** Model reasoning effort string; declared per model in config (`supportedReasoningEfforts`). */
 export type DesktopModelReasoningEffort = ModelReasoningEffort;
 
-/** reasoning.mode (standard / pro) of GPT-5.6+ OpenAI-routed models. */
-export type DesktopModelReasoningMode = "standard" | "pro";
+/** reasoning.mode (standard / pro); `standard` or absent means no mode is sent on the wire. */
+export type DesktopModelReasoningMode = SpiritModelReasoningMode;
 
-export type DesktopModelCapability =
-  | "languageModel"
-  | "image"
-  | "video"
-  | "imageGeneration"
-  | "videoGeneration";
+export type DesktopModelCapability = SpiritModelCapability;
 
 export interface PreviewModelCatalogVideoDurationPricing {
   resolution: string;
@@ -233,12 +231,6 @@ export interface PreviewModelCatalogPricing {
   videoExamplePricing?: PreviewModelCatalogExamplePricing;
 }
 
-export type DesktopAlibabaBillingMode = "token-plan";
-
-export type DesktopStepfunBillingMode = "step-plan";
-
-export type DesktopGlmCodingPlanBillingMode = "glm-coding-plan";
-
 export interface PreviewModelCatalogEntry {
   id: string;
   displayName?: string;
@@ -248,13 +240,20 @@ export interface PreviewModelCatalogEntry {
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
   /** Kimi Code `think_efforts.default_effort` when present. */
   defaultReasoningEffort?: DesktopModelReasoningEffort;
+  supportedReasoningModes?: DesktopModelReasoningMode[];
   contextLength?: number;
+  /** Output token cap reported by the listing; kept separate from `contextLength`. */
+  outputLimit?: number;
   maxCompletionTokens?: number;
   supportsThinkingType?: "only";
   supportsThinkingSwitch?: boolean;
+  /** Thinking on/off wire encoding folded from model knowledge (companion of `supportsThinkingSwitch`). */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
+  /** Declared service tier options (simple list or literal wire map) folded from the listing and model knowledge. */
+  serviceTiers?: SpiritServiceTiersDeclaration;
   /** Hugging Face Hub media models: Inference Providers routing hint. */
   inferenceProvider?: string;
-  /** Aggregator upstream identity fact (Vercel `owned_by` raw, OpenRouter `canonical_slug` author prefix); feeds service tier capability gating. */
+  /** Aggregator upstream identity fact (Vercel `owned_by` raw, OpenRouter `canonical_slug` author prefix); display metadata only, never persisted onto config models. */
   upstreamProvider?: string;
   /** DeepInfra `is_partner`: partner model (data forwarded to a third party); first version keeps it as catalog metadata only, no filtering. */
   isPartner?: boolean;
@@ -264,21 +263,25 @@ export interface PreviewModelCatalogEntry {
 export interface PreviewModelsRequest {
   apiBase: string;
   apiKey: string;
-  provider?: DesktopModelProvider;
+  /** Preset id from agent-core's provider-presets manifest, or `custom`/a custom entry id. */
+  provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; mirrors the connect request so both resolve the same apiBase. */
+  credentialKind?: DesktopProviderCredentialKind;
   /** Site-based providers such as SiliconFlow: cn / intl. */
-  providerSite?: DesktopProviderConnectSiteId;
-  alibabaWorkspaceId?: string;
-  /** Alibaba Token Plan; absent means the standard pay-as-you-go mode. */
-  alibabaBillingMode?: DesktopAlibabaBillingMode;
-  stepfunBillingMode?: DesktopStepfunBillingMode;
-  zAiBillingMode?: DesktopGlmCodingPlanBillingMode;
-  zhipuBillingMode?: DesktopGlmCodingPlanBillingMode;
+  siteId?: string;
+  /** Alibaba MaaS `{workspaceId}` template value. */
+  workspaceId?: string;
+  /** Wizard billing-plan option; materializes into the final apiBase, never persisted. */
+  billingPlanId?: string;
   awsRegion?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
+  /** Azure `{resourceName}` template value. */
   azureResourceName?: string;
+  /** Cloudflare `{accountId}` template value. */
   cloudflareAccountId?: string;
+  /** Materialized into the entry's literal `headers` (`cf-aig-gateway-id`), never a persisted scalar field. */
   cloudflareGatewayId?: string;
   vertexProject?: string;
   vertexLocation?: string;
@@ -294,23 +297,24 @@ export interface PreviewModelsResponse {
   fromCache: boolean;
 }
 
-/** Batch-write multiple model ids under the same endpoint (sharing an API Key), for bulk import via provider connections. */
+/** Batch-write multiple model ids under the same provider entry (sharing an API Key), for bulk import via provider connections. */
 export interface AddProviderModelsRequest {
-  groupId: string;
+  /** Existing entry id on reconnect; absent = computed by the wizard's materialization. */
+  providerId?: string;
   apiBase: string;
   apiKey: string;
   modelIds: string[];
   modelCatalog?: PreviewModelCatalogEntry[];
-  provider?: DesktopModelProvider;
+  provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
+  credentialKind?: DesktopProviderCredentialKind;
   /** Site-based providers such as SiliconFlow: cn / intl. */
-  providerSite?: DesktopProviderConnectSiteId;
-  alibabaWorkspaceId?: string;
-  /** Alibaba Token Plan; absent means the standard pay-as-you-go mode. */
-  alibabaBillingMode?: DesktopAlibabaBillingMode;
-  stepfunBillingMode?: DesktopStepfunBillingMode;
-  zAiBillingMode?: DesktopGlmCodingPlanBillingMode;
-  zhipuBillingMode?: DesktopGlmCodingPlanBillingMode;
+  siteId?: string;
+  /** Alibaba MaaS `{workspaceId}` template value. */
+  workspaceId?: string;
+  /** Wizard billing-plan option; materializes into the final apiBase, never persisted. */
+  billingPlanId?: string;
   awsRegion?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
@@ -321,14 +325,13 @@ export interface AddProviderModelsRequest {
   vertexLocation?: string;
   vertexClientEmail?: string;
   vertexPrivateKey?: string;
-  /** Custom provider connection display name; for `custom`, used to generate the groupId and written to `ProviderGroupV2.label`. */
-  customGroupLabel?: string;
+  /** Custom provider connection display name; for `custom`, also slugifies into the entry id and `ProviderEntry.label`. */
+  customProviderLabel?: string;
 }
 
-/** Attached to the snapshot: the most recent model-listing result for an apiBase in the local `model-catalog-cache` (for main-UI grouping and sorting). */
+/** Attached to the snapshot: the most recent model-listing result for a provider entry in the local `model-catalog-cache` (for main-UI grouping and sorting). */
 export interface DesktopModelCatalogHint {
-  provider?: DesktopModelProvider;
-  transportKind?: DesktopTransportKind;
+  providerId: string;
   apiBase: string;
   modelIds: string[];
   modelCatalog?: PreviewModelCatalogEntry[];
@@ -337,25 +340,25 @@ export interface DesktopModelCatalogHint {
 
 /** Same as CLI `model add`: add a model, write the key, and switch the current model to the new one. */
 export interface AddModelRequest {
-  groupId: string;
+  /** Existing entry id on reconnect; absent = computed by the wizard's materialization. */
+  providerId?: string;
   name: string;
   apiBase: string;
   apiKey: string;
-  /** Absent means not written to config (same as the legacy three-field version). */
-  provider?: DesktopModelProvider;
+  /** Absent means the entry's materialized default transport. */
+  provider?: string;
   transportKind?: DesktopTransportKind;
+  /** The wizard credential form; `apiKey` on a non-apiKey preset materializes the express base. */
+  credentialKind?: DesktopProviderCredentialKind;
   capabilities?: DesktopModelCapability[];
   /** Optional; positive integer; used e.g. as the denominator of the context usage ring. */
   contextLength?: number;
   /** Amazon Bedrock AWS region; required for `amazon-bedrock`. */
   awsRegion?: string;
   /** Site-based provider region (e.g. SiliconFlow cn / intl). */
-  providerSite?: DesktopProviderConnectSiteId;
-  alibabaWorkspaceId?: string;
-  alibabaBillingMode?: DesktopAlibabaBillingMode;
-  stepfunBillingMode?: DesktopStepfunBillingMode;
-  zAiBillingMode?: DesktopGlmCodingPlanBillingMode;
-  zhipuBillingMode?: DesktopGlmCodingPlanBillingMode;
+  siteId?: string;
+  workspaceId?: string;
+  billingPlanId?: string;
   /** Azure resource name; required for `azure`. */
   azureResourceName?: string;
   cloudflareAccountId?: string;
@@ -364,8 +367,12 @@ export interface AddModelRequest {
   vertexProject?: string;
   /** Google Vertex region (e.g. `us-central1`). */
   vertexLocation?: string;
-  /** Custom provider connection display name; for `custom`, used to generate the groupId (`slugifyProviderGroupLabel`). */
-  customGroupLabel?: string;
+  vertexClientEmail?: string;
+  vertexPrivateKey?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  /** Custom provider connection display name; for `custom`, used to generate the provider id (`slugifyCustomProviderLabel`). */
+  customProviderLabel?: string;
 }
 
 export interface RemoveModelRequest {
@@ -373,12 +380,12 @@ export interface RemoveModelRequest {
 }
 
 export interface RemoveProviderGroupRequest {
-  groupId: string;
+  providerId: string;
 }
 
 /** @deprecated Use RemoveProviderGroupRequest */
 export interface RemoveProviderModelsRequest {
-  provider: DesktopModelProvider;
+  provider: string;
 }
 
 export interface DesktopMcpCapabilityToggles {
@@ -1241,8 +1248,29 @@ export interface DesktopExtensionCssLayer {
   media?: string;
 }
 
+/**
+ * A provider entry as exposed to the renderer: the config `providers[]` shape minus credential
+ * channels (`apiKey` / `apiKeyKeyring` / `credentials` never cross the IPC boundary).
+ */
+export type DesktopProviderConfigEntry = Omit<
+  ProviderEntry,
+  "apiKey" | "apiKeyEnv" | "apiKeyKeyring" | "credentials"
+>;
+
+/**
+ * Picker row data for one built-in provider preset (id + fallback display label), delivered by the
+ * host snapshot in manifest order so the renderer never value-imports the preset manifest.
+ */
+export interface DesktopProviderPickerPreset {
+  id: string;
+  label: string;
+}
+
 export interface DesktopConfigSnapshot {
-  providerGroups: ProviderGroupV2[];
+  /** Provider entries with credential material stripped (never send secrets to the renderer). */
+  providers: DesktopProviderConfigEntry[];
+  /** Built-in provider preset picker rows (manifest order; the custom connection stays renderer-side). */
+  providerPickerPresets: DesktopProviderPickerPreset[];
   models: ModelProfileSnapshot[];
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
@@ -1582,53 +1610,39 @@ export type {
 } from "@spiritagent/host-internal/github/types";
 
 export interface ModelProfileSnapshot {
-  groupId?: string;
-  ref?: ModelRef;
+  /** Provider entry id (`providers[].id` in config.json). */
+  providerId: string;
+  ref: ModelRef;
   name: string;
   apiBase: string;
-  reasoningEffort: DesktopModelReasoningEffort;
+  reasoningEffort?: DesktopModelReasoningEffort;
   reasoningMode?: DesktopModelReasoningMode;
-  /** Vendor extended thinking; defaults to true. Only thinking-type models persist false. */
-  thinkingEnabled?: boolean;
-  /** Per-model service tier preference; absent means provider default behavior. */
+  /** Per-model service tier preference; absent means the declared default behavior. */
   serviceTier?: ModelServiceTier;
-  /** Aggregator upstream identity fact persisted from the model catalog (see `ModelEntryV2.upstreamProvider`). */
-  upstreamProvider?: string;
+  /** Declared service tier options (simple list or literal wire map) after inheritance. */
+  serviceTiers?: SpiritServiceTiersDeclaration;
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  supportedReasoningModes?: DesktopModelReasoningMode[];
   capabilities?: DesktopModelCapability[];
-  /** Persistence origin; absent means a legacy custom configuration. */
-  provider?: DesktopModelProvider;
-  /** Transport family; currently mainly used to distinguish Anthropic from OpenAI-compatible. */
+  /** Transport family; absent means `openai-compatible`. */
   transportKind?: DesktopTransportKind;
-  /** Site-based provider region (e.g. SiliconFlow cn / intl). */
-  providerSite?: DesktopProviderConnectSiteId;
-  /** Alibaba workspace ID; required for regions such as Singapore/Frankfurt. */
-  alibabaWorkspaceId?: string;
-  /** Alibaba Token Plan; absent means the standard pay-as-you-go mode. */
-  alibabaBillingMode?: DesktopAlibabaBillingMode;
-  /** StepFun Step Plan; absent means the standard API. */
-  stepfunBillingMode?: DesktopStepfunBillingMode;
-  /** Z.ai GLM Coding Plan; absent means the standard API. */
-  zAiBillingMode?: DesktopGlmCodingPlanBillingMode;
-  /** Zhipu AI GLM Coding Plan; absent means the standard API. */
-  zhipuBillingMode?: DesktopGlmCodingPlanBillingMode;
-  /** Amazon Bedrock AWS region (e.g. `us-east-1`); used only by `amazon-bedrock`. */
-  awsRegion?: string;
-  /** Azure resource name; used only by `azure`. */
-  azureResourceName?: string;
-  cloudflareAccountId?: string;
-  cloudflareGatewayId?: string;
-  /** Google Vertex GCP project ID; used only by `google-vertex-ai`. */
-  vertexProject?: string;
-  /** Google Vertex region; used only by `google-vertex-ai`. */
-  vertexLocation?: string;
   /** User-configured model context length (tokens); takes precedence over catalog resolution. */
   contextLength?: number;
-  /** Kimi Code `supports_thinking_type`; `only` means thinking is always on. */
+  /** Output token cap declared for the model. */
+  outputLimit?: number;
+  /** `only` means thinking is always on (no toggle UI). */
   supportsThinkingType?: "only";
-  /** Catalog flag: the model supports the `thinking.type` switch (e.g. Meituan LongCat). */
+  /** The model supports a thinking on/off switch (wire encoding declared by `thinkingSwitch` or the transport default). */
   supportsThinkingSwitch?: boolean;
-  /** Host snapshot: whether this model has a dedicated API Key entry in the system keychain (same as CLI; excludes environment variables and the global fallback). */
+  /** User thinking on/off state (model-level user state; absent = on). */
+  thinkingEnabled?: boolean;
+  /** Presence-only capability marker: the model's provider entry declares `providerTools`. */
+  hasProviderTools?: boolean;
+  /** Declared image API shape name from the provider entry (`imageApi`); feeds generation sub-configs. */
+  imageApi?: string;
+  /** Declared video API shape name from the provider entry (`videoApi`); feeds generation sub-configs. */
+  videoApi?: string;
+  /** Host snapshot: whether this model's provider entry has credentials in the system keychain (excludes environment variables). */
   keyConfigured?: boolean;
 }
 
@@ -1765,6 +1779,8 @@ export interface ToolBlockSnapshot {
   lspWriteDiagnostics?: LspWriteDiagnosticsUi;
   /** Provider tools like Moonshot Formula: forbid expanding to avoid showing encrypted gibberish. */
   suppressExpand?: boolean;
+  /** Declared provider tool entry label carried by the preview event; the card renders the MCP-style Calling/Called line with it. */
+  providerToolLabel?: string;
 }
 
 export interface MessageAuxSnapshot {

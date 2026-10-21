@@ -43,7 +43,7 @@ test("Google chat transport uses official provider, base URL, thinking config, a
         apiKey: "test-key",
         model: "gemini-2.5-flash",
         baseUrl: "https://generativelanguage.googleapis.com/v1beta",
-        llmVendor: "google",
+        sdk: "@ai-sdk/google",
         reasoningEffort: "low",
         workspaceRoot: process.cwd(),
       },
@@ -70,7 +70,7 @@ test("Google chat transport uses official provider, base URL, thinking config, a
     const trace = result.kind === "success" ? result.result.requestTrace[0] : undefined;
     assert.equal(
       trace && typeof trace === "object" && !Array.isArray(trace) ? trace.kind : undefined,
-      "google_sdk_generate_content",
+      "openai_sdk_chat_completions",
     );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
@@ -94,7 +94,7 @@ test("Google Gemini 3 models map reasoning effort to thinkingLevel", async () =>
         apiKey: "test-key",
         model: "gemini-3.1-pro-preview",
         baseUrl: "https://generativelanguage.googleapis.com/v1beta",
-        llmVendor: "google",
+        sdk: "@ai-sdk/google",
         reasoningEffort: "high",
         workspaceRoot: process.cwd(),
       },
@@ -132,7 +132,7 @@ test("Google code-completion profile sends thinkingBudget 0 for Gemini 2.5", asy
       apiKey: "test-key",
       model: "gemini-2.5-flash",
       baseUrl: "https://generativelanguage.googleapis.com/v1beta",
-      llmVendor: "google",
+      sdk: "@ai-sdk/google",
       reasoningEffort: "high",
       workspaceRoot: process.cwd(),
     }) as import("./openai-compat.js").OpenAiTransportConfig;

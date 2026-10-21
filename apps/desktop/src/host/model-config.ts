@@ -1,52 +1,38 @@
+import { type LlmModelCapabilities } from "@spiritagent/agent-core";
 import {
-  applyCodeCompletionTransportProfile,
-  resolveOpenResponsesReasoningSummary,
-  type AnthropicTransportConfig,
-  type LlmModelCapabilities,
-  type LlmTransportConfig,
-  type OpenResponsesSdkProvider,
-} from "@spiritagent/agent-core";
-import {
-  isXiaomiResponsesReasoningEffortContext,
-  resolveAnthropicTransportReasoningEffortForContext,
-  resolveGroqTransportReasoningEffortForContext,
-  resolveOpenAiTransportReasoningEffortForContext,
-  resolveOpenAiTransportReasoningModeForContext,
-  type ModelReasoningEffortContext,
-} from "@spiritagent/agent-core/reasoning-effort";
-import {
-  modelSupportsThinkingSwitch,
-  resolveAnthropicExplicitThinkingConfig,
-  resolveVendorExtendedThinking,
-  shouldPinReasoningEffortToDefault,
-} from "@spiritagent/agent-core/model-thinking-controls";
-import { parseModelServiceTierConfig } from "@spiritagent/agent-core/model-service-tier";
-import {
-  listProviderModels,
-  listProviderConnectSiteOptions,
-  providerSupportsSiteSelection,
-  resolveProviderConnectApiBase,
-  bedrockApiBaseFromRegion,
-  bedrockMantleApiBaseFromRegion,
-  isBedrockMantleOpenAiModel,
-  azureApiBaseFromResourceName,
-  cloudflareAiGatewayApiBaseFromAccountId,
-  vertexApiBaseFromProjectAndLocation,
+  dedupeProviderListedModelEntries,
+  listAnthropicModels,
+  listCohereModels,
+  listFireworksAiModels,
+  listGoogleModels,
+  listHuggingFaceModels,
+  listMeituanModels,
+  listMinimaxModels,
+  listSiliconFlowModels,
+  resolveModelCatalogParser,
+  type ModelCatalogParserDescriptor,
   type ProviderListedModelEntry,
+} from "@spiritagent/agent-core/model-catalog";
+import { extractAwsRegionFromBedrockApiBase } from "@spiritagent/agent-core/model-catalog/bedrock-region";
+import { listBedrockModels } from "@spiritagent/agent-core/model-catalog/bedrock-models";
+import { extractVertexProjectAndLocationFromApiBase } from "@spiritagent/agent-core/model-catalog/google-vertex-endpoints";
+import { listVertexModels } from "@spiritagent/agent-core/model-catalog/google-vertex-models";
+import {
+  findProviderPreset,
+  type ProviderPresetCatalog,
+} from "@spiritagent/agent-core/provider-presets";
+import {
+  providerInternalSlotAccount,
+  type ProviderOptions,
+  type SpiritTransportKind,
 } from "@spiritagent/host-internal";
 
 import type {
   AddProviderModelsRequest,
-  DesktopAgentMode,
   DesktopModelCapability,
-  DesktopModelCatalogHint,
-  DesktopModelProvider,
   DesktopTransportKind,
-  ModelProfileSnapshot,
   PreviewModelCatalogEntry,
 } from "../types.js";
-import type { BedrockProviderCredentials } from "./provider-api-key.js";
-import type { GoogleVertexProviderCredentials } from "./provider-api-key.js";
 import {
   isModelCatalogCacheFresh,
   readModelCatalogCache,
@@ -54,580 +40,22 @@ import {
 } from "./model-catalog-cache.js";
 import { invalidateModelCatalogHintsMemo } from "./snapshot.js";
 import {
+  catalogParserNameForProvider,
   previewCatalogMapForTransport,
   previewModelCatalogForTransport,
   usesProviderListedModelCatalogMetadata,
 } from "./model-catalog-metadata.js";
-import { findModelCatalogEntry } from "../lib/model-catalog-detail.js";
 import {
   resolveComposerDirectMediaTool,
   type DirectMediaTool,
 } from "../lib/composer-direct-media.js";
-import { DEFAULT_API_BASE, defaultCustomModelCapabilities } from "./storage.js";
+import { getKeyringPassword } from "./keyring-secret.js";
+import { defaultCustomModelCapabilities } from "./storage.js";
 
 export { resolveComposerDirectMediaTool, type DirectMediaTool };
 
-function inferProviderSiteFromStoredApiBase(
-  profile: Pick<ModelProfileSnapshot, "provider" | "transportKind" | "apiBase">,
-): ModelProfileSnapshot["providerSite"] | undefined {
-  const provider = profile.provider;
-  if (!provider || !providerSupportsSiteSelection(provider)) {
-    return undefined;
-  }
-  const storedApiBase = profile.apiBase?.trim();
-  if (!storedApiBase) {
-    return undefined;
-  }
-  const transportKind = resolveDesktopTransportKind(profile);
-  for (const option of listProviderConnectSiteOptions(provider)) {
-    const siteApiBase = resolveProviderConnectApiBase(provider, transportKind, { site: option.id });
-    if (storedApiBase === siteApiBase) {
-      return option.id as ModelProfileSnapshot["providerSite"];
-    }
-  }
-  return undefined;
-}
-
-export function resolveProfileApiBase(
-  profile: Pick<
-    ModelProfileSnapshot,
-    | "name"
-    | "provider"
-    | "transportKind"
-    | "apiBase"
-    | "awsRegion"
-    | "azureResourceName"
-    | "cloudflareAccountId"
-    | "cloudflareGatewayId"
-    | "vertexProject"
-    | "vertexLocation"
-    | "providerSite"
-    | "alibabaWorkspaceId"
-    | "alibabaBillingMode"
-    | "stepfunBillingMode"
-    | "zAiBillingMode"
-    | "zhipuBillingMode"
-  >,
-): string {
-  if (profile.provider === "amazon-bedrock") {
-    const region = profile.awsRegion?.trim();
-    if (region) {
-      if (isBedrockMantleOpenAiModel(profile.name)) {
-        return bedrockMantleApiBaseFromRegion(region);
-      }
-      return bedrockApiBaseFromRegion(region);
-    }
-  }
-
-  if (profile.provider === "google-vertex-ai") {
-    const project = profile.vertexProject?.trim();
-    const location = profile.vertexLocation?.trim();
-    if (project && location) {
-      return vertexApiBaseFromProjectAndLocation(project, location);
-    }
-    return profile.apiBase?.trim() || "";
-  }
-
-  if (profile.provider === "azure") {
-    const resourceName = profile.azureResourceName?.trim();
-    if (resourceName) {
-      return azureApiBaseFromResourceName(resourceName);
-    }
-    const trimmed = profile.apiBase?.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-    throw new Error("Azure model is missing the azureResourceName configuration.");
-  }
-
-  if (profile.provider === "cloudflare-ai-gateway") {
-    const accountId = profile.cloudflareAccountId?.trim();
-    if (accountId) {
-      return cloudflareAiGatewayApiBaseFromAccountId(accountId);
-    }
-    const trimmed = profile.apiBase?.trim();
-    if (trimmed) {
-      return trimmed;
-    }
-    throw new Error(
-      "Cloudflare AI Gateway model is missing the cloudflareAccountId configuration.",
-    );
-  }
-
-  if (profile.provider && profile.provider !== "custom") {
-    const providerSite = profile.providerSite ?? inferProviderSiteFromStoredApiBase(profile);
-    return defaultApiBaseForTransport(
-      profile.provider,
-      resolveDesktopTransportKind(profile),
-      providerSite,
-      profile.alibabaWorkspaceId,
-      profile.alibabaBillingMode,
-      profile.stepfunBillingMode,
-      profile.zAiBillingMode,
-      profile.zhipuBillingMode,
-    );
-  }
-
-  const trimmed = profile.apiBase?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : DEFAULT_API_BASE;
-}
-
-export function resolveDesktopTransportKind(
-  profile?: Pick<ModelProfileSnapshot, "provider" | "transportKind">,
-): DesktopTransportKind {
-  const requested = profile?.transportKind;
-  if (requested) {
-    if (
-      (profile?.provider === "google" || profile?.provider === "google-vertex-ai") &&
-      (requested === "open-responses" || requested === "anthropic")
-    ) {
-      return "openai-compatible";
-    }
-    if (
-      profile?.provider === "azure" ||
-      profile?.provider === "openai" ||
-      profile?.provider === "deepseek"
-    ) {
-      return "open-responses";
-    }
-    return requested;
-  }
-
-  return profile?.provider === "anthropic"
-    ? "anthropic"
-    : profile?.provider === "minimax"
-      ? "anthropic"
-      : profile?.provider === "amazon-bedrock"
-        ? "bedrock"
-        : profile?.provider === "azure" ||
-            profile?.provider === "openai" ||
-            profile?.provider === "deepseek"
-          ? "open-responses"
-          : "openai-compatible";
-}
-
-export function defaultApiBaseForTransport(
-  provider?: DesktopModelProvider,
-  transportKind?: DesktopTransportKind,
-  providerSite?: ModelProfileSnapshot["providerSite"],
-  alibabaWorkspaceId?: string,
-  alibabaBillingMode?: ModelProfileSnapshot["alibabaBillingMode"],
-  stepfunBillingMode?: ModelProfileSnapshot["stepfunBillingMode"],
-  zAiBillingMode?: ModelProfileSnapshot["zAiBillingMode"],
-  zhipuBillingMode?: ModelProfileSnapshot["zhipuBillingMode"],
-): string {
-  if (!provider) {
-    return DEFAULT_API_BASE;
-  }
-
-  return resolveProviderConnectApiBase(
-    provider,
-    transportKind ?? resolveDesktopTransportKind({ provider }),
-    {
-      ...(alibabaBillingMode === "token-plan" ? { billingMode: "token-plan" } : {}),
-      ...(stepfunBillingMode === "step-plan" ? { stepfunBillingMode: "step-plan" } : {}),
-      ...(zAiBillingMode === "glm-coding-plan" ? { zAiBillingMode: "glm-coding-plan" } : {}),
-      ...(zhipuBillingMode === "glm-coding-plan" ? { zhipuBillingMode: "glm-coding-plan" } : {}),
-      ...(alibabaBillingMode === "token-plan"
-        ? {}
-        : {
-            ...(providerSite ? { site: providerSite } : {}),
-            ...(alibabaWorkspaceId?.trim() ? { workspaceId: alibabaWorkspaceId.trim() } : {}),
-          }),
-    },
-  );
-}
-
-export function reasoningProviderForTransport(
-  provider: DesktopModelProvider | undefined,
-  transportKind: DesktopTransportKind,
-): DesktopModelProvider | undefined {
-  if (transportKind === "anthropic") {
-    return "anthropic";
-  }
-
-  if (transportKind === "open-responses" && provider === "openai") {
-    return "openai";
-  }
-
-  return provider;
-}
-
-export function openAiCompatibleVendorFromProvider(
-  provider?: DesktopModelProvider,
-): Exclude<DesktopModelProvider, "anthropic" | "amazon-bedrock"> | undefined {
-  return provider && provider !== "anthropic" && provider !== "amazon-bedrock"
-    ? provider
-    : undefined;
-}
-
-type AgentModelProfileFields = Pick<
-  ModelProfileSnapshot,
-  | "provider"
-  | "transportKind"
-  | "reasoningEffort"
-  | "reasoningMode"
-  | "supportedReasoningEfforts"
-  | "thinkingEnabled"
-  | "supportsThinkingType"
-  | "supportsThinkingSwitch"
->;
-
-function buildAgentModelReasoningContext(
-  profile: AgentModelProfileFields | undefined,
-  model: string,
-): ModelReasoningEffortContext {
-  return {
-    ...(profile?.provider ? { provider: profile.provider } : {}),
-    ...(profile?.transportKind ? { transportKind: profile.transportKind } : {}),
-    ...(profile?.supportedReasoningEfforts !== undefined
-      ? { supportedEfforts: profile.supportedReasoningEfforts }
-      : {}),
-    ...(profile?.supportsThinkingType
-      ? { supportsThinkingType: profile.supportsThinkingType }
-      : {}),
-    ...(profile?.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
-    model,
-  };
-}
-
-function resolveAgentOpenAiReasoningEffort(
-  profile: AgentModelProfileFields | undefined,
-  model: string,
-  transportKind: NonNullable<ModelReasoningEffortContext["transportKind"]>,
-) {
-  const context = {
-    ...buildAgentModelReasoningContext(profile, model),
-    transportKind,
-  };
-  const thinkingEnabled = profile?.thinkingEnabled !== false;
-  if (isXiaomiResponsesReasoningEffortContext(context) && profile?.thinkingEnabled === false) {
-    return "none";
-  }
-  if (
-    modelSupportsThinkingSwitch(context) &&
-    shouldPinReasoningEffortToDefault(thinkingEnabled, context)
-  ) {
-    return undefined;
-  }
-  if (context.provider === "groq") {
-    return resolveGroqTransportReasoningEffortForContext(profile?.reasoningEffort, context);
-  }
-  return resolveOpenAiTransportReasoningEffortForContext(profile?.reasoningEffort, context);
-}
-
-function resolveAgentOpenAiReasoningMode(
-  profile: AgentModelProfileFields | undefined,
-  model: string,
-  transportKind: NonNullable<ModelReasoningEffortContext["transportKind"]>,
-) {
-  const context = {
-    ...buildAgentModelReasoningContext(profile, model),
-    transportKind,
-  };
-  return resolveOpenAiTransportReasoningModeForContext(profile?.reasoningMode, context);
-}
-
-function resolveAgentVendorExtendedThinking(
-  profile: AgentModelProfileFields | undefined,
-  model: string,
-): boolean | undefined {
-  const context = buildAgentModelReasoningContext(profile, model);
-  if (!modelSupportsThinkingSwitch(context)) {
-    return undefined;
-  }
-  return resolveVendorExtendedThinking(profile?.thinkingEnabled);
-}
-
-function resolveAgentAnthropicExplicitThinking(
-  profile: AgentModelProfileFields | undefined,
-  model: string,
-): AnthropicTransportConfig["thinking"] | undefined {
-  const context = buildAgentModelReasoningContext(profile, model);
-  return resolveAnthropicExplicitThinkingConfig(profile?.thinkingEnabled, context);
-}
-
-export function buildPrimaryTransportConfig(input: {
-  apiKey: string;
-  model: string;
-  baseUrl: string;
-  workspaceRoot: string;
-  agentMode?: DesktopAgentMode;
-  bedrockCredentials?: BedrockProviderCredentials;
-  googleVertexCredentials?: GoogleVertexProviderCredentials;
-  profile?: Pick<
-    ModelProfileSnapshot,
-    | "provider"
-    | "transportKind"
-    | "capabilities"
-    | "reasoningEffort"
-    | "reasoningMode"
-    | "supportedReasoningEfforts"
-    | "thinkingEnabled"
-    | "awsRegion"
-    | "azureResourceName"
-    | "cloudflareAccountId"
-    | "cloudflareGatewayId"
-    | "vertexProject"
-    | "vertexLocation"
-    | "supportsThinkingType"
-    | "supportsThinkingSwitch"
-    | "serviceTier"
-    | "upstreamProvider"
-  >;
-}): LlmTransportConfig {
-  const agentMode = input.agentMode ?? "agent";
-  const transportKind = resolveDesktopTransportKind(input.profile);
-  // Validates a configured tier against the provider/model capability matrix; unknown or
-  // unsupported values throw ModelServiceTierConfigError and propagate to the caller
-  // (mirrors host-internal buildTransportFromProfile; the config file is left untouched).
-  const serviceTier = parseModelServiceTierConfig(input.profile?.serviceTier, {
-    ...(input.profile?.provider ? { provider: input.profile.provider } : {}),
-    model: input.model,
-    transportKind,
-    ...(input.profile?.upstreamProvider
-      ? { upstreamProvider: input.profile.upstreamProvider }
-      : {}),
-    ...(input.profile?.vertexLocation ? { vertexLocation: input.profile.vertexLocation } : {}),
-  });
-  const upstreamProvider = input.profile?.upstreamProvider;
-
-  if (input.profile?.provider === "amazon-bedrock" && isBedrockMantleOpenAiModel(input.model)) {
-    const region = input.profile.awsRegion?.trim();
-    if (!region) {
-      throw new Error("Amazon Bedrock model is missing the AWS region configuration.");
-    }
-    const bedrockCredentials = input.bedrockCredentials;
-    const apiKey = input.apiKey.trim() || bedrockCredentials?.apiKey?.trim();
-    const accessKeyId = bedrockCredentials?.accessKeyId?.trim();
-    const secretAccessKey = bedrockCredentials?.secretAccessKey?.trim();
-    const sessionToken = bedrockCredentials?.sessionToken?.trim();
-    if (!apiKey && !(accessKeyId && secretAccessKey)) {
-      throw new Error("Amazon Bedrock Mantle model requires a Bearer API Key or IAM credentials.");
-    }
-    const normalizedReasoningEffort = resolveOpenAiTransportReasoningEffortForContext(
-      input.profile?.reasoningEffort,
-      {
-        provider: "openai",
-        transportKind: "open-responses",
-        ...(input.profile?.supportedReasoningEfforts !== undefined
-          ? { supportedEfforts: input.profile.supportedReasoningEfforts }
-          : {}),
-        model: input.model,
-      },
-    );
-    const mantleBaseUrl = bedrockMantleApiBaseFromRegion(region);
-    const reasoningSummary = resolveOpenResponsesReasoningSummary({
-      llmVendor: "openai",
-      model: input.model,
-      baseUrl: mantleBaseUrl,
-      ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-    });
-
-    return {
-      transportKind: "open-responses",
-      apiKey: apiKey ?? "",
-      model: input.model,
-      baseUrl: mantleBaseUrl,
-      workspaceRoot: input.workspaceRoot,
-      agentMode,
-      responsesProvider: "openai",
-      llmVendor: "openai",
-      ...(input.profile?.capabilities
-        ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-        : {}),
-      ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-      ...(reasoningSummary ? { reasoningSummary } : {}),
-      ...(!apiKey && accessKeyId && secretAccessKey
-        ? {
-            bedrockMantleIam: {
-              region,
-              accessKeyId,
-              secretAccessKey,
-              ...(sessionToken ? { sessionToken } : {}),
-            },
-          }
-        : {}),
-    };
-  }
-
-  if (transportKind === "open-responses") {
-    const llmVendor = openAiCompatibleVendorFromProvider(input.profile?.provider);
-    const normalizedReasoningEffort = resolveAgentOpenAiReasoningEffort(
-      input.profile,
-      input.model,
-      "open-responses",
-    );
-    const normalizedReasoningMode = resolveAgentOpenAiReasoningMode(
-      input.profile,
-      input.model,
-      "open-responses",
-    );
-    const responsesProvider: OpenResponsesSdkProvider | undefined =
-      input.profile?.provider === "openai" || input.profile?.provider === "fireworks-ai"
-        ? "openai"
-        : input.profile?.provider === "xai"
-          ? "xai"
-          : input.profile?.provider === "vercel-ai-gateway" ||
-              input.profile?.provider === "cloudflare-ai-gateway" ||
-              input.profile?.provider === "openrouter"
-            ? undefined
-            : "open-responses-compatible";
-    const reasoningSummary = resolveOpenResponsesReasoningSummary({
-      ...(llmVendor ? { llmVendor } : {}),
-      model: input.model,
-      ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-    });
-    const vendorExtendedThinking = resolveAgentVendorExtendedThinking(input.profile, input.model);
-    const cloudflareGatewayId = input.profile?.cloudflareGatewayId?.trim();
-
-    return {
-      transportKind: "open-responses",
-      apiKey: input.apiKey,
-      model: input.model,
-      baseUrl: input.baseUrl,
-      workspaceRoot: input.workspaceRoot,
-      agentMode,
-      ...(responsesProvider ? { responsesProvider } : {}),
-      ...(llmVendor ? { llmVendor } : {}),
-      ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
-      ...(serviceTier ? { serviceTier } : {}),
-      ...(upstreamProvider ? { upstreamProvider } : {}),
-      ...(input.profile?.capabilities
-        ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-        : {}),
-      ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-      ...(normalizedReasoningMode ? { reasoningMode: normalizedReasoningMode } : {}),
-      ...(reasoningSummary ? { reasoningSummary } : {}),
-      ...(vendorExtendedThinking === false ? { vendorExtendedThinking: false as const } : {}),
-    };
-  }
-
-  if (transportKind === "anthropic") {
-    const supportedAnthropicEfforts = normalizeAnthropicSupportedEfforts(
-      input.profile?.supportedReasoningEfforts,
-    );
-    const anthropicEffort = resolveAnthropicTransportReasoningEffortForContext(
-      input.profile?.reasoningEffort,
-      {
-        ...(input.profile?.provider ? { provider: input.profile.provider } : {}),
-        ...(input.profile?.transportKind ? { transportKind: input.profile.transportKind } : {}),
-        ...(input.profile?.supportedReasoningEfforts !== undefined
-          ? { supportedEfforts: input.profile.supportedReasoningEfforts }
-          : {}),
-        model: input.model,
-      },
-    );
-    const explicitThinking = resolveAgentAnthropicExplicitThinking(input.profile, input.model);
-    const vendorExtendedThinking = resolveAgentVendorExtendedThinking(input.profile, input.model);
-    const cloudflareGatewayId = input.profile?.cloudflareGatewayId?.trim();
-    const llmVendor = openAiCompatibleVendorFromProvider(input.profile?.provider);
-    const meituanThinkingSwitch =
-      llmVendor === "meituan" && input.profile?.supportsThinkingSwitch === true;
-    return {
-      transportKind: "anthropic",
-      apiKey: input.apiKey,
-      model: input.model,
-      baseUrl: input.baseUrl,
-      workspaceRoot: input.workspaceRoot,
-      ...(llmVendor ? { llmVendor } : {}),
-      ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
-      ...(serviceTier ? { serviceTier } : {}),
-      ...(input.profile?.capabilities
-        ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-        : {}),
-      ...(supportedAnthropicEfforts !== undefined
-        ? { supportedEfforts: supportedAnthropicEfforts }
-        : {}),
-      ...(anthropicEffort ? { effort: anthropicEffort } : {}),
-      ...(!meituanThinkingSwitch && explicitThinking ? { thinking: explicitThinking } : {}),
-      ...(input.profile?.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
-      ...(vendorExtendedThinking === false ? { vendorExtendedThinking: false as const } : {}),
-    };
-  }
-
-  if (transportKind === "bedrock") {
-    const region = input.profile?.awsRegion?.trim();
-    if (!region) {
-      throw new Error("Amazon Bedrock model is missing the AWS region configuration.");
-    }
-    const bedrockCredentials = input.bedrockCredentials;
-    const apiKey = input.apiKey.trim() || bedrockCredentials?.apiKey?.trim();
-    const accessKeyId = bedrockCredentials?.accessKeyId?.trim();
-    const secretAccessKey = bedrockCredentials?.secretAccessKey?.trim();
-    const normalizedReasoningEffort = resolveOpenAiTransportReasoningEffortForContext(
-      input.profile?.reasoningEffort,
-      {
-        ...(input.profile?.provider ? { provider: input.profile.provider } : {}),
-        transportKind: "bedrock",
-        ...(input.profile?.supportedReasoningEfforts !== undefined
-          ? { supportedEfforts: input.profile.supportedReasoningEfforts }
-          : {}),
-        model: input.model,
-      },
-    );
-    return {
-      transportKind: "bedrock",
-      model: input.model,
-      region,
-      ...(apiKey ? { apiKey } : {}),
-      ...(accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : {}),
-      baseUrl: input.baseUrl,
-      workspaceRoot: input.workspaceRoot,
-      ...(input.profile?.capabilities
-        ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-        : {}),
-      ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-    };
-  }
-
-  const llmVendor = openAiCompatibleVendorFromProvider(input.profile?.provider);
-  const normalizedReasoningEffort = resolveAgentOpenAiReasoningEffort(
-    input.profile,
-    input.model,
-    "openai-compatible",
-  );
-  const normalizedReasoningMode = resolveAgentOpenAiReasoningMode(
-    input.profile,
-    input.model,
-    "openai-compatible",
-  );
-  const vendorExtendedThinking = resolveAgentVendorExtendedThinking(input.profile, input.model);
-  const vertexCredentials = input.googleVertexCredentials;
-  const vertexProject = input.profile?.vertexProject?.trim();
-  const vertexLocation = input.profile?.vertexLocation?.trim();
-  const vertexClientEmail = vertexCredentials?.clientEmail?.trim();
-  const vertexPrivateKey = vertexCredentials?.privateKey?.trim();
-  const cloudflareGatewayId = input.profile?.cloudflareGatewayId?.trim();
-  return {
-    apiKey: input.apiKey,
-    model: input.model,
-    baseUrl: input.baseUrl,
-    workspaceRoot: input.workspaceRoot,
-    ...(llmVendor ? { llmVendor } : {}),
-    ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
-    ...(serviceTier ? { serviceTier } : {}),
-    ...(upstreamProvider ? { upstreamProvider } : {}),
-    ...(vertexProject ? { vertexProject } : {}),
-    ...(vertexLocation ? { vertexLocation } : {}),
-    ...(vertexClientEmail ? { vertexClientEmail } : {}),
-    ...(vertexPrivateKey ? { vertexPrivateKey } : {}),
-    ...(input.profile?.capabilities
-      ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-      : {}),
-    ...(normalizedReasoningEffort ? { reasoningEffort: normalizedReasoningEffort } : {}),
-    ...(normalizedReasoningMode ? { reasoningMode: normalizedReasoningMode } : {}),
-    ...(vendorExtendedThinking === false ? { vendorExtendedThinking: false as const } : {}),
-    ...(input.profile?.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
-  };
-}
-
-/** Code completion uses a lightweight model; disabling the thinking policy is handled centrally by the agent-core transport-profile. */
-export function buildCodeCompletionTransportConfig(
-  input: Parameters<typeof buildPrimaryTransportConfig>[0],
-): LlmTransportConfig {
-  return applyCodeCompletionTransportProfile(buildPrimaryTransportConfig(input));
-}
+/** Keyring service for internal provider credential accounts (`Spirit`, shared with CLI). */
+const KEYRING_SERVICE = "Spirit";
 
 export function modelCapabilitiesFromConfig(
   capabilities: readonly DesktopModelCapability[],
@@ -635,164 +63,239 @@ export function modelCapabilitiesFromConfig(
   return {
     ...(capabilities.includes("languageModel") ? { languageModel: true } : {}),
     ...(capabilities.includes("image") ? { imageInput: true } : {}),
+    ...(capabilities.includes("audio") ? { audioInput: true } : {}),
     ...(capabilities.includes("video") ? { videoInput: true } : {}),
     ...(capabilities.includes("imageGeneration") ? { imageGeneration: true } : {}),
   };
 }
 
-function normalizeAnthropicSupportedEfforts(
-  efforts?: readonly string[],
-): AnthropicTransportConfig["supportedEfforts"] {
-  if (efforts === undefined) {
-    return undefined;
+/**
+ * The catalog descriptor driving a scope's listing: the preset manifest's `catalog` block for
+ * built-in providers; custom entries fall back to the generic descriptor of their transport.
+ */
+export function catalogDescriptorForProvider(input: {
+  providerId?: string;
+  transportKind?: DesktopTransportKind;
+}): ProviderPresetCatalog | undefined {
+  const preset = input.providerId ? findProviderPreset(input.providerId) : undefined;
+  if (preset) {
+    return preset.catalog;
   }
-
-  return efforts.filter(
-    (effort): effort is NonNullable<AnthropicTransportConfig["supportedEfforts"]>[number] =>
-      effort === "low" ||
-      effort === "medium" ||
-      effort === "high" ||
-      effort === "xhigh" ||
-      effort === "max",
-  );
+  const parser = catalogParserNameForProvider(input);
+  return parser !== undefined ? { parser, endpoint: "/models" } : undefined;
 }
 
-export function supportsImageGeneration(model: {
-  capabilities?: readonly DesktopModelCapability[];
-}): boolean {
-  return model.capabilities?.includes("imageGeneration") === true;
-}
-
-export function supportsVideoGeneration(model: {
-  capabilities?: readonly DesktopModelCapability[];
-}): boolean {
-  return model.capabilities?.includes("videoGeneration") === true;
-}
-
-export function buildImageGenerationSubConfig(input: {
-  profile: Pick<
-    ModelProfileSnapshot,
-    "name" | "apiBase" | "provider" | "capabilities" | "transportKind"
-  >;
+export interface CatalogFetchInput {
+  /** Provider entry id (preset id or custom slug); drives cache keying and the descriptor lookup. */
+  providerId?: string;
+  transportKind: SpiritTransportKind;
+  /** The materialized connect base (config `apiBase` — the runtime truth). */
+  apiBase: string;
+  /** Bearer key; the anthropic transport shape sends it as `x-api-key` instead. */
   apiKey: string;
-  inferenceProvider?: string;
-}) {
-  const imageGenerationVendor = openAiCompatibleVendorFromProvider(input.profile.provider);
-  return {
-    apiKey: input.apiKey,
-    model: input.profile.name,
-    baseUrl: resolveProfileApiBase(input.profile),
-    ...(imageGenerationVendor ? { llmVendor: imageGenerationVendor } : {}),
-    ...(input.profile.capabilities
-      ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-      : {}),
-    ...(input.inferenceProvider ? { inferenceProvider: input.inferenceProvider } : {}),
-  };
+  /** Transport options (`awsRegion` / vertex `project` / `location`) for SDK-sourced listings. */
+  options?: ProviderOptions;
+  /** IAM slots for bedrock listings. */
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  /** Service-account slots for vertex listings. */
+  vertexClientEmail?: string;
+  vertexPrivateKey?: string;
+  signal?: AbortSignal;
 }
 
-export function buildVideoGenerationSubConfig(input: {
-  profile: Pick<
-    ModelProfileSnapshot,
-    "name" | "apiBase" | "provider" | "capabilities" | "transportKind"
-  >;
-  apiKey: string;
-  inferenceProvider?: string;
-}) {
-  const videoGenerationVendor = openAiCompatibleVendorFromProvider(input.profile.provider);
-  return {
-    apiKey: input.apiKey,
-    model: input.profile.name,
-    baseUrl: resolveProfileApiBase(input.profile),
-    ...(videoGenerationVendor ? { llmVendor: videoGenerationVendor } : {}),
-    ...(input.profile.capabilities
-      ? { modelCapabilities: modelCapabilitiesFromConfig(input.profile.capabilities) }
-      : {}),
-    ...(input.inferenceProvider ? { inferenceProvider: input.inferenceProvider } : {}),
-  };
+type CatalogLister = (
+  input: Pick<CatalogFetchInput, "apiBase" | "apiKey" | "signal">,
+) => Promise<ProviderListedModelEntry[]>;
+
+/**
+ * Listing shapes whose fetch is more than one bare GET (pagination, typed sub-listings,
+ * per-model detail fetches, listing-base rewrites, non-Bearer auth) keep their exported
+ * agent-core listers; every other parser is fetched as `GET {apiBase}{endpoint}` + `parseList`.
+ */
+const SPECIALIZED_CATALOG_LISTERS: Readonly<Record<string, CatalogLister>> = {
+  "anthropic-models": (input) =>
+    listAnthropicModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "google-gemini-models": (input) =>
+    listGoogleModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "siliconflow-models": (input) =>
+    listSiliconFlowModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "fireworks-gateway-models": (input) =>
+    listFireworksAiModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "cohere-models": (input) => listCohereModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "huggingface-models": (input) =>
+    listHuggingFaceModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "meituan-models": (input) => listMeituanModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+  "minimax-models": (input) => listMinimaxModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+};
+
+function catalogListingUrl(apiBase: string, endpoint: string): string {
+  if (/^https?:\/\//u.test(endpoint)) {
+    return endpoint;
+  }
+  return `${apiBase.replace(/\/+$/u, "")}${endpoint}`;
 }
 
-export function buildMediaOnlyTransportConfig(
-  toolName: DirectMediaTool,
-  input: {
-    profile: Pick<ModelProfileSnapshot, "name" | "apiBase" | "provider" | "capabilities">;
-    apiKey: string;
-  },
-): LlmTransportConfig {
-  const shell = {
-    transportKind: "openai-compatible" as const,
-    apiKey: input.apiKey,
-    model: input.profile.name,
-    baseUrl: resolveProfileApiBase(input.profile),
-  };
-
-  if (toolName === "generate_image") {
-    return {
-      ...shell,
-      imageGeneration: buildImageGenerationSubConfig(input),
-    } as LlmTransportConfig;
+async function fetchCatalogJson(
+  url: string,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<unknown> {
+  const headers: Record<string, string> = {};
+  const trimmedKey = apiKey.trim();
+  if (trimmedKey) {
+    headers["Authorization"] = `Bearer ${trimmedKey}`;
   }
-
-  return {
-    ...shell,
-    videoGeneration: buildVideoGenerationSubConfig(input),
-  } as LlmTransportConfig;
+  const init: RequestInit = { method: "GET", headers };
+  if (signal !== undefined) {
+    init.signal = signal;
+  }
+  let response: Response;
+  try {
+    response = await fetch(url, init);
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(`Model list request failed: ${message}`, { cause });
+  }
+  const text = await response.text();
+  let json: unknown;
+  try {
+    json = text.length > 0 ? (JSON.parse(text) as unknown) : {};
+  } catch {
+    throw new Error(
+      response.ok
+        ? "Model list response is not valid JSON."
+        : `Model listing failed (HTTP ${String(response.status)}).`,
+    );
+  }
+  if (!response.ok) {
+    const record =
+      typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {};
+    const errorMessage =
+      typeof (record["error"] as { message?: unknown } | undefined)?.message === "string"
+        ? ((record["error"] as { message: string }).message as string)
+        : undefined;
+    throw new Error(
+      errorMessage && errorMessage.trim().length > 0
+        ? `Model listing failed (HTTP ${String(response.status)}): ${errorMessage.trim()}`
+        : `Model listing failed (HTTP ${String(response.status)}).`,
+    );
+  }
+  return json;
 }
 
-function resolveMediaInferenceProvider(
-  profile: ModelProfileSnapshot,
-  catalogHints: readonly DesktopModelCatalogHint[] | undefined,
-): string | undefined {
-  return findModelCatalogEntry(profile, catalogHints)?.inferenceProvider;
+/** Generic descriptor-composed fetch: list (plus typed sub-listings / per-model detail). */
+async function fetchCatalogEntriesWithDescriptor(
+  input: CatalogFetchInput,
+  descriptor: ModelCatalogParserDescriptor,
+  endpoint: string,
+): Promise<ProviderListedModelEntry[]> {
+  const base = descriptor.resolveListingBase?.(input.apiBase) ?? input.apiBase;
+  const url = catalogListingUrl(base, endpoint);
+  const queries = descriptor.queries;
+  let entries: ProviderListedModelEntry[];
+  if (queries && queries.length > 0) {
+    const all: ProviderListedModelEntry[] = [];
+    for (const query of queries) {
+      const json = await fetchCatalogJson(`${url}?${query.query}`, input.apiKey, input.signal);
+      all.push(...query.parse(json));
+    }
+    entries = descriptor.merge ? descriptor.merge(all) : dedupeProviderListedModelEntries(all);
+  } else {
+    const json = await fetchCatalogJson(url, input.apiKey, input.signal);
+    entries = descriptor.parseList(json);
+  }
+
+  if (descriptor.parseDetail) {
+    const parseDetail = descriptor.parseDetail;
+    entries = await Promise.all(
+      entries.map(async (entry) => {
+        try {
+          const detailJson = await fetchCatalogJson(
+            catalogListingUrl(base, `${endpoint}/${encodeURIComponent(entry.id)}`),
+            input.apiKey,
+            input.signal,
+          );
+          return parseDetail(detailJson) ?? entry;
+        } catch {
+          return entry;
+        }
+      }),
+    );
+  }
+
+  return dedupeProviderListedModelEntries(entries).sort((a, b) => a.id.localeCompare(b.id));
 }
 
-export function attachVideoGenerationToTransportConfig(
-  transportConfig: LlmTransportConfig,
-  input: {
-    profile?: ModelProfileSnapshot;
-    apiKey?: string;
-    catalogHints?: readonly DesktopModelCatalogHint[];
-  },
-): LlmTransportConfig {
-  if (!input.profile || !input.apiKey || !supportsVideoGeneration(input.profile)) {
-    return transportConfig;
+/**
+ * Fetches the upstream model listing for a catalog scope. Keys on the catalog parser name
+ * (an API-shape mechanism), never on a provider identity: the preset manifest maps an entry to
+ * its parser via `catalog`, and SDK-sourced listings (Bedrock / Vertex) read their transport
+ * options + credential slots.
+ */
+export async function fetchCatalogModels(
+  input: CatalogFetchInput,
+): Promise<ProviderListedModelEntry[]> {
+  const catalog = catalogDescriptorForProvider(input);
+  if (!catalog) {
+    throw new Error("This provider has no model listing endpoint; enter the model ID manually.");
   }
-  if (transportConfig.transportKind === "anthropic") {
-    return transportConfig;
+  const descriptor = resolveModelCatalogParser(catalog.parser);
+
+  if (catalog.parser === "bedrock-models") {
+    const region =
+      input.options?.awsRegion?.trim() || extractAwsRegionFromBedrockApiBase(input.apiBase);
+    if (!region) {
+      throw new Error("Listing Amazon Bedrock models requires an AWS region.");
+    }
+    try {
+      return await listBedrockModels({
+        region,
+        ...(input.apiKey.trim() ? { apiKey: input.apiKey.trim() } : {}),
+        ...(input.accessKeyId?.trim() ? { accessKeyId: input.accessKeyId.trim() } : {}),
+        ...(input.secretAccessKey?.trim() ? { secretAccessKey: input.secretAccessKey.trim() } : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Model listing failed (Amazon Bedrock): ${message}`, { cause: error });
+    }
   }
 
-  return {
-    ...transportConfig,
-    videoGeneration: buildVideoGenerationSubConfig({
-      profile: input.profile,
-      apiKey: input.apiKey,
-      inferenceProvider: resolveMediaInferenceProvider(input.profile, input.catalogHints),
-    }),
-  } as LlmTransportConfig;
-}
-
-export function attachImageGenerationToTransportConfig(
-  transportConfig: LlmTransportConfig,
-  input: {
-    profile?: ModelProfileSnapshot;
-    apiKey?: string;
-    catalogHints?: readonly DesktopModelCatalogHint[];
-  },
-): LlmTransportConfig {
-  if (!input.profile || !input.apiKey || !supportsImageGeneration(input.profile)) {
-    return transportConfig;
+  if (catalog.parser === "google-vertex-models") {
+    const extracted = extractVertexProjectAndLocationFromApiBase(input.apiBase);
+    const project = input.options?.project?.trim() || extracted.project;
+    const location = input.options?.location?.trim() || extracted.location;
+    if (!project || !location) {
+      throw new Error("Listing Google Vertex models requires a GCP project ID and location.");
+    }
+    try {
+      return await listVertexModels({
+        project,
+        location,
+        ...(input.apiKey.trim() ? { apiKey: input.apiKey.trim() } : {}),
+        ...(input.vertexClientEmail?.trim()
+          ? { vertexClientEmail: input.vertexClientEmail.trim() }
+          : {}),
+        ...(input.vertexPrivateKey?.trim()
+          ? { vertexPrivateKey: input.vertexPrivateKey.trim() }
+          : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Model listing failed (Google Vertex AI): ${message}`, { cause: error });
+    }
   }
-  if (transportConfig.transportKind === "anthropic") {
-    return transportConfig;
-  }
 
-  return {
-    ...transportConfig,
-    imageGeneration: buildImageGenerationSubConfig({
-      profile: input.profile,
-      apiKey: input.apiKey,
-      inferenceProvider: resolveMediaInferenceProvider(input.profile, input.catalogHints),
-    }),
-  } as LlmTransportConfig;
+  const specialized = SPECIALIZED_CATALOG_LISTERS[catalog.parser];
+  if (specialized) {
+    return specialized(input);
+  }
+  if (!catalog.endpoint) {
+    throw new Error(`Catalog parser "${catalog.parser}" declares no listing endpoint.`);
+  }
+  return fetchCatalogEntriesWithDescriptor(input, descriptor, catalog.endpoint);
 }
 
 interface LoadedPreviewModelsResult {
@@ -804,26 +307,19 @@ interface LoadedPreviewModelsResult {
 export type { LoadedPreviewModelsResult };
 
 export async function loadPreviewModelsForTransport(input: {
-  provider?: DesktopModelProvider;
+  providerId?: string;
   transportKind: DesktopTransportKind;
   apiBase: string;
   apiKey: string;
-  awsRegion?: string;
+  options?: ProviderOptions;
   accessKeyId?: string;
   secretAccessKey?: string;
-  vertexProject?: string;
-  vertexLocation?: string;
   vertexClientEmail?: string;
   vertexPrivateKey?: string;
-  cloudflareAccountId?: string;
   forceRefresh: boolean;
 }): Promise<LoadedPreviewModelsResult> {
-  const cached = await readModelCatalogCache(
-    input.apiBase,
-    input.apiKey,
-    input.provider,
-    input.transportKind,
-  );
+  const cacheProviderId = input.providerId?.trim() || "custom";
+  const cached = await readModelCatalogCache(input.apiBase, input.apiKey, cacheProviderId);
   const now = Date.now();
   if (cached && isModelCatalogCacheFresh(cached, now, input.forceRefresh)) {
     return {
@@ -833,33 +329,29 @@ export async function loadPreviewModelsForTransport(input: {
     };
   }
 
-  const listedModels = await listProviderModels({
-    provider: input.provider,
+  const listedModels = await fetchCatalogModels({
+    ...(input.providerId ? { providerId: input.providerId } : {}),
     transportKind: input.transportKind,
-    baseUrl: input.apiBase,
+    apiBase: input.apiBase,
     apiKey: input.apiKey,
-    ...(input.awsRegion ? { awsRegion: input.awsRegion } : {}),
+    ...(input.options ? { options: input.options } : {}),
     ...(input.accessKeyId ? { accessKeyId: input.accessKeyId } : {}),
     ...(input.secretAccessKey ? { secretAccessKey: input.secretAccessKey } : {}),
-    ...(input.vertexProject ? { vertexProject: input.vertexProject } : {}),
-    ...(input.vertexLocation ? { vertexLocation: input.vertexLocation } : {}),
     ...(input.vertexClientEmail ? { vertexClientEmail: input.vertexClientEmail } : {}),
     ...(input.vertexPrivateKey ? { vertexPrivateKey: input.vertexPrivateKey } : {}),
-    ...(input.cloudflareAccountId ? { cloudflareAccountId: input.cloudflareAccountId } : {}),
   });
-  const modelCatalog = previewModelCatalogForProvider(
-    input.provider,
-    input.transportKind,
+  const modelCatalog = previewModelCatalogForTransport({
+    ...(input.providerId ? { providerId: input.providerId } : {}),
+    transportKind: input.transportKind,
     listedModels,
-  );
+  });
   const modelIds = listedModels.map((entry) => entry.id);
   await writeModelCatalogCache(
     input.apiBase,
     modelIds,
     input.apiKey,
     modelCatalog,
-    input.provider,
-    input.transportKind,
+    cacheProviderId,
   );
   // The catalog cache file was updated; invalidate the snapshot-side in-memory memo so the next buildSnapshot re-reads the new catalog
   invalidateModelCatalogHintsMemo();
@@ -870,28 +362,18 @@ export async function loadPreviewModelsForTransport(input: {
   };
 }
 
-function previewModelCatalogForProvider(
-  provider: DesktopModelProvider | undefined,
-  transportKind: DesktopTransportKind,
-  listedModels: readonly ProviderListedModelEntry[],
-): PreviewModelCatalogEntry[] | undefined {
-  return previewModelCatalogForTransport({ provider, transportKind, listedModels });
-}
-
 export function previewCatalogMapForAddProviderRequest(
   request: AddProviderModelsRequest,
-  provider: DesktopModelProvider | undefined,
-  transportKind: DesktopTransportKind,
 ): Map<string, PreviewModelCatalogEntry> {
   return previewCatalogMapForTransport({
-    provider,
-    transportKind,
+    ...(request.provider ? { providerId: request.provider } : {}),
+    ...(request.transportKind ? { transportKind: request.transportKind } : {}),
     modelCatalog: request.modelCatalog,
   });
 }
 
 export async function findCatalogEntryForModel(input: {
-  provider?: DesktopModelProvider;
+  providerId?: string;
   transportKind: DesktopTransportKind;
   apiBase: string;
   apiKey: string;
@@ -903,7 +385,7 @@ export async function findCatalogEntryForModel(input: {
 
   try {
     const preview = await loadPreviewModelsForTransport({
-      provider: input.provider,
+      ...(input.providerId ? { providerId: input.providerId } : {}),
       transportKind: input.transportKind,
       apiBase: input.apiBase,
       apiKey: input.apiKey,
@@ -916,7 +398,7 @@ export async function findCatalogEntryForModel(input: {
 }
 
 export function resolveAddedModelCapabilities(input: {
-  provider?: DesktopModelProvider;
+  providerId?: string;
   requestedCapabilities?: DesktopModelCapability[];
   catalogEntry?: PreviewModelCatalogEntry;
 }): DesktopModelCapability[] | undefined {
@@ -935,5 +417,17 @@ export function resolveAddedModelCapabilities(input: {
     return input.requestedCapabilities;
   }
 
-  return input.provider === "custom" ? defaultCustomModelCapabilities() : undefined;
+  return input.providerId === "custom" || findProviderPreset(input.providerId ?? "") === undefined
+    ? defaultCustomModelCapabilities()
+    : undefined;
+}
+
+/** Reads an internal keyring credential slot for the desktop host (`provider::{id}[::{slot}]`). */
+export function readProviderCredentialSlotFromKeyring(
+  providerId: string,
+  slot: string,
+): string | undefined {
+  const value = getKeyringPassword(KEYRING_SERVICE, providerInternalSlotAccount(providerId, slot));
+  const trimmed = value?.trim();
+  return trimmed || undefined;
 }

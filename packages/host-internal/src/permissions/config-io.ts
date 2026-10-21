@@ -11,13 +11,13 @@ import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname } from "node:path";
 
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "../config-v2.js";
+import { emptyModelRef, SPIRIT_CONFIG_SCHEMA_VERSION } from "../config.js";
 import { configFilePath, loadSpiritConfig } from "../credentials/spirit-config.js";
+import type { SpiritConfigFile } from "../config.js";
 import type {
   PermissionConfig,
   PermissionDomainRules,
   PermissionRuleAction,
-  SpiritConfigFile,
 } from "../credentials/types.js";
 
 export interface PermissionConfigLoadResult {
@@ -188,8 +188,8 @@ export async function savePermissionRule(
   const existing = loadSpiritConfig(spiritDataDir);
   const config: SpiritConfigFile = existing ?? {
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups: [],
-    activeModel: { groupId: "", name: "" },
+    providers: [],
+    activeModel: emptyModelRef(),
   };
 
   // Invalid pre-existing `permission` / domain data is replaced rather than

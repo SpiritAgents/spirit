@@ -14,17 +14,9 @@ import {
 } from "./apply-patch-eligibility.js";
 import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 import {
-  buildAlibabaResponsesBuiltInTools,
-  shouldUseAlibabaResponsesBuiltInTools,
-} from "./alibaba-built-in-tools.js";
-import {
-  buildGatewayWebSearchTraceToolEntry,
-  shouldUseGatewayWebSearch,
-} from "./gateway-web-search.js";
-import {
-  buildWebSearchResponsesTraceToolEntry,
-  shouldUseProviderWebSearch,
-} from "./web-search-eligibility.js";
+  EMPTY_RESOLVED_PROVIDER_TOOLS,
+  type ResolvedProviderTools,
+} from "../provider-tools/runtime.js";
 
 export const APPLY_PATCH_BUILT_IN_TOOL = { type: "apply_patch" } as const;
 
@@ -173,8 +165,17 @@ export function registerPendingApplyPatchCallIds(callIds: readonly string[]): vo
 export function buildResponsesTraceTools(
   config: OpenResponsesTransportConfig,
   normalizedFunctionTools: readonly unknown[],
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "functionTools" | "literalEntries" | "traceEntries"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
 ): JsonValue[] {
-  const traceTools = normalizedFunctionTools.map((tool) => cloneJsonValue(tool as JsonValue));
+  const traceTools = [
+    ...normalizedFunctionTools.map((tool) => cloneJsonValue(tool as JsonValue)),
+    ...providerTools.functionTools.map((tool) => cloneJsonValue(tool as JsonValue)),
+    ...providerTools.literalEntries.map((tool) => cloneJsonValue(tool as JsonValue)),
+    ...providerTools.traceEntries.map((tool) => cloneJsonValue(tool as JsonValue)),
+  ];
   if (shouldUseApplyPatchFileTools(config)) {
     if (shouldUseOpenAiSdkApplyPatchTool(config)) {
       traceTools.push({
@@ -188,17 +189,6 @@ export function buildResponsesTraceTools(
       );
     } else {
       traceTools.push(cloneJsonValue(APPLY_PATCH_BUILT_IN_TOOL as JsonValue));
-    }
-  }
-  if (shouldUseProviderWebSearch(config)) {
-    if (shouldUseAlibabaResponsesBuiltInTools(config)) {
-      for (const tool of buildAlibabaResponsesBuiltInTools()) {
-        traceTools.push(cloneJsonValue(tool as JsonValue));
-      }
-    } else if (shouldUseGatewayWebSearch(config)) {
-      traceTools.push(cloneJsonValue(buildGatewayWebSearchTraceToolEntry() as JsonValue));
-    } else {
-      traceTools.push(cloneJsonValue(buildWebSearchResponsesTraceToolEntry() as JsonValue));
     }
   }
   return traceTools;

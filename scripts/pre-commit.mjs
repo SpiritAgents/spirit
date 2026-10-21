@@ -72,6 +72,29 @@ function run(command, args) {
   }
 }
 
+/** Linters/formatters exit 1 when every staged input is ignore-pattered out; that case is a pass. */
+function runTolerantEmpty(command, args, toleratedMessage) {
+  const result = spawnSync(command, args, {
+    cwd: repoRoot,
+    encoding: "utf8",
+    stdio: "pipe",
+  });
+  if (result.error) {
+    console.error(`pre-commit: ${command} is required (${result.error.message})`);
+    process.exit(1);
+  }
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  if (result.status !== 0 && !output.includes(toleratedMessage)) {
+    process.stdout.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+    process.exit(result.status ?? 1);
+  }
+  if (result.status === 0) {
+    process.stdout.write(result.stdout ?? "");
+    process.stderr.write(result.stderr ?? "");
+  }
+}
+
 function isLintTs(relpath) {
   return (
     TS_EXTENSIONS.has(extensionOf(relpath)) &&
@@ -102,11 +125,11 @@ const formattable = shouldFormat ? files.filter(isFormattable) : [];
 const rustFiles = files.filter(isCliRust);
 
 if (lintTs.length > 0) {
-  run("pnpm", ["exec", "oxlint", "--deny-warnings", ...lintTs]);
+  runTolerantEmpty("pnpm", ["exec", "oxlint", "--deny-warnings", ...lintTs], "No files found to lint");
 }
 
 if (formattable.length > 0) {
-  run("pnpm", ["exec", "oxfmt", "--check", ...formattable]);
+  runTolerantEmpty("pnpm", ["exec", "oxfmt", "--check", ...formattable], "Expected at least one target file");
 }
 
 if (rustFiles.length > 0) {

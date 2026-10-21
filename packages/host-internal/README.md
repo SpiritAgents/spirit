@@ -2,13 +2,15 @@
 
 Shared **host-side implementation** for [Spirit](https://github.com/SpiritAgents/spirit). It sits between platform hosts (Desktop, CLI, ACP server) and [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core), providing discovery, workspace helpers, and local execution plumbing.
 
+This package is in a transitional role: it currently still owns the shared host config and credential resolution, and the recorded direction is for it to be gradually hollowed out into `agent-core`. Only the provider presets and the wizard/catalog materialization core have moved so far; the rest follows opportunistically.
+
 ## What it provides
 
 - **Discovery** — rules, skills, and workspace instruction metadata for Agent Core system assembly.
 - **Tools** — `NodeHostToolService` and related helpers for in-process file, shell, grep/glob, and workspace operations.
 - **Extensions** — extension install paths, local ZIP import, and lifecycle management used by Desktop and CLI.
 - **LSP orchestration** — language-server probe and diagnostics wiring after file edits.
-- **Storage & runtime helpers** — Spirit data directory access, provider presets, and model listing utilities shared across hosts.
+- **Storage & runtime helpers** — Spirit data directory access, the `config.json` v1 schema and validation, credential channel resolution against the OS keyring, and model listing utilities shared across hosts.
 
 ## Product storage
 
@@ -18,13 +20,15 @@ This is a direct default-root change: there is no old-directory lookup, automati
 
 MCP file discovery is supplied through `createHostMcpService(workspaceRoot, spiritDataDir, includeWorkspace, options)`. It injects a configuration source into Agent Core, so a daemon's selected data root is also used for MCP reads. MCP and Hooks path helpers live in this package rather than Agent Core.
 
+## Config and credentials
+
+`config.json` is `schemaVersion: 1`; any other version fails to load. Each `providers[]` entry is fully declarative — `apiBase`, `transportKind`, `sdk`, `headers` / `body`, `providerTools`, `fileUpload`, `options`, plus flat model-level defaults its `models[]` inherit. Unknown keys, unknown `sdk` package names, unknown `credentials` slots, and out-of-range `serviceTier` / `reasoningEffort` / `reasoningMode` selections are fail-fast schema errors; the file is never silently rewritten.
+
+Provider keys resolve through the declared channels in order — `apiKey` (plaintext escape hatch, not recommended), `apiKeyEnv`, `apiKeyKeyring`, then the internal OS keyring (service `Spirit`, account `provider::{id}`; composite credential slots use `provider::{id}::{slot}`). A value that resolves to an empty string falls through to the next channel.
+
 ## Model service tier preferences
 
-Each model entry in `config.json` (`providerGroups[].models[]`) may carry an optional `serviceTier` — a canonical Agent Core value: `auto`, `default`, `flex`, `fast`, `priority`, or `ultrafast`. The field is optional; `schemaVersion` stays `2` and no migration rewrites existing entries. When unset, OpenAI behaves as Auto and the other supported providers as Default, matching previous request behavior. For the direct Anthropic provider, the native Fast toggle is stored as `fast` and is valid only for eligible Claude Opus models.
-
-Aggregator model entries may also carry `upstreamProvider`, a raw catalog fact identifying the upstream provider behind the route (Vercel AI Gateway `owned_by`, OpenRouter `canonical_slug` author prefix). It is preserved verbatim from the catalog and normalized by Agent Core when computing or validating service tier options.
-
-Unknown or unsupported `serviceTier` values are never silently dropped or rewritten: transport resolution (`resolveTransportConfig` / `tryResolveTransportConfig`, and therefore the daemon's `session.replaceConfig`) throws `ModelServiceTierConfigError` and leaves `config.json` untouched for the user to fix.
+Each model entry in `config.json` (`providers[].models[]`) may carry an optional `serviceTier` — a canonical Agent Core value: `auto`, `default`, `flex`, `fast`, `priority`, or `ultrafast`. The field is valid only when the model (or its provider entry) declares `serviceTiers`, and the value must be one of the declared tiers; anything else is a fail-fast config error, not a silent rewrite. The declared `serviceTiers` come in two forms: a simple list of tier names (mapped on the wire through a fixed table of public transport API parameters) or a literal tier → `{ headers, body }` map whose declarations apply verbatim.
 
 ## Requirements
 
@@ -33,7 +37,7 @@ Unknown or unsupported `serviceTier` values are never silently dropped or rewrit
 
 ## Related packages
 
-- [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core) — agent runtime, prompts, tool definitions, and transports.
+- [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core) — agent runtime, prompts, tool definitions, transports, and the provider preset / catalog materialization zone.
 - [`@spiritagent/acp-server`](https://www.npmjs.com/package/@spiritagent/acp-server) — ACP server adapter that depends on this package for local tool execution.
 
 ## License

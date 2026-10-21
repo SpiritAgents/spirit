@@ -5,26 +5,24 @@ import type { JsonValue } from "../ports.js";
 import { buildResponsesTraceTools } from "./apply-patch-bridge.js";
 import { buildResponsesProviderOptions } from "./model-factory.js";
 import {
-  XAI_WEB_SEARCH_WITH_LOCAL_TOOLS_ENABLED,
-  xaiResponsesRejectsLocalFunctionTools,
-} from "./web-search-eligibility.js";
-import {
   buildOpenResponsesRequestTrace,
-  resolveOpenResponsesSdkProvider,
   type OpenResponsesTransportConfig,
 } from "./responses-compat.js";
+import {
+  xaiResponsesLocalToolsUnsupportedMessage,
+  xaiResponsesRejectsLocalFunctionTools,
+} from "./xai-responses-pre-guard.js";
 
 const xaiConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test-key",
   model: "grok-4.3",
   baseUrl: "https://api.x.ai/v1",
-  llmVendor: "xai",
+  sdk: "@ai-sdk/xai",
   reasoningEffort: "medium",
 };
 
-test("xAI responses provider resolves official SDK, options, and trace kind", () => {
-  assert.equal(resolveOpenResponsesSdkProvider(xaiConfig), "xai");
+test("xAI responses provider options and trace kind key on the declared sdk", () => {
   assert.deepEqual(buildResponsesProviderOptions(xaiConfig), {
     xai: { reasoningEffort: "medium" },
   });
@@ -44,13 +42,12 @@ test("xAI responses provider resolves official SDK, options, and trace kind", ()
   );
 });
 
-test("xAI responses allows local function tools when provider web search is enabled", () => {
-  assert.equal(XAI_WEB_SEARCH_WITH_LOCAL_TOOLS_ENABLED, true);
-  assert.equal(xaiResponsesRejectsLocalFunctionTools(xaiConfig, 1), false);
-});
-
-test("xAI responses trace lists web_search alongside host tools when eligible", () => {
-  const traceTools = buildResponsesTraceTools(xaiConfig, [demoToolDefinition()]);
+test("xAI responses trace lists declared provider tools alongside host tools", () => {
+  const traceTools = buildResponsesTraceTools(xaiConfig, [demoToolDefinition()], {
+    functionTools: [],
+    literalEntries: [{ type: "web_search" }],
+    traceEntries: [],
+  });
   assert.ok(
     traceTools.some(
       (tool) =>
@@ -79,3 +76,41 @@ function demoToolDefinition(): JsonValue {
     },
   };
 }
+
+const noResolvedProviderTools = { functionTools: [], literalEntries: [] };
+const resolvedWebSearchEntry = {
+  functionTools: [],
+  literalEntries: [{ type: "web_search" }],
+};
+
+test("the xAI local-tools pre-guard keys on the declared sdk and provider tool resolution", () => {
+  // Local function tools + no active provider tools on the xAI Responses surface -> reject early.
+  assert.equal(xaiResponsesRejectsLocalFunctionTools(xaiConfig, 1, noResolvedProviderTools), true);
+  // A resolved provider tool entry (web search) makes the combination legal upstream.
+  assert.equal(xaiResponsesRejectsLocalFunctionTools(xaiConfig, 1, resolvedWebSearchEntry), false);
+  // The global provider-tools opt-out rejects even when the entry declares tools.
+  assert.equal(
+    xaiResponsesRejectsLocalFunctionTools(
+      { ...xaiConfig, providerToolsEnabled: false },
+      1,
+      resolvedWebSearchEntry,
+    ),
+    true,
+  );
+  // No local tools: nothing to reject.
+  assert.equal(xaiResponsesRejectsLocalFunctionTools(xaiConfig, 0, noResolvedProviderTools), false);
+  // Other sdk adapters are unaffected by the guard.
+  assert.equal(
+    xaiResponsesRejectsLocalFunctionTools(
+      { ...xaiConfig, sdk: "@ai-sdk/openai" },
+      1,
+      noResolvedProviderTools,
+    ),
+    false,
+  );
+
+  assert.equal(
+    xaiResponsesLocalToolsUnsupportedMessage(),
+    "SpaceXAI Responses API does not support local function tools yet; please use the Chat Completions transport instead.",
+  );
+});

@@ -2,14 +2,13 @@ import { HfInference } from "@huggingface/inference";
 
 import { resolveHuggingFaceInferenceProvider } from "../huggingface/inference-provider.js";
 import type { OpenAiImageGenerationConfig } from "../openai/openai-compat.js";
-import { normalizeGeneratedImageMarkdownRef } from "../openai/ai-sdk-transport.js";
+import { buildGeneratedImageToolOutput } from "./output.js";
 import type {
   GeneratedImageFile,
   GeneratedImageSaveRequest,
   ImageGenerationRequest,
   ToolExecutionOutput,
 } from "../ports.js";
-import { createLlmMessageContentFromTextAndImages } from "../ports.js";
 
 const DEFAULT_HUGGING_FACE_IMAGE_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -29,7 +28,7 @@ export async function generateHuggingFaceImage(
   });
 
   console.error("[agent-core][generate-image] request.start", {
-    adapter: "huggingface",
+    adapter: "huggingface-inference",
     model: config.model,
     provider,
     size: request.size,
@@ -65,23 +64,10 @@ export async function generateHuggingFaceImage(
   });
 
   console.error("[agent-core][generate-image] request.success", {
-    adapter: "huggingface",
+    adapter: "huggingface-inference",
     model: config.model,
     mimeType: saved.mimeType,
   });
 
-  const summaryLines = ["[generated image]"];
-  const markdownRef = normalizeGeneratedImageMarkdownRef(saved.markdownRef);
-  summaryLines.push(
-    `image_ref: ${markdownRef}`,
-    `read_file_path: ${markdownRef}`,
-    `embed_markdown: ![Generated image](${markdownRef})`,
-  );
-  summaryLines.push(`mime_type: ${saved.mimeType}`, `model: ${config.model}`);
-  const summaryText = summaryLines.join("\n");
-
-  return {
-    content: createLlmMessageContentFromTextAndImages(summaryText, [saved.path]),
-    summaryText,
-  };
+  return buildGeneratedImageToolOutput(saved, config.model);
 }

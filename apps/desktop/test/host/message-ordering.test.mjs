@@ -6,6 +6,8 @@ import {
   assistantTurnHasPlainPrefixMessage,
   finishTaskNoticePreviewFromArguments,
   finishTaskSummaryFromStreamingArguments,
+  normalizeToolBlockSnapshot,
+  providerToolCallSummaryCopy,
   shouldHideEmptyPendingAssistantSnapshot,
   stripRedundantThinkingFromMessageAux,
   toolCallSummaryCopyForRequest,
@@ -177,6 +179,43 @@ test("toolCallSummaryCopyForResponsesBuiltInTool: web_search falls back to sourc
       headlineDetail: i18n.t("tool.webSearchSourceCount", { count: 2 }),
     },
   );
+});
+
+test("providerToolCallSummaryCopy: MCP-style Call verb with the declared entry label", () => {
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "running"), {
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "preview"), {
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "succeeded"), {
+    headline: toolHeadline("tool.lazyCall", "succeeded"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "failed"), {
+    headline: toolHeadline("tool.lazyCall"),
+    headlineDetail: "Web Search",
+  });
+});
+
+test("normalizeToolBlockSnapshot trims and preserves providerToolLabel", () => {
+  const tool = normalizeToolBlockSnapshot({
+    toolName: "web_search",
+    phase: "succeeded",
+    headline: "Called",
+    detailLines: [],
+    providerToolLabel: "  Web Search  ",
+  });
+  assert.equal(tool?.providerToolLabel, "Web Search");
+  const unlabeled = normalizeToolBlockSnapshot({
+    toolName: "web_search",
+    phase: "succeeded",
+    headline: "Searched web",
+    detailLines: [],
+  });
+  assert.equal(unlabeled?.providerToolLabel, undefined);
 });
 
 test("toolCallSummaryCopyForRequest: search tools use verb headline + detail", () => {

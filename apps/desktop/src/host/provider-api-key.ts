@@ -15,46 +15,8 @@ import {
   modelRefKey,
   modelRefsEqual,
   type ModelRef,
-  type ProviderGroupV2,
+  type ProviderEntry,
 } from "@spiritagent/host-internal";
-
-import type { DesktopModelProvider } from "../types.js";
-
-/** Keyring account for a provider-group-scoped API key (`Spirit` / `group::{id}`). */
-export function groupKeyAccount(groupId: string): string {
-  return `group::${groupId}`;
-}
-
-export function groupAccessKeyIdAccount(groupId: string): string {
-  return `group::${groupId}::access-key-id`;
-}
-
-export function groupSecretAccessKeyAccount(groupId: string): string {
-  return `group::${groupId}::secret-access-key`;
-}
-
-export function groupVertexClientEmailAccount(groupId: string): string {
-  return `group::${groupId}::client-email`;
-}
-
-export function groupVertexPrivateKeyAccount(groupId: string): string {
-  return `group::${groupId}::private-key`;
-}
-
-/** @deprecated Use {@link groupKeyAccount} */
-export const providerKeyAccount = groupKeyAccount;
-
-/** @deprecated Use {@link groupAccessKeyIdAccount} */
-export const providerAccessKeyIdAccount = groupAccessKeyIdAccount;
-
-/** @deprecated Use {@link groupSecretAccessKeyAccount} */
-export const providerSecretAccessKeyAccount = groupSecretAccessKeyAccount;
-
-/** @deprecated Use {@link groupVertexClientEmailAccount} */
-export const providerVertexClientEmailAccount = groupVertexClientEmailAccount;
-
-/** @deprecated Use {@link groupVertexPrivateKeyAccount} */
-export const providerVertexPrivateKeyAccount = groupVertexPrivateKeyAccount;
 
 export interface BedrockProviderCredentials {
   apiKey?: string;
@@ -92,46 +54,23 @@ export function hasGoogleVertexRuntimeCredentials(input: {
   return Boolean(input.vertexProject?.trim() && input.vertexLocation?.trim());
 }
 
-/** Config profiles without `provider` are treated as custom-scoped keys. */
-export function modelProviderKeyScope(provider?: DesktopModelProvider): DesktopModelProvider {
-  return provider ?? "custom";
-}
-
 export interface ModelKeyPresenceProfile {
-  groupId: string;
+  providerId: string;
   name: string;
-  provider?: DesktopModelProvider;
-  vertexProject?: string;
-  vertexLocation?: string;
 }
 
-export type ExistingModelForGroupAdd = ModelKeyPresenceProfile;
+export type ExistingModelForProviderAdd = ModelKeyPresenceProfile;
 
-/** @deprecated Use {@link ExistingModelForGroupAdd} */
-export type ExistingModelForProviderAdd = ExistingModelForGroupAdd;
-
-/** True when the same model id is already configured under this provider group. */
-export function modelExistsInGroupScope(
-  existingModels: readonly ExistingModelForGroupAdd[],
-  groupId: string,
-  name: string,
-): boolean {
-  const normalizedGroupId = groupId.trim();
-  const normalizedName = name.trim();
-  return existingModels.some(
-    (model) => model.groupId === normalizedGroupId && model.name === normalizedName,
-  );
-}
-
-/** @deprecated Use {@link modelExistsInGroupScope} */
+/** True when the same model id is already configured under this provider entry. */
 export function modelExistsInProviderScope(
   existingModels: readonly ExistingModelForProviderAdd[],
+  providerId: string,
   name: string,
-  provider?: DesktopModelProvider,
 ): boolean {
-  const scope = modelProviderKeyScope(provider);
+  const normalizedProviderId = providerId.trim();
+  const normalizedName = name.trim();
   return existingModels.some(
-    (model) => model.name === name && modelProviderKeyScope(model.provider) === scope,
+    (model) => model.providerId === normalizedProviderId && model.name === normalizedName,
   );
 }
 
@@ -148,7 +87,7 @@ export function resolveActiveModelAfterRemoval(
 }
 
 type ModelRemovalConfigTarget = {
-  providerGroups: ProviderGroupV2[];
+  providers: ProviderEntry[];
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
@@ -160,10 +99,10 @@ export type ModelRemovalTarget = {
 };
 
 function modelRefStillExists(
-  groups: readonly ProviderGroupV2[],
+  providers: readonly ProviderEntry[],
   ref: ModelRef | undefined,
 ): boolean {
-  return findModelByRef(groups, ref) !== undefined;
+  return findModelByRef(providers, ref) !== undefined;
 }
 
 function clearDefaultSlotIfNoRemainingModel(
@@ -171,7 +110,7 @@ function clearDefaultSlotIfNoRemainingModel(
   slot: "imageGenerationModel" | "videoGenerationModel" | "secondaryLanguageModel",
 ): void {
   const value = config[slot];
-  if (value && !modelRefStillExists(config.providerGroups, value)) {
+  if (value && !modelRefStillExists(config.providers, value)) {
     delete config[slot];
   }
 }
@@ -185,19 +124,19 @@ export function applyModelsRemovalToConfig(
     return 0;
   }
   let removed = 0;
-  for (const group of config.providerGroups) {
-    const before = group.models.length;
-    group.models = group.models.filter(
+  for (const provider of config.providers) {
+    const before = provider.models.length;
+    provider.models = provider.models.filter(
       (model) =>
         !targetsToRemove.some(
-          (target) => target.ref.groupId === group.id && target.ref.name === model.name,
+          (target) => target.ref.providerId === provider.id && target.ref.name === model.name,
         ),
     );
-    removed += before - group.models.length;
+    removed += before - provider.models.length;
   }
 
-  if (!modelRefStillExists(config.providerGroups, config.activeModel)) {
-    const remaining = listAllModelRefs(config.providerGroups);
+  if (!modelRefStillExists(config.providers, config.activeModel)) {
+    const remaining = listAllModelRefs(config.providers);
     config.activeModel = remaining[0] ? { ...remaining[0] } : emptyModelRef();
   }
   clearDefaultSlotIfNoRemainingModel(config, "imageGenerationModel");
@@ -206,42 +145,34 @@ export function applyModelsRemovalToConfig(
   return removed;
 }
 
-/** Model ids from `modelIds` that are not already present under the target group. */
-export function filterNewGroupModelIds(
-  existingModels: readonly ExistingModelForGroupAdd[],
+/** Model ids from `modelIds` that are not already present under the target provider entry. */
+export function filterNewProviderModelIds(
+  existingModels: readonly ExistingModelForProviderAdd[],
   modelIds: readonly string[],
-  groupId: string,
+  providerId: string,
 ): string[] {
-  return modelIds.filter((name) => !modelExistsInGroupScope(existingModels, groupId, name));
+  return modelIds.filter((name) => !modelExistsInProviderScope(existingModels, providerId, name));
 }
 
-/** @deprecated Use {@link filterNewGroupModelIds} */
-export const filterNewProviderModelIds = filterNewGroupModelIds;
-
 /**
- * Per-model keyring presence: group-level entry OR legacy per-model entry.
- * Does not include env vars or global fallback (snapshot `keyConfigured` semantics).
+ * Per-model keyring presence: the provider entry's internal keyring credential
+ * (`provider::{id}` or a `credentials` slot account). Excludes env vars and declared
+ * external channels (snapshot `keyConfigured` semantics).
  */
 export function buildModelSecretKeyPresence(
   profiles: ModelKeyPresenceProfile[],
-  hasGroupKey: (groupId: string, profile: ModelKeyPresenceProfile) => boolean,
-  hasModelKey: (refKey: string) => boolean,
+  hasProviderKey: (providerId: string) => boolean,
 ): Record<string, boolean> {
-  const groupCache = new Map<string, boolean>();
+  const providerCache = new Map<string, boolean>();
   const out: Record<string, boolean> = {};
   for (const profile of profiles) {
-    const ref: ModelRef = { groupId: profile.groupId, name: profile.name };
-    const refKey = modelRefKey(ref);
-    const cacheKey =
-      profile.provider === "google-vertex-ai"
-        ? `${profile.groupId}::${profile.vertexProject?.trim() ?? ""}::${profile.vertexLocation?.trim() ?? ""}`
-        : profile.groupId;
-    let groupPresent = groupCache.get(cacheKey);
-    if (groupPresent === undefined) {
-      groupPresent = hasGroupKey(profile.groupId, profile);
-      groupCache.set(cacheKey, groupPresent);
+    const ref: ModelRef = { providerId: profile.providerId, name: profile.name };
+    let present = providerCache.get(profile.providerId);
+    if (present === undefined) {
+      present = hasProviderKey(profile.providerId);
+      providerCache.set(profile.providerId, present);
     }
-    out[refKey] = groupPresent ? true : hasModelKey(refKey);
+    out[modelRefKey(ref)] = present;
   }
   return out;
 }

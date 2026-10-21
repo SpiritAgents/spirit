@@ -36,12 +36,15 @@ type ServiceTierChange = (
   tier: ModelServiceTier | undefined,
 ) => void | Promise<boolean>;
 
+const OPENAI_TIERS = ["auto", "default", "flex", "fast"] as const;
+
 function tierModel(overrides: Partial<ModelProfileSnapshot> = {}): ModelProfileSnapshot {
   return {
     name: "gpt-5",
     apiBase: "https://api.openai.com/v1",
-    reasoningEffort: "default",
-    provider: "openai",
+    providerId: "openai",
+    ref: { providerId: "openai", name: overrides.name ?? "gpt-5" },
+    serviceTiers: [...OPENAI_TIERS],
     transportKind: "openai-compatible",
     ...overrides,
   };
@@ -83,19 +86,21 @@ async function pickServiceTierOption(trigger: HTMLElement, optionName: string) {
   fireEvent.keyDown(option, { key: "Enter" });
 }
 
-test("OpenAI models show a Service Tier select with Auto/Default/Flex/Fast and resolve Auto by default", async () => {
+test("a model with declared tiers shows the select and resolves Default when unset", async () => {
   renderInspector(tierModel(), { onServiceTierChange: vi.fn() });
 
   const trigger = serviceTierTrigger();
-  expect(trigger.textContent).toBe("Auto");
+  expect(trigger.textContent).toBe("Default");
 
   fireEvent.keyDown(trigger, { key: "ArrowDown" });
   const options = await screen.findAllByRole("option");
   expect(options.map((option) => option.textContent)).toEqual(["Auto", "Default", "Flex", "Fast"]);
 });
 
-test.each(["gpt-6-astra", "gpt-6.1-sol"])("%s additionally offers Ultrafast", async (name) => {
-  renderInspector(tierModel({ name }), { onServiceTierChange: vi.fn() });
+test("an Ultrafast declaration adds the option to the select", async () => {
+  renderInspector(tierModel({ serviceTiers: [...OPENAI_TIERS, "ultrafast"] }), {
+    onServiceTierChange: vi.fn(),
+  });
 
   fireEvent.keyDown(serviceTierTrigger(), { key: "ArrowDown" });
   const options = await screen.findAllByRole("option");
@@ -108,108 +113,56 @@ test.each(["gpt-6-astra", "gpt-6.1-sol"])("%s additionally offers Ultrafast", as
   ]);
 });
 
-test("direct SpaceXAI models show a Priority switch instead of the dropdown", () => {
+test("a Default/Priority declaration renders the Priority switch instead of the dropdown", () => {
   const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
-  renderInspector(tierModel({ name: "grok-4", provider: "xai" }), { onServiceTierChange });
+  const model = tierModel({
+    name: "grok-4",
+    providerId: "xai",
+    ref: { providerId: "xai", name: "grok-4" },
+    serviceTiers: ["default", "priority"],
+  });
+  renderInspector(model, { onServiceTierChange });
 
   expect(screen.queryByText("Service Tier")).toBeNull();
   const toggle = screen.getByRole("switch", { name: "Priority" });
   expect(toggle.getAttribute("aria-checked")).toBe("false");
 
   fireEvent.click(toggle);
-  expect(onServiceTierChange).toHaveBeenCalledWith({ groupId: "", name: "grok-4" }, "priority");
-});
-
-test("aggregator Default/Priority rows (Vercel SpaceXAI, OpenRouter) show the Priority switch", () => {
-  const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
-  const { unmount } = renderInspector(
-    tierModel({ name: "spacexai/grok-4.7", provider: "vercel-ai-gateway" }),
-    { onServiceTierChange },
-  );
-  expect(screen.queryByText("Service Tier")).toBeNull();
-  fireEvent.click(screen.getByRole("switch", { name: "Priority" }));
   expect(onServiceTierChange).toHaveBeenCalledWith(
-    { groupId: "", name: "spacexai/grok-4.7" },
+    { providerId: "xai", name: "grok-4" },
     "priority",
   );
-  unmount();
+});
 
-  renderInspector(
-    tierModel({
-      name: "x-ai/grok-4",
-      provider: "openrouter",
-      serviceTier: "priority",
-    }),
-    { onServiceTierChange },
-  );
+test("the Priority switch toggles off by clearing the stored preference", () => {
+  const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
+  const model = tierModel({
+    name: "x-ai/grok-4",
+    providerId: "openrouter",
+    ref: { providerId: "openrouter", name: "x-ai/grok-4" },
+    serviceTiers: ["default", "priority"],
+    serviceTier: "priority",
+  });
+  renderInspector(model, { onServiceTierChange });
+
   const toggle = screen.getByRole("switch", { name: "Priority" });
   expect(toggle.getAttribute("aria-checked")).toBe("true");
   fireEvent.click(toggle);
-  expect(onServiceTierChange).toHaveBeenCalledWith({ groupId: "", name: "x-ai/grok-4" }, undefined);
-});
-
-test("Vertex AI hides the control on regional endpoints and shows it on the global endpoint", async () => {
-  const { unmount } = renderInspector(
-    tierModel({
-      name: "gemini-2.5-pro",
-      provider: "google-vertex-ai",
-      vertexLocation: "us-central1",
-    }),
-    { onServiceTierChange: vi.fn() },
+  expect(onServiceTierChange).toHaveBeenCalledWith(
+    { providerId: "openrouter", name: "x-ai/grok-4" },
+    undefined,
   );
-  expect(screen.queryByText("Service Tier")).toBeNull();
-  unmount();
-
-  renderInspector(
-    tierModel({
-      name: "gemini-2.5-pro",
-      provider: "google-vertex-ai",
-      vertexLocation: "global",
-    }),
-    { onServiceTierChange: vi.fn() },
-  );
-  const trigger = serviceTierTrigger();
-  fireEvent.keyDown(trigger, { key: "ArrowDown" });
-  const options = await screen.findAllByRole("option");
-  expect(options.map((option) => option.textContent)).toEqual(["Default", "Flex", "Priority"]);
 });
 
-test("providers outside the matrix render no Service Tier control", () => {
-  renderInspector(tierModel({ name: "deepseek-chat", provider: "deepseek" }), {
-    onServiceTierChange: vi.fn(),
-  });
-  expect(screen.queryByText("Service Tier")).toBeNull();
-  expect(screen.queryByText("Fast")).toBeNull();
-});
-
-test("a Vercel route uses the catalog upstreamProvider fact when the profile lacks one", async () => {
-  const vercelModel = tierModel({
-    name: "my-gateway-model",
-    apiBase: "https://gateway.example/v1",
-    provider: "vercel-ai-gateway",
-  });
-
-  const { unmount } = renderInspector(vercelModel, { onServiceTierChange: vi.fn() });
-  expect(screen.queryByText("Service Tier")).toBeNull();
-  unmount();
-
-  renderInspector(vercelModel, {
-    catalogEntry: { id: "my-gateway-model", upstreamProvider: "openai" },
-    onServiceTierChange: vi.fn(),
-  });
-  const trigger = serviceTierTrigger();
-  fireEvent.keyDown(trigger, { key: "ArrowDown" });
-  const options = await screen.findAllByRole("option");
-  expect(options.map((option) => option.textContent)).toEqual(["Default", "Flex", "Fast"]);
-});
-
-test("Anthropic Opus 4.8 shows the Fast switch instead of the Service Tier dropdown", () => {
+test("a literal tier map with a single fast tier renders the Fast switch", () => {
   const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
   renderInspector(
     tierModel({
       name: "claude-opus-4-8",
-      provider: "anthropic",
+      providerId: "anthropic",
+      ref: { providerId: "anthropic", name: "claude-opus-4-8" },
       transportKind: "anthropic",
+      serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
     }),
     { onServiceTierChange },
   );
@@ -221,18 +174,20 @@ test("Anthropic Opus 4.8 shows the Fast switch instead of the Service Tier dropd
 
   fireEvent.click(toggle);
   expect(onServiceTierChange).toHaveBeenCalledWith(
-    { groupId: "", name: "claude-opus-4-8" },
+    { providerId: "anthropic", name: "claude-opus-4-8" },
     "fast",
   );
 });
 
-test("Anthropic Fast toggle off clears the preference with undefined", () => {
+test("the Fast switch toggling off clears the preference with undefined", () => {
   const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
   renderInspector(
     tierModel({
       name: "claude-opus-4-8",
-      provider: "anthropic",
+      providerId: "anthropic",
+      ref: { providerId: "anthropic", name: "claude-opus-4-8" },
       transportKind: "anthropic",
+      serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
       serviceTier: "fast",
     }),
     { onServiceTierChange },
@@ -243,31 +198,50 @@ test("Anthropic Fast toggle off clears the preference with undefined", () => {
 
   fireEvent.click(toggle);
   expect(onServiceTierChange).toHaveBeenCalledWith(
-    { groupId: "", name: "claude-opus-4-8" },
+    { providerId: "anthropic", name: "claude-opus-4-8" },
     undefined,
   );
 });
 
-test("Anthropic Sonnet renders neither the Fast switch nor the Service Tier dropdown", () => {
+test("a model without declared tiers renders no Service Tier control", () => {
   renderInspector(
-    tierModel({
-      name: "claude-sonnet-4-5",
-      provider: "anthropic",
-      transportKind: "anthropic",
-    }),
+    tierModel({ name: "deepseek-chat", providerId: "deepseek", serviceTiers: undefined }),
     { onServiceTierChange: vi.fn() },
   );
-
-  expect(screen.queryByText("Fast")).toBeNull();
   expect(screen.queryByText("Service Tier")).toBeNull();
+  expect(screen.queryByText("Fast")).toBeNull();
+});
+
+test("the catalog entry's tiers enable the control when the model declares none", async () => {
+  const gatewayModel = tierModel({
+    name: "my-gateway-model",
+    apiBase: "https://gateway.example/v1",
+    providerId: "vercel-ai-gateway",
+    ref: { providerId: "vercel-ai-gateway", name: "my-gateway-model" },
+    serviceTiers: undefined,
+  });
+
+  const { unmount } = renderInspector(gatewayModel, { onServiceTierChange: vi.fn() });
+  expect(screen.queryByText("Service Tier")).toBeNull();
+  unmount();
+
+  renderInspector(gatewayModel, {
+    catalogEntry: { id: "my-gateway-model", serviceTiers: ["default", "flex", "fast"] },
+    onServiceTierChange: vi.fn(),
+  });
+  const trigger = serviceTierTrigger();
+  fireEvent.keyDown(trigger, { key: "ArrowDown" });
+  const options = await screen.findAllByRole("option");
+  expect(options.map((option) => option.textContent)).toEqual(["Default", "Flex", "Fast"]);
 });
 
 test("selecting a tier fires the callback with the picked value", async () => {
   const onServiceTierChange = vi.fn<ServiceTierChange>().mockResolvedValue(true);
-  renderInspector(tierModel(), { onServiceTierChange });
+  const model = tierModel();
+  renderInspector(model, { onServiceTierChange });
 
   await pickServiceTierOption(serviceTierTrigger(), "Fast");
-  expect(onServiceTierChange).toHaveBeenCalledWith({ groupId: "", name: "gpt-5" }, "fast");
+  expect(onServiceTierChange).toHaveBeenCalledWith(model.ref, "fast");
 });
 
 test("a failed save rolls the displayed tier back to the stored value", async () => {
@@ -287,7 +261,7 @@ test("a failed save rolls the displayed tier back to the stored value", async ()
   await act(async () => {
     resolveSave(false);
   });
-  expect(trigger.textContent).toBe("Auto");
+  expect(trigger.textContent).toBe("Default");
 });
 
 test("the displayed tier follows the stored preference", () => {
@@ -300,34 +274,47 @@ test("without the callback the tier controls do not render", () => {
   expect(screen.queryByText("Service Tier")).toBeNull();
 
   renderInspector(
-    tierModel({ name: "claude-opus-4-8", provider: "anthropic", transportKind: "anthropic" }),
+    tierModel({
+      name: "claude-opus-4-8",
+      providerId: "anthropic",
+      transportKind: "anthropic",
+      serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
+    }),
   );
   expect(screen.queryByText("Fast")).toBeNull();
 });
 
 test("modelPickerInspectorNeedsWideLayout includes models with a tier control", () => {
-  const vercelModel = tierModel({
+  const gatewayModel = tierModel({
     name: "my-gateway-model",
     apiBase: "https://gateway.example/v1",
-    provider: "vercel-ai-gateway",
+    providerId: "vercel-ai-gateway",
+    serviceTiers: undefined,
   });
-  // Without an upstream identity the route exposes no tier options and stays narrow.
-  expect(modelPickerInspectorNeedsWideLayout(vercelModel)).toBe(false);
-  // The catalog upstream fact enables the tier control and the wide layout.
+  // Without declared tiers anywhere the row stays narrow.
+  expect(modelPickerInspectorNeedsWideLayout(gatewayModel)).toBe(false);
+  // The catalog entry's declared tiers enable the tier control and the wide layout.
   expect(
-    modelPickerInspectorNeedsWideLayout(vercelModel, {
+    modelPickerInspectorNeedsWideLayout(gatewayModel, {
       id: "my-gateway-model",
-      upstreamProvider: "openai",
+      serviceTiers: ["default", "flex", "fast"],
     }),
   ).toBe(true);
-  // Anthropic native Fast also participates.
+  // A literal fast declaration (Anthropic native Fast) also participates.
   expect(
     modelPickerInspectorNeedsWideLayout(
-      tierModel({ name: "claude-opus-4-8", provider: "anthropic", transportKind: "anthropic" }),
+      tierModel({
+        name: "claude-opus-4-8",
+        providerId: "anthropic",
+        transportKind: "anthropic",
+        serviceTiers: { fast: { headers: { "anthropic-beta": "fast-mode-2026-02-01" } } },
+      }),
     ),
   ).toBe(true);
-  // A provider outside the matrix with no other detail body stays narrow.
+  // A model with no declarations and no other detail body stays narrow.
   expect(
-    modelPickerInspectorNeedsWideLayout(tierModel({ name: "my-local-model", provider: "custom" })),
+    modelPickerInspectorNeedsWideLayout(
+      tierModel({ name: "my-local-model", providerId: "custom", serviceTiers: undefined }),
+    ),
   ).toBe(false);
 });

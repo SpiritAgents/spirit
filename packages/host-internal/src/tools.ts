@@ -68,7 +68,7 @@ import {
   type HostAutomationTrigger,
 } from "./automations.js";
 import type { ModelReasoningEffort } from "./reasoning-effort.js";
-import type { ModelRef } from "./config-v2.js";
+import type { ModelRef } from "./config.js";
 import { resolveInstructionPaths, type InstructionDiscoveryContext } from "./storage.js";
 import { isPathUnderPlansDir, resolvePlanFilePath } from "./plans.js";
 import {

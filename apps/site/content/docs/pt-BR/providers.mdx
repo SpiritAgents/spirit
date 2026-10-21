@@ -17,7 +17,7 @@ O assistente de conexão está em **Configurações → Modelos** no Desktop, ou
 | `anthropic`         | API de Messages                       | Anthropic, MiniMax e endpoints compatíveis com Messages opcionais              |
 | `bedrock`           | Amazon Bedrock                        | Apenas Amazon Bedrock                                                          |
 
-Google Gemini e Vertex AI sempre usam Chat Completions. Se um perfil pedir Responses ou Messages, a {{product.name|mdx}} recorre a `openai-compatible`.
+Os presets do Google e do Vertex AI fixam Chat Completions — o assistente não oferece seletor de transporte para eles.
 
 Alguns provedores adicionam uma segunda dimensão além da chave:
 
@@ -27,11 +27,13 @@ Alguns provedores adicionam uma segunda dimensão além da chave:
 
 Se um provedor não tiver nenhum desses, o assistente é apenas: chave → importar modelos → escolher um modelo de linguagem ativo.
 
-{{product.name|mdx}} importa o catálogo de modelos e permite que você atribua o modelo de linguagem ativo, além de slots de imagem / vídeo / modelo de linguagem secundário quando o catálogo marca essas capacidades. Raciocínio e busca web integrada seguem o modelo e o transporte, não uma opção separada da {{product.name|mdx}}.
+{{product.name|mdx}} importa o catálogo de modelos e permite que você atribua o modelo de linguagem ativo, além de slots de imagem / vídeo / modelo de linguagem secundário quando o catálogo marca essas capacidades. As opções de raciocínio seguem os `supportedReasoningEfforts` declarados de cada modelo. As ferramentas expostas pelo provedor, como pesquisa na web, são declaradas por provedor e controladas pela opção **Ferramentas do provedor** — veja [Ferramentas](./agent/tools.mdx#provider-tools).
+
+O que o assistente grava no `config.json` é uma entrada totalmente declarativa: a base de API final, o transporte, o adaptador SDK e as declarações de ferramentas do provedor / upload de arquivos / API de geração. O runtime lê essas declarações como estão e nunca as deriva novamente da identidade do provedor — suas edições sobrevivem, exceto as chaves que o assistente possui, que uma reconexão redefine (veja [Configuração](./config.mdx)).
 
 ## Catálogo
 
-Estes são os provedores no seletor de conexão, na mesma ordem. Cada seção é a chave, o transporte e os campos extras daquele provedor. O assistente do Desktop e da CLI acima é o mesmo para todos os provedores.
+Estes são os provedores no seletor de conexão, na mesma ordem. Cada seção é a chave, o transporte, os campos extras daquele provedor e o que o assistente declara além da chave. Salvo indicação em contrário, a forma de credencial é uma única chave de API armazenada no chaveiro. O assistente do Desktop e da CLI acima é o mesmo para todos os provedores.
 
 ### OpenAI
 
@@ -40,6 +42,8 @@ Crie uma chave de API no [OpenAI platform](https://platform.openai.com/api-keys)
 O assistente fixa **Responses API** (`open-responses`). Não há seletor de transporte. Base padrão: `https://api.openai.com/v1`.
 
 Chat após a importação. Raciocínio segue o modelo. Geração de imagem e vídeo aparecem apenas quando o catálogo marca essas capacidades — atribua-as nos slots de modelo de imagem / vídeo.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo upstream dentro da requisição) e a API de geração de imagens.
 
 ### Anthropic
 
@@ -53,7 +57,7 @@ Chat após a importação. Raciocínio segue o modelo. Sem slot de geração de 
 
 Crie uma chave de API no [Google AI Studio](https://aistudio.google.com/apikey).
 
-**Chat Completions API** (`openai-compatible`) fixa. Pedir Responses ou Messages recai em Chat Completions. Base padrão: `https://generativelanguage.googleapis.com/v1beta`.
+**Chat Completions API** (`openai-compatible`) fixa; o assistente não oferece seletor de transporte. Base padrão: `https://generativelanguage.googleapis.com/v1beta`.
 
 Chat após a importação. A geração de imagem é atribuída apenas quando o catálogo marca isso. Para Vertex AI (projeto / localização GCP), use [Google Vertex AI](#google-vertex-ai).
 
@@ -61,9 +65,11 @@ Chat após a importação. A geração de imagem é atribuída apenas quando o c
 
 Crie uma chave de API no [SpaceXAI console](https://console.x.ai/team/default/api-keys).
 
-**Chat Completions API** (`openai-compatible`) fixa. Base padrão: `https://api.x.ai/v1`.
+**Open Responses API** (`open-responses`) fixa. Base padrão: `https://api.x.ai/v1`.
 
 Chat após a importação. Raciocínio, imagem e vídeo seguem o catálogo importado — atribua slots quando eles aparecerem.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo upstream dentro da requisição).
 
 ### Vercel AI Gateway
 
@@ -75,6 +81,8 @@ Chat mais tudo o que o catálogo do gateway expõe. A geração de imagens é ob
 
 Não infira visão ou geração de imagens a partir das tags. MiniMax M3 através deste gateway não retorna um fluxo de raciocínio exibível no Open Responses.
 
+Declara: a ferramenta do provedor **Perplexity Search** (executada pelo gateway dentro da requisição) e as APIs de geração de imagens / vídeos.
+
 ### Cloudflare AI Gateway
 
 Crie um token de API no [painel da Cloudflare](https://developers.cloudflare.com/ai-gateway/). Você também precisa do ID da conta.
@@ -82,7 +90,7 @@ Crie um token de API no [painel da Cloudflare](https://developers.cloudflare.com
 Seletor: **Chat Completions**, **Open Responses** ou **Messages**. A base é construída a partir da conta: `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`.
 
 - **ID da conta** (obrigatório) — hex de 32 caracteres
-- **ID do gateway** (opcional)
+- **ID do gateway** (opcional) — gravado como um cabeçalho de requisição literal `cf-aig-gateway-id`
 
 Sem um ID de conta, o assistente não consegue construir a base da API. Chat e outros recursos seguem os modelos que o gateway expõe.
 
@@ -94,6 +102,8 @@ Sem seletor. O padrão de conexão é **Open Responses** (`open-responses`). Bas
 
 Chat após a importação. Raciocínio segue o modelo.
 
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo upstream dentro da requisição).
+
 ### OpenRouter
 
 Crie uma chave em [OpenRouter](https://openrouter.ai/keys).
@@ -101,6 +111,8 @@ Crie uma chave em [OpenRouter](https://openrouter.ai/keys).
 Seletor: **Chat Completions**, **Open Responses** ou **Messages**. Base padrão: `https://openrouter.ai/api/v1`.
 
 Chat mais geração de imagem ou vídeo marcada no catálogo quando OpenRouter expõe esses modelos.
+
+Declara: a API de geração de vídeos.
 
 ### Fireworks AI
 
@@ -118,6 +130,8 @@ Fixado **Chat Completions API**. Base padrão: `https://api.together.ai/v1`.
 
 Chat após a importação. Atribua slots de imagem ou vídeo apenas quando o catálogo os marcar.
 
+Declara: as APIs de geração de imagens e vídeos.
+
 ### Groq
 
 Crie uma chave de API no [console Groq](https://console.groq.com).
@@ -133,6 +147,8 @@ Crie uma chave de API no [Painel DeepInfra](https://deepinfra.com/dash/keys).
 Fixado **Chat Completions API**. Base padrão: `https://api.deepinfra.com/v1/openai`.
 
 Chat após a importação. Outros recursos seguem o catálogo.
+
+Declara: as APIs de geração de imagens e vídeos.
 
 ### Baseten
 
@@ -150,6 +166,8 @@ Crie um token em [configurações do Hugging Face](https://huggingface.co/settin
 
 Chat após importação. Outras capacidades seguem o catálogo do roteador.
 
+Declara: as APIs de geração de imagens e vídeos.
+
 ### Moonshot AI
 
 Crie uma chave de API no console Moonshot para o site que você usará: [China](https://platform.kimi.com/console/api-keys) ou [Internacional](https://platform.kimi.ai/console/api-keys).
@@ -159,7 +177,9 @@ Crie uma chave de API no console Moonshot para o site que você usará: [China](
 - **Internacional** (padrão) — `https://api.moonshot.ai/v1`
 - **China** — `https://api.moonshot.cn/v1`
 
-Este é o provedor Moonshot Open Platform, não [Kimi Code](#kimi-code). A pesquisa embutida no moonshot-ai não usa o caminho de pesquisa hospedada do Kimi Code. Uma chave do Kimi Code e uma chave do Moonshot Open Platform são conexões diferentes.
+Este é o provedor Moonshot Open Platform, não [Kimi Code](#kimi-code). Uma chave do Kimi Code e uma chave do Moonshot Open Platform são conexões diferentes.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (uma fórmula da Moonshot — o esquema da ferramenta é buscado no endpoint da fórmula e o {{product.name|mdx}} executa as chamadas contra ele; os detalhes ficam recolhidos porque a saída é texto cifrado do lado do servidor) e upload de arquivos de vídeo (referências `ms://`).
 
 ### Kimi Code
 
@@ -167,7 +187,9 @@ Crie uma chave de API do Kimi Code no [console Kimi Code](https://www.kimi.com/c
 
 **Chat Completions API** corrigido. Base padrão: `https://api.kimi.com/coding/v1`. Existe uma base de Messages em `https://api.kimi.com/coding`, mas o assistente não oferece um seletor.
 
-Chat após importação. Pesquisa hospedada, quando disponível, é específica deste provedor — não moonshot-ai.
+Chat após importação. A pesquisa hospedada aqui é específica deste provedor — não moonshot-ai.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo host contra o endpoint de pesquisa declarado), upload de arquivos de vídeo (referências `ms://`) e uma mesclagem literal `stream_options` no corpo da requisição.
 
 ### Z.ai
 
@@ -179,6 +201,8 @@ Ative **GLM Coding Plan** no assistente para usar `https://api.z.ai/api/coding/p
 
 Chat após importação. Raciocínio segue o modelo.
 
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo host; `max_results` 1–50).
+
 ### Zhipu AI
 
 Crie uma chave de API no [console Zhipu AI](https://bigmodel.cn/console). Notas do Coding Plan: [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start).
@@ -188,6 +212,8 @@ Crie uma chave de API no [console Zhipu AI](https://bigmodel.cn/console). Notas 
 Ative **GLM Coding Plan** para usar `https://open.bigmodel.cn/api/coding/paas/v4`.
 
 Chat após importação. Raciocínio segue o modelo.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo host; `max_results` 1–50).
 
 ### Alibaba
 
@@ -204,6 +230,8 @@ Crie uma chave de API no [Alibaba Cloud Model Studio / Bailian](https://bailian.
 
 Chat após importação. Outras capacidades seguem o catálogo.
 
+Declara: as ferramentas do provedor **Pesquisa na web** e **Interpretador de código** (interruptores do corpo da requisição, executados pelo upstream).
+
 ### MiniMax
 
 Crie uma chave de API no console MiniMax para o site que você usará: [China](https://platform.minimax.cn/console/) ou [Internacional](https://platform.minimax.io/console/).
@@ -214,6 +242,8 @@ Crie uma chave de API no console MiniMax para o site que você usará: [China](h
 - **China** — `https://api.minimax.cn/v1`
 
 Chat após importação. A lista `/models` upstream não tem sinalizadores multimodais; apenas M3 é tratado como suporte a entrada de imagem / vídeo. Através do Vercel AI Gateway em Open Responses, o MiniMax M3 não retorna um stream de pensamento exibível.
+
+Declara: a ferramenta do provedor **Pesquisa na web** (uma ferramenta de servidor da API de Messages, executada pelo upstream) e upload de arquivos de vídeo (referências `mm_file://`).
 
 ### Xiaomi
 
@@ -234,6 +264,8 @@ Seletor: **Chat Completions** ou **Messages**.
 
 Chat após a importação. Outras capacidades seguem o catálogo.
 
+Declara: as APIs de geração de imagens e vídeos.
+
 ### StepFun
 
 Crie uma chave de API na [plataforma StepFun China](https://platform.stepfun.com) ou na [plataforma internacional](https://platform.stepfun.ai). Notas do Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
@@ -247,6 +279,8 @@ Crie uma chave de API na [plataforma StepFun China](https://platform.stepfun.com
 
 Chat após a importação. Raciocínio segue o modelo.
 
+Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo host; `max_results` 1–20), upload de arquivos de vídeo (referências `stepfile://`, teto de 128 MiB) e a API de geração de imagens.
+
 ### Volcengine
 
 Crie uma chave de API no [console Volcengine Ark](https://console.volcengine.com/ark/apiKey).
@@ -254,6 +288,8 @@ Crie uma chave de API no [console Volcengine Ark](https://console.volcengine.com
 Seletor: **Chat Completions** ou **Responses API**. Base padrão: `https://ark.cn-beijing.volces.com/api/v3`.
 
 Chat após a importação. Outras capacidades seguem o catálogo.
+
+Declara: a API de geração de vídeos.
 
 ### BytePlus
 
@@ -263,6 +299,8 @@ Seletor: **Chat Completions** ou **Responses API**. Base padrão: `https://ark.a
 
 Chat após a importação. Outras capacidades seguem o catálogo.
 
+Declara: a API de geração de vídeos.
+
 ### Meituan
 
 Crie uma chave de API no [console LongCat](https://longcat.chat/platform/api_keys).
@@ -270,6 +308,8 @@ Crie uma chave de API no [console LongCat](https://longcat.chat/platform/api_key
 **Chat Completions API** fixa. Base padrão: `https://api.longcat.chat/openai/v1`.
 
 Chat após a importação. Outras capacidades seguem o catálogo.
+
+Declara: a codificação de wire do interruptor de thinking (`thinkingSwitch`), para que modelos com interruptor de thinking tenham um controle funcional.
 
 ### Tencent TokenHub
 
@@ -321,11 +361,13 @@ No [console AWS Bedrock](https://console.aws.amazon.com/bedrock), crie uma chave
 
 Converse depois de escolher um modelo. Outros recursos seguem esse modelo. Chaves Bearer funcionam apenas para inferência. `ListFoundationModels` não aceita Bearer, então a importação do catálogo precisa de IAM.
 
+A região é materializada na base de API final e em `options.awsRegion`. Bearer é armazenado como a chave do provedor; IAM é armazenado como slots de credenciais `accessKeyId` / `secretAccessKey`.
+
 ### Google Vertex AI
 
 Use um projeto GCP com o Vertex AI ativado. A autenticação é ADC, uma conta de serviço ou uma chave de API Express — não uma chave OpenAI genérica.
 
-**Chat Completions API** fixa. Solicitações de Responses ou Messages caem para Chat Completions. A base se torna `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
+**Chat Completions API** fixa; o assistente não oferece seletor de transporte. A base se torna `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
 
 - **ID do projeto GCP** e **Localização** (obrigatório), por exemplo `us-central1`
 - **Autenticação**
@@ -335,6 +377,8 @@ Use um projeto GCP com o Vertex AI ativado. A autenticação é ADC, uma conta d
 
 Converse após um modelo ser selecionado. Para chaves AI Studio sem projeto GCP, use [Google](#google). O modo Express não pode importar a lista de modelos. O modo Service Account precisa de email e chave privada para listar modelos.
 
+Uma conta de serviço é armazenada como slots de credenciais `clientEmail` / `privateKey` com `options.project` / `options.location`. O modo Express grava a base de API Express e não precisa de projeto / localização.
+
 ### Personalizado
 
 Use a chave de API que seu endpoint espera. Não há provedor personalizado hospedado pelo {{product.name|mdx}}.
@@ -343,6 +387,6 @@ Seletor: **Chat Completions**, **Open Responses** ou **Messages**. Você deve fo
 
 Digite a raiz documentada pelo fornecedor, incluindo o sufixo de versão quando exigido (`/v1`, `/v1/openai`, …). O {{product.name|mdx}} não adivinha um caminho para endpoints personalizados.
 
-Você também pode definir um nome de exibição para o grupo de provedores para que vários endpoints personalizados permaneçam distinguíveis.
+Você também pode definir um nome de exibição para a entrada do provedor, para que vários endpoints personalizados permaneçam distinguíveis.
 
 Após conectar, importe ou digite IDs de modelo. Marque os recursos de chat / imagem / vídeo no assistente quando o endpoint não publicar um catálogo que o {{product.name|mdx}} entenda.

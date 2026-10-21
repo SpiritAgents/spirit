@@ -85,7 +85,7 @@ test("shouldUseApplyPatchFileTools returns false in Ask mode", () => {
       {
         transportKind: "open-responses",
         model: "gpt-5.2",
-        llmVendor: "openai",
+        options: { applyPatch: true },
       },
       { agentMode: "ask" },
     ),

@@ -472,6 +472,7 @@ export default function App() {
                   useTranslucency={useTranslucency}
                   settings={runtime.settings}
                   onSavePatch={runtime.saveSettingsPatch}
+                  providerPickerPresets={snapshot?.config.providerPickerPresets ?? []}
                   modelsBusy={runtime.busyAction === "models"}
                   modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
                   onAddModel={runtime.addModel}

@@ -769,6 +769,7 @@ export function ConversationView({
                       rewindRichInputRef={list.rewindRichInputRef}
                       models={list.models}
                       catalogHints={snapshot?.config.modelCatalogHints}
+                      providerPresets={snapshot?.config.providerPickerPresets}
                       activeModel={
                         snapshot?.config.activeModel ?? list.runtime.settings.activeModel
                       }

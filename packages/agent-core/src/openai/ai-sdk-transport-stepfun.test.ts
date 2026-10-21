@@ -6,9 +6,9 @@ import { test } from "vitest";
 
 import { createLlmImageContentPart } from "../ports.js";
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import { clearMoonshotChatCompletionMessages } from "./moonshot-chat-completion-messages.js";
+import { clearVideoPassthroughMessages } from "./video-message-stash.js";
 import { llmMessageToOpenAiMessage } from "./openai-multimodal-messages.js";
-import { clearStepfunVideoUploadCache } from "./stepfun-files.js";
+import { clearDeclaredFileUploadCacheForTests } from "../file-upload/uploader.js";
 import { AiSdkOpenAiCompatibleTransport } from "./ai-sdk-transport.js";
 
 const MINIMAL_MP4_HEADER = Buffer.from([
@@ -23,13 +23,13 @@ interface CapturedRequest {
   body: Record<string, unknown> | undefined;
 }
 
-test("StepFun transport uploads local video and restores stepfile video_url via stash", async () => {
+test("declared fileUpload uploads local video and restores the stepfile:// video_url via the stash", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-stepfun-video-e2e-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   const captured: CapturedRequest[] = [];
   try {
     await writeFile(videoPath, MINIMAL_MP4_HEADER);
-    clearStepfunVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
     setLlmFetchTransportOverrideForTests(async (input, init) => {
       const url =
         typeof input === "string"
@@ -57,7 +57,11 @@ test("StepFun transport uploads local video and restores stepfile video_url via 
         apiKey: "test-key",
         model: "step-3.7-flash",
         baseUrl: "https://api.stepfun.com/v1",
-        llmVendor: "stepfun",
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "storage" },
+          refTemplate: "stepfile://{id}",
+        },
         workspaceRoot,
         modelCapabilities: { imageInput: true, videoInput: true },
       },
@@ -95,13 +99,13 @@ test("StepFun transport uploads local video and restores stepfile video_url via 
     assert.equal(JSON.stringify(chatBody.body).includes("data:video"), false);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotChatCompletionMessages();
-    clearStepfunVideoUploadCache();
+    clearVideoPassthroughMessages();
+    clearDeclaredFileUploadCacheForTests();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 
-test("StepFun transport sends local images as image_url data URLs without Files upload", async () => {
+test("local images ride the generic base64 inline path (no upload)", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-stepfun-image-e2e-"));
   const imagePath = join(workspaceRoot, "shot.png");
   const captured: CapturedRequest[] = [];
@@ -147,7 +151,11 @@ test("StepFun transport sends local images as image_url data URLs without Files 
         apiKey: "test-key",
         model: "step-3.7-flash",
         baseUrl: "https://api.stepfun.com/v1",
-        llmVendor: "stepfun",
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "storage" },
+          refTemplate: "stepfile://{id}",
+        },
         workspaceRoot,
         modelCapabilities: { imageInput: true, videoInput: true },
       },
@@ -169,7 +177,7 @@ test("StepFun transport sends local images as image_url data URLs without Files 
     assert.equal(wire.includes("stepfile://"), false);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotChatCompletionMessages();
+    clearVideoPassthroughMessages();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });

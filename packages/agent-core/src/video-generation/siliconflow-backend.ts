@@ -35,14 +35,17 @@ export function mapSiliconFlowVideoImageSize(aspectRatio?: string): string {
 }
 
 export class SiliconFlowVideoBackend implements VideoGenerationBackend {
-  readonly id = "siliconflow";
+  readonly id = "siliconflow-videos";
 
   async generate(
     config: OpenAiVideoGenerationConfig,
     request: VideoGenerationRequest,
     saveGeneratedVideo: (request: GeneratedVideoSaveRequest) => Promise<GeneratedVideoFile>,
   ): Promise<ToolExecutionOutput> {
-    const baseUrl = (config.baseUrl ?? "https://api.siliconflow.com/v1").replace(/\/$/, "");
+    const baseUrl = (config.baseUrl ?? "").replace(/\/$/, "");
+    if (!baseUrl) {
+      throw new Error("The siliconflow-videos API shape requires a baseUrl.");
+    }
     const submitUrl = `${baseUrl}/video/submit`;
     const imageSize = mapSiliconFlowVideoImageSize(request.aspectRatio);
 

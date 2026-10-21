@@ -5,16 +5,10 @@ import { join } from "node:path";
 import { test } from "vitest";
 
 import { loadBaseConfig } from "../src/config.js";
-import {
-  providerAccessKeyIdAccount,
-  providerKeyAccount,
-  providerSecretAccessKeyAccount,
-  providerVertexClientEmailAccount,
-  providerVertexPrivateKeyAccount,
-} from "@spiritagent/host-internal";
+import { providerInternalSlotAccount } from "@spiritagent/host-internal";
 import { setKeyringStoreForTests } from "@spiritagent/host-internal";
 import { resolveTransportConfig } from "@spiritagent/host-internal";
-import { v2ConfigFixture } from "./fixtures/v2-config.js";
+import { v1ConfigFixture } from "./fixtures/v1-config.js";
 
 test("resolveTransportConfig builds bedrock transport from IAM credentials", () => {
   const modelName = "anthropic.claude-3-5-sonnet-20241022-v2:0";
@@ -22,24 +16,22 @@ test("resolveTransportConfig builds bedrock transport from IAM credentials", () 
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
+      v1ConfigFixture({
+        providers: [
           {
             id: "amazon-bedrock",
-            provider: "amazon-bedrock",
             apiBase: "https://bedrock-runtime.us-east-1.amazonaws.com",
             transportKind: "bedrock",
-            awsRegion: "us-east-1",
+            options: { awsRegion: "us-east-1" },
             models: [
               {
                 name: modelName,
-                reasoningEffort: "medium",
                 capabilities: ["languageModel"],
               },
             ],
           },
         ],
-        activeModel: { groupId: "amazon-bedrock", name: modelName },
+        activeModel: { providerId: "amazon-bedrock", name: modelName },
       }),
     ),
     "utf8",
@@ -55,8 +47,8 @@ test("resolveTransportConfig builds bedrock transport from IAM credentials", () 
       passwords.delete(account);
     },
   });
-  passwords.set(providerAccessKeyIdAccount("amazon-bedrock"), "AKIAEXAMPLE");
-  passwords.set(providerSecretAccessKeyAccount("amazon-bedrock"), "secret-key");
+  passwords.set(providerInternalSlotAccount("amazon-bedrock", "accessKeyId"), "AKIAEXAMPLE");
+  passwords.set(providerInternalSlotAccount("amazon-bedrock", "secretAccessKey"), "secret-key");
 
   try {
     const config = loadBaseConfig();
@@ -79,24 +71,22 @@ test("resolveTransportConfig builds vertex transport from service account creden
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
+      v1ConfigFixture({
+        providers: [
           {
             id: "google-vertex-ai",
-            provider: "google-vertex-ai",
             apiBase: "https://us-central1-aiplatform.googleapis.com/v1",
-            vertexProject: "my-project",
-            vertexLocation: "us-central1",
+            sdk: "@ai-sdk/google-vertex",
+            options: { project: "my-project", location: "us-central1" },
             models: [
               {
                 name: modelName,
-                reasoningEffort: "medium",
                 capabilities: ["languageModel"],
               },
             ],
           },
         ],
-        activeModel: { groupId: "google-vertex-ai", name: modelName },
+        activeModel: { providerId: "google-vertex-ai", name: modelName },
       }),
     ),
     "utf8",
@@ -113,11 +103,11 @@ test("resolveTransportConfig builds vertex transport from service account creden
     },
   });
   passwords.set(
-    providerVertexClientEmailAccount("google-vertex-ai"),
+    providerInternalSlotAccount("google-vertex-ai", "clientEmail"),
     "sa@my-project.iam.gserviceaccount.com",
   );
   passwords.set(
-    providerVertexPrivateKeyAccount("google-vertex-ai"),
+    providerInternalSlotAccount("google-vertex-ai", "privateKey"),
     "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----",
   );
 
@@ -137,29 +127,27 @@ test("resolveTransportConfig builds vertex transport from service account creden
   }
 });
 
-test("resolveTransportConfig defaults minimax to anthropic transport with llmVendor", () => {
+test("resolveTransportConfig resolves an anthropic-transport entry by declaration", () => {
   const modelName = "MiniMax-M3";
   const dir = mkdtempSync(join(tmpdir(), "spirit-acp-minimax-"));
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify(
-      v2ConfigFixture({
-        groups: [
+      v1ConfigFixture({
+        providers: [
           {
             id: "minimax",
-            provider: "minimax",
             apiBase: "https://api.minimax.cn/anthropic/v1",
-            providerSite: "cn",
+            transportKind: "anthropic",
             models: [
               {
                 name: modelName,
-                reasoningEffort: "medium",
                 capabilities: ["languageModel"],
               },
             ],
           },
         ],
-        activeModel: { groupId: "minimax", name: modelName },
+        activeModel: { providerId: "minimax", name: modelName },
       }),
     ),
     "utf8",
@@ -175,7 +163,7 @@ test("resolveTransportConfig defaults minimax to anthropic transport with llmVen
       passwords.delete(account);
     },
   });
-  passwords.set(providerKeyAccount("minimax"), "stored-key");
+  passwords.set(providerInternalSlotAccount("minimax", "apiKey"), "stored-key");
 
   try {
     const config = loadBaseConfig();
@@ -183,7 +171,8 @@ test("resolveTransportConfig defaults minimax to anthropic transport with llmVen
     const transport = resolveTransportConfig(config);
     assert.equal(transport.transportKind, "anthropic");
     if (transport.transportKind === "anthropic") {
-      assert.equal(transport.llmVendor, "minimax");
+      // No vendor identity fields exist on the resolved config anymore.
+      assert.equal("llmVendor" in transport, false);
       assert.equal(transport.baseUrl, "https://api.minimax.cn/anthropic/v1");
       assert.equal(transport.apiKey, "stored-key");
     }

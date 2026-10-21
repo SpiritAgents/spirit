@@ -35,8 +35,8 @@ import {
   isResponsesBuiltInToolName,
   resolveResponsesBuiltInToolStreamPhaseFromArgumentsJson,
 } from "../open-responses/responses-built-in-tools.js";
-import { findLatestProviderBuiltinToolRoundInState } from "../open-responses/sdk-provider-web-search-loop.js";
-import { shouldSkipEarlyExecutionForManagedProviderTool } from "../moonshot/formula/moonshot-formula-turn-handler.js";
+import { findLatestProviderBuiltinToolRoundInState } from "../open-responses/provider-builtin-tool-round.js";
+import { shouldSkipEarlyExecutionForDeclaredProviderTool } from "./provider-tool-calls.js";
 import type { ToolAgentState } from "../tool-agent.js";
 import { prefetchAutoReviewForToolCallIfNeeded } from "./auto-approval-integration.js";
 import {
@@ -522,7 +522,7 @@ export async function handlePendingStreamEvent<Config, State, ToolRequest>(
       resolveEarlyToolCallArguments(event.toolName, event.argumentsJson) !== undefined;
     if (
       !isResponsesBuiltInToolName(event.toolName) &&
-      !shouldSkipEarlyExecutionForManagedProviderTool(event.toolName, runtime.options.config) &&
+      !shouldSkipEarlyExecutionForDeclaredProviderTool(event.toolName, runtime.options.config) &&
       earlyExecutable
     ) {
       startEarlyToolExecution(

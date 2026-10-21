@@ -1,6 +1,6 @@
 ---
 title: Konfiguration
-description: Datenverzeichnisse, config.json v2,
+description: Datenverzeichnisse, config.json v1,
   {{product.workspaceDataFolderName}}/ und Umgebungsvariablen.
 ---
 
@@ -37,18 +37,75 @@ Typische Dateien:
 
 CLI-Binärdateien verwenden SPIRIT_HOME. Unter Unix können Stable-Installation und gemeinsame Daten dasselbe übergeordnete Verzeichnis nutzen; bin/ und cli/ bleiben Installationsdateien. Die Installationseinstellung bestimmt nicht das gemeinsame Datenverzeichnis.
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` muss `2` sein. Version 1 wird abgelehnt – löschen Sie die alte Datei und [verbinden Sie einen Anbieter neu](./providers.mdx).
+`schemaVersion` muss `1` sein. Jeder andere Wert wird abgelehnt – löschen Sie die alte Datei und [verbinden Sie einen Anbieter neu](./providers.mdx). Es gibt keine Migration aus älteren Formen.
 
 Kernfelder:
 
-- `providerGroups` – verbundene Häuser, API-Basis, Transport, Modelle
+- `providers` – verbundene Anbieter: Endpunkt, Transport, Zugangsdaten, Modelle
 - `activeModel`
 - `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` – Agent-Schalter wie `agents.providerTools.enabled`
 - `permission` – Zulassungsregeln für Berechtigungen
 
-Schlüssel sind **nicht** in dieser Datei. Sie befinden sich im [Schlüsselbund](./security.mdx).
+`activeModel` und die anderen Modell-Slots sind Modellreferenzen: `{ "providerId": "…", "name": "…" }`, wobei `providerId` eine `providers[].id` ist und `name` eines ihrer `models[].name`.
+
+### Anbietereinträge
+
+Jeder `providers[]`-Eintrag ist eine vollständig deklarative Verbindung – was der Verbindungsassistent schreibt, ist genau das, was die Runtime liest. Die Runtime leitet `apiBase` niemals aus der Identität des Anbieters neu ab; Standort-, Plan- und Cloud-Auswahlen werden beim Verbinden in die endgültige URL materialisiert.
+
+Felder auf Verbindungsebene:
+
+- `id` (erforderlich) – eindeutige ID des Eintrags. Modellreferenzen und das interne Schlüsselbund-Konto verweisen darauf
+- `label` – optionaler Anzeigename
+- `apiBase` (erforderlich) – der Endpunkt, die einzige Quelle der Wahrheit
+- `transportKind` – Wire-Protokoll: `openai-compatible` (Standard) / `open-responses` / `anthropic` / `bedrock`
+- `sdk` – vollständiger npm-Paketname des gebündelten SDK-Adapters (zum Beispiel `@ai-sdk/openai-compatible`). Fehlt er, gilt der Transport-Standard; ein unbekannter Paketname wird beim Laden abgelehnt
+- `headers` – literale zusätzliche Request-Header, die in jede ausgehende Anfrage gemergt werden
+- `body` – literale Felder, die in die oberste Ebene jedes Request-Bodys gemergt werden. Ein Fluchtventil für Wire-Eigenheiten – bevorzugen Sie eine strukturierte Deklaration, wo eine existiert
+- `providerTools` – Werkzeuge, die der Anbieter bereitstellt (Websuche, Code-Interpreter). Siehe [Anbieter-Werkzeuge](./agent/tools.mdx#provider-tools)
+- `fileUpload` – der Upload-Kanal für lokale Dateien, die nicht inline gehen sollen (`path` / `url`, `purpose`, `idPath`, `refTemplate`, `maxBytes`). Fehlt er, gehen Medien inline
+- `imageApi` / `videoApi` – API-Formnamen für Bild- / Videogenerierung; fehlt sie, gibt es keine solche Generierung
+- `options` – Transportparameter; der zulässige Schlüsselsatz hängt von `transportKind` × `sdk` ab (`awsRegion` für bedrock, `project` / `location` für `@ai-sdk/google-vertex`, die Schalter `auth` / `storedState` / `applyPatch` bei open-responses). Unbekannte Schlüssel werden abgelehnt
+- `models` (erforderliches Array, darf leer sein)
+
+Felder auf Modellebene – `capabilities`, `contextLength`, `outputLimit`, `reasoningEffort`, `supportedReasoningEfforts`, `reasoningMode`, `supportedReasoningModes`, `supportsThinkingType`, `supportsThinkingSwitch`, `thinkingSwitch`, `serviceTiers`, `serviceTier` – können auch flach am Anbietereintrag deklariert werden als Standardwerte, die jedes Modell erbt; die eigene Deklaration des Modells gewinnt. Innerhalb von `models[]` ist alles außer `name` optional, und fehlend bedeutet nicht deklariert, nicht ein Standardwert.
+
+- `capabilities`-Token: `languageModel`, `image`, `audio`, `video`, `imageGeneration`, `videoGeneration`
+- `outputLimit` ist die Ausgabe-Token-Obergrenze, getrennt von `contextLength`
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` sind die einzige Quelle für Auswahl und Validierung – eine Auswahl außerhalb der Liste ist ein Fehler beim Laden, niemals still geklemmt
+- `thinkingEnabled` ist Ihr Thinking-An/Aus-Zustand (keine Fähigkeitsdeklaration); nur auf Modellebene und erfordert deklariertes `supportsThinkingSwitch`
+
+### Schlüsselkanäle
+
+Schlüssel müssen nicht in dieser Datei liegen – der Verbindungsassistent schreibt sie standardmäßig direkt in den [Schlüsselbund](./security.mdx). Die Config kann stattdessen einen Kanal deklarieren, aufgelöst in dieser Reihenfolge:
+
+1. `apiKey` – Klartext. Nicht empfohlen; nur ein Fluchtventil
+2. `apiKeyEnv` – der Name einer Umgebungsvariable, aus der der Schlüssel gelesen wird
+3. `apiKeyKeyring` – `{ "service": "…", "account": "…" }`, ein Eintrag in einem externen Schlüsselbund
+4. Interner Schlüsselbund – der implizite Fallback, den der Assistent schreibt (Konto `provider::{id}`)
+
+Zusammengesetzte Zugangsdaten (Bedrock IAM, Vertex-Dienstkonten) verwenden statt der flachen Schlüssel eine `credentials`-Slot-Map:
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+Slot-Namen sind Protokollfelder – `apiKey`, `accessKeyId` / `secretAccessKey` (Bedrock IAM / SigV4), `clientEmail` / `privateKey` (Vertex) – und unbekannte Slots werden abgelehnt. Jeder Slot löst `value` → `env` → `keyring` → interner Schlüsselbund auf (`provider::{id}::{slot}`; der `apiKey`-Slot ist schlicht `provider::{id}`). Flache Schlüssel und `credentials.apiKey` können in einem Eintrag nicht koexistieren.
+
+### agents.providerTools
+
+`agents.providerTools.enabled` steuert alle anbieterdeklarierten Werkzeuge auf einmal (umbenannt aus `agents.webSearch.enabled`; die Semantik ist unverändert: Opt-out, standardmäßig an). Auf `false` gesetzt, erreichen weder Anbieter-Werkzeug-Einträge noch Body-Schalter die Anfragen.
+
+### Katalogaktualisierung und Neuverbindung
+
+Routinemäßige Katalogaktualisierungen schreiben die Modelldeklarationsfelder neu, die der Katalog besitzt (`capabilities`, `supportedReasoningEfforts`, `supportedReasoningModes`, `serviceTiers`, …) – Modellfakten kommen aus dem Katalog als einziger Quelle der Wahrheit, daher werden manuelle Änderungen an diesen Feldern bei der nächsten Aktualisierung überschrieben. Materialisierungen auf Anbieterebene (`apiBase`, `sdk`, `providerTools`, `fileUpload`, `options`, `imageApi` / `videoApi`) ändern sich nur, wenn Sie den Anbieter neu verbinden. Die Neuverbindung setzt die Schlüssel zurück, die der Assistent besitzt (Ihre Änderungen daran werden überschrieben), und bewahrt alles andere: `label`, Zugangskanäle, `headers` / `body`, flache Modell-Standardwerte und von Ihnen manuell hinzugefügte Modelle.
 
 ### permission
 

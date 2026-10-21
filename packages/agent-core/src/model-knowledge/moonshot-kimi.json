@@ -1,0 +1,54 @@
+{
+  "models": [
+    {
+      "match": "kimi-k3(?:-|$)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "high", "max"],
+        "supportsThinkingType": "only"
+      },
+      "note": "Kimi K3 always thinks and is controlled only via the top-level reasoning_effort with fixed low/high/max tiers."
+    },
+    {
+      "match": "kimi-k2\\.7-code(?:-|$)",
+      "declare": {},
+      "note": "kimi-k2.7-code (including -highspeed) does not support the thinking.type switch; the empty declare shadows the broader k2.5+ record below."
+    },
+    {
+      "match": "kimi-k(?:2\\.(?:[5-9]|[1-9]\\d+)|[3-9]|[1-9]\\d+)",
+      "declare": {
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "enabled"
+              }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "disabled"
+                }
+              }
+            }
+          }
+        }
+      },
+      "note": "kimi-k2.5 and above support the thinking.type switch; kimi-k3 and kimi-k2.7-code are excluded by the records above."
+    }
+  ]
+}

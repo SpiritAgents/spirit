@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,
   AddProviderModelsRequest,
-  DesktopModelProvider,
+  DesktopProviderPickerPreset,
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
@@ -27,6 +27,8 @@ import type {
 type OnboardingConnectControlsProps = {
   modelsBusy: boolean;
   modelsPreviewBusy: boolean;
+  /** Preset picker rows from the host snapshot (list order + fallback labels). */
+  providerPickerPresets: readonly DesktopProviderPickerPreset[];
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
@@ -43,6 +45,7 @@ type OnboardingConnectControlsProps = {
 export function OnboardingConnectControls({
   modelsBusy,
   modelsPreviewBusy,
+  providerPickerPresets,
   onAddModel,
   onAddProviderModels,
   onPreviewModels,
@@ -55,18 +58,18 @@ export function OnboardingConnectControls({
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   /** Increments on each connection attempt in this session; used as ProviderConnectDialog's key to remount and reset the form. */
   const [connectTarget, setConnectTarget] = useState<{
-    provider: DesktopModelProvider;
+    provider: string;
     session: number;
   } | null>(null);
   const scrollRootRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(() => pinnedBottomFade ?? false);
 
   const filteredProviders = filterProviderRows(
-    localizedProviderRows((key, options) => String(t(key, options))),
+    localizedProviderRows((key, options) => String(t(key, options)), providerPickerPresets),
     query,
   );
 
-  const startConnect = (id: DesktopModelProvider) => {
+  const startConnect = (id: string) => {
     setConnectTarget((prev) => ({ provider: id, session: (prev?.session ?? 0) + 1 }));
     setConnectDialogOpen(true);
   };
@@ -140,6 +143,7 @@ export function OnboardingConnectControls({
         <ProviderConnectDialog
           key={`${connectTarget.provider}-${connectTarget.session}`}
           provider={connectTarget.provider}
+          providerPresets={providerPickerPresets}
           open={connectDialogOpen}
           onOpenChange={setConnectDialogOpen}
           busy={modelsBusy}

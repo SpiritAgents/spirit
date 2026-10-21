@@ -15,8 +15,7 @@ import {
 test("buildModelCatalogDisplayTitleMap uses catalog displayName for gateway models", () => {
   const hints = [
     {
-      provider: "vercel-ai-gateway",
-      transportKind: "openai-compatible",
+      providerId: "vercel-ai-gateway",
       apiBase: "https://gateway.example/v1",
       modelIds: ["openai/gpt-5"],
       modelCatalog: [{ id: "openai/gpt-5", displayName: "GPT-5" }],
@@ -27,26 +26,19 @@ test("buildModelCatalogDisplayTitleMap uses catalog displayName for gateway mode
     {
       name: "openai/gpt-5",
       apiBase: "https://gateway.example/v1",
-      provider: "vercel-ai-gateway",
-      transportKind: "openai-compatible",
-      reasoningEffort: "default",
-      keyConfigured: true,
+      providerId: "vercel-ai-gateway",
     },
   ];
 
   const titles = buildModelCatalogDisplayTitleMap(models, hints);
-  assert.equal(
-    titles.get("vercel-ai-gateway::openai-compatible::https://gateway.example/v1::openai/gpt-5"),
-    "GPT-5",
-  );
+  assert.equal(titles.get("vercel-ai-gateway::openai/gpt-5"), "GPT-5");
   assert.equal(modelDisplayTitleFromMap(models[0], titles), "GPT-5");
   assert.equal(
     modelDisplayTitleFromMap(
       {
         name: "missing",
         apiBase: "https://gateway.example/v1",
-        provider: "vercel-ai-gateway",
-        transportKind: "openai-compatible",
+        providerId: "vercel-ai-gateway",
       },
       titles,
     ),
@@ -151,25 +143,18 @@ test("buildModelCatalogDisplayTitleMap formats non-gateway model ids", () => {
     {
       name: "gpt-4o-mini",
       apiBase: "https://api.openai.com/v1",
-      provider: "openai",
-      transportKind: "openai-compatible",
-      reasoningEffort: "default",
-      keyConfigured: true,
+      providerId: "openai",
     },
   ];
 
   const titles = buildModelCatalogDisplayTitleMap(models, []);
-  assert.equal(
-    titles.get("openai::openai-compatible::https://api.openai.com/v1::gpt-4o-mini"),
-    "GPT 4o Mini",
-  );
+  assert.equal(titles.get("openai::gpt-4o-mini"), "GPT 4o Mini");
 });
 
 test("buildModelCatalogDisplayTitleMap scopes titles by provider for shared model ids", () => {
   const hints = [
     {
-      provider: "tencent-tokenhub",
-      transportKind: "openai-compatible",
+      providerId: "tencent-tokenhub",
       apiBase: "https://tokenhub.tencentmaas.com/v1",
       modelIds: ["deepseek-v4-pro"],
       modelCatalog: [{ id: "deepseek-v4-pro", displayName: "DeepSeek-V4-Pro" }],
@@ -180,18 +165,12 @@ test("buildModelCatalogDisplayTitleMap scopes titles by provider for shared mode
     {
       name: "deepseek-v4-pro",
       apiBase: "https://api.deepseek.com/v1",
-      provider: "deepseek",
-      transportKind: "openai-compatible",
-      reasoningEffort: "default",
-      keyConfigured: true,
+      providerId: "deepseek",
     },
     {
       name: "deepseek-v4-pro",
       apiBase: "https://tokenhub.tencentmaas.com/v1",
-      provider: "tencent-tokenhub",
-      transportKind: "openai-compatible",
-      reasoningEffort: "default",
-      keyConfigured: true,
+      providerId: "tencent-tokenhub",
     },
   ];
 
@@ -204,10 +183,7 @@ test("modelCatalogDisplayTitle keeps raw id for gateway without catalog entry", 
   const model = {
     name: "openai/gpt-5",
     apiBase: "https://gateway.example/v1",
-    provider: "vercel-ai-gateway",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "vercel-ai-gateway",
   };
   assert.equal(modelCatalogDisplayTitle(model, undefined), "openai/gpt-5");
 });
@@ -215,8 +191,7 @@ test("modelCatalogDisplayTitle keeps raw id for gateway without catalog entry", 
 test("findModelCatalogEntry returns entry without pricing", () => {
   const hints = [
     {
-      provider: "openrouter",
-      transportKind: "openai-compatible",
+      providerId: "openrouter",
       apiBase: "https://openrouter.ai/api/v1",
       modelIds: ["anthropic/claude-sonnet-4"],
       modelCatalog: [{ id: "anthropic/claude-sonnet-4", displayName: "Claude Sonnet 4" }],
@@ -226,10 +201,7 @@ test("findModelCatalogEntry returns entry without pricing", () => {
   const model = {
     name: "anthropic/claude-sonnet-4",
     apiBase: "https://openrouter.ai/api/v1",
-    provider: "openrouter",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "openrouter",
   };
   const entry = findModelCatalogEntry(model, hints);
   assert.equal(entry?.displayName, "Claude Sonnet 4");
@@ -239,8 +211,7 @@ test("findModelCatalogEntry returns entry without pricing", () => {
 test("findModelCatalogEntry resolves moonshot-ai catalog with contextLength", () => {
   const hints = [
     {
-      provider: "moonshot-ai",
-      transportKind: "openai-compatible",
+      providerId: "moonshot-ai",
       apiBase: "https://api.moonshot.cn/v1",
       modelIds: ["kimi-k2.5"],
       modelCatalog: [{ id: "kimi-k2.5", displayName: "Kimi K2.5", contextLength: 256000 }],
@@ -250,10 +221,7 @@ test("findModelCatalogEntry resolves moonshot-ai catalog with contextLength", ()
   const model = {
     name: "kimi-k2.5",
     apiBase: "https://api.moonshot.cn/v1",
-    provider: "moonshot-ai",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "moonshot-ai",
   };
   const entry = findModelCatalogEntry(model, hints);
   assert.equal(entry?.contextLength, 256000);
@@ -262,8 +230,7 @@ test("findModelCatalogEntry resolves moonshot-ai catalog with contextLength", ()
 test("findModelCatalogEntry resolves meituan catalog with pricing", () => {
   const hints = [
     {
-      provider: "meituan",
-      transportKind: "openai-compatible",
+      providerId: "meituan",
       apiBase: "https://api.longcat.chat/openai/v1",
       modelIds: ["LongCat-2.0"],
       modelCatalog: [
@@ -283,10 +250,7 @@ test("findModelCatalogEntry resolves meituan catalog with pricing", () => {
   const model = {
     name: "LongCat-2.0",
     apiBase: "https://api.longcat.chat/openai/v1",
-    provider: "meituan",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "meituan",
   };
   const entry = findModelCatalogEntry(model, hints);
   assert.equal(entry?.displayName, "LongCat-2.0");
@@ -294,11 +258,7 @@ test("findModelCatalogEntry resolves meituan catalog with pricing", () => {
   assert.equal(entry?.pricing?.outputPerTokenUsd, "0.000008");
 
   const detailMap = buildModelCatalogDetailMap([model], hints);
-  assert.equal(
-    detailMap.get("meituan::openai-compatible::https://api.longcat.chat/openai/v1::LongCat-2.0")
-      ?.pricing?.inputPerTokenUsd,
-    "0.000002",
-  );
+  assert.equal(detailMap.get("meituan::LongCat-2.0")?.pricing?.inputPerTokenUsd, "0.000002");
   const fields = buildModelCatalogDetailFields({
     contextLength: entry?.contextLength,
     pricing: entry?.pricing,
@@ -312,10 +272,7 @@ test("modelCatalogHasDetailBody is false when only displayName is present", () =
   const model = {
     name: "minimax/M2.7",
     apiBase: "https://example/v1",
-    provider: "openrouter",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "openrouter",
   };
   assert.equal(
     modelCatalogHasDetailBody({
@@ -330,10 +287,7 @@ test("modelCatalogHasDetailBody is true when description or pricing exists", () 
   const model = {
     name: "openai/gpt-5",
     apiBase: "https://example/v1",
-    provider: "openrouter",
-    transportKind: "openai-compatible",
-    reasoningEffort: "default",
-    keyConfigured: true,
+    providerId: "openrouter",
   };
   assert.equal(
     modelCatalogHasDetailBody({

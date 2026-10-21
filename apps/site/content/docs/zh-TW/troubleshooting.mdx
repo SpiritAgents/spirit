@@ -5,7 +5,7 @@ description: 舊版設定、無頭區塊、配對鎖定、遺失金鑰，以及�
 
 ## config.json 被拒絕
 
-檔案必須是 `schemaVersion: 2`。刪除舊檔案並[重新連接供應商](./providers.mdx)。金鑰從不在該檔案中——它們位於[鑰匙圈](./security.mdx)中。
+檔案必須是 `schemaVersion: 1`。其他版本一律拒絕——刪除舊檔案並[重新連接供應商](./providers.mdx)。除非你宣告了明文 `apiKey`，金鑰不在該檔案中——它們位於[鑰匙圈](./security.mdx)中。
 
 ## CLI 已安裝，但設定是空的
 

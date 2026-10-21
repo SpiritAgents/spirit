@@ -1,5 +1,9 @@
 import i18n from "@/lib/i18n";
-import type { DesktopModelProvider, DesktopTransportKind } from "@/types";
+import {
+  CUSTOM_PROVIDER_PRESET_ID,
+  findProviderPreset,
+} from "@spiritagent/agent-core/provider-presets";
+import type { DesktopTransportKind } from "@/types";
 
 export type ConnectTransportOption = {
   value: DesktopTransportKind;
@@ -7,166 +11,93 @@ export type ConnectTransportOption = {
   summaryKey?: string;
 };
 
-export const connectTransportOptionCatalog = {
-  chatCompletions: {
-    value: "openai-compatible" as const,
-    label: "Chat Completions API",
-  },
-  messagesApi: {
-    value: "anthropic" as const,
-    label: "Messages API",
-  },
-  bedrockApi: {
-    value: "bedrock" as const,
-    label: "Amazon Bedrock",
-  },
-  responsesApi: {
-    value: "open-responses" as const,
-    label: "Responses API",
-  },
-  openResponsesApi: {
-    value: "open-responses" as const,
-    label: "Open Responses API",
-  },
-} satisfies Record<string, ConnectTransportOption>;
+const TRANSPORT_OPTION_LABELS: Record<DesktopTransportKind, string> = {
+  "openai-compatible": "Chat Completions API",
+  anthropic: "Messages API",
+  bedrock: "Amazon Bedrock",
+  "open-responses": "Responses API",
+};
 
-export function connectTransportOptionsForProvider(
-  provider: DesktopModelProvider,
-): ConnectTransportOption[] {
-  switch (provider) {
-    case "openai":
-      return [];
-    // Direct providers: the connection wizard fixes Chat Completions and does not expose an API type choice.
-    case "xai":
-    case "google":
-    case "google-vertex-ai":
-    case "deepseek":
-    case "kimi-code":
-    case "meituan":
-    case "xiaomi":
-    case "alibaba":
-    case "stepfun":
-      return [connectTransportOptionCatalog.chatCompletions];
-    case "minimax":
-      return [connectTransportOptionCatalog.messagesApi];
-    // TokenHub documents two web-browsing capabilities: Chat web_search_options and Responses
-    // web_search; measured: Chat injection has no effect, and Responses is only supported by a few
-    // models such as hy3-preview, which does not match TokenHub's Chat Completions-dominated model
-    // matrix, so only Chat Completions is kept.
-    case "tencent-tokenhub":
-    case "mistral":
-    case "cohere":
-    case "together-ai":
-    case "groq":
-    case "deepinfra":
-    case "baseten":
-      return [connectTransportOptionCatalog.chatCompletions];
-    case "hugging-face":
-      return [connectTransportOptionCatalog.openResponsesApi];
-    case "siliconflow":
-      return [
-        connectTransportOptionCatalog.chatCompletions,
-        connectTransportOptionCatalog.messagesApi,
-      ];
-    case "openrouter":
-    case "cloudflare-ai-gateway":
-    case "custom":
-      return [
-        connectTransportOptionCatalog.chatCompletions,
-        connectTransportOptionCatalog.openResponsesApi,
-        connectTransportOptionCatalog.messagesApi,
-      ];
-    case "fireworks-ai":
-      return [
-        connectTransportOptionCatalog.chatCompletions,
-        connectTransportOptionCatalog.messagesApi,
-        connectTransportOptionCatalog.openResponsesApi,
-      ];
-    case "volcengine":
-    case "byteplus":
-      return [
-        connectTransportOptionCatalog.chatCompletions,
-        connectTransportOptionCatalog.responsesApi,
-      ];
-    case "amazon-bedrock":
-      return [connectTransportOptionCatalog.bedrockApi];
-    case "azure":
-      return [];
-    default:
-      return [];
-  }
+function transportOption(value: DesktopTransportKind): ConnectTransportOption {
+  return { value, label: TRANSPORT_OPTION_LABELS[value] };
 }
 
-export function defaultConnectTransportKind(provider: DesktopModelProvider): DesktopTransportKind {
-  if (provider === "vercel-ai-gateway") {
-    return "open-responses";
-  }
-  if (provider === "amazon-bedrock") {
-    return "bedrock";
-  }
-  if (provider === "azure" || provider === "openai" || provider === "deepseek") {
-    return "open-responses";
-  }
+/** A custom endpoint offers every generic transport mechanism. */
+const CUSTOM_TRANSPORT_KINDS: readonly DesktopTransportKind[] = [
+  "openai-compatible",
+  "open-responses",
+  "anthropic",
+];
 
-  return connectTransportOptionsForProvider(provider)[0]?.value ?? "openai-compatible";
-}
-
-export function providerSupportsConnectTransportPicker(
-  provider: DesktopModelProvider | null,
-): provider is DesktopModelProvider {
-  return (
-    provider === "siliconflow" ||
-    provider === "custom" ||
-    provider === "openrouter" ||
-    provider === "cloudflare-ai-gateway" ||
-    provider === "fireworks-ai" ||
-    provider === "volcengine" ||
-    provider === "byteplus"
+/**
+ * The transport choices of the connect wizard: the preset manifest's `transports` keys (one key =
+ * pinned transport, no picker); a custom connection offers the generic mechanisms.
+ */
+export function connectTransportOptionsForProvider(providerId: string): ConnectTransportOption[] {
+  if (providerId === CUSTOM_PROVIDER_PRESET_ID) {
+    return CUSTOM_TRANSPORT_KINDS.map(transportOption);
+  }
+  const preset = findProviderPreset(providerId);
+  if (!preset) {
+    return CUSTOM_TRANSPORT_KINDS.map(transportOption);
+  }
+  return Object.keys(preset.transports).map((kind) =>
+    transportOption(kind as DesktopTransportKind),
   );
 }
 
-export function providerShowsConnectTransportPicker(
-  provider: DesktopModelProvider | null,
-): boolean {
+export function defaultConnectTransportKind(providerId: string): DesktopTransportKind {
+  if (providerId === CUSTOM_PROVIDER_PRESET_ID) {
+    return "openai-compatible";
+  }
   return (
-    provider !== null &&
-    provider !== "vercel-ai-gateway" &&
-    providerSupportsConnectTransportPicker(provider)
+    (findProviderPreset(providerId)?.defaultTransport as DesktopTransportKind | undefined) ??
+    "openai-compatible"
+  );
+}
+
+/**
+ * Wizard product policy: which presets show an API-type picker at all (the others pin their
+ * default transport). Write-time knowledge, never read by the runtime.
+ */
+const CONNECT_TRANSPORT_PICKER_PROVIDERS: ReadonlySet<string> = new Set([
+  "siliconflow",
+  "openrouter",
+  "cloudflare-ai-gateway",
+  "fireworks-ai",
+  "volcengine",
+  "byteplus",
+]);
+
+export function providerShowsConnectTransportPicker(providerId: string | null): boolean {
+  if (providerId === null) {
+    return false;
+  }
+  if (providerId === CUSTOM_PROVIDER_PRESET_ID) {
+    return true;
+  }
+  return (
+    CONNECT_TRANSPORT_PICKER_PROVIDERS.has(providerId) &&
+    connectTransportOptionsForProvider(providerId).length > 1
   );
 }
 
 export function resolveConnectTransportKindForProvider(
-  provider: DesktopModelProvider | null,
+  providerId: string | null,
   connectTransportKind: DesktopTransportKind,
 ): DesktopTransportKind | undefined {
-  if (provider === "vercel-ai-gateway") {
-    return "open-responses";
-  }
-  if (provider === "amazon-bedrock") {
-    return "bedrock";
-  }
-  if (provider === "azure" || provider === "openai") {
-    return "open-responses";
-  }
-
-  if (provider === null) {
+  if (providerId === null) {
     return undefined;
   }
-
-  if (!providerSupportsConnectTransportPicker(provider)) {
-    return connectTransportKind;
+  if (!providerShowsConnectTransportPicker(providerId)) {
+    return undefined;
   }
-
   return connectTransportKind;
 }
 
 export function connectTransportOptionSummary(
   option: ConnectTransportOption,
-  _provider: DesktopModelProvider | null,
+  _providerId: string | null,
 ): string | undefined {
   return option.summaryKey ? i18n.t(option.summaryKey) : undefined;
-}
-
-export function resolveCustomConnectApiBase(customApiBase: string): string {
-  return customApiBase.trim();
 }

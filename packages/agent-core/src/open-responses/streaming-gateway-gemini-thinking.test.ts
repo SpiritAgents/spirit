@@ -11,7 +11,7 @@ const gatewayGeminiConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test",
   model: "google/gemini-3.1-pro-preview",
-  llmVendor: "vercel-ai-gateway",
+  sdk: "@ai-sdk/gateway",
 };
 
 async function collectThinkingChunks(

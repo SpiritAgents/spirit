@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import { isDeepInfraApiBase, resolveVideoGenerationBackend } from "./router.js";
+import { resolveVideoGenerationBackend } from "./router.js";
 import {
   DeepInfraVideosBackend,
   resolveDeepInfraVideoApiBase,
@@ -22,21 +22,38 @@ test("resolveDeepInfraVideoApiBase strips the /openai suffix and falls back to /
     resolveDeepInfraVideoApiBase("http://127.0.0.1:18080/v1"),
     "http://127.0.0.1:18080/v1",
   );
-  assert.equal(resolveDeepInfraVideoApiBase(undefined), "https://api.deepinfra.com/v1");
+  assert.throws(() => resolveDeepInfraVideoApiBase(undefined), /requires a baseUrl/);
 });
 
-test("resolveVideoGenerationBackend routes deepinfra vendor and api base", () => {
+test("resolveVideoGenerationBackend routes by the declared videoApi shape", () => {
   assert.equal(
     resolveVideoGenerationBackend({
       apiKey: "test-key",
       model: "org/example-video-model",
-      llmVendor: "deepinfra",
+      videoApi: "deepinfra-videos",
       baseUrl: "https://api.deepinfra.com/v1/openai",
     }).id,
     "deepinfra-videos",
   );
-  assert.equal(isDeepInfraApiBase("https://api.deepinfra.com/v1/openai"), true);
-  assert.equal(isDeepInfraApiBase("https://example.com/v1"), false);
+  assert.throws(
+    () =>
+      resolveVideoGenerationBackend({
+        apiKey: "test-key",
+        model: "org/example-video-model",
+        videoApi: "no-such-shape",
+        baseUrl: "https://api.deepinfra.com/v1/openai",
+      }),
+    /Unknown videoApi/,
+  );
+  assert.throws(
+    () =>
+      resolveVideoGenerationBackend({
+        apiKey: "test-key",
+        model: "org/example-video-model",
+        baseUrl: "https://api.deepinfra.com/v1/openai",
+      }),
+    /no videoApi/,
+  );
 });
 
 test("DeepInfraVideosBackend create/poll/download success path", async () => {
@@ -85,7 +102,7 @@ test("DeepInfraVideosBackend create/poll/download success path", async () => {
         apiKey: "test-key",
         model: "org/example-video-model",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
+        videoApi: "deepinfra-videos",
       },
       {
         prompt: "a cat walks",
@@ -145,7 +162,7 @@ test("DeepInfraVideosBackend accepts url/output_url result fields", async () => 
         apiKey: "test-key",
         model: "org/example-video-model",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
+        videoApi: "deepinfra-videos",
       },
       { prompt: "alt result fields" },
       async (request) => ({
@@ -189,7 +206,7 @@ test("DeepInfraVideosBackend surfaces failed status message", async () => {
             apiKey: "test-key",
             model: "org/example-video-model",
             baseUrl: "https://api.deepinfra.com/v1/openai",
-            llmVendor: "deepinfra",
+            videoApi: "deepinfra-videos",
           },
           { prompt: "bad prompt" },
           async () => {

@@ -22,7 +22,7 @@ test("DesktopToolExecutor exposes lazy gateway for built-in create_automation wi
     hostContributedToolsEnabled: true,
     getAutomationCreateDefaults: () => ({
       workspaceRoot: process.cwd(),
-      modelRef: { groupId: "openai", name: "demo-model" },
+      modelRef: { providerId: "openai", name: "demo-model" },
     }),
   });
 
@@ -45,7 +45,7 @@ test("DesktopToolExecutor exposes lazy gateway when MCP only provides fetch_mcp_
     hostContributedToolsEnabled: true,
     getAutomationCreateDefaults: () => ({
       workspaceRoot: process.cwd(),
-      modelRef: { groupId: "openai", name: "demo-model" },
+      modelRef: { providerId: "openai", name: "demo-model" },
     }),
   });
 
@@ -61,7 +61,7 @@ test("DesktopToolExecutor hides built-in create_automation in plan mode", () => 
     hostContributedToolsEnabled: true,
     getAutomationCreateDefaults: () => ({
       workspaceRoot: process.cwd(),
-      modelRef: { groupId: "openai", name: "demo-model" },
+      modelRef: { providerId: "openai", name: "demo-model" },
     }),
   });
   toolExecutor.setAgentModeToolExposure("plan");

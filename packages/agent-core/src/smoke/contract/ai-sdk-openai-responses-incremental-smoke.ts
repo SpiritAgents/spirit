@@ -77,8 +77,7 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "gpt-test-incremental",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    responsesProvider: "openai" as const,
-    llmVendor: "openai" as const,
+    sdk: "@ai-sdk/openai" as const,
   };
   const tools = demoLookupToolDefinition();
 

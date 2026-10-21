@@ -10,7 +10,7 @@ import { promisify } from "node:util";
 
 import { NodeHostToolService, type HostToolExecutionOutput } from "./tools.js";
 import { APPROVAL_FILE_PREVIEW_MAX_BYTES } from "./approval-file-preview.js";
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config-v2.js";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config.js";
 import { configFilePath } from "./credentials/spirit-config.js";
 import { loadPermissionConfig } from "./permissions/index.js";
 
@@ -1662,7 +1662,7 @@ test("create_automation writes automation file when defaults are provided", asyn
       {
         getAutomationCreateDefaults: () => ({
           workspaceRoot,
-          modelRef: { groupId: "openai", name: "test-model" },
+          modelRef: { providerId: "openai", name: "test-model" },
         }),
         onAutomationCreated: (definition) => {
           createdId = definition.id;
@@ -1846,8 +1846,8 @@ async function writePermissionConfig(
     `${JSON.stringify(
       {
         schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-        providerGroups: [],
-        activeModel: { groupId: "", name: "" },
+        providers: [],
+        activeModel: { providerId: "", name: "" },
         permission,
       },
       null,

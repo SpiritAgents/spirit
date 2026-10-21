@@ -67,6 +67,7 @@ function MessageCardImpl({
   canPickLocalFile,
   models,
   catalogHints,
+  providerPresets,
   activeModel,
   agentMode,
   onContinue,
@@ -150,6 +151,7 @@ function MessageCardImpl({
   canPickLocalFile: boolean;
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   onContinue(message: ConversationMessageSnapshot): void;
@@ -287,6 +289,7 @@ function MessageCardImpl({
             placeholder={t("app.typeMessage")}
             models={models}
             catalogHints={catalogHints}
+            providerPresets={providerPresets}
             activeModel={activeModel}
             agentMode={agentMode}
             loopEnabled={false}

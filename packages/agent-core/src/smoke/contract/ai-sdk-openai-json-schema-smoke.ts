@@ -133,7 +133,6 @@ async function main(): Promise<void> {
       apiKey: "test-key",
       model: "deepseek-v4-flash",
       baseUrl: host,
-      llmVendor: "deepseek",
     },
     request,
   );
@@ -189,9 +188,9 @@ async function main(): Promise<void> {
     );
   }
   const deepseekTrace = deepseekResult.requestTrace[0];
-  if (!isJsonObject(deepseekTrace) || deepseekTrace.kind !== "deepseek_open_responses") {
+  if (!isJsonObject(deepseekTrace) || deepseekTrace.kind !== "open_responses_sdk_responses") {
     throw new Error(
-      "ai-sdk deepseek json-schema smoke did not write a deepseek_open_responses trace.",
+      "ai-sdk deepseek json-schema smoke did not write an open_responses_sdk_responses trace.",
     );
   }
 }

@@ -24,8 +24,8 @@ export function resolveAiGatewayVideoProviderOptions(
 export const MINIMAX_H3_GATEWAY_DEFAULT_ASPECT_RATIO = "16:9" as const;
 
 export function isMinimaxH3GatewayVideoModel(model: string): boolean {
-  const normalized = model.trim().toLowerCase();
-  return normalized === "minimax/minimax-h3" || normalized.endsWith("/minimax-h3");
+  const bareId = model.trim().toLowerCase().split("/").at(-1) ?? "";
+  return bareId === "minimax-h3";
 }
 
 export function resolveAiGatewayVideoAspectRatio(
@@ -81,7 +81,7 @@ export function resolveAiGatewayVideoDuration(model: string, duration: number | 
 }
 
 export class AiSdkGatewayVideoBackend implements VideoGenerationBackend {
-  readonly id = "ai-sdk-gateway";
+  readonly id = "vercel-gateway-videos";
 
   async generate(
     config: OpenAiVideoGenerationConfig,
@@ -96,7 +96,6 @@ export class AiSdkGatewayVideoBackend implements VideoGenerationBackend {
     console.error("[agent-core][generate-video] request.start", {
       adapter: this.id,
       model: config.model,
-      gatewayBaseUrl: "https://ai-gateway.vercel.sh/v3/ai",
       profileBaseUrl: config.baseUrl,
     });
 

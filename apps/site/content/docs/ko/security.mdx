@@ -7,7 +7,9 @@ description: 키링, 승인, 루프백 데몬. 원격 측정 없음.
 
 API 키, Bedrock / Vertex 비밀, 확장 프로그램 비밀, GitHub 통합 토큰은 운영 체제 키링에 저장됩니다. 서비스 이름은 `{{product.name}}`입니다.
 
-`config.json`에는 공급자 그룹과 모델 참조가 들어 있으며 비밀 자체는 포함되지 않습니다. 큰 비밀은 키링에서 분할될 수 있습니다.
+연결 마법사가 쓰는 프로바이더 키는 `config.json`의 프로바이더 항목마다 `provider::{id}` 계정 체계를 사용하고, Bedrock IAM이나 Vertex 서비스 계정 같은 복합 자격 증명 슬롯에는 `provider::{id}::{slot}`을 사용합니다. 큰 비밀은 키링에서 분할될 수 있습니다.
+
+`config.json`에는 프로바이더 항목과 모델 참조가 들어 있으며 비밀 자체는 포함되지 않습니다 — 선언된 이스케이프 해치를 명시적으로 선택한 경우는 예외입니다: 평문 `apiKey`(권장하지 않음), `apiKeyEnv` 환경 변수 참조, 또는 외부 키링 항목을 가리키는 `apiKeyKeyring` / 슬롯별 `keyring` 참조. [설정](./config.mdx)을 참조하세요.
 
 ## 승인
 

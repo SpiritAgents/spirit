@@ -32,11 +32,7 @@ import type {
   SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
-import {
-  emptyModelRef,
-  isEmptyModelRef,
-  modelRefsEqual,
-} from "@spiritagent/host-internal/config-v2";
+import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@/lib/model-ref";
 import { cn } from "@/lib/utils";
 
 type CreateAutomationDialogProps = {
@@ -100,10 +96,7 @@ export function CreateAutomationDialog({
     );
     setModelRef(snapshot.config.activeModel);
     const activeModel = snapshot.config.models.find((model) =>
-      modelRefsEqual(
-        model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-        snapshot.config.activeModel,
-      ),
+      modelRefsEqual(model.ref, snapshot.config.activeModel),
     );
     setReasoningEffort(activeModel?.reasoningEffort);
     setApprovalLevel(snapshot.conversation.approvalLevel);
@@ -184,17 +177,15 @@ export function CreateAutomationDialog({
                 <ModelPickerMenu
                   models={snapshot.config.models}
                   catalogHints={snapshot.config.modelCatalogHints}
-                  providerGroups={snapshot.config.providerGroups}
+                  providers={snapshot.config.providers}
+                  providerPresets={snapshot.config.providerPickerPresets}
                   activeModelRef={modelRef}
                   activeReasoningEffort={reasoningEffort}
                   disabled={disabled}
                   onModelSelect={(ref) => {
                     setModelRef(ref);
                     const profile = snapshot.config.models.find((model) =>
-                      modelRefsEqual(
-                        model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-                        ref,
-                      ),
+                      modelRefsEqual(model.ref, ref),
                     );
                     setReasoningEffort(profile?.reasoningEffort);
                   }}

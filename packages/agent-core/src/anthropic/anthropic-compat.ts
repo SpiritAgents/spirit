@@ -1,15 +1,16 @@
 import { isCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
-import { isMeituanAnthropicThinkingSwitchConfig } from "../meituan/meituan-anthropic-fetch.js";
+import type { FileUploadConfig } from "../file-upload/uploader.js";
+import type { ModelReasoningMode } from "../reasoning-effort.js";
 import type { JsonObject, JsonValue } from "../ports.js";
+import type { ProviderToolEntry } from "../provider-tools/types.js";
 import { cloneJsonValue } from "../tool-agent.js";
 import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
+  ThinkingSwitchDeclaration,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
-import { buildMinimaxProviderOptions } from "./minimax-provider-options.js";
-
-export const DEFAULT_ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
+import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
 
 export type AnthropicThinkingConfig =
   | { type: "adaptive"; display?: "omitted" | "summarized" }
@@ -28,30 +29,52 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
   compactModel?: string;
   workspaceRoot?: string;
   modelCapabilities?: LlmModelCapabilities;
-  thinking?: AnthropicThinkingConfig;
+  /** Declared reasoning effort, already filtered to the Anthropic protocol enum at config load. */
   effort?: AnthropicEffort;
+  /**
+   * Declared supported effort list (config `supportedReasoningEfforts` filtered to the protocol
+   * enum). Reserved for picker-facing plumbing; the transport does not infer thinking from it.
+   */
   supportedEfforts?: readonly AnthropicEffort[];
   sendReasoning?: boolean;
   disableParallelToolUse?: boolean;
   structuredOutputMode?: AnthropicStructuredOutputMode;
   /** Policy profile for lightweight non-Agent requests such as code completion; defaults to agent-path behavior. */
   transportRequestProfile?: TransportRequestProfile;
-  /** Cloudflare AI Gateway name; injected as `cf-aig-gateway-id` on requests. */
-  cloudflareGatewayId?: string;
-  /** Aligned with the host ModelProfile.provider; used for Messages API vendor extensions. */
-  llmVendor?: import("../openai/openai-compat.js").OpenAiLlmVendor;
   /**
-   * Catalog marker: vendors such as Meituan LongCat send `thinking.type` via the Messages API.
-   * Only injects enabled/disabled for `meituan` when true.
+   * Catalog flag: the model supports the thinking on/off switch. Capability marker for pickers;
+   * the wire encoding is declared by `thinkingSwitch`.
    */
   supportsThinkingSwitch?: boolean;
-  /** Defaults to enabled; when false, sends `thinking.type: disabled`. */
+  /** User thinking-switch state: `false` selects the `thinkingSwitch.off` encoding (default: the protocol's `{type: "disabled"}`). */
   vendorExtendedThinking?: boolean;
   /**
-   * Per-model service tier preference (canonical Spirit value). The direct Anthropic provider
-   * persists `fast` for eligible Claude Opus models, mapped to `speed: "fast"` at request time.
+   * Selected service tier (validated at config load). `fast` maps to the Messages API's public
+   * `speed` parameter; other mappings arrive via literal `serviceTiers` declarations.
    */
-  serviceTier?: import("../model-service-tier.js").ModelServiceTier;
+  serviceTier?: ModelServiceTier;
+  /** Declared service tiers: a tier-name list (simple form) or a tier → wire-patch map (literal). */
+  serviceTiers?: ModelServiceTiersDeclaration;
+  /** Full npm package name of the SDK adapter (e.g. `@ai-sdk/anthropic`); absent = default for the transport kind. */
+  sdk?: string;
+  /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */
+  headers?: Record<string, string>;
+  /** Literal fields merged unconditionally into every request body top level; escape hatch, prefer structured declarations. */
+  body?: JsonObject;
+  /** Declared provider tools; injected, recognized, and executed purely by declaration. */
+  providerTools?: ProviderToolEntry[];
+  /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
+  fileUpload?: FileUploadConfig;
+  /** Transport option namespace; the valid key set is defined by transportKind × sdk, unknown keys are rejected. */
+  options?: Record<string, unknown>;
+  /** Declared output token limit for the model; mapped to the Messages `max_tokens` parameter. */
+  outputLimit?: number;
+  /** Declared reasoning mode; `"standard"` or absent sends nothing on the wire. */
+  reasoningMode?: ModelReasoningMode;
+  /** Declared reasoning mode set; the picker and validation source for `reasoningMode`. */
+  supportedReasoningModes?: readonly ModelReasoningMode[];
+  /** Declared wire encoding of the thinking on/off switch; absent = transport default encoding. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
 }
 
 export interface AnthropicRequestTrace extends JsonObject {
@@ -60,57 +83,27 @@ export interface AnthropicRequestTrace extends JsonObject {
   model: string;
   stream: boolean;
   /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
-  serviceTier?: import("../model-service-tier.js").ModelServiceTier;
+  serviceTier?: ModelServiceTier;
   messages: JsonValue[];
   tools?: JsonValue[];
   providerOptions?: JsonValue;
 }
 
+/**
+ * Transport default thinking encoding: the code-completion profile and the user-off state send
+ * the protocol's `{type: "disabled"}`; otherwise nothing is sent and the upstream default applies
+ * (for adaptive-era Claude models that is thinking on). A declared `thinkingSwitch` state patch
+ * overrides this encoding at the literal body merge layer.
+ */
 export function resolveAnthropicThinkingConfig(
-  config: Pick<
-    AnthropicTransportConfig,
-    "model" | "thinking" | "effort" | "supportedEfforts" | "transportRequestProfile"
-  >,
+  config: Pick<AnthropicTransportConfig, "vendorExtendedThinking" | "transportRequestProfile">,
 ): AnthropicThinkingConfig | undefined {
-  if (config.thinking !== undefined) {
-    return config.thinking;
-  }
-
   if (isCodeCompletionTransportProfile(config)) {
     return { type: "disabled" };
   }
 
-  if (Array.isArray(config.supportedEfforts) && config.supportedEfforts.length === 0) {
+  if (config.vendorExtendedThinking === false) {
     return { type: "disabled" };
-  }
-
-  const normalizedModel = config.model.trim().toLowerCase();
-  if (
-    normalizedModel.includes("claude-fable-5") ||
-    normalizedModel.includes("claude-mythos-5") ||
-    normalizedModel.includes("claude-opus-4-7") ||
-    normalizedModel.includes("claude-opus-4-8")
-  ) {
-    return { type: "adaptive", display: "summarized" };
-  }
-
-  if (normalizedModel.includes("claude-sonnet-5")) {
-    return { type: "adaptive" };
-  }
-
-  if (
-    normalizedModel.includes("claude-opus-4-6") ||
-    normalizedModel.includes("claude-sonnet-4-6") ||
-    normalizedModel.includes("claude-haiku-4-5")
-  ) {
-    return { type: "adaptive" };
-  }
-
-  if (
-    config.effort !== undefined ||
-    (Array.isArray(config.supportedEfforts) && config.supportedEfforts.length > 0)
-  ) {
-    return { type: "enabled", budgetTokens: 12_000 };
   }
 
   return undefined;
@@ -119,22 +112,16 @@ export function resolveAnthropicThinkingConfig(
 export function buildAnthropicProviderOptions(
   config: Pick<
     AnthropicTransportConfig,
-    | "model"
-    | "thinking"
+    | "vendorExtendedThinking"
     | "effort"
-    | "supportedEfforts"
     | "sendReasoning"
     | "disableParallelToolUse"
     | "structuredOutputMode"
     | "transportRequestProfile"
-    | "llmVendor"
-    | "supportsThinkingSwitch"
     | "serviceTier"
   >,
 ): Record<string, JsonObject> {
-  const thinking = isMeituanAnthropicThinkingSwitchConfig(config)
-    ? undefined
-    : resolveAnthropicThinkingConfig(config);
+  const thinking = resolveAnthropicThinkingConfig(config);
   const options: JsonObject = {
     toolStreaming: true,
     ...(thinking !== undefined ? { thinking: thinking as unknown as JsonValue } : {}),
@@ -174,10 +161,7 @@ export function buildAnthropicRequestTrace(
   tools: readonly unknown[],
   stream = false,
 ): JsonValue[] {
-  const providerOptions = {
-    ...buildAnthropicProviderOptions(config),
-    ...buildMinimaxProviderOptions(config),
-  };
+  const providerOptions = buildAnthropicProviderOptions(config);
   const trace: AnthropicRequestTrace = {
     kind: "anthropic_sdk_messages",
     stepIndex,

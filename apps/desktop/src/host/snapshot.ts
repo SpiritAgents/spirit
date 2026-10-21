@@ -16,10 +16,12 @@ import type {
   DesktopSnapshot,
   McpStatusSnapshot,
 } from "../types.js";
+import type { ProviderEntry } from "@spiritagent/host-internal";
+import { listProviderPresets } from "@spiritagent/agent-core/provider-presets";
+
 import { readModelCatalogCacheSync } from "./model-catalog-cache.js";
-import { flattenProviderGroups } from "./model-config-access.js";
+import { flattenProviders } from "./model-config-access.js";
 import {
-  DEFAULT_API_BASE,
   normalizeAgentsConfig,
   normalizeWorkspaceBinding,
   type DesktopConfigFile,
@@ -70,15 +72,23 @@ export interface BuildDesktopSnapshotInput {
   pendingExtensionUi?: DesktopSnapshot["pendingExtensionUi"];
 }
 
-function snapshotProviderGroups(config: DesktopConfigFile): DesktopConfigFile["providerGroups"] {
-  return config.providerGroups.map((group) => ({
-    ...group,
-    models: group.models.map((model) => ({ ...model })),
-  }));
+/** Renderer-facing provider entries: credential channels never cross the IPC boundary. */
+function snapshotProviders(config: DesktopConfigFile): DesktopSnapshot["config"]["providers"] {
+  return config.providers.map((provider) => {
+    const entry: Partial<ProviderEntry> = {
+      ...provider,
+      models: provider.models.map((model) => ({ ...model })),
+    };
+    delete entry.apiKey;
+    delete entry.apiKeyEnv;
+    delete entry.apiKeyKeyring;
+    delete entry.credentials;
+    return entry as DesktopSnapshot["config"]["providers"][number];
+  });
 }
 
 export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopSnapshot {
-  const flattenedModels = flattenProviderGroups(input.config);
+  const flattenedModels = flattenProviders(input.config);
   const agents = normalizeAgentsConfig(input.config.agents);
 
   return {
@@ -104,7 +114,12 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
     runtimeReady: input.runtimeReady,
     ...(input.runtimeError ? { runtimeError: input.runtimeError } : {}),
     config: {
-      providerGroups: snapshotProviderGroups(input.config),
+      providers: snapshotProviders(input.config),
+      // Picker row data rides the snapshot so the renderer never imports the preset manifest.
+      providerPickerPresets: listProviderPresets().map((preset) => ({
+        id: preset.id,
+        label: preset.label,
+      })),
       models: flattenedModels.map((model) => ({
         ...model,
         keyConfigured: input.modelKeyPresence[model.name] ?? false,
@@ -193,7 +208,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
       prEnabled: agents.attribution.pr.enabled,
     },
     webToolExposure: {
-      webSearchEnabled: agents.webSearch.enabled,
+      providerToolsEnabled: agents.providerTools.enabled,
       webFetchEnabled: agents.webFetch.enabled,
     },
     conversation: input.conversation,
@@ -209,7 +224,7 @@ export function buildDesktopSnapshot(input: BuildDesktopSnapshotInput): DesktopS
   };
 }
 
-/** buildSnapshot / context usage are called at high frequency; the catalog cache file only changes after writeModelCatalogCache, so memoize in memory by the model key set. */
+/** buildSnapshot / context usage are called at high frequency; the catalog cache file only changes after writeModelCatalogCache, so memoize in memory by the provider key set. */
 let modelCatalogHintsMemo: { key: string; hints: DesktopModelCatalogHint[] } | undefined;
 
 export function invalidateModelCatalogHintsMemo(): void {
@@ -217,31 +232,18 @@ export function invalidateModelCatalogHintsMemo(): void {
 }
 
 export function buildModelCatalogHints(config: DesktopConfigFile): DesktopModelCatalogHint[] {
-  const seen = new Set<string>();
-  for (const group of config.providerGroups) {
-    const base = group.apiBase.trim() || DEFAULT_API_BASE;
-    const transportKind =
-      group.transportKind ?? (group.provider === "anthropic" ? "anthropic" : "openai-compatible");
-    seen.add(`${group.provider ?? "custom"}::${transportKind}::${base}`);
-  }
-  const memoKey = [...seen].join("\n");
+  const memoKey = config.providers
+    .map((provider) => `${provider.id}::${provider.apiBase}`)
+    .join("\n");
   if (modelCatalogHintsMemo?.key === memoKey) {
     return modelCatalogHintsMemo.hints;
   }
   const hints: DesktopModelCatalogHint[] = [];
-  for (const group of config.providerGroups) {
-    const base = group.apiBase.trim() || DEFAULT_API_BASE;
-    const transportKind =
-      group.transportKind ?? (group.provider === "anthropic" ? "anthropic" : "openai-compatible");
-    const cacheKey = `${group.provider ?? "custom"}::${transportKind}::${base}`;
-    if (!seen.delete(cacheKey)) {
-      continue;
-    }
-    const hit = readModelCatalogCacheSync(base, group.provider, transportKind);
+  for (const provider of config.providers) {
+    const hit = readModelCatalogCacheSync(provider.apiBase, provider.id);
     if (hit && hit.modelIds.length > 0) {
       hints.push({
-        ...(hit.provider ? { provider: hit.provider } : {}),
-        ...(hit.transportKind ? { transportKind: hit.transportKind } : {}),
+        providerId: provider.id,
         apiBase: hit.apiBase,
         modelIds: hit.modelIds,
         ...(hit.modelCatalog ? { modelCatalog: hit.modelCatalog } : {}),

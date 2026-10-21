@@ -31,7 +31,6 @@ import {
   type LlmPlanMetadata,
 } from "@spiritagent/agent-core";
 import { buildApplyPatchFileToolsPromptSection } from "@spiritagent/agent-core";
-import { buildProviderWebSearchPromptSection } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import type { LocalHostToolService } from "@spiritagent/agent-core/host-bridge";
 import { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
@@ -84,7 +83,8 @@ function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
   if (isBedrockTransportConfig(config)) {
     return "bedrock";
   }
-  return config.llmVendor;
+  // Neutral mechanism label for the host prompt: the declared SDK adapter package.
+  return config.sdk;
 }
 
 export async function createAcpRuntime(
@@ -179,7 +179,6 @@ export async function createAcpRuntime(
     transportConfig.transportKind === "open-responses"
       ? buildApplyPatchFileToolsPromptSection()
       : undefined;
-  const providerWebSearchPromptSection = buildProviderWebSearchPromptSection(transportConfig);
 
   // 7. Mutable active skills array — session bookkeeping for slash activation
   const activeSkills: LlmActiveSkill[] = [];
@@ -200,7 +199,7 @@ export async function createAcpRuntime(
       undefined, // dreamsContextText
       basicInfo,
       applyPatchPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
@@ -219,7 +218,7 @@ export async function createAcpRuntime(
       undefined, // dreamsContextText
       basicInfo,
       applyPatchPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
@@ -259,7 +258,7 @@ export async function createAcpRuntime(
         undefined, // dreamsContextText
         basicInfo,
         applyPatchPromptSection,
-        providerWebSearchPromptSection,
+        undefined,
         false, // loopEnabled
         undefined, // mcpToolCatalog
         attribution,

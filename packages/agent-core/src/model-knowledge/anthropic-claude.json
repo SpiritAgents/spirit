@@ -1,0 +1,152 @@
+{
+  "models": [
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:fable|mythos)-5(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingType": "only",
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          }
+        }
+      },
+      "note": "Claude Fable/Mythos 5: always-on adaptive thinking that the API cannot disable, so only the on encoding is declared."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-5(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingSwitch": true,
+        "serviceTiers": ["fast"],
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder, plus the native Fast service tier (the Messages `speed` parameter, applied by the anthropic transport). The optional prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1, including regional inference-profile prefixes (us./eu./global./…)."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      }
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]8(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingSwitch": true,
+        "serviceTiers": ["fast"],
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Claude Opus 4.8 adds the native Fast service tier (Messages `speed`) on top of the shared Opus 4.7/4.8 declarations; the source normalizes 4.8 dotted ids to dashes, so both separators are accepted."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
+            }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Claude Opus 4.7/4.8: adaptive thinking with the full effort ladder; the source normalizes 4.7/4.8 dotted ids to dashes, so both separators are accepted."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]6(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "max"],
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      }
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-4[.-]6(?:$|[-_.])",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      }
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:(?:haiku|opus|sonnet)-4[.-]5|(?:opus|sonnet)-4)(?:$|[-_.])",
+      "declare": {
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": { "thinking": { "type": "enabled", "budget_tokens": 12000 } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "enabled", "budgetTokens": 12000 } }
+            }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Legacy Claude (4.5 families including Haiku 4.5, Opus 4.1, base Opus/Sonnet 4): budget thinking — switchable, but with no effort levels, so supportedReasoningEfforts stays undeclared and the on patch carries the fixed budget."
+    }
+  ]
+}

@@ -6,172 +6,143 @@ import {
   buildModelSecretKeyPresence,
   filterNewProviderModelIds,
   modelExistsInProviderScope,
-  modelProviderKeyScope,
-  providerKeyAccount,
   resolveActiveModelAfterRemoval,
 } from "../../dist-electron/src/host/provider-api-key.js";
 
-const openAiGroupId = "openai";
-const anthropicGroupId = "anthropic";
-const gatewayGroupId = "vercel-ai-gateway";
-
-test("providerKeyAccount uses group namespace", () => {
-  assert.equal(providerKeyAccount("vercel-ai-gateway"), "group::vercel-ai-gateway");
-  assert.equal(providerKeyAccount("openrouter"), "group::openrouter");
-  assert.equal(providerKeyAccount("custom"), "group::custom");
-});
-
-test("modelProviderKeyScope defaults missing provider to custom", () => {
-  assert.equal(modelProviderKeyScope(undefined), "custom");
-  assert.equal(modelProviderKeyScope("openai"), "openai");
-});
+const openAiProviderId = "openai";
+const anthropicProviderId = "anthropic";
+const gatewayProviderId = "vercel-ai-gateway";
 
 test("buildModelSecretKeyPresence reads each provider once", () => {
-  const groupReads = [];
-  const modelReads = [];
+  const providerReads = [];
 
   const presence = buildModelSecretKeyPresence(
     [
-      { groupId: openAiGroupId, name: "a", provider: "openai" },
-      { groupId: openAiGroupId, name: "b", provider: "openai" },
-      { groupId: anthropicGroupId, name: "c", provider: "anthropic" },
-      { groupId: "custom", name: "legacy-only" },
+      { providerId: openAiProviderId, name: "a" },
+      { providerId: openAiProviderId, name: "b" },
+      { providerId: anthropicProviderId, name: "c" },
+      { providerId: "custom-local", name: "legacy-only" },
     ],
-    (groupId, _profile) => {
-      groupReads.push(groupId);
-      return groupId === openAiGroupId;
-    },
-    (refKey) => {
-      modelReads.push(refKey);
-      return refKey === "custom::legacy-only";
+    (providerId) => {
+      providerReads.push(providerId);
+      return providerId === openAiProviderId;
     },
   );
 
-  assert.deepEqual(groupReads, [openAiGroupId, anthropicGroupId, "custom"]);
-  assert.deepEqual(modelReads, ["anthropic::c", "custom::legacy-only"]);
+  assert.deepEqual(providerReads, [openAiProviderId, anthropicProviderId, "custom-local"]);
   assert.equal(presence["openai::a"], true);
   assert.equal(presence["openai::b"], true);
   assert.equal(presence["anthropic::c"], false);
-  assert.equal(presence["custom::legacy-only"], true);
+  assert.equal(presence["custom-local::legacy-only"], false);
 });
 
-test("buildModelSecretKeyPresence prefers provider key over per-model key", () => {
-  const presence = buildModelSecretKeyPresence(
-    [{ groupId: openAiGroupId, name: "gpt-4", provider: "openai" }],
-    () => true,
-    () => false,
-  );
-  assert.equal(presence["openai::gpt-4"], true);
-});
-
-test("modelExistsInProviderScope only matches same provider scope", () => {
+test("modelExistsInProviderScope only matches same provider entry", () => {
   const existing = [
-    { groupId: openAiGroupId, name: "gpt-4", provider: "openai" },
-    { groupId: gatewayGroupId, name: "gpt-4", provider: "vercel-ai-gateway" },
+    { providerId: openAiProviderId, name: "gpt-4" },
+    { providerId: gatewayProviderId, name: "gpt-4" },
   ];
-  assert.equal(modelExistsInProviderScope(existing, "gpt-4", "openai"), true);
-  assert.equal(modelExistsInProviderScope(existing, "gpt-4", "anthropic"), false);
-  assert.equal(modelExistsInProviderScope(existing, "gpt-4"), false);
+  assert.equal(modelExistsInProviderScope(existing, openAiProviderId, "gpt-4"), true);
+  assert.equal(modelExistsInProviderScope(existing, anthropicProviderId, "gpt-4"), false);
+  assert.equal(modelExistsInProviderScope(existing, "custom", "gpt-4"), false);
 });
 
 test("resolveActiveModelAfterRemoval switches to another model or clears active", () => {
   const remaining = [
-    { groupId: openAiGroupId, name: "b" },
-    { groupId: openAiGroupId, name: "c" },
+    { providerId: openAiProviderId, name: "b" },
+    { providerId: openAiProviderId, name: "c" },
   ];
   assert.deepEqual(
-    resolveActiveModelAfterRemoval({ groupId: openAiGroupId, name: "a" }, remaining, [
-      { groupId: openAiGroupId, name: "a" },
+    resolveActiveModelAfterRemoval({ providerId: openAiProviderId, name: "a" }, remaining, [
+      { providerId: openAiProviderId, name: "a" },
     ]),
-    { groupId: openAiGroupId, name: "b" },
+    { providerId: openAiProviderId, name: "b" },
   );
   assert.deepEqual(
     resolveActiveModelAfterRemoval(
-      { groupId: openAiGroupId, name: "a" },
+      { providerId: openAiProviderId, name: "a" },
       [],
-      [{ groupId: openAiGroupId, name: "a" }],
+      [{ providerId: openAiProviderId, name: "a" }],
     ),
-    { groupId: "", name: "" },
+    { providerId: "", name: "" },
   );
   assert.deepEqual(
-    resolveActiveModelAfterRemoval({ groupId: openAiGroupId, name: "b" }, remaining, [
-      { groupId: openAiGroupId, name: "a" },
+    resolveActiveModelAfterRemoval({ providerId: openAiProviderId, name: "b" }, remaining, [
+      { providerId: openAiProviderId, name: "a" },
     ]),
-    { groupId: openAiGroupId, name: "b" },
+    { providerId: openAiProviderId, name: "b" },
   );
 });
 
 test("applyModelsRemovalToConfig clears default slots when active model is removed", () => {
   const config = {
-    providerGroups: [
+    providers: [
       {
-        id: openAiGroupId,
-        provider: "openai",
+        id: openAiProviderId,
         apiBase: "https://api.openai.com/v1",
         models: [
-          { name: "a", reasoningEffort: "medium", capabilities: ["languageModel"] },
-          { name: "b", reasoningEffort: "medium", capabilities: ["languageModel"] },
+          { name: "a", capabilities: ["languageModel"] },
+          { name: "b", capabilities: ["languageModel"] },
         ],
       },
     ],
-    activeModel: { groupId: openAiGroupId, name: "a" },
-    imageGenerationModel: { groupId: openAiGroupId, name: "a" },
-    videoGenerationModel: { groupId: openAiGroupId, name: "b" },
-    secondaryLanguageModel: { groupId: openAiGroupId, name: "a" },
+    activeModel: { providerId: openAiProviderId, name: "a" },
+    imageGenerationModel: { providerId: openAiProviderId, name: "a" },
+    videoGenerationModel: { providerId: openAiProviderId, name: "b" },
+    secondaryLanguageModel: { providerId: openAiProviderId, name: "a" },
   };
 
   assert.equal(
-    applyModelsRemovalToConfig(config, [{ ref: { groupId: openAiGroupId, name: "a" } }]),
+    applyModelsRemovalToConfig(config, [{ ref: { providerId: openAiProviderId, name: "a" } }]),
     1,
   );
   assert.deepEqual(
-    config.providerGroups[0].models.map((model) => model.name),
+    config.providers[0].models.map((model) => model.name),
     ["b"],
   );
-  assert.deepEqual(config.activeModel, { groupId: openAiGroupId, name: "b" });
+  assert.deepEqual(config.activeModel, { providerId: openAiProviderId, name: "b" });
   assert.equal(config.imageGenerationModel, undefined);
-  assert.deepEqual(config.videoGenerationModel, { groupId: openAiGroupId, name: "b" });
+  assert.deepEqual(config.videoGenerationModel, { providerId: openAiProviderId, name: "b" });
   assert.equal(config.secondaryLanguageModel, undefined);
 });
 
-test("applyModelsRemovalToConfig only removes models in the same provider scope", () => {
+test("applyModelsRemovalToConfig only removes models in the same provider entry", () => {
   const config = {
-    providerGroups: [
+    providers: [
       {
-        id: openAiGroupId,
-        provider: "openai",
+        id: openAiProviderId,
         apiBase: "https://api.openai.com/v1",
-        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["languageModel"] }],
+        models: [{ name: "shared-id", capabilities: ["languageModel"] }],
       },
       {
-        id: gatewayGroupId,
-        provider: "vercel-ai-gateway",
+        id: gatewayProviderId,
         apiBase: "https://ai-gateway.vercel.sh/v1",
         transportKind: "open-responses",
-        models: [{ name: "shared-id", reasoningEffort: "medium", capabilities: ["languageModel"] }],
+        models: [{ name: "shared-id", capabilities: ["languageModel"] }],
       },
     ],
-    activeModel: { groupId: openAiGroupId, name: "shared-id" },
-    videoGenerationModel: { groupId: openAiGroupId, name: "shared-id" },
+    activeModel: { providerId: openAiProviderId, name: "shared-id" },
+    videoGenerationModel: { providerId: openAiProviderId, name: "shared-id" },
   };
 
   assert.equal(
-    applyModelsRemovalToConfig(config, [{ ref: { groupId: openAiGroupId, name: "shared-id" } }]),
+    applyModelsRemovalToConfig(config, [
+      { ref: { providerId: openAiProviderId, name: "shared-id" } },
+    ]),
     1,
   );
   assert.deepEqual(
-    config.providerGroups.flatMap((group) => group.models.map(() => group.provider)),
-    ["vercel-ai-gateway"],
+    config.providers.flatMap((provider) => provider.models.map(() => provider.id)),
+    [gatewayProviderId],
   );
-  assert.deepEqual(config.activeModel, { groupId: gatewayGroupId, name: "shared-id" });
+  assert.deepEqual(config.activeModel, { providerId: gatewayProviderId, name: "shared-id" });
   assert.equal(config.videoGenerationModel, undefined);
 });
 
-test("filterNewProviderModelIds skips only duplicates within provider scope", () => {
-  const existing = [{ groupId: openAiGroupId, name: "shared-id", provider: "openai" }];
-  const filtered = filterNewProviderModelIds(existing, ["shared-id", "new-id"], gatewayGroupId);
+test("filterNewProviderModelIds skips only duplicates within the provider entry", () => {
+  const existing = [{ providerId: openAiProviderId, name: "shared-id" }];
+  const filtered = filterNewProviderModelIds(existing, ["shared-id", "new-id"], gatewayProviderId);
   assert.deepEqual(filtered, ["shared-id", "new-id"]);
-  assert.deepEqual(filterNewProviderModelIds(existing, ["shared-id", "new-id"], openAiGroupId), [
+  assert.deepEqual(filterNewProviderModelIds(existing, ["shared-id", "new-id"], openAiProviderId), [
     "new-id",
   ]);
 });

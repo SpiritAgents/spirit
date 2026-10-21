@@ -1,0 +1,41 @@
+{
+  "models": [
+    {
+      "match": "glm-(?:4\\.(?:[5-9]|[1-9]\\d+)|[5-9]|[1-9]\\d+)",
+      "declare": {
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "enabled"
+              }
+            },
+            "providerOptions": {
+              "zai": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "zai": {
+                "thinking": {
+                  "type": "disabled"
+                }
+              }
+            }
+          }
+        }
+      },
+      "note": "GLM-4.5 and above (including glm-5+) support the thinking.type switch."
+    }
+  ]
+}

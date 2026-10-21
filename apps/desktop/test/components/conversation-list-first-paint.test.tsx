@@ -61,7 +61,7 @@ const listProps = {
   rewindRichInputRef: { current: null },
   models: [],
   catalogHints: undefined,
-  activeModel: { groupId: "test", name: "test-model" },
+  activeModel: { providerId: "test", name: "test-model" },
   agentMode: "agent",
   onOpenSubagentViewer: undefined,
   onOpenReadFile: undefined,

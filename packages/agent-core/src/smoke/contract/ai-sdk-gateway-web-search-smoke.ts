@@ -48,7 +48,15 @@ async function runGatewayWebSearchInjectionSmoke(): Promise<void> {
     apiKey: "test-key",
     model: "openai/gpt-5.4",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    llmVendor: "vercel-ai-gateway" as const,
+    sdk: "@ai-sdk/gateway" as const,
+    providerTools: [
+      {
+        label: "Perplexity Search",
+        tools: [
+          { type: "provider", id: "gateway.perplexity_search", name: "web_search", args: {} },
+        ],
+      },
+    ],
     store: false,
   };
 
@@ -89,14 +97,9 @@ async function runGatewayWebSearchInjectionSmoke(): Promise<void> {
   }
 
   const traceTools = trace.tools as JsonValue[] | undefined;
-  if (
-    !traceTools?.some(
-      (tool) =>
-        isJsonObject(tool) && tool.id === "gateway.perplexity_search" && tool.name === "web_search",
-    )
-  ) {
+  if (!traceTools?.some((tool) => isJsonObject(tool) && tool.id === "gateway.perplexity_search")) {
     throw new Error(
-      "gateway web_search injection smoke trace is missing the web_search provider tool.",
+      "gateway web_search injection smoke trace is missing the declared provider tool entry.",
     );
   }
 }
@@ -142,7 +145,15 @@ async function runGatewayWebSearchInvocationSmoke(): Promise<void> {
     apiKey: "test-key",
     model: "openai/gpt-5.4",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    llmVendor: "vercel-ai-gateway" as const,
+    sdk: "@ai-sdk/gateway" as const,
+    providerTools: [
+      {
+        label: "Perplexity Search",
+        tools: [
+          { type: "provider", id: "gateway.perplexity_search", name: "web_search", args: {} },
+        ],
+      },
+    ],
     store: false,
   };
 
@@ -185,9 +196,12 @@ function requestIncludesGatewayWebSearchTool(body: Record<string, unknown> | und
     }
 
     const record = tool as Record<string, unknown>;
+    // The gateway language-model API requires provider tools to carry the model-facing `name`
+    // alongside `id`; an id-only entry passes a loose check here but 400s against the real API.
     return (
-      record.id === "gateway.perplexity_search" ||
-      (record.type === "provider" && record.name === "web_search")
+      record.type === "provider" &&
+      record.id === "gateway.perplexity_search" &&
+      record.name === "web_search"
     );
   });
 }

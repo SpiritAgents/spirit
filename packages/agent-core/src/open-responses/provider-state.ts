@@ -1,11 +1,11 @@
 import type { JsonObject, JsonValue } from "../ports.js";
 import { cloneJsonValue, isJsonObject } from "../tool-agent.js";
-import {
-  resolveOpenResponsesSdkProvider,
-  type OpenResponsesTransportConfig,
-} from "./responses-compat.js";
+import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const RESPONSE_ID_PROVIDER_KEYS = ["openAiResponses", "openResponses"] as const;
+
+/** Assistant-message provider-state bucket key holding captured server-side tool output items. */
+const BUILT_IN_OUTPUT_ITEMS_KEY = "builtInOutputItems";
 
 function readResponseIdFromProviderBucket(bucket: unknown): string | undefined {
   if (!isJsonObject(bucket as JsonValue | undefined)) {
@@ -81,12 +81,10 @@ export function readResponseIdFromProviderState(message: JsonObject): string | u
   return undefined;
 }
 
-const BUILT_IN_OUTPUT_ITEMS_KEY = "builtInOutputItems";
-
 function openResponsesProviderKey(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "responsesProvider" | "model">,
+  config: Pick<OpenResponsesTransportConfig, "sdk">,
 ): (typeof RESPONSE_ID_PROVIDER_KEYS)[number] {
-  return resolveOpenResponsesSdkProvider(config) === "openai" ? "openAiResponses" : "openResponses";
+  return config.sdk === "@ai-sdk/openai" ? "openAiResponses" : "openResponses";
 }
 
 function mergeOpenResponsesProviderBucket(
@@ -128,6 +126,7 @@ export function attachResponseIdToAssistantMessage(
   });
 }
 
+/** Stores captured server-side tool output items (e.g. `web_search_call`) on the assistant message. */
 export function attachBuiltInOutputItemsToAssistantMessage(
   config: OpenResponsesTransportConfig,
   message: JsonValue,
@@ -142,6 +141,7 @@ export function attachBuiltInOutputItemsToAssistantMessage(
   });
 }
 
+/** Reads back the items stored by `attachBuiltInOutputItemsToAssistantMessage` (both bucket spellings). */
 export function readBuiltInOutputItemsFromMessage(message: JsonObject): JsonObject[] {
   const buckets: unknown[] = [];
   if (isJsonObject(message.providerState)) {

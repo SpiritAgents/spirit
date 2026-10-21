@@ -1,14 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { JsonValue } from "../ports.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
 import { cloneJsonValue, isJsonObject } from "../tool-agent.js";
 import { findAnchorIndexForResponseId, findPreviousResponseId } from "./provider-state.js";
-import {
-  isBedrockMantleOpenResponsesConfig,
-  resolveOpenResponsesSdkProvider,
-  type OpenResponsesTransportConfig,
-} from "./responses-compat.js";
+import { isAwsSigV4AuthConfig, type OpenResponsesTransportConfig } from "./responses-compat.js";
 
 export type ResponsesRoundInputMode = "full" | "incremental";
 
@@ -26,19 +21,22 @@ function responsesStoredStateRequestStore(previousResponseId: string | undefined
   return previousResponseId !== undefined ? { previousResponseId } : {};
 }
 
-/** Official OpenAI/Azure SDKs, plus Bailian/Volcengine Ark Responses (store / previous_response_id injected via fetch). */
+/**
+ * Server-side stored state (`store` / `previous_response_id` continuation): the official
+ * OpenAI/Azure adapters speak it natively; a generic Open Responses endpoint opts in via the
+ * declared `options.storedState`. The SigV4 (Bedrock Mantle) surface uses the OpenAI adapter shape
+ * but does not support the OpenAI-style remote store chain.
+ */
 export function responsesUsesStoredState(config: OpenResponsesTransportConfig): boolean {
-  // Bedrock Mantle uses responsesProvider: openai, but does not support the OpenAI-style remote store chain.
-  if (isBedrockMantleOpenResponsesConfig(config)) {
+  if (isAwsSigV4AuthConfig(config)) {
     return false;
   }
 
-  if (config.llmVendor === "alibaba" || isArkLlmVendor(config.llmVendor)) {
+  if (config.options?.storedState === true) {
     return true;
   }
 
-  const provider = resolveOpenResponsesSdkProvider(config);
-  return provider === "openai" || provider === "azure";
+  return config.sdk === "@ai-sdk/openai" || config.sdk === "@ai-sdk/azure";
 }
 
 /** Lets compatible fetch paths such as Bailian/Volcengine Ark read this round's previous_response_id. */

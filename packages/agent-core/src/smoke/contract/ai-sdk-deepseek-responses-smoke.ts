@@ -57,7 +57,8 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "deepseek-v4-flash",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}`,
-    llmVendor: "deepseek" as const,
+    sdk: "@ai-sdk/open-responses" as const,
+    providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
   };
   const tools = demoLookupToolDefinition();
 
@@ -120,9 +121,9 @@ async function main(): Promise<void> {
   }
 
   const traceKind = secondRound.result.requestTrace[0];
-  if (!isJsonObject(traceKind) || traceKind.kind !== "deepseek_open_responses") {
+  if (!isJsonObject(traceKind) || traceKind.kind !== "open_responses_sdk_responses") {
     throw new Error(
-      "ai-sdk deepseek responses smoke did not write a deepseek_open_responses trace.",
+      "ai-sdk deepseek responses smoke did not write an open_responses_sdk_responses trace.",
     );
   }
 }

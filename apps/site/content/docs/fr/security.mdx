@@ -7,7 +7,9 @@ description: Trousseau de clés, approbations et démon en boucle locale. Pas de
 
 Les clés API, les secrets Bedrock / Vertex, les secrets d'extension et le jeton d'intégration GitHub sont stockés dans le trousseau du système d'exploitation. Le nom du service est `{{product.name}}`.
 
-`config.json` contient les groupes de fournisseurs et les références de modèle, pas le secret lui-même. Les grands secrets peuvent être partitionnés dans le trousseau.
+Les clés de fournisseur écrites par l'assistant de connexion utilisent le schéma de compte `provider::{id}` — un par entrée de fournisseur dans `config.json` — ou `provider::{id}::{slot}` pour les slots d'identifiants composites comme IAM Bedrock ou un compte de service Vertex. Les grands secrets peuvent être partitionnés dans le trousseau.
+
+`config.json` contient les entrées de fournisseur et les références de modèle, pas les secrets eux-mêmes — sauf si vous optez pour une trappe de secours déclarée : un `apiKey` en clair (non recommandé), une référence de variable d'environnement `apiKeyEnv`, ou une référence `apiKeyKeyring` / `keyring` par slot vers une entrée d'un trousseau externe. Voir [Configuration](./config.mdx).
 
 ## Approbations
 
