@@ -41,7 +41,6 @@ function MermaidPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-background/40 backdrop-blur-md"
         className="w-auto max-w-none gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
       >
         <div

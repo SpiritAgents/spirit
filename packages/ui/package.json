@@ -142,6 +142,10 @@
       "types": "./dist/dialog.d.ts",
       "default": "./dist/dialog.js"
     },
+    "./image-preview-dialog": {
+      "types": "./dist/image-preview-dialog.d.ts",
+      "default": "./dist/image-preview-dialog.js"
+    },
     "./dropdown-menu": {
       "types": "./dist/dropdown-menu.d.ts",
       "default": "./dist/dropdown-menu.js"
@@ -235,6 +239,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "lucide-react": "1.28.0",
     "radix-ui": "1.6.7",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -248,6 +253,7 @@
     "class-variance-authority": ">=0.7.0",
     "clsx": ">=2.0.0",
     "cmdk": ">=1.0.0",
+    "lucide-react": ">=1.14.0",
     "radix-ui": ">=1.4.0",
     "react": ">=18",
     "react-dom": ">=18",
