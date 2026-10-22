@@ -1,17 +1,17 @@
-import { X } from "@spiritagent/icons/x";
 import { useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { Maximize2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
+import {
+  IMAGE_PREVIEW_FLOATING_ACTION_BUTTON_CLASS,
+  ImagePreviewDialog,
+} from "@/components/ui/image-preview-dialog";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import type { ToolBlockSnapshot } from "@/types/spirit-desktop";
 
-const floatingActionButtonClass =
-  "size-8 rounded-full border border-border/50 bg-background/55 text-foreground shadow-sm backdrop-blur-xl transition-[opacity,background-color,border-color,box-shadow] duration-200 ease-out hover:border-border/60 hover:bg-background/72 dark:border-white/12 dark:bg-input/30 dark:hover:bg-input/40 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25";
 const floatingActionCardRevealClass =
   "opacity-0 group-hover/image-card:opacity-100 group-focus-within/image-card:opacity-100";
 
@@ -88,7 +88,7 @@ export function PreviewImageGenerationToolCard({ tool }: { tool: ToolBlockSnapsh
               variant="ghost"
               className={cn(
                 "pointer-events-auto absolute right-3 bottom-3",
-                floatingActionButtonClass,
+                IMAGE_PREVIEW_FLOATING_ACTION_BUTTON_CLASS,
                 floatingActionCardRevealClass,
               )}
               onClick={(event) => {
@@ -110,36 +110,12 @@ export function PreviewImageGenerationToolCard({ tool }: { tool: ToolBlockSnapsh
         </pre>
       ) : null}
 
-      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent
-          showCloseButton={false}
-          className="w-auto max-w-none gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
-        >
-          {previewSrc ? (
-            <div className="pointer-events-auto relative inline-flex max-h-[calc(100dvh-2rem)] max-w-[calc(100dvw-2rem)] items-center justify-center overflow-hidden rounded-[1.1rem] border border-border/45">
-              <DialogClose asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className={cn("absolute top-3 right-3 z-20", floatingActionButtonClass)}
-                  title={copy.closeImagePreview}
-                  aria-label={copy.closeImagePreview}
-                >
-                  <X className="size-4" aria-hidden strokeWidth={1.75} />
-                </Button>
-              </DialogClose>
-              {/* oxlint-disable-next-line nextjs/no-img-element */}
-              <img
-                src={previewSrc}
-                alt=""
-                className="block max-h-[calc(100dvh-2rem)] max-w-[calc(100dvw-2rem)] object-contain"
-                draggable={false}
-              />
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <ImagePreviewDialog
+        open={viewerOpen}
+        onOpenChange={setViewerOpen}
+        src={previewSrc || null}
+        closeLabel={copy.closeImagePreview}
+      />
     </div>
   );
 }

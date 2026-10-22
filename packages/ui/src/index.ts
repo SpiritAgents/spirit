@@ -86,6 +86,13 @@ export {
   DialogTrigger,
 } from "./dialog.js";
 export {
+  IMAGE_PREVIEW_FLOATING_ACTION_BUTTON_CLASS,
+  ImagePreviewDialog,
+  copyImageToClipboard,
+  useImagePreviewAspectRatio,
+  type ImagePreviewDialogProps,
+} from "./image-preview-dialog.js";
+export {
   ContextMenu,
   ContextMenuCheckboxItem,
   ContextMenuContent,
