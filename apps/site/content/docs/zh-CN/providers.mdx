@@ -97,11 +97,11 @@ Google 与 Vertex AI 预设固定走 Chat Completions——向导不提供传输
 
 在 [DeepSeek 平台](https://platform.deepseek.com/api-keys) 创建 API Key。
 
-无选择器。连接默认是 **Open Responses**（`open-responses`）。兼容 Base 还有 `https://api.deepseek.com/v1`（Chat）和 `https://api.deepseek.com/anthropic`（Messages）。
+连接默认使用 **Chat Completions API**（`openai-compatible`）。默认 Base：`https://api.deepseek.com/v1`。显式备选为 **Open Responses**（`open-responses`，Base `https://api.deepseek.com`）和 **Messages**（`anthropic`，Base `https://api.deepseek.com/anthropic`）。
 
 导入后即可对话。推理跟模型走。
 
-声明：**联网搜索**提供商工具（由上游在请求内执行）。
+声明：**联网搜索**提供商工具（静态 `function` 声明，由 {{product.name|mdx}} 通过 `POST /v1/tools/search` 执行调用）。
 
 ### OpenRouter
 
@@ -178,7 +178,7 @@ Google 与 Vertex AI 预设固定走 Chat Completions——向导不提供传输
 
 这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条不同的连接。
 
-声明：**联网搜索**提供商工具（Moonshot formula——工具 schema 从 formula 端点拉取，调用由 {{product.name|mdx}} 对 formula 端点执行；产出是服务端密文，详情不可展开）和视频文件上传（`ms://` 文件引用）。
+声明：**联网搜索**提供商工具（静态 `function` 工具 schema，由 {{product.name|mdx}} 通过 `POST /v1/tools/search_pro` 执行调用）和视频文件上传（`ms://` 文件引用）。
 
 ### Kimi Code
 

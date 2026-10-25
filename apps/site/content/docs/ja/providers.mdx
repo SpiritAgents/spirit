@@ -97,11 +97,11 @@ Google と Vertex AI のプリセットは Chat Completions に固定されて�
 
 [DeepSeek プラットフォーム](https://platform.deepseek.com/api-keys) で API キーを作成します。
 
-ピッカーなし。接続デフォルトは **Open Responses** (`open-responses`)。互換ベースは `https://api.deepseek.com/v1` (Chat) と `https://api.deepseek.com/anthropic` (Messages) にも存在します。
+接続のデフォルトは **Chat Completions API**（`openai-compatible`）です。デフォルトのベース：`https://api.deepseek.com/v1`。明示的な代替として、**Open Responses**（`open-responses`、ベース `https://api.deepseek.com`）と **Messages**（`anthropic`、ベース `https://api.deepseek.com/anthropic`）を使用できます。
 
 インポート後のチャット。推論はモデルに従います。
 
-宣言：**ウェブ検索**プロバイダーツール（アップストリームがリクエスト内で実行）。
+宣言：**ウェブ検索**プロバイダーツール（静的な `function` 宣言。{{product.name|mdx}} が `POST /v1/tools/search` で呼び出しを実行）。
 
 ### OpenRouter
 
@@ -178,7 +178,7 @@ Google と Vertex AI のプリセットは Chat Completions に固定されて�
 
 これは Moonshot Open Platform プロバイダーであり、[Kimi Code](#kimi-code) ではありません。Kimi Code キーと Moonshot Open Platform キーは別の接続です。
 
-宣言：**ウェブ検索**プロバイダーツール（Moonshot formula — ツールスキーマは formula エンドポイントから取得され、呼び出しは {{product.name|mdx}} が formula エンドポイントに対して実行します。出力はサーバーサイドの暗号文のため詳細は展開できません）とビデオのファイルアップロード（`ms://` ファイル参照）。
+宣言：**ウェブ検索**プロバイダーツール（静的な `function` ツールスキーマ。{{product.name|mdx}} が `POST /v1/tools/search_pro` で呼び出しを実行）とビデオのファイルアップロード（`ms://` ファイル参照）。
 
 ### Kimi Code
 
