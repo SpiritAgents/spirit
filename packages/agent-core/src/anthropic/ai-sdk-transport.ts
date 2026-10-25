@@ -215,7 +215,7 @@ export class AiSdkAnthropicTransport
       config,
       nextState.steps,
       normalizedRequestMessages,
-      [...normalizedTools, ...providerTools.literalEntries, ...providerTools.traceEntries],
+      [...normalizedTools, ...providerTools.literalEntries],
     );
 
     try {
@@ -303,11 +303,7 @@ export class AiSdkAnthropicTransport
       [...providerTools.recognizedNames].filter((name) => !providerTools.executions.has(name)),
     );
     const serverToolsEnabled = serverToolNames.size > 0;
-    const traceTools = [
-      ...normalizedTools,
-      ...providerTools.literalEntries,
-      ...providerTools.traceEntries,
-    ];
+    const traceTools = [...normalizedTools, ...providerTools.literalEntries];
     const requestTrace = buildAnthropicRequestTrace(
       config,
       nextState.steps,

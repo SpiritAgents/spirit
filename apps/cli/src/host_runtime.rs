@@ -1323,10 +1323,10 @@ mod tests {
     }
 
     #[test]
-    fn moonshot_formula_web_search_preview_sets_suppress_expand_and_query_excerpt() {
+    fn provider_tool_preview_sets_suppress_expand_and_query_excerpt() {
         let block = build_tool_preview_block(
             "web_search",
-            "call_formula_01",
+            "call_provider_01",
             &ToolUiRequest::new(
                 "web_search",
                 json!({

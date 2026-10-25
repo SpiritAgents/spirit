@@ -9,7 +9,7 @@ import {
   validateProviderToolEntry,
 } from "./types.js";
 
-test("validateProviderToolEntry accepts body-only, tools-only, and toolsFrom-only entries", () => {
+test("validateProviderToolEntry accepts body-only and tools-only entries", () => {
   assert.deepEqual(validateProviderToolEntry({ body: { enable_search: true } }), {
     body: { enable_search: true },
   });
@@ -19,23 +19,19 @@ test("validateProviderToolEntry accepts body-only, tools-only, and toolsFrom-onl
       tools: [{ type: "function", function: { name: "t" } }],
     },
   );
-  assert.deepEqual(validateProviderToolEntry({ toolsFrom: { path: "/tools" } }), {
-    toolsFrom: { path: "/tools" },
-  });
 });
 
-test("validateProviderToolEntry accepts tools and toolsFrom together with execute", () => {
+test("validateProviderToolEntry accepts literal tools with execute and UI declarations", () => {
   const entry = {
     label: "Web Search",
-    tools: [{ type: "moonshot_formula", formula_uri: "moonshot/web-search:latest" }],
-    toolsFrom: { path: "/formulas/moonshot/web-search:latest/tools", listPath: "tools" },
+    tools: [{ type: "function", function: { name: "web_search" } }],
     execute: {
-      path: "/formulas/moonshot/web-search:latest/fibers",
-      body: { name: "{toolName}", arguments: "{argumentsJson}" },
+      path: "/search",
+      body: { text_query: "{arg.query}" },
       statusPath: "status",
       okValue: "succeeded",
-      errorPath: ["error", "context.error", "context.output"],
-      resultPath: ["context.encrypted_output", "context.output"],
+      errorPath: ["error", "context.error"],
+      resultPath: "output",
     },
     ui: { expand: false },
   };
@@ -67,29 +63,18 @@ test("validateProviderToolEntry rejects a non-object entry and unknown keys", ()
   assert.throws(() => validateProviderToolEntry({ body: {}, bogus: 1 }), /unknown key "bogus"/);
 });
 
-test("validateProviderToolEntry rejects an entry with none of tools/toolsFrom/body", () => {
+test("validateProviderToolEntry rejects an entry with none of tools/body", () => {
   assert.throws(
     () => validateProviderToolEntry({ label: "Web Search" }),
-    /at least one of "tools", "toolsFrom", or "body"/,
+    /at least one of "tools" or "body"/,
   );
 });
 
-test("validateProviderToolEntry rejects execute without tools or toolsFrom", () => {
+test("validateProviderToolEntry rejects execute without tools", () => {
   assert.throws(
     () =>
       validateProviderToolEntry({ body: { enable_search: true }, execute: { path: "/search" } }),
-    /"execute" requires "tools" or "toolsFrom"/,
-  );
-});
-
-test("validateProviderToolEntry rejects toolsFrom without path/url and with unknown keys", () => {
-  assert.throws(
-    () => validateProviderToolEntry({ toolsFrom: { listPath: "tools" } }),
-    /"toolsFrom" requires at least one of "path" or "url"/,
-  );
-  assert.throws(
-    () => validateProviderToolEntry({ toolsFrom: { path: "/tools", extra: 1 } }),
-    /unknown key "extra"/,
+    /"execute" requires "tools"/,
   );
 });
 
@@ -191,7 +176,10 @@ test("validateProviderToolEntries validates arrays and indexes the error context
     () => validateProviderToolEntries([{ body: {} }, { label: "empty" }]),
     /providerTools\[1\]/,
   );
-  const entries = [{ body: { enable_search: true } }, { toolsFrom: { url: "https://x/tools" } }];
+  const entries = [
+    { body: { enable_search: true } },
+    { tools: [{ type: "function", function: { name: "lookup" } }] },
+  ];
   assert.deepEqual(validateProviderToolEntries(entries), entries);
 });
 
@@ -202,13 +190,7 @@ test("isOpenAiFunctionToolEntry accepts only the OpenAI function shape", () => {
   );
   assert.equal(isOpenAiFunctionToolEntry({ type: "function", function: { name: "  " } }), false);
   assert.equal(isOpenAiFunctionToolEntry({ type: "function", function: {} }), false);
-  assert.equal(
-    isOpenAiFunctionToolEntry({
-      type: "moonshot_formula",
-      formula_uri: "moonshot/web-search:latest",
-    }),
-    false,
-  );
+  assert.equal(isOpenAiFunctionToolEntry({ type: "custom_tool", name: "custom" }), false);
   assert.equal(
     isOpenAiFunctionToolEntry({ type: "web_search_20250305", name: "web_search" }),
     false,

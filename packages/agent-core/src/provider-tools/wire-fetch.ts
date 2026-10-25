@@ -7,7 +7,7 @@ type FetchFn = typeof fetch;
 /**
  * Identity key for dedup when merging literal tool entries into a request `tools[]`:
  * function-shaped entries key on `function.name`, server tools on `name`, provider references on
- * `id`, formula-style trace entries on `function_name`.
+ * `id`.
  */
 function literalToolEntryKey(tool: unknown): string | undefined {
   if (!isPlainJsonObject(tool)) {
@@ -20,7 +20,7 @@ function literalToolEntryKey(tool: unknown): string | undefined {
     }
   }
   const type = typeof tool.type === "string" ? tool.type : "";
-  for (const field of ["name", "id", "function_name"] as const) {
+  for (const field of ["name", "id"] as const) {
     const value = tool[field];
     if (typeof value === "string" && value.length > 0) {
       return `${type}\0${field}\0${value}`;

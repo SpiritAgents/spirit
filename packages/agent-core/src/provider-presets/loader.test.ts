@@ -248,7 +248,7 @@ test("loader rejects invalid providerTools entries via the providerTools contrac
   assertLoadThrows(manifestOf([minimalPreset({ providerTools: [{}] })]), /at least one of/);
   assertLoadThrows(
     manifestOf([minimalPreset({ providerTools: [{ execute: { path: "/x" } }] })]),
-    /"execute" requires "tools" or "toolsFrom"/,
+    /"execute" requires "tools"/,
   );
   assertLoadThrows(
     manifestOf([

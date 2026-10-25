@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { clearProviderToolsFromCacheForTests } from "./tools-from.js";
 import {
   declaredProviderToolWirePatches,
   peekDeclaredProviderTools,
@@ -67,83 +66,17 @@ test("resolveDeclaredProviderTools merges literal transport-native entries and e
   assert.deepEqual(resolved.bodyPatches, [{ enable_search: true }]);
 });
 
-test("resolveDeclaredProviderTools fetches toolsFrom entries and validates arguments schema", async () => {
-  clearProviderToolsFromCacheForTests();
-  const fetchedTool = {
-    type: "function",
-    function: {
-      name: "fiber_search",
-      parameters: { type: "object", properties: {}, required: ["q"] },
-    },
-  };
-  const fetchImpl = async () =>
-    new Response(JSON.stringify({ tools: [fetchedTool, { type: "not-a-function" }] }), {
-      status: 200,
-    });
+test("resolveDeclaredProviderTools preserves literal schemas and suppressExpand display", async () => {
+  const config = { providerTools: [{ ...EXECUTE_ENTRY, ui: { expand: false } }] };
+  const resolved = await resolveDeclaredProviderTools(config, new Set());
 
-  const config = {
-    apiKey: "k",
-    baseUrl: "https://example.com/v1",
-    providerTools: [
-      {
-        label: "Formula",
-        tools: [
-          {
-            type: "acme_formula",
-            formula_uri: "acme/search:latest",
-            function_name: "fiber_search",
-          },
-        ],
-        toolsFrom: { path: "/formulas/acme/search:latest/tools" },
-        execute: { path: "/formulas/acme/search:latest/fibers" },
-        ui: { expand: false },
-      },
-    ] as ProviderToolEntry[],
-  };
-  const resolved = await resolveDeclaredProviderTools(config, new Set(), fetchImpl);
-
-  // The trace marker never rides the wire; it feeds recognition and the request trace only.
-  assert.equal(resolved.literalEntries.length, 0);
-  assert.deepEqual(resolved.traceEntries, [
-    {
-      type: "acme_formula",
-      formula_uri: "acme/search:latest",
-      function_name: "fiber_search",
-    },
-  ]);
-  assert.deepEqual([...resolved.executions.keys()], ["fiber_search"]);
-  assert.deepEqual(resolved.executions.get("fiber_search")?.parameters, {
+  assert.deepEqual([...resolved.executions.keys()], ["web_search"]);
+  assert.deepEqual(resolved.executions.get("web_search")?.parameters, {
     type: "object",
-    properties: {},
-    required: ["q"],
+    properties: { query: { type: "string" } },
+    required: ["query"],
   });
-  assert.equal(resolved.display.get("fiber_search")?.suppressExpand, true);
-});
-
-test("resolveDeclaredProviderTools degrades a failed toolsFrom fetch with a warning", async () => {
-  clearProviderToolsFromCacheForTests();
-  const warnings: string[] = [];
-  const originalWarn = console.warn;
-  console.warn = (message?: unknown) => warnings.push(String(message));
-  try {
-    const fetchImpl = async () => new Response("boom", { status: 500 });
-    const config = {
-      apiKey: "k",
-      baseUrl: "https://example.com/v1",
-      providerTools: [
-        {
-          label: "Formula",
-          toolsFrom: { path: "/tools" },
-          execute: { path: "/fibers" },
-        },
-      ] as ProviderToolEntry[],
-    };
-    const resolved = await resolveDeclaredProviderTools(config, new Set(), fetchImpl);
-    assert.deepEqual([...resolved.recognizedNames], []);
-    assert.equal(warnings.length, 1);
-  } finally {
-    console.warn = originalWarn;
-  }
+  assert.equal(resolved.display.get("web_search")?.suppressExpand, true);
 });
 
 test("resolveDeclaredProviderTools applies the per-name collision filter (local wins)", async () => {
@@ -208,11 +141,6 @@ test("declaredProviderToolWirePatches reads literal entries and bodies synchrono
         tools: [
           { type: "web_search_20250305", name: "web_search" },
           {
-            type: "acme_formula",
-            formula_uri: "acme/search:latest",
-            function_name: "web_search",
-          },
-          {
             type: "function",
             function: { name: "web_search", parameters: { type: "object", properties: {} } },
           },
@@ -222,8 +150,7 @@ test("declaredProviderToolWirePatches reads literal entries and bodies synchrono
     ] as ProviderToolEntry[],
   };
   const patches = declaredProviderToolWirePatches(config);
-  // Only non-function wire literals pass through here; function-shaped tools ride the tools[]
-  // assembly and trace markers (`function_name`) never reach the wire.
+  // Only non-function wire literals pass through here; function-shaped tools ride tools[] assembly.
   assert.deepEqual(patches.literalEntries, [{ type: "web_search_20250305", name: "web_search" }]);
   assert.deepEqual(patches.bodyPatches, [{ enable_search: true }]);
 });

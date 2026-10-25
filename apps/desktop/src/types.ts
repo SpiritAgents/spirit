@@ -1777,7 +1777,7 @@ export interface ToolBlockSnapshot {
   videoPaths?: string[];
   /** Error/warning summary from the LSP auto-check after a write-file tool (for the tool card badge and hover). */
   lspWriteDiagnostics?: LspWriteDiagnosticsUi;
-  /** Provider tools like Moonshot Formula: forbid expanding to avoid showing encrypted gibberish. */
+  /** Declared provider tool UI restriction: forbid expanding the call details. */
   suppressExpand?: boolean;
   /** Declared provider tool entry label carried by the preview event; the card renders the MCP-style Calling/Called line with it. */
   providerToolLabel?: string;

@@ -15,15 +15,6 @@ export type ProviderToolResultField = (typeof PROVIDER_TOOL_RESULT_FIELDS)[numbe
 /** Maps a fixed result slot to the field name used inside each upstream result entry. */
 export type ProviderToolFieldsMap = Partial<Record<ProviderToolResultField, string>>;
 
-export interface ProviderToolsFromDeclaration {
-  /** Relative to the provider `apiBase`; overridden by `url` when both are set. */
-  path?: string;
-  /** Absolute URL; overrides `path`. */
-  url?: string;
-  /** Dot path of the tool list inside the response JSON; defaults to `"tools"`. */
-  listPath?: string;
-}
-
 export interface ProviderToolExecuteDeclaration {
   /** Relative to the provider `apiBase`; overridden by `url` when both are set. */
   path?: string;
@@ -53,19 +44,11 @@ export interface ProviderToolUiDeclaration {
   expand?: boolean;
 }
 
-/**
- * One declared provider tool entry. Must carry at least one of `tools` / `toolsFrom` / `body`;
- * `execute` requires `tools` or `toolsFrom`.
- */
+/** One declared provider tool entry. Must carry `tools` and/or `body`; `execute` requires `tools`. */
 export interface ProviderToolEntry {
   label?: string;
-  /**
-   * Literal tool entries merged verbatim into the request `tools[]` while the entry is enabled.
-   * Trace-marker entries (`function_name`-keyed) are the exception: recognition and trace only,
-   * never wire-merged.
-   */
+  /** Literal tool entries merged verbatim into the request `tools[]` while the entry is enabled. */
   tools?: JsonObject[];
-  toolsFrom?: ProviderToolsFromDeclaration;
   /** Literal body fields merged into the request body top level while the entry is enabled. */
   body?: JsonObject;
   execute?: ProviderToolExecuteDeclaration;
@@ -123,22 +106,7 @@ export function isOpenAiFunctionToolEntry(value: unknown): value is OpenAiFuncti
   return typeof name === "string" && name.trim().length > 0;
 }
 
-/**
- * Trace-marker literal entries (formula-style registrations) key on `function_name`. They exist
- * for recognition and the request trace only and must never reach the wire: upstream chat
- * endpoints reject tool types they do not define.
- */
-export function isTraceMarkerToolEntry(value: unknown): value is JsonObject {
-  return (
-    isPlainJsonObject(value) &&
-    !isOpenAiFunctionToolEntry(value) &&
-    typeof value.function_name === "string" &&
-    value.function_name.trim().length > 0
-  );
-}
-
-const ENTRY_KEYS = new Set(["label", "tools", "toolsFrom", "body", "execute", "ui"]);
-const TOOLS_FROM_KEYS = new Set(["path", "url", "listPath"]);
+const ENTRY_KEYS = new Set(["label", "tools", "body", "execute", "ui"]);
 const EXECUTE_KEYS = new Set([
   "path",
   "url",
@@ -195,21 +163,6 @@ function requireOptionalStringOrStringArray(
 function hasNonBlankString(record: JsonObject, key: string): boolean {
   const value = record[key];
   return typeof value === "string" && value.trim().length > 0;
-}
-
-function validateToolsFrom(toolsFrom: unknown, context: string): void {
-  if (!isPlainJsonObject(toolsFrom)) {
-    throw new ProviderToolConfigError(`${context}: "toolsFrom" must be an object.`);
-  }
-  rejectUnknownKeys(toolsFrom, TOOLS_FROM_KEYS, `${context} toolsFrom`);
-  requireOptionalString(toolsFrom, "path", `${context} toolsFrom`);
-  requireOptionalString(toolsFrom, "url", `${context} toolsFrom`);
-  requireOptionalString(toolsFrom, "listPath", `${context} toolsFrom`);
-  if (!hasNonBlankString(toolsFrom, "path") && !hasNonBlankString(toolsFrom, "url")) {
-    throw new ProviderToolConfigError(
-      `${context}: "toolsFrom" requires at least one of "path" or "url".`,
-    );
-  }
 }
 
 function validateExecute(execute: unknown, context: string): void {
@@ -288,27 +241,22 @@ export function validateProviderToolEntry(
       throw new ProviderToolConfigError(`${context}: "tools" must be an array of objects.`);
     }
   }
-  if (entry.toolsFrom !== undefined) {
-    validateToolsFrom(entry.toolsFrom, context);
-  }
   if (entry.body !== undefined && !isPlainJsonObject(entry.body)) {
     throw new ProviderToolConfigError(`${context}: "body" must be an object.`);
   }
   if (entry.execute !== undefined) {
     validateExecute(entry.execute, context);
-    if (entry.tools === undefined && entry.toolsFrom === undefined) {
+    if (entry.tools === undefined) {
       throw new ProviderToolConfigError(
-        `${context}: "execute" requires "tools" or "toolsFrom" on the same entry.`,
+        `${context}: "execute" requires "tools" on the same entry.`,
       );
     }
   }
   if (entry.ui !== undefined) {
     validateUi(entry.ui, context);
   }
-  if (entry.tools === undefined && entry.toolsFrom === undefined && entry.body === undefined) {
-    throw new ProviderToolConfigError(
-      `${context} must declare at least one of "tools", "toolsFrom", or "body".`,
-    );
+  if (entry.tools === undefined && entry.body === undefined) {
+    throw new ProviderToolConfigError(`${context} must declare at least one of "tools" or "body".`);
   }
   return entry as ProviderToolEntry;
 }
