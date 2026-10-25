@@ -115,6 +115,17 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
         supportsVideoInput: false,
         supportedReasoningEfforts: [],
       },
+      {
+        id: "kimi-k3.1-pro",
+        supportsImageInput: true,
+        supportsVideoInput: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+        contextLength: 1048576,
+      },
+      {
+        id: "kimi-k3.2-pro",
+        supportedReasoningEfforts: ["low", "high", "max"],
+      },
     ],
   });
 
@@ -148,6 +159,21 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
       displayName: "Kimi K2 Turbo Preview",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: [],
+    },
+    {
+      id: "kimi-k3.1-pro",
+      displayName: "Kimi K3.1 Pro",
+      capabilities: ["languageModel", "image", "video"],
+      supportedReasoningEfforts: ["low", "high", "max"],
+      contextLength: 1048576,
+      supportsThinkingType: "only",
+    },
+    {
+      id: "kimi-k3.2-pro",
+      displayName: "Kimi K3.2 Pro",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: ["low", "high", "max"],
+      supportsThinkingType: "only",
     },
   ]);
 });

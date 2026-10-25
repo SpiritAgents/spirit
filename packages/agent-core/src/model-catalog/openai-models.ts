@@ -3494,6 +3494,10 @@ export function moonshotSupportedReasoningEfforts(
   if (/^kimi-k3(?:-|$)/.test(bareId)) {
     return moonshotK3SupportedReasoningEfforts();
   }
+  // Unknown Kimi versions follow the current K3/K3.1 Pro contract: no switch and fixed tiers.
+  if (bareId.startsWith("kimi-k")) {
+    return moonshotK3SupportedReasoningEfforts();
+  }
   return ["minimal", "low", "medium", "high"];
 }
 
