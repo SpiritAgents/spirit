@@ -29,7 +29,6 @@ import {
   type JsonValue,
   type LlmMessage,
   type LlmTransportConfig,
-  isBedrockTransportConfig,
   type RuntimeEvent,
   type AgentMode,
 } from "@spiritagent/agent-core";
@@ -215,14 +214,6 @@ export interface ServerRuntimeResult {
  */
 const builtInSeededTrees = new Set<string>();
 
-function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  // Neutral mechanism label for the host prompt: the declared SDK adapter package.
-  return config.sdk;
-}
-
 export async function createServerRuntime(
   options: ServerRuntimeOptions,
 ): Promise<ServerRuntimeResult> {
@@ -245,6 +236,7 @@ export async function createServerRuntime(
   const transportConfig = resolvedTransport.ok
     ? resolvedTransport.config
     : unconfiguredTransportConfig(workspaceRoot);
+  const hostPromptProviderId = resolvedTransport.ok ? resolvedTransport.providerId : undefined;
   await ensureTranscriptSessionDir(spiritDataDir, sessionKey);
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
@@ -484,7 +476,7 @@ export async function createServerRuntime(
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
       transportConfig.webFetchEnabled,
     );
 
@@ -504,7 +496,7 @@ export async function createServerRuntime(
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
       transportConfig.webFetchEnabled,
     );
 
@@ -566,7 +558,7 @@ export async function createServerRuntime(
         loopEnabled,
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
-        hostPromptProviderId(transportConfig),
+        hostPromptProviderId,
         transportConfig.webFetchEnabled,
       ),
     generateImage: (request) =>
@@ -606,7 +598,7 @@ export async function createServerRuntime(
       resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
     getApprovalLevel: () => currentApprovalLevel,
-    reviewToolApproval: createCliAutoApprovalReviewer(transportConfig),
+    reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
     onEvent,
   });
 
@@ -729,11 +721,9 @@ export async function createServerRuntime(
         requestTrace: [...runtime.requestTrace()],
         systemPrompts: {
           ...baseSystemPrompts,
-          tool_agent: buildToolAgentHostPrompt(
-            transportConfig.model,
-            hostPromptProviderId(transportConfig),
-            { webFetchEnabled: transportConfig.webFetchEnabled },
-          ),
+          tool_agent: buildToolAgentHostPrompt(transportConfig.model, hostPromptProviderId, {
+            webFetchEnabled: transportConfig.webFetchEnabled,
+          }),
           ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
           ...(skillsCatalogSystemPrompt === undefined
             ? {}

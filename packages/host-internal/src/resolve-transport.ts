@@ -278,7 +278,12 @@ function buildTransportFromProfile(
 export const NO_ACTIVE_MODEL_ERROR = "No active model configured. Run provider setup first.";
 
 export type ResolveTransportResult =
-  | { ok: true; config: LlmTransportConfig }
+  | {
+      ok: true;
+      /** Selected config provider id for host-facing identity, kept out of the wire transport config. */
+      providerId: string;
+      config: LlmTransportConfig;
+    }
   | { ok: false; error: string };
 
 /**
@@ -355,6 +360,7 @@ export function tryResolveTransportConfig(
   const webFetch = resolveAgentsWebFetchExposure(fullConfig);
   return {
     ok: true,
+    providerId: profile.providerId,
     config: {
       ...config,
       ...(providerTools.providerToolsEnabled ? {} : { providerToolsEnabled: false }),

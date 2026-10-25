@@ -617,6 +617,32 @@ test("modelRef selects a non-active model", () => {
   }
 });
 
+test("tryResolveTransportConfig returns the selected provider id as host-only metadata", () => {
+  useMemoryKeyring(internalKeyEntry("acme"));
+  const spiritDataDir = configDir({
+    providers: [
+      {
+        id: "acme",
+        apiBase: "https://acme.test/v1",
+        sdk: "@ai-sdk/openai-compatible",
+        models: [{ name: "chat-1" }, { name: "chat-2" }],
+      },
+    ],
+    activeModel: { providerId: "acme", name: "chat-1" },
+  });
+  const result = tryResolveTransportConfig({
+    workspaceRoot: tmpdir(),
+    spiritDataDir,
+    modelRef: { providerId: "acme", name: "chat-2" },
+  });
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.providerId, "acme");
+    assert.equal(result.config.model, "chat-2");
+    assert.equal("providerId" in result.config, false);
+  }
+});
+
 test("provider-level flat declarations are inherited by the resolved profile", () => {
   useMemoryKeyring(internalKeyEntry("acme"));
   const spiritDataDir = configDir(
