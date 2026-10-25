@@ -196,6 +196,25 @@ test("moonshotSupportedReasoningEfforts rejects K2 efforts and uses K3 tiers", (
     moonshotSupportedReasoningEfforts(true, "moonshotai/kimi-k3"),
     moonshotK3SupportedReasoningEfforts(),
   );
+  for (const model of [
+    "kimi-k3.1-pro",
+    "kimi-k3.1-pro-highspeed",
+    "moonshotai/kimi-k3.1-pro",
+    "kimi-k3.2-pro",
+    "kimi-k4",
+  ]) {
+    assert.deepEqual(
+      moonshotSupportedReasoningEfforts(true, model),
+      moonshotK3SupportedReasoningEfforts(),
+      model,
+    );
+  }
+  assert.deepEqual(moonshotSupportedReasoningEfforts(true, "moonshot-v1-8k"), [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+  ]);
 });
 
 test("parseVercelAiGatewayModelEntriesPayload infers kimi-k3 reasoning efforts", () => {

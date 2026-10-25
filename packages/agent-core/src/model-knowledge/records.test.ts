@@ -288,25 +288,35 @@ test("muse wonder always has max, including contributor builds", () => {
   assert.deepEqual(lookupModelKnowledge("muse-wonder-1.0-contributor"), withMax);
 });
 
-test("kimi k3 is thinking-only with fixed low/high/max efforts", () => {
+test("kimi k3 and k3.1 pro are thinking-only with fixed low/high/max efforts", () => {
   const expected = {
     supportedReasoningEfforts: ["low", "high", "max"],
     supportsThinkingType: "only",
   };
   assert.deepEqual(lookupModelKnowledge("kimi-k3"), expected);
   assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k3"), expected);
+  assert.deepEqual(lookupModelKnowledge("kimi-k3.1-pro"), expected);
+  assert.deepEqual(lookupModelKnowledge("kimi-k3.1-pro-highspeed"), expected);
+  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k3.1-pro-highspeed"), expected);
 });
 
-test("kimi k2.5+ supports the thinking switch; k2.7-code shadows to an empty declare", () => {
-  const expected = {
+test("kimi k2.5/k2.6 support the switch; k2.7-code and unknown versions use specific defaults", () => {
+  const switchDeclaration = {
     supportsThinkingSwitch: true,
     thinkingSwitch: thinkingTypeSwitchWithGateway("moonshotai"),
   };
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), expected);
-  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), expected);
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), expected);
+  assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), switchDeclaration);
+  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), switchDeclaration);
   assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code"), {});
   assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code-highspeed"), {});
+
+  const unknownVersionDefault = {
+    supportedReasoningEfforts: ["low", "high", "max"],
+    supportsThinkingType: "only",
+  };
+  assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), unknownVersionDefault);
+  assert.deepEqual(lookupModelKnowledge("kimi-k2.8-preview"), unknownVersionDefault);
+  assert.deepEqual(lookupModelKnowledge("kimi-k4"), unknownVersionDefault);
   assert.equal(lookupModelKnowledge("kimi-k2"), undefined);
   assert.equal(lookupModelKnowledge("moonshot-v1-8k"), undefined);
 });
