@@ -334,6 +334,7 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
         supports_image_in: true,
         supports_video_in: true,
         supports_thinking_type: "only",
+        reasoning: { type: "only" },
       },
     ],
   });
@@ -356,7 +357,7 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
       supportsImageInput: true,
       supportsVideoInput: true,
       supportsReasoning: true,
-      supportedReasoningEfforts: moonshotSupportedReasoningEfforts(true),
+      supportedReasoningEfforts: [],
       contextLength: 262144,
       supportsThinkingType: "only",
     },

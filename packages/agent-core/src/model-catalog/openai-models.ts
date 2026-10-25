@@ -431,6 +431,7 @@ export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedM
     if (supportsReasoning !== undefined) {
       modelEntry.supportsReasoning = supportsReasoning;
     }
+    const reasoning = asRecord(record.reasoning);
     const thinkEfforts = readKimiCodeThinkEfforts(record);
     if (thinkEfforts) {
       modelEntry.supportedReasoningEfforts = thinkEfforts.validEfforts;
@@ -438,10 +439,11 @@ export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedM
         modelEntry.defaultReasoningEffort = thinkEfforts.defaultEffort;
       }
     } else if (supportsReasoning !== undefined) {
-      modelEntry.supportedReasoningEfforts = moonshotSupportedReasoningEfforts(
-        supportsReasoning,
-        id.trim(),
-      );
+      // A current reasoning object without effort declares no tiers; do not infer them from supports_reasoning.
+      modelEntry.supportedReasoningEfforts =
+        reasoning !== undefined && reasoning.effort === undefined
+          ? []
+          : moonshotSupportedReasoningEfforts(supportsReasoning, id.trim());
     }
     const contextLength = readPositiveIntegerModelTrait(record, "context_length");
     if (contextLength !== undefined) {
