@@ -3,7 +3,6 @@ import { release as osRelease } from "node:os";
 import {
   AgentRuntime,
   createLlmTransport,
-  isBedrockTransportConfig,
   pendingWorkspaceFilesFromInput,
   type LlmTransportConfig,
   type LlmMessage,
@@ -54,7 +53,7 @@ import {
 } from "@spiritagent/host-internal";
 
 import { createNoopPeer } from "./noop-peer.js";
-import { resolveTransportConfig } from "@spiritagent/host-internal";
+import { tryResolveTransportConfig } from "@spiritagent/host-internal";
 import type { AcpServerConfig } from "./types.js";
 
 export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -79,21 +78,18 @@ export interface AcpRuntimeResult {
  * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
  * - No LSP, extensions, todos, or image/video generation
  */
-function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  // Neutral mechanism label for the host prompt: the declared SDK adapter package.
-  return config.sdk;
-}
-
 export async function createAcpRuntime(
   config: AcpServerConfig,
   onEvent: (event: RuntimeEvent<JsonValue>) => void,
   initialMode: AgentMode = "agent",
   transcriptSessionKey?: string,
 ): Promise<AcpRuntimeResult> {
-  const transportConfig = resolveTransportConfig(config);
+  const resolvedTransport = tryResolveTransportConfig(config);
+  if (!resolvedTransport.ok) {
+    throw new Error(resolvedTransport.error);
+  }
+  const transportConfig = resolvedTransport.config;
+  const hostPromptProviderId = resolvedTransport.providerId;
   const workspaceRoot = config.workspaceRoot;
   const spiritDataDir = config.spiritDataDir;
   const sessionKey = transcriptSessionKey?.trim() || undefined;
@@ -203,7 +199,7 @@ export async function createAcpRuntime(
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
     );
 
   const createContinuationState = (messages: LlmMessage[]) =>
@@ -222,7 +218,7 @@ export async function createAcpRuntime(
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
     );
 
   // 8. Create LLM transport
@@ -262,7 +258,7 @@ export async function createAcpRuntime(
         false, // loopEnabled
         undefined, // mcpToolCatalog
         attribution,
-        hostPromptProviderId(transportConfig),
+        hostPromptProviderId,
       ),
     generateImage: (request) =>
       llmTransport.generateImage(
