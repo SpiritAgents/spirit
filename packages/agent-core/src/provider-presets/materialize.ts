@@ -55,7 +55,6 @@ const PRESET_OPTIONS_TRANSPORT_SCOPE: Record<
 > = {
   toolsRejectReasoningEffort: "openai-compatible",
   maxInlineMediaBytes: "openai-compatible",
-  echoServerToolCalls: "open-responses",
   defaultInputItemStatus: "open-responses",
   applyPatch: "open-responses",
   reasoningSummary: "open-responses",

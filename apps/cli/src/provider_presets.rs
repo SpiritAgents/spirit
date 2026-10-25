@@ -549,11 +549,9 @@ fn preset_options_for_transport(
             "toolsRejectReasoningEffort" | "maxInlineMediaBytes" => {
                 transport_kind == ModelTransportKind::OpenAiCompatible
             }
-            "echoServerToolCalls"
-            | "defaultInputItemStatus"
-            | "applyPatch"
-            | "reasoningSummary"
-            | "storedState" => transport_kind == ModelTransportKind::OpenResponses,
+            "defaultInputItemStatus" | "applyPatch" | "reasoningSummary" | "storedState" => {
+                transport_kind == ModelTransportKind::OpenResponses
+            }
             // OpenRouter's unified anthropic-route reasoning shape applies to both OpenAI-family
             // surfaces; the anthropic transport speaks native Messages and does not take it.
             "openRouterAnthropicReasoning" => matches!(
@@ -727,8 +725,7 @@ mod tests {
                 "cloudflare-ai-gateway",
                 "https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1",
             ),
-            // deepseek's default transport is open-responses; the default slot is the Responses base.
-            ("deepseek", "https://api.deepseek.com"),
+            ("deepseek", "https://api.deepseek.com/v1"),
             ("openrouter", "https://openrouter.ai/api/v1"),
             ("fireworks-ai", "https://api.fireworks.ai/inference/v1"),
             ("together-ai", "https://api.together.ai/v1"),
@@ -988,9 +985,9 @@ mod tests {
         assert_eq!(
             kinds,
             vec![
-                ModelTransportKind::OpenResponses,
-                ModelTransportKind::Anthropic,
                 ModelTransportKind::OpenAiCompatible,
+                ModelTransportKind::Anthropic,
+                ModelTransportKind::OpenResponses,
             ]
         );
         assert_eq!(
@@ -1110,13 +1107,7 @@ mod tests {
             Some(&serde_json::json!(true))
         );
         let draft = preset_connect_draft("deepseek", ModelTransportKind::OpenResponses, None);
-        assert_eq!(
-            draft
-                .options
-                .as_ref()
-                .and_then(|options| options.get("echoServerToolCalls")),
-            Some(&serde_json::json!(true))
-        );
+        assert!(draft.options.is_none());
         // volcengine's default transport is openai-compatible: the open-responses-scoped key drops.
         let draft = preset_connect_draft("volcengine", ModelTransportKind::OpenAiCompatible, None);
         assert!(

@@ -227,7 +227,11 @@ test("saveProviderSetup writes preset mechanism options scoped to the materializ
   const connected = loadSpiritConfig(spiritDataDir);
   assert.ok(connected);
   const connectedById = new Map(connected.providers.map((provider) => [provider.id, provider]));
-  assert.deepEqual(connectedById.get("deepseek")?.options, { echoServerToolCalls: true });
+  const deepseek = connectedById.get("deepseek");
+  assert.equal(deepseek?.apiBase, "https://api.deepseek.com/v1");
+  assert.equal(deepseek?.transportKind, undefined);
+  assert.equal(deepseek?.sdk, "@ai-sdk/openai-compatible");
+  assert.equal(deepseek?.options, undefined);
   assert.deepEqual(connectedById.get("xiaomi")?.options, { maxInlineMediaBytes: 52428800 });
   assert.equal(connectedById.get("volcengine")?.options, undefined);
 

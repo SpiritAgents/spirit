@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 
 import type { JsonValue } from "../../ports.js";
 import { AiSdkOpenResponsesTransport } from "../../open-responses/ai-sdk-transport.js";
+import { materializeProviderPreset } from "../../provider-presets/materialize.js";
 import {
   appendOpenAiToolResultMessage,
   extractLastOpenAiAssistantText,
@@ -51,14 +52,28 @@ async function main(): Promise<void> {
     throw new Error("Unable to get the local smoke server port.");
   }
 
+  const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
+  const entry = materializeProviderPreset({
+    presetId: "deepseek",
+    transportKind: "open-responses",
+    apiBaseOverride: baseUrl,
+  });
+  const execute = entry.providerTools?.[0]?.execute;
+  if (execute?.url !== "https://api.deepseek.com/v1/tools/search" || execute.path !== undefined) {
+    server.close();
+    throw new Error(
+      "ai-sdk deepseek responses smoke did not bake the search execute URL onto the Chat /v1 root.",
+    );
+  }
+
   const transport = new AiSdkOpenResponsesTransport();
   const config = {
     transportKind: "open-responses" as const,
     apiKey: "test-key",
     model: "deepseek-v4-flash",
-    baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}`,
-    sdk: "@ai-sdk/open-responses" as const,
-    providerTools: [{ label: "Web Search", tools: [{ type: "web_search" }] }],
+    baseUrl: entry.apiBase,
+    ...(entry.sdk !== undefined ? { sdk: entry.sdk } : {}),
+    ...(entry.providerTools !== undefined ? { providerTools: entry.providerTools } : {}),
   };
   const tools = demoLookupToolDefinition();
 
@@ -79,14 +94,23 @@ async function main(): Promise<void> {
     throw new Error("ai-sdk deepseek responses smoke step 1 did not reach tool-calls.");
   }
 
-  const toolsOnRequest = capturedBody?.tools as Array<{ type?: string }> | undefined;
-  if (!toolsOnRequest?.some((tool) => tool.type === "web_search")) {
+  if (entry.options !== undefined) {
     server.close();
-    throw new Error("ai-sdk deepseek responses smoke request body is missing web_search.");
+    throw new Error("ai-sdk deepseek responses smoke must not materialize legacy options.");
   }
-  if (toolsOnRequest.some((tool) => tool.type === "web_search_2025_08_26")) {
+  const toolsOnRequest = capturedBody?.tools as Array<{ type?: string; name?: string }> | undefined;
+  const searchTool = toolsOnRequest?.find((tool) => tool.name === "web_search");
+  if (!toolsOnRequest || searchTool?.type !== "function") {
     server.close();
-    throw new Error("ai-sdk deepseek responses smoke should not inject web_search_2025_08_26.");
+    throw new Error("ai-sdk deepseek responses smoke request body is missing function web_search.");
+  }
+  if (
+    toolsOnRequest.some(
+      (tool) => tool.type === "web_search" || tool.type === "web_search_2025_08_26",
+    )
+  ) {
+    server.close();
+    throw new Error("ai-sdk deepseek responses smoke should not inject built-in web_search.");
   }
   if (toolsOnRequest.some((tool) => tool.type === "apply_patch")) {
     server.close();

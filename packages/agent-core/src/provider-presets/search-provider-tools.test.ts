@@ -179,6 +179,63 @@ function runMoonshotSearch(argumentsJson: JsonObject) {
   });
 }
 
+const DEEPSEEK_BASE_URL = "https://deepseek.test/v1";
+const DEEPSEEK_SEARCH_PAYLOAD = {
+  results: [
+    {
+      summary: "A complete result summary.",
+      rerank_score: 2.5,
+      authority: 4,
+      site_icon: "https://assets.example/favicon.ico",
+      date: "2026-10-24T12:34:56Z",
+      title: "Example result",
+      url: "https://example.com/result",
+      snippet: "A complete search snippet.",
+      content: "The full page content.",
+      site_name: "Example",
+      future_result_field: { preserved: true },
+    },
+  ],
+  future_metadata: { opaque: ["preserved", 42] },
+};
+const DEEPSEEK_RAW_RESULT = JSON.stringify(DEEPSEEK_SEARCH_PAYLOAD);
+
+function deepseekMaterializedEntry() {
+  return materializeProviderPreset({
+    presetId: "deepseek",
+    apiBaseOverride: DEEPSEEK_BASE_URL,
+  });
+}
+
+function deepseekConfig(): OpenAiTransportConfig {
+  const entry = deepseekMaterializedEntry();
+  return {
+    apiKey: "test-key",
+    model: "deepseek-v4-flash",
+    baseUrl: entry.apiBase,
+    ...(entry.sdk !== undefined ? { sdk: entry.sdk } : {}),
+    ...(entry.providerTools !== undefined ? { providerTools: entry.providerTools } : {}),
+    workspaceRoot: process.cwd(),
+  };
+}
+
+function deepseekParameters(): JsonObject {
+  const tool = deepseekMaterializedEntry().providerTools?.[0]?.tools?.[0];
+  assert.ok(tool && isOpenAiFunctionToolEntry(tool));
+  const parameters = tool.function.parameters;
+  assert.ok(parameters);
+  return parameters;
+}
+
+function runDeepSeekSearch(argumentsJson: JsonObject) {
+  return runProviderSearchTurn({
+    config: deepseekConfig(),
+    arguments: argumentsJson,
+    searchPath: "/tools/search",
+    searchPayload: DEEPSEEK_SEARCH_PAYLOAD,
+  });
+}
+
 test("Moonshot Pro search preserves argument types and the complete response in the next Chat round", async () => {
   const { requests, result } = await runMoonshotSearch({
     query: "Spirit standalone search",
@@ -295,4 +352,117 @@ test("Moonshot Pro search rejects timeout_seconds without calling the search end
   const execution = result.toolExecutions.find((item) => item.toolName === "web_search");
   assert.equal(execution?.failed, true);
   assert.match(execution?.output ?? "", /unknown argument "timeout_seconds"/);
+});
+
+test("DeepSeek search preserves false and the complete response in the next Chat round", async () => {
+  const { requests, result } = await runDeepSeekSearch({
+    query: "Spirit standalone search",
+    max_results: 12,
+    ori_question: "How does Spirit execute provider search?",
+    localization: "203.0.113.10",
+    need_content: false,
+  });
+
+  assert.deepEqual(
+    requests.map(({ method, url }) => ({ method, url })),
+    [
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/chat/completions` },
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/tools/search` },
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/chat/completions` },
+    ],
+  );
+  assert.equal(
+    requests.some(({ url }) => url.includes("/responses")),
+    false,
+  );
+  assert.deepEqual(requests[1]?.body, {
+    query: "Spirit standalone search",
+    count: 12,
+    ori_question: "How does Spirit execute provider search?",
+    localization: "203.0.113.10",
+    need_content: false,
+  });
+  assert.equal(Number.isInteger(requests[1]?.body?.count), true);
+  assert.equal(requests[1]?.body?.need_content, false);
+  assert.equal(typeof requests[1]?.body?.need_content, "boolean");
+
+  const chatRequests = requests.filter((request) => request.url.endsWith("/chat/completions"));
+  const firstChatBody = chatRequests[0]?.body;
+  assert.ok(firstChatBody);
+  const tools = firstChatBody.tools;
+  assert.ok(Array.isArray(tools));
+  const searchTool = tools.find(
+    (tool) =>
+      typeof tool === "object" &&
+      tool !== null &&
+      (tool as { function?: { name?: string } }).function?.name === "web_search",
+  ) as { type?: string; function?: { parameters?: unknown } } | undefined;
+  assert.ok(searchTool);
+  assert.equal(searchTool.type, "function");
+  assert.deepEqual(searchTool.function?.parameters, deepseekParameters());
+  assert.equal(
+    tools.some(
+      (tool) =>
+        typeof tool === "object" &&
+        tool !== null &&
+        (tool as { type?: string }).type === "web_search",
+    ),
+    false,
+  );
+
+  assert.equal(result.kind, "completed");
+  if (result.kind !== "completed") {
+    return;
+  }
+  assert.equal(result.assistantText, FINAL_ASSISTANT_TEXT);
+  const execution = result.toolExecutions.find((item) => item.toolName === "web_search");
+  assert.equal(execution?.failed, false);
+  assert.equal(execution?.output, DEEPSEEK_RAW_RESULT);
+
+  const secondChatBody = chatRequests[1]?.body;
+  assert.ok(secondChatBody);
+  const messages = secondChatBody.messages;
+  assert.ok(Array.isArray(messages));
+  const toolMessage = messages.find(
+    (message) =>
+      typeof message === "object" &&
+      message !== null &&
+      (message as { role?: string }).role === "tool" &&
+      (message as { tool_call_id?: string }).tool_call_id === SEARCH_CALL_ID,
+  ) as { content?: unknown } | undefined;
+  assert.equal(toolMessage?.content, DEEPSEEK_RAW_RESULT);
+  assert.deepEqual(
+    result.requestTrace.map((trace) =>
+      typeof trace === "object" && trace !== null && !Array.isArray(trace) ? trace.kind : undefined,
+    ),
+    ["openai_sdk_chat_completions", "openai_sdk_chat_completions"],
+  );
+});
+
+test("DeepSeek search omits every optional field when only query is provided", async () => {
+  const { requests, result } = await runDeepSeekSearch({ query: "Spirit" });
+
+  assert.deepEqual(
+    requests.map(({ method, url }) => ({ method, url })),
+    [
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/chat/completions` },
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/tools/search` },
+      { method: "POST", url: `${DEEPSEEK_BASE_URL}/chat/completions` },
+    ],
+  );
+  assert.deepEqual(requests[1]?.body, { query: "Spirit" });
+  assert.equal(result.kind, "completed");
+});
+
+test("DeepSeek search schema enforces required arguments, bounds, and unknown keys", () => {
+  const parameters = deepseekParameters();
+  const validate = (argumentsJson: JsonObject) =>
+    validateProviderToolArguments("web_search", JSON.stringify(argumentsJson), parameters);
+
+  assert.match(validate({}) ?? "", /missing required argument "query"/);
+  assert.equal(validate({ query: "q", max_results: 1 }), undefined);
+  assert.equal(validate({ query: "q", max_results: 50, need_content: false }), undefined);
+  assert.match(validate({ query: "q", max_results: 0 }) ?? "", /must be >= 1/);
+  assert.match(validate({ query: "q", max_results: 51 }) ?? "", /must be <= 50/);
+  assert.match(validate({ query: "q", extra: true }) ?? "", /unknown argument "extra"/);
 });
