@@ -16,7 +16,7 @@ test("collectDeclaredProviderToolNames collects function names and skips other s
     {
       tools: [
         { type: "function", function: { name: "web_search" } },
-        { type: "moonshot_formula", formula_uri: "moonshot/web-search:latest" },
+        { type: "web_search_20250305", name: "web_search" },
         { type: "function", function: { name: "web_search" } },
       ],
     },

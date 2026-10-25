@@ -185,28 +185,65 @@ test("validateSpiritConfig accepts the spec's full example", () => {
       {
         id: "moonshot-ai",
         apiBase: "https://api.moonshot.cn/v1",
-        sdk: "@ai-sdk/openai-compatible",
+        sdk: "@ai-sdk/moonshotai",
         apiKeyEnv: "MOONSHOT_API_KEY",
         providerTools: [
           {
             label: "Web Search",
             tools: [
               {
-                type: "moonshot_formula",
-                formula_uri: "moonshot/web-search:latest",
-                function_name: "web_search",
+                type: "function",
+                function: {
+                  name: "web_search",
+                  description:
+                    "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      query: { type: "string", description: "Search query." },
+                      max_results: {
+                        type: "integer",
+                        minimum: 1,
+                        maximum: 20,
+                        description: "Maximum number of results to return (default 5).",
+                      },
+                      sites: {
+                        type: "array",
+                        items: { type: "string" },
+                        maxItems: 5,
+                        description:
+                          "Restrict search to specific sites; multiple sites are combined with OR.",
+                      },
+                      time_window: {
+                        type: "object",
+                        properties: {
+                          start: {
+                            type: "string",
+                            description: "Start date in YYYY, YYYY-MM, or YYYY-MM-DD format.",
+                          },
+                          end: {
+                            type: "string",
+                            description: "End date in YYYY, YYYY-MM, or YYYY-MM-DD format.",
+                          },
+                        },
+                        description: "Restrict results to a time window.",
+                      },
+                    },
+                    required: ["query"],
+                    additionalProperties: false,
+                  },
+                },
               },
             ],
-            toolsFrom: { path: "/formulas/moonshot/web-search:latest/tools" },
             execute: {
-              path: "/formulas/moonshot/web-search:latest/fibers",
-              body: { name: "{toolName}", arguments: "{argumentsJson}" },
-              statusPath: "status",
-              okValue: "succeeded",
-              errorPath: ["error", "context.error", "context.output"],
-              resultPath: ["context.encrypted_output", "context.output"],
+              path: "/tools/search_pro",
+              body: {
+                text_query: "{arg.query}",
+                limit: "{arg.max_results}",
+                sites: "{arg.sites}",
+                time_window: "{arg.time_window}",
+              },
             },
-            ui: { expand: false },
           },
         ],
         fileUpload: { path: "/files", purpose: { video: "video" }, refTemplate: "ms://{id}" },
@@ -971,14 +1008,14 @@ test("fileUpload declarations are validated fail-fast", () => {
 test("providerTools entries are validated via the agent-core validator", () => {
   assertSchemaError(
     () => validateSpiritConfig(validConfig([validProvider({ providerTools: [{}] })])),
-    'must declare at least one of "tools", "toolsFrom", or "body"',
+    'must declare at least one of "tools" or "body"',
   );
   assertSchemaError(
     () =>
       validateSpiritConfig(
         validConfig([validProvider({ providerTools: [{ execute: { path: "/search" } }] })]),
       ),
-    '"execute" requires "tools" or "toolsFrom"',
+    '"execute" requires "tools"',
   );
   assertSchemaError(
     () =>

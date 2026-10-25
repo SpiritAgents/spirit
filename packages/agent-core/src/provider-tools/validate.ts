@@ -2,8 +2,8 @@ import type { JsonObject, JsonValue } from "../ports.js";
 import { isOpenAiFunctionToolEntry, isPlainJsonObject } from "./types.js";
 
 /**
- * Declared OpenAI function `parameters` schemas keyed by tool name, from literal `tools` entries
- * and/or fetched `toolsFrom` entries; the first declaration of a name wins.
+ * Declared OpenAI function `parameters` schemas keyed by tool name, from literal `tools` entries;
+ * the first declaration of a name wins.
  */
 export function providerToolParametersMap(tools: readonly unknown[]): Map<string, JsonObject> {
   const map = new Map<string, JsonObject>();

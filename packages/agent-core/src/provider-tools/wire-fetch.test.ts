@@ -69,24 +69,26 @@ test("provider tools wire fetch leaves non-model and non-JSON requests untouched
   assert.equal("enable_search" in bodies()[0]!, false);
 });
 
-test("mergeProviderToolLiteralEntries dedups by type+name / id / function_name", () => {
+test("mergeProviderToolLiteralEntries dedups by function name and type+name / id", () => {
   const merged = mergeProviderToolLiteralEntries(
     [
       { type: "web_search_20250305", name: "web_search" },
       { type: "function", name: "shell" },
+      { type: "function", function: { name: "lookup" } },
     ],
     [
       { type: "web_search_20250305", name: "web_search" },
       { type: "provider", id: "gateway.search", args: {} },
-      { type: "acme_formula", formula_uri: "acme/search:latest", function_name: "web_search" },
+      { type: "provider", id: "gateway.search", args: {} },
+      { type: "function", function: { name: "lookup" } },
     ],
   );
 
   assert.deepEqual(merged, [
     { type: "web_search_20250305", name: "web_search" },
     { type: "function", name: "shell" },
+    { type: "function", function: { name: "lookup" } },
     { type: "provider", id: "gateway.search", args: {} },
-    { type: "acme_formula", formula_uri: "acme/search:latest", function_name: "web_search" },
   ]);
 });
 

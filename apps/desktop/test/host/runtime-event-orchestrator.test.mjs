@@ -973,8 +973,8 @@ test("provider tool call with entry label renders MCP-style and keeps suppressEx
   const harness = createHarness();
   harness.pushUser("search DeepSeek");
 
-  // The Moonshot formula declaration (`label` + `ui.expand: false`) projects onto the preview
-  // event's `_spiritUi` block: ciphertext output stays collapsed, the outer line is Call + label.
+  // A declared entry's `label` + `ui.expand: false` projects onto the preview event's
+  // `_spiritUi` block: details stay collapsed and the outer line is Call + label.
   const argumentsJson = JSON.stringify({
     status: "completed",
     _spiritUi: {
@@ -988,14 +988,14 @@ test("provider tool call with entry label renders MCP-style and keeps suppressEx
     { kind: "begin-assistant-response" },
     {
       kind: "streaming-tool-preview",
-      toolCallId: "ws_formula_1",
+      toolCallId: "ws_provider_1",
       toolName: "web_search",
       argumentsJson,
     },
     {
       kind: "tool-execution-finished",
       execution: {
-        toolCallId: "ws_formula_1",
+        toolCallId: "ws_provider_1",
         toolName: "web_search",
         request: { name: "web_search", argumentsJson: '{"query":"What is DeepSeek"}' },
         output: "[provider tool web_search] completed",
@@ -1006,7 +1006,7 @@ test("provider tool call with entry label renders MCP-style and keeps suppressEx
 
   const tool = harness.timeline
     .toMessages()
-    .find((message) => message.tool?.toolCallId === "ws_formula_1")?.tool;
+    .find((message) => message.tool?.toolCallId === "ws_provider_1")?.tool;
   assert.equal(tool?.phase, "succeeded");
   assert.equal(tool?.providerToolLabel, "Web Search");
   assert.equal(tool?.suppressExpand, true);

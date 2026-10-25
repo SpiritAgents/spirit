@@ -42,7 +42,7 @@ test("toolHasExpandableContent: read_file is never expandable", () => {
   );
 });
 
-test("toolHasExpandableContent: Moonshot Formula web_search with suppressExpand is not expandable", () => {
+test("toolHasExpandableContent: Custom Search web_search with suppressExpand is not expandable", () => {
   assert.equal(
     toolHasExpandableContent({
       toolName: "web_search",
@@ -101,16 +101,16 @@ test("getToolCallSummaryParts: provider tool cards render the Call verb with the
   // A provider tool name outside the built-in set follows the same contract.
   assert.deepEqual(
     getToolCallSummaryParts({
-      toolName: "fiber_search",
+      toolName: "custom_search",
       phase: "failed",
       headline: "Call",
-      headlineDetail: "Moonshot Formula",
+      headlineDetail: "Custom Search",
       detailLines: [],
-      providerToolLabel: "Moonshot Formula",
+      providerToolLabel: "Custom Search",
     }),
     {
       headline: i18n.t("tool.lazyCall"),
-      detail: "Moonshot Formula",
+      detail: "Custom Search",
     },
   );
 });
@@ -118,7 +118,7 @@ test("getToolCallSummaryParts: provider tool cards render the Call verb with the
 test("toolHasExpandableContent: labeled provider tool cards expand with input/output detail", () => {
   assert.equal(
     toolHasExpandableContent({
-      toolName: "fiber_search",
+      toolName: "custom_search",
       phase: "succeeded",
       headline: "Called",
       headlineDetail: "Web Search",
@@ -129,7 +129,7 @@ test("toolHasExpandableContent: labeled provider tool cards expand with input/ou
     }),
     true,
   );
-  // The ciphertext case (`ui.expand: false`) stays collapsed even with content present.
+  // The suppressExpand case stays collapsed even with input/output content present.
   assert.equal(
     toolHasExpandableContent({
       toolName: "web_search",
@@ -138,7 +138,7 @@ test("toolHasExpandableContent: labeled provider tool cards expand with input/ou
       headlineDetail: "Web Search",
       detailLines: [],
       argsExcerpt: '{\n  "query": "DeepSeek"\n}',
-      outputExcerpt: "ciphertext",
+      outputExcerpt: "Provider output",
       providerToolLabel: "Web Search",
       suppressExpand: true,
     }),

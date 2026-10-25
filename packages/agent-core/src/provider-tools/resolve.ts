@@ -5,10 +5,7 @@ export function openAiFunctionToolName(tool: unknown): string | undefined {
   return isOpenAiFunctionToolEntry(tool) ? tool.function.name : undefined;
 }
 
-/**
- * Declared interception names from the entries' literal `tools` arrays. The `toolsFrom` side of
- * the name set is dynamic and joins only after a successful fetch.
- */
+/** Declared OpenAI function interception names from the entries' literal `tools` arrays. */
 export function collectDeclaredProviderToolNames(
   entries: readonly ProviderToolEntry[],
 ): Set<string> {
@@ -26,7 +23,7 @@ export function collectDeclaredProviderToolNames(
 
 /**
  * Local tools win name collisions with provider-declared tools: colliding names are skipped
- * per-name (the rest of the entry or fetch group is unaffected) with one console warning each.
+ * per-name (the rest of the entry is unaffected) with one console warning each.
  */
 export function resolveProviderToolNamesAgainstLocal(
   declaredNames: Iterable<string>,
@@ -50,7 +47,7 @@ export function resolveProviderToolNamesAgainstLocal(
 }
 
 /**
- * Endpoint URL shared by providerTools fetch/execute and fileUpload declarations:
+ * Endpoint URL shared by providerTools execution and fileUpload declarations:
  * absolute `url` wins; otherwise `path` joins onto the provider `apiBase`.
  */
 export function resolveProviderEndpointUrl(

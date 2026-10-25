@@ -129,27 +129,72 @@ test("non-default transports bake fileUpload.path as an absolute URL on the open
   assert.equal(kimiDefault.fileUpload?.url, undefined);
 });
 
-test("moonshot-ai materializes the formula entry with ciphertext UI lockdown", () => {
+test("moonshot-ai materializes Pro search with complete response passthrough", () => {
   const entry = materializeProviderPreset({ presetId: "moonshot-ai" });
-  const tool = entry.providerTools?.[0];
-  assert.deepEqual(tool?.tools, [
-    {
-      type: "moonshot_formula",
-      formula_uri: "moonshot/web-search:latest",
-      function_name: "web_search",
+  assert.deepEqual(entry.providerTools?.[0], {
+    label: "Web Search",
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "web_search",
+          description:
+            "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Search query." },
+              max_results: {
+                type: "integer",
+                minimum: 1,
+                maximum: 20,
+                description: "Maximum number of results to return (default 5).",
+              },
+              sites: {
+                type: "array",
+                items: { type: "string" },
+                maxItems: 5,
+                description:
+                  "Restrict search to specific sites; multiple sites are combined with OR.",
+              },
+              time_window: {
+                type: "object",
+                properties: {
+                  start: {
+                    type: "string",
+                    description: "Start date in YYYY, YYYY-MM, or YYYY-MM-DD format.",
+                  },
+                  end: {
+                    type: "string",
+                    description: "End date in YYYY, YYYY-MM, or YYYY-MM-DD format.",
+                  },
+                },
+                description: "Restrict results to a time window.",
+              },
+            },
+            required: ["query"],
+            additionalProperties: false,
+          },
+        },
+      },
+    ],
+    execute: {
+      path: "/tools/search_pro",
+      body: {
+        text_query: "{arg.query}",
+        limit: "{arg.max_results}",
+        sites: "{arg.sites}",
+        time_window: "{arg.time_window}",
+      },
     },
-  ]);
-  assert.deepEqual(tool?.toolsFrom, { path: "/formulas/moonshot/web-search:latest/tools" });
-  assert.deepEqual(tool?.execute, {
-    path: "/formulas/moonshot/web-search:latest/fibers",
-    body: { name: "{toolName}", arguments: "{argumentsJson}" },
-    statusPath: "status",
-    okValue: "succeeded",
-    errorPath: ["error", "context.error", "context.output"],
-    resultPath: ["context.encrypted_output", "context.output"],
   });
-  assert.deepEqual(tool?.ui, { expand: false });
+  assert.equal(entry.apiBase, "https://api.moonshot.ai/v1");
   assert.equal(entry.sdk, "@ai-sdk/moonshotai");
+
+  const cn = materializeProviderPreset({ presetId: "moonshot-ai", siteId: "cn" });
+  assert.equal(cn.apiBase, "https://api.moonshot.cn/v1");
+  assert.equal(cn.sdk, "@ai-sdk/moonshotai");
+  assert.deepEqual(cn.providerTools, entry.providerTools);
 });
 
 test("z-ai and zhipu-ai bake their static search bodies into the execute declaration", () => {

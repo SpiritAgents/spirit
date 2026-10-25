@@ -42,9 +42,8 @@ function localToolNamesForRuntime<Config, State, ToolRequest>(
 }
 
 /**
- * Interception name set = declared literal tool names ∪ fetched `toolsFrom` names. A call whose
- * name has no `execute` binding is an in-band (upstream-executed) provider tool call: the transport
- * stream carries its result, so the turn machine leaves it alone.
+ * A call whose declared name has no `execute` binding is an in-band (upstream-executed) provider
+ * tool call: the transport stream carries its result, so the turn machine leaves it alone.
  */
 async function resolveDeclaredProviderToolExecution<Config, State, ToolRequest>(
   runtime: TurnMachineRuntime<Config, State, ToolRequest>,
@@ -64,8 +63,8 @@ function providerToolSummaryText(
   if (failed) {
     return `[provider tool ${toolName}] failed`;
   }
-  // `ui.expand === false` marks server-side ciphertext output: the content is committed verbatim
-  // for the model but is not a human-readable summary.
+  // Collapsed display does not change the model result: the content is still committed verbatim,
+  // while the human-facing summary stays generic.
   if (!suppressExpand && content?.trim()) {
     return content;
   }

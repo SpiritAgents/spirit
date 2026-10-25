@@ -179,7 +179,7 @@ test("providerToolParametersMap indexes schemas by function name, first declarat
   const first: JsonObject = { type: "object", properties: { query: { type: "string" } } };
   const map = providerToolParametersMap([
     { type: "function", function: { name: "web_search", parameters: first } },
-    { type: "moonshot_formula", formula_uri: "moonshot/web-search:latest" },
+    { type: "web_search_20250305", name: "web_search" },
     { type: "function", function: { name: "no_schema" } },
     { type: "function", function: { name: "web_search", parameters: { type: "object" } } },
   ]);
