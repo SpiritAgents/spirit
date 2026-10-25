@@ -98,11 +98,11 @@ Sem um ID de conta, o assistente não consegue construir a base da API. Chat e o
 
 Crie uma chave de API na [plataforma DeepSeek](https://platform.deepseek.com/api-keys).
 
-Sem seletor. O padrão de conexão é **Open Responses** (`open-responses`). Bases compatíveis também existem em `https://api.deepseek.com/v1` (Chat) e `https://api.deepseek.com/anthropic` (Messages).
+O padrão de conexão é **Chat Completions API** (`openai-compatible`). Base padrão: `https://api.deepseek.com/v1`. As alternativas explícitas são **Open Responses** (`open-responses`, base `https://api.deepseek.com`) e **Messages** (`anthropic`, base `https://api.deepseek.com/anthropic`).
 
 Chat após a importação. Raciocínio segue o modelo.
 
-Declara: a ferramenta do provedor **Pesquisa na web** (executada pelo upstream dentro da requisição).
+Declara: a ferramenta do provedor **Pesquisa na web** (uma declaração `function` estática; o {{product.name|mdx}} executa as chamadas com `POST /v1/tools/search`).
 
 ### OpenRouter
 
@@ -179,7 +179,7 @@ Crie uma chave de API no console Moonshot para o site que você usará: [China](
 
 Este é o provedor Moonshot Open Platform, não [Kimi Code](#kimi-code). Uma chave do Kimi Code e uma chave do Moonshot Open Platform são conexões diferentes.
 
-Declara: a ferramenta do provedor **Pesquisa na web** (uma fórmula da Moonshot — o esquema da ferramenta é buscado no endpoint da fórmula e o {{product.name|mdx}} executa as chamadas contra ele; os detalhes ficam recolhidos porque a saída é texto cifrado do lado do servidor) e upload de arquivos de vídeo (referências `ms://`).
+Declara: a ferramenta do provedor **Pesquisa na web** (um esquema estático de ferramenta `function`; o {{product.name|mdx}} executa as chamadas com `POST /v1/tools/search_pro`) e upload de arquivos de vídeo (referências `ms://`).
 
 ### Kimi Code
 

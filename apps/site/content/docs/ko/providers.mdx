@@ -97,11 +97,11 @@ Google 및 Vertex AI 프리셋은 Chat Completions로 고정됩니다 — 마법
 
 [DeepSeek 플랫폼](https://platform.deepseek.com/api-keys)에서 API 키를 생성하세요.
 
-선택기 없음. 연결 기본값은 **Open Responses** (`open-responses`)입니다. 호환 가능한 베이스는 `https://api.deepseek.com/v1` (Chat) 및 `https://api.deepseek.com/anthropic` (Messages)에도 있습니다.
+연결 기본값은 **Chat Completions API** (`openai-compatible`)입니다. 기본 베이스: `https://api.deepseek.com/v1`. 명시적 대안은 **Open Responses** (`open-responses`, 베이스 `https://api.deepseek.com`) 및 **Messages** (`anthropic`, 베이스 `https://api.deepseek.com/anthropic`)입니다.
 
 가져오기 후 채팅. 추론은 모델을 따릅니다.
 
-선언: **웹 검색** 프로바이더 도구 (업스트림이 요청 내에서 실행).
+선언: **웹 검색** 프로바이더 도구 (정적 `function` 선언으로, {{product.name|mdx}}이 `POST /v1/tools/search`를 통해 호출을 실행).
 
 ### OpenRouter
 
@@ -178,7 +178,7 @@ Google 및 Vertex AI 프리셋은 Chat Completions로 고정됩니다 — 마법
 
 이것은 Moonshot Open Platform 공급자이며 [Kimi Code](#kimi-code)가 아닙니다. Kimi Code 키와 Moonshot Open Platform 키는 서로 다른 연결입니다.
 
-선언: **웹 검색** 프로바이더 도구 (Moonshot formula — 도구 스키마는 formula 엔드포인트에서 가져오고 호출은 {{product.name|mdx}}이 formula 엔드포인트에 대해 실행합니다. 출력은 서버 측 암호문이므로 상세 정보를 펼칠 수 없습니다) 및 비디오 파일 업로드 (`ms://` 파일 참조).
+선언: **웹 검색** 프로바이더 도구 (정적 `function` 도구 스키마로, {{product.name|mdx}}이 `POST /v1/tools/search_pro`를 통해 호출을 실행) 및 비디오 파일 업로드 (`ms://` 파일 참조).
 
 ### Kimi Code
 

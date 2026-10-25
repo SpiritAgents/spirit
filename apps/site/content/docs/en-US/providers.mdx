@@ -98,11 +98,11 @@ Without an account ID the wizard cannot build the API base. Chat and other capab
 
 Create an API key on the [DeepSeek platform](https://platform.deepseek.com/api-keys).
 
-No picker. The connect default is **Open Responses** (`open-responses`). Compatible bases also exist at `https://api.deepseek.com/v1` (Chat) and `https://api.deepseek.com/anthropic` (Messages).
+The connect default is **Chat Completions API** (`openai-compatible`). Default base: `https://api.deepseek.com/v1`. Explicit alternatives are **Open Responses** (`open-responses`, base `https://api.deepseek.com`) and **Messages** (`anthropic`, base `https://api.deepseek.com/anthropic`).
 
 Chat after import. Reasoning follows the model.
 
-Declares: the **Web Search** provider tool (executed by the upstream inside the request).
+Declares: the **Web Search** provider tool (a static `function` declaration; {{product.name|mdx}} executes calls with `POST /v1/tools/search`).
 
 ### OpenRouter
 
@@ -179,7 +179,7 @@ Fixed **Chat Completions API**. No transport picker.
 
 This is the Moonshot Open Platform provider, not [Kimi Code](#kimi-code). A Kimi Code key and a Moonshot Open Platform key are different connections.
 
-Declares: the **Web Search** provider tool (a Moonshot formula — the tool schema is fetched from the formula endpoint and {{product.name|mdx}} executes calls against it; details stay collapsed because the output is server-side ciphertext) and video file upload (`ms://` file references).
+Declares: the **Web Search** provider tool (a static `function` tool schema; {{product.name|mdx}} executes calls with `POST /v1/tools/search_pro`) and video file upload (`ms://` file references).
 
 ### Kimi Code
 

@@ -98,11 +98,11 @@ description: Используйте свой ключ, запустите мас
 
 Создайте API-ключ на [платформе DeepSeek](https://platform.deepseek.com/api-keys).
 
-Выбора нет. Значение подключения по умолчанию — **Open Responses** (`open-responses`). Совместимые базовые URL также существуют по адресам `https://api.deepseek.com/v1` (Chat) и `https://api.deepseek.com/anthropic` (Messages).
+По умолчанию подключение использует **Chat Completions API** (`openai-compatible`). Базовый URL по умолчанию: `https://api.deepseek.com/v1`. Явные альтернативы: **Open Responses** (`open-responses`, базовый URL `https://api.deepseek.com`) и **Messages** (`anthropic`, базовый URL `https://api.deepseek.com/anthropic`).
 
 Чат после импорта. Рассуждения следуют модели.
 
-Объявляет: инструмент провайдера **Веб-поиск** (выполняется вышестоящей системой внутри запроса).
+Объявляет: инструмент провайдера **Веб-поиск** (статическое объявление `function`; {{product.name|mdx}} выполняет вызовы через `POST /v1/tools/search`).
 
 ### OpenRouter
 
@@ -179,7 +179,7 @@ description: Используйте свой ключ, запустите мас
 
 Это провайдер Moonshot Open Platform, а не [Kimi Code](#kimi-code). Ключ Kimi Code и ключ Moonshot Open Platform — это разные подключения.
 
-Объявляет: инструмент провайдера **Веб-поиск** (формула Moonshot — схема инструмента загружается с конечной точки формулы, а вызовы {{product.name|mdx}} выполняет против неё; детали остаются свёрнутыми, потому что результат — серверный шифротекст) и загрузку видеофайлов (ссылки `ms://`).
+Объявляет: инструмент провайдера **Веб-поиск** (статическая схема инструмента `function`; {{product.name|mdx}} выполняет вызовы через `POST /v1/tools/search_pro`) и загрузку видеофайлов (ссылки `ms://`).
 
 ### Kimi Code
 

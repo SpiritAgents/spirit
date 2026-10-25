@@ -99,11 +99,11 @@ Ohne Konto-ID kann der Assistent die API-Basis nicht erstellen. Chat und andere 
 
 Erstellen Sie einen API-Schlüssel auf der [DeepSeek-Plattform](https://platform.deepseek.com/api-keys).
 
-Keine Auswahl. Der Verbindungsstandard ist **Open Responses** (`open-responses`). Kompatible Basen existieren auch unter `https://api.deepseek.com/v1` (Chat) und `https://api.deepseek.com/anthropic` (Messages).
+Der Verbindungsstandard ist **Chat-Completions-API** (`openai-compatible`). Standard-Basis: `https://api.deepseek.com/v1`. Explizite Alternativen sind **Open Responses** (`open-responses`, Basis `https://api.deepseek.com`) und **Messages** (`anthropic`, Basis `https://api.deepseek.com/anthropic`).
 
 Chat nach dem Import. Reasoning folgt dem Modell.
 
-Deklariert: das Anbieter-Werkzeug **Websuche** (vom Upstream innerhalb der Anfrage ausgeführt).
+Deklariert: das Anbieter-Werkzeug **Websuche** (eine statische Werkzeugdeklaration vom Typ `function`; {{product.name|mdx}} führt Aufrufe mit `POST /v1/tools/search` aus).
 
 ### OpenRouter
 
@@ -180,7 +180,7 @@ Feste **Chat Completions API**. Kein Transport-Picker.
 
 Dies ist der Moonshot Open Platform-Anbieter, nicht [Kimi Code](#kimi-code). Ein Kimi Code-Schlüssel und ein Moonshot Open Platform-Schlüssel sind unterschiedliche Verbindungen.
 
-Deklariert: das Anbieter-Werkzeug **Websuche** (eine Moonshot-Formel – das Werkzeugschema wird vom Formel-Endpunkt abgerufen und {{product.name|mdx}} führt Aufrufe dagegen aus; Details bleiben eingeklappt, weil die Ausgabe serverseitiger Ciphertext ist) und Video-Datei-Upload (`ms://`-Dateireferenzen).
+Deklariert: das Anbieter-Werkzeug **Websuche** (ein statisches Werkzeugschema vom Typ `function`; {{product.name|mdx}} führt Aufrufe mit `POST /v1/tools/search_pro` aus) und Video-Datei-Upload (`ms://`-Dateireferenzen).
 
 ### Kimi Code
 
