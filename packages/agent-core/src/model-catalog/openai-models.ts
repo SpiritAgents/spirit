@@ -74,7 +74,7 @@ export interface ProviderListedModelEntry {
   outputLimit?: number;
   maxCompletionTokens?: number;
   supportedReasoningEfforts?: string[];
-  /** Kimi Code `think_efforts.default_effort` when `think_efforts.support` is true. */
+  /** Kimi Code `reasoning.effort.default` when `valid` is non-empty. */
   defaultReasoningEffort?: string;
   /** Hugging Face Hub media models: Inference Providers routing hint (optional for backend use). */
   inferenceProvider?: string;
@@ -393,7 +393,7 @@ export function parseMoonshotModelEntriesPayload(body: unknown): ProviderListedM
   return entries;
 }
 
-/** Kimi Code `GET /v1/models`: Moonshot-shaped traits + `display_name` + `supports_thinking_type` + `think_efforts`. */
+/** Kimi Code `GET /v1/models`: current modalities/limit/reasoning schema; legacy fields are ignored. */
 export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedModelEntry[] {
   if (typeof body !== "object" || body === null || !("data" in body)) {
     return [];
@@ -419,80 +419,75 @@ export function parseKimiCodeModelEntriesPayload(body: unknown): ProviderListedM
     if (displayName) {
       modelEntry.displayName = displayName;
     }
-    const supportsImageInput = readBooleanModelTrait(record, "supports_image_in");
-    if (supportsImageInput !== undefined) {
-      modelEntry.supportsImageInput = supportsImageInput;
+    const inputModalities = readKimiCodeInputModalities(record);
+    if (inputModalities?.supportsImageInput !== undefined) {
+      modelEntry.supportsImageInput = inputModalities.supportsImageInput;
     }
-    const supportsVideoInput = readBooleanModelTrait(record, "supports_video_in");
-    if (supportsVideoInput !== undefined) {
-      modelEntry.supportsVideoInput = supportsVideoInput;
+    if (inputModalities?.supportsVideoInput !== undefined) {
+      modelEntry.supportsVideoInput = inputModalities.supportsVideoInput;
     }
-    const supportsReasoning = readBooleanModelTrait(record, "supports_reasoning");
-    if (supportsReasoning !== undefined) {
-      modelEntry.supportsReasoning = supportsReasoning;
-    }
+
     const reasoning = asRecord(record.reasoning);
-    const thinkEfforts = readKimiCodeThinkEfforts(record);
-    if (thinkEfforts) {
-      modelEntry.supportedReasoningEfforts = thinkEfforts.validEfforts;
-      if (thinkEfforts.defaultEffort) {
-        modelEntry.defaultReasoningEffort = thinkEfforts.defaultEffort;
-      }
-    } else if (supportsReasoning !== undefined) {
-      // A current reasoning object without effort declares no tiers; do not infer them from supports_reasoning.
-      modelEntry.supportedReasoningEfforts =
-        reasoning !== undefined && reasoning.effort === undefined
-          ? []
-          : moonshotSupportedReasoningEfforts(supportsReasoning, id.trim());
+    const reasoningType = readOptionalTrimmedString(reasoning?.type)?.toLowerCase();
+    if (reasoningType === "only") {
+      modelEntry.supportsReasoning = true;
+      modelEntry.supportsThinkingType = "only";
     }
-    const contextLength = readPositiveIntegerModelTrait(record, "context_length");
+    const reasoningEfforts = readKimiCodeReasoningEfforts(reasoning);
+    if (reasoningEfforts) {
+      modelEntry.supportedReasoningEfforts = reasoningEfforts.validEfforts;
+      if (reasoningEfforts.defaultEffort) {
+        modelEntry.defaultReasoningEffort = reasoningEfforts.defaultEffort;
+      }
+    }
+
+    const contextLength = readKimiCodeContextLength(record);
     if (contextLength !== undefined) {
       modelEntry.contextLength = contextLength;
-    }
-    const supportsThinkingType = readKimiCodeSupportsThinkingType(record);
-    if (supportsThinkingType !== undefined) {
-      modelEntry.supportsThinkingType = supportsThinkingType;
     }
     entries.push(modelEntry);
   }
   return entries;
 }
 
-function readKimiCodeSupportsThinkingType(
+function readKimiCodeInputModalities(
   record: Record<string, unknown>,
-): KimiCodeSupportsThinkingType | undefined {
-  const value = record.supports_thinking_type;
-  if (typeof value === "string" && value.trim().toLowerCase() === "only") {
-    return "only";
+): { supportsImageInput: boolean; supportsVideoInput: boolean } | undefined {
+  const input = asRecord(record.modalities)?.input;
+  if (!Array.isArray(input)) {
+    return undefined;
   }
-  return undefined;
+  const modalities = new Set(
+    input
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim().toLowerCase()),
+  );
+  return {
+    supportsImageInput: modalities.has("image"),
+    supportsVideoInput: modalities.has("video"),
+  };
 }
 
-function readKimiCodeThinkEfforts(
-  record: Record<string, unknown>,
+function readKimiCodeReasoningEfforts(
+  reasoning: Record<string, unknown> | undefined,
 ): { validEfforts: string[]; defaultEffort?: string } | undefined {
-  const raw = record.think_efforts;
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+  if (reasoning === undefined) {
     return undefined;
   }
-  const thinkEfforts = raw as Record<string, unknown>;
-  if (thinkEfforts.support !== true) {
-    return undefined;
+  const effort = asRecord(reasoning.effort);
+  if (effort === undefined) {
+    return { validEfforts: [] };
   }
-
-  const validEfforts = readKimiCodeValidReasoningEfforts(thinkEfforts.valid_efforts);
-  if (validEfforts.length === 0) {
-    return undefined;
-  }
-
-  const defaultEffort = readKimiCodeDefaultReasoningEffort(
-    thinkEfforts.default_effort,
-    validEfforts,
-  );
+  const validEfforts = readKimiCodeValidReasoningEfforts(effort.valid);
+  const defaultEffort = readKimiCodeDefaultReasoningEffort(effort.default, validEfforts);
   return {
     validEfforts,
     ...(defaultEffort !== undefined ? { defaultEffort } : {}),
   };
+}
+
+function readKimiCodeContextLength(record: Record<string, unknown>): number | undefined {
+  return readPositiveIntegerModelTrait(asRecord(record.limit) ?? {}, "context");
 }
 
 function readKimiCodeValidReasoningEfforts(value: unknown): string[] {

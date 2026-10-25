@@ -308,13 +308,13 @@ test("parseOpenAiCompatibleModelEntriesPayload leaves gpt-5.5 without gpt56 effo
   assert.deepEqual(entries, [{ id: "gpt-5.5" }]);
 });
 
-test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () => {
+test("parseKimiCodeModelEntriesPayload ignores legacy fields", () => {
   const entries = parseKimiCodeModelEntriesPayload({
     object: "list",
     data: [
       {
-        id: "kimi-for-coding",
-        display_name: "K2.7 Code",
+        id: "legacy-only",
+        display_name: "Legacy",
         context_length: 262144,
         supports_reasoning: true,
         supports_image_in: true,
@@ -327,30 +327,73 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
         },
       },
       {
-        id: "kimi-for-coding-highspeed",
-        display_name: "K2.7 Code Highspeed",
-        context_length: 262144,
+        id: "dual-schema",
+        display_name: "Dual",
         supports_reasoning: true,
-        supports_image_in: true,
-        supports_video_in: true,
-        supports_thinking_type: "only",
+        think_efforts: {
+          support: true,
+          valid_efforts: ["minimal"],
+          default_effort: "minimal",
+        },
         reasoning: { type: "only" },
       },
     ],
   });
 
   assert.deepEqual(entries, [
+    { id: "legacy-only", displayName: "Legacy" },
     {
-      id: "kimi-for-coding",
-      displayName: "K2.7 Code",
-      supportsImageInput: true,
-      supportsVideoInput: true,
+      id: "dual-schema",
+      displayName: "Dual",
       supportsReasoning: true,
-      supportedReasoningEfforts: ["low", "high", "max"],
-      defaultReasoningEffort: "max",
-      contextLength: 262144,
+      supportedReasoningEfforts: [],
       supportsThinkingType: "only",
     },
+  ]);
+});
+
+test("parseKimiCodeModelEntriesPayload reads the current modalities, limit, and reasoning schema", () => {
+  const entries = parseKimiCodeModelEntriesPayload({
+    object: "list",
+    data: [
+      {
+        id: "kimi-for-coding-highspeed",
+        display_name: "K2.7 Code Highspeed",
+        context_length: 262144,
+        supports_reasoning: true,
+        supports_thinking_type: "only",
+        modalities: { input: ["text", "image", "video"], output: ["text"] },
+        reasoning: { type: "only" },
+        limit: { context: 262144 },
+      },
+      {
+        id: "k3.1-pro",
+        display_name: "K3.1 Pro",
+        context_length: 1048576,
+        supports_reasoning: true,
+        modalities: { input: ["text", "image", "video"], output: ["text"] },
+        reasoning: {
+          type: "only",
+          effort: { valid: ["low", "high", "max"], default: "high" },
+        },
+        limit: { context: 1048576 },
+      },
+      {
+        id: "k3-256k",
+        display_name: "K3-256k",
+        context_length: 262144,
+        supports_reasoning: true,
+        modalities: { input: ["text", "image"], output: ["text"] },
+        reasoning: {
+          type: "only",
+          effort: { valid: ["low", "high", "max"], default: "high" },
+        },
+        limit: { context: 262144 },
+      },
+    ],
+  });
+
+  assert.deepEqual(entries, [
     {
       id: "kimi-for-coding-highspeed",
       displayName: "K2.7 Code Highspeed",
@@ -361,29 +404,27 @@ test("parseKimiCodeModelEntriesPayload maps Kimi Code model trait fields", () =>
       contextLength: 262144,
       supportsThinkingType: "only",
     },
-  ]);
-});
-
-test("parseKimiCodeModelEntriesPayload ignores think_efforts when support is not true", () => {
-  const entries = parseKimiCodeModelEntriesPayload({
-    data: [
-      {
-        id: "k3",
-        supports_reasoning: true,
-        think_efforts: {
-          support: false,
-          valid_efforts: ["low", "high", "max"],
-          default_effort: "high",
-        },
-      },
-    ],
-  });
-
-  assert.deepEqual(entries, [
     {
-      id: "k3",
+      id: "k3.1-pro",
+      displayName: "K3.1 Pro",
+      supportsImageInput: true,
+      supportsVideoInput: true,
       supportsReasoning: true,
-      supportedReasoningEfforts: moonshotSupportedReasoningEfforts(true, "k3"),
+      supportedReasoningEfforts: ["low", "high", "max"],
+      defaultReasoningEffort: "high",
+      contextLength: 1048576,
+      supportsThinkingType: "only",
+    },
+    {
+      id: "k3-256k",
+      displayName: "K3-256k",
+      supportsImageInput: true,
+      supportsVideoInput: false,
+      supportsReasoning: true,
+      supportedReasoningEfforts: ["low", "high", "max"],
+      defaultReasoningEffort: "high",
+      contextLength: 262144,
+      supportsThinkingType: "only",
     },
   ]);
 });
@@ -395,8 +436,8 @@ test("parseOpenAiCompatibleModelEntriesPayload routes kimi-code to Kimi parser",
         {
           id: "kimi-for-coding",
           display_name: "K2.7 Code",
-          supports_image_in: true,
-          supports_thinking_type: "only",
+          modalities: { input: ["text", "image", "video"] },
+          reasoning: { type: "only" },
         },
       ],
     },
@@ -408,6 +449,9 @@ test("parseOpenAiCompatibleModelEntriesPayload routes kimi-code to Kimi parser",
       id: "kimi-for-coding",
       displayName: "K2.7 Code",
       supportsImageInput: true,
+      supportsVideoInput: true,
+      supportsReasoning: true,
+      supportedReasoningEfforts: [],
       supportsThinkingType: "only",
     },
   ]);
