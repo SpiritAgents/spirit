@@ -3487,6 +3487,10 @@ export function moonshotSupportedReasoningEfforts(
   const bareId = normalizedId.includes("/")
     ? normalizedId.slice(normalizedId.lastIndexOf("/") + 1)
     : normalizedId;
+  // Current Kimi K2 models reject reasoning_effort; supports_reasoning must not synthesize tiers.
+  if (/^kimi-k2(?:[.-]|$)/.test(bareId)) {
+    return [];
+  }
   if (/^kimi-k3(?:-|$)/.test(bareId)) {
     return moonshotK3SupportedReasoningEfforts();
   }

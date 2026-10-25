@@ -99,11 +99,15 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
     transportKind: "openai-compatible",
     listedModels: [
       {
-        id: "kimi-k2.5",
+        id: "kimi-k2.6",
         supportsImageInput: true,
         supportsVideoInput: false,
-        supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+        supportedReasoningEfforts: [],
         contextLength: 256000,
+      },
+      {
+        id: "kimi-k2.7-code",
+        supportedReasoningEfforts: [],
       },
       {
         id: "kimi-k2-turbo-preview",
@@ -116,12 +120,11 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
 
   assert.deepEqual(preview, [
     {
-      id: "kimi-k2.5",
-      displayName: "Kimi K2.5",
+      id: "kimi-k2.6",
+      displayName: "Kimi K2.6",
       capabilities: ["languageModel", "image"],
-      supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+      supportedReasoningEfforts: [],
       contextLength: 256000,
-      // kimi-k2.5+ carries a model-knowledge thinking-switch declaration (switch + wire encoding).
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -133,6 +136,12 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
           providerOptions: { moonshotai: { thinking: { type: "disabled" } } },
         },
       },
+    },
+    {
+      id: "kimi-k2.7-code",
+      displayName: "Kimi K2.7 Code",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: [],
     },
     {
       id: "kimi-k2-turbo-preview",

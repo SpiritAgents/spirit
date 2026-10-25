@@ -132,12 +132,16 @@ test("parseMoonshotModelEntriesPayload maps Moonshot model trait fields", () => 
     object: "list",
     data: [
       {
-        id: "kimi-k2.5",
+        id: "kimi-k2.6",
         object: "model",
         supports_image_in: true,
         supports_video_in: false,
         supports_reasoning: true,
         context_length: 256000,
+      },
+      {
+        id: "kimi-k2.7-code",
+        supports_reasoning: true,
       },
       {
         id: "kimi-k2-turbo-preview",
@@ -150,12 +154,17 @@ test("parseMoonshotModelEntriesPayload maps Moonshot model trait fields", () => 
 
   assert.deepEqual(entries, [
     {
-      id: "kimi-k2.5",
+      id: "kimi-k2.6",
       supportsImageInput: true,
       supportsVideoInput: false,
       supportsReasoning: true,
-      supportedReasoningEfforts: moonshotSupportedReasoningEfforts(true),
+      supportedReasoningEfforts: [],
       contextLength: 256000,
+    },
+    {
+      id: "kimi-k2.7-code",
+      supportsReasoning: true,
+      supportedReasoningEfforts: [],
     },
     {
       id: "kimi-k2-turbo-preview",
@@ -167,7 +176,18 @@ test("parseMoonshotModelEntriesPayload maps Moonshot model trait fields", () => 
   ]);
 });
 
-test("moonshotSupportedReasoningEfforts uses k3 low/high/max efforts for kimi-k3", () => {
+test("moonshotSupportedReasoningEfforts rejects K2 efforts and uses K3 tiers", () => {
+  for (const model of [
+    "kimi-k2",
+    "kimi-k2.5",
+    "kimi-k2.6",
+    "kimi-k2.7-code",
+    "kimi-k2.7-code-highspeed",
+    "moonshotai/kimi-k2.6",
+  ]) {
+    assert.deepEqual(moonshotSupportedReasoningEfforts(true, model), [], model);
+  }
+  assert.deepEqual(moonshotSupportedReasoningEfforts(false, "kimi-k2.6"), []);
   assert.deepEqual(
     moonshotSupportedReasoningEfforts(true, "kimi-k3"),
     moonshotK3SupportedReasoningEfforts(),
@@ -176,12 +196,6 @@ test("moonshotSupportedReasoningEfforts uses k3 low/high/max efforts for kimi-k3
     moonshotSupportedReasoningEfforts(true, "moonshotai/kimi-k3"),
     moonshotK3SupportedReasoningEfforts(),
   );
-  assert.deepEqual(moonshotSupportedReasoningEfforts(true, "kimi-k2.5"), [
-    "minimal",
-    "low",
-    "medium",
-    "high",
-  ]);
 });
 
 test("parseVercelAiGatewayModelEntriesPayload infers kimi-k3 reasoning efforts", () => {
