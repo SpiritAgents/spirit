@@ -67,7 +67,7 @@ export interface ProviderPreset {
   /** Provider-level thinking on/off wire encoding template (e.g. Meituan LongCat's `thinking.type`). */
   thinkingSwitch?: ThinkingSwitchDeclaration;
   /**
-   * Transport `options` template (mechanism declarations such as `echoServerToolCalls`), copied
+   * Transport `options` template (mechanism declarations such as `reasoningSummary`), copied
    * into the materialized entry's `options`. Keys scoped to a different transportKind than the one
    * being materialized are dropped; deep value validation happens at config load.
    */

@@ -107,8 +107,8 @@
     {
       "id": "deepseek",
       "label": "DeepSeek",
-      "defaultTransport": "open-responses",
-      "sdk": "@ai-sdk/open-responses",
+      "defaultTransport": "openai-compatible",
+      "sdk": "@ai-sdk/openai-compatible",
       "transports": {
         "openai-compatible": "https://api.deepseek.com/v1",
         "anthropic": "https://api.deepseek.com/anthropic",
@@ -118,10 +118,53 @@
       "providerTools": [
         {
           "label": "Web Search",
-          "tools": [{ "type": "web_search" }]
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "web_search",
+                "description": "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "query": { "type": "string", "description": "Search query." },
+                    "max_results": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 50,
+                      "description": "Maximum number of results to return (default 10)."
+                    },
+                    "ori_question": {
+                      "type": "string",
+                      "description": "Original user question that triggered the search, improves query understanding."
+                    },
+                    "localization": {
+                      "type": "string",
+                      "description": "Optional IP address for localized results."
+                    },
+                    "need_content": {
+                      "type": "boolean",
+                      "description": "Include page content in each result (default false)."
+                    }
+                  },
+                  "required": ["query"],
+                  "additionalProperties": false
+                }
+              }
+            }
+          ],
+          "execute": {
+            "path": "/tools/search",
+            "body": {
+              "query": "{arg.query}",
+              "count": "{arg.max_results}",
+              "ori_question": "{arg.ori_question}",
+              "localization": "{arg.localization}",
+              "need_content": "{arg.need_content}"
+            }
+          }
         }
       ],
-      "options": { "echoServerToolCalls": true },
       "catalog": { "parser": "openai-models", "endpoint": "/models" }
     },
     {

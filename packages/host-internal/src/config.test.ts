@@ -751,29 +751,10 @@ test("mechanism options keys validate value shapes and transport scope", () => {
       validConfig([
         validProvider({
           transportKind: "open-responses",
-          options: { echoServerToolCalls: true, defaultInputItemStatus: "completed" },
+          options: { applyPatch: true, defaultInputItemStatus: "completed" },
         }),
       ]),
     ),
-  );
-  assertSchemaError(
-    () =>
-      validateSpiritConfig(
-        validConfig([
-          validProvider({
-            transportKind: "open-responses",
-            options: { echoServerToolCalls: false },
-          }),
-        ]),
-      ),
-    '"options.echoServerToolCalls" must be true',
-  );
-  assertSchemaError(
-    () =>
-      validateSpiritConfig(
-        validConfig([validProvider({ options: { echoServerToolCalls: true } })]),
-      ),
-    'unknown "options" key "echoServerToolCalls" for transportKind "openai-compatible"',
   );
   assertSchemaError(
     () =>
@@ -827,10 +808,8 @@ test("preset mechanism options round trip through save/load", async () => {
       },
       {
         id: "deepseek",
-        apiBase: "https://api.deepseek.com",
-        transportKind: "open-responses",
-        sdk: "@ai-sdk/open-responses",
-        options: { echoServerToolCalls: true },
+        apiBase: "https://api.deepseek.com/v1",
+        sdk: "@ai-sdk/openai-compatible",
         models: [{ name: "deepseek-v4-flash" }],
       },
       {
@@ -866,7 +845,7 @@ test("preset mechanism options round trip through save/load", async () => {
   assert.deepEqual(byId.get("cloudflare-ai-gateway")?.options, {
     toolsRejectReasoningEffort: true,
   });
-  assert.deepEqual(byId.get("deepseek")?.options, { echoServerToolCalls: true });
+  assert.equal(byId.get("deepseek")?.options, undefined);
   assert.deepEqual(byId.get("volcengine")?.options, { defaultInputItemStatus: "completed" });
   assert.deepEqual(byId.get("byteplus")?.options, { defaultInputItemStatus: "completed" });
   assert.deepEqual(byId.get("xiaomi")?.options, { maxInlineMediaBytes: 52428800 });

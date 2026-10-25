@@ -23,7 +23,6 @@ import {
   createResponsesStoredStateAwareFetch,
   shouldUseResponsesStoredStateFetch,
 } from "./responses-stored-state-fetch.js";
-import { createEchoServerToolCallsFetch } from "./echo-server-tool-calls.js";
 import { createDefaultInputItemStatusFetch } from "./responses-input-item-status.js";
 import { createApplyPatchAwareFetch } from "./apply-patch-responses-fetch.js";
 import {
@@ -135,12 +134,8 @@ function responsesFetchForConfig(
       ),
     ),
   );
-  // `options.echoServerToolCalls`: re-injects captured server-side tool call items into `input`;
-  // self-gates on the declaration.
-  fetchFn = createEchoServerToolCallsFetch(config, fetchFn);
   // `options.defaultInputItemStatus`: fills the declared status onto replayed input items that
-  // lack one. Wraps the echo injection so injected items keep their server-provided status
-  // verbatim instead of getting the default filled in.
+  // lack one.
   fetchFn = createDefaultInputItemStatusFetch(config, fetchFn);
   if (shouldUseResponsesStoredStateFetch(config)) {
     fetchFn = createResponsesStoredStateAwareFetch(config, fetchFn);

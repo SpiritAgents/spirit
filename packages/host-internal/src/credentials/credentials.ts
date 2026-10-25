@@ -126,7 +126,7 @@ function resetWizardOwnedKeys(
   options: ProviderOptions | undefined,
 ): void {
   entry.apiBase = materialized.apiBase;
-  // `options` merges the preset's mechanism template (e.g. `echoServerToolCalls`) with the
+  // `options` merges the preset's mechanism template (e.g. `reasoningSummary`) with the
   // wizard-collected values (e.g. `awsRegion`); on a key conflict the explicit wizard input wins.
   const mergedOptions = { ...materialized.options, ...options };
   const owned: Record<string, unknown> = {

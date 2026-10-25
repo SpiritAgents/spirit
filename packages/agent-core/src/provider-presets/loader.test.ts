@@ -282,12 +282,12 @@ test("loader rejects a catalog without a parser", () => {
 
 test("loader accepts an options template object and rejects non-objects", () => {
   const manifest = loadProviderPresetManifest(
-    manifestOf([minimalPreset({ options: { echoServerToolCalls: true } })]),
+    manifestOf([minimalPreset({ options: { applyPatch: true } })]),
   );
-  assert.deepEqual(manifest.providers[0]?.options, { echoServerToolCalls: true });
+  assert.deepEqual(manifest.providers[0]?.options, { applyPatch: true });
 
   assertLoadThrows(
-    manifestOf([minimalPreset({ options: "echoServerToolCalls" })]),
+    manifestOf([minimalPreset({ options: "applyPatch" })]),
     /options must be an object/,
   );
   assertLoadThrows(manifestOf([minimalPreset({ options: [] })]), /options must be an object/);

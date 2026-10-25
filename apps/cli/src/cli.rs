@@ -1417,7 +1417,7 @@ mod tests {
     fn parse_model_transport_kind_defaults_to_the_preset_default_transport() {
         assert_eq!(
             parse_model_transport_kind(None, Some("deepseek")).expect("parse"),
-            ModelTransportKind::OpenResponses
+            ModelTransportKind::OpenAiCompatible
         );
         assert_eq!(
             parse_model_transport_kind(None, Some("amazon-bedrock")).expect("parse"),

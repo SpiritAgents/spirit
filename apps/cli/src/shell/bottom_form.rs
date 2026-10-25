@@ -2597,16 +2597,16 @@ mod tests {
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.provider_id, "deepseek");
         assert!(parsed.bulk);
-        // DeepSeek's preset default transport is open-responses; the form materializes its base.
-        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
-        assert_eq!(parsed.api_base, "https://api.deepseek.com");
+        // DeepSeek's preset default transport is openai-compatible; the form materializes its base.
+        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
+        assert_eq!(parsed.api_base, "https://api.deepseek.com/v1");
         assert_eq!(parsed.api_key, "sk-secret");
         assert!(parsed.model_name.is_none());
         assert_eq!(
             parsed.listing,
             Some(super::ModelAddListing::Http {
-                api_base: "https://api.deepseek.com".to_string(),
-                transport_kind: ModelTransportKind::OpenResponses,
+                api_base: "https://api.deepseek.com/v1".to_string(),
+                transport_kind: ModelTransportKind::OpenAiCompatible,
             })
         );
     }

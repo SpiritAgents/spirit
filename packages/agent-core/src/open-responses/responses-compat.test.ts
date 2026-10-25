@@ -79,12 +79,11 @@ test("openResponsesReasoningTrace defaults the reasoning summary to auto when de
 });
 
 test("resolveOpenResponsesReasoningSummary is opt-in via the options.reasoningSummary declaration", () => {
-  // A DeepSeek-shaped config (generic adapter, echoServerToolCalls, no summary declaration)
-  // sends no summary: the endpoint rejects OpenAI-style reasoning.summary.
+  // A generic adapter config with no summary declaration sends no summary.
   assert.equal(
     resolveOpenResponsesReasoningSummary({
       reasoningEffort: "high",
-      options: { echoServerToolCalls: true },
+      options: { defaultInputItemStatus: "completed" },
     }),
     undefined,
   );

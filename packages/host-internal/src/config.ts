@@ -95,8 +95,6 @@ export interface ProviderOptions {
   toolsRejectReasoningEffort?: true;
   /** openai-compatible: byte cap on base64-encoded inline media payloads. */
   maxInlineMediaBytes?: number;
-  /** open-responses: echo server-side tool call items back into the next round's input. */
-  echoServerToolCalls?: true;
   /** open-responses: the endpoint honors OpenAI-style `reasoning.summary`; absent = never sent. */
   reasoningSummary?: true;
   /** open-responses: status value filled onto replayed input items that lack one. */
@@ -308,7 +306,6 @@ const TRANSPORT_OPTION_KEYS: Record<SpiritTransportKind, readonly string[]> = {
     "auth",
     "storedState",
     "applyPatch",
-    "echoServerToolCalls",
     "reasoningSummary",
     "defaultInputItemStatus",
     "openRouterAnthropicReasoning",
@@ -642,7 +639,6 @@ function validateProviderOptions(
     "storedState",
     "applyPatch",
     "toolsRejectReasoningEffort",
-    "echoServerToolCalls",
     "reasoningSummary",
     "openRouterAnthropicReasoning",
   ] as const) {

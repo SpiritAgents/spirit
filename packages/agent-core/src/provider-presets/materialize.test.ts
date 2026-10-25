@@ -214,7 +214,7 @@ test("z-ai and zhipu-ai bake their static search bodies into the execute declara
   assert.equal(zai.providerTools?.[0]?.execute?.path, "/web_search");
 });
 
-test("openai, xai, deepseek and the gateway carry their literal server-side search entries", () => {
+test("openai, xai and the gateway carry their literal server-side search entries", () => {
   const openai = materializeProviderPreset({ presetId: "openai" });
   assert.deepEqual(openai.providerTools, [
     { label: "Web Search", tools: [{ type: "web_search" }] },
@@ -228,13 +228,6 @@ test("openai, xai, deepseek and the gateway carry their literal server-side sear
   assert.equal(xai.sdk, "@ai-sdk/xai");
   assert.deepEqual(xai.providerTools, [{ label: "Web Search", tools: [{ type: "web_search" }] }]);
 
-  const deepseek = materializeProviderPreset({ presetId: "deepseek" });
-  assert.equal(deepseek.transportKind, "open-responses");
-  assert.equal(deepseek.sdk, "@ai-sdk/open-responses");
-  assert.deepEqual(deepseek.providerTools, [
-    { label: "Web Search", tools: [{ type: "web_search" }] },
-  ]);
-
   const gateway = materializeProviderPreset({ presetId: "vercel-ai-gateway" });
   assert.equal(gateway.sdk, "@ai-sdk/gateway");
   assert.deepEqual(gateway.providerTools, [
@@ -244,6 +237,86 @@ test("openai, xai, deepseek and the gateway carry their literal server-side sear
     },
   ]);
   assert.equal(gateway.videoApi, "vercel-gateway-videos");
+});
+
+test("deepseek materializes Chat search by default and a static tool on the Responses alternate", () => {
+  const deepseek = materializeProviderPreset({ presetId: "deepseek" });
+  assert.equal(deepseek.apiBase, "https://api.deepseek.com/v1");
+  assert.equal(deepseek.transportKind, undefined);
+  assert.equal(deepseek.sdk, "@ai-sdk/openai-compatible");
+  assert.equal(deepseek.options, undefined);
+  assert.deepEqual(deepseek.providerTools, [
+    {
+      label: "Web Search",
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "web_search",
+            description:
+              "Search the web for up-to-date information. Returns page titles, URLs, snippets, and content.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: { type: "string", description: "Search query." },
+                max_results: {
+                  type: "integer",
+                  minimum: 1,
+                  maximum: 50,
+                  description: "Maximum number of results to return (default 10).",
+                },
+                ori_question: {
+                  type: "string",
+                  description:
+                    "Original user question that triggered the search, improves query understanding.",
+                },
+                localization: {
+                  type: "string",
+                  description: "Optional IP address for localized results.",
+                },
+                need_content: {
+                  type: "boolean",
+                  description: "Include page content in each result (default false).",
+                },
+              },
+              required: ["query"],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+      execute: {
+        path: "/tools/search",
+        body: {
+          query: "{arg.query}",
+          count: "{arg.max_results}",
+          ori_question: "{arg.ori_question}",
+          localization: "{arg.localization}",
+          need_content: "{arg.need_content}",
+        },
+      },
+    },
+  ]);
+
+  const responses = materializeProviderPreset({
+    presetId: "deepseek",
+    transportKind: "open-responses",
+  });
+  assert.equal(responses.apiBase, "https://api.deepseek.com");
+  assert.equal(responses.transportKind, "open-responses");
+  assert.equal(responses.sdk, "@ai-sdk/open-responses");
+  assert.equal(responses.options, undefined);
+  assert.deepEqual(responses.providerTools?.[0]?.tools, deepseek.providerTools?.[0]?.tools);
+  assert.deepEqual(responses.providerTools?.[0]?.execute, {
+    url: "https://api.deepseek.com/v1/tools/search",
+    body: {
+      query: "{arg.query}",
+      count: "{arg.max_results}",
+      ori_question: "{arg.ori_question}",
+      localization: "{arg.localization}",
+      need_content: "{arg.need_content}",
+    },
+  });
 });
 
 test("alibaba materializes body-only tool entries and the token plan override", () => {
@@ -381,16 +454,6 @@ test("mechanism options templates materialize scoped to the selected transport",
   });
   assert.deepEqual(cloudflare.options, { toolsRejectReasoningEffort: true });
 
-  const deepseek = materializeProviderPreset({ presetId: "deepseek" });
-  assert.equal(deepseek.transportKind, "open-responses");
-  assert.deepEqual(deepseek.options, { echoServerToolCalls: true });
-  // The echo convention is open-responses-scoped: the chat-completions transport drops the key.
-  const deepseekChat = materializeProviderPreset({
-    presetId: "deepseek",
-    transportKind: "openai-compatible",
-  });
-  assert.equal(deepseekChat.options, undefined);
-
   const volcengineResponses = materializeProviderPreset({
     presetId: "volcengine",
     transportKind: "open-responses",
@@ -477,7 +540,6 @@ test("mechanism options templates materialize scoped to the selected transport",
     materializeProviderPreset({ presetId: "xiaomi", transportKind: "open-responses" }).options,
     { reasoningSummary: true },
   );
-  assert.deepEqual(deepseek.options, { echoServerToolCalls: true });
   assert.deepEqual(volcengineResponses.options, {
     defaultInputItemStatus: "completed",
     storedState: true,
