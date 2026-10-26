@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProviderIcon } from "@/components/provider-icon";
 import { NoTranslate } from "@/components/no-translate";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -461,7 +461,11 @@ export function DesktopModelsPreview({
                       )}
                       onClick={() => startConnect(row.id)}
                     >
-                      <ProviderIcon providerId={row.id} />
+                      <Sparkles
+                        aria-hidden
+                        className="size-4 shrink-0 text-muted-foreground"
+                        strokeWidth={1.75}
+                      />
                       <span className="min-w-0 flex-1 truncate">
                         {row.id === "custom" ? row.label : <NoTranslate>{row.label}</NoTranslate>}
                       </span>
