@@ -1,4 +1,4 @@
-import { ProviderIcon } from "@/components/provider-icon";
+import { Sparkles } from "lucide-react";
 import { CUSTOM_PROVIDER_PRESET_ID } from "@spiritagent/agent-core/provider-presets";
 
 import {
@@ -67,7 +67,7 @@ export function ProviderPickerRowButton({
       className="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left text-sm hover:bg-overlay-hover focus-visible:bg-overlay-hover focus-visible:outline-none"
       onClick={() => onSelect(row.id)}
     >
-      <ProviderIcon providerId={row.id} />
+      <Sparkles aria-hidden className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
       <span className="min-w-0 flex-1 truncate">{row.label}</span>
     </button>
   );
