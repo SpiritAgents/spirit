@@ -1,3 +1,4 @@
+import { Search } from "@spiritagent/icons/search";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
@@ -428,21 +429,31 @@ export function DesktopModelsPreview({
           }
         }}
       >
-        <WindowDialogContent className="sm:max-w-md" container={dialogContainer}>
+        <WindowDialogContent className="sm:max-w-xl" container={dialogContainer}>
           <WindowDialogHeader>
-            <WindowDialogTitle>{messages.desktop.models.providerDialogTitle}</WindowDialogTitle>
+            <WindowDialogTitle aria-label={messages.desktop.models.providerDialogTitle}>
+              {messages.desktop.models.connectProvider}
+            </WindowDialogTitle>
             <WindowDialogDescription>
               {messages.desktop.models.providerDialogDescription}
             </WindowDialogDescription>
           </WindowDialogHeader>
           <div className="grid gap-3 py-1">
-            <Input
-              value={providerQuery}
-              onChange={(event) => setProviderQuery(event.target.value)}
-              placeholder={messages.desktop.models.searchPlaceholder}
-              autoComplete="off"
-            />
-            <ScrollArea className="h-56 rounded-md border border-border/40">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+                strokeWidth={1.75}
+              />
+              <Input
+                value={providerQuery}
+                onChange={(event) => setProviderQuery(event.target.value)}
+                placeholder={messages.desktop.models.searchPlaceholder}
+                autoComplete="off"
+                className="pl-9 pr-3.5"
+              />
+            </div>
+            <ScrollArea className="h-[min(28rem,calc(100dvh-6rem))] rounded-md border border-border/40">
               <div className="p-1">
                 {filteredProviders.length === 0 ? (
                   <p className="px-2 py-6 text-center text-sm text-muted-foreground">
