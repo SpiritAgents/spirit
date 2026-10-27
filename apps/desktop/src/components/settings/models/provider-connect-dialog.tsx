@@ -1,7 +1,6 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshCw } from "lucide-react";
 
 import {
   connectTransportOptionSummary,
@@ -17,11 +16,11 @@ import {
 } from "@/components/settings/models/model-defaults";
 import { providerPickerLabel } from "@/components/settings/models/provider-picker-rows";
 import { providerLabelKey } from "@/lib/model-picker-groups";
+import { joinWithCjkSpacing } from "@/lib/cjk";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogFooterActions,
   DialogHeader,
@@ -168,6 +167,13 @@ export function ProviderConnectDialog({
     provider,
     providerPresets,
   );
+  const [connectionTitlePrefix = "", connectionTitleSuffix = ""] = t(
+    "settings.connectNamedProviderTitle",
+  ).split("{{provider}}");
+  const connectionTitle =
+    provider === CUSTOM_PROVIDER_PRESET_ID
+      ? t("settings.customConnection")
+      : joinWithCjkSpacing(connectionTitlePrefix, selectedProviderLabel, connectionTitleSuffix);
 
   const connectTransportKindForRequest = resolveConnectTransportKindForProvider(
     provider,
@@ -521,28 +527,7 @@ export function ProviderConnectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" showCloseButton>
         <DialogHeader>
-          <DialogTitle>
-            {provider === "custom" ? t("settings.customConnection") : selectedProviderLabel}
-          </DialogTitle>
-          <DialogDescription>
-            {provider === "custom"
-              ? t("settings.customConnectionDescription")
-              : provider === "volcengine"
-                ? t("settings.volcengineConnectionDescription")
-                : provider === "byteplus"
-                  ? t("settings.byteplusConnectionDescription")
-                  : provider === "siliconflow"
-                    ? t("settings.siliconflowConnectionDescription")
-                    : provider === "moonshot-ai"
-                      ? t("settings.moonshotConnectionDescription")
-                      : provider === "minimax"
-                        ? t("settings.minimaxConnectionDescription")
-                        : provider === "alibaba"
-                          ? t("settings.alibabaConnectionDescription")
-                          : providerShowsConnectTransportPicker(provider)
-                            ? t("settings.providerConnectionDescription")
-                            : t("settings.providerSimpleDescription")}
-          </DialogDescription>
+          <DialogTitle>{connectionTitle}</DialogTitle>
         </DialogHeader>
 
         {reconnect ? (
@@ -1193,7 +1178,7 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t("settings.addThisModel")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "custom" && customConnectMode === "bulk" ? (
@@ -1213,10 +1198,8 @@ export function ProviderConnectDialog({
               >
                 {busy || previewBusy ? (
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
-                ) : (
-                  <RefreshCw className="size-4" strokeWidth={1.75} />
-                )}
-                {t("settings.addProvider")}
+                ) : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
@@ -1241,7 +1224,7 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t("settings.addThisModel")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {connectCredentialKind === "bedrock" && bedrockConnectMode === "iam" ? (
@@ -1264,7 +1247,7 @@ export function ProviderConnectDialog({
                 {busy || previewBusy ? (
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : null}
-                {t("settings.addProvider")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {connectCredentialKind === "vertex" && vertexConnectMode === "adc" ? (
@@ -1290,7 +1273,7 @@ export function ProviderConnectDialog({
                 {busy || previewBusy ? (
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : null}
-                {t("settings.addProvider")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
@@ -1317,7 +1300,7 @@ export function ProviderConnectDialog({
                 {busy || previewBusy ? (
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : null}
-                {t("settings.addProvider")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
@@ -1336,7 +1319,7 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t("settings.addThisModel")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "azure" ? (
@@ -1361,7 +1344,7 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t("settings.addThisModel")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "cloudflare-ai-gateway" ? (
@@ -1387,7 +1370,7 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
-                {t("settings.addThisModel")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider !== "custom" &&
@@ -1411,7 +1394,7 @@ export function ProviderConnectDialog({
                 {busy || previewBusy ? (
                   <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
                 ) : null}
-                {t("settings.addProvider")}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
           </DialogFooterActions>

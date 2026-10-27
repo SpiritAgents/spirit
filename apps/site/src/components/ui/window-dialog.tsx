@@ -76,11 +76,13 @@ function WindowDialogContent({
   className,
   children,
   showCloseButton = true,
+  hasDescription = true,
 }: {
   container: HTMLElement | null | undefined;
   className?: string;
   children: React.ReactNode;
   showCloseButton?: boolean;
+  hasDescription?: boolean;
 }) {
   const { present, state, titleId, descriptionId, onOpenChange } = useWindowDialogContext();
 
@@ -123,7 +125,7 @@ function WindowDialogContent({
         role="dialog"
         aria-modal="false"
         aria-labelledby={titleId}
-        aria-describedby={descriptionId}
+        aria-describedby={hasDescription ? descriptionId : undefined}
         data-state={state}
         data-slot="window-dialog-content"
         className={cn(

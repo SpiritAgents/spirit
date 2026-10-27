@@ -100,13 +100,10 @@
       "searchPlaceholder": "Pesquisar",
       "noMatches": "Nenhum resultado",
       "optionalPlaceholder": "Opcional",
-      "addProvider": "Adicionar Provedor",
       "current": "Atual",
       "deleteDialogDescription": "A configuração e as chaves salvas separadamente serão removidas.",
       "providerDialogTitle": "Escolher provedor",
       "providerDialogDescription": "Escolha um provedor e insira os detalhes da conexão.",
-      "connectDialogDescriptionCustom": "Insira o endpoint e a chave.",
-      "connectDialogDescriptionDefault": "Insira uma chave de API para conectar.",
       "addModeLabel": "Como adicionar modelos",
       "addModeAria": "Como adicionar modelos",
       "addSingle": "Adicionar um",
@@ -116,10 +113,9 @@
       "endpointLabel": "Endpoint",
       "apiKeyLabel": "Chave da API",
       "apiKeyPlaceholder": "Digite a chave",
-      "addThisModel": "Adicionar este modelo",
-      "adding": "Adicionando…",
+      "connecting": "Conectando…",
       "customConnectionTitle": "Conexão personalizada",
-      "connectProviderTitle": "Conectar provedor"
+      "connectNamedProviderTitle": "Conectar {{provider}}"
     },
     "window": {
       "toolbarAria": "Barra Lateral e Ferramentas",

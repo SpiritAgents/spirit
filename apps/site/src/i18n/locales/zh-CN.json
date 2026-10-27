@@ -200,8 +200,6 @@
       "providerDialogDescription": "选择后填写连接信息。",
       "searchPlaceholder": "搜索",
       "noMatches": "无匹配项",
-      "connectDialogDescriptionCustom": "填写端点与密钥。",
-      "connectDialogDescriptionDefault": "填写 API Key 即可连接。",
       "addModeLabel": "模型添加方式",
       "addModeAria": "模型添加方式",
       "addSingle": "仅添加单个",
@@ -212,11 +210,9 @@
       "optionalPlaceholder": "可选",
       "apiKeyLabel": "API Key",
       "apiKeyPlaceholder": "输入密钥",
-      "addThisModel": "添加此模型",
-      "adding": "添加中…",
-      "addProvider": "添加提供商",
+      "connecting": "连接中…",
       "customConnectionTitle": "自定义连接",
-      "connectProviderTitle": "连接提供商"
+      "connectNamedProviderTitle": "连接 {{provider}}"
     },
     "window": {
       "toolbarAria": "侧栏与工具区",

@@ -1,5 +1,13 @@
 /** @vitest-environment jsdom */
 
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 import "./setup";
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
@@ -7,7 +15,7 @@ import { expect, test, vi } from "vitest";
 
 import { ProviderConnectDialog } from "@/components/settings/models/provider-connect-dialog";
 
-function renderVertexDialog(overrides = {}) {
+function renderProviderDialog(overrides = {}) {
   const props = {
     provider: "google-vertex-ai",
     providerPresets: [{ id: "google-vertex-ai", label: "Google Vertex AI" }],
@@ -32,8 +40,9 @@ function fillVertexProjectAndLocation() {
 }
 
 test("vertex defaults to the ADC form: project/location only, no secret fields", () => {
-  renderVertexDialog();
+  renderProviderDialog();
 
+  expect(screen.getByRole("dialog", { name: "Connect Google Vertex AI" })).toBeTruthy();
   const adcTab = screen.getByRole("tab", { name: "ADC" });
   expect(adcTab.getAttribute("aria-selected")).toBe("true");
   expect(screen.getByRole("tab", { name: "Service Account" })).toBeTruthy();
@@ -47,16 +56,15 @@ test("vertex defaults to the ADC form: project/location only, no secret fields",
   expect(screen.queryByLabelText("API Key")).toBeNull();
 
   // ADC needs project/location but no credentials before the catalog can be fetched.
-  expect((screen.getByRole("button", { name: "Add Provider" }) as HTMLButtonElement).disabled).toBe(
-    true,
-  );
+  const connectButton = screen.getByRole("button", { name: "Connect Provider" });
+  expect((connectButton as HTMLButtonElement).disabled).toBe(true);
 });
 
 test("ADC connect previews and adds the catalog with credentialKind vertex and no credential slots", async () => {
-  const props = renderVertexDialog();
+  const props = renderProviderDialog();
   fillVertexProjectAndLocation();
 
-  const connectButton = screen.getByRole("button", { name: "Add Provider" });
+  const connectButton = screen.getByRole("button", { name: "Connect Provider" });
   expect((connectButton as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(connectButton);
 
@@ -91,7 +99,7 @@ test("ADC connect previews and adds the catalog with credentialKind vertex and n
 });
 
 test("ADC mode does not leak a typed service-account secret into the request", async () => {
-  const props = renderVertexDialog();
+  const props = renderProviderDialog();
 
   fireEvent.click(screen.getByRole("tab", { name: "Service Account" }));
   fireEvent.change(screen.getByLabelText("Service account client email"), {
@@ -99,7 +107,7 @@ test("ADC mode does not leak a typed service-account secret into the request", a
   });
   fireEvent.click(screen.getByRole("tab", { name: "ADC" }));
   fillVertexProjectAndLocation();
-  fireEvent.click(screen.getByRole("button", { name: "Add Provider" }));
+  fireEvent.click(screen.getByRole("button", { name: "Connect Provider" }));
 
   await waitFor(() => expect(props.onPreviewModels).toHaveBeenCalledTimes(1));
   const previewRequest = props.onPreviewModels.mock.calls[0]![0] as Record<string, unknown>;
@@ -109,13 +117,13 @@ test("ADC mode does not leak a typed service-account secret into the request", a
 });
 
 test("service-account mode still gates the catalog sync on client email and private key", () => {
-  renderVertexDialog();
+  renderProviderDialog();
 
   fireEvent.click(screen.getByRole("tab", { name: "Service Account" }));
   expect(screen.queryByText(/Application Default Credentials/)).toBeNull();
   fillVertexProjectAndLocation();
 
-  const connectButton = screen.getByRole("button", { name: "Add Provider" });
+  const connectButton = screen.getByRole("button", { name: "Connect Provider" });
   expect((connectButton as HTMLButtonElement).disabled).toBe(true);
 
   fireEvent.change(screen.getByLabelText("Service account client email"), {
@@ -125,4 +133,13 @@ test("service-account mode still gates the catalog sync on client email and priv
     target: { value: "-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----\n" },
   });
   expect((connectButton as HTMLButtonElement).disabled).toBe(false);
+});
+
+test("custom connection keeps its title and connect action across add modes", () => {
+  renderProviderDialog({ provider: "custom", providerPresets: [] });
+
+  expect(screen.getByRole("dialog", { name: "Custom Connection" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Connect Provider" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("tab", { name: "Add All" }));
+  expect(screen.getByRole("button", { name: "Connect Provider" })).toBeTruthy();
 });
