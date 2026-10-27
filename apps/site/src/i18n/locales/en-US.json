@@ -203,8 +203,6 @@
       "providerDialogDescription": "Choose a provider, then enter the connection details.",
       "searchPlaceholder": "Search",
       "noMatches": "No matches",
-      "connectDialogDescriptionCustom": "Enter the endpoint and key.",
-      "connectDialogDescriptionDefault": "Enter an API key to connect.",
       "addModeLabel": "How to add models",
       "addModeAria": "How to add models",
       "addSingle": "Add one",
@@ -215,11 +213,9 @@
       "optionalPlaceholder": "Optional",
       "apiKeyLabel": "API key",
       "apiKeyPlaceholder": "Enter key",
-      "addThisModel": "Add this model",
-      "adding": "Adding…",
-      "addProvider": "Add Provider",
+      "connecting": "Connecting…",
       "customConnectionTitle": "Custom connection",
-      "connectProviderTitle": "Connect provider"
+      "connectNamedProviderTitle": "Connect {{provider}}"
     },
     "window": {
       "toolbarAria": "Sidebar and Tools",

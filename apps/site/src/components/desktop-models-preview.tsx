@@ -498,7 +498,11 @@ export function DesktopModelsPreview({
           }
         }}
       >
-        <WindowDialogContent className="sm:max-w-lg" container={dialogContainer}>
+        <WindowDialogContent
+          className="sm:max-w-lg"
+          container={dialogContainer}
+          hasDescription={false}
+        >
           <WindowDialogHeader>
             <WindowDialogTitle>
               {selectedProvider !== null && selectedProvider !== "custom" ? (
@@ -509,11 +513,6 @@ export function DesktopModelsPreview({
                 connectDialogTitle(selectedProvider, messages.desktop.models)
               )}
             </WindowDialogTitle>
-            <WindowDialogDescription>
-              {selectedProvider === "custom"
-                ? messages.desktop.models.connectDialogDescriptionCustom
-                : messages.desktop.models.connectDialogDescriptionDefault}
-            </WindowDialogDescription>
           </WindowDialogHeader>
 
           <div className="grid gap-3 py-1">
@@ -599,7 +598,7 @@ export function DesktopModelsPreview({
                     disabled={!connectName.trim() || !connectApiKey.trim()}
                     onClick={() => setConnectDialogOpen(false)}
                   >
-                    {messages.desktop.models.addThisModel}
+                    {messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
                 {selectedProvider === "custom" && customConnectMode === "bulk" ? (
@@ -610,8 +609,8 @@ export function DesktopModelsPreview({
                     onClick={() => setConnectDialogOpen(false)}
                   >
                     {demoConnectButtonBusy
-                      ? messages.desktop.models.adding
-                      : messages.desktop.models.addProvider}
+                      ? messages.desktop.models.connecting
+                      : messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
                 {selectedProvider !== null && selectedProvider !== "custom" ? (
@@ -622,8 +621,8 @@ export function DesktopModelsPreview({
                     onClick={() => setConnectDialogOpen(false)}
                   >
                     {demoConnectButtonBusy
-                      ? messages.desktop.models.adding
-                      : messages.desktop.models.addProvider}
+                      ? messages.desktop.models.connecting
+                      : messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
               </div>
@@ -662,18 +661,18 @@ function connectDialogTitle(
     case "custom":
       return copy.customConnectionTitle;
     case "openai":
-      return "OpenAI";
+      return copy.connectNamedProviderTitle("OpenAI");
     case "anthropic":
-      return "Anthropic";
+      return copy.connectNamedProviderTitle("Anthropic");
     case "google":
-      return "Google";
+      return copy.connectNamedProviderTitle("Google");
     case "vercel-ai-gateway":
-      return "Vercel AI Gateway";
+      return copy.connectNamedProviderTitle("Vercel AI Gateway");
     case "deepseek":
-      return "DeepSeek";
+      return copy.connectNamedProviderTitle("DeepSeek");
     case "openrouter":
-      return "OpenRouter";
+      return copy.connectNamedProviderTitle("OpenRouter");
     default:
-      return copy.connectProviderTitle;
+      return copy.connectProvider;
   }
 }

@@ -100,13 +100,10 @@
       "searchPlaceholder": "Suchen",
       "noMatches": "Keine Treffer",
       "optionalPlaceholder": "Optional",
-      "addProvider": "Anbieter hinzufügen",
       "current": "Aktuell",
       "deleteDialogDescription": "Konfiguration und separat gespeicherte Schlüssel werden entfernt.",
       "providerDialogTitle": "Anbieter wählen",
       "providerDialogDescription": "Wähle einen Anbieter und gib dann die Verbindungsdetails ein.",
-      "connectDialogDescriptionCustom": "Endpoint und Schlüssel eingeben.",
-      "connectDialogDescriptionDefault": "API-Schlüssel eingeben, um zu verbinden.",
       "addModeLabel": "So fügst du Modelle hinzu",
       "addModeAria": "So fügst du Modelle hinzu",
       "addSingle": "Einzelnes hinzufügen",
@@ -116,10 +113,9 @@
       "endpointLabel": "Endpunkt",
       "apiKeyLabel": "API-Schlüssel",
       "apiKeyPlaceholder": "Schlüssel eingeben",
-      "addThisModel": "Dieses Modell hinzufügen",
-      "adding": "Wird hinzugefügt…",
+      "connecting": "Wird verbunden…",
       "customConnectionTitle": "Benutzerdefinierte Verbindung",
-      "connectProviderTitle": "Anbieter verbinden"
+      "connectNamedProviderTitle": "{{provider}} verbinden"
     },
     "window": {
       "toolbarAria": "Seitenleiste und Werkzeuge",

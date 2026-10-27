@@ -97,13 +97,10 @@
       "searchPlaceholder": "검색",
       "noMatches": "일치하는 항목 없음",
       "optionalPlaceholder": "선택 사항",
-      "addProvider": "공급자 추가",
       "current": "현재",
       "deleteDialogDescription": "구성 및 별도로 저장된 키가 제거됩니다.",
       "providerDialogTitle": "프로바이더 선택",
       "providerDialogDescription": "프로바이더를 선택한 다음 연결 세부 정보를 입력하세요.",
-      "connectDialogDescriptionCustom": "엔드포인트와 키를 입력하세요.",
-      "connectDialogDescriptionDefault": "연결할 API 키를 입력하세요.",
       "addModeLabel": "모델 추가 방법",
       "addModeAria": "모델 추가 방법",
       "addSingle": "하나 추가",
@@ -113,10 +110,9 @@
       "endpointLabel": "엔드포인트",
       "apiKeyLabel": "API 키",
       "apiKeyPlaceholder": "키 입력",
-      "addThisModel": "이 모델 추가",
-      "adding": "추가 중…",
+      "connecting": "연결 중…",
       "customConnectionTitle": "사용자 지정 연결",
-      "connectProviderTitle": "프로바이더 연결"
+      "connectNamedProviderTitle": "{{provider}} 연결"
     },
     "window": {
       "toolbarAria": "사이드바 및 도구",

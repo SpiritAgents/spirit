@@ -97,13 +97,10 @@
       "searchPlaceholder": "搜尋",
       "noMatches": "無相符結果",
       "optionalPlaceholder": "選填",
-      "addProvider": "新增提供者",
       "current": "目前",
       "deleteDialogDescription": "設定與另存的金鑰將一併移除。",
       "providerDialogTitle": "選擇提供者",
       "providerDialogDescription": "選擇提供者，然後輸入連線詳細資料。",
-      "connectDialogDescriptionCustom": "輸入端點和密鑰。",
-      "connectDialogDescriptionDefault": "輸入 API 密鑰以連線。",
       "addModeLabel": "新增模型的方式",
       "addModeAria": "新增模型的方式",
       "addSingle": "新增單一",
@@ -113,10 +110,9 @@
       "endpointLabel": "端點",
       "apiKeyLabel": "API 金鑰",
       "apiKeyPlaceholder": "輸入金鑰",
-      "addThisModel": "新增此模型",
-      "adding": "新增中…",
+      "connecting": "連接中…",
       "customConnectionTitle": "自訂連線",
-      "connectProviderTitle": "連線提供者"
+      "connectNamedProviderTitle": "連接 {{provider}}"
     },
     "window": {
       "toolbarAria": "側邊欄與工具",

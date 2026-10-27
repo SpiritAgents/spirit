@@ -9,9 +9,13 @@ type JsonMessages = Omit<Messages, "common" | "footer" | "desktop"> & {
     copyrightLine: string;
   };
   desktop: Omit<Messages["desktop"], "models" | "commit" | "shell" | "previews"> & {
-    models: Omit<Messages["desktop"]["models"], "deleteDialogTitle" | "deleteDialogDescription"> & {
+    models: Omit<
+      Messages["desktop"]["models"],
+      "deleteDialogTitle" | "deleteDialogDescription" | "connectNamedProviderTitle"
+    > & {
       deleteDialogTitle: string;
       deleteDialogDescription: string;
+      connectNamedProviderTitle: string;
     };
     commit: Omit<Messages["desktop"]["commit"], "currentBranch"> & {
       currentBranch: string;
@@ -61,6 +65,8 @@ export function hydrateMessages(raw: unknown): Messages {
           fill(json.desktop.models.deleteDialogTitle, { modelName }),
         deleteDialogDescription: (modelName) =>
           fill(json.desktop.models.deleteDialogDescription, { modelName }),
+        connectNamedProviderTitle: (provider) =>
+          fill(json.desktop.models.connectNamedProviderTitle, { provider }),
       },
       commit: {
         ...json.desktop.commit,

@@ -187,7 +187,11 @@ export {
   TEXT_LINK_POPOVER_CLASS,
   TextLink,
 } from "./link.js";
-export { endsWithFullWidthCjkPunctuation, needsSpaceBeforeInlineContent } from "./cjk.js";
+export {
+  endsWithFullWidthCjkPunctuation,
+  joinWithCjkSpacing,
+  needsSpaceBeforeInlineContent,
+} from "./cjk.js";
 export { DesktopFormInput, DesktopFormTextarea } from "./desktop-form-field.js";
 export {
   AnimatedCollapse,

@@ -97,13 +97,10 @@
       "searchPlaceholder": "Поиск",
       "noMatches": "Нет совпадений",
       "optionalPlaceholder": "Необязательно",
-      "addProvider": "Добавить провайдера",
       "current": "Текущая",
       "deleteDialogDescription": "Конфигурация и отдельно сохранённые ключи будут удалены.",
       "providerDialogTitle": "Выберите провайдера",
       "providerDialogDescription": "Выберите провайдера, затем введите данные подключения.",
-      "connectDialogDescriptionCustom": "Введите конечную точку и ключ.",
-      "connectDialogDescriptionDefault": "Введите API-ключ для подключения.",
       "addModeLabel": "Как добавить модели",
       "addModeAria": "Как добавить модели",
       "addSingle": "Добавить один",
@@ -113,10 +110,9 @@
       "endpointLabel": "Конечная точка",
       "apiKeyLabel": "API-ключ",
       "apiKeyPlaceholder": "Введите ключ",
-      "addThisModel": "Добавить эту модель",
-      "adding": "Добавление…",
+      "connecting": "Подключение…",
       "customConnectionTitle": "Пользовательское подключение",
-      "connectProviderTitle": "Подключить провайдера"
+      "connectNamedProviderTitle": "Подключить {{provider}}"
     },
     "window": {
       "toolbarAria": "Боковая панель и инструменты",
