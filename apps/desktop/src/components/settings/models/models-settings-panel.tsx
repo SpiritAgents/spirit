@@ -1,4 +1,5 @@
 import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { Search } from "@spiritagent/icons/search";
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -902,18 +903,28 @@ export function ModelsSettingsPanel({
       >
         <DialogContent className="sm:max-w-xl" showCloseButton>
           <DialogHeader>
-            <DialogTitle>{t("settings.selectProvider")}</DialogTitle>
+            <DialogTitle aria-label={t("settings.selectProvider")}>
+              {t("settings.connectProvider")}
+            </DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-1">
-            <DesktopFormInput
-              ref={providerSearchInputRef}
-              value={providerQuery}
-              onChange={(e) => setProviderQuery(e.target.value)}
-              onKeyDown={handleProviderSearchKeyDown}
-              placeholder={t("common.search")}
-              autoComplete="off"
-            />
-            <ScrollArea className="h-80">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+                strokeWidth={1.75}
+              />
+              <DesktopFormInput
+                ref={providerSearchInputRef}
+                value={providerQuery}
+                onChange={(e) => setProviderQuery(e.target.value)}
+                onKeyDown={handleProviderSearchKeyDown}
+                placeholder={t("common.search")}
+                autoComplete="off"
+                className="pl-9 pr-3.5"
+              />
+            </div>
+            <ScrollArea className="h-[min(28rem,calc(100dvh-6rem))]">
               <div ref={providerListRef} className="px-0.5" onKeyDown={handleProviderListKeyDown}>
                 {filteredProviders.length === 0 ? (
                   <p className="px-2 py-6 text-center text-sm text-muted-foreground">
