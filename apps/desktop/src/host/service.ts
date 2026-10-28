@@ -3318,9 +3318,13 @@ export class DesktopHostService {
         return {
           workspaceRoot,
           modelRef: secondaryModel.profile.ref,
-          ...(secondaryModel.profile.reasoningEffort
-            ? { reasoningEffort: secondaryModel.profile.reasoningEffort }
-            : {}),
+          ...(secondaryModel.profile.effortSemantics === "output"
+            ? secondaryModel.profile.effort !== undefined
+              ? { effort: secondaryModel.profile.effort }
+              : {}
+            : secondaryModel.profile.reasoningEffort
+              ? { reasoningEffort: secondaryModel.profile.reasoningEffort }
+              : {}),
         };
       },
       onAutomationCreated: () => {

@@ -190,7 +190,11 @@ export function ComposerSurface({
               models={models}
               catalogHints={catalogHints}
               activeModelName={activeModel}
-              activeReasoningEffort={activeModelProfile?.reasoningEffort}
+              activeReasoningEffort={
+                activeModelProfile?.effortSemantics === "output"
+                  ? activeModelProfile.effort
+                  : activeModelProfile?.reasoningEffort
+              }
               disabled={readOnly}
               onModelSelect={onModelSelect}
               triggerClassName="max-w-[min(12rem,100%)] pr-0.5 pl-1"

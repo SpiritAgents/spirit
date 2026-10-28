@@ -71,7 +71,7 @@ function renderInspector(
       {...(catalogEntry ? { catalogEntry } : {})}
       {...(lastInputTokens !== undefined ? { lastInputTokens } : {})}
       providerLabel="Provider"
-      onReasoningEffortChange={() => {}}
+      onEffortChange={() => {}}
       {...(onServiceTierChange ? { onServiceTierChange } : {})}
     />,
   );

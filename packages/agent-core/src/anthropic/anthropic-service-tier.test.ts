@@ -321,3 +321,74 @@ test("anthropic maps the declared outputLimit to max_tokens", async () => {
   assert.equal(completion.kind, "success");
   assert.equal(lastRequest(requests).body.max_tokens, 8192);
 });
+
+test("Opus 4.5 keeps its fixed budget and output effort in the final Messages body", async () => {
+  const config: AnthropicTransportConfig = {
+    ...baseConfig(),
+    model: "claude-opus-4-5",
+    effortSemantics: "output",
+    effort: "high",
+    supportsThinkingSwitch: true,
+    vendorExtendedThinking: true,
+    thinkingSwitch: {
+      defaultState: "off",
+      on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
+      off: "omit",
+    },
+  };
+  const { completion, requests } = await runRound(config);
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, { type: "enabled", budget_tokens: 12000 });
+  assert.deepEqual(lastRequest(requests).body.output_config, { effort: "high" });
+});
+
+test("Sonnet 5.5 sends between_tools and preserves output_config siblings", async () => {
+  const config: AnthropicTransportConfig = {
+    ...baseConfig(),
+    model: "claude-sonnet-5.5",
+    effortSemantics: "output",
+    effort: "medium",
+    supportsThinkingSwitch: true,
+    vendorExtendedThinking: false,
+    body: { output_config: { format: { type: "json_schema" } } },
+    thinkingSwitch: {
+      defaultState: "on",
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "between_tools" } } },
+    },
+  };
+  const { completion, requests } = await runRound(config);
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, { type: "between_tools" });
+  assert.deepEqual(lastRequest(requests).body.output_config, {
+    format: { type: "json_schema" },
+    effort: "medium",
+  });
+  const [trace] = buildAnthropicRequestTrace(config, 1, [], []);
+  assert.ok(isJsonObject(trace));
+  assert.deepEqual(trace.thinking, { type: "between_tools" });
+  assert.deepEqual(trace.output_config, { format: { type: "json_schema" }, effort: "medium" });
+});
+
+test("a blocked off preference resolves to adaptive thinking without changing the selected effort", async () => {
+  const { completion, requests } = await runRound({
+    ...baseConfig(),
+    model: "claude-opus-5",
+    effortSemantics: "output",
+    effort: "max",
+    supportsThinkingSwitch: true,
+    vendorExtendedThinking: false,
+    thinkingSwitch: {
+      defaultState: "on",
+      offBlockedEfforts: ["max"],
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  });
+
+  assert.equal(completion.kind, "success");
+  assert.deepEqual(lastRequest(requests).body.thinking, { type: "adaptive" });
+  assert.deepEqual(lastRequest(requests).body.output_config, { effort: "max" });
+});

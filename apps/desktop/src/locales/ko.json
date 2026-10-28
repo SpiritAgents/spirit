@@ -776,6 +776,8 @@
     "modelPickerReasoningModeStandard": "표준",
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "생각 중",
+    "modelPickerThinkingAlwaysOn": "이 모델은 사고가 항상 켜져 있습니다.",
+    "modelPickerThinkingRequiredForEffort": "선택한 Effort에서는 사고를 끌 수 없습니다.",
     "modelPickerNotThinking": "생각 안 함",
     "modelPickerServiceTier": "서비스 티어",
     "modelPickerServiceTierInputLimit": "입력이 {{tokens}}를 초과하면 {{tier}}을(를) 사용할 수 없습니다.",

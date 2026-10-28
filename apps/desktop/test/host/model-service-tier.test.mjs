@@ -787,3 +787,60 @@ test("idle flush prefers a full refresh when both deferral flags are set", async
     assert.equal(bundle.deferredRuntimeRefreshWhileBusy, false);
   });
 });
+
+test("updateConfigCommand stores output effort and explicit thinking preferences without legacy keys", async () => {
+  await withUpdateConfigFixture(
+    {
+      providers: [
+        anthropicProvider([
+          {
+            name: "claude-opus-4.5",
+            effortSemantics: "output",
+            supportedEfforts: ["low", "medium", "high"],
+            defaultEffort: "high",
+            supportsThinkingSwitch: true,
+            thinkingSwitch: { defaultState: "off", off: "omit" },
+          },
+        ]),
+      ],
+      activeModel: { providerId: "anthropic", name: "claude-opus-4.5" },
+    },
+    async ({ config, dir }) => {
+      const { ctx, calls } = createUpdateConfigContext({ config });
+      await updateConfigCommand(ctx, {
+        activeModel: { providerId: "anthropic", name: "claude-opus-4.5" },
+        apiBase: "https://api.anthropic.com",
+        effort: "high",
+        thinkingEnabled: true,
+      });
+
+      let model = config.providers[0].models[0];
+      assert.equal(model.effort, "high");
+      assert.equal(model.thinkingEnabled, true);
+      assert.equal("reasoningEffort" in model, false);
+      assert.equal(calls.refreshActiveModelTransportConfig, 1);
+      assert.equal((await readDiskModel(dir)).effort, "high");
+      assert.equal((await readDiskModel(dir)).thinkingEnabled, true);
+
+      await updateConfigCommand(ctx, {
+        activeModel: { providerId: "anthropic", name: "claude-opus-4.5" },
+        apiBase: "https://api.anthropic.com",
+        effort: "default",
+        thinkingEnabled: false,
+      });
+      model = config.providers[0].models[0];
+      assert.equal("effort" in model, false);
+      assert.equal(model.thinkingEnabled, false);
+
+      await assert.rejects(
+        updateConfigCommand(ctx, {
+          activeModel: { providerId: "anthropic", name: "claude-opus-4.5" },
+          apiBase: "https://api.anthropic.com",
+          reasoningEffort: "high",
+        }),
+        /uses effort, not reasoningEffort/,
+      );
+      assert.equal("reasoningEffort" in model, false);
+    },
+  );
+});

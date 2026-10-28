@@ -6,7 +6,7 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
 import { modelCatalogHasDetailBody } from "@/lib/model-catalog-detail";
 import {
-  declaredReasoningEffortOptions,
+  declaredEffortOptions,
   declaredServiceTierControlKind,
   declaredServiceTierMaxInputTokens,
   declaredServiceTierOptions,
@@ -14,10 +14,14 @@ import {
   isDeclaredServiceTierAvailable,
   effectiveReasoningMode,
   effectiveThinkingEnabled,
-  showsReasoningEffortControl,
+  modelEffortControlLabelKind,
+  selectedModelEffort,
+  showsEffortControl,
   showsReasoningModeControl,
   showsServiceTierControl,
+  showsThinkingAlwaysOnHint,
   showsThinkingSwitchControl,
+  thinkingSwitchForcedOn,
 } from "@/lib/model-picker-controls";
 import { serviceTierValueLabelKey } from "@/lib/model-service-tier-context";
 import { formatCompactTokenCount } from "@/lib/format-compact-token-count";
@@ -36,7 +40,7 @@ import {
 } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   ModelProfileSnapshot,
   ModelRef,
@@ -61,13 +65,13 @@ export function modelPickerInspectorNeedsWideLayout(
   if (showsServiceTierControl(model, catalogEntry)) {
     return true;
   }
-  if (showsThinkingSwitchControl(model)) {
+  if (showsThinkingSwitchControl(model) || showsThinkingAlwaysOnHint(model)) {
     return true;
   }
   if (showsReasoningModeControl(model)) {
     return true;
   }
-  return showsReasoningEffortControl(model);
+  return showsEffortControl(model);
 }
 
 type ModelPickerInspectorPanelProps = {
@@ -77,7 +81,7 @@ type ModelPickerInspectorPanelProps = {
   density?: "default" | "list";
   /** Last upstream-measured conversation input tokens; absent means unknown. */
   lastInputTokens?: number;
-  onReasoningEffortChange: (modelRef: ModelRef, effort: DesktopModelReasoningEffort) => void;
+  onEffortChange: (modelRef: ModelRef, effort: DesktopModelEffortSelection) => void;
   onReasoningModeChange?: (modelRef: ModelRef, mode: DesktopModelReasoningMode) => void;
   /**
    * The thinking toggle renders only when this callback is provided, so read-only pickers never
@@ -101,7 +105,7 @@ export function ModelPickerInspectorPanel({
   providerLabel,
   density = "default",
   lastInputTokens,
-  onReasoningEffortChange,
+  onEffortChange,
   onReasoningModeChange,
   onThinkingEnabledChange,
   onServiceTierChange,
@@ -111,13 +115,15 @@ export function ModelPickerInspectorPanel({
   const modelRef = modelInspectorRef(model);
   const showThinkingSwitch =
     onThinkingEnabledChange !== undefined && showsThinkingSwitchControl(model);
+  const showThinkingAlwaysOn = showsThinkingAlwaysOnHint(model);
+  const thinkingForcedOn = thinkingSwitchForcedOn(model);
   const [pendingThinkingEnabled, setPendingThinkingEnabled] = useState<boolean | null>(null);
   useEffect(() => {
     setPendingThinkingEnabled(null);
-  }, [model.name, model.thinkingEnabled]);
+  }, [model.name, model.thinkingEnabled, model.effort]);
   const thinkingEnabled = pendingThinkingEnabled ?? effectiveThinkingEnabled(model);
-  const showReasoningEffort = showsReasoningEffortControl(model);
-  const effortOptions = declaredReasoningEffortOptions(model);
+  const showEffort = showsEffortControl(model);
+  const effortOptions = declaredEffortOptions(model);
   const showReasoningMode = showsReasoningModeControl(model);
   const reasoningMode = effectiveReasoningMode(model);
   const serviceTierControl = onServiceTierChange
@@ -170,13 +176,14 @@ export function ModelPickerInspectorPanel({
       }
     });
   };
-  const displayedEffort = model.reasoningEffort ?? "default";
+  const displayedEffort = selectedModelEffort(model);
   const labelClass = isList ? DESKTOP_OVERLAY_LIST_DETAIL_LABEL : "text-xs text-muted-foreground";
   const selectTriggerClass = cn(isList ? "h-7" : "h-8", DESKTOP_GHOST_SELECT_TRIGGER);
 
   const modelControls =
     showThinkingSwitch ||
-    showReasoningEffort ||
+    showThinkingAlwaysOn ||
+    showEffort ||
     showReasoningMode ||
     (serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined) ||
     switchTier !== undefined ? (
@@ -189,6 +196,7 @@ export function ModelPickerInspectorPanel({
             <Switch
               id={`model-thinking-${model.name}`}
               checked={thinkingEnabled}
+              disabled={thinkingForcedOn}
               onCheckedChange={(checked) => {
                 setPendingThinkingEnabled(checked);
                 void Promise.resolve(onThinkingEnabledChange?.(modelRef, checked)).then((ok) => {
@@ -200,13 +208,27 @@ export function ModelPickerInspectorPanel({
             />
           </div>
         ) : null}
-        {showReasoningEffort ? (
+        {thinkingForcedOn ? (
+          <p className="text-xs text-muted-foreground">
+            {t("app.modelPickerThinkingRequiredForEffort")}
+          </p>
+        ) : null}
+        {showThinkingAlwaysOn ? (
+          <p className="text-xs text-muted-foreground">{t("app.modelPickerThinkingAlwaysOn")}</p>
+        ) : null}
+        {showEffort ? (
           <div className="flex items-center justify-between gap-2">
-            <Label className={labelClass}>{t("app.modelPickerReasoningEffort")}</Label>
+            <Label className={labelClass}>
+              {t(
+                modelEffortControlLabelKind(model) === "effort"
+                  ? "app.modelPickerEffort"
+                  : "app.modelPickerReasoningEffort",
+              )}
+            </Label>
             <Select
               value={displayedEffort}
               onValueChange={(value) => {
-                onReasoningEffortChange(modelRef, value as DesktopModelReasoningEffort);
+                onEffortChange(modelRef, value as DesktopModelEffortSelection);
               }}
             >
               <SelectTrigger className={selectTriggerClass}>

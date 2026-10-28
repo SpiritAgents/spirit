@@ -66,6 +66,7 @@ const MESSAGE_PATHS: Record<string, string> = {
   "settings.capabilityImageGenerationLabel": "desktop.models.heading",
   "settings.capabilityVideoGenerationLabel": "desktop.models.heading",
   "app.modelPickerReasoningEffort": "desktop.models.heading",
+  "app.modelPickerEffort": "desktop.models.heading",
   "composer.removeAttachment": "desktop.models.deleteAction",
   "composer.openInsertPanel": "desktop.models.connectProvider",
   "composer.insert": "desktop.models.connectProvider",

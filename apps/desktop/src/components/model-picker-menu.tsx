@@ -42,7 +42,8 @@ import { toolCardSecondaryTextClass } from "@/lib/file-tool-lsp-diagnostics-disp
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import {
   effectiveDeclaredServiceTier,
-  reasoningEffortOptionLabel,
+  modelEffortTriggerLabel,
+  selectedModelEffort,
   serviceTierTriggerSuffixTier,
   showsReasoningModeControl,
   effectiveReasoningMode,
@@ -51,7 +52,7 @@ import { serviceTierValueLabelKey } from "@/lib/model-service-tier-context";
 import { groupModelsForPicker } from "@/lib/model-picker-groups";
 import { DESKTOP_MENU_TRIGGER_TEXT_CLASS } from "@/lib/desktop-typography";
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopSnapshot,
   ModelProfileSnapshot,
@@ -139,14 +140,14 @@ export type ModelPickerMenuProps = {
   /** Preset picker rows from the host snapshot: group order + fallback labels in the menu. */
   providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModelRef: ModelRef;
-  activeReasoningEffort?: DesktopModelReasoningEffort;
+  activeReasoningEffort?: DesktopModelEffortSelection;
   /** Last upstream-measured conversation input tokens; absent means unknown. */
   lastInputTokens?: number;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?(open: boolean): void;
   onModelSelect(ref: ModelRef): void;
-  onModelReasoningEffortSelect?(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
+  onModelReasoningEffortSelect?(ref: ModelRef, reasoningEffort: DesktopModelEffortSelection): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
@@ -326,7 +327,9 @@ export function ModelPickerMenu({
                   {activeModelProfile ? (
                     <ModelPickerTriggerLabel
                       name={modelDisplayTitleFromMap(activeModelProfile, displayTitleByModelName)}
-                      reasoningEffort={activeReasoningEffort ?? activeModelProfile.reasoningEffort}
+                      reasoningEffort={
+                        activeReasoningEffort ?? selectedModelEffort(activeModelProfile)
+                      }
                       model={activeModelProfile}
                       lastInputTokens={lastInputTokens}
                       catalogEntry={catalogDetailByModelName.get(
@@ -429,7 +432,7 @@ export function ModelPickerMenu({
                   catalogEntry={catalogEntry}
                   lastInputTokens={lastInputTokens}
                   providerLabel={providerLabel}
-                  onReasoningEffortChange={(modelRef, effort) => {
+                  onEffortChange={(modelRef, effort) => {
                     onModelReasoningEffortSelect?.(modelRef, effort);
                     onModelSelect(modelRef);
                   }}
@@ -457,7 +460,7 @@ function ModelPickerTriggerLabel({
   lastInputTokens,
 }: {
   name: string;
-  reasoningEffort?: DesktopModelReasoningEffort;
+  reasoningEffort?: DesktopModelEffortSelection;
   model: ModelProfileSnapshot;
   catalogEntry?: PreviewModelCatalogEntry;
   lastInputTokens?: number;
@@ -472,15 +475,9 @@ function ModelPickerTriggerLabel({
     secondaryLabels.push(t("app.modelPickerReasoningModePro"));
   }
 
-  // The effort suffix only makes sense when the model declares effort options.
-  const declaredEffort =
-    reasoningEffort !== undefined &&
-    (model.supportedReasoningEfforts?.length ?? 0) > 0 &&
-    reasoningEffort !== "default"
-      ? reasoningEffort
-      : undefined;
-  if (declaredEffort !== undefined) {
-    secondaryLabels.push(reasoningEffortOptionLabel(declaredEffort));
+  const effortLabel = modelEffortTriggerLabel(model, reasoningEffort);
+  if (effortLabel !== undefined) {
+    secondaryLabels.push(effortLabel);
   }
   if (suffixTier !== undefined) {
     secondaryLabels.push(t(serviceTierValueLabelKey(suffixTier)));

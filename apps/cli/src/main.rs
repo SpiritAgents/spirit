@@ -128,6 +128,8 @@ enum ModelAction {
         transport_kind: Option<String>,
         #[arg(long, value_name = "reasoning_effort")]
         reasoning_effort: Option<String>,
+        #[arg(long, value_name = "effort")]
+        effort: Option<String>,
         #[arg(long = "capability", value_name = "capability", value_parser = ["languageModel", "image", "imageGeneration", "video", "videoGeneration"])]
         capabilities: Vec<String>,
         #[arg(long, value_name = "context_length")]
@@ -385,6 +387,7 @@ fn into_model_command(action: ModelAction) -> ModelCommand {
             provider,
             transport_kind,
             reasoning_effort,
+            effort,
             capabilities,
             context_length,
             key,
@@ -405,6 +408,7 @@ fn into_model_command(action: ModelAction) -> ModelCommand {
             provider,
             transport_kind,
             reasoning_effort,
+            effort,
             capabilities,
             context_length,
             key,

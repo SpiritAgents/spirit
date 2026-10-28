@@ -216,6 +216,66 @@ test("serviceTier simple form maps to the OpenAI-family service_tier body field"
   assert.deepEqual(captured[0]!.body, { model: "m", service_tier: "priority" });
 });
 
+test("output effort replaces SDK thinking and effort while preserving the rest of output_config", async () => {
+  const { fetch: base, captured } = capturingFetch();
+  const fetch = createDeclaredWireMergeFetch(
+    {
+      effortSemantics: "output",
+      effort: "high",
+      body: { output_config: { format: { type: "json_schema" } } },
+      thinkingSwitch: {
+        defaultState: "on",
+        on: { body: { thinking: { type: "adaptive" } } },
+        off: { body: { thinking: { type: "between_tools" } } },
+      },
+      vendorExtendedThinking: false,
+    },
+    "messages",
+    base,
+  );
+
+  await fetch("https://upstream.example/v1/messages", {
+    method: "POST",
+    body: JSON.stringify({
+      model: "claude-sonnet-5.5",
+      thinking: { type: "enabled", budget_tokens: 12000 },
+      output_config: { effort: "max", task_budget: 4096 },
+    }),
+  });
+
+  assert.deepEqual(captured[0]!.body, {
+    model: "claude-sonnet-5.5",
+    thinking: { type: "between_tools" },
+    output_config: { format: { type: "json_schema" }, task_budget: 4096, effort: "high" },
+  });
+});
+
+test("default output effort and omit thinking remove SDK-inferred fields", async () => {
+  const { fetch: base, captured } = capturingFetch();
+  const fetch = createDeclaredWireMergeFetch(
+    {
+      effortSemantics: "output",
+      thinkingSwitch: { defaultState: "off", off: "omit" },
+    },
+    "messages",
+    base,
+  );
+
+  await fetch("https://upstream.example/v1/messages", {
+    method: "POST",
+    body: JSON.stringify({
+      model: "claude-opus-4.8",
+      thinking: { type: "adaptive" },
+      output_config: { effort: "high", format: { type: "text" } },
+    }),
+  });
+
+  assert.deepEqual(captured[0]!.body, {
+    model: "claude-opus-4.8",
+    output_config: { format: { type: "text" } },
+  });
+});
+
 test("no declarations returns the base fetch untouched", () => {
   const { fetch: base } = capturingFetch();
   assert.equal(createDeclaredWireMergeFetch({}, "chat-completions", base), base);

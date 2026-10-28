@@ -79,9 +79,13 @@ function applyOpenAiCompatibleCodeCompletionProfile(
 function applyAnthropicCodeCompletionProfile(
   config: AnthropicTransportConfig,
 ): AnthropicTransportConfig {
-  // The transport's code-completion branch sends the protocol's `{thinking: {type: "disabled"}}`;
-  // a declared thinkingSwitch off patch applies on top via the literal merge layer.
-  return withThinkingOff(withCodeCompletionProfile(config));
+  const { effort: _effort, ...withoutEffort } = withThinkingOff(withCodeCompletionProfile(config));
+  if (config.supportsThinkingSwitch === false) {
+    const { vendorExtendedThinking: _vendorExtendedThinking, ...withoutThinkingPreference } =
+      withoutEffort;
+    return withoutThinkingPreference;
+  }
+  return withoutEffort;
 }
 
 function applyOpenResponsesCodeCompletionProfile(

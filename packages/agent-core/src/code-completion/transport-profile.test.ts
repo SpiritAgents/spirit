@@ -125,10 +125,12 @@ test("anthropic: the profile marks the config and the transport encodes thinking
     transportKind: "anthropic",
     apiKey: "k",
     model: "claude-sonnet-4-6",
+    effortSemantics: "output",
     effort: "high",
   };
   const result = applyCodeCompletionTransportProfile(input);
   assert.equal(result.transportRequestProfile, "code-completion");
+  assert.equal("effort" in result, false);
   assert.deepEqual(resolveAnthropicThinkingConfig(result as AnthropicTransportConfig), {
     type: "disabled",
   });

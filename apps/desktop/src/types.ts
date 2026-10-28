@@ -99,6 +99,7 @@ export interface UpdateConfigRequest {
   secondaryLanguageModel?: ModelRef;
   apiBase: string;
   reasoningEffort?: DesktopModelReasoningEffort;
+  effort?: ModelEffortSelection;
   reasoningMode?: DesktopModelReasoningMode;
   /**
    * User thinking on/off state for the active model (model-level; absent = on). Only meaningful
@@ -212,6 +213,9 @@ export type DesktopProviderCredentialKind = "apiKey" | "bedrock" | "vertex";
 
 /** Model reasoning effort string; declared per model in config (`supportedReasoningEfforts`). */
 export type DesktopModelReasoningEffort = ModelReasoningEffort;
+
+/** Shared picker selection: output-effort models and reasoning-effort models use distinct config fields. */
+export type DesktopModelEffortSelection = DesktopModelReasoningEffort | ModelEffortSelection;
 
 /** reasoning.mode (standard / pro); `standard` or absent means no mode is sent on the wire. */
 export type DesktopModelReasoningMode = SpiritModelReasoningMode;
@@ -1425,6 +1429,7 @@ export interface DesktopAutomationDefinition {
   workspaceRoot: string;
   modelRef: ModelRef;
   reasoningEffort?: DesktopModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel: ApprovalLevel;
   enabled: boolean;
   createdAtUnixMs: number;
@@ -1444,6 +1449,7 @@ export interface DesktopCreateAutomationRequest {
   workspaceRoot: string;
   modelRef: ModelRef;
   reasoningEffort?: DesktopModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel: ApprovalLevel;
   enabled?: boolean;
 }
@@ -1455,6 +1461,7 @@ export interface DesktopUpdateAutomationRequest {
   workspaceRoot?: string;
   modelRef?: ModelRef;
   reasoningEffort?: DesktopModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel?: ApprovalLevel;
   enabled?: boolean;
 }

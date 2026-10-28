@@ -171,6 +171,22 @@ function assertDeclaredReasoningEffort(
   }
 }
 
+/** Fail-fast: output effort uses only the declared supportedEfforts field. */
+function assertDeclaredEffort(
+  modelName: string,
+  effort: NonNullable<ModelEntry["effort"]>,
+  declared: readonly string[] | undefined,
+): void {
+  if (effort === "default") {
+    return;
+  }
+  if (Array.isArray(declared) && !declared.includes(effort)) {
+    throw new Error(
+      `Effort "${effort}" is not in the declared supportedEfforts for model "${modelName}".`,
+    );
+  }
+}
+
 /** Fail-fast: a chosen mode must be one of the model's declared modes when a list exists. */
 function assertDeclaredReasoningMode(
   modelName: string,
@@ -240,6 +256,7 @@ export async function updateConfigCommand(
     const prevActiveModelInference = prevActiveModelProfile
       ? {
           reasoningEffort: prevActiveModelProfile.reasoningEffort,
+          effort: prevActiveModelProfile.effort,
           reasoningMode: prevActiveModelProfile.reasoningMode,
           serviceTier: prevActiveModelProfile.serviceTier,
           thinkingEnabled: prevActiveModelProfile.thinkingEnabled,
@@ -253,6 +270,7 @@ export async function updateConfigCommand(
     const activeRef = request.activeModel;
     const apiBase = request.apiBase.trim();
     const reasoningEffort = request.reasoningEffort;
+    const effort = request.effort;
     const reasoningMode = request.reasoningMode;
     const thinkingEnabled = request.thinkingEnabled;
     const serviceTier = request.serviceTier;
@@ -267,6 +285,25 @@ export async function updateConfigCommand(
       // preset entries get their base from the wizard's materialization (connect / reconnect).
       if (findProviderPresetForEntry(provider) === undefined && apiBase) {
         provider.apiBase = apiBase;
+      }
+      const outputEffort = (model.effortSemantics ?? provider.effortSemantics) === "output";
+      if (outputEffort && reasoningEffort !== undefined) {
+        throw new Error(`Model "${model.name}" uses effort, not reasoningEffort.`);
+      }
+      if (!outputEffort && effort !== undefined) {
+        throw new Error(`Model "${model.name}" uses reasoningEffort, not effort.`);
+      }
+      if (effort !== undefined) {
+        assertDeclaredEffort(
+          model.name,
+          effort,
+          model.supportedEfforts ?? provider.supportedEfforts,
+        );
+        if (effort === "default") {
+          delete model.effort;
+        } else {
+          model.effort = effort;
+        }
       }
       if (reasoningEffort !== undefined) {
         // Fail-fast against the declared list (effective = model over provider inheritance); the
@@ -310,7 +347,10 @@ export async function updateConfigCommand(
       if (thinkingEnabled !== undefined) {
         // Fail-fast: only a model declaring `supportsThinkingSwitch` may carry the user state.
         assertDeclaredThinkingSwitch(model.name, provider, model);
-        if (thinkingEnabled) {
+        const thinkingDefault = (model.thinkingSwitch ?? provider.thinkingSwitch)?.defaultState;
+        if (thinkingDefault !== undefined) {
+          model.thinkingEnabled = thinkingEnabled;
+        } else if (thinkingEnabled) {
           delete model.thinkingEnabled;
         } else {
           model.thinkingEnabled = false;
@@ -543,6 +583,7 @@ export async function updateConfigCommand(
       prevActiveModelInference !== undefined &&
       modelRefsEqual(state.config.activeModel, prevActiveModel) &&
       (activeModelProfile.reasoningEffort !== prevActiveModelInference.reasoningEffort ||
+        activeModelProfile.effort !== prevActiveModelInference.effort ||
         activeModelProfile.reasoningMode !== prevActiveModelInference.reasoningMode ||
         activeModelProfile.thinkingEnabled !== prevActiveModelInference.thinkingEnabled ||
         activeModelProfile.serviceTier !== prevActiveModelInference.serviceTier);

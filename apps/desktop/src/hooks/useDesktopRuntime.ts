@@ -14,6 +14,7 @@ import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translu
 import type { SettingsFormState } from "@/components/settings/types";
 import { useHostApi } from "@/hooks/useHostApi";
 import { emptyModelRef, modelRefsEqual } from "@/lib/model-ref";
+import { modelEffortPreference } from "@/lib/model-picker-controls";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelRef } from "@/types";
 import {
@@ -74,7 +75,7 @@ import type {
   DeleteHookEntryRequest,
   DeleteSkillRequest,
   DesktopApprovalDecision,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopAutomationDetail,
   DesktopAutomationListItem,
@@ -2448,7 +2449,7 @@ export function useDesktopRuntime() {
   }, [api, bootstrap, saveSettingsPatch, snapshot]);
 
   const setModelReasoningEffort = useCallback(
-    async (modelRef: ModelRef, reasoningEffort: DesktopModelReasoningEffort) => {
+    async (modelRef: ModelRef, effort: DesktopModelEffortSelection) => {
       if (!api || !snapshot) {
         return;
       }
@@ -2473,7 +2474,7 @@ export function useDesktopRuntime() {
             host: next.webHostHost,
             port: next.webHostPort,
           }),
-          reasoningEffort,
+          ...modelEffortPreference(model, effort),
         });
         applySnapshot(res);
         setRuntimeError("");

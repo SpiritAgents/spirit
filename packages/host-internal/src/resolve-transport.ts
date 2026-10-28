@@ -77,18 +77,6 @@ function anthropicEffort(
     : undefined;
 }
 
-function anthropicSupportedEfforts(
-  efforts: readonly SpiritModelReasoningEffort[] | undefined,
-): AnthropicTransportConfig["supportedEfforts"] {
-  if (efforts === undefined) {
-    return undefined;
-  }
-  return efforts.filter(
-    (effort): effort is NonNullable<AnthropicTransportConfig["supportedEfforts"]>[number] =>
-      ANTHROPIC_EFFORT_TOKENS.has(effort),
-  );
-}
-
 /** Declaration fields carried verbatim onto transport configs; every member is optional. */
 interface TransportDeclarationFields {
   sdk?: string;
@@ -225,13 +213,7 @@ function buildTransportFromProfile(
   }
 
   if (transportKind === "anthropic") {
-    const outputEffort = profile.effortSemantics === "output";
-    const supportedEfforts = outputEffort
-      ? profile.supportedEfforts
-      : anthropicSupportedEfforts(profile.supportedReasoningEfforts);
-    const effort = outputEffort
-      ? anthropicEffort(profile.effort)
-      : anthropicEffort(profile.reasoningEffort);
+    const effort = anthropicEffort(profile.effort);
     return {
       transportKind: "anthropic",
       apiKey,
@@ -240,12 +222,16 @@ function buildTransportFromProfile(
       workspaceRoot,
       ...(profile.serviceTier !== undefined ? { serviceTier: profile.serviceTier } : {}),
       ...capabilities,
-      ...(supportedEfforts !== undefined ? { supportedEfforts } : {}),
+      ...(profile.supportedEfforts !== undefined
+        ? { supportedEfforts: profile.supportedEfforts }
+        : {}),
       ...(effort !== undefined ? { effort } : {}),
       ...(profile.supportsThinkingSwitch !== undefined
         ? { supportsThinkingSwitch: profile.supportsThinkingSwitch }
         : {}),
-      ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
+      ...(profile.thinkingEnabled !== undefined
+        ? { vendorExtendedThinking: profile.thinkingEnabled }
+        : {}),
       ...declarations,
     };
   }
