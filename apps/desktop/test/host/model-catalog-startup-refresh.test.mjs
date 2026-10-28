@@ -279,7 +279,12 @@ test("syncExistingModelsFromCatalog adds legacy OpenAI declarations and preserve
     "high",
     "xhigh",
   ]);
-  assert.deepEqual(provider.models[0].serviceTiers, ["auto", "default", "flex"]);
+  assert.deepEqual(provider.models[0].serviceTiers, {
+    auto: { body: { service_tier: "auto" } },
+    default: { body: { service_tier: "default" } },
+    flex: { body: { service_tier: "flex" } },
+    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+  });
   assert.equal(provider.models[0].reasoningEffort, "high");
   assert.equal(provider.models[0].serviceTier, "flex");
   assert.deepEqual(provider.models[1].serviceTiers, ["auto", "default", "fast"]);

@@ -775,6 +775,7 @@
     "modelPickerThinking": "思考",
     "modelPickerNotThinking": "不思考",
     "modelPickerServiceTier": "服务档位",
+    "modelPickerServiceTierInputLimit": "当输入超过 {{tokens}} 时，{{tier}} 不可用。",
     "modelPickerServiceTierValues": {
       "auto": "自动",
       "default": "默认",

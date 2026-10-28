@@ -140,6 +140,8 @@ export type ModelPickerMenuProps = {
   providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModelRef: ModelRef;
   activeReasoningEffort?: DesktopModelReasoningEffort;
+  /** Last upstream-measured conversation input tokens; absent means unknown. */
+  lastInputTokens?: number;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?(open: boolean): void;
@@ -162,6 +164,7 @@ export function ModelPickerMenu({
   providerPresets,
   activeModelRef,
   activeReasoningEffort,
+  lastInputTokens,
   disabled,
   open: openProp,
   onOpenChange,
@@ -325,6 +328,7 @@ export function ModelPickerMenu({
                       name={modelDisplayTitleFromMap(activeModelProfile, displayTitleByModelName)}
                       reasoningEffort={activeReasoningEffort ?? activeModelProfile.reasoningEffort}
                       model={activeModelProfile}
+                      lastInputTokens={lastInputTokens}
                       catalogEntry={catalogDetailByModelName.get(
                         modelCatalogScopeEntryKey(activeModelProfile),
                       )}
@@ -423,6 +427,7 @@ export function ModelPickerMenu({
                 <ModelPickerInspectorPanel
                   model={model}
                   catalogEntry={catalogEntry}
+                  lastInputTokens={lastInputTokens}
                   providerLabel={providerLabel}
                   onReasoningEffortChange={(modelRef, effort) => {
                     onModelReasoningEffortSelect?.(modelRef, effort);
@@ -449,15 +454,17 @@ function ModelPickerTriggerLabel({
   reasoningEffort,
   model,
   catalogEntry,
+  lastInputTokens,
 }: {
   name: string;
   reasoningEffort?: DesktopModelReasoningEffort;
   model: ModelProfileSnapshot;
   catalogEntry?: PreviewModelCatalogEntry;
+  lastInputTokens?: number;
 }) {
   const { t } = useTranslation();
   const suffixTier = serviceTierTriggerSuffixTier(
-    effectiveDeclaredServiceTier(model, catalogEntry),
+    effectiveDeclaredServiceTier(model, catalogEntry, lastInputTokens),
   );
 
   const secondaryLabels: string[] = [];

@@ -30,9 +30,14 @@
       "match": "gpt-5\\.5(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
         "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
-        "serviceTiers": ["auto", "default", "flex"]
+        "serviceTiers": {
+          "auto": { "body": { "service_tier": "auto" } },
+          "default": { "body": { "service_tier": "default" } },
+          "flex": { "body": { "service_tier": "flex" } },
+          "fast": { "body": { "service_tier": "fast" }, "maxInputTokens": 278528 }
+        }
       },
-      "note": "GPT-5.5 supports none through xhigh, but not minimal or max. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5.5 supports none through xhigh, but not minimal or max. Fast supports at most 272K input tokens. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
@@ -46,9 +51,14 @@
       "match": "gpt-5\\.4-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
         "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
-        "serviceTiers": ["auto", "default", "flex"]
+        "serviceTiers": {
+          "auto": { "body": { "service_tier": "auto" } },
+          "default": { "body": { "service_tier": "default" } },
+          "flex": { "body": { "service_tier": "flex" } },
+          "fast": { "body": { "service_tier": "fast" }, "maxInputTokens": 278528 }
+        }
       },
-      "note": "GPT-5.4 mini supports none through xhigh. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5.4 mini supports none through xhigh. Fast supports at most 272K input tokens. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4-nano(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
@@ -62,9 +72,14 @@
       "match": "gpt-5\\.4(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
         "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
-        "serviceTiers": ["auto", "default", "flex"]
+        "serviceTiers": {
+          "auto": { "body": { "service_tier": "auto" } },
+          "default": { "body": { "service_tier": "default" } },
+          "flex": { "body": { "service_tier": "flex" } },
+          "fast": { "body": { "service_tier": "fast" }, "maxInputTokens": 278528 }
+        }
       },
-      "note": "GPT-5.4 supports none through xhigh. Only the canonical id and dated snapshots are matched; Pro, mini, and nano have their own records."
+      "note": "GPT-5.4 supports none through xhigh. Fast supports at most 272K input tokens. Only the canonical id and dated snapshots are matched; Pro, mini, and nano have their own records."
     },
     {
       "match": "gpt-5\\.3-codex(?:$|-\\d{4}-\\d{2}-\\d{2}$)",

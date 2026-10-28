@@ -740,6 +740,7 @@ function resolveChatServiceTierPlan(config: OpenAiTransportConfig): ServiceTierR
   return resolveServiceTierRequestPlan({
     ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    ...(config.lastInputTokens !== undefined ? { lastInputTokens: config.lastInputTokens } : {}),
     surface: chatServiceTierSurface(config),
   });
 }

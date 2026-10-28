@@ -110,6 +110,7 @@ function resolveResponsesServiceTierPlan(
   return resolveServiceTierRequestPlan({
     serviceTier: config.serviceTier,
     ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    ...(config.lastInputTokens !== undefined ? { lastInputTokens: config.lastInputTokens } : {}),
     surface: responsesServiceTierSurface(config),
   });
 }

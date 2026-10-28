@@ -37,6 +37,12 @@ type ServiceTierChange = (
 ) => void | Promise<boolean>;
 
 const OPENAI_TIERS = ["auto", "default", "flex", "fast"] as const;
+const LIMITED_OPENAI_TIERS = {
+  auto: { body: { service_tier: "auto" } },
+  default: { body: { service_tier: "default" } },
+  flex: { body: { service_tier: "flex" } },
+  fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+};
 
 function tierModel(overrides: Partial<ModelProfileSnapshot> = {}): ModelProfileSnapshot {
   return {
@@ -54,14 +60,16 @@ function renderInspector(
   model: ModelProfileSnapshot,
   options: {
     catalogEntry?: PreviewModelCatalogEntry;
+    lastInputTokens?: number;
     onServiceTierChange?: ServiceTierChange;
   } = {},
 ) {
-  const { catalogEntry, onServiceTierChange } = options;
+  const { catalogEntry, lastInputTokens, onServiceTierChange } = options;
   return render(
     <ModelPickerInspectorPanel
       model={model}
       {...(catalogEntry ? { catalogEntry } : {})}
+      {...(lastInputTokens !== undefined ? { lastInputTokens } : {})}
       providerLabel="Provider"
       onReasoningEffortChange={() => {}}
       {...(onServiceTierChange ? { onServiceTierChange } : {})}
@@ -267,6 +275,38 @@ test("a failed save rolls the displayed tier back to the stored value", async ()
 test("the displayed tier follows the stored preference", () => {
   renderInspector(tierModel({ serviceTier: "flex" }), { onServiceTierChange: vi.fn() });
   expect(serviceTierTrigger().textContent).toBe("Flex");
+});
+
+test("input-limited fast displays Default and is disabled above the limit", async () => {
+  renderInspector(tierModel({ serviceTiers: LIMITED_OPENAI_TIERS, serviceTier: "fast" }), {
+    onServiceTierChange: vi.fn(),
+    lastInputTokens: 278529,
+  });
+
+  expect(serviceTierTrigger().textContent).toBe("Default");
+  expect(screen.getByText("Fast is unavailable above 272K input tokens.")).toBeTruthy();
+  fireEvent.keyDown(serviceTierTrigger(), { key: "ArrowDown" });
+  const fastOption = await screen.findByRole("option", { name: "Fast" });
+  expect(fastOption.getAttribute("aria-disabled")).toBe("true");
+});
+
+test("input-limited fast stays available with unknown usage and at the exact boundary", async () => {
+  for (const lastInputTokens of [undefined, 278528]) {
+    const { unmount } = renderInspector(
+      tierModel({ serviceTiers: LIMITED_OPENAI_TIERS, serviceTier: "fast" }),
+      {
+        onServiceTierChange: vi.fn(),
+        ...(lastInputTokens !== undefined ? { lastInputTokens } : {}),
+      },
+    );
+
+    expect(serviceTierTrigger().textContent).toBe("Fast");
+    expect(screen.queryByText("Fast is unavailable above 272K input tokens.")).toBeNull();
+    fireEvent.keyDown(serviceTierTrigger(), { key: "ArrowDown" });
+    const fastOption = await screen.findByRole("option", { name: "Fast" });
+    expect(fastOption.getAttribute("aria-disabled")).not.toBe("true");
+    unmount();
+  }
 });
 
 test("without the callback the tier controls do not render", () => {

@@ -8,8 +8,10 @@ import { modelCatalogHasDetailBody } from "@/lib/model-catalog-detail";
 import {
   declaredReasoningEffortOptions,
   declaredServiceTierControlKind,
+  declaredServiceTierMaxInputTokens,
   declaredServiceTierOptions,
   effectiveDeclaredServiceTier,
+  isDeclaredServiceTierAvailable,
   effectiveReasoningMode,
   effectiveThinkingEnabled,
   showsReasoningEffortControl,
@@ -18,6 +20,7 @@ import {
   showsThinkingSwitchControl,
 } from "@/lib/model-picker-controls";
 import { serviceTierValueLabelKey } from "@/lib/model-service-tier-context";
+import { formatCompactTokenCount } from "@/lib/format-compact-token-count";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -44,6 +47,10 @@ function modelInspectorRef(model: ModelProfileSnapshot): ModelRef {
   return model.ref;
 }
 
+function formatServiceTierInputLimit(value: number): string {
+  return value >= 1024 ? `${formatCompactTokenCount(value / 1024)}K` : String(value);
+}
+
 export function modelPickerInspectorNeedsWideLayout(
   model: ModelProfileSnapshot,
   catalogEntry?: PreviewModelCatalogEntry,
@@ -68,6 +75,8 @@ type ModelPickerInspectorPanelProps = {
   catalogEntry?: PreviewModelCatalogEntry;
   providerLabel: string;
   density?: "default" | "list";
+  /** Last upstream-measured conversation input tokens; absent means unknown. */
+  lastInputTokens?: number;
   onReasoningEffortChange: (modelRef: ModelRef, effort: DesktopModelReasoningEffort) => void;
   onReasoningModeChange?: (modelRef: ModelRef, mode: DesktopModelReasoningMode) => void;
   /**
@@ -91,6 +100,7 @@ export function ModelPickerInspectorPanel({
   catalogEntry,
   providerLabel,
   density = "default",
+  lastInputTokens,
   onReasoningEffortChange,
   onReasoningModeChange,
   onThinkingEnabledChange,
@@ -127,13 +137,28 @@ export function ModelPickerInspectorPanel({
   } | null>(null);
   useEffect(() => {
     setPendingServiceTier(null);
-  }, [model.name, model.serviceTier]);
-  const effectiveServiceTier = effectiveDeclaredServiceTier(model, catalogEntry);
+  }, [model.name, model.serviceTier, lastInputTokens]);
+  const effectiveServiceTier = effectiveDeclaredServiceTier(model, catalogEntry, lastInputTokens);
   const displayedServiceTier = pendingServiceTier ? pendingServiceTier.value : effectiveServiceTier;
   const displayedServiceTierLabel =
     displayedServiceTier !== undefined && serviceTierOptions.includes(displayedServiceTier)
       ? t(serviceTierValueLabelKey(displayedServiceTier))
       : undefined;
+  const serviceTierAvailable = (tier: ModelServiceTier) =>
+    isDeclaredServiceTierAvailable(model, tier, catalogEntry, lastInputTokens);
+  const limitedUnavailableTier = [...serviceTierOptions, ...(switchTier ? [switchTier] : [])].find(
+    (tier) =>
+      !serviceTierAvailable(tier) &&
+      declaredServiceTierMaxInputTokens(model, tier, catalogEntry) !== undefined,
+  );
+  const serviceTierLimitMessage = limitedUnavailableTier
+    ? t("app.modelPickerServiceTierInputLimit", {
+        tier: t(serviceTierValueLabelKey(limitedUnavailableTier)),
+        tokens: formatServiceTierInputLimit(
+          declaredServiceTierMaxInputTokens(model, limitedUnavailableTier, catalogEntry)!,
+        ),
+      })
+    : undefined;
   const handleServiceTierChange = (tier: ModelServiceTier | undefined) => {
     if (!onServiceTierChange) {
       return;
@@ -239,7 +264,7 @@ export function ModelPickerInspectorPanel({
               </SelectTrigger>
               <SelectContent className="z-[110]">
                 {serviceTierOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
+                  <SelectItem key={option} value={option} disabled={!serviceTierAvailable(option)}>
                     {t(serviceTierValueLabelKey(option))}
                   </SelectItem>
                 ))}
@@ -255,11 +280,15 @@ export function ModelPickerInspectorPanel({
             <Switch
               id={`model-tier-switch-${model.name}`}
               checked={displayedServiceTier === switchTier}
+              disabled={!serviceTierAvailable(switchTier)}
               onCheckedChange={(checked) => {
                 handleServiceTierChange(checked ? switchTier : undefined);
               }}
             />
           </div>
+        ) : null}
+        {serviceTierLimitMessage ? (
+          <p className="text-xs text-muted-foreground">{serviceTierLimitMessage}</p>
         ) : null}
       </div>
     ) : null;

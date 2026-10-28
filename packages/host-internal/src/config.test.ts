@@ -1215,6 +1215,49 @@ test("serviceTiers declarations and serviceTier selection are cross-checked", ()
   );
 });
 
+test("serviceTiers validates maxInputTokens as a positive integer", () => {
+  assert.doesNotThrow(() =>
+    validateSpiritConfig(
+      validConfig([
+        validProvider({
+          models: [
+            {
+              name: "m",
+              serviceTiers: {
+                default: { body: { service_tier: "default" } },
+                fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+              },
+              serviceTier: "fast",
+            },
+          ],
+        }),
+      ]),
+    ),
+  );
+
+  for (const maxInputTokens of [0, -1, 1.5, "278528", null, Number.POSITIVE_INFINITY]) {
+    assertSchemaError(
+      () =>
+        validateSpiritConfig(
+          validConfig([
+            validProvider({
+              models: [{ name: "m", serviceTiers: { fast: { maxInputTokens } } }],
+            }),
+          ]),
+        ),
+      '"maxInputTokens" must be a positive integer',
+    );
+  }
+
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ thinkingSwitch: { on: { maxInputTokens: 278528 } } })]),
+      ),
+    'unknown key "maxInputTokens"',
+  );
+});
+
 test("reasoning selections are checked against declared lists, with spec asymmetries", () => {
   assertSchemaError(
     () =>

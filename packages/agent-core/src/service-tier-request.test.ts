@@ -148,6 +148,64 @@ test("literal form carries the gateway providerOptions fragment verbatim", () =>
   });
 });
 
+test("input-limited literal fast resolves its wire body without leaking metadata", () => {
+  const serviceTiers = {
+    auto: { body: { service_tier: "auto" } },
+    default: { body: { service_tier: "default" } },
+    flex: { body: { service_tier: "flex" } },
+    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+  } as const;
+
+  for (const lastInputTokens of [undefined, 1000, 278528]) {
+    assert.deepEqual(
+      plan({
+        surface: "responses",
+        serviceTier: "fast",
+        serviceTiers,
+        ...(lastInputTokens !== undefined ? { lastInputTokens } : {}),
+      }),
+      { body: { service_tier: "fast" } },
+    );
+  }
+  assert.deepEqual(
+    plan({ surface: "responses", serviceTier: "fast", serviceTiers, lastInputTokens: 278529 }),
+    { body: { service_tier: "default" } },
+  );
+  assert.deepEqual(
+    plan({ surface: "responses", serviceTier: "fast", serviceTiers, lastInputTokens: 1000 }),
+    { body: { service_tier: "fast" } },
+  );
+  assert.equal(serviceTiers.fast.maxInputTokens, 278528);
+  assert.equal("maxInputTokens" in serviceTiers.fast.body, false);
+  assert.deepEqual(
+    plan({
+      surface: "responses",
+      serviceTier: "fast",
+      serviceTiers: { fast: { body: { service_tier: "fast" }, maxInputTokens: 10 } },
+      lastInputTokens: 11,
+    }),
+    {},
+  );
+});
+
+test("input-limited gateway fast falls back without leaking maxInputTokens into providerOptions", () => {
+  const serviceTiers = {
+    default: {},
+    fast: {
+      providerOptions: { gateway: { serviceTier: "fast" } },
+      maxInputTokens: 278528,
+    },
+  } as const;
+  assert.deepEqual(
+    plan({ surface: "gateway-v3", serviceTier: "fast", serviceTiers, lastInputTokens: 1000 }),
+    { providerOptions: { gateway: { serviceTier: "fast" } } },
+  );
+  assert.deepEqual(
+    plan({ surface: "gateway-v3", serviceTier: "fast", serviceTiers, lastInputTokens: 278529 }),
+    {},
+  );
+});
+
 test("mergeServiceTierProviderOptions joins namespaces instead of replacing them", () => {
   const merged = mergeServiceTierProviderOptions(
     { openai: { reasoningEffort: "high", store: true } },

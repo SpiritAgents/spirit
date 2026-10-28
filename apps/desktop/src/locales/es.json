@@ -778,6 +778,7 @@
     "modelPickerThinking": "Pensando",
     "modelPickerNotThinking": "Sin pensar",
     "modelPickerServiceTier": "Nivel de servicio",
+    "modelPickerServiceTierInputLimit": "{{tier}} no está disponible con más de {{tokens}} tokens de entrada.",
     "modelPickerServiceTierValues": {
       "auto": "Automático",
       "default": "Predeterminado",

@@ -778,6 +778,7 @@
     "modelPickerThinking": "Denken",
     "modelPickerNotThinking": "Kein Denken",
     "modelPickerServiceTier": "Service-Tier",
+    "modelPickerServiceTierInputLimit": "{{tier}} ist bei mehr als {{tokens}} Eingabe-Tokens nicht verfügbar.",
     "modelPickerServiceTierValues": {
       "auto": "Auto",
       "default": "Standard",

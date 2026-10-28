@@ -20,6 +20,7 @@ import {
   buildTodoHostToolDefinitions,
   buildToolAgentHostPrompt,
   createLlmTransport,
+  setTransportConfigLastInputTokens,
   pendingWorkspaceFilesFromInput,
   runSessionEndHook,
   runSessionStartHookAndApply,
@@ -115,6 +116,8 @@ export interface ServerRuntimeOptions {
   sessionKind?: ServerSessionKind;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
+  /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
+  initialLastInputTokens?: number;
   onEvent: (event: RuntimeEvent<JsonValue>) => void;
   /**
    * Workspace capability trust prompt (hooks). The session manager routes this
@@ -237,6 +240,9 @@ export async function createServerRuntime(
     ? resolvedTransport.config
     : unconfiguredTransportConfig(workspaceRoot);
   const hostPromptProviderId = resolvedTransport.ok ? resolvedTransport.providerId : undefined;
+  if (options.initialLastInputTokens !== undefined) {
+    setTransportConfigLastInputTokens(transportConfig, options.initialLastInputTokens);
+  }
   await ensureTranscriptSessionDir(spiritDataDir, sessionKey);
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
@@ -599,7 +605,12 @@ export async function createServerRuntime(
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
     getApprovalLevel: () => currentApprovalLevel,
     reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
-    onEvent,
+    onEvent: (event) => {
+      if (event.kind === "context-usage-updated") {
+        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
+      }
+      onEvent(event);
+    },
   });
 
   const setAgentMode = async (mode: AgentMode): Promise<void> => {

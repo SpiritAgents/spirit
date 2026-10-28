@@ -782,6 +782,7 @@
     "modelPickerThinking": "Думать",
     "modelPickerNotThinking": "Без размышлений",
     "modelPickerServiceTier": "Уровень обслуживания",
+    "modelPickerServiceTierInputLimit": "{{tier}} недоступен при входном контексте более {{tokens}} токенов.",
     "modelPickerServiceTierValues": {
       "auto": "Авто",
       "default": "По умолчанию",

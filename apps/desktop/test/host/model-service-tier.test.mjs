@@ -91,21 +91,24 @@ test("model catalog cache parses sparse entries", async () => {
   });
 });
 
-test("model catalog cache round-trips literal serviceTiers and the explicit empty declaration", async () => {
+test("model catalog cache round-trips literal serviceTiers and input limits", async () => {
   await withCatalogCacheDir(async () => {
     await writeModelCatalogCache(
       "https://ai-gateway.vercel.sh/v1",
-      ["openai/gpt-5.6", "anthropic/claude-opus-4.8"],
+      ["openai/gpt-5.4", "anthropic/claude-opus-4.8"],
       "test-key",
       [
         {
-          id: "openai/gpt-5.6",
+          id: "openai/gpt-5.4",
           capabilities: ["languageModel"],
           upstreamProvider: "OpenAI",
           serviceTiers: {
             default: {},
             flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
-            fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+            fast: {
+              providerOptions: { gateway: { serviceTier: "fast" } },
+              maxInputTokens: 278528,
+            },
           },
         },
         {
@@ -128,7 +131,10 @@ test("model catalog cache round-trips literal serviceTiers and the explicit empt
     assert.deepEqual(first.serviceTiers, {
       default: {},
       flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
-      fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+      fast: {
+        providerOptions: { gateway: { serviceTier: "fast" } },
+        maxInputTokens: 278528,
+      },
     });
     // The explicit empty list survives the round-trip (it suppresses the knowledge fold).
     assert.deepEqual(second.serviceTiers, []);

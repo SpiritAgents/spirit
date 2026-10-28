@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildResponsesGenerateTools, buildResponsesProviderOptions } from "./model-factory.js";
+import {
+  buildResponsesGenerateTools,
+  buildResponsesProviderOptions,
+  buildResponsesProviderOptionsWithServiceTier,
+} from "./model-factory.js";
 import { applyCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import type { ResolvedProviderTools } from "../provider-tools/runtime.js";
 
@@ -290,4 +294,34 @@ test("buildResponsesProviderOptions generic adapter omits store without the stor
       },
     },
   );
+});
+
+test("gateway provider options honor input-limited fast without leaking metadata", () => {
+  const config = {
+    transportKind: "open-responses",
+    apiKey: "test-key",
+    model: "openai/gpt-5.4",
+    sdk: "@ai-sdk/gateway",
+    serviceTier: "fast",
+    serviceTiers: {
+      default: {},
+      fast: {
+        providerOptions: { gateway: { serviceTier: "fast" } },
+        maxInputTokens: 278528,
+      },
+    },
+  } as const;
+
+  const below = buildResponsesProviderOptionsWithServiceTier({
+    ...config,
+    lastInputTokens: 1000,
+  });
+  assert.equal(below.gateway?.serviceTier, "fast");
+  assert.equal("maxInputTokens" in below.gateway!, false);
+
+  const above = buildResponsesProviderOptionsWithServiceTier({
+    ...config,
+    lastInputTokens: 278529,
+  });
+  assert.equal(above.gateway?.serviceTier, undefined);
 });
