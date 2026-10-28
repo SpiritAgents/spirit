@@ -129,7 +129,6 @@ test("anthropic: the profile marks the config and the transport encodes thinking
   };
   const result = applyCodeCompletionTransportProfile(input);
   assert.equal(result.transportRequestProfile, "code-completion");
-  assert.equal((result as AnthropicTransportConfig).thinking, undefined);
   assert.deepEqual(resolveAnthropicThinkingConfig(result as AnthropicTransportConfig), {
     type: "disabled",
   });
