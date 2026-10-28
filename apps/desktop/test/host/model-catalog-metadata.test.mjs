@@ -21,6 +21,15 @@ function outputEfforts(efforts) {
   return { effortSemantics: "output", supportedEfforts: efforts };
 }
 
+const ADAPTIVE_THINKING = {
+  supported: true,
+  types: { adaptive: true, betweenTools: false, disabled: true, enabled: true },
+};
+const BUDGET_THINKING = {
+  supported: true,
+  types: { adaptive: false, betweenTools: false, disabled: true, enabled: true },
+};
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({
@@ -82,15 +91,14 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
       ...outputEfforts(["low", "high", "max"]),
       // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-* (switch + encoding).
       supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "enabled", budget_tokens: 12000 } },
           providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
   ]);
@@ -220,15 +228,14 @@ test("openrouter provider passes through display metadata and pricing", () => {
       capabilities: ["languageModel"],
       ...outputEfforts([]),
       supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "enabled", budget_tokens: 12000 } },
           providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
   ]);
@@ -329,17 +336,17 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      ...outputEfforts(["low", "medium", "high"]),
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
       supportsThinkingSwitch: true,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "adaptive" } },
           providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
     {
@@ -369,17 +376,17 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      ...outputEfforts(["low", "medium", "high"]),
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
       supportsThinkingSwitch: true,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "adaptive" } },
           providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
     {
@@ -409,17 +416,17 @@ test("knowledge declarations win over empty catalog effort lists", () => {
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      ...outputEfforts(["low", "medium", "high"]),
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
       supportsThinkingSwitch: true,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "adaptive" } },
           providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
   ]);
@@ -777,15 +784,14 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
       contextLength: 200000,
       ...outputEfforts([]),
       supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
       thinkingSwitch: {
+        defaultState: "off",
         on: {
           body: { thinking: { type: "enabled", budget_tokens: 12000 } },
           providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
         },
-        off: {
-          body: { thinking: { type: "disabled" } },
-          providerOptions: { anthropic: { thinking: { type: "disabled" } } },
-        },
+        off: "omit",
       },
     },
   ]);
@@ -977,7 +983,7 @@ test("bedrock listings withhold the provider-agnostic knowledge tier declaration
   const direct = previewModelCatalogForTransport({
     providerId: "anthropic",
     transportKind: "anthropic",
-    listedModels: [{ id: "claude-opus-5.5" }],
+    listedModels: [{ id: "claude-opus-5" }],
   });
 
   assert.deepEqual(direct?.[0]?.serviceTiers, ["fast"]);

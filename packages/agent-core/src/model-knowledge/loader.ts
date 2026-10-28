@@ -23,9 +23,10 @@ export function stripModelIdAggregatorPrefix(modelId: string): string {
   return stripped.length > 0 ? stripped : trimmed;
 }
 
-/** Normalization applied before matching: aggregator prefix stripped, then lowercase folding. */
+/** Normalization applied before matching: route prefix and Vercel Batch/Fast suffix stripped, then lowercase folding. */
 export function normalizeModelKnowledgeModelId(modelId: string): string {
-  return stripModelIdAggregatorPrefix(modelId).toLowerCase();
+  const withoutRoutingSuffix = modelId.trim().replace(/\s+\((?:batch|fast)\)$/i, "");
+  return stripModelIdAggregatorPrefix(withoutRoutingSuffix).toLowerCase();
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -67,9 +67,26 @@ const OPENROUTER_GOOGLE_TIERS = ["default", "flex", "priority"];
 /** Anthropic / unrecognized upstreams declare no tiers; the explicit empty list suppresses knowledge leaks. */
 const NO_SERVICE_TIERS: string[] = [];
 
-function outputEfforts(efforts: string[]) {
-  return { effortSemantics: "output" as const, supportedEfforts: efforts };
+function outputEfforts(efforts: string[], defaultEffort?: string) {
+  return {
+    effortSemantics: "output" as const,
+    supportedEfforts: efforts,
+    ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+  };
 }
+
+const CLAUDE_ADAPTIVE_THINKING = {
+  supported: true,
+  types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+};
+const CLAUDE_DEPRECATED_BUDGET_THINKING = {
+  supported: true,
+  types: { adaptive: true, betweenTools: false, disabled: true, enabled: true },
+};
+const CLAUDE_BUDGET_THINKING = {
+  supported: true,
+  types: { adaptive: false, betweenTools: false, disabled: true, enabled: true },
+};
 
 test("minimaxOpenAiCompatibleListingBaseFromConnectBase preserves site from anthropic connect base", () => {
   assert.equal(
@@ -596,12 +613,14 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      ...outputEfforts(["low", "medium", "high"]),
+      ...outputEfforts(["low", "medium", "high", "max"], "high"),
+      thinkingCapabilities: CLAUDE_DEPRECATED_BUDGET_THINKING,
       serviceTiers: NO_SERVICE_TIERS,
     },
     {
       id: "anthropic/claude-opus-4.7",
-      ...outputEfforts(["low", "medium", "high", "xhigh", "max"]),
+      ...outputEfforts(["low", "medium", "high", "xhigh", "max"], "high"),
+      thinkingCapabilities: CLAUDE_ADAPTIVE_THINKING,
       serviceTiers: NO_SERVICE_TIERS,
     },
     {
@@ -849,6 +868,7 @@ test("parseOpenRouterModelEntriesPayload extracts display metadata and pricing",
         requestPerCallUsd: "0",
       },
       ...outputEfforts([]),
+      thinkingCapabilities: CLAUDE_BUDGET_THINKING,
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
@@ -889,7 +909,8 @@ test("parseOpenRouterModelEntriesPayload lets knowledge records win over the api
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      ...outputEfforts(["low", "medium", "high"]),
+      ...outputEfforts(["low", "medium", "high", "max"], "high"),
+      thinkingCapabilities: CLAUDE_DEPRECATED_BUDGET_THINKING,
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
@@ -1326,6 +1347,7 @@ test("parseOpenAiCompatibleModelEntriesPayload routes openrouter to typed parser
     {
       id: "anthropic/claude-sonnet-4",
       ...outputEfforts([]),
+      thinkingCapabilities: CLAUDE_BUDGET_THINKING,
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
     { id: "stability/sdxl", supportsImageGeneration: true },
@@ -1348,6 +1370,7 @@ test("parseOpenRouterModelEntriesPayload maps context_length", () => {
       id: "anthropic/claude-sonnet-4",
       contextLength: 200000,
       ...outputEfforts([]),
+      thinkingCapabilities: CLAUDE_BUDGET_THINKING,
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
