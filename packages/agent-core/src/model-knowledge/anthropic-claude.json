@@ -5,8 +5,15 @@
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": false, "enabled": false }
+        },
         "supportsThinkingType": "only",
+        "supportsThinkingSwitch": false,
         "thinkingSwitch": {
+          "defaultState": "on",
           "on": {
             "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
             "providerOptions": {
@@ -15,16 +22,119 @@
           }
         }
       },
-      "note": "Claude Fable/Mythos 5: always-on adaptive thinking that the API cannot disable, so only the on encoding is declared."
+      "note": "Fable/Mythos 5 and 5.1: five effort levels with high default; always-on adaptive thinking, summarized opt-in display, and no off encoding."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-mythos-preview(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": false, "enabled": true }
+        },
+        "supportsThinkingType": "only",
+        "supportsThinkingSwitch": false,
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          }
+        }
+      },
+      "note": "Mythos Preview: low/medium/high/max with high default; always-on adaptive thinking, omitted display by default, no off encoding, and no new budget use."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-5[.-]5(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": false, "enabled": false }
+        },
+        "supportsThinkingType": "only",
+        "supportsThinkingSwitch": false,
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          }
+        }
+      },
+      "note": "Opus 5.5: five effort levels with medium default; always-on adaptive thinking, omitted display by default, and no off encoding."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5[.-]5(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": true, "disabled": false, "enabled": false }
+        },
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "offBlockedEfforts": ["xhigh", "max"],
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          },
+          "off": {
+            "body": { "thinking": { "type": "between_tools" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "between_tools" } } }
+          }
+        }
+      },
+      "note": "Sonnet 5.5: five effort levels with high default; off is between_tools rather than disabled and is blocked at xhigh/max."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-haiku-5[.-]5(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "medium",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": false }
+        },
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "offBlockedEfforts": ["xhigh", "max"],
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
+          },
+          "off": {
+            "body": { "thinking": { "type": "disabled" } },
+            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
+          }
+        }
+      },
+      "note": "Haiku 5.5: five effort levels with medium default; off is disabled and is blocked at xhigh/max."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-5(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": false }
+        },
         "supportsThinkingSwitch": true,
         "serviceTiers": ["fast"],
         "thinkingSwitch": {
+          "defaultState": "on",
+          "offBlockedEfforts": ["xhigh", "max"],
           "on": {
             "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
             "providerOptions": {
@@ -37,15 +147,21 @@
           }
         }
       },
-      "note": "Claude Opus 5 generation: adaptive thinking with the full effort ladder, plus the native Fast service tier (the Messages `speed` parameter, applied by the anthropic transport). The optional prefix covers Bedrock ids such as anthropic.claude-opus-5-5-v1, including regional inference-profile prefixes (us./eu./global./…)."
+      "note": "Opus 5: five effort levels with high default; adaptive by default, disabled off is blocked at xhigh/max, with the existing summarized opt-in and Fast declaration."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": false }
+        },
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
+          "defaultState": "on",
           "on": {
             "body": { "thinking": { "type": "adaptive" } },
             "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
@@ -55,107 +171,171 @@
             "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
           }
         }
-      }
+      },
+      "note": "Sonnet 5: five effort levels with high default; adaptive by default and disabled is accepted at every effort level."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]8(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": false }
+        },
         "supportsThinkingSwitch": true,
         "serviceTiers": ["fast"],
         "thinkingSwitch": {
+          "defaultState": "off",
           "on": {
             "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
             "providerOptions": {
               "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
             }
           },
-          "off": {
-            "body": { "thinking": { "type": "disabled" } },
-            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
-          }
+          "off": "omit"
         }
       },
-      "note": "Claude Opus 4.8 adds the native Fast service tier (Messages `speed`) on top of the shared Opus 4.7/4.8 declarations; the source normalizes 4.8 dotted ids to dashes, so both separators are accepted."
+      "note": "Opus 4.8: five effort levels with high default; off by default, adaptive when enabled, omitted when off, with the existing summarized opt-in and Fast declaration."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": false }
+        },
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
+          "defaultState": "off",
           "on": {
             "body": { "thinking": { "type": "adaptive", "display": "summarized" } },
             "providerOptions": {
               "anthropic": { "thinking": { "type": "adaptive", "display": "summarized" } }
             }
           },
-          "off": {
-            "body": { "thinking": { "type": "disabled" } },
-            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
-          }
+          "off": "omit"
         }
       },
-      "note": "Claude Opus 4.7/4.8: adaptive thinking with the full effort ladder; the source normalizes 4.7/4.8 dotted ids to dashes, so both separators are accepted."
+      "note": "Opus 4.7/4.8: five effort levels with high default; off by default, adaptive when enabled, omitted when off, with the existing summarized opt-in."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]6(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
         "supportedEfforts": ["low", "medium", "high", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": true }
+        },
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
+          "defaultState": "off",
           "on": {
             "body": { "thinking": { "type": "adaptive" } },
             "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
           },
-          "off": {
-            "body": { "thinking": { "type": "disabled" } },
-            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
-          }
+          "off": "omit"
         }
-      }
+      },
+      "note": "Opus 4.6: low/medium/high/max with high default and no xhigh; off by default, adaptive when enabled, omitted when off; deprecated budget is accepted but not newly emitted."
     },
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-4[.-]6(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
-        "supportedEfforts": ["low", "medium", "high"],
+        "supportedEfforts": ["low", "medium", "high", "max"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": true, "enabled": true }
+        },
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
+          "defaultState": "off",
           "on": {
             "body": { "thinking": { "type": "adaptive" } },
             "providerOptions": { "anthropic": { "thinking": { "type": "adaptive" } } }
           },
-          "off": {
-            "body": { "thinking": { "type": "disabled" } },
-            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
-          }
+          "off": "omit"
         }
-      }
+      },
+      "note": "Sonnet 4.6: low/medium/high/max with high default and no xhigh; off by default, adaptive when enabled, omitted when off; deprecated budget is accepted but not newly emitted."
     },
     {
-      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:(?:haiku|opus|sonnet)-4[.-]5|(?:opus|sonnet)-4)(?:$|[-_.])",
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]5(?:$|[-_.])",
       "declare": {
         "effortSemantics": "output",
-        "supportedEfforts": [],
+        "supportedEfforts": ["low", "medium", "high"],
+        "defaultEffort": "high",
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": false, "betweenTools": false, "disabled": true, "enabled": true }
+        },
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
+          "defaultState": "off",
           "on": {
             "body": { "thinking": { "type": "enabled", "budget_tokens": 12000 } },
             "providerOptions": {
               "anthropic": { "thinking": { "type": "enabled", "budgetTokens": 12000 } }
             }
           },
-          "off": {
-            "body": { "thinking": { "type": "disabled" } },
-            "providerOptions": { "anthropic": { "thinking": { "type": "disabled" } } }
-          }
+          "off": "omit"
         }
       },
-      "note": "Legacy Claude (4.5 families including Haiku 4.5, Opus 4.1, base Opus/Sonnet 4): budget thinking — switchable, with an explicitly empty supportedEfforts list and a fixed on-budget."
+      "note": "Opus 4.5: low/medium/high with high default; off by default and enabled with a fixed 12000-token budget when switched on, omitted when off."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:sonnet|haiku)-4[.-]5(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": [],
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": false, "betweenTools": false, "disabled": true, "enabled": true }
+        },
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "defaultState": "off",
+          "on": {
+            "body": { "thinking": { "type": "enabled", "budget_tokens": 12000 } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "enabled", "budgetTokens": 12000 } }
+            }
+          },
+          "off": "omit"
+        }
+      },
+      "note": "Sonnet/Haiku 4.5: no effort selector; off by default and enabled with a fixed 12000-token budget when switched on, omitted when off."
+    },
+    {
+      "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:opus|sonnet)-4(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": [],
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": false, "betweenTools": false, "disabled": true, "enabled": true }
+        },
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "defaultState": "off",
+          "on": {
+            "body": { "thinking": { "type": "enabled", "budget_tokens": 12000 } },
+            "providerOptions": {
+              "anthropic": { "thinking": { "type": "enabled", "budgetTokens": 12000 } }
+            }
+          },
+          "off": "omit"
+        }
+      },
+      "note": "Legacy Opus/Sonnet 4 and Opus 4.1: budget-only switch with an explicitly empty effort list and a fixed 12000-token on-budget; no new effort/default facts are inferred."
     }
   ]
 }
