@@ -395,6 +395,20 @@ fn build_transport_from_profile(
             json!(supported_reasoning_modes),
         );
     }
+    if profile.effort_semantics.as_deref() == Some("output")
+        && let Some(obj) = transport.as_object_mut()
+    {
+        obj.insert("effortSemantics".to_string(), json!("output"));
+        if let Some(effort) = anthropic_effort_value(profile.effort.as_deref()) {
+            obj.insert("effort".to_string(), json!(effort));
+        }
+        if let Some(efforts) = profile.supported_efforts.as_ref() {
+            obj.insert("supportedEfforts".to_string(), json!(efforts));
+        }
+        if let Some(capabilities) = profile.thinking_capabilities.as_ref() {
+            obj.insert("thinkingCapabilities".to_string(), capabilities.clone());
+        }
+    }
     if let Some(thinking_switch) = profile.thinking_switch.as_ref()
         && let Some(obj) = transport.as_object_mut()
     {

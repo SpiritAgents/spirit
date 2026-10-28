@@ -7,6 +7,7 @@ import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
   ThinkingSwitchDeclaration,
+  ThinkingCapabilities,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 
@@ -39,6 +40,10 @@ export interface BedrockTransportConfig extends LlmWebToolExposure {
   modelCapabilities?: LlmModelCapabilities;
   reasoningEffort?: BedrockReasoningEffort;
   supportedReasoningEfforts?: readonly BedrockReasoningEffort[];
+  effortSemantics?: "output";
+  effort?: BedrockReasoningEffort;
+  supportedEfforts?: readonly BedrockReasoningEffort[];
+  thinkingCapabilities?: ThinkingCapabilities;
   /** Policy profile for lightweight non-Agent requests such as code completion; defaults to agent-path behavior. */
   transportRequestProfile?: TransportRequestProfile;
   /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */

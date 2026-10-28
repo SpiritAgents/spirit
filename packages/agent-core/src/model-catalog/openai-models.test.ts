@@ -5,6 +5,7 @@ import {
   moonshotK3SupportedReasoningEfforts,
   moonshotSupportedReasoningEfforts,
   dedupeProviderListedModelEntries,
+  listAnthropicModels,
   parseAnthropicModelEntriesPayload,
   parseGoogleModelEntriesPayload,
   parseOpenAiCompatibleModelEntriesPayload,
@@ -66,6 +67,10 @@ const OPENROUTER_GOOGLE_TIERS = ["default", "flex", "priority"];
 /** Anthropic / unrecognized upstreams declare no tiers; the explicit empty list suppresses knowledge leaks. */
 const NO_SERVICE_TIERS: string[] = [];
 
+function outputEfforts(efforts: string[]) {
+  return { effortSemantics: "output" as const, supportedEfforts: efforts };
+}
+
 test("minimaxOpenAiCompatibleListingBaseFromConnectBase preserves site from anthropic connect base", () => {
   assert.equal(
     minimaxOpenAiCompatibleListingBaseFromConnectBase("https://api.minimax.cn/anthropic/v1"),
@@ -105,7 +110,7 @@ test("parseAnthropicModelEntriesPayload extracts image input and supported effor
     {
       id: "claude-sonnet-4-5",
       supportsImageInput: true,
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
     },
   ]);
 });
@@ -127,7 +132,7 @@ test("parseAnthropicModelEntriesPayload keeps explicit no-effort support as empt
     {
       id: "claude-haiku-no-effort",
       supportsImageInput: false,
-      supportedReasoningEfforts: [],
+      ...outputEfforts([]),
     },
   ]);
 });
@@ -591,12 +596,12 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
       serviceTiers: NO_SERVICE_TIERS,
     },
     {
       id: "anthropic/claude-opus-4.7",
-      supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
+      ...outputEfforts(["low", "medium", "high", "xhigh", "max"]),
       serviceTiers: NO_SERVICE_TIERS,
     },
     {
@@ -843,6 +848,7 @@ test("parseOpenRouterModelEntriesPayload extracts display metadata and pricing",
         outputPerTokenUsd: "0.000015",
         requestPerCallUsd: "0",
       },
+      ...outputEfforts([]),
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
@@ -883,7 +889,7 @@ test("parseOpenRouterModelEntriesPayload lets knowledge records win over the api
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
@@ -921,13 +927,7 @@ test("parseOpenRouterModelEntriesPayload infers claude efforts when api omits re
     ],
   });
 
-  assert.deepEqual(entries[0]?.supportedReasoningEfforts, [
-    "low",
-    "medium",
-    "high",
-    "xhigh",
-    "max",
-  ]);
+  assert.deepEqual(entries[0]?.supportedEfforts, ["low", "medium", "high", "xhigh", "max"]);
 });
 
 test("parseOpenRouterModelEntriesPayload replaces upstream efforts for muse model ids", () => {
@@ -1325,6 +1325,7 @@ test("parseOpenAiCompatibleModelEntriesPayload routes openrouter to typed parser
   assert.deepEqual(entries, [
     {
       id: "anthropic/claude-sonnet-4",
+      ...outputEfforts([]),
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
     { id: "stability/sdxl", supportsImageGeneration: true },
@@ -1346,6 +1347,7 @@ test("parseOpenRouterModelEntriesPayload maps context_length", () => {
     {
       id: "anthropic/claude-sonnet-4",
       contextLength: 200000,
+      ...outputEfforts([]),
       serviceTiers: OPENROUTER_ANTHROPIC_TIERS,
     },
   ]);
@@ -2669,4 +2671,182 @@ test("dedupeProviderListedModelEntries carries outputLimit", () => {
   assert.deepEqual(entries, [
     { id: "gemini-3.1-pro-preview", contextLength: 1048576, outputLimit: 8192 },
   ]);
+});
+
+test("parseAnthropicModelEntriesPayload reads the full catalog metadata contract", () => {
+  const entries = parseAnthropicModelEntriesPayload({
+    data: [
+      {
+        id: "claude-test",
+        display_name: "Claude Test",
+        created_at: "2026-10-21T00:00:00Z",
+        type: "model",
+        line: "opus",
+        max_input_tokens: 200000,
+        max_tokens: 64000,
+        lifecycle: "active",
+        deprecated_at: null,
+        retires_at: null,
+        capabilities: {
+          effort: {
+            low: { supported: true },
+            medium: { supported: false },
+            high: { supported: true },
+            xhigh: { supported: false },
+            max: { supported: false },
+          },
+          thinking: {
+            supported: true,
+            types: {
+              adaptive: { supported: true },
+              between_tools: { supported: false },
+              disabled: { supported: true },
+              enabled: { supported: false },
+            },
+          },
+          image_input: { supported: true },
+          server_tools: {
+            supported: true,
+            web_search: { supported: true },
+            code_execution: { supported: true },
+          },
+          code_execution: { supported: false },
+          context_management: {
+            clear_thinking_20251015: { supported: true },
+            clear_tool_uses_20250919: { supported: true },
+            compact_20260112: { supported: false },
+          },
+          batch: { supported: true },
+          citations: { supported: true },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(entries, [
+    {
+      id: "claude-test",
+      effortSemantics: "output",
+      displayName: "Claude Test",
+      contextLength: 200000,
+      outputLimit: 64000,
+      supportsImageInput: true,
+      supportedEfforts: ["low", "high"],
+      thinkingCapabilities: {
+        supported: true,
+        types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+      },
+      catalogCapabilities: {
+        serverTools: {
+          supported: true,
+          web_search: { supported: true },
+          code_execution: { supported: true },
+        },
+        codeExecution: { supported: false },
+        contextManagement: {
+          clear_thinking_20251015: { supported: true },
+          clear_tool_uses_20250919: { supported: true },
+          compact_20260112: { supported: false },
+        },
+        batch: { supported: true },
+        citations: { supported: true },
+      },
+    },
+  ]);
+  for (const key of ["created_at", "type", "line", "lifecycle", "deprecated_at", "retires_at"]) {
+    assert.equal(key in entries[0]!, false, key);
+  }
+});
+
+function jsonResponse(body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+test("listAnthropicModels follows after_id cursors across all pages", async () => {
+  const originalFetch = globalThis.fetch;
+  const requests: Array<{ url: string; init: RequestInit | undefined }> = [];
+  const controller = new AbortController();
+  globalThis.fetch = async (input, init) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+    requests.push({ url, init });
+    const afterId = new URL(url).searchParams.get("after_id");
+    if (afterId === null) {
+      return jsonResponse({
+        data: [{ id: "claude-b" }, { id: "claude-a" }],
+        has_more: true,
+        first_id: "claude-b",
+        last_id: "claude-a",
+      });
+    }
+    if (afterId === "claude-a") {
+      return jsonResponse({
+        data: [{ id: "claude-c" }],
+        has_more: true,
+        first_id: "claude-c",
+        last_id: "claude-c",
+      });
+    }
+    assert.equal(afterId, "claude-c");
+    return jsonResponse({
+      data: [{ id: "claude-a" }, { id: "claude-d" }],
+      has_more: false,
+      first_id: "claude-a",
+      last_id: "claude-d",
+    });
+  };
+
+  try {
+    const entries = await listAnthropicModels({
+      baseUrl: "https://api.anthropic.com/v1",
+      apiKey: "test-key",
+      signal: controller.signal,
+    });
+    assert.deepEqual(
+      entries.map((entry) => entry.id),
+      ["claude-a", "claude-b", "claude-c", "claude-d"],
+    );
+    assert.equal(requests.length, 3);
+    assert.equal(new URL(requests[0]!.url).searchParams.get("limit"), "1000");
+    assert.equal(new URL(requests[1]!.url).searchParams.get("after_id"), "claude-a");
+    assert.equal(new URL(requests[2]!.url).searchParams.get("after_id"), "claude-c");
+    for (const request of requests) {
+      assert.equal(new URL(request.url).searchParams.get("limit"), "1000");
+      assert.equal(new Headers(request.init?.headers).get("anthropic-version"), "2023-06-01");
+      assert.equal(new Headers(request.init?.headers).get("x-api-key"), "test-key");
+      assert.equal(request.init?.signal, controller.signal);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listAnthropicModels rejects a missing continuation cursor", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    jsonResponse({ data: [{ id: "claude-a" }], has_more: true, last_id: null });
+  try {
+    await assert.rejects(
+      listAnthropicModels({ baseUrl: "https://api.anthropic.com/v1", apiKey: "test-key" }),
+      /pagination cursor is invalid or repeated/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listAnthropicModels rejects a repeated continuation cursor", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    jsonResponse({ data: [{ id: "claude-a" }], has_more: true, last_id: "claude-a" });
+  try {
+    await assert.rejects(
+      listAnthropicModels({ baseUrl: "https://api.anthropic.com/v1", apiKey: "test-key" }),
+      /pagination cursor is invalid or repeated/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

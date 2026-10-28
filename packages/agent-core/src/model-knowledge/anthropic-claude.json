@@ -3,7 +3,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:fable|mythos)-5(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingType": "only",
         "thinkingSwitch": {
           "on": {
@@ -19,7 +20,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-5(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
         "serviceTiers": ["fast"],
         "thinkingSwitch": {
@@ -40,7 +42,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-5(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
           "on": {
@@ -57,7 +60,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]8(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
         "serviceTiers": ["fast"],
         "thinkingSwitch": {
@@ -78,7 +82,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-][78](?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh", "max"],
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
           "on": {
@@ -98,7 +103,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-opus-4[.-]6(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "max"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "max"],
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
           "on": {
@@ -115,7 +121,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-sonnet-4[.-]6(?:$|[-_.])",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high"],
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
           "on": {
@@ -132,6 +139,8 @@
     {
       "match": "(?:(?:[a-z0-9-]+\\.)?anthropic\\.)?claude-(?:(?:haiku|opus|sonnet)-4[.-]5|(?:opus|sonnet)-4)(?:$|[-_.])",
       "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": [],
         "supportsThinkingSwitch": true,
         "thinkingSwitch": {
           "on": {
@@ -146,7 +155,7 @@
           }
         }
       },
-      "note": "Legacy Claude (4.5 families including Haiku 4.5, Opus 4.1, base Opus/Sonnet 4): budget thinking — switchable, but with no effort levels, so supportedReasoningEfforts stays undeclared and the on patch carries the fixed budget."
+      "note": "Legacy Claude (4.5 families including Haiku 4.5, Opus 4.1, base Opus/Sonnet 4): budget thinking — switchable, with an explicitly empty supportedEfforts list and a fixed on-budget."
     }
   ]
 }

@@ -2,7 +2,8 @@
  * OpenAI-compatible `GET /v1/models` listing (host-side; no secrets stored here).
  */
 
-import type { LlmTransportKind } from "../llm-provider-shared.js";
+import type { LlmTransportKind, ThinkingCapabilities } from "../llm-provider-shared.js";
+import type { JsonObject } from "../ports.js";
 import {
   serviceTierMaxInputTokens,
   type ModelServiceTier,
@@ -60,6 +61,14 @@ export interface ProviderListedModelPricing {
 
 export type KimiCodeSupportsThinkingType = "only";
 
+export interface ProviderListedCatalogCapabilities {
+  serverTools?: JsonObject;
+  codeExecution?: JsonObject;
+  contextManagement?: JsonObject;
+  batch?: JsonObject;
+  citations?: JsonObject;
+}
+
 export interface ProviderListedModelEntry {
   id: string;
   displayName?: string;
@@ -78,6 +87,11 @@ export interface ProviderListedModelEntry {
   outputLimit?: number;
   maxCompletionTokens?: number;
   supportedReasoningEfforts?: string[];
+  effortSemantics?: "output";
+  supportedEfforts?: string[];
+  defaultEffort?: string;
+  thinkingCapabilities?: ThinkingCapabilities;
+  catalogCapabilities?: ProviderListedCatalogCapabilities;
   /** Kimi Code `reasoning.effort.default` when `valid` is non-empty. */
   defaultReasoningEffort?: string;
   /** Hugging Face Hub media models: Inference Providers routing hint (optional for backend use). */
@@ -2213,6 +2227,24 @@ function attachModelKnowledgeReasoningEfforts(
   modelEntry: ProviderListedModelEntry,
 ): ProviderListedModelEntry {
   const declaration = lookupModelKnowledge(modelEntry.id);
+  if (declaration?.["effortSemantics"] === "output") {
+    const result = { ...modelEntry, effortSemantics: "output" as const };
+    delete result.supportedReasoningEfforts;
+    const declaredEfforts = declaration["supportedEfforts"];
+    result.supportedEfforts = Array.isArray(declaredEfforts)
+      ? declaredEfforts.filter((effort): effort is string => typeof effort === "string")
+      : [];
+    const defaultEffort = declaration["defaultEffort"];
+    if (typeof defaultEffort === "string") {
+      result.defaultEffort = defaultEffort;
+    }
+    const thinkingCapabilities = declaration["thinkingCapabilities"];
+    if (asRecord(thinkingCapabilities)) {
+      result.thinkingCapabilities = structuredClone(thinkingCapabilities) as ThinkingCapabilities;
+    }
+    return result;
+  }
+
   const declared = declaration?.["supportedReasoningEfforts"];
   if (!Array.isArray(declared)) {
     return modelEntry;
@@ -2628,20 +2660,96 @@ export function parseAnthropicModelEntriesPayload(body: unknown): ProviderListed
     }
     const record = entry as Record<string, unknown>;
     const id = record.id;
-    if (typeof id === "string" && id.trim().length > 0) {
-      const modelEntry: ProviderListedModelEntry = { id: id.trim() };
-      const supportsImageInput = anthropicModelSupportsImageInput(record.capabilities);
-      if (supportsImageInput !== undefined) {
-        modelEntry.supportsImageInput = supportsImageInput;
-      }
-      const supportedReasoningEfforts = anthropicSupportedReasoningEfforts(record.capabilities);
-      if (supportedReasoningEfforts !== undefined) {
-        modelEntry.supportedReasoningEfforts = supportedReasoningEfforts;
-      }
-      entries.push(modelEntry);
+    if (typeof id !== "string" || id.trim().length === 0) {
+      continue;
     }
+
+    const modelEntry: ProviderListedModelEntry = { id: id.trim(), effortSemantics: "output" };
+    const displayName = readOptionalTrimmedString(record.display_name);
+    if (displayName) {
+      modelEntry.displayName = displayName;
+    }
+    const contextLength = readPositiveIntegerModelTrait(record, "max_input_tokens");
+    if (contextLength !== undefined) {
+      modelEntry.contextLength = contextLength;
+    }
+    const outputLimit = readPositiveIntegerModelTrait(record, "max_tokens");
+    if (outputLimit !== undefined) {
+      modelEntry.outputLimit = outputLimit;
+    }
+    const supportsImageInput = anthropicModelSupportsImageInput(record.capabilities);
+    if (supportsImageInput !== undefined) {
+      modelEntry.supportsImageInput = supportsImageInput;
+    }
+    const supportedEfforts = anthropicSupportedEfforts(record.capabilities);
+    if (supportedEfforts !== undefined) {
+      modelEntry.supportedEfforts = supportedEfforts;
+    }
+    const thinkingCapabilities = anthropicThinkingCapabilities(record.capabilities);
+    if (thinkingCapabilities !== undefined) {
+      modelEntry.thinkingCapabilities = thinkingCapabilities;
+    }
+    const catalogCapabilities = anthropicCatalogCapabilities(record.capabilities);
+    if (catalogCapabilities !== undefined) {
+      modelEntry.catalogCapabilities = catalogCapabilities;
+    }
+    entries.push(modelEntry);
   }
   return entries;
+}
+
+function anthropicThinkingCapabilities(value: unknown): ThinkingCapabilities | undefined {
+  const capabilities = asRecord(value);
+  const thinking = asRecord(capabilities?.thinking);
+  if (!thinking) {
+    return undefined;
+  }
+
+  const result: ThinkingCapabilities = {};
+  const supported = readBooleanModelTrait(thinking, "supported");
+  if (supported !== undefined) {
+    result.supported = supported;
+  }
+  const rawTypes = asRecord(thinking.types);
+  if (rawTypes) {
+    const types: NonNullable<ThinkingCapabilities["types"]> = {};
+    for (const [wireName, key] of [
+      ["adaptive", "adaptive"],
+      ["between_tools", "betweenTools"],
+      ["disabled", "disabled"],
+      ["enabled", "enabled"],
+    ] as const) {
+      const typeSupported = capabilitySupported(rawTypes[wireName]);
+      if (typeSupported !== undefined) {
+        types[key] = typeSupported;
+      }
+    }
+    result.types = types;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function anthropicCatalogCapabilities(
+  value: unknown,
+): ProviderListedCatalogCapabilities | undefined {
+  const capabilities = asRecord(value);
+  if (!capabilities) {
+    return undefined;
+  }
+  const result: ProviderListedCatalogCapabilities = {};
+  for (const [wireName, key] of [
+    ["server_tools", "serverTools"],
+    ["code_execution", "codeExecution"],
+    ["context_management", "contextManagement"],
+    ["batch", "batch"],
+    ["citations", "citations"],
+  ] as const) {
+    const subtree = asRecord(capabilities[wireName]);
+    if (subtree) {
+      result[key] = structuredClone(subtree) as JsonObject;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 export interface ListOpenAiCompatibleModelIdsOptions {
@@ -2734,12 +2842,15 @@ async function fetchModelsListJson(url: string, init: RequestInit): Promise<unkn
 
   if (!response.ok) {
     const errObj = typeof json === "object" && json !== null ? json : undefined;
+    const error = errObj && "error" in errObj ? errObj.error : undefined;
     const errMsg =
-      errObj &&
-      "error" in errObj &&
-      typeof (errObj as { error?: { message?: unknown } }).error?.message === "string"
-        ? (errObj as { error: { message: string } }).error.message
-        : undefined;
+      typeof error === "string"
+        ? error
+        : typeof error === "object" &&
+            error !== null &&
+            typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : undefined;
     throw new Error(
       errMsg && errMsg.trim().length > 0
         ? `Model listing failed (HTTP ${String(response.status)}): ${errMsg.trim()}`
@@ -2785,59 +2896,41 @@ export async function listAnthropicModelIds(
 export async function listAnthropicModels(
   options: ListAnthropicModelIdsOptions & { provider?: ModelProviderId },
 ): Promise<ProviderListedModelEntry[]> {
-  const url = anthropicModelsListUrl(options.baseUrl);
   requireApiKeyForModelListing(options.apiKey, options.provider);
 
   const headers: Record<string, string> = {
     "anthropic-version": ANTHROPIC_VERSION,
     ...(options.apiKey.trim() ? { "x-api-key": options.apiKey.trim() } : {}),
   };
-
   const init: RequestInit = { method: "GET", headers };
   if (options.signal !== undefined) {
     init.signal = options.signal;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, init);
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause);
-    throw new Error(`Model list request failed: ${message}`, { cause: cause });
+  const entries: ProviderListedModelEntry[] = [];
+  const seenCursors = new Set<string>();
+  let afterId: string | undefined;
+  for (;;) {
+    const url = new URL(anthropicModelsListUrl(options.baseUrl));
+    url.searchParams.set("limit", "1000");
+    if (afterId !== undefined) {
+      url.searchParams.set("after_id", afterId);
+    }
+    const json = await fetchModelsListJson(url.toString(), init);
+    entries.push(...parseAnthropicModelEntriesPayload(json));
+
+    const page = asRecord(json);
+    if (page?.has_more !== true) {
+      break;
+    }
+    const cursor = readOptionalTrimmedString(page.last_id);
+    if (!cursor || seenCursors.has(cursor)) {
+      throw new Error("Model listing pagination cursor is invalid or repeated.");
+    }
+    seenCursors.add(cursor);
+    afterId = cursor;
   }
 
-  const text = await response.text();
-  let json: unknown;
-  try {
-    json = text.length > 0 ? (JSON.parse(text) as unknown) : {};
-  } catch {
-    throw new Error(
-      response.ok
-        ? "Model list response is not valid JSON."
-        : `Model listing failed (HTTP ${String(response.status)}).`,
-    );
-  }
-
-  if (!response.ok) {
-    const errObj =
-      typeof json === "object" && json !== null ? (json as Record<string, unknown>) : undefined;
-    const error = errObj?.error;
-    const errMsg =
-      typeof error === "string"
-        ? error
-        : typeof error === "object" &&
-            error !== null &&
-            typeof (error as { message?: unknown }).message === "string"
-          ? (error as { message: string }).message
-          : undefined;
-    throw new Error(
-      errMsg && errMsg.trim().length > 0
-        ? `Model listing failed (HTTP ${String(response.status)}): ${errMsg.trim()}`
-        : `Model listing failed (HTTP ${String(response.status)}).`,
-    );
-  }
-
-  const entries = parseAnthropicModelEntriesPayload(json);
   return dedupeProviderListedModelEntries(entries).sort((a, b) => a.id.localeCompare(b.id));
 }
 
@@ -3197,20 +3290,15 @@ function anthropicModelSupportsImageInput(value: unknown): boolean | undefined {
   return capabilitySupported(capabilities.image_input);
 }
 
-function anthropicSupportedReasoningEfforts(value: unknown): string[] | undefined {
+function anthropicSupportedEfforts(value: unknown): string[] | undefined {
   const capabilities = asRecord(value);
-  if (!capabilities) {
-    return undefined;
-  }
-  const effort = asRecord(capabilities.effort);
+  const effort = asRecord(capabilities?.effort);
   if (!effort) {
     return undefined;
   }
-
-  if (capabilitySupported(effort) !== true) {
+  if (capabilitySupported(effort) === false) {
     return [];
   }
-
   return ANTHROPIC_REASONING_LEVELS.filter((level) => capabilitySupported(effort[level]) === true);
 }
 
@@ -3261,11 +3349,24 @@ export function dedupeProviderListedModelEntries(
       ...(entry.supportsThinkingType !== undefined
         ? { supportsThinkingType: entry.supportsThinkingType }
         : {}),
-      ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+      ...(entry.supportsThinkingSwitch !== undefined
+        ? { supportsThinkingSwitch: entry.supportsThinkingSwitch }
+        : {}),
       ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
       ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
       ...(entry.supportedReasoningEfforts !== undefined
         ? { supportedReasoningEfforts: [...entry.supportedReasoningEfforts] }
+        : {}),
+      ...(entry.effortSemantics !== undefined ? { effortSemantics: entry.effortSemantics } : {}),
+      ...(entry.supportedEfforts !== undefined
+        ? { supportedEfforts: [...entry.supportedEfforts] }
+        : {}),
+      ...(entry.defaultEffort !== undefined ? { defaultEffort: entry.defaultEffort } : {}),
+      ...(entry.thinkingCapabilities !== undefined
+        ? { thinkingCapabilities: structuredClone(entry.thinkingCapabilities) }
+        : {}),
+      ...(entry.catalogCapabilities !== undefined
+        ? { catalogCapabilities: structuredClone(entry.catalogCapabilities) }
         : {}),
       ...(entry.defaultReasoningEffort !== undefined
         ? { defaultReasoningEffort: entry.defaultReasoningEffort }

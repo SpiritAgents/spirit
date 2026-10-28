@@ -60,20 +60,21 @@ export function createDeclaredWireMergeFetch(
     surface,
   });
 
+  const omitThinking = thinkingPatch === "omit";
   const headers: Record<string, string> = {
     ...config.headers,
-    ...thinkingPatch?.headers,
+    ...(thinkingPatch === "omit" ? {} : thinkingPatch?.headers),
     ...serviceTierPlan.headers,
   };
   const headerEntries = Object.entries(headers);
   const bodyPatches = [
     options?.bodyBase,
     config.body,
-    thinkingPatch?.body,
+    ...(thinkingPatch === "omit" ? [] : [thinkingPatch?.body]),
     serviceTierPlan.body,
   ].filter((patch): patch is JsonObject => patch !== undefined && Object.keys(patch).length > 0);
 
-  if (headerEntries.length === 0 && bodyPatches.length === 0) {
+  if (headerEntries.length === 0 && bodyPatches.length === 0 && !omitThinking) {
     return baseFetch;
   }
 
@@ -87,10 +88,13 @@ export function createDeclaredWireMergeFetch(
       nextInit = { ...nextInit, headers: merged };
     }
 
-    if (bodyPatches.length > 0 && typeof nextInit?.body === "string") {
+    if ((bodyPatches.length > 0 || omitThinking) && typeof nextInit?.body === "string") {
       const body = tryParseJsonObject(nextInit.body);
       if (body !== undefined) {
         const patched: JsonObject = { ...body };
+        if (omitThinking) {
+          delete patched["thinking"];
+        }
         for (const patch of bodyPatches) {
           Object.assign(patched, patch);
         }

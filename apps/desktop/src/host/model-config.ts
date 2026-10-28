@@ -115,7 +115,11 @@ type CatalogLister = (
  */
 const SPECIALIZED_CATALOG_LISTERS: Readonly<Record<string, CatalogLister>> = {
   "anthropic-models": (input) =>
-    listAnthropicModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
+    listAnthropicModels({
+      baseUrl: input.apiBase,
+      apiKey: input.apiKey,
+      ...(input.signal !== undefined ? { signal: input.signal } : {}),
+    }),
   "google-gemini-models": (input) =>
     listGoogleModels({ baseUrl: input.apiBase, apiKey: input.apiKey }),
   "siliconflow-models": (input) =>

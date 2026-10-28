@@ -287,6 +287,65 @@ fn anthropic_shape_filters_efforts_to_the_protocol_enum() {
 }
 
 #[test]
+fn anthropic_shape_maps_output_effort_declarations() {
+    let config = config_from(json!({
+        "schemaVersion": 1,
+        "providers": [{
+            "id": "acme",
+            "apiBase": "https://api.acme.invalid/anthropic",
+            "transportKind": "anthropic",
+            "sdk": "@ai-sdk/anthropic",
+            "models": [{
+                "name": "claude-opus-4.6",
+                "effortSemantics": "output",
+                "effort": "high",
+                "supportedEfforts": ["low", "high"],
+                "defaultEffort": "high",
+                "thinkingCapabilities": {
+                    "supported": true,
+                    "types": {
+                        "adaptive": true,
+                        "betweenTools": false,
+                        "disabled": true,
+                        "enabled": false
+                    }
+                }
+            }]
+        }],
+        "activeModel": { "providerId": "acme", "name": "claude-opus-4.6" }
+    }));
+    let fixture = TestTransportFixture::new(config, StubSecretStore::default());
+    let transport = resolve_transport_config_json_for(&fixture.host(), &fixture.config)
+        .expect("resolve transport config");
+
+    assert_eq!(
+        transport.get("effortSemantics").and_then(Value::as_str),
+        Some("output")
+    );
+    assert_eq!(
+        transport.get("effort").and_then(Value::as_str),
+        Some("high")
+    );
+    assert_eq!(
+        transport.get("supportedEfforts"),
+        Some(&json!(["low", "high"]))
+    );
+    assert_eq!(
+        transport.get("thinkingCapabilities"),
+        Some(&json!({
+            "supported": true,
+            "types": {
+                "adaptive": true,
+                "betweenTools": false,
+                "disabled": true,
+                "enabled": false
+            }
+        }))
+    );
+    assert!(transport.get("reasoningEffort").is_none());
+}
+
+#[test]
 fn thinking_enabled_false_stamps_vendor_extended_thinking() {
     let config = config_from(json!({
         "schemaVersion": 1,

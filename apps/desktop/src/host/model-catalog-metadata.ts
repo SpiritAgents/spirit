@@ -2,6 +2,8 @@ import type { ProviderListedModelEntry } from "@spiritagent/agent-core/model-cat
 import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import type { ThinkingCapabilities, ThinkingSwitchWirePatch } from "@spiritagent/agent-core";
+import { MODEL_OUTPUT_EFFORT_TOKENS } from "@spiritagent/agent-core/model-effort";
 import { lookupModelKnowledge } from "@spiritagent/agent-core/model-knowledge";
 import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 
@@ -140,77 +142,327 @@ function knowledgeDeclaredThinkingSwitch(
   return value as ThinkingSwitchDeclaration;
 }
 
-/**
- * One catalog write entry = the listing's API facts with model-knowledge declarations folded in
- * (knowledge wins on the keys it declares; it is the curated source — data bugs get fixed in the
- * knowledge module, never in a runtime patch).
- */
-function previewEntryFromListedEntry(
+function knowledgeDeclaredOutputEfforts(
+  declaration: Record<string, unknown>,
+): PreviewModelCatalogEntry["supportedEfforts"] | undefined {
+  const value = declaration["supportedEfforts"];
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  return normalizePreviewSupportedEfforts(
+    value.filter((item): item is string => typeof item === "string"),
+  );
+}
+
+function knowledgeDeclaredDefaultEffort(
+  declaration: Record<string, unknown>,
+): PreviewModelCatalogEntry["defaultEffort"] {
+  const value = declaration["defaultEffort"];
+  return normalizePreviewDefaultEffort(typeof value === "string" ? value : undefined);
+}
+
+function knowledgeDeclaredThinkingCapabilities(
+  declaration: Record<string, unknown> | undefined,
+): ThinkingCapabilities | undefined {
+  const value = declaration?.["thinkingCapabilities"];
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as ThinkingCapabilities)
+    : undefined;
+}
+
+function mergeThinkingCapabilities(
+  api: ThinkingCapabilities | undefined,
+  knowledge: ThinkingCapabilities | undefined,
+): ThinkingCapabilities | undefined {
+  if (!api) {
+    return knowledge;
+  }
+  if (!knowledge) {
+    return api;
+  }
+  return {
+    ...knowledge,
+    ...api,
+    ...(api.types !== undefined || knowledge.types !== undefined
+      ? { types: { ...knowledge.types, ...api.types } }
+      : {}),
+  };
+}
+
+type ThinkingCapabilityType = "adaptive" | "betweenTools" | "disabled" | "enabled";
+
+function thinkingTypeFromPatch(
+  patch: ThinkingSwitchDeclaration["on"] | ThinkingSwitchDeclaration["off"],
+): ThinkingCapabilityType | undefined {
+  if (patch === undefined || patch === "omit") {
+    return undefined;
+  }
+  const thinking = patch.body?.["thinking"];
+  if (typeof thinking !== "object" || thinking === null || Array.isArray(thinking)) {
+    return undefined;
+  }
+  const type = (thinking as Record<string, unknown>)["type"];
+  switch (type) {
+    case "adaptive":
+      return "adaptive";
+    case "between_tools":
+      return "betweenTools";
+    case "disabled":
+      return "disabled";
+    case "enabled":
+      return "enabled";
+    default:
+      return undefined;
+  }
+}
+
+function thinkingTypeSupported(
+  capabilities: ThinkingCapabilities | undefined,
+  type: ThinkingCapabilityType | undefined,
+): boolean | undefined {
+  return type === undefined ? undefined : capabilities?.types?.[type];
+}
+
+function offPatchForType(type: "disabled" | "between_tools"): ThinkingSwitchWirePatch {
+  return {
+    body: { thinking: { type } },
+    providerOptions: { anthropic: { thinking: { type } } },
+  };
+}
+
+function resolveThinkingMetadata(input: {
+  parserName: string | undefined;
+  entry: ProviderListedModelEntry;
+  knowledge: Record<string, unknown> | undefined;
+  knowledgeCapabilities: ThinkingCapabilities | undefined;
+  knowledgeSwitch: ThinkingSwitchDeclaration | undefined;
+  knowledgeSwitchSupport: boolean | undefined;
+  knowledgeType: "only" | undefined;
+}): Pick<
+  PreviewModelCatalogEntry,
+  "thinkingCapabilities" | "supportsThinkingSwitch" | "supportsThinkingType" | "thinkingSwitch"
+> {
+  const { entry, knowledgeSwitch, knowledgeCapabilities, knowledgeType } = input;
+  const capabilities =
+    input.parserName === "anthropic-models"
+      ? mergeThinkingCapabilities(entry.thinkingCapabilities, knowledgeCapabilities)
+      : (knowledgeCapabilities ?? entry.thinkingCapabilities);
+  if (capabilities === undefined) {
+    return {
+      ...(input.knowledgeSwitchSupport !== undefined || entry.supportsThinkingSwitch !== undefined
+        ? {
+            supportsThinkingSwitch: input.knowledgeSwitchSupport ?? entry.supportsThinkingSwitch,
+          }
+        : {}),
+      ...(knowledgeType !== undefined
+        ? { supportsThinkingType: knowledgeType }
+        : entry.supportsThinkingType !== undefined
+          ? { supportsThinkingType: entry.supportsThinkingType }
+          : {}),
+      ...(knowledgeSwitch !== undefined ? { thinkingSwitch: knowledgeSwitch } : {}),
+    };
+  }
+  if (capabilities.supported === false) {
+    return {
+      thinkingCapabilities: capabilities,
+      supportsThinkingSwitch: false,
+    };
+  }
+
+  const on = knowledgeSwitch?.on;
+  const onType = thinkingTypeFromPatch(on);
+  const onSupported = on !== undefined && (thinkingTypeSupported(capabilities, onType) ?? true);
+  const defaultState = knowledgeSwitch?.defaultState;
+  let off = knowledgeSwitch?.off;
+  let offType = thinkingTypeFromPatch(off);
+  let offSupported: boolean;
+
+  if (off === "omit") {
+    offSupported = defaultState === "off";
+  } else if (off !== undefined) {
+    offSupported = thinkingTypeSupported(capabilities, offType) === true;
+    if (!offSupported) {
+      if (thinkingTypeSupported(capabilities, "betweenTools") === true) {
+        off = offPatchForType("between_tools");
+        offType = "betweenTools";
+        offSupported = true;
+      } else if (thinkingTypeSupported(capabilities, "disabled") === true) {
+        off = offPatchForType("disabled");
+        offType = "disabled";
+        offSupported = true;
+      }
+    }
+  } else if (defaultState === "off") {
+    off = "omit";
+    offSupported = onSupported;
+  } else if (thinkingTypeSupported(capabilities, "disabled") === true) {
+    off = offPatchForType("disabled");
+    offType = "disabled";
+    offSupported = true;
+  } else if (thinkingTypeSupported(capabilities, "betweenTools") === true) {
+    off = offPatchForType("between_tools");
+    offType = "betweenTools";
+    offSupported = true;
+  } else {
+    offSupported = false;
+  }
+
+  if (!offSupported) {
+    if (defaultState === "off") {
+      off = "omit";
+      offSupported = onSupported;
+    } else {
+      off = undefined;
+    }
+  }
+
+  const hasSwitch = onSupported && off !== undefined && offSupported;
+  const alwaysOn =
+    capabilities.supported === true && defaultState !== "off" && !hasSwitch && !offSupported;
+  const thinkingSwitch =
+    onSupported && knowledgeSwitch !== undefined
+      ? {
+          ...knowledgeSwitch,
+          on,
+          ...(off !== undefined ? { off } : {}),
+        }
+      : undefined;
+  if (thinkingSwitch !== undefined && off === undefined) {
+    delete thinkingSwitch.off;
+  }
+
+  return {
+    thinkingCapabilities: capabilities,
+    supportsThinkingSwitch: hasSwitch,
+    ...(alwaysOn
+      ? { supportsThinkingType: "only" as const }
+      : knowledgeType !== undefined
+        ? { supportsThinkingType: knowledgeType }
+        : {}),
+    ...(thinkingSwitch !== undefined ? { thinkingSwitch } : {}),
+  };
+}
+
+function basePreviewEntryFields(
   parserName: string | undefined,
   entry: ProviderListedModelEntry,
 ): PreviewModelCatalogEntry {
-  const knowledge = lookupCatalogModelKnowledge(entry.id);
-  const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
-  const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
-  // Bedrock Converse has no service tier parameter, so provider-agnostic knowledge tier
-  // declarations (e.g. Claude Opus Fast) are withheld for bedrock listings instead of showing a
-  // no-op control.
-  const knowledgeTiers =
-    knowledge && parserName !== "bedrock-models"
-      ? knowledgeDeclaredServiceTiers(knowledge)
-      : undefined;
-  const knowledgeThinkingSwitch = knowledge?.["supportsThinkingSwitch"] === true ? true : undefined;
-  const knowledgeThinkingType =
-    knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
-  const knowledgeThinkingSwitchEncoding = knowledge
-    ? knowledgeDeclaredThinkingSwitch(knowledge)
-    : undefined;
-
   return {
     id: entry.id,
     capabilities: previewCapabilitiesFromListedEntry(entry),
     ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),
-    ...(knowledgeEfforts !== undefined
-      ? { supportedReasoningEfforts: knowledgeEfforts }
-      : entry.supportedReasoningEfforts !== undefined
-        ? {
-            supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
-              entry.supportedReasoningEfforts,
-            ),
-          }
-        : {}),
-    ...(knowledgeModes !== undefined ? { supportedReasoningModes: knowledgeModes } : {}),
-    // Aggregator parsers materialize the route-specific declaration; it beats the provider-agnostic
-    // knowledge record (an OpenAI-native auto tier, for example, would be wrong on a gateway route).
-    ...(entry.serviceTiers !== undefined
-      ? { serviceTiers: entry.serviceTiers as SpiritServiceTiersDeclaration }
-      : knowledgeTiers !== undefined
-        ? { serviceTiers: knowledgeTiers }
-        : {}),
-    ...resolvePreviewDefaultReasoningEffortForEntry(entry),
     ...(entry.contextLength !== undefined ? { contextLength: entry.contextLength } : {}),
     ...(entry.outputLimit !== undefined ? { outputLimit: entry.outputLimit } : {}),
     ...(entry.maxCompletionTokens !== undefined
       ? { maxCompletionTokens: entry.maxCompletionTokens }
-      : {}),
-    ...(knowledgeThinkingType !== undefined
-      ? { supportsThinkingType: knowledgeThinkingType }
-      : entry.supportsThinkingType !== undefined
-        ? { supportsThinkingType: entry.supportsThinkingType }
-        : {}),
-    ...(knowledgeThinkingSwitch === true || entry.supportsThinkingSwitch === true
-      ? { supportsThinkingSwitch: true }
-      : {}),
-    ...(knowledgeThinkingSwitchEncoding !== undefined
-      ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
       : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),
     ...(entry.upstreamProvider !== undefined ? { upstreamProvider: entry.upstreamProvider } : {}),
     ...(entry.isPartner !== undefined ? { isPartner: entry.isPartner } : {}),
+  };
+}
+
+/**
+ * One catalog write entry = the listing's API facts with model-knowledge declarations folded in.
+ * Anthropic's own catalog wins on fields it actually reports; other listing shapes keep curated
+ * model knowledge as their source for output-effort declarations.
+ */
+function previewEntryFromListedEntry(
+  parserName: string | undefined,
+  entry: ProviderListedModelEntry,
+): PreviewModelCatalogEntry {
+  const base = basePreviewEntryFields(parserName, entry);
+  const knowledge = lookupCatalogModelKnowledge(entry.id);
+  const knowledgeEfforts = knowledge ? knowledgeDeclaredReasoningEfforts(knowledge) : undefined;
+  const knowledgeModes = knowledge ? knowledgeDeclaredReasoningModes(knowledge) : undefined;
+  const knowledgeTiers =
+    knowledge && parserName !== "bedrock-models"
+      ? knowledgeDeclaredServiceTiers(knowledge)
+      : undefined;
+  const tierFields =
+    entry.serviceTiers !== undefined
+      ? { serviceTiers: entry.serviceTiers as SpiritServiceTiersDeclaration }
+      : knowledgeTiers !== undefined
+        ? { serviceTiers: knowledgeTiers }
+        : {};
+
+  if (entry.effortSemantics !== "output" && knowledge?.["effortSemantics"] !== "output") {
+    const knowledgeThinkingSwitch =
+      knowledge?.["supportsThinkingSwitch"] === true ? true : undefined;
+    const knowledgeThinkingType =
+      knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
+    const knowledgeThinkingSwitchEncoding = knowledge
+      ? knowledgeDeclaredThinkingSwitch(knowledge)
+      : undefined;
+    return {
+      ...base,
+      ...(knowledgeEfforts !== undefined
+        ? { supportedReasoningEfforts: knowledgeEfforts }
+        : entry.supportedReasoningEfforts !== undefined
+          ? {
+              supportedReasoningEfforts: normalizePreviewSupportedReasoningEfforts(
+                entry.supportedReasoningEfforts,
+              ),
+            }
+          : {}),
+      ...(knowledgeModes !== undefined ? { supportedReasoningModes: knowledgeModes } : {}),
+      ...tierFields,
+      ...resolvePreviewDefaultReasoningEffortForEntry(entry),
+      ...(knowledgeThinkingType !== undefined
+        ? { supportsThinkingType: knowledgeThinkingType }
+        : entry.supportsThinkingType !== undefined
+          ? { supportsThinkingType: entry.supportsThinkingType }
+          : {}),
+      ...(knowledgeThinkingSwitch === true || entry.supportsThinkingSwitch === true
+        ? { supportsThinkingSwitch: true }
+        : {}),
+      ...(knowledgeThinkingSwitchEncoding !== undefined
+        ? { thinkingSwitch: knowledgeThinkingSwitchEncoding }
+        : {}),
+    };
+  }
+
+  const knowledgeEffortsOutput = knowledge ? knowledgeDeclaredOutputEfforts(knowledge) : undefined;
+  const supportedEfforts =
+    parserName === "anthropic-models"
+      ? entry.supportedEfforts !== undefined
+        ? normalizePreviewSupportedEfforts(entry.supportedEfforts)
+        : (knowledgeEffortsOutput ?? [])
+      : (knowledgeEffortsOutput ?? []);
+  const defaultEffort = knowledge ? knowledgeDeclaredDefaultEffort(knowledge) : undefined;
+  const knowledgeThinkingSwitch = knowledge
+    ? knowledgeDeclaredThinkingSwitch(knowledge)
+    : undefined;
+  const knowledgeThinkingType =
+    knowledge?.["supportsThinkingType"] === "only" ? ("only" as const) : undefined;
+  const knowledgeSwitchSupport =
+    typeof knowledge?.["supportsThinkingSwitch"] === "boolean"
+      ? (knowledge["supportsThinkingSwitch"] as boolean)
+      : undefined;
+  const thinking = resolveThinkingMetadata({
+    parserName,
+    entry,
+    knowledge,
+    knowledgeCapabilities: knowledgeDeclaredThinkingCapabilities(knowledge),
+    knowledgeSwitch: knowledgeThinkingSwitch,
+    knowledgeSwitchSupport,
+    knowledgeType: knowledgeThinkingType,
+  });
+
+  return {
+    ...base,
+    effortSemantics: "output",
+    supportedEfforts,
+    ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+    ...tierFields,
+    ...thinking,
+    ...(entry.catalogCapabilities !== undefined
+      ? { catalogCapabilities: entry.catalogCapabilities }
+      : {}),
   };
 }
 
@@ -337,4 +589,35 @@ function normalizePreviewDefaultReasoningEffort(
     return undefined;
   }
   return effort;
+}
+
+function normalizePreviewSupportedEfforts(
+  values: readonly string[],
+): NonNullable<PreviewModelCatalogEntry["supportedEfforts"]> {
+  const seen = new Set<string>();
+  const normalized: NonNullable<PreviewModelCatalogEntry["supportedEfforts"]> = [];
+  for (const value of values) {
+    const effort = value.trim().toLowerCase();
+    if (
+      !MODEL_OUTPUT_EFFORT_TOKENS.includes(effort as (typeof MODEL_OUTPUT_EFFORT_TOKENS)[number]) ||
+      seen.has(effort)
+    ) {
+      continue;
+    }
+    seen.add(effort);
+    normalized.push(effort as (typeof normalized)[number]);
+  }
+  return normalized;
+}
+
+function normalizePreviewDefaultEffort(
+  value: string | undefined,
+): PreviewModelCatalogEntry["defaultEffort"] {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const effort = value.trim().toLowerCase();
+  return MODEL_OUTPUT_EFFORT_TOKENS.includes(effort as (typeof MODEL_OUTPUT_EFFORT_TOKENS)[number])
+    ? (effort as NonNullable<PreviewModelCatalogEntry["defaultEffort"]>)
+    : undefined;
 }

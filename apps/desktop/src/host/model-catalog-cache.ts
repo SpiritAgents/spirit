@@ -4,8 +4,13 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { normalizeOpenAiApiBase } from "@spiritagent/agent-core/model-catalog/openai-api-base";
+import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
-import type { SpiritServiceTiersDeclaration } from "@spiritagent/host-internal/config";
+import type { ThinkingCapabilities } from "@spiritagent/agent-core";
+import type {
+  SpiritServiceTiersDeclaration,
+  ThinkingSwitchDeclaration,
+} from "@spiritagent/host-internal/config";
 
 import type {
   DesktopModelCapability,
@@ -185,6 +190,105 @@ export function isModelCatalogCacheFresh(
   return nowMs - entry.fetchedAtUnixMs < ttlMs;
 }
 
+const OUTPUT_EFFORT_VALUES = new Set(["low", "medium", "high", "xhigh", "max"]);
+
+function normalizeCachedSupportedEfforts(
+  value: unknown,
+): NonNullable<PreviewModelCatalogEntry["supportedEfforts"]> | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const result: NonNullable<PreviewModelCatalogEntry["supportedEfforts"]> = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    const effort = item.trim().toLowerCase();
+    if (!OUTPUT_EFFORT_VALUES.has(effort) || seen.has(effort)) {
+      continue;
+    }
+    seen.add(effort);
+    result.push(effort as (typeof result)[number]);
+  }
+  return result;
+}
+
+function normalizeCachedDefaultEffort(value: unknown): PreviewModelCatalogEntry["defaultEffort"] {
+  return typeof value === "string" && OUTPUT_EFFORT_VALUES.has(value.trim().toLowerCase())
+    ? (value.trim().toLowerCase() as NonNullable<PreviewModelCatalogEntry["defaultEffort"]>)
+    : undefined;
+}
+
+function normalizeCachedThinkingCapabilities(value: unknown): ThinkingCapabilities | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const result: ThinkingCapabilities = {};
+  if (typeof record.supported === "boolean") {
+    result.supported = record.supported;
+  }
+  if (typeof record.types === "object" && record.types !== null && !Array.isArray(record.types)) {
+    const rawTypes = record.types as Record<string, unknown>;
+    const types: NonNullable<ThinkingCapabilities["types"]> = {};
+    for (const key of ["adaptive", "betweenTools", "disabled", "enabled"] as const) {
+      if (typeof rawTypes[key] === "boolean") {
+        types[key] = rawTypes[key];
+      }
+    }
+    result.types = types;
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeCachedCatalogCapabilities(
+  value: unknown,
+): ProviderListedCatalogCapabilities | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const result: ProviderListedCatalogCapabilities = {};
+  for (const key of [
+    "serverTools",
+    "codeExecution",
+    "contextManagement",
+    "batch",
+    "citations",
+  ] as const) {
+    const subtree = record[key];
+    if (typeof subtree === "object" && subtree !== null && !Array.isArray(subtree)) {
+      result[key] = structuredClone(subtree) as NonNullable<(typeof result)[typeof key]>;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
+function normalizeCachedThinkingSwitch(value: unknown): ThinkingSwitchDeclaration | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const result: ThinkingSwitchDeclaration = {};
+  if (record.defaultState === "on" || record.defaultState === "off") {
+    result.defaultState = record.defaultState;
+  }
+  const offBlockedEfforts = normalizeCachedSupportedEfforts(record.offBlockedEfforts);
+  if (offBlockedEfforts !== undefined) {
+    result.offBlockedEfforts = offBlockedEfforts;
+  }
+  if (typeof record.on === "object" && record.on !== null && !Array.isArray(record.on)) {
+    result.on = structuredClone(record.on);
+  }
+  if (record.off === "omit") {
+    result.off = "omit";
+  } else if (typeof record.off === "object" && record.off !== null && !Array.isArray(record.off)) {
+    result.off = structuredClone(record.off);
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
+}
+
 function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -214,6 +318,12 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const supportedReasoningEfforts = normalizeCachedSupportedReasoningEfforts(
       record.supportedReasoningEfforts,
     );
+    const effortSemantics = record.effortSemantics === "output" ? ("output" as const) : undefined;
+    const supportedEfforts = normalizeCachedSupportedEfforts(record.supportedEfforts);
+    const defaultEffort = normalizeCachedDefaultEffort(record.defaultEffort);
+    const thinkingCapabilities = normalizeCachedThinkingCapabilities(record.thinkingCapabilities);
+    const catalogCapabilities = normalizeCachedCatalogCapabilities(record.catalogCapabilities);
+    const thinkingSwitch = normalizeCachedThinkingSwitch(record.thinkingSwitch);
     const defaultReasoningEffort = normalizeCachedDefaultReasoningEffort(
       record.defaultReasoningEffort,
     );
@@ -232,7 +342,9 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
     const supportsThinkingType =
       record.supportsThinkingType === "only" ? ("only" as const) : undefined;
     const supportsThinkingSwitch =
-      record.supportsThinkingSwitch === true ? (true as const) : undefined;
+      typeof record.supportsThinkingSwitch === "boolean"
+        ? record.supportsThinkingSwitch
+        : undefined;
     const inferenceProvider =
       typeof record.inferenceProvider === "string" && record.inferenceProvider.trim().length > 0
         ? record.inferenceProvider.trim()
@@ -248,6 +360,11 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(pricing !== undefined ? { pricing } : {}),
       ...(capabilities !== undefined ? { capabilities } : {}),
       ...(supportedReasoningEfforts !== undefined ? { supportedReasoningEfforts } : {}),
+      ...(effortSemantics !== undefined ? { effortSemantics } : {}),
+      ...(supportedEfforts !== undefined ? { supportedEfforts } : {}),
+      ...(defaultEffort !== undefined ? { defaultEffort } : {}),
+      ...(thinkingCapabilities !== undefined ? { thinkingCapabilities } : {}),
+      ...(catalogCapabilities !== undefined ? { catalogCapabilities } : {}),
       ...(defaultReasoningEffort !== undefined ? { defaultReasoningEffort } : {}),
       ...(contextLength !== undefined ? { contextLength } : {}),
       ...(outputLimit !== undefined ? { outputLimit } : {}),
@@ -256,6 +373,7 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       ...(serviceTiers !== undefined ? { serviceTiers } : {}),
       ...(supportsThinkingType !== undefined ? { supportsThinkingType } : {}),
       ...(supportsThinkingSwitch !== undefined ? { supportsThinkingSwitch } : {}),
+      ...(thinkingSwitch !== undefined ? { thinkingSwitch } : {}),
       ...(inferenceProvider !== undefined ? { inferenceProvider } : {}),
       ...(upstreamProvider !== undefined ? { upstreamProvider } : {}),
     });
@@ -483,6 +601,17 @@ function clonePreviewModelCatalog(
     ...(entry.supportedReasoningEfforts !== undefined
       ? { supportedReasoningEfforts: [...entry.supportedReasoningEfforts] }
       : {}),
+    ...(entry.effortSemantics !== undefined ? { effortSemantics: entry.effortSemantics } : {}),
+    ...(entry.supportedEfforts !== undefined
+      ? { supportedEfforts: [...entry.supportedEfforts] }
+      : {}),
+    ...(entry.defaultEffort !== undefined ? { defaultEffort: entry.defaultEffort } : {}),
+    ...(entry.thinkingCapabilities !== undefined
+      ? { thinkingCapabilities: structuredClone(entry.thinkingCapabilities) }
+      : {}),
+    ...(entry.catalogCapabilities !== undefined
+      ? { catalogCapabilities: structuredClone(entry.catalogCapabilities) }
+      : {}),
     ...(entry.defaultReasoningEffort !== undefined
       ? { defaultReasoningEffort: entry.defaultReasoningEffort }
       : {}),
@@ -500,7 +629,12 @@ function clonePreviewModelCatalog(
     ...(entry.supportsThinkingType !== undefined
       ? { supportsThinkingType: entry.supportsThinkingType }
       : {}),
-    ...(entry.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+    ...(entry.supportsThinkingSwitch !== undefined
+      ? { supportsThinkingSwitch: entry.supportsThinkingSwitch }
+      : {}),
+    ...(entry.thinkingSwitch !== undefined
+      ? { thinkingSwitch: structuredClone(entry.thinkingSwitch) }
+      : {}),
     ...(entry.inferenceProvider !== undefined
       ? { inferenceProvider: entry.inferenceProvider }
       : {}),

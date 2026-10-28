@@ -8,6 +8,7 @@ import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
   ThinkingSwitchDeclaration,
+  ThinkingCapabilities,
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
@@ -36,6 +37,8 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
    * enum). Reserved for picker-facing plumbing; the transport does not infer thinking from it.
    */
   supportedEfforts?: readonly AnthropicEffort[];
+  effortSemantics?: "output";
+  thinkingCapabilities?: ThinkingCapabilities;
   sendReasoning?: boolean;
   disableParallelToolUse?: boolean;
   structuredOutputMode?: AnthropicStructuredOutputMode;

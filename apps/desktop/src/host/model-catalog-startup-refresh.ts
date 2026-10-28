@@ -192,14 +192,26 @@ export function catalogEntryToModelEntry(
       entry.supportedReasoningEfforts = efforts as ModelEntry["supportedReasoningEfforts"];
     }
   }
+  if (catalogEntry.effortSemantics !== undefined) {
+    entry.effortSemantics = catalogEntry.effortSemantics;
+  }
+  if (catalogEntry.supportedEfforts !== undefined) {
+    entry.supportedEfforts = [...catalogEntry.supportedEfforts];
+  }
+  if (catalogEntry.defaultEffort !== undefined) {
+    entry.defaultEffort = catalogEntry.defaultEffort;
+  }
+  if (catalogEntry.thinkingCapabilities !== undefined) {
+    entry.thinkingCapabilities = structuredClone(catalogEntry.thinkingCapabilities);
+  }
   if (catalogEntry.supportedReasoningModes !== undefined) {
     entry.supportedReasoningModes = [...catalogEntry.supportedReasoningModes];
   }
   if (catalogEntry.supportsThinkingType !== undefined) {
     entry.supportsThinkingType = catalogEntry.supportsThinkingType;
   }
-  if (catalogEntry.supportsThinkingSwitch === true) {
-    entry.supportsThinkingSwitch = true;
+  if (catalogEntry.supportsThinkingSwitch !== undefined) {
+    entry.supportsThinkingSwitch = catalogEntry.supportsThinkingSwitch;
   }
   if (catalogEntry.thinkingSwitch !== undefined) {
     entry.thinkingSwitch = structuredClone(catalogEntry.thinkingSwitch);
@@ -348,6 +360,58 @@ export function applyCatalogEntryToStoredModel(
     }
   }
 
+  if (catalogEntry.effortSemantics !== undefined) {
+    if (model.effortSemantics !== catalogEntry.effortSemantics) {
+      model.effortSemantics = catalogEntry.effortSemantics;
+      changed = true;
+    }
+  } else if (model.effortSemantics !== undefined) {
+    delete model.effortSemantics;
+    delete model.effort;
+    delete model.supportedEfforts;
+    delete model.defaultEffort;
+    changed = true;
+  }
+
+  if (catalogEntry.supportedEfforts !== undefined) {
+    const nextEfforts = catalogEntry.supportedEfforts;
+    if (!stringArrayEqual(model.supportedEfforts, nextEfforts)) {
+      model.supportedEfforts = [...nextEfforts];
+      changed = true;
+    }
+    if (
+      model.effort !== undefined &&
+      model.effort !== "default" &&
+      !nextEfforts.includes(model.effort)
+    ) {
+      delete model.effort;
+      changed = true;
+    }
+  }
+
+  if (catalogEntry.defaultEffort !== undefined) {
+    if (model.defaultEffort !== catalogEntry.defaultEffort) {
+      model.defaultEffort = catalogEntry.defaultEffort;
+      changed = true;
+    }
+  } else if (model.defaultEffort !== undefined) {
+    delete model.defaultEffort;
+    changed = true;
+  }
+
+  if (catalogEntry.thinkingCapabilities !== undefined) {
+    if (
+      JSON.stringify(model.thinkingCapabilities) !==
+      JSON.stringify(catalogEntry.thinkingCapabilities)
+    ) {
+      model.thinkingCapabilities = structuredClone(catalogEntry.thinkingCapabilities);
+      changed = true;
+    }
+  } else if (model.thinkingCapabilities !== undefined) {
+    delete model.thinkingCapabilities;
+    changed = true;
+  }
+
   if (catalogEntry.supportedReasoningModes !== undefined) {
     if (!stringArrayEqual(model.supportedReasoningModes, catalogEntry.supportedReasoningModes)) {
       model.supportedReasoningModes = [...catalogEntry.supportedReasoningModes];
@@ -382,9 +446,15 @@ export function applyCatalogEntryToStoredModel(
     changed = true;
   }
 
-  if (catalogEntry.supportsThinkingSwitch === true && model.supportsThinkingSwitch !== true) {
-    model.supportsThinkingSwitch = true;
-    changed = true;
+  if (catalogEntry.supportsThinkingSwitch !== undefined) {
+    if (model.supportsThinkingSwitch !== catalogEntry.supportsThinkingSwitch) {
+      model.supportsThinkingSwitch = catalogEntry.supportsThinkingSwitch;
+      changed = true;
+    }
+    if (!catalogEntry.supportsThinkingSwitch && model.thinkingEnabled !== undefined) {
+      delete model.thinkingEnabled;
+      changed = true;
+    }
   }
 
   // The thinkingSwitch wire encoding is catalog-owned (knowledge-folded): written when declared,

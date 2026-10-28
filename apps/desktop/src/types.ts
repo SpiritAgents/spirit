@@ -10,8 +10,18 @@ import type {
   ThinkingSwitchDeclaration,
 } from "@spiritagent/host-internal/config";
 import type { ModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
+import type {
+  EffortSemantics,
+  ModelEffort,
+  ModelEffortSelection,
+} from "@spiritagent/agent-core/model-effort";
+import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
-import type { LspWriteDiagnosticsUi, PermissionMemoryTarget } from "@spiritagent/agent-core";
+import type {
+  LspWriteDiagnosticsUi,
+  PermissionMemoryTarget,
+  ThinkingCapabilities,
+} from "@spiritagent/agent-core";
 import type { ToolExecutionFileChangeDiff } from "@spiritagent/agent-core";
 
 import type { DesktopAgentMode } from "./lib/agent-mode.js";
@@ -238,6 +248,11 @@ export interface PreviewModelCatalogEntry {
   pricing?: PreviewModelCatalogPricing;
   capabilities?: DesktopModelCapability[];
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  effortSemantics?: EffortSemantics;
+  supportedEfforts?: ModelEffort[];
+  defaultEffort?: ModelEffort;
+  thinkingCapabilities?: ThinkingCapabilities;
+  catalogCapabilities?: ProviderListedCatalogCapabilities;
   /** Kimi Code `think_efforts.default_effort` when present. */
   defaultReasoningEffort?: DesktopModelReasoningEffort;
   supportedReasoningModes?: DesktopModelReasoningMode[];
@@ -1622,6 +1637,11 @@ export interface ModelProfileSnapshot {
   /** Declared service tier options (simple list or literal wire map) after inheritance. */
   serviceTiers?: SpiritServiceTiersDeclaration;
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  effortSemantics?: EffortSemantics;
+  effort?: ModelEffortSelection;
+  supportedEfforts?: ModelEffort[];
+  defaultEffort?: ModelEffort;
+  thinkingCapabilities?: ThinkingCapabilities;
   supportedReasoningModes?: DesktopModelReasoningMode[];
   capabilities?: DesktopModelCapability[];
   /** Transport family; absent means `openai-compatible`. */
@@ -1634,6 +1654,7 @@ export interface ModelProfileSnapshot {
   supportsThinkingType?: "only";
   /** The model supports a thinking on/off switch (wire encoding declared by `thinkingSwitch` or the transport default). */
   supportsThinkingSwitch?: boolean;
+  thinkingSwitch?: ThinkingSwitchDeclaration;
   /** User thinking on/off state (model-level user state; absent = on). */
   thinkingEnabled?: boolean;
   /** Presence-only capability marker: the model's provider entry declares `providerTools`. */

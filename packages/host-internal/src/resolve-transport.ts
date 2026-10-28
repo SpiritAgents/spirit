@@ -17,6 +17,8 @@ import {
   type SpiritModelReasoningEffort,
   type SpiritModelReasoningMode,
   type ThinkingSwitchDeclaration,
+  type EffortSemantics,
+  type ThinkingCapabilities,
 } from "./config.js";
 import type { SpiritServiceTiersDeclaration } from "./config.js";
 import {
@@ -99,6 +101,8 @@ interface TransportDeclarationFields {
   outputLimit?: number;
   reasoningMode?: SpiritModelReasoningMode;
   supportedReasoningModes?: SpiritModelReasoningMode[];
+  effortSemantics?: EffortSemantics;
+  thinkingCapabilities?: ThinkingCapabilities;
   thinkingSwitch?: ThinkingSwitchDeclaration;
 }
 
@@ -118,6 +122,10 @@ function transportDeclarationFields(
     ...(profile.reasoningMode !== undefined ? { reasoningMode: profile.reasoningMode } : {}),
     ...(profile.supportedReasoningModes !== undefined
       ? { supportedReasoningModes: profile.supportedReasoningModes }
+      : {}),
+    ...(profile.effortSemantics !== undefined ? { effortSemantics: profile.effortSemantics } : {}),
+    ...(profile.thinkingCapabilities !== undefined
+      ? { thinkingCapabilities: profile.thinkingCapabilities }
       : {}),
     ...(profile.thinkingSwitch !== undefined ? { thinkingSwitch: profile.thinkingSwitch } : {}),
     ...(profile.serviceTiers !== undefined ? { serviceTiers: profile.serviceTiers } : {}),
@@ -217,8 +225,13 @@ function buildTransportFromProfile(
   }
 
   if (transportKind === "anthropic") {
-    const supportedEfforts = anthropicSupportedEfforts(profile.supportedReasoningEfforts);
-    const effort = anthropicEffort(profile.reasoningEffort);
+    const outputEffort = profile.effortSemantics === "output";
+    const supportedEfforts = outputEffort
+      ? profile.supportedEfforts
+      : anthropicSupportedEfforts(profile.supportedReasoningEfforts);
+    const effort = outputEffort
+      ? anthropicEffort(profile.effort)
+      : anthropicEffort(profile.reasoningEffort);
     return {
       transportKind: "anthropic",
       apiKey,
