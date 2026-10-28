@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { mapPendingToolApproval } from "../../dist-electron/src/host/snapshot-mappers.js";
+import { buildPaneSessionSlice } from "../../dist-electron/src/host/pane-snapshot.js";
+import { createEmptySessionBundle } from "../../dist-electron/src/host/session-bundle.js";
 
 test("mapPendingToolApproval forwards subagentSessionId when present", () => {
   const mapped = mapPendingToolApproval({
@@ -180,4 +182,18 @@ test("mapPendingToolApproval maps hook-gated file previews from the carried requ
   assert.equal(mapped.hookMessage, "confirm the cleanup");
   assert.equal(mapped.fileDiffPreviews?.length, 1);
   assert.equal(mapped.fileDiffPreviews[0].defaultOpen, false);
+});
+
+test("buildPaneSessionSlice exposes lastInputTokens without contextUsage", () => {
+  const bundle = createEmptySessionBundle("/tmp/spirit-workspace", "session-tier-limit");
+  bundle.lastInputTokens = 278529;
+
+  const slice = buildPaneSessionSlice({
+    bundle,
+    composerSessionKey: "session-tier-limit",
+    isForegroundActive: true,
+  });
+
+  assert.equal(slice.conversation.lastInputTokens, 278529);
+  assert.equal(slice.conversation.contextUsage, undefined);
 });

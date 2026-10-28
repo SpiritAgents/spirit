@@ -1123,6 +1123,7 @@ function createContextUsageHarness(options = {}) {
   let nextMessageId = 1;
   let nextTimelineMessageId = 1;
   let contextUsage = options.initialContextUsage;
+  let lastInputTokens;
   const refreshCatalogCalls = [];
   const timeline = new DesktopMessageTimeline({
     allocateMessageId: () => nextTimelineMessageId++,
@@ -1158,6 +1159,9 @@ function createContextUsageHarness(options = {}) {
     resolveActiveModel: options.resolveActiveModel,
     resolveCatalogHints: options.resolveCatalogHints ?? (() => []),
     supportsCatalogRefresh: options.supportsCatalogRefresh,
+    setLastInputTokens: (inputTokens) => {
+      lastInputTokens = inputTokens;
+    },
     setContextUsage: (usage) => {
       contextUsage = usage;
     },
@@ -1169,6 +1173,7 @@ function createContextUsageHarness(options = {}) {
   return {
     orchestrator,
     getContextUsage: () => contextUsage,
+    getLastInputTokens: () => lastInputTokens,
     refreshCatalogCalls,
   };
 }
@@ -1233,6 +1238,23 @@ test("context-usage-updated updates usage when context length is already known",
     contextLength: 128000,
     percent: 50,
   });
+});
+
+test("context-usage-updated records lastInputTokens without a model context length", () => {
+  const harness = createContextUsageHarness({
+    resolveActiveModel: () => ({
+      name: "gpt-5.4",
+      apiBase: "https://api.openai.com/v1",
+      providerId: "openai",
+    }),
+  });
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "context-usage-updated", usage: { inputTokens: 278529 } },
+  ]);
+
+  assert.equal(harness.getLastInputTokens(), 278529);
+  assert.equal(harness.getContextUsage(), undefined);
 });
 
 test("interleaved built-in web_search shows Thinking placeholder after last terminal tool", () => {

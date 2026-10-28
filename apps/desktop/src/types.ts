@@ -1705,6 +1705,8 @@ export interface ConversationSnapshot {
   rewindWarnings?: FileRewindWarning[];
   todos?: ConversationTodoSnapshot;
   contextUsage?: ConversationContextUsageSnapshot;
+  /** Latest real upstream input usage for conditional service tiers; independent of contextLength. */
+  lastInputTokens?: number;
 }
 
 export interface ConversationLocalFileAttachmentSnapshot {
