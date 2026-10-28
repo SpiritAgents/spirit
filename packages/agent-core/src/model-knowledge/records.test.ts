@@ -197,7 +197,7 @@ test("bedrock nova ids declare the low/medium/high reasoningConfig ladder", () =
   assert.equal(lookupModelKnowledge("amazon.titan-text-express-v1"), undefined);
 });
 
-test("gpt-5.6+ exposes the extended effort ladder and pro mode; gpt-5.5 does not", () => {
+test("gpt-5.6+ exposes the extended effort ladder and pro mode", () => {
   const expected = {
     supportedReasoningEfforts: GPT56_EFFORTS,
     supportedReasoningModes: GPT56_MODES,
@@ -206,8 +206,69 @@ test("gpt-5.6+ exposes the extended effort ladder and pro mode; gpt-5.5 does not
   assert.deepEqual(lookupModelKnowledge("gpt-5.6-sol"), expected);
   assert.deepEqual(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
   assert.deepEqual(lookupModelKnowledge("gpt-6"), expected);
-  assert.equal(lookupModelKnowledge("gpt-5.5"), undefined);
-  assert.equal(lookupModelKnowledge("gpt-5.4"), undefined);
+});
+
+test("pre-5.6 OpenAI reasoning models resolve exact effort ladders across id forms", () => {
+  const noneThroughXhigh = ["none", "low", "medium", "high", "xhigh"];
+  const mediumThroughXhigh = ["medium", "high", "xhigh"];
+  const minimalThroughHigh = ["minimal", "low", "medium", "high"];
+  const cases = [
+    { id: "gpt-5.5-pro", efforts: mediumThroughXhigh },
+    { id: "gpt-5.5", efforts: noneThroughXhigh },
+    { id: "gpt-5.4-pro", efforts: mediumThroughXhigh },
+    { id: "gpt-5.4-mini", efforts: noneThroughXhigh },
+    { id: "gpt-5.4-nano", efforts: noneThroughXhigh },
+    { id: "gpt-5.4", efforts: noneThroughXhigh },
+    { id: "gpt-5.3-codex", efforts: ["low", "medium", "high", "xhigh"] },
+    { id: "gpt-5.2-pro", efforts: mediumThroughXhigh },
+    { id: "gpt-5.2", efforts: noneThroughXhigh },
+    { id: "gpt-5.1", efforts: ["none", "low", "medium", "high"] },
+    { id: "gpt-5-pro", efforts: ["high"] },
+    { id: "gpt-5-mini", efforts: minimalThroughHigh },
+    { id: "gpt-5-nano", efforts: minimalThroughHigh },
+    { id: "gpt-5", efforts: minimalThroughHigh },
+    { id: "o3", efforts: ["low", "medium", "high"] },
+  ];
+
+  for (const { id, efforts } of cases) {
+    for (const modelId of [id, `openai/${id}`, `${id}-2026-01-15`]) {
+      assert.deepEqual(
+        lookupModelKnowledge(modelId),
+        { supportedReasoningEfforts: efforts },
+        modelId,
+      );
+    }
+  }
+});
+
+test("OpenAI knowledge does not infer effort for non-reasoning or unavailable models", () => {
+  for (const modelId of [
+    "o3-pro",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4o",
+    "gpt-4o-mini",
+    "chat-latest",
+  ]) {
+    assert.equal(lookupModelKnowledge(modelId)?.["supportedReasoningEfforts"], undefined, modelId);
+  }
+
+  for (const modelId of [
+    "o1",
+    "o3-mini",
+    "o4-mini",
+    "gpt-5.1-codex",
+    "gpt-5.1-codex-max",
+    "gpt-5-codex",
+    "gpt-5.5-codex",
+    "gpt-4.1-nano",
+    "gpt-4o-audio-preview",
+    "gpt-4o-realtime-preview",
+    "gpt-4o-2024-05-13",
+    "gpt-3.5-turbo",
+  ]) {
+    assert.equal(lookupModelKnowledge(modelId), undefined, modelId);
+  }
 });
 
 test("gpt-6-astra rejects none and offers ultrafast; gpt-6.1-sol keeps none", () => {
@@ -392,6 +453,6 @@ test("grok models declare the default/priority tier ladder", () => {
 
 test("unknown models produce no declarations (safe default)", () => {
   assert.equal(lookupModelKnowledge("qwen3.8-max"), undefined);
-  assert.equal(lookupModelKnowledge("gpt-5.5"), undefined);
+  assert.equal(lookupModelKnowledge("gpt-5.5-codex"), undefined);
   assert.equal(lookupModelKnowledge("my-lab-llm"), undefined);
 });
