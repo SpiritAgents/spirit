@@ -50,6 +50,11 @@ const VERCEL_OPENAI_TIERS_ULTRAFAST = {
   ...VERCEL_OPENAI_TIERS,
   ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } },
 };
+const VERCEL_OPENAI_FAST_TIERS = {
+  default: VERCEL_OPENAI_TIERS.default,
+  fast: VERCEL_OPENAI_TIERS.fast,
+};
+const GPT5_EFFORTS = ["minimal", "low", "medium", "high"];
 const VERCEL_GOOGLE_TIERS = {
   default: {},
   flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
@@ -300,12 +305,14 @@ test("parseVercelAiGatewayModelEntriesPayload omits none effort for openai/gpt-6
   ]);
 });
 
-test("parseOpenAiCompatibleModelEntriesPayload leaves gpt-5.5 without gpt56 effort list", () => {
+test("parseOpenAiCompatibleModelEntriesPayload infers the pre-5.6 gpt-5.5 effort list", () => {
   const entries = parseOpenAiCompatibleModelEntriesPayload({
     data: [{ id: "gpt-5.5" }],
   });
 
-  assert.deepEqual(entries, [{ id: "gpt-5.5" }]);
+  assert.deepEqual(entries, [
+    { id: "gpt-5.5", supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"] },
+  ]);
 });
 
 test("parseKimiCodeModelEntriesPayload ignores legacy fields", () => {
@@ -506,6 +513,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps language and image types", ()
       id: "openai/gpt-5",
       contextLength: 128000,
       supportsImageInput: true,
+      supportedReasoningEfforts: GPT5_EFFORTS,
       serviceTiers: VERCEL_OPENAI_TIERS,
     },
     {
@@ -548,7 +556,7 @@ test("parseVercelAiGatewayModelEntriesPayload maps vision tag to supportsImageIn
     {
       id: "openai/gpt-4o",
       supportsImageInput: true,
-      serviceTiers: VERCEL_OPENAI_TIERS,
+      serviceTiers: VERCEL_OPENAI_FAST_TIERS,
     },
     {
       id: "alibaba/qwen-3-14b",
@@ -593,6 +601,7 @@ test("parseVercelAiGatewayModelEntriesPayload infers supportedReasoningEfforts f
     },
     {
       id: "openai/gpt-5",
+      supportedReasoningEfforts: GPT5_EFFORTS,
       serviceTiers: VERCEL_OPENAI_TIERS,
     },
   ]);
@@ -666,7 +675,11 @@ test("parseOpenAiCompatibleModelEntriesPayload routes vercel-ai-gateway to typed
   );
 
   assert.deepEqual(entries, [
-    { id: "openai/gpt-5", serviceTiers: VERCEL_OPENAI_TIERS },
+    {
+      id: "openai/gpt-5",
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: VERCEL_OPENAI_TIERS,
+    },
     { id: "google/imagen-4", supportsImageGeneration: true },
   ]);
 });
@@ -697,7 +710,7 @@ test("parseOpenRouterModelEntriesPayload classifies output_modalities", () => {
   });
 
   assert.deepEqual(entries, [
-    { id: "openai/gpt-4o", serviceTiers: OPENROUTER_OPENAI_TIERS },
+    { id: "openai/gpt-4o", serviceTiers: ["default", "fast"] },
     { id: "google/imagen-4", supportsImageGeneration: true },
     { id: "openai/gpt-image-1", serviceTiers: OPENROUTER_OPENAI_TIERS },
     { id: "legacy/model-without-modalities", serviceTiers: NO_SERVICE_TIERS },
@@ -731,6 +744,7 @@ test("parseVercelAiGatewayModelEntriesPayload extracts display metadata and pric
         outputPerTokenUsd: "0.000002",
       },
       contextLength: 128000,
+      supportedReasoningEfforts: GPT5_EFFORTS,
       serviceTiers: VERCEL_OPENAI_TIERS,
     },
   ]);
@@ -2589,9 +2603,36 @@ test("parseOpenRouterModelEntriesPayload materializes per-upstream service tier 
   assert.deepEqual(byId.get("anthropic/claude-opus-4.8")?.serviceTiers, ["default", "priority"]);
   assert.deepEqual(byId.get("x-ai/grok-4.3")?.serviceTiers, ["default", "priority"]);
   assert.deepEqual(byId.get("meta/llama-4-scout")?.serviceTiers, []);
-  assert.deepEqual(byId.get("openai/gpt-4o")?.serviceTiers, ["default", "flex", "fast"]);
+  assert.deepEqual(byId.get("openai/gpt-4o")?.serviceTiers, ["default", "fast"]);
   // Media entries carry no tier declaration.
   assert.equal(byId.get("google/imagen-4")?.serviceTiers, undefined);
+});
+
+test("OpenAI aggregator service tiers are capped by model knowledge", () => {
+  const modelIds = ["gpt-5.3-codex", "gpt-5.2-pro", "o3", "uncataloged-model"];
+  const vercelEntries = parseVercelAiGatewayModelEntriesPayload({
+    data: modelIds.map((id) => ({ id: `openai/${id}`, type: "language", owned_by: "OpenAI" })),
+  });
+  const vercelById = new Map(vercelEntries.map((entry) => [entry.id, entry]));
+
+  assert.deepEqual(vercelById.get("openai/gpt-5.3-codex")?.serviceTiers, { default: {} });
+  assert.deepEqual(vercelById.get("openai/gpt-5.2-pro")?.serviceTiers, { default: {} });
+  assert.deepEqual(vercelById.get("openai/o3")?.serviceTiers, VERCEL_OPENAI_TIERS);
+  // Unknown models keep the existing route fallback rather than losing their tier declaration.
+  assert.deepEqual(vercelById.get("openai/uncataloged-model")?.serviceTiers, VERCEL_OPENAI_TIERS);
+
+  const openRouterEntries = parseOpenRouterModelEntriesPayload({
+    data: modelIds.map((id) => ({ id: `openai/${id}`, canonical_slug: `openai/${id}` })),
+  });
+  const openRouterById = new Map(openRouterEntries.map((entry) => [entry.id, entry]));
+
+  assert.deepEqual(openRouterById.get("openai/gpt-5.3-codex")?.serviceTiers, ["default"]);
+  assert.deepEqual(openRouterById.get("openai/gpt-5.2-pro")?.serviceTiers, ["default"]);
+  assert.deepEqual(openRouterById.get("openai/o3")?.serviceTiers, OPENROUTER_OPENAI_TIERS);
+  assert.deepEqual(
+    openRouterById.get("openai/uncataloged-model")?.serviceTiers,
+    OPENROUTER_OPENAI_TIERS,
+  );
 });
 
 test("dedupeProviderListedModelEntries preserves upstreamProvider from the first entry", () => {

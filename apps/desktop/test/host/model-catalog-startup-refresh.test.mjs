@@ -235,6 +235,7 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
       name: "openai/gpt-4.1",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["low", "high"],
+      serviceTiers: ["auto", "default", "fast"],
       contextLength: 128000,
     },
   ]);
@@ -255,6 +256,35 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
 
   assert.equal(synced, 0);
   assert.equal(provider.models[0].contextLength, 128000);
+});
+
+test("syncExistingModelsFromCatalog adds legacy OpenAI declarations and preserves valid selections", () => {
+  const provider = openAiProvider([
+    { name: "gpt-5.4", reasoningEffort: "high", serviceTier: "flex" },
+    { name: "gpt-4.1", serviceTier: "fast" },
+  ]);
+  const config = { providers: [provider] };
+
+  const synced = syncExistingModelsFromCatalog(config, provider, {
+    modelIds: ["gpt-5.4", "gpt-4.1"],
+    fromCache: false,
+    modelCatalog: [{ id: "gpt-5.4" }, { id: "gpt-4.1" }],
+  });
+
+  assert.equal(synced, 2);
+  assert.deepEqual(provider.models[0].supportedReasoningEfforts, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(provider.models[0].serviceTiers, ["auto", "default", "flex"]);
+  assert.equal(provider.models[0].reasoningEffort, "high");
+  assert.equal(provider.models[0].serviceTier, "flex");
+  assert.deepEqual(provider.models[1].serviceTiers, ["auto", "default", "fast"]);
+  assert.equal(provider.models[1].serviceTier, "fast");
+  assert.equal("supportedReasoningEfforts" in provider.models[1], false);
 });
 
 test("catalog upstreamProvider is display metadata only, never written onto config models", () => {

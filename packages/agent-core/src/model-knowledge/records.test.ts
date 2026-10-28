@@ -208,35 +208,66 @@ test("gpt-5.6+ exposes the extended effort ladder and pro mode", () => {
   assert.deepEqual(lookupModelKnowledge("gpt-6"), expected);
 });
 
-test("pre-5.6 OpenAI reasoning models resolve exact effort ladders across id forms", () => {
+test("pre-5.6 OpenAI reasoning models resolve exact effort and tier declarations", () => {
   const noneThroughXhigh = ["none", "low", "medium", "high", "xhigh"];
   const mediumThroughXhigh = ["medium", "high", "xhigh"];
   const minimalThroughHigh = ["minimal", "low", "medium", "high"];
+  const autoDefault = ["auto", "default"];
+  const withFlex = [...autoDefault, "flex"];
+  const withFlexFast = [...withFlex, "fast"];
   const cases = [
-    { id: "gpt-5.5-pro", efforts: mediumThroughXhigh },
-    { id: "gpt-5.5", efforts: noneThroughXhigh },
-    { id: "gpt-5.4-pro", efforts: mediumThroughXhigh },
-    { id: "gpt-5.4-mini", efforts: noneThroughXhigh },
-    { id: "gpt-5.4-nano", efforts: noneThroughXhigh },
-    { id: "gpt-5.4", efforts: noneThroughXhigh },
-    { id: "gpt-5.3-codex", efforts: ["low", "medium", "high", "xhigh"] },
-    { id: "gpt-5.2-pro", efforts: mediumThroughXhigh },
-    { id: "gpt-5.2", efforts: noneThroughXhigh },
-    { id: "gpt-5.1", efforts: ["none", "low", "medium", "high"] },
-    { id: "gpt-5-pro", efforts: ["high"] },
-    { id: "gpt-5-mini", efforts: minimalThroughHigh },
-    { id: "gpt-5-nano", efforts: minimalThroughHigh },
-    { id: "gpt-5", efforts: minimalThroughHigh },
-    { id: "o3", efforts: ["low", "medium", "high"] },
+    { id: "gpt-5.5-pro", efforts: mediumThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.5", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4-pro", efforts: mediumThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4-mini", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4-nano", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.3-codex", efforts: ["low", "medium", "high", "xhigh"], tiers: autoDefault },
+    { id: "gpt-5.2-pro", efforts: mediumThroughXhigh, tiers: autoDefault },
+    { id: "gpt-5.2", efforts: noneThroughXhigh, tiers: withFlexFast },
+    { id: "gpt-5.1", efforts: ["none", "low", "medium", "high"], tiers: withFlexFast },
+    { id: "gpt-5-pro", efforts: ["high"], tiers: autoDefault },
+    { id: "gpt-5-mini", efforts: minimalThroughHigh, tiers: withFlexFast },
+    { id: "gpt-5-nano", efforts: minimalThroughHigh, tiers: withFlex },
+    { id: "gpt-5", efforts: minimalThroughHigh, tiers: withFlexFast },
+    { id: "o3", efforts: ["low", "medium", "high"], tiers: withFlexFast },
   ];
 
-  for (const { id, efforts } of cases) {
+  for (const { id, efforts, tiers } of cases) {
     for (const modelId of [id, `openai/${id}`, `${id}-2026-01-15`]) {
       assert.deepEqual(
         lookupModelKnowledge(modelId),
-        { supportedReasoningEfforts: efforts },
+        { supportedReasoningEfforts: efforts, serviceTiers: tiers },
         modelId,
       );
+    }
+  }
+});
+
+test("OpenAI non-reasoning models declare only their service tiers", () => {
+  const autoDefault = ["auto", "default"];
+  const withFast = [...autoDefault, "fast"];
+  const cases = [
+    { ids: ["o3-pro", "openai/o3-pro", "o3-pro-2026-01-15"], tiers: autoDefault },
+    { ids: ["gpt-4.1", "openai/gpt-4.1", "gpt-4.1-2026-01-15"], tiers: withFast },
+    {
+      ids: ["gpt-4.1-mini", "openai/gpt-4.1-mini", "gpt-4.1-mini-2026-01-15"],
+      tiers: withFast,
+    },
+    {
+      ids: ["gpt-4o-mini", "openai/gpt-4o-mini", "gpt-4o-mini-2026-01-15"],
+      tiers: withFast,
+    },
+    {
+      ids: ["gpt-4o", "openai/gpt-4o", "gpt-4o-2024-08-06", "gpt-4o-2024-11-20"],
+      tiers: withFast,
+    },
+    { ids: ["chat-latest", "openai/chat-latest"], tiers: autoDefault },
+  ];
+
+  for (const { ids, tiers } of cases) {
+    for (const modelId of ids) {
+      assert.deepEqual(lookupModelKnowledge(modelId), { serviceTiers: tiers }, modelId);
     }
   }
 });

@@ -21,107 +21,164 @@
     {
       "match": "gpt-5\\.5-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
-      "note": "GPT-5.5 Pro has the restricted medium/high/xhigh effort ladder. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5.5 Pro has the restricted medium/high/xhigh effort ladder and no Fast tier. Flex is cross-checked against pricing mirrors and the exclusion list rather than a directly read official flex tab."
     },
     {
       "match": "gpt-5\\.5(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
       "note": "GPT-5.5 supports none through xhigh, but not minimal or max. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
-      "note": "GPT-5.4 Pro has the restricted medium/high/xhigh effort ladder. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5.4 Pro has the restricted medium/high/xhigh effort ladder and no Fast tier. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
       "note": "GPT-5.4 mini supports none through xhigh. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4-nano(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
-      "note": "GPT-5.4 nano supports none through xhigh. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5.4 nano supports none through xhigh and has no Fast tier. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5\\.4(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
       "note": "GPT-5.4 supports none through xhigh. Only the canonical id and dated snapshots are matched; Pro, mini, and nano have their own records."
     },
     {
       "match": "gpt-5\\.3-codex(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default"]
       },
-      "note": "GPT-5.3 Codex supports low through xhigh without a none effort. Its upstream default effort is deliberately not materialized."
+      "note": "GPT-5.3 Codex supports low through xhigh without a none effort. Its upstream default effort and unconfirmed Flex/Fast tiers are deliberately not materialized."
     },
     {
       "match": "gpt-5\\.2-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default"]
       },
-      "note": "GPT-5.2 Pro has the restricted medium/high/xhigh effort ladder. Its upstream default effort is deliberately not materialized."
+      "note": "GPT-5.2 Pro has the restricted medium/high/xhigh effort ladder and no Flex/Fast tiers. Its upstream default effort is deliberately not materialized."
     },
     {
       "match": "gpt-5\\.2(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"],
+        "serviceTiers": ["auto", "default", "flex", "fast"]
       },
       "note": "GPT-5.2 supports none through xhigh. Only the canonical id and dated snapshots are matched; Pro has its own record."
     },
     {
       "match": "gpt-5\\.1(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["none", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["none", "low", "medium", "high"],
+        "serviceTiers": ["auto", "default", "flex", "fast"]
       },
       "note": "GPT-5.1 supports none but not minimal or xhigh. The canonical id and dated snapshots do not cover the shut-down Codex variants."
     },
     {
       "match": "gpt-5-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["high"]
+        "supportedReasoningEfforts": ["high"],
+        "serviceTiers": ["auto", "default"]
       },
-      "note": "GPT-5 Pro accepts only the high reasoning effort."
+      "note": "GPT-5 Pro accepts only the high reasoning effort and has no Flex/Fast tiers."
     },
     {
       "match": "gpt-5-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"],
+        "serviceTiers": ["auto", "default", "flex", "fast"]
       },
       "note": "GPT-5 mini starts at minimal and does not support none or xhigh. Only the canonical id and dated snapshots are matched."
     },
     {
       "match": "gpt-5-nano(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"],
+        "serviceTiers": ["auto", "default", "flex"]
       },
-      "note": "GPT-5 nano starts at minimal and does not support none or xhigh. Only the canonical id and dated snapshots are matched."
+      "note": "GPT-5 nano starts at minimal and does not support none or xhigh. It has no Fast tier."
     },
     {
       "match": "gpt-5(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"],
+        "serviceTiers": ["auto", "default", "flex", "fast"]
       },
       "note": "GPT-5 starts at minimal and does not support none or xhigh. Pro, mini, nano, Codex, and newer versions do not match this record."
     },
     {
       "match": "o3(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
       "declare": {
-        "supportedReasoningEfforts": ["low", "medium", "high"]
+        "supportedReasoningEfforts": ["low", "medium", "high"],
+        "serviceTiers": ["auto", "default", "flex", "fast"]
       },
       "note": "o3 supports the low/medium/high effort ladder. The canonical id and dated snapshots do not cover o3-pro, o3-mini, or deep-research variants."
+    },
+    {
+      "match": "o3-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "serviceTiers": ["auto", "default"]
+      },
+      "note": "o3-pro has no Flex/Fast tiers. Reasoning effort is deliberately undeclared because the upstream parameter contract is not documented."
+    },
+    {
+      "match": "gpt-4\\.1-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "serviceTiers": ["auto", "default", "fast"]
+      },
+      "note": "GPT-4.1 mini is non-reasoning and supports Fast but not Flex. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-4\\.1(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "serviceTiers": ["auto", "default", "fast"]
+      },
+      "note": "GPT-4.1 is non-reasoning and supports Fast but not Flex. The canonical id and dated snapshots do not cover nano."
+    },
+    {
+      "match": "gpt-4o-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "serviceTiers": ["auto", "default", "fast"]
+      },
+      "note": "GPT-4o mini is non-reasoning and supports Fast but not Flex. Audio and realtime variants do not match."
+    },
+    {
+      "match": "gpt-4o(?:$|-2024-(?:08-06|11-20)$)",
+      "declare": {
+        "serviceTiers": ["auto", "default", "fast"]
+      },
+      "note": "GPT-4o is non-reasoning. Fast is declared only for the alias and the still-available 2024-08-06 and 2024-11-20 snapshots; the shut-down 2024-05-13 snapshot and audio/realtime variants do not match."
+    },
+    {
+      "match": "chat-latest$",
+      "declare": {
+        "serviceTiers": ["auto", "default"]
+      },
+      "note": "chat-latest is non-reasoning and has no Flex/Fast tiers."
     },
     {
       "match": "(?:openai\\.)?gpt-(?:(?:[6-9]|[1-9]\\d+)(?:\\.\\d+)?(?:$|[-_.])|5\\.(?:[6-9]|[1-9]\\d+))",

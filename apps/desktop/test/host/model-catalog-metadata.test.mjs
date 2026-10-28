@@ -8,6 +8,9 @@ import {
   usesProviderListedModelCatalogMetadata,
 } from "../../dist-electron/src/host/model-catalog-metadata.js";
 
+const GPT5_EFFORTS = ["minimal", "low", "medium", "high"];
+const OPENAI_FLEX_FAST_TIERS = ["auto", "default", "flex", "fast"];
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({
@@ -249,6 +252,7 @@ test("openrouter provider maps output_modalities to catalog capabilities", () =>
     {
       id: "openai/gpt-4o",
       capabilities: ["languageModel"],
+      serviceTiers: ["auto", "default", "fast"],
     },
     {
       id: "google/imagen-4",
@@ -282,6 +286,8 @@ test("vercel-ai-gateway provider maps language and image model types to catalog 
     {
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
     {
       id: "google/imagen-4",
@@ -328,6 +334,8 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
     {
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
   ]);
 });
@@ -366,6 +374,8 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
     {
       id: "openai/gpt-5",
       capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
   ]);
 });
@@ -854,6 +864,8 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
     {
       id: "openai/gpt-5.4",
       capabilities: ["languageModel"],
+      supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"],
+      serviceTiers: ["auto", "default", "flex"],
       upstreamProvider: "OpenAI",
     },
     {
@@ -869,6 +881,33 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
   });
 
   assert.equal(catalogMap.get("x-ai/grok-4.3")?.upstreamProvider, "x-ai");
+});
+
+test("legacy OpenAI knowledge folds exact efforts and tiers into direct catalog entries", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "openai",
+    transportKind: "open-responses",
+    listedModels: [{ id: "gpt-5.4" }, { id: "gpt-5.3-codex" }, { id: "gpt-4.1" }],
+  });
+  const byId = new Map(preview?.map((entry) => [entry.id, entry]));
+
+  assert.deepEqual(byId.get("gpt-5.4")?.supportedReasoningEfforts, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(byId.get("gpt-5.4")?.serviceTiers, ["auto", "default", "flex"]);
+  assert.deepEqual(byId.get("gpt-5.3-codex")?.supportedReasoningEfforts, [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(byId.get("gpt-5.3-codex")?.serviceTiers, ["auto", "default"]);
+  assert.deepEqual(byId.get("gpt-4.1")?.serviceTiers, ["auto", "default", "fast"]);
+  assert.equal(byId.get("gpt-4.1")?.supportedReasoningEfforts, undefined);
 });
 
 test("parser-materialized serviceTiers win over the provider-agnostic knowledge record", () => {
