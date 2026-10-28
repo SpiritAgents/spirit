@@ -215,13 +215,19 @@ test("pre-5.6 OpenAI reasoning models resolve exact effort and tier declarations
   const autoDefault = ["auto", "default"];
   const withFlex = [...autoDefault, "flex"];
   const withFlexFast = [...withFlex, "fast"];
+  const withLimitedFast = {
+    auto: { body: { service_tier: "auto" } },
+    default: { body: { service_tier: "default" } },
+    flex: { body: { service_tier: "flex" } },
+    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+  };
   const cases = [
     { id: "gpt-5.5-pro", efforts: mediumThroughXhigh, tiers: withFlex },
-    { id: "gpt-5.5", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.5", efforts: noneThroughXhigh, tiers: withLimitedFast },
     { id: "gpt-5.4-pro", efforts: mediumThroughXhigh, tiers: withFlex },
-    { id: "gpt-5.4-mini", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4-mini", efforts: noneThroughXhigh, tiers: withLimitedFast },
     { id: "gpt-5.4-nano", efforts: noneThroughXhigh, tiers: withFlex },
-    { id: "gpt-5.4", efforts: noneThroughXhigh, tiers: withFlex },
+    { id: "gpt-5.4", efforts: noneThroughXhigh, tiers: withLimitedFast },
     { id: "gpt-5.3-codex", efforts: ["low", "medium", "high", "xhigh"], tiers: autoDefault },
     { id: "gpt-5.2-pro", efforts: mediumThroughXhigh, tiers: autoDefault },
     { id: "gpt-5.2", efforts: noneThroughXhigh, tiers: withFlexFast },

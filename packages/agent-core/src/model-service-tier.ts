@@ -33,13 +33,70 @@ export interface ModelServiceTierWireDeclaration {
   providerOptions?: JsonObject;
 }
 
-/** Literal `serviceTiers` map: tier name → wire declaration. The simple form is `ModelServiceTier[]`. */
-export type ModelServiceTiersLiteralDeclaration = Record<string, ModelServiceTierWireDeclaration>;
+/** One literal tier: its wire effect plus an optional availability limit, which is never sent upstream. */
+export interface ModelServiceTierDeclaration extends ModelServiceTierWireDeclaration {
+  /** Maximum request input tokens supported by this tier; the boundary itself is inclusive. */
+  maxInputTokens?: number;
+}
+
+/** Literal `serviceTiers` map: tier name → declaration. The simple form is `ModelServiceTier[]`. */
+export type ModelServiceTiersLiteralDeclaration = Record<string, ModelServiceTierDeclaration>;
 
 /** Declared `serviceTiers` block: either the simple tier-name list or the literal wire map. */
 export type ModelServiceTiersDeclaration =
   | readonly ModelServiceTier[]
   | ModelServiceTiersLiteralDeclaration;
+
+export function serviceTierMaxInputTokens(
+  declaration: ModelServiceTiersDeclaration | undefined,
+  tier: ModelServiceTier,
+): number | undefined {
+  if (declaration === undefined || Array.isArray(declaration)) {
+    return undefined;
+  }
+  return (declaration as ModelServiceTiersLiteralDeclaration)[tier]?.maxInputTokens;
+}
+
+export function isServiceTierAvailableForInputTokens(
+  declaration: ModelServiceTiersDeclaration | undefined,
+  tier: ModelServiceTier,
+  lastInputTokens: number | undefined,
+): boolean {
+  const maxInputTokens = serviceTierMaxInputTokens(declaration, tier);
+  return (
+    maxInputTokens === undefined ||
+    lastInputTokens === undefined ||
+    lastInputTokens <= maxInputTokens
+  );
+}
+
+/**
+ * Resolves the effective tier without mutating the stored preference. An unavailable preference
+ * falls back to a declared, available `default`; without one, no tier wire effect is produced.
+ */
+export function resolveEffectiveServiceTier(input: {
+  serviceTier?: ModelServiceTier;
+  serviceTiers?: ModelServiceTiersDeclaration;
+  lastInputTokens?: number;
+}): ModelServiceTier | undefined {
+  const tier = input.serviceTier;
+  if (
+    tier === undefined ||
+    isServiceTierAvailableForInputTokens(input.serviceTiers, tier, input.lastInputTokens)
+  ) {
+    return tier;
+  }
+  if (
+    input.serviceTiers !== undefined &&
+    (Array.isArray(input.serviceTiers)
+      ? input.serviceTiers.includes("default")
+      : Object.keys(input.serviceTiers).includes("default")) &&
+    isServiceTierAvailableForInputTokens(input.serviceTiers, "default", input.lastInputTokens)
+  ) {
+    return "default";
+  }
+  return undefined;
+}
 
 /** Raised when a stored `serviceTier` value is not part of the public enum. */
 export class ModelServiceTierConfigError extends Error {

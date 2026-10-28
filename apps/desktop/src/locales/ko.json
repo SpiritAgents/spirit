@@ -778,6 +778,7 @@
     "modelPickerThinking": "생각 중",
     "modelPickerNotThinking": "생각 안 함",
     "modelPickerServiceTier": "서비스 티어",
+    "modelPickerServiceTierInputLimit": "입력이 {{tokens}}를 초과하면 {{tier}}을(를) 사용할 수 없습니다.",
     "modelPickerServiceTierValues": {
       "auto": "자동",
       "default": "기본",

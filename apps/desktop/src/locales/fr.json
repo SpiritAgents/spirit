@@ -778,6 +778,7 @@
     "modelPickerThinking": "Réflexion",
     "modelPickerNotThinking": "Pas de réflexion",
     "modelPickerServiceTier": "Niveau de service",
+    "modelPickerServiceTierInputLimit": "{{tier}} est indisponible au-delà de {{tokens}} tokens d’entrée.",
     "modelPickerServiceTierValues": {
       "auto": "Auto",
       "default": "Par défaut",

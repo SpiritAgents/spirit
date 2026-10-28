@@ -2609,12 +2609,20 @@ test("parseOpenRouterModelEntriesPayload materializes per-upstream service tier 
 });
 
 test("OpenAI aggregator service tiers are capped by model knowledge", () => {
-  const modelIds = ["gpt-5.3-codex", "gpt-5.2-pro", "o3", "uncataloged-model"];
+  const modelIds = ["gpt-5.4", "gpt-5.3-codex", "gpt-5.2-pro", "o3", "uncataloged-model"];
   const vercelEntries = parseVercelAiGatewayModelEntriesPayload({
     data: modelIds.map((id) => ({ id: `openai/${id}`, type: "language", owned_by: "OpenAI" })),
   });
   const vercelById = new Map(vercelEntries.map((entry) => [entry.id, entry]));
 
+  assert.deepEqual(vercelById.get("openai/gpt-5.4")?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: {
+      providerOptions: { gateway: { serviceTier: "fast" } },
+      maxInputTokens: 278528,
+    },
+  });
   assert.deepEqual(vercelById.get("openai/gpt-5.3-codex")?.serviceTiers, { default: {} });
   assert.deepEqual(vercelById.get("openai/gpt-5.2-pro")?.serviceTiers, { default: {} });
   assert.deepEqual(vercelById.get("openai/o3")?.serviceTiers, VERCEL_OPENAI_TIERS);
@@ -2626,6 +2634,11 @@ test("OpenAI aggregator service tiers are capped by model knowledge", () => {
   });
   const openRouterById = new Map(openRouterEntries.map((entry) => [entry.id, entry]));
 
+  assert.deepEqual(openRouterById.get("openai/gpt-5.4")?.serviceTiers, {
+    default: { body: { service_tier: "default" } },
+    flex: { body: { service_tier: "flex" } },
+    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+  });
   assert.deepEqual(openRouterById.get("openai/gpt-5.3-codex")?.serviceTiers, ["default"]);
   assert.deepEqual(openRouterById.get("openai/gpt-5.2-pro")?.serviceTiers, ["default"]);
   assert.deepEqual(openRouterById.get("openai/o3")?.serviceTiers, OPENROUTER_OPENAI_TIERS);

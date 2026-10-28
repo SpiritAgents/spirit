@@ -1,8 +1,10 @@
 import type { JsonObject } from "./ports.js";
-import type {
-  ModelServiceTier,
-  ModelServiceTiersDeclaration,
-  ModelServiceTiersLiteralDeclaration,
+import type { LlmTransportConfig } from "./provider-config.js";
+import {
+  resolveEffectiveServiceTier,
+  type ModelServiceTier,
+  type ModelServiceTiersDeclaration,
+  type ModelServiceTiersLiteralDeclaration,
 } from "./model-service-tier.js";
 
 /**
@@ -24,6 +26,8 @@ export interface ServiceTierRequestContext {
   serviceTier?: ModelServiceTier;
   /** Declared `serviceTiers` block: a tier-name list (simple form) or a tier → wire map (literal). */
   serviceTiers?: ModelServiceTiersDeclaration;
+  /** Last upstream-measured request input tokens; undefined means unknown, never an estimate. */
+  lastInputTokens?: number;
   surface: ServiceTierRequestSurface;
 }
 
@@ -34,20 +38,20 @@ export interface ServiceTierRequestPlan {
   headers?: Record<string, string>;
   /** Literal fields merged into the serialized request body top level (override on conflict). */
   body?: JsonObject;
-  /** True when the canonical tier is `flex`; selects the extended-wait dispatcher. */
+  /** True when the effective tier is `flex`; selects the extended-wait dispatcher. */
   flexWaiting?: boolean;
 }
 
 /**
- * Maps the declared per-model `serviceTier` selection to request patches. The simple form maps
- * through a fixed table of public transport API facts (`service_tier` for the OpenAI family,
- * `gateway.serviceTier` for the gateway v3 protocol); the literal form applies the tier's declared
- * headers/body verbatim with zero mapping. Selection validity is enforced at config load.
+ * Maps the declared per-model `serviceTier` preference to request patches. Input-limited tiers
+ * resolve to `default` when their last measured input is over the limit. The simple form maps
+ * through a fixed table of public transport API facts; the literal form applies only the selected
+ * declaration's wire fields, never availability metadata such as `maxInputTokens`.
  */
 export function resolveServiceTierRequestPlan(
   context: ServiceTierRequestContext,
 ): ServiceTierRequestPlan {
-  const tier = context.serviceTier;
+  const tier = resolveEffectiveServiceTier(context);
   if (tier === undefined) {
     return {};
   }
@@ -59,13 +63,47 @@ export function resolveServiceTierRequestPlan(
     // The declaration's providerOptions is an opaque JsonObject (config-side convention); the
     // plan narrows it to the per-namespace map the runtime merge iterates.
     return withFlexWaiting(
-      literal !== undefined ? ({ ...literal } as ServiceTierRequestPlan) : {},
+      literal !== undefined
+        ? ({
+            ...(literal.headers !== undefined ? { headers: literal.headers } : {}),
+            ...(literal.body !== undefined ? { body: literal.body } : {}),
+            ...(literal.providerOptions !== undefined
+              ? { providerOptions: literal.providerOptions }
+              : {}),
+          } as ServiceTierRequestPlan)
+        : {},
       tier,
     );
   }
 
   const plan = simpleFormPlan(context.surface, tier);
   return withFlexWaiting(plan, tier);
+}
+
+/** Runtime-only last usage shared by the OpenAI-family service tier request surfaces. */
+export function getTransportConfigLastInputTokens(config: LlmTransportConfig): number | undefined {
+  if (
+    config.transportKind === undefined ||
+    config.transportKind === "openai-compatible" ||
+    config.transportKind === "open-responses"
+  ) {
+    return config.lastInputTokens;
+  }
+  return undefined;
+}
+
+/** Records main-session upstream usage without changing the persisted model preference. */
+export function setTransportConfigLastInputTokens(
+  config: LlmTransportConfig,
+  lastInputTokens: number,
+): void {
+  if (
+    config.transportKind === undefined ||
+    config.transportKind === "openai-compatible" ||
+    config.transportKind === "open-responses"
+  ) {
+    config.lastInputTokens = lastInputTokens;
+  }
 }
 
 /**

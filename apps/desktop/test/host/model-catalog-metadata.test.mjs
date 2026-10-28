@@ -10,6 +10,12 @@ import {
 
 const GPT5_EFFORTS = ["minimal", "low", "medium", "high"];
 const OPENAI_FLEX_FAST_TIERS = ["auto", "default", "flex", "fast"];
+const OPENAI_LIMITED_FAST_TIERS = {
+  auto: { body: { service_tier: "auto" } },
+  default: { body: { service_tier: "default" } },
+  flex: { body: { service_tier: "flex" } },
+  fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+};
 
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
@@ -865,7 +871,7 @@ test("aggregator providers preserve upstreamProvider through preview and catalog
       id: "openai/gpt-5.4",
       capabilities: ["languageModel"],
       supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"],
-      serviceTiers: ["auto", "default", "flex"],
+      serviceTiers: OPENAI_LIMITED_FAST_TIERS,
       upstreamProvider: "OpenAI",
     },
     {
@@ -898,7 +904,7 @@ test("legacy OpenAI knowledge folds exact efforts and tiers into direct catalog 
     "high",
     "xhigh",
   ]);
-  assert.deepEqual(byId.get("gpt-5.4")?.serviceTiers, ["auto", "default", "flex"]);
+  assert.deepEqual(byId.get("gpt-5.4")?.serviceTiers, OPENAI_LIMITED_FAST_TIERS);
   assert.deepEqual(byId.get("gpt-5.3-codex")?.supportedReasoningEfforts, [
     "low",
     "medium",

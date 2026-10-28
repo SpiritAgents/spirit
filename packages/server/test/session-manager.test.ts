@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
 
+import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
 import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
@@ -460,6 +461,150 @@ describe("SessionManager", () => {
       assert.equal(readFileSync(join(dataDir, "config.json"), "utf8"), untouched);
 
       await manager.shutdown();
+    });
+  });
+
+  it("replaceConfig preserves real usage for conditional fast fallback and recovery", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      writeFileSync(
+        join(dataDir, "config.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          providers: [
+            {
+              id: "openai",
+              apiBase: "https://api.openai.com/v1",
+              transportKind: "open-responses",
+              sdk: "@ai-sdk/openai",
+              models: [
+                {
+                  name: "gpt-5.4",
+                  serviceTier: "fast",
+                  serviceTiers: {
+                    default: { body: { service_tier: "default" } },
+                    flex: { body: { service_tier: "flex" } },
+                    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+                  },
+                },
+              ],
+            },
+          ],
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
+        }),
+      );
+      let turnWaiter: ((reason: string, result?: unknown) => void) | undefined;
+      const waitForTurn = () =>
+        new Promise<void>((resolve, reject) => {
+          turnWaiter = (reason, result) => {
+            turnWaiter = undefined;
+            if (reason === "completed") {
+              resolve();
+            } else {
+              reject(new Error(`${reason}: ${JSON.stringify(result)}`));
+            }
+          };
+        });
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: (_sessionId, reason, result) => turnWaiter?.(reason, result),
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+      const created = await manager.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "cli",
+        conversationKey: "ephemeral://tier-limit",
+      });
+
+      const requestTiers: unknown[] = [];
+      let requestCount = 0;
+      setLlmFetchTransportOverrideForTests(async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        requestTiers.push(body.service_tier);
+        assert.equal("maxInputTokens" in body, false);
+        const inputTokens = requestCount++ === 0 ? 278529 : 1000;
+        const message = {
+          type: "message",
+          id: `msg-${requestCount}`,
+          role: "assistant",
+          status: "completed",
+          content: [{ type: "output_text", text: "ok", annotations: [] }],
+        };
+        const completed = {
+          id: `resp-tier-${requestCount}`,
+          object: "response",
+          created_at: 0,
+          model: "gpt-5.4",
+          status: "completed",
+          output: [message],
+          usage: {
+            input_tokens: inputTokens,
+            output_tokens: 1,
+            total_tokens: inputTokens + 1,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens_details: { reasoning_tokens: 0 },
+          },
+        };
+        const events = [
+          {
+            type: "response.created",
+            response: { ...completed, status: "in_progress", output: [] },
+          },
+          {
+            type: "response.output_item.added",
+            output_index: 0,
+            item: { ...message, status: "in_progress", content: [] },
+          },
+          {
+            type: "response.output_text.delta",
+            item_id: message.id,
+            output_index: 0,
+            content_index: 0,
+            delta: "ok",
+          },
+          {
+            type: "response.output_text.done",
+            item_id: message.id,
+            output_index: 0,
+            content_index: 0,
+            text: "ok",
+          },
+          { type: "response.output_item.done", output_index: 0, item: message },
+          { type: "response.completed", response: completed },
+        ];
+        return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream; charset=utf-8" },
+        });
+      });
+
+      try {
+        const firstFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "first" }), {
+          accepted: true,
+        });
+        await firstFinished;
+        await manager.replaceConfig(created.sessionId);
+        const secondFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "second" }), {
+          accepted: true,
+        });
+        await secondFinished;
+        const thirdFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "third" }), {
+          accepted: true,
+        });
+        await thirdFinished;
+        assert.deepEqual(requestTiers, ["fast", "default", "fast"]);
+
+        const persisted = JSON.parse(readFileSync(join(dataDir, "config.json"), "utf8"));
+        assert.equal(persisted.providers[0].models[0].serviceTier, "fast");
+      } finally {
+        setLlmFetchTransportOverrideForTests(undefined);
+        await manager.shutdown();
+      }
     });
   });
 

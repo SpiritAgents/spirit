@@ -1,15 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-  HostToolDescriptionHint,
-  JsonValue,
-  LlmActiveSkill,
-  McpUiOpenRequest,
-  McpUiOpenResult,
-  McpUiOpener,
-  PendingWorkspaceFile,
-  RuntimeEvent,
-  AgentMode,
+import {
+  getTransportConfigLastInputTokens,
+  type HostToolDescriptionHint,
+  type JsonValue,
+  type LlmActiveSkill,
+  type McpUiOpenRequest,
+  type McpUiOpenResult,
+  type McpUiOpener,
+  type PendingWorkspaceFile,
+  type RuntimeEvent,
+  type AgentMode,
 } from "@spiritagent/agent-core";
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
@@ -1090,6 +1091,7 @@ export class SessionManager {
     await old.runSessionEnd("switch");
     old.runtime.abort();
     const history = [...old.runtime.history()];
+    const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
 
     const fresh = await createServerRuntime({
       workspaceRoot: session.createParams.workspaceRoot,
@@ -1106,6 +1108,7 @@ export class SessionManager {
       ...(session.createParams.hostToolDescriptionHints
         ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
         : {}),
+      ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
       basicInfoHost: resolveBasicInfoHost(session.createParams),
       onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
       onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),

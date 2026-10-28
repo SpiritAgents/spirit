@@ -3,7 +3,11 @@
  */
 
 import type { LlmTransportKind } from "../llm-provider-shared.js";
-import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
+import {
+  serviceTierMaxInputTokens,
+  type ModelServiceTier,
+  type ModelServiceTiersDeclaration,
+} from "../model-service-tier.js";
 import { lookupModelKnowledge } from "../model-knowledge/index.js";
 import { findProviderPreset, resolvePresetApiBase } from "../provider-presets/index.js";
 import { assertGoogleGeminiApiBase, googleNativeModelsListUrl } from "./google-gemini-endpoints.js";
@@ -2307,13 +2311,19 @@ function vercelGatewayServiceTiers(
   switch (upstream) {
     case "openai": {
       const knowledge = knowledgeServiceTiers(modelId);
+      const fastMaxInputTokens = serviceTierMaxInputTokens(knowledge, "fast");
       return {
         ...(knowledgeAllowsServiceTier(knowledge, "default", true) ? { default: {} } : {}),
         ...(knowledgeAllowsServiceTier(knowledge, "flex", true)
           ? { flex: gatewayTier("flex") }
           : {}),
         ...(knowledgeAllowsServiceTier(knowledge, "fast", true)
-          ? { fast: gatewayTier("fast") }
+          ? {
+              fast: {
+                ...gatewayTier("fast"),
+                ...(fastMaxInputTokens !== undefined ? { maxInputTokens: fastMaxInputTokens } : {}),
+              },
+            }
           : {}),
         ...(knowledgeAllowsServiceTier(knowledge, "ultrafast", false)
           ? { ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } } }
@@ -2330,10 +2340,11 @@ function vercelGatewayServiceTiers(
 }
 
 /**
- * OpenRouter per-upstream tier ladder in the simple list form: the route speaks the OpenAI-family
- * body `service_tier` on both the chat-completions and Responses surfaces (an explicit default
- * overrides :nitro/:floor admission), and OpenRouter maps `priority` for Anthropic/xAI upstreams
- * itself — Anthropic native speed never goes through it. Knowledge caps the OpenAI route ladder.
+ * OpenRouter per-upstream tier ladder: the route speaks the OpenAI-family body `service_tier` on
+ * both the chat-completions and Responses surfaces (an explicit default overrides :nitro/:floor
+ * admission), and OpenRouter maps `priority` for Anthropic/xAI upstreams itself — Anthropic native
+ * speed never goes through it. Knowledge caps the OpenAI route ladder. Input limits require the
+ * literal declaration form; unlimited routes keep the simpler tier-name list.
  */
 function openRouterServiceTiers(
   upstreamProvider: string | undefined,
@@ -2349,7 +2360,21 @@ function openRouterServiceTiers(
           tiers.push(tier);
         }
       }
-      return tiers;
+      if (tiers.every((tier) => serviceTierMaxInputTokens(knowledge, tier) === undefined)) {
+        return tiers;
+      }
+      return Object.fromEntries(
+        tiers.map((tier) => {
+          const maxInputTokens = serviceTierMaxInputTokens(knowledge, tier);
+          return [
+            tier,
+            {
+              body: { service_tier: tier },
+              ...(maxInputTokens !== undefined ? { maxInputTokens } : {}),
+            },
+          ];
+        }),
+      );
     }
     case "google":
       return ["default", "flex", "priority"];

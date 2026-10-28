@@ -24,8 +24,10 @@ export interface LlmDeclaredWireConfig {
   vendorExtendedThinking?: boolean;
   /** Selected service tier (validated at config load). */
   serviceTier?: ModelServiceTier;
-  /** Declared service tiers; the literal map form carries the wire effect per tier. */
+  /** Declared service tiers; the literal map carries wire effects and optional input limits. */
   serviceTiers?: ModelServiceTiersDeclaration;
+  /** Runtime-only last upstream input usage used to resolve input-limited tiers. */
+  lastInputTokens?: number;
 }
 
 /**
@@ -54,6 +56,7 @@ export function createDeclaredWireMergeFetch(
   const serviceTierPlan = resolveServiceTierRequestPlan({
     ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    ...(config.lastInputTokens !== undefined ? { lastInputTokens: config.lastInputTokens } : {}),
     surface,
   });
 

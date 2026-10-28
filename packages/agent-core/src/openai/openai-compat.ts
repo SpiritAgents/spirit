@@ -113,8 +113,10 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
    * transport API table (simple form) or the tier's literal `serviceTiers` declaration.
    */
   serviceTier?: ModelServiceTier;
-  /** Declared service tiers: a tier-name list (simple form) or a tier → wire-patch map (literal). */
+  /** Declared service tiers: a tier-name list or a literal map with wire effects and input limits. */
   serviceTiers?: ModelServiceTiersDeclaration;
+  /** Runtime-only last upstream input usage used by conditional tiers; never persisted in config.json. */
+  lastInputTokens?: number;
   /** Full npm package name of the SDK adapter (e.g. `@ai-sdk/openai-compatible`); absent = default for the transport kind. */
   sdk?: string;
   /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */

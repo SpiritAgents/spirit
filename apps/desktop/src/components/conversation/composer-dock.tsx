@@ -633,6 +633,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                 catalogHints={snapshot?.config.modelCatalogHints}
                 providerPresets={snapshot?.config.providerPickerPresets}
                 activeModel={snapshot?.config.activeModel ?? runtime.settings.activeModel}
+                lastInputTokens={snapshot?.conversation.contextUsage?.inputTokens}
                 agentMode={runtime.settings.agentMode}
                 loopEnabled={snapshot?.conversation.loopEnabled === true}
                 onModelSelect={(ref) => {

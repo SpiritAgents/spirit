@@ -1,4 +1,9 @@
-import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
+import {
+  isServiceTierAvailableForInputTokens,
+  resolveEffectiveServiceTier,
+  serviceTierMaxInputTokens,
+  type ModelServiceTier,
+} from "@spiritagent/agent-core/model-service-tier";
 
 import type {
   DesktopModelReasoningEffort,
@@ -130,19 +135,51 @@ export function showsServiceTierControl(
   return declaredServiceTierControlKind(model, catalogEntry) !== "none";
 }
 
-/** Displayed tier: the configured value when declared; otherwise the neutral `default` when declared. */
+export function declaredServiceTierMaxInputTokens(
+  model: DeclaredControlModel,
+  tier: ModelServiceTier,
+  catalogEntry?: ServiceTierCatalogEntry,
+): number | undefined {
+  return serviceTierMaxInputTokens(model.serviceTiers ?? catalogEntry?.serviceTiers, tier);
+}
+
+export function isDeclaredServiceTierAvailable(
+  model: DeclaredControlModel,
+  tier: ModelServiceTier,
+  catalogEntry?: ServiceTierCatalogEntry,
+  lastInputTokens?: number,
+): boolean {
+  return isServiceTierAvailableForInputTokens(
+    model.serviceTiers ?? catalogEntry?.serviceTiers,
+    tier,
+    lastInputTokens,
+  );
+}
+
+/** Displayed effective tier: the declared preference, or `default` when a limit makes it unavailable. */
 export function effectiveDeclaredServiceTier(
   model: DeclaredControlModel,
   catalogEntry?: ServiceTierCatalogEntry,
+  lastInputTokens?: number,
 ): ModelServiceTier | undefined {
   const options = declaredServiceTierOptions(model, catalogEntry);
   if (options.length === 0) {
     return undefined;
   }
-  if (model.serviceTier !== undefined && options.includes(model.serviceTier)) {
-    return model.serviceTier;
+  const preferred =
+    model.serviceTier !== undefined && options.includes(model.serviceTier)
+      ? model.serviceTier
+      : options.includes("default")
+        ? "default"
+        : undefined;
+  if (preferred === undefined) {
+    return undefined;
   }
-  return options.includes("default") ? "default" : undefined;
+  return resolveEffectiveServiceTier({
+    serviceTier: preferred,
+    serviceTiers: model.serviceTiers ?? catalogEntry?.serviceTiers,
+    ...(lastInputTokens !== undefined ? { lastInputTokens } : {}),
+  });
 }
 
 /** Tiers that get a gray trigger suffix on the picker button; `auto`/`default` add nothing. */

@@ -3,6 +3,7 @@ import { release as osRelease } from "node:os";
 import {
   AgentRuntime,
   createLlmTransport,
+  setTransportConfigLastInputTokens,
   pendingWorkspaceFilesFromInput,
   type LlmTransportConfig,
   type LlmMessage,
@@ -311,7 +312,12 @@ export async function createAcpRuntime(
     resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
       resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
-    onEvent,
+    onEvent: (event) => {
+      if (event.kind === "context-usage-updated") {
+        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
+      }
+      onEvent(event);
+    },
   });
 
   // 10. Mode switching: update planMetadata binding seen by closures + tool exposure

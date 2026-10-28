@@ -69,8 +69,15 @@ export interface ThinkingSwitchDeclaration {
   off?: SpiritWirePatch;
 }
 
-/** `serviceTiers`: either a list of public tier names or a literal tier → wire-patch map. */
-export type SpiritServiceTiersDeclaration = ModelServiceTier[] | Record<string, SpiritWirePatch>;
+/** One literal service tier: its wire patch plus optional input-token availability metadata. */
+export interface SpiritServiceTierDeclaration extends SpiritWirePatch {
+  maxInputTokens?: number;
+}
+
+/** `serviceTiers`: either a list of public tier names or a literal tier → declaration map. */
+export type SpiritServiceTiersDeclaration =
+  | ModelServiceTier[]
+  | Record<string, SpiritServiceTierDeclaration>;
 
 export interface ProviderKeyringReference {
   service: string;
@@ -284,6 +291,10 @@ const PROVIDER_ENTRY_KEYS: ReadonlySet<string> = new Set([
 ]);
 
 const WIRE_PATCH_KEYS: ReadonlySet<string> = new Set(["headers", "body", "providerOptions"]);
+const SERVICE_TIER_DECLARATION_KEYS: ReadonlySet<string> = new Set([
+  ...WIRE_PATCH_KEYS,
+  "maxInputTokens",
+]);
 const THINKING_SWITCH_KEYS: ReadonlySet<string> = new Set(["on", "off"]);
 const KEYRING_REFERENCE_KEYS: ReadonlySet<string> = new Set(["service", "account"]);
 const CREDENTIAL_SLOT_VALUE_KEYS: ReadonlySet<string> = new Set(["value", "env", "keyring"]);
@@ -385,6 +396,14 @@ function validatePositiveNumber(value: unknown, context: string, key: string): v
   }
 }
 
+function validatePositiveInteger(value: unknown, context: string, key: string): void {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
+    throw new SpiritConfigSchemaError(
+      `${context}: ${JSON.stringify(key)} must be a positive integer.`,
+    );
+  }
+}
+
 function validateStringMap(value: unknown, context: string): void {
   if (!isPlainObject(value)) {
     throw new SpiritConfigSchemaError(`${context} must be an object of string values.`);
@@ -396,11 +415,15 @@ function validateStringMap(value: unknown, context: string): void {
   }
 }
 
-function validateWirePatch(value: unknown, context: string): void {
+function validateWirePatch(
+  value: unknown,
+  context: string,
+  allowedKeys: ReadonlySet<string> = WIRE_PATCH_KEYS,
+): void {
   if (!isPlainObject(value)) {
     throw new SpiritConfigSchemaError(`${context} must be an object.`);
   }
-  rejectUnknownKeys(value, WIRE_PATCH_KEYS, context);
+  rejectUnknownKeys(value, allowedKeys, context);
   if (value["body"] !== undefined && !isPlainObject(value["body"])) {
     throw new SpiritConfigSchemaError(`${context}: "body" must be an object.`);
   }
@@ -434,7 +457,7 @@ function validateServiceTiers(value: unknown, context: string): void {
   }
   if (!isPlainObject(value)) {
     throw new SpiritConfigSchemaError(
-      `${context}: "serviceTiers" must be an array of tier names or a map of tier wire declarations.`,
+      `${context}: "serviceTiers" must be an array of tier names or a map of tier declarations.`,
     );
   }
   for (const [tier, declaration] of Object.entries(value)) {
@@ -443,7 +466,11 @@ function validateServiceTiers(value: unknown, context: string): void {
         `${context}: unknown service tier ${JSON.stringify(tier)}; allowed: ${[...SERVICE_TIER_TOKENS].join(", ")}.`,
       );
     }
-    validateWirePatch(declaration, `${context}.serviceTiers.${tier}`);
+    const declarationContext = `${context}.serviceTiers.${tier}`;
+    validateWirePatch(declaration, declarationContext, SERVICE_TIER_DECLARATION_KEYS);
+    if (isPlainObject(declaration) && declaration["maxInputTokens"] !== undefined) {
+      validatePositiveInteger(declaration["maxInputTokens"], declarationContext, "maxInputTokens");
+    }
   }
 }
 

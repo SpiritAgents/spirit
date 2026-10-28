@@ -71,6 +71,8 @@ export type ComposerSurfaceProps = {
   providers?: DesktopSnapshot["config"]["providers"];
   providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
+  /** Last upstream-measured conversation input tokens; absent means unknown. */
+  lastInputTokens?: number;
   agentMode: DesktopAgentMode;
   loopEnabled: boolean;
   canSend: boolean;
@@ -122,6 +124,7 @@ export function ComposerSurface({
   providers,
   providerPresets,
   activeModel,
+  lastInputTokens,
   agentMode,
   loopEnabled = false,
   canSend,
@@ -281,6 +284,7 @@ export function ComposerSurface({
               providerPresets={providerPresets}
               activeModelRef={activeModel}
               activeReasoningEffort={activeModelProfile?.reasoningEffort}
+              lastInputTokens={lastInputTokens}
               disabled={readOnly}
               onModelSelect={onModelSelect}
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
