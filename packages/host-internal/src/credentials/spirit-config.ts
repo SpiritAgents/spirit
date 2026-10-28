@@ -40,6 +40,8 @@ const PROFILE_PROVIDER_KEYS = [
 ] as const;
 
 const PROFILE_MODEL_KEYS = [
+  "transportKind",
+  "sdk",
   "capabilities",
   "contextLength",
   "outputLimit",
@@ -63,7 +65,7 @@ const PROFILE_MODEL_KEYS = [
 /**
  * Builds the runtime profile for one model. `model` must be the effective entry produced by
  * `resolveModelEntry` / `resolveModelByRef` (provider-level flat declarations already applied);
- * connection-level fields come from the provider entry and never inherit.
+ * connection-level fields default to the provider entry; only explicit model transport/sdk pairs override them.
  */
 export function resolveSpiritModelProfile(
   provider: ProviderEntry,

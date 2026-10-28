@@ -36,7 +36,10 @@ function withThinkingOff<
     vendorExtendedThinking?: boolean;
   },
 >(config: T): T {
-  if (config.supportsThinkingSwitch !== true && config.thinkingSwitch === undefined) {
+  if (
+    config.supportsThinkingSwitch === false ||
+    (config.supportsThinkingSwitch !== true && config.thinkingSwitch === undefined)
+  ) {
     return config;
   }
   return {
@@ -67,7 +70,7 @@ const RESPONSES_NONE_REASONING_EFFORT_SDKS: ReadonlySet<string> = new Set([
 function applyOpenAiCompatibleCodeCompletionProfile(
   config: OpenAiTransportConfig,
 ): OpenAiTransportConfig {
-  const profiled = withThinkingOff(withCodeCompletionProfile(config));
+  const { effort: _effort, ...profiled } = withThinkingOff(withCodeCompletionProfile(config));
   return {
     ...profiled,
     reasoningEffort: CHAT_NONE_REASONING_EFFORT_SDKS.has(config.sdk ?? "@ai-sdk/openai-compatible")
@@ -80,18 +83,13 @@ function applyAnthropicCodeCompletionProfile(
   config: AnthropicTransportConfig,
 ): AnthropicTransportConfig {
   const { effort: _effort, ...withoutEffort } = withThinkingOff(withCodeCompletionProfile(config));
-  if (config.supportsThinkingSwitch === false) {
-    const { vendorExtendedThinking: _vendorExtendedThinking, ...withoutThinkingPreference } =
-      withoutEffort;
-    return withoutThinkingPreference;
-  }
   return withoutEffort;
 }
 
 function applyOpenResponsesCodeCompletionProfile(
   config: OpenResponsesTransportConfig,
 ): OpenResponsesTransportConfig {
-  const profiled = withThinkingOff(withCodeCompletionProfile(config));
+  const { effort: _effort, ...profiled } = withThinkingOff(withCodeCompletionProfile(config));
   return {
     ...profiled,
     reasoningEffort: RESPONSES_NONE_REASONING_EFFORT_SDKS.has(
@@ -104,8 +102,9 @@ function applyOpenResponsesCodeCompletionProfile(
 }
 
 function applyBedrockCodeCompletionProfile(config: BedrockTransportConfig): BedrockTransportConfig {
+  const { effort: _effort, ...profiled } = withThinkingOff(withCodeCompletionProfile(config));
   return {
-    ...withThinkingOff(withCodeCompletionProfile(config)),
+    ...profiled,
     reasoningEffort: "none",
   };
 }

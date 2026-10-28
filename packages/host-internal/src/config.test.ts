@@ -1334,6 +1334,39 @@ test("output effort declarations validate without a schema version change", () =
   });
 });
 
+test("model transport overrides resolve as pairs and reject incomplete declarations", () => {
+  const provider = validProvider({
+    id: "openrouter",
+    apiBase: "https://openrouter.ai/api/v1",
+    transportKind: "openai-compatible",
+    sdk: "@ai-sdk/openai-compatible",
+    models: [
+      {
+        name: "anthropic/claude-opus-4.5",
+        transportKind: "anthropic",
+        sdk: "@ai-sdk/anthropic",
+      },
+    ],
+  });
+  assert.doesNotThrow(() => validateSpiritConfig(validConfig([provider])));
+  const resolved = resolveModelEntry(
+    provider as unknown as ProviderEntry,
+    "anthropic/claude-opus-4.5",
+  );
+  assert.equal(resolved?.transportKind, "anthropic");
+  assert.equal(resolved?.sdk, "@ai-sdk/anthropic");
+
+  for (const model of [
+    { name: "m", transportKind: "anthropic" },
+    { name: "m", sdk: "@ai-sdk/anthropic" },
+  ]) {
+    assertSchemaError(
+      () => validateSpiritConfig(validConfig([validProvider({ models: [model] })])),
+      '"transportKind" and "sdk" must be declared together',
+    );
+  }
+});
+
 test("output effort rejects missing semantics, mixed fields, and invalid selections", () => {
   assertSchemaError(
     () =>

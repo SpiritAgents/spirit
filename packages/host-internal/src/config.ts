@@ -150,6 +150,9 @@ export interface ModelInheritableFields {
 
 export interface ModelEntry extends ModelInheritableFields {
   name: string;
+  /** Optional per-model connection override; transportKind and sdk must be declared together. */
+  transportKind?: SpiritTransportKind;
+  sdk?: string;
   /**
    * User's thinking on/off state (user state, not a capability declaration); meaningful only when
    * `supportsThinkingSwitch` is declared — setting it otherwise is a schema error. Absent = on.
@@ -286,6 +289,8 @@ const MODEL_INHERITABLE_KEYS = [
 
 const MODEL_ENTRY_KEYS: ReadonlySet<string> = new Set([
   "name",
+  "transportKind",
+  "sdk",
   "thinkingEnabled",
   ...MODEL_INHERITABLE_KEYS,
 ]);
@@ -863,6 +868,27 @@ function validateModelEntry(model: unknown, context: string): void {
   rejectUnknownKeys(model, MODEL_ENTRY_KEYS, context);
   readRequiredNonBlankString(model, "name", context);
   validateInheritableFields(model, context);
+  const hasTransportOverride = model["transportKind"] !== undefined;
+  const hasSdkOverride = model["sdk"] !== undefined;
+  if (hasTransportOverride !== hasSdkOverride) {
+    throw new SpiritConfigSchemaError(
+      `${context}: "transportKind" and "sdk" must be declared together for a model transport override.`,
+    );
+  }
+  if (hasTransportOverride) {
+    validateEnumValue(model["transportKind"], TRANSPORT_KIND_TOKENS, context, "transportKind");
+  }
+  if (hasSdkOverride) {
+    const sdk = model["sdk"];
+    if (typeof sdk !== "string" || sdk.trim().length === 0) {
+      throw new SpiritConfigSchemaError(`${context}: "sdk" must be a non-empty string.`);
+    }
+    if (!KNOWN_SDK_PACKAGE_NAME_SET.has(sdk)) {
+      throw new SpiritConfigSchemaError(
+        `${context}: unknown "sdk" ${JSON.stringify(sdk)}; only bundled adapter packages are allowed.`,
+      );
+    }
+  }
   if (model["thinkingEnabled"] !== undefined && typeof model["thinkingEnabled"] !== "boolean") {
     throw new SpiritConfigSchemaError(`${context}: "thinkingEnabled" must be a boolean.`);
   }
@@ -1163,6 +1189,12 @@ export function resolveModelEntry(
   const serviceTier = model.serviceTier ?? provider.serviceTier;
   if (serviceTier !== undefined) {
     resolved.serviceTier = serviceTier;
+  }
+  if (model.transportKind !== undefined) {
+    resolved.transportKind = model.transportKind;
+  }
+  if (model.sdk !== undefined) {
+    resolved.sdk = model.sdk;
   }
   return resolved;
 }

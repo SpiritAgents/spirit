@@ -289,6 +289,18 @@ function normalizeCachedThinkingSwitch(value: unknown): ThinkingSwitchDeclaratio
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+function normalizeCachedTransportOverride(
+  value: unknown,
+): PreviewModelCatalogEntry["transportOverride"] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  return record.transportKind === "anthropic" && record.sdk === "@ai-sdk/anthropic"
+    ? { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" }
+    : undefined;
+}
+
 function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -353,8 +365,10 @@ function normalizePreviewModelCatalog(value: unknown): PreviewModelCatalogEntry[
       typeof record.upstreamProvider === "string" && record.upstreamProvider.trim().length > 0
         ? record.upstreamProvider.trim()
         : undefined;
+    const transportOverride = normalizeCachedTransportOverride(record.transportOverride);
     normalized.push({
       id,
+      ...(transportOverride !== undefined ? { transportOverride } : {}),
       ...(displayName !== undefined ? { displayName } : {}),
       ...(description !== undefined ? { description } : {}),
       ...(pricing !== undefined ? { pricing } : {}),
@@ -594,6 +608,9 @@ function clonePreviewModelCatalog(
 ): PreviewModelCatalogEntry[] {
   return entries.map((entry) => ({
     id: entry.id,
+    ...(entry.transportOverride !== undefined
+      ? { transportOverride: { ...entry.transportOverride } }
+      : {}),
     ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
     ...(entry.description !== undefined ? { description: entry.description } : {}),
     ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),

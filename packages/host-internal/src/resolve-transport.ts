@@ -151,6 +151,8 @@ function buildTransportFromProfile(
       ? { modelCapabilities: modelCapabilitiesFromConfig(profile.capabilities) }
       : {};
   const reasoningEffort = declaredReasoningEffort(profile.reasoningEffort);
+  const outputEffort =
+    profile.effortSemantics === "output" ? anthropicEffort(profile.effort) : undefined;
 
   if (transportKind === "bedrock") {
     const region = profile.options?.awsRegion?.trim();
@@ -173,7 +175,13 @@ function buildTransportFromProfile(
       ...(profile.supportedReasoningEfforts !== undefined
         ? { supportedReasoningEfforts: profile.supportedReasoningEfforts }
         : {}),
-      ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
+      ...(outputEffort !== undefined ? { effort: outputEffort } : {}),
+      ...(profile.effortSemantics === "output" && profile.supportedEfforts !== undefined
+        ? { supportedEfforts: profile.supportedEfforts }
+        : {}),
+      ...(profile.thinkingEnabled !== undefined
+        ? { vendorExtendedThinking: profile.thinkingEnabled }
+        : {}),
       ...declarations,
     };
   }
@@ -207,6 +215,10 @@ function buildTransportFromProfile(
       ...(profile.serviceTier !== undefined ? { serviceTier: profile.serviceTier } : {}),
       ...capabilities,
       ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
+      ...(outputEffort !== undefined ? { effort: outputEffort } : {}),
+      ...(profile.thinkingEnabled !== undefined
+        ? { vendorExtendedThinking: profile.thinkingEnabled }
+        : {}),
       ...(bedrockMantleIam !== undefined ? { bedrockMantleIam } : {}),
       ...declarations,
     };
@@ -266,10 +278,13 @@ function buildTransportFromProfile(
     ...capabilities,
     ...vertex,
     ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
+    ...(outputEffort !== undefined ? { effort: outputEffort } : {}),
     ...(profile.supportsThinkingSwitch !== undefined
       ? { supportsThinkingSwitch: profile.supportsThinkingSwitch }
       : {}),
-    ...(profile.thinkingEnabled === false ? { vendorExtendedThinking: false } : {}),
+    ...(profile.thinkingEnabled !== undefined
+      ? { vendorExtendedThinking: profile.thinkingEnabled }
+      : {}),
     ...declarations,
   };
 }
