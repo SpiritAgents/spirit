@@ -19,6 +19,111 @@
       "note": "GPT-6.1 Sol keeps `none` but offers the Ultrafast tier."
     },
     {
+      "match": "gpt-5\\.5-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.5 Pro has the restricted medium/high/xhigh effort ladder. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5\\.5(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.5 supports none through xhigh, but not minimal or max. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5\\.4-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.4 Pro has the restricted medium/high/xhigh effort ladder. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5\\.4-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.4 mini supports none through xhigh. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5\\.4-nano(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.4 nano supports none through xhigh. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5\\.4(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.4 supports none through xhigh. Only the canonical id and dated snapshots are matched; Pro, mini, and nano have their own records."
+    },
+    {
+      "match": "gpt-5\\.3-codex(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.3 Codex supports low through xhigh without a none effort. Its upstream default effort is deliberately not materialized."
+    },
+    {
+      "match": "gpt-5\\.2-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.2 Pro has the restricted medium/high/xhigh effort ladder. Its upstream default effort is deliberately not materialized."
+    },
+    {
+      "match": "gpt-5\\.2(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh"]
+      },
+      "note": "GPT-5.2 supports none through xhigh. Only the canonical id and dated snapshots are matched; Pro has its own record."
+    },
+    {
+      "match": "gpt-5\\.1(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["none", "low", "medium", "high"]
+      },
+      "note": "GPT-5.1 supports none but not minimal or xhigh. The canonical id and dated snapshots do not cover the shut-down Codex variants."
+    },
+    {
+      "match": "gpt-5-pro(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["high"]
+      },
+      "note": "GPT-5 Pro accepts only the high reasoning effort."
+    },
+    {
+      "match": "gpt-5-mini(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+      },
+      "note": "GPT-5 mini starts at minimal and does not support none or xhigh. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5-nano(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+      },
+      "note": "GPT-5 nano starts at minimal and does not support none or xhigh. Only the canonical id and dated snapshots are matched."
+    },
+    {
+      "match": "gpt-5(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["minimal", "low", "medium", "high"]
+      },
+      "note": "GPT-5 starts at minimal and does not support none or xhigh. Pro, mini, nano, Codex, and newer versions do not match this record."
+    },
+    {
+      "match": "o3(?:$|-\\d{4}-\\d{2}-\\d{2}$)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "medium", "high"]
+      },
+      "note": "o3 supports the low/medium/high effort ladder. The canonical id and dated snapshots do not cover o3-pro, o3-mini, or deep-research variants."
+    },
+    {
       "match": "(?:openai\\.)?gpt-(?:(?:[6-9]|[1-9]\\d+)(?:\\.\\d+)?(?:$|[-_.])|5\\.(?:[6-9]|[1-9]\\d+))",
       "declare": {
         "supportedReasoningEfforts": ["none", "low", "medium", "high", "xhigh", "max"],
