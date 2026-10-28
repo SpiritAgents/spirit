@@ -2266,18 +2266,37 @@ function resolveServiceTierUpstream(
   return SERVICE_TIER_UPSTREAM_ALIASES[modelId.slice(0, slashIndex).trim().toLowerCase()];
 }
 
-/** The knowledge record's ultrafast declaration is the curated model fact aggregators inherit. */
-function knowledgeDeclaresUltrafastTier(modelId: string): boolean {
+/** Curated per-model tier capabilities shared by direct and aggregator materialization. */
+function knowledgeServiceTiers(modelId: string): ModelServiceTiersDeclaration | undefined {
   const declared = lookupModelKnowledge(modelId)?.["serviceTiers"];
-  return Array.isArray(declared) && declared.includes("ultrafast");
+  if (Array.isArray(declared)) {
+    return declared as ModelServiceTier[];
+  }
+  if (typeof declared === "object" && declared !== null) {
+    return declared as ModelServiceTiersDeclaration;
+  }
+  return undefined;
+}
+
+/** A knowledge declaration caps the route's fallback ladder; an unknown model keeps that fallback. */
+function knowledgeAllowsServiceTier(
+  declaration: ModelServiceTiersDeclaration | undefined,
+  tier: ModelServiceTier,
+  fallback: boolean,
+): boolean {
+  if (declaration === undefined) {
+    return fallback;
+  }
+  const declared = Array.isArray(declaration) ? declaration : Object.keys(declaration);
+  return declared.includes(tier);
 }
 
 /**
  * Vercel AI Gateway per-upstream tier mapping as literal declarations: the gateway v3
  * language-model protocol carries the unified flex/priority intent in the `gateway` provider
  * options namespace; OpenAI Fast forwards through the same namespace and Ultrafast through the
- * `openai` one. Anthropic and unrecognized upstreams get an explicit empty list so the
- * provider-agnostic knowledge records never leak a no-op tier onto the route.
+ * `openai` one. Knowledge limits which tiers the route may expose. Anthropic and unrecognized
+ * upstreams get an explicit empty list so provider-agnostic records cannot leak a no-op control.
  */
 function vercelGatewayServiceTiers(
   upstreamProvider: string | undefined,
@@ -2287,11 +2306,16 @@ function vercelGatewayServiceTiers(
   const gatewayTier = (serviceTier: string) => ({ providerOptions: { gateway: { serviceTier } } });
   switch (upstream) {
     case "openai": {
+      const knowledge = knowledgeServiceTiers(modelId);
       return {
-        default: {},
-        flex: gatewayTier("flex"),
-        fast: gatewayTier("fast"),
-        ...(knowledgeDeclaresUltrafastTier(modelId)
+        ...(knowledgeAllowsServiceTier(knowledge, "default", true) ? { default: {} } : {}),
+        ...(knowledgeAllowsServiceTier(knowledge, "flex", true)
+          ? { flex: gatewayTier("flex") }
+          : {}),
+        ...(knowledgeAllowsServiceTier(knowledge, "fast", true)
+          ? { fast: gatewayTier("fast") }
+          : {}),
+        ...(knowledgeAllowsServiceTier(knowledge, "ultrafast", false)
           ? { ultrafast: { providerOptions: { openai: { serviceTier: "ultrafast" } } } }
           : {}),
       };
@@ -2309,7 +2333,7 @@ function vercelGatewayServiceTiers(
  * OpenRouter per-upstream tier ladder in the simple list form: the route speaks the OpenAI-family
  * body `service_tier` on both the chat-completions and Responses surfaces (an explicit default
  * overrides :nitro/:floor admission), and OpenRouter maps `priority` for Anthropic/xAI upstreams
- * itself — Anthropic native speed never goes through it.
+ * itself — Anthropic native speed never goes through it. Knowledge caps the OpenAI route ladder.
  */
 function openRouterServiceTiers(
   upstreamProvider: string | undefined,
@@ -2318,9 +2342,12 @@ function openRouterServiceTiers(
   const upstream = resolveServiceTierUpstream(upstreamProvider, modelId);
   switch (upstream) {
     case "openai": {
-      const tiers: ModelServiceTier[] = ["default", "flex", "fast"];
-      if (knowledgeDeclaresUltrafastTier(modelId)) {
-        tiers.push("ultrafast");
+      const knowledge = knowledgeServiceTiers(modelId);
+      const tiers: ModelServiceTier[] = [];
+      for (const tier of ["default", "flex", "fast", "ultrafast"] as const) {
+        if (knowledgeAllowsServiceTier(knowledge, tier, tier !== "ultrafast")) {
+          tiers.push(tier);
+        }
       }
       return tiers;
     }

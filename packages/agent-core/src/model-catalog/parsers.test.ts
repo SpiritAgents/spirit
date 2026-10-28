@@ -57,7 +57,9 @@ test("openai-models parseList extracts ids from the generic OpenAI shape", () =>
   const entries = resolveModelCatalogParser("openai-models").parseList({
     data: [{ id: "gpt-5.4" }, { id: " " }, { noId: true }],
   });
-  assert.deepEqual(entries, [{ id: "gpt-5.4" }]);
+  assert.deepEqual(entries, [
+    { id: "gpt-5.4", supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"] },
+  ]);
 });
 
 test("siliconflow-models descriptor carries the typed queries and capability-merging merge", () => {
