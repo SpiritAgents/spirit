@@ -4,6 +4,7 @@ import { test } from "vitest";
 import { providerSupportsModelCatalogListing } from "../../dist-electron/src/host/model-catalog-metadata.js";
 import {
   applyCatalogEntryToStoredModel,
+  catalogEntryToModelEntry,
   collectModelCatalogRefreshTargets,
   mergeNewCatalogModelsIntoConfig,
   modelCatalogScopeKey,
@@ -48,6 +49,25 @@ function minimaxProvider(models) {
     models,
   };
 }
+
+test("catalog transport overrides apply to new entries without rewriting existing connections", () => {
+  const catalogEntry = {
+    id: "anthropic/claude-opus-4.5",
+    transportOverride: { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" },
+  };
+  const created = catalogEntryToModelEntry("anthropic/claude-opus-4.5", catalogEntry);
+  assert.equal(created.transportKind, "anthropic");
+  assert.equal(created.sdk, "@ai-sdk/anthropic");
+
+  const existing = {
+    name: "anthropic/claude-opus-4.5",
+    transportKind: "openai-compatible",
+    sdk: "@ai-sdk/openai-compatible",
+  };
+  applyCatalogEntryToStoredModel(existing, catalogEntry);
+  assert.equal(existing.transportKind, "openai-compatible");
+  assert.equal(existing.sdk, "@ai-sdk/openai-compatible");
+});
 
 test("providerSupportsModelCatalogListing follows the preset catalog descriptor", () => {
   assert.equal(

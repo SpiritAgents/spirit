@@ -93,11 +93,19 @@ pub struct CredentialSlot {
     pub keyring: Option<KeyringReference>,
 }
 
-/// schemaVersion 1 model entry: only `name` is required; every other field is an optional
-/// declaration (absent = undeclared, inheritable from the provider entry's flat fields).
+/// schemaVersion 1 model entry: only `name` is required. Flat capability fields inherit from the
+/// provider; transportKind/sdk are explicit per-model overrides and must appear together.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ModelEntry {
     pub name: String,
+    #[serde(
+        rename = "transportKind",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub transport_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sdk: Option<String>,
     /// User thinking on/off state; model-level only and never inherited (absent = on).
     #[serde(
         rename = "thinkingEnabled",
@@ -800,8 +808,11 @@ pub fn resolve_model_profile_from_parts(
         provider_id: provider.id.clone(),
         name: model.name.clone(),
         api_base: provider.api_base.clone(),
-        transport_kind: provider.transport_kind.clone(),
-        sdk: provider.sdk.clone(),
+        transport_kind: model
+            .transport_kind
+            .clone()
+            .or_else(|| provider.transport_kind.clone()),
+        sdk: model.sdk.clone().or_else(|| provider.sdk.clone()),
         headers: provider.headers.clone(),
         body: provider.body.clone(),
         provider_tools: provider.provider_tools.clone(),
@@ -1269,6 +1280,17 @@ fn deserialize_config(content: &str, path: &Path) -> Result<AppConfig> {
 
     let mut cfg: AppConfig = serde_json::from_value(raw)
         .with_context(|| format!("Failed to parse config: {}", path.display()))?;
+    for provider in &cfg.providers {
+        for model in &provider.models {
+            if model.transport_kind.is_some() != model.sdk.is_some() {
+                return Err(anyhow::anyhow!(
+                    "model {}.{}: transportKind and sdk must be declared together",
+                    provider.id,
+                    model.name
+                ));
+            }
+        }
+    }
     normalize_config(&mut cfg);
     Ok(cfg)
 }
@@ -1763,6 +1785,38 @@ mod tests {
             })
             .expect("minimax model");
         assert_eq!(minimax.transport_kind(), ModelTransportKind::Anthropic);
+    }
+
+    #[test]
+    fn model_transport_override_preserves_provider_connection_and_requires_a_pair() {
+        let config = r#"{
+          "schemaVersion": 1,
+          "providers": [{
+            "id": "openrouter",
+            "apiBase": "https://openrouter.ai/api/v1",
+            "transportKind": "openai-compatible",
+            "sdk": "@ai-sdk/openai-compatible",
+            "models": [{
+              "name": "anthropic/claude-opus-4.5",
+              "transportKind": "anthropic",
+              "sdk": "@ai-sdk/anthropic"
+            }]
+          }],
+          "activeModel": { "providerId": "openrouter", "name": "anthropic/claude-opus-4.5" }
+        }"#;
+        let parsed = deserialize_config(config, Path::new("config.json")).expect("parse config");
+        let active = parsed.active_model_profile().expect("active model");
+        assert_eq!(active.transport_kind(), ModelTransportKind::Anthropic);
+        assert_eq!(active.sdk.as_deref(), Some("@ai-sdk/anthropic"));
+        assert_eq!(active.api_base, "https://openrouter.ai/api/v1");
+
+        let without_sdk = config.replace(
+            r#""transportKind": "anthropic",
+              "sdk": "@ai-sdk/anthropic""#,
+            r#""transportKind": "anthropic""#,
+        );
+        let error = deserialize_config(&without_sdk, Path::new("config.json")).unwrap_err();
+        assert!(error.to_string().contains("must be declared together"));
     }
 
     #[test]

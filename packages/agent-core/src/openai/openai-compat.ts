@@ -81,6 +81,9 @@ export interface OpenAiTransportConfig extends LlmWebToolExposure {
    * Declared reasoning effort selection; sent to the wire verbatim. `default`/absent sends nothing.
    */
   reasoningEffort?: "default" | "minimal" | "none" | "low" | "medium" | "high" | "xhigh" | "max";
+  effortSemantics?: "output";
+  /** Output-wide effort used by declarations such as OpenRouter's unified reasoning adapter. */
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
   /** Declared reasoning mode; only `"pro"` produces a wire parameter (Open Responses `reasoning`). */
   reasoningMode?: ModelReasoningMode;
   /**

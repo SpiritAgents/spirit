@@ -349,6 +349,9 @@ function basePreviewEntryFields(
 ): PreviewModelCatalogEntry {
   return {
     id: entry.id,
+    ...(entry.transportOverride !== undefined
+      ? { transportOverride: { ...entry.transportOverride } }
+      : {}),
     capabilities: previewCapabilitiesFromListedEntry(entry),
     ...resolvePreviewCatalogDisplayName(parserName, entry),
     ...(entry.description !== undefined ? { description: entry.description } : {}),

@@ -57,6 +57,8 @@ export function buildGatewayV3ProviderOptions(
     OpenResponsesTransportConfig,
     | "model"
     | "reasoningEffort"
+    | "effortSemantics"
+    | "effort"
     | "reasoningSummary"
     | "options"
     | "thinkingSwitch"
@@ -71,7 +73,8 @@ export function buildGatewayV3ProviderOptions(
     deepMergeProviderOptions(result, thinkingPatch.providerOptions);
   }
 
-  const effort = openResponsesReasoningEffort(config);
+  const effort =
+    config.effortSemantics === "output" ? config.effort : openResponsesReasoningEffort(config);
   const summary = resolveOpenResponsesReasoningSummary(config);
   const slug = gatewayUpstreamRouteSlug(config.model);
 

@@ -951,6 +951,30 @@ test("parseOpenRouterModelEntriesPayload infers claude efforts when api omits re
   assert.deepEqual(entries[0]?.supportedEfforts, ["low", "medium", "high", "xhigh", "max"]);
 });
 
+test("parseOpenRouterModelEntriesPayload materializes Messages overrides only when Chat cannot express the declarations", () => {
+  const entries = parseOpenRouterModelEntriesPayload({
+    data: [
+      { id: "anthropic/claude-opus-4.5", architecture: { output_modalities: ["text"] } },
+      { id: "anthropic/claude-sonnet-5.5", architecture: { output_modalities: ["text"] } },
+      { id: "anthropic/claude-opus-4.8", architecture: { output_modalities: ["text"] } },
+    ],
+  });
+
+  assert.deepEqual(
+    entries.map((entry) => entry.transportOverride),
+    [
+      { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" },
+      { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" },
+      undefined,
+    ],
+  );
+  const deduped = dedupeProviderListedModelEntries([...entries, ...entries]);
+  assert.deepEqual(
+    deduped.map((entry) => entry.transportOverride),
+    entries.map((entry) => entry.transportOverride),
+  );
+});
+
 test("parseOpenRouterModelEntriesPayload replaces upstream efforts for muse model ids", () => {
   const entries = parseOpenRouterModelEntriesPayload({
     data: [

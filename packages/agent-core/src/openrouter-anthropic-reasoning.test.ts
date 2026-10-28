@@ -137,6 +137,89 @@ test("budget-era models send the declared budget as max_tokens and honor the off
   );
 });
 
+test("output effort stays independent when thinking is omitted or disabled", () => {
+  const thinkingSwitch = {
+    defaultState: "off" as const,
+    on: ADAPTIVE_SWITCH.on,
+    off: "omit" as const,
+  };
+  assert.deepEqual(
+    buildOpenRouterAnthropicReasoningBody(
+      config("anthropic/claude-opus-4.8", {
+        effortSemantics: "output",
+        effort: "high",
+        thinkingSwitch,
+      }),
+    ),
+    { enabled: false, effort: "high" },
+  );
+  assert.deepEqual(
+    buildOpenRouterAnthropicReasoningBody(
+      config("anthropic/claude-opus-4.8", {
+        effortSemantics: "output",
+        effort: "high",
+        vendorExtendedThinking: true,
+        thinkingSwitch,
+      }),
+    ),
+    { enabled: true, effort: "high" },
+  );
+  assert.equal(
+    buildOpenRouterAnthropicReasoningBody(
+      config("anthropic/claude-opus-4.8", { effortSemantics: "output", thinkingSwitch }),
+    ),
+    "omit",
+  );
+});
+
+test("Chat rejects budget plus effort and between_tools instead of degrading the request", () => {
+  assert.throws(
+    () =>
+      buildOpenRouterAnthropicReasoningBody(
+        config("anthropic/claude-opus-4.5", {
+          effortSemantics: "output",
+          effort: "high",
+          thinkingSwitch: BUDGET_SWITCH,
+        }),
+      ),
+    /requires Anthropic Messages/,
+  );
+  assert.throws(
+    () =>
+      buildOpenRouterAnthropicReasoningBody(
+        config("anthropic/claude-sonnet-5.5", {
+          effortSemantics: "output",
+          effort: "medium",
+          vendorExtendedThinking: false,
+          thinkingSwitch: {
+            on: ADAPTIVE_SWITCH.on,
+            off: { body: { thinking: { type: "between_tools" } } },
+          },
+        }),
+      ),
+    /requires Anthropic Messages/,
+  );
+});
+
+test("blocked output effort forces adaptive thinking on without rewriting the preference", () => {
+  assert.deepEqual(
+    buildOpenRouterAnthropicReasoningBody(
+      config("anthropic/claude-opus-5", {
+        effortSemantics: "output",
+        effort: "max",
+        vendorExtendedThinking: false,
+        thinkingSwitch: {
+          defaultState: "on",
+          offBlockedEfforts: ["max"],
+          on: ADAPTIVE_SWITCH.on,
+          off: ADAPTIVE_SWITCH.off,
+        },
+      }),
+    ),
+    { enabled: true, effort: "max" },
+  );
+});
+
 test("anthropic routes without a thinking declaration send nothing", () => {
   assert.equal(
     buildOpenRouterAnthropicReasoningBody(config("anthropic/claude-future-9")),
@@ -182,6 +265,28 @@ test("the fetch replaces reasoning wholesale and strips reasoning_effort and thi
     reasoning: { enabled: true, effort: "high" },
     messages: [],
   });
+});
+
+test("an omitted off state removes every reasoning encoding without adding a replacement", async () => {
+  const { fetch: base, bodies } = capturingFetch();
+  const fetch = createOpenRouterAnthropicReasoningFetch(
+    config("anthropic/claude-opus-4.8", {
+      effortSemantics: "output",
+      thinkingSwitch: { defaultState: "off", on: ADAPTIVE_SWITCH.on, off: "omit" },
+    }),
+    base,
+  );
+  await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    body: JSON.stringify({
+      model: "anthropic/claude-opus-4.8",
+      reasoning: { enabled: true, effort: "high" },
+      reasoning_effort: "high",
+      thinking: { type: "adaptive" },
+      messages: [],
+    }),
+  });
+  assert.deepEqual(bodies[0], { model: "anthropic/claude-opus-4.8", messages: [] });
 });
 
 test("the fetch passes through when the mechanism is undeclared or the body is not JSON", async () => {

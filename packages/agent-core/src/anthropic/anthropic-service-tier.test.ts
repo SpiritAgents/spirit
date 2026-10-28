@@ -325,11 +325,13 @@ test("anthropic maps the declared outputLimit to max_tokens", async () => {
 test("Opus 4.5 keeps its fixed budget and output effort in the final Messages body", async () => {
   const config: AnthropicTransportConfig = {
     ...baseConfig(),
-    model: "claude-opus-4-5",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "anthropic/claude-opus-4.5",
     effortSemantics: "output",
     effort: "high",
     supportsThinkingSwitch: true,
     vendorExtendedThinking: true,
+    options: { openRouterAnthropicReasoning: true },
     thinkingSwitch: {
       defaultState: "off",
       on: { body: { thinking: { type: "enabled", budget_tokens: 12000 } } },
@@ -339,6 +341,8 @@ test("Opus 4.5 keeps its fixed budget and output effort in the final Messages bo
   const { completion, requests } = await runRound(config);
 
   assert.equal(completion.kind, "success");
+  assert.equal(lastRequest(requests).url, "https://openrouter.ai/api/v1/messages");
+  assert.equal(lastRequest(requests).body.reasoning, undefined);
   assert.deepEqual(lastRequest(requests).body.thinking, { type: "enabled", budget_tokens: 12000 });
   assert.deepEqual(lastRequest(requests).body.output_config, { effort: "high" });
 });
@@ -346,7 +350,8 @@ test("Opus 4.5 keeps its fixed budget and output effort in the final Messages bo
 test("Sonnet 5.5 sends between_tools and preserves output_config siblings", async () => {
   const config: AnthropicTransportConfig = {
     ...baseConfig(),
-    model: "claude-sonnet-5.5",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "anthropic/claude-sonnet-5.5",
     effortSemantics: "output",
     effort: "medium",
     supportsThinkingSwitch: true,
@@ -361,6 +366,7 @@ test("Sonnet 5.5 sends between_tools and preserves output_config siblings", asyn
   const { completion, requests } = await runRound(config);
 
   assert.equal(completion.kind, "success");
+  assert.equal(lastRequest(requests).url, "https://openrouter.ai/api/v1/messages");
   assert.deepEqual(lastRequest(requests).body.thinking, { type: "between_tools" });
   assert.deepEqual(lastRequest(requests).body.output_config, {
     format: { type: "json_schema" },

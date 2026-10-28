@@ -48,7 +48,11 @@ export function resolveModelProfileFromParts(
     providerId: provider.id,
     name: model.name,
     apiBase: provider.apiBase,
-    ...(provider.transportKind ? { transportKind: provider.transportKind } : {}),
+    ...(effective.transportKind !== undefined
+      ? { transportKind: effective.transportKind }
+      : provider.transportKind !== undefined
+        ? { transportKind: provider.transportKind }
+        : {}),
     ...(effective.reasoningEffort !== undefined
       ? { reasoningEffort: effective.reasoningEffort }
       : {}),

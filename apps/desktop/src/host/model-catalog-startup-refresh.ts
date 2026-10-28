@@ -222,6 +222,10 @@ export function catalogEntryToModelEntry(
   if (catalogEntry.defaultReasoningEffort !== undefined) {
     entry.reasoningEffort = catalogEntry.defaultReasoningEffort as ModelEntry["reasoningEffort"];
   }
+  if (catalogEntry.transportOverride !== undefined) {
+    entry.transportKind = catalogEntry.transportOverride.transportKind;
+    entry.sdk = catalogEntry.transportOverride.sdk;
+  }
   return entry;
 }
 

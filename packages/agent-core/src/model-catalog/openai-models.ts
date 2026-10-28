@@ -69,8 +69,14 @@ export interface ProviderListedCatalogCapabilities {
   citations?: JsonObject;
 }
 
+export interface ProviderListedTransportOverride {
+  transportKind: "anthropic";
+  sdk: "@ai-sdk/anthropic";
+}
+
 export interface ProviderListedModelEntry {
   id: string;
+  transportOverride?: ProviderListedTransportOverride;
   displayName?: string;
   description?: string;
   pricing?: ProviderListedModelPricing;
@@ -2223,8 +2229,25 @@ function vercelGatewayModelSupportsImageInput(record: Record<string, unknown>): 
  * (knowledge wins when it declares). Aggregator-route prefixes are stripped by the knowledge
  * loader's normalization, so `anthropic/claude-…` / `openai/gpt-…` ids match canonical records.
  */
+function openRouterMessagesOverrideRequired(declaration: Record<string, unknown>): boolean {
+  const thinkingSwitch = asRecord(declaration["thinkingSwitch"]);
+  const offThinking = asRecord(asRecord(asRecord(thinkingSwitch?.off)?.body)?.thinking);
+  if (offThinking?.type === "between_tools") {
+    return true;
+  }
+  const onThinking = asRecord(asRecord(asRecord(thinkingSwitch?.on)?.body)?.thinking);
+  const supportedEfforts = declaration["supportedEfforts"];
+  return (
+    onThinking?.type === "enabled" &&
+    typeof onThinking["budget_tokens"] === "number" &&
+    Array.isArray(supportedEfforts) &&
+    supportedEfforts.length > 0
+  );
+}
+
 function attachModelKnowledgeReasoningEfforts(
   modelEntry: ProviderListedModelEntry,
+  openRouterTransportOverride = false,
 ): ProviderListedModelEntry {
   const declaration = lookupModelKnowledge(modelEntry.id);
   if (declaration?.["effortSemantics"] === "output") {
@@ -2241,6 +2264,9 @@ function attachModelKnowledgeReasoningEfforts(
     const thinkingCapabilities = declaration["thinkingCapabilities"];
     if (asRecord(thinkingCapabilities)) {
       result.thinkingCapabilities = structuredClone(thinkingCapabilities) as ThinkingCapabilities;
+    }
+    if (openRouterTransportOverride && openRouterMessagesOverrideRequired(declaration)) {
+      result.transportOverride = { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" };
     }
     return result;
   }
@@ -2616,6 +2642,7 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
               record,
               readOpenRouterPricing(record),
             ),
+            true,
           ),
         );
         continue;
@@ -2635,6 +2662,7 @@ export function parseOpenRouterModelEntriesPayload(body: unknown): ProviderListe
     entries.push(
       attachModelKnowledgeReasoningEfforts(
         attachListedModelMetadata(modelEntry, record, readOpenRouterPricing(record)),
+        true,
       ),
     );
   }
@@ -3328,6 +3356,9 @@ export function dedupeProviderListedModelEntries(
     seen.add(entry.id);
     deduped.push({
       id: entry.id,
+      ...(entry.transportOverride !== undefined
+        ? { transportOverride: { ...entry.transportOverride } }
+        : {}),
       ...(entry.displayName !== undefined ? { displayName: entry.displayName } : {}),
       ...(entry.description !== undefined ? { description: entry.description } : {}),
       ...(entry.pricing !== undefined ? { pricing: { ...entry.pricing } } : {}),

@@ -105,6 +105,59 @@ test("the legacy claude budget patch uses the AI SDK budgetTokens shape", () => 
   );
 });
 
+test("output effort combines with budgetTokens and between_tools on Vercel route variants", () => {
+  const budgetSwitch = {
+    defaultState: "off" as const,
+    on: {
+      body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+      providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+    },
+    off: "omit" as const,
+  };
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({
+      model: "anthropic/claude-opus-4.5 (Batch)",
+      effortSemantics: "output",
+      effort: "high",
+      vendorExtendedThinking: true,
+      thinkingSwitch: budgetSwitch,
+    }),
+    {
+      anthropic: {
+        toolStreaming: true,
+        effort: "high",
+        thinking: { type: "enabled", budgetTokens: 12000 },
+      },
+    },
+  );
+
+  assert.deepEqual(
+    buildGatewayV3ProviderOptions({
+      model: "anthropic/claude-sonnet-5.5 (Fast)",
+      effortSemantics: "output",
+      effort: "medium",
+      vendorExtendedThinking: false,
+      thinkingSwitch: {
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "between_tools" } },
+          providerOptions: { anthropic: { thinking: { type: "between_tools" } } },
+        },
+      },
+    }),
+    {
+      anthropic: {
+        toolStreaming: true,
+        effort: "medium",
+        thinking: { type: "between_tools" },
+      },
+    },
+  );
+});
+
 test("google routes map the declared effort to the era's thinkingConfig", () => {
   assert.deepEqual(
     buildGatewayV3ProviderOptions({ model: "google/gemini-3.5-flash", reasoningEffort: "low" }),

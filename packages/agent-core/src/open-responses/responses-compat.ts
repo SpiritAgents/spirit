@@ -40,6 +40,9 @@ export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   previousResponseMode?: OpenResponsesPreviousResponseMode;
   /** Declared reasoning effort selection; sent to the wire verbatim. `default`/absent sends nothing. */
   reasoningEffort?: "default" | "minimal" | "none" | "low" | "medium" | "high" | "xhigh" | "max";
+  effortSemantics?: "output";
+  /** Output-wide effort used by declarations such as OpenRouter's unified reasoning adapter. */
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
   reasoningMode?: ModelReasoningMode;
   reasoningSummary?: OpenResponsesReasoningSummary;
   truncation?: "disabled" | "auto";

@@ -372,6 +372,55 @@ test("anthropic transport maps output effort declarations without reading reason
   });
 });
 
+test("OpenRouter model overrides share provider credentials while selecting Chat or Messages", () => {
+  useMemoryKeyring(internalKeyEntry("openrouter"));
+  const spiritDataDir = configDir(
+    providerWithActiveModel(
+      {
+        id: "openrouter",
+        apiBase: "https://openrouter.ai/api/v1",
+        transportKind: "openai-compatible",
+        sdk: "@ai-sdk/openai-compatible",
+        options: { openRouterAnthropicReasoning: true },
+        models: [
+          {
+            name: "anthropic/claude-sonnet-5",
+            effortSemantics: "output",
+            effort: "high",
+            supportedEfforts: ["low", "high"],
+          },
+          {
+            name: "anthropic/claude-opus-4.5",
+            transportKind: "anthropic",
+            sdk: "@ai-sdk/anthropic",
+            effortSemantics: "output",
+            effort: "medium",
+            supportedEfforts: ["low", "medium", "high"],
+          },
+        ],
+      },
+      "anthropic/claude-sonnet-5",
+    ),
+  );
+  const base = { workspaceRoot: tmpdir(), spiritDataDir };
+  const chat = resolveTransportConfig(base);
+  assert.equal(chat.transportKind, "openai-compatible");
+  assert.equal(chat.baseUrl, "https://openrouter.ai/api/v1");
+  assert.equal(chat.apiKey, "test-key");
+  assert.equal(chat.options?.openRouterAnthropicReasoning, true);
+
+  const messages = resolveTransportConfig({
+    ...base,
+    modelRef: { providerId: "openrouter", name: "anthropic/claude-opus-4.5" },
+  });
+  assert.equal(messages.transportKind, "anthropic");
+  assert.equal(messages.baseUrl, chat.baseUrl);
+  assert.equal(messages.apiKey, chat.apiKey);
+  assert.equal(messages.sdk, "@ai-sdk/anthropic");
+  assert.equal(messages.effort, "medium");
+  assert.equal(messages.options?.openRouterAnthropicReasoning, true);
+});
+
 test("bedrock transport maps options.awsRegion and IAM credential slots", () => {
   useMemoryKeyring({
     [`Spirit/${providerInternalSlotAccount("bedrock-upstream", "accessKeyId")}`]: "AKIAIOSFODNN7",

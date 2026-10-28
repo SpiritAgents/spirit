@@ -1,8 +1,10 @@
 import type { FileUploadConfig } from "../file-upload/uploader.js";
+import { normalizeModelEffort } from "../model-effort.js";
 import type { ModelReasoningMode } from "../reasoning-effort.js";
+import { resolveThinkingSwitchWirePatch } from "../thinking-switch.js";
 import type { JsonObject, JsonValue } from "../ports.js";
 import type { ProviderToolEntry } from "../provider-tools/types.js";
-import { cloneJsonValue } from "../tool-agent.js";
+import { cloneJsonValue, isJsonObject } from "../tool-agent.js";
 import type {
   LlmModelCapabilities,
   LlmWebToolExposure,
@@ -153,8 +155,48 @@ export function bedrockReasoningConfigFromEffort(
 }
 
 export function buildBedrockProviderOptions(
-  config: Pick<BedrockTransportConfig, "model" | "reasoningEffort" | "vendorExtendedThinking">,
+  config: Pick<
+    BedrockTransportConfig,
+    | "model"
+    | "reasoningEffort"
+    | "effortSemantics"
+    | "effort"
+    | "thinkingSwitch"
+    | "vendorExtendedThinking"
+  >,
 ): Record<string, JsonObject> {
+  if (config.effortSemantics === "output") {
+    const effort = normalizeModelEffort(config.effort);
+    const thinkingPatch = resolveThinkingSwitchWirePatch({
+      ...(config.vendorExtendedThinking !== undefined
+        ? { vendorExtendedThinking: config.vendorExtendedThinking }
+        : {}),
+      ...(config.thinkingSwitch !== undefined ? { thinkingSwitch: config.thinkingSwitch } : {}),
+      ...(effort !== undefined ? { effort } : {}),
+    });
+    const additionalModelRequestFields: JsonObject = {};
+    const thinkingValue = thinkingPatch === "omit" ? undefined : thinkingPatch?.body?.thinking;
+    const thinking = isJsonObject(thinkingValue) ? thinkingValue : undefined;
+    const budgetTokens =
+      thinking?.type === "enabled" && typeof thinking.budget_tokens === "number"
+        ? thinking.budget_tokens
+        : undefined;
+    const bedrock: JsonObject = {};
+    if (budgetTokens !== undefined) {
+      // The SDK serializes the declared budget and reserves room for it in inferenceConfig.maxTokens.
+      bedrock["reasoningConfig"] = { type: "enabled", budgetTokens };
+    } else if (thinking !== undefined) {
+      additionalModelRequestFields["thinking"] = cloneJsonValue(thinking);
+    }
+    if (effort !== undefined) {
+      additionalModelRequestFields["output_config"] = { effort };
+    }
+    if (Object.keys(additionalModelRequestFields).length > 0) {
+      bedrock["additionalModelRequestFields"] = additionalModelRequestFields;
+    }
+    return Object.keys(bedrock).length > 0 ? { bedrock } : {};
+  }
+
   // The user off state is Converse's public off encoding; it wins over any effort-derived
   // config, mirroring the Anthropic transport's default `{thinking: {type: "disabled"}}`.
   // Models outside the reasoningConfig whitelist take no reasoning parameter at all.

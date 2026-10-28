@@ -247,6 +247,7 @@ export interface PreviewModelCatalogPricing {
 
 export interface PreviewModelCatalogEntry {
   id: string;
+  transportOverride?: { transportKind: "anthropic"; sdk: "@ai-sdk/anthropic" };
   displayName?: string;
   description?: string;
   pricing?: PreviewModelCatalogPricing;
