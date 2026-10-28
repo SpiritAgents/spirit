@@ -56,6 +56,17 @@ export function resolveModelProfileFromParts(
     ...(effective.supportedReasoningEfforts !== undefined
       ? { supportedReasoningEfforts: [...effective.supportedReasoningEfforts] }
       : {}),
+    ...(effective.effortSemantics !== undefined
+      ? { effortSemantics: effective.effortSemantics }
+      : {}),
+    ...(effective.effort !== undefined ? { effort: effective.effort } : {}),
+    ...(effective.supportedEfforts !== undefined
+      ? { supportedEfforts: [...effective.supportedEfforts] }
+      : {}),
+    ...(effective.defaultEffort !== undefined ? { defaultEffort: effective.defaultEffort } : {}),
+    ...(effective.thinkingCapabilities !== undefined
+      ? { thinkingCapabilities: structuredClone(effective.thinkingCapabilities) }
+      : {}),
     ...(effective.supportedReasoningModes !== undefined
       ? { supportedReasoningModes: [...effective.supportedReasoningModes] }
       : {}),
@@ -67,6 +78,9 @@ export function resolveModelProfileFromParts(
       : {}),
     ...(effective.supportsThinkingSwitch !== undefined
       ? { supportsThinkingSwitch: effective.supportsThinkingSwitch }
+      : {}),
+    ...(effective.thinkingSwitch !== undefined
+      ? { thinkingSwitch: structuredClone(effective.thinkingSwitch) }
       : {}),
     ...(effective.thinkingEnabled !== undefined
       ? { thinkingEnabled: effective.thinkingEnabled }

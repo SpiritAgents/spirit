@@ -67,7 +67,7 @@ export function buildGatewayV3ProviderOptions(
 
   // Declared thinking on/off encoding, `providerOptions` form (per upstream namespace).
   const thinkingPatch = resolveThinkingSwitchWirePatch(config);
-  if (thinkingPatch?.providerOptions !== undefined) {
+  if (thinkingPatch !== "omit" && thinkingPatch?.providerOptions !== undefined) {
     deepMergeProviderOptions(result, thinkingPatch.providerOptions);
   }
 

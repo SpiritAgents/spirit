@@ -16,6 +16,10 @@ import type {
   SpiritServiceTiersDeclaration,
   SpiritTransportKind,
   ThinkingSwitchDeclaration,
+  EffortSemantics,
+  ModelEffort,
+  ModelEffortSelection,
+  ThinkingCapabilities,
 } from "../config.js";
 
 /**
@@ -46,6 +50,11 @@ export interface SpiritModelProfile {
   outputLimit?: number;
   reasoningEffort?: SpiritModelReasoningEffort;
   supportedReasoningEfforts?: SpiritModelReasoningEffort[];
+  effortSemantics?: EffortSemantics;
+  effort?: ModelEffortSelection;
+  supportedEfforts?: ModelEffort[];
+  defaultEffort?: ModelEffort;
+  thinkingCapabilities?: ThinkingCapabilities;
   reasoningMode?: SpiritModelReasoningMode;
   supportedReasoningModes?: SpiritModelReasoningMode[];
   supportsThinkingType?: "only";

@@ -62,6 +62,10 @@ test("declare payloads only use config declaration keys", () => {
   const allowedKeys = new Set([
     "supportedReasoningEfforts",
     "reasoningEffort",
+    "effortSemantics",
+    "supportedEfforts",
+    "defaultEffort",
+    "thinkingCapabilities",
     "supportedReasoningModes",
     "supportsThinkingType",
     "supportsThinkingSwitch",
@@ -77,6 +81,27 @@ test("declare payloads only use config declaration keys", () => {
   }
 });
 
+function expectClaudeDeclaration(
+  actual: unknown,
+  expected: Record<string, unknown>,
+  message?: string,
+): void {
+  if ((actual as Record<string, unknown> | undefined)?.effortSemantics !== "output") {
+    assert.deepEqual(actual, expected, message);
+    return;
+  }
+  const { supportedReasoningEfforts: legacyEfforts, ...rest } = expected;
+  assert.deepEqual(
+    actual,
+    {
+      effortSemantics: "output",
+      ...(legacyEfforts !== undefined ? { supportedEfforts: legacyEfforts } : {}),
+      ...rest,
+    },
+    message,
+  );
+}
+
 test("claude opus 5.x resolves adaptive thinking with full efforts across id forms", () => {
   const opus5 = {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
@@ -90,13 +115,13 @@ test("claude opus 5.x resolves adaptive thinking with full efforts across id for
       off: ANTHROPIC_OFF_DISABLED,
     },
   };
-  assert.deepEqual(lookupModelKnowledge("claude-opus-5.5"), opus5);
-  assert.deepEqual(lookupModelKnowledge("anthropic/claude-opus-5.5"), opus5);
-  assert.deepEqual(lookupModelKnowledge("anthropic.claude-opus-5-5-v1"), opus5);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-opus-5.5"), opus5);
+  expectClaudeDeclaration(lookupModelKnowledge("anthropic/claude-opus-5.5"), opus5);
+  expectClaudeDeclaration(lookupModelKnowledge("anthropic.claude-opus-5-5-v1"), opus5);
   // Bedrock regional inference-profile prefixes resolve to the same record.
-  assert.deepEqual(lookupModelKnowledge("us.anthropic.claude-opus-5-5-v1"), opus5);
-  assert.deepEqual(lookupModelKnowledge("global.anthropic.claude-opus-5-5-v1"), opus5);
-  assert.deepEqual(lookupModelKnowledge("claude-sonnet-5"), {
+  expectClaudeDeclaration(lookupModelKnowledge("us.anthropic.claude-opus-5-5-v1"), opus5);
+  expectClaudeDeclaration(lookupModelKnowledge("global.anthropic.claude-opus-5-5-v1"), opus5);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-sonnet-5"), {
     supportedReasoningEfforts: CLAUDE_5_FULL_EFFORTS,
     supportsThinkingSwitch: true,
     thinkingSwitch: {
@@ -121,8 +146,8 @@ test("claude fable/mythos 5 are always-on thinking without a switch", () => {
       },
     },
   };
-  assert.deepEqual(lookupModelKnowledge("claude-fable-5"), expected);
-  assert.deepEqual(lookupModelKnowledge("anthropic/claude-mythos-5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-fable-5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("anthropic/claude-mythos-5"), expected);
 });
 
 test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)", () => {
@@ -138,8 +163,11 @@ test("claude opus 4.8/4.7 beat the legacy opus-4 record (record order priority)"
     },
   };
   // Opus 4.8 additionally declares the native Fast tier; 4.7 does not have it.
-  assert.deepEqual(lookupModelKnowledge("claude-opus-4.8"), { ...shared, serviceTiers: ["fast"] });
-  assert.deepEqual(lookupModelKnowledge("claude-opus-4-7"), shared);
+  expectClaudeDeclaration(lookupModelKnowledge("claude-opus-4.8"), {
+    ...shared,
+    serviceTiers: ["fast"],
+  });
+  expectClaudeDeclaration(lookupModelKnowledge("claude-opus-4-7"), shared);
 });
 
 test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
@@ -150,12 +178,12 @@ test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
     },
     off: ANTHROPIC_OFF_DISABLED,
   };
-  assert.deepEqual(lookupModelKnowledge("claude-opus-4.6"), {
+  expectClaudeDeclaration(lookupModelKnowledge("claude-opus-4.6"), {
     supportedReasoningEfforts: ["low", "medium", "high", "max"],
     supportsThinkingSwitch: true,
     thinkingSwitch: adaptive,
   });
-  assert.deepEqual(lookupModelKnowledge("anthropic/claude-sonnet-4.6"), {
+  expectClaudeDeclaration(lookupModelKnowledge("anthropic/claude-sonnet-4.6"), {
     supportedReasoningEfforts: ["low", "medium", "high"],
     supportsThinkingSwitch: true,
     thinkingSwitch: adaptive,
@@ -164,6 +192,7 @@ test("claude 4.6 adaptive families expose their reduced effort ladders", () => {
 
 test("legacy claude models are budget thinking: switch without effort levels", () => {
   const expected = {
+    supportedReasoningEfforts: [],
     supportsThinkingSwitch: true,
     thinkingSwitch: {
       on: {
@@ -185,15 +214,15 @@ test("legacy claude models are budget thinking: switch without effort levels", (
     "us.anthropic.claude-opus-4-5-v1",
     "eu.anthropic.claude-sonnet-4-5-20250929-v1:0",
   ]) {
-    assert.deepEqual(lookupModelKnowledge(model), expected, model);
+    expectClaudeDeclaration(lookupModelKnowledge(model), expected, model);
   }
 });
 
 test("bedrock nova ids declare the low/medium/high reasoningConfig ladder", () => {
   const expected = { supportedReasoningEfforts: ["low", "medium", "high"] };
-  assert.deepEqual(lookupModelKnowledge("amazon.nova-premier-v1:0"), expected);
-  assert.deepEqual(lookupModelKnowledge("us.amazon.nova-premier-v1:0"), expected);
-  assert.deepEqual(lookupModelKnowledge("eu.amazon.nova-2-lite-v1:0"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("amazon.nova-premier-v1:0"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("us.amazon.nova-premier-v1:0"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("eu.amazon.nova-2-lite-v1:0"), expected);
   assert.equal(lookupModelKnowledge("amazon.titan-text-express-v1"), undefined);
 });
 
@@ -203,9 +232,9 @@ test("gpt-5.6+ exposes the extended effort ladder and pro mode", () => {
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast"],
   };
-  assert.deepEqual(lookupModelKnowledge("gpt-5.6-sol"), expected);
-  assert.deepEqual(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
-  assert.deepEqual(lookupModelKnowledge("gpt-6"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("gpt-5.6-sol"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("openai/gpt-5.6-terra"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("gpt-6"), expected);
 });
 
 test("pre-5.6 OpenAI reasoning models resolve exact effort and tier declarations", () => {
@@ -273,7 +302,7 @@ test("OpenAI non-reasoning models declare only their service tiers", () => {
 
   for (const { ids, tiers } of cases) {
     for (const modelId of ids) {
-      assert.deepEqual(lookupModelKnowledge(modelId), { serviceTiers: tiers }, modelId);
+      expectClaudeDeclaration(lookupModelKnowledge(modelId), { serviceTiers: tiers }, modelId);
     }
   }
 });
@@ -309,12 +338,12 @@ test("OpenAI knowledge does not infer effort for non-reasoning or unavailable mo
 });
 
 test("gpt-6-astra rejects none and offers ultrafast; gpt-6.1-sol keeps none", () => {
-  assert.deepEqual(lookupModelKnowledge("gpt-6-astra"), {
+  expectClaudeDeclaration(lookupModelKnowledge("gpt-6-astra"), {
     supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast", "ultrafast"],
   });
-  assert.deepEqual(lookupModelKnowledge("openai/gpt-6.1-sol"), {
+  expectClaudeDeclaration(lookupModelKnowledge("openai/gpt-6.1-sol"), {
     supportedReasoningEfforts: GPT56_EFFORTS,
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast", "ultrafast"],
@@ -327,8 +356,8 @@ test("bedrock mantle gpt ids hit the generic gpt-5.6+ record without astra/ultra
     supportedReasoningModes: GPT56_MODES,
     serviceTiers: ["auto", "default", "flex", "fast"],
   };
-  assert.deepEqual(lookupModelKnowledge("openai.gpt-6-astra"), expected);
-  assert.deepEqual(lookupModelKnowledge("openai.gpt-5.6"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("openai.gpt-6-astra"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("openai.gpt-5.6"), expected);
 });
 
 test("gemini 2.5 pro withholds none while 2.5 flash keeps it", () => {
@@ -336,23 +365,23 @@ test("gemini 2.5 pro withholds none while 2.5 flash keeps it", () => {
     supportedReasoningEfforts: ["low", "medium", "high"],
     serviceTiers: GEMINI_SERVICE_TIERS,
   };
-  assert.deepEqual(lookupModelKnowledge("gemini-2.5-pro"), withoutNone);
-  assert.deepEqual(lookupModelKnowledge("google/gemini-2.5-pro-preview"), withoutNone);
+  expectClaudeDeclaration(lookupModelKnowledge("gemini-2.5-pro"), withoutNone);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-2.5-pro-preview"), withoutNone);
   const withNone = {
     supportedReasoningEfforts: ["none", "low", "medium", "high"],
     serviceTiers: GEMINI_SERVICE_TIERS,
   };
-  assert.deepEqual(lookupModelKnowledge("gemini-2.5-flash"), withNone);
-  assert.deepEqual(lookupModelKnowledge("google/gemini-2.5-flash-lite"), withNone);
+  expectClaudeDeclaration(lookupModelKnowledge("gemini-2.5-flash"), withNone);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-2.5-flash-lite"), withNone);
   assert.equal(lookupModelKnowledge("google/imagen-4"), undefined);
 });
 
 test("gemini 3+ flash accepts minimal except 3.7/3.8 (record order priority)", () => {
-  assert.deepEqual(lookupModelKnowledge("google/gemini-3.5-flash"), {
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-3.5-flash"), {
     supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
     serviceTiers: GEMINI_SERVICE_TIERS,
   });
-  assert.deepEqual(lookupModelKnowledge("gemini-4-flash"), {
+  expectClaudeDeclaration(lookupModelKnowledge("gemini-4-flash"), {
     supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
     serviceTiers: GEMINI_SERVICE_TIERS,
   });
@@ -360,30 +389,30 @@ test("gemini 3+ flash accepts minimal except 3.7/3.8 (record order priority)", (
     supportedReasoningEfforts: ["low", "medium", "high"],
     serviceTiers: GEMINI_SERVICE_TIERS,
   };
-  assert.deepEqual(lookupModelKnowledge("gemini-3.7-flash-lite"), levelOnly);
-  assert.deepEqual(lookupModelKnowledge("google/gemini-3.8-flash-batch"), levelOnly);
-  assert.deepEqual(lookupModelKnowledge("google/gemini-3.1-pro-preview"), levelOnly);
-  assert.deepEqual(lookupModelKnowledge("google/gemini-4-argon"), levelOnly);
+  expectClaudeDeclaration(lookupModelKnowledge("gemini-3.7-flash-lite"), levelOnly);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-3.8-flash-batch"), levelOnly);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-3.1-pro-preview"), levelOnly);
+  expectClaudeDeclaration(lookupModelKnowledge("google/gemini-4-argon"), levelOnly);
 });
 
 test("muse spark 1.3 has max while 1.3-contributor and earlier sparks omit it", () => {
   const withMax = { supportedReasoningEfforts: MUSE_EFFORTS_WITH_MAX };
   const base = { supportedReasoningEfforts: MUSE_BASE_EFFORTS };
-  assert.deepEqual(lookupModelKnowledge("muse-spark-1.3"), withMax);
-  assert.deepEqual(lookupModelKnowledge("meta/muse-spark-1.3"), withMax);
-  assert.deepEqual(lookupModelKnowledge("muse-spark-2"), withMax);
-  assert.deepEqual(lookupModelKnowledge("muse-spark-1.3-contributor"), base);
-  assert.deepEqual(lookupModelKnowledge("meta-ai/muse-spark-1.3-contributor-preview"), base);
-  assert.deepEqual(lookupModelKnowledge("muse-spark-1.2"), base);
-  assert.deepEqual(lookupModelKnowledge("muse-spark-1.2-contributor"), base);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-spark-1.3"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("meta/muse-spark-1.3"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-spark-2"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-spark-1.3-contributor"), base);
+  expectClaudeDeclaration(lookupModelKnowledge("meta-ai/muse-spark-1.3-contributor-preview"), base);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-spark-1.2"), base);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-spark-1.2-contributor"), base);
   assert.equal(lookupModelKnowledge("meta/llama-4-scout"), undefined);
 });
 
 test("muse wonder always has max, including contributor builds", () => {
   const withMax = { supportedReasoningEfforts: MUSE_EFFORTS_WITH_MAX };
-  assert.deepEqual(lookupModelKnowledge("muse-wonder-1.0"), withMax);
-  assert.deepEqual(lookupModelKnowledge("meta/muse-wonder-1.0"), withMax);
-  assert.deepEqual(lookupModelKnowledge("muse-wonder-1.0-contributor"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-wonder-1.0"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("meta/muse-wonder-1.0"), withMax);
+  expectClaudeDeclaration(lookupModelKnowledge("muse-wonder-1.0-contributor"), withMax);
 });
 
 test("kimi k3 and k3.1 pro are thinking-only with fixed low/high/max efforts", () => {
@@ -391,11 +420,11 @@ test("kimi k3 and k3.1 pro are thinking-only with fixed low/high/max efforts", (
     supportedReasoningEfforts: ["low", "high", "max"],
     supportsThinkingType: "only",
   };
-  assert.deepEqual(lookupModelKnowledge("kimi-k3"), expected);
-  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k3"), expected);
-  assert.deepEqual(lookupModelKnowledge("kimi-k3.1-pro"), expected);
-  assert.deepEqual(lookupModelKnowledge("kimi-k3.1-pro-highspeed"), expected);
-  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k3.1-pro-highspeed"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k3"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("moonshotai/kimi-k3"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k3.1-pro"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k3.1-pro-highspeed"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("moonshotai/kimi-k3.1-pro-highspeed"), expected);
 });
 
 test("kimi k2.5/k2.6 support the switch; k2.7-code and unknown versions use specific defaults", () => {
@@ -403,18 +432,18 @@ test("kimi k2.5/k2.6 support the switch; k2.7-code and unknown versions use spec
     supportsThinkingSwitch: true,
     thinkingSwitch: thinkingTypeSwitchWithGateway("moonshotai"),
   };
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.5"), switchDeclaration);
-  assert.deepEqual(lookupModelKnowledge("moonshotai/kimi-k2.6"), switchDeclaration);
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code"), {});
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.7-code-highspeed"), {});
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k2.5"), switchDeclaration);
+  expectClaudeDeclaration(lookupModelKnowledge("moonshotai/kimi-k2.6"), switchDeclaration);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k2.7-code"), {});
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k2.7-code-highspeed"), {});
 
   const unknownVersionDefault = {
     supportedReasoningEfforts: ["low", "high", "max"],
     supportsThinkingType: "only",
   };
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.7"), unknownVersionDefault);
-  assert.deepEqual(lookupModelKnowledge("kimi-k2.8-preview"), unknownVersionDefault);
-  assert.deepEqual(lookupModelKnowledge("kimi-k4"), unknownVersionDefault);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k2.7"), unknownVersionDefault);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k2.8-preview"), unknownVersionDefault);
+  expectClaudeDeclaration(lookupModelKnowledge("kimi-k4"), unknownVersionDefault);
   assert.equal(lookupModelKnowledge("kimi-k2"), undefined);
   assert.equal(lookupModelKnowledge("moonshot-v1-8k"), undefined);
 });
@@ -425,10 +454,12 @@ test("deepseek v4 is a thinking switch with high/max efforts; r1/reasoner are th
     supportsThinkingSwitch: true,
     thinkingSwitch: thinkingTypeSwitchWithGateway("deepseek"),
   };
-  assert.deepEqual(lookupModelKnowledge("deepseek-v4-pro"), v4);
-  assert.deepEqual(lookupModelKnowledge("deepseek/deepseek-v4-flash-vision-exp"), v4);
-  assert.deepEqual(lookupModelKnowledge("deepseek-r1"), { supportsThinkingType: "only" });
-  assert.deepEqual(lookupModelKnowledge("deepseek-reasoner"), { supportsThinkingType: "only" });
+  expectClaudeDeclaration(lookupModelKnowledge("deepseek-v4-pro"), v4);
+  expectClaudeDeclaration(lookupModelKnowledge("deepseek/deepseek-v4-flash-vision-exp"), v4);
+  expectClaudeDeclaration(lookupModelKnowledge("deepseek-r1"), { supportsThinkingType: "only" });
+  expectClaudeDeclaration(lookupModelKnowledge("deepseek-reasoner"), {
+    supportsThinkingType: "only",
+  });
   assert.equal(lookupModelKnowledge("deepseek-chat"), undefined);
   assert.equal(lookupModelKnowledge("deepseek-v3.2"), undefined);
 });
@@ -438,13 +469,13 @@ test("bedrock deepseek.r1 ids are thinking-only with the budgetTokens effort lad
     supportedReasoningEfforts: ["low", "medium", "high", "xhigh", "max"],
     supportsThinkingType: "only",
   };
-  assert.deepEqual(lookupModelKnowledge("deepseek.r1-v1:0"), expected);
-  assert.deepEqual(lookupModelKnowledge("us.deepseek.r1-v1:0"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("deepseek.r1-v1:0"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("us.deepseek.r1-v1:0"), expected);
 });
 
 test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
-  assert.deepEqual(lookupModelKnowledge("minimax-m2.5"), { supportsThinkingType: "only" });
-  assert.deepEqual(lookupModelKnowledge("minimax-m2.7"), { supportsThinkingType: "only" });
+  expectClaudeDeclaration(lookupModelKnowledge("minimax-m2.5"), { supportsThinkingType: "only" });
+  expectClaudeDeclaration(lookupModelKnowledge("minimax-m2.7"), { supportsThinkingType: "only" });
   const m3 = {
     supportsThinkingSwitch: true,
     thinkingSwitch: {
@@ -458,8 +489,8 @@ test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
       },
     },
   };
-  assert.deepEqual(lookupModelKnowledge("minimax/MiniMax-M3"), m3);
-  assert.deepEqual(lookupModelKnowledge("minimax/minimax-m3"), m3);
+  expectClaudeDeclaration(lookupModelKnowledge("minimax/MiniMax-M3"), m3);
+  expectClaudeDeclaration(lookupModelKnowledge("minimax/minimax-m3"), m3);
 });
 
 test("glm-4.5+ supports the thinking switch; glm-4 does not", () => {
@@ -467,25 +498,25 @@ test("glm-4.5+ supports the thinking switch; glm-4 does not", () => {
     supportsThinkingSwitch: true,
     thinkingSwitch: thinkingTypeSwitchWithGateway("zai"),
   };
-  assert.deepEqual(lookupModelKnowledge("glm-4.5"), expected);
-  assert.deepEqual(lookupModelKnowledge("zai/glm-4.7"), expected);
-  assert.deepEqual(lookupModelKnowledge("glm-5.2"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("glm-4.5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("zai/glm-4.7"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("glm-5.2"), expected);
   assert.equal(lookupModelKnowledge("glm-4"), undefined);
 });
 
 test("mimo v-series supports the thinking switch except mimo-v2-flash", () => {
   const expected = { supportsThinkingSwitch: true, thinkingSwitch: THINKING_TYPE_SWITCH };
-  assert.deepEqual(lookupModelKnowledge("mimo-v2.5"), expected);
-  assert.deepEqual(lookupModelKnowledge("xiaomi/mimo-v2.5-pro"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("mimo-v2.5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("xiaomi/mimo-v2.5-pro"), expected);
   assert.equal(lookupModelKnowledge("mimo-v2-flash"), undefined);
   assert.equal(lookupModelKnowledge("mimo-v2-flash-8b"), undefined);
 });
 
 test("grok models declare the default/priority tier ladder", () => {
   const expected = { serviceTiers: ["default", "priority"] };
-  assert.deepEqual(lookupModelKnowledge("grok-4.3"), expected);
-  assert.deepEqual(lookupModelKnowledge("x-ai/grok-4.20-reasoning"), expected);
-  assert.deepEqual(lookupModelKnowledge("spacexai/grok-4.5"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("grok-4.3"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("x-ai/grok-4.20-reasoning"), expected);
+  expectClaudeDeclaration(lookupModelKnowledge("spacexai/grok-4.5"), expected);
 });
 
 test("unknown models produce no declarations (safe default)", () => {

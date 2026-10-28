@@ -9,6 +9,13 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 import { MODEL_SERVICE_TIERS } from "@spiritagent/agent-core/model-service-tier";
 import type { ProviderToolEntry } from "@spiritagent/agent-core/provider-tools";
 import { validateProviderToolEntries } from "@spiritagent/agent-core/provider-tools";
+import {
+  MODEL_OUTPUT_EFFORT_TOKENS,
+  type EffortSemantics,
+  type ModelEffort,
+  type ModelEffortSelection,
+} from "@spiritagent/agent-core/model-effort";
+import type { ThinkingCapabilities } from "@spiritagent/agent-core";
 
 export const SPIRIT_CONFIG_SCHEMA_VERSION = 1 as const;
 
@@ -65,9 +72,13 @@ export interface SpiritWirePatch {
  * `ThinkingSwitchDeclaration`.
  */
 export interface ThinkingSwitchDeclaration {
+  defaultState?: "on" | "off";
+  offBlockedEfforts?: string[];
   on?: SpiritWirePatch;
-  off?: SpiritWirePatch;
+  off?: SpiritWirePatch | "omit";
 }
+
+export type { EffortSemantics, ModelEffort, ModelEffortSelection, ThinkingCapabilities };
 
 /** One literal service tier: its wire patch plus optional input-token availability metadata. */
 export interface SpiritServiceTierDeclaration extends SpiritWirePatch {
@@ -123,6 +134,11 @@ export interface ModelInheritableFields {
   outputLimit?: number;
   reasoningEffort?: SpiritModelReasoningEffort;
   supportedReasoningEfforts?: SpiritModelReasoningEffort[];
+  effortSemantics?: EffortSemantics;
+  effort?: ModelEffortSelection;
+  supportedEfforts?: ModelEffort[];
+  defaultEffort?: ModelEffort;
+  thinkingCapabilities?: ThinkingCapabilities;
   reasoningMode?: SpiritModelReasoningMode;
   supportedReasoningModes?: SpiritModelReasoningMode[];
   supportsThinkingType?: "only";
@@ -254,6 +270,11 @@ const MODEL_INHERITABLE_KEYS = [
   "outputLimit",
   "reasoningEffort",
   "supportedReasoningEfforts",
+  "effortSemantics",
+  "effort",
+  "supportedEfforts",
+  "defaultEffort",
+  "thinkingCapabilities",
   "reasoningMode",
   "supportedReasoningModes",
   "supportsThinkingType",
@@ -295,7 +316,12 @@ const SERVICE_TIER_DECLARATION_KEYS: ReadonlySet<string> = new Set([
   ...WIRE_PATCH_KEYS,
   "maxInputTokens",
 ]);
-const THINKING_SWITCH_KEYS: ReadonlySet<string> = new Set(["on", "off"]);
+const THINKING_SWITCH_KEYS: ReadonlySet<string> = new Set([
+  "defaultState",
+  "offBlockedEfforts",
+  "on",
+  "off",
+]);
 const KEYRING_REFERENCE_KEYS: ReadonlySet<string> = new Set(["service", "account"]);
 const CREDENTIAL_SLOT_VALUE_KEYS: ReadonlySet<string> = new Set(["value", "env", "keyring"]);
 const FILE_UPLOAD_KEYS: ReadonlySet<string> = new Set([
@@ -440,11 +466,45 @@ function validateThinkingSwitch(value: unknown, context: string): void {
     throw new SpiritConfigSchemaError(`${context}: "thinkingSwitch" must be an object.`);
   }
   rejectUnknownKeys(value, THINKING_SWITCH_KEYS, `${context}.thinkingSwitch`);
+  if (value["defaultState"] !== undefined) {
+    validateEnumValue(value["defaultState"], new Set(["on", "off"]), context, "defaultState");
+  }
+  if (value["offBlockedEfforts"] !== undefined) {
+    validateEnumArray(
+      value["offBlockedEfforts"],
+      new Set(MODEL_OUTPUT_EFFORT_TOKENS),
+      context,
+      "offBlockedEfforts",
+    );
+  }
   if (value["on"] !== undefined) {
     validateWirePatch(value["on"], `${context}.thinkingSwitch.on`);
   }
-  if (value["off"] !== undefined) {
+  if (value["off"] !== undefined && value["off"] !== "omit") {
     validateWirePatch(value["off"], `${context}.thinkingSwitch.off`);
+  }
+}
+
+function validateThinkingCapabilities(value: unknown, context: string): void {
+  if (!isPlainObject(value)) {
+    throw new SpiritConfigSchemaError(`${context}: "thinkingCapabilities" must be an object.`);
+  }
+  rejectUnknownKeys(value, new Set(["supported", "types"]), context);
+  if (value["supported"] !== undefined && typeof value["supported"] !== "boolean") {
+    throw new SpiritConfigSchemaError(`${context}: "supported" must be a boolean.`);
+  }
+  const types = value["types"];
+  if (types === undefined) {
+    return;
+  }
+  if (!isPlainObject(types)) {
+    throw new SpiritConfigSchemaError(`${context}: "types" must be an object.`);
+  }
+  rejectUnknownKeys(types, new Set(["adaptive", "betweenTools", "disabled", "enabled"]), context);
+  for (const [key, supported] of Object.entries(types)) {
+    if (typeof supported !== "boolean") {
+      throw new SpiritConfigSchemaError(`${context}: ${JSON.stringify(key)} must be a boolean.`);
+    }
   }
 }
 
@@ -499,6 +559,36 @@ function validateInheritableFields(record: UnknownRecord, context: string): void
       context,
       "supportedReasoningEfforts",
     );
+  }
+  if (record["effortSemantics"] !== undefined && record["effortSemantics"] !== "output") {
+    throw new SpiritConfigSchemaError(`${context}: "effortSemantics" must be "output".`);
+  }
+  if (record["effort"] !== undefined) {
+    validateEnumValue(
+      record["effort"],
+      new Set([...MODEL_OUTPUT_EFFORT_TOKENS, "default"]),
+      context,
+      "effort",
+    );
+  }
+  if (record["supportedEfforts"] !== undefined) {
+    validateEnumArray(
+      record["supportedEfforts"],
+      new Set(MODEL_OUTPUT_EFFORT_TOKENS),
+      context,
+      "supportedEfforts",
+    );
+  }
+  if (record["defaultEffort"] !== undefined) {
+    validateEnumValue(
+      record["defaultEffort"],
+      new Set(MODEL_OUTPUT_EFFORT_TOKENS),
+      context,
+      "defaultEffort",
+    );
+  }
+  if (record["thinkingCapabilities"] !== undefined) {
+    validateThinkingCapabilities(record["thinkingCapabilities"], context);
   }
   if (record["reasoningMode"] !== undefined) {
     validateEnumValue(record["reasoningMode"], REASONING_MODE_TOKENS, context, "reasoningMode");
@@ -566,6 +656,48 @@ function validateServiceTierRule(record: UnknownRecord, context: string): void {
 }
 
 function validateReasoningRules(record: UnknownRecord, context: string): void {
+  const outputEffortKeys = ["effort", "supportedEfforts", "defaultEffort"] as const;
+  if (record["effortSemantics"] === undefined) {
+    for (const key of outputEffortKeys) {
+      if (record[key] !== undefined) {
+        throw new SpiritConfigSchemaError(
+          `${context}: ${JSON.stringify(key)} requires "effortSemantics" to be "output".`,
+        );
+      }
+    }
+  } else {
+    if (
+      record["reasoningEffort"] !== undefined ||
+      record["supportedReasoningEfforts"] !== undefined
+    ) {
+      throw new SpiritConfigSchemaError(
+        `${context}: output effort declarations cannot be mixed with reasoningEffort or supportedReasoningEfforts.`,
+      );
+    }
+    const supported = record["supportedEfforts"];
+    const selected = record["effort"];
+    if (
+      selected !== undefined &&
+      selected !== "default" &&
+      Array.isArray(supported) &&
+      !supported.includes(selected)
+    ) {
+      throw new SpiritConfigSchemaError(
+        `${context}: "effort" ${JSON.stringify(selected)} is not in the declared "supportedEfforts".`,
+      );
+    }
+    const defaultEffort = record["defaultEffort"];
+    if (
+      defaultEffort !== undefined &&
+      Array.isArray(supported) &&
+      !supported.includes(defaultEffort)
+    ) {
+      throw new SpiritConfigSchemaError(
+        `${context}: "defaultEffort" ${JSON.stringify(defaultEffort)} is not in the declared "supportedEfforts".`,
+      );
+    }
+  }
+
   const effort = record["reasoningEffort"];
   // "default" means "send nothing" and is always allowed, matching the spec's own examples.
   if (effort !== undefined && effort !== "default") {
@@ -983,6 +1115,26 @@ export function resolveModelEntry(
     model.supportedReasoningEfforts ?? provider.supportedReasoningEfforts;
   if (supportedReasoningEfforts !== undefined) {
     resolved.supportedReasoningEfforts = supportedReasoningEfforts;
+  }
+  const effortSemantics = model.effortSemantics ?? provider.effortSemantics;
+  if (effortSemantics !== undefined) {
+    resolved.effortSemantics = effortSemantics;
+  }
+  const effort = model.effort ?? provider.effort;
+  if (effort !== undefined) {
+    resolved.effort = effort;
+  }
+  const supportedEfforts = model.supportedEfforts ?? provider.supportedEfforts;
+  if (supportedEfforts !== undefined) {
+    resolved.supportedEfforts = supportedEfforts;
+  }
+  const defaultEffort = model.defaultEffort ?? provider.defaultEffort;
+  if (defaultEffort !== undefined) {
+    resolved.defaultEffort = defaultEffort;
+  }
+  const thinkingCapabilities = model.thinkingCapabilities ?? provider.thinkingCapabilities;
+  if (thinkingCapabilities !== undefined) {
+    resolved.thinkingCapabilities = thinkingCapabilities;
   }
   const reasoningMode = model.reasoningMode ?? provider.reasoningMode;
   if (reasoningMode !== undefined) {

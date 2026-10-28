@@ -37,11 +37,23 @@ export interface ThinkingSwitchWirePatch {
   providerOptions?: JsonObject;
 }
 
+export interface ThinkingCapabilities {
+  supported?: boolean;
+  types?: {
+    adaptive?: boolean;
+    betweenTools?: boolean;
+    disabled?: boolean;
+    enabled?: boolean;
+  };
+}
+
 /**
  * Declared wire encoding for a model thinking on/off switch (`thinkingSwitch`); absent = the
  * transport's default thinking encoding applies.
  */
 export interface ThinkingSwitchDeclaration {
+  defaultState?: "on" | "off";
+  offBlockedEfforts?: string[];
   on?: ThinkingSwitchWirePatch;
-  off?: ThinkingSwitchWirePatch;
+  off?: ThinkingSwitchWirePatch | "omit";
 }

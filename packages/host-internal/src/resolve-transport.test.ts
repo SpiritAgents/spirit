@@ -341,6 +341,38 @@ test("anthropic transport sends no effort for none/minimal/default declarations"
   assert.equal("effort" in config, false);
 });
 
+test("anthropic transport maps output effort declarations without reading reasoning fields", () => {
+  useMemoryKeyring(internalKeyEntry("acme-anthropic"));
+  const spiritDataDir = configDir(
+    providerWithActiveModel(
+      {
+        id: "acme-anthropic",
+        apiBase: "https://acme.test/anthropic",
+        transportKind: "anthropic",
+        effortSemantics: "output",
+        supportedEfforts: ["low", "high"],
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+        },
+        models: [{ name: "claude-opus-4.6", effort: "high" }],
+      },
+      "claude-opus-4.6",
+    ),
+  );
+  const config = resolveTransportConfig({ workspaceRoot: tmpdir(), spiritDataDir });
+  if (config.transportKind !== "anthropic") {
+    assert.fail(`expected anthropic transport, got ${config.transportKind}`);
+  }
+  assert.equal(config.effortSemantics, "output");
+  assert.equal(config.effort, "high");
+  assert.deepEqual(config.supportedEfforts, ["low", "high"]);
+  assert.deepEqual(config.thinkingCapabilities, {
+    supported: true,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+});
+
 test("bedrock transport maps options.awsRegion and IAM credential slots", () => {
   useMemoryKeyring({
     [`Spirit/${providerInternalSlotAccount("bedrock-upstream", "accessKeyId")}`]: "AKIAIOSFODNN7",

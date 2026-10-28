@@ -1306,6 +1306,93 @@ test("reasoning selections are checked against declared lists, with spec asymmet
   );
 });
 
+test("output effort declarations validate without a schema version change", () => {
+  const provider = validProvider({
+    effortSemantics: "output",
+    supportedEfforts: ["low", "high"],
+    defaultEffort: "high",
+    thinkingCapabilities: {
+      supported: true,
+      types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+    },
+    thinkingSwitch: {
+      defaultState: "off",
+      offBlockedEfforts: ["max"],
+      off: "omit",
+    },
+    models: [{ name: "test-model", effort: "low" }],
+  });
+  assert.doesNotThrow(() => validateSpiritConfig(validConfig([provider])));
+  const resolved = resolveModelEntry(provider as ProviderEntry, "test-model");
+  assert.equal(resolved?.effortSemantics, "output");
+  assert.equal(resolved?.effort, "low");
+  assert.deepEqual(resolved?.supportedEfforts, ["low", "high"]);
+  assert.equal(resolved?.defaultEffort, "high");
+  assert.deepEqual(resolved?.thinkingCapabilities, {
+    supported: true,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+});
+
+test("output effort rejects missing semantics, mixed fields, and invalid selections", () => {
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([validProvider({ models: [{ name: "m", effort: "low" }] })]),
+      ),
+    'requires "effortSemantics" to be "output"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            effortSemantics: "output",
+            models: [{ name: "m", reasoningEffort: "low" }],
+          }),
+        ]),
+      ),
+    "cannot be mixed with reasoningEffort or supportedReasoningEfforts",
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            effortSemantics: "output",
+            supportedEfforts: ["low"],
+            models: [{ name: "m", effort: "max" }],
+          }),
+        ]),
+      ),
+    '"effort" "max" is not in the declared "supportedEfforts"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            effortSemantics: "output",
+            supportedEfforts: ["low"],
+            defaultEffort: "max",
+          }),
+        ]),
+      ),
+    '"defaultEffort" "max" is not in the declared "supportedEfforts"',
+  );
+  assertSchemaError(
+    () =>
+      validateSpiritConfig(
+        validConfig([
+          validProvider({
+            thinkingCapabilities: { supported: true, types: { unknown: true } },
+          }),
+        ]),
+      ),
+    'unknown key "unknown"',
+  );
+});
+
 test("thinkingEnabled requires a declared supportsThinkingSwitch", () => {
   assert.doesNotThrow(() =>
     validateSpiritConfig(

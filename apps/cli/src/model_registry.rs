@@ -132,6 +132,32 @@ pub struct ModelEntry {
     )]
     pub supported_reasoning_efforts: Option<Vec<String>>,
     #[serde(
+        rename = "effortSemantics",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub effort_semantics: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    #[serde(
+        rename = "supportedEfforts",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub supported_efforts: Option<Vec<String>>,
+    #[serde(
+        rename = "defaultEffort",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_effort: Option<String>,
+    #[serde(
+        rename = "thinkingCapabilities",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub thinking_capabilities: Option<Value>,
+    #[serde(
         rename = "reasoningMode",
         default,
         skip_serializing_if = "Option::is_none"
@@ -259,6 +285,32 @@ pub struct ProviderEntry {
         skip_serializing_if = "Option::is_none"
     )]
     pub supported_reasoning_efforts: Option<Vec<String>>,
+    #[serde(
+        rename = "effortSemantics",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub effort_semantics: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    #[serde(
+        rename = "supportedEfforts",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub supported_efforts: Option<Vec<String>>,
+    #[serde(
+        rename = "defaultEffort",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_effort: Option<String>,
+    #[serde(
+        rename = "thinkingCapabilities",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub thinking_capabilities: Option<Value>,
     #[serde(
         rename = "reasoningMode",
         default,
@@ -394,6 +446,32 @@ pub struct ModelProfile {
         skip_serializing_if = "Option::is_none"
     )]
     pub supported_reasoning_efforts: Option<Vec<String>>,
+    #[serde(
+        rename = "effortSemantics",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub effort_semantics: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effort: Option<String>,
+    #[serde(
+        rename = "supportedEfforts",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub supported_efforts: Option<Vec<String>>,
+    #[serde(
+        rename = "defaultEffort",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub default_effort: Option<String>,
+    #[serde(
+        rename = "thinkingCapabilities",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub thinking_capabilities: Option<Value>,
     #[serde(
         rename = "reasoningMode",
         default,
@@ -749,6 +827,23 @@ pub fn resolve_model_profile_from_parts(
             .supported_reasoning_efforts
             .clone()
             .or_else(|| provider.supported_reasoning_efforts.clone()),
+        effort_semantics: model
+            .effort_semantics
+            .clone()
+            .or_else(|| provider.effort_semantics.clone()),
+        effort: model.effort.clone().or_else(|| provider.effort.clone()),
+        supported_efforts: model
+            .supported_efforts
+            .clone()
+            .or_else(|| provider.supported_efforts.clone()),
+        default_effort: model
+            .default_effort
+            .clone()
+            .or_else(|| provider.default_effort.clone()),
+        thinking_capabilities: model
+            .thinking_capabilities
+            .clone()
+            .or_else(|| provider.thinking_capabilities.clone()),
         reasoning_mode: model
             .reasoning_mode
             .clone()
@@ -1035,6 +1130,11 @@ impl AppConfig {
             output_limit: None,
             reasoning_effort: None,
             supported_reasoning_efforts: None,
+            effort_semantics: None,
+            effort: None,
+            supported_efforts: None,
+            default_effort: None,
+            thinking_capabilities: None,
             reasoning_mode: None,
             supported_reasoning_modes: None,
             supports_thinking_type: None,

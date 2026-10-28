@@ -17,6 +17,10 @@ const OPENAI_LIMITED_FAST_TIERS = {
   fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
 };
 
+function outputEfforts(efforts) {
+  return { effortSemantics: "output", supportedEfforts: efforts };
+}
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({
@@ -65,7 +69,7 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
       {
         id: "claude-sonnet-4-20250514",
         supportsImageInput: false,
-        supportedReasoningEfforts: ["low", "high", "high", "default", "max"],
+        supportedEfforts: ["low", "high", "high", "default", "max"],
       },
     ],
   });
@@ -75,7 +79,7 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
       id: "claude-sonnet-4-20250514",
       displayName: "Claude Sonnet 4.20250514",
       capabilities: ["languageModel"],
-      supportedReasoningEfforts: ["low", "high", "max"],
+      ...outputEfforts(["low", "high", "max"]),
       // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-* (switch + encoding).
       supportsThinkingSwitch: true,
       thinkingSwitch: {
@@ -214,6 +218,7 @@ test("openrouter provider passes through display metadata and pricing", () => {
         outputPerTokenUsd: "0.000015",
       },
       capabilities: ["languageModel"],
+      ...outputEfforts([]),
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -324,7 +329,7 @@ test("vercel-ai-gateway folds anthropic claude knowledge declarations into catal
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -364,7 +369,7 @@ test("openrouter folds anthropic claude knowledge declarations into catalog entr
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -404,7 +409,7 @@ test("knowledge declarations win over empty catalog effort lists", () => {
     {
       id: "anthropic/claude-sonnet-4.6",
       capabilities: ["languageModel"],
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      ...outputEfforts(["low", "medium", "high"]),
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -770,6 +775,7 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
       id: "anthropic/claude-sonnet-4",
       capabilities: ["languageModel"],
       contextLength: 200000,
+      ...outputEfforts([]),
       supportsThinkingSwitch: true,
       thinkingSwitch: {
         on: {
@@ -1005,4 +1011,93 @@ test("muse model ids override stale catalog reasoning efforts on any provider", 
     "xhigh",
     "max",
   ]);
+});
+
+test("anthropic listings prefer explicit API effort lists and retain knowledge display", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        displayName: "Claude Opus 5",
+        contextLength: 1000000,
+        outputLimit: 128000,
+        supportedEfforts: [],
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+        },
+        catalogCapabilities: { serverTools: { supported: true } },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.displayName, "Claude Opus 5");
+  assert.equal(model?.contextLength, 1000000);
+  assert.equal(model?.outputLimit, 128000);
+  assert.deepEqual(model?.supportedEfforts, []);
+  assert.equal(model?.supportsThinkingSwitch, true);
+  assert.deepEqual(model?.thinkingCapabilities, {
+    supported: true,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+  assert.deepEqual(model?.catalogCapabilities, { serverTools: { supported: true } });
+  assert.deepEqual(model?.thinkingSwitch?.on, {
+    body: { thinking: { type: "adaptive", display: "summarized" } },
+    providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+  });
+});
+
+test("anthropic API thinking unsupported revokes the old switch and encoding", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        supportedEfforts: ["low"],
+        thinkingCapabilities: {
+          supported: false,
+          types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+        },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.supportsThinkingSwitch, false);
+  assert.equal(model?.supportsThinkingType, undefined);
+  assert.equal(model?.thinkingSwitch, undefined);
+  assert.deepEqual(model?.thinkingCapabilities, {
+    supported: false,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+});
+
+test("anthropic API off-type rejection removes the off patch and marks always-on thinking", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        supportedEfforts: ["low"],
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: false, enabled: false },
+        },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.supportsThinkingSwitch, false);
+  assert.equal(model?.supportsThinkingType, "only");
+  assert.deepEqual(model?.thinkingSwitch?.on, {
+    body: { thinking: { type: "adaptive", display: "summarized" } },
+    providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+  });
+  assert.equal(model?.thinkingSwitch && "off" in model.thinkingSwitch, false);
 });

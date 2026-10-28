@@ -207,7 +207,8 @@ export function modelCatalogHasDetailBody(input: {
   const contextLength =
     parseModelContextLength(input.model.contextLength) ??
     parseModelContextLength(input.catalogEntry?.contextLength);
-  const maxCompletionTokens = input.catalogEntry?.maxCompletionTokens;
+  const maxCompletionTokens =
+    input.catalogEntry?.outputLimit ?? input.catalogEntry?.maxCompletionTokens;
   return (
     buildModelCatalogDetailFields({
       ...(contextLength !== undefined ? { contextLength } : {}),

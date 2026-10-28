@@ -18,7 +18,7 @@ export function resolveThinkingSwitchState(config: {
 export function resolveThinkingSwitchWirePatch(config: {
   thinkingSwitch?: ThinkingSwitchDeclaration;
   vendorExtendedThinking?: boolean;
-}): ThinkingSwitchWirePatch | undefined {
+}): ThinkingSwitchWirePatch | "omit" | undefined {
   const declaration = config.thinkingSwitch;
   if (declaration === undefined) {
     return undefined;

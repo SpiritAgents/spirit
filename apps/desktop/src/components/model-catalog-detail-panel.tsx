@@ -64,7 +64,7 @@ export function ModelCatalogDetailPanel({
   const contextLength =
     parseModelContextLength(model.contextLength) ??
     parseModelContextLength(catalogEntry?.contextLength);
-  const maxCompletionTokens = catalogEntry?.maxCompletionTokens;
+  const maxCompletionTokens = catalogEntry?.outputLimit ?? catalogEntry?.maxCompletionTokens;
   const description = catalogEntry?.description?.trim() ?? "";
   const detailFields = useMemo(
     () =>
@@ -74,7 +74,13 @@ export function ModelCatalogDetailPanel({
         pricing: catalogEntry?.pricing,
         t,
       }),
-    [catalogEntry?.maxCompletionTokens, catalogEntry?.pricing, contextLength, t],
+    [
+      catalogEntry?.outputLimit,
+      catalogEntry?.maxCompletionTokens,
+      catalogEntry?.pricing,
+      contextLength,
+      t,
+    ],
   );
   const hasDetailFields = detailFields.length > 0;
   const hasContentBelowHeader = Boolean(description || children || hasDetailFields);

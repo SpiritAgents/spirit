@@ -202,29 +202,34 @@ test("syncExistingModelsFromCatalog corrects stale video input to videoGeneratio
   assert.deepEqual(provider.models[0].capabilities, ["videoGeneration"]);
 });
 
-test("syncExistingModelsFromCatalog syncs supportedReasoningEfforts from catalog", () => {
-  const provider = gatewayProvider([
-    {
-      name: "anthropic/claude-sonnet-4",
-      capabilities: ["languageModel"],
-    },
-  ]);
+test("syncExistingModelsFromCatalog syncs supportedEfforts from catalog", () => {
+  const provider = {
+    id: "anthropic",
+    apiBase: "https://api.anthropic.com/v1",
+    transportKind: "anthropic",
+    models: [
+      {
+        name: "claude-sonnet-4",
+        capabilities: ["languageModel"],
+      },
+    ],
+  };
   const config = { providers: [provider] };
 
   const synced = syncExistingModelsFromCatalog(config, provider, {
-    modelIds: ["anthropic/claude-sonnet-4"],
+    modelIds: ["claude-sonnet-4"],
     fromCache: false,
     modelCatalog: [
       {
-        id: "anthropic/claude-sonnet-4",
+        id: "claude-sonnet-4",
         capabilities: ["languageModel"],
-        supportedReasoningEfforts: ["low", "high"],
+        supportedEfforts: ["low", "high"],
       },
     ],
   });
 
   assert.equal(synced, 1);
-  assert.deepEqual(provider.models[0].supportedReasoningEfforts, ["low", "high"]);
+  assert.deepEqual(provider.models[0].supportedEfforts, ["low", "high"]);
   // The claude-sonnet-4 knowledge record folds in the thinking-switch declaration.
   assert.equal(provider.models[0].supportsThinkingSwitch, true);
 });
@@ -583,4 +588,39 @@ test("removeDelistedModelsFromCatalog prunes the delisted entry model but keeps 
     ["openai"],
   );
   assert.deepEqual(config.activeModel, { providerId: openAiProviderId, name: "shared-id" });
+});
+
+test("applyCatalogEntryToStoredModel clears revoked effort and thinking state", () => {
+  const model = {
+    name: "claude-opus-5",
+    effortSemantics: "output",
+    effort: "high",
+    supportedEfforts: ["low", "high"],
+    defaultEffort: "high",
+    supportsThinkingSwitch: true,
+    thinkingEnabled: false,
+    thinkingCapabilities: { supported: true },
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  };
+
+  const changed = applyCatalogEntryToStoredModel(model, {
+    id: model.name,
+    effortSemantics: "output",
+    supportedEfforts: [],
+    thinkingCapabilities: { supported: false },
+    supportsThinkingSwitch: false,
+  });
+
+  assert.equal(changed, true);
+  assert.equal(model.effortSemantics, "output");
+  assert.deepEqual(model.supportedEfforts, []);
+  assert.equal(model.effort, undefined);
+  assert.equal(model.defaultEffort, undefined);
+  assert.equal(model.supportsThinkingSwitch, false);
+  assert.equal(model.thinkingEnabled, undefined);
+  assert.equal(model.thinkingSwitch, undefined);
+  assert.deepEqual(model.thinkingCapabilities, { supported: false });
 });
