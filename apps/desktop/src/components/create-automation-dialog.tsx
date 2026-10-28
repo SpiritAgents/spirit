@@ -24,7 +24,7 @@ import {
 import type {
   ApprovalLevel,
   DesktopCreateAutomationRequest,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopSnapshot,
   DesktopWorkspaceBinding,
   GitHubAutomationRepositoriesSnapshot,
@@ -33,6 +33,7 @@ import type {
 } from "@/types";
 import { FONT_WEIGHT_MEDIUM } from "@/lib/desktop-typography";
 import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@/lib/model-ref";
+import { configuredModelEffort, modelEffortPreference } from "@/lib/model-picker-controls";
 import { cn } from "@/lib/utils";
 
 type CreateAutomationDialogProps = {
@@ -72,7 +73,7 @@ export function CreateAutomationDialog({
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [workspaceBinding, setWorkspaceBinding] = useState<DesktopWorkspaceBinding>("project");
   const [modelRef, setModelRef] = useState<ModelRef>(emptyModelRef());
-  const [reasoningEffort, setReasoningEffort] = useState<DesktopModelReasoningEffort | undefined>();
+  const [reasoningEffort, setReasoningEffort] = useState<DesktopModelEffortSelection | undefined>();
   const [approvalLevel, setApprovalLevel] = useState<ApprovalLevel>("default");
 
   const initializedForOpenRef = useRef(false);
@@ -98,7 +99,7 @@ export function CreateAutomationDialog({
     const activeModel = snapshot.config.models.find((model) =>
       modelRefsEqual(model.ref, snapshot.config.activeModel),
     );
-    setReasoningEffort(activeModel?.reasoningEffort);
+    setReasoningEffort(activeModel ? configuredModelEffort(activeModel) : undefined);
     setApprovalLevel(snapshot.conversation.approvalLevel);
   }, [open, snapshot]);
 
@@ -187,7 +188,7 @@ export function CreateAutomationDialog({
                     const profile = snapshot.config.models.find((model) =>
                       modelRefsEqual(model.ref, ref),
                     );
-                    setReasoningEffort(profile?.reasoningEffort);
+                    setReasoningEffort(profile ? configuredModelEffort(profile) : undefined);
                   }}
                   onModelReasoningEffortSelect={(ref, effort) => {
                     setModelRef(ref);
@@ -215,13 +216,19 @@ export function CreateAutomationDialog({
               type="button"
               disabled={disabled || !canSubmit}
               onClick={() => {
+                const selectedModel = snapshot?.config.models.find((model) =>
+                  modelRefsEqual(model.ref, modelRef),
+                );
+                if (!selectedModel) {
+                  return;
+                }
                 void onSubmit({
                   title: title.trim(),
                   overview: overview.trim(),
                   trigger,
                   workspaceRoot: resolvedWorkspaceRoot,
                   modelRef,
-                  ...(reasoningEffort ? { reasoningEffort } : {}),
+                  ...modelEffortPreference(selectedModel, reasoningEffort),
                   approvalLevel,
                 });
                 onOpenChange(false);

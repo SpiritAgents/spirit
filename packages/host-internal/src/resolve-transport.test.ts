@@ -302,13 +302,10 @@ test("anthropic transport maps effort onto the protocol enum", () => {
         apiBase: "https://acme.test/anthropic",
         transportKind: "anthropic",
         sdk: "@ai-sdk/anthropic",
-        models: [
-          {
-            name: "claude-ish",
-            reasoningEffort: "xhigh",
-            supportedReasoningEfforts: ["none", "low", "medium", "xhigh", "default"],
-          },
-        ],
+        effortSemantics: "output",
+        supportedEfforts: ["low", "medium", "xhigh"],
+        defaultEffort: "medium",
+        models: [{ name: "claude-ish", effort: "xhigh" }],
       },
       "claude-ish",
     ),
@@ -321,7 +318,7 @@ test("anthropic transport maps effort onto the protocol enum", () => {
   assert.deepEqual(config.supportedEfforts, ["low", "medium", "xhigh"]);
 });
 
-test("anthropic transport sends no effort for none/minimal/default declarations", () => {
+test("anthropic transport sends no effort for the default pseudo-selection", () => {
   useMemoryKeyring(internalKeyEntry("acme-anthropic"));
   const spiritDataDir = configDir(
     providerWithActiveModel(
@@ -329,7 +326,9 @@ test("anthropic transport sends no effort for none/minimal/default declarations"
         id: "acme-anthropic",
         apiBase: "https://acme.test/anthropic",
         transportKind: "anthropic",
-        models: [{ name: "claude-ish", reasoningEffort: "minimal" }],
+        effortSemantics: "output",
+        supportedEfforts: ["low", "medium"],
+        models: [{ name: "claude-ish", effort: "default" }],
       },
       "claude-ish",
     ),

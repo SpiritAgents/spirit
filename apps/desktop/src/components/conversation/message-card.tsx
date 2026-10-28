@@ -40,7 +40,7 @@ import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import { canForkMessage, canShowForkMessage } from "@/lib/fork-eligibility";
 import type {
   ConversationMessageSnapshot,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopSnapshot,
   ModelRef,
@@ -164,7 +164,7 @@ function MessageCardImpl({
   onRewindDragOver(event: ReactDragEvent<HTMLElement>): void;
   onRewindDrop(event: ReactDragEvent<HTMLElement>): void;
   onModelSelect(ref: ModelRef): void;
-  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
+  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelEffortSelection): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(

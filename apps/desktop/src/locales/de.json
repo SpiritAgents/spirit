@@ -776,6 +776,8 @@
     "modelPickerReasoningModeStandard": "Standard",
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Denken",
+    "modelPickerThinkingAlwaysOn": "Denken ist für dieses Modell immer aktiviert.",
+    "modelPickerThinkingRequiredForEffort": "Bei der gewählten Effort-Stufe bleibt Denken aktiviert.",
     "modelPickerNotThinking": "Kein Denken",
     "modelPickerServiceTier": "Service-Tier",
     "modelPickerServiceTierInputLimit": "{{tier}} ist bei mehr als {{tokens}} Eingabe-Tokens nicht verfügbar.",

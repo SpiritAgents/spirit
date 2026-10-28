@@ -32,6 +32,7 @@ import type { SaveLocalImageAs } from "@/components/tool-call/tool-call-types";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DesktopAgentMode } from "@/lib/agent-mode";
 import { modelRefsEqual } from "@/lib/model-ref";
+import { selectedModelEffort } from "@/lib/model-picker-controls";
 import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
 import {
   DESKTOP_COMPOSER_GHOST_HOVER,
@@ -42,7 +43,7 @@ import { desktopComposerSurfaceBackdropClass } from "@/lib/desktop-translucency-
 import { cn } from "@/lib/utils";
 import { segmentsToPlainText } from "@/lib/composer-segment-model";
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopSnapshot,
   ModelRef,
@@ -83,7 +84,7 @@ export type ComposerSurfaceProps = {
   onSubmit(): void;
   onAbort?(): void;
   onModelSelect(ref: ModelRef): void;
-  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
+  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelEffortSelection): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
   onModelServiceTierSelect?(
@@ -283,7 +284,9 @@ export function ComposerSurface({
               providers={providers}
               providerPresets={providerPresets}
               activeModelRef={activeModel}
-              activeReasoningEffort={activeModelProfile?.reasoningEffort}
+              activeReasoningEffort={
+                activeModelProfile ? selectedModelEffort(activeModelProfile) : undefined
+              }
               lastInputTokens={lastInputTokens}
               disabled={readOnly}
               onModelSelect={onModelSelect}

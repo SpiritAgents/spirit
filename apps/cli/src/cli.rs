@@ -32,6 +32,7 @@ pub struct ModelAddCommand {
     pub provider: Option<String>,
     pub transport_kind: Option<String>,
     pub reasoning_effort: Option<String>,
+    pub effort: Option<String>,
     pub capabilities: Vec<String>,
     pub context_length: Option<u64>,
     pub key: Option<String>,
@@ -165,6 +166,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
             println!("{}", t!("cli.model.list_header"));
             for model in cfg.flatten_models() {
                 let key_saved = model_key_resolves(&secret_store, &model);
+                let (effort_label, effort) = model_effort_display(&model);
                 println!(
                     "{}",
                     t!(
@@ -172,11 +174,8 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                         name = model.name,
                         provider_id = model.provider_id,
                         api_base = model.api_base,
-                        reasoning_effort = model
-                            .reasoning_effort
-                            .as_deref()
-                            .map(str::to_string)
-                            .unwrap_or_else(|| t!("cli.common.unset").into_owned()),
+                        effort_label = effort_label,
+                        effort = effort,
                         capabilities = format_model_capabilities(&model),
                         key_status = common_key_status(key_saved),
                     )
@@ -190,6 +189,7 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 provider,
                 transport_kind,
                 reasoning_effort,
+                effort,
                 capabilities,
                 context_length,
                 key,
@@ -224,6 +224,16 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                     validate_azure_resource_name(resource_name).map_err(anyhow::Error::msg)?;
                 }
                 let reasoning_effort = parse_model_reasoning_effort(reasoning_effort)?;
+                let effort = parse_model_effort(effort)?;
+                if effort.is_some() && reasoning_effort.is_some() {
+                    return Err(anyhow!("{}", t!("cli.model.error.effort_conflict")));
+                }
+                if transport_kind == ModelTransportKind::Anthropic && reasoning_effort.is_some() {
+                    return Err(anyhow!(
+                        "{}",
+                        t!("cli.model.error.anthropic_reasoning_effort")
+                    ));
+                }
                 if explicit_custom && api_base.as_deref().map(str::trim).is_none_or(str::is_empty) {
                     return Err(anyhow!("{}", t!("cli.model.error.endpoint_empty")));
                 }
@@ -441,6 +451,8 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 let entry = ModelEntry {
                     name: name.clone(),
                     reasoning_effort: reasoning_effort.clone(),
+                    effort_semantics: effort.as_ref().map(|_| "output".to_string()),
+                    effort: effort.clone(),
                     capabilities: if capabilities.is_empty() {
                         None
                     } else {
@@ -488,13 +500,23 @@ pub fn handle_model_cli(action: ModelCommand) -> Result<()> {
                 println!("{}", t!("cli.model.added_and_active", name = name));
                 println!("api_base: {}", api_base);
                 println!("provider: {}", entry_id);
-                println!(
-                    "reasoning_effort: {}",
-                    reasoning_effort
-                        .as_deref()
-                        .map(str::to_string)
-                        .unwrap_or_else(|| t!("cli.common.unset").into_owned())
-                );
+                if effort.is_some() {
+                    println!(
+                        "effort: {}",
+                        effort
+                            .as_deref()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| t!("cli.common.unset").into_owned())
+                    );
+                } else {
+                    println!(
+                        "reasoning_effort: {}",
+                        reasoning_effort
+                            .as_deref()
+                            .map(str::to_string)
+                            .unwrap_or_else(|| t!("cli.common.unset").into_owned())
+                    );
+                }
                 println!(
                     "capabilities: {}",
                     cfg.resolve_model_profile(&ModelRef {
@@ -608,6 +630,7 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
             println!("{}", t!("cli.config.models_header"));
             for model in cfg.flatten_models() {
                 let key_saved = model_key_resolves(&secret_store, &model);
+                let (effort_label, effort) = model_effort_display(&model);
                 println!(
                     "{}",
                     t!(
@@ -615,11 +638,8 @@ pub fn handle_config_cli(action: ConfigCommand) -> Result<()> {
                         name = model.name,
                         provider_id = model.provider_id,
                         api_base = model.api_base,
-                        reasoning_effort = model
-                            .reasoning_effort
-                            .as_deref()
-                            .map(str::to_string)
-                            .unwrap_or_else(|| t!("cli.common.unset").into_owned()),
+                        effort_label = effort_label,
+                        effort = effort,
                         capabilities = format_model_capabilities(&model),
                         key_status = common_key_status(key_saved),
                     )
@@ -788,6 +808,40 @@ fn parse_model_reasoning_effort(value: Option<String>) -> Result<Option<String>>
             received = normalized
         )
     ))
+}
+
+fn parse_model_effort(value: Option<String>) -> Result<Option<String>> {
+    let normalized = match normalize_choice_arg(value) {
+        Some(effort) => effort.to_ascii_lowercase(),
+        None => return Ok(None),
+    };
+
+    const ALLOWED: [&str; 6] = ["default", "low", "medium", "high", "xhigh", "max"];
+    if ALLOWED.contains(&normalized.as_str()) {
+        return Ok(Some(normalized));
+    }
+
+    let expected = ALLOWED.join("|");
+    Err(anyhow!(
+        "{}",
+        t!(
+            "cli.model.error.effort_invalid",
+            expected = expected,
+            received = normalized
+        )
+    ))
+}
+
+fn model_effort_display(model: &ModelProfile) -> (&'static str, String) {
+    let output = model.effort_semantics.as_deref() == Some("output");
+    let value = if output {
+        model.effort.as_deref()
+    } else {
+        model.reasoning_effort.as_deref()
+    }
+    .map(str::to_string)
+    .unwrap_or_else(|| t!("cli.common.unset").into_owned());
+    (if output { "effort" } else { "reasoning_effort" }, value)
 }
 
 fn normalize_choice_arg(value: Option<String>) -> Option<String> {
@@ -1377,7 +1431,10 @@ pub fn load_or_default_config() -> AppConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_model_provider, parse_model_reasoning_effort, parse_model_transport_kind};
+    use super::{
+        parse_model_effort, parse_model_provider, parse_model_reasoning_effort,
+        parse_model_transport_kind,
+    };
     use crate::model_registry::ModelTransportKind;
 
     #[test]
@@ -1392,6 +1449,20 @@ mod tests {
         );
         assert_eq!(parse_model_reasoning_effort(None).expect("parse"), None);
         assert!(parse_model_reasoning_effort(Some("extreme".to_string())).is_err());
+    }
+
+    #[test]
+    fn parse_model_effort_accepts_only_output_effort_tokens() {
+        assert_eq!(
+            parse_model_effort(Some("xhigh".to_string())).expect("parse"),
+            Some("xhigh".to_string())
+        );
+        assert_eq!(
+            parse_model_effort(Some("default".to_string())).expect("parse"),
+            Some("default".to_string())
+        );
+        assert!(parse_model_effort(Some("none".to_string())).is_err());
+        assert!(parse_model_effort(Some("minimal".to_string())).is_err());
     }
 
     #[test]

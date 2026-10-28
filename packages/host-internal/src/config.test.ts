@@ -1323,7 +1323,7 @@ test("output effort declarations validate without a schema version change", () =
     models: [{ name: "test-model", effort: "low" }],
   });
   assert.doesNotThrow(() => validateSpiritConfig(validConfig([provider])));
-  const resolved = resolveModelEntry(provider as ProviderEntry, "test-model");
+  const resolved = resolveModelEntry(provider as unknown as ProviderEntry, "test-model");
   assert.equal(resolved?.effortSemantics, "output");
   assert.equal(resolved?.effort, "low");
   assert.deepEqual(resolved?.supportedEfforts, ["low", "high"]);

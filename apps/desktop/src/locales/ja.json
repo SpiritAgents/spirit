@@ -776,6 +776,8 @@
     "modelPickerReasoningModeStandard": "標準",
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "思考中",
+    "modelPickerThinkingAlwaysOn": "このモデルでは思考は常に有効です。",
+    "modelPickerThinkingRequiredForEffort": "選択した Effort では思考を無効にできません。",
     "modelPickerNotThinking": "思考なし",
     "modelPickerServiceTier": "サービスティア",
     "modelPickerServiceTierInputLimit": "{{tier}}は入力が{{tokens}}を超えると利用できません。",

@@ -780,6 +780,8 @@
     "modelPickerReasoningModeStandard": "Стандарт",
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "Думать",
+    "modelPickerThinkingAlwaysOn": "Для этой модели рассуждение всегда включено.",
+    "modelPickerThinkingRequiredForEffort": "При выбранном уровне усилия рассуждение остаётся включённым.",
     "modelPickerNotThinking": "Без размышлений",
     "modelPickerServiceTier": "Уровень обслуживания",
     "modelPickerServiceTierInputLimit": "{{tier}} недоступен при входном контексте более {{tokens}} токенов.",

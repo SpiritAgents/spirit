@@ -29,6 +29,10 @@
       "types": "./dist/model-effort.d.ts",
       "default": "./dist/model-effort.js"
     },
+    "./thinking-switch": {
+      "types": "./dist/thinking-switch.d.ts",
+      "default": "./dist/thinking-switch.js"
+    },
     "./model-service-tier": {
       "types": "./dist/model-service-tier.d.ts",
       "default": "./dist/model-service-tier.js"

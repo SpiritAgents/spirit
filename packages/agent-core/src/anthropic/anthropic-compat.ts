@@ -12,6 +12,7 @@ import type {
   TransportRequestProfile,
 } from "../llm-provider-shared.js";
 import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
+import { applyAnthropicOutputWire } from "./output-effort-wire.js";
 
 export type AnthropicThinkingConfig =
   | { type: "adaptive"; display?: "omitted" | "summarized" }
@@ -30,12 +31,9 @@ export interface AnthropicTransportConfig extends LlmWebToolExposure {
   compactModel?: string;
   workspaceRoot?: string;
   modelCapabilities?: LlmModelCapabilities;
-  /** Declared reasoning effort, already filtered to the Anthropic protocol enum at config load. */
+  /** Declared output-wide effort, already filtered to the Anthropic protocol enum at config load. */
   effort?: AnthropicEffort;
-  /**
-   * Declared supported effort list (config `supportedReasoningEfforts` filtered to the protocol
-   * enum). Reserved for picker-facing plumbing; the transport does not infer thinking from it.
-   */
+  /** Declared `supportedEfforts`; picker metadata, never an implicit thinking/effort selector. */
   supportedEfforts?: readonly AnthropicEffort[];
   effortSemantics?: "output";
   thinkingCapabilities?: ThinkingCapabilities;
@@ -90,6 +88,8 @@ export interface AnthropicRequestTrace extends JsonObject {
   messages: JsonValue[];
   tools?: JsonValue[];
   providerOptions?: JsonValue;
+  thinking?: JsonValue;
+  output_config?: JsonObject;
 }
 
 /**
@@ -117,6 +117,7 @@ export function buildAnthropicProviderOptions(
     AnthropicTransportConfig,
     | "vendorExtendedThinking"
     | "effort"
+    | "effortSemantics"
     | "sendReasoning"
     | "disableParallelToolUse"
     | "structuredOutputMode"
@@ -124,7 +125,8 @@ export function buildAnthropicProviderOptions(
     | "serviceTier"
   >,
 ): Record<string, JsonObject> {
-  const thinking = resolveAnthropicThinkingConfig(config);
+  const outputEffort = config.effortSemantics === "output";
+  const thinking = outputEffort ? undefined : resolveAnthropicThinkingConfig(config);
   const options: JsonObject = {
     toolStreaming: true,
     ...(thinking !== undefined ? { thinking: thinking as unknown as JsonValue } : {}),
@@ -136,7 +138,7 @@ export function buildAnthropicProviderOptions(
     options.speed = "fast";
   }
 
-  if (config.effort !== undefined) {
+  if (!outputEffort && config.effort !== undefined) {
     options.effort = config.effort;
   }
 
@@ -165,6 +167,10 @@ export function buildAnthropicRequestTrace(
   stream = false,
 ): JsonValue[] {
   const providerOptions = buildAnthropicProviderOptions(config);
+  const outputBody =
+    config.effortSemantics === "output"
+      ? applyAnthropicOutputWire({ ...config.body }, config)
+      : undefined;
   const trace: AnthropicRequestTrace = {
     kind: "anthropic_sdk_messages",
     stepIndex,
@@ -175,6 +181,12 @@ export function buildAnthropicRequestTrace(
     ...(tools.length > 0 ? { tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)) } : {}),
     ...(Object.keys(providerOptions).length > 0
       ? { providerOptions: providerOptions as JsonValue }
+      : {}),
+    ...(outputBody?.thinking !== undefined
+      ? { thinking: cloneJsonValue(outputBody.thinking) }
+      : {}),
+    ...(outputBody?.output_config !== undefined
+      ? { output_config: cloneJsonValue(outputBody.output_config) as JsonObject }
       : {}),
   };
 

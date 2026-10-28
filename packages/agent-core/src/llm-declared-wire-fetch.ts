@@ -1,4 +1,7 @@
-import type { ThinkingSwitchDeclaration } from "./llm-provider-shared.js";
+import {
+  applyAnthropicOutputWire,
+  type AnthropicOutputWireConfig,
+} from "./anthropic/output-effort-wire.js";
 import type { JsonObject, JsonValue } from "./ports.js";
 import type { ModelServiceTier, ModelServiceTiersDeclaration } from "./model-service-tier.js";
 import {
@@ -9,19 +12,12 @@ import { resolveThinkingSwitchWirePatch } from "./thinking-switch.js";
 
 /**
  * Literal declaration merge point (`headers` / `body` / `thinkingSwitch` / literal `serviceTiers`).
- * The runtime does not interpret the contents: declared headers are written into every outbound
- * request and declared body fields into every JSON request body, overriding transport defaults on
- * conflict (an explicit declaration beats the transport default encoding).
+ * Generic literal contents stay opaque; declared output effort has a dedicated final Messages
+ * resolution after these patches so SDK model tables cannot rewrite the selected semantics.
  */
-export interface LlmDeclaredWireConfig {
+export interface LlmDeclaredWireConfig extends AnthropicOutputWireConfig {
   /** Provider-level literal headers, merged into every outbound request. */
   headers?: Record<string, string>;
-  /** Provider-level literal body fields, merged unconditionally into every request body top level. */
-  body?: JsonObject;
-  /** Declared thinking on/off wire encoding; the user's switch state selects the patch. */
-  thinkingSwitch?: ThinkingSwitchDeclaration;
-  /** User thinking-switch state (`false` = off); read together with `thinkingSwitch`. */
-  vendorExtendedThinking?: boolean;
   /** Selected service tier (validated at config load). */
   serviceTier?: ModelServiceTier;
   /** Declared service tiers; the literal map carries wire effects and optional input limits. */
@@ -61,6 +57,7 @@ export function createDeclaredWireMergeFetch(
   });
 
   const omitThinking = thinkingPatch === "omit";
+  const outputEffortWire = surface === "messages" && config.effortSemantics === "output";
   const headers: Record<string, string> = {
     ...config.headers,
     ...(thinkingPatch === "omit" ? {} : thinkingPatch?.headers),
@@ -74,7 +71,12 @@ export function createDeclaredWireMergeFetch(
     serviceTierPlan.body,
   ].filter((patch): patch is JsonObject => patch !== undefined && Object.keys(patch).length > 0);
 
-  if (headerEntries.length === 0 && bodyPatches.length === 0 && !omitThinking) {
+  if (
+    headerEntries.length === 0 &&
+    bodyPatches.length === 0 &&
+    !omitThinking &&
+    !outputEffortWire
+  ) {
     return baseFetch;
   }
 
@@ -88,7 +90,10 @@ export function createDeclaredWireMergeFetch(
       nextInit = { ...nextInit, headers: merged };
     }
 
-    if ((bodyPatches.length > 0 || omitThinking) && typeof nextInit?.body === "string") {
+    if (
+      (bodyPatches.length > 0 || omitThinking || outputEffortWire) &&
+      typeof nextInit?.body === "string"
+    ) {
       const body = tryParseJsonObject(nextInit.body);
       if (body !== undefined) {
         const patched: JsonObject = { ...body };
@@ -98,7 +103,8 @@ export function createDeclaredWireMergeFetch(
         for (const patch of bodyPatches) {
           Object.assign(patched, patch);
         }
-        nextInit = { ...nextInit, body: JSON.stringify(patched) };
+        const result = outputEffortWire ? applyAnthropicOutputWire(patched, config, body) : patched;
+        nextInit = { ...nextInit, body: JSON.stringify(result) };
       }
     }
 

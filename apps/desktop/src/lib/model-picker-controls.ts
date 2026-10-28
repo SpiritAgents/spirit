@@ -4,9 +4,10 @@ import {
   serviceTierMaxInputTokens,
   type ModelServiceTier,
 } from "@spiritagent/agent-core/model-service-tier";
+import { resolveThinkingSwitchState } from "@spiritagent/agent-core/thinking-switch";
 
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   ModelProfileSnapshot,
   PreviewModelCatalogEntry,
@@ -15,11 +16,7 @@ import type {
 /** Catalog metadata fallback for a model whose entry has not been refreshed with tiers yet. */
 type ServiceTierCatalogEntry = Pick<PreviewModelCatalogEntry, "serviceTiers"> | undefined;
 
-/**
- * Picker controls are declaration-driven (spec: `supportedReasoningEfforts` /
- * `supportedReasoningModes` / `serviceTiers` on the effective model entry are the only source);
- * absent declarations hide the control — no provider or model-name inference.
- */
+/** Picker controls come only from effective model declarations, never provider or model-name inference. */
 type DeclaredControlModel = Pick<
   ModelProfileSnapshot,
   | "supportedReasoningEfforts"
@@ -28,9 +25,13 @@ type DeclaredControlModel = Pick<
   | "serviceTier"
   | "reasoningEffort"
   | "reasoningMode"
+  | "effortSemantics"
+  | "effort"
+  | "supportedEfforts"
   | "supportsThinkingSwitch"
   | "supportsThinkingType"
   | "thinkingEnabled"
+  | "thinkingSwitch"
 >;
 
 /** The thinking toggle shows only when the model declares the switch; `only` means always-on (hidden). */
@@ -38,12 +39,32 @@ export function showsThinkingSwitchControl(model: DeclaredControlModel): boolean
   return model.supportsThinkingSwitch === true && model.supportsThinkingType !== "only";
 }
 
-/** The user's thinking state; absent config means on (spec: `thinkingEnabled` defaults to enabled). */
-export function effectiveThinkingEnabled(model: DeclaredControlModel): boolean {
-  return model.thinkingEnabled ?? true;
+export function showsThinkingAlwaysOnHint(model: DeclaredControlModel): boolean {
+  return model.effortSemantics === "output" && model.supportsThinkingType === "only";
 }
 
-export type ReasoningEffortOption = { value: DesktopModelReasoningEffort; label: string };
+export function effectiveThinkingEnabled(model: DeclaredControlModel): boolean {
+  return (
+    resolveThinkingSwitchState({
+      ...(model.thinkingEnabled !== undefined
+        ? { vendorExtendedThinking: model.thinkingEnabled }
+        : {}),
+      ...(model.thinkingSwitch !== undefined ? { thinkingSwitch: model.thinkingSwitch } : {}),
+      ...(model.effortSemantics === "output" && model.effort !== undefined
+        ? { effort: model.effort }
+        : {}),
+    }) === "on"
+  );
+}
+
+export function thinkingSwitchForcedOn(model: DeclaredControlModel): boolean {
+  const preferredOff =
+    model.thinkingEnabled === false ||
+    (model.thinkingEnabled === undefined && model.thinkingSwitch?.defaultState === "off");
+  return model.effortSemantics === "output" && preferredOff && effectiveThinkingEnabled(model);
+}
+
+export type ModelEffortOption = { value: DesktopModelEffortSelection; label: string };
 
 const EFFORT_OPTION_LABELS: Record<string, string> = {
   default: "Default",
@@ -56,26 +77,70 @@ const EFFORT_OPTION_LABELS: Record<string, string> = {
   max: "Max",
 };
 
-export function reasoningEffortOptionLabel(value: string): string {
+export function modelEffortOptionLabel(value: string): string {
   return EFFORT_OPTION_LABELS[value] ?? value;
 }
 
-/** Declared effort options for the picker, with the wire-neutral Default row first. */
-export function declaredReasoningEffortOptions(
+export function modelEffortControlLabelKind(
+  model: Pick<DeclaredControlModel, "effortSemantics">,
+): "effort" | "reasoningEffort" {
+  return model.effortSemantics === "output" ? "effort" : "reasoningEffort";
+}
+
+export function configuredModelEffort(
   model: DeclaredControlModel,
-): ReasoningEffortOption[] {
-  const declared = model.supportedReasoningEfforts ?? [];
+): DesktopModelEffortSelection | undefined {
+  return model.effortSemantics === "output" ? model.effort : model.reasoningEffort;
+}
+
+export function selectedModelEffort(model: DeclaredControlModel): DesktopModelEffortSelection {
+  return configuredModelEffort(model) ?? "default";
+}
+
+export function modelEffortPreference(
+  model: Pick<DeclaredControlModel, "effortSemantics">,
+  effort: DesktopModelEffortSelection | undefined,
+): Pick<ModelProfileSnapshot, "effort" | "reasoningEffort"> {
+  if (effort === undefined) {
+    return {};
+  }
+  return model.effortSemantics === "output"
+    ? { effort: effort as NonNullable<ModelProfileSnapshot["effort"]> }
+    : { reasoningEffort: effort as NonNullable<ModelProfileSnapshot["reasoningEffort"]> };
+}
+
+/** Declared effort options for the picker, with the wire-neutral Default row first. */
+export function declaredEffortOptions(model: DeclaredControlModel): ModelEffortOption[] {
+  const output = model.effortSemantics === "output";
+  const declared: readonly DesktopModelEffortSelection[] = output
+    ? (model.supportedEfforts ?? [])
+    : (model.supportedReasoningEfforts ?? []);
   if (declared.length === 0) {
     return [];
   }
+  const defaultLabel = EFFORT_OPTION_LABELS["default"]!;
   return [
-    { value: "default", label: EFFORT_OPTION_LABELS["default"]! },
-    ...declared.map((value) => ({ value, label: reasoningEffortOptionLabel(value) })),
+    { value: "default", label: defaultLabel },
+    ...declared.map((value) => ({ value, label: modelEffortOptionLabel(value) })),
   ];
 }
 
-export function showsReasoningEffortControl(model: DeclaredControlModel): boolean {
-  return declaredReasoningEffortOptions(model).length > 1;
+export function showsEffortControl(model: DeclaredControlModel): boolean {
+  return declaredEffortOptions(model).length > 1;
+}
+
+export function modelEffortTriggerLabel(
+  model: DeclaredControlModel,
+  selection?: DesktopModelEffortSelection,
+): string | undefined {
+  if (!showsEffortControl(model)) {
+    return undefined;
+  }
+  const selected = selection ?? selectedModelEffort(model);
+  if (model.effortSemantics === "output") {
+    return declaredEffortOptions(model).find((option) => option.value === selected)?.label;
+  }
+  return selected !== "default" ? modelEffortOptionLabel(selected) : undefined;
 }
 
 /** `standard` or absent sends nothing on the wire; the control needs a declared `pro` option. */

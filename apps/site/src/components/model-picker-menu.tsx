@@ -26,11 +26,11 @@ import {
   buildModelCatalogDisplayTitleMap,
   modelDisplayTitleFromMap,
 } from "@/lib/model-catalog-detail";
-import { modelReasoningEffortLabel } from "@/lib/reasoning-effort";
+import { configuredModelEffort, modelEffortLabel } from "@/lib/reasoning-effort";
 import { groupModelsForPicker } from "@/lib/model-picker-groups";
 import type {
   DesktopModelCatalogHint,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   ModelProfileSnapshot,
 } from "@/types/spirit-desktop";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,7 @@ export type ModelPickerMenuProps = {
   models: ModelProfileSnapshot[];
   catalogHints?: DesktopModelCatalogHint[];
   activeModelName: string;
-  activeReasoningEffort?: DesktopModelReasoningEffort;
+  activeReasoningEffort?: DesktopModelEffortSelection;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?(open: boolean): void;
@@ -159,7 +159,9 @@ export function ModelPickerMenu({
   const activeModelSummary = activeModelProfile
     ? formatModelPickerLabel(
         modelDisplayTitleFromMap(activeModelProfile.name, displayTitleByModelName),
-        activeReasoningEffort ?? activeModelProfile.reasoningEffort ?? "medium",
+        activeReasoningEffort ??
+          configuredModelEffort(activeModelProfile) ??
+          (activeModelProfile.effortSemantics === "output" ? "default" : "medium"),
       )
     : activeModelName;
 
@@ -270,9 +272,6 @@ export function ModelPickerMenu({
   );
 }
 
-function formatModelPickerLabel(
-  name: string,
-  reasoningEffort: DesktopModelReasoningEffort,
-): string {
-  return `${name} · ${modelReasoningEffortLabel(reasoningEffort)}`;
+function formatModelPickerLabel(name: string, effort: DesktopModelEffortSelection): string {
+  return `${name} · ${modelEffortLabel(effort)}`;
 }

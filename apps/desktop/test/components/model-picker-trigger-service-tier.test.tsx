@@ -67,6 +67,39 @@ function renderPickerTrigger(
   return screen.getByRole("button", { name: "Select Model" });
 }
 
+test("Claude output effort shows Default without sending a selection", () => {
+  const trigger = renderPickerTrigger(
+    triggerModel({
+      name: "claude-opus-4.8",
+      providerId: "anthropic",
+      reasoningEffort: undefined,
+      supportedReasoningEfforts: undefined,
+      effortSemantics: "output",
+      supportedEfforts: ["low", "medium", "high", "xhigh", "max"],
+      defaultEffort: "high",
+    }),
+  );
+  expect(trigger.textContent).toContain("Default");
+  expect(trigger.textContent).not.toContain("Default (");
+});
+
+test("a selected Claude output effort replaces the default trigger label", () => {
+  const trigger = renderPickerTrigger(
+    triggerModel({
+      name: "claude-opus-4.8",
+      providerId: "anthropic",
+      reasoningEffort: undefined,
+      supportedReasoningEfforts: undefined,
+      effortSemantics: "output",
+      effort: "xhigh",
+      supportedEfforts: ["low", "medium", "high", "xhigh", "max"],
+      defaultEffort: "high",
+    }),
+  );
+  expect(trigger.textContent).toContain("Extra High");
+  expect(trigger.textContent).not.toContain("Default");
+});
+
 test("a Fast tier appends the Fast suffix to the trigger label", () => {
   const trigger = renderPickerTrigger(triggerModel({ serviceTier: "fast" }));
   expect(trigger.textContent).toContain("Fast");

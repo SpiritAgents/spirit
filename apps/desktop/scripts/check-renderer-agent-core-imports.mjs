@@ -17,6 +17,8 @@ const RENDERER_SAFE_AGENT_CORE_SUBPATHS = new Set([
   "code-completion-to-monaco",
   "code-completion-delete-diff",
   "model-thinking-controls",
+  "model-effort",
+  "thinking-switch",
   "model-service-tier",
   "provider-presets",
   "model-catalog",

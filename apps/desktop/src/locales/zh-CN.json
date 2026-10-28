@@ -773,6 +773,8 @@
     "modelPickerReasoningModeStandard": "标准",
     "modelPickerReasoningModePro": "Pro",
     "modelPickerThinking": "思考",
+    "modelPickerThinkingAlwaysOn": "此模型始终开启思考。",
+    "modelPickerThinkingRequiredForEffort": "当前强度下必须保持思考开启。",
     "modelPickerNotThinking": "不思考",
     "modelPickerServiceTier": "服务档位",
     "modelPickerServiceTierInputLimit": "当输入超过 {{tokens}} 时，{{tier}} 不可用。",

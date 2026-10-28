@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import type {
   ApprovalLevel,
   DesktopAutomationDefinition,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopSnapshot,
   DesktopUpdateAutomationRequest,
   DesktopWorkspaceBinding,
@@ -27,6 +27,7 @@ import type {
   SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
 import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@/lib/model-ref";
+import { configuredModelEffort, modelEffortPreference } from "@/lib/model-picker-controls";
 import { resolveWorkspaceBindingForStoredRoot } from "@/lib/workspace-display-label";
 
 type AutomationSettingsPanelProps = {
@@ -75,12 +76,19 @@ export function AutomationSettingsPanel({
   const [workspaceRoot, setWorkspaceRoot] = useState("");
   const [workspaceBinding, setWorkspaceBinding] = useState<DesktopWorkspaceBinding>("project");
   const [modelRef, setModelRef] = useState<ModelRef>(emptyModelRef());
-  const [reasoningEffort, setReasoningEffort] = useState<DesktopModelReasoningEffort | undefined>();
+  const [reasoningEffort, setReasoningEffort] = useState<DesktopModelEffortSelection | undefined>();
   const [approvalLevel, setApprovalLevel] = useState<ApprovalLevel>("default");
 
   useEffect(() => {
     initializedForAutomationIdRef.current = null;
   }, [automationId]);
+
+  const definitionModel = snapshot?.config.models.find((model) =>
+    modelRefsEqual(model.ref, definition?.modelRef ?? emptyModelRef()),
+  );
+  const selectedModel = snapshot?.config.models.find((model) =>
+    modelRefsEqual(model.ref, modelRef),
+  );
 
   useEffect(() => {
     if (
@@ -101,9 +109,15 @@ export function AutomationSettingsPanel({
     );
     setWorkspaceRoot(definition.workspaceRoot);
     setModelRef(definition.modelRef ?? emptyModelRef());
-    setReasoningEffort(definition.reasoningEffort);
+    setReasoningEffort(
+      definitionModel
+        ? definitionModel.effortSemantics === "output"
+          ? definition.effort
+          : definition.reasoningEffort
+        : undefined,
+    );
     setApprovalLevel(definition.approvalLevel);
-  }, [automationId, definition, snapshot?.userHomeDirectory]);
+  }, [automationId, definition, definitionModel, snapshot?.userHomeDirectory]);
 
   const resolvedWorkspaceRoot =
     workspaceBinding === "none" ? (snapshot?.userHomeDirectory ?? workspaceRoot) : workspaceRoot;
@@ -129,11 +143,17 @@ export function AutomationSettingsPanel({
     if (resolvedWorkspaceRoot !== definition.workspaceRoot) {
       next.workspaceRoot = resolvedWorkspaceRoot;
     }
-    if (!modelRefsEqual(modelRef, definition.modelRef)) {
+    const modelChanged = !modelRefsEqual(modelRef, definition.modelRef);
+    if (modelChanged) {
       next.modelRef = modelRef;
     }
-    if (reasoningEffort !== definition.reasoningEffort) {
-      next.reasoningEffort = reasoningEffort;
+    const savedEffort = selectedModel
+      ? selectedModel.effortSemantics === "output"
+        ? definition.effort
+        : definition.reasoningEffort
+      : undefined;
+    if ((modelChanged || reasoningEffort !== savedEffort) && selectedModel) {
+      Object.assign(next, modelEffortPreference(selectedModel, reasoningEffort));
     }
     if (approvalLevel !== definition.approvalLevel) {
       next.approvalLevel = approvalLevel;
@@ -147,6 +167,7 @@ export function AutomationSettingsPanel({
     overview,
     reasoningEffort,
     resolvedWorkspaceRoot,
+    selectedModel,
     trigger,
     title,
   ]);
@@ -237,7 +258,7 @@ export function AutomationSettingsPanel({
                     const profile = snapshot.config.models.find((model) =>
                       modelRefsEqual(model.ref, ref),
                     );
-                    setReasoningEffort(profile?.reasoningEffort);
+                    setReasoningEffort(profile ? configuredModelEffort(profile) : undefined);
                   }}
                   onModelReasoningEffortSelect={(ref, effort) => {
                     setModelRef(ref);
