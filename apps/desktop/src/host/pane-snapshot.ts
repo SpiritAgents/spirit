@@ -93,6 +93,7 @@ export function buildPaneSessionSlice(input: {
       : {}),
     ...(bundle.cachedTodoSnapshot ? { todos: bundle.cachedTodoSnapshot } : {}),
     ...(bundle.contextUsage ? { contextUsage: { ...bundle.contextUsage } } : {}),
+    ...(bundle.lastInputTokens !== undefined ? { lastInputTokens: bundle.lastInputTokens } : {}),
   };
 
   return {

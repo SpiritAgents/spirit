@@ -1504,6 +1504,9 @@ export class DesktopHostService {
       supportsCatalogRefresh: (model) =>
         model.providerId !== undefined &&
         findProviderPreset(model.providerId)?.catalog !== undefined,
+      setLastInputTokens: (inputTokens) => {
+        bundle.lastInputTokens = inputTokens;
+      },
       setContextUsage: (usage) => {
         bundle.contextUsage = usage;
       },
@@ -4103,6 +4106,9 @@ export class DesktopHostService {
           : {}),
         ...(activeBundle.cachedTodoSnapshot ? { todos: activeBundle.cachedTodoSnapshot } : {}),
         ...(activeBundle.contextUsage ? { contextUsage: { ...activeBundle.contextUsage } } : {}),
+        ...(activeBundle.lastInputTokens !== undefined
+          ? { lastInputTokens: activeBundle.lastInputTokens }
+          : {}),
       },
       ...(activeBundle.activeSession ? { activeSession: activeBundle.activeSession } : {}),
       composerSessionKey: this.resolveTodoSessionKeyForBundle(activeBundle),

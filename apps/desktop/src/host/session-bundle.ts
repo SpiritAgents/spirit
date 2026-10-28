@@ -94,6 +94,8 @@ export interface SessionBundle {
   /** Unix ms when the session was pinned; drives sidebar Pinned grouping. Absent when unpinned. */
   pinnedAtUnixMs?: number;
   contextUsage?: ConversationContextUsageSnapshot;
+  /** Latest real upstream input usage for conditional service tiers; live only, never persisted. */
+  lastInputTokens?: number;
   /** Composer direct image/video generation running in the background; drives snapshot.isBusy together with runtime.isBusy. */
   directMediaTurnInFlight?: boolean;
   /** First Worktree message: gates the LLM turn until the background bootstrap completes. Not persisted. */
@@ -230,6 +232,7 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.sessionTitleSource = undefined;
   bundle.pinnedAtUnixMs = undefined;
   bundle.contextUsage = undefined;
+  bundle.lastInputTokens = undefined;
   bundle.directMediaTurnInFlight = false;
   bundle.pendingWorktreeBootstrap = undefined;
   bundle.queuedUserTurns = [];

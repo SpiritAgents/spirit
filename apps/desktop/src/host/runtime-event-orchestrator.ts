@@ -106,6 +106,8 @@ export interface DesktopRuntimeEventOrchestratorOptions {
   supportsCatalogRefresh?: (model: ContextUsageModelProfile) => boolean;
   resolveCatalogHints?: () => DesktopModelCatalogHint[] | undefined;
   setContextUsage?: (usage: ConversationContextUsageSnapshot | undefined) => void;
+  /** Records real input usage for conditional tiers even when the model context length is unknown. */
+  setLastInputTokens?: (inputTokens: number) => void;
   refreshContextUsageCatalog?: (input: {
     usage: { inputTokens: number };
     activeModel: ContextUsageModelProfile;
@@ -385,6 +387,7 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "context-usage-updated") {
+        this.options.setLastInputTokens?.(event.usage.inputTokens);
         const activeModel = this.options.resolveActiveModel?.();
         const contextLength = resolveModelContextLength(
           activeModel,
