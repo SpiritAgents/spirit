@@ -104,7 +104,7 @@ test("declare payloads only use config declaration keys", () => {
 function expectClaudeDeclaration(
   actual: unknown,
   expected: Record<string, unknown>,
-  message?: string,
+  message = "",
 ): void {
   if ((actual as Record<string, unknown> | undefined)?.effortSemantics !== "output") {
     assert.deepEqual(actual, expected, message);

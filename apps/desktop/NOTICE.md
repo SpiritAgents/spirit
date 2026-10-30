@@ -53,7 +53,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/testing-library/dom-testing-library
 - **@testing-library/react** 16.3.3 — MIT
   - https://github.com/testing-library/react-testing-library
-- **@types/node** 25.9.5 — MIT
+- **@types/node** 26.6.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/react** 19.2.18 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
@@ -145,7 +145,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/tailwindlabs/tailwindcss
 - **tw-animate-css** 1.4.0 — MIT
   - Wombosvideo/tw-animate-css
-- **typescript** 5.9.3 — Apache-2.0
+- **typescript** 7.0.2 — Apache-2.0
   - https://github.com/microsoft/TypeScript
 - **unified** 11.0.5 — MIT
   - unifiedjs/unified
@@ -586,7 +586,7 @@ third-party archives.
 
 **Used by:**
 
-- typescript 5.9.3
+- typescript 7.0.2
 
 ```
 Apache License
@@ -1076,7 +1076,7 @@ SOFTWARE.
 
 **Used by:**
 
-- @types/node 25.9.5
+- @types/node 26.6.6
 - @types/react 19.2.18
 - @types/react-dom 19.2.4
 

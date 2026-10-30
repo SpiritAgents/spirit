@@ -103,7 +103,7 @@ Remote access is **off by default**: the daemon binds loopback and requires the 
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 
 ## Related packages
 

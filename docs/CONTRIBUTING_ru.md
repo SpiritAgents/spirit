@@ -46,7 +46,7 @@
 
 ## Среда разработки
 
-**Требования:** Node.js 24+, pnpm 12+ (`corepack enable`) и инструментарий Rust (для CLI).
+**Требования:** Node.js 26.13.0, pnpm 12.4.2 (установить через `npm install --global pnpm@12.4.2`) и инструментарий Rust (для CLI).
 
 ```bash
 pnpm install          # один раз, в корне репозитория

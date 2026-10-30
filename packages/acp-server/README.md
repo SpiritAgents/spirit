@@ -26,7 +26,7 @@ Setup writes to the shared Spirit data directory (`config.json` + OS keyring —
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 
 ## Related packages
 

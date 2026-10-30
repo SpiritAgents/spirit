@@ -171,14 +171,14 @@ pnpm run dev:cli    # cargo run -p spirit
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| 环境变量               | 必填 | 说明                                                            |
-| ---------------------- | ---- | --------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | 否   | 工作区根路径（默认：客户端 `cwd`）                              |
+| 环境变量               | 必填 | 说明                                                                |
+| ---------------------- | ---- | ------------------------------------------------------------------- |
+| `SPIRIT_ACP_WORKSPACE` | 否   | 工作区根路径（默认：客户端 `cwd`）                                  |
 | `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 数据目录（默认：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
 
 ## 开发
 
-**环境要求：** Node.js 24+、pnpm 12+（通过 `corepack enable` 启用）。构建 CLI 需要 Rust 工具链。
+**环境要求：** Node.js 26.13.0、pnpm 12.4.2（通过 `npm install --global pnpm@12.4.2` 安装）。构建 CLI 需要 Rust 工具链。
 
 | 命令                       | 说明                                                                    |
 | -------------------------- | ----------------------------------------------------------------------- |

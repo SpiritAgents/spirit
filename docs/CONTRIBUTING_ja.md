@@ -46,7 +46,7 @@ Spirit には明確なレイヤーモデルがあります。複数パッケー�
 
 ## 開発環境
 
-**要件：** Node.js 24+、pnpm 12+（`corepack enable`）、および Rust ツールチェーン（CLI 用）。
+**要件：** Node.js 26.13.0、pnpm 12.4.2（`npm install --global pnpm@12.4.2` でインストール）、および Rust ツールチェーン（CLI 用）。
 
 ```bash
 pnpm install          # 一度、リポジトリルートで

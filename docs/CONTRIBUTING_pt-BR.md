@@ -46,7 +46,7 @@ Não duplique definições de ferramentas nem prompts entre a CLI e o Desktop. C
 
 ## Ambiente de desenvolvimento
 
-**Requisitos:** Node.js 24+, pnpm 12+ (`corepack enable`) e a toolchain Rust (para a CLI).
+**Requisitos:** Node.js 26.13.0, pnpm 12.4.2 (instalar com `npm install --global pnpm@12.4.2`) e a toolchain Rust (para a CLI).
 
 ```bash
 pnpm install          # uma vez, na raiz do repositório

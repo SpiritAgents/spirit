@@ -59,7 +59,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/huggingface/huggingface.js
 - **@modelcontextprotocol/sdk** 1.32.1 — MIT
   - https://github.com/modelcontextprotocol/typescript-sdk
-- **@types/node** 24.13.3 — MIT
+- **@types/node** 26.6.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **ai** 7.0.137 — Apache-2.0
   - https://github.com/vercel/ai
@@ -429,7 +429,7 @@ SOFTWARE.
 
 **Used by:**
 
-- @types/node 24.13.3
+- @types/node 26.6.6
 
 ```
     MIT License

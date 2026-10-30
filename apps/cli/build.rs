@@ -51,7 +51,9 @@ fn main() {
             .args(["--quality", &quality, "--out-dir"])
             .arg(&out)
             .status()
-            .expect("Product generation requires Node.js 24 and installed workspace dependencies");
+            .expect(
+                "Product generation requires Node.js 26.13.0 and installed workspace dependencies",
+            );
         assert!(
             status.success(),
             "Product schema validation or generation failed"

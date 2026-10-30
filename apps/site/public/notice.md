@@ -316,7 +316,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/ms** 2.1.0 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
-- **@types/node** 24.13.3 — MIT
+- **@types/node** 26.6.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/react** 19.2.18 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
@@ -884,7 +884,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - privatenumber/tsx
 - **tw-animate-css** 1.4.0 — MIT
   - Wombosvideo/tw-animate-css
-- **undici-types** 7.18.2 — MIT
+- **undici-types** 8.9.0 — MIT
   - https://github.com/nodejs/undici
 - **unified** 11.0.5 — MIT
   - unifiedjs/unified
@@ -4301,7 +4301,7 @@ SOFTWARE.
 - @types/mdast 4.0.4
 - @types/mdx 2.0.14
 - @types/ms 2.1.0
-- @types/node 24.13.3
+- @types/node 26.6.6
 - @types/react 19.2.18
 - @types/react-dom 19.2.4
 - @types/trusted-types 2.0.7
@@ -7367,7 +7367,7 @@ SOFTWARE.
 
 **Used by:**
 
-- undici-types 7.18.2
+- undici-types 8.9.0
 
 ```
 MIT License

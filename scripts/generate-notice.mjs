@@ -215,7 +215,7 @@ function collectLockfilePackages({ lockfile, importerKey, pkgRoot, workspaceRoot
     let dir = resolvePackageDir({ name, version }, fromDir, workspaceRoot);
     if (!dir && fromDir !== pkgRoot) {
       // Peer-resolved instances are nested under the importer, not the referrer
-      // (e.g. site's @types/node@24 while the hoisted root holds 25).
+      // (e.g. when an importer and the hoisted root hold different versions).
       dir = resolvePackageDir({ name, version }, pkgRoot, workspaceRoot);
     }
     visited.set(snapshotKey, { name, version, dir });

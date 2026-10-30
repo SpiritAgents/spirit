@@ -48,8 +48,8 @@ Docked panels attach to the active workspace:
 
 ## Requirements
 
-- **Node.js** 24 or newer
-- **pnpm** 12+ (enable via `corepack enable` at the repo root)
+- **Node.js** 26.13.0
+- **pnpm** 12.4.2 (install at the repo root with `npm install --global pnpm@12.4.2`)
 - **Rust toolchain** — only when building the CLI from the monorepo root; not required for Desktop-only development after dependencies are built
 - **Windows, macOS, or Linux** — Electron targets all three; some features (embedded shell, in-app browser) require the Electron shell
 
@@ -58,7 +58,7 @@ Docked panels attach to the active workspace:
 From the repository root:
 
 ```bash
-corepack enable
+npm install --global pnpm@12.4.2
 pnpm install
 pnpm run dev:desktop
 ```

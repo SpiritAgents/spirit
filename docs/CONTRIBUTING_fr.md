@@ -46,7 +46,7 @@ Ne dupliquez pas les définitions d’outils ni les prompts entre le CLI et Desk
 
 ## Environnement de développement
 
-**Prérequis :** Node.js 24+, pnpm 12+ (`corepack enable`), et la chaîne d’outils Rust (pour le CLI).
+**Prérequis :** Node.js 26.13.0, pnpm 12.4.2 (installer avec `npm install --global pnpm@12.4.2`), et la chaîne d’outils Rust (pour le CLI).
 
 ```bash
 pnpm install          # une fois, à la racine du dépôt

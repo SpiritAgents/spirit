@@ -4,7 +4,7 @@ Shared React primitives for Spirit desktop and the marketing site. Apps supply t
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 - React 18+
 - Tailwind CSS v4 (scan `src` with `@source` and import `theme.css`)
 
