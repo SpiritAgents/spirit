@@ -46,7 +46,7 @@ Duplizieren Sie Tool-Definitionen oder Prompts nicht zwischen CLI und Desktop. N
 
 ## Entwicklungsumgebung
 
-**Anforderungen:** Node.js 24+, pnpm 12+ (`corepack enable`) und die Rust-Toolchain (für die CLI).
+**Anforderungen:** Node.js 26.13.0, pnpm 12.4.2 (Installation mit `npm install --global pnpm@12.4.2`) und die Rust-Toolchain (für die CLI).
 
 ```bash
 pnpm install          # einmal, im Repo-Root

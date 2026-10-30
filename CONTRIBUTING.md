@@ -46,7 +46,7 @@ Do not duplicate tool definitions or prompts across CLI and Desktop. New tool co
 
 ## Development setup
 
-**Requirements:** Node.js 24+, pnpm 12+ (`corepack enable`), and the Rust toolchain (for CLI).
+**Requirements:** Node.js 26.13.0, pnpm 12.4.2 (install with `npm install --global pnpm@12.4.2`), and the Rust toolchain (for CLI).
 
 ```bash
 pnpm install          # once, at the repo root

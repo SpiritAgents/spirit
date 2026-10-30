@@ -46,7 +46,7 @@ Spirit에는 명확한 계층 모델이 있습니다. 여러 패키지를 건드
 
 ## 개발 환경
 
-**요구 사항:** Node.js 24+, pnpm 12+(`corepack enable`), 그리고 Rust 툴체인(CLI용).
+**요구 사항:** Node.js 26.13.0, pnpm 12.4.2(`npm install --global pnpm@12.4.2`로 설치), 그리고 Rust 툴체인(CLI용).
 
 ```bash
 pnpm install          # 한 번, 저장소 루트에서

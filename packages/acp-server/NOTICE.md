@@ -15,9 +15,9 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/agentclientprotocol/typescript-sdk
 - **@inquirer/prompts** 7.10.1 — MIT
   - https://github.com/SBoudrias/Inquirer.js
-- **@types/node** 25.9.5 — MIT
+- **@types/node** 26.6.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
-- **typescript** 5.9.3 — Apache-2.0
+- **typescript** 7.0.2 — Apache-2.0
   - https://github.com/microsoft/TypeScript
 - **vitest** 4.1.11 — MIT
   - https://github.com/vitest-dev/vitest
@@ -228,7 +228,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
 
 **Used by:**
 
-- typescript 5.9.3
+- typescript 7.0.2
 
 ```
 Apache License
@@ -323,7 +323,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 **Used by:**
 
-- @types/node 25.9.5
+- @types/node 26.6.6
 
 ```
     MIT License

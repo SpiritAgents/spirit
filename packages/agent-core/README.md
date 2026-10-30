@@ -31,7 +31,7 @@ This is an internal capability library, not a public SDK. If a public SDK ever s
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 
 ## Related packages
 

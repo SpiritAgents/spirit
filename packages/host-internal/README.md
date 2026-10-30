@@ -32,7 +32,7 @@ Each model entry in `config.json` (`providers[].models[]`) may carry an optional
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 - [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core) at a matching version
 
 ## Related packages

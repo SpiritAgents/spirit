@@ -6,7 +6,7 @@ Each icon is a React component with `size`, `color`, and `strokeWidth`.
 
 ## Requirements
 
-- Node.js 24+
+- Node.js 26.13.0
 - React 18+
 
 ## License

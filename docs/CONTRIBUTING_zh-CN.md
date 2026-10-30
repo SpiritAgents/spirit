@@ -46,7 +46,7 @@ Spirit 有清晰的分层模型。在改动多个包之前，请先阅读 [`.git
 
 ## 开发环境
 
-**环境要求：** Node.js 24+、pnpm 12+（`corepack enable`），以及 Rust 工具链（用于 CLI）。
+**环境要求：** Node.js 26.13.0、pnpm 12.4.2（通过 `npm install --global pnpm@12.4.2` 安装），以及 Rust 工具链（用于 CLI）。
 
 ```bash
 pnpm install          # 一次，在仓库根目录

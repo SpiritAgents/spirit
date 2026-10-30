@@ -46,7 +46,7 @@ Spirit 有清晰的分層模型。在改動多個套件之前，請先閱讀 [`.
 
 ## 開發環境
 
-**環境需求：** Node.js 24+、pnpm 12+（`corepack enable`），以及 Rust 工具鏈（用於 CLI）。
+**環境需求：** Node.js 26.13.0、pnpm 12.4.2（透過 `npm install --global pnpm@12.4.2` 安裝），以及 Rust 工具鏈（用於 CLI）。
 
 ```bash
 pnpm install          # 一次，在儲存庫根目錄

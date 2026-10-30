@@ -166,12 +166,12 @@
   },
   "devDependencies": {
     "@types/jsdom": "28.0.3",
-    "@types/node": "24.13.3",
+    "@types/node": "26.6.6",
     "@types/turndown": "5.0.6",
     "typescript": "7.0.2",
     "vitest": "^4.1.11"
   },
   "engines": {
-    "node": ">=24"
+    "node": "26.13.0"
   }
 }

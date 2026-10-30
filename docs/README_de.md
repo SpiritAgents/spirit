@@ -171,14 +171,14 @@ Manuelles Setup außerhalb des Editors:
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| Umgebungsvariable      | Erforderlich | Beschreibung                                                                 |
-| ---------------------- | ------------ | ---------------------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | Nein         | Workspace-Root (Standard: Client-`cwd`)                                      |
+| Umgebungsvariable      | Erforderlich | Beschreibung                                                                   |
+| ---------------------- | ------------ | ------------------------------------------------------------------------------ |
+| `SPIRIT_ACP_WORKSPACE` | Nein         | Workspace-Root (Standard: Client-`cwd`)                                        |
 | `SPIRIT_ACP_DATA_DIR`  | Nein         | Spirit-Datenverzeichnis (Standard: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Entwicklung
 
-**Anforderungen:** Node.js 24+, pnpm 12+ (über `corepack enable` aktivieren). Rust-Toolchain für CLI-Builds.
+**Anforderungen:** Node.js 26.13.0, pnpm 12.4.2 (mit `npm install --global pnpm@12.4.2` installieren). Rust-Toolchain für CLI-Builds.
 
 | Befehl                     | Beschreibung                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------ |
