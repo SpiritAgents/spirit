@@ -157,10 +157,99 @@ pub(crate) enum BridgePermissionMemoryTarget {
     ReadFile { path: String },
 }
 
+/// Structured approval description produced by the tool executor; the TUI builds
+/// its own (localized) display strings from it. Tagged union mirroring the daemon's
+/// `ToolApprovalRequest`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub(crate) enum BridgeToolApprovalRequest {
+    #[serde(rename = "shell")]
+    Shell {
+        command: String,
+        #[serde(default)]
+        reason: Option<String>,
+        terminal: String,
+    },
+    #[serde(rename = "web_fetch")]
+    WebFetch { url: String },
+    #[serde(rename = "read_path")]
+    ReadPath { operation: String, path: String },
+    #[serde(rename = "create_file")]
+    CreateFile {
+        path: String,
+        #[serde(rename = "contentChars")]
+        content_chars: u64,
+    },
+    #[serde(rename = "create_plan")]
+    CreatePlan {
+        #[serde(rename = "planName")]
+        plan_name: String,
+        #[serde(rename = "contentChars")]
+        content_chars: u64,
+    },
+    #[serde(rename = "edit_file")]
+    EditFile {
+        path: String,
+        #[serde(rename = "oldChars")]
+        old_chars: u64,
+        #[serde(rename = "newChars")]
+        new_chars: u64,
+    },
+    #[serde(rename = "delete_file")]
+    DeleteFile { path: String },
+    #[serde(rename = "apply_patch")]
+    ApplyPatch {
+        operation: String,
+        path: String,
+        #[serde(rename = "diffLines", default)]
+        diff_lines: Option<u64>,
+    },
+    #[serde(rename = "create_automation")]
+    CreateAutomation {
+        title: String,
+        trigger: Value,
+        #[serde(rename = "approvalLevel")]
+        approval_level: String,
+        #[serde(rename = "overviewChars")]
+        overview_chars: u64,
+    },
+    #[serde(rename = "extension_tool")]
+    ExtensionTool {
+        #[serde(rename = "extensionId")]
+        extension_id: String,
+        #[serde(rename = "toolName")]
+        tool_name: String,
+        #[serde(rename = "argumentsPreview")]
+        arguments_preview: String,
+    },
+    #[serde(rename = "lazy_tool_call")]
+    LazyToolCall {
+        provider: String,
+        server: String,
+        tool: String,
+        #[serde(default)]
+        arguments: Option<Value>,
+    },
+}
+
+/// Approval prompt surfaced to the TUI: a structured tool request, or free-form
+/// hook text. Tagged union mirroring the daemon's `ToolApprovalPrompt`.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(tag = "kind")]
+pub(crate) enum BridgeToolApprovalPrompt {
+    #[serde(rename = "tool")]
+    Tool { request: BridgeToolApprovalRequest },
+    #[serde(rename = "hook")]
+    Hook {
+        #[serde(default)]
+        message: Option<String>,
+    },
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgePendingApproval {
-    pub(crate) prompt: String,
+    pub(crate) prompt: BridgeToolApprovalPrompt,
     pub(crate) request: Value,
     pub(crate) remember_target: Option<BridgePermissionMemoryTarget>,
     pub(crate) tool_call_id: Option<String>,
@@ -234,7 +323,9 @@ pub(crate) enum BridgeManualToolCommandStartResult {
         user_message: String,
     },
     #[serde(rename = "requires-approval")]
-    RequiresApproval { approval: BridgePendingApproval },
+    RequiresApproval {
+        approval: Box<BridgePendingApproval>,
+    },
     #[serde(rename = "denied")]
     Denied {
         request: Value,

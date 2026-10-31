@@ -17,6 +17,20 @@ use std::{
 use super::resolve::is_loopback_host;
 use super::ws::{WsReadEvent, WsStream};
 
+pub(super) fn validate_product_build(health: &Value) -> Result<()> {
+    let actual = health.get("productBuildId").and_then(Value::as_str);
+    if actual != Some(crate::product::PRODUCT_BUILD_ID) {
+        return Err(anyhow!(
+            "{} client requires product build {} ({}), but the daemon reported {}. Use matching client and daemon builds.",
+            crate::product::NAME,
+            crate::product::PRODUCT_BUILD_ID,
+            crate::product::QUALITY,
+            actual.unwrap_or("no product build identity"),
+        ));
+    }
+    Ok(())
+}
+
 pub(crate) struct DaemonClient {
     writer: Arc<Mutex<WsStream>>,
     rx: Receiver<Result<Value>>,
@@ -128,6 +142,30 @@ impl DaemonClient {
     pub(crate) fn close(&mut self) {
         if let Ok(mut writer) = self.writer.lock() {
             let _ = writer.send_close();
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn product_handshake_accepts_only_the_baked_build() {
+        assert!(
+            validate_product_build(&json!({
+                "productBuildId": crate::product::PRODUCT_BUILD_ID
+            }))
+            .is_ok()
+        );
+        for health in [
+            json!({"productBuildId": "different-product-build"}),
+            json!({"productBuildId": null}),
+            json!({}),
+            Value::Null,
+        ] {
+            let error = validate_product_build(&health).unwrap_err().to_string();
+            assert!(error.contains("Use matching client and daemon builds"));
         }
     }
 }

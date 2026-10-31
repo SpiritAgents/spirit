@@ -4,17 +4,7 @@ import {
   type JsonValue,
   type AgentMode,
 } from "../ports.js";
-import type { OpenAiLlmVendor } from "../openai/openai-compat.js";
-import {
-  isAggregatedOpenAiRoutedVendor,
-  isBedrockMantleOpenResponsesConfig,
-  normalizeGatewayOpenAiModelId,
-  resolveOpenResponsesSdkProvider,
-  type OpenResponsesTransportConfig,
-} from "./responses-compat.js";
-import { shouldUseGatewayWebSearch } from "./gateway-web-search.js";
-
-export { normalizeGatewayOpenAiModelId } from "./responses-compat.js";
+import type { OpenResponsesTransportConfig } from "./responses-compat.js";
 
 const LEGACY_FILE_TOOL_NAMES = new Set(["create_file", "edit_file", "delete_file"]);
 
@@ -29,161 +19,69 @@ export interface ApplyPatchOperation {
   diff?: string;
 }
 
-/**
- * Parses `gpt-{major}.{minor}` from a model id after optional vendor routing normalization.
- * Returns undefined when the id is not an OpenAI GPT versioned model.
- */
-export function parseOpenAiGptModelVersion(
-  modelId: string,
-): { major: number; minor: number } | undefined {
-  const trimmed = modelId.trim().toLowerCase();
-  const bedrockMantle = /^openai\.(gpt-\d+(?:\.\d+)?)/.exec(trimmed);
-  if (bedrockMantle?.[1]) {
-    return parseOpenAiGptModelVersion(bedrockMantle[1]);
-  }
-
-  const versioned = /^gpt-(\d+)\.(\d+)/.exec(trimmed);
-  if (versioned) {
-    return {
-      major: Number.parseInt(versioned[1] ?? "", 10),
-      minor: Number.parseInt(versioned[2] ?? "", 10),
-    };
-  }
-
-  const majorOnly = /^gpt-(\d+)(?:$|[-_])/.exec(trimmed);
-  if (majorOnly) {
-    return {
-      major: Number.parseInt(majorOnly[1] ?? "", 10),
-      minor: 0,
-    };
-  }
-
-  return undefined;
+/** The endpoint declares apply_patch support via the `options.applyPatch` mechanism switch. */
+function declaresApplyPatch(config: Pick<OpenResponsesTransportConfig, "options">): boolean {
+  return config.options?.applyPatch === true;
 }
 
-export function isOpenAiGptModelAtLeast51(modelId: string): boolean {
-  const version = parseOpenAiGptModelVersion(modelId);
-  if (!version) {
-    return false;
-  }
-
-  if (version.major > 5) {
-    return true;
-  }
-
-  if (version.major === 5 && version.minor >= 1) {
-    return true;
-  }
-
-  return false;
+/** The SigV4 (Bedrock Mantle) surface speaks the OpenAI Responses shape but has no SDK-native apply_patch tool. */
+function isSigV4Surface(config: Pick<OpenResponsesTransportConfig, "options">): boolean {
+  return config.options?.auth === "aws-sigv4";
 }
 
-function isEligibleOpenAiRoutedModel(
-  model: string,
-  llmVendor: OpenAiLlmVendor | undefined,
+/** Official OpenAI: `@ai-sdk/openai` 3.x `openai.tools.applyPatch`; Gateway/SigV4 go through fetch function_call. */
+export function shouldUseOpenAiSdkApplyPatchTool(
+  config: Pick<
+    OpenResponsesTransportConfig,
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
+  >,
 ): boolean {
-  if (isAggregatedOpenAiRoutedVendor(llmVendor)) {
-    const routed = normalizeGatewayOpenAiModelId(model);
-    if (!routed) {
-      return false;
-    }
-    return isOpenAiGptModelAtLeast51(routed);
-  }
-
-  if (llmVendor === "openai") {
-    return isOpenAiGptModelAtLeast51(model);
-  }
-
-  return false;
-}
-
-function isEligibleResponsesProvider(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "responsesProvider" | "model">,
-): boolean {
-  const provider = resolveOpenResponsesSdkProvider(config);
-  if (provider === "openai") {
-    return (
-      config.llmVendor === "openai" ||
-      (config.llmVendor === "vercel-ai-gateway" &&
-        normalizeGatewayOpenAiModelId(config.model) !== undefined)
-    );
-  }
-
-  // Gateway: function apply_patch; OpenRouter: built-in apply_patch (both go through open-responses-compatible).
   return (
-    config.llmVendor === "vercel-ai-gateway" ||
-    config.llmVendor === "cloudflare-ai-gateway" ||
-    config.llmVendor === "openrouter"
+    shouldUseApplyPatchFileTools(config) &&
+    config.sdk === "@ai-sdk/openai" &&
+    !isSigV4Surface(config)
   );
 }
 
-function isEligibleOpenRouterBuiltInApplyPatchModel(
-  config: Pick<OpenResponsesTransportConfig, "model">,
-): boolean {
-  const routed = normalizeGatewayOpenAiModelId(config.model);
-  return routed !== undefined && isOpenAiGptModelAtLeast51(routed);
-}
-
-/** Official OpenAI / OpenRouter shape: apply_patch_call/output; Vercel AI Gateway uses the function_call pair. */
-export function shouldUseBuiltInApplyPatchRequestItems(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "llmVendor" | "responsesProvider" | "model"
-  >,
-): boolean {
-  if (isBedrockMantleOpenResponsesConfig(config)) {
-    return false;
-  }
-
-  if (config.llmVendor === "openai") {
-    return true;
-  }
-
-  if (config.llmVendor === "openrouter" || config.llmVendor === "cloudflare-ai-gateway") {
-    return isEligibleOpenRouterBuiltInApplyPatchModel(config);
-  }
-
-  return false;
-}
-
 /**
- * Vercel AI Gateway does not support built-in `type: apply_patch`; a flat function tool must be registered in tools.
- * OpenRouter uses built-in and must not fall into this path.
+ * The gateway v3 language-model protocol and the SigV4 surface have no built-in
+ * `type: apply_patch`; a flat function tool must be registered in tools.
  */
 export function shouldUseApplyPatchFunctionTool(
   config: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "llmVendor" | "responsesProvider"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
 ): boolean {
   return (
     shouldUseApplyPatchFileTools(config) &&
     !shouldUseOpenAiSdkApplyPatchTool(config) &&
-    (config.llmVendor === "vercel-ai-gateway" || isBedrockMantleOpenResponsesConfig(config))
+    (config.sdk === "@ai-sdk/gateway" || isSigV4Surface(config))
   );
 }
 
-/** Official OpenAI: `@ai-sdk/openai` 3.x `openai.tools.applyPatch`; Gateway goes through fetch function_call. */
-export function shouldUseOpenAiSdkApplyPatchTool(
+/** Generic Open Responses endpoints take the built-in apply_patch request-item shape via the fetch bridge. */
+export function shouldUseBuiltInApplyPatchRequestItems(
   config: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "llmVendor" | "responsesProvider"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
 ): boolean {
   return (
     shouldUseApplyPatchFileTools(config) &&
-    config.llmVendor === "openai" &&
-    !isBedrockMantleOpenResponsesConfig(config)
+    !shouldUseOpenAiSdkApplyPatchTool(config) &&
+    !shouldUseApplyPatchFunctionTool(config)
   );
 }
 
 /**
- * Gateway v3 language-model uses `prompt`; only the Open Responses fetch omits and stash/reinjects via body.input.
+ * The gateway v3 language-model uses `prompt`; only the Open Responses fetch omits and
+ * stash/reinjects apply_patch rounds via body.input.
  */
 export function shouldOmitApplyPatchFromAiSdkMessages(
   config: Pick<
     OpenResponsesTransportConfig,
-    "baseUrl" | "transportKind" | "model" | "llmVendor" | "responsesProvider"
+    "baseUrl" | "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
 ): boolean {
   if (!shouldUseApplyPatchFileTools(config)) {
@@ -192,7 +90,7 @@ export function shouldOmitApplyPatchFromAiSdkMessages(
   if (shouldUseOpenAiSdkApplyPatchTool(config)) {
     return false;
   }
-  if (shouldUseGatewayWebSearch(config)) {
+  if (config.sdk === "@ai-sdk/gateway") {
     return false;
   }
   return true;
@@ -201,7 +99,7 @@ export function shouldOmitApplyPatchFromAiSdkMessages(
 export function shouldUseApplyPatchFileTools(
   config: Pick<
     OpenResponsesTransportConfig,
-    "transportKind" | "model" | "llmVendor" | "responsesProvider" | "agentMode"
+    "transportKind" | "model" | "sdk" | "options" | "agentMode"
   >,
   options?: { agentMode?: AgentMode },
 ): boolean {
@@ -214,11 +112,7 @@ export function shouldUseApplyPatchFileTools(
     return false;
   }
 
-  if (!isEligibleResponsesProvider(config)) {
-    return false;
-  }
-
-  return isEligibleOpenAiRoutedModel(config.model, config.llmVendor);
+  return declaresApplyPatch(config);
 }
 
 /** @deprecated Use {@link shouldUseApplyPatchFileTools}. */

@@ -43,7 +43,11 @@ export function TextSelectionActionMenu({
         align="center"
         side="top"
         sideOffset={8}
+        className="p-0"
         onOpenAutoFocus={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+        onFocusOutside={(event) => event.preventDefault()}
+        onInteractOutside={(event) => event.preventDefault()}
       >
         {children}
       </DropdownMenuContent>

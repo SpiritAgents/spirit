@@ -6,6 +6,7 @@ import { editCommandDisabled, type EditCommand } from "@/lib/edit-command-state"
 import { useTheme } from "@/hooks/useTheme";
 import { useSessionSidebarShellRightInsetPx } from "@/hooks/useSessionSidebarShellRightInsetPx";
 import { spiritAgentTitleBarIconSrc } from "@/lib/brand-icon";
+import { siteDocsUrl } from "@/lib/docs-links";
 import { sessionSidebarShellWidth } from "@/lib/desktop-chrome";
 import { desktopTranslucencyTitleBarTintClass } from "@/lib/desktop-translucency-surface";
 import { cn } from "@/lib/utils";
@@ -44,14 +45,14 @@ function titleBarSurfaceClass(useTranslucency: boolean, withBorder: boolean) {
   );
 }
 
-/** Transparent-background title-bar mark (the brand glyph SVG canvas is large, so 14px looks close to the old 20px favicon) */
+/** Transparent glyph fills its canvas, so its painted height is approximately 14px. */
 const TITLE_BAR_ICON_PX = 14;
 
-/** Mica title-bar dark-background mark (the artwork inside `logo-dark.svg` is smaller, restoring the 20px used before migrating to the transparent mark) */
-const TITLE_BAR_ICON_TRANSLUCENCY_PX = 20;
+/** Glass glyph height is 156.635 * 2.08 / 512 of the canvas; 24px preserves the old ~15px painted height. */
+const TITLE_BAR_ICON_TRANSLUCENCY_PX = 24;
 
-/** Matches the sidebar interactive items' default text color (`text-sidebar-action-foreground`) */
-const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-sidebar-action-foreground";
+/** Matches the sidebar interactive items' default text color (`text-chrome-label`) */
+const TITLE_BAR_MENUBAR_TRIGGER_CLASS = "px-2 py-1 text-[13px] text-chrome-label";
 
 function execWindowAction(action: string): void {
   void window.spiritDesktop?.executeWindowAction(action);
@@ -160,7 +161,7 @@ function TitleBarMenuCluster({
   useTranslucency: boolean;
   onOpenSettings: () => void;
 } & TitleBarZoomMenuProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const isDevChrome = isViteDev;
   return (
     <div className="electron-no-drag flex shrink-0 items-center gap-1">
@@ -175,7 +176,7 @@ function TitleBarMenuCluster({
           </MenubarTrigger>
           <MenubarContent>
             <MenubarItem onSelect={() => void window.spiritDesktop?.resetSession()}>
-              {t("titleBar.newSession")}
+              {t("titleBar.newChat")}
               <MenubarShortcut>Ctrl+N</MenubarShortcut>
             </MenubarItem>
             <MenubarSeparator />
@@ -260,6 +261,16 @@ function TitleBarMenuCluster({
             {t("titleBar.help")}
           </MenubarTrigger>
           <MenubarContent>
+            <MenubarItem
+              onSelect={() => {
+                const url = siteDocsUrl(i18n.language, "");
+                if (window.spiritDesktop?.openBrowserUrl) {
+                  void window.spiritDesktop.openBrowserUrl(url);
+                }
+              }}
+            >
+              {t("titleBar.documentation")}
+            </MenubarItem>
             <MenubarItem onSelect={() => execWindowAction("showAbout")}>
               {t("titleBar.about")}
             </MenubarItem>

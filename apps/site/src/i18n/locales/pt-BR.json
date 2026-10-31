@@ -14,20 +14,20 @@
     "sessionSidebar": {
       "currentWorkspace": "Workspace Atual",
       "models": "Modelos",
-      "skills": "Habilidades",
+      "skills": "Skills",
       "dreams": "Dreams",
       "extensions": "Extensões",
       "mcps": "MCPs",
       "appearance": "Aparência",
       "settingsNavSidebarAria": "Barra Lateral de Navegação de Configurações",
-      "sessionsSidebarAria": "Barra Lateral de Sessões e Configurações",
+      "sessionsSidebarAria": "Barra Lateral de Conversas e Configurações",
       "back": "Voltar",
       "settingsHeading": "Configurações",
-      "newSession": "Nova Sessão",
+      "newChat": "Nova conversa",
       "extensionsButton": "Extensões",
-      "workspaceHeading": "Workspace",
+      "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Abas de Configurações",
-      "workspaceSessionsAria": "Sessões do Workspace",
+      "workspaceSessionsAria": "Conversas do Workspace",
       "settingsButton": "Configurações",
       "basics": "Básico",
       "pageNavigation": "Navegação da página"
@@ -45,7 +45,7 @@
       "thinking": "Pensando",
       "thought": "Pensou",
       "emptyTitle": "Comece algo.",
-      "composerPlaceholder": "Digite uma mensagem…",
+      "composerPlaceholder": "Digite uma mensagem",
       "agentDemo": {
         "previewUnavailable": "Pré-visualização indisponível",
         "viewLargeImage": "Visualizar Imagem Grande",
@@ -61,7 +61,7 @@
         "planPath": "plans/renovacao-hero-pagina-inicial.md",
         "generatingImage": "Gerando imagem…"
       },
-      "manualAssistantResponse": "Baixe o Spirit.",
+      "manualAssistantResponse": "Baixe o {{product.name}}.",
       "demoUserPrompt": "Revise a página inicial atual e me diga o que melhorar em seguida.",
       "demoThinkingText": "Verificando a estrutura atual do Hero.\nProcurando as lacunas mais visíveis na superfície de conversação.\nPreparando um breve resumo de implementação.",
       "demoAssistantResponse": "Aqui está o próximo passo que eu tomaria.\n\n- Substitua a área de conversação vazia por uma demonstração real de streaming.\n- Mantenha a janela Hero interrompível para que os visitantes possam assumir o controle imediatamente.\n- Reutilize os estilos de mensagem do Desktop para Pensamento e chamadas de ferramenta, em vez de aproximá-los.",
@@ -100,13 +100,10 @@
       "searchPlaceholder": "Pesquisar",
       "noMatches": "Nenhum resultado",
       "optionalPlaceholder": "Opcional",
-      "addProvider": "Adicionar Provedor",
       "current": "Atual",
       "deleteDialogDescription": "A configuração e as chaves salvas separadamente serão removidas.",
       "providerDialogTitle": "Escolher provedor",
       "providerDialogDescription": "Escolha um provedor e insira os detalhes da conexão.",
-      "connectDialogDescriptionCustom": "Insira o endpoint e a chave.",
-      "connectDialogDescriptionDefault": "Insira uma chave de API para conectar.",
       "addModeLabel": "Como adicionar modelos",
       "addModeAria": "Como adicionar modelos",
       "addSingle": "Adicionar um",
@@ -116,10 +113,9 @@
       "endpointLabel": "Endpoint",
       "apiKeyLabel": "Chave da API",
       "apiKeyPlaceholder": "Digite a chave",
-      "addThisModel": "Adicionar este modelo",
-      "adding": "Adicionando…",
+      "connecting": "Conectando…",
       "customConnectionTitle": "Conexão personalizada",
-      "connectProviderTitle": "Conectar provedor"
+      "connectNamedProviderTitle": "Conectar {{provider}}"
     },
     "window": {
       "toolbarAria": "Barra Lateral e Ferramentas",
@@ -128,7 +124,7 @@
       "commitButton": "Commit",
       "collapseTools": "Recolher Ferramentas",
       "expandTools": "Expandir Ferramentas",
-      "newSession": "Nova Sessão",
+      "newChat": "Nova conversa",
       "settingsPlaceholderTitle": "Visualização de configurações da área de trabalho",
       "marketplacePlaceholderTitle": "Visualização de extensões",
       "previewEditorOnlyTextError": "Somente arquivos de texto podem ser abertos no editor de pré-visualização.",
@@ -193,7 +189,7 @@
       "exited": "[saiu, código {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Pré-visualização do site de marketing para o produto de desktop do Spirit.",
+      "siteReadmeDescription": "Pré-visualização do site de marketing para o produto de desktop do {{product.name}}.",
       "desktopReadmeDescription": "Shell Electron e renderizador web para o produto de desktop.",
       "generatedWorkspaceDescription": "Espaço de trabalho simulado gerado para a pré-visualização da página de destino {{label}}.",
       "generatedWorkspaceOverview": "Raiz do espaço de trabalho: {{root}}\\n\\nEste espaço de trabalho simulado mantém a aba de arquivos interativa sem montar o runtime completo do desktop.",
@@ -205,17 +201,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit é um agente de IA open source que você executa com seus modelos, suas chaves e seu fluxo de trabalho."
+    "title": "{{product.name}}",
+    "description": "{{product.name}} é um agente de IA open source que você executa com seus modelos, suas chaves e seu fluxo de trabalho."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "Baixar",
     "downloadForPlatform": "Baixar para {{platform}}"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Página inicial do Spirit",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "Página inicial do {{product.name}}",
     "primaryNavAria": "Principal",
     "nav": {
       "features": "Recursos",
@@ -236,8 +232,8 @@
     "headline": "Um agente de IA open source\nfeito para multiplicar sua produtividade."
   },
   "download": {
-    "metaTitle": "Baixar Spirit",
-    "metaDescription": "Baixe o Spirit para Desktop, instale o CLI ou fique atento para ACP.",
+    "metaTitle": "Baixar {{product.name}}",
+    "metaDescription": "Baixe o {{product.name}} para Desktop, instale o CLI ou fique atento para ACP.",
     "title": "O mesmo agente, em todo o seu trabalho.",
     "sectionAria": "O mesmo agente, em todo o seu trabalho.",
     "desktop": "Desktop",
@@ -247,7 +243,7 @@
     "copied": "Copiado",
     "comingSoonJoke": "Em breve™",
     "listingInProgress": "Listando…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "Revise auth.ts e corrija o bug de renovação de sessão.",
     "cliAssistantMessage": "Vou inspecionar auth.ts e corrigir a verificação de sessão que falha.",
     "cliUserFollowUp": "Adicione também um teste de regressão.",
@@ -255,20 +251,20 @@
     "cliFooter": "Agente  |  Aprovação Padrão  |  Loop Desligado          gpt-5"
   },
   "landing": {
-    "sectionAria": "Conteúdo do Spirit",
+    "sectionAria": "Conteúdo do {{product.name}}",
     "featureHeading": ["Seus modelos.", "Suas chaves.", "Seu controle."],
-    "featureBody": "O Spirit não te prende a uma stack hospedada. Traga uma chave de qualquer provedor, adicione uma vez e use o mesmo fluxo de agente em todos eles.",
+    "featureBody": "O {{product.name}} não te prende a uma stack hospedada. Traga uma chave de qualquer provedor, adicione uma vez e use o mesmo fluxo de agente em todos eles.",
     "agent": {
-      "sectionAria": "Produtividade do Spirit",
+      "sectionAria": "Produtividade do {{product.name}}",
       "featureHeading": [
         "Planeje com contexto.",
         "Execute com ferramentas.",
         "Entregue no seu workspace."
       ],
-      "featureBody": "O Spirit planeja antes de agir: gere mockups, escreva planos estruturados e execute contra seu repositório sem sair do shell desktop."
+      "featureBody": "O {{product.name}} planeja antes de agir: gere mockups, escreva planos estruturados e execute contra seu repositório sem sair do shell desktop."
     },
-    "ctaSectionAria": "Baixar Spirit",
-    "ctaTitle": "Experimente o Spirit.",
+    "ctaSectionAria": "Baixar {{product.name}}",
+    "ctaTitle": "Experimente o {{product.name}}.",
     "trio": {
       "sectionAria": "Prévias de recursos",
       "completion": {
@@ -306,12 +302,12 @@
     "linkHome": "Início",
     "changelog": "Changelog",
     "openSourceLicenses": "Licenças de código aberto",
-    "copyrightLine": "© {{year}} Spirit. Agente de IA de código aberto."
+    "copyrightLine": "© {{year}} {{product.name}}. Agente de IA de código aberto."
   },
   "docs": {
     "title": "Documentação",
-    "metaTitle": "Documentação do Spirit",
-    "metaDescription": "Instale o Spirit, conecte um provedor com sua própria chave e execute o mesmo agente no Desktop e na CLI.",
+    "metaTitle": "Documentação do {{product.name}}",
+    "metaDescription": "Instale o {{product.name}}, conecte um provedor com sua própria chave e execute o mesmo agente no Desktop e na CLI.",
     "comingSoon": "Em breve.",
     "sectionAria": "Documentação",
     "search": "Buscar",

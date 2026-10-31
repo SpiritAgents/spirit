@@ -4,18 +4,18 @@ description: 按工作区和 Git 分支保存的短记忆。Agent 用 dream_list
 ---
 
 <Callout type="warn" title="Beta">
-  梦境仍在试验。不要当永久项目百科——那属于 [Rules](./rules.mdx) 或仓库本身。
+  梦境仍处于试验阶段。不要把它当作永久的项目百科——那类内容应该放在 [Rules](./rules.mdx) 或仓库本身。
 </Callout>
 
-梦境是按**当前工作区 + Git 分支**记下的短记忆：最近在做什么、为什么重要、还有哪些未决事项。记录在 `{spiritDataDir}/dreams/`，**五天**后过期。
+梦境是按**当前工作区 + Git 分支**记下的短记忆：最近在做什么、为什么重要、还有哪些未决事项。记录保存在 `{spiritDataDir}/dreams/` 下，**五天**后过期。
 
-对话里的 Agent 会在 system 里看到一份摘要目录（id、标题、summary、tags）。完整细节不预置，按需用工具拉。
+对话中的 Agent 会在 system 消息里看到一份摘要目录（id、标题、summary、tags）。完整细节不会预加载，需要时用工具拉取。
 
 | 工具         | 作用                       |
 | ------------ | -------------------------- |
 | `dream_list` | 列出当前范围内未过期的摘要 |
 | `dream_read` | 按 id 读一条完整记录       |
 
-`dream_record`、`dream_update`、`dream_delete` 给后台收集器用，不进对话 Agent。收集器扫会话，决定新建、更新还是删掉过时条目；优先改已有条目，不复制一份。
+`dream_record`、`dream_update` 和 `dream_delete` 属于后台收集器，不属于对话 Agent。收集器扫描会话，决定是新建、更新还是丢弃过时条目；它优先更新已有梦境，而不是复制一条。
 
-在 Desktop 的 **设置 → 梦境** 开关收集。后台收集用轻量对话模型，与 **设置 → Tab** 同一槽位。CLI 和 ACP 目前不接梦境。
+在 Desktop 的 **设置 → 梦境** 下开启或关闭收集。后台收集使用次要语言模型，与 **设置 → Tab** 是同一个槽位。CLI 和 ACP 尚未接入梦境。

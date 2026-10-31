@@ -54,8 +54,7 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "openai/gpt-5.4",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    llmVendor: "openrouter" as const,
-    responsesProvider: "open-responses-compatible" as const,
+    options: { applyPatch: true },
     store: false,
   };
 

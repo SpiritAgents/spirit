@@ -26,7 +26,7 @@ import {
   AuthorizationDecision,
   createToolExecutionTextOutput,
   JsonValue,
-  McpService,
+  type McpService,
   McpStatusSnapshot,
   type McpUiOpener,
   TOOL_CALL_TOOL_NAME,
@@ -48,6 +48,7 @@ import {
   type McpToolRequest,
   type PermissionMemoryTarget,
   type ToolAgentMcpToolCatalogSnapshot,
+  type ToolApprovalRequest,
   type ToolExecutionOutput,
   ToolRequestExecutionMetadata,
   ToolExecutor,
@@ -55,16 +56,11 @@ import {
   isLspDiagnosticsToolRequest,
   requestFromGetDiagnosticsFunctionCall,
   executeGetDiagnostics,
-  shouldUseStepfunWebSearch,
-  buildStepfunWebSearchToolDefinition,
-  shouldUseKimiCodeWebSearch,
-  buildKimiCodeWebSearchToolDefinition,
 } from "@spiritagent/agent-core";
 import { LspService, appendLspDiagnosticsAfterWriteIfNeeded } from "@spiritagent/host-internal/lsp";
 import {
   CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,
-  buildCreateAutomationApprovalPrompt,
   previewCreateAutomationFromArguments,
   toBuiltInLazyToolIndexEntry,
   type HostAutomationCreateDefaults,
@@ -84,6 +80,7 @@ import {
   NodeHostToolService,
   normalizeApprovalLevel,
   createNoopMcpAdapter,
+  createHostMcpService,
 } from "@spiritagent/host-internal";
 
 import type { AskQuestionsQuestionSpec } from "../types.js";
@@ -118,6 +115,7 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
   private readonly todoScope: HostTodoScope | undefined;
   private extensionToolDefinitions: JsonValue[];
   private readonly hostContributedToolsEnabled: boolean;
+  private readonly webFetchEnabled: boolean;
   private loopToolDefinitions: JsonValue[] = [];
   private loopToolExposureEnabled = false;
   private planToolDefinitions: JsonValue[] = [];
@@ -142,16 +140,19 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
       dreamSourceSession?: HostDreamSourceSessionRef;
       todoScope?: HostTodoScope;
       hostContributedToolsEnabled?: boolean;
+      /** User opt-out (agents.webFetch.enabled=false); defaults to exposed. */
+      webFetchEnabled?: boolean;
       getAutomationCreateDefaults?: () => HostAutomationCreateDefaults;
       onAutomationCreated?: (definition: HostAutomationDefinition) => void;
       mcpUiOpener?: McpUiOpener;
     } = {},
   ) {
-    this.mcp = options.mcp ?? new McpService(workspaceRoot);
+    this.mcp = options.mcp ?? createHostMcpService(workspaceRoot, spiritDataDir());
     this.mcpUiOpener = options.mcpUiOpener;
     this.lsp = options.lsp;
     this.extensionToolDefinitions = [...(options.extensionToolDefinitions ?? [])];
     this.hostContributedToolsEnabled = options.hostContributedToolsEnabled === true;
+    this.webFetchEnabled = options.webFetchEnabled !== false;
     this.dreamScope = options.dreamScope;
     this.todoScope = options.todoScope;
     this.dreamToolMode = options.dreamScope ? (options.dreamToolMode ?? "collector") : undefined;
@@ -254,6 +255,11 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         (definition) => toolDefinitionName(definition) !== "generate_video",
       );
     }
+    if (!this.webFetchEnabled) {
+      builtinDefinitions = builtinDefinitions.filter(
+        (definition) => toolDefinitionName(definition) !== "web_fetch",
+      );
+    }
 
     if (
       this.activeTransportConfig !== undefined &&
@@ -270,14 +276,6 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
         ...this.planToolDefinitions,
         ...this.dreamToolDefinitions,
         ...this.todoToolDefinitions,
-        ...(this.activeTransportConfig !== undefined &&
-        shouldUseStepfunWebSearch(this.activeTransportConfig)
-          ? [buildStepfunWebSearchToolDefinition()]
-          : []),
-        ...(this.activeTransportConfig !== undefined &&
-        shouldUseKimiCodeWebSearch(this.activeTransportConfig)
-          ? [buildKimiCodeWebSearchToolDefinition()]
-          : []),
       ],
       this.agentMode,
     );
@@ -348,6 +346,26 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
     }
     this.assertAllowedDreamToolRequest(request);
     return this.tools.authorize(request);
+  }
+
+  /**
+   * Only built-in host tools carry approval descriptors; MCP / lazy-gateway / LSP requests have
+   * no rich approval form and keep the hook message-only form.
+   */
+  async describeApproval(request: DesktopToolRequest): Promise<ToolApprovalRequest | undefined> {
+    if (this.mcp.isFetchMcpResourceToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (this.mcp.isLazyToolGatewayToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (this.mcp.isToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    if (isLspDiagnosticsToolRequest(request as JsonValue)) {
+      return undefined;
+    }
+    return this.tools.describeApproval(request);
   }
 
   async rememberApproval(
@@ -591,7 +609,14 @@ export class DesktopToolExecutor implements ToolExecutor<DesktopToolRequest> {
           );
           return {
             kind: "need-approval",
-            prompt: buildCreateAutomationApprovalPrompt(preview),
+            approval: {
+              kind: "create_automation",
+              title: preview.title,
+              trigger: preview.trigger as JsonValue,
+              approvalLevel: preview.approval_level,
+              overview: preview.overview,
+              overviewChars: [...preview.overview].length,
+            },
           };
         } catch {
           // Fall through to generic lazy gateway authorization.

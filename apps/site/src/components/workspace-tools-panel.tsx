@@ -1,7 +1,9 @@
+import { Globe } from "@spiritagent/icons/globe";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { FileText, GitBranch, Globe, Terminal } from "lucide-react";
+import { FileText, GitBranch, Terminal } from "lucide-react";
 
 import { WorkspaceBrowserPreviewTab } from "@/components/workspace-browser-preview-tab";
 import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
@@ -113,6 +115,7 @@ export function WorkspaceToolsDock({
   const [activeDesignTabId, setActiveDesignTabId] = useState(designTabsState.activeTabId);
   const [isResizing, setIsResizing] = useState(false);
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const dragCursor = useDragResizeCursor();
   const latestWidthPxRef = useRef(widthPx);
   latestWidthPxRef.current = widthPx;
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
@@ -151,9 +154,10 @@ export function WorkspaceToolsDock({
       event.preventDefault();
       setIsResizing(true);
       dragRef.current = { startX: event.clientX, startWidth: widthPx };
+      dragCursor.start(resizeCursor(widthPx, WORKSPACE_TOOLS_MIN_WIDTH_PX, maxWidthPx, "left"));
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [widthPx],
+    [dragCursor, maxWidthPx, widthPx],
   );
 
   const onResizePointerMove = useCallback(
@@ -163,23 +167,29 @@ export function WorkspaceToolsDock({
         return;
       }
       const delta = drag.startX - event.clientX;
-      onWidthPxChange(clampWidth(drag.startWidth + delta));
+      const next = clampWidth(drag.startWidth + delta);
+      dragCursor.update(resizeCursor(next, WORKSPACE_TOOLS_MIN_WIDTH_PX, maxWidthPx, "left"));
+      onWidthPxChange(next);
     },
-    [clampWidth, onWidthPxChange],
+    [clampWidth, dragCursor, maxWidthPx, onWidthPxChange],
   );
 
-  const endResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizing(false);
-    if (dragRef.current) {
-      writeWorkspaceToolsWidthPx(latestWidthPxRef.current);
-    }
-    dragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture may already be released.
-    }
-  }, []);
+  const endResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      dragCursor.end();
+      setIsResizing(false);
+      if (dragRef.current) {
+        writeWorkspaceToolsWidthPx(latestWidthPxRef.current);
+      }
+      dragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released.
+      }
+    },
+    [dragCursor],
+  );
 
   const renderLegacyTabPanel = () => {
     if (legacyTab === "files") {
@@ -265,9 +275,10 @@ export function WorkspaceToolsDock({
         aria-orientation="vertical"
         aria-label={toolsCopy.resizeAria}
         className={cn(
-          "group relative z-10 w-1 shrink-0 cursor-col-resize touch-none select-none",
+          "group relative z-10 w-1 shrink-0 touch-none select-none",
           "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
         )}
+        style={{ cursor: resizeCursor(widthPx, WORKSPACE_TOOLS_MIN_WIDTH_PX, maxWidthPx, "left") }}
         onPointerDown={onResizePointerDown}
         onPointerMove={onResizePointerMove}
         onPointerUp={endResize}
@@ -329,7 +340,11 @@ export function WorkspaceToolsDock({
                       className={`flex min-w-0 flex-1 items-center gap-1 rounded-t-md bg-transparent py-2 pl-2 pr-2 text-xs ${FONT_WEIGHT_NORMAL} outline-none`}
                       onClick={() => setActiveDesignTabId(item.id)}
                     >
-                      <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                      <Icon
+                        className="size-3.5 shrink-0 opacity-80"
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                       {displayTitle ? (
                         <span className="truncate">{protectBrandTokens(displayTitle)}</span>
                       ) : null}
@@ -367,7 +382,7 @@ export function WorkspaceToolsDock({
                   )}
                   onClick={() => setLegacyTab(item.id)}
                 >
-                  <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                  <Icon className="size-3.5 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
                   <span className="truncate">{toolsCopy[item.labelKey]}</span>
                 </button>
               );

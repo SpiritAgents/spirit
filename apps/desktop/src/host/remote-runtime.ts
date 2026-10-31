@@ -54,8 +54,16 @@ interface RemoteDesktopRuntimeInput {
   archive: ChatArchive;
   approvalLevel: "default" | "auto-approval" | "bypass-approval";
   todoSessionKey?: string;
+  /** Current web tool toggles; pushed on attach so reused daemon sessions re-sync with config.json. */
+  webToolExposure?: { providerToolsEnabled: boolean; webFetchEnabled: boolean };
   /** Resolved chat file path for multi-host session identity. */
   conversationKey?: string;
+  /**
+   * Force `session.replaceConfig` on attach even when the daemon session already runs the
+   * requested model; inference-preference-only updates (reasoning/thinking/service tier) change
+   * config.json without changing the model name, which the attach-time name comparison cannot see.
+   */
+  refreshDaemonConfig?: boolean;
   sessionKind?: "default" | "dream-collector";
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
@@ -214,7 +222,7 @@ async function applyRemoteSessionPreferences(
   runtime: RemoteDesktopRuntime,
   input: Pick<
     RemoteDesktopRuntimeInput,
-    "approvalLevel" | "todoSessionKey" | "archive" | "agentMode"
+    "approvalLevel" | "todoSessionKey" | "archive" | "agentMode" | "webToolExposure"
   >,
 ): Promise<void> {
   await runtime.clientCall("session.setApprovalLevel", { approvalLevel: input.approvalLevel });
@@ -224,6 +232,16 @@ async function applyRemoteSessionPreferences(
   if (input.todoSessionKey?.trim()) {
     await runtime.clientCall("session.setTodoSessionKey", {
       sessionKey: input.todoSessionKey.trim(),
+    });
+  }
+  // Same re-sync rationale as setMode: the daemon session resolves the toggles at creation,
+  // so a reused session can lag behind a config.json edit made while it was running.
+  if (input.webToolExposure) {
+    // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI's daemon
+    // runtime flips with it (P8); agent-core reads it as the providerTools bridge.
+    await runtime.clientCall("session.setWebToolExposure", {
+      webSearchEnabled: input.webToolExposure.providerToolsEnabled,
+      webFetchEnabled: input.webToolExposure.webFetchEnabled,
     });
   }
   if (typeof input.archive.loopEnabled === "boolean") {
@@ -245,10 +263,13 @@ function daemonSessionModelDiffersFromRef(
 
 async function syncDaemonSessionModelIfNeeded(
   client: Awaited<ReturnType<typeof sharedDesktopServerClient>>,
-  input: Pick<RemoteDesktopRuntimeInput, "dataDir" | "modelRef">,
+  input: Pick<RemoteDesktopRuntimeInput, "dataDir" | "modelRef" | "refreshDaemonConfig">,
   attached: SessionAttachResult,
 ): Promise<SessionAttachResult> {
-  if (!daemonSessionModelDiffersFromRef(input.dataDir, input.modelRef, attached.session.model)) {
+  if (
+    input.refreshDaemonConfig !== true &&
+    !daemonSessionModelDiffersFromRef(input.dataDir, input.modelRef, attached.session.model)
+  ) {
     return attached;
   }
   await client.call("session.replaceConfig", {

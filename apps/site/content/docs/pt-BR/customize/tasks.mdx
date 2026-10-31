@@ -1,0 +1,205 @@
+---
+title: Tarefas
+description: Execute tarefas do workspace a partir da paleta de comandos,
+  declaradas em {{product.workspaceDataFolderName}}/tasks.json ou importadas de
+  .vscode/tasks.json.
+---
+
+<Callout type="info">Somente no Desktop.</Callout>
+
+As tarefas executam comandos predefinidos do workspace a partir da paleta de comandos do {{product.name|mdx}} Desktop: abra a paleta (`Mod+Shift+P`), escolha **Workspace → Executar tarefa** e depois escolha uma tarefa na lista do segundo nível. A tarefa é executada em uma aba de terminal no painel de ferramentas à direita. O grupo **Workspace** aparece na paleta somente quando existe pelo menos uma tarefa válida.
+
+As tarefas do {{product.name|mdx}} formam um sistema próprio, diferente das tarefas do VS Code. Elas leem um formato {{product.name|mdx}} em JSON estrito e, como importação de compatibilidade, o `tasks.json` do VS Code — com um subconjunto claramente definido dos campos do VS Code. Uma tarefa que não pode ser executada exatamente como configurada fica totalmente oculta em vez de ser executada semiconfigurada; veja [Por que uma tarefa fica oculta](#por-que-uma-tarefa-fica-oculta).
+
+## Arquivos de tarefas
+
+Três fontes são lidas, da prioridade mais alta para a mais baixa:
+
+| Prioridade | Fonte                                                        | Marcador obrigatório | Notas                                                        |
+| ---------- | ------------------------------------------------------------ | -------------------- | ------------------------------------------------------------ | ----- |
+| 1          | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | Formato próprio do {{product.name|mdx}} |
+| 2          | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | Nível de usuário, aplica-se a todos os workspaces            |
+| 3          | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | Importação de compatibilidade com o VS Code, somente leitura |
+
+Somente a raiz do workspace é varrida — diretórios aninhados não são. `<data dir>` é o diretório de dados do {{product.name|mdx}} (por exemplo, `~/{{product.stable.userDataFolderName}}` no macOS). Um arquivo ausente, ilegível, com JSON inválido ou com o marcador errado não contribui nenhuma tarefa.
+
+Os três arquivos são observados em tempo real; a lista da paleta é atualizada automaticamente quando qualquer um deles muda.
+
+As três fontes são mescladas em um único namespace. Quando várias fontes definem o mesmo `label`, a fonte de maior prioridade vence — tanto para a lista da paleta quanto para as referências de `dependsOn`.
+
+O `.vscode/tasks.json` é analisado com tolerância, porque arquivos do mundo real são JSONC: comentários `//` e `/* */` e vírgulas finais são aceitos. Os arquivos próprios do {{product.name|mdx}} são JSON estrito — um comentário torna o arquivo inválido.
+
+## Confiança no espaço de trabalho
+
+Os arquivos de tarefas do espaço de trabalho chegam com o repositório, portanto são dados não confiáveis: `{{product.workspaceDataFolderName}}/tasks.json` e `.vscode/tasks.json` só são carregados depois que você aprova o conteúdo do espaço de trabalho. O `tasks.json` no nível do usuário (diretório de dados do {{product.name|mdx}}) é implicitamente confiável e sempre carregado.
+
+Quando o {{product.name|mdx}} Desktop detecta arquivos de tarefas do espaço de trabalho (ou uma mudança neles), ele pergunta uma vez: o diálogo lista as tarefas que ficarão disponíveis com seus comandos, e clicar numa entrada abre o arquivo de origem. Se os Hooks do espaço de trabalho também precisarem de aprovação, as duas listas aparecem em um único diálogo combinado.
+
+- **Permitir uma vez** — as tarefas são carregadas apenas nesta sessão.
+- **Sempre confiar** — lembrado para este conteúdo exato do arquivo.
+- **Negar** — as tarefas do espaço de trabalho continuam indisponíveis; a recusa é lembrada para esse conteúdo exato nesta sessão.
+
+Editar qualquer um dos arquivos pergunta novamente (a aprovação está vinculada ao hash do conteúdo). Para se recuperar de uma recusa, edite o arquivo (será perguntado de novo) ou reinicie o app.
+
+Esse gate é o pré-requisito estrutural dos gatilhos automáticos: `runOn: "folderOpen"` só é executado após aprovação, e `worktreeCreated` permanece desabilitado.
+
+## Campos
+
+Comportamento por campo, avaliado após a mesclagem: padrões no nível do arquivo < bloco de SO no nível do arquivo < tarefa < bloco de SO no nível da tarefa.
+
+### Campos principais
+
+| Campo                                          | Comportamento | Notas                                                                                                                                                                                                                                       |
+| ---------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `label`                                        | Obrigatório   | Itens sem um label não vazio são descartados por completo — nunca chegam ao menu nem ao grafo de dependências                                                                                                                               |
+| `type`                                         | Suportado     | `shell` (padrão) ou `process`. Qualquer outra string (`npm`, `grunt`, …) é uma entrada personalizada por extensão e é ignorada por completo: não fica oculta, não é listada, irmãs não são afetadas                                         |
+| `command`                                      | Suportado     | `string`, `string[]` ou `{ value, quoting }`. Uma tarefa cujo comando mesclado está ausente fica oculta — também para tarefas `shell` (mais estrito que o VS Code)                                                                          |
+| `args`                                         | Suportado     | Matriz de `string` ou `{ value, quoting }`                                                                                                                                                                                                  |
+| `quoting`                                      | Suportado     | `escape`, `strong` (padrão) ou `weak`; valores inválidos caem para `strong`. Aplica-se a `args` e à forma de objeto `{ value, quoting }`; um `command` em string simples é passado ao shell verbatim, podendo conter sintaxe de shell bruta |
+| `options.cwd`                                  | Suportado     | Diretório de trabalho do processo                                                                                                                                                                                                           |
+| `options.env`                                  | Suportado     | Variáveis de ambiente extras, mescladas sobre o ambiente do host                                                                                                                                                                            |
+| `options.shell`                                | Suportado     | `{ executable, args }` — shell usado em tarefas `shell` em vez do shell de terminal padrão                                                                                                                                                  |
+| `windows` / `osx` / `linux` (nível da tarefa)  | Suportado     | Sobrescritas de `{ command, args, options }` para o SO atual.                                                                                                                                                                               |
+| `windows` / `osx` / `linux` (nível do arquivo) | Suportado     | Mesmo formato, atuando como a camada padrão específica de SO para cada tarefa do arquivo                                                                                                                                                    |
+| Padrões no nível do arquivo                    | Suportado     | Somente `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` podem atuar como padrões no nível do arquivo.                                                                                                 |
+| `isBackground`                                 | Suportado     | A saída conta como encerramento pelo usuário, nunca como falha. Outra tarefa que dependa dela fica oculta (veja abaixo)                                                                                                                     |
+| `promptOnClose`                                | Suportado     | Fechar a aba enquanto o processo está ativo pede confirmação                                                                                                                                                                                |
+| `dependsOn`                                    | Suportado     | Uma string de label ou uma matriz de strings de label. A forma de objeto (`{ "type": … }`, `{ "task": … }`) oculta a tarefa                                                                                                                 |
+| `dependsOrder`                                 | Suportado     | `parallel` (padrão) ou `sequence`                                                                                                                                                                                                           |
+| `detail`                                       | Suportado     | Mostrado ao lado do label na lista da paleta                                                                                                                                                                                                |
+| `icon.id`                                      | Suportado     | Ícone do menu: {{product.name|mdx}} Icons primeiro, depois Lucide, com um glifo de terminal como fallback |
+| `icon.color`                                   | Ignorado      | Puramente apresentacional                                                                                                                                                                                                                   |
+| `hide`                                         | Suportado     | Oculta da lista da paleta, mas ainda resolvível — a tarefa pode ser executada como dependência de `dependsOn`                                                                                                                               |
+
+### Opções de execução
+
+| Campo                          | Comportamento | Notas                                                                                                 |
+| ------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------- |
+| `runOptions.reevaluateOnRerun` | Suportado     | Padrão `true`. `false` armazena em cache a primeira resolução para reexecuções posteriores            |
+| `runOptions.runOn`             | Restrito      | `default` e `folderOpen` são suportados; `worktreeCreated` oculta a tarefa                            |
+| `runOptions.instanceLimit`     | Suportado     | Padrão `1`. Exceder o limite abre um diálogo (veja [Executando tarefas](#executando-tarefas))         |
+| `runOptions.instancePolicy`    | Restrito      | Somente `prompt` é suportado. `terminateNewest`, `terminateOldest`, `warn`, `silent` ocultam a tarefa |
+
+### Apresentação
+
+| Campo                               | Comportamento | Notas                                                                                   |
+| ----------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| `presentation.echo`                 | Suportado     | Escreve a linha de comando no terminal antes da saída do processo                       |
+| `presentation.reveal`               | Suportado     | `always` (padrão), `silent` ou `never` — veja [Executando tarefas](#executando-tarefas) |
+| `presentation.focus`                | Suportado     | Implica reveal e move o foco do teclado para o terminal                                 |
+| `presentation.panel`                | Suportado     | `shared` (padrão), `dedicated` ou `new` — política de reutilização de terminal          |
+| `presentation.clear`                | Suportado     | Limpa o terminal antes de uma reexecução que o reutiliza                                |
+| `presentation.close`                | Suportado     | Fecha a aba automaticamente quando o processo termina                                   |
+| `presentation.preserveTerminalName` | Suportado     | Mantém o label da tarefa como título da aba em vez do título do processo                |
+| `presentation.showReuseMessage`     | Ignorado      | Puramente apresentacional                                                               |
+| `presentation.group`                | Ignorado      | Agrupamento de terminais está fora do escopo                                            |
+
+### Campos ignorados
+
+Ter estes campos nunca oculta uma tarefa: `problemMatcher` (qualquer forma, em qualquer nível), `presentation.revealProblems`, `group` (agrupamento de build/teste), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. A matriz `inputs` no nível do arquivo simplesmente não é lida — mas uma _referência_ `${input:*}` dentro de uma tarefa oculta essa tarefa (veja [Variáveis](#variáveis)).
+
+## Variáveis
+
+Referências suportadas, substituídas quando a tarefa é resolvida:
+
+| Variável                     | Valor                                                         |
+| ---------------------------- | ------------------------------------------------------------- | ------------- |
+| `${workspaceFolder}`         | Caminho da raiz do workspace                                  |
+| `${workspaceFolderBasename}` | Nome da pasta raiz do workspace                               |
+| `${cwd}`                     | O próprio diretório de trabalho do processo do {{product.name|mdx}} Desktop |
+| `${userHome}`                | O diretório home do usuário do SO                             |
+| `${pathSeparator}`, `${/}`   | O separador de caminho do SO                                  |
+| `${env:NAME}`                | Variável de ambiente `NAME` (vazia quando não definida)       |
+
+A varredura cobre `command`, `args`, `options.cwd`, valores de `options.env` e `options.shell`. Qualquer outra referência `${…}` — `${file}`, `${selectedText}`, `${lineNumber}`, `${config:*}`, `${command:*}`, `${input:*}`, `${defaultBuildTask}`, … — oculta a tarefa. Quando nenhum workspace está aberto, tarefas que referenciam `${workspaceFolder}` ou `${workspaceFolderBasename}` ficam ocultas nessa passagem de resolução.
+
+## Por que uma tarefa fica oculta
+
+Uma tarefa que não pode ser executada exatamente como configurada fica totalmente oculta em vez de ser executada semiconfigurada. A tarefa desaparece da paleta; o motivo é registrado com um id de regra estável.
+
+| Regra                        | Motivo                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------- |
+| `unsupportedVariable`        | Substituir um valor adivinhado executaria um comando diferente do configurado                     |
+| `dependsOnObjectForm`        | Entradas de dependência tipadas por extensão não são executáveis                                  |
+| `dependsOnBackground`        | Uma tarefa em segundo plano nunca termina, então a cadeia não tem nada bem definido para aguardar |
+| `instancePolicy`             | Só existe o prompt interativo; políticas silenciosas encerrariam instâncias sem que você visse    |
+| `cyclicDependency`           | Um ciclo de dependências nunca poderia iniciar                                                    |
+| `transitiveHiddenDependency` | Depende de um label que está oculto ou não existe — a ocultação se propaga                        |
+| `invalidTask`                | Sem label (descartada por completo) ou sem `command` em nenhum ponto da cadeia de mesclagem       |
+
+Para diagnosticar uma tarefa que desapareceu, inicie o Desktop com o canal de depuração ativado — cada tarefa oculta é registrada em log com seu id de regra:
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+A linha de log tem o formato `[desktop-host][tasks] hidden <file>#<label> rule=<id>`.
+
+## Executando tarefas
+
+As tarefas iniciam com um clique explícito na paleta; somente em espaços de trabalho confiáveis, uma tarefa com `runOn: "folderOpen"` também é executada automaticamente ao abrir a pasta. Nada é executado ao salvar um arquivo ou em qualquer outro evento. `worktreeCreated` continua sem suporte.
+
+- **Dependências** — os labels de `dependsOn` são resolvidos no namespace mesclado. Com `dependsOrder: "parallel"` (padrão), todas as dependências iniciam juntas, cada uma em seu próprio terminal com sua própria apresentação, e a tarefa principal só inicia depois que todas as dependências terminaram; se alguma dependência sair com código diferente de zero, a tarefa principal não é executada — a mesma semântica de falha do VS Code. Com `"sequence"`, as dependências são executadas uma por vez em ordem, e a primeira saída diferente de zero aborta a cadeia antes de a tarefa principal iniciar. Uma dependência que já está em execução é aguardada, não reiniciada.
+- **Limite de instâncias** — `runOptions.instanceLimit` tem padrão `1`. Iniciar outra instância além do limite lista as instâncias em execução com seus tempos decorridos; selecione uma (a primeira vem pré-selecionada) e escolha **Substituir** para encerrá-la e iniciar a nova execução, ou **Cancelar**. Não há opção de exceder o limite configurado.
+- **Gatilho de abertura de pasta** — `runOn: "folderOpen"` executa a tarefa automaticamente quando o espaço de trabalho é ativado, mas apenas em espaços de trabalho confiáveis (após aprovação ou com um registro de confiança existente); um espaço negado nunca a executa. Aprovar o aviso de confiança executa imediatamente as tarefas de abertura desta sessão. O gatilho dispara no máximo uma vez por ativação — editar `tasks.json` nunca reexecuta nada — e se a tarefa já está no limite de instâncias, a execução automática é silenciosamente ignorada (sem diálogo).
+- **Reutilização de terminal** — somente terminais de tarefas já finalizadas são reutilizados. `panel: "shared"` e `panel: "dedicated"` reutilizam o terminal ocioso da própria tarefa quando existe um (o pool é por tarefa) e abrem uma nova aba caso contrário; `panel: "new"` sempre abre uma aba nova.
+- **Echo** — com `presentation.echo` (ativado por padrão), a linha de comando é escrita no terminal antes da saída do processo.
+- **Reveal** — `always` (padrão) expande o painel de ferramentas no lançamento; `silent` o mantém fechado no lançamento e só o expande quando a tarefa sai com código diferente de zero; `never` nunca expande automaticamente. `focus: true` implica reveal e ainda move o foco do teclado para o terminal. Note dois desvios do VS Code: `reveal: "silent"` só expande com um código de saída diferente de zero (o {{product.name|mdx}} não tem um caminho de acionamento por problem matcher), e `presentation.revealProblems` não tem efeito algum — não suprime nem aciona a exibição do terminal.
+- **Clear** — `presentation.clear` limpa o terminal antes de uma reexecução que o reutiliza.
+- **Close** — `presentation.close` fecha a aba automaticamente na saída, qualquer que seja o código de saída.
+- **Preservar nome do terminal** — `presentation.preserveTerminalName` mantém o label da tarefa como título da aba; caso contrário, o título do processo em execução o substitui.
+- **Segundo plano** — `isBackground: true` marca a tarefa como sem fim; sua saída conta como encerramento pelo usuário, nunca como falha (sem reveal de falha).
+- **Confirmação de fechamento** — `promptOnClose: true` pede confirmação quando você fecha uma aba cujo processo ainda está ativo; confirmar encerra o processo.
+- **Tarefas ocultas** — tarefas com `hide: true` nunca aparecem na paleta, mas ainda podem ser executadas como dependências de `dependsOn`.
+
+## Exemplo
+
+Um `{{product.workspaceDataFolderName}}/tasks.json` completo — uma cadeia em sequência build → test → package mais uma tarefa `watch` em segundo plano:
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "Production build",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` só é executada depois que `build` sai com código zero; `package` então é executada após `test`, reutilizando o mesmo terminal, limpo antes.
+- `package` resolve `${workspaceFolder}` em tempo de execução e adiciona `CHANNEL` ao ambiente do processo.
+- `watch` fica fora do caminho (`silent` só revela em uma saída diferente de zero) e sua saída nunca conta como falha. Note que nada pode depender dela — uma entrada de `dependsOn` apontando para uma tarefa em segundo plano fica oculta.
+
+Páginas relacionadas: [Automações](./automations.mdx) para trabalhos de agente em um agendamento ou evento do GitHub, [Hooks](./hooks.mdx) para scripts disparados por eventos de agente e de sessão.

@@ -7,6 +7,7 @@ import type {
   JsonValue,
   LlmMessage,
   PermissionMemoryTarget,
+  ToolApprovalPrompt,
   ToolExecutionOutput,
   ToolAgentRoundCompletion,
   ToolCallRequest,
@@ -19,9 +20,9 @@ import {
 import { emitContextUsageUpdated } from "./context-usage.js";
 import { isOpenResponsesTransportConfig } from "../provider-config.js";
 import {
-  handleManagedProviderToolCallInTurn,
-  handleManagedProviderToolCallInTurnAsync,
-} from "../moonshot/formula/moonshot-formula-turn-handler.js";
+  handleDeclaredProviderToolCallInTurn,
+  handleDeclaredProviderToolCallInTurnAsync,
+} from "./provider-tool-calls.js";
 import {
   buildApplyPatchToolResultProviderState,
   registerPendingApplyPatchCallIds,
@@ -38,6 +39,7 @@ import {
   runPostToolUseSideEffects,
   runPreToolUseGate,
   type PreToolUseGateResult,
+  type ToolApprovalGateResolution,
 } from "../hooks/tool-hooks.js";
 import { toolInputFromArgumentsJson } from "../hooks/integration.js";
 import { appendToolResultMessages } from "../tool-agent.js";
@@ -366,7 +368,7 @@ export async function resumePendingQuestions<Config, State, ToolRequest>(
         runtime.options.toolExecutor.toolDefinitionsJson(),
         { name: pending.toolName, argumentsJson: pending.argumentsJson },
         {
-          prompt: authorization.prompt,
+          prompt: { kind: "tool", request: authorization.approval },
           rememberTarget: authorization.rememberTarget,
         },
         undefined,
@@ -639,7 +641,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
       break;
     }
 
-    const managedOutcome = await handleManagedProviderToolCallInTurn(
+    const declaredProviderToolOutcome = await handleDeclaredProviderToolCallInTurn(
       runtime,
       pendingUserInput,
       currentState,
@@ -647,11 +649,11 @@ export async function processToolCalls<Config, State, ToolRequest>(
       remaining,
       turn,
     );
-    if (managedOutcome.kind === "turn-result") {
-      return managedOutcome.result;
+    if (declaredProviderToolOutcome.kind === "turn-result") {
+      return declaredProviderToolOutcome.result;
     }
-    if (managedOutcome.kind === "advance") {
-      currentState = managedOutcome.state;
+    if (declaredProviderToolOutcome.kind === "advance") {
+      currentState = declaredProviderToolOutcome.state;
       continue;
     }
 
@@ -703,7 +705,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
       continue;
     }
 
-    const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+    const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
     if (gateResolution?.kind === "denied") {
       const output = `[denied by permission rule] ${gateResolution.reason}`;
       commitSyntheticToolExecutionFailure(runtime, turn, request, call.id, call.name, output);
@@ -809,6 +811,24 @@ export async function processToolCalls<Config, State, ToolRequest>(
   }
 
   return runTurnLoop(runtime, currentState, pendingUserInput, turn);
+}
+
+/**
+ * Resolves the approval gate after authorization. For the corner where a hook asks on a call
+ * the host auto-allowed, the executor lazily describes the structured approval, so the hook
+ * prompt renders the same rich form as a direct tool approval. Only that corner pays for
+ * descriptor building (describeApproval may read file contents for previews).
+ */
+async function resolveDescribedApprovalGate<Config, State, ToolRequest>(
+  runtime: TurnMachineRuntime<Config, State, ToolRequest>,
+  preGate: PreToolUseGateResult<ToolRequest>,
+  authorization: AuthorizationDecision,
+): Promise<ToolApprovalGateResolution | null> {
+  const describedApproval =
+    preGate.kind === "needs-approval" && authorization.kind === "allowed"
+      ? await runtime.options.toolExecutor.describeApproval?.(preGate.request)
+      : undefined;
+  return resolveApprovalGateAfterAuthorize(preGate, authorization, describedApproval);
 }
 
 async function runPostToolUseForTurnExecution<Config, State, ToolRequest>(
@@ -1157,7 +1177,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       break;
     }
 
-    const managedHandled = await handleManagedProviderToolCallInTurnAsync(
+    const declaredProviderToolHandled = await handleDeclaredProviderToolCallInTurnAsync(
       runtime,
       pendingUserInput,
       currentState,
@@ -1167,7 +1187,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       resumeAsStreaming,
       streamingEmitBeginResponse,
     );
-    if (managedHandled) {
+    if (declaredProviderToolHandled) {
       return;
     }
 
@@ -1436,7 +1456,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
       continue;
     }
 
-    const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+    const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
     if (gateResolution?.kind === "denied") {
       const output = `[denied by permission rule] ${gateResolution.reason}`;
       commitSyntheticToolExecutionFailure(runtime, turn, request, call.id, call.name, output);
@@ -1990,7 +2010,7 @@ async function runEarlyToolExecution<Config, State, ToolRequest>(
     return { kind: "deferred", reason: "authorization-error", preGate };
   }
 
-  const gateResolution = resolveApprovalGateAfterAuthorize(preGate, authorization);
+  const gateResolution = await resolveDescribedApprovalGate(runtime, preGate, authorization);
   if (gateResolution?.kind === "denied") {
     // Defer to the formal path, which re-authorizes and commits the permission-rule denial.
     return { kind: "deferred", reason: "authorization-error", preGate };
@@ -2502,7 +2522,7 @@ export async function waitForCompletedTurnResult<Config, State, ToolRequest>(
 }
 
 function createApproval<ToolRequest>(
-  prompt: string,
+  prompt: ToolApprovalPrompt,
   request: ToolRequest,
   toolCallId: string,
   toolName: string,

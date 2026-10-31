@@ -1,17 +1,13 @@
-//! Reads the `model-catalog-cache` shared with Desktop to resolve display names for Gateway/OpenRouter models.
+//! Reads the `model-catalog-cache` shared with Desktop to resolve display names for
+//! catalog-fetched models (any provider entry may have a cache).
 
-use std::{
-    collections::{HashMap, HashSet},
-    env, fs,
-    path::PathBuf,
-    process::Command,
-};
+use std::{collections::HashMap, env, fs, path::PathBuf, process::Command};
 
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use crate::mcp::spirit_data_dir;
-use crate::model_registry::{ModelProfile, ModelProvider};
+use crate::model_registry::ModelProfile;
 
 const CACHE_DIR_NAME: &str = "model-catalog-cache";
 
@@ -19,9 +15,11 @@ fn normalize_openai_api_base(base_url: &str) -> String {
     base_url.trim().trim_end_matches('/').to_string()
 }
 
-fn model_catalog_hint_key(provider: &str, transport_kind: &str, api_base: &str) -> String {
+/// Matches Desktop `modelCatalogCacheKey`: one provider entry's listing at its materialized
+/// apiBase (`{providerId}::{normalizedApiBase}`, sha256-truncated file name).
+fn model_catalog_hint_key(provider_id: &str, api_base: &str) -> String {
     let base = normalize_openai_api_base(api_base);
-    format!("{provider}::{transport_kind}::{base}")
+    format!("{provider_id}::{base}")
 }
 
 fn model_catalog_cache_file_path(hint_key: &str) -> PathBuf {
@@ -34,16 +32,6 @@ fn model_catalog_cache_file_path(hint_key: &str) -> PathBuf {
     spirit_data_dir()
         .join(CACHE_DIR_NAME)
         .join(format!("{hex}.json"))
-}
-
-fn provider_uses_catalog_display(provider: ModelProvider) -> bool {
-    matches!(
-        provider,
-        ModelProvider::VercelAiGateway
-            | ModelProvider::Openrouter
-            | ModelProvider::Google
-            | ModelProvider::GoogleVertexAi
-    )
 }
 
 fn resolve_host_internal_id_display_title_path() -> Result<PathBuf, String> {
@@ -175,40 +163,36 @@ fn read_display_names_for_hint(hint_key: &str) -> HashMap<String, String> {
     titles
 }
 
-/// Reads the cache in bulk per config; each `(provider, transport, apiBase)` combination reads from disk at most once.
+/// Reads the cache in bulk per config; each provider entry's `(providerId, apiBase)` hint reads
+/// from disk at most once. Any provider may have a daemon-written catalog cache; a cache miss
+/// falls back to id-based formatting, and route-prefixed ids (`openai/gpt-…`) stay raw
+/// (mirrors Desktop `modelIdPreservesRawDisplayTitle`).
 pub fn build_model_display_titles(models: &[ModelProfile]) -> HashMap<String, String> {
     let mut titles = HashMap::new();
     let mut cache_by_hint: HashMap<String, HashMap<String, String>> = HashMap::new();
-    let mut loaded_hints = HashSet::new();
     let mut ids_to_format = Vec::new();
 
     for model in models {
-        let Some(provider) = model.provider else {
-            ids_to_format.push(model.name.clone());
-            continue;
-        };
-        if provider_uses_catalog_display(provider) {
-            let transport = model.transport_kind().as_str();
-            let hint_key = model_catalog_hint_key(provider.as_str(), transport, &model.api_base);
-            if loaded_hints.insert(hint_key.clone()) {
-                let display_names = read_display_names_for_hint(&hint_key);
-                cache_by_hint.insert(hint_key.clone(), display_names);
-            }
-
-            let Some(display_names) = cache_by_hint.get(&hint_key) else {
-                continue;
-            };
-            let display = display_names
-                .get(&model.name)
-                .cloned()
-                .unwrap_or_else(|| model.name.clone());
-            if display != model.name {
-                titles.insert(model.name.clone(), display);
-            }
-            continue;
+        let hint_key = model_catalog_hint_key(&model.provider_id, &model.api_base);
+        if !cache_by_hint.contains_key(&hint_key) {
+            let display_names = read_display_names_for_hint(&hint_key);
+            cache_by_hint.insert(hint_key.clone(), display_names);
         }
 
-        ids_to_format.push(model.name.clone());
+        let display = cache_by_hint
+            .get(&hint_key)
+            .and_then(|display_names| display_names.get(&model.name));
+        match display {
+            Some(display) if display != &model.name => {
+                titles.insert(model.name.clone(), display.clone());
+            }
+            Some(_) => {}
+            None => {
+                if !model.name.contains('/') {
+                    ids_to_format.push(model.name.clone());
+                }
+            }
+        }
     }
 
     if let Ok(formatted_titles) = format_model_display_names_via_host_internal(&ids_to_format) {
@@ -267,7 +251,7 @@ mod tests {
 
     #[test]
     fn model_catalog_cache_file_path_matches_desktop_layout() {
-        let hint = "vercel-ai-gateway::openai-compatible::https://gateway.example/v1";
+        let hint = "vercel-ai-gateway::https://gateway.example/v1";
         let path = model_catalog_cache_file_path(hint);
         assert!(path.to_string_lossy().contains("model-catalog-cache"));
         assert_eq!(path.extension().and_then(|ext| ext.to_str()), Some("json"));
@@ -281,7 +265,7 @@ mod tests {
         let previous_data_dir = env::var("SPIRIT_DATA_DIR").ok();
         let previous_appdata = env::var("APPDATA").ok();
         let data_dir = with_isolated_data_dir("openrouter-catalog");
-        let hint = "openrouter::openai-compatible::https://openrouter.ai/api/v1";
+        let hint = "openrouter::https://openrouter.ai/api/v1";
         let path = model_catalog_cache_file_path(hint);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).expect("cache dir");
@@ -302,17 +286,15 @@ mod tests {
     }
 
     #[test]
-    fn build_model_display_titles_formats_non_gateway_providers() {
-        let models = vec![ModelProfile {
-            group_id: "openai".to_string(),
-            name: "gpt-4o-mini".to_string(),
-            api_base: "https://api.openai.com/v1".to_string(),
-            provider: Some(ModelProvider::Openai),
-            reasoning_effort: None,
-            reasoning_mode: None,
-            context_length: None,
-            extra: serde_json::Map::new(),
-        }];
+    fn build_model_display_titles_formats_ids_without_catalog_cache() {
+        let models = vec![
+            serde_json::from_value::<ModelProfile>(serde_json::json!({
+                "providerId": "openai",
+                "name": "gpt-4o-mini",
+                "apiBase": "https://api.openai.com/v1"
+            }))
+            .expect("parse model profile"),
+        ];
         let titles = build_model_display_titles(&models);
         if resolve_host_internal_id_display_title_path().is_ok() {
             assert_eq!(
@@ -323,12 +305,6 @@ mod tests {
     }
 
     #[test]
-    fn provider_uses_catalog_display_includes_google() {
-        assert!(provider_uses_catalog_display(ModelProvider::Google));
-        assert!(!provider_uses_catalog_display(ModelProvider::Openai));
-    }
-
-    #[test]
     fn read_display_names_for_hint_parses_google_model_catalog() {
         let _guard = shared_env_lock()
             .lock()
@@ -336,7 +312,7 @@ mod tests {
         let previous_data_dir = env::var("SPIRIT_DATA_DIR").ok();
         let previous_appdata = env::var("APPDATA").ok();
         let data_dir = with_isolated_data_dir("google-catalog");
-        let hint = "google::openai-compatible::https://generativelanguage.googleapis.com/v1beta";
+        let hint = "google::https://generativelanguage.googleapis.com/v1beta";
         let path = model_catalog_cache_file_path(hint);
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).expect("cache dir");

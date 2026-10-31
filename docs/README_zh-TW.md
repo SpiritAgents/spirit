@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 一款開源 AI 智能體，旨在成倍提升你的生產力。
@@ -8,9 +14,7 @@
 
 > 本專案仍在積極開發中。各版本之間的行為與 API 可能發生變化。
 
-[English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
+[English](../README.md) · [简体中文](README_zh-CN.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 
@@ -116,8 +120,6 @@ pnpm run dev:site
 
 ## CLI
 
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
-
 [Rust CLI](../apps/cli)（`spirit`）提供終端優先的宿主，可選 Ratatui 介面。透過 WebSocket 連接共享 Spirit Server daemon，適合腳本化、SSH 工作階段與極簡環境。
 
 ```bash
@@ -169,14 +171,14 @@ pnpm run dev:cli    # cargo run -p spirit
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| 環境變數               | 必填 | 說明                                                            |
-| ---------------------- | ---- | --------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | 否   | 工作區根路徑（預設：用戶端 `cwd`）                              |
-| `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 資料目錄（預設：`%APPDATA%/Spirit` 或 `~/.spirit-data`） |
+| 環境變數               | 必填 | 說明                                                                |
+| ---------------------- | ---- | ------------------------------------------------------------------- |
+| `SPIRIT_ACP_WORKSPACE` | 否   | 工作區根路徑（預設：用戶端 `cwd`）                                  |
+| `SPIRIT_ACP_DATA_DIR`  | 否   | Spirit 資料目錄（預設：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
 
 ## 開發
 
-**環境需求：** Node.js 24+、pnpm 12+（透過 `corepack enable` 啟用）。建置 CLI 需要 Rust 工具鏈。
+**環境需求：** Node.js 26.13.0、pnpm 12.4.2（透過 `npm install --global pnpm@12.4.2` 安裝）。建置 CLI 需要 Rust 工具鏈。
 
 | 命令                       | 說明                                                                    |
 | -------------------------- | ----------------------------------------------------------------------- |

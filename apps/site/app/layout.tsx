@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { product } from "@spiritagent/product";
 
 export const metadata: Metadata = {
-  title: "Spirit",
+  title: product.name,
   icons: {
     icon: [
       {
         url: "/favicon.svg",
         type: "image/svg+xml",
+        sizes: "any",
         media: "(prefers-color-scheme: light)",
       },
       {
         url: "/favicon-dark.svg",
         type: "image/svg+xml",
+        sizes: "any",
         media: "(prefers-color-scheme: dark)",
       },
     ],

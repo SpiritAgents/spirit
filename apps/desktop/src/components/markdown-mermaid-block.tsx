@@ -1,6 +1,7 @@
+import { X } from "@spiritagent/icons/x";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Maximize2, X } from "lucide-react";
+import { Maximize2 } from "lucide-react";
 import type { MermaidConfig } from "mermaid";
 import type { CustomRendererProps } from "streamdown";
 
@@ -40,7 +41,6 @@ function MermaidPreviewDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
-        overlayClassName="bg-background/40 backdrop-blur-md"
         className="w-auto max-w-none gap-0 border-0 bg-transparent p-0 shadow-none ring-0 sm:max-w-none"
       >
         <div
@@ -62,7 +62,7 @@ function MermaidPreviewDialog({
               title={closeLabel}
               aria-label={closeLabel}
             >
-              <X className="size-4" aria-hidden />
+              <X className="size-4" aria-hidden strokeWidth={1.75} />
               <span className="sr-only">{closeLabel}</span>
             </Button>
           </DialogClose>
@@ -125,7 +125,7 @@ export function MarkdownMermaidBlock({
             title={expandLabel}
             aria-label={expandLabel}
           >
-            <Maximize2 className="size-4" aria-hidden />
+            <Maximize2 className="size-4" aria-hidden strokeWidth={1.75} />
           </Button>
         </div>
         <div className="min-w-0">

@@ -5,7 +5,7 @@ description: 旧配置、非交互卡住、配对锁定、找不到 Key，以及
 
 ## config.json 被拒绝
 
-文件必须是 `schemaVersion: 2`。删掉旧文件，再[重连提供商](./providers.mdx)。Key 从来不在这个文件里——在[钥匙串](./security.mdx)。
+文件必须是 `schemaVersion: 1`。其他版本一律拒绝——删掉旧文件，再[重连提供商](./providers.mdx)。除非你声明了明文 `apiKey`，Key 不在这个文件里——在[钥匙串](./security.mdx)。
 
 ## CLI 装上了，设置是空的
 
@@ -35,7 +35,7 @@ description: 旧配置、非交互卡住、配对锁定、找不到 Key，以及
 
 ## Tab 补全是空的
 
-打开 **设置 → Tab**，并指定轻量对话模型。见 [Desktop](./desktop.mdx)。
+打开 **设置 → Tab**，并指定次要语言模型。见 [Desktop](./desktop.mdx)。
 
 ## 下载页没有 ACP
 

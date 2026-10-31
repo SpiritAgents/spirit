@@ -40,12 +40,13 @@ import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import { canForkMessage, canShowForkMessage } from "@/lib/fork-eligibility";
 import type {
   ConversationMessageSnapshot,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopSnapshot,
   ModelRef,
   PendingAssistantAux,
 } from "@/types";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 function MessageCardImpl({
   composerSessionKey,
@@ -66,6 +67,7 @@ function MessageCardImpl({
   canPickLocalFile,
   models,
   catalogHints,
+  providerPresets,
   activeModel,
   agentMode,
   onContinue,
@@ -81,6 +83,7 @@ function MessageCardImpl({
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
   onModelThinkingEnabledSelect,
+  onModelServiceTierSelect,
   onAgentModeChange,
   pendingAuxState,
   showThinkingCollapsible: showThinkingCollapsibleEligible,
@@ -148,6 +151,7 @@ function MessageCardImpl({
   canPickLocalFile: boolean;
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   onContinue(message: ConversationMessageSnapshot): void;
@@ -160,9 +164,13 @@ function MessageCardImpl({
   onRewindDragOver(event: ReactDragEvent<HTMLElement>): void;
   onRewindDrop(event: ReactDragEvent<HTMLElement>): void;
   onModelSelect(ref: ModelRef): void;
-  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
+  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelEffortSelection): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
+  onModelServiceTierSelect?(
+    ref: ModelRef,
+    serviceTier: ModelServiceTier | undefined,
+  ): void | Promise<boolean>;
   onAgentModeChange(mode: DesktopAgentMode): void;
   readManagedImagePreviewDataUrl: ReadManagedImagePreview;
   readManagedVideoPreviewUrl: ReadManagedVideoPreview;
@@ -281,6 +289,7 @@ function MessageCardImpl({
             placeholder={t("app.typeMessage")}
             models={models}
             catalogHints={catalogHints}
+            providerPresets={providerPresets}
             activeModel={activeModel}
             agentMode={agentMode}
             loopEnabled={false}
@@ -288,6 +297,7 @@ function MessageCardImpl({
             onModelReasoningEffortSelect={onModelReasoningEffortSelect}
             onModelReasoningModeSelect={onModelReasoningModeSelect}
             onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
+            onModelServiceTierSelect={onModelServiceTierSelect}
             onAgentModeChange={onAgentModeChange}
             onLoopEnabledChange={() => {}}
             canSend={rewindCanSubmit}

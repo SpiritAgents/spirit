@@ -5,9 +5,11 @@ description: Keyring, approvals, and the loopback daemon. No telemetry.
 
 ## Keyring
 
-API keys, Bedrock / Vertex secrets, extension secrets, and the GitHub integration token are stored in the operating system keyring. The service name is `Spirit`.
+API keys, Bedrock / Vertex secrets, extension secrets, and the GitHub integration token are stored in the operating system keyring. The service name is `{{product.name}}`.
 
-`config.json` holds provider groups and model refs, not the secret itself. Large secrets may be sharded in the keyring.
+Provider keys written by the connect wizard use the account scheme `provider::{id}` — one per provider entry in `config.json` — or `provider::{id}::{slot}` for composite credential slots such as Bedrock IAM or a Vertex service account. Large secrets may be sharded in the keyring.
+
+`config.json` holds provider entries and model refs, not the secrets themselves — unless you opt into a declared escape hatch: a plaintext `apiKey` (not recommended), an `apiKeyEnv` environment-variable reference, or an `apiKeyKeyring` / per-slot `keyring` reference to an entry in an external keyring. See [Config](./config.mdx).
 
 ## Approvals
 
@@ -23,6 +25,6 @@ Web Host pairing is a separate 6-digit code on Desktop. Five failures lock the c
 
 ## Privacy
 
-Spirit does not ship developer telemetry. Data stays in the data directory and the keyring. See [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) in the repo.
+{{product.name|mdx}} does not ship developer telemetry. Data stays in the data directory and the keyring. See [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) in the repo.
 
 Report vulnerabilities privately (GitHub Private Advisory), not in a public issue. See [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md).

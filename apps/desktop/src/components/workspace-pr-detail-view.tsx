@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   ArrowRight,
   GitPullRequest,
@@ -65,7 +66,7 @@ export type WorkspacePrDetailViewProps = {
   onOpenExternal: (url: string) => void;
   onMerge?: (method: GitHubPullRequestMergeMethod) => void;
   onMarkReady?: () => void;
-  onPrDiffAddToSession?: (attachment: PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: PrDiffAttachment) => void;
   /** Windows Mica / macOS Vibrancy: forwarded to the changes view's pinned-header occlusion. */
   useTranslucency?: boolean;
   className?: string;
@@ -97,7 +98,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
   if (detail.draft) {
     return (
       <Badge className={GITHUB_PR_DRAFT_BADGE_CLASS}>
-        <GitPullRequestDraft className="size-3 shrink-0" aria-hidden />
+        <GitPullRequestDraft className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
         {t("workspace.prDraft")}
       </Badge>
     );
@@ -106,7 +107,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
   if (detail.state === "open") {
     return (
       <Badge className={GITHUB_PR_OPEN_BADGE_CLASS}>
-        <GitPullRequest className="size-3 shrink-0" aria-hidden />
+        <GitPullRequest className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
         {t("workspace.prOpen")}
       </Badge>
     );
@@ -114,7 +115,7 @@ function PullRequestStatusBadge({ detail }: { detail: GitHubPullRequestDetail })
 
   return (
     <Badge variant="secondary" className="gap-1">
-      <GitPullRequestClosed className="size-3 shrink-0" aria-hidden />
+      <GitPullRequestClosed className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
       {t("workspace.prClosed")}
     </Badge>
   );
@@ -142,7 +143,7 @@ export function WorkspacePrDetailView({
   onOpenExternal,
   onMerge,
   onMarkReady,
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
   useTranslucency = false,
   className,
 }: WorkspacePrDetailViewProps) {
@@ -159,6 +160,7 @@ export function WorkspacePrDetailView({
   const overviewTabsSplitterRef = useRef<HTMLDivElement>(null);
   const latestOverviewPaneHeightPxRef = useRef<number | null>(null);
   const [overviewPaneHeightPx, setOverviewPaneHeightPx] = useState<number | null>(null);
+  const overviewDragCursor = useDragResizeCursor();
   latestOverviewPaneHeightPxRef.current = overviewPaneHeightPx;
   const [isResizingOverviewSplit, setIsResizingOverviewSplit] = useState(false);
   const overviewSplitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
@@ -227,9 +229,17 @@ export function WorkspacePrDetailView({
           containerHeight * readPrOverviewPaneRatio(containerHeight || undefined),
         );
       overviewSplitDragRef.current = { startY: event.clientY, startHeight };
+      overviewDragCursor.start(
+        resizeCursor(
+          startHeight,
+          PR_OVERVIEW_MIN_PX,
+          containerHeight - PR_TABS_SECTION_MIN_PX - PR_OVERVIEW_SPLITTER_PX,
+          "down",
+        ),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [clampOverviewPaneHeight, overviewPaneHeightPx],
+    [clampOverviewPaneHeight, overviewDragCursor, overviewPaneHeightPx],
   );
 
   const onOverviewSplitResizePointerMove = useCallback(
@@ -240,28 +250,37 @@ export function WorkspacePrDetailView({
       }
       const delta = event.clientY - drag.startY;
       const next = clampOverviewPaneHeight(drag.startHeight + delta);
+      const max =
+        (splitContainerRef.current?.clientHeight ?? 0) -
+        PR_TABS_SECTION_MIN_PX -
+        PR_OVERVIEW_SPLITTER_PX;
+      overviewDragCursor.update(resizeCursor(next, PR_OVERVIEW_MIN_PX, max, "down"));
       latestOverviewPaneHeightPxRef.current = next;
       setOverviewPaneHeightPx(next);
     },
-    [clampOverviewPaneHeight],
+    [clampOverviewPaneHeight, overviewDragCursor],
   );
 
-  const endOverviewSplitResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingOverviewSplit(false);
-    if (overviewSplitDragRef.current) {
-      const container = splitContainerRef.current;
-      const height = latestOverviewPaneHeightPxRef.current;
-      if (container && container.clientHeight > 0 && height !== null) {
-        writePrOverviewPaneRatio(height / container.clientHeight, container.clientHeight);
+  const endOverviewSplitResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      overviewDragCursor.end();
+      setIsResizingOverviewSplit(false);
+      if (overviewSplitDragRef.current) {
+        const container = splitContainerRef.current;
+        const height = latestOverviewPaneHeightPxRef.current;
+        if (container && container.clientHeight > 0 && height !== null) {
+          writePrOverviewPaneRatio(height / container.clientHeight, container.clientHeight);
+        }
       }
-    }
-    overviewSplitDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+      overviewSplitDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [overviewDragCursor],
+  );
 
   return (
     <article
@@ -309,7 +328,7 @@ export function WorkspacePrDetailView({
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {detail.merged ? (
                   <Badge className={GITHUB_PR_MERGED_BADGE_CLASS}>
-                    <GitPullRequest className="size-3 shrink-0" aria-hidden />
+                    <GitPullRequest className="size-3 shrink-0" aria-hidden strokeWidth={1.75} />
                     {t("workspace.prMerged")}
                   </Badge>
                 ) : (
@@ -321,6 +340,7 @@ export function WorkspacePrDetailView({
                   <ArrowRight
                     className={cn("size-2.5 shrink-0", toolCardSecondaryTextClass)}
                     aria-hidden
+                    strokeWidth={1.75}
                   />
                   <span>{detail.baseRef}</span>
                 </span>
@@ -354,9 +374,19 @@ export function WorkspacePrDetailView({
         aria-orientation="horizontal"
         aria-label={t("workspace.prResizeOverviewTabs")}
         className={cn(
-          "group relative z-10 h-1 shrink-0 cursor-row-resize touch-none select-none",
+          "group relative z-10 h-1 shrink-0 touch-none select-none",
           "before:absolute before:inset-x-0 before:-top-1 before:h-3 before:content-['']",
         )}
+        style={{
+          cursor: resizeCursor(
+            overviewPaneHeightPx ?? PR_OVERVIEW_MIN_PX,
+            PR_OVERVIEW_MIN_PX,
+            (splitContainerRef.current?.clientHeight ?? 0) -
+              PR_TABS_SECTION_MIN_PX -
+              PR_OVERVIEW_SPLITTER_PX,
+            "down",
+          ),
+        }}
         onPointerDown={onOverviewSplitResizePointerDown}
         onPointerMove={onOverviewSplitResizePointerMove}
         onPointerUp={endOverviewSplitResize}
@@ -415,7 +445,7 @@ export function WorkspacePrDetailView({
             hasMore={changesHasMore}
             prUrl={detail.url}
             prStatus={resolvePullRequestChipStatus(detail)}
-            onPrDiffAddToSession={onPrDiffAddToSession}
+            onPrDiffAddToChat={onPrDiffAddToChat}
             onOpenExternal={onOpenExternal}
             useTranslucency={useTranslucency}
             className="h-full min-h-0"

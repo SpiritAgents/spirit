@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useMemo,
   useState,
@@ -9,7 +10,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ArrowUp, LoaderCircle, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import {
   ComposerAbortShortcutKbd,
@@ -30,7 +31,8 @@ import { Button } from "@/components/ui/button";
 import type { SaveLocalImageAs } from "@/components/tool-call/tool-call-types";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DesktopAgentMode } from "@/lib/agent-mode";
-import { modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { modelRefsEqual } from "@/lib/model-ref";
+import { selectedModelEffort } from "@/lib/model-picker-controls";
 import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
 import {
   DESKTOP_COMPOSER_GHOST_HOVER,
@@ -41,11 +43,12 @@ import { desktopComposerSurfaceBackdropClass } from "@/lib/desktop-translucency-
 import { cn } from "@/lib/utils";
 import { segmentsToPlainText } from "@/lib/composer-segment-model";
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopSnapshot,
   ModelRef,
 } from "@/types";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 function isComposerChromeInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -66,8 +69,11 @@ export type ComposerSurfaceProps = {
   agentModeChipPlaceholder?: string;
   models: DesktopSnapshot["config"]["models"];
   catalogHints?: DesktopSnapshot["config"]["modelCatalogHints"];
-  providerGroups?: DesktopSnapshot["config"]["providerGroups"];
+  providers?: DesktopSnapshot["config"]["providers"];
+  providerPresets?: DesktopSnapshot["config"]["providerPickerPresets"];
   activeModel: ModelRef;
+  /** Last upstream-measured conversation input tokens; absent means unknown. */
+  lastInputTokens?: number;
   agentMode: DesktopAgentMode;
   loopEnabled: boolean;
   canSend: boolean;
@@ -78,9 +84,13 @@ export type ComposerSurfaceProps = {
   onSubmit(): void;
   onAbort?(): void;
   onModelSelect(ref: ModelRef): void;
-  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelReasoningEffort): void;
+  onModelReasoningEffortSelect(ref: ModelRef, reasoningEffort: DesktopModelEffortSelection): void;
   onModelReasoningModeSelect?(ref: ModelRef, reasoningMode: DesktopModelReasoningMode): void;
   onModelThinkingEnabledSelect?(ref: ModelRef, enabled: boolean): void | Promise<boolean>;
+  onModelServiceTierSelect?(
+    ref: ModelRef,
+    serviceTier: ModelServiceTier | undefined,
+  ): void | Promise<boolean>;
   onAgentModeChange(mode: DesktopAgentMode): void;
   onLoopEnabledChange?(enabled: boolean): void;
   richInputRef?: RefObject<ComposerRichInputHandle | null>;
@@ -112,8 +122,10 @@ export function ComposerSurface({
   agentModeChipPlaceholder,
   models,
   catalogHints,
-  providerGroups,
+  providers,
+  providerPresets,
   activeModel,
+  lastInputTokens,
   agentMode,
   loopEnabled = false,
   canSend,
@@ -127,6 +139,7 @@ export function ComposerSurface({
   onModelReasoningEffortSelect,
   onModelReasoningModeSelect,
   onModelThinkingEnabledSelect,
+  onModelServiceTierSelect,
   onAgentModeChange,
   onLoopEnabledChange,
   richInputRef,
@@ -151,13 +164,7 @@ export function ComposerSurface({
   const { t } = useTranslation();
   const [fileDragOver, setFileDragOver] = useState(false);
   const activeModelProfile = useMemo(
-    () =>
-      models.find((model) =>
-        modelRefsEqual(
-          model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-          activeModel,
-        ),
-      ),
+    () => models.find((model) => modelRefsEqual(model.ref, activeModel)),
     [activeModel, models],
   );
 
@@ -274,14 +281,19 @@ export function ComposerSurface({
             <ModelPickerMenu
               models={models}
               catalogHints={catalogHints}
-              providerGroups={providerGroups}
+              providers={providers}
+              providerPresets={providerPresets}
               activeModelRef={activeModel}
-              activeReasoningEffort={activeModelProfile?.reasoningEffort}
+              activeReasoningEffort={
+                activeModelProfile ? selectedModelEffort(activeModelProfile) : undefined
+              }
+              lastInputTokens={lastInputTokens}
               disabled={readOnly}
               onModelSelect={onModelSelect}
               onModelReasoningEffortSelect={onModelReasoningEffortSelect}
               onModelReasoningModeSelect={onModelReasoningModeSelect}
               onModelThinkingEnabledSelect={onModelThinkingEnabledSelect}
+              onModelServiceTierSelect={onModelServiceTierSelect}
               triggerClassName={DESKTOP_COMPOSER_GHOST_HOVER}
               menuContentClassName="z-[100]"
             />
@@ -302,8 +314,10 @@ export function ComposerSurface({
             const actionButton = (
               <Button
                 type="button"
+                size="icon-sm"
+                shape="pill"
                 className={cn(
-                  "size-7 shrink-0 rounded-full p-0 shadow-none [&_svg]:size-3",
+                  "shrink-0 shadow-none [&_svg]:size-3",
                   instantHoverMotionClass,
                   sendDisabled && "disabled:pointer-events-auto disabled:cursor-default",
                 )}
@@ -316,7 +330,7 @@ export function ComposerSurface({
                 ) : showEnqueueWhileBusy || !busy ? (
                   <ArrowUp className="size-3" strokeWidth={2.25} aria-hidden />
                 ) : (
-                  <LoaderCircle className="size-3 animate-spin" />
+                  <LoaderCircle className="size-3 animate-spin" strokeWidth={1.75} />
                 )}
               </Button>
             );

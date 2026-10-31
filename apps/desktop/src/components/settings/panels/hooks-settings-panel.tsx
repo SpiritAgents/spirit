@@ -1,6 +1,7 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -176,7 +177,7 @@ export function HooksSettingsPanel({
               title={t("settings.generateHookTooltip")}
               onClick={() => onGenerateHookNavigate()}
             >
-              <Sparkles className="size-3.5 shrink-0" aria-hidden />
+              <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("settings.generateHook")}
             </Button>
           ) : null}
@@ -307,7 +308,7 @@ export function HooksSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       createScope === opt.scope
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={hooksBusy}
                     title={opt.hint}
@@ -402,7 +403,9 @@ export function HooksSettingsPanel({
                 disabled={hooksBusy || !command.trim()}
                 onClick={() => void handleCreate()}
               >
-                {hooksBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {hooksBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.save")}
               </Button>
             </DialogFooterActions>

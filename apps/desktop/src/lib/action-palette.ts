@@ -9,19 +9,21 @@ import type { ThemePreference } from "@/lib/theme";
 
 export type ActionPaletteTranslate = (key: string) => string;
 
-export type ActionPaletteGroup = "session" | "mode" | "appearance";
+export type ActionPaletteGroup = "chat" | "mode" | "workspace" | "appearance";
 
-export type ActionPaletteView = "root" | "theme" | "locale";
+export type ActionPaletteView = "root" | "theme" | "locale" | "tasks";
 
 export const ACTION_PALETTE_GROUP_ORDER: readonly ActionPaletteGroup[] = [
-  "session",
+  "chat",
   "mode",
+  "workspace",
   "appearance",
 ] as const;
 
 export const ACTION_PALETTE_GROUP_LABEL_KEYS: Record<ActionPaletteGroup, string> = {
-  session: "actionPalette.group.session",
+  chat: "actionPalette.group.chat",
   mode: "actionPalette.group.mode",
+  workspace: "actionPalette.group.workspace",
   appearance: "actionPalette.group.appearance",
 };
 
@@ -31,11 +33,11 @@ const THEME_OPTION_DEFS: ReadonlyArray<{ value: ThemePreference; labelKey: strin
   { value: "dark", labelKey: "settings.themeDark" },
 ];
 
-export type NewSessionActionPaletteItem = {
-  id: "action:new-session";
-  kind: "new-session";
-  group: "session";
-  labelKey: "sidebar.newSession";
+export type NewChatActionPaletteItem = {
+  id: "action:new-chat";
+  kind: "new-chat";
+  group: "chat";
+  labelKey: "sidebar.newChat";
 };
 
 export type ThemeMenuActionPaletteItem = {
@@ -66,23 +68,41 @@ export type LocaleOptionActionPaletteItem = {
   labelKey: string;
 };
 
+export type TaskMenuActionPaletteItem = {
+  id: "action:run-task";
+  kind: "task-menu";
+  group: "workspace";
+  labelKey: "actionPalette.runTask";
+};
+
+export type TaskOptionActionPaletteItem = {
+  id: `action:task:${string}`;
+  kind: "task-option";
+  taskKey: string;
+  label: string;
+  detail?: string;
+  iconId?: string;
+};
+
 export type SlashActionPaletteItem = SkillSlashSuggestion & {
-  group: "session" | "mode";
+  group: "chat" | "mode";
 };
 
 export type ActionPaletteItem =
-  | NewSessionActionPaletteItem
+  | NewChatActionPaletteItem
   | SlashActionPaletteItem
   | ThemeMenuActionPaletteItem
   | LocaleMenuActionPaletteItem
   | ThemeOptionActionPaletteItem
-  | LocaleOptionActionPaletteItem;
+  | LocaleOptionActionPaletteItem
+  | TaskMenuActionPaletteItem
+  | TaskOptionActionPaletteItem;
 
-const NEW_SESSION_ITEM: NewSessionActionPaletteItem = {
-  id: "action:new-session",
-  kind: "new-session",
-  group: "session",
-  labelKey: "sidebar.newSession",
+const NEW_CHAT_ITEM: NewChatActionPaletteItem = {
+  id: "action:new-chat",
+  kind: "new-chat",
+  group: "chat",
+  labelKey: "sidebar.newChat",
 };
 
 const THEME_MENU_ITEM: ThemeMenuActionPaletteItem = {
@@ -99,14 +119,21 @@ const LOCALE_MENU_ITEM: LocaleMenuActionPaletteItem = {
   labelKey: "actionPalette.language",
 };
 
+const TASK_MENU_ITEM: TaskMenuActionPaletteItem = {
+  id: "action:run-task",
+  kind: "task-menu",
+  group: "workspace",
+  labelKey: "actionPalette.runTask",
+};
+
 const MODE_SLASH_KINDS = new Set<SkillSlashSuggestion["kind"]>(["loop", "plan", "ask", "debug"]);
 
-function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "session" | "mode" {
-  return MODE_SLASH_KINDS.has(kind) ? "mode" : "session";
+function slashPaletteGroup(kind: SkillSlashSuggestion["kind"]): "chat" | "mode" {
+  return MODE_SLASH_KINDS.has(kind) ? "mode" : "chat";
 }
 
 const ROOT_ITEMS: ActionPaletteItem[] = [
-  NEW_SESSION_ITEM,
+  NEW_CHAT_ITEM,
   ...STATIC_SLASH_COMMANDS.map((command): SlashActionPaletteItem => ({
     ...command,
     group: slashPaletteGroup(command.kind),
@@ -170,8 +197,16 @@ function withEnglishSearchText(localized: string, englishKey: string): string {
 }
 
 function actionPaletteSearchText(item: ActionPaletteItem, t: ActionPaletteTranslate): string {
-  if (item.kind === "new-session" || item.kind === "theme-menu" || item.kind === "locale-menu") {
+  if (item.kind === "new-chat" || item.kind === "theme-menu" || item.kind === "locale-menu") {
     return withEnglishSearchText(t(item.labelKey), item.labelKey);
+  }
+
+  if (item.kind === "task-menu") {
+    return withEnglishSearchText(t(item.labelKey), item.labelKey);
+  }
+
+  if (item.kind === "task-option") {
+    return `${item.label} ${item.detail ?? ""}`;
   }
 
   if (item.kind === "theme-option") {
@@ -220,6 +255,51 @@ export function buildActionPaletteItems(
   return filterByQuery(ROOT_ITEMS, query, t);
 }
 
+export type ActionPaletteTaskItem = {
+  key: string;
+  label: string;
+  detail?: string;
+  iconId?: string;
+};
+
+export function buildTaskOptionItems(
+  taskItems: readonly ActionPaletteTaskItem[],
+  query: string,
+): TaskOptionActionPaletteItem[] {
+  const trimmed = query.trim();
+  const filtered = !trimmed
+    ? [...taskItems]
+    : taskItems.filter((item) => matchesQuery(`${item.label} ${item.detail ?? ""}`, trimmed));
+  return filtered.map((item) => ({
+    id: `action:task:${item.key}`,
+    kind: "task-option",
+    taskKey: item.key,
+    label: item.label,
+    ...(item.detail !== undefined ? { detail: item.detail } : {}),
+    ...(item.iconId !== undefined ? { iconId: item.iconId } : {}),
+  }));
+}
+
+/**
+ * Root/tasks composition with injected task data: the tasks view lists task options, and
+ * the Run Task root row appears (subject to the query) only while any valid task exists.
+ */
+export function buildActionPaletteItemsWithTasks(
+  query: string,
+  t: ActionPaletteTranslate,
+  view: ActionPaletteView,
+  taskItems: readonly ActionPaletteTaskItem[],
+): ActionPaletteItem[] {
+  if (view === "tasks") {
+    return buildTaskOptionItems(taskItems, query);
+  }
+  const items = buildActionPaletteItems(query, t, view);
+  if (view !== "root" || taskItems.length === 0) {
+    return items;
+  }
+  return filterByQuery([TASK_MENU_ITEM], query, t).length > 0 ? [...items, TASK_MENU_ITEM] : items;
+}
+
 export function groupActionPaletteRootItems(
   items: readonly ActionPaletteItem[],
 ): Array<{ group: ActionPaletteGroup; items: ActionPaletteItem[] }> {
@@ -239,8 +319,8 @@ export function groupActionPaletteRootItems(
   })).filter((entry) => entry.items.length > 0);
 }
 
-export function isNewSessionAction(item: ActionPaletteItem): item is NewSessionActionPaletteItem {
-  return item.kind === "new-session";
+export function isNewChatAction(item: ActionPaletteItem): item is NewChatActionPaletteItem {
+  return item.kind === "new-chat";
 }
 
 export function isAppearanceMenuAction(
@@ -271,4 +351,12 @@ export function isSlashActionPaletteItem(item: ActionPaletteItem): item is Slash
     item.kind === "debug" ||
     item.kind === "skill"
   );
+}
+
+export function isTaskMenuAction(item: ActionPaletteItem): item is TaskMenuActionPaletteItem {
+  return item.kind === "task-menu";
+}
+
+export function isTaskOptionAction(item: ActionPaletteItem): item is TaskOptionActionPaletteItem {
+  return item.kind === "task-option";
 }

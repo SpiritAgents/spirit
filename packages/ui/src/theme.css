@@ -1,0 +1,411 @@
+/* Tailwind v4 helpers and default semantic tokens for Spirit primitives.
+ * Hosts import this file, then override product-specific variables only.
+ */
+
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* All-mode content translucency (app-shell marker): canvas surfaces only — portaled
+   overlays (dialogs, menus) live outside the marker and stay solid. :where() keeps zero
+   added specificity so hover/focus utilities still win over the translucent base. */
+@custom-variant content-translucent (&:where([data-spirit-content-translucency="true"] *));
+
+/*
+ * Opt-in for in-app frosted surfaces (CSS backdrop-blur, not native window material).
+ * Chromium 118+ `prefers-reduced-transparency: reduce` paints an opaque theme
+ * background (`--background`: white in light, black in dark) and drops the blur.
+ * Unlayered so it wins over Tailwind `dark:` / `supports-[backdrop-filter]:` fills.
+ * Native vibrancy / Mica is not marked with this class; the OS already disables it.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .spirit-reduced-transparency-opaque {
+    background-color: var(--background);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+:root {
+  --background: oklch(1 0 0);
+  /* Default body text color (non-emphasis state); sidebar interaction default see --chrome-label */
+  --foreground: #2b2b2b;
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: color-mix(in oklab, black 50%, transparent);
+  --skeleton-shimmer: color-mix(in oklab, white 78%, transparent);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  /* Outline rest border: Input / Outline button / item cards (same `--border` mix) */
+  --outline-border: color-mix(in oklab, var(--border) 60%, transparent);
+  /* Light: full `--border` is already soft on white */
+  --outline-border-hover: var(--border);
+  /* Outline wash: Input / Outline button hover, item-card and history-row hover */
+  --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* Canvas outline/card fill under All-mode translucency; light /30 so white keeps presence */
+  --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
+  --control-border: var(--outline-border);
+  /* Canvas hover: 6% wash on normal page/sidebar surfaces; not for overlays */
+  --canvas-hover: color-mix(in oklab, var(--foreground) 6%, transparent);
+  /* Overlay hover: light uses a lighter mix so the wash does not read dirty on white */
+  --overlay-hover: color-mix(in oklab, var(--foreground) 3%, var(--popover));
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --chrome-background: oklch(0.985 0 0);
+  /* Same level as --foreground, so main-area hover:text-chrome-emphasis is not darker than the selected text-foreground */
+  --chrome-emphasis: #2b2b2b;
+  --chrome-border: oklch(0.922 0 0);
+  /* Sidebar hierarchy: interactive button default / interactive item default / list body text / very faint captions (section subtitles etc.) */
+  --chrome-label: #2b2b2b;
+  /* Softer than the first 58/73 translucent mix; 50/60 keeps the two sides on the same step */
+  --chrome-secondary-label: color-mix(in oklab, black 50%, transparent);
+  --chrome-tertiary-label: oklch(0.4 0 0);
+  --chrome-quaternary-label: oklch(0.5 0 0);
+  /* Outlined panels inside Dialogs uniformly use the "connect provider" select border color; only reuse for block-level borders inside Dialogs, not for non-Dialog cases. */
+  --dialog-panel-border: color-mix(in oklab, var(--border) 40%, transparent);
+}
+
+/* Void dark semantic tokens: must come after :root, otherwise Dialog/Select etc. still use oklch(1 0 0) */
+html.dark,
+.dark,
+[data-spirit-theme="dark"] {
+  --background: #000000;
+  --foreground: #e4e4e4;
+  --card: #090909;
+  --card-foreground: #d4d4d4;
+  --popover: #000000;
+  --popover-foreground: #d4d4d4;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: color-mix(in oklab, white 9%, transparent);
+  --secondary-foreground: #d4d4d4;
+  --muted: #181818;
+  --muted-foreground: color-mix(in oklab, white 60%, transparent);
+  --skeleton-shimmer: color-mix(in oklab, white 18%, transparent);
+  --accent: #181818;
+  --accent-foreground: #d4d4d4;
+  /* Neutral dark default destructive (do not use Void gray or the :root light red) */
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #272727;
+  --input: #272727;
+  --outline-border: color-mix(in oklab, var(--border) 60%, transparent);
+  /* Solid `--border` (#272727) is too hard on black; step up from rest, not full */
+  --outline-border-hover: color-mix(in oklab, var(--border) 80%, transparent);
+  --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* Dark already reads well at /10; do not match the light /30 bump */
+  --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
+  --control-border: var(--outline-border);
+  --canvas-hover: color-mix(in oklab, white 6%, transparent);
+  --overlay-hover: color-mix(in oklab, var(--foreground) 18%, var(--popover));
+  --ring: #3f3f3f;
+  --chart-1: #e4e4e4;
+  --chart-2: #a1a1a1;
+  --chart-3: #717171;
+  --chart-4: #525252;
+  --chart-5: #3f3f3f;
+  --radius: 0.5rem;
+  --chrome-background: #000000;
+  --chrome-emphasis: #ffffff;
+  --chrome-border: #272727;
+  --chrome-label: #d4d4d4;
+  --chrome-secondary-label: color-mix(in oklab, white 60%, transparent);
+  --chrome-tertiary-label: #717171;
+  --chrome-quaternary-label: #525252;
+  --dialog-panel-border: #272727;
+}
+
+@theme inline {
+  --color-chrome-border: var(--chrome-border);
+  --color-chrome-emphasis: var(--chrome-emphasis);
+  --color-chrome-label: var(--chrome-label);
+  --color-chrome-secondary-label: var(--chrome-secondary-label);
+  --color-chrome-tertiary-label: var(--chrome-tertiary-label);
+  --color-chrome-quaternary-label: var(--chrome-quaternary-label);
+  --color-chrome-background: var(--chrome-background);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-dialog-panel-border: var(--dialog-panel-border);
+  --color-ring: var(--ring);
+  --color-outline-border: var(--outline-border);
+  --color-outline-border-hover: var(--outline-border-hover);
+  --color-outline-fill: var(--outline-fill);
+  --color-content-translucent-fill: var(--content-translucent-fill);
+  --color-control-border: var(--control-border);
+  --color-canvas-hover: var(--canvas-hover);
+  --color-overlay-hover: var(--overlay-hover);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+[data-slot="skeleton"] {
+  background-image: radial-gradient(
+    ellipse 58% 72% at 50% 50%,
+    var(--skeleton-shimmer, color-mix(in oklab, white 78%, transparent)) 0%,
+    transparent 72%
+  );
+  background-repeat: no-repeat;
+  background-size: var(--skeleton-shimmer-band, 55%) 280%;
+  background-position: var(--skeleton-shimmer-local-x, -999px) 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="skeleton"] {
+    background-image: none;
+  }
+}
+
+/*
+  Outline button-group: 1px pad + a single inset ring. Seams live in the
+  1px gap (absolute, not in either child's box). A group fill of
+  --outline-border under the same-token inset ring stacked two 60%
+  strokes (and showed through hover:bg-outline-fill).
+*/
+[data-slot="button-group"] > * {
+  position: relative;
+}
+
+[data-slot="button-group"][data-orientation="horizontal"] > :not(:first-child) {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+[data-slot="button-group"][data-orientation="horizontal"] > :not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[data-slot="button-group"][data-orientation="vertical"] > :not(:first-child) {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+[data-slot="button-group"][data-orientation="vertical"] > :not(:last-child) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+[data-slot="button-group"][data-orientation="horizontal"]:not(:has(> [data-variant="outline"]))
+  > :not(:first-child) {
+  border-left-width: 0;
+}
+
+[data-slot="button-group"][data-orientation="vertical"]:not(:has(> [data-variant="outline"]))
+  > :not(:first-child) {
+  border-top-width: 0;
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"]) {
+  gap: 1px;
+  border-radius: var(--radius-lg, var(--radius));
+  padding: 1px;
+  box-shadow: inset 0 0 0 1px var(--outline-border);
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])
+  > :is([data-slot="button"], [data-slot="button-group-text"]) {
+  border-width: 0;
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])
+  > :has(+ :is([data-slot="button"], [data-slot="button-group-text"]))::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background-color: var(--outline-border);
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])[data-orientation="horizontal"]
+  > :has(+ :is([data-slot="button"], [data-slot="button-group-text"]))::after {
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 1px;
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])[data-orientation="vertical"]
+  > :has(+ :is([data-slot="button"], [data-slot="button-group-text"]))::after {
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])
+  > :is(
+    :hover,
+    :focus-visible,
+    [aria-expanded="true"],
+    [aria-pressed="true"],
+    [data-state="open"]
+  ) {
+  z-index: 1;
+  box-shadow:
+    0 0 0 1px var(--outline-border-hover, var(--border)),
+    0 0 0 1px var(--background);
+}
+
+[data-slot="button-group"]:has(> [data-variant="outline"])[data-orientation]
+  > :is(
+    :hover,
+    :focus-visible,
+    [aria-expanded="true"],
+    [aria-pressed="true"],
+    [data-state="open"]
+  )::after,
+[data-slot="button-group"]:has(> [data-variant="outline"])[data-orientation]
+  > :has(
+    + :is(
+      :hover,
+      :focus-visible,
+      [aria-expanded="true"],
+      [aria-pressed="true"],
+      [data-state="open"]
+    )
+  )::after {
+  background-color: transparent;
+}
+
+/*
+  Outline toggle-group: same painting model as outline button-group.
+  1px pad + a single inset ring. Seams live in the 1px gap. Hover / on
+  raises the item so its own hover stroke paints every side, including
+  the leading seam the old border-l-0 join deleted.
+*/
+[data-slot="toggle-group"][data-variant="outline"] {
+  gap: 1px;
+  border-radius: var(--radius-lg, var(--radius));
+  padding: 1px;
+  box-shadow: inset 0 0 0 1px var(--outline-border);
+}
+
+[data-slot="toggle-group"][data-variant="outline"] > [data-slot="toggle-group-item"] {
+  position: relative;
+  border-width: 0;
+}
+
+[data-slot="toggle-group"][data-variant="outline"]
+  > :has(+ [data-slot="toggle-group-item"])::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  background-color: var(--outline-border);
+  top: 0;
+  bottom: 0;
+  right: -1px;
+  width: 1px;
+}
+
+[data-slot="toggle-group"][data-variant="outline"]
+  > :is(:hover, :focus-visible, [data-state="on"]) {
+  z-index: 1;
+  box-shadow:
+    0 0 0 1px var(--outline-border-hover, var(--border)),
+    0 0 0 1px var(--background);
+}
+
+[data-slot="toggle-group"][data-variant="outline"]
+  > :is(:hover, :focus-visible, [data-state="on"])::after,
+[data-slot="toggle-group"][data-variant="outline"]
+  > :has(+ :is(:hover, :focus-visible, [data-state="on"]))::after {
+  background-color: transparent;
+}

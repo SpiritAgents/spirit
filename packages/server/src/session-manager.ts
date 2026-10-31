@@ -1,15 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import type {
-  HostToolDescriptionHint,
-  JsonValue,
-  LlmActiveSkill,
-  McpUiOpenRequest,
-  McpUiOpenResult,
-  McpUiOpener,
-  PendingWorkspaceFile,
-  RuntimeEvent,
-  AgentMode,
+import {
+  getTransportConfigLastInputTokens,
+  type HostToolDescriptionHint,
+  type JsonValue,
+  type LlmActiveSkill,
+  type McpUiOpenRequest,
+  type McpUiOpenResult,
+  type McpUiOpener,
+  type PendingWorkspaceFile,
+  type RuntimeEvent,
+  type AgentMode,
 } from "@spiritagent/agent-core";
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
@@ -279,6 +280,7 @@ export class SessionManager {
   ) {
     this.spiritDataDir = spiritDataDir;
     this.mcpRegistry = new McpRegistry(
+      spiritDataDir,
       createExtensionMcpExtraConfigs(spiritDataDir, ["cli", "desktop"]),
     );
   }
@@ -1077,9 +1079,9 @@ export class SessionManager {
   /** Re-resolve the transport from config.json and rebuild the runtime, preserving history. */
   async replaceConfig(sessionId: string, modelRef?: ModelRef): Promise<void> {
     const session = this.requireSession(sessionId);
-    if (modelRef?.groupId?.trim() && modelRef?.name?.trim()) {
+    if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
       session.createParams.modelRef = {
-        groupId: modelRef.groupId.trim(),
+        providerId: modelRef.providerId.trim(),
         name: modelRef.name.trim(),
       };
     } else {
@@ -1089,6 +1091,7 @@ export class SessionManager {
     await old.runSessionEnd("switch");
     old.runtime.abort();
     const history = [...old.runtime.history()];
+    const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
 
     const fresh = await createServerRuntime({
       workspaceRoot: session.createParams.workspaceRoot,
@@ -1105,6 +1108,7 @@ export class SessionManager {
       ...(session.createParams.hostToolDescriptionHints
         ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
         : {}),
+      ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
       basicInfoHost: resolveBasicInfoHost(session.createParams),
       onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
       onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
@@ -1141,6 +1145,13 @@ export class SessionManager {
     attribution: { commitEnabled?: boolean; prEnabled?: boolean },
   ): void {
     this.requireSession(sessionId).runtimeResult.setAttribution(attribution);
+  }
+
+  setWebToolExposure(
+    sessionId: string,
+    exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean },
+  ): void {
+    this.requireSession(sessionId).runtimeResult.setWebToolExposure(exposure);
   }
 
   setTodoSessionKey(sessionId: string, sessionKey: string): void {

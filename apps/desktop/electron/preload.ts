@@ -1,4 +1,4 @@
-import { clipboard, contextBridge, ipcRenderer, webUtils } from "electron";
+import { clipboard, contextBridge, ipcRenderer, webFrame, webUtils } from "electron";
 
 const newSessionSubscribers = new Set<() => void>();
 let pendingNewSessionFromMain = false;
@@ -142,9 +142,6 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   },
   updateConfig(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "updateConfig", { request });
-  },
-  installLspProvider(request: unknown) {
-    return ipcRenderer.invoke("desktop:invoke", "installLspProvider", { request });
   },
   addModel(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "addModel", { request });
@@ -317,6 +314,27 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   setAutomationEnabled(automationId: string, enabled: boolean) {
     return ipcRenderer.invoke("desktop:invoke", "setAutomationEnabled", { automationId, enabled });
   },
+  listTaskMenuItems() {
+    return ipcRenderer.invoke("desktop:invoke", "listTaskMenuItems");
+  },
+  resolveTaskForRun(key: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskForRun", { key });
+  },
+  resolveTaskByLabel(label: string) {
+    return ipcRenderer.invoke("desktop:invoke", "resolveTaskByLabel", { label });
+  },
+  consumeFolderOpenTaskTriggers() {
+    return ipcRenderer.invoke("desktop:invoke", "consumeFolderOpenTaskTriggers");
+  },
+  tasksSubscribe(callback: (items: unknown) => void) {
+    const onTasksUpdate = (_event: Electron.IpcRendererEvent, items: unknown) => {
+      callback(items);
+    };
+    ipcRenderer.on("desktop:tasks-updated", onTasksUpdate);
+    return () => {
+      ipcRenderer.removeListener("desktop:tasks-updated", onTasksUpdate);
+    };
+  },
   dreamSubscribe(callback: (snapshot: unknown) => void) {
     const onDreamUpdate = (_event: Electron.IpcRendererEvent, snapshot: unknown) => {
       callback(snapshot);
@@ -401,7 +419,10 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   }) {
     return ipcRenderer.invoke("desktop:invoke", "switchPaneWorkspace", { request });
   },
-  switchPaneModel(request: { sessionPath: string; modelRef: { groupId: string; name: string } }) {
+  switchPaneModel(request: {
+    sessionPath: string;
+    modelRef: { providerId: string; name: string };
+  }) {
     return ipcRenderer.invoke("desktop:invoke", "switchPaneModel", { request });
   },
   setPanePendingGitBranch(request: { sessionPath: string; branch: string }) {
@@ -425,6 +446,9 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   },
   renameSession(path: string, displayName: string) {
     return ipcRenderer.invoke("desktop:invoke", "renameSession", { path, displayName });
+  },
+  setSessionPinned(path: string, pinned: boolean) {
+    return ipcRenderer.invoke("desktop:invoke", "setSessionPinned", { path, pinned });
   },
   listWorkspaceFileReferenceSuggestions(request: unknown) {
     return ipcRenderer.invoke("desktop:invoke", "listWorkspaceFileReferenceSuggestions", {
@@ -612,6 +636,12 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   syncTrafficLightPosition(position: { x: number; y: number }) {
     return ipcRenderer.invoke("desktop:sync-traffic-light-position", position);
   },
+  setUiLayoutScale(scale: number) {
+    // Apply synchronously via webFrame so the zoom lands in the same task as the keypress
+    // while persistence to the launch-time cache remains fire-and-forget.
+    webFrame.setZoomFactor(scale);
+    ipcRenderer.send("desktop:persist-ui-layout-scale", scale);
+  },
   popupApplicationMenu(
     section: "file" | "edit" | "view" | "window" | "help",
     clientX: number,
@@ -622,7 +652,14 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   executeWindowAction(action: string) {
     return ipcRenderer.invoke("desktop:execute-window-action", action);
   },
-  ptyCreate(request: { cwd: string; cols: number; rows: number }) {
+  ptyCreate(request: {
+    cwd: string;
+    cols: number;
+    rows: number;
+    file?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  }) {
     return ipcRenderer.invoke("desktop:pty-create", request);
   },
   ptyWrite(id: string, data: string) {
@@ -637,8 +674,8 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
   openSystemTerminal(cwd: string) {
     return ipcRenderer.invoke("desktop:open-system-terminal", cwd);
   },
-  openExternalUrl(url: string) {
-    return ipcRenderer.invoke("desktop:open-external-url", { url });
+  openBrowserUrl(url: string) {
+    return ipcRenderer.invoke("desktop:open-browser-url", { url });
   },
   subscribeBrowserOpenUrl(callback: (url: string) => void) {
     const onOpen = (_event: Electron.IpcRendererEvent, payload: { url?: string }) => {

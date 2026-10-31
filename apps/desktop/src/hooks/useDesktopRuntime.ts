@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildSingleTextQuestionNotificationReplyResult } from "@/lib/ask-questions-notification-reply";
 import { applyConversationDelta } from "@/lib/live-update";
+import { runTaskByKey } from "@/lib/task-run-service";
 import {
   resolvePendingApprovalSessionPath,
   resolvePendingQuestionsSessionPath,
@@ -12,7 +13,9 @@ import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translu
 
 import type { SettingsFormState } from "@/components/settings/types";
 import { useHostApi } from "@/hooks/useHostApi";
-import { emptyModelRef, modelRefsEqual } from "@spiritagent/host-internal/config-v2";
+import { emptyModelRef, modelRefsEqual } from "@/lib/model-ref";
+import { modelEffortPreference } from "@/lib/model-picker-controls";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelRef } from "@/types";
 import {
   buildPaneComposerDraftKey,
@@ -42,9 +45,7 @@ import {
   cancelDoodleNavigation,
   commitDoodleNavigation,
 } from "@/lib/doodle";
-import { readSessionSplitBinding } from "@/lib/session-split-binding";
 import { resolveWorkspaceGroupingRoot } from "@/lib/workspace-grouping";
-import { collectPaneSessionPaths } from "@/lib/conversation-split-layout";
 import {
   normalizePaneSessionPathKey,
   resolvePaneDesktopSnapshot,
@@ -74,11 +75,13 @@ import type {
   DeleteHookEntryRequest,
   DeleteSkillRequest,
   DesktopApprovalDecision,
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopMcpServerInspection,
@@ -143,6 +146,7 @@ type BusyAction =
   | "questions"
   | "reset"
   | "session"
+  | "session-mutation"
   | "models"
   | "modelsPreview"
   | "mcps"
@@ -151,7 +155,6 @@ type BusyAction =
   | "rules"
   | "extensions"
   | "extensionsImport"
-  | "lspInstall"
   | "git"
   | "automation";
 
@@ -244,7 +247,7 @@ function updateConfigFromSettingsForm(
     activeModel: s.activeModel,
     imageGenerationModel: s.imageGenerationModel,
     videoGenerationModel: s.videoGenerationModel,
-    lightweightChatModel: s.lightweightChatModel,
+    secondaryLanguageModel: s.secondaryLanguageModel,
     apiBase: s.apiBase,
     translucency: s.translucency,
     systemNotifications: s.systemNotifications,
@@ -271,6 +274,12 @@ function updateConfigFromSettingsForm(
         pr: {
           enabled: s.prAttributionEnabled,
         },
+      },
+      providerTools: {
+        enabled: s.providerToolsEnabled,
+      },
+      webFetch: {
+        enabled: s.webFetchEnabled,
       },
     },
     networks: {
@@ -357,26 +366,6 @@ function patchActiveSessionDisplayNameInList(
   return changed ? next : null;
 }
 
-function normalizeSessionPathKey(sessionPath: string): string {
-  return sessionPath.replace(/\\/g, "/").toLowerCase();
-}
-
-function shouldHoldSessionBusyForSplitRestore(
-  sessionPath: string,
-  snapshot: DesktopSnapshot,
-): boolean {
-  const binding = readSessionSplitBinding(sessionPath);
-  if (!binding) {
-    return false;
-  }
-  const bindingPaths = collectPaneSessionPaths(binding);
-  const paneKeys = Object.keys(snapshot.paneSessions ?? {});
-  return bindingPaths.some(
-    (path) =>
-      !paneKeys.some((key) => normalizeSessionPathKey(key) === normalizeSessionPathKey(path)),
-  );
-}
-
 function isRemoteWebHostClient(apiKind: string | null | undefined): boolean {
   if (apiKind === "web") {
     return true;
@@ -431,7 +420,7 @@ export function useDesktopRuntime() {
     activeModel: emptyModelRef(),
     imageGenerationModel: undefined,
     videoGenerationModel: undefined,
-    lightweightChatModel: undefined,
+    secondaryLanguageModel: undefined,
     apiBase: "",
     uiLocale: getStoredLanguagePreference(),
     apiKey: "",
@@ -449,6 +438,8 @@ export function useDesktopRuntime() {
     codeCompletionEnabled: true,
     commitAttributionEnabled: true,
     prAttributionEnabled: true,
+    providerToolsEnabled: true,
+    webFetchEnabled: true,
     llmHttpVersion: "http2",
   });
   const [busyAction, setBusyAction] = useState<BusyAction>("");
@@ -458,6 +449,7 @@ export function useDesktopRuntime() {
   const [paneSendBusySessionPath, setPaneSendBusySessionPath] = useState<string | null>(null);
   const [layoutNavigationPending, setLayoutNavigationPendingState] = useState(false);
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [taskMenuItems, setTaskMenuItems] = useState<DesktopTaskMenuItem[]>([]);
   const [unseenCompletedSessionPaths, setUnseenCompletedSessionPaths] = useState<
     ReadonlySet<string>
   >(() => new Set());
@@ -471,7 +463,6 @@ export function useDesktopRuntime() {
   const appliedConversationRevisionRef = useRef(0);
   const appliedComposerSessionKeyRef = useRef("");
   const sessionNavigationGenerationRef = useRef(0);
-  const [sessionNavigationGeneration, setSessionNavigationGeneration] = useState(0);
   const [navigationDoodleVariant, setNavigationDoodleVariant] = useState<
     import("@/lib/doodle").DoodleVariantId | null
   >(null);
@@ -499,7 +490,6 @@ export function useDesktopRuntime() {
   const advanceSessionNavigationGeneration = useCallback(() => {
     const next = sessionNavigationGenerationRef.current + 1;
     sessionNavigationGenerationRef.current = next;
-    setSessionNavigationGeneration(next);
     return next;
   }, []);
 
@@ -696,6 +686,7 @@ export function useDesktopRuntime() {
     if (
       busyAction === "bootstrap" ||
       busyAction === "session" ||
+      busyAction === "session-mutation" ||
       busyAction === "reset" ||
       snapshot?.activeSession?.readOnly
     ) {
@@ -746,7 +737,9 @@ export function useDesktopRuntime() {
 
       if (
         options?.navGeneration === undefined &&
-        (busyActionRef.current === "session" || busyActionRef.current === "reset")
+        (busyActionRef.current === "session" ||
+          busyActionRef.current === "session-mutation" ||
+          busyActionRef.current === "reset")
       ) {
         return;
       }
@@ -794,10 +787,7 @@ export function useDesktopRuntime() {
       setRuntimeError(effectiveNext.runtimeError ?? "");
       setSettings((current) => {
         const activeModelProfile = effectiveNext.config.models.find((model) =>
-          modelRefsEqual(
-            model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-            effectiveNext.config.activeModel,
-          ),
+          modelRefsEqual(model.ref, effectiveNext.config.activeModel),
         );
         const configAgentMode = (effectiveNext.config.agentMode ?? "agent") as DesktopAgentMode;
         // While a turn is in flight, poll may still carry the old config.agentMode; do not overwrite the optimistic agentMode set by saveSettingsPatch after the user dismissed the Chip.
@@ -831,7 +821,7 @@ export function useDesktopRuntime() {
           activeModel: effectiveNext.config.activeModel,
           imageGenerationModel: effectiveNext.config.imageGenerationModel,
           videoGenerationModel: effectiveNext.config.videoGenerationModel,
-          lightweightChatModel: effectiveNext.config.lightweightChatModel,
+          secondaryLanguageModel: effectiveNext.config.secondaryLanguageModel,
           apiBase: activeModelProfile?.apiBase ?? current.apiBase,
           uiLocale: next.config.uiLocale ?? getStoredLanguagePreference(),
           apiKey: current.apiKey,
@@ -849,6 +839,8 @@ export function useDesktopRuntime() {
           codeCompletionEnabled: next.codeCompletion.userEnabled,
           commitAttributionEnabled: next.attribution.commitEnabled,
           prAttributionEnabled: next.attribution.prEnabled,
+          providerToolsEnabled: next.webToolExposure.providerToolsEnabled,
+          webFetchEnabled: next.webToolExposure.webFetchEnabled,
           llmHttpVersion: next.config.networks.llmHttpVersion,
         };
       });
@@ -930,6 +922,25 @@ export function useDesktopRuntime() {
     return api.listAutomations();
   }, [api]);
 
+  const resolveTaskForRun = useCallback(
+    async (key: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskForRun(key);
+    },
+    [api],
+  );
+
+  const resolveTaskByLabel = useCallback(
+    async (label: string): Promise<DesktopResolveTaskForRunResult> => {
+      if (!api) {
+        return { status: "unsupported" };
+      }
+      return api.resolveTaskByLabel(label);
+    },
+    [api],
+  );
   const getAutomation = useCallback(
     async (automationId: string): Promise<DesktopAutomationDetail | undefined> => {
       if (!api) {
@@ -1544,6 +1555,7 @@ export function useDesktopRuntime() {
         Boolean(nextPath) &&
         prevPath !== nextPath &&
         busyActionRef.current !== "session" &&
+        busyActionRef.current !== "session-mutation" &&
         prevPath &&
         nextPath &&
         !isProvisionalSessionPromotion(prevPath, nextPath);
@@ -1574,6 +1586,58 @@ export function useDesktopRuntime() {
       void refreshSessions();
     });
   }, [api, applySnapshot, refreshSessions]);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+    let cancelled = false;
+    // Armed only at workspace activation or a trust allow, so this consumes an empty list
+    // on watcher-driven updates and never re-triggers on tasks.json edits.
+    const consumeFolderOpenTriggers = async () => {
+      if (!api.consumeFolderOpenTaskTriggers) {
+        return;
+      }
+      let keys: string[] = [];
+      try {
+        keys = await api.consumeFolderOpenTaskTriggers();
+      } catch {
+        return;
+      }
+      if (cancelled) {
+        return;
+      }
+      for (const key of keys) {
+        void runTaskByKey(key, { trigger: "folderOpen" });
+      }
+    };
+    api
+      .listTaskMenuItems()
+      .then((items) => {
+        if (!cancelled) {
+          setTaskMenuItems(items);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskMenuItems([]);
+        }
+      });
+    void consumeFolderOpenTriggers();
+    if (!api.subscribeTasksUpdates) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const unsubscribe = api.subscribeTasksUpdates((items) => {
+      setTaskMenuItems(items);
+      void consumeFolderOpenTriggers();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [api, snapshot?.workspaceRoot]);
 
   useEffect(() => {
     if (!api?.subscribeSessionListUpdates) {
@@ -1707,9 +1771,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       const current = settingsRef.current;
       const next: typeof settings = {
         ...current,
@@ -1831,14 +1893,14 @@ export function useDesktopRuntime() {
   );
 
   const removeProviderModels = useCallback(
-    async (groupId: string) => {
+    async (providerId: string) => {
       if (!api) {
         return;
       }
 
       setBusyAction("models");
       try {
-        const next = await api.removeProviderGroup({ groupId });
+        const next = await api.removeProviderGroup({ providerId });
         applySnapshot(next);
         setRuntimeError("");
       } catch (error) {
@@ -2318,10 +2380,7 @@ export function useDesktopRuntime() {
         patch.apiBase ??
         (patch.activeModel !== undefined
           ? (snapshotRef.current?.config.models.find((model) =>
-              modelRefsEqual(
-                model.ref ?? { groupId: model.groupId ?? "", name: model.name },
-                nextActiveModel,
-              ),
+              modelRefsEqual(model.ref, nextActiveModel),
             )?.apiBase ?? prev.apiBase)
           : prev.apiBase);
       const s = {
@@ -2390,14 +2449,12 @@ export function useDesktopRuntime() {
   }, [api, bootstrap, saveSettingsPatch, snapshot]);
 
   const setModelReasoningEffort = useCallback(
-    async (modelRef: ModelRef, reasoningEffort: DesktopModelReasoningEffort) => {
+    async (modelRef: ModelRef, effort: DesktopModelEffortSelection) => {
       if (!api || !snapshot) {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return;
       }
@@ -2417,7 +2474,7 @@ export function useDesktopRuntime() {
             host: next.webHostHost,
             port: next.webHostPort,
           }),
-          reasoningEffort,
+          ...modelEffortPreference(model, effort),
         });
         applySnapshot(res);
         setRuntimeError("");
@@ -2435,9 +2492,7 @@ export function useDesktopRuntime() {
         return;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return;
       }
@@ -2475,9 +2530,7 @@ export function useDesktopRuntime() {
         return false;
       }
 
-      const model = snapshot.config.models.find((item) =>
-        modelRefsEqual(item.ref ?? { groupId: item.groupId ?? "", name: item.name }, modelRef),
-      );
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
       if (!model) {
         return false;
       }
@@ -2499,6 +2552,50 @@ export function useDesktopRuntime() {
             port: next.webHostPort,
           }),
           thinkingEnabled: enabled,
+        });
+        applySnapshot(res);
+        setRuntimeError("");
+        setSettings((current) => ({ ...current, apiKey: "" }));
+        return true;
+      } catch (error) {
+        settingsRef.current = previousSettings;
+        setSettings(previousSettings);
+        setRuntimeError(describeError(error));
+        return false;
+      }
+    },
+    [api, applySnapshot, snapshot],
+  );
+
+  const setModelServiceTier = useCallback(
+    async (modelRef: ModelRef, serviceTier: ModelServiceTier | undefined): Promise<boolean> => {
+      if (!api || !snapshot) {
+        return false;
+      }
+
+      const model = snapshot.config.models.find((item) => modelRefsEqual(item.ref, modelRef));
+      if (!model) {
+        return false;
+      }
+
+      const previousSettings = settingsRef.current;
+      const next = {
+        ...previousSettings,
+        activeModel: modelRef,
+        apiBase: model.apiBase,
+      };
+      settingsRef.current = next;
+      setSettings(next);
+
+      try {
+        const res = await api.updateConfig({
+          ...updateConfigFromSettingsForm(next, {
+            enabled: next.webHostEnabled,
+            host: next.webHostHost,
+            port: next.webHostPort,
+          }),
+          // `undefined` clears the stored preference (e.g. Anthropic Fast toggled off).
+          serviceTier: serviceTier ?? null,
         });
         applySnapshot(res);
         setRuntimeError("");
@@ -3352,37 +3449,34 @@ export function useDesktopRuntime() {
   );
 
   const openSession = useCallback(
-    async (path: string) => {
+    async (path: string): Promise<boolean> => {
       if (!api) {
-        return;
+        return false;
       }
       acknowledgeSessionAttention(path);
       const navGeneration = sessionNavigationGenerationRef.current + 1;
       sessionNavigationGenerationRef.current = navGeneration;
-      let holdBusyForSplitRestore = false;
       setBusyAction("session");
       try {
         stashSessionUi(snapshotRef.current);
         const next = await api.openSession(path);
         if (navGeneration !== sessionNavigationGenerationRef.current) {
-          return;
+          return false;
         }
         if (isRemoteWebHostClient(api.kind)) {
           syncWebViewingSessionPath(next.activeSession?.filePath ?? path);
         }
         applySnapshot(next, { navGeneration });
         restoreSessionUi(next);
-        holdBusyForSplitRestore = shouldHoldSessionBusyForSplitRestore(path, next);
         setRuntimeError("");
         void refreshSessions();
+        return true;
       } catch (error) {
         setRuntimeError(describeError(error));
+        return false;
       } finally {
         if (navGeneration === sessionNavigationGenerationRef.current) {
-          if (!holdBusyForSplitRestore) {
-            setBusyAction("");
-          } else {
-          }
+          setBusyAction("");
         }
       }
     },
@@ -3396,13 +3490,6 @@ export function useDesktopRuntime() {
       syncWebViewingSessionPath,
     ],
   );
-
-  const releaseSessionNavigationBusy = useCallback(() => {
-    if (busyActionRef.current !== "session") {
-      return;
-    }
-    setBusyAction("");
-  }, []);
 
   const setLayoutNavigationPending = useCallback((pending: boolean) => {
     setLayoutNavigationPendingState((current) => (current === pending ? current : pending));
@@ -3486,7 +3573,7 @@ export function useDesktopRuntime() {
       acknowledgeSessionAttention(path);
       const navGeneration = sessionNavigationGenerationRef.current + 1;
       sessionNavigationGenerationRef.current = navGeneration;
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         const next = await api.deleteSession(path);
         if (navGeneration !== sessionNavigationGenerationRef.current) {
@@ -3513,7 +3600,7 @@ export function useDesktopRuntime() {
       if (!api) {
         return;
       }
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         const next = await api.renameSession(path, displayName);
         applySnapshot(next);
@@ -3529,7 +3616,28 @@ export function useDesktopRuntime() {
     [api, applySnapshot, refreshSessions],
   );
 
-  const deleteWorkspace = useCallback(
+  const setSessionPinned = useCallback(
+    async (path: string, pinned: boolean) => {
+      if (!api) {
+        return;
+      }
+      setBusyAction("session-mutation");
+      try {
+        const next = await api.setSessionPinned(path, pinned);
+        applySnapshot(next);
+        setRuntimeError("");
+        void refreshSessions();
+      } catch (error) {
+        setRuntimeError(describeError(error));
+        throw error;
+      } finally {
+        setBusyAction("");
+      }
+    },
+    [api, applySnapshot, refreshSessions],
+  );
+
+  const removeWorkspace = useCallback(
     async (workspacePath: string) => {
       if (!api?.forgetWorkspace) {
         return;
@@ -3546,7 +3654,7 @@ export function useDesktopRuntime() {
           .toLowerCase();
         return groupingRoot === normalizedTarget;
       });
-      setBusyAction("session");
+      setBusyAction("session-mutation");
       try {
         for (const session of workspaceSessions) {
           acknowledgeSessionAttention(session.path);
@@ -3954,27 +4062,6 @@ export function useDesktopRuntime() {
     onNotifyRefresh: refreshFromHostPoll,
   });
 
-  const installLspProvider = useCallback(
-    async (providerId: string) => {
-      if (!api?.installLspProvider) {
-        throw new Error("LSP provider install is only available in the desktop app.");
-      }
-
-      setBusyAction("lspInstall");
-      try {
-        const next = await api.installLspProvider({ providerId });
-        applySnapshot(next);
-        setRuntimeError("");
-      } catch (error) {
-        setRuntimeError(describeError(error));
-        throw error;
-      } finally {
-        setBusyAction("");
-      }
-    },
-    [api, applySnapshot],
-  );
-
   return {
     apiReady: hostReady,
     hostConnectionError: hostError,
@@ -4000,6 +4087,8 @@ export function useDesktopRuntime() {
     refreshSessions,
     listDreamsOverview,
     listAutomations,
+    resolveTaskForRun,
+    resolveTaskByLabel,
     getAutomation,
     createAutomation,
     updateAutomation,
@@ -4007,6 +4096,7 @@ export function useDesktopRuntime() {
     setAutomationEnabled,
     runtimeError,
     sessions,
+    taskMenuItems,
     unseenCompletedSessionPaths,
     settings,
     snapshot,
@@ -4017,6 +4107,7 @@ export function useDesktopRuntime() {
     setModelReasoningEffort,
     setModelReasoningMode,
     setModelThinkingEnabled,
+    setModelServiceTier,
     setApprovalGuidance,
     setAgentModeChipDismissed,
     setComposerLocalFileAttachments,
@@ -4082,8 +4173,6 @@ export function useDesktopRuntime() {
     pushGitBranch,
     continueAssistantCompletion,
     openSession,
-    releaseSessionNavigationBusy,
-    sessionNavigationGeneration,
     navigationDoodleVariant,
     beginSplitPaneSession,
     beginSideChatPaneSession,
@@ -4094,7 +4183,8 @@ export function useDesktopRuntime() {
     closeSplitPaneSession,
     deleteSession,
     renameSession,
-    deleteWorkspace,
+    setSessionPinned,
+    removeWorkspace,
     listWorkspaceFileReferenceSuggestions,
     primeWorkspaceFileReferenceIndex,
     getWorkspaceFileReferenceIndex,
@@ -4135,8 +4225,6 @@ export function useDesktopRuntime() {
     removeQueuedUserTurn,
     saveSettingsPatch,
     resetWebHostPairing,
-    installLspProvider,
-    lspInstallBusy: busyAction === "lspInstall",
     sendMessage,
     submitStartImplementing,
     skipQuestions,

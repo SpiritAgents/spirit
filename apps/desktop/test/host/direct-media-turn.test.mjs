@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -11,9 +12,9 @@ import {
   shouldUseComposerDirectMediaTurn,
 } from "../../dist-electron/src/host/direct-media-turn.js";
 
-const openAiGroupId = "openai";
+const openAiProviderId = "openai";
 
-const imageRef = { groupId: openAiGroupId, name: "dall-e-3" };
+const imageRef = { providerId: openAiProviderId, name: "dall-e-3" };
 
 const imageModel = {
   name: "dall-e-3",
@@ -21,10 +22,9 @@ const imageModel = {
 };
 
 const config = {
-  providerGroups: [
+  providers: [
     {
-      id: openAiGroupId,
-      provider: "openai",
+      id: openAiProviderId,
       apiBase: "https://api.openai.com/v1",
       models: [imageModel],
     },
@@ -114,7 +114,7 @@ function createDirectMediaHarness() {
           ],
           summaryText: [
             "[generated image]",
-            "image_ref: spirit://generated/image/direct-test.png",
+            `image_ref: ${product.urlProtocol}://generated/image/direct-test.png`,
           ].join("\n"),
         };
       },
@@ -132,7 +132,7 @@ function createDirectMediaHarness() {
         return {
           path: "generated/direct-test.png",
           mimeType: request.mediaType,
-          markdownRef: "spirit://generated/image/direct-test.png",
+          markdownRef: `${product.urlProtocol}://generated/image/direct-test.png`,
         };
       },
     }),
@@ -170,10 +170,128 @@ test("executeDirectMediaTurn emits succeeded generate_image tool card and archiv
   assert.equal(toolMessage.tool.phase, "succeeded");
   assert.deepEqual(toolMessage.tool.imagePaths, ["generated/direct-test.png"]);
   assert.equal(harness.bundle.archiveHistory.length, 3);
-  assert.match(harness.bundle.archiveHistory[2].content[0].text, /spirit:\/\/generated\/image/);
+  assert.ok(
+    harness.bundle.archiveHistory[2].content[0].text.includes(
+      `${product.urlProtocol}://generated/image/`,
+    ),
+  );
   assert.equal(harness.bundle.runtime.history().length, 3);
   assert.equal(harness.bundle.runtime.history()[1].role, "assistant");
   assert.equal(harness.bundle.runtime.history()[1].toolCalls?.[0]?.name, "generate_image");
+});
+
+test("executeDirectMediaTurn passes the provider entry's declared imageApi into the generation sub-config", async () => {
+  const harness = createDirectMediaHarness();
+  const gatewayConfig = {
+    providers: [
+      {
+        id: "vercel-ai-gateway",
+        apiBase: "https://ai-gateway.vercel.sh/v1",
+        imageApi: "vercel-gateway-images",
+        videoApi: "vercel-gateway-videos",
+        models: [
+          {
+            name: "openai/gpt-image-2.5-flare",
+            capabilities: ["imageGeneration", "videoGeneration"],
+          },
+        ],
+      },
+    ],
+    activeModel: { providerId: "vercel-ai-gateway", name: "openai/gpt-image-2.5-flare" },
+    imageGenerationModel: { providerId: "vercel-ai-gateway", name: "openai/gpt-image-2.5-flare" },
+  };
+  harness.ctx.requireConfig = () => gatewayConfig;
+
+  let seenConfig;
+  harness.bundle.runtimeTransport.generateImage = async (mediaConfig, request, saveGenerated) => {
+    seenConfig = mediaConfig;
+    await saveGenerated({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: "image/png",
+      prompt: request.prompt,
+      model: "openai/gpt-image-2.5-flare",
+    });
+    return {
+      content: [
+        { type: "text", text: "[generated image]" },
+        { type: "image", path: "generated/direct-test.png" },
+      ],
+      summaryText: "[generated image]",
+    };
+  };
+
+  await executeDirectMediaTurn(harness.ctx, {
+    bundle: harness.bundle,
+    toolName: "generate_image",
+    prompt: "draw a square poster",
+    userMessageId: 1,
+    beforeUserCheckpoint: undefined,
+  });
+
+  assert.equal(seenConfig?.imageGeneration?.imageApi, "vercel-gateway-images");
+  assert.equal(seenConfig?.imageGeneration?.model, "openai/gpt-image-2.5-flare");
+  assert.equal(seenConfig?.imageGeneration?.baseUrl, "https://ai-gateway.vercel.sh/v1");
+});
+
+test("executeDirectMediaTurn passes the provider entry's declared videoApi into the generation sub-config", async () => {
+  const harness = createDirectMediaHarness();
+  const gatewayConfig = {
+    providers: [
+      {
+        id: "vercel-ai-gateway",
+        apiBase: "https://ai-gateway.vercel.sh/v1",
+        imageApi: "vercel-gateway-images",
+        videoApi: "vercel-gateway-videos",
+        models: [
+          {
+            name: "alibaba/wan-v2.5-t2v-preview",
+            capabilities: ["videoGeneration"],
+          },
+        ],
+      },
+    ],
+    activeModel: { providerId: "vercel-ai-gateway", name: "alibaba/wan-v2.5-t2v-preview" },
+    videoGenerationModel: { providerId: "vercel-ai-gateway", name: "alibaba/wan-v2.5-t2v-preview" },
+  };
+  harness.ctx.requireConfig = () => gatewayConfig;
+
+  let seenConfig;
+  harness.bundle.runtimeTransport.generateVideo = async (mediaConfig, request, saveGenerated) => {
+    seenConfig = mediaConfig;
+    await saveGenerated({
+      data: new Uint8Array([1, 2, 3]),
+      mediaType: "video/mp4",
+      prompt: request.prompt,
+      model: "alibaba/wan-v2.5-t2v-preview",
+    });
+    return {
+      content: [
+        { type: "text", text: "[generated video]" },
+        { type: "video", path: "generated/direct-test.mp4" },
+      ],
+      summaryText: "[generated video]",
+    };
+  };
+  harness.ctx.ensureToolExecutor = async () => ({
+    async saveGeneratedVideo(request) {
+      return {
+        path: "generated/direct-test.mp4",
+        mimeType: request.mediaType,
+        markdownRef: `${product.urlProtocol}://generated/video/direct-test.mp4`,
+      };
+    },
+  });
+
+  await executeDirectMediaTurn(harness.ctx, {
+    bundle: harness.bundle,
+    toolName: "generate_video",
+    prompt: "animate the poster",
+    userMessageId: 1,
+    beforeUserCheckpoint: undefined,
+  });
+
+  assert.equal(seenConfig?.videoGeneration?.videoApi, "vercel-gateway-videos");
+  assert.equal(seenConfig?.videoGeneration?.model, "alibaba/wan-v2.5-t2v-preview");
 });
 
 test("isSessionBundleBusy includes direct media in-flight flag", () => {
@@ -206,7 +324,7 @@ test("startComposerDirectMediaTurn shows tool card before generation completes",
       ],
       summaryText: [
         "[generated image]",
-        "image_ref: spirit://generated/image/direct-test.png",
+        `image_ref: ${product.urlProtocol}://generated/image/direct-test.png`,
       ].join("\n"),
     };
   };

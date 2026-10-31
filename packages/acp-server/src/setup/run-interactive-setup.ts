@@ -1,20 +1,19 @@
 import { readFileSync } from "node:fs";
 
 import { confirm, input, password, select } from "@inquirer/prompts";
+import { listProviderModels } from "@spiritagent/agent-core/model-catalog";
 import {
-  PROVIDER_PICKER_ROWS,
-  listProviderModels,
-  type ModelProviderId,
-} from "@spiritagent/host-internal";
+  CUSTOM_PROVIDER_PRESET_ID,
+  listProviderPresets,
+} from "@spiritagent/agent-core/provider-presets";
 
 import type { ProviderSetupResult } from "@spiritagent/host-internal";
 import {
-  buildSetupProfile,
   buildProviderSetupResult,
   listSiteOptions,
   providerNeedsSiteSelection,
-  resolveProfileApiBase,
   resolveSetupTransportKind,
+  resolveWizardApiBase,
   siteNeedsWorkspaceId,
   validateApiKeyRequired,
   validateAzureSetup,
@@ -22,12 +21,13 @@ import {
   validateCustomSetup,
   validateModelName,
   validateVertexCredentials,
+  type WizardSetupInput,
 } from "./provider-wizard.js";
 
 async function promptModelId(
-  provider: ModelProviderId,
+  provider: string,
   apiKey: string,
-  profileDraft: ReturnType<typeof buildSetupProfile>,
+  wizardInput: WizardSetupInput,
   extras?: {
     accessKeyId?: string;
     secretAccessKey?: string;
@@ -35,20 +35,20 @@ async function promptModelId(
     vertexPrivateKey?: string;
   },
 ): Promise<string> {
-  const transportKind = resolveSetupTransportKind(provider, profileDraft.transportKind);
-  const baseUrl = resolveProfileApiBase(profileDraft);
+  const transportKind = resolveSetupTransportKind(provider);
+  const baseUrl = resolveWizardApiBase(wizardInput);
 
   let catalog: Array<{ id: string; displayName?: string }> = [];
-  if (provider !== "custom") {
+  if (provider !== CUSTOM_PROVIDER_PRESET_ID) {
     try {
       const listed = await listProviderModels({
         provider,
         transportKind,
         apiKey: apiKey.trim(),
         baseUrl,
-        ...(profileDraft.awsRegion ? { awsRegion: profileDraft.awsRegion } : {}),
-        ...(profileDraft.vertexProject ? { vertexProject: profileDraft.vertexProject } : {}),
-        ...(profileDraft.vertexLocation ? { vertexLocation: profileDraft.vertexLocation } : {}),
+        ...(wizardInput.awsRegion ? { awsRegion: wizardInput.awsRegion } : {}),
+        ...(wizardInput.vertexProject ? { vertexProject: wizardInput.vertexProject } : {}),
+        ...(wizardInput.vertexLocation ? { vertexLocation: wizardInput.vertexLocation } : {}),
         ...(extras?.accessKeyId ? { accessKeyId: extras.accessKeyId } : {}),
         ...(extras?.secretAccessKey ? { secretAccessKey: extras.secretAccessKey } : {}),
         ...(extras?.vertexClientEmail ? { vertexClientEmail: extras.vertexClientEmail } : {}),
@@ -88,8 +88,7 @@ async function promptModelId(
 }
 
 async function collectBedrockCredentials(): Promise<{
-  apiKey?: string;
-  bedrock: NonNullable<ProviderSetupResult["bedrock"]>;
+  credentials: Record<string, string>;
   awsRegion: string;
 }> {
   const awsRegion = await input({
@@ -110,12 +109,12 @@ async function collectBedrockCredentials(): Promise<{
       mask: "*",
       validate: (value) => (value.trim() ? true : "API key is required."),
     });
-    const bedrock = { apiKey: apiKey.trim(), awsRegion: awsRegion.trim() };
-    const error = validateBedrockCredentials(bedrock);
+    const credentials = { apiKey: apiKey.trim() };
+    const error = validateBedrockCredentials({ ...credentials, awsRegion: awsRegion.trim() });
     if (error) {
       throw new Error(error);
     }
-    return { apiKey: apiKey.trim(), bedrock, awsRegion: awsRegion.trim() };
+    return { credentials, awsRegion: awsRegion.trim() };
   }
 
   const accessKeyId = await input({
@@ -127,21 +126,19 @@ async function collectBedrockCredentials(): Promise<{
     mask: "*",
     validate: (value) => (value.trim() ? true : "Secret access key is required."),
   });
-  const bedrock = {
+  const credentials = {
     accessKeyId: accessKeyId.trim(),
     secretAccessKey: secretAccessKey.trim(),
-    awsRegion: awsRegion.trim(),
   };
-  const error = validateBedrockCredentials(bedrock);
+  const error = validateBedrockCredentials({ ...credentials, awsRegion: awsRegion.trim() });
   if (error) {
     throw new Error(error);
   }
-  return { bedrock, awsRegion: awsRegion.trim() };
+  return { credentials, awsRegion: awsRegion.trim() };
 }
 
 async function collectVertexCredentials(): Promise<{
-  apiKey?: string;
-  vertex: NonNullable<ProviderSetupResult["vertex"]>;
+  credentials: Record<string, string>;
   vertexProject: string;
   vertexLocation: string;
 }> {
@@ -167,18 +164,17 @@ async function collectVertexCredentials(): Promise<{
       mask: "*",
       validate: (value) => (value.trim() ? true : "API key is required."),
     });
-    const vertex = {
-      apiKey: apiKey.trim(),
+    const credentials = { apiKey: apiKey.trim() };
+    const error = validateVertexCredentials({
+      ...credentials,
       vertexProject: vertexProject.trim(),
       vertexLocation: vertexLocation.trim(),
-    };
-    const error = validateVertexCredentials(vertex);
+    });
     if (error) {
       throw new Error(error);
     }
     return {
-      apiKey: apiKey.trim(),
-      vertex: { apiKey: apiKey.trim() },
+      credentials,
       vertexProject: vertexProject.trim(),
       vertexLocation: vertexLocation.trim(),
     };
@@ -214,13 +210,12 @@ async function collectVertexCredentials(): Promise<{
     });
   }
 
-  const vertex = {
+  const credentials = {
     clientEmail: clientEmail.trim(),
     privateKey: privateKey.trim(),
   };
   const error = validateVertexCredentials({
-    clientEmail: vertex.clientEmail,
-    privateKey: vertex.privateKey,
+    ...credentials,
     vertexProject: vertexProject.trim(),
     vertexLocation: vertexLocation.trim(),
   });
@@ -228,7 +223,7 @@ async function collectVertexCredentials(): Promise<{
     throw new Error(error);
   }
   return {
-    vertex,
+    credentials,
     vertexProject: vertexProject.trim(),
     vertexLocation: vertexLocation.trim(),
   };
@@ -237,31 +232,32 @@ async function collectVertexCredentials(): Promise<{
 export async function runProviderWizard(): Promise<ProviderSetupResult> {
   const provider = await select({
     message: "LLM provider",
-    choices: PROVIDER_PICKER_ROWS.map((row) => ({
-      name: row.fallbackLabel,
-      value: row.id,
-    })),
+    choices: [
+      ...listProviderPresets().map((preset) => ({
+        name: preset.label,
+        value: preset.id,
+      })),
+      { name: "Custom", value: CUSTOM_PROVIDER_PRESET_ID },
+    ],
   });
 
-  let providerSite: string | undefined;
+  let siteId: string | undefined;
   if (providerNeedsSiteSelection(provider)) {
-    providerSite = await select({
+    siteId = await select({
       message: "Provider region / site",
       choices: listSiteOptions(provider),
     });
   }
 
-  let alibabaWorkspaceId: string | undefined;
-  if (provider === "alibaba" && providerSite && siteNeedsWorkspaceId(provider, providerSite)) {
-    alibabaWorkspaceId = await input({
+  let workspaceId: string | undefined;
+  if (provider === "alibaba" && siteId && siteNeedsWorkspaceId(provider, siteId)) {
+    workspaceId = await input({
       message: "Alibaba workspace ID",
       validate: (value) => (value.trim() ? true : "Workspace ID is required for this region."),
     });
   }
 
-  let apiKey = "";
-  let bedrock: ProviderSetupResult["bedrock"];
-  let vertex: ProviderSetupResult["vertex"];
+  let credentials: Record<string, string> = {};
   let awsRegion: string | undefined;
   let azureResourceName: string | undefined;
   let vertexProject: string | undefined;
@@ -270,13 +266,11 @@ export async function runProviderWizard(): Promise<ProviderSetupResult> {
 
   if (provider === "amazon-bedrock") {
     const collected = await collectBedrockCredentials();
-    bedrock = collected.bedrock;
-    apiKey = collected.apiKey ?? "";
+    credentials = collected.credentials;
     awsRegion = collected.awsRegion;
   } else if (provider === "google-vertex-ai") {
     const collected = await collectVertexCredentials();
-    vertex = collected.vertex;
-    apiKey = collected.apiKey ?? "";
+    credentials = collected.credentials;
     vertexProject = collected.vertexProject;
     vertexLocation = collected.vertexLocation;
   } else if (provider === "azure") {
@@ -284,62 +278,65 @@ export async function runProviderWizard(): Promise<ProviderSetupResult> {
       message: "Azure OpenAI resource name",
       validate: (value) => (value.trim() ? true : "Resource name is required."),
     });
-    apiKey = await password({
+    const apiKey = await password({
       message: "Azure API key",
       mask: "*",
       validate: (value) => (value.trim() ? true : "API key is required."),
     });
-  } else if (provider === "custom") {
+    credentials = { apiKey: apiKey.trim() };
+  } else if (provider === CUSTOM_PROVIDER_PRESET_ID) {
     apiBaseOverride = await input({
       message: "API base URL",
       validate: (value) => (value.trim() ? true : "API base URL is required."),
     });
-    apiKey = await password({
+    const apiKey = await password({
       message: "API key",
       mask: "*",
       validate: (value) => (value.trim() ? true : "API key is required."),
     });
+    credentials = { apiKey: apiKey.trim() };
   } else {
-    apiKey = await password({
+    const apiKey = await password({
       message: "API key",
       mask: "*",
       validate: (value) => validateApiKeyRequired(provider, value) ?? true,
     });
+    credentials = apiKey.trim() ? { apiKey: apiKey.trim() } : {};
   }
 
-  const draftProfile = buildSetupProfile({
+  const wizardInput: WizardSetupInput = {
     provider,
     modelName: "placeholder",
-    ...(providerSite ? { providerSite } : {}),
-    ...(alibabaWorkspaceId ? { alibabaWorkspaceId } : {}),
+    ...(siteId ? { siteId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
     ...(awsRegion ? { awsRegion } : {}),
     ...(azureResourceName ? { azureResourceName } : {}),
     ...(vertexProject ? { vertexProject } : {}),
     ...(vertexLocation ? { vertexLocation } : {}),
     ...(apiBaseOverride ? { apiBaseOverride } : {}),
-  });
+  };
 
-  const modelName = await promptModelId(provider, apiKey, draftProfile, {
-    ...(bedrock?.accessKeyId ? { accessKeyId: bedrock.accessKeyId } : {}),
-    ...(bedrock?.secretAccessKey ? { secretAccessKey: bedrock.secretAccessKey } : {}),
-    ...(vertex?.clientEmail ? { vertexClientEmail: vertex.clientEmail } : {}),
-    ...(vertex?.privateKey ? { vertexPrivateKey: vertex.privateKey } : {}),
+  const modelName = await promptModelId(provider, credentials["apiKey"] ?? "", wizardInput, {
+    ...(credentials["accessKeyId"] ? { accessKeyId: credentials["accessKeyId"] } : {}),
+    ...(credentials["secretAccessKey"] ? { secretAccessKey: credentials["secretAccessKey"] } : {}),
+    ...(credentials["clientEmail"] ? { vertexClientEmail: credentials["clientEmail"] } : {}),
+    ...(credentials["privateKey"] ? { vertexPrivateKey: credentials["privateKey"] } : {}),
   });
 
   if (provider === "azure") {
     const azureError = validateAzureSetup({
       ...(azureResourceName ? { azureResourceName } : {}),
-      apiKey,
+      apiKey: credentials["apiKey"] ?? "",
       modelName,
     });
     if (azureError) {
       throw new Error(azureError);
     }
   }
-  if (provider === "custom") {
+  if (provider === CUSTOM_PROVIDER_PRESET_ID) {
     const customError = validateCustomSetup({
       ...(apiBaseOverride ? { apiBase: apiBaseOverride } : {}),
-      apiKey,
+      apiKey: credentials["apiKey"] ?? "",
       modelName,
     });
     if (customError) {
@@ -347,37 +344,16 @@ export async function runProviderWizard(): Promise<ProviderSetupResult> {
     }
   }
 
-  const setupParts = buildProviderSetupResult({
-    provider,
-    modelName,
-    ...(providerSite ? { providerSite } : {}),
-    ...(alibabaWorkspaceId ? { alibabaWorkspaceId } : {}),
-    ...(awsRegion ? { awsRegion } : {}),
-    ...(azureResourceName ? { azureResourceName } : {}),
-    ...(vertexProject ? { vertexProject } : {}),
-    ...(vertexLocation ? { vertexLocation } : {}),
-    ...(apiBaseOverride ? { apiBaseOverride } : {}),
-  });
+  const result = buildProviderSetupResult({ ...wizardInput, modelName });
 
+  const activeModelName = result.activeModel?.name ?? modelName;
   const confirmed = await confirm({
-    message: `Save ${setupParts.model.name} (${provider}) as the active model?`,
+    message: `Save ${activeModelName} (${provider}) as the active model?`,
     default: true,
   });
   if (!confirmed) {
     throw new Error("Setup cancelled.");
   }
 
-  const result: ProviderSetupResult = {
-    ...setupParts,
-  };
-  if (apiKey.trim()) {
-    result.apiKey = apiKey.trim();
-  }
-  if (bedrock) {
-    result.bedrock = bedrock;
-  }
-  if (vertex) {
-    result.vertex = vertex;
-  }
-  return result;
+  return Object.keys(credentials).length > 0 ? { ...result, credentials } : result;
 }

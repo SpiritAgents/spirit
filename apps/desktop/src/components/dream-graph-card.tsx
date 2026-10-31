@@ -1,8 +1,9 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { product } from "@spiritagent/product";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import i18n from "@/lib/i18n";
-import { LoaderCircle } from "lucide-react";
 import {
   Background,
   type Edge,
@@ -283,7 +284,12 @@ function DreamLogoNode({ data }: NodeProps<Node<DreamLogoNodeData>>) {
         position={Position.Right}
         className="!h-2 !w-2 !border-0 !bg-transparent !opacity-0"
       />
-      <img src={data.iconSrc} alt="Spirit" className="h-16 w-16 object-contain" draggable={false} />
+      <img
+        src={data.iconSrc}
+        alt={product.name}
+        className="h-16 w-16 object-contain"
+        draggable={false}
+      />
     </div>
   );
 }
@@ -557,7 +563,7 @@ export function DreamGraphCard({
       <div className="relative w-full" style={{ height: `${String(graphHeight)}px` }}>
         {loading ? (
           <div className="absolute right-3 top-3 z-10 flex items-center gap-2 rounded-full border border-border/50 bg-background/75 px-3 py-1 text-xs text-muted-foreground backdrop-blur-sm">
-            <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+            <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
             {t("dreams.loading")}
           </div>
         ) : null}

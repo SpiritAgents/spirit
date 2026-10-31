@@ -1,17 +1,18 @@
 ---
 title: スキル
-description: ユーザー、.spirit、.agents のスキルに加えて、組み込みの create-rule、create-skill、create-hook、create-extension。
+description: ユーザー、{{product.workspaceDataFolderName}}、.agents のスキルに加えて、組み込みの
+  create-rule、create-skill、create-hook、create-extension。
 ---
 
-スキルは `SKILL.md` を含むフォルダーです。Spirit はスキルを以下の 3 つの場所から発見します:
+スキルは `SKILL.md` を含むフォルダーです。{{product.name|mdx}} はスキルを以下の 3 つの場所から発見します:
 
-| スコープ              | パス                                         |
-| --------------------- | -------------------------------------------- |
-| ユーザー              | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| ワークスペース Spirit | `{workspace}/.spirit/skills/{name}/SKILL.md` |
-| ワークスペース agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| スコープ                      | パス                                         |
+| ----------------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| ユーザー                      | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| ワークスペース {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| ワークスペース agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-ターン内でスキルに言及すると、Spirit はそのユーザーメッセージにスキルの全文を添付できます。すべてのスキルをシステムプロンプトに投入することはありません。
+ターン内でスキルに言及すると、{{product.name|mdx}} はそのユーザーメッセージにスキルの全文を添付できます。すべてのスキルをシステムプロンプトに投入することはありません。
 
 ## フロントマター
 
@@ -24,11 +25,11 @@ description: ユーザー、.spirit、.agents のスキルに加えて、組み�
 
 ## 組み込みスキル
 
-これらは Spirit に同梱されています（データディレクトリ内のファイルではありません）:
+これらは {{product.name|mdx}} に同梱されています（データディレクトリ内のファイルではありません）:
 
 - `create-rule` — [ルール](./rules.mdx) の下書き
 - `create-skill` — [スキル](./skills.mdx) の下書き
 - `create-hook` — [フック](./hooks.mdx) の下書き
 - `create-extension` — [拡張機能](../develop/extensions.mdx) の下書き
 
-**設定 → スキル** でスキルを管理します。Git コミット/プッシュ/マージのチップはホスト UI であり、バンドルされたスキルではありません。[デスクトップ](../desktop.mdx) を参照してください。[拡張機能](../develop/extensions.mdx) に同梱された skills は、その拡張機能が有効なときだけ使え、この設定一覧には出ません。
+**設定 → スキル** でスキルを管理します。Git コミット/プッシュ/マージのチップはホスト UI であり、バンドルされたスキルではありません。[デスクトップ](../desktop.mdx) を参照してください。[拡張機能](../develop/extensions.mdx) に同梱されたスキルは、その拡張機能が有効なときだけ使え、この設定一覧には出ません。

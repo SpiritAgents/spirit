@@ -3,11 +3,11 @@ title: プロバイダー
 description: 自分のAPIキーを持ち込み、接続ウィザードを実行し、ハウスを切り替えても同じエージェントワークフローを維持します。
 ---
 
-SpiritはBYOKです。プロバイダーのコンソールでキーを作成し、それをDesktopまたはCLIに貼り付けます。SpiritはそれをOSのキーリングに保存します。ハウスを切り替えても、ワークスペースの開き方、編集の承認方法、エージェントの実行方法は変わりません。
+{{product.name|mdx}}はBYOKです。プロバイダーのコンソールでキーを作成し、それをDesktopまたはCLIに貼り付けます。{{product.name|mdx}}はそれをOSのキーリングに保存します。ハウスを切り替えても、ワークスペースの開き方、編集の承認方法、エージェントの実行方法は変わりません。
 
 接続ウィザードは、Desktopでは**Settings → Models**、CLIでは`/model add`または`spirit model add`です。追加フィールドは、そのプロバイダーが必要とする場合にのみ表示されます。
 
-Spiritは4つのトランスポートのいずれかでプロバイダーと通信します。ウィザードはタイプを固定するか、選択させます。
+{{product.name|mdx}}は4つのトランスポートのいずれかでプロバイダーと通信します。ウィザードはタイプを固定するか、選択させます。
 
 | トランスポート      | ウィザードのラベル                 | 一般的な用途                                                                       |
 | ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
@@ -16,7 +16,7 @@ Spiritは4つのトランスポートのいずれかでプロバイダーと通�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax、およびオプションのMessages互換エンドポイント                   |
 | `bedrock`           | Amazon Bedrock                     | Amazon Bedrockのみ                                                                 |
 
-Google GeminiとVertex AIは常にChat Completionsを使用します。プロファイルがResponsesまたはMessagesを要求する場合、Spiritは`openai-compatible`にフォールバックします。
+Google と Vertex AI のプリセットは Chat Completions に固定されています。ウィザードにトランスポートのピッカーはありません。
 
 一部のハウスでは、キーに加えて2番目の次元が追加されます：
 
@@ -24,21 +24,25 @@ Google GeminiとVertex AIは常にChat Completionsを使用します。プロフ
 - **プランエンドポイント** — Alibaba Token Plan、StepFun Step Plan、Z.ai / Zhipu AI GLM Coding Plan
 - **クラウドフィールド** — Bedrockリージョン、Azureリソース名、Cloudflareアカウント（およびオプションのゲートウェイ）、Vertexプロジェクト/ロケーション
 
-これらのいずれも持たないプロバイダーの場合、ウィザードはキー → モデルのインポート → アクティブなチャットモデルの選択だけです。
+これらのいずれも持たないプロバイダーの場合、ウィザードはキー → モデルのインポート → アクティブな言語モデルの選択だけです。
 
-Spiritはモデルカタログをインポートし、アクティブなチャットモデルを割り当てることができます。さらに、カタログがその機能をマークしている場合、画像/ビデオ/軽量チャットのスロットも割り当てられます。推論と組み込みのウェブ検索は、モデルとトランスポートに従い、Spiritの別のトグルではありません。
+{{product.name|mdx}}はモデルカタログをインポートし、アクティブな言語モデルを割り当てることができます。さらに、カタログがその機能をマークしている場合、画像/ビデオ/セカンダリ言語モデルのスロットも割り当てられます。推論の選択肢は各モデルが宣言する `supportedReasoningEfforts` に従います。ウェブ検索などのプロバイダー公開ツールはプロバイダーごとに宣言され、**プロバイダーツール** のトグルで一括制御されます。詳しくは [ツール](./agent/tools.mdx#provider-tools) を参照してください。
+
+ウィザードが `config.json` に書き込むのは、完全な宣言型のエントリです：最終的な API ベース、トランスポート、SDK アダプター、そしてプロバイダーツール / ファイルアップロード / 生成 API の宣言。ランタイムはこれらの宣言をそのまま読み取り、プロバイダーの素性から再導出することはありません。あなたの編集は保持されます。再接続時にウィザードが所有するキーだけがリセットされます（[設定](./config.mdx) を参照）。
 
 ## カタログ
 
-これらは接続ピッカーに表示されるハウスで、同じ順序です。各セクションは、そのハウスのキー、トランスポート、追加フィールドです。上記のDesktopおよびCLIウィザードは、すべてのハウスで同じです。
+これらは接続ピッカーに表示されるハウスで、同じ順序です。各セクションには、そのハウスのキー、トランスポート、追加フィールド、そしてウィザードがキー以外に宣言する内容を記載しています。特に記載がない限り、認証情報の形態はキーリングに保存される単一の API キーです。上記のDesktopおよびCLIウィザードは、すべてのハウスで同じです。
 
 ### OpenAI
 
-[OpenAIプラットフォーム](https://platform.openai.com/api-keys)でAPIキーを作成します。SpiritはOpenAIの使用量を販売しません。
+[OpenAIプラットフォーム](https://platform.openai.com/api-keys)でAPIキーを作成します。{{product.name|mdx}}はOpenAIの使用量を販売しません。
 
 ウィザードは**Responses API**（`open-responses`）を固定します。トランスポートのピッカーはありません。デフォルトのベース：`https://api.openai.com/v1`。
 
 インポート後にチャットします。推論はモデルに従います。画像およびビデオ生成は、カタログがそれらの機能をマークした場合にのみ表示されます — 画像/ビデオモデルスロットで割り当ててください。
+
+宣言：**ウェブ検索**プロバイダーツール（アップストリームがリクエスト内で実行）と画像生成 API。
 
 ### Anthropic
 
@@ -46,13 +50,13 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 **Messages API**（`anthropic`）を固定します。デフォルトのベース：`https://api.anthropic.com/v1`。
 
-インポート後にチャットします。推論はモデルに従います。Spirit側の画像またはビデオ生成スロットは、後のカタログエントリがそれをマークしない限りありません。
+インポート後にチャットします。推論はモデルに従います。{{product.name|mdx}}側の画像またはビデオ生成スロットは、後のカタログエントリがそれをマークしない限りありません。
 
 ### Google
 
 [Google AI Studio](https://aistudio.google.com/apikey)でAPIキーを作成します。
 
-**Chat Completions API**（`openai-compatible`）を固定します。ResponsesまたはMessagesを要求すると、Chat Completionsにフォールバックします。デフォルトのベース：`https://generativelanguage.googleapis.com/v1beta`。
+**Chat Completions API**（`openai-compatible`）に固定され、ウィザードにトランスポートのピッカーはありません。デフォルトのベース：`https://generativelanguage.googleapis.com/v1beta`。
 
 インポート後にチャットします。画像生成は、カタログがそれをマークした場合にのみ割り当てられます。Vertex AI（GCPプロジェクト/ロケーション）の場合は、[Google Vertex AI](#google-vertex-ai)を使用してください。
 
@@ -60,9 +64,11 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 [SpaceXAIコンソール](https://console.x.ai/team/default/api-keys)でAPIキーを作成します。
 
-**Chat Completions API**（`openai-compatible`）を固定します。デフォルトのベース：`https://api.x.ai/v1`。
+**Open Responses API**（`open-responses`）を固定します。デフォルトのベース：`https://api.x.ai/v1`。
 
 インポート後のチャット。推論、画像、ビデオはインポートされたカタログに従います。表示されたらスロットを割り当てます。
+
+宣言：**ウェブ検索**プロバイダーツール（アップストリームがリクエスト内で実行）。
 
 ### Vercel AI Gateway
 
@@ -74,6 +80,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 タグからビジョンや画像生成を推測しないでください。このゲートウェイを介した MiniMax M3 は、Open Responses で表示可能な思考ストリームを返しません。
 
+宣言：**Perplexity Search** プロバイダーツール（ゲートウェイがリクエスト内で実行）と画像 / ビデオ生成 API。
+
 ### Cloudflare AI Gateway
 
 [Cloudflare ダッシュボード](https://developers.cloudflare.com/ai-gateway/) で API トークンを作成します。アカウント ID も必要です。
@@ -81,7 +89,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 ピッカー: **Chat Completions**、**Open Responses**、または **Messages**。ベースはアカウントから構築されます: `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
 
 - **アカウント ID** (必須) — 32文字の16進数
-- **ゲートウェイ ID** (オプション)
+- **ゲートウェイ ID** (オプション) — リテラルの `cf-aig-gateway-id` リクエストヘッダーとして書き込まれます
 
 アカウント ID がないとウィザードは API ベースを構築できません。チャットやその他の機能は、ゲートウェイが公開するモデルに従います。
 
@@ -89,9 +97,11 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 [DeepSeek プラットフォーム](https://platform.deepseek.com/api-keys) で API キーを作成します。
 
-ピッカーなし。接続デフォルトは **Open Responses** (`open-responses`)。互換ベースは `https://api.deepseek.com/v1` (Chat) と `https://api.deepseek.com/anthropic` (Messages) にも存在します。
+接続のデフォルトは **Chat Completions API**（`openai-compatible`）です。デフォルトのベース：`https://api.deepseek.com/v1`。明示的な代替として、**Open Responses**（`open-responses`、ベース `https://api.deepseek.com`）と **Messages**（`anthropic`、ベース `https://api.deepseek.com/anthropic`）を使用できます。
 
 インポート後のチャット。推論はモデルに従います。
+
+宣言：**ウェブ検索**プロバイダーツール（静的な `function` 宣言。{{product.name|mdx}} が `POST /v1/tools/search` で呼び出しを実行）。
 
 ### OpenRouter
 
@@ -100,6 +110,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 ピッカー: **Chat Completions**、**Open Responses**、または **Messages**。デフォルトのベース: `https://openrouter.ai/api/v1`。
 
 チャットに加えて、OpenRouter がそのモデルを公開している場合、カタログでマークされた画像またはビデオ生成。
+
+宣言：ビデオ生成 API。
 
 ### Fireworks AI
 
@@ -117,6 +129,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後のチャット。カタログがマークしている場合のみ、画像またはビデオのスロットを割り当てます。
 
+宣言：画像生成 API とビデオ生成 API。
+
 ### Groq
 
 [Groq コンソール](https://console.groq.com) で API キーを作成します。
@@ -132,6 +146,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 固定 **Chat Completions API**。デフォルトのベース: `https://api.deepinfra.com/v1/openai`。
 
 インポート後のチャット。その他の機能はカタログに従います。
+
+宣言：画像生成 API とビデオ生成 API。
 
 ### Baseten
 
@@ -149,6 +165,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット可能。その他の機能はルーターカタログに従います。
 
+宣言：画像生成 API とビデオ生成 API。
+
 ### Moonshot AI
 
 使用するサイトの Moonshot コンソールで API キーを作成します: [中国](https://platform.kimi.com/console/api-keys) または [国際](https://platform.kimi.ai/console/api-keys)。
@@ -158,7 +176,9 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 - **国際** (デフォルト) — `https://api.moonshot.ai/v1`
 - **中国** — `https://api.moonshot.cn/v1`
 
-これは Moonshot Open Platform プロバイダーであり、[Kimi Code](#kimi-code) ではありません。moonshot-ai の組み込み検索は Kimi Code のホスト検索パスを使用しません。Kimi Code キーと Moonshot Open Platform キーは別の接続です。
+これは Moonshot Open Platform プロバイダーであり、[Kimi Code](#kimi-code) ではありません。Kimi Code キーと Moonshot Open Platform キーは別の接続です。
+
+宣言：**ウェブ検索**プロバイダーツール（静的な `function` ツールスキーマ。{{product.name|mdx}} が `POST /v1/tools/search_pro` で呼び出しを実行）とビデオのファイルアップロード（`ms://` ファイル参照）。
 
 ### Kimi Code
 
@@ -166,7 +186,9 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 **Chat Completions API** に固定。デフォルトのベース: `https://api.kimi.com/coding/v1`。Messages ベースは `https://api.kimi.com/coding` にありますが、ウィザードにはピッカーはありません。
 
-インポート後にチャット可能。ホスト検索は、利用可能な場合、このプロバイダー固有です — moonshot-ai ではありません。
+インポート後にチャット可能。ここでのホスト検索は、このプロバイダー固有のものです — moonshot-ai ではありません。
+
+宣言：**ウェブ検索**プロバイダーツール（ホストが宣言された検索エンドポイントに対して実行）、ビデオのファイルアップロード（`ms://` ファイル参照）、およびリテラルの `stream_options` リクエストボディのマージ。
 
 ### Z.ai
 
@@ -178,6 +200,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット可能。推論はモデルに従います。
 
+宣言：**ウェブ検索**プロバイダーツール（ホスト実行。`max_results` 1–50）。
+
 ### Zhipu AI
 
 [Zhipu AI コンソール](https://bigmodel.cn/console) で API キーを作成します。コーディングプランの注意: [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start)。
@@ -187,6 +211,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 **GLM Coding Plan** をオンにして、`https://open.bigmodel.cn/api/coding/paas/v4` を使用します。
 
 インポート後にチャット可能。推論はモデルに従います。
+
+宣言：**ウェブ検索**プロバイダーツール（ホスト実行。`max_results` 1–50）。
 
 ### Alibaba
 
@@ -203,16 +229,20 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット可能。その他の機能はカタログに従います。
 
+宣言：**ウェブ検索**と**コードインタープリター**のプロバイダーツール（リクエストボディのスイッチで、アップストリームが実行）。
+
 ### MiniMax
 
-使用するサイトの MiniMax コンソールで API キーを作成します: [中国](https://platform.minimaxi.com/console/) または [国際](https://platform.minimax.io/console/)。
+使用するサイトの MiniMax コンソールで API キーを作成します: [中国](https://platform.minimax.cn/console/) または [国際](https://platform.minimax.io/console/)。
 
 **Messages API** (`anthropic`) に固定。国際 Messages ベース: `https://api.minimax.io/anthropic/v1`。
 
 - **国際** (デフォルト) — `https://api.minimax.io/v1` (Chat 形式) / `https://api.minimax.io/anthropic/v1` (Messages)
-- **中国** — `https://api.minimaxi.com/v1`
+- **中国** — `https://api.minimax.cn/v1`
 
 インポート後にチャット可能。上流の `/models` リストにはマルチモーダルフラグがなく、M3 のみが画像 / ビデオ入力をサポートするものとして扱われます。Vercel AI Gateway 経由の Open Responses では、MiniMax M3 は表示可能な思考ストリームを返しません。
+
+宣言：**ウェブ検索**プロバイダーツール（Messages API のサーバーツールで、アップストリームが実行）とビデオのファイルアップロード（`mm_file://` ファイル参照）。
 
 ### Xiaomi
 
@@ -233,6 +263,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット。その他の機能はカタログに従います。
 
+宣言：画像生成 API とビデオ生成 API。
+
 ### StepFun
 
 [StepFun 中国サイト](https://platform.stepfun.com) または [国際サイト](https://platform.stepfun.ai) で API キーを作成します。Step Plan の注記: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api)。
@@ -246,6 +278,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット。推論はモデルに従います。
 
+宣言：**ウェブ検索**プロバイダーツール（ホスト実行。`max_results` 1–20）、ビデオのファイルアップロード（`stepfile://` ファイル参照、128 MiB 上限）、および画像生成 API。
+
 ### Volcengine
 
 [Volcengine Ark コンソール](https://console.volcengine.com/ark/apiKey) で API キーを作成します。
@@ -253,6 +287,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 ピッカー: **Chat Completions** または **Responses API**。デフォルトのベース: `https://ark.cn-beijing.volces.com/api/v3`。
 
 インポート後にチャット。その他の機能はカタログに従います。
+
+宣言：ビデオ生成 API。
 
 ### BytePlus
 
@@ -262,6 +298,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 インポート後にチャット。その他の機能はカタログに従います。
 
+宣言：ビデオ生成 API。
+
 ### Meituan
 
 [LongCat コンソール](https://longcat.chat/platform/api_keys) で API キーを作成します。
@@ -269,6 +307,8 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 固定 **Chat Completions API**。デフォルトのベース: `https://api.longcat.chat/openai/v1`。
 
 インポート後にチャット。その他の機能はカタログに従います。
+
+宣言：thinking オン/オフのワイヤー符号化（`thinkingSwitch`）。thinking スイッチを持つモデルでトグルが機能するようになります。
 
 ### Tencent TokenHub
 
@@ -279,7 +319,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 - **広州** (デフォルト) — `https://tokenhub.tencentmaas.com/v1`
 - **シンガポール** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-インポート後にチャット。Chat に組み込まれた Web 検索に依存しないでください。TokenHub は Chat の `web_search_options` と Responses の `web_search` を文書化していますが、Chat の注入は実際には機能せず、Responses は一部のモデルでのみ利用可能です。したがって、Spirit は Chat Completions のみを保持します。
+インポート後にチャット。Chat に組み込まれた Web 検索に依存しないでください。TokenHub は Chat の `web_search_options` と Responses の `web_search` を文書化していますが、Chat の注入は実際には機能せず、Responses は一部のモデルでのみ利用可能です。したがって、{{product.name|mdx}} は Chat Completions のみを保持します。
 
 ### Mistral
 
@@ -305,7 +345,7 @@ Spiritはモデルカタログをインポートし、アクティブなチャ�
 
 - **リソース名** (必須) — 2〜64文字、英字、数字、ハイフンを使用可能。ハイフンで始まるまたは終わることはできません。
 
-Spirit は `https://{resource}.openai.azure.com/openai/v1` を構築します。インポート後にチャットできます。画像生成は、マークされている場合に Azure カタログに従います。
+{{product.name|mdx}} は `https://{resource}.openai.azure.com/openai/v1` を構築します。インポート後にチャットできます。画像生成は、マークされている場合に Azure カタログに従います。
 
 ### Amazon Bedrock
 
@@ -316,15 +356,17 @@ Spirit は `https://{resource}.openai.azure.com/openai/v1` を構築します。
 - **AWS リージョン** (必須)、例: `us-east-1`
 - **認証**: **Bearer** または **IAM**
   - Bearer — Bedrock API キーとモデル ID を貼り付けます。モデルは自動的に取得されません。
-  - IAM — Access Key ID + Secret Access Key。Spirit はアカウントから基盤モデルを一覧表示します。
+  - IAM — Access Key ID + Secret Access Key。{{product.name|mdx}} はアカウントから基盤モデルを一覧表示します。
 
 モデルを選択した後にチャットできます。他の機能はそのモデルに従います。Bearer キーは推論のみで機能します。`ListFoundationModels` は Bearer を受け付けないため、カタログのインポートには IAM が必要です。
+
+リージョンは最終的な API ベースと `options.awsRegion` に物化されます。Bearer はプロバイダーキーとして、IAM は `accessKeyId` / `secretAccessKey` 認証スロットとして保存されます。
 
 ### Google Vertex AI
 
 Vertex AI が有効な GCP プロジェクトを使用します。認証は ADC、サービスアカウント、または Express API キーです。一般的な OpenAI キーではありません。
 
-**Chat Completions API** に固定されます。Responses または Messages リクエストは Chat Completions にフォールバックします。ベースは `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}` になります。
+**Chat Completions API** に固定され、ウィザードにトランスポートのピッカーはありません。ベースは `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}` になります。
 
 - **GCP プロジェクト ID** と **ロケーション** (必須)、例: `us-central1`
 - **認証**
@@ -334,14 +376,16 @@ Vertex AI が有効な GCP プロジェクトを使用します。認証は ADC�
 
 モデルを選択した後にチャットできます。GCP プロジェクトを持たない AI Studio キーの場合は、[Google](#google) を使用してください。Express モードではモデル一覧をインポートできません。サービスアカウントモードでは、モデルを一覧表示するためにメールと秘密鍵の両方が必要です。
 
+サービスアカウントは `clientEmail` / `privateKey` 認証スロットに保存され、`options.project` / `options.location` を伴います。Express モードは Express API ベースを書き込み、プロジェクト / ロケーションは不要です。
+
 ### カスタム
 
-エンドポイントが期待する API キーを使用します。Spirit がホストするカスタムプロバイダーはありません。
+エンドポイントが期待する API キーを使用します。{{product.name|mdx}} がホストするカスタムプロバイダーはありません。
 
 選択肢: **Chat Completions**、**Open Responses**、または **Messages**。**ベース URL** を指定する必要があります。空のままにした場合のプレースホルダーのデフォルトは `https://api.openai.com/v1` です。
 
-ベンダーが文書化しているルートを入力します。ベンダーが要求する場合はバージョンサフィックスも含めます (`/v1`、`/v1/openai` など)。Spirit はカスタムエンドポイントのパスを推測しません。
+ベンダーが文書化しているルートを入力します。ベンダーが要求する場合はバージョンサフィックスも含めます (`/v1`、`/v1/openai` など)。{{product.name|mdx}} はカスタムエンドポイントのパスを推測しません。
 
-プロバイダーグループの表示名を設定して、複数のカスタムエンドポイントを区別しやすくすることもできます。
+プロバイダーエントリの表示名を設定して、複数のカスタムエンドポイントを区別しやすくすることもできます。
 
-接続後、モデル ID をインポートまたは入力します。エンドポイントが Spirit が理解できるカタログを公開しない場合は、ウィザードでチャット/画像/ビデオの機能をマークします。
+接続後、モデル ID をインポートまたは入力します。エンドポイントが {{product.name|mdx}} が理解できるカタログを公開しない場合は、ウィザードでチャット/画像/ビデオの機能をマークします。

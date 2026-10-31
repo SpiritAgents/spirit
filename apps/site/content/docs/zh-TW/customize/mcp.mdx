@@ -1,14 +1,15 @@
 ---
 title: MCP
-description: 使用者的 mcp.json 加上工作區的 .spirit/mcp.json。相同伺服器名稱時，以工作區為準。
+description: 使用者的 mcp.json 加上工作區的
+  {{product.workspaceDataFolderName}}/mcp.json。相同伺服器名稱時，以工作區為準。
 ---
 
-MCP 伺服器從 Spirit 外部加入工具、資源與提示詞。
+MCP 伺服器從 {{product.name|mdx}} 外部加入工具、資源與提示詞。
 
-| 範圍   | 路徑                           |
-| ------ | ------------------------------ |
-| 使用者 | `{spiritDataDir}/mcp.json`     |
-| 工作區 | `{workspace}/.spirit/mcp.json` |
+| 範圍   | 路徑                                                       |
+| ------ | ---------------------------------------------------------- |
+| 使用者 | `{spiritDataDir}/mcp.json`                                 |
+| 工作區 | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 當兩個檔案定義相同的伺服器名稱時，**工作區**的項目優先。
 

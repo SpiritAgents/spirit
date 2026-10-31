@@ -1,6 +1,8 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronRight, Folder } from "lucide-react";
+import { Folder } from "lucide-react";
 
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
 
@@ -58,11 +60,11 @@ function PrChangesTreeNodeRow({
         onClick={() => setOpen((value) => !value)}
       >
         {open ? (
-          <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden />
+          <ChevronDown className="size-3.5 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
         ) : (
-          <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden />
+          <ChevronRight className="size-3.5 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
         )}
-        <Folder className="size-3.5 shrink-0 opacity-70" aria-hidden />
+        <Folder className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
         <span className="min-w-0 truncate">{node.name}</span>
       </button>
       {open ? (

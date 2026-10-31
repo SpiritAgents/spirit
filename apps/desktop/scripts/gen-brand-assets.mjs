@@ -1,6 +1,6 @@
 /**
  * Generates all packaging/runtime icons from the @spiritagent/brand SVG sources (outputs are not committed, see .gitignore):
- * - build/icon.png (512)          — macOS packaging icon + Windows window/taskbar icon; source app-icon.svg, natively opaque canvas
+ * - build/icon.png (512)          — macOS packaging icon + Windows window/taskbar icon; source logo-dark.svg, natively opaque canvas
  * - build/icon.ico (16/32/48/256) — Windows/Linux electron-builder; same source
  * - build/icon.icns               — macOS only; multi-resolution ICNS for the branded dev bundle; electron-builder mac still uses build/icon.png
  * - build/tray/iconTemplate.png (22) / @2x (44) / -32 (32) — macOS Template + Windows tray; source glyph constant
@@ -28,7 +28,7 @@ const buildDir = path.join(desktopRoot, "build");
 const trayDir = path.join(buildDir, "tray");
 
 const brandAssetsDir = path.join(desktopRoot, "..", "..", "packages", "brand", "assets");
-const appIconSvg = path.join(brandAssetsDir, "app-icon.svg");
+const appIconSvg = path.join(brandAssetsDir, "logo-dark.svg");
 const dmgBackgroundSvg = path.join(brandAssetsDir, "dmg-background.svg");
 
 const ICO_SIZES = [16, 32, 48, 256];
@@ -80,7 +80,7 @@ async function genPackagerIcons() {
 }
 
 /**
- * Rasterize app-icon.svg into a full Apple iconset and compile it with iconutil.
+ * Rasterize logo-dark.svg into a full Apple iconset and compile it with iconutil.
  * The PNGs stay square and opaque: baking a squircle here (or feeding the PNG to app.dock.setIcon)
  * produces the hard-cornered Dock tile that bypasses macOS's own mask.
  */

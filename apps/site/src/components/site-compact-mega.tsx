@@ -278,7 +278,7 @@ function CompactNestedPanel({
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
         )}
       >
-        <ArrowLeft className="size-4" aria-hidden />
+        <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
         {backLabel}
       </button>
       <ul className="mt-4 flex flex-col items-start gap-2">

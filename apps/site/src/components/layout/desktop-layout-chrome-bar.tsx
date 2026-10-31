@@ -1,9 +1,12 @@
+import { Plus } from "@spiritagent/icons/plus";
+import { SidebarLeft } from "@spiritagent/icons/sidebar-left";
+import { SidebarLeftCollapsed } from "@spiritagent/icons/sidebar-left-collapsed";
+import { SidebarRight } from "@spiritagent/icons/sidebar-right";
+import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
+
 import { useTranslation } from "@/lib/desktop-preview-i18n";
-
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Plus } from "lucide-react";
-
 import {
-  NewSessionShortcutKbd,
+  NewChatShortcutKbd,
   SessionSidebarShortcutKbd,
   WorkspaceToolsShortcutKbd,
 } from "@/components/layout/desktop-shortcut-kbds";
@@ -27,8 +30,8 @@ export function DesktopLayoutChromeBar({
   sessionTitle,
   subagentPromptText,
   onExitSubagentViewer,
-  onNewSession,
-  newSessionBusy = false,
+  onNewChat,
+  newChatBusy = false,
 }: {
   useTranslucency: boolean;
   baseToneClassName?: string;
@@ -38,8 +41,8 @@ export function DesktopLayoutChromeBar({
   sessionTitle?: string | null;
   subagentPromptText?: string | null;
   onExitSubagentViewer?: () => void;
-  onNewSession?: () => void;
-  newSessionBusy?: boolean;
+  onNewChat?: () => void;
+  newChatBusy?: boolean;
 }) {
   const { t } = useTranslation();
   const { open: sessionSidebarOpen, toggle: onToggleSessionSidebar } = useSessionSidebarChrome();
@@ -73,9 +76,9 @@ export function DesktopLayoutChromeBar({
               {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
             >
               {sessionSidebarOpen ? (
-                <PanelLeftClose className="size-3.5" aria-hidden />
+                <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
               ) : (
-                <PanelLeftOpen className="size-3.5" aria-hidden />
+                <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
               )}
             </Button>
           </TooltipTrigger>
@@ -84,7 +87,7 @@ export function DesktopLayoutChromeBar({
             <SessionSidebarShortcutKbd />
           </TooltipContent>
         </Tooltip>
-        {onNewSession ? (
+        {onNewChat ? (
           <div
             className={cn(
               "shrink-0 overflow-hidden",
@@ -102,16 +105,16 @@ export function DesktopLayoutChromeBar({
                   variant="ghost"
                   size="icon"
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                  onClick={onNewSession}
-                  disabled={newSessionBusy}
+                  onClick={onNewChat}
+                  disabled={newChatBusy}
                   tabIndex={sessionSidebarOpen ? -1 : undefined}
-                  aria-label={t("sidebar.newSession")}
+                  aria-label={t("sidebar.newChat")}
                 >
-                  <Plus className="size-3.5" aria-hidden />
+                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                {t("sidebar.newChat")} <NewChatShortcutKbd />
               </TooltipContent>
             </Tooltip>
           </div>
@@ -140,9 +143,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <PanelRightClose className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden strokeWidth={1.75} />
                   ) : (
-                    <PanelRightOpen className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
                   )}
                 </Button>
               </TooltipTrigger>

@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 生産性を何倍にも引き上げるオープンソース AI エージェント。
@@ -8,9 +14,7 @@
 
 > 本プロジェクトは活発に開発中です。リリース間で動作や API が変わる場合があります。
 
-[English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 
@@ -116,8 +120,6 @@ pnpm run dev:site
 
 ## CLI
 
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
-
 [Rust CLI](../apps/cli)（`spirit`）はターミナル優先ホストで、オプションの Ratatui UI を提供。WebSocket 経由で共有 Spirit Server デーモンに接続し、スクリプト、SSH セッション、最小環境に適します。
 
 ```bash
@@ -172,11 +174,11 @@ node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 | 環境変数               | 必須   | 説明                                                                                |
 | ---------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `SPIRIT_ACP_WORKSPACE` | いいえ | ワークスペースルート（デフォルト：クライアント `cwd`）                              |
-| `SPIRIT_ACP_DATA_DIR`  | いいえ | Spirit データディレクトリ（デフォルト：`%APPDATA%/Spirit` または `~/.spirit-data`） |
+| `SPIRIT_ACP_DATA_DIR`  | いいえ | Spirit データディレクトリ（デフォルト：Stable: `~/.spirit` · Dev: `~/.spirit-dev`） |
 
 ## 開発
 
-**要件：** Node.js 24+、pnpm 12+（`corepack enable` で有効化）。CLI ビルドには Rust ツールチェーン。
+**要件：** Node.js 26.13.0、pnpm 12.4.2（`npm install --global pnpm@12.4.2` でインストール）。CLI ビルドには Rust ツールチェーン。
 
 | コマンド                   | 説明                                                                      |
 | -------------------------- | ------------------------------------------------------------------------- |

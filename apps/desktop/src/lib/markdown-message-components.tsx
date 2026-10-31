@@ -8,7 +8,11 @@ import type {
   MouseEvent,
 } from "react";
 
-import { MarkdownImage, type ReadManagedImagePreviewDataUrl } from "@/components/markdown-image";
+import {
+  MarkdownImage,
+  MarkdownImageSource,
+  type ReadManagedImagePreviewDataUrl,
+} from "@/components/markdown-image";
 import { MarkdownVideo, type ReadManagedVideoPreviewUrl } from "@/components/markdown-video";
 import type {
   ReadLocalImagePreview,
@@ -228,7 +232,7 @@ export function createMarkdownMessageComponents(
       </code>
     ),
     pre: ({ className, children, ...props }: HTMLAttributes<HTMLPreElement>) => (
-      <ScrollArea scrollbars="horizontal" className="mb-2 max-w-full min-w-0 last:mb-0">
+      <ScrollArea scrollbars="horizontal" className="mb-2 max-w-full last:mb-0">
         <pre
           className={cn(
             "w-max min-w-full rounded-md border p-3 font-mono leading-relaxed",
@@ -244,7 +248,7 @@ export function createMarkdownMessageComponents(
       </ScrollArea>
     ),
     table: ({ className, children, ...props }: HTMLAttributes<HTMLTableElement>) => (
-      <ScrollArea scrollbars="horizontal" className="my-2 max-w-full min-w-0 last:mb-0">
+      <ScrollArea scrollbars="horizontal" className="my-2 max-w-full last:mb-0">
         <table
           className={cn(
             "w-max min-w-full border-collapse border border-border/50 text-sm",
@@ -319,7 +323,15 @@ export function createMarkdownMessageComponents(
               {children}
             </picture>
           ),
-          source: (props: ComponentPropsWithoutRef<"source">) => <source {...props} />,
+          source: (props: ComponentPropsWithoutRef<"source">) => (
+            <MarkdownImageSource
+              readManagedImagePreviewDataUrl={readManagedImagePreviewDataUrl}
+              readLocalImagePreviewDataUrl={readLocalImagePreviewDataUrl}
+              localImageBaseDir={localImageBaseDir}
+              localImageAllowedRootDir={localImageAllowedRootDir}
+              {...props}
+            />
+          ),
           sup: ({ className, ...props }: HTMLAttributes<HTMLElement>) => (
             <sup
               className={cn("text-[10px] leading-snug text-muted-foreground/80", className)}

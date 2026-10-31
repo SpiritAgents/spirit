@@ -1,0 +1,205 @@
+---
+title: Tasks
+description: Run workspace tasks from the command palette, declared in
+  {{product.workspaceDataFolderName}}/tasks.json or imported from
+  .vscode/tasks.json.
+---
+
+<Callout type="info">Desktop only.</Callout>
+
+Tasks run predefined workspace commands from the {{product.name|mdx}} Desktop command palette: open the palette (`Mod+Shift+P`), pick **Workspace → Run Task**, then pick a task from the second-level list. The task runs in a terminal tab in the right-hand tools panel. The **Workspace** group appears in the palette only when at least one valid task exists.
+
+{{product.name|mdx}} Tasks is its own system, not VS Code Tasks. It reads a strict-JSON {{product.name|mdx}} format and, as a compatibility import, VS Code's `tasks.json` — with a clearly defined subset of VS Code's fields. A task that cannot run exactly as configured is hidden entirely rather than run half-configured; see [Why a task is hidden](#why-a-task-is-hidden).
+
+## Task files
+
+Three sources are read, highest priority first:
+
+| Priority | Source                                                       | Required marker      | Notes                                   |
+| -------- | ------------------------------------------------------------ | -------------------- | --------------------------------------- | ------------------ |
+| 1        | `<workspace>/{{product.workspaceDataFolderName}}/tasks.json` | `"schemaVersion": 1` | {{product.name|mdx}}'s own format |
+| 2        | `<data dir>/tasks.json`                                      | `"schemaVersion": 1` | User-level, applies to every workspace  |
+| 3        | `<workspace>/.vscode/tasks.json`                             | `"version": "2.0.0"` | VS Code compatibility import, read-only |
+
+Only the workspace root is scanned — nested directories are not. `<data dir>` is the {{product.name|mdx}} data directory (for example `~/{{product.stable.userDataFolderName}}` on macOS). A file that is missing, unreadable, invalid JSON, or carries the wrong marker contributes no tasks.
+
+The three files are watched live; the palette list refreshes automatically when any of them changes.
+
+All three sources merge into one namespace. When several sources define the same `label`, the highest-priority source wins — for the palette list and for `dependsOn` references alike.
+
+`.vscode/tasks.json` is parsed tolerantly, because real-world files are JSONC: `//` and `/* */` comments and trailing commas are accepted. {{product.name|mdx}}'s own files are strict JSON — a comment makes the file invalid.
+
+## Workspace trust
+
+Workspace task files arrive with the repository, so they are untrusted data: `{{product.workspaceDataFolderName}}/tasks.json` and `.vscode/tasks.json` load only after you approve the workspace content. The user-level `tasks.json` is implicitly trusted and always loads.
+
+When {{product.name|mdx}} Desktop detects workspace task files (or a change to them), it asks once: the prompt lists the tasks that will become available with their commands, and clicking an entry opens the source file. If workspace hooks also need approval, both lists appear in one combined dialog.
+
+- **Allow once** — the tasks load for this session only.
+- **Always trust** — remembered for this exact file content.
+- **Deny** — the workspace tasks stay unavailable; the denial is remembered for that exact content in this session.
+
+Editing either file asks again (the approval is tied to the content hash). To recover from a denial, edit the file (you will be asked again) or restart the app.
+
+This gate is the structural prerequisite for automatic run triggers: `runOn: "folderOpen"` runs only after approval, and `worktreeCreated` remains disabled.
+
+## Fields
+
+Behavior per field, evaluated after merging: file-level defaults < file-level OS block < task < task-level OS block.
+
+### Core fields
+
+| Field                                    | Behavior  | Notes                                                                                                                                                                                                                                   |
+| ---------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `label`                                  | Required  | Items without a non-empty label are dropped entirely — they never reach the menu or the dependency graph                                                                                                                                |
+| `type`                                   | Supported | `shell` (default) or `process`. Any other string (`npm`, `grunt`, …) is an extension-customized entry and is ignored completely: not hidden, not listed, siblings unaffected                                                            |
+| `command`                                | Supported | `string`, `string[]`, or `{ value, quoting }`. A task whose merged command is missing is hidden — also for `shell` tasks (stricter than VS Code)                                                                                        |
+| `args`                                   | Supported | Array of `string` or `{ value, quoting }`                                                                                                                                                                                               |
+| `quoting`                                | Supported | `escape`, `strong` (default), or `weak`; invalid values fall back to `strong`. Applies to `args` and the `{ value, quoting }` object form; a plain-string `command` is passed to the shell verbatim, so it may contain raw shell syntax |
+| `options.cwd`                            | Supported | Working directory of the process                                                                                                                                                                                                        |
+| `options.env`                            | Supported | Extra environment variables, merged over the host environment                                                                                                                                                                           |
+| `options.shell`                          | Supported | `{ executable, args }` — shell used for `shell` tasks instead of the default terminal shell                                                                                                                                             |
+| `windows` / `osx` / `linux` (task level) | Supported | `{ command, args, options }` overrides for the current OS                                                                                                                                                                               |
+| `windows` / `osx` / `linux` (file level) | Supported | Same shape, acting as the OS-specific default layer for every task in the file                                                                                                                                                          |
+| File-level defaults                      | Supported | Only `command`, `args`, `options`, `type`, `isBackground`, `promptOnClose`, `presentation` may act as file-level defaults                                                                                                               |
+| `isBackground`                           | Supported | Exit counts as user termination, never as failure. Another task depending on it is hidden (see below)                                                                                                                                   |
+| `promptOnClose`                          | Supported | Closing the tab while the process is alive asks for confirmation                                                                                                                                                                        |
+| `dependsOn`                              | Supported | A label string, or an array of label strings. The object form (`{ "type": … }`, `{ "task": … }`) hides the task                                                                                                                         |
+| `dependsOrder`                           | Supported | `parallel` (default) or `sequence`                                                                                                                                                                                                      |
+| `detail`                                 | Supported | Shown next to the label in the palette list                                                                                                                                                                                             |
+| `icon.id`                                | Supported | Menu icon: {{product.name|mdx}} Icons first, then Lucide, with a terminal glyph as fallback |
+| `icon.color`                             | Ignored   | Purely presentational                                                                                                                                                                                                                   |
+| `hide`                                   | Supported | Hidden from the palette list but still resolvable — the task can run as a `dependsOn` dependency                                                                                                                                        |
+
+### Run options
+
+| Field                          | Behavior   | Notes                                                                                            |
+| ------------------------------ | ---------- | ------------------------------------------------------------------------------------------------ |
+| `runOptions.reevaluateOnRerun` | Supported  | Default `true`. `false` caches the first resolution for later reruns                             |
+| `runOptions.runOn`             | Restricted | `default` and `folderOpen` are supported; `worktreeCreated` hides the task                       |
+| `runOptions.instanceLimit`     | Supported  | Default `1`. Exceeding the limit opens a dialog (see [Running tasks](#running-tasks))            |
+| `runOptions.instancePolicy`    | Restricted | Only `prompt` is supported. `terminateNewest`, `terminateOldest`, `warn`, `silent` hide the task |
+
+### Presentation
+
+| Field                               | Behavior  | Notes                                                                          |
+| ----------------------------------- | --------- | ------------------------------------------------------------------------------ |
+| `presentation.echo`                 | Supported | Writes the command line into the terminal before process output                |
+| `presentation.reveal`               | Supported | `always` (default), `silent`, or `never` — see [Running tasks](#running-tasks) |
+| `presentation.focus`                | Supported | Implies reveal and moves keyboard focus into the terminal                      |
+| `presentation.panel`                | Supported | `shared` (default), `dedicated`, or `new` — terminal reuse policy              |
+| `presentation.clear`                | Supported | Clears the terminal before a rerun that reuses it                              |
+| `presentation.close`                | Supported | Closes the tab automatically when the process exits                            |
+| `presentation.preserveTerminalName` | Supported | Keeps the task label as the tab title instead of the process title             |
+| `presentation.showReuseMessage`     | Ignored   | Purely presentational                                                          |
+| `presentation.group`                | Ignored   | Terminal grouping is out of scope                                              |
+
+### Ignored fields
+
+Carrying these never hides a task: `problemMatcher` (any form, at any level), `presentation.revealProblems`, `group` (build/test grouping), `icon.color`, `presentation.showReuseMessage`, `presentation.group`, `inAgents`. The file-level `inputs` array is simply not read — but a `${input:*}` _reference_ inside a task hides that task (see [Variables](#variables)).
+
+## Variables
+
+Supported references, substituted when the task is resolved:
+
+| Variable                     | Value                                          |
+| ---------------------------- | ---------------------------------------------- | --------------------------------------------- |
+| `${workspaceFolder}`         | Workspace root path                            |
+| `${workspaceFolderBasename}` | Workspace root folder name                     |
+| `${cwd}`                     | {{product.name|mdx}} Desktop's own process working directory |
+| `${userHome}`                | The OS user's home directory                   |
+| `${pathSeparator}`, `${/}`   | The OS path separator                          |
+| `${env:NAME}`                | Environment variable `NAME` (empty when unset) |
+
+Scanning covers `command`, `args`, `options.cwd`, `options.env` values, and `options.shell`. Any other `${…}` reference — `${file}`, `${selectedText}`, `${lineNumber}`, `${config:*}`, `${command:*}`, `${input:*}`, `${defaultBuildTask}`, … — hides the task. When no workspace is open, tasks referencing `${workspaceFolder}` or `${workspaceFolderBasename}` are hidden for that resolution pass.
+
+## Why a task is hidden
+
+A task that cannot run exactly as configured is hidden entirely rather than run half-configured. The task disappears from the palette; the reason is recorded with a stable rule id.
+
+| Rule                         | Rationale                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `unsupportedVariable`        | Substituting a guessed value would run a different command than configured           |
+| `dependsOnObjectForm`        | Extension-typed dependency entries are not runnable                                  |
+| `dependsOnBackground`        | A background task never finishes, so the chain has nothing well-defined to wait on   |
+| `instancePolicy`             | Only the interactive prompt exists; silent policies would terminate instances unseen |
+| `cyclicDependency`           | A dependency cycle could never start                                                 |
+| `transitiveHiddenDependency` | Depends on a label that is itself hidden or does not exist — hiding propagates       |
+| `invalidTask`                | No label (dropped entirely) or no `command` anywhere in the merge chain              |
+
+To diagnose a disappeared task, start Desktop with the debug channel enabled — every hidden task is logged with its rule id:
+
+```bash
+SPIRIT_DESKTOP_TASKS_DEBUG=1
+```
+
+The log line has the form `[desktop-host][tasks] hidden <file>#<label> rule=<id>`.
+
+## Running tasks
+
+Tasks start on an explicit click in the palette or, in trusted workspaces only, automatically on folder open when the task sets `runOn: "folderOpen"`. Nothing ever runs on file save or any other event. `worktreeCreated` remains unsupported.
+
+- **Dependencies** — `dependsOn` labels resolve in the merged namespace. With `dependsOrder: "parallel"` (default) all dependencies start together, each in its own terminal with its own presentation, and the main task starts only after every dependency has exited; if any dependency exits non-zero, the main task does not run — the same failure semantics as VS Code. With `"sequence"`, dependencies run one at a time in order and the first non-zero exit aborts the chain before the main task starts. A dependency that is already running is awaited, not restarted.
+- **Instance limit** — `runOptions.instanceLimit` defaults to `1`. Starting another instance past the limit lists the running instances with their elapsed times; select one (the first is preselected) and choose **Replace** to terminate it and start the new run, or **Cancel**. There is no option to exceed the configured limit.
+- **Folder-open trigger** — `runOn: "folderOpen"` runs the task automatically when the workspace is activated, but only in trusted workspaces (after approval or with an existing trust record); a denied workspace never runs it. Approving the trust prompt runs this session's folder-open tasks immediately. The trigger fires at most once per activation round — editing `tasks.json` never re-runs anything — and when the task is already running at its instance limit, the automatic run is silently skipped (no dialog).
+- **Terminal reuse** — only terminals of exited tasks are ever reused. `panel: "shared"` and `panel: "dedicated"` both reuse this task's own idle terminal when one exists (the pool is per task) and open a new tab otherwise; `panel: "new"` always opens a fresh tab.
+- **Echo** — with `presentation.echo` (default on) the command line is written into the terminal before the process output.
+- **Reveal** — `always` (default) expands the tools panel at launch; `silent` keeps it closed at launch and expands it only when the task exits non-zero; `never` never auto-expands. `focus: true` implies reveal and additionally moves keyboard focus into the terminal. Note two VS Code deviations: `reveal: "silent"` reveals only on a non-zero exit code ({{product.name|mdx}} has no problem-matcher trigger path), and `presentation.revealProblems` has no effect at all — it neither suppresses nor triggers a terminal reveal.
+- **Clear** — `presentation.clear` clears the terminal before a rerun that reuses it.
+- **Close** — `presentation.close` closes the tab automatically on exit, whatever the exit code.
+- **Preserve terminal name** — `presentation.preserveTerminalName` keeps the task label as the tab title; otherwise the running process's title replaces it.
+- **Background** — `isBackground: true` marks the task as never-ending; its exit counts as user termination, never as failure (no failure reveal).
+- **Close confirmation** — `promptOnClose: true` asks for confirmation when you close a tab whose process is still alive; confirming terminates the process.
+- **Hidden tasks** — `hide: true` tasks never appear in the palette but can still run as `dependsOn` dependencies.
+
+## Example
+
+A complete `{{product.workspaceDataFolderName}}/tasks.json` — a build → test → package sequence chain plus a background watch task:
+
+```json
+{
+  "schemaVersion": 1,
+  "tasks": [
+    {
+      "label": "build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["run", "build"],
+      "detail": "Production build",
+      "icon": { "id": "hammer" }
+    },
+    {
+      "label": "test",
+      "command": "pnpm",
+      "args": ["run", "test"],
+      "dependsOn": ["build"],
+      "dependsOrder": "sequence"
+    },
+    {
+      "label": "package",
+      "command": "bash",
+      "args": ["${workspaceFolder}/scripts/package.sh"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "CHANNEL": "stable" }
+      },
+      "dependsOn": ["test"],
+      "dependsOrder": "sequence",
+      "presentation": { "clear": true, "panel": "shared" }
+    },
+    {
+      "label": "watch",
+      "command": "pnpm",
+      "args": ["run", "watch"],
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated" }
+    }
+  ]
+}
+```
+
+- `test` runs only after `build` exits zero; `package` then runs after `test`, reusing the same terminal cleared first.
+- `package` resolves `${workspaceFolder}` at run time and adds `CHANNEL` to the process environment.
+- `watch` stays out of the way (`silent` reveals only on a non-zero exit) and its exit never counts as a failure. Note that nothing may depend on it — a `dependsOn` entry pointing at a background task is hidden.
+
+Related pages: [Automations](./automations.mdx) for agent jobs on a schedule or GitHub event, [Hooks](./hooks.mdx) for scripts fired by agent and session events.

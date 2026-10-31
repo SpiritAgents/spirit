@@ -11,7 +11,7 @@ Agent 可以调用 `subagent` 开一个子会话。子会话做一件隔离的�
 | ------------------ | ---- | --------------------------------------- |
 | `task`             | 是   | 子智能体要做什么                        |
 | `success_criteria` | 否   | 怎样算做完                              |
-| `context_summary`  | 否   | 子智能体不必自己再挖的背景              |
+| `context_summary`  | 否   | 子智能体不必自行重新挖掘的背景          |
 | `files_to_inspect` | 否   | 先读哪些路径                            |
 | `expected_output`  | 否   | 父会话希望收回的结果形态                |
 | `worktree`         | 否   | `true` 时在隔离的 git worktree 里改文件 |
@@ -20,4 +20,4 @@ Agent 可以调用 `subagent` 开一个子会话。子会话做一件隔离的�
 
 ## 限制
 
-已经在 worktree 里跑的子智能体不能再开一层 worktree。会话开始和结束可以跑 hook（`subagentStart` / `subagentEnd`）。Desktop 的子智能体查看器或 CLI TUI 的 `/subagent` 可以检查子会话。
+已经在 worktree 里跑的子智能体不能再开一层 worktree。会话开始和结束可以跑挂钩（`subagentStart` / `subagentEnd`）。Desktop 的子智能体查看器或 CLI TUI 的 `/subagent` 可以检查子会话。

@@ -2,6 +2,8 @@ import type {
   AuthorizationDecision,
   JsonObject,
   PermissionMemoryTarget,
+  ToolApprovalPrompt,
+  ToolApprovalRequest,
   ToolCallRequest,
   ToolExecutionOutput,
 } from "../ports.js";
@@ -25,13 +27,13 @@ export type PreToolUseGateResult<ToolRequest> =
   | {
       kind: "needs-approval";
       request: ToolRequest;
-      prompt: string;
+      prompt: ToolApprovalPrompt;
       effectiveToolInput?: JsonObject;
     }
   | { kind: "denied"; error: HookDeniedError };
 
 export interface ToolApprovalGate {
-  prompt: string;
+  prompt: ToolApprovalPrompt;
   rememberTarget: PermissionMemoryTarget | undefined;
 }
 
@@ -42,20 +44,34 @@ export type ToolApprovalGateResolution =
 export function resolveApprovalGateAfterAuthorize<ToolRequest>(
   preGate: PreToolUseGateResult<ToolRequest>,
   authorization: AuthorizationDecision,
+  /**
+   * Structured descriptor built on demand (ToolExecutor.describeApproval) for the corner where
+   * a hook asks on a call the host auto-allowed — the hook prompt then renders the same rich
+   * form as a direct tool approval.
+   */
+  describedApproval?: ToolApprovalRequest,
 ): ToolApprovalGateResolution | null {
   // A hook returning permission "allow" no longer skips host approval: hooks can only
   // tighten (allow -> ask/deny) or block, never loosen the host authorization outcome.
   // An allowlist deny denies outright; hook ask or an allowlist ask both end in
-  // needs-approval (a hook ask keeps its own prompt); only allow + allow proceeds.
+  // needs-approval (a hook ask keeps its own prompt, but carries the host's structured
+  // request when one exists, so hosts can render the same rich approval form); only
+  // allow + allow proceeds.
   if (authorization.kind === "denied") {
     return { kind: "denied", reason: authorization.reason };
   }
 
   if (preGate.kind === "needs-approval") {
+    const hookPrompt = preGate.prompt;
+    const structuredRequest =
+      authorization.kind === "need-approval" ? authorization.approval : describedApproval;
     return {
       kind: "needs-approval",
       gate: {
-        prompt: preGate.prompt,
+        prompt:
+          hookPrompt.kind === "hook" && structuredRequest !== undefined
+            ? { ...hookPrompt, request: structuredRequest }
+            : hookPrompt,
         rememberTarget:
           authorization.kind === "need-approval" ? authorization.rememberTarget : undefined,
       },
@@ -66,7 +82,7 @@ export function resolveApprovalGateAfterAuthorize<ToolRequest>(
     return {
       kind: "needs-approval",
       gate: {
-        prompt: authorization.prompt,
+        prompt: { kind: "tool", request: authorization.approval },
         rememberTarget: authorization.rememberTarget,
       },
     };
@@ -76,7 +92,6 @@ export function resolveApprovalGateAfterAuthorize<ToolRequest>(
 }
 
 function preToolUseGateFromHookResult<ToolRequest>(
-  call: ToolCallRequest,
   request: ToolRequest,
   permission: "allow" | "ask" | undefined,
   userMessage: string | undefined,
@@ -85,7 +100,7 @@ function preToolUseGateFromHookResult<ToolRequest>(
     return {
       kind: "needs-approval",
       request,
-      prompt: userMessage?.trim() || `Hook requested approval for ${call.name}.`,
+      prompt: { kind: "hook", message: userMessage?.trim() || undefined },
     };
   }
 
@@ -122,7 +137,6 @@ export async function runPreToolUseGate<Config, State, ToolRequest>(
     }
 
     const gate = preToolUseGateFromHookResult(
-      call,
       resolvedRequest,
       preHook.permission === "allow" || preHook.permission === "ask"
         ? preHook.permission

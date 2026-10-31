@@ -1,3 +1,6 @@
+import { Globe } from "@spiritagent/icons/globe";
+import { Plus } from "@spiritagent/icons/plus";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   memo,
   useCallback,
@@ -5,6 +8,7 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type Dispatch,
   type SetStateAction,
 } from "react";
@@ -16,10 +20,8 @@ import {
   GitPullRequest,
   GitPullRequestClosed,
   GitPullRequestDraft,
-  Globe,
   Maximize2,
   Minimize2,
-  Plus,
   Terminal,
 } from "lucide-react";
 import {
@@ -45,6 +47,7 @@ import { WorkspaceFilesTab } from "@/components/workspace-files-tab";
 import { WorkspaceGitTab } from "@/components/workspace-git-tab";
 import { WorkspacePrTab } from "@/components/workspace-pr-tab";
 import { WorkspaceTerminalTab } from "@/components/workspace-terminal-tab";
+import { WorkspaceTaskTerminalTab } from "@/components/workspace-task-terminal-tab";
 import { WorkspaceToolTabChip } from "@/components/workspace-tool-tab-chip";
 import {
   DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE,
@@ -57,10 +60,12 @@ import {
 import { desktopTranslucencyTintClass } from "@/lib/desktop-translucency-surface";
 import {
   WORKSPACE_TOOLS_MIN_WIDTH_PX,
+  WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY,
   computeWorkspaceToolsMaxWidthPx,
   workspaceToolsShellWidthExpression,
   workspaceToolsShellWidthWhenOpen,
-  writeWorkspaceToolsWidthPx,
+  workspaceToolsWidthExpression,
+  writeWorkspaceToolsWidthRatio,
 } from "@/lib/layout-prefs";
 import type { PullRequestChipStatus } from "@/lib/pr-diff-attachment";
 import { cn } from "@/lib/utils";
@@ -74,7 +79,7 @@ import {
   useWorkspaceToolsChromeFullScreen,
   useWorkspaceToolsChromeOpen,
   useWorkspaceToolsChromeWidthFlight,
-  useWorkspaceToolsNewSessionChrome,
+  useWorkspaceToolsNewChatChrome,
 } from "@/contexts/workspace-tools-chrome-context";
 import { useSessionSidebarChrome } from "@/contexts/session-sidebar-chrome-context";
 import { setWorkspacePanelRegionActive } from "@/lib/desktop-keyboard-shortcut-eligibility";
@@ -93,6 +98,8 @@ import {
   type WorkspaceToolTab,
   type WorkspaceToolTabKind,
 } from "@/lib/workspace-tool-tabs";
+import { getTaskTerminal, shouldConfirmTaskTabClose } from "@/lib/task-terminal-registry";
+import { terminateTaskTerminalInstance } from "@/lib/task-run-service";
 import type {
   DesktopGitSnapshot,
   WorkspaceContentInvalidation,
@@ -119,6 +126,7 @@ const TAB_KIND_META: Record<WorkspaceToolTabKind, { labelKey: string; icon: type
   git: { labelKey: "workspace.gitTab", icon: GitBranch },
   browser: { labelKey: "workspace.browser", icon: Globe },
   pr: { labelKey: "workspace.prTab", icon: GitPullRequest },
+  task: { labelKey: "workspace.taskTab", icon: Terminal },
 };
 
 export type WorkspaceToolsDockProps = {
@@ -166,15 +174,15 @@ export type WorkspaceToolsDockProps = {
   onTabsChange: Dispatch<SetStateAction<WorkspaceToolTab[]>>;
   onActiveTabIdChange(id: string): void;
   onBrowserElementPicked?: WorkspaceBrowserTabProps["onElementPicked"];
-  onPrDiffAddToSession?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
-  onTerminalAddToSession?: (
+  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onTerminalAddToChat?: (
     attachment: import("@/lib/terminal-snippet-attachment").TerminalSnippetAttachment,
   ) => void;
-  onFileSnippetAddToSession?: (
+  onFileSnippetAddToChat?: (
     attachment: import("@/lib/file-snippet-attachment").FileSnippetAttachment,
   ) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string, sourceTabId?: string) => void;
-  onGitCommitAddToSession?: (
+  onWorkspaceFileAddToChat?: (relativePath: string, sourceTabId?: string) => void;
+  onGitCommitAddToChat?: (
     attachment: import("@/lib/git-commit-attachment").GitCommitAttachment,
   ) => void;
   onBrowserOpenInNewTab?: WorkspaceBrowserTabProps["onOpenUrlInNewTab"];
@@ -212,11 +220,11 @@ export type WorkspaceToolsDockProps = {
   markGitHubPullRequestReady: (
     request: GetGitHubPullRequestDetailRequest,
   ) => Promise<GitHubPullRequestDetail>;
-  /** Right panel width (pixels) */
-  widthPx: number;
+  /** Right panel width as a proportion of the viewport. */
+  widthRatio: number;
   minWidthPx?: number;
   maxWidthPx?: number;
-  onWidthPxChange(next: number): void;
+  onWidthRatioChange(next: number): void;
   gitSnapshot?: DesktopGitSnapshot;
   workspaceContentInvalidation?: WorkspaceContentInvalidation;
   gitChipBusy?: boolean;
@@ -235,14 +243,19 @@ export type WorkspaceToolsDockProps = {
 
 type WorkspaceToolsDockContentProps = Omit<
   WorkspaceToolsDockProps,
-  "widthPx" | "minWidthPx" | "maxWidthPx" | "onWidthPxChange" | "className"
+  "widthRatio" | "minWidthPx" | "maxWidthPx" | "onWidthRatioChange" | "className"
 > & {
   isResizing: boolean;
 };
 
 type WorkspaceToolsDockShellProps = Pick<
   WorkspaceToolsDockProps,
-  "widthPx" | "minWidthPx" | "maxWidthPx" | "onWidthPxChange" | "className" | "useTranslucency"
+  | "widthRatio"
+  | "minWidthPx"
+  | "maxWidthPx"
+  | "onWidthRatioChange"
+  | "className"
+  | "useTranslucency"
 > & {
   contentProps: WorkspaceToolsDockContentProps;
 };
@@ -262,10 +275,10 @@ function resolvePrTabStatusIcon(status: PullRequestChipStatus) {
 
 function WorkspaceToolsDockInner(props: WorkspaceToolsDockProps) {
   const {
-    widthPx,
+    widthRatio,
     minWidthPx,
     maxWidthPx,
-    onWidthPxChange,
+    onWidthRatioChange,
     className,
     useTranslucency,
     ...contentProps
@@ -274,10 +287,10 @@ function WorkspaceToolsDockInner(props: WorkspaceToolsDockProps) {
 
   return (
     <WorkspaceToolsDockShell
-      widthPx={widthPx}
+      widthRatio={widthRatio}
       minWidthPx={minWidthPx}
       maxWidthPx={maxWidthPx}
-      onWidthPxChange={onWidthPxChange}
+      onWidthRatioChange={onWidthRatioChange}
       className={className}
       useTranslucency={useTranslucency}
       isResizing={isResizing}
@@ -288,10 +301,10 @@ function WorkspaceToolsDockInner(props: WorkspaceToolsDockProps) {
 }
 
 function WorkspaceToolsDockShell({
-  widthPx,
+  widthRatio,
   minWidthPx = WORKSPACE_TOOLS_MIN_WIDTH_PX,
   maxWidthPx: maxWidthPxProp,
-  onWidthPxChange,
+  onWidthRatioChange,
   className,
   useTranslucency = false,
   isResizing: _isResizing,
@@ -309,11 +322,10 @@ function WorkspaceToolsDockShell({
   // full-screen flights and the settled 100% state never show a full shell with underfilled content.
   const fillMode = fullScreen || widthFlight !== null;
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
+  const dragCursor = useDragResizeCursor();
   const shellRef = useRef<HTMLDivElement>(null);
-  const splitRef = useRef<HTMLDivElement>(null);
   const asideRef = useRef<HTMLElement>(null);
-  const latestWidthPxRef = useRef(widthPx);
-  latestWidthPxRef.current = widthPx;
+  const latestWidthPxRef = useRef(0);
 
   useEffect(() => {
     if (!open || !consumeFocusWorkspaceToolsPanelOnOpen()) {
@@ -324,6 +336,10 @@ function WorkspaceToolsDockShell({
   }, [open, fullScreen]);
   const [viewportMaxWidthPx, setViewportMaxWidthPx] = useState(computeWorkspaceToolsMaxWidthPx);
   const maxWidthPx = maxWidthPxProp ?? viewportMaxWidthPx;
+  const widthPx = Math.min(
+    maxWidthPx,
+    Math.max(minWidthPx, Math.round(window.innerWidth * widthRatio)),
+  );
 
   useEffect(() => {
     if (maxWidthPxProp !== undefined) {
@@ -343,45 +359,38 @@ function WorkspaceToolsDockShell({
   }, [open, onResizingChange]);
 
   const clampWidth = useCallback(
-    (value: number) => Math.min(maxWidthPx, Math.max(minWidthPx, value)),
-    [minWidthPx, maxWidthPx],
+    (value: number) =>
+      Math.min(maxWidthPxProp ?? computeWorkspaceToolsMaxWidthPx(), Math.max(minWidthPx, value)),
+    [minWidthPx, maxWidthPxProp],
   );
 
-  const applyDragWidthPx = useCallback((next: number) => {
-    const splitWidth = workspaceToolsShellWidthExpression(next);
-    if (shellRef.current) {
-      shellRef.current.style.width = splitWidth;
-    }
-    if (splitRef.current) {
-      splitRef.current.style.width = splitWidth;
-    }
-    if (asideRef.current) {
-      asideRef.current.style.width = `${next}px`;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (widthPx <= maxWidthPx) {
-      return;
-    }
-    onWidthPxChange(clampWidth(widthPx));
-  }, [clampWidth, maxWidthPx, onWidthPxChange, widthPx]);
+  const applyDragWidthPx = useCallback(
+    (next: number) => {
+      shellRef.current?.style.setProperty(
+        WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY,
+        workspaceToolsWidthExpression(next / window.innerWidth, minWidthPx, maxWidthPxProp),
+      );
+    },
+    [minWidthPx, maxWidthPxProp],
+  );
 
   const onResizePointerDown = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       // No docked-width dragging while full screen or mid-flight; the full-screen width is never
       // written back to the docked ratio.
-      if (fillMode) {
+      if (fillMode || !asideRef.current) {
         return;
       }
       event.preventDefault();
       onResizingChange(true);
-      dragRef.current = { startX: event.clientX, startWidth: widthPx };
-      latestWidthPxRef.current = widthPx;
-      applyDragWidthPx(widthPx);
+      const currentWidthPx = asideRef.current.getBoundingClientRect().width;
+      dragRef.current = { startX: event.clientX, startWidth: currentWidthPx };
+      latestWidthPxRef.current = currentWidthPx;
+      applyDragWidthPx(currentWidthPx);
+      dragCursor.start(resizeCursor(currentWidthPx, minWidthPx, maxWidthPx, "left"));
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [applyDragWidthPx, fillMode, onResizingChange, widthPx],
+    [applyDragWidthPx, dragCursor, fillMode, maxWidthPx, minWidthPx, onResizingChange],
   );
 
   const onResizePointerMove = useCallback(
@@ -392,18 +401,21 @@ function WorkspaceToolsDockShell({
       }
       const delta = drag.startX - event.clientX;
       const next = clampWidth(drag.startWidth + delta);
+      dragCursor.update(resizeCursor(next, minWidthPx, maxWidthPx, "left"));
       latestWidthPxRef.current = next;
       applyDragWidthPx(next);
     },
-    [applyDragWidthPx, clampWidth, fillMode],
+    [applyDragWidthPx, clampWidth, dragCursor, fillMode, maxWidthPx, minWidthPx],
   );
 
   const endResize = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
+      dragCursor.end();
       onResizingChange(false);
       if (dragRef.current) {
-        onWidthPxChange(latestWidthPxRef.current);
-        writeWorkspaceToolsWidthPx(latestWidthPxRef.current);
+        const nextRatio = latestWidthPxRef.current / window.innerWidth;
+        onWidthRatioChange(nextRatio);
+        writeWorkspaceToolsWidthRatio(nextRatio);
       }
       dragRef.current = null;
       try {
@@ -412,41 +424,49 @@ function WorkspaceToolsDockShell({
         // Already released or no capture
       }
     },
-    [onResizingChange, onWidthPxChange],
+    [dragCursor, onResizingChange, onWidthRatioChange],
   );
 
   // Full screen: the enter flight transitions between definite px endpoints (a percentage would be
   // cyclic against the content-sized dock wrapper), then settles to 100% so window resizes follow.
   const enterFlightPx = widthFlight?.kind === "enter" ? widthFlight.targetPx : null;
+  const dockedWidth = `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`;
   const shellWidth = fullScreen
     ? enterFlightPx !== null
       ? `${enterFlightPx}px`
       : "100%"
-    : workspaceToolsShellWidthWhenOpen(open, widthPx);
+    : workspaceToolsShellWidthWhenOpen(open, dockedWidth);
 
   return (
     <div
       id="workspace-tools-panel-shell"
       ref={shellRef}
       className={cn(
-        // Viewport zoom changes widthPx proportionally: do not attach a permanent width
-        // transition to the shell, otherwise resizing the window lags behind.
+        // Viewport units follow native zoom without a React width update or permanent transition.
         // Expand/collapse/full-screen is handled by the chrome context, which temporarily
         // writes a transition before changing the width.
         "flex h-full min-h-0 shrink-0 flex-row self-stretch overflow-hidden",
         className,
       )}
-      style={{ width: shellWidth }}
+      style={
+        {
+          width: shellWidth,
+          [WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY]: workspaceToolsWidthExpression(
+            widthRatio,
+            minWidthPx,
+            maxWidthPxProp,
+          ),
+        } as CSSProperties
+      }
     >
       <div
-        ref={splitRef}
         data-workspace-tools-split
         className={cn(
           "relative flex h-full min-h-0 flex-row self-stretch",
           fillMode ? "min-w-0 flex-1" : "shrink-0",
           !open && "pointer-events-none select-none",
         )}
-        style={{ width: fillMode ? undefined : workspaceToolsShellWidthExpression(widthPx) }}
+        style={{ width: fillMode ? undefined : workspaceToolsShellWidthExpression(dockedWidth) }}
         aria-hidden={!open}
         inert={!open}
       >
@@ -455,7 +475,7 @@ function WorkspaceToolsDockShell({
           aria-orientation="vertical"
           aria-label={t("workspace.resizeToolsWidth")}
           className={cn(
-            "group z-10 shrink-0 cursor-col-resize touch-none select-none",
+            "group z-10 shrink-0 touch-none select-none",
             "before:absolute before:inset-y-0 before:-left-1 before:w-3 before:content-['']",
             "transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
             // fillMode: overlay the panel's left edge so the 1px slot does not sit next to the
@@ -466,6 +486,7 @@ function WorkspaceToolsDockShell({
             fillMode && "pointer-events-none",
             desktopTranslucencyTintClass(useTranslucency),
           )}
+          style={{ cursor: resizeCursor(widthPx, minWidthPx, maxWidthPx, "left") }}
           onPointerDown={onResizePointerDown}
           onPointerMove={onResizePointerMove}
           onPointerUp={endResize}
@@ -490,7 +511,7 @@ function WorkspaceToolsDockShell({
             fillMode ? "flex-1" : "shrink-0",
             desktopTranslucencyTintClass(useTranslucency),
           )}
-          style={{ width: fillMode ? undefined : widthPx }}
+          style={{ width: fillMode ? undefined : dockedWidth }}
           aria-label={t("workspace.workspaceTools")}
         >
           <WorkspaceToolsDockContent {...contentProps} />
@@ -535,11 +556,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   onTabsChange,
   onActiveTabIdChange,
   onBrowserElementPicked,
-  onPrDiffAddToSession,
-  onTerminalAddToSession,
-  onFileSnippetAddToSession,
-  onWorkspaceFileAddToSession,
-  onGitCommitAddToSession,
+  onPrDiffAddToChat,
+  onTerminalAddToChat,
+  onFileSnippetAddToChat,
+  onWorkspaceFileAddToChat,
+  onGitCommitAddToChat,
   onBrowserOpenInNewTab,
   browserTabEnabled = false,
   prTabEnabled = false,
@@ -570,7 +591,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const { openTools, toggleFullScreen } = useWorkspaceToolsChromeActions();
   const workspaceToolsOpen = useWorkspaceToolsChromeOpen();
   const workspaceToolsFullScreen = useWorkspaceToolsChromeFullScreen();
-  const hasNewSessionChrome = useWorkspaceToolsNewSessionChrome();
+  const hasNewChatChrome = useWorkspaceToolsNewChatChrome();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinWindowFullscreen = useDarwinWindowFullscreen(darwinElectron);
@@ -584,6 +605,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     () => new Set(),
   );
   const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null);
+  const [pendingTaskClose, setPendingTaskClose] = useState<{ tabId: string; label: string } | null>(
+    null,
+  );
+  const [taskCloseDialogOpen, setTaskCloseDialogOpen] = useState(false);
   const [addToolTabMenuOpen, setAddToolTabMenuOpen] = useState(false);
   const toolTabsBarRef = useRef<HTMLDivElement>(null);
 
@@ -614,7 +639,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
   const activeTab = useMemo(() => tabs.find((tab) => tab.id === activeTabId), [activeTabId, tabs]);
 
   useEffect(() => {
-    if (activeTab?.kind !== "terminal") {
+    if (activeTab?.kind !== "terminal" && activeTab?.kind !== "task") {
       return;
     }
     setMountedTerminalTabIds((prev) => {
@@ -683,6 +708,11 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         setPendingCloseTabId(closeId);
         return;
       }
+      if (tab?.kind === "task" && shouldConfirmTaskTabClose(getTaskTerminal(closeId))) {
+        setPendingTaskClose({ tabId: closeId, label: tab.tabTitle ?? "" });
+        setTaskCloseDialogOpen(true);
+        return;
+      }
       performCloseTab(closeId);
     },
     [performCloseTab, tabs],
@@ -695,6 +725,18 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     performCloseTab(pendingCloseTabId);
     setPendingCloseTabId(null);
   }, [pendingCloseTabId, performCloseTab]);
+
+  const handleConfirmTaskCloseTab = useCallback(() => {
+    if (!pendingTaskClose) {
+      return;
+    }
+    const closeId = pendingTaskClose.tabId;
+    // Keep pendingTaskClose latched: the closing dialog still renders its label
+    // while the exit animation plays (same pattern as the sidebar delete dialog).
+    setTaskCloseDialogOpen(false);
+    void terminateTaskTerminalInstance(closeId);
+    performCloseTab(closeId);
+  }, [pendingTaskClose, performCloseTab]);
 
   const handleBrowserUrlChange = useCallback(
     (tabId: string, url: string) => {
@@ -709,7 +751,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     (tabId: string, title: string | undefined) => {
       onTabsChange((prev) =>
         prev.map((item) =>
-          item.id === tabId
+          item.id === tabId && item.pinnedTitle !== true
             ? {
                 ...item,
                 tabTitle: title || undefined,
@@ -752,15 +794,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
     [onTabsChange],
   );
 
-  // While full screen, the pinned conversation chrome (new session, and on Win/Linux the sidebar
+  // While full screen, the pinned conversation chrome (new chat, and on Win/Linux the sidebar
   // toggle) floats over the tab row's left edge; grow the margin to clear it. Margin (not
   // padding) so the tab bar's border box and -webkit-app-region: drag do not cover the pins. Keyed
   // on fullScreen (not chromePinned) so the inset retracts during the exit flight — the strict
   // reverse — while the pins themselves hold until the flight settles. The margin-left
   // transition lives in styles.css. Sidebar open on macOS windowed: the pinned cluster floats
-  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-session
+  // over the sidebar, not the panel, so no extra inset. Empty session omits the new-chat
   // button, so the plus slot is not reserved.
-  const plusSlot = !sessionSidebarOpen && hasNewSessionChrome;
+  const plusSlot = !sessionSidebarOpen && hasNewChatChrome;
   const toolTabsPaddingLeft = !workspaceToolsFullScreen
     ? undefined
     : darwinElectron && !darwinWindowFullscreen
@@ -785,7 +827,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
           scrollbars="horizontal"
           type="hover"
           scrollHideDelay={450}
-          className="min-h-0 min-w-0 flex-1 self-stretch"
+          className="min-h-0 flex-1 self-stretch"
         >
           <div
             role="tablist"
@@ -830,14 +872,14 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               aria-pressed={workspaceToolsFullScreen}
               onClick={toggleFullScreen}
               className={cn(
-                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+                "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
                 instantHoverMotionClass,
               )}
             >
               {workspaceToolsFullScreen ? (
-                <Minimize2 className="size-3.5" aria-hidden />
+                <Minimize2 className="size-3.5" aria-hidden strokeWidth={1.75} />
               ) : (
-                <Maximize2 className="size-3.5" aria-hidden />
+                <Maximize2 className="size-3.5" aria-hidden strokeWidth={1.75} />
               )}
             </Button>
           </TooltipTrigger>
@@ -859,12 +901,12 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   data-workspace-new-tool-tab=""
                   aria-label={t("workspace.newToolTab")}
                   className={cn(
-                    "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
-                    "aria-expanded:bg-canvas-hover aria-expanded:text-sidebar-foreground aria-expanded:hover:bg-canvas-hover",
+                    "size-7 shrink-0 p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
+                    "aria-expanded:bg-canvas-hover aria-expanded:text-chrome-emphasis aria-expanded:hover:bg-canvas-hover",
                     instantHoverMotionClass,
                   )}
                 >
-                  <Plus className="size-3.5" aria-hidden />
+                  <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </DropdownMenuTrigger>
             </TooltipTrigger>
@@ -912,7 +954,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     handleAddTab(kind);
                   }}
                 >
-                  <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <Icon className="size-4 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span className="min-w-0 flex-1 truncate">{t(meta.labelKey)}</span>
                 </DropdownMenuItem>
               );
@@ -978,7 +1020,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
               )}
             >
               {item.kind === "files" ? (
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-2 pb-2 pt-0">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-0">
                   <WorkspaceFilesTab
                     workspaceRoot={workspaceRoot}
                     plan={plan}
@@ -1013,15 +1055,15 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     onFilesWorkspacePathChange={(path) =>
                       handleTabFilesWorkspacePathChange(item.id, path)
                     }
-                    onFileSnippetAddToSession={
-                      onFileSnippetAddToSession
+                    onFileSnippetAddToChat={
+                      onFileSnippetAddToChat
                         ? (attachment) =>
-                            onFileSnippetAddToSession({ ...attachment, sourceTabId: item.id })
+                            onFileSnippetAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
-                    onWorkspaceFileAddToSession={
-                      onWorkspaceFileAddToSession
-                        ? (relativePath) => onWorkspaceFileAddToSession(relativePath, item.id)
+                    onWorkspaceFileAddToChat={
+                      onWorkspaceFileAddToChat
+                        ? (relativePath) => onWorkspaceFileAddToChat(relativePath, item.id)
                         : undefined
                     }
                     useTranslucency={useTranslucency}
@@ -1036,12 +1078,24 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                       useTranslucency={useTranslucency}
                       onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                       terminalDisplayName={workspaceTerminalChipDisplayName(item, tabs, t)}
-                      onTerminalAddToSession={
-                        onTerminalAddToSession
+                      onTerminalAddToChat={
+                        onTerminalAddToChat
                           ? (attachment) =>
-                              onTerminalAddToSession({ ...attachment, sourceTabId: item.id })
+                              onTerminalAddToChat({ ...attachment, sourceTabId: item.id })
                           : undefined
                       }
+                      suspendTerminalResize={isResizing}
+                    />
+                  </div>
+                ) : null
+              ) : item.kind === "task" ? (
+                mountedTerminalTabIds.has(item.id) ? (
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <WorkspaceTaskTerminalTab
+                      tabId={item.id}
+                      taskKey={item.taskKey ?? ""}
+                      useTranslucency={useTranslucency}
+                      onTitleChange={(title) => handleTabTitleChange(item.id, title)}
                       suspendTerminalResize={isResizing}
                     />
                   </div>
@@ -1086,10 +1140,9 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     prRevealEnabled={prRevealEnabled}
                     prRevealNonce={prRevealEnabled ? prRevealNonce : 0}
                     prRevealRequest={prRevealEnabled ? prRevealRequest : null}
-                    onPrDiffAddToSession={
-                      onPrDiffAddToSession
-                        ? (attachment) =>
-                            onPrDiffAddToSession({ ...attachment, sourceTabId: item.id })
+                    onPrDiffAddToChat={
+                      onPrDiffAddToChat
+                        ? (attachment) => onPrDiffAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
                     useTranslucency={useTranslucency}
@@ -1098,7 +1151,7 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                   />
                 </div>
               ) : (
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-2 pb-2 pt-2">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                   <WorkspaceGitTab
                     gitSnapshot={gitSnapshot}
                     isActive={selected}
@@ -1107,10 +1160,10 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
                     readGitHistory={readGitHistory}
                     readGitCommitMessage={readGitCommitMessage}
                     submitGitChip={submitGitChip}
-                    onGitCommitAddToSession={
-                      onGitCommitAddToSession
+                    onGitCommitAddToChat={
+                      onGitCommitAddToChat
                         ? (attachment) =>
-                            onGitCommitAddToSession({ ...attachment, sourceTabId: item.id })
+                            onGitCommitAddToChat({ ...attachment, sourceTabId: item.id })
                         : undefined
                     }
                     onOpenChangedFile={onOpenWorkspaceFile}
@@ -1138,6 +1191,23 @@ const WorkspaceToolsDockContent = memo(function WorkspaceToolsDockContent({
         cancelLabel={t("common.cancel")}
         onConfirm={() => {
           handleConfirmCloseTab();
+        }}
+      />
+      <AlertDialog
+        open={taskCloseDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTaskCloseDialogOpen(false);
+          }
+        }}
+        title={t("task.terminateConfirmTitle")}
+        description={t("task.terminateConfirmDescription", {
+          label: pendingTaskClose?.label ?? "",
+        })}
+        confirmLabel={t("task.terminateConfirmAction")}
+        cancelLabel={t("common.cancel")}
+        onConfirm={() => {
+          handleConfirmTaskCloseTab();
         }}
       />
     </>

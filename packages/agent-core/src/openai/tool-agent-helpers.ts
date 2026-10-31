@@ -83,6 +83,7 @@ export function startOpenAiToolAgentState(
   mcpToolCatalog?: ToolAgentMcpToolCatalogSnapshot,
   attribution?: OpenAiAttributionFlags,
   providerId?: string,
+  webFetchEnabled?: boolean,
 ): OpenAiToolAgentState {
   return startToolAgentState(
     buildOpenAiToolAgentMessages(
@@ -101,6 +102,7 @@ export function startOpenAiToolAgentState(
       mcpToolCatalog,
       attribution,
       providerId,
+      webFetchEnabled,
     ),
     userInput,
   );
@@ -122,6 +124,7 @@ export function continueOpenAiToolAgentState(
   mcpToolCatalog?: ToolAgentMcpToolCatalogSnapshot,
   attribution?: OpenAiAttributionFlags,
   providerId?: string,
+  webFetchEnabled?: boolean,
 ): OpenAiToolAgentState {
   return continueToolAgentState(
     buildOpenAiToolAgentMessages(
@@ -140,6 +143,7 @@ export function continueOpenAiToolAgentState(
       mcpToolCatalog,
       attribution,
       providerId,
+      webFetchEnabled,
     ),
   );
 }
@@ -160,6 +164,7 @@ function buildOpenAiToolAgentMessages(
   mcpToolCatalog: ToolAgentMcpToolCatalogSnapshot | undefined,
   attribution: OpenAiAttributionFlags | undefined,
   providerId: string | undefined,
+  webFetchEnabled: boolean | undefined,
 ): JsonValue[] {
   return buildToolAgentMessages({
     historyMessages: llmHistoryToOpenAiMessages(history, assetRoot),
@@ -176,6 +181,7 @@ function buildOpenAiToolAgentMessages(
     ...(providerWebSearchPromptSection === undefined ? {} : { providerWebSearchPromptSection }),
     ...(loopEnabled === true ? { loopEnabled: true } : {}),
     ...(attribution === undefined ? {} : { attribution }),
+    ...(webFetchEnabled === undefined ? {} : { webFetchEnabled }),
   });
 }
 
@@ -255,6 +261,7 @@ export function rebuildOpenAiToolAgentStateAfterCompaction(
   mcpToolCatalog?: ToolAgentMcpToolCatalogSnapshot,
   attribution?: OpenAiAttributionFlags,
   providerId?: string,
+  webFetchEnabled?: boolean,
 ): OpenAiToolAgentState {
   const preservedSpiritSystemMessage = findSpiritSystemMessageContent(retryState.messages);
   const rebuilt = startOpenAiToolAgentState(
@@ -274,6 +281,7 @@ export function rebuildOpenAiToolAgentStateAfterCompaction(
     preservedSpiritSystemMessage === undefined ? mcpToolCatalog : undefined,
     attribution,
     providerId,
+    webFetchEnabled,
   );
   if (preservedSpiritSystemMessage !== undefined) {
     const preservedDreams = hasDreamsSystemMessage(preservedSpiritSystemMessage);
@@ -285,6 +293,7 @@ export function rebuildOpenAiToolAgentStateAfterCompaction(
       content: buildToolAgentSystemMessage(
         model,
         providerId,
+        { webFetchEnabled },
         preservedSpiritSystemMessage,
         preservedDreams ? undefined : buildDreamsSystemMessage(dreamsContextText),
         preservedLoop ? undefined : buildLoopModeSystemMessage(loopEnabled),

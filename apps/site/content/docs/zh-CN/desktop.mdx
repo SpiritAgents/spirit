@@ -21,10 +21,10 @@ Desktop 是图形宿主。它与 [CLI](./cli.mdx) 共用本机守护进程。安
 | 模型   | 提供商连接、模型列表、Key                   |
 | 智能体 | LSP、Commit / PR 署名                       |
 | Tab    | 编辑器 Tab 补全                             |
-| Skills | 发现和生成 [Skills](./customize/skills.mdx) |
+| 技能 | 发现和生成 [技能](./customize/skills.mdx) |
 | 规则   | [Rules](./customize/rules.mdx) 槽位         |
-| MCPs   | [MCP](./customize/mcp.mdx) 服务器           |
-| Hooks  | [Hooks](./customize/hooks.mdx)              |
+| MCP    | [MCP](./customize/mcp.mdx) 服务器           |
+| 挂钩  | [挂钩](./customize/hooks.mdx)              |
 | 梦境   | [梦境](./customize/dreams.mdx)（Beta）      |
 
 ### 连接
@@ -56,13 +56,13 @@ CLI 没有嵌入式 PTY 面板。命令仍通过共用守护进程上的同一�
 
 ### Git
 
-**Git** 标签显示变更和历史。输入框上的 chip 可以发起 **commit**、**push** 或 **merge**。这是宿主 UI，不是 Skill 包。
+**Git** 标签显示变更和历史。输入框上的 chip 可以发起 **commit**、**push** 或 **merge**。这是宿主 UI，不是技能包。
 
 Chip 会注入固定提示。随后 Agent 用[工作区和 `shell` 工具](./agent/tools.mdx)。
 
 ### LSP
 
-到 **设置 → 智能体** 打开语言服务器，缺哪个提供商就装哪个。装好后 Agent 可用 [`get_diagnostics`](./agent/tools.mdx)。
+到 **设置 → 智能体** 打开语言服务器。{{product.name|mdx}} 只探测本机已安装的服务器，缺哪个就按表中的工具链自己装。装好后 Agent 可用 [`get_diagnostics`](./agent/tools.mdx)。
 
 | Id              | 语言   | 安装方式                          |
 | --------------- | ------ | --------------------------------- |
@@ -73,13 +73,13 @@ Chip 会注入固定提示。随后 Agent 用[工作区和 `shell` 工具](./age
 | `jdtls`         | Java   | 手动                              |
 | `omnisharp`     | C#     | .NET                              |
 
-clangd 和 jdtls 不随包装。自己装好，再回到 **设置 → 智能体**。
+{{product.name|mdx}} 不会替你安装语言服务器。缺什么自己装，再回到 **设置 → 智能体**。
 
 ### Tab
 
-Tab 是 Monaco 内联补全，按一次 Tab 接受幽灵文字。到 **设置 → Tab** 打开代码补全（`codeCompletionEnabled`），并在 **设置 → 模型** 指定轻量对话模型。这个槽位也给其他轻量后台任务用。
+Tab 是 Monaco 内联补全，按一次 Tab 接受幽灵文字。到 **设置 → Tab** 打开代码补全（`codeCompletionEnabled`），并在 **设置 → 模型** 指定次要语言模型。这个槽位也给其他次要后台任务用。
 
-没有建议时，检查轻量对话模型是否已连接，以及开关是否打开。这不是 Agent 对话。
+没有建议时，检查次要语言模型是否已连接，以及开关是否打开。这不是 Agent 对话。
 
 ## 扩展与自动化
 

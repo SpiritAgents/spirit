@@ -32,7 +32,9 @@ export async function appendLspDiagnosticsAfterWriteIfNeeded(
       diagnostics.diagnostics,
     );
     if (!block) {
-      return lspWriteDiagnostics ? { ...output, hostUi: { lspWriteDiagnostics } } : output;
+      return lspWriteDiagnostics
+        ? { ...output, hostUi: { ...output.hostUi, lspWriteDiagnostics } }
+        : output;
     }
     const summaryText = `${output.summaryText ?? ""}${block}`.trim();
     return {
@@ -44,7 +46,7 @@ export async function appendLspDiagnosticsAfterWriteIfNeeded(
         }
         return { type: "text", text: `${part.text}${block}` };
       }),
-      ...(lspWriteDiagnostics ? { hostUi: { lspWriteDiagnostics } } : {}),
+      ...(lspWriteDiagnostics ? { hostUi: { ...output.hostUi, lspWriteDiagnostics } } : {}),
     };
   } catch (error) {
     if (!(error instanceof LspTimeoutError)) {

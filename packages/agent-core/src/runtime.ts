@@ -1541,7 +1541,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
       if (authorization.kind === "need-approval") {
         const approval = {
-          prompt: authorization.prompt,
+          prompt: { kind: "tool" as const, request: authorization.approval },
           request: continuedRequest,
           ...(authorization.rememberTarget !== undefined
             ? { rememberTarget: authorization.rememberTarget }
@@ -1553,7 +1553,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
           pendingUserInput: pending.pendingUserInput,
           state: pending.state,
           request: continuedRequest,
-          prompt: authorization.prompt,
+          prompt: { kind: "tool", request: authorization.approval },
           ...(authorization.rememberTarget !== undefined
             ? { rememberTarget: authorization.rememberTarget }
             : {}),

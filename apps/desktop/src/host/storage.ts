@@ -18,43 +18,41 @@ import {
   normalizeLlmHttpVersion,
   type LlmHttpVersion,
 } from "@spiritagent/agent-core";
-import {
-  normalizeModelReasoningEffort,
-  resolveModelReasoningEffortForContext,
-  resolveModelReasoningMode,
-} from "@spiritagent/agent-core/reasoning-effort";
+import { normalizeModelReasoningEffort } from "@spiritagent/agent-core/reasoning-effort";
 import {
   assertSpiritConfigSchemaVersion,
   createFileExtensionStateStore,
   emptyModelRef,
   findModelByRef,
+  findProviderEntry,
+  GOOGLE_VERTEX_SDK_PACKAGE_NAME,
   listAllModelRefs,
-  parseModelProviderId,
   parseModelRef,
+  providerInternalSlotAccount,
+  resolveProviderApiKey,
   SPIRIT_CONFIG_SCHEMA_VERSION,
+  validateSpiritConfig,
   type ExtensionManagementContext,
   type ExtensionStateStore,
   loadHostInstructionMetadata,
   type HostInstructionMetadataSummary,
   type HostRuleDiscoveryResult,
   type HostSkillDiscoveryResult,
-  type ModelEntryV2,
   type ModelRef,
   type PermissionConfig,
-  type ProviderGroupV2,
+  type ProviderEntry,
+  resolveModelByRef,
   resolveSessionTranscriptFilePath,
+  resolveDefaultSpiritDataDir,
+  resolveSpiritDataDir,
 } from "@spiritagent/host-internal";
 
 import { resolveDesktopAgentMode, type DesktopAgentMode } from "../lib/agent-mode.js";
-import { flattenProviderGroups, resolveModelProfile } from "./model-config-access.js";
 import { normalizeContextUsageSnapshot } from "../lib/context-usage.js";
-import { parseModelContextLength } from "../lib/model-context-length.js";
 
 import type {
   DesktopModelCapability,
-  DesktopModelProvider,
   DesktopModelReasoningEffort,
-  DesktopTransportKind,
   ModelProfileSnapshot,
   SessionListItem,
 } from "../types.js";
@@ -69,11 +67,6 @@ import {
 } from "./chat-schema.js";
 import {
   buildModelSecretKeyPresence,
-  groupAccessKeyIdAccount,
-  groupKeyAccount,
-  groupSecretAccessKeyAccount,
-  groupVertexClientEmailAccount,
-  groupVertexPrivateKeyAccount,
   hasBedrockRuntimeCredentials,
   hasGoogleVertexRuntimeCredentials,
   type BedrockProviderCredentials,
@@ -85,7 +78,6 @@ import { normalizeDesktopRewindMetadata } from "./rewind.js";
 export { SpiritConfigSchemaError as ConfigSchemaError } from "@spiritagent/host-internal";
 export {
   buildModelSecretKeyPresence,
-  groupKeyAccount,
   hasBedrockRuntimeCredentials,
   hasGoogleVertexRuntimeCredentials,
 } from "./provider-api-key.js";
@@ -93,19 +85,19 @@ export {
 export const DEFAULT_API_BASE = "https://api.openai.com/v1";
 export const DEFAULT_DESKTOP_WEB_HOST = "127.0.0.1";
 export const DEFAULT_DESKTOP_WEB_PORT = 7788;
-const APP_DATA_DIR_NAME = "Spirit";
 const CONFIG_FILE_NAME = "config.json";
 const CHATS_DIR_NAME = "chats";
 const PROVISIONAL_CHATS_DIR_NAME = "__provisional__";
 const MAX_RECENT_WORKSPACES = 20;
 const MODEL_CAPABILITIES = [
-  "chat",
+  "languageModel",
   "image",
+  "audio",
   "video",
   "imageGeneration",
   "videoGeneration",
 ] as const;
-const DEFAULT_CUSTOM_MODEL_CAPABILITIES: DesktopModelCapability[] = ["chat", "image"];
+const DEFAULT_CUSTOM_MODEL_CAPABILITIES: DesktopModelCapability[] = ["languageModel", "image"];
 
 export type DesktopWorkspaceBinding = "project" | "none";
 
@@ -132,10 +124,17 @@ export interface DesktopAttributionConfigFile {
   pr: DesktopAttributionToggleConfigFile;
 }
 
+export interface DesktopWebToolToggleConfigFile {
+  enabled: boolean;
+}
+
 export interface DesktopAgentsConfigFile {
   lsp: DesktopLspConfigFile;
   codeCompletion: DesktopCodeCompletionConfigFile;
   attribution: DesktopAttributionConfigFile;
+  /** Opt-out switch for provider-declared tools (`agents.providerTools.enabled` in config.json). */
+  providerTools: DesktopWebToolToggleConfigFile;
+  webFetch: DesktopWebToolToggleConfigFile;
 }
 
 export interface DesktopNetworksConfigFile {
@@ -144,11 +143,11 @@ export interface DesktopNetworksConfigFile {
 
 export interface DesktopConfigFile {
   schemaVersion: typeof SPIRIT_CONFIG_SCHEMA_VERSION;
-  providerGroups: ProviderGroupV2[];
+  providers: ProviderEntry[];
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   recentWorkspaces?: string[];
   /** When `none`, cwd is the user home directory and workspace-scoped instructions/MCP are skipped. */
   workspaceBinding?: DesktopWorkspaceBinding;
@@ -189,13 +188,8 @@ export interface DesktopWebHostConfigFile {
   authTokenHash?: string;
 }
 
-/** Matches the keyring naming in `apps/cli/src/model_registry.rs`. */
+/** Matches the keyring naming in `apps/cli/src/model_registry.rs` and host-internal. */
 const KEYRING_SERVICE = "Spirit";
-const KEYRING_GLOBAL_ACCOUNT = "openai_api_key";
-
-function modelKeyAccount(modelName: string): string {
-  return `model::${modelName}`;
-}
 
 function extensionSecretAccount(extensionId: string, key: string): string {
   return `extension::${extensionId}::secret::${key}`;
@@ -205,56 +199,14 @@ export type RuleDiscoveryResult = HostRuleDiscoveryResult;
 export type SkillDiscoveryResult = HostSkillDiscoveryResult;
 export type HostMetadataSummary = HostInstructionMetadataSummary;
 
-const ENV_SPIRIT_DATA_DIR = "SPIRIT_DATA_DIR";
-
 let spiritDataDirOverride: string | undefined;
 
 export function setSpiritDataDirOverride(dir: string | undefined): void {
   spiritDataDirOverride = dir;
 }
 
-function resolveHomeDirectory(): string | undefined {
-  const home = process.env.HOME?.trim() || homedir()?.trim();
-  return home || undefined;
-}
-
-export function resolveDefaultSpiritDataDir(): string {
-  const appData = process.env.APPDATA?.trim();
-  if (appData) {
-    return path.join(appData, APP_DATA_DIR_NAME);
-  }
-
-  const home = resolveHomeDirectory();
-  if (home) {
-    if (process.platform === "darwin") {
-      return path.join(home, "Library", "Application Support", APP_DATA_DIR_NAME);
-    }
-    if (process.platform === "linux") {
-      const xdgDataHome = process.env.XDG_DATA_HOME?.trim();
-      if (xdgDataHome) {
-        return path.join(xdgDataHome, APP_DATA_DIR_NAME);
-      }
-      return path.join(home, ".local", "share", APP_DATA_DIR_NAME);
-    }
-    return path.join(home, ".spirit-data");
-  }
-
-  const userProfile = process.env.USERPROFILE?.trim();
-  if (userProfile) {
-    return path.join(userProfile, ".spirit-data");
-  }
-
-  return path.join(homedir(), ".spirit-data");
-}
-
-export function resolveConfiguredSpiritDataDir(): string {
-  const envOverride = process.env[ENV_SPIRIT_DATA_DIR]?.trim();
-  if (envOverride) {
-    return envOverride;
-  }
-
-  return resolveDefaultSpiritDataDir();
-}
+export { resolveDefaultSpiritDataDir };
+export const resolveConfiguredSpiritDataDir = resolveSpiritDataDir;
 
 export function spiritDataDir(): string {
   if (spiritDataDirOverride) {
@@ -272,130 +224,91 @@ export function configFilePath(): string {
   return path.join(spiritDataDir(), CONFIG_FILE_NAME);
 }
 
-function readModelKeyFromKeyring(modelName: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, modelKeyAccount(modelName));
+/** Internal keyring slot read: `provider::{id}` for `apiKey`, `provider::{id}::{slot}` otherwise. */
+function readProviderSlotFromKeyring(providerId: string, slot: string): string | undefined {
+  const value = getKeyringPassword(KEYRING_SERVICE, providerInternalSlotAccount(providerId, slot));
   const trimmed = value?.trim();
   return trimmed || undefined;
 }
 
-function readGlobalKeyFromKeyring(): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, KEYRING_GLOBAL_ACCOUNT);
-  const trimmed = value?.trim();
-  return trimmed || undefined;
+export function readProviderAccessKeyIdFromKeyring(providerId: string): string | undefined {
+  return readProviderSlotFromKeyring(providerId, "accessKeyId");
 }
 
-export function readProviderAccessKeyIdFromKeyring(groupId: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, groupAccessKeyIdAccount(groupId));
-  const trimmed = value?.trim();
-  return trimmed || undefined;
+export function readProviderSecretAccessKeyFromKeyring(providerId: string): string | undefined {
+  return readProviderSlotFromKeyring(providerId, "secretAccessKey");
 }
 
-export function readProviderSecretAccessKeyFromKeyring(groupId: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, groupSecretAccessKeyAccount(groupId));
-  const trimmed = value?.trim();
-  return trimmed || undefined;
+export function readProviderVertexClientEmailFromKeyring(providerId: string): string | undefined {
+  return readProviderSlotFromKeyring(providerId, "clientEmail");
 }
 
-export function readProviderVertexClientEmailFromKeyring(groupId: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, groupVertexClientEmailAccount(groupId));
-  const trimmed = value?.trim();
-  return trimmed || undefined;
-}
-
-export function readProviderVertexPrivateKeyFromKeyring(groupId: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, groupVertexPrivateKeyAccount(groupId));
-  const trimmed = value?.trim();
-  return trimmed || undefined;
+export function readProviderVertexPrivateKeyFromKeyring(providerId: string): string | undefined {
+  return readProviderSlotFromKeyring(providerId, "privateKey");
 }
 
 export function readBedrockProviderCredentialsFromKeyring(
-  groupId: string,
+  providerId: string,
 ): BedrockProviderCredentials {
   return {
-    apiKey: readProviderKeyFromKeyring(groupId),
-    accessKeyId: readProviderAccessKeyIdFromKeyring(groupId),
-    secretAccessKey: readProviderSecretAccessKeyFromKeyring(groupId),
+    apiKey: readProviderKeyFromKeyring(providerId),
+    accessKeyId: readProviderAccessKeyIdFromKeyring(providerId),
+    secretAccessKey: readProviderSecretAccessKeyFromKeyring(providerId),
   };
 }
 
-export async function saveBedrockProviderCredentialsForProvider(
-  groupId: string,
-  credentials: BedrockProviderCredentials,
-): Promise<void> {
-  const apiKey = credentials.apiKey?.trim();
-  if (apiKey) {
-    await saveApiKeyForProvider(groupId, apiKey);
+function writeProviderSlotToKeyring(providerId: string, slot: string, secret?: string): void {
+  const account = providerInternalSlotAccount(providerId, slot);
+  const trimmed = secret?.trim();
+  if (trimmed) {
+    setKeyringPassword(KEYRING_SERVICE, account, trimmed);
   } else {
-    await removeProviderApiKey(groupId);
-  }
-
-  const accessKeyId = credentials.accessKeyId?.trim();
-  if (accessKeyId) {
-    setKeyringPassword(KEYRING_SERVICE, groupAccessKeyIdAccount(groupId), accessKeyId);
-  } else {
-    deleteKeyringPassword(KEYRING_SERVICE, groupAccessKeyIdAccount(groupId));
-  }
-
-  const secretAccessKey = credentials.secretAccessKey?.trim();
-  if (secretAccessKey) {
-    setKeyringPassword(KEYRING_SERVICE, groupSecretAccessKeyAccount(groupId), secretAccessKey);
-  } else {
-    deleteKeyringPassword(KEYRING_SERVICE, groupSecretAccessKeyAccount(groupId));
+    deleteKeyringPassword(KEYRING_SERVICE, account);
   }
 }
 
-export async function removeBedrockProviderCredentials(groupId: string): Promise<void> {
-  await removeProviderApiKey(groupId);
-  deleteKeyringPassword(KEYRING_SERVICE, groupAccessKeyIdAccount(groupId));
-  deleteKeyringPassword(KEYRING_SERVICE, groupSecretAccessKeyAccount(groupId));
+export async function saveBedrockProviderCredentialsForProvider(
+  providerId: string,
+  credentials: BedrockProviderCredentials,
+): Promise<void> {
+  writeProviderSlotToKeyring(providerId, "apiKey", credentials.apiKey);
+  writeProviderSlotToKeyring(providerId, "accessKeyId", credentials.accessKeyId);
+  writeProviderSlotToKeyring(providerId, "secretAccessKey", credentials.secretAccessKey);
+}
+
+export async function removeBedrockProviderCredentials(providerId: string): Promise<void> {
+  writeProviderSlotToKeyring(providerId, "apiKey", undefined);
+  writeProviderSlotToKeyring(providerId, "accessKeyId", undefined);
+  writeProviderSlotToKeyring(providerId, "secretAccessKey", undefined);
 }
 
 export function readGoogleVertexProviderCredentialsFromKeyring(
-  groupId: string,
+  providerId: string,
 ): GoogleVertexProviderCredentials {
   return {
-    apiKey: readProviderKeyFromKeyring(groupId),
-    clientEmail: readProviderVertexClientEmailFromKeyring(groupId),
-    privateKey: readProviderVertexPrivateKeyFromKeyring(groupId),
+    apiKey: readProviderKeyFromKeyring(providerId),
+    clientEmail: readProviderVertexClientEmailFromKeyring(providerId),
+    privateKey: readProviderVertexPrivateKeyFromKeyring(providerId),
   };
 }
 
 export async function saveGoogleVertexProviderCredentialsForProvider(
-  groupId: string,
+  providerId: string,
   credentials: GoogleVertexProviderCredentials,
 ): Promise<void> {
-  const apiKey = credentials.apiKey?.trim();
-  if (apiKey) {
-    await saveApiKeyForProvider(groupId, apiKey);
-  } else {
-    await removeProviderApiKey(groupId);
-  }
-
-  const clientEmail = credentials.clientEmail?.trim();
-  if (clientEmail) {
-    setKeyringPassword(KEYRING_SERVICE, groupVertexClientEmailAccount(groupId), clientEmail);
-  } else {
-    deleteKeyringPassword(KEYRING_SERVICE, groupVertexClientEmailAccount(groupId));
-  }
-
-  const privateKey = credentials.privateKey?.trim();
-  if (privateKey) {
-    setKeyringPassword(KEYRING_SERVICE, groupVertexPrivateKeyAccount(groupId), privateKey);
-  } else {
-    deleteKeyringPassword(KEYRING_SERVICE, groupVertexPrivateKeyAccount(groupId));
-  }
+  writeProviderSlotToKeyring(providerId, "apiKey", credentials.apiKey);
+  writeProviderSlotToKeyring(providerId, "clientEmail", credentials.clientEmail);
+  writeProviderSlotToKeyring(providerId, "privateKey", credentials.privateKey);
 }
 
-export async function removeGoogleVertexProviderCredentials(groupId: string): Promise<void> {
-  await removeProviderApiKey(groupId);
-  deleteKeyringPassword(KEYRING_SERVICE, groupVertexClientEmailAccount(groupId));
-  deleteKeyringPassword(KEYRING_SERVICE, groupVertexPrivateKeyAccount(groupId));
+export async function removeGoogleVertexProviderCredentials(providerId: string): Promise<void> {
+  writeProviderSlotToKeyring(providerId, "apiKey", undefined);
+  writeProviderSlotToKeyring(providerId, "clientEmail", undefined);
+  writeProviderSlotToKeyring(providerId, "privateKey", undefined);
 }
 
-export function readProviderKeyFromKeyring(groupId: string): string | undefined {
-  const value = getKeyringPassword(KEYRING_SERVICE, groupKeyAccount(groupId));
-  const trimmed = value?.trim();
-  return trimmed || undefined;
+export function readProviderKeyFromKeyring(providerId: string): string | undefined {
+  return readProviderSlotFromKeyring(providerId, "apiKey");
 }
 
 export function defaultNewSessionPath(): string {
@@ -515,6 +428,9 @@ export async function loadConfig(): Promise<DesktopConfigFile> {
 
   const raw = JSON.parse(await readFile(filePath, "utf8")) as Record<string, unknown>;
   assertSpiritConfigSchemaVersion(raw);
+  // Fail fast on invalid provider/model fields: a soft load would read the file as "no config"
+  // and a later save (e.g. a permission write) would silently overwrite it with a fresh one.
+  validateSpiritConfig(raw);
   return normalizeConfig(raw as Partial<DesktopConfigFile>);
 }
 
@@ -524,128 +440,105 @@ export async function saveConfig(config: DesktopConfigFile): Promise<void> {
   await writeFile(filePath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
-export async function resolveApiKeyForModel(
-  groupId: string,
-  modelName?: string,
+/**
+ * API key resolution for a config model: the `SPIRIT_API_KEY` process override first (CLI
+ * parity), then the provider entry's declared channels and the internal keyring
+ * (`provider::{id}`), resolved by host-internal.
+ */
+export async function resolveApiKeyForModel(providerId: string): Promise<string | undefined> {
+  const envKey = process.env.SPIRIT_API_KEY?.trim();
+  if (envKey) {
+    return envKey;
+  }
+  return readProviderKeyFromKeyring(providerId);
+}
+
+export async function hasApiKeyForModel(providerId: string): Promise<boolean> {
+  return Boolean(await resolveApiKeyForModel(providerId));
+}
+
+export async function resolveApiKeyForConfigModel(
+  config: Pick<DesktopConfigFile, "providers">,
+  ref: ModelRef,
 ): Promise<string | undefined> {
   const envKey = process.env.SPIRIT_API_KEY?.trim();
   if (envKey) {
     return envKey;
   }
-
-  const groupKey = readProviderKeyFromKeyring(groupId);
-  if (groupKey) {
-    return groupKey;
-  }
-
-  if (modelName) {
-    const modelKey = readModelKeyFromKeyring(modelName);
-    if (modelKey) {
-      return modelKey;
-    }
-  }
-
-  return readGlobalKeyFromKeyring();
-}
-
-export async function hasApiKeyForModel(groupId: string, modelName?: string): Promise<boolean> {
-  return Boolean(await resolveApiKeyForModel(groupId, modelName));
-}
-
-export async function resolveApiKeyForConfigModel(
-  config: Pick<DesktopConfigFile, "providerGroups">,
-  ref: ModelRef,
-): Promise<string | undefined> {
-  const profile = resolveModelProfile(config, ref);
-  if (!profile) {
+  const provider = findProviderEntry(config.providers, ref.providerId);
+  if (!provider) {
     return undefined;
   }
-  return resolveApiKeyForModel(profile.groupId, profile.name);
+  return resolveProviderApiKey({
+    id: provider.id,
+    ...(provider.apiKey !== undefined ? { apiKey: provider.apiKey } : {}),
+    ...(provider.apiKeyEnv !== undefined ? { apiKeyEnv: provider.apiKeyEnv } : {}),
+    ...(provider.apiKeyKeyring !== undefined ? { apiKeyKeyring: provider.apiKeyKeyring } : {}),
+    ...(provider.credentials !== undefined ? { credentials: provider.credentials } : {}),
+  });
 }
 
-function normalizePresenceProfiles(
-  profiles: ModelKeyPresenceProfile[] | ModelProfileSnapshot[],
-): ModelKeyPresenceProfile[] {
-  if (profiles.length === 0) {
-    return [];
-  }
-  const first = profiles[0];
-  if ("apiBase" in first && typeof first === "object" && first !== null) {
-    return (profiles as ModelProfileSnapshot[]).map(toModelKeyPresenceProfile);
-  }
-  return profiles as ModelKeyPresenceProfile[];
-}
-
-function hasGroupSecretInKeyring(groupId: string, profile: ModelKeyPresenceProfile): boolean {
-  if (readProviderKeyFromKeyring(groupId)) {
+/** Keychain-internal credential slot read for presence display (excludes declared env/keyring channels). */
+function hasProviderSecretInKeyring(provider: ProviderEntry): boolean {
+  if (readProviderKeyFromKeyring(provider.id)) {
     return true;
   }
-  if (profile.provider === "amazon-bedrock") {
-    return hasBedrockRuntimeCredentials(readBedrockProviderCredentialsFromKeyring(groupId));
+  if (provider.transportKind === "bedrock") {
+    return hasBedrockRuntimeCredentials(readBedrockProviderCredentialsFromKeyring(provider.id));
   }
-  if (profile.provider === "google-vertex-ai") {
-    const credentials = readGoogleVertexProviderCredentialsFromKeyring(groupId);
+  if (provider.sdk === GOOGLE_VERTEX_SDK_PACKAGE_NAME) {
+    const credentials = readGoogleVertexProviderCredentialsFromKeyring(provider.id);
     return hasGoogleVertexRuntimeCredentials({
       apiKey: credentials.apiKey,
       clientEmail: credentials.clientEmail,
       privateKey: credentials.privateKey,
-      vertexProject: profile.vertexProject,
-      vertexLocation: profile.vertexLocation,
+      vertexProject: provider.options?.project,
+      vertexLocation: provider.options?.location,
     });
   }
   return false;
 }
 
 function toModelKeyPresenceProfile(model: ModelProfileSnapshot): ModelKeyPresenceProfile {
-  const groupId = model.groupId?.trim() ?? model.ref?.groupId?.trim() ?? "";
-  if (!groupId) {
-    throw new Error(`model profile "${model.name}" is missing groupId`);
+  const providerId = model.providerId.trim() || model.ref.providerId.trim();
+  if (!providerId) {
+    throw new Error(`model profile "${model.name}" is missing providerId`);
   }
-  return {
-    groupId,
-    name: model.name,
-    provider: model.provider,
-    ...(model.vertexProject ? { vertexProject: model.vertexProject } : {}),
-    ...(model.vertexLocation ? { vertexLocation: model.vertexLocation } : {}),
-  };
+  return { providerId, name: model.name };
 }
 
-function legacyModelKeyPresent(refKey: string): boolean {
-  const separatorIndex = refKey.lastIndexOf("::");
-  const modelName = separatorIndex >= 0 ? refKey.slice(separatorIndex + 2) : refKey;
-  return Boolean(readModelKeyFromKeyring(modelName));
-}
-
-/** Whether each model has a provider-group-level or legacy model-level entry in the keychain (excluding env vars and the global fallback). */
+/** Whether each model's provider entry has credentials in the keychain (excluding env vars and declared external channels). */
 export async function modelSecretKeyPresence(
-  input:
-    | Pick<DesktopConfigFile, "providerGroups">
-    | ModelKeyPresenceProfile[]
-    | ModelProfileSnapshot[],
+  input: Pick<DesktopConfigFile, "providers"> | ModelKeyPresenceProfile[] | ModelProfileSnapshot[],
 ): Promise<Record<string, boolean>> {
-  const profiles =
-    "providerGroups" in input
-      ? flattenProviderGroups(input).map(toModelKeyPresenceProfile)
-      : normalizePresenceProfiles(input);
-  return buildModelSecretKeyPresence(profiles, hasGroupSecretInKeyring, legacyModelKeyPresent);
+  const profiles = Array.isArray(input)
+    ? input.map((profile) => ("apiBase" in profile ? toModelKeyPresenceProfile(profile) : profile))
+    : input.providers.flatMap((provider) =>
+        provider.models.map((model) => ({ providerId: provider.id, name: model.name })),
+      );
+  const providerById = new Map(
+    Array.isArray(input) ? [] : input.providers.map((provider) => [provider.id, provider] as const),
+  );
+  return buildModelSecretKeyPresence(profiles, (providerId) => {
+    const provider = providerById.get(providerId);
+    if (provider) {
+      return hasProviderSecretInKeyring(provider);
+    }
+    return readProviderKeyFromKeyring(providerId) !== undefined;
+  });
 }
 
-export async function saveApiKeyForModel(modelName: string, apiKey: string): Promise<void> {
-  setKeyringPassword(KEYRING_SERVICE, modelKeyAccount(modelName), apiKey.trim());
+export async function saveApiKeyForProvider(providerId: string, apiKey: string): Promise<void> {
+  setKeyringPassword(
+    KEYRING_SERVICE,
+    providerInternalSlotAccount(providerId, "apiKey"),
+    apiKey.trim(),
+  );
 }
 
-export async function saveApiKeyForProvider(groupId: string, apiKey: string): Promise<void> {
-  setKeyringPassword(KEYRING_SERVICE, groupKeyAccount(groupId), apiKey.trim());
-}
-
-/** Deletes the provider group's shared API Key entry from the keychain. */
-export async function removeProviderApiKey(groupId: string): Promise<void> {
-  deleteKeyringPassword(KEYRING_SERVICE, groupKeyAccount(groupId));
-}
-
-/** Consistent with CLI `remove_model_api_key`: deletes the model's dedicated keychain entry. */
-export async function removeModelApiKey(modelName: string): Promise<void> {
-  deleteKeyringPassword(KEYRING_SERVICE, modelKeyAccount(modelName));
+/** Deletes the provider entry's internal API key (`provider::{id}`) from the keychain. */
+export async function removeProviderApiKey(providerId: string): Promise<void> {
+  deleteKeyringPassword(KEYRING_SERVICE, providerInternalSlotAccount(providerId, "apiKey"));
 }
 
 export function createDesktopExtensionStateStore(
@@ -738,6 +631,9 @@ function normalizeStoredSession(parsed: Partial<StoredDesktopSession>): StoredDe
     parsed.sessionTitleSource === "manual"
       ? { sessionTitleSource: parsed.sessionTitleSource }
       : {}),
+    ...(normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs)
+      ? { pinnedAtUnixMs: normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs) }
+      : {}),
     ...(resolveStoredWorkspaceRoot(parsed.workspaceRoot)
       ? { workspaceRoot: resolveStoredWorkspaceRoot(parsed.workspaceRoot) }
       : {}),
@@ -790,6 +686,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           ? (parsed.desktopMessageTimeline as PersistedDesktopTimelineTurnSnapshot[])
           : undefined;
         const gitBranch = normalizeGitBranch(parsed.gitBranch);
+        const pinnedAtUnixMs = normalizePinnedAtUnixMs(parsed.pinnedAtUnixMs);
         const modifiedAtUnixMs =
           typeof parsed.savedAtUnixMs === "number"
             ? parsed.savedAtUnixMs
@@ -802,6 +699,7 @@ export async function listStoredSessions(): Promise<SessionListItem[]> {
           workspaceRoot:
             resolveStoredWorkspaceRoot(parsed.workspaceRoot) ?? discoverWorkspaceRoot(),
           ...(gitBranch ? { gitBranch } : {}),
+          ...(pinnedAtUnixMs ? { pinnedAtUnixMs } : {}),
           modifiedAtUnixMs,
           transcriptPath: resolveSessionTranscriptFilePath(spiritDataDir(), path.resolve(filePath)),
         } satisfies SessionListItem;
@@ -856,7 +754,7 @@ export async function deleteStoredSession(filePath: string): Promise<void> {
 function defaultConfig(): DesktopConfigFile {
   return {
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups: [],
+    providers: [],
     activeModel: emptyModelRef(),
     recentWorkspaces: [],
     translucency: DEFAULT_TRANSLUCENCY,
@@ -873,6 +771,10 @@ function defaultConfig(): DesktopConfigFile {
 
 function normalizeGitBranch(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizePinnedAtUnixMs(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
 export function defaultWebHostConfig(): DesktopWebHostConfigFile {
@@ -905,6 +807,12 @@ export function defaultAgentsConfig(): DesktopAgentsConfigFile {
       pr: {
         enabled: true,
       },
+    },
+    providerTools: {
+      enabled: true,
+    },
+    webFetch: {
+      enabled: true,
     },
   };
 }
@@ -976,6 +884,14 @@ export function normalizeAgentsConfig(raw: unknown): DesktopAgentsConfigFile {
     typeof attributionRaw.pr === "object" && attributionRaw.pr !== null
       ? (attributionRaw.pr as Partial<DesktopAttributionToggleConfigFile>)
       : {};
+  const providerToolsRaw =
+    typeof record.providerTools === "object" && record.providerTools !== null
+      ? (record.providerTools as Partial<DesktopWebToolToggleConfigFile>)
+      : {};
+  const webFetchRaw =
+    typeof record.webFetch === "object" && record.webFetch !== null
+      ? (record.webFetch as Partial<DesktopWebToolToggleConfigFile>)
+      : {};
   return {
     lsp: {
       enabled: lspRaw.enabled !== false,
@@ -992,185 +908,25 @@ export function normalizeAgentsConfig(raw: unknown): DesktopAgentsConfigFile {
         enabled: prRaw.enabled !== false,
       },
     },
-  };
-}
-
-function normalizeProviderGroup(raw: unknown): ProviderGroupV2 | null {
-  if (typeof raw !== "object" || raw === null) {
-    return null;
-  }
-  const record = raw as Partial<ProviderGroupV2>;
-  const id = typeof record.id === "string" ? record.id.trim() : "";
-  const provider = parseModelProviderId(record.provider);
-  if (!id || !provider) {
-    return null;
-  }
-  const label =
-    typeof record.label === "string" && record.label.trim() ? record.label.trim() : undefined;
-  const resolvedLabel = provider === "custom" && !label ? id : label;
-  const apiBase =
-    typeof record.apiBase === "string" && record.apiBase.trim()
-      ? record.apiBase.trim()
-      : DEFAULT_API_BASE;
-  const transportKind = normalizeDesktopTransportKind(record.transportKind, provider);
-  const providerSite =
-    typeof record.providerSite === "string" && record.providerSite.trim().length > 0
-      ? record.providerSite.trim()
-      : undefined;
-  const alibabaWorkspaceId =
-    typeof record.alibabaWorkspaceId === "string" && record.alibabaWorkspaceId.trim().length > 0
-      ? record.alibabaWorkspaceId.trim()
-      : undefined;
-  const alibabaBillingMode =
-    record.alibabaBillingMode === "token-plan" ? ("token-plan" as const) : undefined;
-  const stepfunBillingMode =
-    record.stepfunBillingMode === "step-plan" ? ("step-plan" as const) : undefined;
-  const zAiBillingMode =
-    record.zAiBillingMode === "glm-coding-plan" ? ("glm-coding-plan" as const) : undefined;
-  const zhipuBillingMode =
-    record.zhipuBillingMode === "glm-coding-plan" ? ("glm-coding-plan" as const) : undefined;
-  const awsRegion =
-    typeof record.awsRegion === "string" && record.awsRegion.trim().length > 0
-      ? record.awsRegion.trim()
-      : undefined;
-  const vertexProject =
-    typeof record.vertexProject === "string" && record.vertexProject.trim().length > 0
-      ? record.vertexProject.trim()
-      : undefined;
-  const vertexLocation =
-    typeof record.vertexLocation === "string" && record.vertexLocation.trim().length > 0
-      ? record.vertexLocation.trim()
-      : undefined;
-  const azureResourceName =
-    typeof record.azureResourceName === "string" && record.azureResourceName.trim().length > 0
-      ? record.azureResourceName.trim()
-      : undefined;
-  const cloudflareAccountId =
-    typeof record.cloudflareAccountId === "string" && record.cloudflareAccountId.trim().length > 0
-      ? record.cloudflareAccountId.trim()
-      : undefined;
-  const cloudflareGatewayId =
-    typeof record.cloudflareGatewayId === "string" && record.cloudflareGatewayId.trim().length > 0
-      ? record.cloudflareGatewayId.trim()
-      : undefined;
-  if (provider === "azure" && !azureResourceName) {
-    return null;
-  }
-  if (provider === "cloudflare-ai-gateway" && (!cloudflareAccountId || !cloudflareGatewayId)) {
-    return null;
-  }
-
-  const models = Array.isArray(record.models)
-    ? record.models
-        .map((model) => normalizeModelEntry(model, provider, transportKind))
-        .filter((model): model is ModelEntryV2 => model !== null)
-    : [];
-
-  const seenNames = new Set<string>();
-  const dedupedModels = models.filter((model) => {
-    if (seenNames.has(model.name)) {
-      return false;
-    }
-    seenNames.add(model.name);
-    return true;
-  });
-
-  return {
-    id,
-    provider,
-    ...(resolvedLabel ? { label: resolvedLabel } : {}),
-    apiBase,
-    ...(transportKind ? { transportKind } : {}),
-    ...(providerSite ? { providerSite } : {}),
-    ...(alibabaWorkspaceId ? { alibabaWorkspaceId } : {}),
-    ...(alibabaBillingMode ? { alibabaBillingMode } : {}),
-    ...(stepfunBillingMode ? { stepfunBillingMode } : {}),
-    ...(zAiBillingMode ? { zAiBillingMode } : {}),
-    ...(zhipuBillingMode ? { zhipuBillingMode } : {}),
-    ...(awsRegion ? { awsRegion } : {}),
-    ...(vertexProject ? { vertexProject } : {}),
-    ...(vertexLocation ? { vertexLocation } : {}),
-    ...(azureResourceName ? { azureResourceName } : {}),
-    ...(cloudflareAccountId ? { cloudflareAccountId } : {}),
-    ...(cloudflareGatewayId ? { cloudflareGatewayId } : {}),
-    models: dedupedModels,
-  };
-}
-
-function normalizeModelEntry(
-  raw: unknown,
-  provider: DesktopModelProvider,
-  transportKind: DesktopTransportKind | undefined,
-): ModelEntryV2 | null {
-  if (typeof raw !== "object" || raw === null) {
-    return null;
-  }
-  const record = raw as Partial<ModelEntryV2>;
-  const name = typeof record.name === "string" ? record.name.trim() : "";
-  if (!name) {
-    return null;
-  }
-  const capabilities = normalizeModelCapabilities(record.capabilities);
-  const supportedReasoningEfforts = normalizeSupportedReasoningEfforts(
-    record.supportedReasoningEfforts,
-  );
-  const contextLength = parseModelContextLength(record.contextLength);
-  const supportsThinkingType =
-    record.supportsThinkingType === "only" ? ("only" as const) : undefined;
-  const supportsThinkingSwitch =
-    record.supportsThinkingSwitch === true ? (true as const) : undefined;
-  const reasoningContext = {
-    provider,
-    model: name,
-    ...(transportKind ? { transportKind } : {}),
-    ...(supportedReasoningEfforts !== undefined
-      ? { supportedEfforts: supportedReasoningEfforts }
-      : {}),
-    ...(supportsThinkingType ? { supportsThinkingType } : {}),
-    ...(supportsThinkingSwitch ? { supportsThinkingSwitch } : {}),
-  };
-  const resolvedReasoningMode = resolveModelReasoningMode(record.reasoningMode, reasoningContext);
-  return {
-    name,
-    reasoningEffort: resolveModelReasoningEffortForContext(
-      record.reasoningEffort,
-      reasoningContext,
-    ) as ModelEntryV2["reasoningEffort"],
-    ...(resolvedReasoningMode === "pro" ? { reasoningMode: "pro" as const } : {}),
-    ...(supportedReasoningEfforts !== undefined
-      ? {
-          supportedReasoningEfforts:
-            supportedReasoningEfforts as ModelEntryV2["supportedReasoningEfforts"],
-        }
-      : {}),
-    ...(capabilities ? { capabilities } : {}),
-    ...(contextLength !== undefined ? { contextLength } : {}),
-    ...(supportsThinkingType ? { supportsThinkingType } : {}),
-    ...(supportsThinkingSwitch ? { supportsThinkingSwitch } : {}),
-    ...(record.thinkingEnabled === false ? { thinkingEnabled: false } : {}),
+    // Opt-out everywhere: provider tools ship in the default tool surface; only explicit false hides them.
+    providerTools: {
+      enabled: providerToolsRaw.enabled !== false,
+    },
+    webFetch: {
+      enabled: webFetchRaw.enabled !== false,
+    },
   };
 }
 
 function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
-  const providerGroups = Array.isArray(raw.providerGroups)
-    ? raw.providerGroups
-        .map((group) => normalizeProviderGroup(group))
-        .filter((group): group is ProviderGroupV2 => group !== null)
-    : [];
+  // loadConfig validates the provider section fail-fast before this runs, so entries are
+  // already schema-clean; normalization here only covers desktop-owned fields and ref slots.
+  const providers = Array.isArray(raw.providers) ? raw.providers : [];
 
-  const seenGroupIds = new Set<string>();
-  const normalizedGroups = providerGroups.filter((group) => {
-    if (seenGroupIds.has(group.id)) {
-      return false;
-    }
-    seenGroupIds.add(group.id);
-    return true;
-  });
-
-  const allRefs = listAllModelRefs(normalizedGroups);
+  const allRefs = listAllModelRefs(providers);
   const activeModel =
     parseModelRef(raw.activeModel) ?? (allRefs[0] ? { ...allRefs[0] } : emptyModelRef());
-  const resolvedActive = findModelByRef(normalizedGroups, activeModel)
+  const resolvedActive = findModelByRef(providers, activeModel)
     ? activeModel
     : allRefs[0]
       ? { ...allRefs[0] }
@@ -1178,25 +934,25 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
 
   const imageGenerationModel = normalizeImageGenerationModelRef(
     raw.imageGenerationModel,
-    normalizedGroups,
+    providers,
   );
   const videoGenerationModel = normalizeVideoGenerationModelRef(
     raw.videoGenerationModel,
-    normalizedGroups,
+    providers,
   );
-  const dreams = normalizeDreamConfig(raw.dreams, normalizedGroups);
-  const lightweightChatModel = normalizeLightweightChatModelRef(
-    raw.lightweightChatModel ?? dreams.collectorModel,
-    normalizedGroups,
+  const dreams = normalizeDreamConfig(raw.dreams, providers);
+  const secondaryLanguageModel = normalizeSecondaryLanguageModelRef(
+    raw.secondaryLanguageModel ?? dreams.collectorModel,
+    providers,
   );
 
   return {
     schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-    providerGroups: normalizedGroups,
+    providers,
     activeModel: resolvedActive,
     ...(imageGenerationModel ? { imageGenerationModel } : {}),
     ...(videoGenerationModel ? { videoGenerationModel } : {}),
-    ...(lightweightChatModel ? { lightweightChatModel } : {}),
+    ...(secondaryLanguageModel ? { secondaryLanguageModel } : {}),
     recentWorkspaces: normalizeRecentWorkspaceRoots(raw.recentWorkspaces),
     workspaceBinding: normalizeWorkspaceBinding(raw.workspaceBinding),
     ...(typeof raw.lastProjectWorkspaceRoot === "string" && raw.lastProjectWorkspaceRoot.trim()
@@ -1225,82 +981,51 @@ function normalizeConfig(raw: Partial<DesktopConfigFile>): DesktopConfigFile {
   };
 }
 
+/** Capability checks read the effective entry: provider-level flat declarations inherit down. */
+function effectiveCapabilities(
+  providers: readonly ProviderEntry[],
+  ref: ModelRef,
+): readonly DesktopModelCapability[] | undefined {
+  const resolved = resolveModelByRef(providers, ref);
+  return resolved?.model.capabilities;
+}
+
 function normalizeImageGenerationModelRef(
   value: unknown,
-  groups: readonly ProviderGroupV2[],
+  providers: readonly ProviderEntry[],
 ): ModelRef | undefined {
   const ref = parseModelRef(value);
   if (!ref) {
     return undefined;
   }
-  const resolved = findModelByRef(groups, ref);
-  if (!resolved) {
-    return undefined;
-  }
-  const capabilities = normalizeModelCapabilities(resolved.model.capabilities);
-  return capabilities?.includes("imageGeneration") ? ref : undefined;
+  return effectiveCapabilities(providers, ref)?.includes("imageGeneration") ? ref : undefined;
 }
 
 function normalizeVideoGenerationModelRef(
   value: unknown,
-  groups: readonly ProviderGroupV2[],
+  providers: readonly ProviderEntry[],
 ): ModelRef | undefined {
   const ref = parseModelRef(value);
   if (!ref) {
     return undefined;
   }
-  const resolved = findModelByRef(groups, ref);
-  if (!resolved) {
-    return undefined;
-  }
-  const capabilities = normalizeModelCapabilities(resolved.model.capabilities);
-  return capabilities?.includes("videoGeneration") ? ref : undefined;
+  return effectiveCapabilities(providers, ref)?.includes("videoGeneration") ? ref : undefined;
 }
 
-function normalizeLightweightChatModelRef(
+function normalizeSecondaryLanguageModelRef(
   value: unknown,
-  groups: readonly ProviderGroupV2[],
+  providers: readonly ProviderEntry[],
 ): ModelRef | undefined {
   const ref = parseModelRef(value);
   if (!ref) {
     return undefined;
   }
-  const resolved = findModelByRef(groups, ref);
-  if (!resolved) {
-    return undefined;
+  const capabilities = effectiveCapabilities(providers, ref);
+  if (capabilities === undefined) {
+    // No capability declaration: the model counts as a language model (legacy default).
+    return ref;
   }
-  const capabilities = normalizeModelCapabilities(resolved.model.capabilities);
-  if (capabilities && !capabilities.includes("chat")) {
-    return undefined;
-  }
-  return ref;
-}
-
-function normalizeDesktopTransportKind(
-  value: unknown,
-  provider?: DesktopModelProvider,
-): DesktopTransportKind | undefined {
-  if (provider === "azure" || provider === "openai") {
-    return "open-responses";
-  }
-
-  if (
-    value === "openai-compatible" ||
-    value === "open-responses" ||
-    value === "anthropic" ||
-    value === "bedrock"
-  ) {
-    return value;
-  }
-
-  if (provider === "anthropic") {
-    return "anthropic";
-  }
-  if (provider === "amazon-bedrock") {
-    return "bedrock";
-  }
-
-  return undefined;
+  return capabilities.includes("languageModel") ? ref : undefined;
 }
 
 export function normalizeModelCapabilities(value: unknown): DesktopModelCapability[] | undefined {
@@ -1357,9 +1082,9 @@ export function normalizeSupportedReasoningEfforts(
 
 export function normalizeDreamConfig(
   raw?: Partial<DesktopDreamConfigFile>,
-  groups: readonly ProviderGroupV2[] = [],
+  providers: readonly ProviderEntry[] = [],
 ): DesktopDreamConfigFile {
-  const collectorModel = normalizeLightweightChatModelRef(raw?.collectorModel, groups);
+  const collectorModel = normalizeSecondaryLanguageModelRef(raw?.collectorModel, providers);
   return {
     enabled: raw?.enabled === true,
     ...(collectorModel ? { collectorModel } : {}),

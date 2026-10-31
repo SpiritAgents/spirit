@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/host-internal",
   "version": "1.0.0-alpha.0",
-  "description": "Internal TypeScript host implementation boundaries for Spirit",
+  "description": "Internal TypeScript agent host implementations",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -10,7 +10,6 @@
   },
   "files": [
     "dist",
-    "built-in",
     "README.md"
   ],
   "type": "module",
@@ -49,33 +48,9 @@
       "types": "./dist/hooks/trust.d.ts",
       "default": "./dist/hooks/trust.js"
     },
-    "./config-v2": {
-      "types": "./dist/config-v2.d.ts",
-      "default": "./dist/config-v2.js"
-    },
-    "./model-provider-presets": {
-      "types": "./dist/model-provider-presets.d.ts",
-      "default": "./dist/model-provider-presets.js"
-    },
-    "./id-display-title": {
-      "types": "./dist/id-display-title.d.ts",
-      "default": "./dist/id-display-title.js"
-    },
-    "./well-known-casing": {
-      "types": "./dist/well-known-casing.d.ts",
-      "default": "./dist/well-known-casing.js"
-    },
-    "./openai-models": {
-      "types": "./dist/openai-models.d.ts",
-      "default": "./dist/openai-models.js"
-    },
-    "./openai-api-base": {
-      "types": "./dist/openai-api-base.d.ts",
-      "default": "./dist/openai-api-base.js"
-    },
-    "./bedrock-region": {
-      "types": "./dist/bedrock-region.d.ts",
-      "default": "./dist/bedrock-region.js"
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "default": "./dist/config.js"
     },
     "./azure-resource": {
       "types": "./dist/azure-resource.d.ts",
@@ -84,14 +59,6 @@
     "./cloudflare-ai-gateway-resource": {
       "types": "./dist/cloudflare-ai-gateway-resource.d.ts",
       "default": "./dist/cloudflare-ai-gateway-resource.js"
-    },
-    "./bedrock-mantle": {
-      "types": "./dist/bedrock-mantle.d.ts",
-      "default": "./dist/bedrock-mantle.js"
-    },
-    "./google-vertex-endpoints": {
-      "types": "./dist/google-vertex-endpoints.d.ts",
-      "default": "./dist/google-vertex-endpoints.js"
     },
     "./reasoning-effort": {
       "types": "./dist/reasoning-effort.d.ts",
@@ -152,20 +119,27 @@
     "./lsp": {
       "types": "./dist/lsp/index.d.ts",
       "default": "./dist/lsp/index.js"
+    },
+    "./tasks": {
+      "types": "./dist/tasks/public.d.ts",
+      "default": "./dist/tasks/public.js"
+    },
+    "./tasks-runtime": {
+      "types": "./dist/tasks-runtime/index.d.ts",
+      "default": "./dist/tasks-runtime/index.js"
     }
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
+    "build": "node ../../scripts/product/generate-content.mjs --scope built-in && tsc -p tsconfig.build.json && node scripts/assemble-built-in-extensions.mjs",
     "build:tsc": "tsc -p tsconfig.json",
     "test": "vitest run",
     "test:workspace-file-references": "vitest run src/workspace-file-references.test.ts",
     "test:lsp": "vitest run src/lsp",
     "smoke:lsp": "npm run build && node dist/smoke/lsp-pyright-smoke.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "smoke:openai-models-parse": "npm run build && node dist/smoke/openai-models-parse-smoke.js && vitest run src/bedrock-models.test.ts src/google-vertex-endpoints.test.ts src/google-vertex-models.test.ts",
     "notice": "node scripts/gen-notice.mjs",
     "notice:production": "node scripts/gen-notice.mjs --production",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
@@ -176,6 +150,7 @@
     "@napi-rs/keyring": "1.3.0",
     "@spiritagent/agent-core": "workspace:*",
     "@spiritagent/extension-toolkit": "workspace:*",
+    "@spiritagent/product": "workspace:*",
     "@vscode/ripgrep": "1.18.0",
     "fast-glob": "3.3.3",
     "fflate": "0.8.3",
@@ -191,12 +166,12 @@
   },
   "devDependencies": {
     "@types/jsdom": "28.0.3",
-    "@types/node": "25.9.5",
+    "@types/node": "26.6.6",
     "@types/turndown": "5.0.6",
-    "typescript": "5.9.3",
+    "typescript": "7.0.2",
     "vitest": "^4.1.11"
   },
   "engines": {
-    "node": ">=24"
+    "node": "26.13.0"
   }
 }

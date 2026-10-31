@@ -1,0 +1,70 @@
+{
+  "models": [
+    {
+      "match": "kimi-k3\\.1-pro(?:-|$)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "high", "max"],
+        "supportsThinkingType": "only"
+      },
+      "note": "Kimi K3.1 Pro and its highspeed variant share the K3 contract: always-on thinking, no thinking switch, and low/high/max reasoning_effort."
+    },
+    {
+      "match": "kimi-k3(?:-|$)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "high", "max"],
+        "supportsThinkingType": "only"
+      },
+      "note": "Kimi K3 always thinks and is controlled only via the top-level reasoning_effort with fixed low/high/max tiers."
+    },
+    {
+      "match": "kimi-k2\\.7-code(?:-|$)",
+      "declare": {},
+      "note": "kimi-k2.7-code (including -highspeed) does not support the thinking.type switch; the empty declare shadows the K2.5/K2.6 switch record and the unknown-version default below."
+    },
+    {
+      "match": "kimi-k2\\.[56](?:-|$)",
+      "declare": {
+        "supportsThinkingSwitch": true,
+        "thinkingSwitch": {
+          "on": {
+            "body": {
+              "thinking": {
+                "type": "enabled"
+              }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "enabled"
+                }
+              }
+            }
+          },
+          "off": {
+            "body": {
+              "thinking": {
+                "type": "disabled"
+              }
+            },
+            "providerOptions": {
+              "moonshotai": {
+                "thinking": {
+                  "type": "disabled"
+                }
+              }
+            }
+          }
+        }
+      },
+      "note": "Kimi K2.6 supports thinking.type enabled/disabled; retain the existing K2.5 legacy switch declaration. K2.7-code is excluded above."
+    },
+    {
+      "match": "kimi-k(?:[3-9]|[1-9]\\d+|2\\.)",
+      "declare": {
+        "supportedReasoningEfforts": ["low", "high", "max"],
+        "supportsThinkingType": "only"
+      },
+      "note": "Unknown Kimi versions default to the current K3/K3.1 Pro contract: no thinking switch and only low/high/max reasoning_effort."
+    }
+  ]
+}

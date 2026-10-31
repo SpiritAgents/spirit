@@ -7,9 +7,9 @@ import { join } from "node:path";
 
 import type { JsonValue } from "../../ports.js";
 import { createLlmMessageContentFromTextAndImages } from "../../ports.js";
-import { AiSdkOpenResponsesTransport } from "../../open-responses/ai-sdk-transport.js";
 import { AiSdkOpenAiCompatibleTransport } from "../../openai/ai-sdk-transport.js";
 import { resolveOpenAiModelCompatibilityProfile } from "../../openai/openai-compat.js";
+import { materializeProviderPreset } from "../../provider-presets/materialize.js";
 import {
   appendOpenAiToolResultMessage,
   continueOpenAiToolAgentState,
@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   const requestBodies: JsonValue[] = [];
 
   const server = createServer(async (request, response) => {
-    if (request.method !== "POST" || !request.url?.includes("/responses")) {
+    if (request.method !== "POST" || request.url !== "/v1/chat/completions") {
       response.statusCode = 404;
       response.end("not found");
       return;
@@ -46,157 +46,87 @@ async function main(): Promise<void> {
     const chunks =
       requestCount === 1
         ? [
-            sseEvent({
-              type: "response.output_item.added",
-              output_index: 0,
-              item: {
-                type: "reasoning",
-                id: "rs_stream_1",
-                status: "in_progress",
-              },
-            }),
-            sseEvent({
-              type: "response.reasoning_text.delta",
-              item_id: "rs_stream_1",
-              output_index: 0,
-              delta: "Think first, ",
-            }),
-            sseEvent({
-              type: "response.reasoning_text.delta",
-              item_id: "rs_stream_1",
-              output_index: 0,
-              delta: "then check the tool.",
-            }),
-            sseEvent({
-              type: "response.output_item.done",
-              output_index: 0,
-              item: {
-                type: "reasoning",
-                id: "rs_stream_1",
-                status: "completed",
-                content: [{ type: "reasoning_text", text: "Think first, then check the tool." }],
-              },
-            }),
-            sseEvent({
-              type: "response.output_item.added",
-              output_index: 1,
-              item: {
-                type: "function_call",
-                id: "fc_stream_1",
-                call_id: "call_deepseek_stream_1",
-                name: "demo_lookup",
-                arguments: "",
-                status: "in_progress",
-              },
-            }),
-            sseEvent({
-              type: "response.function_call_arguments.delta",
-              item_id: "fc_stream_1",
-              output_index: 1,
-              delta: '{"query"',
-            }),
-            sseEvent({
-              type: "response.function_call_arguments.delta",
-              item_id: "fc_stream_1",
-              output_index: 1,
-              delta: ':"Spirit deepseek"}',
-            }),
-            sseEvent({
-              type: "response.output_item.done",
-              output_index: 1,
-              item: {
-                type: "function_call",
-                id: "fc_stream_1",
-                call_id: "call_deepseek_stream_1",
-                name: "demo_lookup",
-                arguments: '{"query":"Spirit deepseek"}',
-                status: "completed",
-              },
-            }),
-            sseEvent({
-              type: "response.completed",
-              response: {
-                id: "resp-stream-1",
-                status: "completed",
-                usage: {
-                  input_tokens: 1,
-                  output_tokens: 1,
-                  input_tokens_details: { cached_tokens: 0 },
-                  output_tokens_details: { reasoning_tokens: 2 },
+            {
+              id: "chatcmpl-deepseek-stream-1",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "deepseek-v4-flash",
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        id: "call_deepseek_stream_1",
+                        type: "function",
+                        function: {
+                          name: "demo_lookup",
+                          arguments: '{"query"',
+                        },
+                      },
+                    ],
+                  },
+                  finish_reason: null,
                 },
-              },
-            }),
+              ],
+            },
+            {
+              id: "chatcmpl-deepseek-stream-1",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "deepseek-v4-flash",
+              choices: [
+                {
+                  index: 0,
+                  delta: {
+                    tool_calls: [
+                      {
+                        index: 0,
+                        type: "function",
+                        function: { arguments: ':"Spirit deepseek"}' },
+                      },
+                    ],
+                  },
+                  finish_reason: null,
+                },
+              ],
+            },
+            {
+              id: "chatcmpl-deepseek-stream-1",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "deepseek-v4-flash",
+              choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+            },
           ]
         : [
-            sseEvent({
-              type: "response.output_item.added",
-              output_index: 0,
-              item: {
-                type: "message",
-                id: "msg_stream_2",
-                role: "assistant",
-                status: "in_progress",
-              },
-            }),
-            sseEvent({
-              type: "response.content_part.added",
-              item_id: "msg_stream_2",
-              output_index: 0,
-              content_index: 0,
-              part: { type: "output_text", text: "" },
-            }),
-            sseEvent({
-              type: "response.output_text.delta",
-              item_id: "msg_stream_2",
-              output_index: 0,
-              content_index: 0,
-              delta: "AI_SDK_DEEPSEEK_OK",
-            }),
-            sseEvent({
-              type: "response.output_text.done",
-              item_id: "msg_stream_2",
-              output_index: 0,
-              content_index: 0,
-              text: "AI_SDK_DEEPSEEK_OK",
-            }),
-            sseEvent({
-              type: "response.output_item.done",
-              output_index: 0,
-              item: {
-                type: "message",
-                id: "msg_stream_2",
-                role: "assistant",
-                status: "completed",
-                content: [{ type: "output_text", text: "AI_SDK_DEEPSEEK_OK" }],
-              },
-            }),
-            sseEvent({
-              type: "response.completed",
-              response: {
-                id: "resp-stream-2",
-                status: "completed",
-                usage: {
-                  input_tokens: 1,
-                  output_tokens: 1,
-                  input_tokens_details: { cached_tokens: 0 },
-                  output_tokens_details: { reasoning_tokens: 0 },
+            {
+              id: "chatcmpl-deepseek-stream-2",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "deepseek-v4-flash",
+              choices: [
+                {
+                  index: 0,
+                  delta: { content: "AI_SDK_DEEPSEEK_OK" },
+                  finish_reason: null,
                 },
-                output: [
-                  {
-                    type: "message",
-                    id: "msg_stream_2",
-                    role: "assistant",
-                    status: "completed",
-                    content: [{ type: "output_text", text: "AI_SDK_DEEPSEEK_OK" }],
-                  },
-                ],
-              },
-            }),
+              ],
+            },
+            {
+              id: "chatcmpl-deepseek-stream-2",
+              object: "chat.completion.chunk",
+              created: 0,
+              model: "deepseek-v4-flash",
+              choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+            },
           ];
 
     for (const chunk of chunks) {
-      response.write(chunk);
+      response.write(sseEvent(chunk as JsonValue));
     }
+    response.write("data: [DONE]\n\n");
     response.end();
   });
 
@@ -209,14 +139,15 @@ async function main(): Promise<void> {
     throw new Error("Unable to get the local smoke server port.");
   }
 
-  const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}`;
-  const transport = new AiSdkOpenResponsesTransport();
+  const baseUrl = `http://127.0.0.1:${(address as AddressInfo).port}/v1`;
+  const entry = materializeProviderPreset({ presetId: "deepseek", apiBaseOverride: baseUrl });
+  const transport = new AiSdkOpenAiCompatibleTransport();
   const config = {
-    transportKind: "open-responses" as const,
     apiKey: "test-key",
     model: "deepseek-v4-flash",
-    baseUrl,
-    llmVendor: "deepseek" as const,
+    baseUrl: entry.apiBase,
+    ...(entry.sdk !== undefined ? { sdk: entry.sdk } : {}),
+    ...(entry.providerTools !== undefined ? { providerTools: entry.providerTools } : {}),
   };
   const state = startOpenAiToolAgentState(
     [],
@@ -244,16 +175,6 @@ async function main(): Promise<void> {
     server.close();
     throw new Error(
       "ai-sdk deepseek streaming smoke did not receive a streaming-tool-preview event.",
-    );
-  }
-
-  if (
-    firstEvents.filter((event) => isJsonObject(event) && event.kind === "thinking-chunk").length !==
-    2
-  ) {
-    server.close();
-    throw new Error(
-      "ai-sdk deepseek streaming smoke has an abnormal thinking-chunk count, suggesting duplicate accumulation.",
     );
   }
 
@@ -305,29 +226,49 @@ async function main(): Promise<void> {
       "ai-sdk deepseek streaming smoke did not capture the first-round request body.",
     );
   }
-  const firstTools = firstRequest.tools as Array<{ type?: string }> | undefined;
-  if (!firstTools?.some((tool) => tool.type === "web_search")) {
+  const firstTools = firstRequest.tools as
+    | Array<{ type?: string; function?: { name?: string } }>
+    | undefined;
+  const searchTool = firstTools?.find((tool) => tool.function?.name === "web_search");
+  if (searchTool?.type !== "function") {
     throw new Error(
-      "ai-sdk deepseek streaming smoke first-round request did not inject web_search.",
+      "ai-sdk deepseek streaming smoke first-round request did not inject function web_search.",
+    );
+  }
+  if (firstTools?.some((tool) => tool.type === "web_search")) {
+    throw new Error(
+      "ai-sdk deepseek streaming smoke must not inject a Responses built-in web_search entry.",
     );
   }
 
   const roundTwoBody = requestBodies[1];
-  if (!isJsonObject(roundTwoBody) || !Array.isArray(roundTwoBody.input)) {
+  if (!isJsonObject(roundTwoBody) || !Array.isArray(roundTwoBody.messages)) {
     throw new Error(
-      "ai-sdk deepseek streaming smoke second round did not send the Responses input history.",
+      "ai-sdk deepseek streaming smoke second round did not send the Chat message history.",
+    );
+  }
+  const hasToolResult = roundTwoBody.messages.some(
+    (message) =>
+      isJsonObject(message) &&
+      message.role === "tool" &&
+      message.tool_call_id === "call_deepseek_stream_1" &&
+      message.content === '{"query":"Spirit deepseek","result":"official provider ok"}',
+  );
+  if (!hasToolResult) {
+    throw new Error(
+      "ai-sdk deepseek streaming smoke second round did not send the tool result history.",
     );
   }
 
   const traceEntry = secondCompletion.result.requestTrace[0];
-  if (!isJsonObject(traceEntry) || traceEntry.kind !== "deepseek_open_responses") {
+  if (!isJsonObject(traceEntry) || traceEntry.kind !== "openai_sdk_chat_completions") {
     throw new Error(
-      "ai-sdk deepseek streaming smoke did not mark the deepseek_open_responses trace kind.",
+      "ai-sdk deepseek streaming smoke did not mark the openai_sdk_chat_completions trace kind.",
     );
   }
 
   await runDeepSeekVisionCapabilitySmoke();
-  verifyKnownModelCapabilityTable();
+  verifyDeclaredCapabilitiesProfile();
 }
 
 async function runDeepSeekVisionCapabilitySmoke(): Promise<void> {
@@ -428,7 +369,8 @@ async function runDeepSeekVisionCapabilitySmoke(): Promise<void> {
         apiKey: "test-key",
         model: "deepseek-v4-pro",
         baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-        llmVendor: "deepseek",
+        // Declared text-only capability profile: the compat layer trims the image part upfront.
+        modelCapabilities: { languageModel: true },
       },
       state,
       demoLookupToolDefinition(),
@@ -491,52 +433,36 @@ interface DeepSeekSmokeWarningOptions {
 
 type DeepSeekSmokeWarningLogger = (options: DeepSeekSmokeWarningOptions) => void;
 
-function verifyKnownModelCapabilityTable(): void {
-  const deepSeek = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "deepseek",
+function verifyDeclaredCapabilitiesProfile(): void {
+  // Undeclared capabilities mean "no explicit profile": the compat layer trims nothing.
+  const undeclared = resolveOpenAiModelCompatibilityProfile({
     model: "deepseek-v4-pro",
   });
-  if (!deepSeek.hasExplicitCapabilities || deepSeek.capabilities.imageInput) {
+  if (undeclared.hasExplicitCapabilities) {
     throw new Error(
-      "DeepSeek capabilities table is abnormal: it should be explicitly declared and should not support imageInput.",
+      "Capabilities profile is abnormal: undeclared capabilities must not trim requests.",
     );
   }
 
-  const moonshotWithoutCatalog = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "moonshot-ai",
+  // Declared capabilities are honored verbatim, including trimming undeclared modalities.
+  const declared = resolveOpenAiModelCompatibilityProfile({
     model: "kimi-k2.5",
+    modelCapabilities: { languageModel: true },
   });
-  const moonshotWithImageInput = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "moonshot-ai",
+  if (!declared.hasExplicitCapabilities || declared.capabilities.imageInput) {
+    throw new Error(
+      "Capabilities profile is abnormal: declared capabilities should drop imageInput here.",
+    );
+  }
+
+  const withImageInput = resolveOpenAiModelCompatibilityProfile({
     model: "kimi-k2.5",
     modelCapabilities: { imageInput: true },
   });
-
-  if (
-    !moonshotWithoutCatalog.hasExplicitCapabilities ||
-    moonshotWithoutCatalog.capabilities.imageInput
-  ) {
+  if (!withImageInput.capabilities.imageInput) {
     throw new Error(
-      "Moonshot capabilities table is abnormal: imageInput should not be inferred without a catalog.",
+      "Capabilities profile is abnormal: explicit modelCapabilities should preserve imageInput.",
     );
-  }
-  if (!moonshotWithImageInput.capabilities.imageInput) {
-    throw new Error(
-      "Moonshot capabilities table is abnormal: explicit modelCapabilities should preserve imageInput.",
-    );
-  }
-
-  const explicitCustom = resolveOpenAiModelCompatibilityProfile({
-    llmVendor: "custom",
-    model: "custom-image-model",
-    modelCapabilities: { chat: true, imageInput: true, imageGeneration: true },
-  });
-  if (
-    !explicitCustom.hasExplicitCapabilities ||
-    !explicitCustom.capabilities.imageInput ||
-    !explicitCustom.capabilities.imageGeneration
-  ) {
-    throw new Error("Explicit modelCapabilities did not override the provider/model inference.");
   }
 }
 

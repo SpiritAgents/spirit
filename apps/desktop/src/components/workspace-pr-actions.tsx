@@ -1,5 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, GitMerge, LoaderCircle } from "lucide-react";
+import { GitMerge } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ButtonGroup, ButtonGroupSeparator } from "@/components/ui/button-group";
@@ -54,7 +56,9 @@ export function WorkspacePrActions({
   const { t } = useTranslation();
   const primaryMergeLabel = mergePrimaryLabel ?? t("app.merge");
 
-  const busyIcon = busy ? <LoaderCircle className="size-3 animate-spin" aria-hidden /> : null;
+  const busyIcon = busy ? (
+    <LoaderCircle className="size-3 animate-spin" aria-hidden strokeWidth={1.75} />
+  ) : null;
 
   if (mode === "ready") {
     return (
@@ -84,7 +88,7 @@ export function WorkspacePrActions({
         onClick={() => onMerge("merge")}
       >
         {busyIcon}
-        <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden />
+        <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
         <span>{primaryMergeLabel}</span>
       </Button>
       <ButtonGroupSeparator className={DESKTOP_GIT_ACTION_SPLIT} />
@@ -99,7 +103,7 @@ export function WorkspacePrActions({
             disabled={busy || mergeDisabled}
             className={cn(DESKTOP_GIT_ACTION_MENU_TRIGGER, instantHoverMotionClass)}
           >
-            <ChevronDown className="size-3" aria-hidden />
+            <ChevronDown className="size-3" aria-hidden strokeWidth={1.75} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -124,7 +128,7 @@ export function WorkspacePrActions({
             )}
             onSelect={() => onMerge("squash")}
           >
-            <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden />
+            <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
             <span className="min-w-0 flex-1 truncate">{t("workspace.prMergeSquash")}</span>
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -135,7 +139,7 @@ export function WorkspacePrActions({
             )}
             onSelect={() => onMerge("rebase")}
           >
-            <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden />
+            <GitMerge className="size-3 shrink-0 opacity-80" aria-hidden strokeWidth={1.75} />
             <span className="min-w-0 flex-1 truncate">{t("workspace.prMergeRebase")}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -1,6 +1,7 @@
 ---
 title: Desktop
-description: Settings map, Files / Git / Browser, extensions, automations, and local Web Host pairing.
+description: Settings map, Files / Git / Browser, extensions, automations, and
+  local Web Host pairing.
 ---
 
 Desktop 是圖形化主機。它與 [CLI](./cli.mdx) 共享本地 daemon。請從 [Install Desktop](./install/desktop.mdx) 安裝。
@@ -21,10 +22,10 @@ Desktop 是圖形化主機。它與 [CLI](./cli.mdx) 共享本地 daemon。請�
 | 模型     | 供應商連線、模型清單、金鑰                  |
 | 智慧體   | LSP、commit / PR 歸因                       |
 | Tab      | 編輯器 Tab 補全                             |
-| 技能     | 探索並產出 [Skills](./customize/skills.mdx) |
+| 技能     | 探索並產出 [技能](./customize/skills.mdx) |
 | 規則     | [Rules](./customize/rules.mdx) 插槽         |
 | MCP      | [MCP](./customize/mcp.mdx) 伺服器           |
-| 鉤子     | [Hooks](./customize/hooks.mdx)              |
+| 掛鉤     | [掛鉤](./customize/hooks.mdx)              |
 | 夢境     | [夢境](./customize/dreams.mdx)（Beta）      |
 
 ### 連線
@@ -56,13 +57,13 @@ CLI 沒有內嵌 PTY 面板。指令仍會透過共享 daemon 上的相同 `shel
 
 ### Git
 
-**Git** 標籤頁顯示變更和歷史記錄。Composer 上的標籤可以啟動**提交**、**推送**或**合併**。這是主機 UI，不是 Skills 套件。
+**Git** 標籤頁顯示變更和歷史記錄。Composer 上的標籤可以啟動**提交**、**推送**或**合併**。這是主機 UI，不是技能套件。
 
 這些標籤會注入固定提示。Agent 接著使用 [workspace 和 `shell` 工具](./agent/tools.mdx)。
 
 ### LSP
 
-在**設定 → Agents**中開啟語言伺服器，如果缺少提供者則安裝。伺服器就緒後，Agent 可以呼叫 [`get_diagnostics`](./agent/tools.mdx)。
+在**設定 → Agents**中開啟語言伺服器。{{product.name|mdx}} 只會偵測此機器上已安裝的伺服器，缺少的請依照表中的工具鏈自行安裝。伺服器就緒後，Agent 可以呼叫 [`get_diagnostics`](./agent/tools.mdx)。
 
 | ID              | 語言   | 安裝方式                            |
 | --------------- | ------ | ----------------------------------- |
@@ -73,13 +74,13 @@ CLI 沒有內嵌 PTY 面板。指令仍會透過共享 daemon 上的相同 `shel
 | `jdtls`         | Java   | 手動                                |
 | `omnisharp`     | C#     | .NET                                |
 
-clangd 和 jdtls 未隨附。請自行安裝，然後回到設定 → Agents。
+{{product.name|mdx}} 不會代為安裝語言伺服器。請自行安裝缺少的伺服器，然後回到設定 → Agents。
 
 ### Tab
 
-Tab 是 Monaco 的內嵌完成功能。按一次 Tab 接受幽靈文字。開啟**設定 → Tab**，啟用程式碼完成（`codeCompletionEnabled`），並在**設定 → 模型**中指派輕量級聊天模型。該位置也服務其他輕量級背景任務。
+Tab 是 Monaco 的內嵌完成功能。按一次 Tab 接受幽靈文字。開啟**設定 → Tab**，啟用程式碼完成（`codeCompletionEnabled`），並在**設定 → 模型**中指派次要語言模型。該位置也服務其他次要背景任務。
 
-如果完成度為空，請檢查是否已連接輕量級聊天模型，且該設定已開啟。這不是智慧體對話。
+如果完成度為空，請檢查是否已連接次要語言模型，且該設定已開啟。這不是智慧體對話。
 
 ## 擴充功能與自動化
 

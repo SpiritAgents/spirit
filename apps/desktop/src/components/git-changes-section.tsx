@@ -1,8 +1,7 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import type { CSSProperties } from "react";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-
-import { LoaderCircle } from "lucide-react";
 
 import { GitChangesActions } from "@/components/git-changes-actions";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,6 +11,7 @@ import {
   gitChangeStatusTitle,
 } from "@/lib/git-change-status-display";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
+import { DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS } from "@/lib/desktop-chrome";
 import { GIT_CHANGES_HEADER_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,13 @@ export function GitChangesSection({
 
   return (
     <section className={cn("flex min-h-0 flex-col", className)} style={style}>
-      <div ref={headerRef} className="flex shrink-0 items-center justify-between gap-2 px-2 py-1.5">
+      <div
+        ref={headerRef}
+        className={cn(
+          "flex shrink-0 items-center justify-between gap-2 px-2 py-1.5",
+          DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
+        )}
+      >
         <div className="flex min-w-0 items-center gap-1">
           <h3 className="m-0 shrink-0 text-xs font-normal leading-none text-foreground">
             {t("workspace.git.changes")}
@@ -157,7 +163,7 @@ export function GitChangesSection({
       <div className="relative min-h-0 flex-1">
         {loading ? (
           <div className="flex items-center justify-center gap-2 p-4 text-xs text-muted-foreground">
-            <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+            <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
             {t("workspace.git.loadingChanges")}
           </div>
         ) : null}

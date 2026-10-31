@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { product } from "@spiritagent/product";
+import { existsSync, realpathSync } from "node:fs";
 import { lstat, mkdir, readdir, readFile, realpath, unlink, writeFile } from "node:fs/promises";
 import { release as osRelease } from "node:os";
 import path from "node:path";
@@ -12,10 +13,25 @@ import {
   toolNamesFromDefinitions,
   type JsonValue,
   type PermissionMemoryTarget,
+  type ToolApprovalFileDiffPreview,
+  type ToolApprovalRequest,
+  type ToolExecutionFileChangeDiff,
+  type ToolExecutionHostUi,
 } from "@spiritagent/agent-core";
 
 import { applyDiff } from "./apply-diff.js";
-import { formatGrepToolOutput, runRipgrepSearch } from "./ripgrep-search.js";
+import {
+  APPROVAL_FILE_PREVIEW_MAX_BYTES,
+  buildApprovalFileContentPreview,
+  buildApprovalFileDiffPreview,
+  type ApprovalFileDiffPreviewSource,
+} from "./approval-file-preview.js";
+import {
+  GREP_TOOL_MAX_MATCHES,
+  formatGrepToolOutput,
+  runRipgrepSearch,
+  type GrepToolOutputMode,
+} from "./ripgrep-search.js";
 import { resolveTranscriptsDir } from "./transcript.js";
 import {
   defaultShellForPty,
@@ -39,7 +55,6 @@ import {
   type HostExtensionToolExecutionMode,
 } from "./extensions.js";
 import {
-  buildCreateAutomationApprovalPrompt,
   CREATE_AUTOMATION_TOOL_NAME,
   type CreateAutomationApprovalLevel,
   deriveAutomationTitle,
@@ -53,7 +68,7 @@ import {
   type HostAutomationTrigger,
 } from "./automations.js";
 import type { ModelReasoningEffort } from "./reasoning-effort.js";
-import type { ModelRef } from "./config-v2.js";
+import type { ModelRef } from "./config.js";
 import { resolveInstructionPaths, type InstructionDiscoveryContext } from "./storage.js";
 import { isPathUnderPlansDir, resolvePlanFilePath } from "./plans.js";
 import {
@@ -144,6 +159,7 @@ export interface HostToolModelCompatibilityProfile {
 export interface HostToolExecutionOutput {
   content: HostToolContentPart[];
   summaryText: string;
+  hostUi?: ToolExecutionHostUi;
 }
 
 export interface HostGeneratedImageSaveRequest {
@@ -235,7 +251,22 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
       offset?: number;
       limit?: number;
     }
-  | { name: "grep"; query: string; is_regexp?: boolean; glob?: string }
+  | {
+      name: "grep";
+      pattern: string;
+      glob?: string;
+      caseInsensitive?: boolean;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
+    }
   | {
       name: "subagent";
       task: string;
@@ -300,7 +331,11 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
 
 export type HostAuthorizationDecision<QuestionSpec = HostAskQuestionsQuestionSpec> =
   | { kind: "allowed" }
-  | { kind: "need-approval"; prompt: string; rememberTarget?: PermissionMemoryTarget }
+  | {
+      kind: "need-approval";
+      approval: ToolApprovalRequest;
+      rememberTarget?: PermissionMemoryTarget;
+    }
   | { kind: "need-questions"; questions: HostAskQuestionsRequest<QuestionSpec> }
   | { kind: "denied"; reason: string };
 
@@ -317,6 +352,26 @@ export interface HostMcpStatusSnapshot {
 
 function createHostToolTextOutput(text: string): HostToolExecutionOutput {
   return createHostToolOutput(text);
+}
+
+/**
+ * Attaches the exact before/after pair of an apply_patch write to the tool output, so hosts can
+ * render a real diff on the completed tool card. Over-sized sides drop the payload; the card
+ * then falls back to reconstructing the diff from the patch text.
+ */
+function hostOutputWithFileChangeDiff(
+  summaryText: string,
+  fileChangeDiff: ToolExecutionFileChangeDiff,
+): HostToolExecutionOutput {
+  const output = createHostToolTextOutput(summaryText);
+  const encoder = new TextEncoder();
+  if (
+    encoder.encode(fileChangeDiff.before).length > APPROVAL_FILE_PREVIEW_MAX_BYTES ||
+    encoder.encode(fileChangeDiff.after).length > APPROVAL_FILE_PREVIEW_MAX_BYTES
+  ) {
+    return output;
+  }
+  return { ...output, hostUi: { fileChangeDiff } };
 }
 
 function createHostToolOutput(
@@ -638,17 +693,13 @@ export class NodeHostToolService<
         };
       }
       case "search": {
-        const searchInput = raw.slice("search".length).trim();
-        const usesRegexp =
-          searchInput.startsWith("--regexp ") || searchInput.startsWith("--regex ");
-        const query = usesRegexp ? searchInput.replace(/^--regex(p)?\s+/u, "").trim() : searchInput;
-        if (!query) {
-          throw new Error("Usage: /tool search [--regexp] <query>");
+        const pattern = raw.slice("search".length).trim();
+        if (!pattern) {
+          throw new Error("Usage: /tool search <pattern>");
         }
         return {
           name: "grep",
-          query,
-          ...(usesRegexp ? { is_regexp: true } : {}),
+          pattern,
         };
       }
       default:
@@ -704,13 +755,33 @@ export class NodeHostToolService<
         };
       }
       case "grep": {
-        const isRegexp = optionalBoolean(parsed, "is_regexp");
+        const caseInsensitive = optionalBoolean(parsed, "-i");
         const glob = optionalStringStrict(parsed, "glob");
+        const outputMode = optionalGrepOutputMode(parsed, "output_mode");
+        const headLimit = optionalPositiveInt(parsed, "head_limit");
+        const offset = optionalNonNegativeInt(parsed, "offset");
+        const lineNumbers = optionalBoolean(parsed, "-n");
+        const afterContext = optionalNonNegativeInt(parsed, "-A");
+        const beforeContext = optionalNonNegativeInt(parsed, "-B");
+        const contextLines = optionalNonNegativeInt(parsed, "-C");
+        const fileType = optionalStringStrict(parsed, "type");
+        const includeIgnored = optionalBoolean(parsed, "include_ignored");
+        const multiline = optionalBoolean(parsed, "multiline");
         return {
           name,
-          query: requiredString(parsed, "query"),
-          ...(isRegexp !== undefined ? { is_regexp: isRegexp } : {}),
+          pattern: requiredString(parsed, "pattern"),
+          ...(caseInsensitive !== undefined ? { caseInsensitive } : {}),
           ...(glob ? { glob } : {}),
+          ...(outputMode !== undefined ? { outputMode } : {}),
+          ...(headLimit !== undefined ? { headLimit } : {}),
+          ...(offset !== undefined ? { offset } : {}),
+          ...(lineNumbers !== undefined ? { lineNumbers } : {}),
+          ...(afterContext !== undefined ? { afterContext } : {}),
+          ...(beforeContext !== undefined ? { beforeContext } : {}),
+          ...(contextLines !== undefined ? { contextLines } : {}),
+          ...(fileType ? { fileType } : {}),
+          ...(includeIgnored !== undefined ? { includeIgnored } : {}),
+          ...(multiline !== undefined ? { multiline } : {}),
         };
       }
       case "subagent": {
@@ -904,7 +975,12 @@ export class NodeHostToolService<
         if (request.approval_mode === "need-approval") {
           return {
             kind: "need-approval",
-            prompt: buildExtensionApprovalPrompt(request),
+            approval: {
+              kind: "extension_tool",
+              extensionId: request.extension_id,
+              toolName: request.tool_name,
+              argumentsPreview: truncateChars(JSON.stringify(request.arguments, null, 2), 1_200),
+            },
           };
         }
         return { kind: "allowed" };
@@ -936,25 +1012,22 @@ export class NodeHostToolService<
         if (bypassHighRiskApproval || metadata?.userInitiated) {
           return { kind: "allowed" };
         }
-        const shell = this.toolDefinitionEnvironment();
         return {
           kind: "need-approval",
-          prompt:
-            `Reason: ${request.reason}\n` +
-            `High-risk tool call: shell\nTerminal: ${shell.shellDisplayName}\nCommand: ${request.command}`,
+          approval: this.describeShellApproval(request),
           rememberTarget: { kind: "shell", command: request.command },
         };
       }
       case "web_fetch":
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: fetch web page\nURL: ${request.url}\n\nThe body will enter the conversation; confirm the source is trustworthy — malicious pages may attempt prompt injection.`,
+          approval: { kind: "web_fetch", url: request.url },
         };
       case "ls": {
         const canonical = await this.resolveExistingAbsoluteDirectory(request.path);
         return this.authorizeExternalReadPath(
           canonical,
-          "List directory outside the workspace",
+          "ls",
           bypassHighRiskApproval || this.requestMetadataFor(request)?.userInitiated === true,
         );
       }
@@ -966,44 +1039,43 @@ export class NodeHostToolService<
         const canonical = target.canonicalPath;
         return this.authorizeExternalReadPath(
           canonical,
-          "Read file outside the workspace",
+          "read_file",
           bypassHighRiskApproval || this.requestMetadataFor(request)?.userInitiated === true,
         );
       }
-      case "create_file":
+      case "create_file": {
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: create file\nPath: ${request.path}\nContent length: ${[...request.content].length} chars`,
+          approval: await this.describeCreateFileApproval(request),
         };
-      case "create_plan":
+      }
+      case "create_plan": {
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: create plan\nName: ${request.plan_name}\nContent length: ${[...request.content].length} chars`,
+          approval: await this.describeCreatePlanApproval(request),
         };
+      }
       case CREATE_AUTOMATION_TOOL_NAME:
         return {
           kind: "need-approval",
-          prompt: buildCreateAutomationApprovalPrompt(request),
+          approval: this.describeCreateAutomationApproval(request),
         };
-      case "edit_file":
+      case "edit_file": {
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: edit file (exact replacement)\nPath: ${request.path}\nOld text length: ${[...request.old_text].length} chars\nNew text length: ${[...request.new_text].length} chars`,
+          approval: await this.describeEditFileApproval(request),
         };
-      case "delete_file":
+      }
+      case "delete_file": {
         return {
           kind: "need-approval",
-          prompt: `High-risk tool call: delete file\nPath: ${request.path}`,
+          approval: await this.describeDeleteFileApproval(request),
         };
+      }
       case APPLY_PATCH_HOST_TOOL_NAME: {
-        const diffLines =
-          request.operation.diff === undefined ? 0 : request.operation.diff.split(/\r?\n/).length;
         return {
           kind: "need-approval",
-          prompt:
-            `High-risk tool call: apply_patch (${request.operation.type})\n` +
-            `Path: ${request.operation.path}` +
-            (request.operation.type === "update_file" ? `\nDiff lines: ${diffLines}` : ""),
+          approval: await this.describeApplyPatchApproval(request),
         };
       }
       case "dream_list":
@@ -1014,6 +1086,223 @@ export class NodeHostToolService<
       case "todo_list":
       case "todo_write":
         return { kind: "allowed" };
+    }
+  }
+
+  /**
+   * Structured approval descriptor for a call the host would auto-allow, used to enrich
+   * hook-gated approvals with the same rich form (ToolExecutor.describeApproval). Best-effort:
+   * unresolvable paths or unknown tools return undefined and the hook message stands alone.
+   */
+  async describeApproval(
+    request: HostToolRequest<QuestionSpec>,
+  ): Promise<ToolApprovalRequest | undefined> {
+    try {
+      switch (request.name) {
+        case "shell":
+          return this.describeShellApproval(request);
+        case "web_fetch":
+          return { kind: "web_fetch", url: request.url };
+        case "ls": {
+          const canonical = await this.resolveExistingAbsoluteDirectory(request.path);
+          return this.buildReadPathApprovalDescriptor(canonical, "ls");
+        }
+        case "read_file": {
+          const target = await this.resolveReadFileTarget(request.path);
+          return this.buildReadPathApprovalDescriptor(target.canonicalPath, "read_file");
+        }
+        case "create_file":
+          return this.describeCreateFileApproval(request);
+        case "create_plan":
+          return this.describeCreatePlanApproval(request);
+        case "edit_file":
+          return this.describeEditFileApproval(request);
+        case "delete_file":
+          return this.describeDeleteFileApproval(request);
+        case APPLY_PATCH_HOST_TOOL_NAME:
+          return this.describeApplyPatchApproval(request);
+        case CREATE_AUTOMATION_TOOL_NAME:
+          return this.describeCreateAutomationApproval(request);
+        default:
+          return undefined;
+      }
+    } catch {
+      return undefined;
+    }
+  }
+
+  private describeShellApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "shell" }>,
+  ): ToolApprovalRequest {
+    const shell = this.toolDefinitionEnvironment();
+    return {
+      kind: "shell",
+      command: request.command,
+      reason: request.reason,
+      terminal: shell.shellDisplayName,
+    };
+  }
+
+  private async describeCreateFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "create_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "create_file",
+      path: request.path,
+      content: request.content,
+    });
+    return {
+      kind: "create_file",
+      path: request.path,
+      contentChars: [...request.content].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeCreatePlanApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "create_plan" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "create_plan",
+      planName: request.plan_name,
+      content: request.content,
+    });
+    return {
+      kind: "create_plan",
+      planName: request.plan_name,
+      contentChars: [...request.content].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private describeCreateAutomationApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: typeof CREATE_AUTOMATION_TOOL_NAME }>,
+  ): ToolApprovalRequest {
+    return {
+      kind: "create_automation",
+      title: request.title,
+      trigger: request.trigger as JsonValue,
+      approvalLevel: request.approval_level,
+      overview: request.overview,
+      overviewChars: [...request.overview].length,
+    };
+  }
+
+  private async describeEditFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "edit_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "edit_file",
+      path: request.path,
+      oldText: request.old_text,
+      newText: request.new_text,
+    });
+    return {
+      kind: "edit_file",
+      path: request.path,
+      oldChars: [...request.old_text].length,
+      newChars: [...request.new_text].length,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeDeleteFileApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: "delete_file" }>,
+  ): Promise<ToolApprovalRequest> {
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "delete_file",
+      path: request.path,
+    });
+    return {
+      kind: "delete_file",
+      path: request.path,
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  private async describeApplyPatchApproval(
+    request: Extract<HostToolRequest<QuestionSpec>, { name: typeof APPLY_PATCH_HOST_TOOL_NAME }>,
+  ): Promise<ToolApprovalRequest> {
+    const diffLines =
+      request.operation.diff === undefined ? 0 : request.operation.diff.split(/\r?\n/).length;
+    const fileDiffPreview = await this.approvalFileDiffPreview({
+      kind: "apply_patch",
+      operation: request.operation,
+    });
+    return {
+      kind: "apply_patch",
+      operation: request.operation.type,
+      path: request.operation.path,
+      ...(request.operation.type === "update_file" ? { diffLines } : {}),
+      ...(fileDiffPreview ? { fileDiffPreview } : {}),
+    };
+  }
+
+  /**
+   * Comparison roots for read approvals: the descriptor path is realpath'd, so the workspace
+   * root must be too (macOS /var -> /private/var and similar symlinked roots never match
+   * otherwise). A missing root falls back to the unresolved path — display concerns must not
+   * kill the descriptor.
+   */
+  private readPathWorkspaceRoots(): string[] {
+    const roots = [path.resolve(this.workspaceRoot)];
+    try {
+      const resolvedRoot = realpathSync(this.workspaceRoot);
+      if (resolvedRoot !== roots[0]) {
+        roots.push(resolvedRoot);
+      }
+    } catch {
+      // Keep the unresolved root.
+    }
+    return roots;
+  }
+
+  private async buildReadPathApprovalDescriptor(
+    canonical: string,
+    operation: "read_file" | "ls",
+  ): Promise<ToolApprovalRequest> {
+    // Best-effort like the diff previews: an unreadable/binary/over-sized target just drops the
+    // content preview, and the approval form falls back to the plain path text.
+    let fileContentPreview;
+    try {
+      fileContentPreview = await buildApprovalFileContentPreview(canonical, operation);
+    } catch {
+      fileContentPreview = undefined;
+    }
+    // Display path: workspace-relative when inside the workspace, else the global absolute path.
+    const withinRoot = this.readPathWorkspaceRoots().find((root) => isWithinRoot(canonical, root));
+    let displayPath = canonical;
+    if (withinRoot !== undefined) {
+      const relative = path.relative(withinRoot, canonical).replace(/\\/g, "/");
+      if (relative) {
+        displayPath = relative;
+      }
+    }
+    return {
+      kind: "read_path",
+      operation,
+      path: displayPath,
+      workspaceExternal: withinRoot === undefined,
+      ...(fileContentPreview
+        ? { fileContentPreview: { path: displayPath, content: fileContentPreview.content } }
+        : {}),
+    };
+  }
+
+  /**
+   * Best-effort diff preview for the approval form: the target may vanish or the patch may not
+   * apply between the tool call and the approval decision, so preview failures degrade to the
+   * plain text prompt instead of failing the authorization.
+   */
+  private async approvalFileDiffPreview(
+    source: ApprovalFileDiffPreviewSource,
+  ): Promise<ToolApprovalFileDiffPreview | undefined> {
+    try {
+      return await buildApprovalFileDiffPreview(source, (inputPath) =>
+        this.resolveWorkspaceWriteTarget(inputPath),
+      );
+    } catch {
+      return undefined;
     }
   }
 
@@ -1054,7 +1343,24 @@ export class NodeHostToolService<
       case "read_file":
         return this.executeReadFile(request.path, request.offset, request.limit);
       case "grep":
-        return this.executeSearchFiles(request.query, request.is_regexp ?? false, request.glob);
+        return this.executeSearchFiles(request.pattern, {
+          ...(request.caseInsensitive !== undefined
+            ? { caseInsensitive: request.caseInsensitive }
+            : {}),
+          ...(request.glob !== undefined ? { glob: request.glob } : {}),
+          ...(request.outputMode !== undefined ? { outputMode: request.outputMode } : {}),
+          ...(request.headLimit !== undefined ? { headLimit: request.headLimit } : {}),
+          ...(request.offset !== undefined ? { offset: request.offset } : {}),
+          ...(request.lineNumbers !== undefined ? { lineNumbers: request.lineNumbers } : {}),
+          ...(request.afterContext !== undefined ? { afterContext: request.afterContext } : {}),
+          ...(request.beforeContext !== undefined ? { beforeContext: request.beforeContext } : {}),
+          ...(request.contextLines !== undefined ? { contextLines: request.contextLines } : {}),
+          ...(request.fileType !== undefined ? { fileType: request.fileType } : {}),
+          ...(request.includeIgnored !== undefined
+            ? { includeIgnored: request.includeIgnored }
+            : {}),
+          ...(request.multiline !== undefined ? { multiline: request.multiline } : {}),
+        });
       case "subagent":
         throw new Error(
           "subagent must be handled by the Agent runtime, not the host-internal tool executor",
@@ -1342,11 +1648,11 @@ export class NodeHostToolService<
    * built-in location fallback when NO rule matched. `foldAskToAllow` folds
    * every ask (rule or fallback) to allow under bypass-approval / userInitiated.
    */
-  private authorizeExternalReadPath(
+  private async authorizeExternalReadPath(
     canonical: string,
-    promptTitle: string,
+    operation: "read_file" | "ls",
     foldAskToAllow: boolean,
-  ): HostAuthorizationDecision<QuestionSpec> {
+  ): Promise<HostAuthorizationDecision<QuestionSpec>> {
     const evaluation = evaluateReadFilePermission(
       canonical,
       this.loadPermissionRules().read_file ?? {},
@@ -1363,7 +1669,7 @@ export class NodeHostToolService<
     }
     if (evaluation.matched !== undefined) {
       if (evaluation.verdict === "ask" && !foldAskToAllow) {
-        return needReadPathApproval(canonical, promptTitle);
+        return this.needReadPathApproval(canonical, operation);
       }
       return { kind: "allowed" };
     }
@@ -1373,7 +1679,18 @@ export class NodeHostToolService<
     if (this.isAllowedReadLocation(canonical) || foldAskToAllow) {
       return { kind: "allowed" };
     }
-    return needReadPathApproval(canonical, promptTitle);
+    return this.needReadPathApproval(canonical, operation);
+  }
+
+  private async needReadPathApproval(
+    canonical: string,
+    operation: "read_file" | "ls",
+  ): Promise<HostAuthorizationDecision<QuestionSpec>> {
+    return {
+      kind: "need-approval",
+      approval: await this.buildReadPathApprovalDescriptor(canonical, operation),
+      rememberTarget: { kind: "read_file", path: canonical },
+    };
   }
 
   /**
@@ -1453,15 +1770,17 @@ export class NodeHostToolService<
     try {
       const managedRootStats = await lstat(managedRoot);
       if (!managedRootStats.isDirectory() || managedRootStats.isSymbolicLink()) {
-        throw new Error(`Invalid Spirit-managed ${assetLabel} directory: ${trimmed}`);
+        throw new Error(`Invalid ${product.name}-managed ${assetLabel} directory: ${trimmed}`);
       }
 
       const candidate = await lstat(candidatePath);
       if (candidate.isSymbolicLink()) {
-        throw new Error(`Spirit-managed ${assetLabel} reference must not be a symlink: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} reference must not be a symlink: ${trimmed}`,
+        );
       }
       if (!candidate.isFile()) {
-        throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`);
+        throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`);
       }
 
       const [canonicalSpiritRoot, canonicalRoot, canonical] = await Promise.all([
@@ -1470,15 +1789,19 @@ export class NodeHostToolService<
         realpath(candidatePath),
       ]);
       if (!pathHasPrefix(canonicalRoot, canonicalSpiritRoot)) {
-        throw new Error(`Spirit-managed ${assetLabel} directory escapes allowed root: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} directory escapes allowed root: ${trimmed}`,
+        );
       }
       if (!pathHasPrefix(canonical, canonicalRoot)) {
-        throw new Error(`Spirit-managed ${assetLabel} reference escapes allowed root: ${trimmed}`);
+        throw new Error(
+          `${product.name}-managed ${assetLabel} reference escapes allowed root: ${trimmed}`,
+        );
       }
 
       const st = await lstat(canonical);
       if (st.isSymbolicLink() || !st.isFile()) {
-        throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`);
+        throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`);
       }
 
       return canonical;
@@ -1486,7 +1809,9 @@ export class NodeHostToolService<
       if (error instanceof Error && error.message.includes(trimmed)) {
         throw error;
       }
-      throw new Error(`Spirit-managed ${assetLabel} not found: ${trimmed}`, { cause: error });
+      throw new Error(`${product.name}-managed ${assetLabel} not found: ${trimmed}`, {
+        cause: error,
+      });
     }
   }
 
@@ -1671,28 +1996,60 @@ export class NodeHostToolService<
   }
 
   private async executeSearchFiles(
-    query: string,
-    isRegexp = false,
-    inputGlob?: string,
+    pattern: string,
+    options: {
+      caseInsensitive?: boolean;
+      glob?: string;
+      outputMode?: GrepToolOutputMode;
+      headLimit?: number;
+      offset?: number;
+      lineNumbers?: boolean;
+      afterContext?: number;
+      beforeContext?: number;
+      contextLines?: number;
+      fileType?: string;
+      includeIgnored?: boolean;
+      multiline?: boolean;
+    } = {},
   ): Promise<string> {
-    const needle = query.trim();
+    const needle = pattern.trim();
     if (!needle) {
-      throw new Error("search query must not be empty");
+      throw new Error("search pattern must not be empty");
     }
 
     const globPattern =
-      inputGlob !== undefined && inputGlob.trim() !== ""
-        ? normalizeWorkspaceGlobPattern(inputGlob)
+      options.glob !== undefined && options.glob.trim() !== ""
+        ? normalizeWorkspaceGlobPattern(options.glob)
         : null;
 
-    const { matches } = await runRipgrepSearch({
+    const { matches, truncated } = await runRipgrepSearch({
       workspaceRoot: this.workspaceRoot,
       query: needle,
-      isRegexp,
+      isRegexp: true,
+      caseSensitive: options.caseInsensitive !== true,
       globPattern,
+      maxMatches: GREP_TOOL_MAX_MATCHES,
+      ...(options.contextLines !== undefined ? { context: options.contextLines } : {}),
+      ...(options.beforeContext !== undefined ? { beforeContext: options.beforeContext } : {}),
+      ...(options.afterContext !== undefined ? { afterContext: options.afterContext } : {}),
+      ...(options.fileType ? { fileType: options.fileType } : {}),
+      ...(options.includeIgnored !== undefined ? { includeIgnored: options.includeIgnored } : {}),
+      ...(options.multiline !== undefined ? { multiline: options.multiline } : {}),
     });
 
-    return formatGrepToolOutput(matches);
+    const hasContext =
+      (options.contextLines ?? 0) > 0 ||
+      (options.beforeContext ?? 0) > 0 ||
+      (options.afterContext ?? 0) > 0;
+
+    return formatGrepToolOutput(matches, {
+      ...(options.outputMode !== undefined ? { mode: options.outputMode } : {}),
+      ...(options.lineNumbers !== undefined ? { lineNumbers: options.lineNumbers } : {}),
+      ...(options.offset !== undefined ? { offset: options.offset } : {}),
+      ...(options.headLimit !== undefined ? { headLimit: options.headLimit } : {}),
+      blockSeparators: hasContext,
+      truncated,
+    });
   }
 
   private async executeShell(
@@ -2010,7 +2367,7 @@ export class NodeHostToolService<
 
   private async executeApplyPatch(
     request: Extract<HostToolRequest<QuestionSpec>, { name: typeof APPLY_PATCH_HOST_TOOL_NAME }>,
-  ): Promise<string> {
+  ): Promise<HostToolExecutionOutput> {
     const { operation } = request;
     switch (operation.type) {
       case "create_file": {
@@ -2018,10 +2375,15 @@ export class NodeHostToolService<
           throw new Error("apply_patch create_file requires a non-empty diff");
         }
         const content = applyDiff("", operation.diff, "create");
-        return this.executeCreateFile({
+        const summary = await this.executeCreateFile({
           name: "create_file",
           path: operation.path,
           content,
+        });
+        return hostOutputWithFileChangeDiff(summary, {
+          path: operation.path,
+          before: "",
+          after: content,
         });
       }
       case "update_file": {
@@ -2048,13 +2410,28 @@ export class NodeHostToolService<
           oldChars: [...source].length,
           newChars: [...updated].length,
         });
-        return `[write]\naction: apply_patch\noperation: update_file\npath: ${target}\nold_chars: ${[...source].length}\nnew_chars: ${[...updated].length}`;
+        return hostOutputWithFileChangeDiff(
+          `[write]\naction: apply_patch\noperation: update_file\npath: ${target}\nold_chars: ${[...source].length}\nnew_chars: ${[...updated].length}`,
+          { path: operation.path, before: source, after: updated },
+        );
       }
-      case "delete_file":
-        return this.executeDeleteFile({
+      case "delete_file": {
+        // Read the doomed content before unlink so the tool card can render a real delete diff.
+        const target = this.resolveWorkspaceWriteTarget(operation.path);
+        const doomed = await readFile(target, "utf8").catch(() => undefined);
+        const summary = await this.executeDeleteFile({
           name: "delete_file",
           path: operation.path,
         });
+        if (doomed === undefined) {
+          return createHostToolTextOutput(summary);
+        }
+        return hostOutputWithFileChangeDiff(summary, {
+          path: operation.path,
+          before: doomed,
+          after: "",
+        });
+      }
       default:
         throw new Error(
           `Unsupported apply_patch operation: ${(operation as ApplyPatchOperation).type}`,
@@ -2183,17 +2560,6 @@ function sessionApprovalKey(target: PermissionMemoryTarget): string {
   return target.kind === "shell" ? `shell:${target.command}` : `read_file:${target.path}`;
 }
 
-function needReadPathApproval<QuestionSpec>(
-  canonical: string,
-  promptTitle: string,
-): HostAuthorizationDecision<QuestionSpec> {
-  return {
-    kind: "need-approval",
-    prompt: `High-risk tool call: ${promptTitle}\nPath: ${canonical}`,
-    rememberTarget: { kind: "read_file", path: canonical },
-  };
-}
-
 function parseJsonObject(argumentsJson: string): HostJsonObject {
   if (argumentsJson.trim().length === 0) {
     return {};
@@ -2291,6 +2657,32 @@ function optionalPositiveInt(obj: HostJsonObject, key: string): number | undefin
 function optionalBoolean(obj: HostJsonObject, key: string): boolean | undefined {
   const value = obj[key];
   return typeof value === "boolean" ? value : undefined;
+}
+
+function optionalNonNegativeInt(obj: HostJsonObject, key: string): number | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error(`Field ${key} must be an integer`);
+  }
+  const n = Math.trunc(value);
+  if (n < 0) {
+    throw new Error(`Field ${key} must be >= 0`);
+  }
+  return n;
+}
+
+function optionalGrepOutputMode(obj: HostJsonObject, key: string): GrepToolOutputMode | undefined {
+  const value = obj[key];
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  if (value === "content" || value === "files_with_matches" || value === "count_matches") {
+    return value;
+  }
+  throw new Error(`Field ${key} must be one of: content, files_with_matches, count_matches`);
 }
 
 function normalizeWorkspaceGlobPattern(input: string): string {
@@ -2486,13 +2878,6 @@ function inferSupportedImageExtensionFromWebResponse(
   } catch {
     return undefined;
   }
-}
-
-function buildExtensionApprovalPrompt<QuestionSpec>(
-  request: Extract<HostToolRequest<QuestionSpec>, { name: "extension_tool" }>,
-): string {
-  const preview = truncateChars(JSON.stringify(request.arguments, null, 2), 1_200);
-  return `Extension tool requires confirmation\nExtension: ${request.extension_id}\nTool: ${request.tool_name}\n\nArguments\n${preview}`;
 }
 
 function buildExtensionQuestionsAuthorization<QuestionSpec>(

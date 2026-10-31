@@ -1,4 +1,5 @@
 import path from "node:path";
+import { product } from "@spiritagent/product";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -40,7 +41,7 @@ const webHost = createDesktopHttpHost({
     // restarted to generate a new one.
     onPairingLockout: () => {
       console.warn(
-        "Spirit desktop web pairing locked after too many failures; restart web host to get a new code.",
+        `${product.name} desktop web pairing locked after too many failures; restart web host to get a new code.`,
       );
       pairingCode = "";
     },
@@ -73,7 +74,7 @@ setDesktopWebHostRuntimeStatus({
 });
 
 if (!webHostConfig.authTokenHash) {
-  console.warn(`Spirit desktop web pairing code: ${pairingCode}`);
+  console.warn(`${product.name} desktop web pairing code: ${pairingCode}`);
 }
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

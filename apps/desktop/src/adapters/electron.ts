@@ -30,9 +30,6 @@ export async function createElectronHostApi(): Promise<HostApi> {
     updateConfig(request) {
       return bridge.updateConfig(request);
     },
-    installLspProvider(request) {
-      return bridge.installLspProvider(request);
-    },
     addModel(request) {
       return bridge.addModel(request);
     },
@@ -206,6 +203,21 @@ export async function createElectronHostApi(): Promise<HostApi> {
     setAutomationEnabled(automationId, enabled) {
       return bridge.setAutomationEnabled(automationId, enabled);
     },
+    listTaskMenuItems() {
+      return bridge.listTaskMenuItems();
+    },
+    resolveTaskForRun(key) {
+      return bridge.resolveTaskForRun(key);
+    },
+    resolveTaskByLabel(label) {
+      return bridge.resolveTaskByLabel(label);
+    },
+    consumeFolderOpenTaskTriggers() {
+      return bridge.consumeFolderOpenTaskTriggers();
+    },
+    subscribeTasksUpdates(callback) {
+      return bridge.tasksSubscribe(callback);
+    },
     subscribeDreamUpdates(callback) {
       return bridge.dreamSubscribe(callback);
     },
@@ -280,6 +292,9 @@ export async function createElectronHostApi(): Promise<HostApi> {
     },
     renameSession(path, displayName) {
       return bridge.renameSession(path, displayName);
+    },
+    setSessionPinned(path, pinned) {
+      return bridge.setSessionPinned(path, pinned);
     },
     listWorkspaceFileReferenceSuggestions(request) {
       return bridge.listWorkspaceFileReferenceSuggestions(request);

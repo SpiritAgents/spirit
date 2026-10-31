@@ -41,7 +41,7 @@ test("scanGitCommitWireBlocks parses subject containing parentheses", () => {
     oid: "f4d96fad0282ed8a134ac5af73e425cef17baede",
     subject:
       "fix(desktop): tool-execution-finished inherits preview suppressExpand and argsExcerpt",
-    author: "XianYu",
+    author: "Yu",
     authoredAt: "2026-07-01 05:47:43 +0800",
     fullMessage:
       "fix(desktop): tool-execution-finished inherits preview suppressExpand and argsExcerpt\n\n- bullet one\n- bullet two",
@@ -50,7 +50,7 @@ test("scanGitCommitWireBlocks parses subject containing parentheses", () => {
   const blocks = scanGitCommitWireBlocks(`${wire}\n hello`);
   assert.equal(blocks.length, 1);
   assert.equal(blocks[0]?.oid, "f4d96fad0282ed8a134ac5af73e425cef17baede");
-  assert.equal(blocks[0]?.author, "XianYu");
+  assert.equal(blocks[0]?.author, "Yu");
   assert.equal(blocks[0]?.authoredAt, "2026-07-01 05:47:43 +0800");
   assert.equal(
     deriveGitCommitSubject(blocks[0]?.fullMessage ?? ""),

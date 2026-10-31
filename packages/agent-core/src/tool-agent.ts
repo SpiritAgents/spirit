@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import {
   cloneLlmProviderState,
   cloneLlmMessageContent,
@@ -17,8 +18,15 @@ import {
   LLM_CONTEXT_TAGS,
   wrapLlmContextBlock,
 } from "./llm-context-block.js";
+import {
+  CONTEXT_INJECTION_MAX_BYTES,
+  decodeUtf8,
+  encodeUtf8,
+  sliceUtf8Head,
+  sliceUtf8Tail,
+  utf8ByteLength,
+} from "./context-budget.js";
 
-const TOOL_OUTPUT_RETRY_MAX_CHARS = 12_000;
 const TOOL_TRUNCATION_HEAD_RATIO_NUM = 2;
 const TOOL_TRUNCATION_HEAD_RATIO_DEN = 3;
 
@@ -277,7 +285,7 @@ export function buildSpiritCoreHostPrompt(model: string, providerId?: string): s
   const modelLabel = hostModelIdentityLabel(model);
   const providerLabel = hostModelIdentityLabel(providerId);
   return [
-    "You are Spirit.",
+    `You are ${product.name}.`,
     `The user's model is ${modelLabel} from ${providerLabel}.`,
     "Keep a neutral, matter-of-fact tone unless the user's enabled rules explicitly ask for a different style.",
     "",
@@ -286,7 +294,16 @@ export function buildSpiritCoreHostPrompt(model: string, providerId?: string): s
   ].join("\n");
 }
 
-export function buildToolAgentHostPrompt(model: string, providerId?: string): string {
+export interface ToolAgentHostPromptOptions {
+  /** User web fetch opt-out (agents.webFetch.enabled=false): drop the line that tells the model to use web_fetch. */
+  webFetchEnabled?: boolean | undefined;
+}
+
+export function buildToolAgentHostPrompt(
+  model: string,
+  providerId?: string,
+  options: ToolAgentHostPromptOptions = {},
+): string {
   return [
     buildSpiritCoreHostPrompt(model, providerId),
     "Available tools are defined only by the tools field in this request.",
@@ -298,18 +315,23 @@ export function buildToolAgentHostPrompt(model: string, providerId?: string): st
     "Treat this as a safety and privacy requirement, not a suggestion.",
     "High-risk tools (anything that could expose private data, credentials, secrets, personal information, or broadly traverse or modify the user's machine or repository) must not be used unless the user has given explicit, specific consent in the same turn or conversation for that exact class of action. If risk is unclear, do not call the tool; ask a short clarifying question instead.",
     "",
-    "Spirit product questions: the official site is https://spirit.dev.",
-    "When the user asks about Spirit itself (features, install, configuration, troubleshooting), fetch https://spirit.dev/llms.txt or the matching page under https://spirit.dev/docs with web_fetch instead of answering from memory.",
-    "When the user asks for the official website, answer https://spirit.dev.",
+    `${product.name} product questions: the official site is ${product.websiteOrigin}.`,
+    ...(options.webFetchEnabled === false
+      ? []
+      : [
+          `When the user asks about ${product.name} itself (features, install, configuration, troubleshooting), fetch ${product.websiteOrigin}/llms.txt or the matching page under ${product.websiteOrigin}/docs with web_fetch instead of answering from memory.`,
+        ]),
+    `When the user asks for the official website, answer ${product.websiteOrigin}.`,
   ].join("\n");
 }
 
 export function buildToolAgentSystemMessage(
   model: string,
-  providerId?: string,
+  providerId: string | undefined,
+  options: ToolAgentHostPromptOptions = {},
   ...sections: Array<string | undefined>
 ): string {
-  return [buildToolAgentHostPrompt(model, providerId), ...sections]
+  return [buildToolAgentHostPrompt(model, providerId, options), ...sections]
     .filter(
       (section): section is string => typeof section === "string" && section.trim().length > 0,
     )
@@ -332,6 +354,7 @@ export function buildToolAgentMessages(input: {
   providerWebSearchPromptSection?: string;
   loopEnabled?: boolean;
   attribution?: ToolAgentAttributionFlags;
+  webFetchEnabled?: boolean;
 }): JsonValue[] {
   const rulesSystemMessage = buildRulesSystemMessage(input.enabledRules ?? []);
   const skillsCatalogSystemMessage = buildSkillsCatalogSystemMessage(
@@ -351,6 +374,7 @@ export function buildToolAgentMessages(input: {
       content: buildToolAgentSystemMessage(
         input.model,
         input.providerId,
+        { webFetchEnabled: input.webFetchEnabled },
         rulesSystemMessage,
         skillsCatalogSystemMessage,
         mcpCatalogSystemMessage,
@@ -787,8 +811,8 @@ export function buildAgentModeSystemMessage(planMetadata?: ToolAgentPlanMetadata
       "1. Propose hypotheses about the root cause, ranked by likelihood.",
       "2. Insert structured log points in the relevant source code to test each hypothesis.",
       "",
-      "Each log point should append one NDJSON line to a file under .spirit/logs/ at runtime:",
-      "- Directory: .spirit/logs/ under the workspace root",
+      `Each log point should append one NDJSON line to a file under ${product.workspaceDataFolderName}/logs/ at runtime:`,
+      `- Directory: ${product.workspaceDataFolderName}/logs/ under the workspace root`,
       "- Filename: kebab-case (e.g. auth-retry-failure.json)",
       "- Format: NDJSON (one JSON object per line)",
       "- Required fields:",
@@ -867,7 +891,7 @@ export function buildAttributionSystemMessage(
   }
   if (prEnabled) {
     lines.push(
-      "When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [Spirit Agent](https://spirit.dev)",
+      `When you create GitHub pull requests with gh pr create, append this line at the end of the PR body: Made with [${product.name} Agent](${product.websiteOrigin})`,
     );
   }
   return wrapLlmContextBlock(LLM_CONTEXT_TAGS.attribution, lines.join("\n"));
@@ -1257,8 +1281,8 @@ function truncateMessageContentForRetry(
 }
 
 export function buildContextRetryExcerpt(text: string, archivePath?: string): string | undefined {
-  const chars = Array.from(text);
-  if (chars.length <= TOOL_OUTPUT_RETRY_MAX_CHARS) {
+  const textBytes = encodeUtf8(text);
+  if (textBytes.length <= CONTEXT_INJECTION_MAX_BYTES) {
     return undefined;
   }
 
@@ -1267,35 +1291,25 @@ export function buildContextRetryExcerpt(text: string, archivePath?: string): st
   const archiveHint = archivePath?.trim()
     ? `\nFull output archived at: ${archivePath.trim()}\n${TOOL_OUTPUT_ARCHIVE_READ_FILE_GUIDANCE}`
     : "";
-  const overhead = Array.from(label).length + Array.from(archiveHint).length + 160;
-  const usable = Math.max(TOOL_OUTPUT_RETRY_MAX_CHARS - overhead, 256);
-  const headChars = Math.floor(
+  const overhead = utf8ByteLength(label) + utf8ByteLength(archiveHint) + 160;
+  const usable = Math.max(CONTEXT_INJECTION_MAX_BYTES - overhead, 256);
+  const headBytes = Math.floor(
     (usable * TOOL_TRUNCATION_HEAD_RATIO_NUM) / TOOL_TRUNCATION_HEAD_RATIO_DEN,
   );
-  const tailChars = Math.max(usable - headChars, 0);
-  const head = takeFirstChars(text, headChars);
-  const tail = takeLastChars(text, tailChars);
-  const omittedChars = Math.max(
-    chars.length - Array.from(head).length - Array.from(tail).length,
-    0,
-  );
+  const tailBytes = Math.max(usable - headBytes, 0);
+  const headSlice = sliceUtf8Head(textBytes, headBytes);
+  const tailSlice = sliceUtf8Tail(textBytes, tailBytes);
+  const head = decodeUtf8(headSlice);
+  const tail = decodeUtf8(tailSlice);
+  const omittedBytes = Math.max(textBytes.length - headSlice.length - tailSlice.length, 0);
   const omittedLines = Math.max(
     totalLines - head.split(/\r?\n/).length - tail.split(/\r?\n/).length,
     0,
   );
 
-  const middle = `${label} omitted_chars=${omittedChars} omitted_lines≈${omittedLines}${archiveHint}`;
+  const middle = `${label} omitted_bytes=${omittedBytes} omitted_lines≈${omittedLines}${archiveHint}`;
 
   return [head, middle, tail].filter((part) => part.trim().length > 0).join("\n");
-}
-
-function takeFirstChars(text: string, count: number): string {
-  return Array.from(text).slice(0, count).join("");
-}
-
-function takeLastChars(text: string, count: number): string {
-  const chars = Array.from(text);
-  return chars.slice(Math.max(chars.length - count, 0)).join("");
 }
 
 function escapeRuleAttribute(value: string): string {

@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -80,7 +80,7 @@ export function ComposerScrollToBottomButton({
       aria-hidden={!shown}
       tabIndex={shown ? undefined : -1}
     >
-      <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden />
+      <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden strokeWidth={1.75} />
     </button>
   );
 }

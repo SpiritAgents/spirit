@@ -64,7 +64,7 @@ export function ModelCatalogDetailPanel({
   const contextLength =
     parseModelContextLength(model.contextLength) ??
     parseModelContextLength(catalogEntry?.contextLength);
-  const maxCompletionTokens = catalogEntry?.maxCompletionTokens;
+  const maxCompletionTokens = catalogEntry?.outputLimit ?? catalogEntry?.maxCompletionTokens;
   const description = catalogEntry?.description?.trim() ?? "";
   const detailFields = useMemo(
     () =>
@@ -74,7 +74,13 @@ export function ModelCatalogDetailPanel({
         pricing: catalogEntry?.pricing,
         t,
       }),
-    [catalogEntry?.maxCompletionTokens, catalogEntry?.pricing, contextLength, t],
+    [
+      catalogEntry?.outputLimit,
+      catalogEntry?.maxCompletionTokens,
+      catalogEntry?.pricing,
+      contextLength,
+      t,
+    ],
   );
   const hasDetailFields = detailFields.length > 0;
   const hasContentBelowHeader = Boolean(description || children || hasDetailFields);
@@ -109,9 +115,9 @@ export function ModelCatalogDetailPanel({
         >
           {providerLabel}
         </p>
-        {capabilities && capabilities.length > 0 ? (
+        {(capabilities && capabilities.length > 0) || model.hasProviderTools === true ? (
           <div className={cn("flex flex-wrap gap-1.5", isList ? "mt-1.5" : "mt-2")}>
-            {capabilities.map((capability) => (
+            {(capabilities ?? []).map((capability) => (
               <Badge
                 key={capability}
                 variant="secondary"
@@ -120,6 +126,12 @@ export function ModelCatalogDetailPanel({
                 {modelCapabilityLabel(capability)}
               </Badge>
             ))}
+            {/* Presence-only marker: the provider entry declares providerTools (no per-kind split). */}
+            {model.hasProviderTools === true ? (
+              <Badge variant="secondary" className="text-[10px] text-secondary-foreground">
+                {t("settings.capabilityProviderToolsLabel")}
+              </Badge>
+            ) : null}
           </div>
         ) : null}
       </div>

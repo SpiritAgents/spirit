@@ -1,13 +1,14 @@
 ---
 title: Proveedores
-description: Trae tu propia clave, ejecuta el asistente de conexión y mantén el mismo flujo de trabajo del agente cuando cambies de casa.
+description: Trae tu propia clave, ejecuta el asistente de conexión y mantén el
+  mismo flujo de trabajo del agente cuando cambies de casa.
 ---
 
-Spirit es BYOK. Creas una clave en la consola del proveedor, la pegas en Desktop o en la CLI, y Spirit la guarda en el llavero del sistema operativo. Cambiar de casa no cambia cómo abres un workspace, apruebas ediciones o ejecutas el agente.
+{{product.name|mdx}} es BYOK. Creas una clave en la consola del proveedor, la pegas en Desktop o en la CLI, y {{product.name|mdx}} la guarda en el llavero del sistema operativo. Cambiar de casa no cambia cómo abres un workspace, apruebas ediciones o ejecutas el agente.
 
 El asistente de conexión es **Configuración → Modelos** en Desktop, o `/model add` / `spirit model add` en la CLI. Los campos adicionales aparecen solo cuando ese proveedor los necesita.
 
-Spirit se comunica con los proveedores a través de uno de cuatro transportes. El asistente fija el tipo o te permite elegirlo.
+{{product.name|mdx}} se comunica con los proveedores a través de uno de cuatro transportes. El asistente fija el tipo o te permite elegirlo.
 
 | Transporte          | Etiqueta del asistente                   | Uso típico                                                                   |
 | ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------- |
@@ -16,7 +17,7 @@ Spirit se comunica con los proveedores a través de uno de cuatro transportes. E
 | `anthropic`         | API de Messages                          | Anthropic, MiniMax y endpoints compatibles con Messages opcionales           |
 | `bedrock`           | Amazon Bedrock                           | Solo Amazon Bedrock                                                          |
 
-Google Gemini y Vertex AI siempre usan Chat Completions. Si un perfil solicita Responses o Messages, Spirit recurre a `openai-compatible`.
+Los presets de Google y Vertex AI fijan Chat Completions — el asistente no ofrece selector de transporte para ellos.
 
 Algunas casas añaden una segunda dimensión además de la clave:
 
@@ -24,21 +25,25 @@ Algunas casas añaden una segunda dimensión además de la clave:
 - **Endpoints de plan** — Alibaba Token Plan, StepFun Step Plan, Z.ai / Zhipu AI GLM Coding Plan
 - **Campos de nube** — región de Bedrock, nombre de recurso de Azure, cuenta de Cloudflare (y gateway opcional), proyecto / ubicación de Vertex
 
-Si un proveedor no tiene nada de esto, el asistente es solo clave → importar modelos → elegir un modelo de chat activo.
+Si un proveedor no tiene nada de esto, el asistente es solo clave → importar modelos → elegir un modelo de lenguaje activo.
 
-Spirit importa el catálogo de modelos y te permite asignar el modelo de chat activo, además de los espacios de imagen / video / chat ligero cuando el catálogo marca esas capacidades. El razonamiento y la búsqueda web integrada siguen al modelo y al transporte, no a un interruptor separado de Spirit.
+{{product.name|mdx}} importa el catálogo de modelos y te permite asignar el modelo de lenguaje activo, además de los espacios de imagen / video / modelo de lenguaje secundario cuando el catálogo marca esas capacidades. Las opciones de razonamiento siguen los `supportedReasoningEfforts` declarados de cada modelo. Las herramientas expuestas por el proveedor, como la búsqueda web, se declaran por proveedor y las controla el interruptor **Herramientas del proveedor** — ver [Herramientas](./agent/tools.mdx#provider-tools).
+
+Lo que el asistente escribe en `config.json` es una entrada totalmente declarativa: la base de API final, el transporte, el adaptador SDK y las declaraciones de herramientas del proveedor / subida de archivos / API de generación. El runtime lee esas declaraciones tal cual y nunca las vuelve a derivar de la identidad del proveedor — tus ediciones sobreviven, salvo las claves que posee el asistente, que una reconexión restablece (ver [Config](./config.mdx)).
 
 ## Catálogo
 
-Estas son las casas en el selector de conexión, en el mismo orden. Cada sección es la clave, el transporte y los campos adicionales de esa casa. El asistente de Desktop y CLI anterior es el mismo para cada casa.
+Estas son las casas en el selector de conexión, en el mismo orden. Cada sección es la clave, el transporte, los campos adicionales de esa casa y lo que el asistente declara más allá de la clave. Salvo indicación contraria, la forma de credencial es una única clave de API guardada en el llavero. El asistente de Desktop y CLI anterior es el mismo para cada casa.
 
 ### OpenAI
 
-Crea una clave de API en la [plataforma de OpenAI](https://platform.openai.com/api-keys). Spirit no vende el uso de OpenAI.
+Crea una clave de API en la [plataforma de OpenAI](https://platform.openai.com/api-keys). {{product.name|mdx}} no vende el uso de OpenAI.
 
 El asistente fija **API de Responses** (`open-responses`). No hay selector de transporte. Base predeterminada: `https://api.openai.com/v1`.
 
 Chat después de importar. El razonamiento sigue al modelo. La generación de imagen y video aparece solo cuando el catálogo marca esas capacidades — asígnalas en los espacios de modelo de imagen / video.
+
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el upstream dentro de la solicitud) y la API de generación de imágenes.
 
 ### Anthropic
 
@@ -46,13 +51,13 @@ Crea una clave de API en la [consola de Anthropic](https://console.anthropic.com
 
 **API de Messages** fija (`anthropic`). Base predeterminada: `https://api.anthropic.com/v1`.
 
-Chat después de importar. El razonamiento sigue al modelo. No hay espacio de generación de imagen o video en el lado de Spirit a menos que una entrada posterior del catálogo lo marque.
+Chat después de importar. El razonamiento sigue al modelo. No hay espacio de generación de imagen o video en el lado de {{product.name|mdx}} a menos que una entrada posterior del catálogo lo marque.
 
 ### Google
 
 Crea una clave de API en [Google AI Studio](https://aistudio.google.com/apikey).
 
-**API de Chat Completions** fija (`openai-compatible`). Si se solicita Responses o Messages, se recurre a Chat Completions. Base predeterminada: `https://generativelanguage.googleapis.com/v1beta`.
+**API de Chat Completions** fija (`openai-compatible`); el asistente no ofrece selector de transporte. Base predeterminada: `https://generativelanguage.googleapis.com/v1beta`.
 
 Chat después de importar. La generación de imagen se asigna solo cuando el catálogo la marca. Para Vertex AI (proyecto / ubicación de GCP), usa [Google Vertex AI](#google-vertex-ai).
 
@@ -60,9 +65,11 @@ Chat después de importar. La generación de imagen se asigna solo cuando el cat
 
 Crea una clave de API en la [consola de SpaceXAI](https://console.x.ai/team/default/api-keys).
 
-**API de Chat Completions** fija (`openai-compatible`). Base predeterminada: `https://api.x.ai/v1`.
+**API de Open Responses** fija (`open-responses`). Base predeterminada: `https://api.x.ai/v1`.
 
 Chat después de la importación. El razonamiento, la imagen y el video siguen el catálogo importado: asigna espacios cuando aparezcan.
+
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el upstream dentro de la solicitud).
 
 ### Vercel AI Gateway
 
@@ -74,6 +81,8 @@ Chat más lo que exponga el catálogo del gateway. La generación de imágenes s
 
 No inferir visión ni generación de imágenes a partir de etiquetas. MiniMax M3 a través de este gateway no devuelve una secuencia de pensamiento visible en Open Responses.
 
+Declara: la herramienta del proveedor **Perplexity Search** (ejecutada por el gateway dentro de la solicitud) y las API de generación de imágenes / videos.
+
 ### Cloudflare AI Gateway
 
 Crea un token de API en el [panel de Cloudflare](https://developers.cloudflare.com/ai-gateway/). También necesitas el ID de cuenta.
@@ -81,7 +90,7 @@ Crea un token de API en el [panel de Cloudflare](https://developers.cloudflare.c
 Selector: **Chat Completions**, **Open Responses** o **Messages**. La base se construye con la cuenta: `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`.
 
 - **ID de cuenta** (obligatorio) — hexadecimal de 32 caracteres
-- **ID de gateway** (opcional)
+- **ID de gateway** (opcional) — se escribe como una cabecera de solicitud literal `cf-aig-gateway-id`
 
 Sin un ID de cuenta, el asistente no puede construir la base de API. El chat y otras capacidades siguen los modelos que el gateway expone.
 
@@ -89,9 +98,11 @@ Sin un ID de cuenta, el asistente no puede construir la base de API. El chat y o
 
 Crea una clave de API en la [plataforma DeepSeek](https://platform.deepseek.com/api-keys).
 
-Sin selector. La conexión predeterminada es **Open Responses** (`open-responses`). También existen bases compatibles en `https://api.deepseek.com/v1` (Chat) y `https://api.deepseek.com/anthropic` (Messages).
+La conexión usa de forma predeterminada la **API de Chat Completions** (`openai-compatible`). Base predeterminada: `https://api.deepseek.com/v1`. Las alternativas explícitas son **Open Responses** (`open-responses`, base `https://api.deepseek.com`) y **Messages** (`anthropic`, base `https://api.deepseek.com/anthropic`).
 
 Chat después de la importación. El razonamiento sigue al modelo.
+
+Declara: la herramienta del proveedor **Búsqueda web** (una declaración `function` estática; {{product.name|mdx}} ejecuta las llamadas con `POST /v1/tools/search`).
 
 ### OpenRouter
 
@@ -100,6 +111,8 @@ Crea una clave en [OpenRouter](https://openrouter.ai/keys).
 Selector: **Chat Completions**, **Open Responses** o **Messages**. Base predeterminada: `https://openrouter.ai/api/v1`.
 
 Chat más generación de imagen o video marcada en el catálogo cuando OpenRouter exponga esos modelos.
+
+Declara: la API de generación de videos.
 
 ### Fireworks AI
 
@@ -117,6 +130,8 @@ Fijado **Chat Completions API**. Base predeterminada: `https://api.together.ai/v
 
 Chat después de la importación. Asigna espacios de imagen o video solo cuando el catálogo los marque.
 
+Declara: las API de generación de imágenes y videos.
+
 ### Groq
 
 Crea una clave de API en la [consola de Groq](https://console.groq.com).
@@ -132,6 +147,8 @@ Crea una clave de API en el [panel de DeepInfra](https://deepinfra.com/dash/keys
 Fijado **Chat Completions API**. Base predeterminada: `https://api.deepinfra.com/v1/openai`.
 
 Chat después de la importación. Otras capacidades siguen el catálogo.
+
+Declara: las API de generación de imágenes y videos.
 
 ### Baseten
 
@@ -149,6 +166,8 @@ Crea un token en [configuración de Hugging Face](https://huggingface.co/setting
 
 Chat después de la importación. Otras capacidades siguen el catálogo del enrutador.
 
+Declara: las API de generación de imágenes y videos.
+
 ### Moonshot AI
 
 Crea una clave de API en la consola de Moonshot para el sitio que usarás: [China](https://platform.kimi.com/console/api-keys) o [Internacional](https://platform.kimi.ai/console/api-keys).
@@ -158,7 +177,9 @@ Crea una clave de API en la consola de Moonshot para el sitio que usarás: [Chin
 - **Internacional** (predeterminado) — `https://api.moonshot.ai/v1`
 - **China** — `https://api.moonshot.cn/v1`
 
-Este es el proveedor de Moonshot Open Platform, no [Kimi Code](#kimi-code). La búsqueda integrada en moonshot-ai no utiliza la ruta de búsqueda alojada de Kimi Code. Una clave de Kimi Code y una clave de Moonshot Open Platform son conexiones diferentes.
+Este es el proveedor de Moonshot Open Platform, no [Kimi Code](#kimi-code). Una clave de Kimi Code y una clave de Moonshot Open Platform son conexiones diferentes.
+
+Declara: la herramienta del proveedor **Búsqueda web** (un esquema estático de herramienta `function`; {{product.name|mdx}} ejecuta las llamadas con `POST /v1/tools/search_pro`) y subida de archivos de video (referencias `ms://`).
 
 ### Kimi Code
 
@@ -166,7 +187,9 @@ Crea una clave de API de Kimi Code en la [consola de Kimi Code](https://www.kimi
 
 **Chat Completions API** fijo. Base predeterminada: `https://api.kimi.com/coding/v1`. Existe una base Messages en `https://api.kimi.com/coding` pero el asistente no ofrece selector.
 
-Chat después de la importación. La búsqueda alojada, cuando esté disponible, es específica de este proveedor, no de moonshot-ai.
+Chat después de la importación. La búsqueda alojada aquí es específica de este proveedor, no de moonshot-ai.
+
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el host contra el endpoint de búsqueda declarado), subida de archivos de video (referencias `ms://`) y una fusión literal `stream_options` en el cuerpo de la solicitud.
 
 ### Z.ai
 
@@ -178,6 +201,8 @@ Activa **GLM Coding Plan** en el asistente para usar `https://api.z.ai/api/codin
 
 Chat después de la importación. El razonamiento sigue al modelo.
 
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el host; `max_results` 1–50).
+
 ### Zhipu AI
 
 Crea una clave de API en la [consola de Zhipu AI](https://bigmodel.cn/console). Notas del Coding Plan: [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start).
@@ -187,6 +212,8 @@ Crea una clave de API en la [consola de Zhipu AI](https://bigmodel.cn/console). 
 Activa **GLM Coding Plan** para usar `https://open.bigmodel.cn/api/coding/paas/v4`.
 
 Chat después de la importación. El razonamiento sigue al modelo.
+
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el host; `max_results` 1–50).
 
 ### Alibaba
 
@@ -203,16 +230,20 @@ Crea una clave de API en [Alibaba Cloud Model Studio / Bailian](https://bailian.
 
 Chat después de la importación. Otras capacidades siguen el catálogo.
 
+Declara: las herramientas del proveedor **Búsqueda web** y **Intérprete de código** (interruptores del cuerpo de la solicitud, ejecutados por el upstream).
+
 ### MiniMax
 
-Crea una clave de API en la consola de MiniMax para el sitio que usarás: [China](https://platform.minimaxi.com/console/) o [Internacional](https://platform.minimax.io/console/).
+Crea una clave de API en la consola de MiniMax para el sitio que usarás: [China](https://platform.minimax.cn/console/) o [Internacional](https://platform.minimax.io/console/).
 
 **Messages API** fijo (`anthropic`). Base Messages Internacional: `https://api.minimax.io/anthropic/v1`.
 
 - **Internacional** (predeterminado) — `https://api.minimax.io/v1` (con forma de Chat) / `https://api.minimax.io/anthropic/v1` (Messages)
-- **China** — `https://api.minimaxi.com/v1`
+- **China** — `https://api.minimax.cn/v1`
 
 Chat después de la importación. La lista `/models` aguas arriba no tiene indicadores multimodales; solo M3 se trata como compatible con entrada de imagen / video. A través de Vercel AI Gateway en Open Responses, MiniMax M3 no devuelve un flujo de pensamiento visible.
+
+Declara: la herramienta del proveedor **Búsqueda web** (una herramienta de servidor de la API de Messages, ejecutada por el upstream) y subida de archivos de video (referencias `mm_file://`).
 
 ### Xiaomi
 
@@ -233,6 +264,8 @@ Selector: **Chat Completions** o **Messages**.
 
 Chatea después de la importación. Otras capacidades siguen el catálogo.
 
+Declara: las API de generación de imágenes y videos.
+
 ### StepFun
 
 Crea una clave de API en la [plataforma StepFun China](https://platform.stepfun.com) o en la [plataforma internacional](https://platform.stepfun.ai). Notas del Step Plan: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
@@ -246,6 +279,8 @@ Crea una clave de API en la [plataforma StepFun China](https://platform.stepfun.
 
 Chatea después de la importación. El razonamiento sigue al modelo.
 
+Declara: la herramienta del proveedor **Búsqueda web** (ejecutada por el host; `max_results` 1–20), subida de archivos de video (referencias `stepfile://`, tope de 128 MiB) y la API de generación de imágenes.
+
 ### Volcengine
 
 Crea una clave de API en la [consola de Volcengine Ark](https://console.volcengine.com/ark/apiKey).
@@ -253,6 +288,8 @@ Crea una clave de API en la [consola de Volcengine Ark](https://console.volcengi
 Selector: **Chat Completions** o **Responses API**. Base predeterminada: `https://ark.cn-beijing.volces.com/api/v3`.
 
 Chatea después de la importación. Otras capacidades siguen el catálogo.
+
+Declara: la API de generación de videos.
 
 ### BytePlus
 
@@ -262,6 +299,8 @@ Selector: **Chat Completions** o **Responses API**. Base predeterminada: `https:
 
 Chatea después de la importación. Otras capacidades siguen el catálogo.
 
+Declara: la API de generación de videos.
+
 ### Meituan
 
 Crea una clave de API en la [consola de LongCat](https://longcat.chat/platform/api_keys).
@@ -269,6 +308,8 @@ Crea una clave de API en la [consola de LongCat](https://longcat.chat/platform/a
 **API de Chat Completions** fija. Base predeterminada: `https://api.longcat.chat/openai/v1`.
 
 Chatea después de la importación. Otras capacidades siguen el catálogo.
+
+Declara: la codificación de wire del interruptor de thinking (`thinkingSwitch`), para que los modelos con interruptor de thinking tengan un control funcional.
 
 ### Tencent TokenHub
 
@@ -279,7 +320,7 @@ Crea una clave de API en la [consola de Tencent TokenHub](https://console.cloud.
 - **Guangzhou** (predeterminado) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapur** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Chatea después de la importación. No confíes en la búsqueda web inyectada en Chat. TokenHub documenta `web_search_options` para Chat y `web_search` para Responses, pero la inyección en Chat no funciona en la práctica, y Responses solo está en algunos modelos. Por lo tanto, Spirit mantiene solo Chat Completions.
+Chatea después de la importación. No confíes en la búsqueda web inyectada en Chat. TokenHub documenta `web_search_options` para Chat y `web_search` para Responses, pero la inyección en Chat no funciona en la práctica, y Responses solo está en algunos modelos. Por lo tanto, {{product.name|mdx}} mantiene solo Chat Completions.
 
 ### Mistral
 
@@ -305,7 +346,7 @@ Cree una clave para su recurso de Azure OpenAI en el [portal de Azure](https://p
 
 - **Nombre del recurso** (obligatorio) — de 2 a 64 caracteres, letras, números y guiones; no puede comenzar ni terminar con un guion
 
-Spirit construye `https://{resource}.openai.azure.com/openai/v1`. Chat después de importar. La generación de imágenes sigue el catálogo de Azure cuando está marcada.
+{{product.name|mdx}} construye `https://{resource}.openai.azure.com/openai/v1`. Chat después de importar. La generación de imágenes sigue el catálogo de Azure cuando está marcada.
 
 ### Amazon Bedrock
 
@@ -316,15 +357,17 @@ En la [consola de AWS Bedrock](https://console.aws.amazon.com/bedrock), cree una
 - **Región de AWS** (obligatorio), por ejemplo `us-east-1`
 - **Autenticación**: **Bearer** o **IAM**
   - Bearer: pegue una clave de API de Bedrock y un ID de modelo. Los modelos **no** se obtienen automáticamente.
-  - IAM: ID de clave de acceso + clave de acceso secreta. Spirit lista los modelos fundacionales de la cuenta.
+  - IAM: ID de clave de acceso + clave de acceso secreta. {{product.name|mdx}} lista los modelos fundacionales de la cuenta.
 
 Chat después de elegir un modelo. Otras capacidades siguen a ese modelo. Las claves Bearer funcionan solo para inferencia. `ListFoundationModels` no acepta Bearer, por lo que la importación del catálogo necesita IAM.
+
+La región se materializa en la base de API final y en `options.awsRegion`. Bearer se guarda como la clave del proveedor; IAM se guarda como slots de credenciales `accessKeyId` / `secretAccessKey`.
 
 ### Google Vertex AI
 
 Use un proyecto de GCP que tenga Vertex AI habilitado. La autenticación es ADC, una cuenta de servicio o una clave de API Express, no una clave genérica de OpenAI.
 
-**Chat Completions API** fija. Las solicitudes de Responses o Messages vuelven a Chat Completions. La base se convierte en `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
+**Chat Completions API** fija; el asistente no ofrece selector de transporte. La base se convierte en `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
 
 - **ID del proyecto de GCP** y **Ubicación** (obligatorio), por ejemplo `us-central1`
 - **Autenticación**
@@ -334,14 +377,16 @@ Use un proyecto de GCP que tenga Vertex AI habilitado. La autenticación es ADC,
 
 Chat después de seleccionar un modelo. Para claves de AI Studio sin un proyecto de GCP, use [Google](#google). El modo Express no puede importar la lista de modelos. El modo de cuenta de servicio necesita tanto el correo electrónico como la clave privada para listar modelos.
 
+Una cuenta de servicio se guarda como slots de credenciales `clientEmail` / `privateKey` con `options.project` / `options.location`. El modo Express escribe la base de API Express y no necesita proyecto / ubicación.
+
 ### Personalizado
 
-Use la clave de API que su endpoint espera. No hay un proveedor personalizado alojado por Spirit.
+Use la clave de API que su endpoint espera. No hay un proveedor personalizado alojado por {{product.name|mdx}}.
 
 Selector: **Chat Completions**, **Open Responses** o **Messages**. Debe proporcionar la **URL base**. El valor predeterminado del marcador de posición es `https://api.openai.com/v1` si lo deja vacío.
 
-Ingrese la raíz que documenta el proveedor, incluido el sufijo de versión cuando lo requieran (`/v1`, `/v1/openai`, …). Spirit no adivina una ruta para endpoints personalizados.
+Ingrese la raíz que documenta el proveedor, incluido el sufijo de versión cuando lo requieran (`/v1`, `/v1/openai`, …). {{product.name|mdx}} no adivina una ruta para endpoints personalizados.
 
-También puede establecer un nombre para mostrar para el grupo de proveedores para que varios endpoints personalizados sigan siendo distinguibles.
+También puede establecer un nombre visible para la entrada del proveedor, de modo que varios endpoints personalizados sigan siendo distinguibles.
 
-Después de conectarse, importe o escriba los IDs de modelo. Marque las capacidades de chat / imagen / video en el asistente cuando el endpoint no publique un catálogo que Spirit entienda.
+Después de conectarse, importe o escriba los IDs de modelo. Marque las capacidades de chat / imagen / video en el asistente cuando el endpoint no publique un catálogo que {{product.name|mdx}} entienda.

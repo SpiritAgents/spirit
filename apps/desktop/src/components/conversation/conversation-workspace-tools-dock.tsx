@@ -42,12 +42,12 @@ export function ConversationWorkspaceToolsDock({
   const widthFlight = useWorkspaceToolsChromeWidthFlight();
   const composerInsert = useFocusedPaneComposerInsertCallbacks(split.getFocusedPaneComposerInsert, {
     handleBrowserElementPicked: composer.handleBrowserElementPicked,
-    handlePrDiffAddToSession: composer.handlePrDiffAddToSession,
-    handleGitCommitAddToSession: composer.handleGitCommitAddToSession,
-    handleTerminalAddToSession: composer.handleTerminalAddToSession,
-    handleFileSnippetAddToSession: composer.handleFileSnippetAddToSession,
-    handleWorkspaceFileAddToSession: composer.handleWorkspaceFileAddToSession,
-    handleMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
+    handlePrDiffAddToChat: composer.handlePrDiffAddToChat,
+    handleGitCommitAddToChat: composer.handleGitCommitAddToChat,
+    handleTerminalAddToChat: composer.handleTerminalAddToChat,
+    handleFileSnippetAddToChat: composer.handleFileSnippetAddToChat,
+    handleWorkspaceFileAddToChat: composer.handleWorkspaceFileAddToChat,
+    handleMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
   });
 
   // Settled full screen: the wrapper (the conversation row's direct flex item) takes the full row
@@ -101,11 +101,11 @@ export function ConversationWorkspaceToolsDock({
         onTabsChange={workspaceTools.setWorkspaceToolTabs}
         onActiveTabIdChange={workspaceTools.setActiveWorkspaceToolTabId}
         onBrowserElementPicked={composerInsert.handleBrowserElementPicked}
-        onPrDiffAddToSession={composerInsert.handlePrDiffAddToSession}
-        onTerminalAddToSession={composerInsert.handleTerminalAddToSession}
-        onFileSnippetAddToSession={composerInsert.handleFileSnippetAddToSession}
-        onWorkspaceFileAddToSession={composerInsert.handleWorkspaceFileAddToSession}
-        onGitCommitAddToSession={composerInsert.handleGitCommitAddToSession}
+        onPrDiffAddToChat={composerInsert.handlePrDiffAddToChat}
+        onTerminalAddToChat={composerInsert.handleTerminalAddToChat}
+        onFileSnippetAddToChat={composerInsert.handleFileSnippetAddToChat}
+        onWorkspaceFileAddToChat={composerInsert.handleWorkspaceFileAddToChat}
+        onGitCommitAddToChat={composerInsert.handleGitCommitAddToChat}
         onBrowserOpenInNewTab={workspaceTools.openBrowserUrlInNewTab}
         browserTabEnabled={workspaceTools.browserTabEnabled}
         prTabEnabled={workspaceTools.prTabEnabled}
@@ -122,8 +122,8 @@ export function ConversationWorkspaceToolsDock({
         mergeGitHubPullRequest={runtime.mergeGitHubPullRequest}
         markGitHubPullRequestReady={runtime.markGitHubPullRequestReady}
         codeCompletionEnabled={snapshot?.codeCompletion?.userEnabled !== false}
-        widthPx={workspaceTools.workspaceToolsWidthPx}
-        onWidthPxChange={workspaceTools.setWorkspaceToolsWidthPx}
+        widthRatio={workspaceTools.workspaceToolsWidthRatio}
+        onWidthRatioChange={workspaceTools.setWorkspaceToolsWidthRatio}
         gitSnapshot={snapshot?.git}
         workspaceContentInvalidation={snapshot?.workspaceContentInvalidation}
         gitChipBusy={composer.gitChipBusy}

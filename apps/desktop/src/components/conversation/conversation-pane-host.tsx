@@ -3,12 +3,17 @@ import { useCallback, useEffect } from "react";
 import { ConversationView } from "@/components/conversation/conversation-view";
 import { ComposerChipNavigateProvider } from "@/contexts/composer-chip-navigate-context";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
-import { isSideChatPaneProvisionalSessionPath } from "@/lib/session-path-kind";
+import {
+  isSideChatPaneProvisionalSessionPath,
+  normalizeSessionPathKey,
+} from "@/lib/session-path-kind";
 import { canBeginSideChat } from "@/lib/fork-eligibility";
 import { findLastForkableAssistantMessageId } from "@/lib/fork-session-utils";
 import { useConversationPaneController } from "@/hooks/useConversationPaneController";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
+import type { useToolCardPreviewDemo } from "@/hooks/useToolCardPreviewDemo";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
@@ -20,6 +25,8 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
+type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
+type ToolCardPreviewDemo = ReturnType<typeof useToolCardPreviewDemo>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
 export type ConversationPaneHostProps = {
@@ -43,19 +50,21 @@ export type ConversationPaneHostProps = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
-  hideStaleConversationMessages: boolean;
-  showWorkspaceBindingControls: boolean;
-  sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
-  onNewSession?: () => void;
+  approvalPreviewDemo: ApprovalPreviewDemo;
+  toolCardPreviewDemo: ToolCardPreviewDemo;
+  newChatBusy: boolean;
+  onNewChat?: () => void;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
   workspaceTools: WorkspaceTools;
   onOpenIntegrationsSettings: () => void;
   onCompactionDemoStop: () => void;
   onLongConversationListDemoStop: () => void;
+  onApprovalPreviewDemoStop: () => void;
+  onToolCardPreviewDemoStop: () => void;
   paneReorderEnabled: boolean;
   onPaneDragStart?: (paneId: string) => void;
   onPaneDragLeave?: () => void;
@@ -109,7 +118,6 @@ export function ConversationPaneHost({
     isAnchorPane,
     useIsolatedPane,
     splitPaneCount,
-    layoutNavigationPending: controllerInput.runtime.layoutNavigationPending,
     conversationAbortShortcutTargetRef: split.conversationAbortShortcutTargetRef ?? undefined,
   });
 
@@ -160,6 +168,22 @@ export function ConversationPaneHost({
     [controllerInput.onRenameSession],
   );
 
+  const handleTogglePinSession = useCallback(
+    async (path: string, pinned: boolean) => {
+      if (controllerInput.onTogglePinSession) {
+        await controllerInput.onTogglePinSession(path, pinned);
+      }
+    },
+    [controllerInput.onTogglePinSession],
+  );
+
+  const paneSessionPathKey = normalizeSessionPathKey(sessionPath);
+  const sessionPinned = controllerInput.runtime.sessions.some(
+    (session) =>
+      normalizeSessionPathKey(session.path) === paneSessionPathKey &&
+      typeof session.pinnedAtUnixMs === "number",
+  );
+
   const showSideChat =
     !pane.paneIsEmptySession &&
     Boolean(findLastForkableAssistantMessageId(pane.paneSnapshot?.conversation.messages ?? [])) &&
@@ -185,7 +209,7 @@ export function ConversationPaneHost({
         useTranslucency={useTranslucency}
         snapshot={pane.paneSnapshot}
         isEmptySession={pane.paneIsEmptySession}
-        hideStaleConversationMessages={pane.hideStaleConversationMessages}
+        paneContentStatus={pane.paneContentStatus}
         showComposerDock
         showSessionSidebarToggle={splitPaneCount <= 1 || isSessionSidebarAnchorPane}
         showWorkspaceToggle={isAnchorPane}
@@ -208,8 +232,8 @@ export function ConversationPaneHost({
         sidebarSessionDragActive={sidebarSessionDragActive}
         subagentViewActive={pane.subagentViewActive}
         onExitSubagentViewer={pane.onExitSubagentViewer}
-        onNewSession={controllerInput.onNewSession}
-        newSessionBusy={controllerInput.newSessionBusy}
+        onNewChat={controllerInput.onNewChat}
+        newChatBusy={controllerInput.newChatBusy}
         showDeleteSession={!pane.paneIsEmptySession && Boolean(controllerInput.onDeleteSession)}
         deleteSessionPath={sessionPath}
         deleteSessionDisplayName={pane.paneSnapshot?.activeSession?.displayName ?? null}
@@ -224,11 +248,20 @@ export function ConversationPaneHost({
         renameSessionDisplayName={pane.paneSnapshot?.activeSession?.displayName ?? null}
         renameSessionBusy={controllerInput.renameSessionBusy}
         onRenameSession={handleRenameSession}
+        sessionPinned={sessionPinned}
+        onTogglePinSession={controllerInput.onTogglePinSession ? handleTogglePinSession : undefined}
         compactionDemoActive={pane.compactionDemoActive}
         onCompactionDemoStop={controllerInput.onCompactionDemoStop}
         longConversationListDemoActive={pane.longConversationListDemoActive}
         onLongConversationListDemoStop={controllerInput.onLongConversationListDemoStop}
         longConversationListDemoStats={controllerInput.longConversationListDemo.stats}
+        approvalPreviewDemoActive={pane.approvalPreviewDemoActive}
+        onApprovalPreviewDemoStop={controllerInput.onApprovalPreviewDemoStop}
+        approvalPreviewDemoApprovals={pane.approvalPreviewDemoApprovals}
+        toolCardPreviewDemoActive={pane.toolCardPreviewDemoActive}
+        onToolCardPreviewDemoStop={controllerInput.onToolCardPreviewDemoStop}
+        toolCardPreviewDemoTools={pane.toolCardPreviewDemoTools}
+        onPaneKeyDown={pane.onPaneKeyDown}
         rewindDraft={pane.rewindDraft}
         onRewindDraftClear={pane.onRewindDraftClear}
         conversationScrollBedPaddingPx={pane.conversationScrollBedPaddingPx}

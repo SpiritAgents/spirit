@@ -1,6 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useRef, useState } from "react";
 
-import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { AgentMarkdownMessage } from "@/components/agent-markdown-message";
@@ -136,6 +136,7 @@ export function AssistantThinkingCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>
@@ -227,6 +228,7 @@ export function AssistantCompactionCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>

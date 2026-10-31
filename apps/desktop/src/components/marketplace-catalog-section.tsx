@@ -1,6 +1,3 @@
-// Copyright (c) 2026 N123999
-// SPDX-License-Identifier: MIT
-
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -79,7 +76,7 @@ export function MarketplaceCatalogSection({
                         aria-hidden
                       />
                     ) : (
-                      <Sparkles className="size-1.5" aria-hidden />
+                      <Sparkles className="size-1.5" aria-hidden strokeWidth={1.75} />
                     )}
                   </span>
                 ))}

@@ -4,6 +4,8 @@ import fs from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "vitest";
+import plist from "plist";
+import { product } from "@spiritagent/product";
 
 import {
   DEV_BUNDLE_ID,
@@ -63,11 +65,14 @@ test("copy and brand a fixture app without mutating the stock bundle", async () 
       adHocSign: false,
     });
 
-    assert.equal(path.basename(destApp), "Spirit.app");
+    assert.equal(path.basename(destApp), `${product.name}.app`);
     const plistPath = path.join(destApp, "Contents", "Info.plist");
     assert.equal(readPlistString(plistPath, "CFBundleName"), DEV_PRODUCT_NAME);
     assert.equal(readPlistString(plistPath, "CFBundleDisplayName"), DEV_PRODUCT_NAME);
     assert.equal(readPlistString(plistPath, "CFBundleIdentifier"), DEV_BUNDLE_ID);
+    assert.deepEqual(plist.parse(fs.readFileSync(plistPath, "utf8")).CFBundleURLTypes, [
+      { CFBundleURLName: product.name, CFBundleURLSchemes: [product.urlProtocol] },
+    ]);
     assert.deepEqual(
       fs.readFileSync(path.join(destApp, "Contents", "Resources", "electron.icns")),
       brandIcns,

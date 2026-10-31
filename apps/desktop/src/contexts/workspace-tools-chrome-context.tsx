@@ -12,7 +12,7 @@ import {
 import {
   readWorkspaceToolsFullScreen,
   readWorkspaceToolsFullScreenRestoreOpen,
-  readWorkspaceToolsWidthPx,
+  WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY,
   workspaceToolsShellWidthExpression,
   workspaceToolsShellWidthWhenOpen,
   writeWorkspaceToolsFullScreen,
@@ -36,15 +36,15 @@ type WorkspaceToolsChromeActions = {
   toggle(): void;
   openTools(): void;
   toggleFullScreen(): void;
-  dismissForNewSession(): void;
-  registerNewSessionChrome(): () => void;
+  dismissForNewChat(): void;
+  registerNewChatChrome(): () => void;
 };
 
 const WorkspaceToolsChromeOpenContext = createContext(false);
 const WorkspaceToolsChromeFullScreenContext = createContext(false);
 const WorkspaceToolsChromeFlightContext = createContext<WorkspaceToolsWidthFlight | null>(null);
 const WorkspaceToolsChromeActionsContext = createContext<WorkspaceToolsChromeActions | null>(null);
-const WorkspaceToolsNewSessionChromeContext = createContext(false);
+const WorkspaceToolsNewChatChromeContext = createContext(false);
 
 export type WorkspaceToolsChromeApi = {
   open: boolean;
@@ -52,7 +52,7 @@ export type WorkspaceToolsChromeApi = {
   toggle(): void;
   toggleFullScreen(): void;
   setOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
-  dismissForNewSession(): void;
+  dismissForNewChat(): void;
 };
 
 export type WorkspaceToolsChromeProviderProps = {
@@ -97,21 +97,16 @@ function scheduleShellWidthTransitionSettle(shell: HTMLElement, onSettle: () => 
 
 function applyWorkspaceToolsShellWidthImmediate(nextOpen: boolean, onSettle: () => void): void {
   const shell = getWorkspaceToolsShell();
-  const aside = document.getElementById("workspace-tools-panel");
-  if (!shell || !aside) {
+  if (!shell) {
     return;
   }
-  const widthRaw = aside.style.width;
-  const widthPx =
-    widthRaw && widthRaw.endsWith("px")
-      ? Number.parseInt(widthRaw, 10)
-      : readWorkspaceToolsWidthPx();
-  const splitWidth = workspaceToolsShellWidthExpression(widthPx);
+  const dockedWidth = `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`;
+  const splitWidth = workspaceToolsShellWidthExpression(dockedWidth);
 
-  // Only open/close uses the width transition; when viewport scaling changes the ratio, the React side keeps no transition to avoid lagging behind window dragging.
+  // Only open/close uses a width transition; docked viewport changes resolve through CSS.
   const reduceMotion = prefersReducedMotion();
   shell.style.transition = reduceMotion ? "none" : WORKSPACE_TOOLS_SHELL_WIDTH_TRANSITION;
-  shell.style.width = workspaceToolsShellWidthWhenOpen(nextOpen, widthPx);
+  shell.style.width = workspaceToolsShellWidthWhenOpen(nextOpen, dockedWidth);
   const split = shell.querySelector("[data-workspace-tools-split]");
   if (split instanceof HTMLElement) {
     split.style.width = splitWidth;
@@ -166,7 +161,7 @@ export function WorkspaceToolsChromeProvider({
   const [fullScreen, setFullScreenState] = useState(readWorkspaceToolsFullScreen);
   const [open, setOpenState] = useState(() => readWorkspaceToolsFullScreen());
   const [flight, setFlight] = useState<WorkspaceToolsWidthFlight | null>(null);
-  const [newSessionChromeCount, setNewSessionChromeCount] = useState(0);
+  const [newChatChromeCount, setNewChatChromeCount] = useState(0);
   const openRef = useRef(open);
   openRef.current = open;
   const fullScreenRef = useRef(fullScreen);
@@ -191,7 +186,7 @@ export function WorkspaceToolsChromeProvider({
         if (shell) {
           setFlight({ kind: "exit" });
           applyExitFullScreenFlight(
-            workspaceToolsShellWidthWhenOpen(toOpen, readWorkspaceToolsWidthPx()),
+            workspaceToolsShellWidthWhenOpen(toOpen, `var(${WORKSPACE_TOOLS_WIDTH_CSS_PROPERTY})`),
             settleFlight,
           );
         } else {
@@ -280,10 +275,10 @@ export function WorkspaceToolsChromeProvider({
     enterFullScreen();
   }, [enterFullScreen, exitFullScreen]);
 
-  const dismissForNewSession = useCallback(() => {
+  const dismissForNewChat = useCallback(() => {
     // A new session is a new space: a full-screen panel collapses instantly (no reverse animation)
     // so the old space's tools do not linger. A docked panel is workspace-level and stays open, so
-    // callers can invoke this on every new-session path without checking the state first.
+    // callers can invoke this on every new-chat path without checking the state first.
     if (!fullScreenRef.current) {
       return;
     }
@@ -301,9 +296,9 @@ export function WorkspaceToolsChromeProvider({
     writeWorkspaceToolsFullScreen(false);
   }, []);
 
-  const registerNewSessionChrome = useCallback(() => {
-    setNewSessionChromeCount((count) => count + 1);
-    return () => setNewSessionChromeCount((count) => count - 1);
+  const registerNewChatChrome = useCallback(() => {
+    setNewChatChromeCount((count) => count + 1);
+    return () => setNewChatChromeCount((count) => count - 1);
   }, []);
 
   const actions = useMemo(
@@ -312,10 +307,10 @@ export function WorkspaceToolsChromeProvider({
       toggle,
       openTools,
       toggleFullScreen,
-      dismissForNewSession,
-      registerNewSessionChrome,
+      dismissForNewChat,
+      registerNewChatChrome,
     }),
-    [dismissForNewSession, openTools, registerNewSessionChrome, setOpen, toggle, toggleFullScreen],
+    [dismissForNewChat, openTools, registerNewChatChrome, setOpen, toggle, toggleFullScreen],
   );
 
   useEffect(() => {
@@ -326,19 +321,19 @@ export function WorkspaceToolsChromeProvider({
         toggle,
         toggleFullScreen,
         setOpen,
-        dismissForNewSession,
+        dismissForNewChat,
       };
     }
-  }, [apiRef, open, fullScreen, setOpen, toggle, toggleFullScreen, dismissForNewSession]);
+  }, [apiRef, open, fullScreen, setOpen, toggle, toggleFullScreen, dismissForNewChat]);
 
   return (
     <WorkspaceToolsChromeActionsContext.Provider value={actions}>
       <WorkspaceToolsChromeOpenContext.Provider value={open}>
         <WorkspaceToolsChromeFullScreenContext.Provider value={fullScreen}>
           <WorkspaceToolsChromeFlightContext.Provider value={flight}>
-            <WorkspaceToolsNewSessionChromeContext.Provider value={newSessionChromeCount > 0}>
+            <WorkspaceToolsNewChatChromeContext.Provider value={newChatChromeCount > 0}>
               {children}
-            </WorkspaceToolsNewSessionChromeContext.Provider>
+            </WorkspaceToolsNewChatChromeContext.Provider>
           </WorkspaceToolsChromeFlightContext.Provider>
         </WorkspaceToolsChromeFullScreenContext.Provider>
       </WorkspaceToolsChromeOpenContext.Provider>
@@ -358,8 +353,8 @@ export function useWorkspaceToolsChromeWidthFlight(): WorkspaceToolsWidthFlight 
   return useContext(WorkspaceToolsChromeFlightContext);
 }
 
-export function useWorkspaceToolsNewSessionChrome(): boolean {
-  return useContext(WorkspaceToolsNewSessionChromeContext);
+export function useWorkspaceToolsNewChatChrome(): boolean {
+  return useContext(WorkspaceToolsNewChatChromeContext);
 }
 
 export function useWorkspaceToolsChromeActions(): WorkspaceToolsChromeActions {
@@ -382,20 +377,14 @@ export function useWorkspaceToolsChrome(): {
   toggle: WorkspaceToolsChromeActions["toggle"];
   openTools: WorkspaceToolsChromeActions["openTools"];
   toggleFullScreen: WorkspaceToolsChromeActions["toggleFullScreen"];
-  dismissForNewSession: WorkspaceToolsChromeActions["dismissForNewSession"];
-  registerNewSessionChrome: WorkspaceToolsChromeActions["registerNewSessionChrome"];
+  dismissForNewChat: WorkspaceToolsChromeActions["dismissForNewChat"];
+  registerNewChatChrome: WorkspaceToolsChromeActions["registerNewChatChrome"];
 } {
   const open = useWorkspaceToolsChromeOpen();
   const fullScreen = useWorkspaceToolsChromeFullScreen();
   const flight = useWorkspaceToolsChromeWidthFlight();
-  const {
-    setOpen,
-    toggle,
-    openTools,
-    toggleFullScreen,
-    dismissForNewSession,
-    registerNewSessionChrome,
-  } = useWorkspaceToolsChromeActions();
+  const { setOpen, toggle, openTools, toggleFullScreen, dismissForNewChat, registerNewChatChrome } =
+    useWorkspaceToolsChromeActions();
   return {
     open,
     fullScreen,
@@ -404,7 +393,7 @@ export function useWorkspaceToolsChrome(): {
     toggle,
     openTools,
     toggleFullScreen,
-    dismissForNewSession,
-    registerNewSessionChrome,
+    dismissForNewChat,
+    registerNewChatChrome,
   };
 }

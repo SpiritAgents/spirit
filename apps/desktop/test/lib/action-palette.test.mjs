@@ -4,12 +4,13 @@ import { test } from "vitest";
 import {
   ACTION_PALETTE_GROUP_ORDER,
   buildActionPaletteItems,
+  buildActionPaletteItemsWithTasks,
   groupActionPaletteRootItems,
 } from "../../src/lib/action-palette.ts";
 import { STATIC_SLASH_COMMANDS } from "../../src/lib/skill-slash.ts";
 
 const EN_LABELS = {
-  "sidebar.newSession": "New Session",
+  "sidebar.newChat": "New Chat",
   "slash.createSkill": "Create or refine a SKILL.md with natural language",
   "slash.exportSession": "Export llm_history and API trace",
   "slash.compact": "Compact the current session context",
@@ -36,7 +37,7 @@ const EN_LABELS = {
 };
 
 const ZH_LABELS = {
-  "sidebar.newSession": "新会话",
+  "sidebar.newChat": "新对话",
   "actionPalette.theme": "主题",
   "actionPalette.language": "语言",
   "settings.themeSystem": "跟随系统",
@@ -65,8 +66,8 @@ function tZh(key) {
 
 test("buildActionPaletteItems returns grouped root items including appearance menus", () => {
   const items = buildActionPaletteItems("", tEn);
-  assert.equal(items[0]?.kind, "new-session");
-  assert.equal(items[0]?.group, "session");
+  assert.equal(items[0]?.kind, "new-chat");
+  assert.equal(items[0]?.group, "chat");
   assert.equal(items.length, 1 + STATIC_SLASH_COMMANDS.length + 2);
   assert.ok(items.some((item) => item.kind === "theme-menu"));
   assert.ok(items.some((item) => item.kind === "locale-menu"));
@@ -82,17 +83,102 @@ test("buildActionPaletteItems returns grouped root items including appearance me
   const modeItem = items.find((item) => item.kind === "plan");
   assert.equal(modeItem?.group, "mode");
   const sessionItem = items.find((item) => item.kind === "compact");
-  assert.equal(sessionItem?.group, "session");
+  assert.equal(sessionItem?.group, "chat");
 });
 
-test("groupActionPaletteRootItems preserves session mode appearance order", () => {
+test("groupActionPaletteRootItems preserves chat mode appearance order", () => {
   const items = buildActionPaletteItems("", tEn);
   const grouped = groupActionPaletteRootItems(items);
   assert.deepEqual(
     grouped.map((entry) => entry.group),
-    [...ACTION_PALETTE_GROUP_ORDER],
+    ACTION_PALETTE_GROUP_ORDER.filter((group) => group !== "workspace"),
   );
   assert.ok(grouped.find((entry) => entry.group === "appearance")?.items.length === 2);
+});
+
+test("buildActionPaletteItemsWithTasks hides the Run Task row when no tasks exist", () => {
+  const root = buildActionPaletteItemsWithTasks("", tEn, "root", []);
+  assert.equal(
+    root.some((item) => item.kind === "task-menu"),
+    false,
+  );
+  const grouped = groupActionPaletteRootItems(root);
+  assert.equal(
+    grouped.some((entry) => entry.group === "workspace"),
+    false,
+  );
+  assert.deepEqual(buildActionPaletteItemsWithTasks("", tEn, "tasks", []), []);
+});
+
+const SAMPLE_TASK_ITEMS = [
+  {
+    key: "/repo/.spirit/tasks.json#build",
+    label: "build",
+    detail: "Builds everything",
+    iconId: "gear",
+  },
+  { key: "/repo/.vscode/tasks.json#watch", label: "watch" },
+];
+
+test("buildActionPaletteItemsWithTasks lists the Run Task row inside a workspace group", () => {
+  const root = buildActionPaletteItemsWithTasks("", tEn, "root", SAMPLE_TASK_ITEMS);
+  const taskMenu = root.find((item) => item.kind === "task-menu");
+  assert.ok(taskMenu);
+  assert.equal(taskMenu.id, "action:run-task");
+  assert.equal(taskMenu.group, "workspace");
+
+  const grouped = groupActionPaletteRootItems(root);
+  assert.deepEqual(
+    grouped.map((entry) => entry.group),
+    [...ACTION_PALETTE_GROUP_ORDER],
+  );
+  assert.deepEqual(
+    grouped.find((entry) => entry.group === "workspace")?.items.map((item) => item.id),
+    ["action:run-task"],
+  );
+});
+
+test("buildActionPaletteItemsWithTasks applies the query to the Run Task row", () => {
+  assert.equal(
+    buildActionPaletteItemsWithTasks("zzz-no-match", tEn, "root", SAMPLE_TASK_ITEMS).some(
+      (item) => item.kind === "task-menu",
+    ),
+    false,
+  );
+  assert.ok(
+    buildActionPaletteItemsWithTasks("run task", tEn, "root", SAMPLE_TASK_ITEMS).some(
+      (item) => item.kind === "task-menu",
+    ),
+  );
+});
+
+test("buildTaskOptionItems maps task items and filters by label and detail", () => {
+  const options = buildActionPaletteItemsWithTasks("", tEn, "tasks", SAMPLE_TASK_ITEMS);
+  assert.deepEqual(
+    options.map((item) => [item.id, item.kind, item.label]),
+    [
+      ["action:task:/repo/.spirit/tasks.json#build", "task-option", "build"],
+      ["action:task:/repo/.vscode/tasks.json#watch", "task-option", "watch"],
+    ],
+  );
+  assert.equal(options[0]?.taskKey, "/repo/.spirit/tasks.json#build");
+  assert.equal(options[0]?.detail, "Builds everything");
+  assert.equal(options[0]?.iconId, "gear");
+  assert.equal(options[1]?.detail, undefined);
+  assert.equal(options[1]?.iconId, undefined);
+
+  assert.deepEqual(
+    buildActionPaletteItemsWithTasks("wat", tEn, "tasks", SAMPLE_TASK_ITEMS).map(
+      (item) => item.label,
+    ),
+    ["watch"],
+  );
+  assert.deepEqual(
+    buildActionPaletteItemsWithTasks("builds everything", tEn, "tasks", SAMPLE_TASK_ITEMS).map(
+      (item) => item.label,
+    ),
+    ["build"],
+  );
 });
 
 test("buildActionPaletteItems filters compact by prefix", () => {
@@ -104,9 +190,9 @@ test("buildActionPaletteItems filters compact by prefix", () => {
   );
 });
 
-test("buildActionPaletteItems matches localized new session label", () => {
-  const items = buildActionPaletteItems("新会话", tZh);
-  assert.ok(items.some((item) => item.kind === "new-session"));
+test("buildActionPaletteItems matches localized new chat label", () => {
+  const items = buildActionPaletteItems("新对话", tZh);
+  assert.ok(items.some((item) => item.kind === "new-chat"));
 });
 
 test("buildActionPaletteItems matches slash description text", () => {
@@ -119,7 +205,7 @@ test("buildActionPaletteItems theme view only returns theme options", () => {
   assert.ok(items.length >= 3);
   assert.ok(items.every((item) => item.kind === "theme-option"));
   assert.equal(
-    items.some((item) => item.kind === "new-session"),
+    items.some((item) => item.kind === "new-chat"),
     false,
   );
 });
@@ -180,9 +266,7 @@ test("buildActionPaletteItems root search matches appearance menu labels", () =>
 
 test("buildActionPaletteItems matches English labels under Chinese UI", () => {
   assert.ok(buildActionPaletteItems("theme", tZh).some((item) => item.kind === "theme-menu"));
-  assert.ok(
-    buildActionPaletteItems("new session", tZh).some((item) => item.kind === "new-session"),
-  );
+  assert.ok(buildActionPaletteItems("new chat", tZh).some((item) => item.kind === "new-chat"));
   assert.ok(buildActionPaletteItems("language", tZh).some((item) => item.kind === "locale-menu"));
 });
 

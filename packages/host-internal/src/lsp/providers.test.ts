@@ -36,7 +36,6 @@ test("LSP_PROVIDERS registers all in-scope language servers", () => {
 test("findLspProvider returns descriptor by id", () => {
   const provider = findLspProvider("pyright");
   assert.equal(provider?.displayName, "Pyright");
-  assert.equal(provider?.npmPackage, "pyright");
 });
 
 test("routeLspProviderForExtension maps extensions to providers", () => {

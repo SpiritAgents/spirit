@@ -1,5 +1,8 @@
+import { Check } from "@spiritagent/icons/check";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Circle, LoaderCircle } from "lucide-react";
+import { Circle } from "lucide-react";
 
 import type { ConversationTodoSnapshot } from "@/types";
 import {
@@ -13,6 +16,45 @@ type ComposerTodoCardProps = {
   sessionKey: string;
   useTranslucency?: boolean;
 };
+
+/**
+ * The bare todo rows (status icon + title, completed struck through) shared by the composer card
+ * and the todo_write/todo_list tool detail: no header row, no chrome — the caller frames it.
+ */
+export function TodoItemsList({
+  items,
+  className,
+}: {
+  items: ReadonlyArray<{ title: string; status: "pending" | "in_progress" | "completed" }>;
+  className?: string;
+}) {
+  return (
+    <ul className={cn("space-y-0.5", className)}>
+      {items.map((item, index) => (
+        // Frozen per-render list (snapshot or post-write state): index keys never reorder.
+        <li key={index} className="flex items-start gap-2 text-sm leading-snug">
+          <StatusIcon
+            status={
+              item.status === "completed"
+                ? "completed"
+                : item.status === "in_progress"
+                  ? "in-progress"
+                  : "pending"
+            }
+          />
+          <span
+            className={cn(
+              "min-w-0 flex-1",
+              item.status === "completed" && "text-muted-foreground line-through",
+            )}
+          >
+            {item.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 function storageKey(sessionKey: string): string {
   return `spirit-todo-expanded:${sessionKey}`;
@@ -111,6 +153,7 @@ export function ComposerTodoCard({
             "size-4 shrink-0 text-muted-foreground transition-transform duration-300",
             expanded ? "rotate-180" : "rotate-0",
           )}
+          strokeWidth={1.75}
         />
       </button>
       <div
@@ -120,29 +163,7 @@ export function ComposerTodoCard({
         )}
       >
         <div className="overflow-hidden">
-          <ul className="space-y-0.5 px-3 pb-2.5 pt-0">
-            {todos.items.map((item) => (
-              <li key={item.id} className="flex items-start gap-2 text-sm leading-snug">
-                <StatusIcon
-                  status={
-                    item.status === "completed"
-                      ? "completed"
-                      : item.status === "in_progress"
-                        ? "in-progress"
-                        : "pending"
-                  }
-                />
-                <span
-                  className={cn(
-                    "min-w-0 flex-1",
-                    item.status === "completed" && "text-muted-foreground line-through",
-                  )}
-                >
-                  {item.title}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <TodoItemsList items={todos.items} className="px-3 pb-2.5 pt-0" />
         </div>
       </div>
     </div>
@@ -154,7 +175,12 @@ function StatusIcon({ status }: { status: "pending" | "in-progress" | "completed
     return <Check className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" strokeWidth={2.5} />;
   }
   if (status === "in-progress") {
-    return <LoaderCircle className="mt-0.5 size-3.5 shrink-0 animate-spin text-foreground/80" />;
+    return (
+      <LoaderCircle
+        className="mt-0.5 size-3.5 shrink-0 animate-spin text-foreground/80"
+        strokeWidth={1.75}
+      />
+    );
   }
   return <Circle className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/55" strokeWidth={1.5} />;
 }

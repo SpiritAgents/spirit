@@ -8,7 +8,8 @@ const gatewayConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test",
   model: "openai/gpt-5.6-luna",
-  llmVendor: "vercel-ai-gateway",
+  sdk: "@ai-sdk/gateway",
+  options: { applyPatch: true },
 };
 
 test("createApplyPatchAwareFetch skips Responses apply_patch inject on Gateway language-model body", async () => {

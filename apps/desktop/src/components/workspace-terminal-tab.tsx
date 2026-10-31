@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import "@xterm/xterm/css/xterm.css";
 
 import { Button } from "@/components/ui/button";
+import { WorkspaceTerminalContextMenu } from "@/components/workspace-terminal-context-menu";
 import { TerminalSelectionMenu } from "@/components/workspace-terminal-selection-menu";
 import { createWorkspaceTerminalSession } from "@/lib/workspace-xterm";
 import { desktopTranslucencyTerminalTintClass } from "@/lib/desktop-translucency-surface";
@@ -16,7 +17,7 @@ export type WorkspaceTerminalTabProps = {
   onTitleChange?: (title: string | undefined) => void;
   /** Terminal name used for the Chip and menu display (OSC title or the default Terminal label). */
   terminalDisplayName?: string;
-  onTerminalAddToSession?: (
+  onTerminalAddToChat?: (
     attachment: import("@/lib/terminal-snippet-attachment").TerminalSnippetAttachment,
   ) => void;
   /** True while the sidebar is being continuously drag-resized; pauses terminal fit until release. */
@@ -29,7 +30,7 @@ export function WorkspaceTerminalTab({
   workspaceRoot,
   onTitleChange,
   terminalDisplayName = "Terminal",
-  onTerminalAddToSession,
+  onTerminalAddToChat,
   suspendTerminalResize = false,
   useTranslucency = false,
 }: WorkspaceTerminalTabProps) {
@@ -131,19 +132,21 @@ export function WorkspaceTerminalTab({
           </div>
         </div>
       ) : null}
-      <div
-        ref={containerRef}
-        className={cn(
-          "workspace-terminal-xterm min-h-0 min-w-0 flex-1 overflow-hidden",
-          desktopTranslucencyTerminalTintClass(useTranslucency),
-          embedError ? "hidden" : "block",
-        )}
-      />
+      <WorkspaceTerminalContextMenu terminal={terminal}>
+        <div
+          ref={containerRef}
+          className={cn(
+            "workspace-terminal-xterm min-h-0 min-w-0 flex-1 overflow-hidden",
+            desktopTranslucencyTerminalTintClass(useTranslucency),
+            embedError ? "hidden" : "block",
+          )}
+        />
+      </WorkspaceTerminalContextMenu>
       <TerminalSelectionMenu
         containerRef={containerRef}
         terminal={terminal}
         terminalDisplayName={terminalDisplayName}
-        onTerminalAddToSession={onTerminalAddToSession}
+        onTerminalAddToChat={onTerminalAddToChat}
       />
     </div>
   );

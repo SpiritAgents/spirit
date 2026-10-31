@@ -29,7 +29,7 @@ export type SettingsFormState = {
   activeModel: ModelRef;
   imageGenerationModel?: ModelRef;
   videoGenerationModel?: ModelRef;
-  lightweightChatModel?: ModelRef;
+  secondaryLanguageModel?: ModelRef;
   apiBase: string;
   uiLocale: string;
   apiKey: string;
@@ -48,6 +48,8 @@ export type SettingsFormState = {
   codeCompletionEnabled: boolean;
   commitAttributionEnabled: boolean;
   prAttributionEnabled: boolean;
+  providerToolsEnabled: boolean;
+  webFetchEnabled: boolean;
   llmHttpVersion: "http1.1" | "http2";
 };
 
@@ -71,16 +73,14 @@ export type SettingsViewProps = {
   skillsBusy: boolean;
   rulesBusy: boolean;
   extensionsBusy: boolean;
-  lspInstallBusy: boolean;
   isElectronShell: boolean;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
-  onInstallLspProvider: (providerId: string) => Promise<void>;
   onResetWebHostPairing?: () => Promise<void>;
   onAddModel: (request: AddModelRequest) => Promise<void>;
   onAddProviderModels: (request: AddProviderModelsRequest) => Promise<void>;
   onPreviewModels: (request: PreviewModelsRequest) => Promise<PreviewModelsResponse>;
   onRemoveModel: (name: string) => Promise<void>;
-  onRemoveProviderModels: (groupId: string) => Promise<void>;
+  onRemoveProviderModels: (providerId: string) => Promise<void>;
   onAddMcpServer: (request: AddMcpServerRequest) => Promise<void>;
   onUpdateExtensionSettings: (request: UpdateExtensionSettingsRequest) => Promise<void>;
   onUpdateExtensionSecret: (request: UpdateExtensionSecretRequest) => Promise<void>;
@@ -103,6 +103,10 @@ export type SettingsViewProps = {
   onStartCompactionUiDemo?: () => void;
   /** Developer page: loads an extremely long message list performance demo in the conversation area (no model call). */
   onStartLongConversationListDemo?: () => void;
+  /** Developer page: tiles every tool approval form in the conversation area for style tuning (no model call). */
+  onStartApprovalPreviewDemo?: () => void;
+  /** Developer page: lists collapsed agent tool cards in the conversation area, expandable to their real details (no model call). */
+  onStartToolCardPreviewDemo?: () => void;
   /** Windows Mica / macOS Vibrancy: the inner layer is transparent to avoid double-tint darkening with settings-shell. */
   useTranslucency?: boolean;
   getGitHubAuthStatus: () => Promise<GitHubAuthStatus>;

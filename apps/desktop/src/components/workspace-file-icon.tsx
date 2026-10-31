@@ -46,15 +46,21 @@ export function WorkspaceFileIcon({
 
   if (kind === "dir") {
     const Folder = workspaceExplorerIcon(resolvedName, "dir");
-    return <Folder className={workspaceDirectoryIconClassName(colorMode, className)} aria-hidden />;
+    return (
+      <Folder
+        className={workspaceDirectoryIconClassName(colorMode, className)}
+        aria-hidden
+        strokeWidth={1.75}
+      />
+    );
   }
 
   const Icon = workspaceExplorerIcon(resolvedName, kind);
   const iconClassName = workspaceFileIconClassName(colorMode, className);
 
   if (colorMode === "inherit") {
-    return <Icon size={size} className={iconClassName} aria-hidden />;
+    return <Icon size={size} className={iconClassName} aria-hidden strokeWidth={1.75} />;
   }
 
-  return <Icon className={iconClassName} aria-hidden />;
+  return <Icon className={iconClassName} aria-hidden strokeWidth={1.75} />;
 }

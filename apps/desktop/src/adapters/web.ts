@@ -27,7 +27,6 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  InstallLspProviderRequest,
   RunExtensionRequest,
   SaveHookEntryRequest,
   SetExtensionEnabledRequest,
@@ -58,7 +57,6 @@ import type {
   WriteWorkspaceTextFileRequest,
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
-  DesktopModelProvider,
   MarketplaceInstallCommandResult,
   MarketplaceSourceCommandResult,
   MarketplaceUpdateCommandResult,
@@ -145,11 +143,6 @@ export function createWebHostApi(): HostApi {
     updateConfig(request: UpdateConfigRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/config", request);
     },
-    installLspProvider(_request: InstallLspProviderRequest) {
-      return Promise.reject(
-        new Error("LSP provider install is only available in the desktop app."),
-      );
-    },
     addModel(request: AddModelRequest) {
       return post<DesktopSnapshot>(baseUrl, "/api/models", request);
     },
@@ -162,7 +155,7 @@ export function createWebHostApi(): HostApi {
     removeModel(name: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/remove", { name });
     },
-    removeProviderModels(provider: DesktopModelProvider) {
+    removeProviderModels(provider: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/models/remove-provider", { provider });
     },
     removeProviderGroup(request: import("../types").RemoveProviderGroupRequest) {
@@ -429,6 +422,21 @@ export function createWebHostApi(): HostApi {
     subscribeAutomationsUpdates() {
       return () => {};
     },
+    listTaskMenuItems() {
+      return Promise.resolve([]);
+    },
+    resolveTaskForRun() {
+      return Promise.resolve({ status: "unsupported" as const });
+    },
+    resolveTaskByLabel() {
+      return Promise.resolve({ status: "unsupported" as const });
+    },
+    consumeFolderOpenTaskTriggers() {
+      return Promise.resolve([]);
+    },
+    subscribeTasksUpdates() {
+      return () => {};
+    },
     subscribeDreamUpdates(callback) {
       const controller = new AbortController();
       void consumeSnapshotStream(
@@ -516,6 +524,9 @@ export function createWebHostApi(): HostApi {
     },
     renameSession(path: string, displayName: string) {
       return post<DesktopSnapshot>(baseUrl, "/api/sessions/rename", { path, displayName });
+    },
+    setSessionPinned(path: string, pinned: boolean) {
+      return post<DesktopSnapshot>(baseUrl, "/api/sessions/pin", { path, pinned });
     },
     listWorkspaceFileReferenceSuggestions(request: QueryWorkspaceFileReferenceSuggestionsRequest) {
       return post<WorkspaceFileReferenceSuggestionsResponse>(

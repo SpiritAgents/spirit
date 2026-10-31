@@ -1,6 +1,6 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search } from "@spiritagent/icons/search";
 import { useSearchContext } from "fumadocs-ui/contexts/search";
 
 import { Kbd } from "@/components/ui/kbd";
@@ -27,7 +27,10 @@ export function DocsSearch() {
         "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
       )}
     >
-      <Search className="size-4 opacity-50 transition-opacity group-hover:opacity-100 sm:hidden" />
+      <Search
+        className="size-4 opacity-50 transition-opacity group-hover:opacity-100 sm:hidden"
+        strokeWidth={1.75}
+      />
       <span className="hidden sm:inline">{messages.docs.search}</span>
       <Kbd className="hidden bg-foreground/8 text-foreground/45 sm:inline-flex">
         {hotKey.map((item, index) => (

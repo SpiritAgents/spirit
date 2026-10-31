@@ -19,12 +19,13 @@ import type {
   DeleteRuleRequest,
   DesktopAutomationDetail,
   DesktopAutomationListItem,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopCreateAutomationRequest,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
-  DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
   AddMarketplaceSourceRequest,
@@ -103,7 +104,6 @@ import type {
   SubmitGitChipRequest,
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
-  InstallLspProviderRequest,
   ApprovalLevel,
   LocalFileComposerRoute,
   WorkLocationKind,
@@ -119,12 +119,11 @@ export interface HostApi {
   forgetWorkspace?(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;
   commitChanges(request: CommitChangesRequest): Promise<DesktopSnapshot>;
   updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot>;
-  installLspProvider(request: InstallLspProviderRequest): Promise<DesktopSnapshot>;
   addModel(request: AddModelRequest): Promise<DesktopSnapshot>;
   addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
   previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
   removeModel(name: string): Promise<DesktopSnapshot>;
-  removeProviderModels(provider: DesktopModelProvider): Promise<DesktopSnapshot>;
+  removeProviderModels(provider: string): Promise<DesktopSnapshot>;
   removeProviderGroup(request: RemoveProviderGroupRequest): Promise<DesktopSnapshot>;
   addMcpServer(request: AddMcpServerRequest): Promise<DesktopSnapshot>;
   deleteMcpServer(request: DeleteMcpServerRequest): Promise<DesktopSnapshot>;
@@ -229,6 +228,11 @@ export interface HostApi {
   subscribeDreamUpdates?(callback: (update: DesktopLiveUpdate) => void): () => void;
   subscribeAutomationsUpdates?(callback: (snapshot: DesktopSnapshot) => void): () => void;
   subscribeSessionListUpdates?(callback: () => void): () => void;
+  listTaskMenuItems(): Promise<DesktopTaskMenuItem[]>;
+  resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult>;
+  resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult>;
+  consumeFolderOpenTaskTriggers(): Promise<string[]>;
+  subscribeTasksUpdates?(callback: (items: DesktopTaskMenuItem[]) => void): () => void;
   replyPendingApproval(request: ReplyPendingApprovalRequest): Promise<DesktopSnapshot>;
   replyPendingQuestions(request: ReplyPendingQuestionsRequest): Promise<DesktopSnapshot>;
   replyWorkspaceCapabilityTrust(
@@ -259,6 +263,7 @@ export interface HostApi {
   checkoutPaneGitBranch(request: CheckoutPaneGitBranchRequest): Promise<DesktopSnapshot>;
   deleteSession(path: string): Promise<DesktopSnapshot>;
   renameSession(path: string, displayName: string): Promise<DesktopSnapshot>;
+  setSessionPinned(path: string, pinned: boolean): Promise<DesktopSnapshot>;
   listWorkspaceFileReferenceSuggestions(
     request: QueryWorkspaceFileReferenceSuggestionsRequest,
   ): Promise<WorkspaceFileReferenceSuggestionsResponse>;

@@ -1,16 +1,17 @@
 ---
 title: Расширения
-description: Создавайте расширения мастером npm create или вручную и управляйте собственным удалённым маркетплейсом расширений.
+description: Создавайте расширения мастером npm create или вручную и управляйте
+  собственным удалённым маркетплейсом расширений.
 ---
 
-Расширение — это папка с `.spirit/extension.json` — дампом манифеста Spirit — рядом с чисто npm-ным `package.json`. Spirit устанавливает расширения для каждого пользователя и каждого хоста отдельно, а не в каталог `.spirit/` рабочей области, и ограничивает каждую установку маркетплейсом-источником: идентичность установки — `(id источника, name)`.
+Расширение — это папка с `{{product.workspaceDataFolderName}}/extension.json` — дампом манифеста {{product.name|mdx}} — рядом с чисто npm-ным `package.json`. {{product.name|mdx}} устанавливает расширения для каждого пользователя и каждого хоста отдельно, а не в каталог `{{product.workspaceDataFolderName}}/` рабочей области, и ограничивает каждую установку маркетплейсом-источником: идентичность установки — `(id источника, name)`.
 
 | Хост    | Путь                                                    |
 | ------- | ------------------------------------------------------- |
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-Это отличается от [Skills](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Hooks](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` стилизует слоты TUI CLI. Это не `hooks.json`. Расширение всё же может _поставлять_ те же файлы, если объявляет `mcp`, `hooks`, `skills` или `rules`.
+Это отличается от [Навыки](../customize/skills.mdx) (папки `SKILL.md`), [MCP](../customize/mcp.mdx) (внешние серверы) и [Хуки](../customize/hooks.mdx) (скрипты `hooks.json`). `contributes.cli.hooks` стилизует слоты TUI CLI. Это не `hooks.json`. Расширение всё же может _поставлять_ те же файлы, если объявляет `mcp`, `hooks`, `skills` или `rules`.
 
 У каждого установленного расширения есть переключатель включения. Отключите или удалите его, чтобы остановить его вклады. Включение расширения — это согласие на запуск объявленных им MCP-серверов, хуков агента, навыков и правил.
 
@@ -59,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-Мастер спрашивает имя расширения (kebab-case), отображаемое имя, однострочное описание и возможности для каркаса. Он записывает `package.json`, `icon.svg` и `.spirit/extension.json`, плюс файлы выбранных возможностей (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), а в конце выводит готовую запись маркетплейса для вставки.
+Мастер спрашивает имя расширения (kebab-case), отображаемое имя, однострочное описание и возможности для каркаса. Он записывает `package.json`, `icon.svg` и `{{product.workspaceDataFolderName}}/extension.json`, плюс файлы выбранных возможностей (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), а в конце выводит готовую запись маркетплейса для вставки.
 
 Для скриптов у каждого вопроса есть флаг: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` и `--yes` для пропуска подтверждения.
 
@@ -72,12 +73,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="Вручную">
 
-Каталогу расширения нужны только два файла — `.spirit/extension.json` и `package.json` — плюс файлы объявленных возможностей:
+Каталогу расширения нужны только два файла — `{{product.workspaceDataFolderName}}/extension.json` и `package.json` — плюс файлы объявленных возможностей:
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # дамп манифеста Spirit (обязательно)
+  {{product.workspaceDataFolderName}}/
+    extension.json        # дамп манифеста {{product.name}} (обязательно)
   package.json            # чисто npm; читается только `main`
   icon.svg                # необязательно; только SVG, без <script>
   index.mjs               # необязательно; вход activate, на который ссылается `main`
@@ -89,9 +90,9 @@ my-extension/
   cli-hooks.json          # при объявлении хуков CLI (путь указан в манифесте)
 ```
 
-`package.json` не несёт полей Spirit — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` остаются чисто npm. Хост читает только `main`, вход модуля [`activate`](#activate).
+`package.json` не несёт полей {{product.name|mdx}} — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` остаются чисто npm. Хост читает только `main`, вход модуля [`activate`](#activate).
 
-Поля `.spirit/extension.json`:
+Поля `{{product.workspaceDataFolderName}}/extension.json`:
 
 | Поле            | Описание                                                                                                                                                            |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -224,24 +225,24 @@ my-extension/
 }
 ```
 
-### Встроенные MCP, hooks, skills и rules
+### Встроенные MCP, хуки, навыки и rules
 
 Требуют соответствующую capability. `contributes.mcp`, `contributes.hooks`, `contributes.skills` и `contributes.rules` равны `true` или `{}`. Пути фиксированные; свои пути задавать нельзя.
 
 | Вклад       | Capability | Файл                                                                                         |
 | ----------- | ---------- | -------------------------------------------------------------------------------------------- |
 | MCP         | `mcp`      | `mcp.json` в корне пакета (та же схема, что у пользовательского/рабочего MCP)                |
-| Agent hooks | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent hooks; это не `contributes.cli.hooks`) |
-| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                     |
+| Agent хуки | `hooks`    | `hooks.json` в корне пакета (та же схема, что у agent хуки; это не `contributes.cli.hooks`) |
+| Навыки      | `skills`   | `skills/<name>/SKILL.md`                                                                     |
 | Rules       | `rules`    | `rule.md` в корне пакета                                                                     |
 
 Объявлено, но файл отсутствует или некорректен — установка отклоняется. Необъявленные файлы игнорируются и никогда не загружаются.
 
-Относительные `command` и `cwd` считаются от корня расширения. Если у MCP stdio нет `cwd`, по умолчанию используется корень расширения.
+Относительные `command` и `cwd` считаются от корня расширения. Если у MCP stdio нет `cwd`, по умолчанию используется корень расширения. Команды, разрешаемые только через PATH, не изменяются.
 
-Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCPs | Hooks | Skills | Rules**. При конфликте имён: workspace > user > extension.
+Эти вклады попадают в сессию при включённом расширении и **не** появляются в **Настройки → MCP | Хуки | Навыки | Rules**. При конфликте имён: workspace > user > extension.
 
-Во время `tools/call` встроенный MCP может отправить `spirit/ui/open` (`{ viewId, params }`), если клиент объявил `experimental["spirit/ui"]`. Spirit открывает только view того же расширения из `contributes.desktop.views`. Пользовательский и workspace MCP отклоняются. Диалог блокирует этот вызов; `close(result)` возвращается в том же запросе. Хост без окна отвечает `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — инструмент должен деградировать.
+Во время `tools/call` встроенный MCP может отправить `spirit/ui/open` (`{ viewId, params }`), если клиент объявил `experimental["spirit/ui"]`. {{product.name|mdx}} открывает только view того же расширения из `contributes.desktop.views`. Пользовательский и workspace MCP отклоняются. Диалог блокирует этот вызов; `close(result)` возвращается в том же запросе. Хост без окна отвечает `{ "kind": "unavailable", "reason": "host-has-no-ui" }` — инструмент должен деградировать.
 
 ### `settingsSchema`
 
@@ -351,7 +352,7 @@ export function activate(ctx) {
 
 ## Распространение в виде ZIP
 
-Упакуйте каталог расширения в распространяемый формат ZIP (содержимое плюс `.spirit/extension.json`):
+Упакуйте каталог расширения в распространяемый формат ZIP (содержимое плюс `{{product.workspaceDataFolderName}}/extension.json`):
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +364,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ## Управление удалённым маркетплейсом расширений
 
-Удалённый маркетплейс расширений — это обслуживаемый каталог с индексом `.spirit/marketplace.json`: Git-репозиторий, статический сайт или локальный каталог. Пользователи добавляют его командой `spirit extension marketplace add <url|path>` или на странице **Расширения** в Desktop, а затем просматривают и устанавливают его записи.
+Удалённый маркетплейс расширений — это обслуживаемый каталог с индексом `{{product.workspaceDataFolderName}}/marketplace.json`: Git-репозиторий, статический сайт или локальный каталог. Пользователи добавляют его командой `spirit extension marketplace add <url|path>` или на странице **Расширения** в Desktop, а затем просматривают и устанавливают его записи.
 
 <Tabs items={["Репозиторий-шаблон", "Вручную"]}>
 <Tab value="Репозиторий-шаблон">
@@ -373,7 +374,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 Шаблон содержит структуру реестра, два примера расширений и CI, проверяющий реестр при каждом push и pull request. Чтобы опубликовать расширение:
 
 1. Создайте каркас командой `npm create @spiritagent/extension`.
-2. Выполните `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — команда скопирует расширение в `extensions/` и объединит запись с `.spirit/marketplace.json`. См. [Публикация через publish](#публикация-через-publish).
+2. Выполните `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — команда скопирует расширение в `extensions/` и объединит запись с `{{product.workspaceDataFolderName}}/marketplace.json`. См. [Публикация через publish](#публикация-через-publish).
 3. Отправьте изменения — пользователи добавляют маркетплейс по его Git-URL.
 
 </Tab>
@@ -383,7 +384,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # индекс
   extensions/
     my-extension/     # каталог содержимого (простой npm-пакет + файлы возможностей)
@@ -416,18 +417,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 
 ### Локальные маркетплейсы
 
-Любой локальный каталог с `.spirit/marketplace.json` работает как маркетплейс — добавьте его командой `spirit extension marketplace add <path>` или через **Добавить с диска** в Desktop. Локальные маркетплейсы читаются на месте и не требуют CI, что делает их циклом разработки авторов расширений: править, переустановить, повторить.
+Любой локальный каталог с `{{product.workspaceDataFolderName}}/marketplace.json` работает как маркетплейс — добавьте его командой `spirit extension marketplace add <path>` или через **Добавить с диска** в Desktop. Локальные маркетплейсы читаются на месте и не требуют CI, что делает их циклом разработки авторов расширений: править, переустановить, повторить.
 
 ### Публикация через publish
 
-`extension-toolkit publish` объединяет `.spirit/extension.json` расширения с `.spirit/marketplace.json` целевого маркетплейса и копирует содержимое, необходимое источнику записи:
+`extension-toolkit publish` объединяет `{{product.workspaceDataFolderName}}/extension.json` расширения с `{{product.workspaceDataFolderName}}/marketplace.json` целевого маркетплейса и копирует содержимое, необходимое источнику записи:
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- Первый аргумент — каталог расширения, второй — корень маркетплейса: любой локальный каталог с `.spirit/marketplace.json`: клон репозитория-шаблона, маркетплейс «Личные» в `{spiritDataDir}/marketplaces/personal` и т. д.
-- `--source local` (по умолчанию): копирует весь пакет в `extensions/<name>/` маркетплейса — включая `.spirit/extension.json`, исключая `node_modules` и `.git` — и указывает `source` записи на этот каталог.
+- Первый аргумент — каталог расширения, второй — корень маркетплейса: любой локальный каталог с `{{product.workspaceDataFolderName}}/marketplace.json`: клон репозитория-шаблона, маркетплейс «Личные» в `{spiritDataDir}/marketplaces/personal` и т. д.
+- `--source local` (по умолчанию): копирует весь пакет в `extensions/<name>/` маркетплейса — включая `{{product.workspaceDataFolderName}}/extension.json`, исключая `node_modules` и `.git` — и указывает `source` записи на этот каталог.
 - `--source npm`: фиксирует `name@version` из `package.json` расширения как npm-`source` записи; в `extensions/<name>/` копируется только объявленный значок (маркетплейсы хранят значки у себя). Публикация самого npm-пакета по-прежнему выполняется вами через npm CLI.
 - `--dry-run`: выводит запись и планируемые действия, ничего не записывая.
 - Правила слияния: запись с тем же именем заменяется на месте, иначе добавляется. Новые записи и изменения `version` возвращают `reviewStatus: "unverified"`; повторная публикация той же версии его сохраняет. Поля кураторства вроде `featured` всегда сохраняют значения маркетплейса.

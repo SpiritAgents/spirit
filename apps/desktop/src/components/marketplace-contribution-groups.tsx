@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Monitor, Plug, ScrollText, Wand2, Webhook, Wrench, type LucideIcon } from "lucide-react";
 
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
 
 import { DESKTOP_LIST_ITEM_PRIMARY_CLASS } from "@/lib/desktop-typography";
 import { markdownToPlainText } from "@/lib/markdown-plain-text";
@@ -181,7 +181,11 @@ export function MarketplaceContributionGroups({
           <div className="space-y-4">
             {group.items.map((entry) => (
               <div key={entry.key} className="flex items-center gap-3">
-                <entry.icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <entry.icon
+                  className="size-4 shrink-0 text-muted-foreground"
+                  aria-hidden
+                  strokeWidth={1.75}
+                />
                 <div className="min-w-0 flex-1">
                   <span
                     className={cn(

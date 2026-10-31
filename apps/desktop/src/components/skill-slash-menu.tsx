@@ -19,7 +19,7 @@ type SkillSlashMenuProps = {
 
 function SlashSuggestionIcon({ kind }: { kind: SkillSlashSuggestionKind }) {
   const Icon = SLASH_SUGGESTION_ICONS[kind];
-  return <Icon className="mt-0.5 size-3.5 shrink-0 opacity-70" aria-hidden />;
+  return <Icon className="mt-0.5 size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />;
 }
 
 export function SkillSlashMenu({

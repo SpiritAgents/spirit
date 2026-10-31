@@ -22,7 +22,7 @@ use crate::{
     host_runtime::{RuntimeEvent, ToolUiRequest, build_tool_result_block, format_tool_ui_message},
     locale, logging,
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
-    model_registry::{DEFAULT_API_BASE, ModelProvider},
+    model_registry::ModelTransportKind,
     openai_models_list,
     plan::{self, PlanMetadata},
     ports::{
@@ -147,14 +147,18 @@ pub(crate) struct ApplyModelAddParams<'a> {
     pub name: &'a str,
     pub api_base: &'a str,
     pub api_key: &'a str,
-    pub provider: Option<ModelProvider>,
-    pub transport_kind: crate::model_registry::ModelTransportKind,
+    /// Preset id from the presets manifest, or `custom`.
+    pub provider_id: &'a str,
+    pub transport_kind: ModelTransportKind,
     pub context_length: Option<u64>,
-    pub azure_resource_name: Option<&'a str>,
-    pub cloudflare_account_id: Option<&'a str>,
+    /// Materializes into the literal `cf-aig-gateway-id` header on the provider entry.
     pub cloudflare_gateway_id: Option<&'a str>,
-    pub provider_site: Option<&'a str>,
-    pub alibaba_workspace_id: Option<&'a str>,
+    /// Selected preset site; per-site templates (e.g. fileUpload overrides) resolve against it.
+    pub site_id: Option<&'a str>,
+    /// Transport `options` declarations (awsRegion / project / location).
+    pub options: &'a std::collections::BTreeMap<String, String>,
+    /// Non-apiKey credential slots stored in the internal keyring (`provider::{id}::{slot}`).
+    pub credential_slots: &'a [(String, String)],
 }
 
 impl TuiShell {
@@ -604,68 +608,64 @@ impl TuiShell {
             name,
             api_base,
             api_key,
-            provider,
+            provider_id,
             transport_kind,
             context_length,
-            azure_resource_name,
-            cloudflare_account_id,
             cloudflare_gateway_id,
-            provider_site,
-            alibaba_workspace_id,
+            site_id,
+            options,
+            credential_slots,
         } = params;
         let mut config = self.runtime.config().clone();
         if config.has_model_name(name) {
             return Err(t!("tui.model_add.duplicate", name = name).into_owned());
         }
 
-        let provider = provider.unwrap_or(ModelProvider::Custom);
-        let group_id = crate::model_registry::default_preset_provider_group_id(provider);
-        let connect = crate::model_registry::ProviderGroupConnectDraft {
-            transport_kind: (transport_kind
-                == crate::model_registry::ModelTransportKind::Anthropic
-                || transport_kind == crate::model_registry::ModelTransportKind::OpenResponses)
-                .then(|| transport_kind.as_str().to_string()),
-            provider_site: provider_site
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            alibaba_workspace_id: alibaba_workspace_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            azure_resource_name: azure_resource_name
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            cloudflare_account_id: cloudflare_account_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            cloudflare_gateway_id: cloudflare_gateway_id
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-                .map(ToOwned::to_owned),
-            ..Default::default()
+        let provider_id = if provider_id.trim().is_empty() {
+            crate::provider_presets::CUSTOM_PROVIDER_PRESET_ID
+        } else {
+            provider_id
         };
-        config.add_model_to_group(
-            &group_id,
-            provider,
+        // Sites, workspace ids, and `{placeholder}` template values were already materialized
+        // into `api_base` by the connect form; the Cloudflare gateway id materializes into a
+        // literal header (`cf-aig-gateway-id`).
+        let mut connect =
+            crate::provider_presets::preset_connect_draft(provider_id, transport_kind, site_id);
+        if let Some(gateway_id) = cloudflare_gateway_id
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+        {
+            connect.headers = Some(std::collections::BTreeMap::from([(
+                "cf-aig-gateway-id".to_string(),
+                gateway_id.to_string(),
+            )]));
+        }
+        if !options.is_empty() {
+            // Wizard input wins per key over the preset's mechanism-option template.
+            let wizard_options: serde_json::Map<String, serde_json::Value> = options
+                .iter()
+                .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+                .collect();
+            connect.options = Some(match connect.options {
+                Some(mut template) => {
+                    template.extend(wizard_options);
+                    template
+                }
+                None => wizard_options,
+            });
+        }
+        config.add_model_to_provider(
+            provider_id,
             api_base.to_string(),
             connect,
             crate::model_registry::ModelEntry {
                 name: name.to_string(),
-                reasoning_effort: None,
-                reasoning_mode: None,
-                thinking_enabled: None,
-                supported_reasoning_efforts: None,
-                capabilities: None,
                 context_length,
-                supports_thinking_type: None,
-                supports_thinking_switch: None,
+                ..Default::default()
             },
         );
         config.active_model = crate::model_registry::ModelRef {
-            group_id,
+            provider_id: provider_id.to_string(),
             name: name.to_string(),
         };
 
@@ -673,9 +673,20 @@ impl TuiShell {
             return Err(err.to_string());
         }
 
-        if !api_key.trim().is_empty() {
-            if let Err(err) = self.secret_store.save_model_api_key(name, api_key) {
-                return Err(t!("tui.model_add.key_save_failed", err = err).into_owned());
+        if !api_key.trim().is_empty()
+            && let Err(err) = self.secret_store.save_provider_secret(
+                &crate::model_registry::provider_key_account(provider_id),
+                api_key,
+            )
+        {
+            return Err(t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned());
+        }
+        for (slot, value) in credential_slots {
+            if let Err(err) = self.secret_store.save_provider_secret(
+                &crate::model_registry::provider_slot_account(provider_id, slot),
+                value,
+            ) {
+                return Err(t!("tui.model_add.key_save_failed", err = err.to_string()).into_owned());
             }
         }
 

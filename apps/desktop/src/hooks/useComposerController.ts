@@ -10,7 +10,10 @@ import {
 } from "react";
 import type { TFunction } from "i18next";
 
-import { codeUnitIndexToCharCount } from "@spiritagent/host-internal/workspace-file-reference-query";
+import {
+  codeUnitIndexToCharCount,
+  mergeRecentIntoSuggestions,
+} from "@spiritagent/host-internal/workspace-file-reference-query";
 
 import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
 import { segmentsToMessageText, segmentsToPlainText } from "@/components/composer-rich-input";
@@ -40,6 +43,7 @@ import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
 import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
 import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
+import { useRecentFilePool } from "@/hooks/useRecentFilePool";
 import { useWorkspaceFileIndex } from "@/hooks/use-workspace-file-index";
 import type { useDesktopRuntime, QuestionDraft } from "@/hooks/useDesktopRuntime";
 import {
@@ -51,7 +55,9 @@ import {
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
-  isNewSessionAction,
+  isNewChatAction,
+  isTaskMenuAction,
+  isTaskOptionAction,
   isThemeOptionAction,
   type ActionPaletteItem,
 } from "@/lib/action-palette";
@@ -100,11 +106,13 @@ export type UseComposerControllerOptions = {
   activeSessionReadOnly: boolean;
   compactionDemoActive: boolean;
   longConversationListDemoActive: boolean;
+  approvalPreviewDemoActive: boolean;
+  toolCardPreviewDemoActive: boolean;
   subagentViewActive: boolean;
   pendingApproval: DesktopSnapshot["conversation"]["pendingToolApproval"];
   pendingQuestions: ReturnType<typeof useDesktopRuntime>["pendingQuestions"];
   conversationInterruptible: boolean;
-  handleNewSession: () => void;
+  handleNewChat: () => void;
   setActiveSurface: (
     surface: "conversation" | "settings" | "marketplace" | "automations" | "automation-detail",
   ) => void;
@@ -122,11 +130,13 @@ export function useComposerController({
   activeSessionReadOnly,
   compactionDemoActive,
   longConversationListDemoActive,
+  approvalPreviewDemoActive,
+  toolCardPreviewDemoActive,
   subagentViewActive,
   pendingApproval,
   pendingQuestions,
   conversationInterruptible,
-  handleNewSession,
+  handleNewChat,
   setActiveSurface,
   setLastNonSettingsSurface,
   paneSessionPath,
@@ -342,6 +352,8 @@ export function useComposerController({
   const messageRewindComposerEnabled =
     !compactionDemoActive &&
     !longConversationListDemoActive &&
+    !approvalPreviewDemoActive &&
+    !toolCardPreviewDemoActive &&
     !subagentViewActive &&
     !activeSessionReadOnly &&
     !pendingApproval &&
@@ -367,6 +379,8 @@ export function useComposerController({
   const composerCanSend =
     !compactionDemoActive &&
     !longConversationListDemoActive &&
+    !approvalPreviewDemoActive &&
+    !toolCardPreviewDemoActive &&
     !subagentViewActive &&
     composerHasPayload &&
     !activeSessionReadOnly &&
@@ -489,6 +503,13 @@ export function useComposerController({
     getWorkspaceFileReferenceIndex: runtime.getWorkspaceFileReferenceIndex,
   });
 
+  const recentFilePool = useRecentFilePool({
+    workspaceRoot: snapshot?.workspaceRoot ?? "",
+    statHostTextFile: runtime.statHostTextFile,
+    // Only an existing Plan is referenceable; a missing Plan stays out of the @ menu.
+    planPath: snapshot?.plan?.exists ? snapshot.plan.path : undefined,
+  });
+
   useEffect(() => {
     setSlashSelectedIndex(0);
   }, [slashQuery?.raw, slashQuery?.start, slashQuery?.end]);
@@ -500,23 +521,25 @@ export function useComposerController({
       return;
     }
 
-    if (!workspaceFileIndex.ready) {
-      setFileReferenceSuggestions({
-        query: fileReferenceQuery,
-        suggestions: [],
-      });
-      return;
-    }
-
+    recentFilePool.validateEntries();
+    const indexSuggestions = workspaceFileIndex.ready
+      ? workspaceFileIndex.search(fileReferenceQuery.raw)
+      : [];
     setFileReferenceSuggestions({
       query: fileReferenceQuery,
-      suggestions: workspaceFileIndex.search(fileReferenceQuery.raw),
+      suggestions: mergeRecentIntoSuggestions(
+        fileReferenceQuery.raw,
+        indexSuggestions,
+        recentFilePool.displayPaths,
+      ),
     });
     setFileReferenceSelectedIndex(0);
   }, [
     dismissedFileReferenceKey,
     fileReferenceQuery,
     fileReferenceQueryKey,
+    recentFilePool.displayPaths,
+    recentFilePool.validateEntries,
     workspaceFileIndex.ready,
     workspaceFileIndex.fileCount,
     workspaceFileIndex.search,
@@ -540,8 +563,15 @@ export function useComposerController({
       rawQuery: fileReferenceSuggestions.query.raw,
       fileSuggestions: fileReferenceSuggestions.suggestions,
       sessions: atReferenceSessionCandidates,
+      planPath: snapshot?.plan?.exists ? snapshot.plan.path : null,
     });
-  }, [atReferenceSessionCandidates, fileReferenceMenuView, fileReferenceSuggestions]);
+  }, [
+    atReferenceSessionCandidates,
+    fileReferenceMenuView,
+    fileReferenceSuggestions,
+    snapshot?.plan?.exists,
+    snapshot?.plan?.path,
+  ]);
 
   useEffect(() => {
     if (slashSuggestions.length === 0) {
@@ -796,7 +826,7 @@ export function useComposerController({
       if (!runtime.busyAction) {
         return false;
       }
-      if (isNewSessionAction(item)) {
+      if (isNewChatAction(item)) {
         return true;
       }
       return (
@@ -811,12 +841,18 @@ export function useComposerController({
 
   const runActionPaletteItem = useCallback(
     (item: ActionPaletteItem) => {
-      if (isAppearanceMenuAction(item) || isThemeOptionAction(item) || isLocaleOptionAction(item)) {
+      if (
+        isAppearanceMenuAction(item) ||
+        isThemeOptionAction(item) ||
+        isLocaleOptionAction(item) ||
+        isTaskMenuAction(item) ||
+        isTaskOptionAction(item)
+      ) {
         return;
       }
       ensureConversationSurface();
-      if (isNewSessionAction(item)) {
-        handleNewSession();
+      if (isNewChatAction(item)) {
+        handleNewChat();
         return;
       }
       if (item.kind === "loop") {
@@ -858,24 +894,28 @@ export function useComposerController({
       applySideChatSlash,
       applySlashSuggestion,
       ensureConversationSurface,
-      handleNewSession,
+      handleNewChat,
       runtime,
     ],
   );
 
   const applyFileReferenceSuggestion = useCallback(
-    (path: string) => {
+    (path: string, options?: { isPlan?: boolean }) => {
       const query = fileReferenceSuggestions?.query;
       if (!query) {
         return;
       }
 
-      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true);
+      composerRichInputRef.current?.insertWorkspaceFileReference(path, query, true, {
+        isPlan: options?.isPlan === true,
+      });
+      // The chip counts as a reference even if the message is never sent.
+      recentFilePool.recordAtReference(path);
       setFileReferenceSelectedIndex(-1);
       setFileReferenceMenuView("root");
       setDismissedFileReferenceKey(null);
     },
-    [fileReferenceSuggestions?.query],
+    [fileReferenceSuggestions?.query, recentFilePool.recordAtReference],
   );
 
   const applySessionReferenceSuggestion = useCallback(
@@ -913,8 +953,10 @@ export function useComposerController({
         backAtReferenceMenu();
         return;
       }
-      if (item.kind === "file") {
-        applyFileReferenceSuggestion(item.path);
+      if (item.kind === "file" || item.kind === "plan") {
+        // The Plan row's identity is part of the inserted chip, so it survives send,
+        // rewind, history reload and split-pane focus changes.
+        applyFileReferenceSuggestion(item.path, { isPlan: item.kind === "plan" });
         return;
       }
       if (item.kind === "sessions-entry") {
@@ -1008,12 +1050,12 @@ export function useComposerController({
     [attachLocalFilePath],
   );
 
-  const handlePrDiffAddToSession = useCallback((attachment: PrDiffAttachment) => {
+  const handlePrDiffAddToChat = useCallback((attachment: PrDiffAttachment) => {
     composerRichInputRef.current?.insertPrDiffAttachment(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleGitCommitAddToSession = useCallback(
+  const handleGitCommitAddToChat = useCallback(
     (attachment: GitCommitAttachment) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertGitCommitAttachment(attachment);
@@ -1022,22 +1064,22 @@ export function useComposerController({
     [ensureConversationSurface],
   );
 
-  const handleTerminalAddToSession = useCallback((attachment: TerminalSnippetAttachment) => {
+  const handleTerminalAddToChat = useCallback((attachment: TerminalSnippetAttachment) => {
     composerRichInputRef.current?.insertTerminalSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleFileSnippetAddToSession = useCallback((attachment: FileSnippetAttachment) => {
+  const handleFileSnippetAddToChat = useCallback((attachment: FileSnippetAttachment) => {
     composerRichInputRef.current?.insertFileSnippet(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleMessageQuoteAddToSession = useCallback((attachment: MessageQuoteAttachment) => {
+  const handleMessageQuoteAddToChat = useCallback((attachment: MessageQuoteAttachment) => {
     composerRichInputRef.current?.insertMessageQuote(attachment);
     composerRichInputRef.current?.focus();
   }, []);
 
-  const handleWorkspaceFileAddToSession = useCallback(
+  const handleWorkspaceFileAddToChat = useCallback(
     (relativePath: string, sourceTabId?: string) => {
       ensureConversationSurface();
       composerRichInputRef.current?.insertWorkspaceFileAtCaret(relativePath, sourceTabId);
@@ -1403,6 +1445,10 @@ export function useComposerController({
     ],
   );
 
+  const submitApprovalAllowShortcut = useCallback(() => {
+    void runtime.submitApproval({ kind: "allow" }, isPaneIsolated ? paneSessionPath : undefined);
+  }, [runtime, isPaneIsolated, paneSessionPath]);
+
   const handleComposerKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
       handleComposerSuggestionKeyDown(event);
@@ -1431,20 +1477,48 @@ export function useComposerController({
         runtime.busyAction !== "approve"
       ) {
         event.preventDefault();
-        void runtime.submitApproval(
-          { kind: "allow" },
-          isPaneIsolated ? paneSessionPath : undefined,
-        );
+        submitApprovalAllowShortcut();
       }
     },
     [
       handleComposerAgentModeChange,
       handleComposerSuggestionKeyDown,
-      isPaneIsolated,
-      paneSessionPath,
       pendingApproval,
       runtime,
+      submitApprovalAllowShortcut,
     ],
+  );
+
+  // Pane-level Enter → Allow: fires for any focus inside this pane (blank areas focus the pane
+  // shell). Structural containment keeps split panes isolated — a keydown in a sibling pane
+  // never reaches this handler. Interactive descendants keep their native Enter behavior; the
+  // composer input and the approval guidance textarea preventDefault first.
+  const handlePaneKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
+      if (
+        event.defaultPrevented ||
+        !pendingApproval ||
+        event.key !== "Enter" ||
+        event.shiftKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.nativeEvent.isComposing ||
+        runtime.busyAction === "approve"
+      ) {
+        return;
+      }
+      if (
+        event.target instanceof HTMLElement &&
+        event.target.closest(
+          'button, a, input, textarea, select, [contenteditable="true"], [role="button"], [role="link"]',
+        )
+      ) {
+        return;
+      }
+      event.preventDefault();
+      submitApprovalAllowShortcut();
+    },
+    [pendingApproval, runtime, submitApprovalAllowShortcut],
   );
 
   const focusComposer = useCallback(() => {
@@ -1512,12 +1586,12 @@ export function useComposerController({
     insertSkillTriggerFromPalette,
     removeLocalFileAttachment,
     handleBrowserElementPicked,
-    handlePrDiffAddToSession,
-    handleGitCommitAddToSession,
-    handleTerminalAddToSession,
-    handleFileSnippetAddToSession,
-    handleMessageQuoteAddToSession,
-    handleWorkspaceFileAddToSession,
+    handlePrDiffAddToChat,
+    handleGitCommitAddToChat,
+    handleTerminalAddToChat,
+    handleFileSnippetAddToChat,
+    handleMessageQuoteAddToChat,
+    handleWorkspaceFileAddToChat,
     pickLocalFileFromPalette,
     handleComposerPaste,
     handleComposerDragOver,
@@ -1527,7 +1601,9 @@ export function useComposerController({
     discardBranchChangesAndCheckoutSend,
     handleComposerSuggestionKeyDown,
     handleComposerKeyDown,
+    handlePaneKeyDown,
     workspaceFileIndex,
+    recentFilePool,
     composerPlaceholder,
     composerAgentModeChipPlaceholder,
     composerCanSend,

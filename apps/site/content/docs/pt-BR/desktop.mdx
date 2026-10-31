@@ -1,6 +1,7 @@
 ---
 title: Desktop
-description: Mapa de configurações, Arquivos / Git / Navegador, extensões, automações e pareamento com Web Host local.
+description: Mapa de configurações, Arquivos / Git / Navegador, extensões,
+  automações e pareamento com Web Host local.
 ---
 
 O Desktop é o host gráfico. Ele compartilha o daemon local com o [CLI](./cli.mdx). Instale-o em [Instalar Desktop](./install/desktop.mdx).
@@ -62,7 +63,7 @@ Esses chips injetam um prompt fixo. O agente então usa as ferramentas [workspac
 
 ### LSP
 
-Ative os servidores de linguagem em **Configurações → Agentes** e instale um provedor se estiver faltando. Quando o servidor estiver pronto, o agente pode chamar [`get_diagnostics`](./agent/tools.mdx).
+Ative os servidores de linguagem em **Configurações → Agentes**. O {{product.name|mdx}} detecta apenas os servidores já instalados nesta máquina; instale você mesmo os que estiverem faltando, com a ferramenta indicada na tabela. Quando o servidor estiver pronto, o agente pode chamar [`get_diagnostics`](./agent/tools.mdx).
 
 | ID              | Linguagens | Como é instalado                                       |
 | --------------- | ---------- | ------------------------------------------------------ |
@@ -73,13 +74,13 @@ Ative os servidores de linguagem em **Configurações → Agentes** e instale um
 | `jdtls`         | Java       | Manual                                                 |
 | `omnisharp`     | C#         | .NET                                                   |
 
-clangd e jdtls não estão incluídos. Instale-os você mesmo e depois volte para Configurações → Agentes.
+O {{product.name|mdx}} não instala servidores de linguagem. Instale você mesmo os que estiverem faltando e depois volte para Configurações → Agentes.
 
 ### Aba
 
-A aba é a conclusão inline do Monaco. Aceite o texto fantasma com a tecla Tab. Abra **Configurações → Aba**, ative a conclusão de código (`codeCompletionEnabled`) e atribua um modelo de chat leve em **Configurações → Modelos**. Esse slot também atende a outras tarefas leves em segundo plano.
+A aba é a conclusão inline do Monaco. Aceite o texto fantasma com a tecla Tab. Abra **Configurações → Aba**, ative a conclusão de código (`codeCompletionEnabled`) e atribua um modelo de linguagem secundário em **Configurações → Modelos**. Esse slot também atende a outras tarefas secundárias em segundo plano.
 
-Se o preenchimento estiver vazio, verifique se um modelo de chat leve está conectado e se a configuração está ativada. Esta não é a conversa do agente.
+Se o preenchimento estiver vazio, verifique se um modelo de linguagem secundário está conectado e se a configuração está ativada. Esta não é a conversa do agente.
 
 ## Extensões e automações
 

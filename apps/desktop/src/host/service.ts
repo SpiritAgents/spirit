@@ -56,6 +56,11 @@ import {
   normalizeWorkLocationKind,
   gitBranchLabelForBasicInfo,
   setGitHubFetchImplementation,
+  applyWorkspaceTasksTrustDecision,
+  computeWorkspaceTasksContentHash,
+  loadTaskFiles,
+  canonicalizeWorkspaceRoot,
+  type LoadedTaskFile,
   type WorkLocationKind,
   type WorkspaceCapabilityTrustDecision,
   type WorkspaceCapabilityTrustRequest,
@@ -83,6 +88,8 @@ import type {
   DesktopAutomationDetail,
   DesktopAutomationListItem,
   DesktopCreateAutomationRequest,
+  DesktopResolveTaskForRunResult,
+  DesktopTaskMenuItem,
   DesktopDreamOverviewItem,
   DesktopUpdateAutomationRequest,
   DesktopApprovalDecision,
@@ -142,7 +149,6 @@ import type {
   MarketplaceUpdateCommandResult,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  InstallLspProviderRequest,
   SetExtensionEnabledRequest,
   SubmitUserTurnRequest,
   AbortConversationRequest,
@@ -339,9 +345,16 @@ import {
 } from "./active-model-sync.js";
 import { findModelRefByName, resolveModelProfile } from "./model-config-access.js";
 import { deleteSessionCommand, type SessionDeleteContext } from "./session-delete.js";
-import { modelRefKey, modelRefsEqual, tryResolveTransportConfig } from "@spiritagent/host-internal";
+import {
+  findProviderEntry,
+  modelRefKey,
+  modelRefsEqual,
+  tryResolveTransportConfig,
+} from "@spiritagent/host-internal";
+import { findProviderPreset } from "@spiritagent/agent-core/provider-presets";
 import type { ModelRef } from "../types.js";
 import { renameSessionCommand, type SessionRenameContext } from "./session-rename.js";
+import { setSessionPinnedCommand, type SessionPinContext } from "./session-pin.js";
 import {
   finishSessionActivationCommand,
   isBundleRuntimeFresh,
@@ -364,6 +377,17 @@ import {
   setAutomationEnabledCommand,
   updateAutomationCommand,
 } from "./host-automation-commands.js";
+import {
+  createTaskRunResolver,
+  evaluateAndFilterTaskFiles,
+  listTaskMenuItemsCommand,
+  resolveTaskMenuItems,
+  resolveTaskFiles,
+  tasksDebugEnabled,
+  type TaskRunResolver,
+} from "./host-tasks-commands.js";
+import { TasksWatcher } from "./tasks-watcher.js";
+import { WorkspaceTasksTrustPromptQueue } from "./tasks-trust-prompt.js";
 import {
   clearAssistantContinuationMarkers as clearAssistantContinuationMarkersFromService,
   latestContinuableAssistantMessage as latestContinuableAssistantMessageFromService,
@@ -424,7 +448,7 @@ import {
 import {
   applyConfiguredModelCatalogRefreshResults,
   fetchConfiguredModelCatalogsOnStartup,
-  forceRefreshModelCatalogForProfile,
+  forceRefreshModelCatalogForProvider,
 } from "./model-catalog-startup-refresh.js";
 import {
   defaultNewSessionPath,
@@ -437,7 +461,6 @@ import {
   createDesktopExtensionStateStore,
   loadConfig,
   saveConfig,
-  removeModelApiKey,
   spiritDataDir,
   normalizeWorkspaceBinding,
   resolveDesktopHomeDirectory,
@@ -471,7 +494,7 @@ import {
 import { buildDesktopUiMarkdownPromptSection } from "./desktop-ui-markdown-prompt.js";
 import { buildActiveSkillPayload } from "./skills.js";
 import { buildDreamContextText, emptyDreamCollectorSnapshot } from "./dreams.js";
-import { resolveLightweightChatModelProfile } from "./lightweight-chat-model.js";
+import { resolveSecondaryLanguageModelProfile } from "./secondary-language-model.js";
 import { createTodoScope } from "./todos.js";
 import {
   buildDesktopExtensionListItems,
@@ -501,7 +524,6 @@ import {
   sharedLspServiceForWorkspace,
 } from "@spiritagent/host-internal/lsp";
 import { buildDesktopLspSnapshot, defaultDesktopLspSnapshot } from "./lsp-snapshot.js";
-import { installLspProviderCommand } from "./lsp-commands.js";
 import {
   basicInfoHostFromClientHost,
   currentApiBase,
@@ -597,7 +619,7 @@ async function loadDesktopPlanSnapshot(
   }
 }
 
-class DesktopHostService {
+export class DesktopHostService {
   private readonly invokeDispatch = createHostInvokeDispatch(this);
   private runtimeTransport: SpiritLlmTransport = createLlmTransport();
   private readonly extensionStateStore = createDesktopExtensionStateStore({
@@ -656,6 +678,13 @@ class DesktopHostService {
   private readonly dreamUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly automationUpdateListeners = new Set<(snapshot: DesktopSnapshot) => void>();
   private readonly sessionListUpdateListeners = new Set<() => void>();
+  private readonly tasksUpdateListeners = new Set<(items: DesktopTaskMenuItem[]) => void>();
+  private readonly taskRunResolver: TaskRunResolver = createTaskRunResolver();
+  private pendingFolderOpenTaskKeys: string[] = [];
+  private folderOpenTriggerRoot: string | undefined;
+  private readonly tasksWatcher = new TasksWatcher(() => {
+    void this.refreshTasksFromDisk();
+  });
   private subagentViewerTargetToolCallId: string | null = null;
   private gitRefreshInFlight: Promise<void> | null = null;
   private workspaceContentInvalidation: WorkspaceContentInvalidation | undefined;
@@ -716,12 +745,21 @@ class DesktopHostService {
         finish: () => void;
       }
     | undefined;
-  private workspaceCapabilityTrustWaiter:
-    | {
-        resolve: (decision: WorkspaceCapabilityTrustDecision) => void;
-        reject: (error: Error) => void;
-      }
-    | undefined;
+  /** True once the current pending trust prompt has had a macrotask to reach the renderer. */
+  private capabilityTrustPromptShown = false;
+  private readonly tasksTrustPromptQueue = new WorkspaceTasksTrustPromptQueue({
+    getPending: () => this.pendingWorkspaceCapabilityTrust,
+    setPending: (request) => {
+      this.setCapabilityTrustPending(request);
+    },
+    isPromptShown: () => this.capabilityTrustPromptShown,
+    getTail: () => this.workspaceCapabilityTrustTail,
+    setTail: (tail) => {
+      this.workspaceCapabilityTrustTail = tail;
+    },
+    emit: () => this.emitCapabilityTrustSnapshotUpdate(),
+    apply: (waiter, decision) => this.applyTasksCapabilityTrustDecision(waiter, decision),
+  });
   /** Serialize trust prompts so one reply cannot authorize multiple workspaces. */
   private workspaceCapabilityTrustTail: Promise<void> = Promise.resolve();
   /** sessionStart may await interactive trust; never run it while holding runSerialized. */
@@ -776,6 +814,7 @@ class DesktopHostService {
       buildSnapshot: () => this.buildSnapshot(),
       disposeAllLspServices: () => this.disposeAllLspServices(),
       invalidateToolExecutors: () => this.invalidateToolExecutors(),
+      applyWebToolExposureToRuntimes: (exposure) => this.applyWebToolExposureToRuntimes(exposure),
       refreshLspSnapshot: () => this.refreshLspSnapshot(),
     };
   }
@@ -796,6 +835,39 @@ class DesktopHostService {
     for (const bundle of this.sessionRegistry.all()) {
       bundle.toolExecutor = undefined;
     }
+  }
+
+  /**
+   * Best-effort live push of the web tool toggles to every attached daemon
+   * session; a failed push is logged and dropped (the next attach re-syncs).
+   */
+  private async applyWebToolExposureToRuntimes(exposure: {
+    providerToolsEnabled: boolean;
+    webFetchEnabled: boolean;
+  }): Promise<void> {
+    const runtimes = new Set<DesktopHostRuntime>();
+    if (this.runtime) {
+      runtimes.add(this.runtime);
+    }
+    for (const bundle of this.sessionRegistry.all()) {
+      if (bundle.runtime) {
+        runtimes.add(bundle.runtime);
+      }
+    }
+    await Promise.all(
+      [...runtimes].map(async (runtime) => {
+        try {
+          // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI's
+          // daemon runtime flips with it (P8); agent-core reads it as the providerTools bridge.
+          await runtime.clientCall("session.setWebToolExposure", {
+            webSearchEnabled: exposure.providerToolsEnabled,
+            webFetchEnabled: exposure.webFetchEnabled,
+          });
+        } catch (error) {
+          console.warn("[desktop-host] setWebToolExposure push failed", error);
+        }
+      }),
+    );
   }
 
   private extensionCommandContext(): HostExtensionCommandContext {
@@ -963,32 +1035,6 @@ class DesktopHostService {
     }
   }
 
-  private requestWorkspaceCapabilityTrust = (
-    request: WorkspaceCapabilityTrustRequest,
-  ): Promise<WorkspaceCapabilityTrustDecision> => {
-    return new Promise<WorkspaceCapabilityTrustDecision>((resolve, reject) => {
-      this.workspaceCapabilityTrustTail = this.workspaceCapabilityTrustTail
-        .catch(() => undefined)
-        .then(
-          () =>
-            new Promise<void>((slotDone) => {
-              this.pendingWorkspaceCapabilityTrust = request;
-              this.workspaceCapabilityTrustWaiter = {
-                resolve: (decision) => {
-                  resolve(decision);
-                  slotDone();
-                },
-                reject: (error) => {
-                  reject(error);
-                  slotDone();
-                },
-              };
-              this.emitLiveSnapshotUpdate();
-            }),
-        );
-    });
-  };
-
   private async runSessionEndForBundle(
     bundle: SessionBundle,
     reason: SessionEndHookInput["reason"],
@@ -1003,6 +1049,19 @@ class DesktopHostService {
     await runRemoteDesktopSessionStart(bundle.runtime, source);
   }
 
+  // Merging new content into a trust prompt is only safe before the user can see it; the
+  // flag flips one macrotask after the pending request is emitted (identity-guarded so a
+  // replaced pending request never flips an older marker).
+  private setCapabilityTrustPending(request: WorkspaceCapabilityTrustRequest): void {
+    this.pendingWorkspaceCapabilityTrust = request;
+    this.capabilityTrustPromptShown = false;
+    setImmediate(() => {
+      if (this.pendingWorkspaceCapabilityTrust === request) {
+        this.capabilityTrustPromptShown = true;
+      }
+    });
+  }
+
   private enqueueRemoteWorkspaceCapabilityTrust(
     requestId: string,
     request: WorkspaceCapabilityTrustRequest,
@@ -1013,7 +1072,7 @@ class DesktopHostService {
       .then(
         () =>
           new Promise<void>((finish) => {
-            this.pendingWorkspaceCapabilityTrust = request;
+            this.setCapabilityTrustPending(request);
             this.pendingRemoteWorkspaceCapabilityTrust = {
               requestId,
               runtime,
@@ -1365,6 +1424,9 @@ class DesktopHostService {
       invalidateExtensionWarmup: () => this.invalidateExtensionWarmup(),
       scheduleExtensionWarmup: (trigger) => this.scheduleExtensionWarmup(trigger),
       loadDesktopPlanSnapshot,
+      evaluateWorkspaceTasksTrust: (reason) => {
+        void this.evaluateWorkspaceTasksTrust(reason);
+      },
     };
   }
 
@@ -1438,6 +1500,13 @@ class DesktopHostService {
         return resolveModelProfile(state.config, activeModelRef) ?? undefined;
       },
       resolveCatalogHints: () => buildModelCatalogHints(this.requireState().config),
+      // Only providers whose preset declares a catalog can re-fetch a missing context length.
+      supportsCatalogRefresh: (model) =>
+        model.providerId !== undefined &&
+        findProviderPreset(model.providerId)?.catalog !== undefined,
+      setLastInputTokens: (inputTokens) => {
+        bundle.lastInputTokens = inputTokens;
+      },
       setContextUsage: (usage) => {
         bundle.contextUsage = usage;
       },
@@ -1515,9 +1584,6 @@ class DesktopHostService {
           );
           if (summary.merged > 0 || summary.synced > 0 || summary.pruned > 0) {
             await saveConfig(applyState.config);
-            for (const name of summary.prunedModelNames) {
-              await removeModelApiKey(name);
-            }
             if (this.runtime?.isBusy() !== true) {
               await this.refreshRuntime();
             }
@@ -1557,6 +1623,14 @@ class DesktopHostService {
     };
   }
 
+  subscribeTasksUpdates(listener: (items: DesktopTaskMenuItem[]) => void): () => void {
+    this.tasksUpdateListeners.add(listener);
+    this.syncTasksWatcher();
+    return () => {
+      this.tasksUpdateListeners.delete(listener);
+    };
+  }
+
   subscribeSessionListUpdates(listener: () => void): () => void {
     this.sessionListUpdateListeners.add(listener);
     return () => {
@@ -1578,10 +1652,6 @@ class DesktopHostService {
 
   async updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot> {
     return updateConfigCommand(this.modelCommandContext(), request);
-  }
-
-  async installLspProvider(request: InstallLspProviderRequest): Promise<DesktopSnapshot> {
-    return installLspProviderCommand(this.modelCommandContext(), request);
   }
 
   async setWebHostAuthTokenHash(authTokenHash: string): Promise<DesktopSnapshot> {
@@ -1824,7 +1894,7 @@ class DesktopHostService {
           ...(this.runtimeTransport.llmSystemPromptsForExport() as Record<string, unknown>),
           tool_agent: buildToolAgentHostPrompt(
             state.config.activeModel.name,
-            resolveModelProfile(state.config, state.config.activeModel)?.provider,
+            resolveModelProfile(state.config, state.config.activeModel)?.providerId,
           ),
           ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
           ...(skillsCatalogSystemPrompt === undefined
@@ -2392,6 +2462,17 @@ class DesktopHostService {
     request: ReplyWorkspaceCapabilityTrustRequest,
   ): Promise<DesktopSnapshot> {
     const remote = this.pendingRemoteWorkspaceCapabilityTrust;
+    const pending = this.pendingWorkspaceCapabilityTrust;
+    if (!remote && !pending) {
+      throw new Error("No pending workspace capability trust request");
+    }
+    // Consume synchronously before any await: a second reply must find nothing pending.
+    this.pendingRemoteWorkspaceCapabilityTrust = undefined;
+    this.pendingWorkspaceCapabilityTrust = undefined;
+    this.capabilityTrustPromptShown = false;
+    this.emitLiveSnapshotUpdate();
+
+    await this.tasksTrustPromptQueue.handleReply(request.decision, pending);
     if (remote) {
       try {
         await replyRemoteWorkspaceCapabilityTrust(
@@ -2400,21 +2481,9 @@ class DesktopHostService {
           request.decision,
         );
       } finally {
-        this.pendingRemoteWorkspaceCapabilityTrust = undefined;
-        this.pendingWorkspaceCapabilityTrust = undefined;
         remote.finish();
-        this.emitLiveSnapshotUpdate();
       }
-      return this.buildSnapshot();
     }
-    if (!this.pendingWorkspaceCapabilityTrust || !this.workspaceCapabilityTrustWaiter) {
-      throw new Error("No pending workspace capability trust request");
-    }
-    const waiter = this.workspaceCapabilityTrustWaiter;
-    this.workspaceCapabilityTrustWaiter = undefined;
-    this.pendingWorkspaceCapabilityTrust = undefined;
-    waiter.resolve(request.decision);
-    this.emitLiveSnapshotUpdate();
     return this.buildSnapshot();
   }
 
@@ -2507,6 +2576,24 @@ class DesktopHostService {
 
   async getAutomation(automationId: string): Promise<DesktopAutomationDetail | undefined> {
     return getAutomationCommand(automationId);
+  }
+
+  async listTaskMenuItems(): Promise<DesktopTaskMenuItem[]> {
+    return listTaskMenuItemsCommand({ workspaceRoot: this.state?.workspaceRoot });
+  }
+
+  async resolveTaskForRun(key: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskForRun({
+      workspaceRoot: this.state?.workspaceRoot,
+      key,
+    });
+  }
+
+  async resolveTaskByLabel(label: string): Promise<DesktopResolveTaskForRunResult> {
+    return this.taskRunResolver.resolveTaskByLabel({
+      workspaceRoot: this.state?.workspaceRoot,
+      label,
+    });
   }
 
   async createAutomation(request: DesktopCreateAutomationRequest): Promise<DesktopSnapshot> {
@@ -2836,6 +2923,18 @@ class DesktopHostService {
     return renameSessionCommand(this.sessionRenameContext(), filePath, displayName);
   }
 
+  async setSessionPinned(filePath: string, pinned: boolean): Promise<DesktopSnapshot> {
+    return setSessionPinnedCommand(this.sessionPinContext(), filePath, pinned);
+  }
+
+  private sessionPinContext(): SessionPinContext {
+    return {
+      ...this.sessionActivationContext(),
+      notifySessionListUpdated: () => this.notifySessionListUpdated(),
+      emitLiveSnapshotUpdate: () => this.emitLiveSnapshotUpdate(),
+    };
+  }
+
   private sessionRenameContext(): SessionRenameContext {
     return {
       ...this.sessionActivationContext(),
@@ -2982,7 +3081,7 @@ class DesktopHostService {
     // Preserve bundle.currentTurnSkills: slash-activated turn skills must be injected into the user message meta at startUserTurnStreaming
     const effectiveActiveModel = resolveEffectivePaneActiveModel(bundle, state);
     if (inferencePreferenceOnly && bundle.runtime?.isBusy()) {
-      bundle.deferredRuntimeRefreshWhileBusy = true;
+      bundle.deferredInferencePreferenceRefreshWhileBusy = true;
       return;
     }
     const desktopMessages = bundle.messageTimeline.toMessages();
@@ -3011,7 +3110,14 @@ class DesktopHostService {
       archive,
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
+      webToolExposure: {
+        providerToolsEnabled: state.config.agents.providerTools.enabled,
+        webFetchEnabled: state.config.agents.webFetch.enabled,
+      },
       ...(bundle.basicInfoHost ? { basicInfoHost: bundle.basicInfoHost } : {}),
+      // Inference-preference-only updates (reasoning/thinking/service tier) must reach the
+      // daemon even when the model ref is unchanged; attach forces `session.replaceConfig`.
+      ...(inferencePreferenceOnly ? { refreshDaemonConfig: true } : {}),
       onActivity: () => {
         this.sessionPump.ensureRunning();
         this.requestThrottledLiveSnapshotEmit();
@@ -3176,6 +3282,7 @@ class DesktopHostService {
     return new DesktopToolExecutor(workspaceRoot, {
       mcp: this.sharedMcpServiceForWorkspace(workspaceRoot, state.workspaceBinding),
       mcpUiOpener: (request) => this.openLocalExtensionUi(request),
+      webFetchEnabled: state.config.agents.webFetch.enabled,
       ...(lsp ? { lsp } : {}),
       extensionToolDefinitions: buildDesktopExtensionToolDefinitions(extensions),
       fileChangeObserver: {
@@ -3204,16 +3311,20 @@ class DesktopHostService {
       hostContributedToolsEnabled: true,
       getAutomationCreateDefaults: () => {
         const currentState = this.requireState();
-        const lightweightModel = resolveLightweightChatModelProfile(currentState.config);
-        if (!lightweightModel) {
-          throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
+        const secondaryModel = resolveSecondaryLanguageModelProfile(currentState.config);
+        if (!secondaryModel) {
+          throw new Error(i18n.t("error.secondaryLanguageModelNotConfigured"));
         }
         return {
           workspaceRoot,
-          modelRef: lightweightModel.profile.ref,
-          ...(lightweightModel.profile.reasoningEffort
-            ? { reasoningEffort: lightweightModel.profile.reasoningEffort }
-            : {}),
+          modelRef: secondaryModel.profile.ref,
+          ...(secondaryModel.profile.effortSemantics === "output"
+            ? secondaryModel.profile.effort !== undefined
+              ? { effort: secondaryModel.profile.effort }
+              : {}
+            : secondaryModel.profile.reasoningEffort
+              ? { reasoningEffort: secondaryModel.profile.reasoningEffort }
+              : {}),
         };
       },
       onAutomationCreated: () => {
@@ -3404,6 +3515,115 @@ class DesktopHostService {
     }
   }
 
+  private syncTasksWatcher(): void {
+    this.tasksWatcher.sync({
+      workspaceRoot: this.state?.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
+    });
+  }
+
+  // Evaluates workspace task trust and enqueues a prompt when the content hash is unknown.
+  // Runs on workspace adoption and on every watched-file change; the verdict is never cached.
+  private async evaluateWorkspaceTasksTrust(reason: string): Promise<void> {
+    const workspaceRoot = this.state?.workspaceRoot;
+    if (workspaceRoot === undefined) {
+      return;
+    }
+    const { files, gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+    if (tasksDebugEnabled()) {
+      console.warn(`[desktop-host][tasks] trust gate ${gate.status} (${reason})`);
+    }
+    if (gate.status === "needsPrompt") {
+      this.tasksTrustPromptQueue.request(gate.tasks, workspaceRoot);
+      return;
+    }
+    // User-level tasks are implicitly trusted, so noWorkspaceFiles arms them the same way.
+    if (gate.status === "allow" || gate.status === "noWorkspaceFiles") {
+      this.armFolderOpenTasks(workspaceRoot, files, false);
+    }
+  }
+
+  // folderOpen tasks arm once per activation round: adopting the same root again within a
+  // stay never re-arms, a different root starts a new round, and a trust-allow always arms
+  // (it is this session's deferred folder-open). Watcher refreshes never call this.
+  private armFolderOpenTasks(
+    workspaceRoot: string,
+    files: LoadedTaskFile[],
+    always: boolean,
+  ): void {
+    const canonical = canonicalizeWorkspaceRoot(workspaceRoot);
+    if (!always && this.folderOpenTriggerRoot === canonical) {
+      return;
+    }
+    const { tasks } = resolveTaskFiles({ workspaceRoot }, files);
+    const armed = tasks.filter((task) => task.runOptions.runOn === "folderOpen");
+    this.pendingFolderOpenTaskKeys = armed.map((task) => task.key);
+    this.folderOpenTriggerRoot = canonical;
+    if (tasksDebugEnabled()) {
+      for (const task of armed) {
+        console.warn(
+          `[desktop-host][tasks] folder-open armed ${task.label} ${task.key} (${task.sourceFile})`,
+        );
+      }
+    }
+  }
+
+  async consumeFolderOpenTaskTriggers(): Promise<string[]> {
+    const keys = this.pendingFolderOpenTaskKeys;
+    this.pendingFolderOpenTaskKeys = [];
+    return keys;
+  }
+
+  private async refreshTasksFromDisk(): Promise<void> {
+    this.taskRunResolver.invalidate();
+    const workspaceRoot = this.state?.workspaceRoot;
+    if (workspaceRoot === undefined) {
+      const items = await listTaskMenuItemsCommand({ workspaceRoot });
+      this.emitTasksUpdate(items);
+      return;
+    }
+    const { files, gate } = await evaluateAndFilterTaskFiles({ workspaceRoot });
+    if (tasksDebugEnabled()) {
+      console.warn(`[desktop-host][tasks] trust gate ${gate.status} (watch)`);
+    }
+    if (gate.status === "needsPrompt") {
+      this.tasksTrustPromptQueue.request(gate.tasks, workspaceRoot);
+    }
+    this.emitTasksUpdate(resolveTaskMenuItems({ workspaceRoot }, files));
+  }
+
+  // Mid-prompt tamper guard: apply the decision only when the file content still matches
+  // what was prompted; a hash change drops the decision (deny-without-record).
+  private async applyTasksCapabilityTrustDecision(
+    waiter: { workspaceRoot: string; contentHash: string },
+    decision: WorkspaceCapabilityTrustDecision,
+  ): Promise<void> {
+    const files = await loadTaskFiles({
+      workspaceRoot: waiter.workspaceRoot,
+      spiritDataDir: spiritDataDir(),
+    });
+    if (computeWorkspaceTasksContentHash(files) !== waiter.contentHash) {
+      return;
+    }
+    await applyWorkspaceTasksTrustDecision({
+      spiritDataDir: spiritDataDir(),
+      workspaceRoot: waiter.workspaceRoot,
+      contentHash: waiter.contentHash,
+      decision,
+    });
+    if (decision !== "deny") {
+      // The just-allowed folderOpen tasks are this session's deferred folder-open run.
+      this.armFolderOpenTasks(waiter.workspaceRoot, files, true);
+      await this.refreshTasksFromDisk();
+    }
+  }
+
+  private emitTasksUpdate(items: DesktopTaskMenuItem[]): void {
+    for (const listener of this.tasksUpdateListeners) {
+      listener(items);
+    }
+  }
+
   private setDreamCollectorStatus(next: DesktopDreamCollectorSnapshot): void {
     if (sameDreamCollectorSnapshot(this.dreamCollectorStatus, next)) {
       return;
@@ -3420,6 +3640,20 @@ class DesktopHostService {
     for (const listener of this.dreamUpdateListeners) {
       listener(snapshot);
     }
+  }
+
+  /**
+   * Trust prompt emissions must never be the launch's first live snapshot: an
+   * early emit trips the splash's `snapshot != null` exit condition while the
+   * rest of init is still loading. Before anything has been emitted, the
+   * pending request already lives in host state, so the natural first emission
+   * carries it to the renderer with no extra push.
+   */
+  private emitCapabilityTrustSnapshotUpdate(): void {
+    if (this.lastLiveSnapshotEmitAtMs === 0) {
+      return;
+    }
+    this.emitLiveSnapshotUpdate();
   }
 
   private emitLiveSnapshotUpdate(): void {
@@ -3503,14 +3737,23 @@ class DesktopHostService {
   private async flushDeferredRuntimeRefreshIfIdle(
     bundle: SessionBundle = this.activeBundle(),
   ): Promise<void> {
-    if (!bundle.deferredRuntimeRefreshWhileBusy) {
+    const fullRefreshDeferred = bundle.deferredRuntimeRefreshWhileBusy;
+    const inferencePreferenceDeferred = bundle.deferredInferencePreferenceRefreshWhileBusy;
+    if (!fullRefreshDeferred && !inferencePreferenceDeferred) {
       return;
     }
     if (bundle.runtime?.isBusy()) {
       return;
     }
     bundle.deferredRuntimeRefreshWhileBusy = false;
-    await this.refreshRuntimeForBundle(bundle);
+    bundle.deferredInferencePreferenceRefreshWhileBusy = false;
+    // A full refresh supersedes a pending inference-preference refresh (a changed model re-resolves
+    // the daemon transport via session.replaceConfig on attach); the light path forces that same
+    // replaceConfig so a same-model preference change still reaches the daemon.
+    await this.refreshRuntimeForBundle(
+      bundle,
+      fullRefreshDeferred ? {} : { inferencePreferenceOnly: true },
+    );
     if (bundle.id === this.sessionRegistry.activeSessionId()) {
       this.syncActiveRuntimePointer();
     }
@@ -3539,7 +3782,7 @@ class DesktopHostService {
     usage: { inputTokens: number },
     activeModel: ContextUsageModelProfile,
   ): Promise<void> {
-    if (!activeModel.provider) {
+    if (!activeModel.providerId) {
       return;
     }
     this.pendingContextUsageCatalogRefresh = { bundle, usage, activeModel };
@@ -3575,15 +3818,17 @@ class DesktopHostService {
   }): Promise<void> {
     const { bundle, usage, activeModel } = input;
     const state = this.state;
-    if (!state || !activeModel.provider) {
+    if (!state || !activeModel.providerId) {
       return;
     }
     const activeRef = findModelRefByName(state.config, activeModel.name);
-    const profile = activeRef ? resolveModelProfile(state.config, activeRef) : undefined;
-    if (!profile) {
+    const provider = activeRef
+      ? findProviderEntry(state.config.providers, activeRef.providerId)
+      : undefined;
+    if (!provider) {
       return;
     }
-    const refreshed = await forceRefreshModelCatalogForProfile(state.config, profile);
+    const refreshed = await forceRefreshModelCatalogForProvider(provider);
     if (!refreshed) {
       return;
     }
@@ -3865,6 +4110,9 @@ class DesktopHostService {
           : {}),
         ...(activeBundle.cachedTodoSnapshot ? { todos: activeBundle.cachedTodoSnapshot } : {}),
         ...(activeBundle.contextUsage ? { contextUsage: { ...activeBundle.contextUsage } } : {}),
+        ...(activeBundle.lastInputTokens !== undefined
+          ? { lastInputTokens: activeBundle.lastInputTokens }
+          : {}),
       },
       ...(activeBundle.activeSession ? { activeSession: activeBundle.activeSession } : {}),
       composerSessionKey: this.resolveTodoSessionKeyForBundle(activeBundle),
@@ -4071,6 +4319,8 @@ class DesktopHostService {
     state.workspaceRoot = resolved;
     state.git = applyGitRevision(await readWorkspaceGitSnapshot(resolved), 0, { reset: true });
     bundle.workspaceRoot = resolved;
+    this.syncTasksWatcher();
+    void this.evaluateWorkspaceTasksTrust("adopt");
     await this.syncPlanStateForBundle(bundle);
 
     if (options?.deferHeavyWork) {
@@ -4143,6 +4393,8 @@ class DesktopHostService {
     bundle.workspaceRoot = home;
     bundle.workspaceBinding = "none";
     bundle.scopedGit = undefined;
+    this.syncTasksWatcher();
+    void this.evaluateWorkspaceTasksTrust("adopt");
 
     state.config = {
       ...state.config,
@@ -4176,11 +4428,11 @@ class DesktopHostService {
     repoRoot: string,
   ): Promise<{ worktreeName: string; branchName: string }> {
     const state = this.requireState();
-    const lightweightModel = resolveLightweightChatModelProfile(state.config);
-    if (!lightweightModel) {
-      throw new Error(i18n.t("error.lightweightChatModelNotConfigured"));
+    const secondaryModel = resolveSecondaryLanguageModelProfile(state.config);
+    if (!secondaryModel) {
+      throw new Error(i18n.t("error.secondaryLanguageModelNotConfigured"));
     }
-    const apiKey = await resolveApiKeyForConfigModel(state.config, lightweightModel.profile.ref);
+    const apiKey = await resolveApiKeyForConfigModel(state.config, secondaryModel.profile.ref);
     if (!apiKey) {
       throw new Error(i18n.t("error.autoWorktreeNameFailedNoKey"));
     }
@@ -4195,10 +4447,7 @@ class DesktopHostService {
     return generateWorktreeNamesFromModelTask({
       workspaceRoot: state.workspaceRoot,
       gitBranch: state.git.branch,
-      config: state.config,
-      taskModel: lightweightModel.name,
-      taskProfile: lightweightModel.profile,
-      apiKey,
+      taskModelRef: secondaryModel.profile.ref,
       metadata: {
         ...state.metadata,
         rules: { ...state.metadata.rules, enabledRules: overlay.rules },
@@ -4867,6 +5116,7 @@ class DesktopHostService {
   }
 
   async shutdown(): Promise<void> {
+    this.tasksWatcher.close();
     for (const bundle of this.sessionRegistry.all()) {
       if (!bundle.activeSession || bundle.activeSession.kind === "ephemeral") {
         continue;
@@ -4937,6 +5187,12 @@ export function subscribeDesktopAutomationsUpdates(
 
 export function subscribeDesktopSessionListUpdates(listener: () => void): () => void {
   return desktopHostService.subscribeSessionListUpdates(listener);
+}
+
+export function subscribeDesktopTasksUpdates(
+  listener: (items: DesktopTaskMenuItem[]) => void,
+): () => void {
+  return desktopHostService.subscribeTasksUpdates(listener);
 }
 
 export async function shutdownDesktopHostService(): Promise<void> {

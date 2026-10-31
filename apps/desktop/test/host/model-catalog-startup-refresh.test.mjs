@@ -4,6 +4,7 @@ import { test } from "vitest";
 import { providerSupportsModelCatalogListing } from "../../dist-electron/src/host/model-catalog-metadata.js";
 import {
   applyCatalogEntryToStoredModel,
+  catalogEntryToModelEntry,
   collectModelCatalogRefreshTargets,
   mergeNewCatalogModelsIntoConfig,
   modelCatalogScopeKey,
@@ -11,299 +12,267 @@ import {
   syncExistingModelsFromCatalog,
 } from "../../dist-electron/src/host/model-catalog-startup-refresh.js";
 
-const gatewayGroupId = "vercel-ai-gateway";
-const openAiGroupId = "openai";
-const customGroupId = "custom-local";
-const minimaxGroupId = "minimax";
+const gatewayProviderId = "vercel-ai-gateway";
+const openAiProviderId = "openai";
+const customProviderId = "custom-local";
+const minimaxProviderId = "minimax";
 
-const gatewayScopeProfile = {
-  groupId: gatewayGroupId,
-  name: "anthropic/claude-sonnet-4",
-  apiBase: "https://ai-gateway.vercel.sh/v1",
-  provider: "vercel-ai-gateway",
-  transportKind: "open-responses",
-  reasoningEffort: "default",
-};
-
-function gatewayGroup(models) {
+function gatewayProvider(models) {
   return {
-    id: gatewayGroupId,
-    provider: "vercel-ai-gateway",
+    id: gatewayProviderId,
     apiBase: "https://ai-gateway.vercel.sh/v1",
     transportKind: "open-responses",
     models,
   };
 }
 
-function openAiGroup(models) {
+function openAiProvider(models) {
   return {
-    id: openAiGroupId,
-    provider: "openai",
+    id: openAiProviderId,
     apiBase: "https://api.openai.com/v1",
     models,
   };
 }
 
-function customGroup(models) {
+function customProvider(models) {
   return {
-    id: customGroupId,
-    provider: "custom",
+    id: customProviderId,
     apiBase: "http://127.0.0.1:8080/v1",
     models,
   };
 }
 
-function minimaxGroup(models) {
+function minimaxProvider(models) {
   return {
-    id: minimaxGroupId,
-    provider: "minimax",
-    apiBase: "https://api.minimaxi.com/v1",
+    id: minimaxProviderId,
+    apiBase: "https://api.minimax.cn/v1",
     models,
   };
 }
 
-test("providerSupportsModelCatalogListing includes OpenAI and excludes Azure", () => {
+test("catalog transport overrides apply to new entries without rewriting existing connections", () => {
+  const catalogEntry = {
+    id: "anthropic/claude-opus-4.5",
+    transportOverride: { transportKind: "anthropic", sdk: "@ai-sdk/anthropic" },
+  };
+  const created = catalogEntryToModelEntry("anthropic/claude-opus-4.5", catalogEntry);
+  assert.equal(created.transportKind, "anthropic");
+  assert.equal(created.sdk, "@ai-sdk/anthropic");
+
+  const existing = {
+    name: "anthropic/claude-opus-4.5",
+    transportKind: "openai-compatible",
+    sdk: "@ai-sdk/openai-compatible",
+  };
+  applyCatalogEntryToStoredModel(existing, catalogEntry);
+  assert.equal(existing.transportKind, "openai-compatible");
+  assert.equal(existing.sdk, "@ai-sdk/openai-compatible");
+});
+
+test("providerSupportsModelCatalogListing follows the preset catalog descriptor", () => {
   assert.equal(
-    providerSupportsModelCatalogListing({ provider: "openai", transportKind: "open-responses" }),
+    providerSupportsModelCatalogListing({ providerId: "openai", transportKind: "open-responses" }),
     true,
   );
+  // Azure and Cloudflare AI Gateway presets declare no catalog descriptor.
   assert.equal(
-    providerSupportsModelCatalogListing({ provider: "azure", transportKind: "open-responses" }),
+    providerSupportsModelCatalogListing({ providerId: "azure", transportKind: "open-responses" }),
     false,
   );
   assert.equal(
     providerSupportsModelCatalogListing({
-      provider: "cloudflare-ai-gateway",
+      providerId: "cloudflare-ai-gateway",
       transportKind: "openai-compatible",
     }),
     false,
   );
+  // Custom entries list via the generic transport shape; bedrock has no generic HTTP listing.
+  assert.equal(providerSupportsModelCatalogListing({ providerId: "my-lab" }), true);
+  assert.equal(
+    providerSupportsModelCatalogListing({ providerId: "my-lab", transportKind: "bedrock" }),
+    false,
+  );
 });
 
-test("collectModelCatalogRefreshTargets skips Azure and includes OpenAI", () => {
+test("collectModelCatalogRefreshTargets keeps one entry per provider with a catalog", () => {
   const targets = collectModelCatalogRefreshTargets([
-    { name: "gpt-4.1", apiBase: "https://api.openai.com/v1", provider: "openai" },
-    { name: "my-deploy", apiBase: "https://x.openai.azure.com/openai/v1", provider: "azure" },
+    openAiProvider([{ name: "gpt-4.1" }]),
     {
-      name: "local",
+      id: "azure",
+      apiBase: "https://x.openai.azure.com/openai/v1",
+      models: [{ name: "my-deploy" }],
+    },
+    {
+      id: "local-bedrock",
       apiBase: "http://127.0.0.1:8080/v1",
-      provider: "custom",
       transportKind: "bedrock",
+      models: [{ name: "local" }],
     },
-    {
-      name: "anthropic/claude-sonnet-4",
-      apiBase: "https://ai-gateway.vercel.sh/v1",
-      provider: "vercel-ai-gateway",
-      transportKind: "open-responses",
-    },
+    gatewayProvider([{ name: "anthropic/claude-sonnet-4" }, { name: "openai/gpt-4.1" }]),
   ]);
 
-  assert.equal(targets.length, 2);
-  assert.deepEqual(targets.map((target) => target.provider).sort(), [
-    "openai",
-    "vercel-ai-gateway",
-  ]);
+  assert.deepEqual(targets.map((target) => target.id).sort(), ["openai", "vercel-ai-gateway"]);
 });
 
-test("collectModelCatalogRefreshTargets dedupes by provider transport and api base", () => {
-  const shared = {
-    apiBase: "https://ai-gateway.vercel.sh/v1",
-    provider: "vercel-ai-gateway",
-    transportKind: "open-responses",
-  };
-  const targets = collectModelCatalogRefreshTargets([
-    { name: "anthropic/claude-sonnet-4", ...shared },
-    { name: "openai/gpt-4.1", ...shared },
-  ]);
-
-  assert.equal(targets.length, 1);
-  assert.equal(targets[0]?.name, "anthropic/claude-sonnet-4");
-});
-
-test("modelCatalogScopeKey normalizes api base", () => {
+test("modelCatalogScopeKey identifies an entry at its materialized api base", () => {
   const key = modelCatalogScopeKey({
-    provider: "vercel-ai-gateway",
-    transportKind: "open-responses",
-    apiBase: "https://ai-gateway.vercel.sh/v1/",
+    id: "vercel-ai-gateway",
+    apiBase: "https://ai-gateway.vercel.sh/v1",
   });
-  assert.equal(key, "vercel-ai-gateway::open-responses::https://ai-gateway.vercel.sh/v1");
+  assert.equal(key, "vercel-ai-gateway::https://ai-gateway.vercel.sh/v1");
 });
 
 test("mergeNewCatalogModelsIntoConfig appends only new provider-scoped models", () => {
+  const provider = gatewayProvider([
+    {
+      name: "zai/glm-5.1",
+      capabilities: ["languageModel"],
+    },
+  ]);
   const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "zai/glm-5.1",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-        },
-      ]),
-    ],
-    activeModel: { groupId: gatewayGroupId, name: "zai/glm-5.1" },
+    providers: [provider],
+    activeModel: { providerId: gatewayProviderId, name: "zai/glm-5.1" },
   };
 
-  const merged = mergeNewCatalogModelsIntoConfig(
-    config,
-    { ...gatewayScopeProfile, name: "zai/glm-5.1" },
-    {
-      modelIds: ["zai/glm-5.1", "zai/glm-5.2"],
-      fromCache: false,
-      modelCatalog: [
-        { id: "zai/glm-5.1", capabilities: ["chat"] },
-        { id: "zai/glm-5.2", capabilities: ["chat"] },
-      ],
-    },
-  );
+  const merged = mergeNewCatalogModelsIntoConfig(config, provider, {
+    modelIds: ["zai/glm-5.1", "zai/glm-5.2"],
+    fromCache: false,
+    modelCatalog: [
+      { id: "zai/glm-5.1", capabilities: ["languageModel"] },
+      { id: "zai/glm-5.2", capabilities: ["languageModel"] },
+    ],
+  });
 
   assert.equal(merged, 1);
   assert.deepEqual(
-    config.providerGroups[0].models.map((model) => model.name),
+    provider.models.map((model) => model.name),
     ["zai/glm-5.1", "zai/glm-5.2"],
   );
-  assert.deepEqual(config.activeModel, { groupId: gatewayGroupId, name: "zai/glm-5.1" });
+  // GLM-5.x carries a model-knowledge thinking-switch declaration, folded at catalog write time.
+  assert.equal(provider.models[1].supportsThinkingSwitch, true);
+  assert.deepEqual(config.activeModel, { providerId: gatewayProviderId, name: "zai/glm-5.1" });
 });
 
 test("syncExistingModelsFromCatalog upgrades chat-only profiles from catalog", () => {
+  const provider = minimaxProvider([
+    {
+      name: "MiniMax-M3",
+      capabilities: ["languageModel"],
+    },
+    {
+      name: "MiniMax-M2.5",
+      capabilities: ["languageModel"],
+    },
+  ]);
   const config = {
-    providerGroups: [
-      minimaxGroup([
-        {
-          name: "MiniMax-M3",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-        },
-        {
-          name: "MiniMax-M2.5",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-        },
-      ]),
-    ],
-    activeModel: { groupId: minimaxGroupId, name: "MiniMax-M3" },
+    providers: [provider],
+    activeModel: { providerId: minimaxProviderId, name: "MiniMax-M3" },
   };
 
-  const synced = syncExistingModelsFromCatalog(
-    config,
-    {
-      groupId: minimaxGroupId,
-      name: "MiniMax-M3",
-      apiBase: "https://api.minimaxi.com/v1",
-      provider: "minimax",
-      capabilities: ["chat"],
-      reasoningEffort: "medium",
-    },
-    {
-      modelIds: ["MiniMax-M3", "MiniMax-M2.5"],
-      fromCache: false,
-      modelCatalog: [
-        { id: "MiniMax-M3", capabilities: ["chat", "image", "video"] },
-        { id: "MiniMax-M2.5", capabilities: ["chat"] },
-      ],
-    },
-  );
+  const synced = syncExistingModelsFromCatalog(config, provider, {
+    modelIds: ["MiniMax-M3", "MiniMax-M2.5"],
+    fromCache: false,
+    modelCatalog: [
+      { id: "MiniMax-M3", capabilities: ["languageModel", "image", "video"] },
+      { id: "MiniMax-M2.5", capabilities: ["languageModel"] },
+    ],
+  });
 
-  assert.equal(synced, 1);
-  assert.deepEqual(config.providerGroups[0].models[0].capabilities, ["chat", "image", "video"]);
-  assert.deepEqual(config.providerGroups[0].models[1].capabilities, ["chat"]);
+  // MiniMax-M2.5 also changes: the minimax-m2.5 knowledge record folds in `supportsThinkingType`.
+  assert.equal(synced, 2);
+  assert.deepEqual(provider.models[0].capabilities, ["languageModel", "image", "video"]);
+  assert.deepEqual(provider.models[1].capabilities, ["languageModel"]);
+  assert.equal(provider.models[1].supportsThinkingType, "only");
 });
 
 test("syncExistingModelsFromCatalog writes videoGeneration when capabilities are missing", () => {
-  const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "alibaba/wan-v2.6-t2v",
-          reasoningEffort: "medium",
-        },
-      ]),
-    ],
-  };
+  const provider = gatewayProvider([
+    {
+      name: "alibaba/wan-v2.6-t2v",
+    },
+  ]);
+  const config = { providers: [provider] };
 
-  const synced = syncExistingModelsFromCatalog(config, gatewayScopeProfile, {
+  const synced = syncExistingModelsFromCatalog(config, provider, {
     modelIds: ["alibaba/wan-v2.6-t2v"],
     fromCache: false,
     modelCatalog: [{ id: "alibaba/wan-v2.6-t2v", capabilities: ["videoGeneration"] }],
   });
 
   assert.equal(synced, 1);
-  assert.deepEqual(config.providerGroups[0].models[0].capabilities, ["videoGeneration"]);
+  assert.deepEqual(provider.models[0].capabilities, ["videoGeneration"]);
 });
 
 test("syncExistingModelsFromCatalog corrects stale video input to videoGeneration", () => {
-  const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "alibaba/wan-v2.6-t2v",
-          reasoningEffort: "medium",
-          capabilities: ["chat", "video"],
-        },
-      ]),
-    ],
-  };
+  const provider = gatewayProvider([
+    {
+      name: "alibaba/wan-v2.6-t2v",
+      capabilities: ["languageModel", "video"],
+    },
+  ]);
+  const config = { providers: [provider] };
 
-  const synced = syncExistingModelsFromCatalog(config, gatewayScopeProfile, {
+  const synced = syncExistingModelsFromCatalog(config, provider, {
     modelIds: ["alibaba/wan-v2.6-t2v"],
     fromCache: false,
     modelCatalog: [{ id: "alibaba/wan-v2.6-t2v", capabilities: ["videoGeneration"] }],
   });
 
   assert.equal(synced, 1);
-  assert.deepEqual(config.providerGroups[0].models[0].capabilities, ["videoGeneration"]);
+  assert.deepEqual(provider.models[0].capabilities, ["videoGeneration"]);
 });
 
-test("syncExistingModelsFromCatalog syncs supportedReasoningEfforts from catalog", () => {
-  const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "anthropic/claude-sonnet-4",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-        },
-      ]),
+test("syncExistingModelsFromCatalog syncs supportedEfforts from catalog", () => {
+  const provider = {
+    id: "anthropic",
+    apiBase: "https://api.anthropic.com/v1",
+    transportKind: "anthropic",
+    models: [
+      {
+        name: "claude-sonnet-4",
+        capabilities: ["languageModel"],
+      },
     ],
   };
+  const config = { providers: [provider] };
 
-  const synced = syncExistingModelsFromCatalog(config, gatewayScopeProfile, {
-    modelIds: ["anthropic/claude-sonnet-4"],
+  const synced = syncExistingModelsFromCatalog(config, provider, {
+    modelIds: ["claude-sonnet-4"],
     fromCache: false,
     modelCatalog: [
       {
-        id: "anthropic/claude-sonnet-4",
-        capabilities: ["chat"],
-        supportedReasoningEfforts: ["low", "high"],
+        id: "claude-sonnet-4",
+        capabilities: ["languageModel"],
+        supportedEfforts: ["low", "high"],
       },
     ],
   });
 
   assert.equal(synced, 1);
-  assert.deepEqual(config.providerGroups[0].models[0].supportedReasoningEfforts, ["low", "high"]);
+  assert.deepEqual(provider.models[0].supportedEfforts, ["low", "high"]);
+  // The claude-sonnet-4 knowledge record folds in the thinking-switch declaration.
+  assert.equal(provider.models[0].supportsThinkingSwitch, true);
 });
 
 test("syncExistingModelsFromCatalog returns zero when catalog matches stored profile", () => {
-  const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "openai/gpt-4.1",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-          supportedReasoningEfforts: ["low", "high"],
-          contextLength: 128000,
-        },
-      ]),
-    ],
-  };
+  const provider = gatewayProvider([
+    {
+      name: "openai/gpt-4.1",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: ["low", "high"],
+      serviceTiers: ["auto", "default", "fast"],
+      contextLength: 128000,
+    },
+  ]);
+  const config = { providers: [provider] };
 
-  const synced = syncExistingModelsFromCatalog(config, gatewayScopeProfile, {
+  const synced = syncExistingModelsFromCatalog(config, provider, {
     modelIds: ["openai/gpt-4.1"],
     fromCache: false,
     modelCatalog: [
       {
         id: "openai/gpt-4.1",
-        capabilities: ["chat"],
+        capabilities: ["languageModel"],
         supportedReasoningEfforts: ["low", "high"],
         contextLength: 256000,
       },
@@ -311,14 +280,65 @@ test("syncExistingModelsFromCatalog returns zero when catalog matches stored pro
   });
 
   assert.equal(synced, 0);
-  assert.equal(config.providerGroups[0].models[0].contextLength, 128000);
+  assert.equal(provider.models[0].contextLength, 128000);
+});
+
+test("syncExistingModelsFromCatalog adds legacy OpenAI declarations and preserves valid selections", () => {
+  const provider = openAiProvider([
+    { name: "gpt-5.4", reasoningEffort: "high", serviceTier: "flex" },
+    { name: "gpt-4.1", serviceTier: "fast" },
+  ]);
+  const config = { providers: [provider] };
+
+  const synced = syncExistingModelsFromCatalog(config, provider, {
+    modelIds: ["gpt-5.4", "gpt-4.1"],
+    fromCache: false,
+    modelCatalog: [{ id: "gpt-5.4" }, { id: "gpt-4.1" }],
+  });
+
+  assert.equal(synced, 2);
+  assert.deepEqual(provider.models[0].supportedReasoningEfforts, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(provider.models[0].serviceTiers, {
+    auto: { body: { service_tier: "auto" } },
+    default: { body: { service_tier: "default" } },
+    flex: { body: { service_tier: "flex" } },
+    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+  });
+  assert.equal(provider.models[0].reasoningEffort, "high");
+  assert.equal(provider.models[0].serviceTier, "flex");
+  assert.deepEqual(provider.models[1].serviceTiers, ["auto", "default", "fast"]);
+  assert.equal(provider.models[1].serviceTier, "fast");
+  assert.equal("supportedReasoningEfforts" in provider.models[1], false);
+});
+
+test("catalog upstreamProvider is display metadata only, never written onto config models", () => {
+  const provider = gatewayProvider([]);
+  const config = {
+    providers: [provider],
+    activeModel: { providerId: "", name: "" },
+  };
+
+  const merged = mergeNewCatalogModelsIntoConfig(config, provider, {
+    modelIds: ["openai/gpt-5.4"],
+    fromCache: false,
+    modelCatalog: [
+      { id: "openai/gpt-5.4", capabilities: ["languageModel"], upstreamProvider: "OpenAI" },
+    ],
+  });
+
+  assert.equal(merged, 1);
+  assert.equal("upstreamProvider" in provider.models[0], false);
 });
 
 test("applyCatalogEntryToStoredModel backfills contextLength only when unset", () => {
   const model = {
     name: "openai/gpt-4.1",
-    apiBase: "https://ai-gateway.vercel.sh/v1",
-    reasoningEffort: "default",
   };
 
   assert.equal(
@@ -340,101 +360,181 @@ test("applyCatalogEntryToStoredModel backfills contextLength only when unset", (
   assert.equal(model.contextLength, 128000);
 });
 
-test("applyCatalogEntryToStoredModel syncs supportsThinkingType", () => {
-  const model = {
-    name: "kimi-for-coding",
-    apiBase: "https://api.kimi.com/coding/v1",
-    reasoningEffort: "default",
-    provider: "kimi-code",
-  };
+test("applyCatalogEntryToStoredModel backfills outputLimit only when unset", () => {
+  const model = { name: "gpt-5.4" };
+  assert.equal(applyCatalogEntryToStoredModel(model, { id: "gpt-5.4", outputLimit: 32000 }), true);
+  assert.equal(model.outputLimit, 32000);
+  assert.equal(applyCatalogEntryToStoredModel(model, { id: "gpt-5.4", outputLimit: 64000 }), false);
+  assert.equal(model.outputLimit, 32000);
+});
 
+test("applyCatalogEntryToStoredModel syncs thinking declarations and resets stale selections", () => {
+  const thinkingModel = { name: "kimi-for-coding" };
   assert.equal(
-    applyCatalogEntryToStoredModel(model, {
+    applyCatalogEntryToStoredModel(thinkingModel, {
       id: "kimi-for-coding",
       supportsThinkingType: "only",
     }),
     true,
   );
-  assert.equal(model.supportsThinkingType, "only");
-});
+  assert.equal(thinkingModel.supportsThinkingType, "only");
 
-test("applyCatalogEntryToStoredModel syncs supportsThinkingSwitch", () => {
-  const model = {
-    name: "LongCat-2.0",
-    apiBase: "https://api.longcat.chat/openai/v1",
-    reasoningEffort: "default",
-    provider: "meituan",
-  };
-
+  const switchModel = { name: "LongCat-2.0" };
   assert.equal(
-    applyCatalogEntryToStoredModel(model, {
+    applyCatalogEntryToStoredModel(switchModel, {
       id: "LongCat-2.0",
       supportsThinkingSwitch: true,
     }),
     true,
   );
-  assert.equal(model.supportsThinkingSwitch, true);
+  assert.equal(switchModel.supportsThinkingSwitch, true);
+
+  // The thinkingSwitch wire encoding is catalog-owned: written when declared, cleared when dropped.
+  const encodingModel = { name: "kimi-k2.6" };
+  const thinkingSwitch = {
+    on: { body: { thinking: { type: "enabled" } } },
+    off: { body: { thinking: { type: "disabled" } } },
+  };
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+      thinkingSwitch,
+    }),
+    true,
+  );
+  assert.deepEqual(encodingModel.thinkingSwitch, thinkingSwitch);
+
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+      thinkingSwitch,
+    }),
+    false,
+  );
+
+  assert.equal(
+    applyCatalogEntryToStoredModel(encodingModel, {
+      id: "kimi-k2.6",
+      supportsThinkingSwitch: true,
+    }),
+    true,
+  );
+  assert.equal("thinkingSwitch" in encodingModel, false);
+
+  // A reasoning selection outside the fresh declaration resets to "send nothing".
+  const effortModel = {
+    name: "m",
+    reasoningEffort: "max",
+  };
+  assert.equal(
+    applyCatalogEntryToStoredModel(effortModel, {
+      id: "m",
+      supportedReasoningEfforts: ["low", "high"],
+    }),
+    true,
+  );
+  assert.deepEqual(effortModel.supportedReasoningEfforts, ["low", "high"]);
+  assert.equal("reasoningEffort" in effortModel, false);
 });
 
-test("removeDelistedModelsFromCatalog drops scope models missing from upstream ids", () => {
-  const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "alibaba/wan-v2.6-t2v",
-          reasoningEffort: "medium",
-          capabilities: ["videoGeneration"],
-        },
-        {
-          name: "openai/gpt-4.1",
-          reasoningEffort: "medium",
-          capabilities: ["chat"],
-        },
-      ]),
-      customGroup([
-        {
-          name: "legacy-local",
-          reasoningEffort: "medium",
-        },
-      ]),
-    ],
-    activeModel: { groupId: gatewayGroupId, name: "alibaba/wan-v2.6-t2v" },
-    videoGenerationModel: { groupId: gatewayGroupId, name: "alibaba/wan-v2.6-t2v" },
+test("applyCatalogEntryToStoredModel syncs literal serviceTiers and resets stale tier selections", () => {
+  const literalTiers = {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
   };
 
-  const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
+  const model = { name: "openai/gpt-5.6" };
+  assert.equal(
+    applyCatalogEntryToStoredModel(model, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    true,
+  );
+  assert.deepEqual(model.serviceTiers, literalTiers);
+
+  // An unchanged declaration is a no-op.
+  assert.equal(
+    applyCatalogEntryToStoredModel(model, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    false,
+  );
+
+  // A tier selection outside the fresh declaration resets to "send nothing".
+  const selectedModel = {
+    name: "openai/gpt-5.6",
+    serviceTiers: literalTiers,
+    serviceTier: "priority",
+  };
+  assert.equal(
+    applyCatalogEntryToStoredModel(selectedModel, {
+      id: "openai/gpt-5.6",
+      serviceTiers: literalTiers,
+    }),
+    true,
+  );
+  assert.equal("serviceTier" in selectedModel, false);
+  assert.deepEqual(selectedModel.serviceTiers, literalTiers);
+});
+
+test("removeDelistedModelsFromCatalog drops entry models missing from upstream ids", () => {
+  const gateway = gatewayProvider([
+    {
+      name: "alibaba/wan-v2.6-t2v",
+      capabilities: ["videoGeneration"],
+    },
+    {
+      name: "openai/gpt-4.1",
+      capabilities: ["languageModel"],
+    },
+  ]);
+  const custom = customProvider([
+    {
+      name: "legacy-local",
+    },
+  ]);
+  const config = {
+    providers: [gateway, custom],
+    activeModel: { providerId: gatewayProviderId, name: "alibaba/wan-v2.6-t2v" },
+    videoGenerationModel: { providerId: gatewayProviderId, name: "alibaba/wan-v2.6-t2v" },
+  };
+
+  const pruned = removeDelistedModelsFromCatalog(config, gateway, {
     modelIds: ["openai/gpt-4.1"],
     fromCache: false,
-    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["chat"] }],
+    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["languageModel"] }],
   });
 
   assert.deepEqual(pruned, ["alibaba/wan-v2.6-t2v"]);
   assert.deepEqual(
-    config.providerGroups[0].models.map((model) => model.name),
+    gateway.models.map((model) => model.name),
     ["openai/gpt-4.1"],
   );
   assert.deepEqual(
-    config.providerGroups[1].models.map((model) => model.name),
+    custom.models.map((model) => model.name),
     ["legacy-local"],
   );
-  assert.deepEqual(config.activeModel, { groupId: gatewayGroupId, name: "openai/gpt-4.1" });
+  assert.deepEqual(config.activeModel, { providerId: gatewayProviderId, name: "openai/gpt-4.1" });
   assert.equal(config.videoGenerationModel, undefined);
 });
 
-test("removeDelistedModelsFromCatalog clears activeModel when last scope model is removed", () => {
+test("removeDelistedModelsFromCatalog keeps models when the upstream listing is empty", () => {
+  const gateway = gatewayProvider([
+    {
+      name: "alibaba/wan-v2.6-t2v",
+    },
+  ]);
   const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "alibaba/wan-v2.6-t2v",
-          reasoningEffort: "medium",
-        },
-      ]),
-    ],
-    activeModel: { groupId: gatewayGroupId, name: "alibaba/wan-v2.6-t2v" },
+    providers: [gateway],
+    activeModel: { providerId: gatewayProviderId, name: "alibaba/wan-v2.6-t2v" },
   };
 
-  const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
+  const pruned = removeDelistedModelsFromCatalog(config, gateway, {
     modelIds: [],
     fromCache: false,
     modelCatalog: [],
@@ -442,32 +542,32 @@ test("removeDelistedModelsFromCatalog clears activeModel when last scope model i
 
   assert.deepEqual(pruned, []);
   assert.deepEqual(
-    config.providerGroups[0].models.map((model) => model.name),
+    gateway.models.map((model) => model.name),
     ["alibaba/wan-v2.6-t2v"],
   );
-  assert.deepEqual(config.activeModel, { groupId: gatewayGroupId, name: "alibaba/wan-v2.6-t2v" });
+  assert.deepEqual(config.activeModel, {
+    providerId: gatewayProviderId,
+    name: "alibaba/wan-v2.6-t2v",
+  });
 });
 
-test("removeDelistedModelsFromCatalog keeps same-named models in other provider scopes", () => {
+test("removeDelistedModelsFromCatalog keeps same-named models in other provider entries", () => {
+  const gateway = gatewayProvider([
+    {
+      name: "shared-id",
+    },
+  ]);
+  const openai = openAiProvider([
+    {
+      name: "shared-id",
+    },
+  ]);
   const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "shared-id",
-          reasoningEffort: "medium",
-        },
-      ]),
-      openAiGroup([
-        {
-          name: "shared-id",
-          reasoningEffort: "medium",
-        },
-      ]),
-    ],
-    activeModel: { groupId: gatewayGroupId, name: "shared-id" },
+    providers: [gateway, openai],
+    activeModel: { providerId: gatewayProviderId, name: "shared-id" },
   };
 
-  const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
+  const pruned = removeDelistedModelsFromCatalog(config, gateway, {
     modelIds: [],
     fromCache: false,
     modelCatalog: [],
@@ -475,40 +575,72 @@ test("removeDelistedModelsFromCatalog keeps same-named models in other provider 
 
   assert.deepEqual(pruned, []);
   assert.deepEqual(
-    config.providerGroups.map((group) => group.provider),
+    config.providers.map((provider) => provider.id),
     ["vercel-ai-gateway", "openai"],
   );
 });
 
-test("removeDelistedModelsFromCatalog prunes delisted gateway model but keeps openai same name", () => {
+test("removeDelistedModelsFromCatalog prunes the delisted entry model but keeps the openai same name", () => {
+  const gateway = gatewayProvider([
+    {
+      name: "shared-id",
+    },
+  ]);
+  const openai = openAiProvider([
+    {
+      name: "shared-id",
+    },
+  ]);
   const config = {
-    providerGroups: [
-      gatewayGroup([
-        {
-          name: "shared-id",
-          reasoningEffort: "medium",
-        },
-      ]),
-      openAiGroup([
-        {
-          name: "shared-id",
-          reasoningEffort: "medium",
-        },
-      ]),
-    ],
-    activeModel: { groupId: gatewayGroupId, name: "shared-id" },
+    providers: [gateway, openai],
+    activeModel: { providerId: gatewayProviderId, name: "shared-id" },
   };
 
-  const pruned = removeDelistedModelsFromCatalog(config, gatewayScopeProfile, {
+  const pruned = removeDelistedModelsFromCatalog(config, gateway, {
     modelIds: ["openai/gpt-4.1"],
     fromCache: false,
-    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["chat"] }],
+    modelCatalog: [{ id: "openai/gpt-4.1", capabilities: ["languageModel"] }],
   });
 
   assert.deepEqual(pruned, ["shared-id"]);
   assert.deepEqual(
-    config.providerGroups.flatMap((group) => group.models.map(() => group.provider)),
+    config.providers.flatMap((provider) => provider.models.map(() => provider.id)),
     ["openai"],
   );
-  assert.deepEqual(config.activeModel, { groupId: openAiGroupId, name: "shared-id" });
+  assert.deepEqual(config.activeModel, { providerId: openAiProviderId, name: "shared-id" });
+});
+
+test("applyCatalogEntryToStoredModel clears revoked effort and thinking state", () => {
+  const model = {
+    name: "claude-opus-5",
+    effortSemantics: "output",
+    effort: "high",
+    supportedEfforts: ["low", "high"],
+    defaultEffort: "high",
+    supportsThinkingSwitch: true,
+    thinkingEnabled: false,
+    thinkingCapabilities: { supported: true },
+    thinkingSwitch: {
+      on: { body: { thinking: { type: "adaptive" } } },
+      off: { body: { thinking: { type: "disabled" } } },
+    },
+  };
+
+  const changed = applyCatalogEntryToStoredModel(model, {
+    id: model.name,
+    effortSemantics: "output",
+    supportedEfforts: [],
+    thinkingCapabilities: { supported: false },
+    supportsThinkingSwitch: false,
+  });
+
+  assert.equal(changed, true);
+  assert.equal(model.effortSemantics, "output");
+  assert.deepEqual(model.supportedEfforts, []);
+  assert.equal(model.effort, undefined);
+  assert.equal(model.defaultEffort, undefined);
+  assert.equal(model.supportsThinkingSwitch, false);
+  assert.equal(model.thinkingEnabled, undefined);
+  assert.equal(model.thinkingSwitch, undefined);
+  assert.deepEqual(model.thinkingCapabilities, { supported: false });
 });

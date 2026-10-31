@@ -1,13 +1,16 @@
+import { product } from "@spiritagent/product";
 import { test } from "vitest";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 import { NodeHostToolService, type HostToolExecutionOutput } from "./tools.js";
-import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config-v2.js";
+import { APPROVAL_FILE_PREVIEW_MAX_BYTES } from "./approval-file-preview.js";
+import { SPIRIT_CONFIG_SCHEMA_VERSION } from "./config.js";
 import { configFilePath } from "./credentials/spirit-config.js";
 import { loadPermissionConfig } from "./permissions/index.js";
 
@@ -319,7 +322,7 @@ test("saveGeneratedImage returns a managed markdown reference instead of a raw l
     assert.equal(dirname(saved.path), join(spiritDataDir, "generated-images"));
     assert.equal(
       saved.markdownRef,
-      `spirit://generated/image/${encodeURIComponent(basename(saved.path))}`,
+      `${product.urlProtocol}://generated/image/${encodeURIComponent(basename(saved.path))}`,
     );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -344,7 +347,7 @@ test("saveGeneratedVideo returns a managed markdown reference instead of a raw l
     assert.equal(dirname(saved.path), join(spiritDataDir, "generated-videos"));
     assert.equal(
       saved.markdownRef,
-      `spirit://generated/video/${encodeURIComponent(basename(saved.path))}`,
+      `${product.urlProtocol}://generated/video/${encodeURIComponent(basename(saved.path))}`,
     );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -422,8 +425,8 @@ test("read_file accepts Spirit-managed generated image refs with mixed-case URL 
       model: "test-image-model",
     });
     const mixedCaseRef = saved.markdownRef.replace(
-      "spirit://generated/image/",
-      "SPIRIT://GENERATED/image/",
+      `${product.urlProtocol}://generated/image/`,
+      `${product.urlProtocol.toUpperCase()}://GENERATED/image/`,
     );
 
     const authorization = await service.authorize({
@@ -452,7 +455,7 @@ test("read_file missing Spirit-managed generated image ref reports sanitized err
     join(tmpdir(), "spirit-host-tools-missing-managed-image-read-"),
   );
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
-  const missingRef = "spirit://generated/image/missing-image.png";
+  const missingRef = `${product.urlProtocol}://generated/image/missing-image.png`;
   const leakedLocalPath = join(spiritDataDir, "generated-images", "missing-image.png");
 
   try {
@@ -523,12 +526,12 @@ test("grep limits search to files matched by glob", async () => {
     const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
     const output = await service.execute({
       name: "grep",
-      query: "needle",
+      pattern: "needle",
       glob: "src/**/*.ts",
     });
 
     assertTextToolOutput(output);
-    assert.match(output, /src\/app\.ts:1 \| needle here/u);
+    assert.match(output, /src\/app\.ts:1:needle here/u);
     assert.doesNotMatch(output, /readme\.md/u);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -547,7 +550,7 @@ test("grep rejects glob patterns that escape the workspace", async () => {
       () =>
         service.execute({
           name: "grep",
-          query: "needle",
+          pattern: "needle",
           glob: "../**/*.ts",
         }),
       /glob pattern must not escape the workspace/u,
@@ -567,12 +570,12 @@ test("requestFromFunctionCall parses grep glob", async () => {
     const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
     const request = await service.requestFromFunctionCall(
       "grep",
-      '{"query":"needle","glob":"src/**/*.ts"}',
+      '{"pattern":"needle","glob":"src/**/*.ts"}',
     );
 
     assert.deepEqual(request, {
       name: "grep",
-      query: "needle",
+      pattern: "needle",
       glob: "src/**/*.ts",
     });
   } finally {
@@ -580,25 +583,354 @@ test("requestFromFunctionCall parses grep glob", async () => {
   }
 });
 
-test("grep supports case-insensitive regular expression queries", async () => {
+test("grep matches ripgrep regular expressions by default", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-regexp-"));
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
 
   try {
     await mkdir(spiritDataDir, { recursive: true });
-    await writeFile(join(workspaceRoot, "alpha.txt"), "Runtime    parity\nsecond line\n");
+    await writeFile(join(workspaceRoot, "alpha.txt"), "runtime    parity\nsecond line\n");
     await writeFile(join(workspaceRoot, "beta.txt"), "no match here\n");
 
     const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
     const output = await service.execute({
       name: "grep",
-      query: "runtime\\s+parity",
-      is_regexp: true,
+      pattern: "runtime\\s+parity",
     });
 
     assertTextToolOutput(output);
-    assert.match(output, /alpha\.txt:1 \| Runtime    parity/u);
+    assert.match(output, /alpha\.txt:1:runtime    parity/u);
     assert.doesNotMatch(output, /beta\.txt/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep is case-sensitive by default and -i ignores case", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-case-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "Runtime    parity\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const sensitive = await service.execute({
+      name: "grep",
+      pattern: "runtime",
+    });
+    assertTextToolOutput(sensitive);
+    assert.equal(sensitive, "No matches found");
+
+    const insensitive = await service.execute({
+      name: "grep",
+      pattern: "runtime",
+      caseInsensitive: true,
+    });
+    assertTextToolOutput(insensitive);
+    assert.match(insensitive, /alpha\.txt:1:Runtime    parity/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep lists matching files in files_with_matches mode", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-files-mode-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "needle one\nneedle two\n");
+    await writeFile(join(workspaceRoot, "beta.txt"), "needle here\n");
+    await writeFile(join(workspaceRoot, "gamma.txt"), "no hit\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      outputMode: "files_with_matches",
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /^alpha\.txt$/mu);
+    assert.match(output, /^beta\.txt$/mu);
+    assert.doesNotMatch(output, /gamma\.txt/u);
+    assert.doesNotMatch(output, /needle one/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep reports per-file counts in count_matches mode", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-count-mode-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "needle one\nneedle two\n");
+    await writeFile(join(workspaceRoot, "beta.txt"), "needle here\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      outputMode: "count_matches",
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /^alpha\.txt:2$/mu);
+    assert.match(output, /^beta\.txt:1$/mu);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep pages content results with head_limit and offset", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-paging-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "needle 1\nneedle 2\nneedle 3\nneedle 4\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const firstPage = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      headLimit: 2,
+    });
+    assertTextToolOutput(firstPage);
+    assert.match(firstPage, /alpha\.txt:1:needle 1\nalpha\.txt:2:needle 2\n/u);
+    assert.doesNotMatch(firstPage, /needle 3/u);
+    assert.match(
+      firstPage,
+      /\[truncated\] Showing 2 of 4 matches \(offset 0\)\. Pass offset 2 to continue\./u,
+    );
+
+    const secondPage = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      headLimit: 2,
+      offset: 2,
+    });
+    assertTextToolOutput(secondPage);
+    assert.match(secondPage, /alpha\.txt:3:needle 3\nalpha\.txt:4:needle 4\n/u);
+    assert.doesNotMatch(secondPage, /\[truncated\]/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep omits line numbers in content mode when -n is false", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-no-line-numbers-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "needle here\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      lineNumbers: false,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /^alpha\.txt:needle here\n/mu);
+    assert.doesNotMatch(output, /alpha\.txt:1:needle/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep shows context lines around matches with -C", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-context-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(
+      join(workspaceRoot, "alpha.txt"),
+      "before\nneedle one\nafter\nfiller\nfiller\nfiller\nbefore two\nneedle two\nafter two\n",
+    );
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      contextLines: 1,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(
+      output,
+      /alpha\.txt-1-before\nalpha\.txt:2:needle one\nalpha\.txt-3-after\n--\nalpha\.txt-7-before two\nalpha\.txt:8:needle two\nalpha\.txt-9-after two\n/u,
+    );
+    assert.doesNotMatch(output, /filler/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep restricts search to a ripgrep file type", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-type-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.ts"), "needle\n");
+    await writeFile(join(workspaceRoot, "beta.txt"), "needle\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      fileType: "ts",
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /alpha\.ts:1:needle/u);
+    assert.doesNotMatch(output, /beta\.txt/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep searches gitignored files with include_ignored", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-ignored-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await execFileAsync("git", ["init"], { cwd: workspaceRoot, windowsHide: true });
+    await writeFile(join(workspaceRoot, ".gitignore"), "ignored.txt\n", "utf8");
+    await writeFile(join(workspaceRoot, "ignored.txt"), "needle here\n", "utf8");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "needle",
+      includeIgnored: true,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /ignored\.txt:1:needle here/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("grep matches across line boundaries with multiline", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-multiline-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    await writeFile(join(workspaceRoot, "alpha.txt"), "foo\nbar\nplain\n");
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "grep",
+      pattern: "foo\\nbar",
+      multiline: true,
+    });
+
+    assertTextToolOutput(output);
+    assert.match(output, /alpha\.txt:1:foo\nbar/u);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("requestFromFunctionCall parses grep output mode and paging fields", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-modes-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const request = await service.requestFromFunctionCall(
+      "grep",
+      '{"pattern":"needle","output_mode":"files_with_matches","head_limit":50,"offset":10,"-n":false}',
+    );
+
+    assert.deepEqual(request, {
+      name: "grep",
+      pattern: "needle",
+      outputMode: "files_with_matches",
+      headLimit: 50,
+      offset: 10,
+      lineNumbers: false,
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("requestFromFunctionCall parses grep context options", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-context-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const request = await service.requestFromFunctionCall(
+      "grep",
+      '{"pattern":"needle","-A":2,"-B":1,"-C":3}',
+    );
+
+    assert.deepEqual(request, {
+      name: "grep",
+      pattern: "needle",
+      afterContext: 2,
+      beforeContext: 1,
+      contextLines: 3,
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("requestFromFunctionCall parses grep type, include_ignored, and multiline", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-filters-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const request = await service.requestFromFunctionCall(
+      "grep",
+      '{"pattern":"needle","type":"ts","include_ignored":true,"multiline":true}',
+    );
+
+    assert.deepEqual(request, {
+      name: "grep",
+      pattern: "needle",
+      fileType: "ts",
+      includeIgnored: true,
+      multiline: true,
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("requestFromFunctionCall rejects an unknown grep output mode", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-bad-mode-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    await assert.rejects(
+      () => service.requestFromFunctionCall("grep", '{"pattern":"needle","output_mode":"json"}'),
+      /output_mode must be one of/u,
+    );
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }
@@ -616,8 +948,7 @@ test("grep rejects invalid regular expressions with a clear error", async () => 
       () =>
         service.execute({
           name: "grep",
-          query: "(",
-          is_regexp: true,
+          pattern: "(",
         }),
       /Invalid regex/u,
     );
@@ -640,11 +971,11 @@ test("grep skips files matched by .gitignore", async () => {
     const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
     const output = await service.execute({
       name: "grep",
-      query: "needle",
+      pattern: "needle",
     });
 
     assertTextToolOutput(output);
-    assert.match(output, /tracked\.txt:1 \| needle here/u);
+    assert.match(output, /tracked\.txt:1:needle here/u);
     assert.doesNotMatch(output, /ignored\.txt/u);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -752,7 +1083,7 @@ test("requestFromFunctionCall parses glob pattern", async () => {
   }
 });
 
-test("requestFromFunctionCall parses grep is_regexp flag", async () => {
+test("requestFromFunctionCall parses grep -i flag", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-parse-"));
   const spiritDataDir = join(workspaceRoot, ".spirit-data");
 
@@ -762,13 +1093,13 @@ test("requestFromFunctionCall parses grep is_regexp flag", async () => {
     const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
     const request = await service.requestFromFunctionCall(
       "grep",
-      '{"query":"runtime\\\\s+parity","is_regexp":true}',
+      '{"pattern":"runtime\\\\s+parity","-i":true}',
     );
 
     assert.deepEqual(request, {
       name: "grep",
-      query: "runtime\\s+parity",
-      is_regexp: true,
+      pattern: "runtime\\s+parity",
+      caseInsensitive: true,
     });
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -918,7 +1249,12 @@ test("authorize asks for shell commands matched by an ask rule and offers rememb
     });
 
     assert.ok(decision.kind === "need-approval");
-    assert.match(decision.prompt, /High-risk tool call: shell/u);
+    assert.equal(decision.approval.kind, "shell");
+    if (decision.approval.kind === "shell") {
+      assert.equal(decision.approval.command, "npm test");
+      assert.equal(decision.approval.reason, "test");
+      assert.ok(decision.approval.terminal.length > 0);
+    }
     assert.deepEqual(decision.rememberTarget, { kind: "shell", command: "npm test" });
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
@@ -1326,7 +1662,7 @@ test("create_automation writes automation file when defaults are provided", asyn
       {
         getAutomationCreateDefaults: () => ({
           workspaceRoot,
-          modelRef: { groupId: "openai", name: "test-model" },
+          modelRef: { providerId: "openai", name: "test-model" },
         }),
         onAutomationCreated: (definition) => {
           createdId = definition.id;
@@ -1388,6 +1724,100 @@ function assertHostToolExecutionOutput(
   assert.notEqual(typeof output, "string");
 }
 
+test("apply_patch create attaches the exact before/after pair to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-create-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: { type: "create_file", path: "new.txt", diff: "+one\n+two\n*** End Patch" },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "new.txt",
+      before: "",
+      after: "one\ntwo",
+    });
+    assert.equal(await readFile(join(workspaceRoot, "new.txt"), "utf8"), "one\ntwo");
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch update attaches the real before/after pair to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-update-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await writeFile(join(workspaceRoot, "scratch.log"), "alpha\nbeta\n", "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: {
+        type: "update_file",
+        path: "scratch.log",
+        diff: "@@ \n alpha\n-beta\n+BETA\n*** End Patch",
+      },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "scratch.log",
+      before: "alpha\nbeta\n",
+      after: "alpha\nBETA\n",
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch delete attaches the doomed content to hostUi", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-delete-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    await writeFile(join(workspaceRoot, "scratch.log"), "doomed\ncontent\n", "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: { type: "delete_file", path: "scratch.log" },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.deepEqual(output.hostUi?.fileChangeDiff, {
+      path: "scratch.log",
+      before: "doomed\ncontent\n",
+      after: "",
+    });
+    assert.equal(existsSync(join(workspaceRoot, "scratch.log")), false);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply_patch drops the fileChangeDiff payload when a side exceeds the budget", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-apply-patch-oversize-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+
+  try {
+    const huge = `x\n${"x".repeat(APPROVAL_FILE_PREVIEW_MAX_BYTES)}`;
+    await writeFile(join(workspaceRoot, "huge.log"), huge, "utf8");
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const output = await service.execute({
+      name: "apply_patch",
+      operation: {
+        type: "update_file",
+        path: "huge.log",
+        diff: "@@ \n-x\n+y\n*** End Patch",
+      },
+    });
+    assertHostToolExecutionOutput(output);
+    assert.equal(output.hostUi?.fileChangeDiff, undefined);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 /**
  * mkdtemp + realpath: authorize realpath()s read targets, and on macOS
  * tmpdir() is a /var symlink, so canonical paths would otherwise escape the
@@ -1416,8 +1846,8 @@ async function writePermissionConfig(
     `${JSON.stringify(
       {
         schemaVersion: SPIRIT_CONFIG_SCHEMA_VERSION,
-        providerGroups: [],
-        activeModel: { groupId: "", name: "" },
+        providers: [],
+        activeModel: { providerId: "", name: "" },
         permission,
       },
       null,

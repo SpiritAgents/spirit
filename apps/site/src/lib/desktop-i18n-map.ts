@@ -1,4 +1,5 @@
 import type { AppLocale } from "@/i18n/config";
+import { interpolateProductCopy } from "@/i18n/product-copy";
 import { getDesktopPack } from "@/i18n/desktop-packs";
 import type { Messages } from "@/i18n/messages";
 
@@ -16,7 +17,7 @@ const MESSAGE_PATHS: Record<string, string> = {
   "titleBar.minimize": "desktop.titleBar.minimize",
   "titleBar.maximize": "desktop.titleBar.maximize",
   "titleBar.close": "desktop.titleBar.close",
-  "titleBar.newSession": "desktop.window.newSession",
+  "titleBar.newChat": "desktop.window.newChat",
   "titleBar.quit": "desktop.titleBar.close",
   "titleBar.undo": "desktop.titleBar.edit",
   "titleBar.redo": "desktop.titleBar.edit",
@@ -44,14 +45,14 @@ const MESSAGE_PATHS: Record<string, string> = {
   "app.noModelsAvailable": "desktop.conversation.noModels",
   "app.send": "desktop.conversation.sendTitle",
   "app.abort": "desktop.conversation.sendTitle",
-  "sidebar.newSession": "desktop.sessionSidebar.newSession",
+  "sidebar.newChat": "desktop.sessionSidebar.newChat",
   "sidebar.currentWorkspace": "desktop.sessionSidebar.currentWorkspace",
   "sidebar.extensions": "desktop.sessionSidebar.extensionsButton",
   "sidebar.settingsTabsAria": "desktop.sessionSidebar.settingsTabsAria",
   "sidebar.workspaceSessionsAria": "desktop.sessionSidebar.workspaceSessionsAria",
   "sidebar.settingsNavAria": "desktop.sessionSidebar.settingsNavSidebarAria",
   "sidebar.sessionNavAria": "desktop.sessionSidebar.sessionsSidebarAria",
-  "sidebar.workspace": "desktop.sessionSidebar.workspaceHeading",
+  "sidebar.workspaces": "desktop.sessionSidebar.workspacesHeading",
   "sidebar.resizeWidth": "desktop.tools.resizeAria",
   "composer.planChipLabel": "desktop.conversation.plan",
   "composer.askChipLabel": "desktop.conversation.agent",
@@ -59,12 +60,13 @@ const MESSAGE_PATHS: Record<string, string> = {
   "composer.enqueueWhileBusy": "desktop.conversation.sendTitle",
   "git.commit": "desktop.window.commitButton",
   "settings.title": "desktop.sessionSidebar.settingsHeading",
-  "settings.capabilityChatLabel": "desktop.models.heading",
+  "settings.capabilityLanguageModelLabel": "desktop.models.heading",
   "settings.capabilityImageLabel": "desktop.models.heading",
   "settings.capabilityVideoLabel": "desktop.models.heading",
   "settings.capabilityImageGenerationLabel": "desktop.models.heading",
   "settings.capabilityVideoGenerationLabel": "desktop.models.heading",
   "app.modelPickerReasoningEffort": "desktop.models.heading",
+  "app.modelPickerEffort": "desktop.models.heading",
   "composer.removeAttachment": "desktop.models.deleteAction",
   "composer.openInsertPanel": "desktop.models.connectProvider",
   "composer.insert": "desktop.models.connectProvider",
@@ -80,12 +82,11 @@ const DESKTOP_FALLBACK_KEYS: Record<string, string> = {
   "sidebar.sessionActions": "sidebar.sessionActions",
   "sidebar.workspaceActions": "sidebar.workspaceActions",
   "sidebar.deleteSession": "sidebar.deleteSession",
-  "sidebar.deleteWorkspace": "sidebar.deleteWorkspace",
   "sidebar.cannotDeleteBusySession": "sidebar.cannotDeleteBusySession",
   "sidebar.deleteSessionConfirmTitle": "sidebar.deleteSessionConfirmTitle",
   "sidebar.deleteSessionConfirmDescription": "sidebar.deleteSessionConfirmDescription",
-  "sidebar.deleteWorkspaceConfirmTitle": "sidebar.deleteWorkspaceConfirmTitle",
-  "sidebar.deleteWorkspaceConfirmDescription": "sidebar.deleteWorkspaceConfirmDescription",
+  "sidebar.removeWorkspaceConfirmTitle": "sidebar.removeWorkspaceConfirmTitle",
+  "sidebar.removeWorkspaceConfirmDescription": "sidebar.removeWorkspaceConfirmDescription",
   "sidebar.noWorkspaceSessions": "sidebar.noWorkspaceSessions",
   "sidebar.automations": "sidebar.automations",
   "sidebar.extensionSettings": "sidebar.extensionSettings",
@@ -93,6 +94,7 @@ const DESKTOP_FALLBACK_KEYS: Record<string, string> = {
   "common.running": "common.running",
   "common.cancel": "common.cancel",
   "common.delete": "common.delete",
+  "common.remove": "common.remove",
   "titleBar.quit": "titleBar.quit",
   "titleBar.undo": "titleBar.undo",
   "titleBar.redo": "titleBar.redo",
@@ -118,11 +120,12 @@ function getByPath(object: unknown, path: string): string | undefined {
 }
 
 function formatTranslation(template: string, params?: TranslationParams): string {
+  const productTemplate = interpolateProductCopy(template);
   if (!params) {
-    return template;
+    return productTemplate;
   }
   if (params.defaultValue && template === params.defaultValue) {
-    return params.defaultValue;
+    return productTemplate;
   }
   return Object.entries(params).reduce((result, [name, value]) => {
     if (name === "defaultValue") {
@@ -130,7 +133,7 @@ function formatTranslation(template: string, params?: TranslationParams): string
     }
     const text = value == null ? "" : String(value);
     return result.replaceAll(`{{${name}}}`, text).replaceAll(`{${name}}`, text);
-  }, template);
+  }, productTemplate);
 }
 
 function resolvePluralSuffix(

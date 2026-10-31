@@ -1,9 +1,9 @@
 ---
-title: Hooks
+title: 掛鉤
 description: 在工作階段、工具和子智慧體事件上執行指令碼。它們可以允許、拒絕或詢問。
 ---
 
-Hooks 是 Spirit 在固定點執行的指令碼。它們可以允許工具、拒絕工具，或強制顯示核准提示（`ask`）。
+掛鉤是 {{product.name|mdx}} 在固定點執行的指令碼。它們可以允許工具、拒絕工具，或強制顯示核准提示（`ask`）。
 
 ## 事件
 
@@ -19,14 +19,14 @@ Hooks 是 Spirit 在固定點執行的指令碼。它們可以允許工具、拒
 
 ## 存放位置
 
-| 範圍   | 設定檔                           | 指令碼                       |
-| ------ | -------------------------------- | ---------------------------- |
-| 使用者 | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| 工作區 | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| 範圍   | 設定檔                                                       | 指令碼                                                   |
+| ------ | ------------------------------------------------------------ | -------------------------------------------------------- |
+| 使用者 | `{spiritDataDir}/hooks.json`                                 | `{spiritDataDir}/hooks/`                                 |
+| 工作區 | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 在相同事件上，使用者條目和工作區條目會依該順序串接。它們不會互相覆寫。
 
-在 **設定 → Hooks** 中管理它們。使用 CLI 的 `spirit hook list` 和 `spirit hook validate` 進行驗證。內建的 Skill `create-hook` 會草擬一個 hook。[擴充功能](../develop/extensions.mdx) 捆綁的 hooks 只在該擴充功能啟用時執行，不會出現在此設定清單。
+在 **設定 → 掛鉤** 中管理它們。使用 CLI 的 `spirit hook list` 和 `spirit hook validate` 進行驗證。內建的技能 `create-hook` 會草擬一個掛鉤。[擴充功能](../develop/extensions.mdx) 捆綁的掛鉤只在該擴充功能啟用時執行，不會出現在此設定清單。
 
 ## 檔案欄位
 
@@ -35,9 +35,9 @@ Hooks 是 Spirit 在固定點執行的指令碼。它們可以允許工具、拒
 | 欄位      | 說明                                              |
 | --------- | ------------------------------------------------- |
 | `version` | 必填。必須為 `1`                                  |
-| `hooks`   | 必填。物件。鍵為事件名稱；值為該事件的 hooks 陣列 |
+| `hooks`   | 必填。物件。鍵為事件名稱；值為該事件的掛鉤陣列 |
 
-### 每個 hook
+### 每個掛鉤
 
 | 欄位         | 說明                                                                                                                              |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |

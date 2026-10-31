@@ -13,8 +13,6 @@ import { desktopInstructionPaths } from "../../dist-electron/src/host/skills.js"
 
 test("createRuleFile writes template and rejects duplicates", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-rules-create-"));
-  const previousAppData = process.env.APPDATA;
-  process.env.APPDATA = join(workspaceRoot, "appdata");
   try {
     const instructionPaths = desktopInstructionPaths(workspaceRoot);
     const targetPath = resolveRuleFilePath(instructionPaths, "workspaceSpirit");
@@ -33,21 +31,13 @@ test("createRuleFile writes template and rejects duplicates", async () => {
       /已存在|already exists/i,
     );
   } finally {
-    if (previousAppData === undefined) {
-      delete process.env.APPDATA;
-    } else {
-      process.env.APPDATA = previousAppData;
-    }
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 
 test("deleteRuleFile removes managed rule file", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-rules-delete-"));
-  const appDataRoot = join(workspaceRoot, "appdata");
-  const spiritDataDir = join(appDataRoot, "Spirit");
-  const previousAppData = process.env.APPDATA;
-  process.env.APPDATA = appDataRoot;
+  const spiritDataDir = join(workspaceRoot, "user-data");
   try {
     await mkdir(join(workspaceRoot, ".spirit"), { recursive: true });
     const instructionPaths = desktopInstructionPaths(workspaceRoot);
@@ -67,11 +57,6 @@ test("deleteRuleFile removes managed rule file", async () => {
     );
     assert.equal(after, null);
   } finally {
-    if (previousAppData === undefined) {
-      delete process.env.APPDATA;
-    } else {
-      process.env.APPDATA = previousAppData;
-    }
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });

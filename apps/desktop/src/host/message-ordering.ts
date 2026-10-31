@@ -1,4 +1,4 @@
-import { formatTriggerLabel, normalizeAutomationTrigger } from "@spiritagent/host-internal";
+import { formatTriggerLabel } from "@spiritagent/host-internal";
 
 import i18n from "../lib/i18n-host.js";
 import type {
@@ -30,6 +30,7 @@ import {
 } from "../lib/read-file-skill-display.js";
 import { readFileToolHeadlineDetail, readFileVerbKey } from "../lib/read-file-tool-display.js";
 import { grepToolHeadlineDetail } from "../lib/grep-tool-display.js";
+import { formatLazyToolCallDetail } from "../lib/lazy-tool-call-display.js";
 import { phaseToVerbContext } from "../lib/tool-verb-context.js";
 import {
   diagnosticsPathsHeadlineDetail,
@@ -173,9 +174,6 @@ export function truncateOneLineForDebug(s: string, max: number): string {
   return `${t.slice(0, max)}…`;
 }
 
-// The shell approval prompt is emitted in English by host-internal; match the fixed label.
-const SHELL_REASON_PREFIX = "Reason:";
-
 export function reasonForShellTool(toolName: string, request: unknown): string | undefined {
   if (toolName !== "shell" || !request || typeof request !== "object") {
     return undefined;
@@ -188,36 +186,6 @@ export function reasonForShellTool(toolName: string, request: unknown): string |
 
   const trimmed = reason.trim();
   return trimmed || undefined;
-}
-
-export function displayTitleForTool(toolName: string, request: unknown): string {
-  const shellReason = reasonForShellTool(toolName, request);
-  if (shellReason) {
-    return shellReason;
-  }
-  if (toolName === "tool_call" || toolName === "tool_describe") {
-    const summary = toolCallSummaryCopyForRequest(
-      toolName,
-      resolveToolSummaryRequest(toolName, request),
-    );
-    if (summary?.headline) {
-      return summary.headline;
-    }
-  }
-  return toolName;
-}
-
-export function stripReasonLineFromShellPrompt(toolName: string, prompt: string): string {
-  if (toolName !== "shell") {
-    return prompt;
-  }
-
-  const lines = prompt.split(/\r?\n/);
-  if (!lines[0]?.trim().startsWith(SHELL_REASON_PREFIX)) {
-    return prompt;
-  }
-
-  return lines.slice(1).join("\n").trim();
 }
 
 export interface ToolCallSummaryCopy {
@@ -304,12 +272,9 @@ export function toolCallSummaryCopyForRequest(
     }
     case "create_automation": {
       const title = typeof record.title === "string" ? record.title.trim() : "";
-      const trigger = normalizeAutomationTrigger(record.trigger);
-      const triggerLabel = trigger ? formatTriggerLabel(trigger) : "";
-      const detail = [title, triggerLabel].filter((part) => part.length > 0).join(" · ");
       return {
-        headline: i18n.t("automations.create", tOpts),
-        headlineDetail: truncateSummaryDetail(detail || "automation"),
+        headline: i18n.t("tool.create", tOpts),
+        headlineDetail: truncateSummaryDetail(title || "automation"),
       };
     }
     case "apply_patch": {
@@ -327,7 +292,7 @@ export function toolCallSummaryCopyForRequest(
             ? i18n.t("tool.edit", tOpts)
             : opType === "delete_file"
               ? i18n.t("tool.delete", tOpts)
-              : "Patch";
+              : i18n.t("tool.applyPatch", tOpts);
       return {
         headline: verb,
         headlineDetail: truncateSummaryDetail(basename),
@@ -336,8 +301,7 @@ export function toolCallSummaryCopyForRequest(
     case "grep": {
       const headlineDetail = grepToolHeadlineDetail(
         {
-          query: typeof record.query === "string" ? record.query : undefined,
-          is_regexp: record.is_regexp === true,
+          pattern: typeof record.pattern === "string" ? record.pattern : undefined,
           glob: typeof record.glob === "string" ? record.glob : undefined,
         },
         (key, opts) => i18n.t(key, { ...tOpts, ...opts }),
@@ -372,11 +336,11 @@ export function toolCallSummaryCopyForRequest(
       const provider = typeof record.provider === "string" ? record.provider.trim() : "";
       const server = typeof record.server === "string" ? record.server.trim() : "";
       const tool = typeof record.tool === "string" ? record.tool.trim() : "";
-      const detail = [provider, server, tool].filter((part) => part.length > 0).join(" / ");
+      const detail = formatLazyToolCallDetail(provider, server, tool);
       return {
         headline:
           toolName === "tool_call"
-            ? i18n.t("tool.lazyToolCall", tOpts)
+            ? i18n.t("tool.lazyCall", tOpts)
             : i18n.t("tool.lazyToolDescribe", tOpts),
         ...(detail ? { headlineDetail: truncateSummaryDetail(detail) } : {}),
       };
@@ -530,7 +494,7 @@ function lazyBuiltInCreateAutomationSummaryCopy(
     return undefined;
   }
 
-  const headline = i18n.t("automations.create", tOpts);
+  const headline = i18n.t("tool.create", tOpts);
   const parts = builtInCreateAutomationToolCallSummaryParts({
     gatewayJson: gatewayJson || undefined,
     requestRecord: record,
@@ -904,6 +868,7 @@ export function normalizeToolBlockSnapshot(
   const detailLines = tool.detailLines.filter((line) => line.trim().length > 0);
   const argsExcerpt = tool.argsExcerpt?.trim() ? tool.argsExcerpt : undefined;
   const outputExcerpt = tool.outputExcerpt?.trim() ? tool.outputExcerpt : undefined;
+  const providerToolLabel = tool.providerToolLabel?.trim() || undefined;
   const imagePaths = tool.imagePaths?.map((entry) => entry.trim()).filter(Boolean);
   const videoPaths = tool.videoPaths?.map((entry) => entry.trim()).filter(Boolean);
   const lspWriteDiagnostics = normalizeLspWriteDiagnosticsSnapshot(tool.lspWriteDiagnostics);
@@ -917,6 +882,7 @@ export function normalizeToolBlockSnapshot(
     ...(headlineDetail ? { headlineDetail } : {}),
     ...(argsExcerpt ? { argsExcerpt } : {}),
     ...(outputExcerpt ? { outputExcerpt } : {}),
+    ...(providerToolLabel ? { providerToolLabel } : {}),
     ...(imagePaths && imagePaths.length > 0 ? { imagePaths } : {}),
     ...(videoPaths && videoPaths.length > 0 ? { videoPaths } : {}),
     ...(lspWriteDiagnostics ? { lspWriteDiagnostics } : {}),
@@ -1184,6 +1150,22 @@ function internalWebSearchActionHeadlineKey(
   }
 }
 
+/**
+ * Declaration-driven provider tool calls render like MCP tool calls: the outer line is the
+ * phase-aware Call verb with the declared entry label as the detail (`Calling Web Search`).
+ */
+export function providerToolCallSummaryCopy(
+  label: string,
+  phase: ToolBlockSnapshot["phase"],
+): ToolCallSummaryCopy {
+  const ctx = phaseToVerbContext(phase);
+  const tOpts = ctx ? { context: ctx } : {};
+  return {
+    headline: i18n.t("tool.lazyCall", tOpts),
+    headlineDetail: truncateSummaryDetail(label),
+  };
+}
+
 export function toolCallSummaryCopyForResponsesBuiltInTool(
   toolName: string,
   phase: ToolBlockSnapshot["phase"],
@@ -1287,7 +1269,17 @@ export function toolCallSummaryForStreamingPreview(
     return {
       headline: hasBlockingToolAheadOfSameTurnPreview(messages, toolCallId)
         ? i18n.t("tool.queued", { toolName })
-        : i18n.t(toolName === "tool_call" ? "tool.lazyToolCall" : "tool.lazyToolDescribe", tOpts),
+        : i18n.t(toolName === "tool_call" ? "tool.lazyCall" : "tool.lazyToolDescribe", tOpts),
+    };
+  }
+
+  // apply_patch without parseable args yet (e.g. the model streams the diff first): the Patch
+  // verb stands in for the generic "calling" line.
+  if (toolName === "apply_patch") {
+    return {
+      headline: hasBlockingToolAheadOfSameTurnPreview(messages, toolCallId)
+        ? i18n.t("tool.queued", { toolName })
+        : i18n.t("tool.applyPatch", { context: "running" }),
     };
   }
 

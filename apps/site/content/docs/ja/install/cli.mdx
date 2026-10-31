@@ -1,6 +1,6 @@
 ---
 title: CLIをインストール
-description: インストールスクリプト、SPIRIT_HOME、SPIRIT_VERSIONを使用してSpirit CLIをインストールします。
+description: インストールスクリプト、SPIRIT_HOME、SPIRIT_VERSIONを使用して{{product.name}} CLIをインストールします。
 ---
 
 CLIは、TUIと非対話型の `-p` モードを備えたターミナルホストです。 [Desktop](./desktop.mdx) と同じローカルデーモンと通信します。
@@ -10,16 +10,16 @@ CLIは、TUIと非対話型の `-p` モードを備えたターミナルホス�
 macOSおよびLinux:
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 Windows (PowerShell):
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
-スクリプトは `download.spirit.dev` からビルドをダウンロードし、対応する GitHub Release の `SHA256SUMS.txt` と SHA-256 を照合します（不一致なら中止）。その後解凍して `spirit` を `PATH` に配置します。
+スクリプトは `{{product.downloadOrigin|host}}` からビルドをダウンロードし、対応する GitHub Release の `SHA256SUMS.txt` と SHA-256 を照合します（不一致なら中止）。その後解凍して `spirit` を `PATH` に配置します。
 
 新しいターミナルを開いて、次のコマンドを実行します:
 
@@ -29,25 +29,25 @@ spirit --version
 
 ## インストール先
 
-インストールルートは、Spiritデータディレクトリ**ではありません**。
+CLI バイナリには SPIRIT_HOME を使用します。Unix では Stable のインストールと共有データが同じ親ディレクトリを使用できますが、bin/ と cli/ はインストールファイルです。インストール設定で共有データディレクトリは変わりません。
 
-|                                      | デフォルト                                                                                                   | 上書き            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ----------------- |
-| CLIバイナリ                          | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                         | `SPIRIT_HOME`     |
-| セッション、設定、キーリングポインタ | macOS: `~/Library/Application Support/Spirit` · Windows: `%APPDATA%\Spirit` · Linux: `~/.local/share/Spirit` | `SPIRIT_DATA_DIR` |
+|                                      | デフォルト                                                                                                                                                                                                            | 上書き            |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| CLIバイナリ                          | Unix: `~/.spirit` · Windows: `%LOCALAPPDATA%\Spirit`                                                                                                                                                                  | `SPIRIT_HOME`     |
+| セッション、設定、キーリングポインタ | Stable: `~/{{product.stable.userDataFolderName}}` · Dev: `~/{{product.dev.userDataFolderName}}` · Windows: `%USERPROFILE%\{{product.stable.userDataFolderName}}` / `%USERPROFILE%\{{product.dev.userDataFolderName}}` | `SPIRIT_DATA_DIR` |
 
 Unixでは、スクリプトは `$SPIRIT_HOME/bin/spirit` から `$SPIRIT_HOME/cli/current/bin/spirit` へのシンボリックリンクを作成し、`~/.profile`、`~/.bashrc`、`~/.zshrc` に `export PATH="$SPIRIT_HOME/bin:$PATH"` を追加します（マーカー `# spirit cli`）。
 
 ## バージョンまたはミラーの固定
 
 | 変数                   | デフォルト                                 | 役割                                  |
-| ---------------------- | ------------------------------------------ | ------------------------------------- |
+| ---------------------- | ------------------------------------------ | ------------------------------------- | --------- |
 | `SPIRIT_HOME`          | `~/.spirit` または `%LOCALAPPDATA%\Spirit` | CLIバイナリのインストールルート       |
 | `SPIRIT_VERSION`       | `latest`                                   | ダウンロードURLのバージョンセグメント |
-| `SPIRIT_DOWNLOAD_HOST` | `download.spirit.dev`                      | CDNホスト                             |
+| `SPIRIT_DOWNLOAD_HOST` | `{{product.downloadOrigin|host}}`                               | CDNホスト |
 
 ```bash
-SPIRIT_VERSION=0.1.0 curl -fsSL https://spirit.dev/install | bash
+SPIRIT_VERSION=0.1.0 curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 [ダウンロードページ](/en-US/download) または [GitHub Releases](https://github.com/SpiritAgents/spirit/releases/latest) からCLIアーカイブを直接ダウンロードして、自分で解凍することもできます。

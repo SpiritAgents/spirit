@@ -5,9 +5,11 @@ description: キーリング、承認、およびループバックデーモン�
 
 ## キーリング
 
-APIキー、Bedrock / Vertex のシークレット、拡張機能のシークレット、および GitHub 統合トークンは、オペレーティングシステムのキーリングに保存されます。サービス名は `Spirit` です。
+APIキー、Bedrock / Vertex のシークレット、拡張機能のシークレット、および GitHub 統合トークンは、オペレーティングシステムのキーリングに保存されます。サービス名は `{{product.name}}` です。
 
-`config.json` にはプロバイダーグループとモデル参照が含まれており、シークレット自体は含まれません。大きなシークレットはキーリングでシャーディングされる場合があります。
+接続ウィザードが書き込むプロバイダーキーは、`config.json` のプロバイダーエントリごとに `provider::{id}` というアカウント体系を使用します。Bedrock IAM や Vertex サービスアカウントのような複合認証情報のスロットには `provider::{id}::{slot}` を使用します。大きなシークレットはキーリングでシャーディングされる場合があります。
+
+`config.json` に含まれるのはプロバイダーエントリとモデル参照であり、シークレット自体ではありません。ただし、宣言型のエスケープハッチを明示的に選んだ場合は別です：平文の `apiKey`（非推奨）、`apiKeyEnv` 環境変数参照、または外部キーリングのエントリを指す `apiKeyKeyring` / スロットごとの `keyring` 参照。詳しくは [設定](./config.mdx) を参照してください。
 
 ## 承認
 
@@ -23,6 +25,6 @@ Web Host のペアリングは、Desktop 上の別の6桁のコードです。5�
 
 ## プライバシー
 
-Spirit は開発者テレメトリを提供しません。データはデータディレクトリとキーリングに残ります。リポジトリ内の [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) を参照してください。
+{{product.name|mdx}} は開発者テレメトリを提供しません。データはデータディレクトリとキーリングに残ります。リポジトリ内の [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) を参照してください。
 
 脆弱性は公開イシューではなく、非公開で（GitHub Private Advisory）報告してください。[SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md) を参照してください。

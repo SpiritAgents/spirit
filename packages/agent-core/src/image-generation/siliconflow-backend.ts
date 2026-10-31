@@ -1,13 +1,12 @@
 import { getLlmFetch } from "../llm-fetch.js";
 import type { OpenAiImageGenerationConfig } from "../openai/openai-compat.js";
-import { normalizeGeneratedImageMarkdownRef } from "../openai/ai-sdk-transport.js";
+import { buildGeneratedImageToolOutput } from "./output.js";
 import type {
   GeneratedImageFile,
   GeneratedImageSaveRequest,
   ImageGenerationRequest,
   ToolExecutionOutput,
 } from "../ports.js";
-import { createLlmMessageContentFromTextAndImages } from "../ports.js";
 
 interface SiliconFlowImageGenerationResponse {
   images?: Array<{ url?: string }>;
@@ -31,12 +30,15 @@ export async function generateSiliconFlowImage(
   request: ImageGenerationRequest,
   saveGeneratedImage: (request: GeneratedImageSaveRequest) => Promise<GeneratedImageFile>,
 ): Promise<ToolExecutionOutput> {
-  const baseUrl = (config.baseUrl ?? "https://api.siliconflow.com/v1").replace(/\/$/, "");
+  const baseUrl = (config.baseUrl ?? "").replace(/\/$/, "");
+  if (!baseUrl) {
+    throw new Error("The siliconflow-images API shape requires a baseUrl.");
+  }
   const createUrl = `${baseUrl}/images/generations`;
   const imageSize = mapSiliconFlowImageSize(request.size);
 
   console.error("[agent-core][generate-image] request.start", {
-    adapter: "siliconflow",
+    adapter: "siliconflow-images",
     model: config.model,
     baseUrl,
     createUrl,
@@ -85,23 +87,10 @@ export async function generateSiliconFlowImage(
   });
 
   console.error("[agent-core][generate-image] request.success", {
-    adapter: "siliconflow",
+    adapter: "siliconflow-images",
     model: config.model,
     mimeType: saved.mimeType,
   });
 
-  const summaryLines = ["[generated image]"];
-  const markdownRef = normalizeGeneratedImageMarkdownRef(saved.markdownRef);
-  summaryLines.push(
-    `image_ref: ${markdownRef}`,
-    `read_file_path: ${markdownRef}`,
-    `embed_markdown: ![Generated image](${markdownRef})`,
-  );
-  summaryLines.push(`mime_type: ${saved.mimeType}`, `model: ${config.model}`);
-  const summaryText = summaryLines.join("\n");
-
-  return {
-    content: createLlmMessageContentFromTextAndImages(summaryText, [saved.path]),
-    summaryText,
-  };
+  return buildGeneratedImageToolOutput(saved, config.model);
 }

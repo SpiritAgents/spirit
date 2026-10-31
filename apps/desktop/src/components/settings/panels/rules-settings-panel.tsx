@@ -1,6 +1,8 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+import { product } from "@spiritagent/product";
 
 import { skillRootKindLabel } from "@/components/settings/skill-rule-labels";
 import type { SettingsViewProps } from "@/components/settings/types";
@@ -41,7 +43,7 @@ const ruleCreateRootOptions: Array<{
   },
   {
     kind: "workspaceSpirit",
-    labelFallback: ".spirit",
+    labelFallback: product.workspaceDataFolderName,
     hintKey: "settings.ruleWorkspaceSpiritHint",
   },
   {
@@ -129,7 +131,7 @@ export function RulesSettingsPanel({
               title={t("settings.generateRuleTooltip")}
               onClick={() => onGenerateRuleNavigate()}
             >
-              <Sparkles className="size-3.5 shrink-0" aria-hidden />
+              <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("settings.generateRule")}
             </Button>
           ) : null}
@@ -264,7 +266,7 @@ export function RulesSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       createRootKind === opt.kind
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={rulesBusy}
                     title={opt.hint}
@@ -322,7 +324,9 @@ export function RulesSettingsPanel({
                   })();
                 }}
               >
-                {rulesBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {rulesBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.create")}
               </Button>
             </DialogFooterActions>

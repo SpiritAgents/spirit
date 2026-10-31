@@ -1,16 +1,17 @@
 ---
 title: Modes
-description: Basculez entre Agent, Plan, Ask et Debug. Même espace de travail, permissions différentes.
+description: Basculez entre Agent, Plan, Ask et Debug. Même espace de travail,
+  permissions différentes.
 ---
 
-Spirit a quatre modes d'agent. Desktop et le CLI les parcourent avec Tab : **Agent → Plan → Ask → Debug → Agent**.
+{{product.name|mdx}} a quatre modes d'agent. Desktop et le CLI les parcourent avec Tab : **Agent → Plan → Ask → Debug → Agent**.
 
-| Mode      | Ce qu'il fait                                                                                                                                                                                                           |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Agent** | Le mode par défaut. Lit, édite, exécute des commandes et vérifie.                                                                                                                                                       |
-| **Plan**  | Planifie uniquement. Clarifie avec [ask_questions](./ask-questions.mdx), écrit un plan avec `create_plan`, puis vous demande de commencer l'implémentation ou de repasser en mode Agent.                                |
-| **Ask**   | Lecture seule. Explique et recherche. Les modifications de fichiers, le shell, les correctifs et la génération de médias sont indisponibles. Basculez en mode Agent pour modifier le code.                              |
-| **Debug** | Enquête sur un bug : classe les hypothèses, insère des journaux NDJSON sous `.spirit/logs/` (enveloppés dans `#region agent log`), et attend que vous disiez que le problème est résolu ou qu'il se reproduit toujours. |
+| Mode      | Ce qu'il fait                                                                                                                                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Agent** | Le mode par défaut. Lit, édite, exécute des commandes et vérifie.                                                                                                                                                                                   |
+| **Plan**  | Planifie uniquement. Clarifie avec [ask_questions](./ask-questions.mdx), écrit un plan avec `create_plan`, puis vous demande de commencer l'implémentation ou de repasser en mode Agent.                                                            |
+| **Ask**   | Lecture seule. Explique et recherche. Les modifications de fichiers, le shell, les correctifs et la génération de médias sont indisponibles. Basculez en mode Agent pour modifier le code.                                                          |
+| **Debug** | Enquête sur un bug : classe les hypothèses, insère des journaux NDJSON sous `{{product.workspaceDataFolderName}}/logs/` (enveloppés dans `#region agent log`), et attend que vous disiez que le problème est résolu ou qu'il se reproduit toujours. |
 
 Utilisez Plan lorsque le changement est important ou que l'objectif est flou. Utilisez Ask lorsque vous voulez seulement comprendre le dépôt. Utilisez Debug lorsque vous pouvez reproduire une défaillance et souhaitez une analyse systématique. Laissez Agent pour les modifications ordinaires.
 

@@ -223,7 +223,7 @@ pub struct ToolUiBlock {
     pub args_excerpt: Option<String>,
     /// Optional: output excerpt (already truncated).
     pub output_excerpt: Option<String>,
-    /// Provider tools such as Moonshot Formula: expanding details is forbidden (encrypted garbage).
+    /// Declared provider tool UI restriction: expanding details is forbidden.
     pub suppress_expand: Option<bool>,
 }
 

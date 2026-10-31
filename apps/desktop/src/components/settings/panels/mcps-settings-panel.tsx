@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
 
 import type { SettingsViewProps } from "@/components/settings/types";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +94,7 @@ function McpRuntimeBadge({ state }: { state: McpServerRuntimeBadgeState }) {
 
   return (
     <Badge variant="outline" className="gap-1.5">
-      <LoaderCircle className="size-3 animate-spin" aria-hidden />
+      <LoaderCircle className="size-3 animate-spin" aria-hidden strokeWidth={1.75} />
       {i18n.t("common.loading")}
     </Badge>
   );
@@ -242,7 +242,7 @@ export function McpsSettingsPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1">
-          <h1 className={DESKTOP_PAGE_TITLE_CLASS}>MCPs</h1>
+          <h1 className={DESKTOP_PAGE_TITLE_CLASS}>{t("settings.mcps")}</h1>
           {workspaceBindingDisabled ? (
             <p className="text-xs text-muted-foreground">{t("app.noWorkspaceBindingHint")}</p>
           ) : null}
@@ -382,7 +382,7 @@ export function McpsSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       createScope === opt.scope
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={mcpsBusy}
                     title={opt.hint}
@@ -413,7 +413,7 @@ export function McpsSettingsPanel({
                       DESKTOP_EDITOR_TAB_CLASS,
                       transportType === value
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={mcpsBusy}
                     onClick={() => setTransportType(value)}
@@ -491,7 +491,9 @@ export function McpsSettingsPanel({
                   })();
                 }}
               >
-                {mcpsBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {mcpsBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
                 {t("common.create")}
               </Button>
             </DialogFooterActions>

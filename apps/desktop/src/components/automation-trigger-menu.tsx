@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState, useEffect, useRef, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, Clock } from "lucide-react";
+import { Clock } from "lucide-react";
 
 import { AutomationTimeScheduleOptions } from "@/components/automation-schedule-menu";
 import { GitHubConnectTooltipContent } from "@/components/github-sign-in-prompt";
@@ -107,7 +108,11 @@ export function AutomationTriggerMenu({
           )}
         >
           <span className="min-w-0 truncate">{label}</span>
-          <ChevronDown className="size-3 shrink-0 text-muted-foreground/80" aria-hidden />
+          <ChevronDown
+            className="size-3 shrink-0 text-muted-foreground/80"
+            aria-hidden
+            strokeWidth={1.75}
+          />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -132,7 +137,7 @@ export function AutomationTriggerMenu({
                       disabled={disabled || !githubConnected}
                       className="gap-2"
                     >
-                      <GitHubMarkIcon className="size-3.5 shrink-0 text-muted-foreground/80" />
+                      <GitHubMarkIcon className="size-3.5 shrink-0" />
                       {t("automations.trigger.github")}
                     </DropdownMenuSubTrigger>
                   </span>
@@ -152,7 +157,7 @@ export function AutomationTriggerMenu({
             ) : (
               <>
                 <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
-                  <GitHubMarkIcon className="size-3.5 shrink-0 text-muted-foreground/80" />
+                  <GitHubMarkIcon className="size-3.5 shrink-0" />
                   {t("automations.trigger.github")}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent
@@ -175,7 +180,7 @@ export function AutomationTriggerMenu({
           </DropdownMenuSub>
           <DropdownMenuSub>
             <DropdownMenuSubTrigger disabled={disabled} className="gap-2">
-              <Clock className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+              <Clock className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               {t("automations.trigger.time")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent

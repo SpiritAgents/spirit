@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { product } from "@spiritagent/product";
 import http from "node:http";
 import https from "node:https";
 import { promisify } from "node:util";
@@ -101,7 +102,7 @@ export function probeHttpUrl(
         rejectUnauthorized: false,
         headers: {
           Accept: "text/html,application/xhtml+xml,*/*",
-          "User-Agent": "Spirit-Desktop-LocalProbe/1.0",
+          "User-Agent": `${encodeURIComponent(product.name)}-Desktop-LocalProbe/1.0`,
         },
       },
       (res) => {
@@ -524,7 +525,7 @@ export async function startLocalListenersScan(
 /** Warm-up at app startup: silently scan once in the background and store the result in the cache */
 scanningPromise = startLocalListenersScan();
 
-export function isAllowedExternalUrl(url: string): boolean {
+export function isHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return parsed.protocol === "http:" || parsed.protocol === "https:";

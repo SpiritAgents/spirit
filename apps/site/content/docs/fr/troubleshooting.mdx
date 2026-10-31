@@ -5,7 +5,7 @@ description: Ancienne configuration, blocs headless, verrouillage d'appairage, c
 
 ## config.json est rejeté
 
-Le fichier doit être `schemaVersion: 2`. Supprimez l'ancien fichier et [reconnectez un fournisseur](./providers.mdx). Les clés n'ont jamais été dans ce fichier — elles se trouvent dans le [trousseau](./security.mdx).
+Le fichier doit être `schemaVersion: 1`. Toute autre version est rejetée — supprimez l'ancien fichier et [reconnectez un fournisseur](./providers.mdx). Sauf si vous avez déclaré un `apiKey` en clair, les clés ne sont pas dans ce fichier — elles se trouvent dans le [trousseau](./security.mdx).
 
 ## CLI installé, paramètres vides
 
@@ -35,7 +35,7 @@ Installez le serveur vous-même (clangd via Homebrew / winget, jdtls manuellemen
 
 ## La complétion Tab est vide
 
-Activez **Paramètres → Tab** et assignez un modèle de chat léger. Voir [Desktop](./desktop.mdx).
+Activez **Paramètres → Tab** et assignez un modèle de langue secondaire. Voir [Desktop](./desktop.mdx).
 
 ## ACP absent de la page de téléchargement
 

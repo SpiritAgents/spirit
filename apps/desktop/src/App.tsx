@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
@@ -20,6 +20,7 @@ import { MarketplaceView } from "@/components/marketplace-view";
 import { SessionSidebar } from "@/components/session-sidebar";
 import { SessionSidebarShell } from "@/components/session-sidebar-shell";
 import { SettingsView } from "@/components/settings-view";
+import { TaskInstanceLimitDialog } from "@/components/task-instance-limit-dialog";
 import { WebHostPairingGate } from "@/components/web-host-pairing-gate";
 import { WorkspaceCapabilityTrustDialog } from "@/components/workspace-capability-trust-dialog";
 import { WorkspaceFilePickerDialog } from "@/components/workspace-file-picker-dialog";
@@ -29,6 +30,8 @@ import { useClickablePointerCursor } from "@/hooks/useClickablePointerCursor";
 import { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import { useFontSmoothing } from "@/hooks/useFontSmoothing";
 import { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
+import { useToolCardPreviewDemo } from "@/hooks/useToolCardPreviewDemo";
 import { useComposerController } from "@/hooks/useComposerController";
 import { ConversationSessionFocusComposerBridge } from "@/components/conversation/conversation-session-focus-composer-bridge";
 import { ConversationTypingFocusRedirectBridge } from "@/components/conversation/conversation-typing-focus-redirect-bridge";
@@ -64,13 +67,14 @@ import {
   type ShellOverlayPhase,
 } from "@/lib/desktop-shell";
 import { isMarkdownPath } from "@/lib/file-picker-path";
+import { initTaskRunService, runTaskByKey } from "@/lib/task-run-service";
 import {
   isWorkspaceReferenceDirectoryPath,
   normalizeWorkspaceReferenceDirectoryPath,
 } from "@spiritagent/host-internal/workspace-file-reference-query";
 import { tryHandleDesktopWorkspaceLink } from "@/lib/workspace-navigation-link";
 import { tryHandleMarkdownWorkspaceLink } from "@/lib/markdown-workspace-link";
-import { applyUiLayoutScaleToDocument, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";
+import { applyUiLayoutScale, UI_LAYOUT_SCALE_ROOT_ID } from "@/lib/ui-layout-scale";
 import {
   resolveLaunchSplashActive,
   resolveOnboardingCompletedKnown,
@@ -110,11 +114,14 @@ export default function App() {
 
   const compactionDemo = useCompactionUiDemo();
   const longConversationListDemo = useLongConversationListDemo();
+  const approvalPreviewDemo = useApprovalPreviewDemo();
+  const toolCardPreviewDemo = useToolCardPreviewDemo();
   const subagentViewer = useSubagentViewer(runtime.setSubagentViewerTarget);
   const subagentViewActive = subagentViewer.active && Boolean(snapshot?.subagentViewer);
   const sessionMessages = snapshot?.conversation.messages ?? [];
   const sessionNavigationBusy = runtime.busyAction === "session";
-  const newSessionBusy = runtime.busyAction === "reset";
+  const sessionMutationBusy = runtime.busyAction === "session-mutation";
+  const newChatBusy = runtime.busyAction === "reset";
   const conversationNavigationPending = sessionNavigationBusy || runtime.layoutNavigationPending;
   const activeFilePath =
     runtime.hostKind === "web"
@@ -148,26 +155,26 @@ export default function App() {
     subagentViewActive,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
-    sessionNavigationBusy,
-    newSessionBusy,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
+    toolCardPreviewDemoActive: toolCardPreviewDemo.active,
+    newChatBusy,
     t,
     composerAutomationApiRef,
   });
 
-  const { dismissForNewSession: dismissWorkspaceToolsForNewSession } =
-    useWorkspaceToolsChromeActions();
-  // Every new-session path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
-  // these wrappers so a full-screen tools panel never lingers into the new session's space.
-  const handleNewSession = useCallback(() => {
-    dismissWorkspaceToolsForNewSession();
-    surfaceNav.handleNewSession();
-  }, [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSession]);
-  const handleNewSessionInWorkspace = useCallback(
+  const { dismissForNewChat: dismissWorkspaceToolsForNewChat } = useWorkspaceToolsChromeActions();
+  // Every new-chat path (chrome bar, sidebar, keyboard shortcut, app menu) funnels through
+  // these wrappers so a full-screen tools panel never lingers into the new chat's space.
+  const handleNewChat = useCallback(() => {
+    dismissWorkspaceToolsForNewChat();
+    surfaceNav.handleNewChat();
+  }, [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChat]);
+  const handleNewChatInWorkspace = useCallback(
     (workspaceRoot: string) => {
-      dismissWorkspaceToolsForNewSession();
-      void surfaceNav.handleNewSessionInWorkspace(workspaceRoot);
+      dismissWorkspaceToolsForNewChat();
+      void surfaceNav.handleNewChatInWorkspace(workspaceRoot);
     },
-    [dismissWorkspaceToolsForNewSession, surfaceNav.handleNewSessionInWorkspace],
+    [dismissWorkspaceToolsForNewChat, surfaceNav.handleNewChatInWorkspace],
   );
 
   const conversation = useConversationViewState({
@@ -177,6 +184,8 @@ export default function App() {
     subagentViewer,
     compactionDemo,
     longConversationListDemo,
+    approvalPreviewDemo,
+    toolCardPreviewDemo,
     t,
     language: i18n.language,
     conversationAbortShortcutTargetRef,
@@ -187,6 +196,28 @@ export default function App() {
     snapshot,
     activeFilePath,
   });
+
+  useEffect(() => {
+    initTaskRunService({
+      resolveTaskForRun: runtime.resolveTaskForRun,
+      resolveTaskByLabel: runtime.resolveTaskByLabel,
+      getTabs: workspaceTools.getWorkspaceToolTabs,
+      setTabs: workspaceTools.setWorkspaceToolTabs,
+      getActiveTabId: workspaceTools.getActiveWorkspaceToolTabId,
+      setActiveTabId: workspaceTools.setActiveWorkspaceToolTabId,
+      setToolsOpen: workspaceTools.setWorkspaceToolsOpen,
+      getWorkspaceRoot: () => snapshot?.workspaceRoot ?? "",
+    });
+  }, [
+    runtime.resolveTaskForRun,
+    runtime.resolveTaskByLabel,
+    workspaceTools.getWorkspaceToolTabs,
+    workspaceTools.setWorkspaceToolTabs,
+    workspaceTools.getActiveWorkspaceToolTabId,
+    workspaceTools.setActiveWorkspaceToolTabId,
+    workspaceTools.setWorkspaceToolsOpen,
+    snapshot?.workspaceRoot,
+  ]);
 
   const gitHubAuthConnected = useGitHubAuthConnected(
     runtime.getGitHubAuthStatus,
@@ -207,11 +238,13 @@ export default function App() {
     activeSessionReadOnly: conversation.activeSessionReadOnly,
     compactionDemoActive: compactionDemo.active,
     longConversationListDemoActive: longConversationListDemo.active,
+    approvalPreviewDemoActive: approvalPreviewDemo.active,
+    toolCardPreviewDemoActive: toolCardPreviewDemo.active,
     subagentViewActive,
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewSession,
+    handleNewChat,
     setActiveSurface: surfaceNav.setActiveSurface,
     setLastNonSettingsSurface: surfaceNav.setLastNonSettingsSurface,
     onBeginSideChat: () => {
@@ -229,11 +262,9 @@ export default function App() {
 
   const handleSelectSession = useCallback(
     (path: string) => {
-      surfaceNav.setLastNonSettingsSurface("conversation");
-      surfaceNav.setActiveSurface("conversation");
-      void runtime.openSession(path);
+      surfaceNav.beginSessionNavigation(path);
     },
-    [runtime.openSession, surfaceNav.setActiveSurface, surfaceNav.setLastNonSettingsSurface],
+    [surfaceNav.beginSessionNavigation],
   );
 
   useDesktopKeyboardShortcuts({
@@ -242,7 +273,7 @@ export default function App() {
     conversationAbortShortcutEligibleRef: conversation.conversationAbortShortcutEligibleRef,
     conversationAbortShortcutTargetRef,
     sessionSidebarChromeApiRef: surfaceNav.sessionSidebarChromeApiRef,
-    handleNewSession,
+    handleNewChat,
     handleSelectSession,
     handleOpenSettings: surfaceNav.handleOpenSettings,
     handleCloseSettings: surfaceNav.handleCloseSettings,
@@ -322,14 +353,17 @@ export default function App() {
     syncLaunchSplashChromeToDocument(shellOverlayPhase);
   }, [shellOverlayPhase]);
 
-  const focusComposerEnabled =
+  const conversationSurfaceActive = surfaceNav.activeSurface === "conversation";
+  // In-page settle (session switch, split layout, launch overlay) stays separate
+  // from which surface is showing, so re-entering the conversation page focuses
+  // the composer even when the session key is unchanged.
+  const focusComposerReady =
     snapshot != null &&
-    surfaceNav.activeSurface === "conversation" &&
-    !surfaceNav.settingsMode &&
     !sessionNavigationBusy &&
     !runtime.layoutNavigationPending &&
-    !newSessionBusy &&
+    !newChatBusy &&
     !shellUnderlayHidden;
+  const focusComposerEnabled = conversationSurfaceActive && focusComposerReady;
 
   const handleOnboardingDone = useCallback(() => {
     void (async () => {
@@ -339,7 +373,7 @@ export default function App() {
   }, [runtime.saveSettingsPatch]);
 
   useLayoutEffect(() => {
-    applyUiLayoutScaleToDocument(uiLayoutScale.scale);
+    applyUiLayoutScale(uiLayoutScale.scale);
   }, [uiLayoutScale.scale]);
 
   useLayoutEffect(() => {
@@ -438,6 +472,7 @@ export default function App() {
                   useTranslucency={useTranslucency}
                   settings={runtime.settings}
                   onSavePatch={runtime.saveSettingsPatch}
+                  providerPickerPresets={snapshot?.config.providerPickerPresets ?? []}
                   modelsBusy={runtime.busyAction === "models"}
                   modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
                   onAddModel={runtime.addModel}
@@ -480,7 +515,8 @@ export default function App() {
                     >
                       <ConversationSessionFocusComposerBridge
                         composerSessionKey={conversation.composerSessionKey}
-                        enabled={focusComposerEnabled}
+                        surfaceActive={conversationSurfaceActive}
+                        ready={focusComposerReady}
                         composerAutomationApiRef={composerAutomationApiRef}
                       />
                       <ConversationTypingFocusRedirectBridge enabled={focusComposerEnabled} />
@@ -494,8 +530,8 @@ export default function App() {
                           userHomeDirectory={snapshot?.userHomeDirectory ?? null}
                           sessions={runtime.sessions}
                           activeFilePath={sidebarActiveFilePath}
-                          onNewSession={handleNewSession}
-                          onNewSessionInWorkspace={handleNewSessionInWorkspace}
+                          onNewChat={handleNewChat}
+                          onNewChatInWorkspace={handleNewChatInWorkspace}
                           onSelectSession={handleSelectSession}
                           onOpenMarketplace={() => {
                             surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
@@ -521,17 +557,19 @@ export default function App() {
                           }}
                           onExtensionSettingsChange={(id) => surfaceNav.setExtensionSettingsId(id)}
                           translucency={useTranslucency}
-                          newSessionBusy={newSessionBusy}
-                          sessionNavigationBusy={sessionNavigationBusy}
-                          deleteSessionBusy={sessionNavigationBusy}
+                          newChatBusy={newChatBusy}
+                          deleteSessionBusy={sessionMutationBusy}
                           onDeleteSession={(path) => runtime.deleteSession(path)}
-                          renameSessionBusy={sessionNavigationBusy}
+                          renameSessionBusy={sessionMutationBusy}
                           onRenameSession={(path, displayName) =>
                             runtime.renameSession(path, displayName)
                           }
-                          deleteWorkspaceBusy={sessionNavigationBusy}
-                          onDeleteWorkspace={(workspacePath) =>
-                            runtime.deleteWorkspace(workspacePath)
+                          onTogglePinSession={(path, pinned) =>
+                            runtime.setSessionPinned(path, pinned)
+                          }
+                          removeWorkspaceBusy={sessionMutationBusy}
+                          onRemoveWorkspace={(workspacePath) =>
+                            runtime.removeWorkspace(workspacePath)
                           }
                           unseenCompletedSessionPaths={runtime.unseenCompletedSessionPaths}
                         />
@@ -573,10 +611,8 @@ export default function App() {
                               runtime.busyAction === "extensions" ||
                               runtime.busyAction === "extensionsImport"
                             }
-                            lspInstallBusy={runtime.lspInstallBusy}
                             isElectronShell={isElectronShell}
                             onSavePatch={runtime.saveSettingsPatch}
-                            onInstallLspProvider={runtime.installLspProvider}
                             onResetWebHostPairing={runtime.resetWebHostPairing}
                             onAddModel={runtime.addModel}
                             onAddProviderModels={runtime.addProviderModels}
@@ -594,13 +630,31 @@ export default function App() {
                             onCreateRule={runtime.createRule}
                             onStartCompactionUiDemo={() => {
                               longConversationListDemo.stop();
+                              approvalPreviewDemo.stop();
+                              toolCardPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               compactionDemo.start();
                             }}
                             onStartLongConversationListDemo={() => {
                               compactionDemo.stop();
+                              approvalPreviewDemo.stop();
+                              toolCardPreviewDemo.stop();
                               surfaceNav.setActiveSurface("conversation");
                               longConversationListDemo.start();
+                            }}
+                            onStartApprovalPreviewDemo={() => {
+                              compactionDemo.stop();
+                              longConversationListDemo.stop();
+                              toolCardPreviewDemo.stop();
+                              surfaceNav.setActiveSurface("conversation");
+                              approvalPreviewDemo.start();
+                            }}
+                            onStartToolCardPreviewDemo={() => {
+                              compactionDemo.stop();
+                              longConversationListDemo.stop();
+                              approvalPreviewDemo.stop();
+                              surfaceNav.setActiveSurface("conversation");
+                              toolCardPreviewDemo.start();
                             }}
                             onDeleteSkill={runtime.deleteSkill}
                             onDeleteRule={runtime.deleteRule}
@@ -643,9 +697,7 @@ export default function App() {
                                   surfaceNav.setActiveSurface("automations");
                                 }}
                                 onOpenSession={(path) => {
-                                  surfaceNav.setLastNonSettingsSurface("conversation");
-                                  surfaceNav.setActiveSurface("conversation");
-                                  void runtime.openSession(path);
+                                  surfaceNav.beginSessionNavigation(path);
                                 }}
                                 getAutomation={runtime.getAutomation}
                                 updateAutomation={(id, patch) =>
@@ -797,25 +849,25 @@ export default function App() {
                                     subagentViewer={subagentViewer}
                                     compactionDemo={compactionDemo}
                                     longConversationListDemo={longConversationListDemo}
-                                    hideStaleConversationMessages={
-                                      surfaceNav.hideStaleConversationMessages
-                                    }
-                                    showWorkspaceBindingControls={
-                                      surfaceNav.showWorkspaceBindingControls
-                                    }
-                                    sessionNavigationBusy={sessionNavigationBusy}
-                                    newSessionBusy={newSessionBusy}
-                                    onNewSession={handleNewSession}
-                                    deleteSessionBusy={sessionNavigationBusy}
+                                    approvalPreviewDemo={approvalPreviewDemo}
+                                    toolCardPreviewDemo={toolCardPreviewDemo}
+                                    newChatBusy={newChatBusy}
+                                    onNewChat={handleNewChat}
+                                    deleteSessionBusy={sessionMutationBusy}
                                     onDeleteSession={(path) => runtime.deleteSession(path)}
-                                    renameSessionBusy={sessionNavigationBusy}
+                                    renameSessionBusy={sessionMutationBusy}
                                     onRenameSession={(path, displayName) =>
                                       runtime.renameSession(path, displayName)
+                                    }
+                                    onTogglePinSession={(path, pinned) =>
+                                      runtime.setSessionPinned(path, pinned)
                                     }
                                     workspaceTools={workspaceTools}
                                     onOpenIntegrationsSettings={openIntegrationsSettings}
                                     onCompactionDemoStop={compactionDemo.stop}
                                     onLongConversationListDemoStop={longConversationListDemo.stop}
+                                    onApprovalPreviewDemoStop={approvalPreviewDemo.stop}
+                                    onToolCardPreviewDemoStop={toolCardPreviewDemo.stop}
                                     t={t}
                                     language={i18n.language}
                                   />
@@ -850,15 +902,22 @@ export default function App() {
                   onOpenChange={composer.setActionPickerOpen}
                   onSelect={composer.runActionPaletteItem}
                   onSavePatch={runtime.saveSettingsPatch}
+                  taskItems={runtime.taskMenuItems}
+                  onRunTask={(key) => void runTaskByKey(key)}
                   isItemDisabled={composer.isActionPaletteItemDisabled}
                   shouldIncludeItem={composer.filterActionPaletteItem}
                 />
+
+                <TaskInstanceLimitDialog />
 
                 <WorkspaceFilePickerDialog
                   open={composer.filePickerOpen}
                   onOpenChange={composer.setFilePickerOpen}
                   workspaceRoot={snapshot?.workspaceRoot ?? ""}
                   workspaceBinding={snapshot?.workspaceBinding ?? "project"}
+                  recentFiles={composer.recentFilePool.fileDisplayPaths}
+                  onValidateRecentFiles={composer.recentFilePool.validateEntries}
+                  onOpenPlan={() => workspaceTools.openWorkspacePlan()}
                   onOpenWorkspaceFile={(relativePath) => {
                     if (isWorkspaceReferenceDirectoryPath(relativePath)) {
                       workspaceTools.revealWorkspaceDirectory(
@@ -883,7 +942,12 @@ export default function App() {
                 />
 
                 <WorkspaceCapabilityTrustDialog
-                  pending={snapshot?.pendingWorkspaceCapabilityTrust}
+                  // The prompt must not preempt the launch overlay: while the splash/OOBE
+                  // is up the app body is still hidden, so hold the request until the
+                  // exit animation has finished.
+                  pending={
+                    shellUnderlayHidden ? undefined : snapshot?.pendingWorkspaceCapabilityTrust
+                  }
                   busy={runtime.busyAction === "workspaceTrust"}
                   onReply={(decision) => {
                     void runtime.replyWorkspaceCapabilityTrust(decision);

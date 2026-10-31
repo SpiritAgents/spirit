@@ -1,23 +1,19 @@
+import {
+  CUSTOM_PROVIDER_PRESET_ID,
+  findProviderPreset,
+  materializeProviderPreset,
+  type MaterializeProviderPresetInput,
+} from "@spiritagent/agent-core/provider-presets";
 import type {
-  ModelEntryV2,
-  ModelProviderId,
-  ProviderGroupV2,
-  ProviderModelTransportKind,
+  ModelEntry,
+  ProviderOptions,
+  ProviderSetupResult,
+  SpiritTransportKind,
 } from "@spiritagent/host-internal";
 import {
-  defaultPresetProviderGroupId,
   isValidCloudflareAccountId,
   isValidCloudflareGatewayId,
-  listProviderConnectSiteOptions,
-  providerConnectSiteRequiresWorkspaceId,
-  providerSupportsSiteSelection,
-  resolveProfileApiBase,
-  resolveSetupTransportKind,
-} from "@spiritagent/host-internal";
-
-import type { ProviderSetupResult, SpiritModelProfile } from "@spiritagent/host-internal";
-
-export { resolveProfileApiBase, resolveSetupTransportKind };
+} from "@spiritagent/host-internal/cloudflare-ai-gateway-resource";
 
 export function validateModelName(modelName: string): string | undefined {
   const trimmed = modelName.trim();
@@ -27,10 +23,7 @@ export function validateModelName(modelName: string): string | undefined {
   return undefined;
 }
 
-export function validateApiKeyRequired(
-  provider: ModelProviderId,
-  apiKey: string,
-): string | undefined {
+export function validateApiKeyRequired(provider: string, apiKey: string): string | undefined {
   if (provider === "amazon-bedrock" || provider === "google-vertex-ai" || provider === "custom") {
     return undefined;
   }
@@ -134,13 +127,12 @@ export function validateCustomSetup(input: {
   return undefined;
 }
 
-export function buildSetupProfile(input: {
-  provider: ModelProviderId;
+/** Wizard form fields collected by the terminal setup flow (preset id + materialization inputs). */
+export interface WizardSetupInput {
+  provider: string;
   modelName: string;
-  groupId?: string;
-  transportKind?: ProviderModelTransportKind;
-  providerSite?: string;
-  alibabaWorkspaceId?: string;
+  siteId?: string;
+  workspaceId?: string;
   awsRegion?: string;
   azureResourceName?: string;
   cloudflareAccountId?: string;
@@ -148,107 +140,105 @@ export function buildSetupProfile(input: {
   vertexProject?: string;
   vertexLocation?: string;
   apiBaseOverride?: string;
-}): SpiritModelProfile {
-  const groupId = input.groupId?.trim() || defaultPresetProviderGroupId(input.provider);
-  const name = input.modelName.trim();
-  const ref = { groupId, name };
-  const transportKind = resolveSetupTransportKind(input.provider, input.transportKind);
-  const profile: SpiritModelProfile = {
-    groupId,
-    ref,
-    name,
-    apiBase: input.apiBaseOverride?.trim() || "",
-    reasoningEffort: "medium",
-    capabilities: ["chat", "image"],
-    provider: input.provider === "custom" ? "custom" : input.provider,
-    transportKind,
-  };
-  if (input.providerSite) {
-    profile.providerSite = input.providerSite;
-  }
-  if (input.alibabaWorkspaceId?.trim()) {
-    profile.alibabaWorkspaceId = input.alibabaWorkspaceId.trim();
-  }
+}
+
+/** The wizard's materialization input: site/workspace/template values resolve to the final apiBase. */
+export function buildMaterializeInput(input: WizardSetupInput): MaterializeProviderPresetInput {
+  const templateValues: Record<string, string> = {};
   if (input.awsRegion?.trim()) {
-    profile.awsRegion = input.awsRegion.trim();
+    templateValues["awsRegion"] = input.awsRegion.trim();
   }
   if (input.azureResourceName?.trim()) {
-    profile.azureResourceName = input.azureResourceName.trim();
+    templateValues["resourceName"] = input.azureResourceName.trim();
   }
   if (input.cloudflareAccountId?.trim()) {
-    profile.cloudflareAccountId = input.cloudflareAccountId.trim();
-  }
-  if (input.cloudflareGatewayId?.trim()) {
-    profile.cloudflareGatewayId = input.cloudflareGatewayId.trim();
+    templateValues["accountId"] = input.cloudflareAccountId.trim();
   }
   if (input.vertexProject?.trim()) {
-    profile.vertexProject = input.vertexProject.trim();
+    templateValues["project"] = input.vertexProject.trim();
   }
   if (input.vertexLocation?.trim()) {
-    profile.vertexLocation = input.vertexLocation.trim();
+    templateValues["location"] = input.vertexLocation.trim();
   }
-  if (input.apiBaseOverride?.trim()) {
-    profile.apiBase = input.apiBaseOverride.trim();
-  } else {
-    profile.apiBase = resolveProfileApiBase(profile);
-  }
-  return profile;
-}
-
-export function buildProviderSetupResult(input: {
-  provider: ModelProviderId;
-  modelName: string;
-  groupId?: string;
-  transportKind?: ProviderModelTransportKind;
-  providerSite?: string;
-  alibabaWorkspaceId?: string;
-  awsRegion?: string;
-  azureResourceName?: string;
-  vertexProject?: string;
-  vertexLocation?: string;
-  apiBaseOverride?: string;
-}): Pick<ProviderSetupResult, "groupId" | "group" | "model" | "providerScope"> {
-  const profile = buildSetupProfile(input);
-  const group: Omit<ProviderGroupV2, "models"> = {
-    id: profile.groupId,
-    provider: profile.provider ?? "custom",
-    apiBase: profile.apiBase,
-    ...(profile.transportKind ? { transportKind: profile.transportKind } : {}),
-    ...(profile.providerSite ? { providerSite: profile.providerSite } : {}),
-    ...(profile.alibabaWorkspaceId ? { alibabaWorkspaceId: profile.alibabaWorkspaceId } : {}),
-    ...(profile.awsRegion ? { awsRegion: profile.awsRegion } : {}),
-    ...(profile.azureResourceName ? { azureResourceName: profile.azureResourceName } : {}),
-    ...(profile.vertexProject ? { vertexProject: profile.vertexProject } : {}),
-    ...(profile.vertexLocation ? { vertexLocation: profile.vertexLocation } : {}),
-  };
-  const model: ModelEntryV2 = {
-    name: profile.name,
-    reasoningEffort: profile.reasoningEffort ?? "medium",
-    ...(profile.supportedReasoningEfforts !== undefined
-      ? { supportedReasoningEfforts: profile.supportedReasoningEfforts }
-      : {}),
-    ...(profile.capabilities !== undefined ? { capabilities: profile.capabilities } : {}),
-    ...(profile.contextLength !== undefined ? { contextLength: profile.contextLength } : {}),
-  };
   return {
-    groupId: profile.groupId,
-    group,
-    model,
-    providerScope: input.provider,
+    presetId: input.provider,
+    ...(input.siteId ? { siteId: input.siteId } : {}),
+    ...(input.workspaceId?.trim() ? { workspaceId: input.workspaceId.trim() } : {}),
+    ...(input.apiBaseOverride?.trim() ? { apiBaseOverride: input.apiBaseOverride.trim() } : {}),
+    ...(Object.keys(templateValues).length > 0 ? { templateValues } : {}),
   };
 }
 
-export function providerNeedsSiteSelection(provider: ModelProviderId): boolean {
-  return providerSupportsSiteSelection(provider);
+/** The apiBase the wizard would persist for the given inputs (prompt-time preview/listing). */
+export function resolveWizardApiBase(input: WizardSetupInput): string {
+  return materializeProviderPreset(buildMaterializeInput(input)).apiBase;
 }
 
-export function listSiteOptions(provider: ModelProviderId): Array<{ value: string; name: string }> {
-  return listProviderConnectSiteOptions(provider).map((site) => ({
+/** The default transport of a preset (`openai-compatible` for custom/unknown ids). */
+export function resolveSetupTransportKind(provider: string): SpiritTransportKind {
+  if (provider === CUSTOM_PROVIDER_PRESET_ID) {
+    return "openai-compatible";
+  }
+  return findProviderPreset(provider)?.defaultTransport ?? "openai-compatible";
+}
+
+/** Wizard-owned transport options (Bedrock region / Vertex project+location). */
+function buildSetupOptions(input: WizardSetupInput): ProviderOptions | undefined {
+  if (input.provider === "amazon-bedrock") {
+    const awsRegion = input.awsRegion?.trim();
+    return awsRegion ? { awsRegion } : undefined;
+  }
+  if (input.provider === "google-vertex-ai") {
+    const options: ProviderOptions = {};
+    if (input.vertexProject?.trim()) {
+      options.project = input.vertexProject.trim();
+    }
+    if (input.vertexLocation?.trim()) {
+      options.location = input.vertexLocation.trim();
+    }
+    return Object.keys(options).length > 0 ? options : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Builds the setup payload for host-internal `saveProviderSetup`: materialization input, wizard
+ * transport options, the first model entry, and the active model ref. Credential secrets are
+ * attached by the caller (`credentials`).
+ */
+export function buildProviderSetupResult(input: WizardSetupInput): ProviderSetupResult {
+  const name = input.modelName.trim();
+  const materialize = buildMaterializeInput(input);
+  const providerId = materializeProviderPreset(materialize).id;
+  const model: ModelEntry = {
+    name,
+    capabilities: ["languageModel", "image"],
+  };
+  const options = buildSetupOptions(input);
+  return {
+    materialize,
+    ...(options ? { options } : {}),
+    models: [model],
+    activeModel: { providerId, name },
+  };
+}
+
+export function providerNeedsSiteSelection(provider: string): boolean {
+  if (provider === CUSTOM_PROVIDER_PRESET_ID) {
+    return false;
+  }
+  return findProviderPreset(provider)?.sites !== undefined;
+}
+
+export function listSiteOptions(provider: string): Array<{ value: string; name: string }> {
+  const preset = provider === CUSTOM_PROVIDER_PRESET_ID ? undefined : findProviderPreset(provider);
+  return (preset?.sites?.items ?? []).map((site) => ({
     value: site.id,
-    name: site.fallbackLabel,
+    name: site.label,
   }));
 }
 
-export function siteNeedsWorkspaceId(provider: ModelProviderId, siteId: string): boolean {
-  return providerConnectSiteRequiresWorkspaceId(provider, siteId);
+export function siteNeedsWorkspaceId(provider: string, siteId: string): boolean {
+  const preset = provider === CUSTOM_PROVIDER_PRESET_ID ? undefined : findProviderPreset(provider);
+  return preset?.sites?.items.find((site) => site.id === siteId)?.requiresWorkspaceId === true;
 }

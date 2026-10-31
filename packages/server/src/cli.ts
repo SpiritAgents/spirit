@@ -1,9 +1,10 @@
 import { resolveSpiritDataDir, resolveServerVersion } from "./config.js";
+import { product } from "@spiritagent/product";
 import { rotateToken, tokenFilePath } from "./auth-token.js";
 import { isProcessAlive, listInstances } from "./instance-registry.js";
 import { startDaemon } from "./daemon.js";
 
-const USAGE = `spirit-server — Spirit shared daemon
+const USAGE = `spirit-server — ${product.name} shared daemon
 
 Usage:
   spirit-server [serve] [--hostname <host>] [--port <port>]

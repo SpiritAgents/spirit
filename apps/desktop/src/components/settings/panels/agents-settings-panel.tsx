@@ -1,30 +1,20 @@
-import { useCallback, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import type { SettingsFormState } from "@/components/settings/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { TextLink } from "@/components/ui/link";
 import { Switch } from "@/components/ui/switch";
-import { ShellToolCommandHighlight } from "@/components/shell-tool-command-highlight";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import {
   DESKTOP_LIST_ITEM_PRIMARY_CLASS,
   DESKTOP_SETTINGS_LABEL_CLASS,
   DESKTOP_PAGE_TITLE_CLASS,
 } from "@/lib/desktop-typography";
-import { isDesktopInstallableProvider } from "@/lib/lsp-provider-install";
-import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
+import { siteDocsUrl } from "@/lib/docs-links";
+import { needsSpaceBeforeInlineContent } from "@/lib/cjk";
 import { cn } from "@/lib/utils";
 import type { DesktopLspProviderSnapshot, DesktopSnapshot } from "@/types";
 
@@ -36,17 +26,19 @@ export function AgentsSettingsRow({
   children,
 }: {
   label: string;
-  description?: string;
+  description?: ReactNode;
   htmlFor?: string;
   children: ReactNode;
 }) {
   return (
     <div className="grid gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6">
-      <div className="min-w-0 space-y-1">
-        <label htmlFor={htmlFor} className={DESKTOP_SETTINGS_LABEL_CLASS}>
+      <div className="min-w-0">
+        <Label htmlFor={htmlFor} className={DESKTOP_SETTINGS_LABEL_CLASS}>
           {label}
-        </label>
-        {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+        </Label>
+        {description ? (
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{description}</p>
+        ) : null}
       </div>
       <div className="min-w-0">{children}</div>
     </div>
@@ -66,32 +58,75 @@ function providerStatusBadge(provider: DesktopLspProviderSnapshot, t: (key: stri
 export function AgentsSettingsPanel({
   settings,
   snapshot,
-  lspInstallBusy,
   onSavePatch,
-  onInstallLspProvider,
 }: {
   settings: SettingsFormState;
   snapshot: DesktopSnapshot | null;
-  lspInstallBusy: boolean;
   onSavePatch: (patch: Partial<SettingsFormState>) => Promise<void>;
-  onInstallLspProvider: (providerId: string) => Promise<void>;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lsp = snapshot?.lsp;
   const listDisabled = !settings.lspEnabled;
-  const [installTarget, setInstallTarget] = useState<DesktopLspProviderSnapshot | null>(null);
-  const [installDialogOpen, setInstallDialogOpen] = useState(false);
-
-  const dismissInstallDialog = useCallback(() => {
-    setInstallDialogOpen(false);
-    runAfterRadixOverlayClose(() => {
-      setInstallTarget(null);
-    });
-  }, []);
+  const providerToolsDocsUrl = siteDocsUrl(i18n.language, "/agent/tools#provider-tools");
+  const providerToolsDescription = t("settings.providerToolsDescription");
 
   return (
     <div className="space-y-6">
       <h1 className={DESKTOP_PAGE_TITLE_CLASS}>{t("settings.agents")}</h1>
+
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">{t("settings.contextSection")}</p>
+        <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
+          <AgentsSettingsRow
+            label={t("settings.providerTools")}
+            description={
+              <>
+                {providerToolsDescription}
+                {needsSpaceBeforeInlineContent(providerToolsDescription) ? " " : null}
+                <TextLink
+                  href={providerToolsDocsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline={false}
+                  aria-label={t("settings.providerToolsLearnMoreAria")}
+                  onClick={(event) => {
+                    if (window.spiritDesktop?.openBrowserUrl) {
+                      event.preventDefault();
+                      void window.spiritDesktop.openBrowserUrl(providerToolsDocsUrl);
+                    }
+                  }}
+                >
+                  {t("settings.providerToolsLearnMore")}
+                </TextLink>
+              </>
+            }
+            htmlFor="settings-provider-tools"
+          >
+            <div className="flex justify-end">
+              <Switch
+                id="settings-provider-tools"
+                checked={settings.providerToolsEnabled}
+                onCheckedChange={(value) =>
+                  void onSavePatch({ providerToolsEnabled: value === true })
+                }
+              />
+            </div>
+          </AgentsSettingsRow>
+          <AgentsSettingsRow
+            label={t("settings.webFetch")}
+            description={t("settings.webFetchDescription")}
+            htmlFor="settings-web-fetch"
+          >
+            <div className="flex justify-end">
+              <Switch
+                id="settings-web-fetch"
+                checked={settings.webFetchEnabled}
+                onCheckedChange={(value) => void onSavePatch({ webFetchEnabled: value === true })}
+              />
+            </div>
+          </AgentsSettingsRow>
+        </div>
+      </div>
 
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">{t("settings.lspSection")}</p>
@@ -133,33 +168,6 @@ export function AgentsSettingsPanel({
                   </p>
                 ) : null}
               </div>
-              {provider.status === "not_found" &&
-              settings.lspEnabled &&
-              isDesktopInstallableProvider(provider) ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0"
-                  disabled={lspInstallBusy}
-                  onClick={() => {
-                    if (!provider.installCommand) {
-                      return;
-                    }
-                    setInstallTarget(provider);
-                    setInstallDialogOpen(true);
-                  }}
-                >
-                  {lspInstallBusy ? (
-                    <>
-                      <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
-                      {t("settings.lspInstalling")}
-                    </>
-                  ) : (
-                    t("settings.lspInstall")
-                  )}
-                </Button>
-              ) : null}
             </div>
           ))}
         </div>
@@ -200,62 +208,6 @@ export function AgentsSettingsPanel({
           </AgentsSettingsRow>
         </div>
       </div>
-
-      <Dialog
-        open={installDialogOpen}
-        onOpenChange={(open: boolean) => {
-          if (open) {
-            setInstallDialogOpen(true);
-          } else if (!lspInstallBusy) {
-            dismissInstallDialog();
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg" showCloseButton={!lspInstallBusy}>
-          <DialogHeader>
-            <DialogTitle>{t("settings.lspInstallConfirmTitle")}</DialogTitle>
-            <DialogDescription>{t("settings.lspInstallConfirmDescription")}</DialogDescription>
-          </DialogHeader>
-          {installTarget?.installCommand ? (
-            <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2 text-xs leading-relaxed text-muted-foreground">
-              <ShellToolCommandHighlight command={installTarget.installCommand} />
-            </div>
-          ) : null}
-          <DialogFooter>
-            <DialogFooterActions>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (!lspInstallBusy) {
-                    dismissInstallDialog();
-                  }
-                }}
-                disabled={lspInstallBusy}
-              >
-                {t("common.cancel")}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                disabled={lspInstallBusy || !installTarget?.installCommand}
-                onClick={() => {
-                  if (!installTarget?.installCommand) {
-                    return;
-                  }
-                  void onInstallLspProvider(installTarget.id).finally(() => {
-                    dismissInstallDialog();
-                  });
-                }}
-              >
-                {lspInstallBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.lspInstallConfirmAction")}
-              </Button>
-            </DialogFooterActions>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

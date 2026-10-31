@@ -1,5 +1,3 @@
-import { viewportLengthToScaleRootLocal } from "@/lib/ui-layout-scale";
-
 export const WORKSPACE_TOOLS_SPLIT_SELECTOR = "[data-workspace-tools-split]";
 export const WORKSPACE_TOOLS_RESIZE_LINE_SELECTOR =
   "#workspace-tools-panel-shell [role='separator'][aria-orientation='vertical'] div[aria-hidden='true']";
@@ -22,9 +20,9 @@ export function getWorkspaceToolsShellSplit(): HTMLElement | null {
   return document.querySelector<HTMLElement>(WORKSPACE_TOOLS_SPLIT_SELECTOR);
 }
 
-/** Absolute positioning inside shellSplit must use local lengths, not getBoundingClientRect viewport deltas directly. */
+/** getBoundingClientRect deltas are already local CSS px under native Chromium page zoom. */
 export function shellLocalLengthFromViewportDelta(delta: number): number {
-  return viewportLengthToScaleRootLocal(delta);
+  return delta;
 }
 
 /** Left offset for shell dividers: start at the workspace tools resize line right edge. */

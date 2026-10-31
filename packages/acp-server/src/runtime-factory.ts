@@ -3,7 +3,7 @@ import { release as osRelease } from "node:os";
 import {
   AgentRuntime,
   createLlmTransport,
-  isBedrockTransportConfig,
+  setTransportConfigLastInputTokens,
   pendingWorkspaceFilesFromInput,
   type LlmTransportConfig,
   type LlmMessage,
@@ -31,7 +31,6 @@ import {
   type LlmPlanMetadata,
 } from "@spiritagent/agent-core";
 import { buildApplyPatchFileToolsPromptSection } from "@spiritagent/agent-core";
-import { buildProviderWebSearchPromptSection } from "@spiritagent/agent-core";
 import type { AgentMode } from "@spiritagent/agent-core";
 import type { LocalHostToolService } from "@spiritagent/agent-core/host-bridge";
 import { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
@@ -40,6 +39,7 @@ import {
   NodeHostToolService,
   createHostExtensionManager,
   createNoopMcpAdapter,
+  createHostMcpService,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
   loadHostInstructionMetadata,
@@ -54,7 +54,7 @@ import {
 } from "@spiritagent/host-internal";
 
 import { createNoopPeer } from "./noop-peer.js";
-import { resolveTransportConfig } from "@spiritagent/host-internal";
+import { tryResolveTransportConfig } from "@spiritagent/host-internal";
 import type { AcpServerConfig } from "./types.js";
 
 export type AcpHostRuntime = AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
@@ -77,22 +77,20 @@ export interface AcpRuntimeResult {
  * Key differences from the daemon-backed server runtime:
  * - No WebSocket session attach (ACP uses ndJSON on stdio)
  * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
- * - No LSP, extensions, todos, or image/video generation for MVP
+ * - No LSP, extensions, todos, or image/video generation
  */
-function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  return config.llmVendor;
-}
-
 export async function createAcpRuntime(
   config: AcpServerConfig,
   onEvent: (event: RuntimeEvent<JsonValue>) => void,
   initialMode: AgentMode = "agent",
   transcriptSessionKey?: string,
 ): Promise<AcpRuntimeResult> {
-  const transportConfig = resolveTransportConfig(config);
+  const resolvedTransport = tryResolveTransportConfig(config);
+  if (!resolvedTransport.ok) {
+    throw new Error(resolvedTransport.error);
+  }
+  const transportConfig = resolvedTransport.config;
+  const hostPromptProviderId = resolvedTransport.providerId;
   const workspaceRoot = config.workspaceRoot;
   const spiritDataDir = config.spiritDataDir;
   const sessionKey = transcriptSessionKey?.trim() || undefined;
@@ -102,7 +100,10 @@ export async function createAcpRuntime(
 
   // 1. Create noop peer + tool executor (ACP doesn't use JSON-RPC peer)
   const noopPeer = createNoopPeer();
-  const toolExecutor = new HostToolExecutorProxy(noopPeer);
+  const toolExecutor = new HostToolExecutorProxy(
+    noopPeer,
+    createHostMcpService(workspaceRoot, spiritDataDir),
+  );
 
   // 2. Create NodeHostToolService with noop MCP adapter
   await ensureBuiltInSkills(spiritDataDir);
@@ -175,7 +176,6 @@ export async function createAcpRuntime(
     transportConfig.transportKind === "open-responses"
       ? buildApplyPatchFileToolsPromptSection()
       : undefined;
-  const providerWebSearchPromptSection = buildProviderWebSearchPromptSection(transportConfig);
 
   // 7. Mutable active skills array — session bookkeeping for slash activation
   const activeSkills: LlmActiveSkill[] = [];
@@ -196,11 +196,11 @@ export async function createAcpRuntime(
       undefined, // dreamsContextText
       basicInfo,
       applyPatchPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
     );
 
   const createContinuationState = (messages: LlmMessage[]) =>
@@ -215,11 +215,11 @@ export async function createAcpRuntime(
       undefined, // dreamsContextText
       basicInfo,
       applyPatchPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       false, // loopEnabled
       undefined, // mcpToolCatalog
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
     );
 
   // 8. Create LLM transport
@@ -255,11 +255,11 @@ export async function createAcpRuntime(
         undefined, // dreamsContextText
         basicInfo,
         applyPatchPromptSection,
-        providerWebSearchPromptSection,
+        undefined,
         false, // loopEnabled
         undefined, // mcpToolCatalog
         attribution,
-        hostPromptProviderId(transportConfig),
+        hostPromptProviderId,
       ),
     generateImage: (request) =>
       llmTransport.generateImage(
@@ -312,7 +312,12 @@ export async function createAcpRuntime(
     resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
       resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
-    onEvent,
+    onEvent: (event) => {
+      if (event.kind === "context-usage-updated") {
+        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
+      }
+      onEvent(event);
+    },
   });
 
   // 10. Mode switching: update planMetadata binding seen by closures + tool exposure

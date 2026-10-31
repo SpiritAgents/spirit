@@ -6,12 +6,11 @@ import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
 import { createLlmMessageContentFromTextAndImages, createLlmVideoContentPart } from "../ports.js";
-import { clearMoonshotVideoUploadCache } from "./moonshot-files.js";
+import { clearDeclaredFileUploadCacheForTests } from "../file-upload/uploader.js";
 import {
   llmMessageToOpenAiMessage,
-  resolveMoonshotVideoUrlsInOpenAiMessages,
+  resolveDeclaredVideoInputsInMessages,
 } from "./openai-multimodal-messages.js";
-import { resolveXiaomiVideoUrlsInOpenAiMessages } from "./xiaomi-video-messages.js";
 
 const MINIMAL_MP4_HEADER = Buffer.from([
   0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d,
@@ -41,12 +40,12 @@ test("llmMessageToOpenAiMessage serializes video parts as video_url with local p
   });
 });
 
-test("resolveMoonshotVideoUrlsInOpenAiMessages uploads local video_url references", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-moonshot-resolve-"));
+test("resolveDeclaredVideoInputsInMessages uploads local video_url references via fileUpload", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-declared-upload-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   try {
     await writeFile(videoPath, MINIMAL_MP4_HEADER);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
 
     setLlmFetchTransportOverrideForTests(
       async () => new Response(JSON.stringify({ id: "file-uploaded" }), { status: 200 }),
@@ -62,13 +61,16 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages uploads local video_url reference
       ),
     ];
 
-    await resolveMoonshotVideoUrlsInOpenAiMessages(
+    await resolveDeclaredVideoInputsInMessages(
       {
         apiKey: "test-key",
         baseUrl: "https://api.moonshot.cn/v1",
-        model: "kimi-k2.5",
-        llmVendor: "moonshot-ai",
         modelCapabilities: { videoInput: true },
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "video" },
+          refTemplate: "ms://{id}",
+        },
       },
       messages,
       workspaceRoot,
@@ -78,18 +80,18 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages uploads local video_url reference
     assert.equal(content[0]?.video_url.url, "ms://file-uploaded");
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 
-test("resolveMoonshotVideoUrlsInOpenAiMessages uploads Kimi Code local video_url references", async () => {
+test("resolveDeclaredVideoInputsInMessages joins the upload path onto the declared apiBase", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-kimi-code-resolve-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   let uploadCount = 0;
   try {
     await writeFile(videoPath, MINIMAL_MP4_HEADER);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
 
     setLlmFetchTransportOverrideForTests(async (input) => {
       uploadCount += 1;
@@ -113,13 +115,16 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages uploads Kimi Code local video_url
       ),
     ];
 
-    await resolveMoonshotVideoUrlsInOpenAiMessages(
+    await resolveDeclaredVideoInputsInMessages(
       {
         apiKey: "test-key",
         baseUrl: "https://api.kimi.com/coding/v1",
-        model: "k3",
-        llmVendor: "kimi-code",
         modelCapabilities: { videoInput: true },
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "video" },
+          refTemplate: "ms://{id}",
+        },
       },
       messages,
       workspaceRoot,
@@ -130,18 +135,18 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages uploads Kimi Code local video_url
     assert.equal(uploadCount, 1);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 
-test("resolveMoonshotVideoUrlsInOpenAiMessages skips Kimi Code upload without videoInput", async () => {
+test("resolveDeclaredVideoInputsInMessages skips the upload without a videoInput declaration", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-kimi-code-resolve-off-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   let uploadCount = 0;
   try {
     await writeFile(videoPath, MINIMAL_MP4_HEADER);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
     setLlmFetchTransportOverrideForTests(async () => {
       uploadCount += 1;
       return new Response(JSON.stringify({ id: "file_xyz789" }), { status: 200 });
@@ -158,13 +163,16 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages skips Kimi Code upload without vi
     ];
     const before = JSON.stringify(messages);
 
-    await resolveMoonshotVideoUrlsInOpenAiMessages(
+    await resolveDeclaredVideoInputsInMessages(
       {
         apiKey: "test-key",
         baseUrl: "https://api.kimi.com/coding/v1",
-        model: "k3",
-        llmVendor: "kimi-code",
         modelCapabilities: {},
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "video" },
+          refTemplate: "ms://{id}",
+        },
       },
       messages,
       workspaceRoot,
@@ -174,12 +182,12 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages skips Kimi Code upload without vi
     assert.equal(uploadCount, 0);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotVideoUploadCache();
+    clearDeclaredFileUploadCacheForTests();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });
 
-test("resolveMoonshotVideoUrlsInOpenAiMessages leaves Kimi Code remote video URLs unchanged", async () => {
+test("resolveDeclaredVideoInputsInMessages leaves referenced/remote/data video URLs untouched", async () => {
   let uploadCount = 0;
   setLlmFetchTransportOverrideForTests(async () => {
     uploadCount += 1;
@@ -198,13 +206,16 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages leaves Kimi Code remote video URL
   ];
 
   try {
-    await resolveMoonshotVideoUrlsInOpenAiMessages(
+    await resolveDeclaredVideoInputsInMessages(
       {
         apiKey: "test-key",
         baseUrl: "https://api.kimi.com/coding/v1",
-        model: "k3",
-        llmVendor: "kimi-code",
         modelCapabilities: { videoInput: true },
+        fileUpload: {
+          path: "/files",
+          purpose: { video: "video" },
+          refTemplate: "ms://{id}",
+        },
       },
       messages,
     );
@@ -219,8 +230,8 @@ test("resolveMoonshotVideoUrlsInOpenAiMessages leaves Kimi Code remote video URL
   }
 });
 
-test("resolveXiaomiVideoUrlsInOpenAiMessages embeds local video as data URL base64", async () => {
-  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-xiaomi-resolve-"));
+test("resolveDeclaredVideoInputsInMessages embeds local video as base64 without a fileUpload declaration", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-inline-video-"));
   const videoPath = join(workspaceRoot, "clip.mp4");
   try {
     await writeFile(videoPath, MINIMAL_MP4_HEADER);
@@ -235,12 +246,10 @@ test("resolveXiaomiVideoUrlsInOpenAiMessages embeds local video as data URL base
       ),
     ];
 
-    resolveXiaomiVideoUrlsInOpenAiMessages(
+    await resolveDeclaredVideoInputsInMessages(
       {
         apiKey: "test-key",
         baseUrl: "https://api.xiaomimimo.com/v1",
-        model: "mimo-v2.5",
-        llmVendor: "xiaomi",
         modelCapabilities: { videoInput: true },
       },
       messages,
@@ -253,6 +262,107 @@ test("resolveXiaomiVideoUrlsInOpenAiMessages embeds local video as data URL base
     assert.match(url, /^data:video\/mp4;base64,/);
     assert.equal(url.slice("data:video/mp4;base64,".length), MINIMAL_MP4_HEADER.toString("base64"));
   } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveDeclaredVideoInputsInMessages enforces options.maxInlineMediaBytes on the inline path", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-inline-cap-"));
+  const videoPath = join(workspaceRoot, "clip.mp4");
+  try {
+    await writeFile(videoPath, MINIMAL_MP4_HEADER);
+    const encodedBytes = Buffer.byteLength(MINIMAL_MP4_HEADER.toString("base64"), "utf8");
+
+    const buildMessages = () => [
+      llmMessageToOpenAiMessage(
+        {
+          role: "user",
+          content: [createLlmVideoContentPart(videoPath)],
+        },
+        workspaceRoot,
+      ),
+    ];
+
+    // Cap below the encoded size: the inline rewrite fails with the declared-limit error.
+    await assert.rejects(
+      resolveDeclaredVideoInputsInMessages(
+        {
+          apiKey: "test-key",
+          baseUrl: "https://api.xiaomimimo.com/v1",
+          modelCapabilities: { videoInput: true },
+          options: { maxInlineMediaBytes: encodedBytes - 1 },
+        },
+        buildMessages(),
+        workspaceRoot,
+      ),
+      /must not exceed .* MB after Base64 encoding/,
+    );
+
+    // Cap at the encoded size: the inline rewrite applies.
+    const messages = buildMessages();
+    await resolveDeclaredVideoInputsInMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.xiaomimimo.com/v1",
+        modelCapabilities: { videoInput: true },
+        options: { maxInlineMediaBytes: encodedBytes },
+      },
+      messages,
+      workspaceRoot,
+    );
+    const url =
+      (messages[0] as { content: Array<{ video_url: { url: string } }> }).content[0]?.video_url
+        .url ?? "";
+    assert.match(url, /^data:video\/mp4;base64,/);
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
+test("resolveDeclaredVideoInputsInMessages inlines when the purpose map does not cover video", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-core-inline-purpose-"));
+  const videoPath = join(workspaceRoot, "clip.mp4");
+  let uploadCount = 0;
+  try {
+    await writeFile(videoPath, MINIMAL_MP4_HEADER);
+    setLlmFetchTransportOverrideForTests(async () => {
+      uploadCount += 1;
+      return new Response(JSON.stringify({ id: "file_xyz789" }), { status: 200 });
+    });
+
+    const messages = [
+      llmMessageToOpenAiMessage(
+        {
+          role: "user",
+          content: [createLlmVideoContentPart(videoPath)],
+        },
+        workspaceRoot,
+      ),
+    ];
+
+    await resolveDeclaredVideoInputsInMessages(
+      {
+        apiKey: "test-key",
+        baseUrl: "https://api.minimax.io/anthropic/v1",
+        modelCapabilities: { videoInput: true },
+        fileUpload: {
+          url: "https://api.minimax.io/v1/files/upload",
+          purpose: { image: "image_understanding" },
+          idPath: "file.file_id",
+          refTemplate: "mm_file://{id}",
+        },
+      },
+      messages,
+      workspaceRoot,
+    );
+
+    const url =
+      (messages[0] as { content: Array<{ video_url: { url: string } }> }).content[0]?.video_url
+        .url ?? "";
+    assert.match(url, /^data:video\/mp4;base64,/);
+    assert.equal(uploadCount, 0);
+  } finally {
+    setLlmFetchTransportOverrideForTests(undefined);
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });

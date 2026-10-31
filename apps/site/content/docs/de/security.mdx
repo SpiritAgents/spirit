@@ -5,9 +5,11 @@ description: Schlüsselbund, Genehmigungen und der Loopback-Daemon. Keine Teleme
 
 ## Schlüsselbund
 
-API-Schlüssel, Bedrock / Vertex-Geheimnisse, Erweiterungsgeheimnisse und das GitHub-Integrations-Token werden im Betriebssystem-Schlüsselbund gespeichert. Der Dienstname ist `Spirit`.
+API-Schlüssel, Bedrock / Vertex-Geheimnisse, Erweiterungsgeheimnisse und das GitHub-Integrations-Token werden im Betriebssystem-Schlüsselbund gespeichert. Der Dienstname ist `{{product.name}}`.
 
-`config.json` enthält Anbietergruppen und Modellreferenzen, nicht das Geheimnis selbst. Große Geheimnisse können im Schlüsselbund aufgeteilt werden.
+Anbieterschlüssel, die der Verbindungsassistent schreibt, verwenden das Kontoschema `provider::{id}` – eines pro Anbietereintrag in `config.json` – oder `provider::{id}::{slot}` für zusammengesetzte Zugangsdaten-Slots wie Bedrock IAM oder ein Vertex-Dienstkonto. Große Geheimnisse können im Schlüsselbund aufgeteilt werden.
+
+`config.json` enthält Anbietereinträge und Modellreferenzen, nicht die Geheimnisse selbst – es sei denn, Sie entscheiden sich für eine deklarierte Hintertür: ein Klartext-`apiKey` (nicht empfohlen), eine `apiKeyEnv`-Umgebungsvariablenreferenz oder eine `apiKeyKeyring`- / Slot-`keyring`-Referenz auf einen Eintrag in einem externen Schlüsselbund. Siehe [Konfiguration](./config.mdx).
 
 ## Genehmigungen
 
@@ -23,6 +25,6 @@ Die Web Host-Kopplung ist ein separater 6-stelliger Code auf Desktop. Fünf Fehl
 
 ## Datenschutz
 
-Spirit enthält keine Entwickler-Telemetrie. Daten bleiben im Datenverzeichnis und im Schlüsselbund. Siehe [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) im Repository.
+{{product.name|mdx}} enthält keine Entwickler-Telemetrie. Daten bleiben im Datenverzeichnis und im Schlüsselbund. Siehe [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) im Repository.
 
 Melden Sie Schwachstellen privat (GitHub Private Advisory), nicht in einem öffentlichen Issue. Siehe [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md).

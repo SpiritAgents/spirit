@@ -17,6 +17,18 @@ const RENDERER_SAFE_AGENT_CORE_SUBPATHS = new Set([
   "code-completion-to-monaco",
   "code-completion-delete-diff",
   "model-thinking-controls",
+  "model-effort",
+  "thinking-switch",
+  "model-service-tier",
+  "provider-presets",
+  "model-catalog",
+  "model-catalog/id-display-title",
+  "model-catalog/well-known-casing",
+  "model-catalog/openai-api-base",
+  "model-catalog/bedrock-region",
+  "model-catalog/google-vertex-endpoints",
+  "azure-resource",
+  "cloudflare-ai-gateway-resource",
 ]);
 
 const RENDERER_SCAN_ROOTS = ["components", "hooks", "lib", "App.tsx"];

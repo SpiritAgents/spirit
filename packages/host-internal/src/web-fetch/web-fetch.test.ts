@@ -93,9 +93,10 @@ test("buildWebFetchOutput marks truncated content in metadata", () => {
     contentType: "text/markdown",
     extracted: { markdown: longMarkdown, extraction: "passthrough" },
     links: [],
-    maxContentChars: 500,
+    maxOutputBytes: 600,
   });
   assert.match(output, /truncated: true/u);
+  assert.match(output, /content_bytes: 6022/u);
 });
 
 test("collectLinksFromMarkdown deduplicates by URL", () => {
@@ -159,7 +160,7 @@ test("buildWebFetchOutput sanitizes metadata newlines to prevent header injectio
   assert.match(output, /title: Real Title content_chars: 999999/u);
   assert.doesNotMatch(output, /title: Real Title\ncontent_chars:/u);
   assert.doesNotMatch(output, /^content_chars: 999999$/mu);
-  assert.match(output, /content_chars: 6/u);
+  assert.match(output, /content_bytes: 6/u);
 });
 
 test("buildWebFetchOutput escapes forged markdown in link labels", () => {
@@ -206,4 +207,66 @@ test("buildWebFetchOutput reports links_truncated when link index exceeds cap", 
   });
   assert.match(output, /links_truncated: true/u);
   assert.match(output, /more links omitted/u);
+});
+
+test("buildWebFetchOutput keeps the excerpt when the page fits the budget", () => {
+  const output = buildWebFetchOutput({
+    url: "https://example.com",
+    finalUrl: "https://example.com",
+    status: 200,
+    contentType: "text/markdown",
+    extracted: { markdown: "# Small", excerpt: "页面摘要", extraction: "passthrough" },
+    links: [],
+    maxOutputBytes: 4_096,
+  });
+
+  assert.match(output, /^excerpt: 页面摘要$/mu);
+  assert.match(output, /truncated: false/u);
+});
+
+test("buildWebFetchOutput stays within the byte budget on oversized mixed input", () => {
+  const links = Array.from({ length: 205 }, (_value, index) => ({
+    text: `Link ${index} ${"长链接文本".repeat(10)}`,
+    url: `https://example.com/p/${index}${"/segment".repeat(20)}`,
+  }));
+  const output = buildWebFetchOutput({
+    url: "https://example.com",
+    finalUrl: "https://example.com",
+    status: 200,
+    contentType: "text/html",
+    extracted: {
+      markdown: `# 标题\n\n${"中文段落内容。\n\n".repeat(2_000)}`,
+      title: "T".repeat(5_000),
+      excerpt: "这个摘要应该在预算紧张时被丢弃。",
+      extraction: "readability",
+    },
+    links,
+    maxOutputBytes: 4_096,
+  });
+
+  assert.ok(Buffer.byteLength(output, "utf8") <= 4_096);
+  assert.ok(!output.includes(String.fromCharCode(0xfffd)));
+  assert.match(output, /truncated: true/u);
+  assert.match(output, /content_bytes: 46010/u);
+  assert.doesNotMatch(output, /^excerpt:/mu);
+});
+
+test("buildWebFetchOutput yields link budget to oversized content", () => {
+  const links = Array.from({ length: 50 }, (_value, index) => ({
+    text: `L${index}`,
+    url: `https://example.com/${index}`,
+  }));
+  const output = buildWebFetchOutput({
+    url: "https://example.com",
+    finalUrl: "https://example.com",
+    status: 200,
+    contentType: "text/markdown",
+    extracted: { markdown: "段落。\n\n".repeat(2_000), extraction: "passthrough" },
+    links,
+    maxOutputBytes: 4_096,
+  });
+
+  assert.ok(Buffer.byteLength(output, "utf8") <= 4_096);
+  assert.match(output, /links_truncated: true/u);
+  assert.ok(!output.includes("## links"));
 });

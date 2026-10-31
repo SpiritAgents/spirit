@@ -969,15 +969,17 @@ test("edit_file tool-execution-finished preserves lspWriteDiagnostics on tool sn
   assert.equal(toolMessage?.tool?.lspWriteDiagnostics?.items[0]?.severity, "error");
 });
 
-test("Moonshot Formula web_search tool-execution-finished preserves preview suppressExpand and argsExcerpt", () => {
+test("provider tool call with entry label renders MCP-style and keeps suppressExpand on completion", () => {
   const harness = createHarness();
   harness.pushUser("search DeepSeek");
 
+  // A declared entry's `label` + `ui.expand: false` projects onto the preview event's
+  // `_spiritUi` block: details stay collapsed and the outer line is Call + label.
   const argumentsJson = JSON.stringify({
     status: "completed",
     _spiritUi: {
+      label: "Web Search",
       inputExcerpt: "What is DeepSeek",
-      headlineDetail: "What is DeepSeek",
       suppressExpand: true,
     },
   });
@@ -986,17 +988,17 @@ test("Moonshot Formula web_search tool-execution-finished preserves preview supp
     { kind: "begin-assistant-response" },
     {
       kind: "streaming-tool-preview",
-      toolCallId: "ws_formula_1",
+      toolCallId: "ws_provider_1",
       toolName: "web_search",
       argumentsJson,
     },
     {
       kind: "tool-execution-finished",
       execution: {
-        toolCallId: "ws_formula_1",
+        toolCallId: "ws_provider_1",
         toolName: "web_search",
         request: { name: "web_search", argumentsJson: '{"query":"What is DeepSeek"}' },
-        output: "[moonshot formula web_search] completed",
+        output: "[provider tool web_search] completed",
         failed: false,
       },
     },
@@ -1004,11 +1006,84 @@ test("Moonshot Formula web_search tool-execution-finished preserves preview supp
 
   const tool = harness.timeline
     .toMessages()
-    .find((message) => message.tool?.toolCallId === "ws_formula_1")?.tool;
+    .find((message) => message.tool?.toolCallId === "ws_provider_1")?.tool;
   assert.equal(tool?.phase, "succeeded");
+  assert.equal(tool?.providerToolLabel, "Web Search");
   assert.equal(tool?.suppressExpand, true);
-  assert.equal(tool?.argsExcerpt, "What is DeepSeek");
-  assert.equal(tool?.headlineDetail, "What is DeepSeek");
+  assert.equal(tool?.headline, i18n.t("tool.lazyCall", { context: "succeeded" }));
+  assert.equal(tool?.headlineDetail, "Web Search");
+  assert.equal(tool?.argsExcerpt, JSON.stringify({ query: "What is DeepSeek" }, null, 2));
+});
+
+test("labeled provider tool card runs Calling/Called with input/output detail", () => {
+  const harness = createHarness();
+  harness.pushUser("search DeepSeek");
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "ws_kimi_1",
+      toolName: "web_search",
+      argumentsJson: JSON.stringify({
+        query: "DeepSeek V4",
+        status: "in_progress",
+        _spiritUi: {
+          label: "Web Search",
+          inputExcerpt: "DeepSeek V4",
+          headlineDetail: "DeepSeek V4",
+        },
+      }),
+    },
+  ]);
+
+  const previewTool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "ws_kimi_1")?.tool;
+  assert.equal(previewTool?.phase, "preview");
+  assert.equal(previewTool?.providerToolLabel, "Web Search");
+  assert.equal(previewTool?.headline, i18n.t("tool.lazyCall", { context: "running" }));
+  assert.equal(previewTool?.headlineDetail, "Web Search");
+  assert.equal(previewTool?.argsExcerpt, "DeepSeek V4");
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "ws_kimi_1",
+      toolName: "web_search",
+      argumentsJson: JSON.stringify({
+        query: "DeepSeek V4",
+        status: "completed",
+        _spiritUi: {
+          label: "Web Search",
+          inputExcerpt: "DeepSeek V4",
+          headlineDetail: "DeepSeek V4",
+          outputExcerpt: "1. https://www.deepseek.com/",
+        },
+      }),
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "ws_kimi_1",
+        toolName: "web_search",
+        request: { name: "web_search", argumentsJson: '{"query":"DeepSeek V4"}' },
+        output: "1. https://www.deepseek.com/",
+        failed: false,
+      },
+    },
+  ]);
+
+  const tool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "ws_kimi_1")?.tool;
+  assert.equal(tool?.phase, "succeeded");
+  assert.equal(tool?.providerToolLabel, "Web Search");
+  assert.equal(tool?.headline, i18n.t("tool.lazyCall", { context: "succeeded" }));
+  assert.equal(tool?.headlineDetail, "Web Search");
+  assert.equal(tool?.suppressExpand, undefined);
+  assert.equal(tool?.argsExcerpt, JSON.stringify({ query: "DeepSeek V4" }, null, 2));
+  assert.equal(tool?.outputExcerpt, "1. https://www.deepseek.com/");
 });
 
 test("failed llm turn reuses streamed error text instead of duplicating assistant rows", () => {
@@ -1048,6 +1123,7 @@ function createContextUsageHarness(options = {}) {
   let nextMessageId = 1;
   let nextTimelineMessageId = 1;
   let contextUsage = options.initialContextUsage;
+  let lastInputTokens;
   const refreshCatalogCalls = [];
   const timeline = new DesktopMessageTimeline({
     allocateMessageId: () => nextTimelineMessageId++,
@@ -1082,6 +1158,10 @@ function createContextUsageHarness(options = {}) {
     bindFileChangesToToolMessage: () => {},
     resolveActiveModel: options.resolveActiveModel,
     resolveCatalogHints: options.resolveCatalogHints ?? (() => []),
+    supportsCatalogRefresh: options.supportsCatalogRefresh,
+    setLastInputTokens: (inputTokens) => {
+      lastInputTokens = inputTokens;
+    },
     setContextUsage: (usage) => {
       contextUsage = usage;
     },
@@ -1093,6 +1173,7 @@ function createContextUsageHarness(options = {}) {
   return {
     orchestrator,
     getContextUsage: () => contextUsage,
+    getLastInputTokens: () => lastInputTokens,
     refreshCatalogCalls,
   };
 }
@@ -1104,10 +1185,11 @@ test("context-usage-updated queues catalog refresh without clearing cached usage
     resolveActiveModel: () => ({
       name: "openai/gpt-5",
       apiBase: "https://gateway.example/v1",
-      provider: "vercel-ai-gateway",
+      providerId: "vercel-ai-gateway",
       transportKind: "openai-compatible",
     }),
     resolveCatalogHints: () => [],
+    supportsCatalogRefresh: () => true,
   });
 
   harness.orchestrator.applyRuntimeHostEvents([
@@ -1125,7 +1207,7 @@ test("context-usage-updated clears usage when provider cannot resolve context le
     resolveActiveModel: () => ({
       name: "custom-model",
       apiBase: "https://example.invalid/v1",
-      provider: "custom",
+      providerId: "custom-local",
     }),
   });
 
@@ -1142,7 +1224,7 @@ test("context-usage-updated updates usage when context length is already known",
     resolveActiveModel: () => ({
       name: "custom-model",
       apiBase: "https://example.invalid/v1",
-      provider: "custom",
+      providerId: "custom-local",
       contextLength: 128000,
     }),
   });
@@ -1156,6 +1238,23 @@ test("context-usage-updated updates usage when context length is already known",
     contextLength: 128000,
     percent: 50,
   });
+});
+
+test("context-usage-updated records lastInputTokens without a model context length", () => {
+  const harness = createContextUsageHarness({
+    resolveActiveModel: () => ({
+      name: "gpt-5.4",
+      apiBase: "https://api.openai.com/v1",
+      providerId: "openai",
+    }),
+  });
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "context-usage-updated", usage: { inputTokens: 278529 } },
+  ]);
+
+  assert.equal(harness.getLastInputTokens(), 278529);
+  assert.equal(harness.getContextUsage(), undefined);
 });
 
 test("interleaved built-in web_search shows Thinking placeholder after last terminal tool", () => {
@@ -1349,6 +1448,43 @@ test("shell tool-execution-finished keeps full outputExcerpt without 4k truncati
   const parsed = JSON.parse(tool?.outputExcerpt ?? "");
   assert.equal(parsed.exitCode, 0);
   assert.ok(String(parsed.output).endsWith("TAIL_MARKER_OK"));
+});
+
+test("non-shell tool-execution-finished keeps full output and refreshes full args without truncation", () => {
+  const harness = createHarness();
+  harness.pushUser("grep big");
+
+  const longOutput = `${"match\n".repeat(2_000)}GREP_TAIL_OK`;
+  assert.ok(longOutput.length > 4_000);
+  const request = { name: "grep", pattern: "x".repeat(5_000), glob: "*.ts" };
+
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "grep-1",
+      toolName: "grep",
+      argumentsJson: JSON.stringify({ pattern: "x" }),
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "grep-1",
+        toolName: "grep",
+        request,
+        output: longOutput,
+        failed: false,
+      },
+    },
+  ]);
+
+  const tool = harness.timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "grep-1")?.tool;
+  assert.equal(tool?.outputExcerpt, longOutput);
+  // Completion always refreshes args from the executed request, not the stale preview excerpt.
+  assert.equal(tool?.argsExcerpt, JSON.stringify(request, null, 2));
+  assert.equal(tool?.argsExcerpt?.includes("...<truncated>"), false);
 });
 
 test("shell tool-execution-output-chunk appends while phase stays running", () => {

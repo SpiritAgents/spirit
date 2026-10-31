@@ -25,7 +25,7 @@ test("automation store create list get update delete", async () => {
       overview: "Collect GitHub news",
       trigger: { kind: "time", schedule: { kind: "daily", hour: 20, minute: 0 } },
       workspaceRoot: spiritDataDir,
-      modelRef: { groupId: "openai", name: "gpt-test" },
+      modelRef: { providerId: "openai", name: "gpt-test" },
       approvalLevel: "default",
     });
     assert.equal(created.enabled, true);
@@ -61,7 +61,7 @@ test("automation store tracks runs and active run", async () => {
       overview: "Do work",
       trigger: { kind: "time", schedule: { kind: "hourly" } },
       workspaceRoot: spiritDataDir,
-      modelRef: { groupId: "openai", name: "gpt-test" },
+      modelRef: { providerId: "openai", name: "gpt-test" },
       approvalLevel: "bypass-approval",
     });
 
@@ -188,7 +188,7 @@ test("automation store serializes concurrent mutations and writes atomically", a
       overview: "Concurrent writes",
       trigger: { kind: "time", schedule: { kind: "hourly" } },
       workspaceRoot: spiritDataDir,
-      modelRef: { groupId: "openai", name: "gpt-test" },
+      modelRef: { providerId: "openai", name: "gpt-test" },
       approvalLevel: "default",
     });
 
@@ -290,16 +290,16 @@ test("automation store persists modelRef and rejects legacy modelName-only files
       overview: "Uses group-scoped model",
       trigger: { kind: "time", schedule: { kind: "hourly" } },
       workspaceRoot: spiritDataDir,
-      modelRef: { groupId: "custom-openai", name: "gpt-test" },
+      modelRef: { providerId: "custom-openai", name: "gpt-test" },
       approvalLevel: "default",
     });
-    assert.deepEqual(created.modelRef, { groupId: "custom-openai", name: "gpt-test" });
+    assert.deepEqual(created.modelRef, { providerId: "custom-openai", name: "gpt-test" });
 
     const raw = await readFile(join(spiritDataDir, "automations", `${created.id}.json`), "utf8");
     const parsed = JSON.parse(raw) as {
-      definition: { modelRef?: { groupId: string; name: string }; modelName?: string };
+      definition: { modelRef?: { providerId: string; name: string }; modelName?: string };
     };
-    assert.deepEqual(parsed.definition.modelRef, { groupId: "custom-openai", name: "gpt-test" });
+    assert.deepEqual(parsed.definition.modelRef, { providerId: "custom-openai", name: "gpt-test" });
     assert.equal(parsed.definition.modelName, undefined);
 
     const legacyId = "legacy-automation-id";

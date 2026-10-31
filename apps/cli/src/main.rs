@@ -22,9 +22,9 @@ use std::{
 use spirit::tui::InlineRecreate;
 use spirit::{
     ConfigCommand, ExtensionCommand, ExtensionMarketplaceCommand, GlobalCliOptions, HookCommand,
-    KeyCommand, McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell,
-    bootstrap_config, handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli,
-    handle_model_cli, handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
+    McpCommand, ModelAddCommand, ModelCommand, PermissionCommand, TuiShell, bootstrap_config,
+    handle_config_cli, handle_extension_cli, handle_hooks_cli, handle_mcp_cli, handle_model_cli,
+    handle_permissions_cli, logging, print_skills_stub, resolve_session_tui_mode,
     run_headless_prompt, run_serve, tui, ui,
 };
 
@@ -41,7 +41,7 @@ use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_LSHIF
 #[command(name = "spirit")]
 #[command(version)]
 #[command(disable_version_flag = true)]
-#[command(about = "Spirit — AI productivity agent", long_about = None)]
+#[command(about = format!("{} — AI productivity agent", spirit::product::NAME), long_about = None)]
 struct Cli {
     /// Print version
     #[arg(short = 'v', long = "version", action = ArgAction::SetTrue)]
@@ -83,11 +83,11 @@ struct Cli {
 enum Commands {
     Skill,
     Interactive,
-    /// Run the Spirit Server daemon in the foreground (WebSocket backend for hosts)
+    /// Run the shared server daemon in the foreground (WebSocket backend for hosts)
     Serve,
     Model {
         #[command(subcommand)]
-        action: ModelAction,
+        action: Box<ModelAction>,
     },
     Config {
         #[command(subcommand)]
@@ -121,13 +121,16 @@ enum ModelAction {
         name: String,
         #[arg(long, value_name = "api_base")]
         api_base: Option<String>,
-        #[arg(long, value_name = "provider", value_parser = ["deepseek", "xai", "moonshot-ai", "kimi-code", "z-ai", "zhipu-ai", "minimax", "xiaomi", "siliconflow", "alibaba", "anthropic", "vercel-ai-gateway", "openrouter", "fireworks-ai", "together-ai", "groq", "deepinfra", "baseten", "hugging-face", "cohere", "openai", "google", "volcengine", "byteplus", "azure", "amazon-bedrock", "custom"])]
+        /// Preset id from the built-in provider presets manifest, or `custom`.
+        #[arg(long, value_name = "provider")]
         provider: Option<String>,
         #[arg(long, value_name = "transport_kind", value_parser = ["openai-compatible", "open-responses", "anthropic", "bedrock"])]
         transport_kind: Option<String>,
         #[arg(long, value_name = "reasoning_effort")]
         reasoning_effort: Option<String>,
-        #[arg(long = "capability", value_name = "capability", value_parser = ["chat", "image", "imageGeneration", "video", "videoGeneration"])]
+        #[arg(long, value_name = "effort")]
+        effort: Option<String>,
+        #[arg(long = "capability", value_name = "capability", value_parser = ["languageModel", "image", "imageGeneration", "video", "videoGeneration"])]
         capabilities: Vec<String>,
         #[arg(long, value_name = "context_length")]
         context_length: Option<u64>,
@@ -137,8 +140,24 @@ enum ModelAction {
         azure_resource_name: Option<String>,
         #[arg(long, value_name = "provider_site")]
         provider_site: Option<String>,
-        #[arg(long, value_name = "alibaba_workspace_id")]
-        alibaba_workspace_id: Option<String>,
+        #[arg(long, value_name = "billing_plan")]
+        billing_plan: Option<String>,
+        #[arg(long, value_name = "workspace_id")]
+        workspace_id: Option<String>,
+        #[arg(long, value_name = "vertex_project")]
+        vertex_project: Option<String>,
+        #[arg(long, value_name = "vertex_location")]
+        vertex_location: Option<String>,
+        #[arg(long, value_name = "vertex_client_email")]
+        vertex_client_email: Option<String>,
+        #[arg(long, value_name = "vertex_private_key")]
+        vertex_private_key: Option<String>,
+        #[arg(long, value_name = "aws_region")]
+        aws_region: Option<String>,
+        #[arg(long, value_name = "aws_access_key_id")]
+        aws_access_key_id: Option<String>,
+        #[arg(long, value_name = "aws_secret_access_key")]
+        aws_secret_access_key: Option<String>,
     },
     Remove {
         #[arg(value_name = "name")]
@@ -168,20 +187,6 @@ enum ConfigAction {
         name: String,
     },
     ClearVideoModel,
-    Key {
-        #[command(subcommand)]
-        action: KeyAction,
-    },
-}
-
-#[derive(Subcommand)]
-enum KeyAction {
-    Set {
-        #[arg(value_name = "value")]
-        value: Option<String>,
-    },
-    Remove,
-    Status,
 }
 
 #[derive(Subcommand)]
@@ -255,7 +260,7 @@ enum HookAction {
 #[derive(Subcommand)]
 enum PermissionAction {
     /// Check a shell command or read_file path against the permission allowlist.
-    /// Rule evaluation runs daemon-side, so a reachable Spirit daemon is required.
+    /// Rule evaluation runs daemon-side, so a reachable shared daemon is required.
     Check {
         /// Shell command to check
         #[arg(
@@ -358,7 +363,7 @@ fn main() -> Result<()> {
         Some(Commands::Skill) => print_skills_stub(),
         Some(Commands::Serve) => run_serve()?,
         Some(Commands::Interactive) | None => run_interactive(&options, &config)?,
-        Some(Commands::Model { action }) => handle_model_cli(into_model_command(action))?,
+        Some(Commands::Model { action }) => handle_model_cli(into_model_command(*action))?,
         Some(Commands::Config { action }) => handle_config_cli(into_config_command(action))?,
         Some(Commands::Mcp { action }) => handle_mcp_cli(into_mcp_command(action))?,
         Some(Commands::Hook { action }) => handle_hooks_cli(into_hook_command(action))?,
@@ -382,24 +387,42 @@ fn into_model_command(action: ModelAction) -> ModelCommand {
             provider,
             transport_kind,
             reasoning_effort,
+            effort,
             capabilities,
             context_length,
             key,
             azure_resource_name,
             provider_site,
-            alibaba_workspace_id,
+            billing_plan,
+            workspace_id,
+            vertex_project,
+            vertex_location,
+            vertex_client_email,
+            vertex_private_key,
+            aws_region,
+            aws_access_key_id,
+            aws_secret_access_key,
         } => ModelCommand::Add(Box::new(ModelAddCommand {
             name,
             api_base,
             provider,
             transport_kind,
             reasoning_effort,
+            effort,
             capabilities,
             context_length,
             key,
             azure_resource_name,
             provider_site,
-            alibaba_workspace_id,
+            billing_plan,
+            workspace_id,
+            vertex_project,
+            vertex_location,
+            vertex_client_email,
+            vertex_private_key,
+            aws_region,
+            aws_access_key_id,
+            aws_secret_access_key,
         })),
         ModelAction::Remove { name } => ModelCommand::Remove { name },
         ModelAction::Use { name } => ModelCommand::Use { name },
@@ -415,9 +438,6 @@ fn into_config_command(action: ConfigAction) -> ConfigCommand {
         ConfigAction::ClearImageModel => ConfigCommand::ClearImageModel,
         ConfigAction::SetVideoModel { name } => ConfigCommand::SetVideoModel { name },
         ConfigAction::ClearVideoModel => ConfigCommand::ClearVideoModel,
-        ConfigAction::Key { action } => ConfigCommand::Key {
-            action: into_key_command(action),
-        },
     }
 }
 
@@ -457,14 +477,6 @@ fn into_extension_marketplace_command(
         }
         ExtensionMarketplaceAction::List => ExtensionMarketplaceCommand::List,
         ExtensionMarketplaceAction::Remove { name } => ExtensionMarketplaceCommand::Remove { name },
-    }
-}
-
-fn into_key_command(action: KeyAction) -> KeyCommand {
-    match action {
-        KeyAction::Set { value } => KeyCommand::Set { value },
-        KeyAction::Remove => KeyCommand::Remove,
-        KeyAction::Status => KeyCommand::Status,
     }
 }
 

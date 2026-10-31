@@ -1,13 +1,14 @@
 /* unified diff: scoped to tool card / PR review containers, aligned with Spirit Desktop's background and subtle diff styling */
 .tool-call-diff {
-  --diff-background-color: var(--background);
   --diff-text-color: var(--foreground);
   --diff-font-family: var(--font-mono, ui-monospace, monospace);
   --diff-code-insert-background-color: color-mix(in oklab, #6ee7b7 7%, transparent);
   --diff-code-delete-background-color: color-mix(in oklab, #fca5a5 7%, transparent);
   font-size: 12px;
   line-height: 1.5;
-  background-color: var(--diff-background-color);
+  /* The background var is read with a fallback (not redeclared here) so wrappers can override
+     it — a same-element redeclaration would always beat the inherited value. */
+  background-color: var(--diff-background-color, var(--background));
   color: var(--diff-text-color);
 }
 
@@ -36,7 +37,7 @@
 }
 
 .unified-diff-line-normal {
-  background-color: var(--diff-background-color);
+  background-color: var(--diff-background-color, var(--background));
 }
 
 .unified-diff-gutter {

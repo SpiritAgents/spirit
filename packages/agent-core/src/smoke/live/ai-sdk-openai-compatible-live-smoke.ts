@@ -29,7 +29,6 @@ async function main(): Promise<void> {
   const result = await transport.createJsonSchemaCompletion<{ message: string }>(config, request);
   printSmokeSection("live openai-compatible json-schema smoke", {
     model: config.model,
-    llmVendor: config.llmVendor ?? null,
     output: result.output,
     requestTraceCount: result.requestTrace.length,
   });

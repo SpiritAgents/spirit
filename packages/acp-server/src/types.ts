@@ -14,7 +14,7 @@ import type { JsonValue } from "@spiritagent/agent-core";
 export interface AcpServerConfig {
   /** Workspace root path (default: process.cwd()) */
   workspaceRoot: string;
-  /** Spirit data directory (default: APPDATA/Spirit or ~/.spirit-data) */
+  /** Shared data directory, defaulting to the build's product directory under the user home. */
   spiritDataDir: string;
 }
 

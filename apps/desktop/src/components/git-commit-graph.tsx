@@ -1,3 +1,6 @@
+import { Copy } from "@spiritagent/icons/copy";
+import { Check } from "@spiritagent/icons/check";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useCallback,
   useEffect,
@@ -10,7 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 
-import { Check, Copy, GitCommit, LoaderCircle } from "lucide-react";
+import { GitCommit } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -112,8 +115,8 @@ export type GitCommitGraphProps = {
   loadingMore?: boolean;
   hasMore?: boolean;
   onLoadMore?: () => void;
-  onAddCommitToSession?: (commit: GitCommitRecord) => void;
-  addCommitToSessionDisabled?: boolean;
+  onAddCommitToChat?: (commit: GitCommitRecord) => void;
+  addCommitToChatDisabled?: boolean;
   error?: string;
   className?: string;
 };
@@ -498,9 +501,9 @@ function CommitGraphRowDetail({ row }: { row: GitCommitGraphRow }) {
           aria-label={copied ? t("workspace.git.copiedSha") : t("workspace.git.copySha")}
         >
           {copied ? (
-            <Check className="size-[11px]" aria-hidden />
+            <Check className="size-[11px]" aria-hidden strokeWidth={1.75} />
           ) : (
-            <Copy className="size-[11px]" aria-hidden />
+            <Copy className="size-[11px]" aria-hidden strokeWidth={1.75} />
           )}
         </button>
       </div>
@@ -546,8 +549,8 @@ export function GitCommitGraph({
   loadingMore = false,
   hasMore = false,
   onLoadMore,
-  onAddCommitToSession,
-  addCommitToSessionDisabled = false,
+  onAddCommitToChat,
+  addCommitToChatDisabled = false,
   error,
   className,
 }: GitCommitGraphProps) {
@@ -631,7 +634,7 @@ export function GitCommitGraph({
           className,
         )}
       >
-        <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+        <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
         {t("workspace.git.loadingHistory")}
       </div>
     );
@@ -662,7 +665,7 @@ export function GitCommitGraph({
   const graphBody = (
     <div
       className="relative min-w-0 pr-1"
-      onContextMenuCapture={onAddCommitToSession ? handleCommitContextMenuCapture : undefined}
+      onContextMenuCapture={onAddCommitToChat ? handleCommitContextMenuCapture : undefined}
     >
       <CommitGraphGutter rows={rows} graphWidth={graphWidth} />
       <Tooltip<GitCommitGraphRow> getItemId={(row) => row.commit.oid}>
@@ -706,7 +709,7 @@ export function GitCommitGraph({
         >
           {loadingMore ? (
             <>
-              <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+              <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
               {t("workspace.git.loadingMoreHistory")}
             </>
           ) : hasMore && onLoadMore ? (
@@ -727,14 +730,14 @@ export function GitCommitGraph({
 
   return (
     <ScrollArea ref={scrollAreaRef} className={cn("min-h-0 flex-1", className)}>
-      {onAddCommitToSession ? (
+      {onAddCommitToChat ? (
         <ContextMenu>
           <ContextMenuTrigger asChild>{graphBody}</ContextMenuTrigger>
           <WorkspaceGitCommitContextMenuContent
             commit={commitContextMenuTarget}
             commitRef={commitContextMenuTargetRef}
-            onAddToSession={onAddCommitToSession}
-            addToSessionDisabled={addCommitToSessionDisabled}
+            onAddToChat={onAddCommitToChat}
+            addToChatDisabled={addCommitToChatDisabled}
           />
         </ContextMenu>
       ) : (

@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import crossSpawn from 'cross-spawn';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { signCliBundle } from './sign-macos.mjs';
+import { deployProductionPackage, assertContainedLinks } from './deploy-package.mjs';
+import { parseReleaseVersion } from './version.mjs';
+import { product, PRODUCT_BUILD_ID } from '@spiritagent/product';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const releaseRoot = path.join(repoRoot, 'dist', 'release');
+const releaseRoot = path.resolve(readArg('--output-dir') ?? path.join(repoRoot, 'dist', 'release'));
 
 const targetMap = {
   'x86_64-pc-windows-msvc': {
@@ -62,7 +65,10 @@ const targetMap = {
 
 function readArg(name) {
   const index = process.argv.indexOf(name);
-  return index >= 0 ? process.argv[index + 1] : undefined;
+  if (index < 0) return undefined;
+  const value = process.argv[index + 1];
+  if (!value || value.startsWith('--')) throw new Error(`Missing value for ${name}`);
+  return value;
 }
 
 function detectHostTarget() {
@@ -82,8 +88,9 @@ async function pathExists(filePath) {
   try {
     await stat(filePath);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (error?.code === 'ENOENT') return false;
+    throw error;
   }
 }
 
@@ -111,8 +118,14 @@ async function readNvmrcMajor() {
 }
 
 async function resolveNodeReleaseVersion() {
-  if (process.env.SPIRIT_RELEASE_NODE_VERSION) {
-    return process.env.SPIRIT_RELEASE_NODE_VERSION.replace(/^v/, '');
+  const explicit = readArg('--node-version') ?? process.env.SPIRIT_RELEASE_NODE_VERSION;
+  if (explicit) {
+    const version = explicit.replace(/^v/, '');
+    if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid Node runtime version: ${explicit}`);
+    return version;
+  }
+  if (process.argv.includes('--offline')) {
+    throw new Error('--offline requires --node-version or SPIRIT_RELEASE_NODE_VERSION');
   }
 
   const major = process.env.SPIRIT_RELEASE_NODE_MAJOR ?? (await readNvmrcMajor());
@@ -129,11 +142,11 @@ async function resolveNodeReleaseVersion() {
 }
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, {
+  const result = crossSpawn.sync(command, args, {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
     ...options,
   });
+  if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`Command failed: ${command} ${args.join(' ')}`);
   }
@@ -173,6 +186,19 @@ function createArchive(sourceDir, archivePath, archiveExt) {
 }
 
 async function ensureNodeRuntime(targetInfo) {
+  const localRuntime = readArg('--node-runtime-dir');
+  if (localRuntime) {
+    const explicitVersion = readArg('--node-version') ?? process.env.SPIRIT_RELEASE_NODE_VERSION;
+    if (!explicitVersion) {
+      throw new Error('--node-runtime-dir requires an explicit --node-version');
+    }
+    const root = path.resolve(localRuntime);
+    const binary = targetInfo.nodePlatform === 'win' ? 'node.exe' : 'bin/node';
+    if (!(await stat(path.join(root, binary))).isFile()) {
+      throw new Error(`Local Node runtime has no ${binary}: ${root}`);
+    }
+    return { root, version: await resolveNodeReleaseVersion() };
+  }
   const version = await resolveNodeReleaseVersion();
   const nodeName = `node-v${version}-${targetInfo.nodePlatform}-${targetInfo.nodeArch}`;
   const archiveName = `${nodeName}.${targetInfo.nodeArchiveExt}`;
@@ -182,6 +208,9 @@ async function ensureNodeRuntime(targetInfo) {
 
   if (!(await pathExists(extractedRoot))) {
     if (!(await pathExists(archivePath))) {
+      if (process.argv.includes('--offline')) {
+        throw new Error(`Node runtime is not cached: ${archivePath}; provide --node-runtime-dir`);
+      }
       const url = `https://nodejs.org/dist/v${version}/${archiveName}`;
       console.log(`Downloading ${url}`);
       await downloadFile(url, archivePath);
@@ -189,40 +218,7 @@ async function ensureNodeRuntime(targetInfo) {
     extractArchive(archivePath, cacheDir, targetInfo.nodeArchiveExt);
   }
 
-  return extractedRoot;
-}
-
-async function copyHoistedHostInternalRipgrep(destinationRoot) {
-  const destination = path.join(destinationRoot, 'packages', 'host-internal', 'node_modules', '@vscode', 'ripgrep');
-  if (await pathExists(destination)) {
-    return;
-  }
-  let hoistedRipgrep = path.join(repoRoot, 'node_modules', '@vscode', 'ripgrep');
-  try {
-    const require = createRequire(import.meta.url);
-    hoistedRipgrep = path.dirname(require.resolve('@vscode/ripgrep/package.json'));
-  } catch {
-    // fall back to repoRoot node_modules
-  }
-  if (!(await pathExists(hoistedRipgrep))) {
-    return;
-  }
-  await mkdir(path.dirname(destination), { recursive: true });
-  await cp(hoistedRipgrep, destination, { recursive: true });
-}
-
-async function copyPackageDist(packageName, destinationRoot) {
-  const sourceRoot = path.join(repoRoot, 'packages', packageName);
-  const destination = path.join(destinationRoot, 'packages', packageName);
-  await cp(path.join(sourceRoot, 'dist'), path.join(destination, 'dist'), { recursive: true });
-  await cp(path.join(sourceRoot, 'package.json'), path.join(destination, 'package.json'));
-  const nodeModules = path.join(sourceRoot, 'node_modules');
-  if (await pathExists(nodeModules)) {
-    await cp(nodeModules, path.join(destination, 'node_modules'), { recursive: true });
-  }
-  if (packageName === 'host-internal') {
-    await copyHoistedHostInternalRipgrep(destinationRoot);
-  }
+  return { root: extractedRoot, version };
 }
 
 async function main() {
@@ -235,42 +231,84 @@ async function main() {
   const desktopPackage = await readJson('apps/desktop/package.json');
   const agentCorePackage = await readJson('packages/agent-core/package.json');
   const hostInternalPackage = await readJson('packages/host-internal/package.json');
-  const version = readArg('--version') ?? process.env.RELEASE_VERSION ?? desktopPackage.version;
+  const serverPackage = await readJson('packages/server/package.json');
+  const productPackage = await readJson('packages/product/package.json');
+  const version = parseReleaseVersion(
+    readArg('--version') ?? process.env.RELEASE_VERSION ?? desktopPackage.version,
+  ).version;
   const targetBinaryPath = path.join(repoRoot, 'target', target, 'release', targetInfo.binaryName);
   const hostBinaryPath = path.join(repoRoot, 'target', 'release', targetInfo.binaryName);
-  const binaryPath = (await pathExists(targetBinaryPath)) ? targetBinaryPath : hostBinaryPath;
+  const binaryPath =
+    readArg('--binary') ??
+    ((await pathExists(targetBinaryPath))
+      ? targetBinaryPath
+      : target === detectHostTarget()
+        ? hostBinaryPath
+        : targetBinaryPath);
 
   if (!(await pathExists(binaryPath))) {
-    throw new Error(`CLI release binary not found: ${targetBinaryPath}`);
+    throw new Error(`CLI release binary not found: ${binaryPath}`);
+  }
+  if (!(await readFile(binaryPath)).includes(Buffer.from(PRODUCT_BUILD_ID))) {
+    throw new Error('CLI binary has a different product build; rebuild it before bundling');
   }
 
-  const bundleName = `Spirit-CLI-${version}-${targetInfo.packageTarget}`;
+  const bundleName = `${product.name}-CLI-${version}-${targetInfo.packageTarget}`;
+  if (/[<>:"/\\|?*\x00-\x1f]/.test(bundleName)) {
+    throw new Error(`Product name cannot be used in a cross-platform release filename: ${product.name}`);
+  }
   const bundleRoot = path.join(releaseRoot, 'cli', bundleName);
+  const runtime = await ensureNodeRuntime(targetInfo);
+  for (const input of [path.resolve(binaryPath), runtime.root]) {
+    if (input === bundleRoot || input.startsWith(`${bundleRoot}${path.sep}`)) {
+      throw new Error(`Release input must be outside the output bundle: ${input}`);
+    }
+  }
   await rm(bundleRoot, { recursive: true, force: true });
   await mkdir(path.join(bundleRoot, 'bin'), { recursive: true });
 
-  await cp(binaryPath, path.join(bundleRoot, 'bin', targetInfo.binaryName));
-  await cp(await ensureNodeRuntime(targetInfo), path.join(bundleRoot, 'node'), { recursive: true });
-  await copyPackageDist('agent-core', bundleRoot);
-  await copyPackageDist('host-internal', bundleRoot);
+  await cp(binaryPath, path.join(bundleRoot, 'bin', targetInfo.binaryName), { dereference: true });
+  await cp(runtime.root, path.join(bundleRoot, 'node'), {
+    recursive: true,
+    verbatimSymlinks: true,
+  });
+  const serverRoot = path.join(bundleRoot, 'packages', 'server');
+  await deployProductionPackage({
+    packageName: '@spiritagent/server',
+    destination: serverRoot,
+    arch: targetInfo.nodeArch,
+    platform: targetInfo.nodePlatform === 'win' ? 'win32' : targetInfo.nodePlatform,
+    offline: process.argv.includes('--offline') || process.env.npm_config_offline === 'true',
+    ignoreScripts: process.argv.includes('--ignore-scripts'),
+  });
+  const require = createRequire(path.join(serverRoot, 'package.json'));
+  const deployedProduct = await import(pathToFileURL(require.resolve('@spiritagent/product')).href);
+  if (deployedProduct.PRODUCT_BUILD_ID !== PRODUCT_BUILD_ID) {
+    throw new Error('Deployed product build does not match the release build');
+  }
+  await assertContainedLinks(bundleRoot);
 
   await writeFile(
     path.join(bundleRoot, 'release-manifest.json'),
     `${JSON.stringify(
       {
-        name: 'Spirit CLI',
+        name: `${product.name} CLI`,
+        product,
+        productBuildId: PRODUCT_BUILD_ID,
         version,
         target,
         packageTarget: targetInfo.packageTarget,
         generatedAt: new Date().toISOString(),
         gitSha: process.env.GITHUB_SHA ?? null,
-        nodeVersion: await resolveNodeReleaseVersion(),
+        nodeVersion: runtime.version,
         binary: `bin/${targetInfo.binaryName}`,
         components: {
           cli: version,
           desktop: desktopPackage.version,
           agentCore: agentCorePackage.version,
           hostInternal: hostInternalPackage.version,
+          server: serverPackage.version,
+          product: productPackage.version,
         },
       },
       null,

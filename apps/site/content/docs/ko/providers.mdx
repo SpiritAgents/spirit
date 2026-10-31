@@ -3,11 +3,11 @@ title: 프로바이더
 description: 자신의 키를 가져오고, 연결 마법사를 실행하고, 집을 바꿔도 동일한 에이전트 워크플로를 유지하세요.
 ---
 
-Spirit는 BYOK입니다. 프로바이더 콘솔에서 키를 생성하고, Desktop 또는 CLI에 붙여넣으면 Spirit이 운영 체제 키링에 저장합니다. 집을 바꿔도 작업 공간을 열거나 편집을 승인하거나 에이전트를 실행하는 방식은 변경되지 않습니다.
+{{product.name|mdx}}는 BYOK입니다. 프로바이더 콘솔에서 키를 생성하고, Desktop 또는 CLI에 붙여넣으면 {{product.name|mdx}}이 운영 체제 키링에 저장합니다. 집을 바꿔도 작업 공간을 열거나 편집을 승인하거나 에이전트를 실행하는 방식은 변경되지 않습니다.
 
 연결 마법사는 Desktop에서 **설정 → 모델**이며, CLI에서는 `/model add` 또는 `spirit model add`입니다. 추가 필드는 해당 프로바이더가 필요로 할 때만 나타납니다.
 
-Spirit은 네 가지 전송 방식 중 하나로 프로바이더와 통신합니다. 마법사는 유형을 고정하거나 선택하게 합니다.
+{{product.name|mdx}}은 네 가지 전송 방식 중 하나로 프로바이더와 통신합니다. 마법사는 유형을 고정하거나 선택하게 합니다.
 
 | 전송                | 마법사 라벨                        | 일반적인 사용                                                            |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------------ |
@@ -16,7 +16,7 @@ Spirit은 네 가지 전송 방식 중 하나로 프로바이더와 통신합니
 | `anthropic`         | Messages API                       | Anthropic, MiniMax 및 선택적 Messages 호환 엔드포인트                    |
 | `bedrock`           | Amazon Bedrock                     | Amazon Bedrock 전용                                                      |
 
-Google Gemini 및 Vertex AI는 항상 Chat Completions를 사용합니다. 프로필이 Responses 또는 Messages를 요청하면 Spirit은 `openai-compatible`로 대체합니다.
+Google 및 Vertex AI 프리셋은 Chat Completions로 고정됩니다 — 마법사에 전송 선택기가 없습니다.
 
 일부 집은 키 위에 두 번째 차원을 추가합니다:
 
@@ -24,21 +24,25 @@ Google Gemini 및 Vertex AI는 항상 Chat Completions를 사용합니다. 프�
 - **요금제 엔드포인트** — Alibaba Token Plan, StepFun Step Plan, Z.ai / Zhipu AI GLM Coding Plan
 - **클라우드 필드** — Bedrock 리전, Azure 리소스 이름, Cloudflare 계정 (및 선택적 게이트웨이), Vertex 프로젝트 / 위치
 
-프로바이더에 이러한 항목이 없으면 마법사는 키 → 모델 가져오기 → 활성 채팅 모델 선택만으로 진행됩니다.
+프로바이더에 이러한 항목이 없으면 마법사는 키 → 모델 가져오기 → 활성 언어 모델 선택만으로 진행됩니다.
 
-Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 수 있게 하며, 카탈로그가 해당 기능을 표시할 때 이미지 / 비디오 / 경량 채팅 슬롯도 지정할 수 있습니다. 추론 및 내장 웹 검색은 모델과 전송 방식을 따르며, 별도의 Spirit 토글을 사용하지 않습니다.
+{{product.name|mdx}}은 모델 카탈로그를 가져오고 활성 언어 모델을 지정할 수 있게 하며, 카탈로그가 해당 기능을 표시할 때 이미지 / 비디오 / 보조 언어 모델 슬롯도 지정할 수 있습니다. 추론 옵션은 각 모델이 선언한 `supportedReasoningEfforts`를 따릅니다. 웹 검색 같은 프로바이더 노출 도구는 프로바이더별로 선언되며 **프로바이더 도구** 토글로 제어됩니다 — [도구](./agent/tools.mdx#provider-tools)를 참조하세요.
+
+마법사가 `config.json`에 쓰는 것은 완전한 선언적 항목입니다: 최종 API 베이스, 전송, SDK 어댑터, 그리고 프로바이더 도구 / 파일 업로드 / 생성 API 선언. 런타임은 이 선언을 그대로 읽으며 프로바이더의 정체에서 다시 유도하지 않습니다 — 재연결이 마법사 소유 키를 리셋하는 경우를 제외하면 편집 내용이 유지됩니다 ([설정](./config.mdx) 참조).
 
 ## 카탈로그
 
-연결 선택기에 표시되는 집들은 같은 순서로 나열됩니다. 각 섹션은 해당 집의 키, 전송 및 추가 필드입니다. 위의 Desktop 및 CLI 마법사는 모든 집에 동일합니다.
+연결 선택기에 표시되는 집들은 같은 순서로 나열됩니다. 각 섹션은 해당 집의 키, 전송, 추가 필드, 그리고 마법사가 키 외에 선언하는 내용입니다. 별도의 언급이 없으면 자격 증명 형태는 키링에 저장되는 단일 API 키입니다. 위의 Desktop 및 CLI 마법사는 모든 집에 동일합니다.
 
 ### OpenAI
 
-[OpenAI 플랫폼](https://platform.openai.com/api-keys)에서 API 키를 생성하세요. Spirit은 OpenAI 사용량을 판매하지 않습니다.
+[OpenAI 플랫폼](https://platform.openai.com/api-keys)에서 API 키를 생성하세요. {{product.name|mdx}}은 OpenAI 사용량을 판매하지 않습니다.
 
 마법사는 **Responses API** (`open-responses`)를 고정합니다. 전송 선택기가 없습니다. 기본 베이스: `https://api.openai.com/v1`.
 
 가져온 후 채팅하세요. 추론은 모델을 따릅니다. 이미지 및 비디오 생성은 카탈로그가 해당 기능을 표시할 때만 나타납니다 — 이미지 / 비디오 모델 슬롯에 지정하세요.
+
+선언: **웹 검색** 프로바이더 도구 (업스트림이 요청 내에서 실행) 및 이미지 생성 API.
 
 ### Anthropic
 
@@ -46,13 +50,13 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 고정 **Messages API** (`anthropic`). 기본 베이스: `https://api.anthropic.com/v1`.
 
-가져온 후 채팅하세요. 추론은 모델을 따릅니다. 나중에 카탈로그 항목이 표시하지 않는 한 Spirit 측 이미지 또는 비디오 생성 슬롯이 없습니다.
+가져온 후 채팅하세요. 추론은 모델을 따릅니다. 나중에 카탈로그 항목이 표시하지 않는 한 {{product.name|mdx}} 측 이미지 또는 비디오 생성 슬롯이 없습니다.
 
 ### Google
 
 [Google AI Studio](https://aistudio.google.com/apikey)에서 API 키를 생성하세요.
 
-고정 **Chat Completions API** (`openai-compatible`). Responses 또는 Messages를 요청하면 Chat Completions로 대체됩니다. 기본 베이스: `https://generativelanguage.googleapis.com/v1beta`.
+고정 **Chat Completions API** (`openai-compatible`); 마법사에 전송 선택기가 없습니다. 기본 베이스: `https://generativelanguage.googleapis.com/v1beta`.
 
 가져온 후 채팅하세요. 이미지 생성은 카탈로그가 표시할 때만 지정됩니다. Vertex AI (GCP 프로젝트 / 위치)의 경우 [Google Vertex AI](#google-vertex-ai)를 사용하세요.
 
@@ -60,9 +64,11 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 [SpaceXAI 콘솔](https://console.x.ai/team/default/api-keys)에서 API 키를 생성하세요.
 
-고정 **Chat Completions API** (`openai-compatible`). 기본 베이스: `https://api.x.ai/v1`.
+고정 **Open Responses API** (`open-responses`). 기본 베이스: `https://api.x.ai/v1`.
 
 가져오기 후 채팅. 추론, 이미지 및 비디오는 가져온 카탈로그를 따르며, 나타날 때 슬롯을 할당합니다.
+
+선언: **웹 검색** 프로바이더 도구 (업스트림이 요청 내에서 실행).
 
 ### Vercel AI Gateway
 
@@ -74,6 +80,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 태그에서 비전이나 이미지 생성을 추론하지 마십시오. 이 게이트웨이를 통한 MiniMax M3는 Open Responses에서 표시 가능한 사고 스트림을 반환하지 않습니다.
 
+선언: **Perplexity Search** 프로바이더 도구 (게이트웨이가 요청 내에서 실행) 및 이미지 / 비디오 생성 API.
+
 ### Cloudflare AI Gateway
 
 [Cloudflare 대시보드](https://developers.cloudflare.com/ai-gateway/)에서 API 토큰을 생성하세요. 계정 ID도 필요합니다.
@@ -81,7 +89,7 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 선택기: **Chat Completions**, **Open Responses** 또는 **Messages**. 베이스는 계정에서 빌드됩니다: `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`.
 
 - **계정 ID** (필수) — 32자리 16진수
-- **게이트웨이 ID** (선택)
+- **게이트웨이 ID** (선택) — 리터럴 `cf-aig-gateway-id` 요청 헤더로 기록됩니다
 
 계정 ID 없이는 마법사가 API 베이스를 빌드할 수 없습니다. 채팅 및 기타 기능은 게이트웨이가 노출하는 모델을 따릅니다.
 
@@ -89,9 +97,11 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 [DeepSeek 플랫폼](https://platform.deepseek.com/api-keys)에서 API 키를 생성하세요.
 
-선택기 없음. 연결 기본값은 **Open Responses** (`open-responses`)입니다. 호환 가능한 베이스는 `https://api.deepseek.com/v1` (Chat) 및 `https://api.deepseek.com/anthropic` (Messages)에도 있습니다.
+연결 기본값은 **Chat Completions API** (`openai-compatible`)입니다. 기본 베이스: `https://api.deepseek.com/v1`. 명시적 대안은 **Open Responses** (`open-responses`, 베이스 `https://api.deepseek.com`) 및 **Messages** (`anthropic`, 베이스 `https://api.deepseek.com/anthropic`)입니다.
 
 가져오기 후 채팅. 추론은 모델을 따릅니다.
+
+선언: **웹 검색** 프로바이더 도구 (정적 `function` 선언으로, {{product.name|mdx}}이 `POST /v1/tools/search`를 통해 호출을 실행).
 
 ### OpenRouter
 
@@ -100,6 +110,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 선택기: **Chat Completions**, **Open Responses** 또는 **Messages**. 기본 베이스: `https://openrouter.ai/api/v1`.
 
 채팅 및 OpenRouter가 해당 모델을 노출할 때 카탈로그에 표시된 이미지 또는 비디오 생성.
+
+선언: 비디오 생성 API.
 
 ### Fireworks AI
 
@@ -117,6 +129,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져오기 후 채팅. 카탈로그가 표시할 때만 이미지 또는 비디오 슬롯을 할당하세요.
 
+선언: 이미지 및 비디오 생성 API.
+
 ### Groq
 
 [Groq 콘솔](https://console.groq.com)에서 API 키를 생성하세요.
@@ -132,6 +146,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 고정 **Chat Completions API**. 기본 베이스: `https://api.deepinfra.com/v1/openai`.
 
 가져오기 후 채팅. 기타 기능은 카탈로그를 따릅니다.
+
+선언: 이미지 및 비디오 생성 API.
 
 ### Baseten
 
@@ -149,6 +165,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 그 외 기능은 라우터 카탈로그를 따릅니다.
 
+선언: 이미지 및 비디오 생성 API.
+
 ### Moonshot AI
 
 사용할 사이트의 Moonshot 콘솔에서 API 키를 생성하세요: [중국](https://platform.kimi.com/console/api-keys) 또는 [국제](https://platform.kimi.ai/console/api-keys).
@@ -158,7 +176,9 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 - **국제**(기본값) — `https://api.moonshot.ai/v1`
 - **중국** — `https://api.moonshot.cn/v1`
 
-이것은 Moonshot Open Platform 공급자이며 [Kimi Code](#kimi-code)가 아닙니다. moonshot-ai의 기본 제공 검색은 Kimi Code 호스팅 검색 경로를 사용하지 않습니다. Kimi Code 키와 Moonshot Open Platform 키는 서로 다른 연결입니다.
+이것은 Moonshot Open Platform 공급자이며 [Kimi Code](#kimi-code)가 아닙니다. Kimi Code 키와 Moonshot Open Platform 키는 서로 다른 연결입니다.
+
+선언: **웹 검색** 프로바이더 도구 (정적 `function` 도구 스키마로, {{product.name|mdx}}이 `POST /v1/tools/search_pro`를 통해 호출을 실행) 및 비디오 파일 업로드 (`ms://` 파일 참조).
 
 ### Kimi Code
 
@@ -166,7 +186,9 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 **Chat Completions API**로 고정됩니다. 기본 베이스: `https://api.kimi.com/coding/v1`. `https://api.kimi.com/coding`에 Messages 베이스가 있지만 마법사는 선택기를 제공하지 않습니다.
 
-가져온 후 채팅하세요. 호스팅 검색은 사용 가능한 경우 이 공급자(다른 moonshot-ai가 아님)에 한정됩니다.
+가져온 후 채팅하세요. 여기의 호스팅 검색은 이 공급자에 한정됩니다 — moonshot-ai가 아닙니다.
+
+선언: **웹 검색** 프로바이더 도구 (호스트가 선언된 검색 엔드포인트에 대해 실행), 비디오 파일 업로드 (`ms://` 파일 참조), 리터럴 `stream_options` 요청 본문 병합.
 
 ### Z.ai
 
@@ -178,6 +200,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 추론은 모델을 따릅니다.
 
+선언: **웹 검색** 프로바이더 도구 (호스트 실행; `max_results` 1–50).
+
 ### Zhipu AI
 
 [Zhipu AI 콘솔](https://bigmodel.cn/console)에서 API 키를 생성하세요. 코딩 플랜 참고: [GLM 코딩 플랜](https://docs.bigmodel.cn/cn/coding-plan/quick-start).
@@ -187,6 +211,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 **GLM 코딩 플랜**을 켜면 `https://open.bigmodel.cn/api/coding/paas/v4`를 사용합니다.
 
 가져온 후 채팅하세요. 추론은 모델을 따릅니다.
+
+선언: **웹 검색** 프로바이더 도구 (호스트 실행; `max_results` 1–50).
 
 ### Alibaba
 
@@ -203,16 +229,20 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 그 외 기능은 카탈로그를 따릅니다.
 
+선언: **웹 검색** 및 **코드 인터프리터** 프로바이더 도구 (업스트림이 실행하는 요청 본문 스위치).
+
 ### MiniMax
 
-사용할 사이트의 MiniMax 콘솔에서 API 키를 생성하세요: [중국](https://platform.minimaxi.com/console/) 또는 [국제](https://platform.minimax.io/console/).
+사용할 사이트의 MiniMax 콘솔에서 API 키를 생성하세요: [중국](https://platform.minimax.cn/console/) 또는 [국제](https://platform.minimax.io/console/).
 
 **Messages API**(`anthropic`)로 고정됩니다. 국제 Messages 베이스: `https://api.minimax.io/anthropic/v1`.
 
 - **국제**(기본값) — `https://api.minimax.io/v1` (Chat 형태) / `https://api.minimax.io/anthropic/v1` (Messages)
-- **중국** — `https://api.minimaxi.com/v1`
+- **중국** — `https://api.minimax.cn/v1`
 
 가져온 후 채팅하세요. 업스트림 `/models` 목록에는 멀티모달 플래그가 없습니다. M3만 이미지/비디오 입력을 지원하는 것으로 처리됩니다. Vercel AI Gateway를 통한 Open Responses에서 MiniMax M3는 표시 가능한 thinking 스트림을 반환하지 않습니다.
+
+선언: **웹 검색** 프로바이더 도구 (Messages API 서버 도구, 업스트림이 실행) 및 비디오 파일 업로드 (`mm_file://` 파일 참조).
 
 ### Xiaomi
 
@@ -233,6 +263,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 기타 기능은 카탈로그를 따릅니다.
 
+선언: 이미지 및 비디오 생성 API.
+
 ### StepFun
 
 [StepFun 중국 사이트](https://platform.stepfun.com) 또는 [국제 사이트](https://platform.stepfun.ai)에서 API 키를 생성하세요. Step Plan 참고: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
@@ -246,6 +278,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 추론은 모델을 따릅니다.
 
+선언: **웹 검색** 프로바이더 도구 (호스트 실행; `max_results` 1–20), 비디오 파일 업로드 (`stepfile://` 파일 참조, 128 MiB 상한), 이미지 생성 API.
+
 ### Volcengine
 
 [Volcengine Ark 콘솔](https://console.volcengine.com/ark/apiKey)에서 API 키를 생성하세요.
@@ -253,6 +287,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 선택기: **Chat Completions** 또는 **Responses API**. 기본 베이스: `https://ark.cn-beijing.volces.com/api/v3`.
 
 가져온 후 채팅하세요. 기타 기능은 카탈로그를 따릅니다.
+
+선언: 비디오 생성 API.
 
 ### BytePlus
 
@@ -262,6 +298,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 가져온 후 채팅하세요. 기타 기능은 카탈로그를 따릅니다.
 
+선언: 비디오 생성 API.
+
 ### Meituan
 
 [LongCat 콘솔](https://longcat.chat/platform/api_keys)에서 API 키를 생성하세요.
@@ -269,6 +307,8 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 고정됨 **Chat Completions API**. 기본 베이스: `https://api.longcat.chat/openai/v1`.
 
 가져온 후 채팅하세요. 기타 기능은 카탈로그를 따릅니다.
+
+선언: thinking 온/오프 와이어 인코딩 (`thinkingSwitch`). thinking 스위치가 있는 모델에서 토글이 동작합니다.
 
 ### Tencent TokenHub
 
@@ -279,7 +319,7 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 - **광저우** (기본) — `https://tokenhub.tencentmaas.com/v1`
 - **싱가포르** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-가져온 후 채팅하세요. 채팅에 주입된 웹 검색에 의존하지 마세요. TokenHub는 Chat `web_search_options` 및 Responses `web_search`를 문서화하지만, 실제로 Chat 주입은 작동하지 않으며 Responses는 일부 모델에서만 사용할 수 있습니다. 따라서 Spirit은 Chat Completions만 유지합니다.
+가져온 후 채팅하세요. 채팅에 주입된 웹 검색에 의존하지 마세요. TokenHub는 Chat `web_search_options` 및 Responses `web_search`를 문서화하지만, 실제로 Chat 주입은 작동하지 않으며 Responses는 일부 모델에서만 사용할 수 있습니다. 따라서 {{product.name|mdx}}은 Chat Completions만 유지합니다.
 
 ### Mistral
 
@@ -305,7 +345,7 @@ Spirit은 모델 카탈로그를 가져오고 활성 채팅 모델을 지정할 
 
 - **리소스 이름** (필수) — 2–64자, 문자, 숫자 및 하이픈; 하이픈으로 시작하거나 끝날 수 없음
 
-Spirit은 `https://{resource}.openai.azure.com/openai/v1`을 구성합니다. 가져온 후 채팅합니다. 표시된 경우 이미지 생성은 Azure 카탈로그를 따릅니다.
+{{product.name|mdx}}은 `https://{resource}.openai.azure.com/openai/v1`을 구성합니다. 가져온 후 채팅합니다. 표시된 경우 이미지 생성은 Azure 카탈로그를 따릅니다.
 
 ### Amazon Bedrock
 
@@ -316,15 +356,17 @@ Spirit은 `https://{resource}.openai.azure.com/openai/v1`을 구성합니다. �
 - **AWS 리전** (필수), 예: `us-east-1`
 - **인증**: **Bearer** 또는 **IAM**
   - Bearer — Bedrock API 키와 모델 ID를 붙여넣습니다. 모델은 자동으로 가져오지 **않습니다**.
-  - IAM — 액세스 키 ID + 비밀 액세스 키. Spirit이 계정에서 기반 모델을 나열합니다.
+  - IAM — 액세스 키 ID + 비밀 액세스 키. {{product.name|mdx}}이 계정에서 기반 모델을 나열합니다.
 
 모델을 선택한 후 채팅합니다. 다른 기능은 해당 모델을 따릅니다. Bearer 키는 추론에만 작동합니다. `ListFoundationModels`는 Bearer를 허용하지 않으므로 카탈로그 가져오기에는 IAM이 필요합니다.
+
+리전은 최종 API 베이스와 `options.awsRegion`에 구체화됩니다. Bearer는 프로바이더 키로, IAM은 `accessKeyId` / `secretAccessKey` 자격 증명 슬롯으로 저장됩니다.
 
 ### Google Vertex AI
 
 Vertex AI가 활성화된 GCP 프로젝트를 사용하세요. 인증은 ADC, 서비스 계정 또는 Express API 키입니다 — 일반 OpenAI 키가 아닙니다.
 
-고정 **Chat Completions API**. Responses 또는 Messages 요청은 Chat Completions로 대체됩니다. Base는 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`이 됩니다.
+고정 **Chat Completions API**; 마법사에 전송 선택기가 없습니다. Base는 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`이 됩니다.
 
 - **GCP 프로젝트 ID** 및 **위치** (필수), 예: `us-central1`
 - **인증**
@@ -334,14 +376,16 @@ Vertex AI가 활성화된 GCP 프로젝트를 사용하세요. 인증은 ADC, �
 
 모델을 선택한 후 채팅합니다. GCP 프로젝트가 없는 AI Studio 키의 경우 [Google](#google)을 사용하세요. Express 모드는 모델 목록을 가져올 수 없습니다. 서비스 계정 모드는 모델을 나열하려면 이메일과 개인 키가 모두 필요합니다.
 
+서비스 계정은 `clientEmail` / `privateKey` 자격 증명 슬롯에 저장되며 `options.project` / `options.location`을 동반합니다. Express 모드는 Express API 베이스를 기록하며 프로젝트 / 위치가 필요 없습니다.
+
 ### 사용자 지정
 
-엔드포인트가 기대하는 API 키를 사용하세요. Spirit 호스팅 사용자 지정 공급자는 없습니다.
+엔드포인트가 기대하는 API 키를 사용하세요. {{product.name|mdx}} 호스팅 사용자 지정 공급자는 없습니다.
 
 선택기: **Chat Completions**, **Open Responses** 또는 **Messages**. **Base URL**을 제공해야 합니다. 비워 두면 기본값은 `https://api.openai.com/v1`입니다.
 
-공급업체가 문서화한 루트를 입력하세요. 필요한 경우 버전 접미사 (`/v1`, `/v1/openai`, …)를 포함하세요. Spirit은 사용자 지정 엔드포인트에 대해 경로를 추측하지 않습니다.
+공급업체가 문서화한 루트를 입력하세요. 필요한 경우 버전 접미사 (`/v1`, `/v1/openai`, …)를 포함하세요. {{product.name|mdx}}은 사용자 지정 엔드포인트에 대해 경로를 추측하지 않습니다.
 
-공급자 그룹에 표시 이름을 설정하여 여러 사용자 지정 엔드포인트를 구분할 수도 있습니다.
+프로바이더 항목에 표시 이름을 설정하여 여러 사용자 지정 엔드포인트를 구분할 수도 있습니다.
 
-연결 후 모델 ID를 가져오거나 입력하세요. 엔드포인트가 Spirit이 이해하는 카탈로그를 게시하지 않는 경우 마법사에서 채팅 / 이미지 / 비디오 기능을 표시하세요.
+연결 후 모델 ID를 가져오거나 입력하세요. 엔드포인트가 {{product.name|mdx}}이 이해하는 카탈로그를 게시하지 않는 경우 마법사에서 채팅 / 이미지 / 비디오 기능을 표시하세요.

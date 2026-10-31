@@ -37,7 +37,7 @@ test("scopeAgentRuntimeOptionsForSubagentWorkspace uses resolveWorkspaceFilesFor
   const sampleFile: PendingWorkspaceFile = {
     kind: "text",
     path: "scoped/README.md",
-    totalChars: 4,
+    totalBytes: 4,
     truncated: false,
     attachedAtUnixMs: 1,
     content: "body",

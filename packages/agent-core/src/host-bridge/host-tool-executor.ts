@@ -6,6 +6,7 @@ import type {
   JsonValue,
   McpStatusSnapshot,
   PermissionMemoryTarget,
+  ToolApprovalRequest,
   ToolExecutionOutput,
   ToolRequestExecutionMetadata,
   ToolExecutor,
@@ -31,12 +32,6 @@ import {
   type HostToolDescriptionHint,
 } from "../host-tools.js";
 import { enrichUnknownToolError, toolNamesFromDefinitions } from "../unknown-tool-error.js";
-import { shouldUseStepfunWebSearch } from "../stepfun/stepfun-eligibility.js";
-import { buildStepfunWebSearchToolDefinition } from "../stepfun/stepfun-web-search-tool.js";
-import { shouldUseKimiCodeWebSearch } from "../kimi-code/kimi-code-eligibility.js";
-import { buildKimiCodeWebSearchToolDefinition } from "../kimi-code/kimi-code-web-search-tool.js";
-import { shouldUseZaiWebSearch } from "../zai/zai-eligibility.js";
-import { buildZaiWebSearchToolDefinition } from "../zai/zai-web-search-tool.js";
 import { buildLspHostToolDefinitions } from "../lsp/tool-definitions.js";
 import { executeGetDiagnostics } from "../lsp/execute-diagnostics.js";
 import {
@@ -71,6 +66,8 @@ export interface LocalHostToolService {
   parseCommand(message: string): Promise<JsonValue>;
   requestFromFunctionCall(name: string, argumentsJson: string): Promise<JsonValue>;
   authorize(request: JsonValue): Promise<AuthorizationDecision>;
+  /** See ToolExecutor.describeApproval; absent on services that cannot describe approvals. */
+  describeApproval?(request: JsonValue): Promise<ToolApprovalRequest | undefined>;
   rememberApproval(target: PermissionMemoryTarget, scope: "session" | "config"): Promise<void>;
   execute(request: JsonValue): Promise<ToolExecutionOutput | string>;
   saveGeneratedImage?(request: GeneratedImageSaveRequest): Promise<GeneratedImageFile>;
@@ -112,8 +109,7 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     protected readonly peer: JsonRpcPeer,
     mcp?: McpService,
   ) {
-    // Daemons serving multiple workspaces inject a per-session McpService;
-    // single-workspace hosts (CLI sidecar, ACP) keep the process-cwd default.
+    // Hosts inject file-backed MCP configuration. The SDK-only default is empty.
     this.mcp = mcp ?? new McpService();
   }
 
@@ -312,6 +308,30 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
     return this.peer.call<AuthorizationDecision>("host.authorize", {
       request: this.serializeRequest(request),
     });
+  }
+
+  /**
+   * Only local built-in tools carry approval descriptors; MCP / lazy-gateway / LSP requests have
+   * no rich approval form, and peer (remote bridge) mode has no describe RPC — those corners keep
+   * the hook message-only form.
+   */
+  async describeApproval(request: JsonValue): Promise<ToolApprovalRequest | undefined> {
+    if (this.mcp.isFetchMcpResourceToolRequest(request)) {
+      return undefined;
+    }
+    if (this.mcp.isLazyToolGatewayToolRequest(request)) {
+      return undefined;
+    }
+    if (this.mcp.isToolRequest(request)) {
+      return undefined;
+    }
+    if (isLspDiagnosticsToolRequest(request)) {
+      return undefined;
+    }
+    if (!this.localHostService) {
+      return undefined;
+    }
+    return this.localHostService.describeApproval?.(request);
   }
 
   async rememberApproval(
@@ -635,6 +655,12 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
       hostDefinitions = filterToolDefinitionByName(hostDefinitions, "generate_video");
     }
     if (
+      this.transportConfigForToolDefinitions?.webFetchEnabled === false &&
+      Array.isArray(hostDefinitions)
+    ) {
+      hostDefinitions = filterToolDefinitionByName(hostDefinitions, "web_fetch");
+    }
+    if (
       isOpenResponsesTransportConfig(this.transportConfigForToolDefinitions) &&
       shouldUseApplyPatchFileTools(this.transportConfigForToolDefinitions, {
         agentMode: this.agentMode,
@@ -650,29 +676,11 @@ export class HostToolExecutorProxy implements ToolExecutor<JsonValue> {
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildStepfunWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildKimiCodeWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildZaiWebSearchToolDefinition()]
-              : []),
           ]
         : [
             ...this.loopToolDefinitionsCache,
             ...this.planToolDefinitionsCache,
             ...this.todoToolDefinitionsCache,
-            ...(shouldUseStepfunWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildStepfunWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseKimiCodeWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildKimiCodeWebSearchToolDefinition()]
-              : []),
-            ...(shouldUseZaiWebSearch(this.transportConfigForToolDefinitions)
-              ? [buildZaiWebSearchToolDefinition()]
-              : []),
           ],
       this.agentMode,
     );

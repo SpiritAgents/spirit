@@ -5,7 +5,6 @@ import {
   CREATE_AUTOMATION_CONTRIBUTED_TOOL,
   CREATE_AUTOMATION_TOOL_NAME,
   buildAutomationHostToolDefinitions,
-  buildCreateAutomationApprovalPrompt,
   deriveAutomationTitle,
   parseCreateAutomationApprovalLevel,
   parseCreateAutomationTrigger,
@@ -128,8 +127,10 @@ test("previewCreateAutomationFromArguments derives title and trigger", () => {
     trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
   });
   assert.equal(preview.title, "CI check");
-  assert.match(buildCreateAutomationApprovalPrompt(preview), /Create automation/u);
-  assert.match(buildCreateAutomationApprovalPrompt(preview), /CI check/u);
+  assert.deepEqual(preview.trigger, {
+    kind: "time",
+    schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 },
+  });
 });
 
 test("toBuiltInLazyToolIndexEntry maps contributed metadata to lazy index entry", () => {

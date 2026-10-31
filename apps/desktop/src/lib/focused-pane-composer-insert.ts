@@ -9,12 +9,12 @@ import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachmen
 
 export type FocusedPaneComposerInsertHandlers = {
   handleBrowserElementPicked: (attachment: BrowserElementAttachment) => void | Promise<void>;
-  handlePrDiffAddToSession: (attachment: PrDiffAttachment) => void;
-  handleGitCommitAddToSession: (attachment: GitCommitAttachment) => void;
-  handleTerminalAddToSession: (attachment: TerminalSnippetAttachment) => void;
-  handleFileSnippetAddToSession: (attachment: FileSnippetAttachment) => void;
-  handleWorkspaceFileAddToSession: (relativePath: string, sourceTabId?: string) => void;
-  handleMessageQuoteAddToSession: (attachment: MessageQuoteAttachment) => void;
+  handlePrDiffAddToChat: (attachment: PrDiffAttachment) => void;
+  handleGitCommitAddToChat: (attachment: GitCommitAttachment) => void;
+  handleTerminalAddToChat: (attachment: TerminalSnippetAttachment) => void;
+  handleFileSnippetAddToChat: (attachment: FileSnippetAttachment) => void;
+  handleWorkspaceFileAddToChat: (relativePath: string, sourceTabId?: string) => void;
+  handleMessageQuoteAddToChat: (attachment: MessageQuoteAttachment) => void;
 };
 
 /** Stable proxies: read focused pane handlers via getter at call time (no Provider re-render on register). */
@@ -28,42 +28,38 @@ export function useFocusedPaneComposerInsertCallbacks(
         (getFocusedInsert()?.handleBrowserElementPicked ?? fallback.handleBrowserElementPicked)(
           attachment,
         ),
-      handlePrDiffAddToSession: (attachment) =>
-        (getFocusedInsert()?.handlePrDiffAddToSession ?? fallback.handlePrDiffAddToSession)(
+      handlePrDiffAddToChat: (attachment) =>
+        (getFocusedInsert()?.handlePrDiffAddToChat ?? fallback.handlePrDiffAddToChat)(attachment),
+      handleGitCommitAddToChat: (attachment) =>
+        (getFocusedInsert()?.handleGitCommitAddToChat ?? fallback.handleGitCommitAddToChat)(
           attachment,
         ),
-      handleGitCommitAddToSession: (attachment) =>
-        (getFocusedInsert()?.handleGitCommitAddToSession ?? fallback.handleGitCommitAddToSession)(
+      handleTerminalAddToChat: (attachment) =>
+        (getFocusedInsert()?.handleTerminalAddToChat ?? fallback.handleTerminalAddToChat)(
           attachment,
         ),
-      handleTerminalAddToSession: (attachment) =>
-        (getFocusedInsert()?.handleTerminalAddToSession ?? fallback.handleTerminalAddToSession)(
+      handleFileSnippetAddToChat: (attachment) =>
+        (getFocusedInsert()?.handleFileSnippetAddToChat ?? fallback.handleFileSnippetAddToChat)(
           attachment,
         ),
-      handleFileSnippetAddToSession: (attachment) =>
-        (
-          getFocusedInsert()?.handleFileSnippetAddToSession ??
-          fallback.handleFileSnippetAddToSession
-        )(attachment),
-      handleWorkspaceFileAddToSession: (relativePath, sourceTabId) =>
-        (
-          getFocusedInsert()?.handleWorkspaceFileAddToSession ??
-          fallback.handleWorkspaceFileAddToSession
-        )(relativePath, sourceTabId),
-      handleMessageQuoteAddToSession: (attachment) =>
-        (
-          getFocusedInsert()?.handleMessageQuoteAddToSession ??
-          fallback.handleMessageQuoteAddToSession
-        )(attachment),
+      handleWorkspaceFileAddToChat: (relativePath, sourceTabId) =>
+        (getFocusedInsert()?.handleWorkspaceFileAddToChat ?? fallback.handleWorkspaceFileAddToChat)(
+          relativePath,
+          sourceTabId,
+        ),
+      handleMessageQuoteAddToChat: (attachment) =>
+        (getFocusedInsert()?.handleMessageQuoteAddToChat ?? fallback.handleMessageQuoteAddToChat)(
+          attachment,
+        ),
     }),
     [
       fallback.handleBrowserElementPicked,
-      fallback.handleFileSnippetAddToSession,
-      fallback.handleGitCommitAddToSession,
-      fallback.handleMessageQuoteAddToSession,
-      fallback.handlePrDiffAddToSession,
-      fallback.handleTerminalAddToSession,
-      fallback.handleWorkspaceFileAddToSession,
+      fallback.handleFileSnippetAddToChat,
+      fallback.handleGitCommitAddToChat,
+      fallback.handleMessageQuoteAddToChat,
+      fallback.handlePrDiffAddToChat,
+      fallback.handleTerminalAddToChat,
+      fallback.handleWorkspaceFileAddToChat,
       getFocusedInsert,
     ],
   );

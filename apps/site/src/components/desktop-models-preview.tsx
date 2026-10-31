@@ -1,4 +1,6 @@
+import { Search } from "@spiritagent/icons/search";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { FONT_WEIGHT_MEDIUM, FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ProviderIcon } from "@/components/provider-icon";
 import { NoTranslate } from "@/components/no-translate";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
@@ -428,21 +429,31 @@ export function DesktopModelsPreview({
           }
         }}
       >
-        <WindowDialogContent className="sm:max-w-md" container={dialogContainer}>
+        <WindowDialogContent className="sm:max-w-xl" container={dialogContainer}>
           <WindowDialogHeader>
-            <WindowDialogTitle>{messages.desktop.models.providerDialogTitle}</WindowDialogTitle>
+            <WindowDialogTitle aria-label={messages.desktop.models.providerDialogTitle}>
+              {messages.desktop.models.connectProvider}
+            </WindowDialogTitle>
             <WindowDialogDescription>
               {messages.desktop.models.providerDialogDescription}
             </WindowDialogDescription>
           </WindowDialogHeader>
           <div className="grid gap-3 py-1">
-            <Input
-              value={providerQuery}
-              onChange={(event) => setProviderQuery(event.target.value)}
-              placeholder={messages.desktop.models.searchPlaceholder}
-              autoComplete="off"
-            />
-            <ScrollArea className="h-56 rounded-md border border-border/40">
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+                strokeWidth={1.75}
+              />
+              <Input
+                value={providerQuery}
+                onChange={(event) => setProviderQuery(event.target.value)}
+                placeholder={messages.desktop.models.searchPlaceholder}
+                autoComplete="off"
+                className="pl-9 pr-3.5"
+              />
+            </div>
+            <ScrollArea className="h-[min(28rem,calc(100dvh-6rem))] rounded-md border border-border/40">
               <div className="p-1">
                 {filteredProviders.length === 0 ? (
                   <p className="px-2 py-6 text-center text-sm text-muted-foreground">
@@ -461,7 +472,11 @@ export function DesktopModelsPreview({
                       )}
                       onClick={() => startConnect(row.id)}
                     >
-                      <ProviderIcon providerId={row.id} />
+                      <Sparkles
+                        aria-hidden
+                        className="size-4 shrink-0 text-muted-foreground"
+                        strokeWidth={1.75}
+                      />
                       <span className="min-w-0 flex-1 truncate">
                         {row.id === "custom" ? row.label : <NoTranslate>{row.label}</NoTranslate>}
                       </span>
@@ -483,7 +498,11 @@ export function DesktopModelsPreview({
           }
         }}
       >
-        <WindowDialogContent className="sm:max-w-lg" container={dialogContainer}>
+        <WindowDialogContent
+          className="sm:max-w-lg"
+          container={dialogContainer}
+          hasDescription={false}
+        >
           <WindowDialogHeader>
             <WindowDialogTitle>
               {selectedProvider !== null && selectedProvider !== "custom" ? (
@@ -494,11 +513,6 @@ export function DesktopModelsPreview({
                 connectDialogTitle(selectedProvider, messages.desktop.models)
               )}
             </WindowDialogTitle>
-            <WindowDialogDescription>
-              {selectedProvider === "custom"
-                ? messages.desktop.models.connectDialogDescriptionCustom
-                : messages.desktop.models.connectDialogDescriptionDefault}
-            </WindowDialogDescription>
           </WindowDialogHeader>
 
           <div className="grid gap-3 py-1">
@@ -584,7 +598,7 @@ export function DesktopModelsPreview({
                     disabled={!connectName.trim() || !connectApiKey.trim()}
                     onClick={() => setConnectDialogOpen(false)}
                   >
-                    {messages.desktop.models.addThisModel}
+                    {messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
                 {selectedProvider === "custom" && customConnectMode === "bulk" ? (
@@ -595,8 +609,8 @@ export function DesktopModelsPreview({
                     onClick={() => setConnectDialogOpen(false)}
                   >
                     {demoConnectButtonBusy
-                      ? messages.desktop.models.adding
-                      : messages.desktop.models.addProvider}
+                      ? messages.desktop.models.connecting
+                      : messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
                 {selectedProvider !== null && selectedProvider !== "custom" ? (
@@ -607,8 +621,8 @@ export function DesktopModelsPreview({
                     onClick={() => setConnectDialogOpen(false)}
                   >
                     {demoConnectButtonBusy
-                      ? messages.desktop.models.adding
-                      : messages.desktop.models.addProvider}
+                      ? messages.desktop.models.connecting
+                      : messages.desktop.models.connectProvider}
                   </Button>
                 ) : null}
               </div>
@@ -647,18 +661,18 @@ function connectDialogTitle(
     case "custom":
       return copy.customConnectionTitle;
     case "openai":
-      return "OpenAI";
+      return copy.connectNamedProviderTitle("OpenAI");
     case "anthropic":
-      return "Anthropic";
+      return copy.connectNamedProviderTitle("Anthropic");
     case "google":
-      return "Google";
+      return copy.connectNamedProviderTitle("Google");
     case "vercel-ai-gateway":
-      return "Vercel AI Gateway";
+      return copy.connectNamedProviderTitle("Vercel AI Gateway");
     case "deepseek":
-      return "DeepSeek";
+      return copy.connectNamedProviderTitle("DeepSeek");
     case "openrouter":
-      return "OpenRouter";
+      return copy.connectNamedProviderTitle("OpenRouter");
     default:
-      return copy.connectProviderTitle;
+      return copy.connectProvider;
   }
 }

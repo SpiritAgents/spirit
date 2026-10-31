@@ -5,13 +5,15 @@ description: Trousseau de clés, approbations et démon en boucle locale. Pas de
 
 ## Trousseau de clés
 
-Les clés API, les secrets Bedrock / Vertex, les secrets d'extension et le jeton d'intégration GitHub sont stockés dans le trousseau du système d'exploitation. Le nom du service est `Spirit`.
+Les clés API, les secrets Bedrock / Vertex, les secrets d'extension et le jeton d'intégration GitHub sont stockés dans le trousseau du système d'exploitation. Le nom du service est `{{product.name}}`.
 
-`config.json` contient les groupes de fournisseurs et les références de modèle, pas le secret lui-même. Les grands secrets peuvent être partitionnés dans le trousseau.
+Les clés de fournisseur écrites par l'assistant de connexion utilisent le schéma de compte `provider::{id}` — un par entrée de fournisseur dans `config.json` — ou `provider::{id}::{slot}` pour les slots d'identifiants composites comme IAM Bedrock ou un compte de service Vertex. Les grands secrets peuvent être partitionnés dans le trousseau.
+
+`config.json` contient les entrées de fournisseur et les références de modèle, pas les secrets eux-mêmes — sauf si vous optez pour une trappe de secours déclarée : un `apiKey` en clair (non recommandé), une référence de variable d'environnement `apiKeyEnv`, ou une référence `apiKeyKeyring` / `keyring` par slot vers une entrée d'un trousseau externe. Voir [Configuration](./config.mdx).
 
 ## Approbations
 
-Voir [Approbations](./agent/approvals.mdx). La valeur par défaut est le point de départ sécurisé. Le contournement s'arrête toujours pour `ask_questions` et le hook `ask`.
+Voir [Approbations](./agent/approvals.mdx). La valeur par défaut est le point de départ sécurisé. Le contournement s'arrête toujours pour `ask_questions` et le Hook `ask`.
 
 ## Démon local
 
@@ -23,6 +25,6 @@ L'appairage Web Host est un code distinct à 6 chiffres sur Desktop. Cinq échec
 
 ## Confidentialité
 
-Spirit ne fournit pas de télémétrie de développeur. Les données restent dans le répertoire de données et le trousseau. Voir [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) dans le dépôt.
+{{product.name|mdx}} ne fournit pas de télémétrie de développeur. Les données restent dans le répertoire de données et le trousseau. Voir [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md) dans le dépôt.
 
 Signalez les vulnérabilités de manière privée (avis privé GitHub), et non dans un problème public. Voir [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md).

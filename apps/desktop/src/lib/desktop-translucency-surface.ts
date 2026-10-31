@@ -1,9 +1,19 @@
 /** LaunchSplash / OOBE overlay tint when translucency is on (tint only; no CSS backdrop-blur stacked). */
 export const DESKTOP_TRANSLUCENCY_CONTENT_TINT_CLASS = "bg-background/70";
 
+/**
+ * In-app frosted surfaces. The rule in `@spiritagent/ui` theme.css listens for
+ * `prefers-reduced-transparency: reduce` and, when it matches, paints an opaque
+ * theme background and clears CSS backdrop-blur. Compose this onto future
+ * in-app translucent overlays. Native window material does not use it.
+ */
+export const DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS = "spirit-reduced-transparency-opaque";
+
 /** Translucent background of the Composer input (dark mode overlays a faint input layer); shared source for non-translucency overlays */
-export const DESKTOP_COMPOSER_SURFACE_BACKDROP =
-  "bg-background/55 backdrop-blur-xl dark:bg-input/30 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25";
+export const DESKTOP_COMPOSER_SURFACE_BACKDROP = [
+  "bg-background/55 backdrop-blur-xl dark:bg-input/30 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25",
+  DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
+].join(" ");
 
 /**
  * Translucent Composer tint when translucency is on (no CSS blur stacked, letting the
@@ -96,5 +106,5 @@ export function desktopTranslucencyFileDetailSurfaceClass(useTranslucency: boole
 
 /** Windows custom-drawn title bar: sidebar-matched tint on the leading segment under translucency, solid sidebar color otherwise. */
 export function desktopTranslucencyTitleBarTintClass(useTranslucency: boolean): string {
-  return useTranslucency ? DESKTOP_TRANSLUCENCY_TITLE_BAR_TINT_CLASS : "bg-sidebar";
+  return useTranslucency ? DESKTOP_TRANSLUCENCY_TITLE_BAR_TINT_CLASS : "bg-chrome-background";
 }

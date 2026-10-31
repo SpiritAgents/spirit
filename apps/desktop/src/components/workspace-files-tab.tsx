@@ -1,3 +1,6 @@
+import { Compose } from "@spiritagent/icons/compose";
+import { Search } from "@spiritagent/icons/search";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 import {
   useCallback,
   useEffect,
@@ -10,7 +13,7 @@ import {
 import { useTranslation } from "react-i18next";
 import type * as Monaco from "monaco-editor";
 
-import { Eye, ListTree, Play, Search, SquarePen } from "lucide-react";
+import { Eye, ListTree, Play } from "lucide-react";
 
 import { MarkdownMessage } from "@/components/markdown-message";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,7 @@ import { cn } from "@/lib/utils";
 import {
   DESKTOP_FILES_EXPLORER_TOOLBAR_ICON_BTN,
   DESKTOP_SHELL_LAYOUT_TRANSITION,
+  DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
 } from "@/lib/desktop-chrome";
 import { desktopTranslucencyFileDetailSurfaceClass } from "@/lib/desktop-translucency-surface";
 import {
@@ -225,6 +229,7 @@ function WorkspaceFilesExplorerToolbar({
       ref={toolbarRef}
       className={cn(
         "flex shrink-0 items-center gap-1 py-1.5 pl-1 pr-2",
+        DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
         fileOpen && "justify-between",
       )}
       role="toolbar"
@@ -243,7 +248,7 @@ function WorkspaceFilesExplorerToolbar({
               aria-expanded={fileTreeOpen}
               aria-pressed={fileTreeOpen && !fileSearchOpen}
             >
-              <ListTree className="size-3.5" aria-hidden />
+              <ListTree className="size-3.5" aria-hidden strokeWidth={1.75} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
@@ -261,7 +266,7 @@ function WorkspaceFilesExplorerToolbar({
               aria-label={fileSearchTooltip}
               aria-pressed={fileSearchOpen && fileTreeOpen}
             >
-              <Search className="size-3.5" aria-hidden />
+              <Search className="size-3.5" aria-hidden strokeWidth={1.75} />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
@@ -284,6 +289,7 @@ function WorkspaceFilesExplorerToolbar({
               <Toggle
                 variant="default"
                 size="sm"
+                className="text-xs"
                 pressed={markdownViewMode === "preview"}
                 onPressedChange={(pressed) => {
                   if (pressed) {
@@ -294,12 +300,13 @@ function WorkspaceFilesExplorerToolbar({
                 title={t("workspace.markdownPreview")}
                 disabled={!docReady}
               >
-                <Eye aria-hidden />
+                <Eye className="size-3.5" aria-hidden strokeWidth={1.75} />
                 {t("workspace.preview")}
               </Toggle>
               <Toggle
                 variant="default"
                 size="sm"
+                className="text-xs"
                 pressed={markdownViewMode === "edit"}
                 onPressedChange={(pressed) => {
                   if (pressed) {
@@ -312,7 +319,7 @@ function WorkspaceFilesExplorerToolbar({
                 }
                 disabled={!docReady || docReadOnly}
               >
-                <SquarePen aria-hidden />
+                <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
                 {t("workspace.edit")}
               </Toggle>
             </div>
@@ -320,13 +327,13 @@ function WorkspaceFilesExplorerToolbar({
           {showStartImplementing ? (
             <button
               type="button"
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground enabled:hover:bg-canvas-hover enabled:hover:text-sidebar-foreground disabled:opacity-50"
+              className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground enabled:hover:bg-canvas-hover enabled:hover:text-chrome-emphasis disabled:opacity-50"
               disabled={startImplementingDisabled}
               aria-label={t("workspace.startImplementing")}
               title={t("workspace.startImplementing")}
               onClick={onStartImplementing}
             >
-              <Play className="size-3.5" aria-hidden />
+              <Play className="size-3.5" aria-hidden strokeWidth={1.75} />
             </button>
           ) : null}
         </div>
@@ -380,8 +387,8 @@ export type WorkspaceFilesTabProps = {
   ) => void;
   /** Currently open workspace-relative path; undefined when no workspace file is selected */
   onFilesWorkspacePathChange?: (relativePath: string | undefined) => void;
-  onFileSnippetAddToSession?: (attachment: FileSnippetAttachment) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string) => void;
+  onFileSnippetAddToChat?: (attachment: FileSnippetAttachment) => void;
+  onWorkspaceFileAddToChat?: (relativePath: string) => void;
   gitRevision?: number;
   workspaceContentInvalidation?: WorkspaceContentInvalidation;
   useTranslucency?: boolean;
@@ -418,8 +425,8 @@ export function WorkspaceFilesTab({
   onOpenWorkspaceFile,
   onOpenWorkspaceFileInNewTab,
   onFilesWorkspacePathChange,
-  onFileSnippetAddToSession,
-  onWorkspaceFileAddToSession,
+  onFileSnippetAddToChat,
+  onWorkspaceFileAddToChat,
   gitRevision,
   workspaceContentInvalidation,
   useTranslucency = false,
@@ -479,6 +486,7 @@ export function WorkspaceFilesTab({
   workspaceContentInvalidationRef.current = workspaceContentInvalidation;
 
   latestFileTreeWidthPxRef.current = fileTreeWidthPx;
+  const fileTreeDragCursor = useDragResizeCursor();
 
   const maxFileTreeWidthPx = useMemo(
     () =>
@@ -520,9 +528,17 @@ export function WorkspaceFilesTab({
       event.preventDefault();
       setIsResizingFileTree(true);
       fileTreeDragRef.current = { startX: event.clientX, startWidth: fileTreeWidthPx };
+      fileTreeDragCursor.start(
+        resizeCursor(
+          fileTreeWidthPx,
+          WORKSPACE_FILES_TREE_MIN_WIDTH_PX,
+          maxFileTreeWidthPx,
+          "right",
+        ),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [fileTreeWidthPx],
+    [fileTreeDragCursor, fileTreeWidthPx, maxFileTreeWidthPx],
   );
 
   const onFileTreeResizePointerMove = useCallback(
@@ -533,28 +549,35 @@ export function WorkspaceFilesTab({
       }
       const delta = event.clientX - drag.startX;
       const next = clampFileTreeWidth(drag.startWidth + delta);
+      fileTreeDragCursor.update(
+        resizeCursor(next, WORKSPACE_FILES_TREE_MIN_WIDTH_PX, maxFileTreeWidthPx, "right"),
+      );
       latestFileTreeWidthPxRef.current = next;
       setFileTreeWidthPx(next);
     },
-    [clampFileTreeWidth],
+    [clampFileTreeWidth, fileTreeDragCursor, maxFileTreeWidthPx],
   );
 
-  const endFileTreeResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingFileTree(false);
-    if (fileTreeDragRef.current) {
-      const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
-      writeWorkspaceFilesTreeWidthPx(
-        latestFileTreeWidthPxRef.current,
-        containerWidth > 0 ? containerWidth : undefined,
-      );
-    }
-    fileTreeDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+  const endFileTreeResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      fileTreeDragCursor.end();
+      setIsResizingFileTree(false);
+      if (fileTreeDragRef.current) {
+        const containerWidth = splitContainerRef.current?.clientWidth ?? 0;
+        writeWorkspaceFilesTreeWidthPx(
+          latestFileTreeWidthPxRef.current,
+          containerWidth > 0 ? containerWidth : undefined,
+        );
+      }
+      fileTreeDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [fileTreeDragCursor],
+  );
 
   useEffect(() => {
     const prev = prevSelectedEntryRef.current;
@@ -1013,7 +1036,7 @@ export function WorkspaceFilesTab({
   }, [draftText, doc?.readOnly, isPreviewVisible, savedText]);
 
   const selectionEnabled =
-    doc?.status === "ready" && Boolean(onFileSnippetAddToSession && selectedPath);
+    doc?.status === "ready" && Boolean(onFileSnippetAddToChat && selectedPath);
 
   const onToggleMarkdownViewMode = useCallback((value: string) => {
     if (value === "preview" || value === "edit") {
@@ -1233,7 +1256,7 @@ export function WorkspaceFilesTab({
                       : current,
                   );
                 }}
-                onWorkspaceFileAddToSession={onWorkspaceFileAddToSession}
+                onWorkspaceFileAddToChat={onWorkspaceFileAddToChat}
               />
             </div>
             {searchWorkspaceContent ? (
@@ -1261,9 +1284,17 @@ export function WorkspaceFilesTab({
             aria-orientation="vertical"
             aria-label={t("workspace.resizeFileTreeWidth")}
             className={cn(
-              "group relative z-10 -ml-px w-1 shrink-0 cursor-col-resize touch-none select-none self-stretch",
+              "group relative z-10 -ml-px w-1 shrink-0 touch-none select-none self-stretch",
               "before:absolute before:inset-y-0 before:-right-1 before:w-3 before:content-['']",
             )}
+            style={{
+              cursor: resizeCursor(
+                fileTreeWidthPx,
+                WORKSPACE_FILES_TREE_MIN_WIDTH_PX,
+                maxFileTreeWidthPx,
+                "right",
+              ),
+            }}
             onPointerDown={onFileTreeResizePointerDown}
             onPointerMove={onFileTreeResizePointerMove}
             onPointerUp={endFileTreeResize}
@@ -1338,7 +1369,7 @@ export function WorkspaceFilesTab({
                       <FileDomSelectionMenu
                         rootRef={previewRootRef}
                         filePath={selectedPath}
-                        onFileSnippetAddToSession={onFileSnippetAddToSession}
+                        onFileSnippetAddToChat={onFileSnippetAddToChat}
                       />
                     ) : null}
                   </>
@@ -1367,7 +1398,7 @@ export function WorkspaceFilesTab({
                         containerRef={monacoContainerRef}
                         editor={monacoEditor}
                         filePath={selectedPath}
-                        onFileSnippetAddToSession={onFileSnippetAddToSession}
+                        onFileSnippetAddToChat={onFileSnippetAddToChat}
                       />
                     ) : null}
                   </div>

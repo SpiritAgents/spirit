@@ -61,13 +61,20 @@ export function attachWorkspaceTerminalResizeObserver(options: {
     }
   };
 
+  // Leading edge: the first size change fits on the next animation frame (UI zoom, panel ratio
+  // changes); further events within the debounce window are coalesced (continuous resizes).
   const scheduleFit = (): void => {
     if (disposed) {
       return;
     }
-    if (debounceTimer !== undefined) {
-      clearTimeout(debounceTimer);
+    if (debounceTimer === undefined) {
+      debounceTimer = setTimeout(() => {
+        debounceTimer = undefined;
+      }, RESIZE_DEBOUNCE_MS);
+      requestAnimationFrame(runFit);
+      return;
     }
+    clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       debounceTimer = undefined;
       requestAnimationFrame(runFit);

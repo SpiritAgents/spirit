@@ -29,13 +29,13 @@ const defaultMessages = {
     },
     sessionSidebar: {
       currentWorkspace: "Current workspace",
-      newSession: "New session",
+      newChat: "New chat",
       extensionsButton: "Extensions",
       settingsTabsAria: "Settings tabs",
-      workspaceSessionsAria: "Workspace sessions",
+      workspaceSessionsAria: "Workspace chats",
       settingsNavSidebarAria: "Settings navigation sidebar",
-      sessionsSidebarAria: "Sessions sidebar",
-      workspaceHeading: "Workspace",
+      sessionsSidebarAria: "Chats sidebar",
+      workspacesHeading: "Workspaces",
       settingsHeading: "Settings",
     },
     conversation: {
@@ -57,7 +57,7 @@ const defaultMessages = {
       collapseTools: "Collapse tools",
       expandTools: "Expand tools",
       commitButton: "Commit",
-      newSession: "New session",
+      newChat: "New chat",
     },
     files: { noWorkspace: "No workspace" },
     tools: {

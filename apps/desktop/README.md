@@ -31,7 +31,7 @@ Docked panels attach to the active workspace:
 
 ### Configuration and extensibility
 
-- **Models** — configure inference providers, API keys, reasoning effort, and a lightweight background model.
+- **Models** — configure inference providers, API keys, reasoning effort, and a secondary language model. The model inspector's **Service Tier** dropdown — or a **Fast** / **Priority** switch on rows with a single non-default tier (Anthropic Opus, SpaceXAI and equivalent aggregator rows) — sets the per-model _requested_ tier preference; the gray trigger suffix (Fast / Flex / Priority / Ultrafast) marks that requested preference, not the tier actually granted by the upstream provider.
 - **Skills and Rules** — discover workspace and user-level skills; manage Spirit rule slots (`AGENTS.md`, `.spirit/rule.md`, and user `rule.md`).
 - **MCP servers** — add stdio or HTTP Model Context Protocol servers from settings.
 - **Extensions** — import ZIP packages from the Extensions page; extensions can contribute tools, Desktop CSS, CLI hooks, and settings pages.
@@ -48,8 +48,8 @@ Docked panels attach to the active workspace:
 
 ## Requirements
 
-- **Node.js** 24 or newer
-- **pnpm** 12+ (enable via `corepack enable` at the repo root)
+- **Node.js** 26.13.0
+- **pnpm** 12.4.2 (install at the repo root with `npm install --global pnpm@12.4.2`)
 - **Rust toolchain** — only when building the CLI from the monorepo root; not required for Desktop-only development after dependencies are built
 - **Windows, macOS, or Linux** — Electron targets all three; some features (embedded shell, in-app browser) require the Electron shell
 
@@ -58,12 +58,14 @@ Docked panels attach to the active workspace:
 From the repository root:
 
 ```bash
-corepack enable
+npm install --global pnpm@12.4.2
 pnpm install
 pnpm run dev:desktop
 ```
 
 This builds shared packages (`agent-core`, `host-internal`, `server`), starts the Vite renderer on `http://127.0.0.1:1420`, and launches Electron.
+
+While it runs, workspace package edits apply without a manual rebuild: the renderer resolves `@spiritagent/ui`, `@spiritagent/icons`, and the renderer-consumed subpaths of `agent-core`/`host-internal` directly to their TypeScript sources (HMR, see `workspaceSourceAliases` in `apps/desktop/vite.config.ts`), while Electron main-process code (`electron/`, `src/host/`) and the main-process packages rebuild via watch tasks and restart the app automatically. The exception is `electron/preload.ts`: rerun `pnpm run build:electron` after changing it.
 
 From `apps/desktop` (after `pnpm install` at the repo root):
 

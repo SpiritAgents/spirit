@@ -1,22 +1,15 @@
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
+import { Globe } from "@spiritagent/icons/globe";
+import { Search } from "@spiritagent/icons/search";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  ArrowLeft,
-  Blocks,
-  ChevronDown,
-  Ellipsis,
-  Folder,
-  Globe,
-  LoaderCircle,
-  Search,
-  Sparkles,
-  Store,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Blocks, Folder, Sparkles, Store, Trash2 } from "lucide-react";
 
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import { MarketplaceAddSourceDialog } from "@/components/marketplace-add-source-dialog";
 import { MarketplaceCatalogSection } from "@/components/marketplace-catalog-section";
@@ -74,13 +67,6 @@ import type {
 
 /** h-8: the whitespace above the title; it scrolls away with the title before the search bar docks */
 const MARKETPLACE_HEADER_TOP_GAP_PX = 32;
-
-declare global {
-  /** Not yet in TS lib.dom; runtime support is detected via `typeof ScrollTimeline`. */
-  class ScrollTimeline extends AnimationTimeline {
-    constructor(options?: { source?: Element | null; axis?: "block" | "inline" });
-  }
-}
 
 export function reviewStatusBadgeVariant(status: DesktopMarketplaceReviewStatus) {
   if (status === "verified") {
@@ -163,6 +149,32 @@ export function MarketplaceView({
   /** Install / update in flight for these catalog ids; other rows stay clickable. */
   const [installBusyIds, setInstallBusyIds] = useState<ReadonlySet<string>>(() => new Set());
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  // MarketplaceView mounts when navigation lands on this page, the same moment
+  // the session page moves focus into the Composer. The control that opened the
+  // page still holds DOM focus, so schedule the search field the same way: a
+  // microtask for the current turn, then a frame in case a later effect moves
+  // focus back. Cleanup covers Strict Mode's remount, which would otherwise
+  // leave the first schedule pointing at a detached input.
+  useLayoutEffect(() => {
+    const input = searchInputRef.current;
+    if (!input) {
+      return;
+    }
+    let cancelled = false;
+    const focus = () => {
+      if (cancelled || !input.isConnected) {
+        return;
+      }
+      input.focus({ preventScroll: true });
+    };
+    queueMicrotask(focus);
+    const frame = requestAnimationFrame(focus);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, []);
   const [listScrollRoot, setListScrollRoot] = useState<ComponentRef<typeof ScrollArea> | null>(
     null,
   );
@@ -508,7 +520,7 @@ export function MarketplaceView({
           {item.iconUrl ? (
             <img src={item.iconUrl} alt="" className="size-full object-cover" aria-hidden />
           ) : (
-            <Sparkles className="size-4" aria-hidden />
+            <Sparkles className="size-4" aria-hidden strokeWidth={1.75} />
           )}
         </div>
         <span className="min-w-0 flex-1">
@@ -533,7 +545,7 @@ export function MarketplaceView({
                 className="size-8 shrink-0 self-center"
                 title={t("marketplace.moreActions")}
               >
-                <Ellipsis className="size-4" aria-hidden />
+                <Ellipsis className="size-4" aria-hidden strokeWidth={1.75} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-40 p-0">
@@ -549,7 +561,7 @@ export function MarketplaceView({
                   className="gap-2"
                   onSelect={() => openUninstallDialog(item)}
                 >
-                  <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                  <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                   <span>{t("marketplace.uninstall")}</span>
                 </DropdownMenuItem>
               </div>
@@ -638,6 +650,7 @@ export function MarketplaceView({
                     <LoaderCircle
                       className="size-4 animate-spin text-muted-foreground"
                       aria-label={t("common.loading")}
+                      strokeWidth={1.75}
                     />
                   ) : null}
                 </h1>
@@ -779,8 +792,10 @@ export function MarketplaceView({
                   <Search
                     className="pointer-events-none absolute left-3 top-1/2 z-10 size-3.5 -translate-y-1/2 text-muted-foreground"
                     aria-hidden
+                    strokeWidth={1.75}
                   />
                   <Input
+                    ref={searchInputRef}
                     value={searchText}
                     onChange={(event) => setSearchText(event.target.value)}
                     placeholder={t("marketplace.searchPlaceholder")}
@@ -792,14 +807,19 @@ export function MarketplaceView({
                     <Button
                       type="button"
                       size="sm"
-                      className="h-8 shrink-0 gap-1 rounded-full px-3.5"
+                      shape="pill"
+                      className="h-8 shrink-0 px-3.5"
                       disabled={extensionsInstalling}
                     >
                       {extensionsInstalling ? (
-                        <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                        <LoaderCircle
+                          className="size-4 animate-spin"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : null}
                       {t("common.add")}
-                      <ChevronDown className="size-3.5 shrink-0" aria-hidden />
+                      <ChevronDown className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-44 p-1">
@@ -808,26 +828,26 @@ export function MarketplaceView({
                         className="gap-2"
                         onSelect={() => onGenerateExtensionNavigate()}
                       >
-                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Sparkles className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         {t("marketplace.generateExtension")}
                       </DropdownMenuItem>
                     ) : null}
                     <DropdownMenuItem className="gap-2" onSelect={() => inputRef.current?.click()}>
-                      <Blocks className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      <Blocks className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       {t("marketplace.importExtension")}
                     </DropdownMenuItem>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger className="gap-2">
-                        <Store className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Store className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         {t("marketplace.addMarketplace")}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="min-w-44 p-1">
                         <DropdownMenuItem className="gap-2" onSelect={handleAddFromDisk}>
-                          <Folder className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <Folder className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                           {t("marketplace.addFromDisk")}
                         </DropdownMenuItem>
                         <DropdownMenuItem className="gap-2" onSelect={() => setAddSourceOpen(true)}>
-                          <Globe className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                          <Globe className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                           {t("marketplace.addFromUrl")}
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
@@ -859,12 +879,12 @@ export function MarketplaceView({
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "-ml-2 h-8 gap-1 text-muted-foreground hover:text-sidebar-foreground",
+                  "-ml-2 h-8 gap-1 text-muted-foreground hover:text-chrome-emphasis",
                   instantHoverMotionClass,
                 )}
                 onClick={closeDetail}
               >
-                <ArrowLeft className="size-4" aria-hidden />
+                <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
                 {t("common.back")}
               </Button>
             </div>

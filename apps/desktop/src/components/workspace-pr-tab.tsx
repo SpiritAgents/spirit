@@ -1,6 +1,6 @@
+import { ChevronLeft } from "@spiritagent/icons/chevron-left";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft } from "lucide-react";
 import { appendPullRequestChecksPages } from "@spiritagent/host-internal/github-pull-request-checks-pages";
 import { appendPullRequestConversationPages } from "@spiritagent/host-internal/github-pull-request-conversation-pages";
 
@@ -134,7 +134,7 @@ export type WorkspacePrTabProps = {
   prRevealEnabled?: boolean;
   prRevealNonce?: number;
   prRevealRequest?: GitHubPullRequestRevealRequest | null;
-  onPrDiffAddToSession?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
   /** Windows Mica / macOS Vibrancy: forwarded to the detail view's changes tab. */
   useTranslucency?: boolean;
   /** Called when the current PR detail title changes ("PR #XXX" in detail view, undefined when back to the list or on load failure) */
@@ -163,7 +163,7 @@ export function WorkspacePrTab({
   prRevealEnabled = false,
   prRevealNonce = 0,
   prRevealRequest = null,
-  onPrDiffAddToSession,
+  onPrDiffAddToChat,
   useTranslucency = false,
   onTitleChange,
   onPrStatusChange,
@@ -735,8 +735,8 @@ export function WorkspacePrTab({
     }
   }, [viewMode, detail, t]);
 
-  const openExternalUrl = (url: string) => {
-    void window.spiritDesktop?.openExternalUrl(url);
+  const openBrowserUrl = (url: string) => {
+    void window.spiritDesktop?.openBrowserUrl(url);
   };
 
   const isInitialPrLoad = viewMode === "detail" && (loadingBranch || loadingDetail) && !detail;
@@ -790,12 +790,12 @@ export function WorkspacePrTab({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-sidebar-foreground",
+                    "h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-chrome-emphasis",
                     instantHoverMotionClass,
                   )}
                   onClick={handleBackToList}
                 >
-                  <ChevronLeft className="size-3.5" aria-hidden />
+                  <ChevronLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
                   {t("common.back")}
                 </Button>
               </div>
@@ -818,10 +818,10 @@ export function WorkspacePrTab({
                 checksHasMore={checksSnapshot?.hasMore ?? false}
                 onLoadMoreChecks={loadMoreChecks}
                 actionBusy={prActionBusy}
-                onOpenExternal={openExternalUrl}
+                onOpenExternal={openBrowserUrl}
                 onMerge={handleMergePullRequest}
                 onMarkReady={handleMarkPullRequestReady}
-                onPrDiffAddToSession={onPrDiffAddToSession}
+                onPrDiffAddToChat={onPrDiffAddToChat}
                 useTranslucency={useTranslucency}
                 className="min-h-0 flex-1"
               />

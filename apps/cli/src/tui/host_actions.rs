@@ -1,4 +1,5 @@
 use super::*;
+use crate::model_registry::DEFAULT_API_BASE;
 
 impl TuiShell {
     pub(super) fn open_cli_log_file(&self) -> Result<std::path::PathBuf> {

@@ -3,7 +3,9 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { parseModelRef, type ModelRef } from "./config-v2.js";
+import type { ModelEffortSelection } from "@spiritagent/agent-core/model-effort";
+
+import { parseModelRef, type ModelRef } from "./config.js";
 import type { ModelReasoningEffort } from "./reasoning-effort.js";
 import { normalizeApprovalLevel, type ApprovalLevel } from "./tools.js";
 
@@ -37,6 +39,7 @@ export interface HostAutomationDefinition {
   workspaceRoot: string;
   modelRef: ModelRef;
   reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel: ApprovalLevel;
   enabled: boolean;
   createdAtUnixMs: number;
@@ -76,6 +79,7 @@ export interface HostAutomationCreateInput {
   workspaceRoot: string;
   modelRef: ModelRef;
   reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel: ApprovalLevel;
   enabled?: boolean;
 }
@@ -87,6 +91,7 @@ export interface HostAutomationUpdateInput {
   workspaceRoot?: string;
   modelRef?: ModelRef;
   reasoningEffort?: ModelReasoningEffort;
+  effort?: ModelEffortSelection;
   approvalLevel?: ApprovalLevel;
   enabled?: boolean;
 }
@@ -409,6 +414,7 @@ export class HostAutomationStore {
       workspaceRoot: path.resolve(normalizeNonEmpty(input.workspaceRoot, "workspaceRoot")),
       modelRef: normalizeAutomationModelRef(input.modelRef, "modelRef"),
       ...(input.reasoningEffort ? { reasoningEffort: input.reasoningEffort } : {}),
+      ...(input.effort ? { effort: input.effort } : {}),
       approvalLevel: normalizeApprovalLevel(input.approvalLevel),
       enabled: input.enabled !== false,
       createdAtUnixMs: now,
@@ -464,9 +470,16 @@ export class HostAutomationStore {
       }
       if (patch.modelRef !== undefined) {
         file.definition.modelRef = normalizeAutomationModelRef(patch.modelRef, "modelRef");
+        delete file.definition.reasoningEffort;
+        delete file.definition.effort;
       }
       if (patch.reasoningEffort !== undefined) {
         file.definition.reasoningEffort = patch.reasoningEffort;
+        delete file.definition.effort;
+      }
+      if (patch.effort !== undefined) {
+        file.definition.effort = patch.effort;
+        delete file.definition.reasoningEffort;
       }
       if (patch.approvalLevel !== undefined) {
         file.definition.approvalLevel = normalizeApprovalLevel(patch.approvalLevel);

@@ -9,7 +9,6 @@ export interface HostCommandDelegate {
   forgetWorkspace(request: CommandPayloads["forgetWorkspace"]["request"]): Promise<unknown>;
   commitChanges(request: CommandPayloads["commitChanges"]["request"]): Promise<unknown>;
   updateConfig(request: CommandPayloads["updateConfig"]["request"]): Promise<unknown>;
-  installLspProvider(request: CommandPayloads["installLspProvider"]["request"]): Promise<unknown>;
   setWebHostAuthTokenHash(authTokenHash: string): Promise<unknown>;
   addModel(request: CommandPayloads["addModel"]["request"]): Promise<unknown>;
   addProviderModels(request: CommandPayloads["addProviderModels"]["request"]): Promise<unknown>;
@@ -83,6 +82,10 @@ export interface HostCommandDelegate {
   ): Promise<unknown>;
   deleteAutomation(automationId: string): Promise<unknown>;
   setAutomationEnabled(automationId: string, enabled: boolean): Promise<unknown>;
+  listTaskMenuItems(): Promise<unknown>;
+  resolveTaskForRun(key: string): Promise<unknown>;
+  resolveTaskByLabel(label: string): Promise<unknown>;
+  consumeFolderOpenTaskTriggers(): Promise<unknown>;
   replyPendingApproval(
     request: CommandPayloads["replyPendingApproval"]["request"],
   ): Promise<unknown>;
@@ -129,6 +132,7 @@ export interface HostCommandDelegate {
   ): Promise<unknown>;
   deleteSession(path: string): Promise<unknown>;
   renameSession(path: string, displayName: string): Promise<unknown>;
+  setSessionPinned(path: string, pinned: boolean): Promise<unknown>;
   listWorkspaceFileReferenceSuggestions(
     request: CommandPayloads["listWorkspaceFileReferenceSuggestions"]["request"],
   ): Promise<unknown>;
@@ -241,7 +245,6 @@ const hostCommandDispatch = {
   forgetWorkspace: (host, payload) => host.forgetWorkspace(payload.request),
   commitChanges: (host, payload) => host.commitChanges(payload.request),
   updateConfig: (host, payload) => host.updateConfig(payload.request),
-  installLspProvider: (host, payload) => host.installLspProvider(payload.request),
   setWebHostAuthTokenHash: (host, payload) => host.setWebHostAuthTokenHash(payload.authTokenHash),
   addModel: (host, payload) => host.addModel(payload.request),
   addProviderModels: (host, payload) => host.addProviderModels(payload.request),
@@ -296,6 +299,10 @@ const hostCommandDispatch = {
   deleteAutomation: (host, payload) => host.deleteAutomation(payload.automationId),
   setAutomationEnabled: (host, payload) =>
     host.setAutomationEnabled(payload.automationId, payload.enabled),
+  listTaskMenuItems: (host) => host.listTaskMenuItems(),
+  resolveTaskForRun: (host, payload) => host.resolveTaskForRun(payload.key),
+  resolveTaskByLabel: (host, payload) => host.resolveTaskByLabel(payload.label),
+  consumeFolderOpenTaskTriggers: (host) => host.consumeFolderOpenTaskTriggers(),
   replyPendingApproval: (host, payload) => host.replyPendingApproval(payload.request),
   replyPendingQuestions: (host, payload) => host.replyPendingQuestions(payload.request),
   replyWorkspaceCapabilityTrust: (host, payload) =>
@@ -332,6 +339,7 @@ const hostCommandDispatch = {
   checkoutPaneGitBranch: (host, payload) => host.checkoutPaneGitBranch(payload.request),
   deleteSession: (host, payload) => host.deleteSession(payload.path),
   renameSession: (host, payload) => host.renameSession(payload.path, payload.displayName),
+  setSessionPinned: (host, payload) => host.setSessionPinned(payload.path, payload.pinned === true),
   listWorkspaceFileReferenceSuggestions: (host, payload) =>
     host.listWorkspaceFileReferenceSuggestions(payload.request),
   requestCodeCompletion: (host, payload) => host.requestCodeCompletion(payload.request),

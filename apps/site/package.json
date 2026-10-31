@@ -4,23 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1",
-    "build": "node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
+    "dev": "node ../../packages/product/scripts/run-quality.mjs dev pnpm run dev:run",
+    "dev:run": "pnpm exec turbo run build --filter=\"@spiritagent/site^...\" && node scripts/generate-brand-assets.mjs && node scripts/dev.mjs",
+    "build": "node ../../scripts/product/generate-content.mjs --scope site && node scripts/generate-brand-assets.mjs && node scripts/generate-notice.mjs && node scripts/generate-install-scripts.mjs && tsx scripts/generate-markdown-companions.mjs && next build",
     "start": "next start",
+    "test": "node ../../scripts/product/generate-content.mjs --scope site && tsx --test scripts/*.test.ts",
     "lint": "oxlint --deny-warnings .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --check .",
     "format:fix": "oxfmt .",
+    "brand-assets": "node scripts/generate-brand-assets.mjs",
     "notice": "node scripts/generate-notice.mjs",
     "install-scripts": "node scripts/generate-install-scripts.mjs",
     "markdown-companions": "tsx scripts/generate-markdown-companions.mjs"
   },
   "dependencies": {
-    "@fontsource-variable/geist": "^5.2.8",
-    "@fontsource-variable/noto-sans-sc": "^5.2.10",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@shikijs/langs": "^4.3.1",
     "@shikijs/themes": "^4.3.1",
+    "@spiritagent/icons": "workspace:*",
+    "@spiritagent/product": "workspace:*",
+    "@spiritagent/ui": "workspace:*",
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
     "class-variance-authority": "^0.7.1",
@@ -43,16 +47,16 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/mdx": "^2.0.14",
-    "@types/node": "^24.12.2",
+    "@types/node": "26.6.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "oxfmt": "^0.62.0",
     "oxlint": "^1.77.0",
     "tsx": "^4.21.0",
-    "typescript": "~6.0.2"
+    "typescript": "~7.0.2"
   },
   "engines": {
-    "node": ">=24"
+    "node": "26.13.0"
   },
   "packageManager": "pnpm@12.4.2"
 }

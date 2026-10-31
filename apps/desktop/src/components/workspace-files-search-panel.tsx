@@ -1,7 +1,9 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useCallback, useEffect, useMemo, useRef, useState, memo, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { CaseSensitive, ChevronDown, ChevronRight, Regex, WholeWord } from "lucide-react";
+import { CaseSensitive, Regex, WholeWord } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +38,7 @@ function pathBasename(rel: string): string {
 }
 
 const SEARCH_OPTION_TOGGLE_BTN = cn(
-  "electron-no-drag size-7 shrink-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-sidebar-foreground",
+  "electron-no-drag size-7 shrink-0 bg-transparent p-0 text-muted-foreground shadow-none hover:bg-canvas-hover hover:text-chrome-emphasis",
   "aria-pressed:bg-canvas-hover aria-pressed:text-foreground aria-pressed:hover:bg-canvas-hover",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,
@@ -247,7 +249,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.matchCase")}
                   onClick={() => setCaseSensitive((value) => !value)}
                 >
-                  <CaseSensitive className="size-3.5" aria-hidden />
+                  <CaseSensitive className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -265,7 +267,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.matchWholeWord")}
                   onClick={() => setWholeWord((value) => !value)}
                 >
-                  <WholeWord className="size-3.5" aria-hidden />
+                  <WholeWord className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -283,7 +285,7 @@ export function WorkspaceFilesSearchPanel({
                   aria-label={t("workspace.useRegex")}
                   onClick={() => setIsRegexp((value) => !value)}
                 >
-                  <Regex className="size-3.5" aria-hidden />
+                  <Regex className="size-3.5" aria-hidden strokeWidth={1.75} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={4}>
@@ -344,12 +346,24 @@ export function WorkspaceFilesSearchPanel({
                       onClick={() => toggleExpanded(row.normalizedPath)}
                     >
                       {expandedPaths.has(row.normalizedPath) ? (
-                        <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
+                        <ChevronDown
+                          className="size-3 shrink-0 opacity-70"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : (
-                        <ChevronRight className="size-3 shrink-0 opacity-70" aria-hidden />
+                        <ChevronRight
+                          className="size-3 shrink-0 opacity-70"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       )}
                       {PlanTabIcon ? (
-                        <PlanTabIcon className="size-3.5 shrink-0 opacity-80" aria-hidden />
+                        <PlanTabIcon
+                          className="size-3.5 shrink-0 opacity-80"
+                          aria-hidden
+                          strokeWidth={1.75}
+                        />
                       ) : (
                         <WorkspaceFileIcon name={headerName} className="opacity-80" />
                       )}

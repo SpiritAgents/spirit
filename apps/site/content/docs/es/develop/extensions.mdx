@@ -1,9 +1,10 @@
 ---
 title: Extensiones
-description: Crea extensiones con el asistente npm create o a mano, y opera tu propio mercado de extensiones remoto.
+description: Crea extensiones con el asistente npm create o a mano, y opera tu
+  propio mercado de extensiones remoto.
 ---
 
-Una extensión es una carpeta con un `.spirit/extension.json` — el volcado de manifiesto de Spirit — junto a un `package.json` puramente npm. Spirit instala extensiones por usuario y por host, no bajo el directorio `.spirit/` del espacio de trabajo, y delimita cada instalación por el mercado del que proviene: la identidad de instalación es `(id de fuente, name)`.
+Una extensión es una carpeta con un `{{product.workspaceDataFolderName}}/extension.json` — el volcado de manifiesto de {{product.name|mdx}} — junto a un `package.json` puramente npm. {{product.name|mdx}} instala extensiones por usuario y por host, no bajo el directorio `{{product.workspaceDataFolderName}}/` del espacio de trabajo, y delimita cada instalación por el mercado del que proviene: la identidad de instalación es `(id de fuente, name)`.
 
 | Host    | Ruta                                                    |
 | ------- | ------------------------------------------------------- |
@@ -12,7 +13,7 @@ Una extensión es una carpeta con un `.spirit/extension.json` — el volcado de 
 
 Esto es diferente de [Skills](../customize/skills.mdx) (carpetas `SKILL.md`), [MCP](../customize/mcp.mdx) (servidores externos) y [Hooks](../customize/hooks.mdx) (scripts `hooks.json`). `contributes.cli.hooks` da estilo a los slots de la TUI de la CLI. No es `hooks.json`. Una extensión aún puede _empaquetar_ esos mismos archivos cuando declara `mcp`, `hooks`, `skills` o `rules`.
 
-Cada extensión instalada tiene un interruptor de activación. Desactívala o desinstálala para detener sus contribuciones. Activar la extensión es consentir la ejecución de los servidores MCP, hooks de agente, skills y rules que declaró.
+Cada extensión instalada tiene un interruptor de activación. Desactívala o desinstálala para detener sus contribuciones. Activar la extensión es consentir la ejecución de los servidores MCP, Hooks de agente, Skills y rules que declaró.
 
 ## Crear una extensión
 
@@ -59,7 +60,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-El asistente pregunta un nombre de extensión (kebab-case), un nombre visible, una descripción de una línea y las capacidades a generar. Escribe `package.json`, `icon.svg` y `.spirit/extension.json`, más los archivos de las capacidades elegidas (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), y al terminar imprime una entrada de mercado lista para pegar.
+El asistente pregunta un nombre de extensión (kebab-case), un nombre visible, una descripción de una línea y las capacidades a generar. Escribe `package.json`, `icon.svg` y `{{product.workspaceDataFolderName}}/extension.json`, más los archivos de las capacidades elegidas (`skills/<name>/SKILL.md`, `rule.md`, `mcp.json`, `hooks.json`, `styles.css`, `index.mjs`), y al terminar imprime una entrada de mercado lista para pegar.
 
 Para scripting, cada pregunta tiene un flag: `[target-dir]`, `--name`, `--display-name`, `--description`, `--capabilities <csv>` y `--yes` para omitir la confirmación.
 
@@ -72,12 +73,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="Manual">
 
-Un directorio de extensión solo necesita dos archivos — `.spirit/extension.json` y `package.json` — más los archivos de las capacidades que declare:
+Un directorio de extensión solo necesita dos archivos — `{{product.workspaceDataFolderName}}/extension.json` y `package.json` — más los archivos de las capacidades que declare:
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # volcado de manifiesto de Spirit (obligatorio)
+  {{product.workspaceDataFolderName}}/
+    extension.json        # volcado de manifiesto de {{product.name}} (obligatorio)
   package.json            # puramente npm; solo se lee `main`
   icon.svg                # opcional; solo SVG, sin <script>
   index.mjs               # opcional; la entrada de activate referenciada por `main`
@@ -89,9 +90,9 @@ my-extension/
   cli-hooks.json          # al declarar hooks de CLI (ruta referenciada desde el manifiesto)
 ```
 
-`package.json` no lleva ningún campo de Spirit — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` siguen siendo puramente npm. El host solo lee `main`, la entrada de módulo de [`activate`](#activate).
+`package.json` no lleva ningún campo de {{product.name|mdx}} — `name`, `version`, `description`, `author`, `homepage`, `license`, `main`, `keywords` siguen siendo puramente npm. El host solo lee `main`, la entrada de módulo de [`activate`](#activate).
 
-Campos de `.spirit/extension.json`:
+Campos de `{{product.workspaceDataFolderName}}/extension.json`:
 
 | Campo           | Descripción                                                                                                                                                                  |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -224,24 +225,24 @@ Roles de token: `default`, `primary`, `secondary`, `muted`, `accent`, `success`,
 }
 ```
 
-### MCP, hooks, skills y rules empaquetados
+### MCP, Hooks, Skills y rules empaquetados
 
 Requieren la capability correspondiente. `contributes.mcp`, `contributes.hooks`, `contributes.skills` y `contributes.rules` son `true` o `{}`. Las rutas son convencionales; no se permiten rutas personalizadas.
 
 | Contribución | Capability | Archivo                                                                                                 |
 | ------------ | ---------- | ------------------------------------------------------------------------------------------------------- |
 | MCP          | `mcp`      | `mcp.json` en la raíz del paquete (mismo schema que el MCP de usuario/espacio de trabajo)               |
-| Agent hooks  | `hooks`    | `hooks.json` en la raíz del paquete (mismo schema que los hooks del agente; no `contributes.cli.hooks`) |
+| Agent Hooks  | `hooks`    | `hooks.json` en la raíz del paquete (mismo schema que los Hooks del agente; no `contributes.cli.hooks`) |
 | Skills       | `skills`   | `skills/<name>/SKILL.md`                                                                                |
 | Rules        | `rules`    | `rule.md` en la raíz del paquete                                                                        |
 
 Si están declarados pero el archivo falta o es inválido, la instalación falla. Los archivos no declarados se ignoran y nunca se cargan.
 
-`command` y `cwd` relativos se resuelven respecto a la raíz de la extensión. Si un MCP stdio omite `cwd`, el valor predeterminado es la raíz de la extensión.
+`command` y `cwd` relativos se resuelven respecto a la raíz de la extensión. Si un MCP stdio omite `cwd`, el valor predeterminado es la raíz de la extensión. Los comandos que solo usan PATH no cambian.
 
 Estas contribuciones se superponen en la sesión cuando la extensión está habilitada. No aparecen en **Ajustes → MCPs | Hooks | Skills | Rules**. En un conflicto de nombres: espacio de trabajo > usuario > extensión.
 
-Durante `tools/call`, un MCP empaquetado puede enviar `spirit/ui/open` (`{ viewId, params }`) si el cliente declaró `experimental["spirit/ui"]`. Spirit solo abre una vista de la misma extensión en `contributes.desktop.views`. Los MCP de usuario/espacio de trabajo se rechazan. El diálogo bloquea esa llamada; `close(result)` vuelve en la misma petición. Un host sin ventana responde `{ "kind": "unavailable", "reason": "host-has-no-ui" }` y la herramienta debe degradarse.
+Durante `tools/call`, un MCP empaquetado puede enviar `spirit/ui/open` (`{ viewId, params }`) si el cliente declaró `experimental["spirit/ui"]`. {{product.name|mdx}} solo abre una vista de la misma extensión en `contributes.desktop.views`. Los MCP de usuario/espacio de trabajo se rechazan. El diálogo bloquea esa llamada; `close(result)` vuelve en la misma petición. Un host sin ventana responde `{ "kind": "unavailable", "reason": "host-has-no-ui" }` y la herramienta debe degradarse.
 
 ### `settingsSchema`
 
@@ -351,7 +352,7 @@ export function activate(ctx) {
 
 ## Distribuir como ZIP
 
-Empaqueta un directorio de extensión en el formato ZIP compartible (contenido más `.spirit/extension.json`):
+Empaqueta un directorio de extensión en el formato ZIP compartible (contenido más `{{product.workspaceDataFolderName}}/extension.json`):
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,17 +364,17 @@ Para listar la extensión en un mercado, consulta [Publicar con publish](#public
 
 ## Operar un mercado de extensiones remoto
 
-Un mercado de extensiones remoto es un directorio servible con un índice `.spirit/marketplace.json`: un repositorio Git, un sitio estático o un directorio local. Los usuarios lo añaden con `spirit extension marketplace add <url|path>` o desde la página **Extensiones** de Desktop, y luego exploran e instalan sus entradas.
+Un mercado de extensiones remoto es un directorio servible con un índice `{{product.workspaceDataFolderName}}/marketplace.json`: un repositorio Git, un sitio estático o un directorio local. Los usuarios lo añaden con `spirit extension marketplace add <url|path>` o desde la página **Extensiones** de Desktop, y luego exploran e instalan sus entradas.
 
 <Tabs items={["Repositorio de plantilla", "Manual"]}>
 <Tab value="Repositorio de plantilla">
 
-[Use this template](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) crea tu propio repositorio de mercado a partir de `SpiritAgents/extension-template`.
+[Usa esta plantilla](https://github.com/new?template_owner=SpiritAgents&template_name=extension-template) para crear tu propio repositorio de mercado a partir de `SpiritAgents/extension-template`.
 
 La plantilla incluye la estructura de registro, dos extensiones de ejemplo y CI que valida el registro en cada push y pull request. Para publicar una extensión:
 
 1. Genérala con `npm create @spiritagent/extension`.
-2. Ejecuta `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — copia la extensión a `extensions/` y fusiona la entrada en `.spirit/marketplace.json`. Consulta [Publicar con publish](#publicar-con-publish).
+2. Ejecuta `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` — copia la extensión a `extensions/` y fusiona la entrada en `{{product.workspaceDataFolderName}}/marketplace.json`. Consulta [Publicar con publish](#publicar-con-publish).
 3. Haz push — los usuarios añaden el mercado con su URL de Git.
 
 </Tab>
@@ -383,7 +384,7 @@ Una raíz de mercado contiene el índice más un directorio de contenido por ext
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # el índice
   extensions/
     my-extension/     # directorio de contenido (paquete npm simple + archivos de capacidades)
@@ -416,18 +417,18 @@ Disciplina de revisión: los pull requests que añaden una entrada o cambian su 
 
 ### Mercados locales
 
-Cualquier directorio local con un `.spirit/marketplace.json` funciona como mercado — añádelo con `spirit extension marketplace add <path>` o con **Añadir desde disco** en Desktop. Los mercados locales se leen in situ y no necesitan CI, lo que los convierte en el bucle de desarrollo de los autores de extensiones: editar, reinstalar, repetir.
+Cualquier directorio local con un `{{product.workspaceDataFolderName}}/marketplace.json` funciona como mercado — añádelo con `spirit extension marketplace add <path>` o con **Añadir desde disco** en Desktop. Los mercados locales se leen in situ y no necesitan CI, lo que los convierte en el bucle de desarrollo de los autores de extensiones: editar, reinstalar, repetir.
 
 ### Publicar con publish
 
-`extension-toolkit publish` fusiona el `.spirit/extension.json` de una extensión en el `.spirit/marketplace.json` de un mercado y copia el contenido que la fuente de la entrada necesita:
+`extension-toolkit publish` fusiona el `{{product.workspaceDataFolderName}}/extension.json` de una extensión en el `{{product.workspaceDataFolderName}}/marketplace.json` de un mercado y copia el contenido que la fuente de la entrada necesita:
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- El primer argumento es el directorio de la extensión; el segundo es la raíz del mercado — cualquier directorio local con un `.spirit/marketplace.json`: un clon del repositorio de plantilla, el mercado Personal en `{spiritDataDir}/marketplaces/personal`, etc.
-- `--source local` (predeterminado): copia el paquete completo en `extensions/<name>/` del mercado — incluyendo `.spirit/extension.json`, excluyendo `node_modules` y `.git` — y apunta el `source` de la entrada a él.
+- El primer argumento es el directorio de la extensión; el segundo es la raíz del mercado — cualquier directorio local con un `{{product.workspaceDataFolderName}}/marketplace.json`: un clon del repositorio de plantilla, el mercado Personal en `{spiritDataDir}/marketplaces/personal`, etc.
+- `--source local` (predeterminado): copia el paquete completo en `extensions/<name>/` del mercado — incluyendo `{{product.workspaceDataFolderName}}/extension.json`, excluyendo `node_modules` y `.git` — y apunta el `source` de la entrada a él.
 - `--source npm`: fija `name@version` desde el `package.json` de la extensión como `source` npm de la entrada; solo el icono declarado se copia a `extensions/<name>/` (los mercados autoalojan los iconos). La publicación del paquete npm en sí sigue a cargo de tu CLI de npm.
 - `--dry-run`: imprime la entrada y las acciones planeadas sin escribir nada.
 - Reglas de fusión: una entrada con el mismo nombre se reemplaza en su lugar; si no, se añade. Las entradas nuevas y los cambios de `version` vuelven a `reviewStatus: "unverified"`; republicar la misma versión lo conserva. Los campos de curaduría como `featured` siempre conservan los valores del mercado.

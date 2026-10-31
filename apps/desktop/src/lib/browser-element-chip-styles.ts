@@ -25,7 +25,7 @@ export function makeChipNode(a: BrowserElementAttachment, doc: Document): HTMLEl
   icon.setAttribute("height", String(COMPOSER_CHIP_ICON_SIZE_PX));
   icon.setAttribute("fill", "none");
   icon.setAttribute("stroke", "currentColor");
-  icon.setAttribute("stroke-width", "2");
+  icon.setAttribute("stroke-width", "1.75");
   icon.setAttribute("stroke-linecap", "round");
   icon.setAttribute("stroke-linejoin", "round");
   icon.setAttribute("class", BROWSER_ELEMENT_CHIP_ICON_CLASS);

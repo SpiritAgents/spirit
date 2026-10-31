@@ -1,6 +1,6 @@
+import { SidebarLeft } from "@spiritagent/icons/sidebar-left";
+import { SidebarLeftCollapsed } from "@spiritagent/icons/sidebar-left-collapsed";
 import { useTranslation } from "react-i18next";
-
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { SessionSidebarShortcutKbd } from "@/components/layout/desktop-shortcut-kbds";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,9 @@ export function SessionSidebarToggleButton({ className }: { className?: string }
           {...(sessionSidebarOpen ? { "aria-controls": "session-sidebar-panel" } : {})}
         >
           {sessionSidebarOpen ? (
-            <PanelLeftClose className="size-3.5" aria-hidden />
+            <SidebarLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
           ) : (
-            <PanelLeftOpen className="size-3.5" aria-hidden />
+            <SidebarLeftCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
           )}
         </Button>
       </TooltipTrigger>

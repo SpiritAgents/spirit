@@ -3,7 +3,7 @@ title: 확장
 description: 마켓플레이스에서 확장을 설치하고, ZIP 패키지를 가져오고, 나만의 원격 확장 마켓플레이스를 추가하세요.
 ---
 
-확장은 Spirit에 기능을 추가합니다——도구, 스킬, 훅, MCP 서버, UI 기여. 확장은 확장 마켓플레이스를 통해 배포됩니다:
+확장은 {{product.name|mdx}}에 기능을 추가합니다——도구, 스킬, 훅, MCP 서버, UI 기여. 확장은 확장 마켓플레이스를 통해 배포됩니다:
 
 - **내장**——앱에 함께 제공됩니다.
 - **개인**——직접 추가한 ZIP 패키지 가져오기.
@@ -54,7 +54,7 @@ ZIP 패키지는 자체 선언 사이드 채널입니다: 마켓플레이스를 
 | Git 저장소(HTTPS 또는 SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | HTTP 인덱스 URL            | `spirit extension marketplace add https://example.com`                   |
 
-Git URL은 `--git-ref <tag|branch|commit>`으로 ref를 고정할 수 있습니다. 기본값은 원격의 기본 브랜치입니다. 단순 사이트 URL은 자동으로 `/.spirit/marketplace.json`이 보완됩니다.
+Git URL은 `--git-ref <tag|branch|commit>`으로 ref를 고정할 수 있습니다. 기본값은 원격의 기본 브랜치입니다. 단순 사이트 URL은 자동으로 `/{{product.workspaceDataFolderName}}/marketplace.json`이 보완됩니다.
 
 추가된 마켓플레이스는 `spirit extension marketplace list`와 `spirit extension marketplace remove <name>`으로 관리합니다. Desktop에서는 마켓플레이스 탭을 마우스 오른쪽 버튼으로 클릭하면 제거 작업이 표시됩니다.
 

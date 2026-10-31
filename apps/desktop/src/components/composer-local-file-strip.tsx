@@ -1,7 +1,8 @@
+import { X } from "@spiritagent/icons/x";
 import { useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { File, X } from "lucide-react";
+import { File } from "lucide-react";
 
 import {
   LOCAL_IMAGE_FLOATING_ACTION_BUTTON_CLASS,
@@ -97,7 +98,7 @@ function ComposerLocalFileCard({
           />
         ) : (
           <div className="flex size-full items-center justify-center text-muted-foreground">
-            <File className="size-5 shrink-0" aria-hidden />
+            <File className="size-5 shrink-0" aria-hidden strokeWidth={1.75} />
           </div>
         )}
         {removable ? (
@@ -117,7 +118,7 @@ function ComposerLocalFileCard({
               }}
               aria-label={t("composer.removeAttachment", { name: attachment.name })}
             >
-              <X className="size-3" aria-hidden />
+              <X className="size-3" aria-hidden strokeWidth={1.75} />
             </Button>
           </div>
         ) : null}

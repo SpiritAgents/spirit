@@ -1,5 +1,6 @@
+import { X } from "@spiritagent/icons/x";
 import { useTranslation } from "react-i18next";
-import { ChevronsUpDown, X } from "lucide-react";
+import { ChevronsUpDown } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -62,7 +63,7 @@ export function ModelCapabilitiesCombobox({
                         role="button"
                         tabIndex={-1}
                         aria-label={t("settings.removeCapability", { label })}
-                        className="rounded-sm text-muted-foreground hover:text-sidebar-foreground"
+                        className="rounded-sm text-muted-foreground hover:text-chrome-emphasis"
                         onPointerDown={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
@@ -73,7 +74,7 @@ export function ModelCapabilitiesCombobox({
                           toggleCapability(option.value, false);
                         }}
                       >
-                        <X className="size-3" aria-hidden />
+                        <X className="size-3" aria-hidden strokeWidth={1.75} />
                       </span>
                     </span>
                   );
@@ -82,7 +83,7 @@ export function ModelCapabilitiesCombobox({
                 <span className="px-1 text-muted-foreground">{t("settings.selectCapability")}</span>
               )}
             </span>
-            <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden />
+            <ChevronsUpDown className="size-4 shrink-0 opacity-60" aria-hidden strokeWidth={1.75} />
           </button>
         </DropdownMenuTrigger>
       </div>

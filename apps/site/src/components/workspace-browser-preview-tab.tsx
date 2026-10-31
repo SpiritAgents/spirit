@@ -134,7 +134,7 @@ export function WorkspaceBrowserPreviewTab({
           aria-label="Back"
           disabled
         >
-          <ArrowLeft className="size-3.5" aria-hidden />
+          <ArrowLeft className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Button
           type="button"
@@ -144,7 +144,7 @@ export function WorkspaceBrowserPreviewTab({
           aria-label="Forward"
           disabled
         >
-          <ArrowRight className="size-3.5" aria-hidden />
+          <ArrowRight className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Button
           type="button"
@@ -154,7 +154,7 @@ export function WorkspaceBrowserPreviewTab({
           aria-label="Reload"
           disabled
         >
-          <RefreshCw className="size-3.5" aria-hidden />
+          <RefreshCw className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
         <Input
           value={DESIGN_MODE_BROWSER_URL}
@@ -174,7 +174,7 @@ export function WorkspaceBrowserPreviewTab({
           aria-pressed={pickerActive}
           onClick={handlePickerToggle}
         >
-          <PenTool className="size-3.5" aria-hidden />
+          <PenTool className="size-3.5" aria-hidden strokeWidth={1.75} />
         </Button>
       </div>
 

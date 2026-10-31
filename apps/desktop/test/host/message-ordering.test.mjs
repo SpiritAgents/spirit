@@ -6,13 +6,14 @@ import {
   assistantTurnHasPlainPrefixMessage,
   finishTaskNoticePreviewFromArguments,
   finishTaskSummaryFromStreamingArguments,
+  normalizeToolBlockSnapshot,
+  providerToolCallSummaryCopy,
   shouldHideEmptyPendingAssistantSnapshot,
   stripRedundantThinkingFromMessageAux,
   toolCallSummaryCopyForRequest,
   toolCallSummaryForPhase,
   toolCallSummaryForStreamingPreview,
   toolCallSummaryCopyForResponsesBuiltInTool,
-  displayTitleForTool,
 } from "../../dist-electron/src/host/message-ordering.js";
 import { phaseToVerbContext } from "../../src/lib/tool-verb-context.ts";
 import i18n from "../../dist-electron/src/lib/i18n-host.js";
@@ -44,7 +45,7 @@ test("toolCallSummaryCopyForRequest: create_automation uses title and trigger de
       overview: "Summarize CI failures.",
       trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
     }),
-    { headline: toolHeadline("automations.create"), headlineDetail: "CI check · Weekly Mon 09:00" },
+    { headline: toolHeadline("tool.create"), headlineDetail: "CI check" },
   );
 });
 
@@ -70,6 +71,19 @@ test("toolCallSummaryCopyForRequest: apply_patch uses verb headline + basename d
     }),
     { headline: toolHeadline("tool.edit"), headlineDetail: "README.md" },
   );
+});
+
+test("toolCallSummaryCopyForRequest: apply_patch without an operation type falls back to the Patch verb", () => {
+  assert.deepEqual(
+    toolCallSummaryCopyForRequest("apply_patch", { operation: { path: "README.md" } }),
+    { headline: toolHeadline("tool.applyPatch"), headlineDetail: "README.md" },
+  );
+});
+
+test("toolCallSummaryForStreamingPreview: apply_patch without parseable args shows Patching instead of the generic calling line", () => {
+  assert.deepEqual(toolCallSummaryForStreamingPreview([], "call_1", "apply_patch", undefined), {
+    headline: i18n.t("tool.applyPatch", { context: "running" }),
+  });
 });
 
 test("toolCallSummaryCopyForRequest: web_search uses web search headline + query detail", () => {
@@ -167,14 +181,51 @@ test("toolCallSummaryCopyForResponsesBuiltInTool: web_search falls back to sourc
   );
 });
 
+test("providerToolCallSummaryCopy: MCP-style Call verb with the declared entry label", () => {
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "running"), {
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "preview"), {
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "succeeded"), {
+    headline: toolHeadline("tool.lazyCall", "succeeded"),
+    headlineDetail: "Web Search",
+  });
+  assert.deepEqual(providerToolCallSummaryCopy("Web Search", "failed"), {
+    headline: toolHeadline("tool.lazyCall"),
+    headlineDetail: "Web Search",
+  });
+});
+
+test("normalizeToolBlockSnapshot trims and preserves providerToolLabel", () => {
+  const tool = normalizeToolBlockSnapshot({
+    toolName: "web_search",
+    phase: "succeeded",
+    headline: "Called",
+    detailLines: [],
+    providerToolLabel: "  Web Search  ",
+  });
+  assert.equal(tool?.providerToolLabel, "Web Search");
+  const unlabeled = normalizeToolBlockSnapshot({
+    toolName: "web_search",
+    phase: "succeeded",
+    headline: "Searched web",
+    detailLines: [],
+  });
+  assert.equal(unlabeled?.providerToolLabel, undefined);
+});
+
 test("toolCallSummaryCopyForRequest: search tools use verb headline + detail", () => {
-  assert.deepEqual(toolCallSummaryCopyForRequest("grep", { query: "TODO" }), {
+  assert.deepEqual(toolCallSummaryCopyForRequest("grep", { pattern: "TODO" }), {
     headline: toolHeadline("tool.search"),
     headlineDetail: "TODO",
   });
   assert.deepEqual(
     toolCallSummaryCopyForRequest("grep", {
-      query: "ratatui",
+      pattern: "ratatui",
       glob: "apps/cli/**/*.{rs,toml}",
     }),
     {
@@ -207,8 +258,8 @@ test("toolCallSummaryForPhase: lazyToolGateway execution request preserves MCP d
     }),
   };
   assert.deepEqual(toolCallSummaryForPhase("running", "tool_call", lazyRequest), {
-    headline: toolHeadline("tool.lazyToolCall", "running"),
-    headlineDetail: "mcp / microsoft-learn / microsoft_docs_search",
+    headline: toolHeadline("tool.lazyCall", "running"),
+    headlineDetail: "Microsoft Learn Microsoft Docs Search",
   });
   assert.deepEqual(
     toolCallSummaryForPhase("succeeded", "tool_describe", {
@@ -222,7 +273,7 @@ test("toolCallSummaryForPhase: lazyToolGateway execution request preserves MCP d
     }),
     {
       headline: toolHeadline("tool.lazyToolDescribe", "succeeded"),
-      headlineDetail: "mcp / microsoft-learn / microsoft_docs_fetch",
+      headlineDetail: "Microsoft Learn Microsoft Docs Fetch",
     },
   );
 });
@@ -243,8 +294,8 @@ test("toolCallSummaryForPhase: built-in create_automation preserves automation c
     }),
   };
   assert.deepEqual(toolCallSummaryForPhase("running", "tool_call", lazyRequest), {
-    headline: toolHeadline("automations.create"),
-    headlineDetail: "CI check · Weekly Mon 09:00",
+    headline: toolHeadline("tool.create", "running"),
+    headlineDetail: "CI check",
   });
 });
 
@@ -256,8 +307,8 @@ test("toolCallSummaryForStreamingPreview: built-in create_automation uses progre
       streamingArgumentsJson: partialGateway,
     }),
     {
-      headline: toolHeadline("automations.create"),
-      headlineDetail: "AI news digest · Daily 08:00",
+      headline: toolHeadline("tool.create", "running"),
+      headlineDetail: "AI news digest",
     },
   );
 
@@ -267,7 +318,7 @@ test("toolCallSummaryForStreamingPreview: built-in create_automation uses progre
     toolCallSummaryForStreamingPreview([], "tool-1", "tool_call", undefined, {
       streamingArgumentsJson: titleOnly,
     }),
-    { headline: toolHeadline("automations.create"), headlineDetail: "AI news digest" },
+    { headline: toolHeadline("tool.create", "running"), headlineDetail: "AI news digest" },
   );
 
   const gatewayIdentified =
@@ -276,27 +327,7 @@ test("toolCallSummaryForStreamingPreview: built-in create_automation uses progre
     toolCallSummaryForStreamingPreview([], "tool-1", "tool_call", undefined, {
       streamingArgumentsJson: gatewayIdentified,
     }),
-    { headline: toolHeadline("automations.create") },
-  );
-});
-
-test("displayTitleForTool: built-in create_automation approval uses automation headline", () => {
-  assert.equal(
-    displayTitleForTool("tool_call", {
-      kind: "lazyToolGateway",
-      name: "tool_call",
-      argumentsJson: JSON.stringify({
-        provider: "built-in",
-        server: "desktop",
-        tool: "create_automation",
-        arguments: {
-          overview: "Summarize CI failures.",
-          title: "CI check",
-          trigger: { kind: "time", schedule: { kind: "weekly", weekday: 1, hour: 9, minute: 0 } },
-        },
-      }),
-    }),
-    toolHeadline("automations.create"),
+    { headline: toolHeadline("tool.create", "running") },
   );
 });
 
@@ -587,14 +618,14 @@ test("toolCallSummaryCopyForRequest: English verbs use progressive in running ph
       headline: "Listing",
       headlineDetail: "src/",
     });
-    assert.deepEqual(toolCallSummaryCopyForRequest("grep", { query: "TODO" }, "running"), {
+    assert.deepEqual(toolCallSummaryCopyForRequest("grep", { pattern: "TODO" }, "running"), {
       headline: "Searching",
       headlineDetail: "TODO",
     });
     assert.deepEqual(
       toolCallSummaryCopyForRequest(
         "grep",
-        { query: "ratatui", glob: "apps/cli/**/*.{rs,toml}" },
+        { pattern: "ratatui", glob: "apps/cli/**/*.{rs,toml}" },
         "running",
       ),
       { headline: "Searching", headlineDetail: "ratatui in apps/cli/**/*.{rs,toml}" },

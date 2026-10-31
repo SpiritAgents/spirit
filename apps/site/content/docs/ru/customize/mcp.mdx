@@ -1,18 +1,20 @@
 ---
 title: MCP
-description: Пользовательский mcp.json плюс workspace .spirit/mcp.json. Workspace имеет приоритет при совпадении имени сервера.
+description: Пользовательский mcp.json плюс workspace
+  {{product.workspaceDataFolderName}}/mcp.json. Workspace имеет приоритет при
+  совпадении имени сервера.
 ---
 
-MCP-серверы добавляют инструменты, ресурсы и подсказки извне Spirit.
+MCP-серверы добавляют инструменты, ресурсы и подсказки извне {{product.name|mdx}}.
 
-| Область      | Путь                           |
-| ------------ | ------------------------------ |
-| Пользователь | `{spiritDataDir}/mcp.json`     |
-| Workspace    | `{workspace}/.spirit/mcp.json` |
+| Область      | Путь                                                       |
+| ------------ | ---------------------------------------------------------- |
+| Пользователь | `{spiritDataDir}/mcp.json`                                 |
+| Workspace    | `{workspace}/{{product.workspaceDataFolderName}}/mcp.json` |
 
 Когда оба файла определяют одно и то же имя сервера, запись из **workspace** имеет приоритет.
 
-Управляйте серверами в **Settings → MCPs** или с помощью `spirit mcp` в CLI (`list`, `show`, `init`, `enable`, `disable`, `inspect`, `tools`, `call-tool`, …). MCP из [расширения](../develop/extensions.mdx) работают только при включённом расширении и не появляются в этом списке настроек.
+Управляйте серверами в **Settings → MCP** или с помощью `spirit mcp` в CLI (`list`, `show`, `init`, `enable`, `disable`, `inspect`, `tools`, `call-tool`, …). MCP из [расширения](../develop/extensions.mdx) работают только при включённом расширении и не появляются в этом списке настроек.
 
 MCP-инструменты объединяются в тот же список инструментов, который уже есть у агента. Они по-прежнему проходят через [approval](../agent/approvals.mdx), когда они высокорисковые.
 

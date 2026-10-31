@@ -82,7 +82,7 @@ export function QueuedUserMessageHoverActions({
         >
           <QueueActionButton
             disabled={busy || !canMoveUp}
-            icon={<ArrowUp className="size-3.5 shrink-0" aria-hidden />}
+            icon={<ArrowUp className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />}
             label={t("queue.moveUp")}
             onClick={() => {
               void onMoveUp(queueId);
@@ -90,7 +90,7 @@ export function QueuedUserMessageHoverActions({
           />
           <QueueActionButton
             disabled={busy}
-            icon={<Send className="size-3.5 shrink-0" aria-hidden />}
+            icon={<Send className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />}
             label={t("queue.sendNow")}
             onClick={() => {
               void onSendNow(queueId);
@@ -98,7 +98,7 @@ export function QueuedUserMessageHoverActions({
           />
           <QueueActionButton
             disabled={busy}
-            icon={<Trash2 className="size-3.5 shrink-0" aria-hidden />}
+            icon={<Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />}
             label={t("queue.delete")}
             onClick={() => {
               void onDelete(queueId);

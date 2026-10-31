@@ -62,7 +62,9 @@ test("AgentsSettingsRow uses grid layout without shared SettingsRow border", () 
 
   assert.match(html, /sm:grid-cols-\[minmax\(0,1fr\)_auto\]/);
   assert.doesNotMatch(html, /border-b/);
-  assert.match(html, /text-sm text-muted-foreground/);
+  // Label + description text stack matches the shared SettingsRow used by other panels.
+  assert.match(html, /data-slot="label"/);
+  assert.match(html, /mt-1 text-xs leading-relaxed text-muted-foreground/);
   assert.match(html, /for="settings-lsp-enabled"/);
 });
 
@@ -76,6 +78,25 @@ test("AgentsSettingsPanel includes LSP section label and Attribution rows", asyn
   assert.match(source, /prAttributionEnabled/);
   assert.match(source, /settings-commit-attribution/);
   assert.match(source, /settings-pr-attribution/);
+});
+
+test("AgentsSettingsPanel places the Context group with web tool toggles above LSP", async () => {
+  const source = await readFile(join(srcRoot, "panels/agents-settings-panel.tsx"), "utf8");
+  assert.match(source, /settings\.contextSection/);
+  assert.match(source, /settings\.providerToolsDescription/);
+  assert.match(source, /settings\.providerToolsLearnMoreAria/);
+  assert.match(source, /settings\.webFetchDescription/);
+  // The separator helper lives in @spiritagent/ui/cjk; the panel only consumes it.
+  assert.match(source, /needsSpaceBeforeInlineContent/);
+  assert.doesNotMatch(source, /export function needsSpaceBeforeInlineContent/);
+  assert.match(source, /providerToolsEnabled/);
+  assert.match(source, /webFetchEnabled/);
+  assert.match(source, /settings-provider-tools/);
+  assert.match(source, /settings-web-fetch/);
+  assert.ok(
+    source.indexOf("settings.contextSection") < source.indexOf("settings.lspSection"),
+    "Context group must render above the LSP group",
+  );
 });
 
 test("AppearanceSettingsPanel groups Theme, Motion, and Typography without UI locale", async () => {

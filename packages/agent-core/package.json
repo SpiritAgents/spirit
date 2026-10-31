@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/agent-core",
   "version": "1.0.0-alpha.0",
-  "description": "TypeScript core runtime for Spirit",
+  "description": "TypeScript agent core runtime",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -25,9 +25,77 @@
       "types": "./dist/reasoning-effort.d.ts",
       "default": "./dist/reasoning-effort.js"
     },
-    "./model-thinking-controls": {
-      "types": "./dist/model-thinking-controls.d.ts",
-      "default": "./dist/model-thinking-controls.js"
+    "./model-effort": {
+      "types": "./dist/model-effort.d.ts",
+      "default": "./dist/model-effort.js"
+    },
+    "./thinking-switch": {
+      "types": "./dist/thinking-switch.d.ts",
+      "default": "./dist/thinking-switch.js"
+    },
+    "./model-service-tier": {
+      "types": "./dist/model-service-tier.d.ts",
+      "default": "./dist/model-service-tier.js"
+    },
+    "./provider-tools": {
+      "types": "./dist/provider-tools/index.d.ts",
+      "default": "./dist/provider-tools/index.js"
+    },
+    "./file-upload": {
+      "types": "./dist/file-upload/index.d.ts",
+      "default": "./dist/file-upload/index.js"
+    },
+    "./model-knowledge": {
+      "types": "./dist/model-knowledge/index.d.ts",
+      "default": "./dist/model-knowledge/index.js"
+    },
+    "./model-catalog": {
+      "types": "./dist/model-catalog/index.d.ts",
+      "default": "./dist/model-catalog/index.js"
+    },
+    "./model-catalog/openai-models": {
+      "types": "./dist/model-catalog/openai-models.d.ts",
+      "default": "./dist/model-catalog/openai-models.js"
+    },
+    "./model-catalog/openai-api-base": {
+      "types": "./dist/model-catalog/openai-api-base.d.ts",
+      "default": "./dist/model-catalog/openai-api-base.js"
+    },
+    "./model-catalog/google-gemini-endpoints": {
+      "types": "./dist/model-catalog/google-gemini-endpoints.d.ts",
+      "default": "./dist/model-catalog/google-gemini-endpoints.js"
+    },
+    "./model-catalog/google-vertex-endpoints": {
+      "types": "./dist/model-catalog/google-vertex-endpoints.d.ts",
+      "default": "./dist/model-catalog/google-vertex-endpoints.js"
+    },
+    "./model-catalog/google-vertex-models": {
+      "types": "./dist/model-catalog/google-vertex-models.d.ts",
+      "default": "./dist/model-catalog/google-vertex-models.js"
+    },
+    "./model-catalog/bedrock-models": {
+      "types": "./dist/model-catalog/bedrock-models.d.ts",
+      "default": "./dist/model-catalog/bedrock-models.js"
+    },
+    "./model-catalog/bedrock-region": {
+      "types": "./dist/model-catalog/bedrock-region.d.ts",
+      "default": "./dist/model-catalog/bedrock-region.js"
+    },
+    "./model-catalog/bedrock-mantle": {
+      "types": "./dist/model-catalog/bedrock-mantle.d.ts",
+      "default": "./dist/model-catalog/bedrock-mantle.js"
+    },
+    "./model-catalog/id-display-title": {
+      "types": "./dist/model-catalog/id-display-title.d.ts",
+      "default": "./dist/model-catalog/id-display-title.js"
+    },
+    "./model-catalog/well-known-casing": {
+      "types": "./dist/model-catalog/well-known-casing.d.ts",
+      "default": "./dist/model-catalog/well-known-casing.js"
+    },
+    "./provider-presets": {
+      "types": "./dist/provider-presets/index.d.ts",
+      "default": "./dist/provider-presets/index.js"
     },
     "./shell-tool-result": {
       "types": "./dist/shell-tool-result.d.ts",
@@ -64,7 +132,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/check-no-vendor-runtime.mjs && vitest run",
     "test:file": "vitest run",
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs",
     "smoke:contract": "npm run build && node dist/smoke/contract/ai-sdk-openai-smoke.js && node dist/smoke/contract/ai-sdk-openai-json-schema-smoke.js && node dist/smoke/contract/ai-sdk-openai-streaming-smoke.js && node dist/smoke/contract/ai-sdk-openai-stream-reasoning-only-smoke.js && node dist/smoke/contract/ai-sdk-deepseek-streaming-smoke.js && node dist/smoke/contract/ai-sdk-deepseek-responses-smoke.js && node dist/smoke/contract/ai-sdk-anthropic-streaming-smoke.js && node dist/smoke/contract/ai-sdk-bedrock-streaming-smoke.js && node dist/smoke/contract/ai-sdk-google-streaming-smoke.js && node dist/smoke/contract/ai-sdk-google-vertex-streaming-smoke.js && node dist/smoke/contract/ai-sdk-open-responses-smoke.js && node dist/smoke/contract/ai-sdk-openai-responses-smoke.js && node dist/smoke/contract/ai-sdk-openai-responses-incremental-smoke.js && node dist/smoke/contract/ai-sdk-openai-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-gateway-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-gateway-web-search-smoke.js && node dist/smoke/contract/ai-sdk-openrouter-apply-patch-smoke.js && node dist/smoke/contract/ai-sdk-open-responses-streaming-smoke.js && node dist/smoke/contract/ai-sdk-alibaba-built-in-tools-smoke.js",
@@ -96,39 +164,40 @@
     "notice:production": "node scripts/gen-notice.mjs --production"
   },
   "dependencies": {
-    "@ai-sdk/alibaba": "2.0.37",
-    "@ai-sdk/amazon-bedrock": "5.0.66",
-    "@ai-sdk/anthropic": "4.0.44",
-    "@ai-sdk/azure": "4.0.52",
-    "@ai-sdk/baseten": "2.1.17",
-    "@ai-sdk/cohere": "4.0.33",
-    "@ai-sdk/deepinfra": "3.0.39",
-    "@ai-sdk/deepseek": "3.0.35",
-    "@ai-sdk/fireworks": "3.0.42",
-    "@ai-sdk/gateway": "4.0.67",
-    "@ai-sdk/google": "4.0.54",
-    "@ai-sdk/google-vertex": "5.0.66",
-    "@ai-sdk/groq": "4.0.33",
-    "@ai-sdk/huggingface": "2.0.39",
-    "@ai-sdk/minimax": "3.0.20",
-    "@ai-sdk/moonshotai": "3.0.41",
-    "@ai-sdk/open-responses": "2.0.34",
-    "@ai-sdk/openai": "4.0.50",
-    "@ai-sdk/openai-compatible": "3.0.39",
-    "@ai-sdk/togetherai": "3.0.40",
-    "@ai-sdk/xai": "4.0.47",
+    "@ai-sdk/alibaba": "2.0.65",
+    "@ai-sdk/amazon-bedrock": "5.0.113",
+    "@ai-sdk/anthropic": "4.0.78",
+    "@ai-sdk/azure": "4.0.99",
+    "@ai-sdk/baseten": "2.1.45",
+    "@ai-sdk/cohere": "4.0.59",
+    "@ai-sdk/deepinfra": "3.0.67",
+    "@ai-sdk/deepseek": "3.0.63",
+    "@ai-sdk/fireworks": "3.0.70",
+    "@ai-sdk/gateway": "4.0.110",
+    "@ai-sdk/google": "4.0.93",
+    "@ai-sdk/google-vertex": "5.0.109",
+    "@ai-sdk/groq": "4.0.59",
+    "@ai-sdk/huggingface": "2.0.67",
+    "@ai-sdk/minimax": "3.0.55",
+    "@ai-sdk/moonshotai": "3.0.67",
+    "@ai-sdk/open-responses": "2.0.63",
+    "@ai-sdk/openai": "4.0.91",
+    "@ai-sdk/openai-compatible": "3.0.67",
+    "@ai-sdk/togetherai": "3.0.68",
+    "@ai-sdk/xai": "5.0.20",
     "@aws/bedrock-token-generator": "1.1.0",
-    "@huggingface/inference": "4.13.25",
-    "@modelcontextprotocol/sdk": "1.30.0",
-    "ai": "7.0.83",
-    "undici": "7.29.0"
+    "@huggingface/inference": "4.13.32",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@spiritagent/product": "workspace:*",
+    "ai": "7.0.137",
+    "undici": "8.11.2"
   },
   "devDependencies": {
-    "@types/node": "25.9.5",
-    "typescript": "5.9.3",
-    "vitest": "^4.1.11"
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2",
+    "vitest": "^5.0.3"
   },
   "engines": {
-    "node": ">=24"
+    "node": "26.13.0"
   }
 }

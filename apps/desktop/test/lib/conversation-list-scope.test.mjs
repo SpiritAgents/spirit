@@ -13,6 +13,7 @@ test("resolveConversationListScopeKey isolates subagent viewer from main list", 
       subagentToolCallId: "call_abc",
       compactionDemoActive: false,
       longConversationListDemoActive: false,
+      approvalPreviewDemoActive: false,
     }),
     "subagent:call_abc",
   );
@@ -22,6 +23,7 @@ test("resolveConversationListScopeKey isolates subagent viewer from main list", 
       subagentToolCallId: "call_abc",
       compactionDemoActive: false,
       longConversationListDemoActive: false,
+      approvalPreviewDemoActive: false,
     }),
     "main",
   );
@@ -34,8 +36,22 @@ test("resolveConversationListScopeKey isolates long list perf demo", () => {
       subagentToolCallId: null,
       compactionDemoActive: false,
       longConversationListDemoActive: true,
+      approvalPreviewDemoActive: false,
     }),
     "long-list-demo",
+  );
+});
+
+test("resolveConversationListScopeKey isolates approval preview demo", () => {
+  assert.equal(
+    resolveConversationListScopeKey({
+      subagentViewActive: false,
+      subagentToolCallId: null,
+      compactionDemoActive: false,
+      longConversationListDemoActive: false,
+      approvalPreviewDemoActive: true,
+    }),
+    "approval-preview-demo",
   );
 });
 

@@ -10,7 +10,15 @@ import { cn } from "@/lib/utils";
 export function DeveloperSettingsPanel({
   onStartCompactionUiDemo,
   onStartLongConversationListDemo,
-}: Pick<SettingsViewProps, "onStartCompactionUiDemo" | "onStartLongConversationListDemo">) {
+  onStartApprovalPreviewDemo,
+  onStartToolCardPreviewDemo,
+}: Pick<
+  SettingsViewProps,
+  | "onStartCompactionUiDemo"
+  | "onStartLongConversationListDemo"
+  | "onStartApprovalPreviewDemo"
+  | "onStartToolCardPreviewDemo"
+>) {
   const { t } = useTranslation();
   return (
     <div className={cn(DESKTOP_CANVAS_CARD_SURFACE, "divide-y divide-border/35 px-4 sm:px-5")}>
@@ -50,6 +58,46 @@ export function DeveloperSettingsPanel({
           className="shrink-0 self-start sm:self-center"
           disabled={!onStartLongConversationListDemo}
           onClick={() => onStartLongConversationListDemo?.()}
+        >
+          {t("settings.demoInConversation")}
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <p className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>
+            {t("settings.approvalPreviewDemoTitle")}
+          </p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("settings.approvalPreviewDemoDescription")}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 self-start sm:self-center"
+          disabled={!onStartApprovalPreviewDemo}
+          onClick={() => onStartApprovalPreviewDemo?.()}
+        >
+          {t("settings.demoInConversation")}
+        </Button>
+      </div>
+      <div className="flex flex-col gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <p className={DESKTOP_LIST_ITEM_PRIMARY_CLASS}>
+            {t("settings.toolCardPreviewDemoTitle")}
+          </p>
+          <p className="text-xs leading-5 text-muted-foreground">
+            {t("settings.toolCardPreviewDemoDescription")}
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 self-start sm:self-center"
+          disabled={!onStartToolCardPreviewDemo}
+          onClick={() => onStartToolCardPreviewDemo?.()}
         >
           {t("settings.demoInConversation")}
         </Button>

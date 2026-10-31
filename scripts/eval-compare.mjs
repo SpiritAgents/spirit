@@ -144,7 +144,6 @@ function parseArgs(argv) {
     apiKey: undefined,
     baseUrl: undefined,
     model: undefined,
-    llmVendor: undefined,
     reasoningEffort: undefined,
     outputDir: undefined,
     workspaceSource: undefined,
@@ -184,9 +183,6 @@ function parseArgs(argv) {
         break;
       case '--model':
         options.model = requiredArgValue(argv, ++index, '--model');
-        break;
-      case '--llm-vendor':
-        options.llmVendor = requiredArgValue(argv, ++index, '--llm-vendor');
         break;
       case '--reasoning-effort':
         options.reasoningEffort = requiredArgValue(argv, ++index, '--reasoning-effort');
@@ -425,9 +421,6 @@ function resolveModelConfig(options) {
     model,
     ...(options.baseUrl ?? process.env.OPENAI_BASE_URL
       ? { baseUrl: options.baseUrl ?? process.env.OPENAI_BASE_URL }
-      : {}),
-    ...(options.llmVendor ?? process.env.SPIRIT_AGENT_EVAL_LLM_VENDOR
-      ? { llmVendor: options.llmVendor ?? process.env.SPIRIT_AGENT_EVAL_LLM_VENDOR }
       : {}),
     ...(options.reasoningEffort ?? process.env.SPIRIT_AGENT_EVAL_REASONING_EFFORT
       ? { reasoningEffort: options.reasoningEffort ?? process.env.SPIRIT_AGENT_EVAL_REASONING_EFFORT }
@@ -989,6 +982,7 @@ async function linkWorkspaceNodeModules(repoRoot, workspacePath) {
   const packageRelativePaths = [
     'packages/agent-core/node_modules',
     'packages/host-internal/node_modules',
+    'packages/extension-toolkit/node_modules',
   ];
 
   for (const relativePath of packageRelativePaths) {
@@ -1130,7 +1124,6 @@ function redactModelConfig(modelConfig) {
   return {
     model: modelConfig.model,
     ...(modelConfig.baseUrl ? { baseUrl: modelConfig.baseUrl } : {}),
-    ...(modelConfig.llmVendor ? { llmVendor: modelConfig.llmVendor } : {}),
     ...(modelConfig.reasoningEffort ? { reasoningEffort: modelConfig.reasoningEffort } : {}),
   };
 }
@@ -1203,7 +1196,6 @@ function printHelp() {
   console.log('  --api-key <key>          Overrides OPENAI_API_KEY');
   console.log('  --base-url <url>         Overrides OPENAI_BASE_URL');
   console.log('  --model <id>             Overrides OPENAI_MODEL; falls back to the environment variable');
-  console.log('  --llm-vendor <vendor>    e.g. deepseek / moonshot-ai / custom');
   console.log('  --reasoning-effort <v>   e.g. low / medium / high');
   console.log('  --output-dir <dir>       Required; output root for this compare, either a new non-existent path or an existing empty directory');
   console.log('  --workspace-source <dir> Copy the given workspace directory into the output directory; defaults to an empty workspace');

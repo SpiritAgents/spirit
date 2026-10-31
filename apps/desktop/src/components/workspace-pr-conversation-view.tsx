@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useEffect, useRef, type ComponentRef } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle } from "lucide-react";
 
 import { PrConversationTimeline } from "@/components/workspace-pr-conversation-timeline";
 import { Button } from "@/components/ui/button";
@@ -78,7 +78,7 @@ export function WorkspacePrConversationView({
           >
             {loadingMore ? (
               <>
-                <LoaderCircle className="size-3.5 animate-spin" aria-hidden />
+                <LoaderCircle className="size-3.5 animate-spin" aria-hidden strokeWidth={1.75} />
                 {t("workspace.prConversationLoadingMore")}
               </>
             ) : hasMore && onLoadMore ? (

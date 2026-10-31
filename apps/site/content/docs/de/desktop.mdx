@@ -1,6 +1,7 @@
 ---
 title: Desktop
-description: Einstellungsübersicht, Dateien / Git / Browser, Erweiterungen, Automatisierungen und lokales Web-Host-Pairing.
+description: Einstellungsübersicht, Dateien / Git / Browser, Erweiterungen,
+  Automatisierungen und lokales Web-Host-Pairing.
 ---
 
 Desktop ist der grafische Host. Er teilt den lokalen Daemon mit der [CLI](./cli.mdx). Installiere ihn über [Desktop installieren](./install/desktop.mdx).
@@ -62,7 +63,7 @@ Diese Chips injizieren einen festen Prompt. Der Agent verwendet dann [Workspace-
 
 ### LSP
 
-Aktiviere Sprachserver in **Settings → Agents** und installiere dann einen Anbieter, falls er fehlt. Sobald ein Server bereit ist, kann der Agent [`get_diagnostics`](./agent/tools.mdx) aufrufen.
+Aktiviere Sprachserver in **Settings → Agents**. {{product.name|mdx}} erkennt nur bereits auf diesem Rechner installierte Server; installiere fehlende selbst, jeweils mit der Toolchain aus der Tabelle. Sobald ein Server bereit ist, kann der Agent [`get_diagnostics`](./agent/tools.mdx) aufrufen.
 
 | ID              | Sprachen | Installationsmethode                        |
 | --------------- | -------- | ------------------------------------------- |
@@ -73,13 +74,13 @@ Aktiviere Sprachserver in **Settings → Agents** und installiere dann einen Anb
 | `jdtls`         | Java     | Manuell                                     |
 | `omnisharp`     | C#       | .NET                                        |
 
-clangd und jdtls sind nicht gebündelt. Installiere sie selbst und kehre dann zu Settings → Agents zurück.
+{{product.name|mdx}} installiert keine Sprachserver. Installiere fehlende selbst und kehre dann zu Settings → Agents zurück.
 
 ### Tab
 
-Tab ist Monaco-Inline-Vervollständigung. Akzeptiere Geistertext mit einer Tab-Taste. Öffne **Settings → Tab**, aktiviere Code-Vervollständigung (`codeCompletionEnabled`) und weise ein leichtgewichtiges Chat-Modell in **Settings → Models** zu. Dieser Slot dient auch anderen leichtgewichtigen Hintergrundaufgaben.
+Tab ist Monaco-Inline-Vervollständigung. Akzeptiere Geistertext mit einer Tab-Taste. Öffne **Settings → Tab**, aktiviere Code-Vervollständigung (`codeCompletionEnabled`) und weise ein sekundäres Sprachmodell in **Settings → Models** zu. Dieser Slot dient auch anderen sekundären Hintergrundaufgaben.
 
-Wenn die Vervollständigung leer ist, überprüfen Sie, ob ein leichtgewichtiges Chat-Modell verbunden ist und die Einstellung aktiviert ist. Dies ist nicht die Agent-Konversation.
+Wenn die Vervollständigung leer ist, überprüfen Sie, ob ein sekundäres Sprachmodell verbunden ist und die Einstellung aktiviert ist. Dies ist nicht die Agent-Konversation.
 
 ## Erweiterungen und Automatisierungen
 

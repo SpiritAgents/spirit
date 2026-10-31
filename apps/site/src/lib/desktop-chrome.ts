@@ -13,31 +13,31 @@ export const DESKTOP_SHELL_LAYOUT_TRANSITION =
   "transition-[width,margin,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 /** Top-bar default text/icon color, aligned with the sidebar `sidebarItemDefaultTextClass` */
-export const DESKTOP_CHROME_MUTED_TEXT = "text-sidebar-action-foreground";
+export const DESKTOP_CHROME_MUTED_TEXT = "text-chrome-label";
 
 /** Top-bar session title hover: text color only, no translucent fill */
 export const DESKTOP_SESSION_TITLE_HOVER_CLASS = cn(
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
   instantHoverMotionClass,
 );
 
 /** Top-bar hover/focus/current-item text color, aligned with the sidebar `sidebarItemActiveTextClass` */
-export const DESKTOP_CHROME_ACTIVE_TEXT = "text-sidebar-foreground";
+export const DESKTOP_CHROME_ACTIVE_TEXT = "text-chrome-emphasis";
 
 /** ghost defaults to bg-muted when aria-expanded; top-bar icon buttons need a fully transparent background */
 export const DESKTOP_CHROME_TOGGLE_ICON_BTN = cn(
   "electron-no-drag size-7 shrink-0 bg-transparent",
   DESKTOP_CHROME_MUTED_TEXT,
-  "hover:bg-foreground/[0.06] hover:text-sidebar-foreground focus-visible:bg-foreground/[0.06] focus-visible:text-sidebar-foreground",
+  "hover:bg-foreground/[0.06] hover:text-chrome-emphasis focus-visible:bg-foreground/[0.06] focus-visible:text-chrome-emphasis",
   "dark:hover:bg-white/[0.06] dark:focus-visible:bg-white/[0.06]",
-  "aria-expanded:bg-transparent dark:aria-expanded:bg-transparent aria-expanded:text-sidebar-action-foreground",
-  "aria-expanded:hover:bg-foreground/[0.06] aria-expanded:hover:text-sidebar-foreground dark:aria-expanded:hover:bg-white/[0.06]",
+  "aria-expanded:bg-transparent dark:aria-expanded:bg-transparent aria-expanded:text-chrome-label",
+  "aria-expanded:hover:bg-foreground/[0.06] aria-expanded:hover:text-chrome-emphasis dark:aria-expanded:hover:bg-white/[0.06]",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,
 );
 
 export const DESKTOP_CHROME_COMMIT_BTN = cn(
-  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-foreground/[0.06] hover:text-sidebar-foreground dark:hover:bg-foreground/10",
+  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-foreground/[0.06] hover:text-chrome-emphasis dark:hover:bg-foreground/10",
   FONT_WEIGHT_NORMAL,
   instantHoverMotionClass,
 );
@@ -45,9 +45,9 @@ export const DESKTOP_CHROME_COMMIT_BTN = cn(
 /** Git changes section primary button (ButtonGroup segment, with `size="xs"`); `border-r-0` avoids the transparent right border looking too thick over the separator */
 export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
 
-/** Git ButtonGroup middle divider (`ButtonGroupSeparator`); `!bg-*` overrides the Separator defaults bg-border / bg-input */
+/** Git ButtonGroup middle divider (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
 export const DESKTOP_GIT_ACTION_SPLIT = cn(
-  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-border-0 !bg-[var(--git-action-split)] !p-0",
+  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
 );
 
 /** Git ButtonGroup right-side dropdown trigger */
@@ -106,14 +106,15 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(19rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER =
+  "shrink-0 border-b border-outline-border p-1 pr-1.5";
 
 /** Matches the PendingApprovalCard guidance input: thin-bordered shell, inner Input without ring */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL =
   "overflow-hidden rounded-md border border-input bg-transparent focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/20";
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2 py-1.5 text-xs shadow-none focus-visible:border-transparent focus-visible:ring-0";
 
 /** ghost: transparent background matching the popover; overrides the Input base dark:bg-input/30 */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
@@ -211,7 +212,7 @@ export function computeSessionSidebarMaxWidthPx(): number {
 }
 
 export function sessionSidebarShellWidth(open: boolean, widthPx: number): string {
-  return open ? `calc(0.25rem + ${widthPx}px)` : "0px";
+  return open ? `${widthPx}px` : "0px";
 }
 
 /** In-browser nested hero preview: narrower session rail for compact typography. */

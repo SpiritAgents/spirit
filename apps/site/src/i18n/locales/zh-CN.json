@@ -1,16 +1,16 @@
 {
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit 是一个开源 AI Agent。你可以保留自己的模型、自己的密钥和自己的工作流。"
+    "title": "{{product.name}}",
+    "description": "{{product.name}} 是一个开源 AI Agent。你可以保留自己的模型、自己的密钥和自己的工作流。"
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "下载",
     "downloadForPlatform": "下载 {{platform}} 版本"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit 首页",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} 首页",
     "primaryNavAria": "主导航",
     "nav": {
       "features": "特性",
@@ -31,8 +31,8 @@
     "headline": "开源 AI 智能体\n旨在成倍提升您的生产力。"
   },
   "download": {
-    "metaTitle": "下载 Spirit",
-    "metaDescription": "下载 Spirit 桌面版、安装 CLI，或关注 ACP。",
+    "metaTitle": "下载 {{product.name}}",
+    "metaDescription": "下载 {{product.name}} 桌面版、安装 CLI，或关注 ACP。",
     "title": "同一个智能体，贯穿你的所有工作。",
     "sectionAria": "同一个智能体，贯穿你的所有工作。",
     "desktop": "Desktop",
@@ -42,7 +42,7 @@
     "copied": "已复制",
     "comingSoonJoke": "即将推出",
     "listingInProgress": "上架中…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "检查 auth.ts，修好会话刷新的问题。",
     "cliAssistantMessage": "我会先查看 auth.ts，再修补失败的会话检查。",
     "cliUserFollowUp": "再补一个回归测试。",
@@ -50,16 +50,16 @@
     "cliFooter": "Agent  |  默认审批  |  Loop 关          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit 内容",
+    "sectionAria": "{{product.name}} 内容",
     "featureHeading": ["你的模型。", "你的密钥。", "你的控制权。"],
-    "featureBody": "Spirit 不会把你锁进托管栈。你可以接入任意提供商的密钥，只配置一次，再在同一套 Agent 工作流里复用。",
+    "featureBody": "{{product.name}} 不会把你锁进托管栈。你可以接入任意提供商的密钥，只配置一次，再在同一套 Agent 工作流里复用。",
     "agent": {
-      "sectionAria": "Spirit 生产力",
+      "sectionAria": "{{product.name}} 生产力",
       "featureHeading": ["结合上下文规划。", "调用工具执行。", "在工作区里交付。"],
-      "featureBody": "Spirit 先规划再行动：生成示意图、写出结构化计划，并在桌面壳层内直接对你的仓库执行，无需切换上下文。"
+      "featureBody": "{{product.name}} 先规划再行动：生成示意图、写出结构化计划，并在桌面壳层内直接对你的仓库执行，无需切换上下文。"
     },
-    "ctaSectionAria": "下载 Spirit",
-    "ctaTitle": "试试 Spirit。",
+    "ctaSectionAria": "下载 {{product.name}}",
+    "ctaTitle": "试试 {{product.name}}。",
     "trio": {
       "sectionAria": "能力预览",
       "completion": {
@@ -97,7 +97,7 @@
     "linkHome": "首页",
     "changelog": "更新日志",
     "openSourceLicenses": "开源许可",
-    "copyrightLine": "© {{year}} Spirit。开源 AI 智能体。"
+    "copyrightLine": "© {{year}} {{product.name}}。开源 AI 智能体。"
   },
   "desktop": {
     "titleBar": {
@@ -115,25 +115,25 @@
       "currentWorkspace": "当前工作区",
       "basics": "基础",
       "models": "模型",
-      "skills": "Skills",
+      "skills": "技能",
       "dreams": "梦境",
       "extensions": "扩展",
-      "mcps": "MCPs",
+      "mcps": "MCP",
       "appearance": "外观",
       "settingsNavSidebarAria": "设置导航侧栏",
-      "sessionsSidebarAria": "会话与设置侧栏",
+      "sessionsSidebarAria": "对话与设置侧栏",
       "back": "返回",
       "settingsHeading": "设置",
       "pageNavigation": "页面导航",
-      "newSession": "新会话",
+      "newChat": "新对话",
       "extensionsButton": "扩展",
-      "workspaceHeading": "工作区",
+      "workspacesHeading": "工作区",
       "settingsTabsAria": "设置页签",
-      "workspaceSessionsAria": "工作区会话",
+      "workspaceSessionsAria": "工作区对话",
       "settingsButton": "设置"
     },
     "conversation": {
-      "manualAssistantResponse": "下载 Spirit。",
+      "manualAssistantResponse": "下载 {{product.name}}。",
       "demoUserPrompt": "检查当前落地页，并告诉我下一步应该优先改进什么。",
       "demoThinkingText": "正在检查当前 Hero 结构。\n寻找对话界面里最明显的缺口。\n准备一份简短的实现建议。",
       "demoAssistantResponse": "接下来我会这样推进。\n\n- 把空白对话区替换成真实的流式演示。\n- 让 Hero 窗口随时可中断，访客可以立刻接管。\n- 直接复用桌面端消息样式来呈现 Thinking 和工具调用，而不是做近似实现。",
@@ -157,7 +157,7 @@
       "runningToolDetails": ["正在打开 Hero 实现。", "正在检查桌面窗口外壳。"],
       "runningToolOutput": "发现了单一 Hero 区块、复用的桌面外壳，以及静态的对话空状态。",
       "emptyTitle": "开始点什么。",
-      "composerPlaceholder": "输入消息…",
+      "composerPlaceholder": "输入消息",
       "agentDemo": {
         "demoUserPrompt": "规划一次落地页 Hero 改版。先生成示意图，再写出实现计划。",
         "demoThinkingText": "正在查看当前 Hero 布局与文案。\n确认示意图应放在计划的哪个位置。\n准备先生成图片，再起草计划文档。",
@@ -200,8 +200,6 @@
       "providerDialogDescription": "选择后填写连接信息。",
       "searchPlaceholder": "搜索",
       "noMatches": "无匹配项",
-      "connectDialogDescriptionCustom": "填写端点与密钥。",
-      "connectDialogDescriptionDefault": "填写 API Key 即可连接。",
       "addModeLabel": "模型添加方式",
       "addModeAria": "模型添加方式",
       "addSingle": "仅添加单个",
@@ -212,11 +210,9 @@
       "optionalPlaceholder": "可选",
       "apiKeyLabel": "API Key",
       "apiKeyPlaceholder": "输入密钥",
-      "addThisModel": "添加此模型",
-      "adding": "添加中…",
-      "addProvider": "添加提供商",
+      "connecting": "连接中…",
       "customConnectionTitle": "自定义连接",
-      "connectProviderTitle": "连接提供商"
+      "connectNamedProviderTitle": "连接 {{provider}}"
     },
     "window": {
       "toolbarAria": "侧栏与工具区",
@@ -230,7 +226,7 @@
       "previewEditorOnlyTextError": "仅为预览中的文本文件启用编辑器。",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newSession": "新会话"
+      "newChat": "新对话"
     },
     "commit": {
       "modeCommit": "提交",
@@ -290,7 +286,7 @@
       "exited": "[已退出，代码 {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Spirit 桌面产品的营销站预览。",
+      "siteReadmeDescription": "{{product.name}} 桌面产品的营销站预览。",
       "desktopReadmeDescription": "桌面产品的 Electron 外壳与 Web 渲染器。",
       "generatedWorkspaceDescription": "为落地页 {{label}} 预览生成的模拟工作区。",
       "generatedWorkspaceOverview": "工作区根路径：{{root}}\\n\\n这个模拟工作区让文件标签页可交互，同时不需要挂载完整桌面端运行时。",
@@ -303,8 +299,8 @@
   },
   "docs": {
     "title": "文档",
-    "metaTitle": "Spirit 文档",
-    "metaDescription": "安装 Spirit，用自己的密钥接入提供商，并在 Desktop 与 CLI 上使用同一套 Agent。",
+    "metaTitle": "{{product.name}} 文档",
+    "metaDescription": "安装 {{product.name}}，用自己的密钥接入提供商，并在 Desktop 与 CLI 上使用同一套 Agent。",
     "comingSoon": "即将推出。",
     "sectionAria": "文档",
     "search": "搜索",

@@ -8,12 +8,13 @@
  */
 
 import { assertMarketplaceIconPath } from "./icon.js";
+import { product } from "@spiritagent/product";
 import { assertRegistryRelativePath } from "./paths.js";
 import { isMarketplaceVersionString, parseMarketplaceVersion } from "./semver.js";
 
 export const MARKETPLACE_SCHEMA_VERSION = 1;
 export const MARKETPLACE_INDEX_FILE_NAME = "marketplace.json";
-export const MARKETPLACE_SPIRIT_DIR_NAME = ".spirit";
+export const MARKETPLACE_SPIRIT_DIR_NAME = product.workspaceDataFolderName;
 /** Installed extension dump file name; lives at `<installDir>/.spirit/extension.json`. */
 export const EXTENSION_DUMP_FILE_NAME = "extension.json";
 

@@ -8,9 +8,15 @@
 
 Use this exact owner/name for `gh`, GitHub search, clone URLs, and issue/PR links. Do not invent nearby slugs.
 
+## npm Scope
+
+- Scope: `@spiritagent`
+
+Use this exact scope for `pnpm --filter`, `pnpm --filter ... exec`, and any package reference. Do not invent nearby scopes. Before filtering or executing against a package, read its `name` field from that package's `package.json` instead of guessing.
+
 ## Layering and Specialized Guides
 
-- Capability and host boundary: `.github/instructions/agent-core-host-boundary.instructions.md`
+- Capability and host boundary (agent-core as the internal agent capability library — runtime, transports, tool contracts, plus the `provider-presets` / `model-catalog` / `model-knowledge` write-time materialization zone; the no-vendor-identity rule on runtime paths; host-internal's transitional role): `.github/instructions/agent-core-host-boundary.instructions.md`
 - Rust CLI: `.github/instructions/cli-rust.instructions.md`
 
 ## Branch Names
@@ -101,10 +107,12 @@ EOF
 
 - Run repo-local tools (`tsx`, `tsc`, `oxfmt`, `oxlint`, etc.) via `pnpm exec`, never `npx` — `npx` may hit the network; `pnpm exec` resolves from workspace `node_modules/.bin`.
 - Prefer cross-platform compatibility (including Windows branches and conditional compilation).
+- Icon stroke width: call sites rendering an icon component from `@spiritagent/icons` or `lucide-react` must pass `strokeWidth={1.75}` explicitly (JSX or `createElement` alike). An icon that needs a different weight must declare that value explicitly at the call site, which marks it as intentional; never rely on the library default (2). Do not override icon stroke width via CSS — a CSS rule beats the `stroke-width` presentation attribute and would clobber intentional per-call-site values.
 - User-visible UI copy uses Title Case for short label-style text (labels, buttons, dialog titles, settings entries, menu items, etc.): capitalize the first and last word and all major words; short words (≤3 letters) are capitalized when they are content words (verbs, nouns, adverbs — e.g. `Log In`, `Sign Out`) and kept lowercase when they are function words (such as `at` / `in` / `for` / `of` / `to` / `on`) in the middle.
 - Full sentences (confirmation prompts, descriptions, toast/notification messages, etc.) use Sentence case: capitalize only the first word and proper nouns.
 - Brand names and proper nouns keep their canonical casing (e.g. `GitHub`, `macOS`, `GLM Coding Plan`) under both rules above.
 - User-visible UI copy and natural-language comments use the Unicode ellipsis … (U+2026), not three ASCII periods; this does not apply to language syntax, path or API placeholders, or machine-readable truncation markers.
+- Input placeholder copy does not end with an ellipsis: a placeholder marks a field awaiting user input, not an in-progress state, so a trailing … reads as if the UI is still loading. Loading or other ongoing-state hints may keep the trailing ellipsis.
 - When referencing existing implementations, prefer linking to source paths instead of repeating long explanations here.
 - Unless explicitly required by the test target, avoid adding third-party products, services, models, or brand strings in unit tests, snapshots, fixtures, example inputs, etc.; prefer in-project semantics or neutral descriptions.
 - This project is in very early development; if a change involves user configuration structure, persistence format, or migration strategy and requires significant adjustment, avoid stacking too many compatibility fallbacks. Prefer keeping the implementation directly evolvable, and clearly communicate to developers the reasons, costs, and future evolution space for doing so. Note that "early stage" only means fewer compatibility fallbacks are needed; **it does not mean avoiding significant changes** — restructure directly when necessary, rather than bypassing necessary refactoring for the sake of stability.

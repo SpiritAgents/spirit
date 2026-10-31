@@ -1,29 +1,23 @@
-import { type ModelEntryV2, type ModelRef, type ProviderGroupV2 } from "@spiritagent/host-internal";
+import {
+  findProviderEntry,
+  resolveModelEntry,
+  type ModelEntry,
+  type ModelRef,
+  type ProviderEntry,
+} from "@spiritagent/host-internal";
 
-import type {
-  DesktopAlibabaBillingMode,
-  DesktopGlmCodingPlanBillingMode,
-  DesktopModelCapability,
-  DesktopModelProvider,
-  DesktopModelReasoningEffort,
-  DesktopStepfunBillingMode,
-  DesktopTransportKind,
-  ModelProfileSnapshot,
-} from "../types.js";
+import type { ModelProfileSnapshot } from "../types.js";
 import type { DesktopConfigFile } from "./storage.js";
 
-export interface ResolvedModelProfile extends ModelProfileSnapshot {
-  groupId: string;
-  ref: ModelRef;
-}
+export type ResolvedModelProfile = ModelProfileSnapshot;
 
-export function flattenProviderGroups(
-  config: Pick<DesktopConfigFile, "providerGroups">,
+export function flattenProviders(
+  config: Pick<DesktopConfigFile, "providers">,
 ): ResolvedModelProfile[] {
   const resolved: ResolvedModelProfile[] = [];
-  for (const group of config.providerGroups) {
-    for (const model of group.models) {
-      const profile = resolveModelProfileFromParts(group, model);
+  for (const provider of config.providers) {
+    for (const model of provider.models) {
+      const profile = resolveModelProfileFromParts(provider, model);
       if (profile) {
         resolved.push(profile);
       }
@@ -32,123 +26,108 @@ export function flattenProviderGroups(
   return resolved;
 }
 
+/**
+ * Snapshot projection of one config model entry: connection facts come from the provider entry;
+ * model-level fields are the effective (post-inheritance) values per host-internal
+ * `resolveModelEntry`. Vendor-free by construction.
+ */
 export function resolveModelProfileFromParts(
-  group: ProviderGroupV2,
-  model: ModelEntryV2,
+  provider: ProviderEntry,
+  model: ModelEntry,
 ): ResolvedModelProfile | null {
-  if (!group.id.trim() || !model.name.trim()) {
+  if (!provider.id.trim() || !model.name.trim()) {
     return null;
   }
-  const ref: ModelRef = { groupId: group.id, name: model.name };
+  const effective = resolveModelEntry(provider, model.name);
+  if (!effective) {
+    return null;
+  }
+  const ref: ModelRef = { providerId: provider.id, name: model.name };
   return {
     ref,
-    groupId: group.id,
+    providerId: provider.id,
     name: model.name,
-    apiBase: group.apiBase,
-    reasoningEffort: model.reasoningEffort as DesktopModelReasoningEffort,
-    ...(model.reasoningMode === "pro" ? { reasoningMode: "pro" as const } : {}),
-    ...(model.thinkingEnabled === false ? { thinkingEnabled: false } : {}),
-    ...(model.supportedReasoningEfforts !== undefined
-      ? {
-          supportedReasoningEfforts:
-            model.supportedReasoningEfforts as DesktopModelReasoningEffort[],
-        }
+    apiBase: provider.apiBase,
+    ...(effective.transportKind !== undefined
+      ? { transportKind: effective.transportKind }
+      : provider.transportKind !== undefined
+        ? { transportKind: provider.transportKind }
+        : {}),
+    ...(effective.reasoningEffort !== undefined
+      ? { reasoningEffort: effective.reasoningEffort }
       : {}),
-    ...(model.capabilities !== undefined
-      ? { capabilities: model.capabilities as DesktopModelCapability[] }
+    ...(effective.reasoningMode !== undefined ? { reasoningMode: effective.reasoningMode } : {}),
+    ...(effective.supportedReasoningEfforts !== undefined
+      ? { supportedReasoningEfforts: [...effective.supportedReasoningEfforts] }
       : {}),
-    provider: group.provider as DesktopModelProvider,
-    ...(group.transportKind ? { transportKind: group.transportKind as DesktopTransportKind } : {}),
-    ...(group.providerSite
-      ? { providerSite: group.providerSite as ResolvedModelProfile["providerSite"] }
+    ...(effective.effortSemantics !== undefined
+      ? { effortSemantics: effective.effortSemantics }
       : {}),
-    ...(group.alibabaWorkspaceId ? { alibabaWorkspaceId: group.alibabaWorkspaceId } : {}),
-    ...(group.alibabaBillingMode
-      ? { alibabaBillingMode: group.alibabaBillingMode as DesktopAlibabaBillingMode }
+    ...(effective.effort !== undefined ? { effort: effective.effort } : {}),
+    ...(effective.supportedEfforts !== undefined
+      ? { supportedEfforts: [...effective.supportedEfforts] }
       : {}),
-    ...(group.stepfunBillingMode
-      ? { stepfunBillingMode: group.stepfunBillingMode as DesktopStepfunBillingMode }
+    ...(effective.defaultEffort !== undefined ? { defaultEffort: effective.defaultEffort } : {}),
+    ...(effective.thinkingCapabilities !== undefined
+      ? { thinkingCapabilities: structuredClone(effective.thinkingCapabilities) }
       : {}),
-    ...(group.zAiBillingMode
-      ? { zAiBillingMode: group.zAiBillingMode as DesktopGlmCodingPlanBillingMode }
+    ...(effective.supportedReasoningModes !== undefined
+      ? { supportedReasoningModes: [...effective.supportedReasoningModes] }
       : {}),
-    ...(group.zhipuBillingMode
-      ? { zhipuBillingMode: group.zhipuBillingMode as DesktopGlmCodingPlanBillingMode }
+    ...(effective.capabilities !== undefined ? { capabilities: [...effective.capabilities] } : {}),
+    ...(effective.contextLength !== undefined ? { contextLength: effective.contextLength } : {}),
+    ...(effective.outputLimit !== undefined ? { outputLimit: effective.outputLimit } : {}),
+    ...(effective.supportsThinkingType !== undefined
+      ? { supportsThinkingType: effective.supportsThinkingType }
       : {}),
-    ...(group.awsRegion ? { awsRegion: group.awsRegion } : {}),
-    ...(group.azureResourceName ? { azureResourceName: group.azureResourceName } : {}),
-    ...(group.cloudflareAccountId ? { cloudflareAccountId: group.cloudflareAccountId } : {}),
-    ...(group.cloudflareGatewayId ? { cloudflareGatewayId: group.cloudflareGatewayId } : {}),
-    ...(group.vertexProject ? { vertexProject: group.vertexProject } : {}),
-    ...(group.vertexLocation ? { vertexLocation: group.vertexLocation } : {}),
-    ...(model.contextLength !== undefined ? { contextLength: model.contextLength } : {}),
-    ...(model.supportsThinkingType ? { supportsThinkingType: model.supportsThinkingType } : {}),
-    ...(model.supportsThinkingSwitch === true ? { supportsThinkingSwitch: true } : {}),
+    ...(effective.supportsThinkingSwitch !== undefined
+      ? { supportsThinkingSwitch: effective.supportsThinkingSwitch }
+      : {}),
+    ...(effective.thinkingSwitch !== undefined
+      ? { thinkingSwitch: structuredClone(effective.thinkingSwitch) }
+      : {}),
+    ...(effective.thinkingEnabled !== undefined
+      ? { thinkingEnabled: effective.thinkingEnabled }
+      : {}),
+    ...(provider.providerTools !== undefined && provider.providerTools.length > 0
+      ? { hasProviderTools: true }
+      : {}),
+    ...(provider.imageApi !== undefined ? { imageApi: provider.imageApi } : {}),
+    ...(provider.videoApi !== undefined ? { videoApi: provider.videoApi } : {}),
+    ...(effective.serviceTiers !== undefined ? { serviceTiers: effective.serviceTiers } : {}),
+    ...(effective.serviceTier !== undefined ? { serviceTier: effective.serviceTier } : {}),
   };
 }
 
 export function resolveModelProfile(
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
   ref: ModelRef | undefined,
 ): ResolvedModelProfile | null {
-  if (!ref?.groupId?.trim() || !ref?.name?.trim()) {
+  if (!ref?.providerId?.trim() || !ref?.name?.trim()) {
     return null;
   }
-  const group = config.providerGroups.find((entry) => entry.id === ref.groupId.trim());
-  if (!group) {
+  const provider = findProviderEntry(config.providers, ref.providerId);
+  if (!provider) {
     return null;
   }
-  const model = group.models.find((entry) => entry.name === ref.name.trim());
+  const model = provider.models.find((entry) => entry.name === ref.name.trim());
   if (!model) {
     return null;
   }
-  return resolveModelProfileFromParts(group, model);
+  return resolveModelProfileFromParts(provider, model);
 }
 
-export function findProviderGroup(
-  config: Pick<DesktopConfigFile, "providerGroups">,
-  groupId: string,
-): ProviderGroupV2 | undefined {
-  const normalized = groupId.trim();
-  if (!normalized) {
-    return undefined;
+export function firstModelRef(config: Pick<DesktopConfigFile, "providers">): ModelRef {
+  const firstProvider = config.providers[0];
+  const firstModel = firstProvider?.models[0];
+  if (!firstProvider || !firstModel) {
+    return { providerId: "", name: "" };
   }
-  return config.providerGroups.find((group) => group.id === normalized);
-}
-
-export function modelExistsInGroup(
-  config: Pick<DesktopConfigFile, "providerGroups">,
-  groupId: string,
-  name: string,
-): boolean {
-  const group = findProviderGroup(config, groupId);
-  if (!group) {
-    return false;
-  }
-  return group.models.some((model) => model.name === name.trim());
-}
-
-export function listAllModelRefs(config: Pick<DesktopConfigFile, "providerGroups">): ModelRef[] {
-  const refs: ModelRef[] = [];
-  for (const group of config.providerGroups) {
-    for (const model of group.models) {
-      refs.push({ groupId: group.id, name: model.name });
-    }
-  }
-  return refs;
-}
-
-export function firstModelRef(config: Pick<DesktopConfigFile, "providerGroups">): ModelRef {
-  const firstGroup = config.providerGroups[0];
-  const firstModel = firstGroup?.models[0];
-  if (!firstGroup || !firstModel) {
-    return { groupId: "", name: "" };
-  }
-  return { groupId: firstGroup.id, name: firstModel.name };
+  return { providerId: firstProvider.id, name: firstModel.name };
 }
 
 export function modelRefExists(
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
   ref: ModelRef | undefined,
 ): boolean {
   return resolveModelProfile(config, ref) !== null;
@@ -170,29 +149,31 @@ export function modelSupportsVideoGeneration(
   return model.capabilities?.includes("videoGeneration") === true;
 }
 
-export function modelSupportsChat(model: Pick<ModelProfileSnapshot, "capabilities">): boolean {
-  return model.capabilities === undefined || model.capabilities.includes("chat");
+export function modelSupportsLanguageModel(
+  model: Pick<ModelProfileSnapshot, "capabilities">,
+): boolean {
+  return model.capabilities === undefined || model.capabilities.includes("languageModel");
 }
 
 export function findModelRefByName(
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
   name: string,
 ): ModelRef | undefined {
   const trimmed = name.trim();
   if (!trimmed) {
     return undefined;
   }
-  for (const group of config.providerGroups) {
-    const model = group.models.find((entry) => entry.name === trimmed);
+  for (const provider of config.providers) {
+    const model = provider.models.find((entry) => entry.name === trimmed);
     if (model) {
-      return { groupId: group.id, name: model.name };
+      return { providerId: provider.id, name: model.name };
     }
   }
   return undefined;
 }
 
 export function resolvePaneModelRef(
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
   ref: ModelRef | undefined,
 ): ModelRef | undefined {
   if (!ref?.name?.trim()) {
@@ -202,7 +183,7 @@ export function resolvePaneModelRef(
   if (profile) {
     return profile.ref;
   }
-  if (!ref.groupId?.trim()) {
+  if (!ref.providerId?.trim()) {
     return findModelRefByName(config, ref.name);
   }
   return undefined;
@@ -210,20 +191,20 @@ export function resolvePaneModelRef(
 
 export function normalizeSlotModelRef(
   value: unknown,
-  config: Pick<DesktopConfigFile, "providerGroups">,
+  config: Pick<DesktopConfigFile, "providers">,
   predicate: (profile: ResolvedModelProfile) => boolean,
 ): ModelRef | undefined {
   const ref =
     typeof value === "object" && value !== null
       ? {
-          groupId:
-            typeof (value as ModelRef).groupId === "string"
-              ? (value as ModelRef).groupId.trim()
+          providerId:
+            typeof (value as ModelRef).providerId === "string"
+              ? (value as ModelRef).providerId.trim()
               : "",
           name: typeof (value as ModelRef).name === "string" ? (value as ModelRef).name.trim() : "",
         }
       : undefined;
-  if (!ref?.groupId || !ref?.name) {
+  if (!ref?.providerId || !ref?.name) {
     return undefined;
   }
   const profile = resolveModelProfile(config, ref);

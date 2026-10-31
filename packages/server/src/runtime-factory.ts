@@ -4,7 +4,7 @@ import path from "node:path";
 
 import {
   AgentRuntime,
-  McpService,
+  type McpService,
   buildAgentModeSystemMessage,
   buildApplyPatchFileToolsPromptSection,
   buildBasicInfoSystemMessage,
@@ -15,12 +15,12 @@ import {
   mergeEnabledExtensionSystemPrompts,
   buildLoopModeSystemMessage,
   buildMcpCatalogSystemMessage,
-  buildProviderWebSearchPromptSection,
   buildRulesSystemMessage,
   buildSkillsCatalogSystemMessage,
   buildTodoHostToolDefinitions,
   buildToolAgentHostPrompt,
   createLlmTransport,
+  setTransportConfigLastInputTokens,
   pendingWorkspaceFilesFromInput,
   runSessionEndHook,
   runSessionStartHookAndApply,
@@ -30,7 +30,6 @@ import {
   type JsonValue,
   type LlmMessage,
   type LlmTransportConfig,
-  isBedrockTransportConfig,
   type RuntimeEvent,
   type AgentMode,
 } from "@spiritagent/agent-core";
@@ -68,6 +67,7 @@ import {
   collectHostExtensionContributedTools,
   extensionExposesModelContext,
   createHostExtensionManager,
+  createHostMcpService,
   createHookRunner,
   createNoopMcpAdapter,
   ensureBuiltInExtensions,
@@ -116,6 +116,8 @@ export interface ServerRuntimeOptions {
   sessionKind?: ServerSessionKind;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
+  /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
+  initialLastInputTokens?: number;
   onEvent: (event: RuntimeEvent<JsonValue>) => void;
   /**
    * Workspace capability trust prompt (hooks). The session manager routes this
@@ -183,6 +185,11 @@ export interface ServerRuntimeResult {
   setAttribution: (
     attribution: { commitEnabled?: boolean; prEnabled?: boolean } | undefined,
   ) => void;
+  /**
+   * Web tool exposure toggles applied live: mutates the shared transport config
+   * (read lazily by state factories and transports) and refreshes tool definitions.
+   */
+  setWebToolExposure: (exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean }) => void;
   /** Re-scope the todo store (CLI keys todos by its own chat session id). */
   setTodoSessionKey: (sessionKey: string) => void;
   /**
@@ -210,13 +217,6 @@ export interface ServerRuntimeResult {
  */
 const builtInSeededTrees = new Set<string>();
 
-function hostPromptProviderId(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  return config.llmVendor;
-}
-
 export async function createServerRuntime(
   options: ServerRuntimeOptions,
 ): Promise<ServerRuntimeResult> {
@@ -239,13 +239,17 @@ export async function createServerRuntime(
   const transportConfig = resolvedTransport.ok
     ? resolvedTransport.config
     : unconfiguredTransportConfig(workspaceRoot);
+  const hostPromptProviderId = resolvedTransport.ok ? resolvedTransport.providerId : undefined;
+  if (options.initialLastInputTokens !== undefined) {
+    setTransportConfigLastInputTokens(transportConfig, options.initialLastInputTokens);
+  }
   await ensureTranscriptSessionDir(spiritDataDir, sessionKey);
 
   // 1. Tool executor: noop peer (no stdio peer in the daemon) + per-session MCP.
   const mcpService = isDreamCollector
-    ? new McpService(workspaceRoot, true)
+    ? createHostMcpService(workspaceRoot, spiritDataDir, true)
     : (options.mcpService ??
-      new McpService(workspaceRoot, true, {
+      createHostMcpService(workspaceRoot, spiritDataDir, true, {
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
@@ -449,7 +453,6 @@ export async function createServerRuntime(
     transportConfig.transportKind === "open-responses"
       ? buildApplyPatchFileToolsPromptSection()
       : undefined;
-  const providerWebSearchPromptSection = buildProviderWebSearchPromptSection(transportConfig);
   const hostUiPromptSection = normalizeHostUiPromptSection(options.hostUiPromptSection);
   // apply_patch + optional host UI Markdown (Desktop Mermaid) share the trailing plain slot.
   const trailingHostPromptSection = joinHostPromptSections(
@@ -475,11 +478,12 @@ export async function createServerRuntime(
       undefined, // dreamsContextText — Desktop-only product surface, wired in a later phase
       basicInfo,
       trailingHostPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
+      transportConfig.webFetchEnabled,
     );
 
   const createContinuationState = (messages: LlmMessage[]) =>
@@ -494,11 +498,12 @@ export async function createServerRuntime(
       undefined,
       basicInfo,
       trailingHostPromptSection,
-      providerWebSearchPromptSection,
+      undefined,
       loopEnabled,
       toolExecutor.mcpToolCatalogSnapshot(),
       attribution,
-      hostPromptProviderId(transportConfig),
+      hostPromptProviderId,
+      transportConfig.webFetchEnabled,
     );
 
   const llmTransport = createLlmTransport(transportConfig);
@@ -555,11 +560,12 @@ export async function createServerRuntime(
         undefined,
         basicInfo,
         trailingHostPromptSection,
-        providerWebSearchPromptSection,
+        undefined,
         loopEnabled,
         toolExecutor.mcpToolCatalogSnapshot(),
         attribution,
-        hostPromptProviderId(transportConfig),
+        hostPromptProviderId,
+        transportConfig.webFetchEnabled,
       ),
     generateImage: (request) =>
       llmTransport.generateImage(
@@ -598,8 +604,13 @@ export async function createServerRuntime(
       resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
     getApprovalLevel: () => currentApprovalLevel,
-    reviewToolApproval: createCliAutoApprovalReviewer(transportConfig),
-    onEvent,
+    reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
+    onEvent: (event) => {
+      if (event.kind === "context-usage-updated") {
+        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
+      }
+      onEvent(event);
+    },
   });
 
   const setAgentMode = async (mode: AgentMode): Promise<void> => {
@@ -721,10 +732,9 @@ export async function createServerRuntime(
         requestTrace: [...runtime.requestTrace()],
         systemPrompts: {
           ...baseSystemPrompts,
-          tool_agent: buildToolAgentHostPrompt(
-            transportConfig.model,
-            hostPromptProviderId(transportConfig),
-          ),
+          tool_agent: buildToolAgentHostPrompt(transportConfig.model, hostPromptProviderId, {
+            webFetchEnabled: transportConfig.webFetchEnabled,
+          }),
           ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
           ...(skillsCatalogSystemPrompt === undefined
             ? {}
@@ -743,6 +753,17 @@ export async function createServerRuntime(
     },
     setAttribution: (next) => {
       attribution = next;
+    },
+    setWebToolExposure: (next) => {
+      // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI end flips;
+      // it maps onto the providerTools exposure gate.
+      if (next.webSearchEnabled !== undefined) {
+        transportConfig.providerToolsEnabled = next.webSearchEnabled;
+      }
+      if (next.webFetchEnabled !== undefined) {
+        transportConfig.webFetchEnabled = next.webFetchEnabled;
+      }
+      toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
     },
     setTodoSessionKey: (key) => {
       service.setTodoScope?.({ sessionKey: key });

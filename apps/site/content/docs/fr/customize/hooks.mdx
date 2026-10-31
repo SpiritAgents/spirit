@@ -1,9 +1,10 @@
 ---
 title: Hooks
-description: Exécutez des scripts lors d'événements de session, d'outil et de sous-agent. Ils peuvent autoriser, refuser ou demander.
+description: Exécutez des scripts lors d'événements de session, d'outil et de
+  sous-agent. Ils peuvent autoriser, refuser ou demander.
 ---
 
-Les hooks sont des scripts que Spirit exécute à des points fixes. Ils peuvent autoriser un outil, le refuser ou forcer une demande d'approbation (`ask`).
+Les Hooks sont des scripts que {{product.name|mdx}} exécute à des points fixes. Ils peuvent autoriser un outil, le refuser ou forcer une demande d'approbation (`ask`).
 
 ## Événements
 
@@ -19,14 +20,14 @@ Les hooks sont des scripts que Spirit exécute à des points fixes. Ils peuvent 
 
 ## Où ils se trouvent
 
-| Portée            | Config                           | Scripts                      |
-| ----------------- | -------------------------------- | ---------------------------- |
-| Utilisateur       | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| Espace de travail | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| Portée            | Config                                                       | Scripts                                                  |
+| ----------------- | ------------------------------------------------------------ | -------------------------------------------------------- |
+| Utilisateur       | `{spiritDataDir}/hooks.json`                                 | `{spiritDataDir}/hooks/`                                 |
+| Espace de travail | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 Sur le même événement, les entrées utilisateur et les entrées d'espace de travail sont concaténées dans cet ordre. Elles ne se remplacent pas mutuellement.
 
-Gérez-les dans **Paramètres → Hooks**. Validez depuis la CLI avec `spirit hook list` et `spirit hook validate`. La compétence intégrée `create-hook` rédige un hook. Les hooks bundlés dans une [extension](../develop/extensions.mdx) s'exécutent lorsque cette extension est activée. Ils n'apparaissent pas dans cette liste de paramètres.
+Gérez-les dans **Paramètres → Hooks**. Validez depuis la CLI avec `spirit hook list` et `spirit hook validate`. La Skill intégrée `create-hook` rédige un Hook. Les Hooks bundlés dans une [extension](../develop/extensions.mdx) s'exécutent lorsque cette extension est activée. Ils n'apparaissent pas dans cette liste de paramètres.
 
 ## Champs du fichier
 
@@ -35,9 +36,9 @@ L'objet racine doit inclure `version` et `hooks`. `version` n'accepte actuelleme
 | Champ     | Description                                                                                                    |
 | --------- | -------------------------------------------------------------------------------------------------------------- |
 | `version` | Requis. Doit être `1`                                                                                          |
-| `hooks`   | Requis. Objet. Les clés sont les noms d'événements ; les valeurs sont des tableaux de hooks pour cet événement |
+| `hooks`   | Requis. Objet. Les clés sont les noms d'événements ; les valeurs sont des tableaux de Hooks pour cet événement |
 
-### Chaque hook
+### Chaque Hook
 
 | Champ        | Description                                                                                                                                                           |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

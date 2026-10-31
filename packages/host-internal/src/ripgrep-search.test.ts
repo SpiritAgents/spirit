@@ -251,17 +251,157 @@ test("runRipgrepSearch excludes .git directory at any path", async () => {
   });
 });
 
-test("formatGrepToolOutput preserves grep tool summary shape", () => {
-  const output = formatGrepToolOutput([
-    {
-      relativePath: "src/app.ts",
-      lineNumber: 1,
-      lineText: "needle here",
-      submatches: [{ start: 0, end: 6 }],
-    },
-  ]);
+function grepToolMatch(relativePath: string, lineNumber: number, lineText: string) {
+  return { relativePath, lineNumber, lineText, submatches: [] };
+}
 
-  assert.equal(output, ["src/app.ts:1 | needle here", "", "Files", "src/app.ts", ""].join("\n"));
+test("formatGrepToolOutput renders ripgrep-style content lines", () => {
+  const output = formatGrepToolOutput([grepToolMatch("src/app.ts", 1, "needle here")]);
+
+  assert.equal(output, "src/app.ts:1:needle here\n");
+});
+
+test("formatGrepToolOutput omits line numbers when disabled", () => {
+  const output = formatGrepToolOutput([grepToolMatch("src/app.ts", 1, "needle here")], {
+    lineNumbers: false,
+  });
+
+  assert.equal(output, "src/app.ts:needle here\n");
+});
+
+test("formatGrepToolOutput lists unique paths in files_with_matches mode", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepToolMatch("src/app.ts", 1, "needle"),
+      grepToolMatch("src/app.ts", 5, "needle again"),
+      grepToolMatch("docs/readme.md", 2, "needle"),
+    ],
+    { mode: "files_with_matches" },
+  );
+
+  assert.equal(output, "src/app.ts\ndocs/readme.md\n");
+});
+
+test("formatGrepToolOutput counts matches per file in count_matches mode", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepToolMatch("src/app.ts", 1, "needle"),
+      grepToolMatch("src/app.ts", 5, "needle again"),
+      grepToolMatch("docs/readme.md", 2, "needle"),
+    ],
+    { mode: "count_matches" },
+  );
+
+  assert.equal(output, "src/app.ts:2\ndocs/readme.md:1\n");
+});
+
+test("formatGrepToolOutput pages entries with headLimit and offset", () => {
+  const matches = [
+    grepToolMatch("a.txt", 1, "needle 1"),
+    grepToolMatch("a.txt", 2, "needle 2"),
+    grepToolMatch("a.txt", 3, "needle 3"),
+  ];
+
+  const firstPage = formatGrepToolOutput(matches, { headLimit: 2 });
+  assert.equal(
+    firstPage,
+    "a.txt:1:needle 1\na.txt:2:needle 2\n\n[truncated] Showing 2 of 3 matches (offset 0). Pass offset 2 to continue.\n",
+  );
+
+  const secondPage = formatGrepToolOutput(matches, { headLimit: 2, offset: 2 });
+  assert.equal(secondPage, "a.txt:3:needle 3\n");
+});
+
+test("formatGrepToolOutput notes when the internal match cap was hit", () => {
+  const output = formatGrepToolOutput([grepToolMatch("a.txt", 1, "needle")], {
+    truncated: true,
+  });
+
+  assert.match(output, /\[truncated\] Search hit the internal limit of 10000 matches/u);
+});
+
+test("runRipgrepSearch returns context lines around matches", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.txt"), "before\nneedle here\nafter\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      context: 1,
+    });
+
+    assert.deepEqual(
+      matches.map((entry) => [entry.kind ?? "match", entry.lineNumber, entry.lineText]),
+      [
+        ["context", 1, "before"],
+        ["match", 2, "needle here"],
+        ["context", 3, "after"],
+      ],
+    );
+  });
+});
+
+function grepContextLine(relativePath: string, lineNumber: number, lineText: string) {
+  return { relativePath, lineNumber, lineText, submatches: [], kind: "context" as const };
+}
+
+test("formatGrepToolOutput renders context lines with block separators", () => {
+  const output = formatGrepToolOutput(
+    [
+      grepContextLine("a.txt", 1, "before"),
+      grepToolMatch("a.txt", 2, "needle one"),
+      grepContextLine("a.txt", 3, "after"),
+      grepToolMatch("a.txt", 9, "needle two"),
+      grepContextLine("a.txt", 10, "trailing"),
+    ],
+    { blockSeparators: true },
+  );
+
+  assert.equal(
+    output,
+    [
+      "a.txt-1-before",
+      "a.txt:2:needle one",
+      "a.txt-3-after",
+      "--",
+      "a.txt:9:needle two",
+      "a.txt-10-trailing",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("formatGrepToolOutput ignores context lines in files and count modes", () => {
+  const entries = [
+    grepContextLine("a.txt", 1, "before"),
+    grepToolMatch("a.txt", 2, "needle"),
+    grepContextLine("a.txt", 3, "after"),
+  ];
+
+  assert.equal(formatGrepToolOutput(entries, { mode: "files_with_matches" }), "a.txt\n");
+  assert.equal(formatGrepToolOutput(entries, { mode: "count_matches" }), "a.txt:1\n");
+});
+
+test("formatGrepToolOutput pages by matches and keeps trailing context", () => {
+  const entries = [
+    grepToolMatch("a.txt", 1, "needle 1"),
+    grepContextLine("a.txt", 2, "after 1"),
+    grepToolMatch("a.txt", 5, "needle 2"),
+    grepContextLine("a.txt", 6, "after 2"),
+  ];
+
+  const firstPage = formatGrepToolOutput(entries, { headLimit: 1, blockSeparators: true });
+  assert.equal(
+    firstPage,
+    "a.txt:1:needle 1\na.txt-2-after 1\n\n[truncated] Showing 1 of 2 matches (offset 0). Pass offset 1 to continue.\n",
+  );
+
+  const secondPage = formatGrepToolOutput(entries, {
+    headLimit: 1,
+    offset: 1,
+    blockSeparators: true,
+  });
+  assert.equal(secondPage, "a.txt:5:needle 2\na.txt-6-after 2\n");
 });
 
 test("normalizeSearchLine strips trailing newline but keeps leading indent", () => {
@@ -321,5 +461,69 @@ test("runRipgrepSearch stops at maxMatches and reports truncated", async () => {
 });
 
 test("formatGrepToolOutput reports empty results", () => {
-  assert.equal(formatGrepToolOutput([]), "No files found");
+  assert.equal(formatGrepToolOutput([]), "No matches found");
+});
+
+test("runRipgrepSearch restricts search to a file type", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.ts"), "needle\n", "utf8");
+    await writeFile(join(root, "beta.txt"), "needle\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      fileType: "ts",
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.relativePath, "alpha.ts");
+  });
+});
+
+test("runRipgrepSearch rejects unknown file types with a clear error", async () => {
+  await withTempWorkspace(async (root) => {
+    await assert.rejects(
+      () =>
+        runRipgrepSearch({
+          workspaceRoot: root,
+          query: "needle",
+          fileType: "not-a-real-type",
+        }),
+      /Invalid file type: not-a-real-type/u,
+    );
+  });
+});
+
+test("runRipgrepSearch searches ignored files with includeIgnored", async () => {
+  await withTempWorkspace(async (root) => {
+    await initGitRepo(root);
+    await writeFile(join(root, ".gitignore"), "ignored.txt\n", "utf8");
+    await writeFile(join(root, "ignored.txt"), "needle\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "needle",
+      includeIgnored: true,
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.relativePath, "ignored.txt");
+  });
+});
+
+test("runRipgrepSearch matches across line boundaries with multiline", async () => {
+  await withTempWorkspace(async (root) => {
+    await writeFile(join(root, "alpha.txt"), "foo\nbar\nplain\n", "utf8");
+
+    const { matches } = await runRipgrepSearch({
+      workspaceRoot: root,
+      query: "foo\\nbar",
+      isRegexp: true,
+      multiline: true,
+    });
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.lineNumber, 1);
+    assert.equal(matches[0]?.lineText, "foo\nbar");
+  });
 });

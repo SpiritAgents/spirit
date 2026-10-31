@@ -2,42 +2,7 @@ import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseAllDocuments } from "yaml";
-
-const PINNED_SHADCN_UI_MIT = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "third-party-notices",
-  "shadcn-ui.MIT.txt"
-);
-
-export function readPinnedShadcnUiMit() {
-  return readFileSync(PINNED_SHADCN_UI_MIT, "utf8");
-}
-
-/** Appendix after scanned npm licenses. Fence body is the pinned file bytes unchanged. */
-export function buildShadcnUiCopiedNoticeAppendix(pinnedMitText) {
-  const body = pinnedMitText.endsWith("\n") ? pinnedMitText : `${pinnedMitText}\n`;
-  return (
-    [
-      "",
-      "## Copied UI",
-      "",
-      "Vendored components and inlined Tailwind variants from [shadcn/ui](https://github.com/shadcn-ui/ui) are copied into this app. See per-file copyright headers in source. This is not an npm package listed above.",
-      "",
-      "```",
-      "",
-    ].join("\n") +
-    body +
-    "```\n"
-  );
-}
-
-function appendShadcnUiCopiedNotice(noticePath) {
-  const existing = readFileSync(noticePath, "utf8");
-  const prefix = existing.endsWith("\n") ? existing : `${existing}\n`;
-  writeFileSync(noticePath, prefix + buildShadcnUiCopiedNoticeAppendix(readPinnedShadcnUiMit()), "utf8");
-}
 
 const LICENSE_FILE_NAMES = [
   "LICENSE",
@@ -250,7 +215,7 @@ function collectLockfilePackages({ lockfile, importerKey, pkgRoot, workspaceRoot
     let dir = resolvePackageDir({ name, version }, fromDir, workspaceRoot);
     if (!dir && fromDir !== pkgRoot) {
       // Peer-resolved instances are nested under the importer, not the referrer
-      // (e.g. site's @types/node@24 while the hoisted root holds 25).
+      // (e.g. when an importer and the hoisted root hold different versions).
       dir = resolvePackageDir({ name, version }, pkgRoot, workspaceRoot);
     }
     visited.set(snapshotKey, { name, version, dir });
@@ -448,7 +413,6 @@ function formatNoticeWithOxfmt(noticePath, workspaceRoot) {
 export async function generateNotice({
   pkgRoot,
   extraExcludedPackageNames = [],
-  includeShadcnUiCopiedNotice = false,
   excludePlatformSpecificPackages = false,
   extraNoticePaths = [],
   productionOnly: productionOnlyOption,
@@ -475,9 +439,6 @@ export async function generateNotice({
     const noticePath = path.join(pkgRoot, "NOTICE.md");
     writeFileSync(noticePath, noticeText, "utf8");
     formatNoticeWithOxfmt(noticePath, workspaceRoot);
-    if (includeShadcnUiCopiedNotice) {
-      appendShadcnUiCopiedNotice(noticePath);
-    }
 
     if (extraNoticePaths.length > 0) {
       const finalText = readFileSync(noticePath, "utf8");

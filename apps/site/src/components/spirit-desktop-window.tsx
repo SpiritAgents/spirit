@@ -601,9 +601,9 @@ export function SpiritDesktopWindow({
     if (existing) {
       return existing.path;
     }
-    const newSession = createSession(nextWorkspaceRoot, messages.desktop.window.newSession);
-    setSessions((current) => sortSessionsNewestFirst([newSession, ...current]));
-    return newSession.path;
+    const newChat = createSession(nextWorkspaceRoot, messages.desktop.window.newChat);
+    setSessions((current) => sortSessionsNewestFirst([newChat, ...current]));
+    return newChat.path;
   };
 
   const handleSelectWorkspace = (nextWorkspaceRoot: string) => {
@@ -625,7 +625,7 @@ export function SpiritDesktopWindow({
       path: nextRoot,
     };
     const preview = createPreviewForWorkspace(nextRoot, messages.desktop.previews);
-    const nextSession = createSession(nextRoot, messages.desktop.window.newSession);
+    const nextSession = createSession(nextRoot, messages.desktop.window.newChat);
 
     setAvailableWorkspaces((current) => [...current, nextWorkspace]);
     setWorkspacePreviews((current) => ({
@@ -639,8 +639,8 @@ export function SpiritDesktopWindow({
     setLastNonSettingsSurface("conversation");
   };
 
-  const handleNewSession = () => {
-    const nextSession = createSession(workspaceRoot, messages.desktop.window.newSession);
+  const handleNewChat = () => {
+    const nextSession = createSession(workspaceRoot, messages.desktop.window.newChat);
     setSessions((current) => sortSessionsNewestFirst([nextSession, ...current]));
     setActiveSessionPath(nextSession.path);
     setActiveSurface("conversation");
@@ -692,7 +692,7 @@ export function SpiritDesktopWindow({
             setWorkspaceToolsOpen={setWorkspaceToolsOpen}
             workspaceToolsWidthPx={workspaceToolsWidthPx}
             setWorkspaceToolsWidthPx={setWorkspaceToolsWidthPx}
-            handleNewSession={handleNewSession}
+            handleNewChat={handleNewChat}
             handleSelectWorkspace={handleSelectWorkspace}
             handleAddWorkspace={handleAddWorkspace}
             activeSessionTitle={activeSessionTitle}
@@ -746,7 +746,7 @@ type SpiritDesktopWindowBodyProps = {
   setWorkspaceToolsOpen: Dispatch<SetStateAction<boolean>>;
   workspaceToolsWidthPx: number;
   setWorkspaceToolsWidthPx: Dispatch<SetStateAction<number>>;
-  handleNewSession: () => void;
+  handleNewChat: () => void;
   handleSelectWorkspace: (path: string) => void;
   handleAddWorkspace: () => void;
   activeSessionTitle: string | null;
@@ -795,7 +795,7 @@ function SpiritDesktopWindowBody({
   setWorkspaceToolsOpen,
   workspaceToolsWidthPx,
   setWorkspaceToolsWidthPx,
-  handleNewSession,
+  handleNewChat,
   handleSelectWorkspace,
   handleAddWorkspace,
   activeSessionTitle,
@@ -837,8 +837,8 @@ function SpiritDesktopWindowBody({
         useTranslucency
           ? "bg-transparent"
           : heroBaseTone
-            ? "bg-sidebar dark:bg-[#000000]"
-            : "bg-sidebar dark:bg-[#0a0a0a]",
+            ? "bg-chrome-background dark:bg-[#000000]"
+            : "bg-chrome-background dark:bg-[#0a0a0a]",
         className,
       )}
     >
@@ -878,7 +878,7 @@ function SpiritDesktopWindowBody({
                 mode={activeSurface === "settings" ? "settings" : "sessions"}
                 sessions={sessions}
                 activeFilePath={activeSessionPath}
-                onNewSession={handleNewSession}
+                onNewChat={handleNewChat}
                 onSelectSession={(path) => {
                   setActiveSessionPath(path);
                   setActiveSurface("conversation");
@@ -920,7 +920,7 @@ function SpiritDesktopWindowBody({
                   showWorkspaceToggle={activeSurface === "conversation"}
                   workspaceToolsOpen={workspaceToolsOpen}
                   onToggleWorkspaceTools={() => setWorkspaceToolsOpen((open) => !open)}
-                  onNewSession={handleNewSession}
+                  onNewChat={handleNewChat}
                   sessionTitle={activeSurface === "settings" ? null : activeSessionTitle}
                 />
 

@@ -42,8 +42,8 @@ test("mapTimelineEventToConversationItem maps committed event from issue timelin
     html_url:
       "https://github.com/SpiritAgents/spirit/commit/3fc54ae2102e42ec0adc877fac601e6a517b117f",
     author: {
-      name: "XianYu",
-      email: "121384036+N123999@users.noreply.github.com",
+      name: "Yu",
+      email: "332389783+yureDesign@users.noreply.github.com",
       date: "2026-06-10T03:40:34Z",
     },
     message:
@@ -58,8 +58,8 @@ test("mapTimelineEventToConversationItem maps committed event from issue timelin
   assert.equal(item.createdAt, "2026-06-10T03:40:34Z");
   assert.equal(item.subject, "feat(desktop): open menu from slash token at cursor");
   assert.equal(item.sha, "3fc54ae2102e42ec0adc877fac601e6a517b117f");
-  assert.equal(item.authorLogin, "N123999");
-  assert.equal(item.avatarUrl, "https://github.com/N123999.png?size=40");
+  assert.equal(item.authorLogin, "yureDesign");
+  assert.equal(item.avatarUrl, "https://github.com/yureDesign.png?size=40");
 });
 
 test("mapTimelineEventToConversationItem maps merged event", () => {

@@ -1,21 +1,30 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  modelReasoningEffortLabel,
-  modelReasoningEffortOptions,
-  modelSupportsReasoningModeControl,
-  resolveModelReasoningMode,
-} from "@spiritagent/agent-core/reasoning-effort";
-import {
-  modelEffortControlLabelKind,
-  modelShowsReasoningEffortControl,
-  modelSupportsThinkingSwitch,
-  resolveModelThinkingEnabled,
-} from "@spiritagent/agent-core/model-thinking-controls";
+import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 
 import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
 import { modelCatalogHasDetailBody } from "@/lib/model-catalog-detail";
+import {
+  declaredEffortOptions,
+  declaredServiceTierControlKind,
+  declaredServiceTierMaxInputTokens,
+  declaredServiceTierOptions,
+  effectiveDeclaredServiceTier,
+  isDeclaredServiceTierAvailable,
+  effectiveReasoningMode,
+  effectiveThinkingEnabled,
+  modelEffortControlLabelKind,
+  selectedModelEffort,
+  showsEffortControl,
+  showsReasoningModeControl,
+  showsServiceTierControl,
+  showsThinkingAlwaysOnHint,
+  showsThinkingSwitchControl,
+  thinkingSwitchForcedOn,
+} from "@/lib/model-picker-controls";
+import { serviceTierValueLabelKey } from "@/lib/model-service-tier-context";
+import { formatCompactTokenCount } from "@/lib/format-compact-token-count";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,7 +40,7 @@ import {
 } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import type {
-  DesktopModelReasoningEffort,
+  DesktopModelEffortSelection,
   DesktopModelReasoningMode,
   ModelProfileSnapshot,
   ModelRef,
@@ -39,7 +48,11 @@ import type {
 } from "@/types";
 
 function modelInspectorRef(model: ModelProfileSnapshot): ModelRef {
-  return model.ref ?? { groupId: model.groupId ?? "", name: model.name };
+  return model.ref;
+}
+
+function formatServiceTierInputLimit(value: number): string {
+  return value >= 1024 ? `${formatCompactTokenCount(value / 1024)}K` : String(value);
 }
 
 export function modelPickerInspectorNeedsWideLayout(
@@ -49,31 +62,16 @@ export function modelPickerInspectorNeedsWideLayout(
   if (modelCatalogHasDetailBody({ model, catalogEntry })) {
     return true;
   }
-  const modelContext = {
-    ...(model.provider ? { provider: model.provider } : {}),
-    model: model.name,
-    ...(model.supportedReasoningEfforts !== undefined
-      ? { supportedEfforts: model.supportedReasoningEfforts }
-      : {}),
-    ...(model.transportKind ? { transportKind: model.transportKind } : {}),
-    ...((model.supportsThinkingType ?? catalogEntry?.supportsThinkingType)
-      ? { supportsThinkingType: model.supportsThinkingType ?? catalogEntry?.supportsThinkingType }
-      : {}),
-    ...((model.supportsThinkingSwitch ?? catalogEntry?.supportsThinkingSwitch) === true
-      ? { supportsThinkingSwitch: true as const }
-      : {}),
-  };
-  if (modelSupportsThinkingSwitch(modelContext)) {
+  if (showsServiceTierControl(model, catalogEntry)) {
     return true;
   }
-  if (modelSupportsReasoningModeControl(modelContext)) {
+  if (showsThinkingSwitchControl(model) || showsThinkingAlwaysOnHint(model)) {
     return true;
   }
-  const thinkingEnabled = resolveModelThinkingEnabled(model.thinkingEnabled);
-  if (!modelShowsReasoningEffortControl(modelContext, thinkingEnabled)) {
-    return false;
+  if (showsReasoningModeControl(model)) {
+    return true;
   }
-  return modelReasoningEffortOptions(modelContext).length > 1;
+  return showsEffortControl(model);
 }
 
 type ModelPickerInspectorPanelProps = {
@@ -81,9 +79,24 @@ type ModelPickerInspectorPanelProps = {
   catalogEntry?: PreviewModelCatalogEntry;
   providerLabel: string;
   density?: "default" | "list";
-  onReasoningEffortChange: (modelRef: ModelRef, effort: DesktopModelReasoningEffort) => void;
+  /** Last upstream-measured conversation input tokens; absent means unknown. */
+  lastInputTokens?: number;
+  onEffortChange: (modelRef: ModelRef, effort: DesktopModelEffortSelection) => void;
   onReasoningModeChange?: (modelRef: ModelRef, mode: DesktopModelReasoningMode) => void;
+  /**
+   * The thinking toggle renders only when this callback is provided, so read-only pickers never
+   * show a preference that cannot be saved (same rule as the tier controls).
+   */
   onThinkingEnabledChange?: (modelRef: ModelRef, enabled: boolean) => void | Promise<boolean>;
+  /**
+   * `undefined` tier clears the stored preference. The tier controls render only when this
+   * callback is provided, so read-only and standalone pickers never show a preference that
+   * cannot be saved.
+   */
+  onServiceTierChange?: (
+    modelRef: ModelRef,
+    tier: ModelServiceTier | undefined,
+  ) => void | Promise<boolean>;
 };
 
 export function ModelPickerInspectorPanel({
@@ -91,49 +104,91 @@ export function ModelPickerInspectorPanel({
   catalogEntry,
   providerLabel,
   density = "default",
-  onReasoningEffortChange,
+  lastInputTokens,
+  onEffortChange,
   onReasoningModeChange,
   onThinkingEnabledChange,
+  onServiceTierChange,
 }: ModelPickerInspectorPanelProps) {
   const { t } = useTranslation();
   const isList = density === "list";
   const modelRef = modelInspectorRef(model);
-  const modelContext = {
-    ...(model.provider ? { provider: model.provider } : {}),
-    model: model.name,
-    ...(model.supportedReasoningEfforts !== undefined
-      ? { supportedEfforts: model.supportedReasoningEfforts }
-      : {}),
-    ...(model.transportKind ? { transportKind: model.transportKind } : {}),
-    ...((model.supportsThinkingType ?? catalogEntry?.supportsThinkingType)
-      ? { supportsThinkingType: model.supportsThinkingType ?? catalogEntry?.supportsThinkingType }
-      : {}),
-    ...((model.supportsThinkingSwitch ?? catalogEntry?.supportsThinkingSwitch) === true
-      ? { supportsThinkingSwitch: true as const }
-      : {}),
-  };
-  const supportsThinkingSwitch = modelSupportsThinkingSwitch(modelContext);
+  const showThinkingSwitch =
+    onThinkingEnabledChange !== undefined && showsThinkingSwitchControl(model);
+  const showThinkingAlwaysOn = showsThinkingAlwaysOnHint(model);
+  const thinkingForcedOn = thinkingSwitchForcedOn(model);
   const [pendingThinkingEnabled, setPendingThinkingEnabled] = useState<boolean | null>(null);
   useEffect(() => {
     setPendingThinkingEnabled(null);
-  }, [model.name, model.thinkingEnabled]);
-  const thinkingEnabled =
-    pendingThinkingEnabled ?? resolveModelThinkingEnabled(model.thinkingEnabled);
-  const showReasoningEffort = modelShowsReasoningEffortControl(modelContext, thinkingEnabled);
-  const effortOptions = showReasoningEffort ? modelReasoningEffortOptions(modelContext) : [];
-  const showReasoningMode = modelSupportsReasoningModeControl(modelContext);
-  const reasoningMode = resolveModelReasoningMode(model.reasoningMode, modelContext);
-  const effortLabelKey =
-    modelEffortControlLabelKind(modelContext) === "effort"
-      ? "app.modelPickerEffort"
-      : "app.modelPickerReasoningEffort";
+  }, [model.name, model.thinkingEnabled, model.effort]);
+  const thinkingEnabled = pendingThinkingEnabled ?? effectiveThinkingEnabled(model);
+  const showEffort = showsEffortControl(model);
+  const effortOptions = declaredEffortOptions(model);
+  const showReasoningMode = showsReasoningModeControl(model);
+  const reasoningMode = effectiveReasoningMode(model);
+  const serviceTierControl = onServiceTierChange
+    ? declaredServiceTierControlKind(model, catalogEntry)
+    : "none";
+  const serviceTierOptions =
+    serviceTierControl === "select" ? declaredServiceTierOptions(model, catalogEntry) : [];
+  // Binary Default-plus-one-tier rows render as a switch named by the non-default tier.
+  const switchTier: "fast" | "priority" | undefined =
+    serviceTierControl === "fast-switch"
+      ? "fast"
+      : serviceTierControl === "priority-switch"
+        ? "priority"
+        : undefined;
+  const [pendingServiceTier, setPendingServiceTier] = useState<{
+    value: ModelServiceTier | undefined;
+  } | null>(null);
+  useEffect(() => {
+    setPendingServiceTier(null);
+  }, [model.name, model.serviceTier, lastInputTokens]);
+  const effectiveServiceTier = effectiveDeclaredServiceTier(model, catalogEntry, lastInputTokens);
+  const displayedServiceTier = pendingServiceTier ? pendingServiceTier.value : effectiveServiceTier;
+  const displayedServiceTierLabel =
+    displayedServiceTier !== undefined && serviceTierOptions.includes(displayedServiceTier)
+      ? t(serviceTierValueLabelKey(displayedServiceTier))
+      : undefined;
+  const serviceTierAvailable = (tier: ModelServiceTier) =>
+    isDeclaredServiceTierAvailable(model, tier, catalogEntry, lastInputTokens);
+  const limitedUnavailableTier = [...serviceTierOptions, ...(switchTier ? [switchTier] : [])].find(
+    (tier) =>
+      !serviceTierAvailable(tier) &&
+      declaredServiceTierMaxInputTokens(model, tier, catalogEntry) !== undefined,
+  );
+  const serviceTierLimitMessage = limitedUnavailableTier
+    ? t("app.modelPickerServiceTierInputLimit", {
+        tier: t(serviceTierValueLabelKey(limitedUnavailableTier)),
+        tokens: formatServiceTierInputLimit(
+          declaredServiceTierMaxInputTokens(model, limitedUnavailableTier, catalogEntry)!,
+        ),
+      })
+    : undefined;
+  const handleServiceTierChange = (tier: ModelServiceTier | undefined) => {
+    if (!onServiceTierChange) {
+      return;
+    }
+    setPendingServiceTier({ value: tier });
+    void Promise.resolve(onServiceTierChange(modelRef, tier)).then((ok) => {
+      if (ok === false) {
+        setPendingServiceTier(null);
+      }
+    });
+  };
+  const displayedEffort = selectedModelEffort(model);
   const labelClass = isList ? DESKTOP_OVERLAY_LIST_DETAIL_LABEL : "text-xs text-muted-foreground";
   const selectTriggerClass = cn(isList ? "h-7" : "h-8", DESKTOP_GHOST_SELECT_TRIGGER);
 
   const modelControls =
-    supportsThinkingSwitch || effortOptions.length > 1 || showReasoningMode ? (
+    showThinkingSwitch ||
+    showThinkingAlwaysOn ||
+    showEffort ||
+    showReasoningMode ||
+    (serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined) ||
+    switchTier !== undefined ? (
       <div className="space-y-2">
-        {supportsThinkingSwitch ? (
+        {showThinkingSwitch ? (
           <div className="flex items-center justify-between gap-2">
             <Label className={labelClass} htmlFor={`model-thinking-${model.name}`}>
               {t("app.modelPickerThinking")}
@@ -141,6 +196,7 @@ export function ModelPickerInspectorPanel({
             <Switch
               id={`model-thinking-${model.name}`}
               checked={thinkingEnabled}
+              disabled={thinkingForcedOn}
               onCheckedChange={(checked) => {
                 setPendingThinkingEnabled(checked);
                 void Promise.resolve(onThinkingEnabledChange?.(modelRef, checked)).then((ok) => {
@@ -152,17 +208,34 @@ export function ModelPickerInspectorPanel({
             />
           </div>
         ) : null}
-        {effortOptions.length > 1 ? (
+        {thinkingForcedOn ? (
+          <p className="text-xs text-muted-foreground">
+            {t("app.modelPickerThinkingRequiredForEffort")}
+          </p>
+        ) : null}
+        {showThinkingAlwaysOn ? (
+          <p className="text-xs text-muted-foreground">{t("app.modelPickerThinkingAlwaysOn")}</p>
+        ) : null}
+        {showEffort ? (
           <div className="flex items-center justify-between gap-2">
-            <Label className={labelClass}>{t(effortLabelKey)}</Label>
+            <Label className={labelClass}>
+              {t(
+                modelEffortControlLabelKind(model) === "effort"
+                  ? "app.modelPickerEffort"
+                  : "app.modelPickerReasoningEffort",
+              )}
+            </Label>
             <Select
-              value={model.reasoningEffort}
+              value={displayedEffort}
               onValueChange={(value) => {
-                onReasoningEffortChange(modelRef, value as DesktopModelReasoningEffort);
+                onEffortChange(modelRef, value as DesktopModelEffortSelection);
               }}
             >
               <SelectTrigger className={selectTriggerClass}>
-                <SelectValue>{modelReasoningEffortLabel(model.reasoningEffort)}</SelectValue>
+                <SelectValue>
+                  {effortOptions.find((option) => option.value === displayedEffort)?.label ??
+                    displayedEffort}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent className="z-[110]">
                 {effortOptions.map((option) => (
@@ -198,6 +271,46 @@ export function ModelPickerInspectorPanel({
               </SelectContent>
             </Select>
           </div>
+        ) : null}
+        {serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined ? (
+          <div className="flex items-center justify-between gap-2">
+            <Label className={labelClass}>{t("app.modelPickerServiceTier")}</Label>
+            <Select
+              value={displayedServiceTier}
+              onValueChange={(value) => {
+                handleServiceTierChange(value as ModelServiceTier);
+              }}
+            >
+              <SelectTrigger className={selectTriggerClass}>
+                <SelectValue>{displayedServiceTierLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent className="z-[110]">
+                {serviceTierOptions.map((option) => (
+                  <SelectItem key={option} value={option} disabled={!serviceTierAvailable(option)}>
+                    {t(serviceTierValueLabelKey(option))}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : null}
+        {switchTier !== undefined ? (
+          <div className="flex items-center justify-between gap-2">
+            <Label className={labelClass} htmlFor={`model-tier-switch-${model.name}`}>
+              {t(serviceTierValueLabelKey(switchTier))}
+            </Label>
+            <Switch
+              id={`model-tier-switch-${model.name}`}
+              checked={displayedServiceTier === switchTier}
+              disabled={!serviceTierAvailable(switchTier)}
+              onCheckedChange={(checked) => {
+                handleServiceTierChange(checked ? switchTier : undefined);
+              }}
+            />
+          </div>
+        ) : null}
+        {serviceTierLimitMessage ? (
+          <p className="text-xs text-muted-foreground">{serviceTierLimitMessage}</p>
         ) : null}
       </div>
     ) : null;

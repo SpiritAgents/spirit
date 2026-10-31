@@ -969,7 +969,10 @@ test("processToolCalls hook allow does not bypass host need-approval", async () 
       toolExecutor: {
         toolDefinitionsJson: () => [],
         requestFromFunctionCall: async (name: string) => ({ name }),
-        authorize: async () => ({ kind: "need-approval", prompt: "host approval required" }),
+        authorize: async () => ({
+          kind: "need-approval",
+          approval: { kind: "shell", command: "grep x", terminal: "zsh" },
+        }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
       createToolAgentState: () => state,
@@ -1044,7 +1047,7 @@ test("processToolCalls auto-approval reviewer allow skips manual approval", asyn
         }),
         authorize: async () => ({
           kind: "need-approval",
-          prompt: "High-risk tool call: shell\nCommand: echo hi",
+          approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -1117,7 +1120,7 @@ test("processToolCalls auto-approval reviewer block requires manual approval wit
         }),
         authorize: async () => ({
           kind: "need-approval",
-          prompt: "High-risk tool call: shell\nCommand: rm -rf /",
+          approval: { kind: "shell", command: "rm -rf /", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -1191,7 +1194,7 @@ test("processToolCalls auto-approval reviews multiple tools concurrently then ex
         }),
         authorize: async () => ({
           kind: "need-approval",
-          prompt: "needs review",
+          approval: { kind: "shell", command: "cat a.txt", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -1286,7 +1289,7 @@ test("processToolCalls auto-approval block stops later tools after earlier allow
         }),
         authorize: async () => ({
           kind: "need-approval",
-          prompt: "needs review",
+          approval: { kind: "shell", command: "cat a.txt", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -1417,8 +1420,96 @@ test("processToolCalls hook ask triggers approval when host allows", async () =>
 
   assert.equal(result.kind, "requires-approval");
   if (result.kind === "requires-approval") {
-    assert.equal(result.approval.prompt, "hook confirmation required");
+    assert.deepEqual(result.approval.prompt, {
+      kind: "hook",
+      message: "hook confirmation required",
+    });
     assert.equal(result.approval.toolName, "grep");
+  }
+});
+
+test("processToolCalls hook ask on host-allowed call carries the described approval request", async () => {
+  const state = { messages: [] as Array<{ role: string; content: string }>, steps: 0 };
+  const described = {
+    kind: "read_path" as const,
+    operation: "read_file" as const,
+    path: "/w/notes.md",
+    fileContentPreview: { path: "/w/notes.md", content: "hi\n" },
+  };
+  const runtime = {
+    options: {
+      config: {},
+      hookRunner: createStubHookRunner(async () => ({
+        records: [],
+        denied: false,
+        permission: "ask",
+        userMessage: "hook confirmation required",
+        agentMessage: undefined,
+        updatedInput: undefined,
+        additionalContexts: [],
+        followupMessage: undefined,
+      })),
+      hookSessionContext: {
+        sessionId: "s1",
+        conversationPath: null,
+        workspaceRoot: "/w",
+        model: "m",
+      },
+      llmTransport: {
+        startToolAgentRound: async () => ({
+          kind: "failure",
+          error: "unused",
+          requestTrace: [],
+        }),
+        isContextOverflowError: () => false,
+      },
+      toolExecutor: {
+        toolDefinitionsJson: () => [],
+        requestFromFunctionCall: async (name: string) => ({ name }),
+        authorize: async () => ({ kind: "allowed" }),
+        describeApproval: async () => described,
+        execute: async () => ({ content: [], summaryText: "ok" }),
+      },
+      createToolAgentState: () => state,
+      appendToolResultMessage: (currentState: typeof state) => currentState,
+      extractAssistantText: () => undefined,
+    },
+    historyStore: [],
+    requestTraceStore: [],
+    pendingUserTurnStore: undefined,
+    pendingApproval: undefined,
+    pendingQuestions: undefined,
+    pendingToolAgentRound: undefined,
+    appendTrace: () => {},
+    clearStreamingUiState: () => {},
+    completeTurn: () => {},
+    emitEvent: () => {},
+    performToolExecution: async () => {
+      throw new Error("unused");
+    },
+    startBackgroundToolExecutionAsync: () => {
+      throw new Error("unused");
+    },
+    startHistoryCompactionAsync: () => {},
+    loopEnabled: () => false,
+  } as unknown as TurnMachineRuntime<{}, typeof state, { name: string }>;
+
+  const result = await processToolCalls(
+    runtime,
+    state,
+    "run read_file",
+    [{ id: "call_read", name: "read_file", argumentsJson: '{"path":"notes.md"}' }],
+    createTurnContext(),
+  );
+
+  assert.equal(result.kind, "requires-approval");
+  if (result.kind === "requires-approval") {
+    // The hook keeps its message; the described structured request rides along.
+    assert.deepEqual(result.approval.prompt, {
+      kind: "hook",
+      message: "hook confirmation required",
+      request: described,
+    });
   }
 });
 
@@ -1496,7 +1587,10 @@ test("processToolCalls auto-approval does not bypass hook ask permission", async
   assert.equal(result.kind, "requires-approval");
   assert.equal(performExecutionCount, 0);
   if (result.kind === "requires-approval") {
-    assert.equal(result.approval.prompt, "hook confirmation required");
+    assert.deepEqual(result.approval.prompt, {
+      kind: "hook",
+      message: "hook confirmation required",
+    });
     assert.equal(result.approval.autoReviewBlockReason, undefined);
   }
 });
@@ -1551,7 +1645,10 @@ test("processToolCalls persists the full assistant tool-call message from state"
         requestFromFunctionCall: async (_name: string, argumentsJson: string) => ({
           argumentsJson,
         }),
-        authorize: async () => ({ kind: "need-approval", prompt: "approve?" }),
+        authorize: async () => ({
+          kind: "need-approval",
+          approval: { kind: "shell", command: "ls", terminal: "zsh" },
+        }),
         execute: async () => ({ content: [], summaryText: "" }),
       },
       createToolAgentState: () => state,
@@ -2078,7 +2175,7 @@ test("startEarlyToolExecution requests approval when preview args are stable", a
           JSON.parse(argumentsJson) as ShellRequest,
         authorize: async () => ({
           kind: "need-approval" as const,
-          prompt: "approve shell",
+          approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -2136,7 +2233,7 @@ test("startEarlyToolExecution queues second approval while first is pending", as
           JSON.parse(argumentsJson) as ShellRequest,
         authorize: async () => ({
           kind: "need-approval" as const,
-          prompt: "approve shell",
+          approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
         }),
         shouldExecuteInBackground: () => true,
         execute: async () => ({ content: [], summaryText: "ok" }),
@@ -2223,7 +2320,7 @@ test("startEarlyToolExecution invalidates queued approval when arguments change"
           JSON.parse(argumentsJson) as ShellRequest,
         authorize: async () => ({
           kind: "need-approval" as const,
-          prompt: "approve shell",
+          approval: { kind: "shell", command: "echo hi", terminal: "zsh" },
         }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -2283,7 +2380,10 @@ test("processToolCallsAsync parks the formal approval gate behind a pending earl
         toolDefinitionsJson: () => [],
         requestFromFunctionCall: async (_name: string, argumentsJson: string) =>
           JSON.parse(argumentsJson) as ShellRequest,
-        authorize: async () => ({ kind: "need-approval" as const, prompt: "approve ls" }),
+        authorize: async () => ({
+          kind: "need-approval" as const,
+          approval: { kind: "read_path", operation: "ls", path: "/tmp" },
+        }),
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
       appendToolResultMessage: (state: { n: number }) => state,
@@ -2297,7 +2397,10 @@ test("processToolCallsAsync parks the formal approval gate behind a pending earl
       pendingUserInput: "run",
       state: { n: 1 },
       request: { name: "shell", command: "git stash list" },
-      prompt: "approve shell",
+      prompt: {
+        kind: "tool",
+        request: { kind: "shell", command: "git stash list", terminal: "zsh" },
+      },
       toolCallId: "call-shell",
       toolName: "shell",
       argumentsJson: '{"name":"shell","command":"git stash list"}',
@@ -2376,7 +2479,10 @@ test("continuePendingApproval pumps the queued early approval after resolving a 
         { kind: "final", text: "done" },
       ],
       {
-        authorize: async () => ({ kind: "need-approval" as const, prompt: "approve ls" }),
+        authorize: async () => ({
+          kind: "need-approval" as const,
+          approval: { kind: "read_path", operation: "ls", path: "/tmp" },
+        }),
       },
     ),
   );
@@ -2392,7 +2498,10 @@ test("continuePendingApproval pumps the queued early approval after resolving a 
     pendingUserInput: "work",
     state: { messages: [], steps: 0 },
     request: { name: "shell", command: "echo hi" },
-    prompt: "approve shell",
+    prompt: {
+      kind: "tool",
+      request: { kind: "shell", command: "echo hi", terminal: "zsh" },
+    },
     toolCallId: "call_shell",
     toolName: "shell",
     argumentsJson: '{"command":"echo hi"}',
@@ -2433,7 +2542,10 @@ test("startEarlyToolExecution shows approvals in start order even when a later a
               resolveSlowAuthorize = resolve;
             });
           }
-          return { kind: "need-approval" as const, prompt: "approve shell" };
+          return {
+            kind: "need-approval" as const,
+            approval: { kind: "shell", command: request.command, terminal: "zsh" },
+          };
         },
         execute: async () => ({ content: [], summaryText: "ok" }),
       },
@@ -2538,7 +2650,7 @@ test("continuePendingApproval routes remember session/config into rememberApprov
         {
           authorize: async () => ({
             kind: "need-approval" as const,
-            prompt: "approve ls",
+            approval: { kind: "read_path", operation: "ls", path: "/tmp" },
             rememberTarget: { kind: "read_file", path: "/tmp" },
           }),
           rememberApproval: async (target: unknown, rememberScope: string) => {

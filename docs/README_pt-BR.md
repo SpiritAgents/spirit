@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 Um agente de IA de código aberto feito para multiplicar sua produtividade.
@@ -8,9 +14,7 @@ Um agente de IA de código aberto feito para multiplicar sua produtividade.
 
 > Este projeto está em desenvolvimento ativo. Comportamento e APIs podem mudar entre releases.
 
-[English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Русский](README_ru.md)
 
 </div>
 
@@ -116,8 +120,6 @@ Veja [apps/site/README.md](../apps/site/README.md) para desenvolvimento local e 
 
 ## CLI
 
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
-
 A [CLI Rust](../apps/cli) (`spirit`) oferece um host terminal-first com UI Ratatui opcional. Conecta-se ao daemon compartilhado Spirit Server via WebSocket, ideal para scripts, sessões SSH e ambientes mínimos.
 
 ```bash
@@ -169,14 +171,14 @@ Setup manual fora do editor:
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| Variável de ambiente   | Obrigatória | Descrição                                                                  |
-| ---------------------- | ----------- | -------------------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | Não         | Raiz do workspace (padrão: `cwd` do cliente)                               |
-| `SPIRIT_ACP_DATA_DIR`  | Não         | Diretório de dados Spirit (padrão: `%APPDATA%/Spirit` ou `~/.spirit-data`) |
+| Variável de ambiente   | Obrigatória | Descrição                                                                      |
+| ---------------------- | ----------- | ------------------------------------------------------------------------------ |
+| `SPIRIT_ACP_WORKSPACE` | Não         | Raiz do workspace (padrão: `cwd` do cliente)                                   |
+| `SPIRIT_ACP_DATA_DIR`  | Não         | Diretório de dados Spirit (padrão: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Desenvolvimento
 
-**Requisitos:** Node.js 24+, pnpm 12+ (ativar via `corepack enable`). Toolchain Rust necessária para build da CLI.
+**Requisitos:** Node.js 26.13.0, pnpm 12.4.2 (instalar com `npm install --global pnpm@12.4.2`). Toolchain Rust necessária para build da CLI.
 
 | Comando                    | Descrição                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------- |

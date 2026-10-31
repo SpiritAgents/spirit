@@ -17,6 +17,9 @@ export interface DesktopAvailableWorkspace {
 }
 
 export type DesktopModelReasoningEffort = "low" | "medium" | "high";
+export type DesktopModelOutputEffort = "default" | "low" | "medium" | "high" | "xhigh" | "max";
+export type DesktopModelEffortSelection = DesktopModelReasoningEffort | DesktopModelOutputEffort;
+export type DesktopModelDefaultEffort = Exclude<DesktopModelOutputEffort, "default">;
 
 export interface PreviewModelCatalogPricing {
   inputPerTokenUsd?: string;
@@ -26,7 +29,7 @@ export interface PreviewModelCatalogPricing {
 }
 
 export type DesktopModelCapability =
-  | "chat"
+  | "languageModel"
   | "image"
   | "video"
   | "imageGeneration"
@@ -39,6 +42,9 @@ export interface PreviewModelCatalogEntry {
   pricing?: PreviewModelCatalogPricing;
   capabilities?: DesktopModelCapability[];
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  effortSemantics?: "output";
+  supportedEfforts?: DesktopModelDefaultEffort[];
+  defaultEffort?: DesktopModelDefaultEffort;
   contextLength?: number;
 }
 
@@ -50,6 +56,10 @@ export interface ModelProfileSnapshot {
   keyConfigured?: boolean;
   reasoningEffort?: DesktopModelReasoningEffort;
   supportedReasoningEfforts?: DesktopModelReasoningEffort[];
+  effortSemantics?: "output";
+  effort?: DesktopModelOutputEffort;
+  supportedEfforts?: DesktopModelDefaultEffort[];
+  defaultEffort?: DesktopModelDefaultEffort;
   capabilities?: DesktopModelCapability[];
   contextLength?: number;
 }

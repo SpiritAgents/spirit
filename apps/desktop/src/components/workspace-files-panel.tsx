@@ -1,3 +1,5 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import {
   Fragment,
   useCallback,
@@ -12,7 +14,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ChevronDown, ChevronRight, FilePlus, FolderPlus, ListTodo } from "lucide-react";
+import { FilePlus, FolderPlus, ListTodo } from "lucide-react";
 
 import { WORKSPACE_REFERENCE_DIRECTORY_SUFFIX } from "@spiritagent/host-internal/workspace-file-reference-query";
 
@@ -157,7 +159,7 @@ type CreatingEntryState = {
 
 const EXPLORER_ROOT_CREATE_BUTTON_CLASS = cn(
   "inline-flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground",
-  "hover:bg-canvas-hover hover:text-sidebar-foreground",
+  "hover:bg-canvas-hover hover:text-chrome-emphasis",
 );
 
 export type WorkspaceFilesPanelProps = {
@@ -177,7 +179,7 @@ export type WorkspaceFilesPanelProps = {
   onWorkspaceEntryMoved?: (oldRelativePath: string, newRelativePath: string) => void;
   /** Notifies the parent to close the editor after a workspace entry is deleted. */
   onWorkspaceEntryDeleted?: (relativePath: string) => void;
-  onWorkspaceFileAddToSession?: (relativePath: string) => void;
+  onWorkspaceFileAddToChat?: (relativePath: string) => void;
   /** Git status revision; refreshes the file tree's ignore-tinting cache when it changes. */
   gitRevision?: number;
 };
@@ -359,7 +361,7 @@ function ExplorerCreateRow({
   const skipBlurCommitRef = useRef(false);
   const icon =
     kind === "dir" ? (
-      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden strokeWidth={1.75} />
     ) : (
       <WorkspaceFileIcon name="untitled.txt" className={EXPLORER_ROW_ICON_CLASS} />
     );
@@ -443,7 +445,7 @@ export function WorkspaceFilesPanel({
   onWorkspaceEntryRenamed,
   onWorkspaceEntryMoved,
   onWorkspaceEntryDeleted,
-  onWorkspaceFileAddToSession,
+  onWorkspaceFileAddToChat,
   gitRevision,
 }: WorkspaceFilesPanelProps) {
   const { t } = useTranslation();
@@ -886,14 +888,14 @@ export function WorkspaceFilesPanel({
     onWorkspaceEntryDeleted,
   ]);
 
-  const handleAddToSession = useCallback(
+  const handleAddToChat = useCallback(
     (target: WorkspaceExplorerContextTarget) => {
       const normalized = target.relativePath.replace(/\\/g, "/");
       const path =
         target.kind === "dir" ? `${normalized}${WORKSPACE_REFERENCE_DIRECTORY_SUFFIX}` : normalized;
-      onWorkspaceFileAddToSession?.(path);
+      onWorkspaceFileAddToChat?.(path);
     },
-    [onWorkspaceFileAddToSession],
+    [onWorkspaceFileAddToChat],
   );
 
   const handleConfirmMove = useCallback(async () => {
@@ -1141,7 +1143,7 @@ export function WorkspaceFilesPanel({
           title={plan.path}
         >
           <span className="inline-block size-3.5 shrink-0" aria-hidden />
-          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden />
+          <ListTodo className="size-3.5 shrink-0 opacity-70" aria-hidden strokeWidth={1.75} />
           <span className="min-w-0 truncate">Plan</span>
         </button>
       </li>
@@ -1310,9 +1312,17 @@ export function WorkspaceFilesPanel({
                   leading={EXPLORER_ROW_LEADING_SPACER}
                   icon={
                     open ? (
-                      <ChevronDown className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronDown
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     ) : (
-                      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronRight
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     )
                   }
                   dropHighlight={dragOverDirectory === dirRel}
@@ -1405,9 +1415,17 @@ export function WorkspaceFilesPanel({
                     }}
                   >
                     {rootOpen ? (
-                      <ChevronDown className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronDown
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     ) : (
-                      <ChevronRight className={EXPLORER_DIR_CHEVRON_CLASS} aria-hidden />
+                      <ChevronRight
+                        className={EXPLORER_DIR_CHEVRON_CLASS}
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                     )}
                     <span className="min-w-0 truncate">{rootLabel}</span>
                   </button>
@@ -1436,7 +1454,7 @@ export function WorkspaceFilesPanel({
                               handleCreateStart("file");
                             }}
                           >
-                            <FilePlus className="size-3" aria-hidden />
+                            <FilePlus className="size-3" aria-hidden strokeWidth={1.75} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent
@@ -1471,7 +1489,7 @@ export function WorkspaceFilesPanel({
                               handleCreateStart("dir");
                             }}
                           >
-                            <FolderPlus className="size-3" aria-hidden />
+                            <FolderPlus className="size-3" aria-hidden strokeWidth={1.75} />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent
@@ -1499,7 +1517,7 @@ export function WorkspaceFilesPanel({
                   className="flex min-h-0 min-w-0 flex-1 flex-col"
                   onMouseDownCapture={handleScrollAreaMouseDownCapture}
                 >
-                  <ScrollArea className="min-h-0 min-w-0 flex-1" type="auto">
+                  <ScrollArea className="min-h-0 flex-1" type="auto">
                     <div
                       ref={explorerTreeRef}
                       role="tree"
@@ -1524,7 +1542,7 @@ export function WorkspaceFilesPanel({
             onReveal={handleReveal}
             onRename={handleRenameStartFromMenu}
             onDelete={handleDeleteRequest}
-            onAddToSession={onWorkspaceFileAddToSession ? handleAddToSession : undefined}
+            onAddToChat={onWorkspaceFileAddToChat ? handleAddToChat : undefined}
             onCloseAutoFocus={handleFileContextMenuCloseAutoFocus}
           />
         </ContextMenu>

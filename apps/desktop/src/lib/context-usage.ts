@@ -1,40 +1,26 @@
-import { normalizeOpenAiApiBase } from "@spiritagent/host-internal/openai-api-base";
-
 import { parseModelContextLength } from "./model-context-length.js";
 import type {
   ConversationContextUsageSnapshot,
   DesktopModelCatalogHint,
-  DesktopModelProvider,
   DesktopTransportKind,
 } from "../types.js";
-
-/** Keep in sync with `DEFAULT_API_BASE` in `apps/desktop/src/host/storage.ts`. */
-const DEFAULT_API_BASE = "https://api.openai.com/v1";
 
 export interface ContextUsageModelProfile {
   name: string;
   apiBase: string;
-  provider?: DesktopModelProvider;
+  /** Provider entry id; catalog hints are scoped by it. */
+  providerId?: string;
   transportKind?: DesktopTransportKind;
   contextLength?: number;
 }
 
 export { parseModelContextLength } from "./model-context-length.js";
 
-const CONTEXT_USAGE_PROVIDERS = new Set<DesktopModelProvider>([
-  "openrouter",
-  "vercel-ai-gateway",
-  "cloudflare-ai-gateway",
-  "moonshot-ai",
-  "kimi-code",
-  "volcengine",
-  "byteplus",
-]);
-
-export function supportsContextUsageProvider(provider: DesktopModelProvider | undefined): boolean {
-  return provider !== undefined && CONTEXT_USAGE_PROVIDERS.has(provider);
-}
-
+/**
+ * Context usage display resolution: the model's declared `contextLength` first, then the provider
+ * entry's catalog cache hint. No provider gating — any catalog that lists a context length feeds
+ * the ring.
+ */
 export function resolveModelContextLength(
   activeModel: ContextUsageModelProfile | undefined,
   catalogHints: DesktopModelCatalogHint[] | undefined,
@@ -48,29 +34,13 @@ export function resolveModelContextLength(
     return profileLength;
   }
 
-  if (!supportsContextUsageProvider(activeModel.provider)) {
-    return undefined;
-  }
-
+  const providerId = activeModel.providerId?.trim();
   const modelName = activeModel.name.trim();
-  if (!modelName) {
+  if (!providerId || !modelName) {
     return undefined;
   }
 
-  const apiBase = activeModel.apiBase.trim() || DEFAULT_API_BASE;
-  const transportKind =
-    activeModel.transportKind ??
-    (activeModel.provider === "anthropic" ? "anthropic" : "openai-compatible");
-  const hint = catalogHints?.find((entry) => {
-    if (entry.provider !== activeModel.provider) {
-      return false;
-    }
-    if (entry.transportKind !== undefined && entry.transportKind !== transportKind) {
-      return false;
-    }
-    return normalizeOpenAiApiBase(entry.apiBase) === normalizeOpenAiApiBase(apiBase);
-  });
-
+  const hint = catalogHints?.find((entry) => entry.providerId === providerId);
   const catalogEntry = hint?.modelCatalog?.find((entry) => entry.id === modelName);
   const contextLength = catalogEntry?.contextLength;
   if (typeof contextLength !== "number" || !Number.isFinite(contextLength) || contextLength <= 0) {

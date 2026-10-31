@@ -1,8 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { buildResponsesGenerateTools, buildResponsesProviderOptions } from "./model-factory.js";
+import {
+  buildResponsesGenerateTools,
+  buildResponsesProviderOptions,
+  buildResponsesProviderOptionsWithServiceTier,
+} from "./model-factory.js";
 import { applyCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
+import type { ResolvedProviderTools } from "../provider-tools/runtime.js";
 
 const hostTool = {
   type: "function",
@@ -13,46 +18,46 @@ const hostTool = {
   },
 } as const;
 
-test("buildResponsesGenerateTools adds web_search for openai official", () => {
+const declaredWebSearchTool = {
+  type: "function",
+  function: {
+    name: "web_search",
+    description: "Search the web.",
+    parameters: { type: "object", properties: {} },
+  },
+} as const;
+
+function providerToolsWith(
+  functionTools: readonly (typeof declaredWebSearchTool)[],
+): Pick<ResolvedProviderTools, "functionTools"> {
+  return { functionTools: [...functionTools] };
+}
+
+test("buildResponsesGenerateTools merges declared provider function tools", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "gpt-5.4",
-      llmVendor: "openai",
-      responsesProvider: "openai",
+      sdk: "@ai-sdk/openai",
     },
     [hostTool],
+    providerToolsWith([declaredWebSearchTool]),
   );
 
   assert.ok("web_search" in tools);
   assert.ok("grep" in tools);
 });
 
-test("buildResponsesGenerateTools adds web_search for gateway", () => {
-  const tools = buildResponsesGenerateTools(
-    {
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "openai/gpt-5.4",
-      llmVendor: "vercel-ai-gateway",
-    },
-    [hostTool],
-  );
-
-  assert.ok("web_search" in tools);
-  assert.ok("grep" in tools);
-});
-
-test("buildResponsesGenerateTools uses function apply_patch for Bedrock Mantle", () => {
+test("buildResponsesGenerateTools uses the flat function apply_patch for the SigV4 surface", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "openai.gpt-5.5",
       baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-      llmVendor: "openai",
-      responsesProvider: "openai",
+      sdk: "@ai-sdk/openai",
+      options: { auth: "aws-sigv4", applyPatch: true },
     },
     [hostTool],
   );
@@ -61,127 +66,44 @@ test("buildResponsesGenerateTools uses function apply_patch for Bedrock Mantle",
   assert.equal("grep" in tools, true);
 });
 
-test("buildResponsesGenerateTools omits sdk web_search for Bedrock Mantle", () => {
+test("buildResponsesGenerateTools uses the SDK apply_patch tool on the openai adapter", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
-      model: "openai.gpt-5.5",
-      baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
-      llmVendor: "openai",
-      responsesProvider: "openai",
+      model: "gpt-5.4",
+      sdk: "@ai-sdk/openai",
+      options: { applyPatch: true },
     },
     [hostTool],
   );
 
-  assert.equal("web_search" in tools, false);
+  assert.ok("apply_patch" in tools);
   assert.ok("grep" in tools);
 });
 
-test("buildResponsesGenerateTools omits sdk web_search for openrouter", () => {
+test("buildResponsesGenerateTools adds no apply_patch without the options declaration", () => {
   const tools = buildResponsesGenerateTools(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
-      model: "openai/gpt-4o",
-      llmVendor: "openrouter",
+      model: "gpt-5.4",
+      sdk: "@ai-sdk/openai",
     },
     [hostTool],
   );
 
-  assert.equal("web_search" in tools, false);
+  assert.equal("apply_patch" in tools, false);
   assert.ok("grep" in tools);
 });
 
-test("buildResponsesGenerateTools adds web_search for xai when enabled", () => {
-  const tools = buildResponsesGenerateTools(
-    {
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "grok-4",
-      llmVendor: "xai",
-      responsesProvider: "xai",
-    },
-    [hostTool],
-  );
-
-  assert.ok("web_search" in tools);
-});
-
-test("buildResponsesProviderOptions maps gateway openai reasoning options", () => {
-  const options = buildResponsesProviderOptions({
-    transportKind: "open-responses",
-    apiKey: "test-key",
-    model: "openai/gpt-5.4",
-    llmVendor: "vercel-ai-gateway",
-    reasoningEffort: "medium",
-  });
-
-  assert.deepEqual(options, {
-    openai: {
-      reasoningEffort: "medium",
-      reasoningSummary: "auto",
-    },
-  });
-});
-
-test("buildResponsesProviderOptions maps gateway xiaomi reasoning via openai namespace", () => {
+test("buildResponsesProviderOptions passes the declared reasoning effort verbatim on xai", () => {
   assert.deepEqual(
     buildResponsesProviderOptions({
       transportKind: "open-responses",
       apiKey: "test-key",
-      model: "xiaomi/mimo-v2.5",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "none",
-    }),
-    {
-      openai: {
-        reasoningEffort: "none",
-      },
-    },
-  );
-
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "xiaomi/mimo-v2.5",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "medium",
-    }),
-    {
-      openai: {
-        reasoningEffort: "medium",
-        reasoningSummary: "auto",
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps direct xiaomi reasoning via xiaomi namespace", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "mimo-v2.5-pro",
-      llmVendor: "xiaomi",
-      reasoningEffort: "none",
-    }),
-    {
-      xiaomi: {
-        reasoningEffort: "none",
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway xai reasoning via xai namespace", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "xai/grok-4.3",
-      llmVendor: "vercel-ai-gateway",
+      model: "grok-4.3",
+      sdk: "@ai-sdk/xai",
       reasoningEffort: "none",
     }),
     {
@@ -192,155 +114,15 @@ test("buildResponsesProviderOptions maps gateway xai reasoning via xai namespace
   );
 });
 
-test("buildResponsesProviderOptions maps gateway alibaba qwen to enable_thinking false", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "alibaba/qwen3-max",
-      llmVendor: "vercel-ai-gateway",
-      vendorExtendedThinking: false,
-    }),
-    {
-      alibaba: {
-        enableThinking: false,
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway minimax m3 to adaptive thinking", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "minimax/minimax-m3",
-      llmVendor: "vercel-ai-gateway",
-    }),
-    {
-      minimax: {
-        thinking: { type: "adaptive" },
-      },
-    },
-  );
-
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "minimax/minimax-m3",
-      llmVendor: "vercel-ai-gateway",
-      vendorExtendedThinking: false,
-    }),
-    {
-      minimax: {
-        thinking: { type: "disabled" },
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway anthropic claude to adaptive thinking", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "anthropic/claude-sonnet-4.6",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "medium",
-    }),
-    {
-      anthropic: {
-        toolStreaming: true,
-        thinking: { type: "adaptive" },
-        effort: "medium",
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway google gemini 3 to google thinkingConfig", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "google/gemini-3.1-pro-preview",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "high",
-    }),
-    {
-      google: {
-        thinkingConfig: {
-          thinkingLevel: "high",
-          includeThoughts: true,
-        },
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway google gemini 2.5 to google thinkingConfig", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "google/gemini-2.5-flash",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "low",
-    }),
-    {
-      google: {
-        thinkingConfig: {
-          thinkingBudget: 1024,
-          includeThoughts: true,
-        },
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps gateway anthropic opus 4.8 to summarized adaptive thinking", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "anthropic/claude-opus-4.8",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "medium",
-    }),
-    {
-      anthropic: {
-        toolStreaming: true,
-        thinking: { type: "adaptive", display: "summarized" },
-        effort: "medium",
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions omits openrouter providerOptions for anthropic claude", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "anthropic/claude-sonnet-4.6",
-      llmVendor: "openrouter",
-      reasoningEffort: "medium",
-    }),
-    {},
-  );
-});
-
 test("buildResponsesProviderOptions maps azure provider options", () => {
   const options = buildResponsesProviderOptions({
     transportKind: "open-responses",
     apiKey: "test-key",
     model: "my-deploy",
-    llmVendor: "azure",
-    responsesProvider: "azure",
-    azureResourceName: "my-resource",
+    sdk: "@ai-sdk/azure",
     reasoningEffort: "low",
     store: false,
+    options: { reasoningSummary: true },
   });
 
   assert.deepEqual(options, {
@@ -353,14 +135,37 @@ test("buildResponsesProviderOptions maps azure provider options", () => {
   });
 });
 
+test("buildResponsesProviderOptions passes effort, pro mode, and summary on the openai adapter", () => {
+  assert.deepEqual(
+    buildResponsesProviderOptions({
+      transportKind: "open-responses",
+      apiKey: "test-key",
+      model: "gpt-6-astra",
+      sdk: "@ai-sdk/openai",
+      reasoningEffort: "max",
+      reasoningMode: "pro",
+      reasoningSummary: "detailed",
+      options: { reasoningSummary: true },
+    }),
+    {
+      openai: {
+        store: true,
+        truncation: "disabled",
+        reasoningEffort: "max",
+        reasoningMode: "pro",
+        reasoningSummary: "detailed",
+      },
+    },
+  );
+});
+
 test("buildResponsesProviderOptions attaches previousResponseId for openai stored state", () => {
   const options = buildResponsesProviderOptions(
     {
       transportKind: "open-responses",
       apiKey: "test-key",
       model: "gpt-5",
-      llmVendor: "openai",
-      responsesProvider: "openai",
+      sdk: "@ai-sdk/openai",
     },
     "resp_chain_1",
   );
@@ -369,15 +174,15 @@ test("buildResponsesProviderOptions attaches previousResponseId for openai store
   assert.equal(options.openai?.previousResponseId, "resp_chain_1");
 });
 
-test("buildResponsesProviderOptions omits reasoning for code-completion OpenAI profile", () => {
+test("buildResponsesProviderOptions omits reasoning for the code-completion profile", () => {
   const config = applyCodeCompletionTransportProfile({
     transportKind: "open-responses",
     apiKey: "test-key",
     model: "gpt-5",
-    llmVendor: "openai",
-    responsesProvider: "openai",
+    sdk: "@ai-sdk/openai",
     reasoningEffort: "high",
     reasoningSummary: "detailed",
+    options: { reasoningSummary: true },
   });
 
   assert.deepEqual(
@@ -394,56 +199,14 @@ test("buildResponsesProviderOptions omits reasoning for code-completion OpenAI p
   );
 });
 
-test("buildResponsesProviderOptions routes gateway code-completion by upstream slug", () => {
-  const config = applyCodeCompletionTransportProfile({
-    transportKind: "open-responses",
-    apiKey: "test-key",
-    model: "anthropic/claude-sonnet-4-6",
-    llmVendor: "vercel-ai-gateway",
-    reasoningEffort: "high",
-    reasoningSummary: "detailed",
-  });
-
-  assert.deepEqual(
-    buildResponsesProviderOptions(
-      config as import("./responses-compat.js").OpenResponsesTransportConfig,
-    ),
-    {
-      anthropic: {
-        thinking: { type: "disabled" },
-        toolStreaming: true,
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions disables Gateway DeepSeek V4 thinking via deepseek namespace", () => {
-  assert.deepEqual(
-    buildResponsesProviderOptions({
-      transportKind: "open-responses",
-      apiKey: "test-key",
-      model: "deepseek/deepseek-v4-pro",
-      llmVendor: "vercel-ai-gateway",
-      reasoningEffort: "default",
-      reasoningSummary: "auto",
-      vendorExtendedThinking: false,
-    }),
-    {
-      deepseek: {
-        thinking: { type: "disabled" },
-      },
-    },
-  );
-});
-
-test("buildResponsesProviderOptions maps hugging-face reasoningEffort to huggingface namespace", () => {
+test("buildResponsesProviderOptions maps huggingface reasoningEffort to the huggingface namespace", () => {
   assert.deepEqual(
     buildResponsesProviderOptions({
       transportKind: "open-responses",
       apiKey: "hf_test",
       model: "deepseek-ai/DeepSeek-R1",
       baseUrl: "https://router.huggingface.co/v1",
-      llmVendor: "hugging-face",
+      sdk: "@ai-sdk/huggingface",
       reasoningEffort: "high",
     }),
     {
@@ -454,36 +217,111 @@ test("buildResponsesProviderOptions maps hugging-face reasoningEffort to hugging
   );
 });
 
-test("buildResponsesProviderOptions maps direct deepseek reasoning via deepseek namespace", () => {
+test("buildResponsesProviderOptions uses the generic adapter namespace verbatim declarations", () => {
   assert.deepEqual(
     buildResponsesProviderOptions({
       transportKind: "open-responses",
-      apiKey: "ds_test",
-      model: "deepseek-v4-flash",
-      baseUrl: "https://api.deepseek.com",
-      llmVendor: "deepseek",
-      reasoningEffort: "max",
+      apiKey: "test-key",
+      model: "some-model",
+      sdk: "@ai-sdk/open-responses",
+      reasoningEffort: "medium",
+      options: { reasoningSummary: true },
     }),
     {
-      deepseek: {
-        reasoningEffort: "max",
+      spirit: {
+        reasoningEffort: "medium",
+        reasoningSummary: "auto",
       },
     },
   );
+});
+
+test("buildResponsesProviderOptions generic adapter suppresses summary without the declaration", () => {
+  // DeepSeek-shaped: the generic adapter with no reasoningSummary declaration sends no summary.
   assert.deepEqual(
     buildResponsesProviderOptions({
       transportKind: "open-responses",
-      apiKey: "ds_test",
-      model: "deepseek-v4-flash",
-      baseUrl: "https://api.deepseek.com",
-      llmVendor: "deepseek",
-      reasoningEffort: "high",
-      vendorExtendedThinking: false,
+      apiKey: "test-key",
+      model: "some-model",
+      sdk: "@ai-sdk/open-responses",
+      reasoningEffort: "medium",
     }),
     {
-      deepseek: {
-        reasoningEffort: "none",
+      spirit: {
+        reasoningEffort: "medium",
       },
     },
   );
+});
+
+test("buildResponsesProviderOptions generic adapter honors options.storedState", () => {
+  assert.deepEqual(
+    buildResponsesProviderOptions(
+      {
+        transportKind: "open-responses",
+        apiKey: "test-key",
+        model: "some-model",
+        sdk: "@ai-sdk/open-responses",
+        options: { storedState: true, reasoningSummary: true },
+      },
+      "resp_prev",
+    ),
+    {
+      spirit: {
+        reasoningSummary: "auto",
+        store: true,
+        previousResponseId: "resp_prev",
+      },
+    },
+  );
+});
+
+test("buildResponsesProviderOptions generic adapter omits store without the storedState declaration", () => {
+  assert.deepEqual(
+    buildResponsesProviderOptions(
+      {
+        transportKind: "open-responses",
+        apiKey: "test-key",
+        model: "some-model",
+        sdk: "@ai-sdk/open-responses",
+        options: { reasoningSummary: true },
+      },
+      "resp_prev",
+    ),
+    {
+      spirit: {
+        reasoningSummary: "auto",
+      },
+    },
+  );
+});
+
+test("gateway provider options honor input-limited fast without leaking metadata", () => {
+  const config = {
+    transportKind: "open-responses",
+    apiKey: "test-key",
+    model: "openai/gpt-5.4",
+    sdk: "@ai-sdk/gateway",
+    serviceTier: "fast",
+    serviceTiers: {
+      default: {},
+      fast: {
+        providerOptions: { gateway: { serviceTier: "fast" } },
+        maxInputTokens: 278528,
+      },
+    },
+  } as const;
+
+  const below = buildResponsesProviderOptionsWithServiceTier({
+    ...config,
+    lastInputTokens: 1000,
+  });
+  assert.equal(below.gateway?.serviceTier, "fast");
+  assert.equal("maxInputTokens" in below.gateway!, false);
+
+  const above = buildResponsesProviderOptionsWithServiceTier({
+    ...config,
+    lastInputTokens: 278529,
+  });
+  assert.equal(above.gateway?.serviceTier, undefined);
 });

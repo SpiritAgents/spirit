@@ -1,0 +1,124 @@
+import {
+  applyAnthropicOutputWire,
+  type AnthropicOutputWireConfig,
+} from "./anthropic/output-effort-wire.js";
+import type { JsonObject, JsonValue } from "./ports.js";
+import type { ModelServiceTier, ModelServiceTiersDeclaration } from "./model-service-tier.js";
+import {
+  resolveServiceTierRequestPlan,
+  type ServiceTierRequestSurface,
+} from "./service-tier-request.js";
+import { resolveThinkingSwitchWirePatch } from "./thinking-switch.js";
+
+/**
+ * Literal declaration merge point (`headers` / `body` / `thinkingSwitch` / literal `serviceTiers`).
+ * Generic literal contents stay opaque; declared output effort has a dedicated final Messages
+ * resolution after these patches so SDK model tables cannot rewrite the selected semantics.
+ */
+export interface LlmDeclaredWireConfig extends AnthropicOutputWireConfig {
+  /** Provider-level literal headers, merged into every outbound request. */
+  headers?: Record<string, string>;
+  /** Selected service tier (validated at config load). */
+  serviceTier?: ModelServiceTier;
+  /** Declared service tiers; the literal map carries wire effects and optional input limits. */
+  serviceTiers?: ModelServiceTiersDeclaration;
+  /** Runtime-only last upstream input usage used to resolve input-limited tiers. */
+  lastInputTokens?: number;
+}
+
+/**
+ * Wraps `baseFetch` so every outbound request carries the declared wire patches. Merge order, from
+ * lowest to highest precedence: SDK-serialized request → `options.bodyBase` (transport-computed
+ * wire fields, e.g. `reasoning_effort` for adapters without a native option) → provider-level
+ * `headers`/`body` → thinking-switch state patch → selected service tier patch. The more specific
+ * declaration wins.
+ */
+export function createDeclaredWireMergeFetch(
+  config: LlmDeclaredWireConfig,
+  surface: ServiceTierRequestSurface,
+  baseFetch: typeof fetch,
+  options?: { bodyBase?: JsonObject | undefined },
+): typeof fetch {
+  // Surfaces whose protocol has no raw top-level thinking field skip the patch:
+  // - gateway v3: the language-model protocol carries the encoding in namespaced call
+  //   providerOptions (the patch's `providerOptions` form), emitted by the open-responses
+  //   provider-options builder; a top-level field is a stray the protocol does not define.
+  // - bedrock: Converse defines no top-level `thinking` field; the encoding travels in
+  //   `providerOptions.bedrock.reasoningConfig`, emitted by the bedrock provider-options builder.
+  const thinkingPatch =
+    surface === "gateway-v3" || surface === "bedrock"
+      ? undefined
+      : resolveThinkingSwitchWirePatch(config);
+  const serviceTierPlan = resolveServiceTierRequestPlan({
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
+    ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    ...(config.lastInputTokens !== undefined ? { lastInputTokens: config.lastInputTokens } : {}),
+    surface,
+  });
+
+  const omitThinking = thinkingPatch === "omit";
+  const outputEffortWire = surface === "messages" && config.effortSemantics === "output";
+  const headers: Record<string, string> = {
+    ...config.headers,
+    ...(thinkingPatch === "omit" ? {} : thinkingPatch?.headers),
+    ...serviceTierPlan.headers,
+  };
+  const headerEntries = Object.entries(headers);
+  const bodyPatches = [
+    options?.bodyBase,
+    config.body,
+    ...(thinkingPatch === "omit" ? [] : [thinkingPatch?.body]),
+    serviceTierPlan.body,
+  ].filter((patch): patch is JsonObject => patch !== undefined && Object.keys(patch).length > 0);
+
+  if (
+    headerEntries.length === 0 &&
+    bodyPatches.length === 0 &&
+    !omitThinking &&
+    !outputEffortWire
+  ) {
+    return baseFetch;
+  }
+
+  return async (input, init) => {
+    let nextInit = init;
+    if (headerEntries.length > 0) {
+      const merged = new Headers(nextInit?.headers);
+      for (const [key, value] of headerEntries) {
+        merged.set(key, value);
+      }
+      nextInit = { ...nextInit, headers: merged };
+    }
+
+    if (
+      (bodyPatches.length > 0 || omitThinking || outputEffortWire) &&
+      typeof nextInit?.body === "string"
+    ) {
+      const body = tryParseJsonObject(nextInit.body);
+      if (body !== undefined) {
+        const patched: JsonObject = { ...body };
+        if (omitThinking) {
+          delete patched["thinking"];
+        }
+        for (const patch of bodyPatches) {
+          Object.assign(patched, patch);
+        }
+        const result = outputEffortWire ? applyAnthropicOutputWire(patched, config, body) : patched;
+        nextInit = { ...nextInit, body: JSON.stringify(result) };
+      }
+    }
+
+    return baseFetch(input, nextInit);
+  };
+}
+
+function tryParseJsonObject(body: string): JsonObject | undefined {
+  try {
+    const parsed = JSON.parse(body) as JsonValue;
+    return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? parsed
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}

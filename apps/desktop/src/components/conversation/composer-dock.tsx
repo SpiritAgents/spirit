@@ -49,7 +49,6 @@ import type { ActiveSkillSlashQuery, SkillSlashSuggestion } from "@/lib/skill-sl
 import { sameWorkspacePath } from "@/lib/workspace-display-label";
 import { normalizePaneSessionPathKey } from "@/lib/pane-desktop-snapshot";
 import { shouldShowComposerChangesCard } from "@/lib/composer-changes-card-visibility";
-import { viewportLengthToScaleRootLocal } from "@/lib/ui-layout-scale";
 import type { ComposerLocalFileAttachmentView } from "@/lib/local-file-attachments";
 import { cn } from "@/lib/utils";
 import { useComposerSuggestionAnchor } from "@/hooks/use-composer-suggestion-anchor";
@@ -90,7 +89,7 @@ export type ComposerDockProps = {
   onFileReferenceSelectedIndexChange: (index: number) => void;
   fileReferenceMenuView: import("@/lib/composer-at-reference-demo").AtReferenceMenuView;
   atReferenceMenuItems: import("@/lib/composer-at-reference-demo").AtReferenceMenuItem[];
-  onApplyFileReferenceSuggestion: (path: string) => void;
+  onApplyFileReferenceSuggestion: (path: string, options?: { isPlan?: boolean }) => void;
   onApplySessionReferenceSuggestion: (session: { path: string; title: string }) => void;
   onOpenAtReferenceSessions: () => void;
   onBackAtReferenceMenu: () => void;
@@ -333,22 +332,12 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
         bottomSlabFromY = surfaceRect.bottom - viewportRect.top - radius;
       }
 
-      const localShapes: ConversationScrollOccludeShape[] = shapes.map((shape) => ({
-        ...shape,
-        x: viewportLengthToScaleRootLocal(shape.x),
-        y: viewportLengthToScaleRootLocal(shape.y),
-        width: viewportLengthToScaleRootLocal(shape.width),
-        height: viewportLengthToScaleRootLocal(shape.height),
-      }));
-      const localBottomSlabFromY =
-        bottomSlabFromY == null ? undefined : viewportLengthToScaleRootLocal(bottomSlabFromY);
-
       onScrollOccludeMaskStyleChange(
         buildConversationScrollOccludeMaskStyle({
           viewportWidth: viewport.clientWidth,
           viewportHeight: viewport.clientHeight,
-          shapes: localShapes,
-          bottomSlabFromY: localBottomSlabFromY,
+          shapes,
+          bottomSlabFromY,
         }),
       );
     };
@@ -642,7 +631,9 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                 localFileAttachments={composerLocalFileAttachments}
                 models={models}
                 catalogHints={snapshot?.config.modelCatalogHints}
+                providerPresets={snapshot?.config.providerPickerPresets}
                 activeModel={snapshot?.config.activeModel ?? runtime.settings.activeModel}
+                lastInputTokens={snapshot?.conversation.lastInputTokens}
                 agentMode={runtime.settings.agentMode}
                 loopEnabled={snapshot?.conversation.loopEnabled === true}
                 onModelSelect={(ref) => {
@@ -655,6 +646,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                 onModelReasoningEffortSelect={runtime.setModelReasoningEffort}
                 onModelReasoningModeSelect={runtime.setModelReasoningMode}
                 onModelThinkingEnabledSelect={runtime.setModelThinkingEnabled}
+                onModelServiceTierSelect={runtime.setModelServiceTier}
                 onAgentModeChange={onComposerAgentModeChange}
                 onLoopEnabledChange={(enabled) => {
                   void runtime.setLoopEnabled(enabled);
@@ -692,7 +684,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
               composerRootRef={composerRootRef}
               ariaLabel={
                 fileReferenceMenuView === "sessions"
-                  ? t("composer.atReference.sessionCandidates")
+                  ? t("composer.atReference.chatCandidates")
                   : t("composer.atReference.candidates")
               }
               onDismiss={onDismissFileReferenceSuggestions}

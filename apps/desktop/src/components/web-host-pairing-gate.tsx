@@ -1,7 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-
-import { LoaderCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +57,7 @@ export function WebHostPairingGate({
             />
           </div>
           <Button type="button" className="w-full" disabled={busy} onClick={submit}>
-            {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+            {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
             {t("app.pair")}
           </Button>
         </CardContent>

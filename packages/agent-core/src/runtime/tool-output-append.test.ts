@@ -6,7 +6,7 @@ import { TOOL_OUTPUT_TRUNCATION_LABEL } from "../tool-agent.js";
 import { prepareAndSyncRuntimeToolResultToHistory } from "./tool-output-append.js";
 
 test("prepareAndSyncRuntimeToolResultToHistory writes truncated prepared content to historyStore", async () => {
-  const longToolOutput = "z".repeat(20_000);
+  const longToolOutput = "z".repeat(40_000);
   const historyStore = [
     {
       role: "tool" as const,

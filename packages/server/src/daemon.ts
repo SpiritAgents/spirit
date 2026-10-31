@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type Server as HttpServer } from "node:http";
 import type { Socket } from "node:net";
+import { PRODUCT_BUILD_ID } from "@spiritagent/product";
 
 import {
   configureLlmClientVersion,
@@ -61,6 +62,7 @@ import {
   SESSION_RELOAD_METADATA,
   SESSION_SET_APPROVAL_LEVEL,
   SESSION_SET_ATTRIBUTION,
+  SESSION_SET_WEB_TOOL_EXPOSURE,
   SESSION_SET_TODO_SESSION_KEY,
   SESSION_SET_LOOP_ENABLED,
   SESSION_SET_MODE,
@@ -138,6 +140,7 @@ const SESSION_METHODS = new Set([
   SESSION_RUN_SESSION_START,
   SESSION_RUN_SESSION_END,
   SESSION_SET_ATTRIBUTION,
+  SESSION_SET_WEB_TOOL_EXPOSURE,
   SESSION_SET_TODO_SESSION_KEY,
 ]);
 
@@ -471,7 +474,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
             : {}),
           ...(modelRef &&
           typeof modelRef === "object" &&
-          typeof (modelRef as Record<string, unknown>)["groupId"] === "string" &&
+          typeof (modelRef as Record<string, unknown>)["providerId"] === "string" &&
           typeof (modelRef as Record<string, unknown>)["name"] === "string"
             ? { modelRef: modelRef as never }
             : {}),
@@ -708,9 +711,9 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           readSessionId(params),
           modelRef &&
             typeof modelRef === "object" &&
-            typeof (modelRef as Record<string, unknown>)["groupId"] === "string" &&
+            typeof (modelRef as Record<string, unknown>)["providerId"] === "string" &&
             typeof (modelRef as Record<string, unknown>)["name"] === "string"
-            ? (modelRef as { groupId: string; name: string })
+            ? (modelRef as { providerId: string; name: string })
             : undefined,
         );
         return { ok: true };
@@ -745,6 +748,25 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           (params["attribution"] ?? {}) as never,
         );
         return { ok: true };
+      case SESSION_SET_WEB_TOOL_EXPOSURE: {
+        const exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean } = {};
+        const webSearchEnabled = params["webSearchEnabled"];
+        if (webSearchEnabled !== undefined) {
+          if (typeof webSearchEnabled !== "boolean") {
+            throw new Error("invalid webSearchEnabled");
+          }
+          exposure.webSearchEnabled = webSearchEnabled;
+        }
+        const webFetchEnabled = params["webFetchEnabled"];
+        if (webFetchEnabled !== undefined) {
+          if (typeof webFetchEnabled !== "boolean") {
+            throw new Error("invalid webFetchEnabled");
+          }
+          exposure.webFetchEnabled = webFetchEnabled;
+        }
+        sessionManager.setWebToolExposure(readSessionId(params), exposure);
+        return { ok: true };
+      }
       case SESSION_SET_TODO_SESSION_KEY: {
         const sessionKey = params["sessionKey"];
         if (typeof sessionKey !== "string" || !sessionKey.trim()) {
@@ -783,6 +805,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         case SERVER_HEALTH: {
           const result: ServerHealthResult = {
             ok: true,
+            productBuildId: PRODUCT_BUILD_ID,
             instanceId,
             pid: process.pid,
             version,

@@ -20,14 +20,14 @@
       "mcps": "MCP",
       "appearance": "外觀",
       "settingsNavSidebarAria": "設定導覽側邊欄",
-      "sessionsSidebarAria": "工作階段與設定側邊欄",
+      "sessionsSidebarAria": "對話與設定側邊欄",
       "back": "返回",
       "settingsHeading": "設定",
-      "newSession": "新工作階段",
+      "newChat": "新對話",
       "extensionsButton": "擴充功能",
-      "workspaceHeading": "工作區",
+      "workspacesHeading": "工作區",
       "settingsTabsAria": "設定分頁",
-      "workspaceSessionsAria": "工作區工作階段",
+      "workspaceSessionsAria": "工作區對話",
       "settingsButton": "設定",
       "basics": "基本",
       "pageNavigation": "頁面導覽"
@@ -45,7 +45,7 @@
       "thinking": "思考中",
       "thought": "已思考",
       "emptyTitle": "開始做些事。",
-      "composerPlaceholder": "輸入訊息…",
+      "composerPlaceholder": "輸入訊息",
       "agentDemo": {
         "previewUnavailable": "無法預覽",
         "viewLargeImage": "檢視大圖",
@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "產生圖片中…"
       },
-      "manualAssistantResponse": "下載 Spirit。",
+      "manualAssistantResponse": "下載 {{product.name}}。",
       "demoUserPrompt": "審查目前的首頁，告訴我下一步該改進什麼。",
       "demoThinkingText": "檢查目前的 Hero 結構。\n尋找對話表面最明顯的缺口。\n準備簡短的實作摘要。",
       "demoAssistantResponse": "這是我會採取的下一步。\n\n- 將空白的對話區替換為真實的串流示範。\n- 保持 Hero 視窗可中斷，讓訪客可以立即掌控。\n- 重用 Desktop 的訊息樣式來顯示 Thinking 和工具呼叫，而不是近似模擬。",
@@ -97,13 +97,10 @@
       "searchPlaceholder": "搜尋",
       "noMatches": "無相符結果",
       "optionalPlaceholder": "選填",
-      "addProvider": "新增提供者",
       "current": "目前",
       "deleteDialogDescription": "設定與另存的金鑰將一併移除。",
       "providerDialogTitle": "選擇提供者",
       "providerDialogDescription": "選擇提供者，然後輸入連線詳細資料。",
-      "connectDialogDescriptionCustom": "輸入端點和密鑰。",
-      "connectDialogDescriptionDefault": "輸入 API 密鑰以連線。",
       "addModeLabel": "新增模型的方式",
       "addModeAria": "新增模型的方式",
       "addSingle": "新增單一",
@@ -113,10 +110,9 @@
       "endpointLabel": "端點",
       "apiKeyLabel": "API 金鑰",
       "apiKeyPlaceholder": "輸入金鑰",
-      "addThisModel": "新增此模型",
-      "adding": "新增中…",
+      "connecting": "連接中…",
       "customConnectionTitle": "自訂連線",
-      "connectProviderTitle": "連線提供者"
+      "connectNamedProviderTitle": "連接 {{provider}}"
     },
     "window": {
       "toolbarAria": "側邊欄與工具",
@@ -125,7 +121,7 @@
       "commitButton": "提交",
       "collapseTools": "收起工具",
       "expandTools": "展開工具",
-      "newSession": "新工作階段",
+      "newChat": "新對話",
       "settingsPlaceholderTitle": "桌面設定檢視",
       "marketplacePlaceholderTitle": "擴充功能檢視",
       "previewEditorOnlyTextError": "預覽編輯器只能開啟文字檔。",
@@ -190,7 +186,7 @@
       "exited": "[已結束，代碼 {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Spirit 桌面產品的行銷網站預覽。",
+      "siteReadmeDescription": "{{product.name}} 桌面產品的行銷網站預覽。",
       "desktopReadmeDescription": "桌面產品的 Electron shell 與網頁渲染器。",
       "generatedWorkspaceDescription": "為登陸頁面 {{label}} 預覽所產生的模擬工作區。",
       "generatedWorkspaceOverview": "工作區根目錄：{{root}}\\n\\n此模擬工作區讓檔案頁籤保持互動，而不掛載完整的桌面執行環境。",
@@ -202,17 +198,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit 是一個開源 AI 智慧體，您可以使用自己的模型、金鑰和工作流程來執行。"
+    "title": "{{product.name}}",
+    "description": "{{product.name}} 是一個開源 AI 智慧體，您可以使用自己的模型、金鑰和工作流程來執行。"
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "下載",
     "downloadForPlatform": "下載 {{platform}} 版"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit 首頁",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} 首頁",
     "primaryNavAria": "主要",
     "nav": {
       "features": "功能",
@@ -233,8 +229,8 @@
     "headline": "一個開源 AI 智慧體\n旨在倍增您的生產力。"
   },
   "download": {
-    "metaTitle": "下載 Spirit",
-    "metaDescription": "下載 Spirit Desktop、安裝 CLI，或留意 ACP。",
+    "metaTitle": "下載 {{product.name}}",
+    "metaDescription": "下載 {{product.name}} Desktop、安裝 CLI，或留意 ACP。",
     "title": "同一個智慧體，適用於您所有的工作。",
     "sectionAria": "同一個智慧體，適用於您所有的工作。",
     "desktop": "Desktop",
@@ -244,7 +240,7 @@
     "copied": "已複製",
     "comingSoonJoke": "即將推出™",
     "listingInProgress": "列出中…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "檢查 auth.ts 並修正 session 刷新錯誤。",
     "cliAssistantMessage": "我會檢查 auth.ts 並修補失敗的 session 檢查。",
     "cliUserFollowUp": "另外加入回歸測試。",
@@ -252,16 +248,16 @@
     "cliFooter": "Agent  |  預設核准  |  迴圈關閉          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit 內容",
+    "sectionAria": "{{product.name}} 內容",
     "featureHeading": ["你的模型。", "你的金鑰。", "你的掌控。"],
-    "featureBody": "Spirit 不會將你鎖定在託管堆疊中。從任何供應商取得金鑰，一次新增，並在所有供應商中使用相同的智慧體工作流程。",
+    "featureBody": "{{product.name}} 不會將你鎖定在託管堆疊中。從任何供應商取得金鑰，一次新增，並在所有供應商中使用相同的智慧體工作流程。",
     "agent": {
-      "sectionAria": "Spirit 生產力",
+      "sectionAria": "{{product.name}} 生產力",
       "featureHeading": ["帶著上下文規劃。", "使用工具執行。", "在你的工作區中交付。"],
-      "featureBody": "Spirit 在行動前先規劃：生成 mockups、撰寫結構化計劃，並在你的儲存庫中執行，無需離開桌面外殼。"
+      "featureBody": "{{product.name}} 在行動前先規劃：生成 mockups、撰寫結構化計劃，並在你的儲存庫中執行，無需離開桌面外殼。"
     },
-    "ctaSectionAria": "下載 Spirit",
-    "ctaTitle": "試用 Spirit。",
+    "ctaSectionAria": "下載 {{product.name}}",
+    "ctaTitle": "試用 {{product.name}}。",
     "trio": {
       "sectionAria": "功能預覽",
       "completion": {
@@ -299,12 +295,12 @@
     "linkHome": "首頁",
     "changelog": "變更日誌",
     "openSourceLicenses": "開放原始碼授權",
-    "copyrightLine": "© {{year}} Spirit。開放原始碼 AI 智慧體。"
+    "copyrightLine": "© {{year}} {{product.name}}。開放原始碼 AI 智慧體。"
   },
   "docs": {
     "title": "文件",
-    "metaTitle": "Spirit 文件",
-    "metaDescription": "安裝 Spirit，使用自己的金鑰連接提供者，並在 Desktop 和 CLI 上執行相同的智慧體。",
+    "metaTitle": "{{product.name}} 文件",
+    "metaDescription": "安裝 {{product.name}}，使用自己的金鑰連接提供者，並在 Desktop 和 CLI 上執行相同的智慧體。",
     "comingSoon": "即將推出。",
     "sectionAria": "文件",
     "search": "搜尋",

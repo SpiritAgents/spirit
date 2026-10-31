@@ -3,7 +3,7 @@ import {
   type JsonObject,
   type JsonValue,
 } from "../ports.js";
-import { buildToolAgentSystemMessage, cloneJsonValue, isJsonObject } from "../tool-agent.js";
+import { buildToolAgentSystemMessage, cloneJsonValue } from "../tool-agent.js";
 
 import type { OpenAiTransportConfig } from "./openai-compat.js";
 import { llmMessageToOpenAiMessage } from "./openai-multimodal-messages.js";
@@ -31,23 +31,11 @@ export interface OpenAiJsonSchemaTransport {
   ): Promise<OpenAiJsonSchemaCompletionResult<T>>;
 }
 
-export type StructuredOutputResponseFormat =
-  | { type: "json_object" }
-  | {
-      type: "json_schema";
-      json_schema: {
-        name: string;
-        strict: true;
-        schema: JsonObject;
-      };
-    };
-
 export function buildJsonSchemaCompletionMessages(
-  config: { model: string; llmVendor?: string; workspaceRoot?: string },
+  config: { model: string; workspaceRoot?: string; webFetchEnabled?: boolean },
   request: OpenAiJsonSchemaCompletionRequest,
 ): JsonObject[] {
-  const structuredOutputSystemSection = buildStructuredOutputSystemSection(config, request);
-  const sections = [...(request.systemSections ?? []), structuredOutputSystemSection]
+  const sections = [...(request.systemSections ?? [])]
     .filter(
       (section): section is string => typeof section === "string" && section.trim().length > 0,
     )
@@ -58,7 +46,12 @@ export function buildJsonSchemaCompletionMessages(
       content:
         request.includeToolAgentHostPrompt === false
           ? sections.join("\n\n")
-          : buildToolAgentSystemMessage(config.model, config.llmVendor, ...sections),
+          : buildToolAgentSystemMessage(
+              config.model,
+              undefined,
+              { webFetchEnabled: config.webFetchEnabled },
+              ...sections,
+            ),
     },
     buildJsonSchemaCompletionUserMessage(config.workspaceRoot, request),
   ];
@@ -116,43 +109,6 @@ export function stringifyJsonSchemaCompletionOutput(output: JsonValue): string {
   return JSON.stringify(cloneJsonValue(output));
 }
 
-export function buildStructuredOutputResponseFormat(
-  config: Pick<OpenAiTransportConfig, "llmVendor">,
-  request: OpenAiJsonSchemaCompletionRequest,
-): StructuredOutputResponseFormat {
-  if (config.llmVendor === "deepseek") {
-    return { type: "json_object" };
-  }
-
-  return {
-    type: "json_schema",
-    json_schema: {
-      name: request.schemaName,
-      strict: true,
-      schema: request.schema,
-    },
-  };
-}
-
-export function buildStructuredOutputSystemSection(
-  config: { llmVendor?: string },
-  request: OpenAiJsonSchemaCompletionRequest,
-): string | undefined {
-  if (config.llmVendor !== "deepseek") {
-    return undefined;
-  }
-
-  const example = buildJsonSchemaExample(request.schema);
-  return [
-    "Return only raw json that matches the requested schema.",
-    "Do not add Markdown code fences, explanations, or any extra text.",
-    `Schema name: ${request.schemaName}`,
-    "[JSON_SCHEMA]",
-    JSON.stringify(request.schema),
-    ...(example === undefined ? [] : ["[JSON_EXAMPLE]", JSON.stringify(example, null, 2)]),
-  ].join("\n");
-}
-
 function collectJsonParseCandidates(content: string): string[] {
   const trimmed = content.trim();
   const candidates: string[] = [];
@@ -184,38 +140,4 @@ function collectJsonParseCandidates(content: string): string[] {
   }
 
   return candidates;
-}
-
-function buildJsonSchemaExample(schema: JsonValue | undefined): JsonValue | undefined {
-  if (!isJsonObject(schema)) {
-    return undefined;
-  }
-
-  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
-    return cloneJsonValue(schema.enum[0] as JsonValue);
-  }
-
-  if (schema.type === "object" && isJsonObject(schema.properties)) {
-    const example: JsonObject = {};
-    for (const [key, value] of Object.entries(schema.properties)) {
-      example[key] = buildJsonSchemaExample(value as JsonValue) ?? null;
-    }
-    return example;
-  }
-
-  if (schema.type === "array") {
-    return [];
-  }
-
-  switch (schema.type) {
-    case "string":
-      return "";
-    case "integer":
-    case "number":
-      return 0;
-    case "boolean":
-      return false;
-    default:
-      return undefined;
-  }
 }

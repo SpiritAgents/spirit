@@ -1,6 +1,6 @@
 //! TUI bottom-form helpers.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 use rust_i18n::t;
 use serde_json::{Map, Value};
@@ -9,27 +9,17 @@ use crate::{
     host_protocol::CliExtensionEntry,
     mcp::{McpCapabilityToggles, McpScope, McpServerConfig, McpTransportConfig},
     mcp_types::McpDiscoveredPrompt,
-    model_provider_presets::{
-        azure_api_base_from_resource_name, cloudflare_ai_gateway_api_base_from_account_id,
+    model_registry::ModelTransportKind,
+    provider_presets::{
+        CUSTOM_PROVIDER_PRESET_ID, PresetConnectSelections, ProviderPresetSite,
         is_valid_azure_resource_name, is_valid_cloudflare_account_id,
-        is_valid_cloudflare_gateway_id, model_add_alibaba_site_api_base,
-        model_add_alibaba_site_id_from_choice, model_add_alibaba_site_ids,
-        model_add_alibaba_site_requires_workspace_id, model_add_alibaba_token_plan_api_base,
-        model_add_kimi_code_site_api_base, model_add_kimi_code_site_id_from_choice,
-        model_add_minimax_site_api_base, model_add_minimax_site_id_from_choice,
-        model_add_moonshot_site_api_base, model_add_moonshot_site_id_from_choice,
-        model_add_picker_order_ids, model_add_preset_api_base_by_choice_index,
-        model_add_provider_at_choice_index, model_add_provider_id_at_choice_index,
-        model_add_requires_manual_single_provider, model_add_siliconflow_site_api_base,
-        model_add_siliconflow_site_id_from_choice, model_add_stepfun_api_base,
-        model_add_stepfun_site_id_from_choice, model_add_tencent_tokenhub_site_api_base,
-        model_add_tencent_tokenhub_site_id_from_choice, model_add_z_ai_api_base,
-        model_add_zhipu_ai_api_base,
+        is_valid_cloudflare_gateway_id, list_base_template_keys, model_add_picker_order_ids,
+        model_add_provider_id_at_choice_index, preset_connect_api_base,
+        preset_connect_base_template, preset_default_transport_kind, preset_entry,
+        preset_supports_bulk_listing,
     },
-    model_registry::{ModelProvider, ModelTransportKind},
     rules::{RuleEntry, RuleScope},
     skills::{SkillEntry, SkillScope},
-    vertex_models_list::vertex_api_base_from_project_and_location,
     view::{
         BottomFormFieldEditorView, BottomFormFieldView, BottomFormKind, BottomFormView,
         McpPromptArgumentBinding,
@@ -65,111 +55,12 @@ const HOOK_EVENT_PRE_TOOL_USE_INDEX: usize = 3;
 
 const MODEL_ADD_FIELD_PROVIDER: usize = 0;
 
-fn model_add_volcengine_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "volcengine")
-        .unwrap_or(14)
-}
-
-fn model_add_byteplus_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "byteplus")
-        .unwrap_or(15)
-}
-
-fn model_add_cloudflare_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "cloudflare-ai-gateway")
-        .unwrap_or(10)
-}
-
 #[cfg(test)]
-fn model_add_deepseek_provider_index() -> usize {
+fn model_add_picker_index_of(preset_id: &str) -> usize {
     model_add_picker_order_ids()
         .iter()
-        .position(|id| id == "deepseek")
-        .unwrap_or(6)
-}
-
-#[cfg(test)]
-fn model_add_azure_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "azure")
-        .unwrap_or(24)
-}
-
-fn model_add_siliconflow_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "siliconflow")
-        .unwrap_or(13)
-}
-
-fn model_add_moonshot_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "moonshot-ai")
-        .unwrap_or(7)
-}
-
-fn model_add_tencent_tokenhub_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "tencent-tokenhub")
-        .unwrap_or(20)
-}
-
-fn model_add_kimi_code_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "kimi-code")
-        .unwrap_or(8)
-}
-
-fn model_add_minimax_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "minimax")
-        .unwrap_or(11)
-}
-
-fn model_add_alibaba_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "alibaba")
-        .unwrap_or(10)
-}
-
-fn model_add_stepfun_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "stepfun")
-        .unwrap_or(17)
-}
-
-fn model_add_z_ai_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "z-ai")
-        .unwrap_or(11)
-}
-
-fn model_add_zhipu_ai_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "zhipu-ai")
-        .unwrap_or(12)
-}
-
-fn model_add_vertex_provider_index() -> usize {
-    model_add_picker_order_ids()
-        .iter()
-        .position(|id| id == "google-vertex-ai")
-        .unwrap_or(17)
+        .position(|id| id == preset_id)
+        .unwrap_or(0)
 }
 
 const MCP_DEFAULT_TIMEOUT_MS: u64 = 20_000;
@@ -195,7 +86,7 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
                 help: String::new(),
                 editor: BottomFormFieldEditorView::Choice {
                     options: vec![
-                        t!("form.mcp.field.scope.workspace").into_owned(),
+                        crate::locale::product_text("form.mcp.field.scope.workspace").into_owned(),
                         t!("form.mcp.field.scope.user").into_owned(),
                     ],
                     selected: 0,
@@ -246,7 +137,7 @@ pub(crate) fn new_mcp_add_form() -> BottomFormView {
 pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormView {
     let scope_options = if workspace_scope_available {
         vec![
-            t!("form.hooks.field.scope.workspace").into_owned(),
+            crate::locale::product_text("form.hooks.field.scope.workspace").into_owned(),
             t!("form.hooks.field.scope.user").into_owned(),
         ]
     } else {
@@ -326,6 +217,32 @@ pub(crate) fn new_hook_add_form(workspace_scope_available: bool) -> BottomFormVi
     }
 }
 
+/// Runtime i18n lookup for keys composed from preset data; a missing key falls back instead
+/// of rendering `{locale}.{key}`.
+fn try_translate(key: &str) -> Option<String> {
+    crate::_rust_i18n_try_translate(rust_i18n::locale().as_ref(), key)
+        .map(std::borrow::Cow::into_owned)
+}
+
+fn localized_or(key: &str, fallback: &str) -> String {
+    try_translate(key).unwrap_or_else(|| fallback.to_string())
+}
+
+/// The provider picker's display label: the app's i18n mapping wins, then the preset's
+/// manifest `label` (fallback semantics), then the raw id.
+fn model_add_provider_label(id: &str) -> String {
+    let fallback = preset_entry(id)
+        .and_then(|preset| preset.label.clone())
+        .unwrap_or_else(|| id.to_string());
+    if let Some(text) = try_translate(&format!("form.model.provider.{id}")) {
+        return text;
+    }
+    localized_or(
+        &format!("form.model.provider.{}", id.replace('-', "_")),
+        &fallback,
+    )
+}
+
 fn model_add_provider_choice_labels() -> Vec<String> {
     model_add_picker_order_ids()
         .iter()
@@ -333,51 +250,21 @@ fn model_add_provider_choice_labels() -> Vec<String> {
         .collect()
 }
 
-fn model_add_provider_label(id: &str) -> String {
-    match id {
-        "openai" => t!("form.model.provider.openai"),
-        "google" => t!("form.model.provider.google"),
-        "xai" => t!("form.model.provider.xai"),
-        "anthropic" => t!("form.model.provider.anthropic"),
-        "deepseek" => t!("form.model.provider.deepseek"),
-        "vercel-ai-gateway" => t!("form.model.provider.vercel_ai_gateway"),
-        "cloudflare-ai-gateway" => t!("form.model.provider.cloudflare_ai_gateway"),
-        "openrouter" => t!("form.model.provider.openrouter"),
-        "fireworks-ai" => t!("form.model.provider.fireworks-ai"),
-        "together-ai" => t!("form.model.provider.together-ai"),
-        "groq" => t!("form.model.provider.groq"),
-        "deepinfra" => t!("form.model.provider.deepinfra"),
-        "baseten" => t!("form.model.provider.baseten"),
-        "moonshot-ai" => t!("form.model.provider.moonshot-ai"),
-        "kimi-code" => t!("form.model.provider.kimi-code"),
-        "z-ai" => t!("form.model.provider.z-ai"),
-        "zhipu-ai" => t!("form.model.provider.zhipu-ai"),
-        "alibaba" => t!("form.model.provider.alibaba"),
-        "minimax" => t!("form.model.provider.minimax"),
-        "xiaomi" => t!("form.model.provider.xiaomi"),
-        "siliconflow" => t!("form.model.provider.siliconflow"),
-        "stepfun" => t!("form.model.provider.stepfun"),
-        "volcengine" => t!("form.model.provider.volcengine"),
-        "byteplus" => t!("form.model.provider.byteplus"),
-        "meituan" => t!("form.model.provider.meituan"),
-        "tencent-tokenhub" => t!("form.model.provider.tencent-tokenhub"),
-        "mistral" => t!("form.model.provider.mistral"),
-        "cohere" => t!("form.model.provider.cohere"),
-        "azure" => t!("form.model.provider.azure"),
-        "amazon-bedrock" => t!("form.model.provider.amazon_bedrock"),
-        "google-vertex-ai" => t!("form.model.provider.google_vertex_ai"),
-        "custom" => t!("form.model.provider.custom"),
-        other => std::borrow::Cow::Borrowed(other),
-    }
-    .into_owned()
+/// The site picker's display label: the app's i18n mapping wins, then the manifest label.
+fn model_add_site_label(provider_id: &str, site: &ProviderPresetSite) -> String {
+    let key = format!("form.model.provider.{provider_id}.site.{}", site.id);
+    localized_or(&key, site.label.as_deref().unwrap_or(site.id.as_str()))
+}
+
+fn model_add_transport_kind_label(kind: ModelTransportKind) -> String {
+    localized_or(
+        &format!("form.model.api_kind.{}", kind.as_str().replace('-', "_")),
+        kind.as_str(),
+    )
 }
 
 fn model_add_provider_option_count() -> usize {
     model_add_provider_choice_labels().len()
-}
-
-fn model_add_is_preset_provider(provider_idx: usize) -> bool {
-    provider_idx + 1 < model_add_provider_option_count()
 }
 
 fn model_add_provider_selected(form: &BottomFormView) -> Option<usize> {
@@ -389,331 +276,610 @@ fn model_add_provider_selected(form: &BottomFormView) -> Option<usize> {
     }
 }
 
-fn model_add_mode_bulk(form: &BottomFormView, provider_idx: usize) -> bool {
-    if let Some(provider) = model_add_provider_at_choice_index(provider_idx)
-        && model_add_requires_manual_single_provider(provider)
-    {
-        return false;
+fn model_add_choice_selected(form: &BottomFormView, label: &str) -> Option<usize> {
+    form.fields
+        .iter()
+        .find(|field| field.label == label)
+        .and_then(|field| match &field.editor {
+            BottomFormFieldEditorView::Choice { selected, options } if !options.is_empty() => {
+                Some((*selected).min(options.len() - 1))
+            }
+            _ => None,
+        })
+}
+
+/// Text values keyed by field label: the form rebuilds on every choice change, and values
+/// survive by label (slots move as sections appear/disappear with the selected preset).
+fn model_add_text_values_by_label(form: &BottomFormView) -> HashMap<String, String> {
+    form.fields
+        .iter()
+        .filter_map(|field| match &field.editor {
+            BottomFormFieldEditorView::Text { value, .. } if !field.label.is_empty() => {
+                Some((field.label.clone(), value.clone()))
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+fn model_add_saved_text(texts: &HashMap<String, String>, labels: &[String]) -> String {
+    labels
+        .iter()
+        .find_map(|label| texts.get(label))
+        .cloned()
+        .unwrap_or_default()
+}
+
+/// Current choice selections of the model-add form, keyed by field label.
+#[derive(Default)]
+struct ModelAddChoiceSelections {
+    mode: Option<usize>,
+    credential_kind: Option<usize>,
+    billing_plan: Option<usize>,
+    site: Option<usize>,
+    transport: Option<usize>,
+}
+
+fn model_add_choice_selections(form: &BottomFormView) -> ModelAddChoiceSelections {
+    ModelAddChoiceSelections {
+        mode: model_add_choice_selected(form, t!("form.model.field.mode.label").as_ref()),
+        credential_kind: model_add_choice_selected(
+            form,
+            t!("form.model.field.credential_kind.label").as_ref(),
+        ),
+        billing_plan: model_add_choice_selected(
+            form,
+            t!("form.model.field.billing_mode.label").as_ref(),
+        ),
+        site: model_add_choice_selected(form, t!("form.model.field.site.label").as_ref()),
+        transport: model_add_choice_selected(form, t!("form.model.field.api_kind.label").as_ref()),
     }
-    if model_add_is_preset_provider(provider_idx) {
-        return true;
-    }
-    match form.fields.get(1).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 1 => {
-            *selected == 1
+}
+
+/// Which credential form the wizard collects, driven by the preset's `credentials.kind`
+/// (the vertex preset additionally offers the apiKey Express shortcut).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum CredentialForm {
+    ApiKey,
+    BedrockIam,
+    VertexServiceAccount,
+}
+
+impl CredentialForm {
+    fn kind_str(self) -> &'static str {
+        match self {
+            Self::ApiKey => "apiKey",
+            Self::BedrockIam => "bedrock",
+            Self::VertexServiceAccount => "vertex",
         }
-        _ => true,
     }
 }
 
-fn model_add_transport_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.api_kind.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.api_kind.openai_compatible").into_owned(),
-                t!("form.model.api_kind.open_responses").into_owned(),
-                t!("form.model.api_kind.anthropic").into_owned(),
-            ],
-            selected: selected.min(2),
-        },
-    }
+/// The model-add form's field layout, computed from the selected preset's manifest data
+/// (`transports` / `sites` / `billingPlans` / `credentials.kind` / `expressApiBase` /
+/// `catalog`) plus the current choice selections. Both the form builder and the parser read
+/// this plan, so fields are located by label instead of positional indices.
+#[derive(Debug)]
+struct ModelAddFormPlan {
+    provider_id: String,
+    /// Bulk import of the catalog listing (vs single-model manual entry).
+    bulk: bool,
+    credential_form: CredentialForm,
+    transport_kind: ModelTransportKind,
+    transport_options: Vec<ModelTransportKind>,
+    site_id: Option<String>,
+    billing_plan_id: Option<String>,
+    /// `{placeholder}` template values to collect for the resolved base.
+    template_keys: Vec<String>,
+    /// The cloudflare wizard additionally collects the gateway id (materialized into the
+    /// literal `cf-aig-gateway-id` header).
+    collect_gateway_id: bool,
+    /// Manual single-model entry: model name + context length fields.
+    manual_single: bool,
+    has_mode_field: bool,
+    has_credential_choice: bool,
+    has_billing_field: bool,
+    has_site_field: bool,
+    has_transport_field: bool,
+    has_api_base_field: bool,
+    mode_selected: usize,
+    credential_selected: usize,
+    billing_selected: usize,
+    site_selected: usize,
+    transport_selected: usize,
 }
 
-fn model_add_siliconflow_transport_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.api_kind.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.api_kind.openai_compatible").into_owned(),
-                t!("form.model.api_kind.anthropic").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+impl ModelAddFormPlan {
+    fn resolve(provider_id: &str, choices: &ModelAddChoiceSelections) -> Self {
+        if provider_id == CUSTOM_PROVIDER_PRESET_ID {
+            let mode_selected = choices.mode.unwrap_or(0).min(1);
+            let bulk = mode_selected == 1;
+            let transport_options = vec![
+                ModelTransportKind::OpenAiCompatible,
+                ModelTransportKind::OpenResponses,
+                ModelTransportKind::Anthropic,
+            ];
+            let transport_selected = choices
+                .transport
+                .unwrap_or(0)
+                .min(transport_options.len() - 1);
+            return Self {
+                provider_id: provider_id.to_string(),
+                bulk,
+                credential_form: CredentialForm::ApiKey,
+                transport_kind: transport_options[transport_selected],
+                transport_options,
+                site_id: None,
+                billing_plan_id: None,
+                template_keys: Vec::new(),
+                collect_gateway_id: false,
+                manual_single: !bulk,
+                has_mode_field: true,
+                has_credential_choice: false,
+                has_billing_field: false,
+                has_site_field: false,
+                has_transport_field: true,
+                has_api_base_field: true,
+                mode_selected,
+                credential_selected: 0,
+                billing_selected: 0,
+                site_selected: 0,
+                transport_selected,
+            };
+        }
 
-fn model_add_siliconflow_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.siliconflow.site.cn").into_owned(),
-                t!("form.model.provider.siliconflow.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        let preset = preset_entry(provider_id);
 
-fn model_add_moonshot_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.moonshot-ai.site.cn").into_owned(),
-                t!("form.model.provider.moonshot-ai.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Credential form: the preset's `credentials.kind`; the vertex preset also offers
+        // the apiKey (Express) shortcut when it declares `expressApiBase`.
+        let preset_credential_kind = preset
+            .map(|entry| entry.credential_kind())
+            .unwrap_or("apiKey");
+        let has_credential_choice = preset_credential_kind == "vertex"
+            && preset.is_some_and(|entry| entry.express_api_base().is_some());
+        let credential_selected = choices.credential_kind.unwrap_or(0).min(1);
+        let credential_form = match preset_credential_kind {
+            "bedrock" => CredentialForm::BedrockIam,
+            "vertex" if has_credential_choice && credential_selected == 1 => CredentialForm::ApiKey,
+            "vertex" => CredentialForm::VertexServiceAccount,
+            _ => CredentialForm::ApiKey,
+        };
 
-fn model_add_kimi_code_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.kimi-code.site.cn").into_owned(),
-                t!("form.model.provider.kimi-code.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Billing plans: option 0 is the standard connection; a selected plan overrides
+        // the site selection (the plan pins its own bases).
+        let plans = preset.map(|entry| entry.billing_plans()).unwrap_or(&[]);
+        let has_billing_field = !plans.is_empty();
+        let billing_selected = choices.billing_plan.unwrap_or(0).min(plans.len());
+        let billing_plan_id = (has_billing_field && billing_selected > 0)
+            .then(|| plans[billing_selected - 1].id.clone());
 
-fn model_add_tencent_tokenhub_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.tencent-tokenhub.site.cn").into_owned(),
-                t!("form.model.provider.tencent-tokenhub.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Sites from the preset's `sites.items`, defaulting to `sites.default`.
+        let sites = preset.map(|entry| entry.sites()).unwrap_or(&[]);
+        let has_site_field = !sites.is_empty() && billing_plan_id.is_none();
+        let default_site = preset
+            .and_then(|entry| entry.default_site_id())
+            .and_then(|default| sites.iter().position(|site| site.id == default))
+            .unwrap_or(0);
+        let site_selected = choices
+            .site
+            .unwrap_or(default_site)
+            .min(sites.len().saturating_sub(1));
+        let site_id = has_site_field.then(|| sites[site_selected].id.clone());
 
-fn model_add_minimax_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.minimax.site.cn").into_owned(),
-                t!("form.model.provider.minimax.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Transports from the preset's `transports` keys (pinned when only one).
+        let transport_options = preset
+            .map(|entry| entry.transport_kinds())
+            .unwrap_or_default();
+        let has_transport_field = transport_options.len() > 1;
+        let transport_selected = choices
+            .transport
+            .unwrap_or(0)
+            .min(transport_options.len().saturating_sub(1));
+        let transport_kind = transport_options
+            .get(transport_selected)
+            .copied()
+            .unwrap_or_else(|| preset_default_transport_kind(provider_id));
 
-fn model_add_alibaba_billing_mode_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.alibaba_billing_mode.label").into_owned(),
-        help: t!("form.model.field.alibaba_billing_mode.help").into_owned(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.alibaba_billing_mode.standard").into_owned(),
-                t!("form.model.alibaba_billing_mode.token_plan").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Bulk import requires a catalog listing endpoint and a listable credential form.
+        let bulk = preset_supports_bulk_listing(provider_id, credential_form.kind_str());
 
-fn model_add_stepfun_billing_mode_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.stepfun_billing_mode.label").into_owned(),
-        help: t!("form.model.field.stepfun_billing_mode.help").into_owned(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.stepfun_billing_mode.standard").into_owned(),
-                t!("form.model.stepfun_billing_mode.step_plan").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        // Template fields: the `{placeholder}` keys of the raw base for this selection.
+        let selections = PresetConnectSelections {
+            transport_kind: Some(transport_kind),
+            site_id: site_id.as_deref(),
+            billing_plan_id: billing_plan_id.as_deref(),
+            template_values: BTreeMap::new(),
+            credential_kind: Some(credential_form.kind_str()),
+        };
+        let mut template_keys = preset_connect_base_template(provider_id, &selections)
+            .map(|template| list_base_template_keys(&template))
+            .unwrap_or_default();
+        template_keys.sort_by_key(|key| template_key_order(key));
 
-fn model_add_stepfun_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.provider.stepfun.site.cn").into_owned(),
-                t!("form.model.provider.stepfun.site.intl").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
+        Self {
+            provider_id: provider_id.to_string(),
+            bulk,
+            credential_form,
+            transport_kind,
+            transport_options,
+            site_id,
+            billing_plan_id,
+            template_keys,
+            collect_gateway_id: provider_id == "cloudflare-ai-gateway",
+            manual_single: !bulk,
+            has_mode_field: bulk,
+            has_credential_choice,
+            has_billing_field,
+            has_site_field,
+            has_transport_field,
+            has_api_base_field: false,
+            mode_selected: 0,
+            credential_selected,
+            billing_selected,
+            site_selected,
+            transport_selected,
+        }
     }
-}
 
-fn model_add_glm_coding_plan_billing_mode_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.glm_coding_plan_billing_mode.label").into_owned(),
-        help: t!("form.model.field.glm_coding_plan_billing_mode.help").into_owned(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.glm_coding_plan_billing_mode.standard").into_owned(),
-                t!("form.model.glm_coding_plan_billing_mode.glm_coding_plan").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+    fn build_fields(
+        &self,
+        provider_idx: usize,
+        texts: &HashMap<String, String>,
+    ) -> Vec<BottomFormFieldView> {
+        let mut fields = vec![model_add_provider_field(provider_idx)];
+        let is_custom = self.provider_id == CUSTOM_PROVIDER_PRESET_ID;
 
-fn model_add_alibaba_site_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.site.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: model_add_alibaba_site_ids()
+        if self.has_mode_field {
+            let options = if is_custom {
+                vec![
+                    t!("form.model.mode.single").into_owned(),
+                    t!("form.model.mode.bulk").into_owned(),
+                ]
+            } else {
+                vec![t!("form.model.mode.bulk_only").into_owned()]
+            };
+            fields.push(model_add_choice_field(
+                t!("form.model.field.mode.label").into_owned(),
+                options,
+                self.mode_selected,
+            ));
+        }
+
+        if self.has_credential_choice {
+            fields.push(model_add_choice_field(
+                t!("form.model.field.credential_kind.label").into_owned(),
+                vec![
+                    t!("form.model.credential_kind.service_account").into_owned(),
+                    t!("form.model.credential_kind.api_key").into_owned(),
+                ],
+                self.credential_selected,
+            ));
+        }
+
+        if self.has_billing_field {
+            let plans = preset_entry(&self.provider_id)
+                .map(|entry| entry.billing_plans())
+                .unwrap_or(&[]);
+            let mut options = vec![t!("form.model.billing_mode.standard").into_owned()];
+            options.extend(
+                plans
+                    .iter()
+                    .map(|plan| plan.label.clone().unwrap_or_else(|| plan.id.clone())),
+            );
+            fields.push(model_add_choice_field(
+                t!("form.model.field.billing_mode.label").into_owned(),
+                options,
+                self.billing_selected,
+            ));
+        }
+
+        if self.has_site_field {
+            let sites = preset_entry(&self.provider_id)
+                .map(|entry| entry.sites())
+                .unwrap_or(&[]);
+            let options = sites
                 .iter()
-                .map(|site| (*site).to_string())
-                .collect(),
-            selected: selected.min(model_add_alibaba_site_ids().len().saturating_sub(1)),
-        },
-    }
-}
+                .map(|site| model_add_site_label(&self.provider_id, site))
+                .collect();
+            fields.push(model_add_choice_field(
+                t!("form.model.field.site.label").into_owned(),
+                options,
+                self.site_selected,
+            ));
+        }
 
-fn model_add_alibaba_workspace_id_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.alibaba_workspace_id.label").into_owned(),
-        help: t!("form.model.field.alibaba_workspace_id.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.alibaba_workspace_id.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
+        if self.has_transport_field {
+            let options = self
+                .transport_options
+                .iter()
+                .map(|kind| model_add_transport_kind_label(*kind))
+                .collect();
+            fields.push(model_add_choice_field(
+                t!("form.model.field.api_kind.label").into_owned(),
+                options,
+                self.transport_selected,
+            ));
+        }
 
-fn model_add_ark_transport_field(selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.api_kind.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.api_kind.openai_compatible").into_owned(),
-                t!("form.model.api_kind.open_responses").into_owned(),
-            ],
-            selected: selected.min(1),
-        },
-    }
-}
+        for key in &self.template_keys {
+            let (label, help, placeholder) = model_add_template_field_copy(key);
+            let default_value = if key == "awsRegion" { "us-east-1" } else { "" };
+            let value = texts
+                .get(&label)
+                .map(String::as_str)
+                .unwrap_or(default_value);
+            fields.push(model_add_text_field(label, help, placeholder, value, false));
+        }
 
-fn model_add_cloudflare_transport_field(selected: usize) -> BottomFormFieldView {
-    model_add_transport_field(selected)
-}
+        if self.collect_gateway_id {
+            let label = t!("form.model.field.cloudflare_gateway_id.label").into_owned();
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
+            fields.push(model_add_text_field(
+                label,
+                t!("form.model.field.cloudflare_gateway_id.help").into_owned(),
+                t!("form.model.field.cloudflare_gateway_id.placeholder").into_owned(),
+                &value,
+                false,
+            ));
+        }
 
-fn model_add_cloudflare_account_id_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.cloudflare_account_id.label").into_owned(),
-        help: t!("form.model.field.cloudflare_account_id.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.cloudflare_account_id.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
+        if self.manual_single {
+            let (label, help, placeholder) = model_add_model_name_field_copy(&self.provider_id);
+            let value = model_add_saved_text(texts, &model_add_model_name_field_labels());
+            fields.push(model_add_text_field(
+                label,
+                help,
+                placeholder,
+                &value,
+                false,
+            ));
+        }
 
-fn model_add_cloudflare_gateway_id_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.cloudflare_gateway_id.label").into_owned(),
-        help: t!("form.model.field.cloudflare_gateway_id.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.cloudflare_gateway_id.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
+        if self.has_api_base_field {
+            let label = t!("form.model.field.api_base.label").into_owned();
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
+            fields.push(model_add_text_field(
+                label,
+                String::new(),
+                t!("form.model.field.api_base.placeholder").into_owned(),
+                &value,
+                false,
+            ));
+        }
 
-fn model_add_cloudflare_api_token_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.cloudflare_api_token.label").into_owned(),
-        help: t!("form.model.field.cloudflare_api_token.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.cloudflare_api_token.placeholder").into_owned(),
-            cursor,
-            mask: true,
-            disabled: false,
-        },
-    }
-}
+        if self.manual_single {
+            let label = t!("form.model.field.context_length.label").into_owned();
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
+            fields.push(model_add_text_field(
+                label,
+                t!("form.model.field.context_length.help").into_owned(),
+                t!("form.model.field.context_length.placeholder").into_owned(),
+                &value,
+                false,
+            ));
+        }
 
-fn model_add_transport_kind(form: &BottomFormView, provider: ModelProvider) -> ModelTransportKind {
-    match provider {
-        ModelProvider::Anthropic => ModelTransportKind::Anthropic,
-        ModelProvider::Volcengine | ModelProvider::Byteplus => {
-            match form.fields.get(2).map(|f| &f.editor) {
-                Some(BottomFormFieldEditorView::Choice { selected, options })
-                    if options.len() == 2 =>
-                {
-                    if *selected == 1 {
-                        ModelTransportKind::OpenResponses
-                    } else {
-                        ModelTransportKind::OpenAiCompatible
-                    }
-                }
-                _ => ModelTransportKind::OpenAiCompatible,
+        match self.credential_form {
+            CredentialForm::ApiKey => {
+                let (label, help, placeholder) = model_add_api_key_field_copy(&self.provider_id);
+                let value = model_add_saved_text(texts, &model_add_api_key_field_labels());
+                fields.push(model_add_text_field(label, help, placeholder, &value, true));
+            }
+            CredentialForm::BedrockIam => {
+                let access_label = t!("form.model.field.bedrock_access_key_id.label").into_owned();
+                let access_value = model_add_saved_text(texts, std::slice::from_ref(&access_label));
+                fields.push(model_add_text_field(
+                    access_label,
+                    String::new(),
+                    t!("form.model.field.bedrock_access_key_id.placeholder").into_owned(),
+                    &access_value,
+                    false,
+                ));
+                let secret_label =
+                    t!("form.model.field.bedrock_secret_access_key.label").into_owned();
+                let secret_value = model_add_saved_text(texts, std::slice::from_ref(&secret_label));
+                fields.push(model_add_text_field(
+                    secret_label,
+                    String::new(),
+                    t!("form.model.field.bedrock_secret_access_key.placeholder").into_owned(),
+                    &secret_value,
+                    true,
+                ));
+            }
+            CredentialForm::VertexServiceAccount => {
+                let email_label = t!("form.model.field.vertex_client_email.label").into_owned();
+                let email_value = model_add_saved_text(texts, std::slice::from_ref(&email_label));
+                fields.push(model_add_text_field(
+                    email_label,
+                    t!("form.model.field.vertex_client_email.help").into_owned(),
+                    t!("form.model.field.vertex_client_email.placeholder").into_owned(),
+                    &email_value,
+                    false,
+                ));
+                let key_label = t!("form.model.field.vertex_private_key.label").into_owned();
+                let key_value = model_add_saved_text(texts, std::slice::from_ref(&key_label));
+                fields.push(model_add_text_field(
+                    key_label,
+                    t!("form.model.field.vertex_private_key.help").into_owned(),
+                    t!("form.model.field.vertex_private_key.placeholder").into_owned(),
+                    &key_value,
+                    true,
+                ));
             }
         }
-        ModelProvider::CloudflareAiGateway => match form.fields.get(3).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 2 => {
-                match *selected {
-                    1 => ModelTransportKind::OpenResponses,
-                    2 => ModelTransportKind::Anthropic,
-                    _ => ModelTransportKind::OpenAiCompatible,
-                }
-            }
-            _ => ModelTransportKind::OpenAiCompatible,
-        },
-        ModelProvider::Siliconflow => match form.fields.get(3).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                if *selected == 1 {
-                    ModelTransportKind::Anthropic
-                } else {
-                    ModelTransportKind::OpenAiCompatible
-                }
-            }
-            _ => ModelTransportKind::OpenAiCompatible,
-        },
-        ModelProvider::Custom => match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 2 => {
-                match *selected {
-                    1 => ModelTransportKind::OpenResponses,
-                    2 => ModelTransportKind::Anthropic,
-                    _ => ModelTransportKind::OpenAiCompatible,
-                }
-            }
-            _ => ModelTransportKind::OpenAiCompatible,
-        },
-        ModelProvider::Azure | ModelProvider::Openai => ModelTransportKind::OpenResponses,
-        ModelProvider::Minimax => ModelTransportKind::Anthropic,
-        _ => ModelTransportKind::OpenAiCompatible,
+
+        fields
     }
 }
 
-/// The API Key is always the last field of the "connect model" form (3 fields for presets,
-/// 4 for Volcengine, 6 for custom single, 5 for custom bulk).
-fn model_add_api_key_field_index(form: &BottomFormView) -> usize {
-    form.fields.len().saturating_sub(1)
+/// Canonical display order for `{placeholder}` template fields (unknown keys last, in
+/// appearance order).
+fn template_key_order(key: &str) -> usize {
+    [
+        "resourceName",
+        "accountId",
+        "workspaceId",
+        "project",
+        "location",
+        "awsRegion",
+    ]
+    .iter()
+    .position(|known| *known == key)
+    .unwrap_or(usize::MAX)
+}
+
+/// Label/help/placeholder copy for a `{placeholder}` template field, keyed by the
+/// placeholder name from the preset data.
+fn model_add_template_field_copy(key: &str) -> (String, String, String) {
+    match key {
+        "resourceName" => (
+            t!("form.model.field.azure_resource_name.label").into_owned(),
+            t!("form.model.field.azure_resource_name.help").into_owned(),
+            t!("form.model.field.azure_resource_name.placeholder").into_owned(),
+        ),
+        "accountId" => (
+            t!("form.model.field.cloudflare_account_id.label").into_owned(),
+            t!("form.model.field.cloudflare_account_id.help").into_owned(),
+            t!("form.model.field.cloudflare_account_id.placeholder").into_owned(),
+        ),
+        "workspaceId" => (
+            t!("form.model.field.alibaba_workspace_id.label").into_owned(),
+            t!("form.model.field.alibaba_workspace_id.help").into_owned(),
+            t!("form.model.field.alibaba_workspace_id.placeholder").into_owned(),
+        ),
+        "project" => (
+            t!("form.model.field.vertex_project.label").into_owned(),
+            String::new(),
+            t!("form.model.field.vertex_project.placeholder").into_owned(),
+        ),
+        "location" => (
+            t!("form.model.field.vertex_location.label").into_owned(),
+            String::new(),
+            t!("form.model.field.vertex_location.placeholder").into_owned(),
+        ),
+        "awsRegion" => (
+            t!("form.model.field.aws_region.label").into_owned(),
+            String::new(),
+            t!("form.model.field.aws_region.placeholder").into_owned(),
+        ),
+        _ => (key.to_string(), String::new(), String::new()),
+    }
+}
+
+fn validate_template_value(key: &str, value: &str) -> Result<(), String> {
+    match key {
+        "resourceName" if value.is_empty() => {
+            Err(t!("form.model.validation.azure_resource_name_empty").into_owned())
+        }
+        "resourceName" if !is_valid_azure_resource_name(value) => {
+            Err(t!("form.model.validation.azure_resource_name_invalid").into_owned())
+        }
+        "accountId" if value.is_empty() => {
+            Err(t!("form.model.validation.cloudflare_account_id_empty").into_owned())
+        }
+        "accountId" if !is_valid_cloudflare_account_id(value) => {
+            Err(t!("form.model.validation.cloudflare_account_id_invalid").into_owned())
+        }
+        "project" | "location" if value.is_empty() => {
+            Err(t!("form.model.validation.vertex_project_location_required").into_owned())
+        }
+        _ if value.is_empty() => {
+            let (label, _, _) = model_add_template_field_copy(key);
+            Err(t!("form.model.validation.field_required", label = label).into_owned())
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The model-name field's label variants (deployment / gateway model id wordings); all map
+/// to the same slot so the value survives provider switches.
+fn model_add_model_name_field_labels() -> Vec<String> {
+    vec![
+        t!("form.model.field.model_name.label").into_owned(),
+        t!("form.model.field.deployment_name.label").into_owned(),
+        t!("form.model.field.cloudflare_model_name.label").into_owned(),
+    ]
+}
+
+fn model_add_model_name_field_copy(provider_id: &str) -> (String, String, String) {
+    match provider_id {
+        "azure" => (
+            t!("form.model.field.deployment_name.label").into_owned(),
+            String::new(),
+            t!("form.model.field.deployment_name.placeholder").into_owned(),
+        ),
+        "cloudflare-ai-gateway" => (
+            t!("form.model.field.cloudflare_model_name.label").into_owned(),
+            t!("form.model.field.cloudflare_model_name.help").into_owned(),
+            t!("form.model.field.cloudflare_model_name.placeholder").into_owned(),
+        ),
+        _ => (
+            t!("form.model.field.model_name.label").into_owned(),
+            String::new(),
+            t!("form.model.field.model_name.placeholder").into_owned(),
+        ),
+    }
+}
+
+fn model_add_api_key_field_labels() -> Vec<String> {
+    vec![
+        t!("form.model.field.api_key.label").into_owned(),
+        t!("form.model.field.cloudflare_api_token.label").into_owned(),
+    ]
+}
+
+fn model_add_api_key_field_copy(provider_id: &str) -> (String, String, String) {
+    match provider_id {
+        "cloudflare-ai-gateway" => (
+            t!("form.model.field.cloudflare_api_token.label").into_owned(),
+            t!("form.model.field.cloudflare_api_token.help").into_owned(),
+            t!("form.model.field.cloudflare_api_token.placeholder").into_owned(),
+        ),
+        _ => (
+            t!("form.model.field.api_key.label").into_owned(),
+            t!("form.model.field.api_key.help").into_owned(),
+            t!("form.model.field.api_key.placeholder").into_owned(),
+        ),
+    }
+}
+
+fn model_add_choice_field(
+    label: String,
+    options: Vec<String>,
+    selected: usize,
+) -> BottomFormFieldView {
+    let selected = if options.is_empty() {
+        0
+    } else {
+        selected.min(options.len() - 1)
+    };
+    BottomFormFieldView {
+        label,
+        help: String::new(),
+        editor: BottomFormFieldEditorView::Choice { options, selected },
+    }
+}
+
+fn model_add_text_field(
+    label: String,
+    help: String,
+    placeholder: String,
+    value: &str,
+    mask: bool,
+) -> BottomFormFieldView {
+    let value = value.to_string();
+    let cursor = value.chars().count();
+    BottomFormFieldView {
+        label,
+        help,
+        editor: BottomFormFieldEditorView::Text {
+            value,
+            placeholder,
+            cursor,
+            mask,
+            disabled: false,
+        },
+    }
 }
 
 fn model_add_provider_field(selected: usize) -> BottomFormFieldView {
@@ -727,211 +893,6 @@ fn model_add_provider_field(selected: usize) -> BottomFormFieldView {
     }
 }
 
-fn model_add_mode_field_preset() -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.mode.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![t!("form.model.mode.bulk_only").into_owned()],
-            selected: 0,
-        },
-    }
-}
-
-fn model_add_mode_field_custom(mode_selected: usize) -> BottomFormFieldView {
-    BottomFormFieldView {
-        label: t!("form.model.field.mode.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Choice {
-            options: vec![
-                t!("form.model.mode.single").into_owned(),
-                t!("form.model.mode.bulk").into_owned(),
-            ],
-            selected: mode_selected.min(1),
-        },
-    }
-}
-
-fn model_add_model_name_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.model_name.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.model_name.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_cloudflare_model_name_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.cloudflare_model_name.label").into_owned(),
-        help: t!("form.model.field.cloudflare_model_name.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.cloudflare_model_name.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_api_base_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.api_base.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.api_base.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_context_length_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.context_length.label").into_owned(),
-        help: t!("form.model.field.context_length.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.context_length.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_api_key_field(api_key: &str) -> BottomFormFieldView {
-    let value = api_key.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.api_key.label").into_owned(),
-        help: t!("form.model.field.api_key.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.api_key.placeholder").into_owned(),
-            cursor,
-            mask: true,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_deployment_name_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.deployment_name.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.deployment_name.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_azure_resource_name_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.azure_resource_name.label").into_owned(),
-        help: t!("form.model.field.azure_resource_name.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.azure_resource_name.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_vertex_project_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.vertex_project.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.vertex_project.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_vertex_location_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.vertex_location.label").into_owned(),
-        help: String::new(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.vertex_location.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_vertex_client_email_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.vertex_client_email.label").into_owned(),
-        help: t!("form.model.field.vertex_client_email.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.vertex_client_email.placeholder").into_owned(),
-            cursor,
-            mask: false,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_vertex_private_key_field(value: &str) -> BottomFormFieldView {
-    let value = value.to_string();
-    let cursor = value.chars().count();
-    BottomFormFieldView {
-        label: t!("form.model.field.vertex_private_key.label").into_owned(),
-        help: t!("form.model.field.vertex_private_key.help").into_owned(),
-        editor: BottomFormFieldEditorView::Text {
-            value,
-            placeholder: t!("form.model.field.vertex_private_key.placeholder").into_owned(),
-            cursor,
-            mask: true,
-            disabled: false,
-        },
-    }
-}
-
-fn model_add_provider_to_enum(idx: usize) -> Option<ModelProvider> {
-    model_add_provider_at_choice_index(idx)
-}
-
 fn sync_model_add_form_fields(form: &mut BottomFormView) {
     if !matches!(form.kind, BottomFormKind::ModelAdd) {
         return;
@@ -939,343 +900,13 @@ fn sync_model_add_form_fields(form: &mut BottomFormView) {
     let Some(provider_idx) = model_add_provider_selected(form) else {
         return;
     };
-
-    let old_len = form.fields.len();
-    let api_key_raw = bottom_form_text_value(form, model_add_api_key_field_index(form));
-    let mode_custom = match form.fields.get(1).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 1 => {
-            (*selected).min(1)
-        }
-        _ => 0,
+    let Some(provider_id) = model_add_provider_id_at_choice_index(provider_idx) else {
+        return;
     };
-    let transport_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 2 => {
-            (*selected).min(2)
-        }
-        _ => 0,
-    };
-    let ark_transport_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 0,
-    };
-    let siliconflow_site_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 1,
-    };
-    let moonshot_site_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 1,
-    };
-    let kimi_code_site_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 1,
-    };
-    let tencent_tokenhub_site_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 0,
-    };
-    let minimax_site_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 1,
-    };
-    let siliconflow_transport_selected = match form.fields.get(3).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 0,
-    };
-
-    let alibaba_billing_selected = match form.fields.get(2).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-            (*selected).min(1)
-        }
-        _ => 0,
-    };
-    let stepfun_billing_selected = if provider_idx == model_add_stepfun_provider_index() {
-        match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        }
-    } else {
-        0
-    };
-    let stepfun_site_selected = if provider_idx == model_add_stepfun_provider_index() {
-        match form.fields.get(3).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        }
-    } else {
-        1
-    };
-    let glm_coding_plan_billing_selected = if provider_idx == model_add_z_ai_provider_index()
-        || provider_idx == model_add_zhipu_ai_provider_index()
-    {
-        match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        }
-    } else {
-        0
-    };
-    let alibaba_is_token_plan =
-        provider_idx == model_add_alibaba_provider_index() && alibaba_billing_selected == 1;
-    let alibaba_site_selected = if alibaba_is_token_plan {
-        0
-    } else {
-        match form.fields.get(3).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 4 => {
-                (*selected).min(3)
-            }
-            _ => 0,
-        }
-    };
-
-    let cloudflare_transport_selected = match form.fields.get(3).map(|f| &f.editor) {
-        Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() > 2 => {
-            (*selected).min(2)
-        }
-        _ => 0,
-    };
-    let cloudflare_account_raw =
-        if old_len == 7 && provider_idx == model_add_cloudflare_provider_index() {
-            bottom_form_text_value(form, 1)
-        } else {
-            ""
-        };
-    let cloudflare_gateway_raw =
-        if old_len == 7 && provider_idx == model_add_cloudflare_provider_index() {
-            bottom_form_text_value(form, 2)
-        } else {
-            ""
-        };
-    let cloudflare_name_raw =
-        if old_len == 7 && provider_idx == model_add_cloudflare_provider_index() {
-            bottom_form_text_value(form, 4)
-        } else {
-            ""
-        };
-    let cloudflare_context_length_raw =
-        if old_len == 7 && provider_idx == model_add_cloudflare_provider_index() {
-            bottom_form_text_value(form, 5)
-        } else {
-            ""
-        };
-
-    let name_raw = if old_len == 7 || old_len == 5 {
-        bottom_form_text_value(form, if old_len == 5 { 2 } else { 3 })
-    } else {
-        ""
-    };
-    let azure_resource_raw = if old_len == 5 {
-        bottom_form_text_value(form, 1)
-    } else {
-        ""
-    };
-    let base_raw = if old_len == 7 {
-        bottom_form_text_value(form, 4)
-    } else if old_len == 5 && model_add_provider_id_at_choice_index(provider_idx) != Some("azure") {
-        bottom_form_text_value(form, 3)
-    } else {
-        ""
-    };
-    let context_length_raw = if old_len == 7 {
-        bottom_form_text_value(form, 5)
-    } else if old_len == 5 {
-        bottom_form_text_value(form, 3)
-    } else {
-        ""
-    };
-    let vertex_project_raw = if old_len == 7 && provider_idx == model_add_vertex_provider_index() {
-        bottom_form_text_value(form, 2)
-    } else {
-        ""
-    };
-    let vertex_location_raw = if old_len == 7 && provider_idx == model_add_vertex_provider_index() {
-        bottom_form_text_value(form, 3)
-    } else {
-        ""
-    };
-    let vertex_client_email_raw =
-        if old_len == 7 && provider_idx == model_add_vertex_provider_index() {
-            bottom_form_text_value(form, 4)
-        } else {
-            ""
-        };
-    let vertex_private_key_raw =
-        if old_len == 7 && provider_idx == model_add_vertex_provider_index() {
-            bottom_form_text_value(form, 5)
-        } else {
-            ""
-        };
-    let alibaba_workspace_raw = if provider_idx == model_add_alibaba_provider_index() {
-        if old_len == 6 {
-            bottom_form_text_value(form, 4)
-        } else if old_len == 7 {
-            // Legacy layout compatibility (when the api_kind field is present, workspace is at index 5)
-            bottom_form_text_value(form, 5)
-        } else {
-            ""
-        }
-    } else {
-        ""
-    };
-
-    let bulk_custom = !model_add_is_preset_provider(provider_idx) && mode_custom == 1;
-
-    let new_fields: Vec<BottomFormFieldView> =
-        if provider_idx == model_add_siliconflow_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_siliconflow_site_field(siliconflow_site_selected),
-                model_add_siliconflow_transport_field(siliconflow_transport_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_moonshot_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_moonshot_site_field(moonshot_site_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_tencent_tokenhub_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_tencent_tokenhub_site_field(tencent_tokenhub_site_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_kimi_code_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_kimi_code_site_field(kimi_code_site_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_minimax_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_minimax_site_field(minimax_site_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_alibaba_provider_index() {
-            if alibaba_is_token_plan {
-                vec![
-                    model_add_provider_field(provider_idx),
-                    model_add_mode_field_preset(),
-                    model_add_alibaba_billing_mode_field(alibaba_billing_selected),
-                    model_add_api_key_field(api_key_raw),
-                ]
-            } else {
-                vec![
-                    model_add_provider_field(provider_idx),
-                    model_add_mode_field_preset(),
-                    model_add_alibaba_billing_mode_field(alibaba_billing_selected),
-                    model_add_alibaba_site_field(alibaba_site_selected),
-                    model_add_alibaba_workspace_id_field(alibaba_workspace_raw),
-                    model_add_api_key_field(api_key_raw),
-                ]
-            }
-        } else if provider_idx == model_add_stepfun_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_stepfun_billing_mode_field(stepfun_billing_selected),
-                model_add_stepfun_site_field(stepfun_site_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_z_ai_provider_index()
-            || provider_idx == model_add_zhipu_ai_provider_index()
-        {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_glm_coding_plan_billing_mode_field(glm_coding_plan_billing_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_volcengine_provider_index()
-            || provider_idx == model_add_byteplus_provider_index()
-        {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_ark_transport_field(ark_transport_selected),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_cloudflare_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_cloudflare_account_id_field(cloudflare_account_raw),
-                model_add_cloudflare_gateway_id_field(cloudflare_gateway_raw),
-                model_add_cloudflare_transport_field(cloudflare_transport_selected),
-                model_add_cloudflare_model_name_field(cloudflare_name_raw),
-                model_add_context_length_field(cloudflare_context_length_raw),
-                model_add_cloudflare_api_token_field(api_key_raw),
-            ]
-        } else if model_add_provider_id_at_choice_index(provider_idx) == Some("azure") {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_azure_resource_name_field(azure_resource_raw),
-                model_add_deployment_name_field(name_raw),
-                model_add_context_length_field(context_length_raw),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if provider_idx == model_add_vertex_provider_index() {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_vertex_project_field(vertex_project_raw),
-                model_add_vertex_location_field(vertex_location_raw),
-                model_add_vertex_client_email_field(vertex_client_email_raw),
-                model_add_vertex_private_key_field(vertex_private_key_raw),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if model_add_is_preset_provider(provider_idx) {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_preset(),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else if bulk_custom {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_custom(mode_custom),
-                model_add_transport_field(transport_selected),
-                model_add_api_base_field(base_raw),
-                model_add_api_key_field(api_key_raw),
-            ]
-        } else {
-            vec![
-                model_add_provider_field(provider_idx),
-                model_add_mode_field_custom(mode_custom),
-                model_add_transport_field(transport_selected),
-                model_add_model_name_field(name_raw),
-                model_add_api_base_field(base_raw),
-                model_add_context_length_field(context_length_raw),
-                model_add_api_key_field(api_key_raw),
-            ]
-        };
-
-    form.fields = new_fields;
+    let texts = model_add_text_values_by_label(form);
+    let choices = model_add_choice_selections(form);
+    let plan = ModelAddFormPlan::resolve(provider_id, &choices);
+    form.fields = plan.build_fields(provider_idx, &texts);
     form.selected_field = form.selected_field.min(form.fields.len().saturating_sub(1));
     ensure_selectable_field(form);
 }
@@ -1293,29 +924,260 @@ pub(crate) fn new_model_add_form() -> BottomFormView {
     form
 }
 
+/// How the bulk import lists models for a parsed connection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum ModelAddListing {
+    /// `GET {api_base}/models` with the transport's listing shape.
+    Http {
+        api_base: String,
+        transport_kind: ModelTransportKind,
+    },
+    /// Vertex publisher listing via host-internal (service account project/location).
+    VertexServiceAccount,
+}
+
 /// Parses the "connect provider" bottom form; semantics are aligned with the Desktop settings page (single / bulk).
+/// Sites, billing plans, and `{placeholder}` template values are materialized into `api_base`
+/// here; only values that land in config.json (`options`) or the internal keyring are carried
+/// on the result.
 #[derive(Debug, Clone)]
 pub(crate) struct ParsedModelAddForm {
-    pub provider: ModelProvider,
+    /// Preset id from the presets manifest, or `custom`.
+    pub provider_id: String,
     pub transport_kind: ModelTransportKind,
+    /// Selected preset site; per-site templates resolve against it.
+    pub site_id: Option<String>,
     pub bulk: bool,
     pub model_name: Option<String>,
     pub api_base: String,
     pub api_key: String,
     pub context_length: Option<u64>,
-    pub azure_resource_name: Option<String>,
-    pub cloudflare_account_id: Option<String>,
+    /// Materializes into the literal `cf-aig-gateway-id` header.
     pub cloudflare_gateway_id: Option<String>,
-    pub vertex_project: Option<String>,
-    pub vertex_location: Option<String>,
-    pub vertex_client_email: Option<String>,
-    pub vertex_private_key: Option<String>,
-    pub provider_site: Option<String>,
-    pub alibaba_workspace_id: Option<String>,
-    pub alibaba_billing_mode: Option<String>,
-    pub stepfun_billing_mode: Option<String>,
-    pub z_ai_billing_mode: Option<String>,
-    pub zhipu_billing_mode: Option<String>,
+    /// Transport `options` declarations materialized from template values (bedrock
+    /// `awsRegion`, vertex `project` / `location`).
+    pub options: BTreeMap<String, String>,
+    /// Non-apiKey credential slots to store in the internal keyring
+    /// (`provider::{id}::{slot}`).
+    pub credential_slots: Vec<(String, String)>,
+    /// The bulk listing endpoint; `None` for manual single-model entry.
+    pub listing: Option<ModelAddListing>,
+}
+
+pub(crate) fn parse_model_add_connection(
+    form: &BottomFormView,
+) -> std::result::Result<ParsedModelAddForm, String> {
+    if !matches!(form.kind, BottomFormKind::ModelAdd) {
+        return Err(t!("form.model.validation.invalid_form_kind").into_owned());
+    }
+
+    let Some(provider_idx) = model_add_provider_selected(form) else {
+        return Err(t!("form.model.validation.provider_invalid").into_owned());
+    };
+    let Some(provider_id) = model_add_provider_id_at_choice_index(provider_idx) else {
+        return Err(t!("form.model.validation.provider_invalid").into_owned());
+    };
+    let plan = ModelAddFormPlan::resolve(provider_id, &model_add_choice_selections(form));
+    let texts = model_add_text_values_by_label(form);
+
+    // `{placeholder}` template values with per-placeholder validation.
+    let mut template_values = BTreeMap::new();
+    for key in &plan.template_keys {
+        let (label, _, _) = model_add_template_field_copy(key);
+        let value = model_add_saved_text(&texts, &[label]).trim().to_string();
+        validate_template_value(key, &value)?;
+        template_values.insert(key.clone(), value);
+    }
+
+    let cloudflare_gateway_id = if plan.collect_gateway_id {
+        let value = model_add_saved_text(
+            &texts,
+            &[t!("form.model.field.cloudflare_gateway_id.label").into_owned()],
+        )
+        .trim()
+        .to_string();
+        if value.is_empty() {
+            return Err(t!("form.model.validation.cloudflare_gateway_id_empty").into_owned());
+        }
+        if !is_valid_cloudflare_gateway_id(&value) {
+            return Err(t!("form.model.validation.cloudflare_gateway_id_invalid").into_owned());
+        }
+        Some(value)
+    } else {
+        None
+    };
+
+    let model_name = if plan.manual_single {
+        let name = model_add_saved_text(&texts, &model_add_model_name_field_labels())
+            .trim()
+            .to_string();
+        if name.is_empty() {
+            return Err(t!("form.model.validation.name_empty").into_owned());
+        }
+        if name.chars().any(char::is_whitespace) {
+            return Err(t!("form.model.validation.name_whitespace").into_owned());
+        }
+        Some(name)
+    } else {
+        None
+    };
+
+    let api_base = if plan.has_api_base_field {
+        let value = model_add_saved_text(
+            &texts,
+            &[t!("form.model.field.api_base.label").into_owned()],
+        )
+        .trim()
+        .to_string();
+        if value.is_empty() {
+            return Err(t!("form.model.validation.api_base_empty").into_owned());
+        }
+        value
+    } else {
+        preset_connect_api_base(
+            &plan.provider_id,
+            &PresetConnectSelections {
+                transport_kind: Some(plan.transport_kind),
+                site_id: plan.site_id.as_deref(),
+                billing_plan_id: plan.billing_plan_id.as_deref(),
+                template_values: template_values.clone(),
+                credential_kind: Some(plan.credential_form.kind_str()),
+            },
+        )
+        .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
+    };
+
+    let context_length = if plan.manual_single {
+        let raw = model_add_saved_text(
+            &texts,
+            &[t!("form.model.field.context_length.label").into_owned()],
+        );
+        parse_model_context_length_field(&raw)?
+    } else {
+        None
+    };
+
+    let api_key = match plan.credential_form {
+        CredentialForm::ApiKey => {
+            let key = model_add_saved_text(&texts, &model_add_api_key_field_labels())
+                .trim()
+                .to_string();
+            if key.is_empty() && plan.provider_id != CUSTOM_PROVIDER_PRESET_ID {
+                return Err(t!("form.model.validation.api_key_empty").into_owned());
+            }
+            key
+        }
+        CredentialForm::BedrockIam | CredentialForm::VertexServiceAccount => String::new(),
+    };
+
+    let mut credential_slots: Vec<(String, String)> = Vec::new();
+    match plan.credential_form {
+        CredentialForm::BedrockIam => {
+            let access_key_id = model_add_saved_text(
+                &texts,
+                &[t!("form.model.field.bedrock_access_key_id.label").into_owned()],
+            )
+            .trim()
+            .to_string();
+            let secret_access_key = model_add_saved_text(
+                &texts,
+                &[t!("form.model.field.bedrock_secret_access_key.label").into_owned()],
+            )
+            .trim()
+            .to_string();
+            if access_key_id.is_empty() || secret_access_key.is_empty() {
+                return Err(t!("form.model.validation.bedrock_credentials_incomplete").into_owned());
+            }
+            credential_slots.push(("accessKeyId".to_string(), access_key_id));
+            credential_slots.push(("secretAccessKey".to_string(), secret_access_key));
+        }
+        CredentialForm::VertexServiceAccount => {
+            let client_email = model_add_saved_text(
+                &texts,
+                &[t!("form.model.field.vertex_client_email.label").into_owned()],
+            )
+            .trim()
+            .to_string();
+            let private_key = model_add_saved_text(
+                &texts,
+                &[t!("form.model.field.vertex_private_key.label").into_owned()],
+            )
+            .trim()
+            .to_string();
+            if client_email.is_empty() != private_key.is_empty() {
+                return Err(
+                    t!("form.model.validation.vertex_service_account_incomplete").into_owned(),
+                );
+            }
+            if !client_email.is_empty() {
+                credential_slots.push(("clientEmail".to_string(), client_email));
+                credential_slots.push(("privateKey".to_string(), private_key));
+            }
+        }
+        CredentialForm::ApiKey => {}
+    }
+
+    // Transport options materialized from template values (bedrock `awsRegion`, vertex
+    // `project` / `location`); express connects write none.
+    let options: BTreeMap<String, String> = template_values
+        .iter()
+        .filter(|(key, _)| matches!(key.as_str(), "awsRegion" | "project" | "location"))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect();
+
+    let listing = if !plan.bulk {
+        None
+    } else if plan.provider_id == CUSTOM_PROVIDER_PRESET_ID {
+        Some(ModelAddListing::Http {
+            api_base: api_base.clone(),
+            transport_kind: plan.transport_kind,
+        })
+    } else {
+        match preset_entry(&plan.provider_id)
+            .and_then(|entry| entry.catalog())
+            .map(|catalog| catalog.parser.as_str())
+        {
+            Some("google-vertex-models") => Some(ModelAddListing::VertexServiceAccount),
+            // The minimax catalog parser lists via the openai-compatible endpoint on the
+            // same site, not the anthropic connect base.
+            Some("minimax-models") if plan.transport_kind == ModelTransportKind::Anthropic => {
+                let listing_base = preset_connect_api_base(
+                    &plan.provider_id,
+                    &PresetConnectSelections {
+                        transport_kind: Some(ModelTransportKind::OpenAiCompatible),
+                        site_id: plan.site_id.as_deref(),
+                        billing_plan_id: plan.billing_plan_id.as_deref(),
+                        template_values: template_values.clone(),
+                        credential_kind: Some(plan.credential_form.kind_str()),
+                    },
+                )
+                .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?;
+                Some(ModelAddListing::Http {
+                    api_base: listing_base,
+                    transport_kind: ModelTransportKind::OpenAiCompatible,
+                })
+            }
+            _ => Some(ModelAddListing::Http {
+                api_base: api_base.clone(),
+                transport_kind: plan.transport_kind,
+            }),
+        }
+    };
+
+    Ok(ParsedModelAddForm {
+        provider_id: plan.provider_id,
+        transport_kind: plan.transport_kind,
+        site_id: plan.site_id.clone(),
+        bulk: plan.bulk,
+        model_name,
+        api_base,
+        api_key,
+        context_length,
+        cloudflare_gateway_id,
+        options,
+        credential_slots,
+        listing,
+    })
 }
 
 pub(crate) fn new_rules_form(entries: &[RuleEntry]) -> BottomFormView {
@@ -1911,362 +1773,6 @@ fn parse_model_context_length_field(raw: &str) -> std::result::Result<Option<u64
     Ok(Some(parsed))
 }
 
-pub(crate) fn parse_model_add_connection(
-    form: &BottomFormView,
-) -> std::result::Result<ParsedModelAddForm, String> {
-    if !matches!(form.kind, BottomFormKind::ModelAdd) {
-        return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-    }
-
-    let Some(provider_idx) = model_add_provider_selected(form) else {
-        return Err(t!("form.model.validation.provider_invalid").into_owned());
-    };
-    let Some(provider) = model_add_provider_to_enum(provider_idx) else {
-        return Err(t!("form.model.validation.provider_invalid").into_owned());
-    };
-    let transport_kind = model_add_transport_kind(form, provider);
-
-    let key_idx = model_add_api_key_field_index(form);
-    let api_key = bottom_form_text_value(form, key_idx).trim().to_string();
-
-    if provider == ModelProvider::Azure {
-        if api_key.is_empty() {
-            return Err(t!("form.model.validation.api_key_empty").into_owned());
-        }
-        if form.fields.len() != 5 {
-            return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-        }
-        let azure_resource_name = bottom_form_text_value(form, 1).trim().to_string();
-        if azure_resource_name.is_empty() {
-            return Err(t!("form.model.validation.azure_resource_name_empty").into_owned());
-        }
-        if !is_valid_azure_resource_name(&azure_resource_name) {
-            return Err(t!("form.model.validation.azure_resource_name_invalid").into_owned());
-        }
-        let deployment_name = bottom_form_text_value(form, 2).trim().to_string();
-        if deployment_name.is_empty() {
-            return Err(t!("form.model.validation.name_empty").into_owned());
-        }
-        if deployment_name.chars().any(char::is_whitespace) {
-            return Err(t!("form.model.validation.name_whitespace").into_owned());
-        }
-        let context_length = parse_model_context_length_field(bottom_form_text_value(form, 3))?;
-        return Ok(ParsedModelAddForm {
-            provider,
-            transport_kind: ModelTransportKind::OpenResponses,
-            bulk: false,
-            model_name: Some(deployment_name),
-            api_base: azure_api_base_from_resource_name(&azure_resource_name),
-            api_key,
-            context_length,
-            azure_resource_name: Some(azure_resource_name),
-            cloudflare_account_id: None,
-            cloudflare_gateway_id: None,
-            vertex_project: None,
-            vertex_location: None,
-            vertex_client_email: None,
-            vertex_private_key: None,
-            provider_site: None,
-            alibaba_workspace_id: None,
-            alibaba_billing_mode: None,
-            stepfun_billing_mode: None,
-            z_ai_billing_mode: None,
-            zhipu_billing_mode: None,
-        });
-    }
-
-    if provider == ModelProvider::CloudflareAiGateway {
-        if form.fields.len() != 7 {
-            return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-        }
-        let cloudflare_account_id = bottom_form_text_value(form, 1).trim().to_string();
-        if cloudflare_account_id.is_empty() {
-            return Err(t!("form.model.validation.cloudflare_account_id_empty").into_owned());
-        }
-        if !is_valid_cloudflare_account_id(&cloudflare_account_id) {
-            return Err(t!("form.model.validation.cloudflare_account_id_invalid").into_owned());
-        }
-        let cloudflare_gateway_id = bottom_form_text_value(form, 2).trim().to_string();
-        if cloudflare_gateway_id.is_empty() {
-            return Err(t!("form.model.validation.cloudflare_gateway_id_empty").into_owned());
-        }
-        if !is_valid_cloudflare_gateway_id(&cloudflare_gateway_id) {
-            return Err(t!("form.model.validation.cloudflare_gateway_id_invalid").into_owned());
-        }
-        let model_name = bottom_form_text_value(form, 4).trim().to_string();
-        if model_name.is_empty() {
-            return Err(t!("form.model.validation.name_empty").into_owned());
-        }
-        let context_length = parse_model_context_length_field(bottom_form_text_value(form, 5))?;
-        if api_key.is_empty() {
-            return Err(t!("form.model.validation.cloudflare_api_token_empty").into_owned());
-        }
-        return Ok(ParsedModelAddForm {
-            provider,
-            transport_kind,
-            bulk: false,
-            model_name: Some(model_name),
-            api_base: cloudflare_ai_gateway_api_base_from_account_id(&cloudflare_account_id),
-            api_key,
-            context_length,
-            azure_resource_name: None,
-            cloudflare_account_id: Some(cloudflare_account_id),
-            cloudflare_gateway_id: Some(cloudflare_gateway_id),
-            vertex_project: None,
-            vertex_location: None,
-            vertex_client_email: None,
-            vertex_private_key: None,
-            provider_site: None,
-            alibaba_workspace_id: None,
-            alibaba_billing_mode: None,
-            stepfun_billing_mode: None,
-            z_ai_billing_mode: None,
-            zhipu_billing_mode: None,
-        });
-    }
-
-    let mut vertex_project = None;
-    let mut vertex_location = None;
-    let mut vertex_client_email = None;
-    let mut vertex_private_key = None;
-
-    if provider == ModelProvider::GoogleVertexAi {
-        if form.fields.len() != 7 {
-            return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-        }
-        let project = bottom_form_text_value(form, 2).trim().to_string();
-        let location = bottom_form_text_value(form, 3).trim().to_string();
-        if project.is_empty() || location.is_empty() {
-            return Err(t!("form.model.validation.vertex_project_location_required").into_owned());
-        }
-        vertex_project = Some(project);
-        vertex_location = Some(location);
-        let client_email = bottom_form_text_value(form, 4).trim().to_string();
-        let private_key = bottom_form_text_value(form, 5).trim().to_string();
-        let has_client_email = !client_email.is_empty();
-        let has_private_key = !private_key.is_empty();
-        if has_client_email ^ has_private_key {
-            return Err(t!("form.model.validation.vertex_service_account_incomplete").into_owned());
-        }
-        if has_client_email {
-            vertex_client_email = Some(client_email);
-            vertex_private_key = Some(private_key);
-        }
-    } else if api_key.is_empty() && provider != ModelProvider::Custom {
-        return Err(t!("form.model.validation.api_key_empty").into_owned());
-    }
-
-    let bulk = model_add_mode_bulk(form, provider_idx);
-    let mut provider_site = None;
-    let mut alibaba_workspace_id = None;
-    let mut alibaba_billing_mode = None;
-    let mut stepfun_billing_mode = None;
-    let mut z_ai_billing_mode = None;
-    let mut zhipu_billing_mode = None;
-    let api_base = if provider == ModelProvider::Siliconflow {
-        let site_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        };
-        let site = model_add_siliconflow_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        model_add_siliconflow_site_api_base(site)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::Moonshot {
-        let site_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        };
-        let site = model_add_moonshot_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        model_add_moonshot_site_api_base(site)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::TencentTokenhub {
-        let site_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        };
-        let site = model_add_tencent_tokenhub_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        model_add_tencent_tokenhub_site_api_base(site)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::KimiCode {
-        let site_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        };
-        let site = model_add_kimi_code_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        model_add_kimi_code_site_api_base(site, transport_kind)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::Minimax {
-        let site_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        };
-        let site = model_add_minimax_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        model_add_minimax_site_api_base(site, transport_kind)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::Alibaba {
-        let billing_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        };
-        if billing_selected == 1 {
-            alibaba_billing_mode = Some("token-plan".to_string());
-            model_add_alibaba_token_plan_api_base(transport_kind)
-                .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-        } else {
-            let site_selected = match form.fields.get(3).map(|f| &f.editor) {
-                Some(BottomFormFieldEditorView::Choice { selected, options })
-                    if options.len() == 4 =>
-                {
-                    (*selected).min(3)
-                }
-                _ => 0,
-            };
-            let site = model_add_alibaba_site_id_from_choice(site_selected);
-            let workspace_id = bottom_form_text_value(form, 4).trim().to_string();
-            if model_add_alibaba_site_requires_workspace_id(site) && workspace_id.is_empty() {
-                return Err(t!("form.model.validation.alibaba_workspace_id_required").into_owned());
-            }
-            provider_site = Some(site.to_string());
-            alibaba_workspace_id = if workspace_id.is_empty() {
-                None
-            } else {
-                Some(workspace_id.clone())
-            };
-            model_add_alibaba_site_api_base(site, &workspace_id, transport_kind)
-                .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-        }
-    } else if provider == ModelProvider::Stepfun {
-        let billing_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        };
-        let site_selected = match form.fields.get(3).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 1,
-        };
-        let site = model_add_stepfun_site_id_from_choice(site_selected);
-        provider_site = Some(site.to_string());
-        let step_plan = billing_selected == 1;
-        if step_plan {
-            stepfun_billing_mode = Some("step-plan".to_string());
-        }
-        model_add_stepfun_api_base(transport_kind, step_plan, Some(site))
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::ZAi {
-        let billing_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        };
-        let glm_coding_plan = billing_selected == 1;
-        if glm_coding_plan {
-            z_ai_billing_mode = Some("glm-coding-plan".to_string());
-        }
-        model_add_z_ai_api_base(glm_coding_plan)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::ZhipuAi {
-        let billing_selected = match form.fields.get(2).map(|f| &f.editor) {
-            Some(BottomFormFieldEditorView::Choice { selected, options }) if options.len() == 2 => {
-                (*selected).min(1)
-            }
-            _ => 0,
-        };
-        let glm_coding_plan = billing_selected == 1;
-        if glm_coding_plan {
-            zhipu_billing_mode = Some("glm-coding-plan".to_string());
-        }
-        model_add_zhipu_ai_api_base(glm_coding_plan)
-            .ok_or_else(|| t!("form.model.validation.site_invalid").into_owned())?
-    } else if provider == ModelProvider::GoogleVertexAi {
-        vertex_api_base_from_project_and_location(
-            vertex_project.as_deref().unwrap_or(""),
-            vertex_location.as_deref().unwrap_or(""),
-        )
-    } else if let Some(preset) = model_add_preset_api_base_by_choice_index(provider_idx) {
-        preset
-    } else {
-        let base_idx = match form.fields.len() {
-            5 => 3,
-            7 => 4,
-            _ => {
-                return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-            }
-        };
-        let v = bottom_form_text_value(form, base_idx).trim().to_string();
-        if v.is_empty() {
-            return Err(t!("form.model.validation.api_base_empty").into_owned());
-        }
-        v
-    };
-
-    let model_name = if bulk {
-        None
-    } else {
-        if form.fields.len() != 7 {
-            return Err(t!("form.model.validation.invalid_form_kind").into_owned());
-        }
-        let n = bottom_form_text_value(form, 3).trim().to_string();
-        if n.is_empty() {
-            return Err(t!("form.model.validation.name_empty").into_owned());
-        }
-        if n.chars().any(char::is_whitespace) {
-            return Err(t!("form.model.validation.name_whitespace").into_owned());
-        }
-        Some(n)
-    };
-
-    let context_length = if bulk {
-        None
-    } else {
-        parse_model_context_length_field(bottom_form_text_value(form, 5))?
-    };
-
-    Ok(ParsedModelAddForm {
-        provider,
-        transport_kind,
-        bulk,
-        model_name,
-        api_base,
-        api_key,
-        context_length,
-        azure_resource_name: None,
-        cloudflare_account_id: None,
-        cloudflare_gateway_id: None,
-        vertex_project,
-        vertex_location,
-        vertex_client_email,
-        vertex_private_key,
-        provider_site,
-        alibaba_workspace_id,
-        alibaba_billing_mode,
-        stepfun_billing_mode,
-        z_ai_billing_mode,
-        zhipu_billing_mode,
-    })
-}
-
 pub(crate) fn to_prompt_args_json(
     form: &BottomFormView,
 ) -> std::result::Result<Option<String>, String> {
@@ -2763,15 +2269,13 @@ mod tests {
     use super::{
         HOOK_ADD_FIELD_COMMAND, HOOK_ADD_FIELD_FAIL_CLOSED, HOOK_ADD_FIELD_TIMEOUT,
         MetadataFieldKind, activate, hook_add_form_enter_toggles_checkbox, insert_text,
-        model_add_byteplus_provider_index, model_add_stepfun_provider_index,
-        model_add_volcengine_provider_index, model_add_z_ai_provider_index,
-        model_add_zhipu_ai_provider_index, move_right, new_extensions_form, new_hook_add_form,
+        model_add_picker_index_of, move_right, new_extensions_form, new_hook_add_form,
         new_mcp_add_form, new_mcp_prompt_form, new_model_add_form, new_rules_form, new_skills_form,
         parse_metadata_map, parse_model_add_connection, prompt_user_message, rules_form_overrides,
         select_next_field, skills_form_overrides, sync_model_add_form_fields, to_hook_save_request,
         to_prompt_args_json,
     };
-    use crate::model_registry::{ModelProvider, ModelTransportKind};
+    use crate::model_registry::ModelTransportKind;
     use rust_i18n::t;
     use std::path::PathBuf;
 
@@ -2784,7 +2288,7 @@ mod tests {
         mcp_types::{McpDiscoveredPrompt, McpDiscoveredPromptArgument},
         rules::{RuleEntry, RulePreview, RuleScope, RuleSource},
         skills::{SkillEntry, SkillPreview, SkillRootKind, SkillScope, SkillSource},
-        view::BottomFormFieldEditorView,
+        view::{BottomFormFieldEditorView, BottomFormView},
     };
 
     #[test]
@@ -3036,32 +2540,75 @@ mod tests {
         assert_eq!(value, "line1 line2");
     }
 
-    fn model_add_custom_provider_index() -> usize {
-        super::model_add_picker_order_ids()
+    fn model_add_pick_provider(form: &mut BottomFormView, preset_id: &str) {
+        let idx = form
+            .fields
             .iter()
-            .position(|id| id == "custom")
-            .expect("custom provider in picker order")
+            .position(|field| field.label == t!("form.model.field.provider.label"))
+            .expect("provider field");
+        if let BottomFormFieldEditorView::Choice { selected, .. } = &mut form.fields[idx].editor {
+            *selected = model_add_picker_index_of(preset_id);
+        }
+        sync_model_add_form_fields(form);
+    }
+
+    fn model_add_set_choice(form: &mut BottomFormView, label: &str, selected: usize) {
+        let idx = form
+            .fields
+            .iter()
+            .position(|field| field.label == label)
+            .unwrap_or_else(|| panic!("choice field: {label}"));
+        if let BottomFormFieldEditorView::Choice {
+            selected: current, ..
+        } = &mut form.fields[idx].editor
+        {
+            *current = selected;
+        }
+        sync_model_add_form_fields(form);
+    }
+
+    fn model_add_set_text(form: &mut BottomFormView, label: &str, text: &str) {
+        let idx = form
+            .fields
+            .iter()
+            .position(|field| field.label == label)
+            .unwrap_or_else(|| panic!("text field: {label}"));
+        form.selected_field = idx;
+        insert_text(form, text);
+    }
+
+    fn model_add_field_labels(form: &BottomFormView) -> Vec<String> {
+        form.fields
+            .iter()
+            .map(|field| field.label.clone())
+            .collect()
     }
 
     #[test]
     fn model_add_form_parses_preset_connection() {
         let mut form = new_model_add_form();
         assert!(matches!(form.kind, crate::view::BottomFormKind::ModelAdd));
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_deepseek_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        const API_KEY_FIELD: usize = 2;
-        form.selected_field = API_KEY_FIELD;
-        insert_text(&mut form, "sk-secret");
+        model_add_pick_provider(&mut form, "deepseek");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-secret",
+        );
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Deepseek);
+        assert_eq!(parsed.provider_id, "deepseek");
         assert!(parsed.bulk);
+        // DeepSeek's preset default transport is openai-compatible; the form materializes its base.
+        assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert_eq!(parsed.api_base, "https://api.deepseek.com/v1");
         assert_eq!(parsed.api_key, "sk-secret");
         assert!(parsed.model_name.is_none());
+        assert_eq!(
+            parsed.listing,
+            Some(super::ModelAddListing::Http {
+                api_base: "https://api.deepseek.com/v1".to_string(),
+                transport_kind: ModelTransportKind::OpenAiCompatible,
+            })
+        );
     }
 
     #[test]
@@ -3073,47 +2620,80 @@ mod tests {
     }
 
     #[test]
+    fn model_add_form_shows_transport_choices_from_the_manifest() {
+        // kimi-code declares two transports: the wizard offers the choice with the preset's
+        // defaultTransport selected first.
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "kimi-code");
+        let transport_idx = form
+            .fields
+            .iter()
+            .position(|field| field.label == t!("form.model.field.api_kind.label"))
+            .expect("transport field");
+        match &form.fields[transport_idx].editor {
+            BottomFormFieldEditorView::Choice { options, selected } => {
+                assert_eq!(options.len(), 2);
+                assert_eq!(*selected, 0);
+            }
+            _ => panic!("expected transport choice"),
+        }
+        // Single-transport presets (moonshot-ai) pin the transport: no choice field.
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "moonshot-ai");
+        assert!(
+            !form
+                .fields
+                .iter()
+                .any(|field| field.label == t!("form.model.field.api_kind.label"))
+        );
+    }
+
+    #[test]
     fn model_add_form_parses_custom_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_custom_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "my-model");
-        form.selected_field = 4;
-        insert_text(&mut form, "https://custom.example/v1");
-        form.selected_field = 6;
-        insert_text(&mut form, "sk-c");
+        model_add_pick_provider(&mut form, "custom");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "my-model",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_base.label"),
+            "https://custom.example/v1",
+        );
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-c");
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Custom);
+        assert_eq!(parsed.provider_id, "custom");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(!parsed.bulk);
         assert_eq!(parsed.model_name.as_deref(), Some("my-model"));
         assert_eq!(parsed.api_base, "https://custom.example/v1");
         assert_eq!(parsed.api_key, "sk-c");
         assert_eq!(parsed.context_length, None);
+        assert!(parsed.listing.is_none());
     }
 
     #[test]
     fn model_add_form_parses_custom_connection_context_length() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_custom_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "my-model");
-        form.selected_field = 4;
-        insert_text(&mut form, "https://custom.example/v1");
-        form.selected_field = 5;
-        insert_text(&mut form, "128000");
-        form.selected_field = 6;
-        insert_text(&mut form, "sk-c");
+        model_add_pick_provider(&mut form, "custom");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "my-model",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_base.label"),
+            "https://custom.example/v1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.context_length.label"),
+            "128000",
+        );
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-c");
         let parsed = parse_model_add_connection(&form).expect("parse");
         assert_eq!(parsed.context_length, Some(128_000));
     }
@@ -3121,15 +2701,9 @@ mod tests {
     #[test]
     fn model_add_custom_bulk_hides_model_name_field() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_custom_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "custom");
         assert_eq!(form.fields.len(), 7);
-        form.selected_field = 1;
-        move_right(&mut form);
+        model_add_set_choice(&mut form, &t!("form.model.field.mode.label"), 1);
         assert_eq!(form.fields.len(), 5);
         assert!(
             !form
@@ -3137,42 +2711,50 @@ mod tests {
                 .iter()
                 .any(|f| f.label == t!("form.model.field.model_name.label").into_owned())
         );
-        form.selected_field = 3;
-        insert_text(&mut form, "https://bulk.example/v1");
-        form.selected_field = 4;
-        insert_text(&mut form, "sk-bulk");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_base.label"),
+            "https://bulk.example/v1",
+        );
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-bulk");
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Custom);
+        assert_eq!(parsed.provider_id, "custom");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://bulk.example/v1");
         assert_eq!(parsed.api_key, "sk-bulk");
+        assert_eq!(
+            parsed.listing,
+            Some(super::ModelAddListing::Http {
+                api_base: "https://bulk.example/v1".to_string(),
+                transport_kind: ModelTransportKind::OpenAiCompatible,
+            })
+        );
     }
 
     #[test]
     fn model_add_form_parses_custom_anthropic_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_custom_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 2;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "claude-custom");
-        form.selected_field = 4;
-        insert_text(&mut form, "https://api.anthropic.com/v1");
-        form.selected_field = 6;
-        insert_text(&mut form, "sk-anthropic");
+        model_add_pick_provider(&mut form, "custom");
+        model_add_set_choice(&mut form, &t!("form.model.field.api_kind.label"), 2);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "claude-custom",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_base.label"),
+            "https://api.anthropic.com/v1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-anthropic",
+        );
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Custom);
+        assert_eq!(parsed.provider_id, "custom");
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert_eq!(parsed.model_name.as_deref(), Some("claude-custom"));
         assert_eq!(parsed.api_base, "https://api.anthropic.com/v1");
@@ -3181,20 +2763,18 @@ mod tests {
     #[test]
     fn model_add_form_parses_alibaba_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_alibaba_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 6);
-        form.selected_field = 4;
-        insert_text(&mut form, "ws-cn");
-        form.selected_field = 5;
-        insert_text(&mut form, "sk-ali");
+        model_add_pick_provider(&mut form, "alibaba");
+        // provider, mode, billing, site, transport, workspace id, key
+        assert_eq!(form.fields.len(), 7);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.alibaba_workspace_id.label"),
+            "ws-cn",
+        );
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-ali");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Alibaba);
+        assert_eq!(parsed.provider_id, "alibaba");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
@@ -3203,32 +2783,23 @@ mod tests {
             "https://ws-cn.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
         );
         assert_eq!(parsed.api_key, "sk-ali");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn-beijing"));
-        assert_eq!(parsed.alibaba_workspace_id.as_deref(), Some("ws-cn"));
-        assert!(parsed.alibaba_billing_mode.is_none());
     }
 
     #[test]
     fn model_add_form_parses_alibaba_token_plan_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_alibaba_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 4);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-ali-token");
+        model_add_pick_provider(&mut form, "alibaba");
+        model_add_set_choice(&mut form, &t!("form.model.field.billing_mode.label"), 1);
+        // A selected billing plan pins its own bases: the site and workspace fields hide.
+        assert_eq!(form.fields.len(), 5);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-ali-token",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Alibaba);
+        assert_eq!(parsed.provider_id, "alibaba");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert_eq!(
@@ -3236,26 +2807,21 @@ mod tests {
             "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
         );
         assert_eq!(parsed.api_key, "sk-ali-token");
-        assert_eq!(parsed.alibaba_billing_mode.as_deref(), Some("token-plan"));
-        assert!(parsed.provider_site.is_none());
-        assert!(parsed.alibaba_workspace_id.is_none());
     }
 
     #[test]
     fn model_add_form_parses_anthropic_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "anthropic");
         assert_eq!(form.fields.len(), 3);
-        form.selected_field = 2;
-        insert_text(&mut form, "sk-anthropic");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-anthropic",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Anthropic);
+        assert_eq!(parsed.provider_id, "anthropic");
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.anthropic.com/v1");
@@ -3265,183 +2831,104 @@ mod tests {
     #[test]
     fn model_add_form_parses_stepfun_step_plan_connection() {
         let mut form = new_model_add_form();
-        let stepfun_idx = model_add_stepfun_provider_index();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = stepfun_idx;
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 5);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(3)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 0;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 4;
-        insert_text(&mut form, "sk-stepfun");
+        model_add_pick_provider(&mut form, "stepfun");
+        model_add_set_choice(&mut form, &t!("form.model.field.billing_mode.label"), 1);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-stepfun",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Stepfun);
+        assert_eq!(parsed.provider_id, "stepfun");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
-        assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
     }
 
     #[test]
     fn model_add_form_parses_stepfun_international_connection() {
         let mut form = new_model_add_form();
-        let stepfun_idx = model_add_stepfun_provider_index();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = stepfun_idx;
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 5);
-        form.selected_field = 4;
-        insert_text(&mut form, "sk-stepfun-intl");
+        model_add_pick_provider(&mut form, "stepfun");
+        model_add_set_choice(&mut form, &t!("form.model.field.site.label"), 1);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-stepfun-intl",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Stepfun);
+        assert_eq!(parsed.provider_id, "stepfun");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.stepfun.ai/v1");
         assert_eq!(parsed.api_key, "sk-stepfun-intl");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
-        assert_eq!(parsed.stepfun_billing_mode, None);
     }
 
     #[test]
     fn model_add_form_parses_stepfun_international_step_plan_connection() {
         let mut form = new_model_add_form();
-        let stepfun_idx = model_add_stepfun_provider_index();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = stepfun_idx;
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(3)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 4;
-        insert_text(&mut form, "sk-stepfun-intl-plan");
+        model_add_pick_provider(&mut form, "stepfun");
+        model_add_set_choice(&mut form, &t!("form.model.field.billing_mode.label"), 1);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-stepfun-intl-plan",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Stepfun);
+        assert_eq!(parsed.provider_id, "stepfun");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
-        assert_eq!(parsed.api_base, "https://api.stepfun.ai/step_plan/v1");
+        // The step-plan billing plan pins the China host regardless of the selected site.
+        assert_eq!(parsed.api_base, "https://api.stepfun.com/step_plan/v1");
         assert_eq!(parsed.api_key, "sk-stepfun-intl-plan");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
-        assert_eq!(parsed.stepfun_billing_mode.as_deref(), Some("step-plan"));
     }
 
     #[test]
     fn model_add_form_parses_z_ai_glm_coding_plan_connection() {
         let mut form = new_model_add_form();
-        let z_ai_idx = model_add_z_ai_provider_index();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = z_ai_idx;
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "z-ai");
         assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-zai");
+        model_add_set_choice(&mut form, &t!("form.model.field.billing_mode.label"), 1);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-zai");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::ZAi);
+        assert_eq!(parsed.provider_id, "z-ai");
         assert!(parsed.bulk);
         assert_eq!(parsed.api_base, "https://api.z.ai/api/coding/paas/v4");
         assert_eq!(parsed.api_key, "sk-zai");
-        assert_eq!(parsed.z_ai_billing_mode.as_deref(), Some("glm-coding-plan"));
-        assert!(parsed.zhipu_billing_mode.is_none());
     }
 
     #[test]
     fn model_add_form_parses_zhipu_glm_coding_plan_connection() {
         let mut form = new_model_add_form();
-        let zhipu_idx = model_add_zhipu_ai_provider_index();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = zhipu_idx;
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "zhipu-ai");
         assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-zhipu");
+        model_add_set_choice(&mut form, &t!("form.model.field.billing_mode.label"), 1);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-zhipu");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::ZhipuAi);
+        assert_eq!(parsed.provider_id, "zhipu-ai");
         assert!(parsed.bulk);
         assert_eq!(
             parsed.api_base,
             "https://open.bigmodel.cn/api/coding/paas/v4"
         );
         assert_eq!(parsed.api_key, "sk-zhipu");
-        assert_eq!(
-            parsed.zhipu_billing_mode.as_deref(),
-            Some("glm-coding-plan")
-        );
-        assert!(parsed.z_ai_billing_mode.is_none());
     }
 
     #[test]
     fn model_add_form_parses_volcengine_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_volcengine_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "volcengine");
         assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-volc");
+        model_add_set_choice(&mut form, &t!("form.model.field.api_kind.label"), 1);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-volc");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Volcengine);
+        assert_eq!(parsed.provider_id, "volcengine");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
@@ -3452,24 +2939,17 @@ mod tests {
     #[test]
     fn model_add_form_parses_byteplus_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = model_add_byteplus_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "byteplus");
         assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-byteplus");
+        model_add_set_choice(&mut form, &t!("form.model.field.api_kind.label"), 1);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-byteplus",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Byteplus);
+        assert_eq!(parsed.provider_id, "byteplus");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
@@ -3483,156 +2963,120 @@ mod tests {
     #[test]
     fn model_add_form_parses_siliconflow_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_siliconflow_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "siliconflow");
         assert_eq!(form.fields.len(), 5);
-        if let Some(f) = form.fields.get_mut(3)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 4;
-        insert_text(&mut form, "sk-sf");
+        model_add_set_choice(&mut form, &t!("form.model.field.api_kind.label"), 1);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-sf");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Siliconflow);
+        assert_eq!(parsed.provider_id, "siliconflow");
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.siliconflow.com/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-sf");
     }
 
     #[test]
     fn model_add_form_parses_moonshot_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_moonshot_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "moonshot-ai");
         assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 0;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-moon");
+        model_add_set_choice(&mut form, &t!("form.model.field.site.label"), 0);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-moon");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Moonshot);
+        assert_eq!(parsed.provider_id, "moonshot-ai");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.moonshot.cn/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
         assert_eq!(parsed.api_key, "sk-moon");
     }
 
     #[test]
     fn model_add_form_parses_kimi_code_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_kimi_code_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 4);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-kimi-code");
+        model_add_pick_provider(&mut form, "kimi-code");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-kimi-code",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::KimiCode);
+        assert_eq!(parsed.provider_id, "kimi-code");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenAiCompatible);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.kimi.ai/coding/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
     #[test]
     fn model_add_form_parses_kimi_code_china_site_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_kimi_code_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 0;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-kimi-code");
+        model_add_pick_provider(&mut form, "kimi-code");
+        model_add_set_choice(&mut form, &t!("form.model.field.site.label"), 0);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "sk-kimi-code",
+        );
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::KimiCode);
+        assert_eq!(parsed.provider_id, "kimi-code");
         assert_eq!(parsed.api_base, "https://api.kimi.com/coding/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("cn"));
         assert_eq!(parsed.api_key, "sk-kimi-code");
     }
 
     #[test]
     fn model_add_form_parses_minimax_preset_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_minimax_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
-        assert_eq!(form.fields.len(), 4);
-        if let Some(f) = form.fields.get_mut(2)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 1;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 3;
-        insert_text(&mut form, "sk-mm");
+        model_add_pick_provider(&mut form, "minimax");
+        model_add_set_choice(&mut form, &t!("form.model.field.site.label"), 1);
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "sk-mm");
 
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Minimax);
+        assert_eq!(parsed.provider_id, "minimax");
+        // The preset's defaultTransport is anthropic.
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(parsed.bulk);
         assert!(parsed.model_name.is_none());
         assert_eq!(parsed.api_base, "https://api.minimax.io/anthropic/v1");
-        assert_eq!(parsed.provider_site.as_deref(), Some("intl"));
         assert_eq!(parsed.api_key, "sk-mm");
+        // The minimax catalog parser lists via the openai-compatible endpoint on the same site.
+        assert_eq!(
+            parsed.listing,
+            Some(super::ModelAddListing::Http {
+                api_base: "https://api.minimax.io/v1".to_string(),
+                transport_kind: ModelTransportKind::OpenAiCompatible,
+            })
+        );
     }
 
     #[test]
     fn model_add_form_parses_azure_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_azure_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "azure");
         assert_eq!(form.fields.len(), 5);
-        form.selected_field = 1;
-        insert_text(&mut form, "my-openai-resource");
-        form.selected_field = 2;
-        insert_text(&mut form, "my-gpt4o-deploy");
-        form.selected_field = 4;
-        insert_text(&mut form, "azure-key");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.azure_resource_name.label"),
+            "my-openai-resource",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.deployment_name.label"),
+            "my-gpt4o-deploy",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.api_key.label"),
+            "azure-key",
+        );
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::Azure);
+        assert_eq!(parsed.provider_id, "azure");
         assert_eq!(parsed.transport_kind, ModelTransportKind::OpenResponses);
         assert!(!parsed.bulk);
         assert_eq!(parsed.model_name.as_deref(), Some("my-gpt4o-deploy"));
@@ -3641,38 +3085,36 @@ mod tests {
             "https://my-openai-resource.openai.azure.com/openai/v1"
         );
         assert_eq!(parsed.api_key, "azure-key");
-        assert_eq!(
-            parsed.azure_resource_name.as_deref(),
-            Some("my-openai-resource")
-        );
     }
 
     #[test]
     fn model_add_form_parses_cloudflare_ai_gateway_connection() {
         let mut form = new_model_add_form();
-        if let Some(f) = form.fields.get_mut(0)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = super::model_add_cloudflare_provider_index();
-        }
-        sync_model_add_form_fields(&mut form);
+        model_add_pick_provider(&mut form, "cloudflare-ai-gateway");
         assert_eq!(form.fields.len(), 7);
-        form.selected_field = 1;
-        insert_text(&mut form, "0123456789abcdef0123456789abcdef");
-        form.selected_field = 2;
-        insert_text(&mut form, "my-gateway");
-        if let Some(f) = form.fields.get_mut(3)
-            && let BottomFormFieldEditorView::Choice { selected, .. } = &mut f.editor
-        {
-            *selected = 2;
-        }
-        sync_model_add_form_fields(&mut form);
-        form.selected_field = 4;
-        insert_text(&mut form, "openai/gpt-4.1-mini");
-        form.selected_field = 6;
-        insert_text(&mut form, "cf-token");
+        model_add_set_choice(&mut form, &t!("form.model.field.api_kind.label"), 1);
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.cloudflare_account_id.label"),
+            "0123456789abcdef0123456789abcdef",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.cloudflare_gateway_id.label"),
+            "my-gateway",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.cloudflare_model_name.label"),
+            "openai/gpt-4.1-mini",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.cloudflare_api_token.label"),
+            "cf-token",
+        );
         let parsed = parse_model_add_connection(&form).expect("parse");
-        assert_eq!(parsed.provider, ModelProvider::CloudflareAiGateway);
+        assert_eq!(parsed.provider_id, "cloudflare-ai-gateway");
         assert_eq!(parsed.transport_kind, ModelTransportKind::Anthropic);
         assert!(!parsed.bulk);
         assert_eq!(parsed.model_name.as_deref(), Some("openai/gpt-4.1-mini"));
@@ -3681,11 +3123,221 @@ mod tests {
             "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/ai/v1"
         );
         assert_eq!(parsed.api_key, "cf-token");
-        assert_eq!(
-            parsed.cloudflare_account_id.as_deref(),
-            Some("0123456789abcdef0123456789abcdef")
-        );
         assert_eq!(parsed.cloudflare_gateway_id.as_deref(), Some("my-gateway"));
+    }
+
+    #[test]
+    fn model_add_form_parses_vertex_service_account_connection() {
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "google-vertex-ai");
+        // provider, mode, credential form, project, location, client email, private key
+        assert_eq!(
+            model_add_field_labels(&form),
+            vec![
+                t!("form.model.field.provider.label").into_owned(),
+                t!("form.model.field.mode.label").into_owned(),
+                t!("form.model.field.credential_kind.label").into_owned(),
+                t!("form.model.field.vertex_project.label").into_owned(),
+                t!("form.model.field.vertex_location.label").into_owned(),
+                t!("form.model.field.vertex_client_email.label").into_owned(),
+                t!("form.model.field.vertex_private_key.label").into_owned(),
+            ]
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_project.label"),
+            "my-gcp-project",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_location.label"),
+            "us-central1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_client_email.label"),
+            "sa@example.invalid",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_private_key.label"),
+            "-----BEGIN PRIVATE KEY-----",
+        );
+
+        let parsed = parse_model_add_connection(&form).expect("parse");
+        assert_eq!(parsed.provider_id, "google-vertex-ai");
+        assert!(parsed.bulk);
+        assert_eq!(
+            parsed.api_base,
+            "https://us-central1-aiplatform.googleapis.com/v1/projects/my-gcp-project/locations/us-central1"
+        );
+        assert!(parsed.api_key.is_empty());
+        assert_eq!(
+            parsed.options.get("project").map(String::as_str),
+            Some("my-gcp-project")
+        );
+        assert_eq!(
+            parsed.options.get("location").map(String::as_str),
+            Some("us-central1")
+        );
+        assert_eq!(
+            parsed.credential_slots,
+            vec![
+                ("clientEmail".to_string(), "sa@example.invalid".to_string()),
+                (
+                    "privateKey".to_string(),
+                    "-----BEGIN PRIVATE KEY-----".to_string()
+                ),
+            ]
+        );
+        assert_eq!(
+            parsed.listing,
+            Some(super::ModelAddListing::VertexServiceAccount)
+        );
+    }
+
+    #[test]
+    fn model_add_form_parses_vertex_express_api_key_connection() {
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "google-vertex-ai");
+        // The apiKey credential form selects the Vertex Express shortcut.
+        model_add_set_choice(&mut form, &t!("form.model.field.credential_kind.label"), 1);
+        // provider, credential form, model name, context length, api key
+        assert_eq!(
+            model_add_field_labels(&form),
+            vec![
+                t!("form.model.field.provider.label").into_owned(),
+                t!("form.model.field.credential_kind.label").into_owned(),
+                t!("form.model.field.model_name.label").into_owned(),
+                t!("form.model.field.context_length.label").into_owned(),
+                t!("form.model.field.api_key.label").into_owned(),
+            ]
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "publishers/google/models/gemini-2.5-flash",
+        );
+        model_add_set_text(&mut form, &t!("form.model.field.api_key.label"), "aq-key");
+
+        let parsed = parse_model_add_connection(&form).expect("parse");
+        assert_eq!(parsed.provider_id, "google-vertex-ai");
+        assert!(!parsed.bulk);
+        // Vertex Express materializes the preset's expressApiBase and writes no options.
+        assert_eq!(
+            parsed.api_base,
+            "https://aiplatform.googleapis.com/v1/publishers/google"
+        );
+        assert!(parsed.options.is_empty());
+        assert_eq!(parsed.api_key, "aq-key");
+        assert_eq!(
+            parsed.model_name.as_deref(),
+            Some("publishers/google/models/gemini-2.5-flash")
+        );
+        assert!(parsed.credential_slots.is_empty());
+        assert!(parsed.listing.is_none());
+    }
+
+    #[test]
+    fn model_add_form_vertex_service_account_requires_the_pair() {
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "google-vertex-ai");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_project.label"),
+            "my-gcp-project",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_location.label"),
+            "us-central1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.vertex_client_email.label"),
+            "sa@example.invalid",
+        );
+
+        let err = parse_model_add_connection(&form).expect_err("incomplete service account");
+        assert_eq!(
+            err,
+            t!("form.model.validation.vertex_service_account_incomplete")
+        );
+    }
+
+    #[test]
+    fn model_add_form_parses_bedrock_connection() {
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "amazon-bedrock");
+        // provider, region, model name, context length, access key id, secret access key
+        assert_eq!(
+            model_add_field_labels(&form),
+            vec![
+                t!("form.model.field.provider.label").into_owned(),
+                t!("form.model.field.aws_region.label").into_owned(),
+                t!("form.model.field.model_name.label").into_owned(),
+                t!("form.model.field.context_length.label").into_owned(),
+                t!("form.model.field.bedrock_access_key_id.label").into_owned(),
+                t!("form.model.field.bedrock_secret_access_key.label").into_owned(),
+            ]
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "anthropic.claude-opus-5-5-v1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.bedrock_access_key_id.label"),
+            "AKIAEXAMPLE",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.bedrock_secret_access_key.label"),
+            "secret",
+        );
+
+        let parsed = parse_model_add_connection(&form).expect("parse");
+        assert_eq!(parsed.provider_id, "amazon-bedrock");
+        assert_eq!(parsed.transport_kind, ModelTransportKind::Bedrock);
+        assert!(!parsed.bulk);
+        // The region field defaults to us-east-1 and materializes into the endpoint + options.
+        assert_eq!(parsed.api_base, "https://bedrock.us-east-1.amazonaws.com");
+        assert_eq!(
+            parsed.options.get("awsRegion").map(String::as_str),
+            Some("us-east-1")
+        );
+        assert!(parsed.api_key.is_empty());
+        assert_eq!(
+            parsed.credential_slots,
+            vec![
+                ("accessKeyId".to_string(), "AKIAEXAMPLE".to_string()),
+                ("secretAccessKey".to_string(), "secret".to_string()),
+            ]
+        );
+        assert!(parsed.listing.is_none());
+    }
+
+    #[test]
+    fn model_add_form_bedrock_requires_both_iam_fields() {
+        let mut form = new_model_add_form();
+        model_add_pick_provider(&mut form, "amazon-bedrock");
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.model_name.label"),
+            "anthropic.claude-opus-5-5-v1",
+        );
+        model_add_set_text(
+            &mut form,
+            &t!("form.model.field.bedrock_access_key_id.label"),
+            "AKIAEXAMPLE",
+        );
+
+        let err = parse_model_add_connection(&form).expect_err("incomplete IAM pair");
+        assert_eq!(
+            err,
+            t!("form.model.validation.bedrock_credentials_incomplete")
+        );
     }
 
     fn sample_rule_entry(scope: RuleScope, exists: bool, enabled: bool) -> RuleEntry {

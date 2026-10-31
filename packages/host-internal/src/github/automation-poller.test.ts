@@ -14,7 +14,7 @@ const baseDefinition = {
   title: "Test",
   overview: "Do work",
   workspaceRoot: "/tmp",
-  modelRef: { groupId: "openai", name: "gpt-test" },
+  modelRef: { providerId: "openai", name: "gpt-test" },
   approvalLevel: "default" as const,
   enabled: true,
   createdAtUnixMs: 1,

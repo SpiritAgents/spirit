@@ -1,4 +1,5 @@
 import type { Messages } from "@/i18n/messages";
+import { hydrateProductCopy } from "@/i18n/product-copy";
 
 type JsonMessages = Omit<Messages, "common" | "footer" | "desktop"> & {
   common: Omit<Messages["common"], "downloadForPlatform"> & {
@@ -8,9 +9,13 @@ type JsonMessages = Omit<Messages, "common" | "footer" | "desktop"> & {
     copyrightLine: string;
   };
   desktop: Omit<Messages["desktop"], "models" | "commit" | "shell" | "previews"> & {
-    models: Omit<Messages["desktop"]["models"], "deleteDialogTitle" | "deleteDialogDescription"> & {
+    models: Omit<
+      Messages["desktop"]["models"],
+      "deleteDialogTitle" | "deleteDialogDescription" | "connectNamedProviderTitle"
+    > & {
       deleteDialogTitle: string;
       deleteDialogDescription: string;
+      connectNamedProviderTitle: string;
     };
     commit: Omit<Messages["desktop"]["commit"], "currentBranch"> & {
       currentBranch: string;
@@ -41,7 +46,7 @@ function fill(template: string, params: Record<string, string | number>): string
 }
 
 export function hydrateMessages(raw: unknown): Messages {
-  const json = raw as JsonMessages;
+  const json = hydrateProductCopy(raw) as JsonMessages;
   return {
     ...json,
     common: {
@@ -60,6 +65,8 @@ export function hydrateMessages(raw: unknown): Messages {
           fill(json.desktop.models.deleteDialogTitle, { modelName }),
         deleteDialogDescription: (modelName) =>
           fill(json.desktop.models.deleteDialogDescription, { modelName }),
+        connectNamedProviderTitle: (provider) =>
+          fill(json.desktop.models.connectNamedProviderTitle, { provider }),
       },
       commit: {
         ...json.desktop.commit,

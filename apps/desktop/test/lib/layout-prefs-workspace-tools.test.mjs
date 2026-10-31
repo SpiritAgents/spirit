@@ -7,6 +7,9 @@ import {
   readWorkspaceToolsFullScreenRestoreOpen,
   readWorkspaceToolsWidthPx,
   readWorkspaceToolsWidthRatio,
+  workspaceToolsShellWidthExpression,
+  workspaceToolsShellWidthWhenOpen,
+  workspaceToolsWidthExpression,
   writeWorkspaceToolsFullScreen,
   writeWorkspaceToolsFullScreenRestoreOpen,
   writeWorkspaceToolsWidthPx,
@@ -52,6 +55,35 @@ test("readWorkspaceToolsWidthPx scales with viewport from stored ratio", () => {
   });
 });
 
+test("narrow viewports clamp the rendered width without changing the stored ratio", () => {
+  withLocalStorage((store) => {
+    writeWorkspaceToolsWidthRatio(0.5, 1000);
+    assert.equal(readWorkspaceToolsWidthRatio(360), 0.5);
+    assert.equal(readWorkspaceToolsWidthPx(360), computeWorkspaceToolsMaxWidthPx(360));
+    assert.equal(readWorkspaceToolsWidthPx(1200), 600);
+    assert.equal(store.get(RATIO_KEY), "0.5");
+  });
+});
+
+test("workspace tools CSS width resolves ratio and bounds against the current viewport", () => {
+  assert.equal(
+    workspaceToolsWidthExpression(0.5),
+    "min(round(nearest, 62vw, 1px), max(240px, round(nearest, 50vw, 1px)))",
+  );
+  assert.equal(
+    workspaceToolsWidthExpression(0.35, 200, 600),
+    "min(600px, max(200px, round(nearest, 35vw, 1px)))",
+  );
+});
+
+test("workspace tools shell shares the viewport expression and collapses to zero", () => {
+  const width = workspaceToolsWidthExpression(0.5);
+  assert.equal(workspaceToolsShellWidthExpression(width), `calc(1px + ${width})`);
+  assert.equal(workspaceToolsShellWidthWhenOpen(true, width), `calc(1px + ${width})`);
+  assert.equal(workspaceToolsShellWidthWhenOpen(false, width), "0px");
+  assert.equal(workspaceToolsShellWidthExpression(420), "calc(1px + 420px)");
+});
+
 test("writeWorkspaceToolsWidthPx persists ratio not absolute pixels", () => {
   withLocalStorage((store) => {
     writeWorkspaceToolsWidthPx(600, 1200);
@@ -83,6 +115,7 @@ test("readWorkspaceToolsWidthPx clamps to min and max", () => {
 test("default ratio is used when no prefs exist", () => {
   withLocalStorage(() => {
     assert.equal(readWorkspaceToolsWidthRatio(1200), WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO);
+    assert.equal(readWorkspaceToolsWidthRatio(360), WORKSPACE_TOOLS_DEFAULT_WIDTH_RATIO);
   });
 });
 

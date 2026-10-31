@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 생산성을 배가시키기 위해 만들어진 오픈소스 AI 에이전트.
@@ -8,9 +14,7 @@
 
 > 본 프로젝트는 활발히 개발 중입니다. 릴리스 간 동작과 API가 변경될 수 있습니다.
 
-[English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md) · [Русский](README_ru.md)
 
 </div>
 
@@ -116,8 +120,6 @@ pnpm run dev:site
 
 ## CLI
 
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
-
 [Rust CLI](../apps/cli)(`spirit`)는 터미널 우선 호스트로 선택적 Ratatui UI를 제공합니다. WebSocket으로 공유 Spirit Server 데몬에 연결하며, 스크립팅, SSH 세션, 최소 환경에 적합합니다.
 
 ```bash
@@ -169,14 +171,14 @@ pnpm run dev:cli    # cargo run -p spirit
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| 환경 변수              | 필수   | 설명                                                                   |
-| ---------------------- | ------ | ---------------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | 아니오 | 워크스페이스 루트(기본: 클라이언트 `cwd`)                              |
-| `SPIRIT_ACP_DATA_DIR`  | 아니오 | Spirit 데이터 디렉터리(기본: `%APPDATA%/Spirit` 또는 `~/.spirit-data`) |
+| 환경 변수              | 필수   | 설명                                                                     |
+| ---------------------- | ------ | ------------------------------------------------------------------------ |
+| `SPIRIT_ACP_WORKSPACE` | 아니오 | 워크스페이스 루트(기본: 클라이언트 `cwd`)                                |
+| `SPIRIT_ACP_DATA_DIR`  | 아니오 | Spirit 데이터 디렉터리(기본: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## 개발
 
-**요구 사항:** Node.js 24+, pnpm 12+(`corepack enable`로 활성화). CLI 빌드에는 Rust 툴체인 필요.
+**요구 사항:** Node.js 26.13.0, pnpm 12.4.2(`npm install --global pnpm@12.4.2`로 설치). CLI 빌드에는 Rust 툴체인 필요.
 
 | 명령                       | 설명                                                                       |
 | -------------------------- | -------------------------------------------------------------------------- |

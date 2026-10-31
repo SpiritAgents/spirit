@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 
-import { isWin32ElectronShell } from "@/lib/desktop-shell";
 import i18n from "@/lib/i18n";
 import {
   desktopNativeThemeForPreference,
@@ -46,13 +45,6 @@ export function useDesktopShellEffects({
       document.documentElement.classList.remove("spirit-desktop-darwin-conversation-split");
     }
   }, [darwinElectronChrome]);
-
-  useEffect(() => {
-    if (typeof document === "undefined") {
-      return;
-    }
-    document.documentElement.classList.toggle("spirit-desktop-win32", isWin32ElectronShell());
-  }, [isElectronShell]);
 
   useEffect(() => {
     if (!darwinElectronChrome || typeof document === "undefined") {

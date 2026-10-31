@@ -20,7 +20,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/Brooooooklyn/keyring-node
 - **@types/jsdom** 28.0.3 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
-- **@types/node** 25.9.5 — MIT
+- **@types/node** 26.6.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
 - **@types/turndown** 5.0.6 — MIT
   - https://github.com/DefinitelyTyped/DefinitelyTyped
@@ -44,7 +44,7 @@ Scope constraint: exclude workspace-local/internal dependencies resolved via `wo
   - https://github.com/mixmark-io/turndown
 - **turndown-plugin-gfm** 1.0.2 — MIT
   - https://github.com/domchristie/turndown-plugin-gfm
-- **typescript** 5.9.3 — Apache-2.0
+- **typescript** 7.0.2 — Apache-2.0
   - https://github.com/microsoft/TypeScript
 - **vitest** 4.1.11 — MIT
   - https://github.com/vitest-dev/vitest
@@ -502,7 +502,7 @@ limitations under the License.
 
 **Used by:**
 
-- typescript 5.9.3
+- typescript 7.0.2
 
 ```
 Apache License
@@ -733,7 +733,7 @@ SOFTWARE.
 **Used by:**
 
 - @types/jsdom 28.0.3
-- @types/node 25.9.5
+- @types/node 26.6.6
 - @types/turndown 5.0.6
 
 ```

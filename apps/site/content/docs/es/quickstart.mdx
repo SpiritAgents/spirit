@@ -1,6 +1,7 @@
 ---
 title: Inicio rápido
-description: Instala Spirit, conecta un proveedor y logra una pequeña edición aprobada.
+description: Instala {{product.name}}, conecta un proveedor y logra una pequeña
+  edición aprobada.
 ---
 
 Esta página te lleva desde una instalación nueva hasta un cambio útil. Las páginas posteriores cubren cada proveedor y host; sin esta ruta, esas páginas no tienen a qué vincularse.
@@ -24,11 +25,11 @@ Detalles: [Instalar Desktop](./install/desktop.mdx).
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 Abre una nueva terminal y ejecuta `spirit --version`. Detalles: [Instalar CLI](./install/cli.mdx).
@@ -60,7 +61,7 @@ La TUI usa el directorio actual como workspace.
 
 ## 3. Conecta un proveedor
 
-Necesitas una clave API de un proveedor que ya uses. Spirit almacena esa clave en el llavero del sistema operativo (`Spirit`).
+Necesitas una clave API de un proveedor que ya uses. {{product.name|mdx}} almacena esa clave en el llavero del sistema operativo (`{{product.name}}`).
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">
@@ -68,7 +69,7 @@ Necesitas una clave API de un proveedor que ya uses. Spirit almacena esa clave e
 1. Abre **Ajustes → Modelos**.
 2. Elige un proveedor y sigue el asistente de conexión.
 3. Pega la clave. Los campos adicionales (región, sitio, endpoint del plan) aparecen solo cuando ese proveedor los necesita.
-4. Elige un modelo de chat como modelo activo.
+4. Elige un modelo de lenguaje como modelo activo.
 
 </Tab>
   <Tab value="CLI">

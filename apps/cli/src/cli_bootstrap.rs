@@ -113,13 +113,13 @@ pub fn apply_active_model(
                 )
             };
 
-            // Invalid syntax (e.g. "::name", "group::") must not be reported as "not found".
-            if let Some((group_id, name)) = trimmed.split_once("::") {
-                if group_id.trim().is_empty() || name.trim().is_empty() {
+            // Invalid syntax (e.g. "::name", "provider::") must not be reported as "not found".
+            if let Some((provider_id, name)) = trimmed.split_once("::") {
+                if provider_id.trim().is_empty() || name.trim().is_empty() {
                     return Err(selector_failed());
                 }
                 let model_ref = crate::model_registry::ModelRef {
-                    group_id: group_id.trim().to_string(),
+                    provider_id: provider_id.trim().to_string(),
                     name: name.trim().to_string(),
                 };
                 if !config.model_ref_exists(&model_ref) {
@@ -185,46 +185,55 @@ pub fn print_skills_stub() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model_registry::{ModelEntry, ModelProvider, ModelRef, ProviderGroup};
+    use crate::model_registry::{ModelEntry, ModelRef, ProviderEntry};
 
     fn config_with_models(names: &[&str]) -> AppConfig {
         let models = names
             .iter()
             .map(|name| ModelEntry {
                 name: (*name).to_string(),
-                reasoning_effort: None,
-                reasoning_mode: None,
-                thinking_enabled: None,
-                supported_reasoning_efforts: None,
-                capabilities: None,
-                context_length: None,
-                supports_thinking_type: None,
-                supports_thinking_switch: None,
+                ..ModelEntry::default()
             })
             .collect();
         AppConfig {
             active_model: ModelRef {
-                group_id: "g".to_string(),
+                provider_id: "g".to_string(),
                 name: names.first().copied().unwrap_or("m").to_string(),
             },
-            provider_groups: vec![ProviderGroup {
+            providers: vec![ProviderEntry {
                 id: "g".to_string(),
-                provider: ModelProvider::Custom,
                 label: None,
                 api_base: "https://example.com/v1".to_string(),
                 transport_kind: Some("openai-compatible".to_string()),
-                provider_site: None,
-                alibaba_workspace_id: None,
-                alibaba_billing_mode: None,
-                stepfun_billing_mode: None,
-                z_ai_billing_mode: None,
-                zhipu_billing_mode: None,
-                aws_region: None,
-                azure_resource_name: None,
-                cloudflare_account_id: None,
-                cloudflare_gateway_id: None,
-                vertex_project: None,
-                vertex_location: None,
+                sdk: None,
+                headers: None,
+                body: None,
+                provider_tools: None,
+                file_upload: None,
+                image_api: None,
+                video_api: None,
+                api_key: None,
+                api_key_env: None,
+                api_key_keyring: None,
+                credentials: None,
+                options: None,
+                capabilities: None,
+                context_length: None,
+                output_limit: None,
+                reasoning_effort: None,
+                supported_reasoning_efforts: None,
+                effort_semantics: None,
+                effort: None,
+                supported_efforts: None,
+                default_effort: None,
+                thinking_capabilities: None,
+                reasoning_mode: None,
+                supported_reasoning_modes: None,
+                supports_thinking_type: None,
+                supports_thinking_switch: None,
+                thinking_switch: None,
+                service_tiers: None,
+                service_tier: None,
                 models,
             }],
             ..AppConfig::default()

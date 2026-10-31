@@ -14,20 +14,20 @@
     "sessionSidebar": {
       "currentWorkspace": "Aktueller Workspace",
       "models": "Modelle",
-      "skills": "Fähigkeiten",
+      "skills": "Skills",
       "dreams": "Dreams",
       "extensions": "Erweiterungen",
       "mcps": "MCPs",
       "appearance": "Aussehen",
       "settingsNavSidebarAria": "Einstellungs-Navigationsseitenleiste",
-      "sessionsSidebarAria": "Sitzungen und Einstellungen Seitenleiste",
+      "sessionsSidebarAria": "Chats und Einstellungen Seitenleiste",
       "back": "Zurück",
       "settingsHeading": "Einstellungen",
-      "newSession": "Neue Sitzung",
+      "newChat": "Neuer Chat",
       "extensionsButton": "Erweiterungen",
-      "workspaceHeading": "Workspace",
+      "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Einstellungs-Tabs",
-      "workspaceSessionsAria": "Workspace-Sitzungen",
+      "workspaceSessionsAria": "Workspace-Chats",
       "settingsButton": "Einstellungen",
       "basics": "Grundlagen",
       "pageNavigation": "Seitennavigation"
@@ -45,7 +45,7 @@
       "thinking": "Denken",
       "thought": "Nachgedacht",
       "emptyTitle": "Starte etwas.",
-      "composerPlaceholder": "Nachricht eingeben…",
+      "composerPlaceholder": "Nachricht eingeben",
       "agentDemo": {
         "previewUnavailable": "Vorschau nicht verfügbar",
         "viewLargeImage": "Großes Bild anzeigen",
@@ -61,7 +61,7 @@
         "planPath": "plans/landing-hero-refresh.md",
         "generatingImage": "Generiere Bild…"
       },
-      "manualAssistantResponse": "Spirit herunterladen.",
+      "manualAssistantResponse": "{{product.name}} herunterladen.",
       "demoUserPrompt": "Prüfe die aktuelle Landing Page und sag mir, was ich als Nächstes verbessern soll.",
       "demoThinkingText": "Prüfe die aktuelle Hero-Struktur.\nSuche nach den sichtbarsten Lücken in der Konversationsfläche.\nBereite eine kurze Implementierungsübersicht vor.",
       "demoAssistantResponse": "Hier ist der nächste Schritt, den ich machen würde.\n\n- Ersetze die leere Konversationsfläche durch eine echte Streaming-Demo.\n- Halte das Hero-Fenster unterbrechbar, damit Besucher sofort die Kontrolle übernehmen können.\n- Verwende die Desktop-Nachrichtenstile für Denken und Tool-Aufrufe, statt sie anzunähern.",
@@ -100,13 +100,10 @@
       "searchPlaceholder": "Suchen",
       "noMatches": "Keine Treffer",
       "optionalPlaceholder": "Optional",
-      "addProvider": "Anbieter hinzufügen",
       "current": "Aktuell",
       "deleteDialogDescription": "Konfiguration und separat gespeicherte Schlüssel werden entfernt.",
       "providerDialogTitle": "Anbieter wählen",
       "providerDialogDescription": "Wähle einen Anbieter und gib dann die Verbindungsdetails ein.",
-      "connectDialogDescriptionCustom": "Endpoint und Schlüssel eingeben.",
-      "connectDialogDescriptionDefault": "API-Schlüssel eingeben, um zu verbinden.",
       "addModeLabel": "So fügst du Modelle hinzu",
       "addModeAria": "So fügst du Modelle hinzu",
       "addSingle": "Einzelnes hinzufügen",
@@ -116,10 +113,9 @@
       "endpointLabel": "Endpunkt",
       "apiKeyLabel": "API-Schlüssel",
       "apiKeyPlaceholder": "Schlüssel eingeben",
-      "addThisModel": "Dieses Modell hinzufügen",
-      "adding": "Wird hinzugefügt…",
+      "connecting": "Wird verbunden…",
       "customConnectionTitle": "Benutzerdefinierte Verbindung",
-      "connectProviderTitle": "Anbieter verbinden"
+      "connectNamedProviderTitle": "{{provider}} verbinden"
     },
     "window": {
       "toolbarAria": "Seitenleiste und Werkzeuge",
@@ -128,7 +124,7 @@
       "commitButton": "Committen",
       "collapseTools": "Werkzeuge einklappen",
       "expandTools": "Werkzeuge ausklappen",
-      "newSession": "Neue Sitzung",
+      "newChat": "Neuer Chat",
       "settingsPlaceholderTitle": "Desktop-Einstellungen",
       "marketplacePlaceholderTitle": "Erweiterungsansicht",
       "previewEditorOnlyTextError": "Nur Textdateien können im Vorschau-Editor geöffnet werden.",
@@ -193,7 +189,7 @@
       "exited": "[beendet, Code {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Marketing-Website-Vorschau für das Spirit Desktop-Produkt.",
+      "siteReadmeDescription": "Marketing-Website-Vorschau für das {{product.name}} Desktop-Produkt.",
       "desktopReadmeDescription": "Electron-Shell und Web-Renderer für das Desktop-Produkt.",
       "generatedWorkspaceDescription": "Simulierter Arbeitsbereich, generiert für die Vorschau der Landingpage {{label}}.",
       "generatedWorkspaceOverview": "Arbeitsbereichsroot: {{root}}\\n\\nDieser simulierte Arbeitsbereich hält die Dateiregisterkarte interaktiv, ohne die vollständige Desktop-Laufzeit zu mounten.",
@@ -205,17 +201,17 @@
     }
   },
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit ist ein Open-Source-KI-Agent, den Sie mit Ihren Modellen, Ihren Schlüsseln und Ihrem Workflow ausführen."
+    "title": "{{product.name}}",
+    "description": "{{product.name}} ist ein Open-Source-KI-Agent, den Sie mit Ihren Modellen, Ihren Schlüsseln und Ihrem Workflow ausführen."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "Herunterladen",
     "downloadForPlatform": "Herunterladen für {{platform}}"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit Startseite",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} Startseite",
     "primaryNavAria": "Primär",
     "nav": {
       "features": "Funktionen",
@@ -236,8 +232,8 @@
     "headline": "Ein Open-Source-KI-Agent,\nder Ihre Produktivität vervielfacht."
   },
   "download": {
-    "metaTitle": "Spirit herunterladen",
-    "metaDescription": "Laden Sie Spirit für Desktop herunter, installieren Sie die CLI oder warten Sie auf ACP.",
+    "metaTitle": "{{product.name}} herunterladen",
+    "metaDescription": "Laden Sie {{product.name}} für Desktop herunter, installieren Sie die CLI oder warten Sie auf ACP.",
     "title": "Derselbe Agent, überall in Ihrer Arbeit.",
     "sectionAria": "Derselbe Agent, überall in Ihrer Arbeit.",
     "desktop": "Desktop",
@@ -247,7 +243,7 @@
     "copied": "Kopiert",
     "comingSoonJoke": "Demnächst™",
     "listingInProgress": "Wird gelistet…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "Überprüfe auth.ts und behebe den Session-Refresh-Bug.",
     "cliAssistantMessage": "Ich werde auth.ts inspizieren und den fehlerhaften Session-Check patchen.",
     "cliUserFollowUp": "Füge auch einen Regressionstest hinzu.",
@@ -255,20 +251,20 @@
     "cliFooter": "Agent  |  Standardfreigabe  |  Schleife aus          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit Inhalt",
+    "sectionAria": "{{product.name}} Inhalt",
     "featureHeading": ["Deine Modelle.", "Deine Schlüssel.", "Deine Kontrolle."],
-    "featureBody": "Spirit sperrt dich nicht in einen gehosteten Stack ein. Bring einen Schlüssel von einem beliebigen Anbieter mit, füge ihn einmal hinzu und verwende denselben Agent-Workflow überall.",
+    "featureBody": "{{product.name}} sperrt dich nicht in einen gehosteten Stack ein. Bring einen Schlüssel von einem beliebigen Anbieter mit, füge ihn einmal hinzu und verwende denselben Agent-Workflow überall.",
     "agent": {
-      "sectionAria": "Spirit Produktivität",
+      "sectionAria": "{{product.name}} Produktivität",
       "featureHeading": [
         "Plane mit Kontext.",
         "Führe mit Tools aus.",
         "Liefere in deinem Workspace."
       ],
-      "featureBody": "Spirit plant, bevor es handelt: Generiere Mockups, schreibe strukturierte Pläne und arbeite direkt gegen dein Repo – ohne die Desktop-Shell zu verlassen."
+      "featureBody": "{{product.name}} plant, bevor es handelt: Generiere Mockups, schreibe strukturierte Pläne und arbeite direkt gegen dein Repo – ohne die Desktop-Shell zu verlassen."
     },
-    "ctaSectionAria": "Spirit herunterladen",
-    "ctaTitle": "Probier Spirit aus.",
+    "ctaSectionAria": "{{product.name}} herunterladen",
+    "ctaTitle": "Probier {{product.name}} aus.",
     "trio": {
       "sectionAria": "Fähigkeitsvorschauen",
       "completion": {
@@ -306,12 +302,12 @@
     "linkHome": "Startseite",
     "changelog": "Changelog",
     "openSourceLicenses": "Open-Source-Lizenzen",
-    "copyrightLine": "© {{year}} Spirit. Open-Source-KI-Agent."
+    "copyrightLine": "© {{year}} {{product.name}}. Open-Source-KI-Agent."
   },
   "docs": {
     "title": "Dokumentation",
-    "metaTitle": "Spirit Dokumentation",
-    "metaDescription": "Installieren Sie Spirit, verbinden Sie einen Anbieter mit Ihrem eigenen Schlüssel und nutzen Sie denselben Agenten auf Desktop und CLI.",
+    "metaTitle": "{{product.name}} Dokumentation",
+    "metaDescription": "Installieren Sie {{product.name}}, verbinden Sie einen Anbieter mit Ihrem eigenen Schlüssel und nutzen Sie denselben Agenten auf Desktop und CLI.",
     "comingSoon": "Demnächst verfügbar.",
     "sectionAria": "Dokumentation",
     "search": "Suchen",

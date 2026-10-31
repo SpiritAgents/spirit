@@ -16,7 +16,9 @@ import {
   shell,
 } from "electron";
 
-import { detectSupportedImageFile } from "@spiritagent/host-internal/image-file-support";
+import { detectPreviewableImageFile } from "@spiritagent/host-internal/image-file-support";
+import { configureElectronProductStorage } from "./product-storage.js";
+import { product } from "@spiritagent/product";
 
 import {
   registerDesktopNotifications,
@@ -55,7 +57,7 @@ import {
 import { openSystemTerminalInDirectory } from "./open-system-terminal.js";
 import { WorkspacePtyManager } from "./workspace-pty.js";
 import {
-  isAllowedExternalUrl,
+  isHttpUrl,
   getCachedLocalListeningEndpoints,
   getScanningPromise,
   startLocalListenersScan,
@@ -88,13 +90,13 @@ import {
 } from "../src/lib/translucency.js";
 
 registerSpiritGeneratedAssetPrivilegedScheme();
+configureElectronProductStorage(app);
 
 const gotSpiritSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSpiritSingleInstanceLock) {
   app.quit();
 } else {
   const spiritDataDir = resolveConfiguredSpiritDataDir();
-  app.setPath("userData", spiritDataDir);
   setSpiritDataDirOverride(spiritDataDir);
 
   app.on("second-instance", (_event, argv) => {
@@ -153,6 +155,7 @@ import {
   subscribeDesktopAutomationsUpdates,
   subscribeDesktopDreamUpdates,
   subscribeDesktopSessionListUpdates,
+  subscribeDesktopTasksUpdates,
 } from "../src/host/service.js";
 import {
   chatsDirPath,
@@ -190,17 +193,14 @@ import { resolveRendererDistPath } from "./renderer-dist.js";
 import { registerGitHubDeviceLoginRunners } from "../src/host/github-oauth-bridge.js";
 import { listSystemFonts } from "./system-fonts.js";
 import { syncWindowsImmersiveDarkMode } from "./win-dwm.js";
-import {
-  configureElectronProductDisplayName,
-  PRODUCT_DISPLAY_NAME,
-} from "./product-display-name.js";
+import { PRODUCT_DISPLAY_NAME } from "./product-display-name.js";
 import i18nHost from "../src/lib/i18n-host.js";
 import { resolveUiLocalePreference } from "../src/lib/ui-locale.js";
 
 /** Must match `titleBarOverlay.height` and the custom title bar CSS height (px) */
 const TITLE_BAR_OVERLAY_HEIGHT = 32;
 const LOCAL_IMAGE_PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
-const MANAGED_ASSET_PROTOCOL = "spirit:";
+const MANAGED_ASSET_PROTOCOL = `${product.urlProtocol}:`;
 const MANAGED_ASSET_HOST = "generated";
 const MANAGED_GENERATED_IMAGES_DIR = "generated-images";
 const MANAGED_GENERATED_VIDEOS_DIR = "generated-videos";
@@ -208,7 +208,6 @@ const MANAGED_GENERATED_VIDEOS_DIR = "generated-videos";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-configureElectronProductDisplayName();
 installMainStderrCapture();
 
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
@@ -222,6 +221,7 @@ let quittingAfterDesktopWebHostStop = false;
 let unsubscribeDesktopDreamUpdates: (() => void) | undefined;
 let unsubscribeDesktopAutomationsUpdates: (() => void) | undefined;
 let unsubscribeDesktopSessionListUpdates: (() => void) | undefined;
+let unsubscribeDesktopTasksUpdates: (() => void) | undefined;
 /** Last snapshot pushed to each webContents; basis for incremental (delta) live updates. Reset on renderer reload. */
 const lastLivePushByWebContents = new WeakMap<Electron.WebContents, DesktopSnapshot>();
 let desktopHostShutdownComplete = false;
@@ -704,6 +704,35 @@ function trafficLightPositionCachePath(): string {
   return path.join(app.getPath("userData"), "traffic-light-position.json");
 }
 
+/**
+ * UI layout zoom cache: the zoom value lives in renderer localStorage, which the main process
+ * cannot read at window construction time. The renderer persists it on every change via
+ * `desktop:persist-ui-layout-scale`, and the next launch applies it to the webContents right after
+ * load, while the window is still hidden behind the launch splash.
+ * Keep the bounds in sync with UI_LAYOUT_SCALE_MIN/MAX in src/lib/ui-layout-scale.ts.
+ */
+function uiLayoutScaleCachePath(): string {
+  return path.join(app.getPath("userData"), "ui-layout-scale.json");
+}
+
+function clampUiLayoutScaleValue(scale: number): number {
+  return Math.min(1.25, Math.max(0.8, scale));
+}
+
+function readUiLayoutScaleFromDisk(): number {
+  try {
+    const parsed = JSON.parse(readFileSync(uiLayoutScaleCachePath(), "utf8")) as {
+      scale?: unknown;
+    };
+    if (typeof parsed.scale === "number" && Number.isFinite(parsed.scale)) {
+      return clampUiLayoutScaleValue(parsed.scale);
+    }
+  } catch {
+    // First launch or missing cache: default zoom 1
+  }
+  return 1;
+}
+
 function readTrafficLightPositionFromDisk(): { x: number; y: number } | undefined {
   try {
     const parsed = JSON.parse(readFileSync(trafficLightPositionCachePath(), "utf8")) as {
@@ -1044,6 +1073,13 @@ async function createMainWindow(): Promise<BrowserWindow> {
     await window.loadFile(path.join(rendererDistPath(), "index.html"));
   }
 
+  // Native Chromium page zoom re-rasterizes canvas content (terminal WebGL, Monaco) at the
+  // zoomed resolution; applied before the window is revealed so no unzoomed frame shows.
+  const storedUiLayoutScale = readUiLayoutScaleFromDisk();
+  if (storedUiLayoutScale !== 1) {
+    window.webContents.setZoomFactor(storedUiLayoutScale);
+  }
+
   await syncBrowserWindowFrameFromRendererStorage(window);
   flushPendingSpiritProtocolActions();
 
@@ -1094,7 +1130,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
   window.webContents.setWindowOpenHandler((details) => {
     const url = typeof details.url === "string" ? details.url.trim() : "";
-    if (url && isAllowedExternalUrl(url) && !window.webContents.isDestroyed()) {
+    if (url && isHttpUrl(url) && !window.webContents.isDestroyed()) {
       window.webContents.send("desktop:browser-open-url", { url });
     }
     return { action: "deny" };
@@ -1185,6 +1221,14 @@ if (gotSpiritSingleInstanceLock) {
       for (const window of BrowserWindow.getAllWindows()) {
         if (!window.isDestroyed()) {
           window.webContents.send("desktop:automations-updated", snapshot);
+        }
+      }
+    });
+
+    unsubscribeDesktopTasksUpdates = subscribeDesktopTasksUpdates((items) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send("desktop:tasks-updated", items);
         }
       }
     });
@@ -1530,6 +1574,18 @@ if (gotSpiritSingleInstanceLock) {
       },
     );
 
+    // The renderer applies the zoom synchronously via webFrame; the main process only persists
+    // it so the next launch can set the zoom before the window is revealed.
+    ipcMain.on("desktop:persist-ui-layout-scale", (_event, scale: unknown) => {
+      if (typeof scale !== "number" || !Number.isFinite(scale)) {
+        return;
+      }
+      const clamped = clampUiLayoutScaleValue(scale);
+      writeFile(uiLayoutScaleCachePath(), JSON.stringify({ scale: clamped })).catch((err) => {
+        console.error("[spirit-desktop] persist ui layout scale failed", err);
+      });
+    });
+
     // Preload forwards uncaught renderer errors/rejections (with stacks) for the crash page log.
     ipcMain.on("desktop:renderer-error", (_event, report: RendererErrorReport) => {
       if (!report || typeof report !== "object") {
@@ -1560,9 +1616,27 @@ if (gotSpiritSingleInstanceLock) {
       "desktop:pty-create",
       (
         event,
-        request: { cwd: string; cols: number; rows: number },
+        request: {
+          cwd: string;
+          cols: number;
+          rows: number;
+          file?: unknown;
+          args?: unknown;
+          env?: unknown;
+        },
       ): { ok: true; id: string; shellDisplayName: string } | { ok: false; error: string } => {
-        return workspacePtyManager.createSession(event.sender, request);
+        return workspacePtyManager.createSession(event.sender, {
+          cwd: request.cwd,
+          cols: request.cols,
+          rows: request.rows,
+          ...(typeof request.file === "string" ? { file: request.file } : {}),
+          ...(Array.isArray(request.args)
+            ? { args: request.args.filter((arg): arg is string => typeof arg === "string") }
+            : {}),
+          ...(request.env !== null && typeof request.env === "object"
+            ? { env: request.env as Record<string, string> }
+            : {}),
+        });
       },
     );
 
@@ -1585,10 +1659,10 @@ if (gotSpiritSingleInstanceLock) {
       openSystemTerminalInDirectory(cwd);
     });
 
-    ipcMain.handle("desktop:open-external-url", async (event, payload: { url?: string }) => {
+    ipcMain.handle("desktop:open-browser-url", async (event, payload: { url?: string }) => {
       const url = typeof payload?.url === "string" ? payload.url.trim() : "";
-      if (!url || !isAllowedExternalUrl(url)) {
-        throw new Error("Invalid external URL");
+      if (!url || !isHttpUrl(url)) {
+        throw new Error("Invalid browser URL");
       }
       if (event.sender.isDestroyed()) {
         return;
@@ -1807,6 +1881,8 @@ app.on("before-quit", (event) => {
   unsubscribeDesktopAutomationsUpdates = undefined;
   unsubscribeDesktopSessionListUpdates?.();
   unsubscribeDesktopSessionListUpdates = undefined;
+  unsubscribeDesktopTasksUpdates?.();
+  unsubscribeDesktopTasksUpdates = undefined;
   if (quittingAfterDesktopWebHostStop && desktopHostShutdownComplete) {
     return;
   }
@@ -1909,7 +1985,7 @@ async function readImagePreviewDataUrlFromPath(filePath: string): Promise<string
     }
 
     const bytes = await readFile(filePath);
-    const detected = detectSupportedImageFile(filePath, bytes);
+    const detected = detectPreviewableImageFile(filePath, bytes);
     if (!detected) {
       return null;
     }

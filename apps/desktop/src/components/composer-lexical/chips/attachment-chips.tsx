@@ -6,8 +6,8 @@ import type { PrDiffAttachment } from "@/lib/pr-diff-attachment";
 import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
 import { MessageCircleMore } from "lucide-react";
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
-import { ChipIcon, ChipIconSvg, ChipShell } from "@/components/composer-lexical/chips/chip-shell";
-import { NavigableChipLabel } from "@/contexts/composer-chip-navigate-context";
+import { ChipIcon, ChipIconSvg, ChipLabel } from "@/components/composer-lexical/chips/chip-shell";
+import { NavigableChipShell } from "@/contexts/composer-chip-navigate-context";
 import {
   BROWSER_ELEMENT_CHIP_CLASS,
   BROWSER_ELEMENT_CHIP_ICON_CLASS,
@@ -49,7 +49,12 @@ import {
 
 export function ElementChip({ attachment }: { attachment: BrowserElementAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "element",
+        pageUrl: attachment.pageUrl,
+        ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
+      }}
       data-chip-kind="element"
       data-element-chip="true"
       data-element-id={attachment.id}
@@ -65,16 +70,8 @@ export function ElementChip({ attachment }: { attachment: BrowserElementAttachme
         <path d="M21.293 8.293a1 1 0 0 1 0 1.414l-1.586 1.586a1 1 0 0 1-1.414 0l-5.586-5.586a1 1 0 0 1 0-1.414l1.586-1.586a1 1 0 0 1 1.414 0z" />
         <circle cx="11" cy="13" r="2" />
       </ChipIconSvg>
-      <NavigableChipLabel
-        target={{
-          kind: "element",
-          pageUrl: attachment.pageUrl,
-          ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
-        }}
-      >
-        {`<${attachment.tagName}>`}
-      </NavigableChipLabel>
-    </ChipShell>
+      <ChipLabel>{`<${attachment.tagName}>`}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
@@ -121,7 +118,12 @@ function prDiffIconPaths(status: PrDiffAttachment["status"]) {
 
 export function PrDiffChip({ attachment }: { attachment: PrDiffAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "prDiff",
+        prUrl: attachment.prUrl,
+        ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
+      }}
       data-chip-kind="prDiff"
       className={prDiffChipClassForStatus(attachment.status)}
       title={formatPrDiffChipTitle(attachment)}
@@ -134,22 +136,20 @@ export function PrDiffChip({ attachment }: { attachment: PrDiffAttachment }) {
       <ChipIconSvg className={PR_DIFF_CHIP_ICON_CLASS}>
         {prDiffIconPaths(attachment.status)}
       </ChipIconSvg>
-      <NavigableChipLabel
-        target={{
-          kind: "prDiff",
-          prUrl: attachment.prUrl,
-          ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
-        }}
-      >
+      <ChipLabel>
         {formatPrDiffChipLabel(attachment.filename, attachment.lineStart, attachment.lineEnd)}
-      </NavigableChipLabel>
-    </ChipShell>
+      </ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 export function GitCommitChip({ attachment }: { attachment: GitCommitAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "gitCommit",
+        ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
+      }}
       data-chip-kind="gitCommit"
       className={GIT_COMMIT_CHIP_CLASS}
       title={formatGitCommitChipTitle(attachment)}
@@ -160,21 +160,18 @@ export function GitCommitChip({ attachment }: { attachment: GitCommitAttachment 
         <line x1="1.05" y1="12" x2="7" y2="12" />
         <line x1="17.01" y1="12" x2="22.96" y2="12" />
       </ChipIconSvg>
-      <NavigableChipLabel
-        target={{
-          kind: "gitCommit",
-          ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
-        }}
-      >
-        {formatGitCommitChipLabel(attachment.subject)}
-      </NavigableChipLabel>
-    </ChipShell>
+      <ChipLabel>{formatGitCommitChipLabel(attachment.subject)}</ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 export function TerminalSnippetChip({ attachment }: { attachment: TerminalSnippetAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "terminalSnippet",
+        ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
+      }}
       data-chip-kind="terminalSnippet"
       className={TERMINAL_CHIP_CLASS}
       title={formatTerminalChipTitle(attachment)}
@@ -188,21 +185,23 @@ export function TerminalSnippetChip({ attachment }: { attachment: TerminalSnippe
         <polyline points="4 17 10 11 4 5" />
         <line x1="12" x2="20" y1="19" y2="19" />
       </ChipIconSvg>
-      <NavigableChipLabel
-        target={{
-          kind: "terminalSnippet",
-          ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
-        }}
-      >
+      <ChipLabel>
         {formatTerminalChipLabel(attachment.terminalName, attachment.lineStart, attachment.lineEnd)}
-      </NavigableChipLabel>
-    </ChipShell>
+      </ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 export function FileSnippetChip({ attachment }: { attachment: FileSnippetAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "fileSnippet",
+        filePath: attachment.filePath,
+        lineStart: attachment.lineStart,
+        lineEnd: attachment.lineEnd,
+        ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
+      }}
       data-chip-kind="fileSnippet"
       className={FILE_SNIPPET_CHIP_CLASS}
       title={formatFileSnippetChipTitle(attachment)}
@@ -220,42 +219,35 @@ export function FileSnippetChip({ attachment }: { attachment: FileSnippetAttachm
           colorMode="inherit"
         />
       </ChipIcon>
-      <NavigableChipLabel
-        target={{
-          kind: "fileSnippet",
-          filePath: attachment.filePath,
-          lineStart: attachment.lineStart,
-          lineEnd: attachment.lineEnd,
-          ...(attachment.sourceTabId ? { sourceTabId: attachment.sourceTabId } : {}),
-        }}
-      >
+      <ChipLabel>
         {formatFileSnippetChipLabel(attachment.filePath, attachment.lineStart, attachment.lineEnd)}
-      </NavigableChipLabel>
-    </ChipShell>
+      </ChipLabel>
+    </NavigableChipShell>
   );
 }
 
 export function MessageQuoteChip({ attachment }: { attachment: MessageQuoteAttachment }) {
   return (
-    <ChipShell
+    <NavigableChipShell
+      target={{
+        kind: "messageQuote",
+        quoteSessionPath: attachment.sessionPath,
+        quoteMessageId: attachment.messageId,
+        quoteOrigin: attachment.origin,
+      }}
       data-chip-kind="messageQuote"
       className={MESSAGE_QUOTE_CHIP_CLASS}
       title={formatMessageQuoteChipTitle(attachment)}
       aria-label={formatMessageQuoteChipLabel(attachment.selectedText)}
     >
       <ChipIcon className={MESSAGE_QUOTE_CHIP_ICON_CLASS}>
-        <MessageCircleMore className={WORKSPACE_FILE_ICON_CHIP_CLASS} aria-hidden />
+        <MessageCircleMore
+          className={WORKSPACE_FILE_ICON_CHIP_CLASS}
+          aria-hidden
+          strokeWidth={1.75}
+        />
       </ChipIcon>
-      <NavigableChipLabel
-        target={{
-          kind: "messageQuote",
-          quoteSessionPath: attachment.sessionPath,
-          quoteMessageId: attachment.messageId,
-          quoteOrigin: attachment.origin,
-        }}
-      >
-        {formatMessageQuoteChipLabel(attachment.selectedText)}
-      </NavigableChipLabel>
-    </ChipShell>
+      <ChipLabel>{formatMessageQuoteChipLabel(attachment.selectedText)}</ChipLabel>
+    </NavigableChipShell>
   );
 }

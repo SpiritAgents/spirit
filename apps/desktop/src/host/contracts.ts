@@ -15,7 +15,6 @@ export type HostCommandName =
   | "forgetWorkspace"
   | "commitChanges"
   | "updateConfig"
-  | "installLspProvider"
   | "setWebHostAuthTokenHash"
   | "addModel"
   | "addProviderModels"
@@ -88,6 +87,10 @@ export type HostCommandName =
   | "updateAutomation"
   | "deleteAutomation"
   | "setAutomationEnabled"
+  | "listTaskMenuItems"
+  | "resolveTaskForRun"
+  | "resolveTaskByLabel"
+  | "consumeFolderOpenTaskTriggers"
   | "replyPendingApproval"
   | "replyPendingQuestions"
   | "replyWorkspaceCapabilityTrust"
@@ -109,6 +112,7 @@ export type HostCommandName =
   | "checkoutPaneGitBranch"
   | "deleteSession"
   | "renameSession"
+  | "setSessionPinned"
   | "listWorkspaceFileReferenceSuggestions"
   | "requestCodeCompletion"
   | "abortCodeCompletion"
@@ -154,6 +158,7 @@ export interface StoredDesktopSession {
   savedAtUnixMs: number;
   sessionDisplayName?: string;
   sessionTitleSource?: SessionTitleSource;
+  pinnedAtUnixMs?: number;
   workspaceRoot?: string;
   gitBranch?: string;
   activePlanPath?: string;

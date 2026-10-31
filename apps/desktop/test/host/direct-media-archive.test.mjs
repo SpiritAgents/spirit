@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -13,9 +14,10 @@ test("appendDirectMediaTurnToArchive appends user, assistant tool_calls, and too
     toolCallId: "call-direct-video",
     toolName: "generate_video",
     request: { name: "generate_video", prompt: "a moonlit courtyard" },
-    summaryText: ["[generated video]", "video_ref: spirit://generated/video/courtyard.mp4"].join(
-      "\n",
-    ),
+    summaryText: [
+      "[generated video]",
+      `video_ref: ${product.urlProtocol}://generated/video/courtyard.mp4`,
+    ].join("\n"),
   });
 
   assert.equal(bundle.archiveHistory.length, 3);
@@ -27,5 +29,7 @@ test("appendDirectMediaTurnToArchive appends user, assistant tool_calls, and too
   assert.match(bundle.archiveHistory[1].toolCalls?.[0]?.argumentsJson ?? "", /a moonlit courtyard/);
   assert.equal(bundle.archiveHistory[2].role, "tool");
   assert.equal(bundle.archiveHistory[2].toolCallId, "call-direct-video");
-  assert.match(bundle.archiveHistory[2].content[0].text, /spirit:\/\/generated\/video/);
+  assert.ok(
+    bundle.archiveHistory[2].content[0].text.includes(`${product.urlProtocol}://generated/video/`),
+  );
 });

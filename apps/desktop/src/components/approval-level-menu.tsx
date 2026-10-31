@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import type { ApprovalLevel } from "@spiritagent/host-internal/approval-level";
-import { Brain, ChevronDown, ShieldBan, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Brain, ShieldBan, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -29,7 +30,7 @@ type ApprovalLevelMenuProps = {
   onApprovalLevelChange(level: ApprovalLevel): void;
 };
 
-const APPROVAL_LEVEL_ICONS: Record<ApprovalLevel, LucideIcon> = {
+export const APPROVAL_LEVEL_ICONS: Record<ApprovalLevel, LucideIcon> = {
   default: ShieldCheck,
   "auto-approval": Brain,
   "bypass-approval": ShieldBan,
@@ -105,11 +106,13 @@ export function ApprovalLevelMenu({
               <TriggerIcon
                 className={cn("size-3.5 shrink-0", approvalLevelTriggerIconClass(approvalLevel))}
                 aria-hidden
+                strokeWidth={1.75}
               />
               <span className="min-w-0 truncate">{label}</span>
               <ChevronDown
                 className={cn("size-3 shrink-0", approvalLevelChevronClass(approvalLevel))}
                 aria-hidden
+                strokeWidth={1.75}
               />
             </button>
           </DropdownMenuTrigger>
@@ -135,7 +138,7 @@ export function ApprovalLevelMenu({
                   approvalLevel === option.value && DESKTOP_OVERLAY_LIST_ITEM_SELECTED,
                 )}
               >
-                <OptionIcon className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+                <OptionIcon className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 {option.label}
               </DropdownMenuItem>
             );

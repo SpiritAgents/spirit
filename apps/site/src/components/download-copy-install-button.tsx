@@ -1,6 +1,6 @@
+import { Copy } from "@spiritagent/icons/copy";
+import { Check } from "@spiritagent/icons/check";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-
-import { Check, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/provider";
@@ -204,9 +204,9 @@ export function DownloadCopyInstallButton({ className }: DownloadCopyInstallButt
       }}
     >
       {copied ? (
-        <Check className="size-3.5 shrink-0" aria-hidden />
+        <Check className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
       ) : (
-        <Copy className="size-3.5 shrink-0" aria-hidden />
+        <Copy className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
       )}
       <span
         ref={viewportRef}

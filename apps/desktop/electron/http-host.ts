@@ -1,13 +1,9 @@
 import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { product } from "@spiritagent/product";
 import { readFile, stat } from "node:fs/promises";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { isIP } from "node:net";
 import path from "node:path";
-
-import {
-  parseModelProviderId,
-  parsePresetModelProviderId,
-} from "@spiritagent/host-internal/model-provider-presets";
 
 import type { HostCommandName } from "../src/host/contracts.js";
 
@@ -124,7 +120,7 @@ export function createDesktopHttpHost(options: DesktopHttpHostOptions): DesktopH
           running: true,
           url: `http://${options.host}:${options.port}`,
         };
-        logger.log(`Spirit desktop web host listening on ${state.url}`);
+        logger.log(`${product.name} desktop web host listening on ${state.url}`);
         return { ...state };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -426,7 +422,10 @@ async function handleApiRequest({
     const modelIds = Array.isArray(jsonBody?.modelIds)
       ? jsonBody.modelIds.filter((id: unknown): id is string => typeof id === "string")
       : [];
-    const provider = parseModelProviderId(jsonBody?.provider);
+    const provider =
+      typeof jsonBody?.provider === "string" && jsonBody.provider.trim()
+        ? jsonBody.provider.trim()
+        : undefined;
     writeJson(
       request,
       response,
@@ -455,7 +454,10 @@ async function handleApiRequest({
   }
 
   if (request.method === "POST" && pathname === "/api/models/remove-provider") {
-    const provider = parsePresetModelProviderId(jsonBody?.provider);
+    const provider =
+      typeof jsonBody?.provider === "string" && jsonBody.provider.trim()
+        ? jsonBody.provider.trim()
+        : undefined;
     if (!provider) {
       writeJson(request, response, 400, { error: i18nHost.t("webHost.error.invalidProvider") });
       return;
@@ -1320,16 +1322,16 @@ async function handleApiRequest({
           modelRef:
             typeof jsonBody?.modelRef === "object" && jsonBody.modelRef !== null
               ? {
-                  groupId:
-                    typeof (jsonBody.modelRef as { groupId?: unknown }).groupId === "string"
-                      ? (jsonBody.modelRef as { groupId: string }).groupId
+                  providerId:
+                    typeof (jsonBody.modelRef as { providerId?: unknown }).providerId === "string"
+                      ? (jsonBody.modelRef as { providerId: string }).providerId
                       : "",
                   name:
                     typeof (jsonBody.modelRef as { name?: unknown }).name === "string"
                       ? (jsonBody.modelRef as { name: string }).name
                       : "",
                 }
-              : { groupId: "", name: "" },
+              : { providerId: "", name: "" },
         },
       }),
     );
@@ -1405,6 +1407,19 @@ async function handleApiRequest({
       await runHostCommand("renameSession", {
         path: typeof jsonBody?.path === "string" ? jsonBody.path : "",
         displayName: typeof jsonBody?.displayName === "string" ? jsonBody.displayName : "",
+      }),
+    );
+    return;
+  }
+
+  if (request.method === "POST" && pathname === "/api/sessions/pin") {
+    writeJson(
+      request,
+      response,
+      200,
+      await runHostCommand("setSessionPinned", {
+        path: typeof jsonBody?.path === "string" ? jsonBody.path : "",
+        pinned: jsonBody?.pinned === true,
       }),
     );
     return;

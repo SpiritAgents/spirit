@@ -1,19 +1,21 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { resolveProfileApiBase, resolveSetupTransportKind } from "../src/setup/provider-wizard.js";
+import { resolveSetupTransportKind, resolveWizardApiBase } from "../src/setup/provider-wizard.js";
 
-test("resolveSetupTransportKind defaults minimax to anthropic", () => {
+test("resolveSetupTransportKind reads the preset's default transport", () => {
   assert.equal(resolveSetupTransportKind("minimax"), "anthropic");
-  assert.equal(resolveSetupTransportKind("minimax", "openai-compatible"), "openai-compatible");
+  assert.equal(resolveSetupTransportKind("openai"), "open-responses");
+  assert.equal(resolveSetupTransportKind("custom"), "openai-compatible");
 });
 
-test("resolveProfileApiBase uses anthropic endpoint for minimax without explicit transportKind", () => {
+test("resolveWizardApiBase materializes the minimax cn site anthropic endpoint", () => {
   assert.equal(
-    resolveProfileApiBase({
+    resolveWizardApiBase({
       provider: "minimax",
-      providerSite: "cn",
+      modelName: "placeholder",
+      siteId: "cn",
     }),
-    "https://api.minimaxi.com/anthropic/v1",
+    "https://api.minimax.cn/anthropic/v1",
   );
 });

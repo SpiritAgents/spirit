@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 
 import type { JsonValue } from "../ports.js";
@@ -18,13 +17,9 @@ import {
   parseFetchMcpResourceArguments,
 } from "../tool-gateway/index.js";
 import {
-  parseMcpConfigFile,
   resolveEnvRecord,
-  mcpUserConfigPath,
-  mcpWorkspaceConfigPath,
   mergeMcpConfigFiles,
   mcpServerScopesFromFiles,
-  spiritDataDir,
   type McpConfigScope,
   normalizeMcpServerConfig,
 } from "./config.js";
@@ -125,6 +120,15 @@ export interface McpCallToolOptions {
 
 export interface McpServiceOptions {
   extraConfigs?: McpExtraConfigProvider;
+  /** Hosts supply configuration; an SDK service without a source has no file-backed servers. */
+  configSource?: McpConfigSource;
+}
+
+export interface McpConfigSource {
+  /** Separates the tooling cache for different user configuration roots. */
+  scopeKey: string;
+  /** Synchronous to support immediate registry priming before background refresh. */
+  read(includeWorkspace: boolean): { user: McpConfigFile; workspace: McpConfigFile };
 }
 
 export class McpService {
@@ -268,10 +272,7 @@ export class McpService {
   async refreshConfig(): Promise<void> {
     try {
       const extra = await this.loadExtraConfig();
-      const { merged, serverScopes, user } = await loadMergedMcpConfigForWorkspace(
-        this.workspaceRootStore,
-        { includeWorkspace: this.includeWorkspaceConfig },
-      );
+      const { merged, serverScopes, user } = this.loadMergedConfig();
       const raw = mergeMcpConfigFiles(extra, merged);
       this.extensionServerOwnershipStore = retainUnoverlaidExtensionOwnership(
         extra.extensionServerOwnership,
@@ -279,7 +280,7 @@ export class McpService {
         merged.servers,
       );
       const nextDigest = mcpConfigDigest(raw);
-      const nextUserDigest = mcpConfigDigest(user);
+      const nextUserDigest = this.userConfigDigest(user);
       if (sharedUserMcpToolingCache && sharedUserMcpToolingCache.digest !== nextUserDigest) {
         sharedUserMcpToolingCache = undefined;
       }
@@ -822,11 +823,8 @@ export class McpService {
     const resourceEntries: McpResourceIndexEntry[] = [];
     const prompts = new Map<string, McpPromptCatalogEntry[]>();
 
-    const { user: userConfigFile } = await loadMergedMcpConfigForWorkspace(
-      this.workspaceRootStore,
-      { includeWorkspace: this.includeWorkspaceConfig },
-    );
-    const currentUserDigest = mcpConfigDigest(userConfigFile);
+    const { user: userConfigFile } = this.loadMergedConfig();
+    const currentUserDigest = this.userConfigDigest(userConfigFile);
 
     let userCacheHit = false;
     if (
@@ -1023,10 +1021,7 @@ export class McpService {
 
   private primeRegistryFromDisk(): void {
     try {
-      const { merged, serverScopes } = loadMergedMcpConfigForWorkspaceSync(
-        this.workspaceRootStore,
-        { includeWorkspace: this.includeWorkspaceConfig },
-      );
+      const { merged, serverScopes } = this.loadMergedConfig();
       const raw = merged;
       const nextDigest = mcpConfigDigest(raw);
       this.loadedConfigStore = {
@@ -1050,6 +1045,23 @@ export class McpService {
       this.loadErrorStore = describeError(error);
     }
   }
+
+  private loadMergedConfig() {
+    const files = this.serviceOptions.configSource?.read(this.includeWorkspaceConfig) ?? {
+      user: { servers: {} },
+      workspace: { servers: {} },
+    };
+    const workspace = this.includeWorkspaceConfig ? files.workspace : { servers: {} };
+    return {
+      user: files.user,
+      merged: mergeMcpConfigFiles(files.user, workspace),
+      serverScopes: mcpServerScopesFromFiles(files.user, workspace),
+    };
+  }
+
+  private userConfigDigest(config: McpConfigFile): string {
+    return `${this.serviceOptions.configSource?.scopeKey ?? ""}\0${mcpConfigDigest(config)}`;
+  }
 }
 
 function retainUnoverlaidExtensionOwnership(
@@ -1068,91 +1080,6 @@ function retainUnoverlaidExtensionOwnership(
 
 function mcpConfigDigest(config: McpConfigFile): string {
   return createHash("sha1").update(JSON.stringify(config)).digest("hex");
-}
-
-function resolveMcpConfigPaths(workspaceRoot: string): { userPath: string; workspacePath: string } {
-  return {
-    userPath: mcpUserConfigPath(spiritDataDir()),
-    workspacePath: mcpWorkspaceConfigPath(workspaceRoot),
-  };
-}
-
-type LoadMergedMcpConfigOptions = {
-  includeWorkspace?: boolean;
-};
-
-async function loadMergedMcpConfigForWorkspace(
-  workspaceRoot: string,
-  options: LoadMergedMcpConfigOptions = {},
-): Promise<{
-  merged: McpConfigFile;
-  serverScopes: Record<string, McpConfigScope>;
-  user: McpConfigFile;
-}> {
-  const includeWorkspace = options.includeWorkspace !== false;
-  const { userPath, workspacePath } = resolveMcpConfigPaths(workspaceRoot);
-  const user = await loadMcpConfigFile(userPath);
-  const workspace = includeWorkspace ? await loadMcpConfigFile(workspacePath) : { servers: {} };
-  return {
-    merged: mergeMcpConfigFiles(user, workspace),
-    serverScopes: mcpServerScopesFromFiles(user, workspace),
-    user,
-  };
-}
-
-function loadMergedMcpConfigForWorkspaceSync(
-  workspaceRoot: string,
-  options: LoadMergedMcpConfigOptions = {},
-): {
-  merged: McpConfigFile;
-  serverScopes: Record<string, McpConfigScope>;
-} {
-  const includeWorkspace = options.includeWorkspace !== false;
-  const { userPath, workspacePath } = resolveMcpConfigPaths(workspaceRoot);
-  const user = loadMcpConfigFileSync(userPath);
-  const workspace = includeWorkspace ? loadMcpConfigFileSync(workspacePath) : { servers: {} };
-  return {
-    merged: mergeMcpConfigFiles(user, workspace),
-    serverScopes: mcpServerScopesFromFiles(user, workspace),
-  };
-}
-
-async function loadMcpConfigFile(path: string): Promise<McpConfigFile> {
-  try {
-    const content = await readFile(path, "utf8");
-    return parseMcpConfigFile(JSON.parse(content) as unknown);
-  } catch (error) {
-    if (isErrnoWithCode(error, "ENOENT")) {
-      return { servers: {} };
-    }
-
-    if (error instanceof SyntaxError) {
-      throw new McpConfigError(`Failed to parse MCP config: ${path}`, { cause: error });
-    }
-
-    throw new McpConfigError(`Failed to read MCP config: ${path}`, {
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
-}
-
-function loadMcpConfigFileSync(path: string): McpConfigFile {
-  try {
-    const content = readFileSync(path, "utf8");
-    return parseMcpConfigFile(JSON.parse(content) as unknown);
-  } catch (error) {
-    if (isErrnoWithCode(error, "ENOENT")) {
-      return { servers: {} };
-    }
-
-    if (error instanceof SyntaxError) {
-      throw new McpConfigError(`Failed to parse MCP config: ${path}`, { cause: error });
-    }
-
-    throw new McpConfigError(`Failed to read MCP config: ${path}`, {
-      cause: error instanceof Error ? error : undefined,
-    });
-  }
 }
 
 async function resolveRuntimeServerConfig(
@@ -1534,15 +1461,6 @@ function describeError(error: unknown): string {
   }
 
   return String(error);
-}
-
-function isErrnoWithCode(error: unknown, code: string): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: string }).code === code
-  );
 }
 
 function parseOptionalJsonValue(argsJson: string | undefined): JsonValue {

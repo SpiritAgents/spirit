@@ -1,13 +1,14 @@
 ---
 title: Providers
-description: Bring your own key, run the connect wizard, and keep the same agent workflow when you switch houses.
+description: Bring your own key, run the connect wizard, and keep the same agent
+  workflow when you switch houses.
 ---
 
-Spirit is BYOK. You create a key in a provider console, paste it into Desktop or the CLI, and Spirit stores it in the operating system keyring. Switching houses does not change how you open a workspace, approve edits, or run the agent.
+{{product.name|mdx}} is BYOK. You create a key in a provider console, paste it into Desktop or the CLI, and {{product.name|mdx}} stores it in the operating system keyring. Switching houses does not change how you open a workspace, approve edits, or run the agent.
 
 The connect wizard is **Settings → Models** on Desktop, or `/model add` / `spirit model add` in the CLI. Extra fields appear only when that provider needs them.
 
-Spirit talks to providers over one of four transports. The wizard either fixes the type or lets you pick.
+{{product.name|mdx}} talks to providers over one of four transports. The wizard either fixes the type or lets you pick.
 
 | Transport           | Wizard label                       | Typical use                                                                |
 | ------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
@@ -16,7 +17,7 @@ Spirit talks to providers over one of four transports. The wizard either fixes t
 | `anthropic`         | Messages API                       | Anthropic, MiniMax, and optional Messages-compatible endpoints             |
 | `bedrock`           | Amazon Bedrock                     | Amazon Bedrock only                                                        |
 
-Google Gemini and Vertex AI always use Chat Completions. If a profile asks for Responses or Messages, Spirit falls back to `openai-compatible`.
+The Google and Vertex AI presets pin Chat Completions — the wizard offers no transport picker for them.
 
 Some houses add a second dimension on top of the key:
 
@@ -24,21 +25,25 @@ Some houses add a second dimension on top of the key:
 - **Plan endpoints** — Alibaba Token Plan, StepFun Step Plan, Z.ai / Zhipu AI GLM Coding Plan
 - **Cloud fields** — Bedrock region, Azure resource name, Cloudflare account (and optional gateway), Vertex project / location
 
-If a provider has none of these, the wizard is just key → import models → pick an active chat model.
+If a provider has none of these, the wizard is just key → import models → pick an active language model.
 
-Spirit imports the model catalog and lets you assign the active chat model, plus image / video / lightweight chat slots when the catalog marks those capabilities. Reasoning and built-in web search follow the model and transport, not a separate Spirit toggle.
+{{product.name|mdx}} imports the model catalog and lets you assign the active language model, plus image / video / secondary language model slots when the catalog marks those capabilities. Reasoning options follow each model's declared `supportedReasoningEfforts`. Provider-exposed tools such as web search are declared per provider and gated by the **Provider Tools** toggle — see [Tools](./agent/tools.mdx#provider-tools).
+
+What the wizard writes into `config.json` is a fully declarative entry: the final API base, the transport, the SDK adapter, and any provider tools / file upload / generation API declarations. The runtime reads those declarations as-is and never re-derives them from the provider's identity — your edits survive, except the wizard-owned keys that a reconnect resets (see [Config](./config.mdx)).
 
 ## Catalog
 
-These are the houses in the connect picker, in the same order. Each section is that house's key, transport, and extra fields. The Desktop and CLI wizard above is the same for every house.
+These are the houses in the connect picker, in the same order. Each section is that house's key, transport, extra fields, and what the wizard declares beyond the key. Unless a section says otherwise, the credential form is a single API key stored in the keyring. The Desktop and CLI wizard above is the same for every house.
 
 ### OpenAI
 
-Create an API key in the [OpenAI platform](https://platform.openai.com/api-keys). Spirit does not sell OpenAI usage.
+Create an API key in the [OpenAI platform](https://platform.openai.com/api-keys). {{product.name|mdx}} does not sell OpenAI usage.
 
 The wizard fixes **Responses API** (`open-responses`). There is no transport picker. Default base: `https://api.openai.com/v1`.
 
 Chat after import. Reasoning follows the model. Image and video generation appear only when the catalog marks those capabilities — assign them in the image / video model slots.
+
+Declares: the **Web Search** provider tool (executed by the upstream inside the request) and the image generation API.
 
 ### Anthropic
 
@@ -46,13 +51,13 @@ Create an API key in the [Anthropic console](https://console.anthropic.com/setti
 
 Fixed **Messages API** (`anthropic`). Default base: `https://api.anthropic.com/v1`.
 
-Chat after import. Reasoning follows the model. No Spirit-side image or video generation slot unless a later catalog entry marks it.
+Chat after import. Reasoning follows the model. No {{product.name|mdx}}-side image or video generation slot unless a later catalog entry marks it.
 
 ### Google
 
 Create an API key in [Google AI Studio](https://aistudio.google.com/apikey).
 
-Fixed **Chat Completions API** (`openai-compatible`). Asking for Responses or Messages falls back to Chat Completions. Default base: `https://generativelanguage.googleapis.com/v1beta`.
+Fixed **Chat Completions API** (`openai-compatible`); the wizard offers no transport picker. Default base: `https://generativelanguage.googleapis.com/v1beta`.
 
 Chat after import. Image generation is assigned only when the catalog marks it. For Vertex AI (GCP project / location), use [Google Vertex AI](#google-vertex-ai).
 
@@ -60,9 +65,11 @@ Chat after import. Image generation is assigned only when the catalog marks it. 
 
 Create an API key in the [SpaceXAI console](https://console.x.ai/team/default/api-keys).
 
-Fixed **Chat Completions API** (`openai-compatible`). Default base: `https://api.x.ai/v1`.
+Fixed **Open Responses API** (`open-responses`). Default base: `https://api.x.ai/v1`.
 
 Chat after import. Reasoning, image, and video follow the imported catalog — assign slots when they appear.
+
+Declares: the **Web Search** provider tool (executed by the upstream inside the request).
 
 ### Vercel AI Gateway
 
@@ -74,6 +81,8 @@ Chat plus whatever the gateway catalog exposes. Image generation is taken from c
 
 Do not infer vision or image generation from tags. MiniMax M3 through this gateway does not return a displayable thinking stream on Open Responses.
 
+Declares: the **Perplexity Search** provider tool (executed by the gateway inside the request) and the image / video generation APIs.
+
 ### Cloudflare AI Gateway
 
 Create an API token in the [Cloudflare dashboard](https://developers.cloudflare.com/ai-gateway/). You also need the account ID.
@@ -81,7 +90,7 @@ Create an API token in the [Cloudflare dashboard](https://developers.cloudflare.
 Picker: **Chat Completions**, **Open Responses**, or **Messages**. Base is built from the account: `https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`.
 
 - **Account ID** (required) — 32-character hex
-- **Gateway ID** (optional)
+- **Gateway ID** (optional) — written as a literal `cf-aig-gateway-id` request header
 
 Without an account ID the wizard cannot build the API base. Chat and other capabilities follow the models the gateway exposes.
 
@@ -89,9 +98,11 @@ Without an account ID the wizard cannot build the API base. Chat and other capab
 
 Create an API key on the [DeepSeek platform](https://platform.deepseek.com/api-keys).
 
-No picker. The connect default is **Open Responses** (`open-responses`). Compatible bases also exist at `https://api.deepseek.com/v1` (Chat) and `https://api.deepseek.com/anthropic` (Messages).
+The connect default is **Chat Completions API** (`openai-compatible`). Default base: `https://api.deepseek.com/v1`. Explicit alternatives are **Open Responses** (`open-responses`, base `https://api.deepseek.com`) and **Messages** (`anthropic`, base `https://api.deepseek.com/anthropic`).
 
 Chat after import. Reasoning follows the model.
+
+Declares: the **Web Search** provider tool (a static `function` declaration; {{product.name|mdx}} executes calls with `POST /v1/tools/search`).
 
 ### OpenRouter
 
@@ -100,6 +111,8 @@ Create a key at [OpenRouter](https://openrouter.ai/keys).
 Picker: **Chat Completions**, **Open Responses**, or **Messages**. Default base: `https://openrouter.ai/api/v1`.
 
 Chat plus catalog-marked image or video generation when OpenRouter exposes those models.
+
+Declares: the video generation API.
 
 ### Fireworks AI
 
@@ -117,6 +130,8 @@ Fixed **Chat Completions API**. Default base: `https://api.together.ai/v1`.
 
 Chat after import. Assign image or video slots only when the catalog marks them.
 
+Declares: the image and video generation APIs.
+
 ### Groq
 
 Create an API key in the [Groq console](https://console.groq.com).
@@ -132,6 +147,8 @@ Create an API key in the [DeepInfra Dashboard](https://deepinfra.com/dash/keys).
 Fixed **Chat Completions API**. Default base: `https://api.deepinfra.com/v1/openai`.
 
 Chat after import. Other capabilities follow the catalog.
+
+Declares: the image and video generation APIs.
 
 ### Baseten
 
@@ -149,6 +166,8 @@ Fixed **Open Responses API**. Default base: `https://router.huggingface.co/v1`.
 
 Chat after import. Other capabilities follow the router catalog.
 
+Declares: the image and video generation APIs.
+
 ### Moonshot AI
 
 Create an API key in the Moonshot console for the site you will use: [China](https://platform.kimi.com/console/api-keys) or [International](https://platform.kimi.ai/console/api-keys).
@@ -158,7 +177,9 @@ Fixed **Chat Completions API**. No transport picker.
 - **International** (default) — `https://api.moonshot.ai/v1`
 - **China** — `https://api.moonshot.cn/v1`
 
-This is the Moonshot Open Platform provider, not [Kimi Code](#kimi-code). Built-in search on moonshot-ai does not use the Kimi Code hosted search path. A Kimi Code key and a Moonshot Open Platform key are different connections.
+This is the Moonshot Open Platform provider, not [Kimi Code](#kimi-code). A Kimi Code key and a Moonshot Open Platform key are different connections.
+
+Declares: the **Web Search** provider tool (a static `function` tool schema; {{product.name|mdx}} executes calls with `POST /v1/tools/search_pro`) and video file upload (`ms://` file references).
 
 ### Kimi Code
 
@@ -166,7 +187,9 @@ Create a Kimi Code API key in the [Kimi Code console](https://www.kimi.com/code/
 
 Fixed **Chat Completions API**. Default base: `https://api.kimi.com/coding/v1`. A Messages base exists at `https://api.kimi.com/coding` but the wizard does not offer a picker.
 
-Chat after import. Hosted search, when available, is specific to this provider — not moonshot-ai.
+Chat after import. The hosted search here is specific to this provider — not moonshot-ai.
+
+Declares: the **Web Search** provider tool (host-executed against the declared search endpoint), video file upload (`ms://` file references), and a literal `stream_options` request-body merge.
 
 ### Z.ai
 
@@ -178,6 +201,8 @@ Turn on **GLM Coding Plan** in the wizard to use `https://api.z.ai/api/coding/pa
 
 Chat after import. Reasoning follows the model.
 
+Declares: the **Web Search** provider tool (host-executed; `max_results` 1–50).
+
 ### Zhipu AI
 
 Create an API key in the [Zhipu AI console](https://bigmodel.cn/console). Coding Plan notes: [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start).
@@ -187,6 +212,8 @@ Fixed **Chat Completions API**. Default base: `https://open.bigmodel.cn/api/paas
 Turn on **GLM Coding Plan** to use `https://open.bigmodel.cn/api/coding/paas/v4`.
 
 Chat after import. Reasoning follows the model.
+
+Declares: the **Web Search** provider tool (host-executed; `max_results` 1–50).
 
 ### Alibaba
 
@@ -203,16 +230,20 @@ Fixed **Chat Completions API**. Compatible default: `https://dashscope.aliyuncs.
 
 Chat after import. Other capabilities follow the catalog.
 
+Declares: the **Web Search** and **Code Interpreter** provider tools (request-body switches executed by the upstream).
+
 ### MiniMax
 
-Create an API key in the MiniMax console for the site you will use: [China](https://platform.minimaxi.com/console/) or [International](https://platform.minimax.io/console/).
+Create an API key in the MiniMax console for the site you will use: [China](https://platform.minimax.cn/console/) or [International](https://platform.minimax.io/console/).
 
 Fixed **Messages API** (`anthropic`). International Messages base: `https://api.minimax.io/anthropic/v1`.
 
 - **International** (default) — `https://api.minimax.io/v1` (Chat-shaped) / `https://api.minimax.io/anthropic/v1` (Messages)
-- **China** — `https://api.minimaxi.com/v1`
+- **China** — `https://api.minimax.cn/v1`
 
 Chat after import. The upstream `/models` list has no multimodal flags; only M3 is treated as supporting image / video input. Through Vercel AI Gateway on Open Responses, MiniMax M3 does not return a displayable thinking stream.
+
+Declares: the **Web Search** provider tool (a Messages API server tool, executed by the upstream) and video file upload (`mm_file://` file references).
 
 ### Xiaomi
 
@@ -233,6 +264,8 @@ Picker: **Chat Completions** or **Messages**.
 
 Chat after import. Other capabilities follow the catalog.
 
+Declares: the image and video generation APIs.
+
 ### StepFun
 
 Create an API key on the [StepFun China platform](https://platform.stepfun.com) or the [International platform](https://platform.stepfun.ai). Step Plan notes: [Step Plan](https://platform.stepfun.com/docs/zh/step-plan/integrations/reasoning-api).
@@ -246,6 +279,8 @@ Fixed **Chat Completions API**.
 
 Chat after import. Reasoning follows the model.
 
+Declares: the **Web Search** provider tool (host-executed; `max_results` 1–20), video file upload (`stepfile://` file references, 128 MiB cap), and the image generation API.
+
 ### Volcengine
 
 Create an API key in the [Volcengine Ark console](https://console.volcengine.com/ark/apiKey).
@@ -253,6 +288,8 @@ Create an API key in the [Volcengine Ark console](https://console.volcengine.com
 Picker: **Chat Completions** or **Responses API**. Default base: `https://ark.cn-beijing.volces.com/api/v3`.
 
 Chat after import. Other capabilities follow the catalog.
+
+Declares: the video generation API.
 
 ### BytePlus
 
@@ -262,6 +299,8 @@ Picker: **Chat Completions** or **Responses API**. Default base: `https://ark.ap
 
 Chat after import. Other capabilities follow the catalog.
 
+Declares: the video generation API.
+
 ### Meituan
 
 Create an API key in the [LongCat console](https://longcat.chat/platform/api_keys).
@@ -269,6 +308,8 @@ Create an API key in the [LongCat console](https://longcat.chat/platform/api_key
 Fixed **Chat Completions API**. Default base: `https://api.longcat.chat/openai/v1`.
 
 Chat after import. Other capabilities follow the catalog.
+
+Declares: the thinking on/off wire encoding (`thinkingSwitch`), so models with a thinking switch get a working toggle.
 
 ### Tencent TokenHub
 
@@ -279,7 +320,7 @@ Fixed **Chat Completions API**. The wizard does not offer Responses or Messages.
 - **Guangzhou** (default) — `https://tokenhub.tencentmaas.com/v1`
 - **Singapore** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-Chat after import. Do not rely on Chat-injected web search. TokenHub documents Chat `web_search_options` and Responses `web_search`, but Chat injection does not work in practice, and Responses is only on a few models. Spirit therefore keeps Chat Completions only.
+Chat after import. Do not rely on Chat-injected web search. TokenHub documents Chat `web_search_options` and Responses `web_search`, but Chat injection does not work in practice, and Responses is only on a few models. {{product.name|mdx}} therefore keeps Chat Completions only.
 
 ### Mistral
 
@@ -305,7 +346,7 @@ Fixed **Responses API** (`open-responses`). No transport picker.
 
 - **Resource name** (required) — 2–64 characters, letters, numbers, and hyphens; cannot start or end with a hyphen
 
-Spirit builds `https://{resource}.openai.azure.com/openai/v1`. Chat after import. Image generation follows the Azure catalog when marked.
+{{product.name|mdx}} builds `https://{resource}.openai.azure.com/openai/v1`. Chat after import. Image generation follows the Azure catalog when marked.
 
 ### Amazon Bedrock
 
@@ -316,15 +357,17 @@ Fixed **Amazon Bedrock** (`bedrock`). Default host shape: `https://bedrock.us-ea
 - **AWS Region** (required), for example `us-east-1`
 - **Authentication**: **Bearer** or **IAM**
   - Bearer — paste a Bedrock API key and a model id. Models are **not** fetched automatically.
-  - IAM — Access Key ID + Secret Access Key. Spirit lists foundation models from the account.
+  - IAM — Access Key ID + Secret Access Key. {{product.name|mdx}} lists foundation models from the account.
 
 Chat after you pick a model. Other capabilities follow that model. Bearer keys work for inference only. `ListFoundationModels` does not accept Bearer, so the catalog import needs IAM.
+
+The region is baked into the final API base and `options.awsRegion`. Bearer is stored as the provider key; IAM is stored as `accessKeyId` / `secretAccessKey` credential slots.
 
 ### Google Vertex AI
 
 Use a GCP project that has Vertex AI enabled. Auth is ADC, a service account, or an Express API key — not a generic OpenAI key.
 
-Fixed **Chat Completions API**. Responses or Messages requests fall back to Chat Completions. Base becomes `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
+Fixed **Chat Completions API**; the wizard offers no transport picker. Base becomes `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`.
 
 - **GCP Project ID** and **Location** (required), for example `us-central1`
 - **Authentication**
@@ -334,14 +377,16 @@ Fixed **Chat Completions API**. Responses or Messages requests fall back to Chat
 
 Chat after a model is selected. For AI Studio keys without a GCP project, use [Google](#google). Express mode cannot import the model list. Service account mode needs both email and private key to list models.
 
+A service account is stored as `clientEmail` / `privateKey` credential slots with `options.project` / `options.location`. Express mode writes the Express API base and needs no project / location.
+
 ### Custom
 
-Use the API key your endpoint expects. There is no Spirit-hosted custom provider.
+Use the API key your endpoint expects. There is no {{product.name|mdx}}-hosted custom provider.
 
 Picker: **Chat Completions**, **Open Responses**, or **Messages**. You must supply the **Base URL**. The placeholder default is `https://api.openai.com/v1` if you leave it empty.
 
-Enter the root the vendor documents, including the version suffix when they require it (`/v1`, `/v1/openai`, …). Spirit does not guess a path for custom endpoints.
+Enter the root the vendor documents, including the version suffix when they require it (`/v1`, `/v1/openai`, …). {{product.name|mdx}} does not guess a path for custom endpoints.
 
-You can also set a display name for the provider group so several custom endpoints stay distinguishable.
+You can also set a display name for the provider entry so several custom endpoints stay distinguishable.
 
-After connect, import or type model ids. Mark chat / image / video capabilities in the wizard when the endpoint does not publish a catalog Spirit understands.
+After connect, import or type model ids. Mark chat / image / video capabilities in the wizard when the endpoint does not publish a catalog {{product.name|mdx}} understands.

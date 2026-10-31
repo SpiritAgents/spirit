@@ -1,13 +1,10 @@
-// Copyright (c) 2026 N123999
-// SPDX-License-Identifier: MIT
-
 // Information section for the extension detail page: label / value rows
 // without a card surface; rows without data are omitted.
 
 import { useTranslation } from "react-i18next";
 
-import { formatTitleFromId } from "@spiritagent/host-internal/id-display-title";
-import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/host-internal/well-known-casing";
+import { formatTitleFromId } from "@spiritagent/agent-core/model-catalog/id-display-title";
+import { WELL_KNOWN_CASING_OVERRIDES } from "@spiritagent/agent-core/model-catalog/well-known-casing";
 
 import type { DesktopMarketplaceCatalogEntry } from "@/types";
 
@@ -58,8 +55,8 @@ export function MarketplaceInformationSection({ item }: { item: DesktopMarketpla
             {href ? (
               <button
                 type="button"
-                className="text-foreground underline underline-offset-2 hover:text-sidebar-foreground/80"
-                onClick={() => void window.spiritDesktop?.openExternalUrl(href)}
+                className="text-foreground underline underline-offset-2 hover:text-chrome-emphasis/80"
+                onClick={() => void window.spiritDesktop?.openBrowserUrl(href)}
               >
                 {value}
               </button>

@@ -95,6 +95,8 @@ export const SESSION_RUN_SESSION_START = "session.runSessionStart";
 export const SESSION_RUN_SESSION_END = "session.runSessionEnd";
 /** RPC: attribution toggles for future turns. */
 export const SESSION_SET_ATTRIBUTION = "session.setAttribution";
+/** RPC: web tool exposure toggles applied live to future turns. */
+export const SESSION_SET_WEB_TOOL_EXPOSURE = "session.setWebToolExposure";
 /** RPC: re-scope the todo store (CLI keys todos by its chat session id). */
 export const SESSION_SET_TODO_SESSION_KEY = "session.setTodoSessionKey";
 
@@ -146,6 +148,7 @@ export interface ServerInitializeResult {
 
 export interface ServerHealthResult {
   ok: true;
+  productBuildId: string;
   instanceId: string;
   pid: number;
   version: string;

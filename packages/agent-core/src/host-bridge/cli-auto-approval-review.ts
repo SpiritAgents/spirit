@@ -1,20 +1,13 @@
 import { runAutoApprovalReview } from "../auto-approval/run-review.js";
 import type { ToolAutoReviewInput, ToolAutoReviewResult } from "../auto-approval/types.js";
 import type { LlmTransportConfig } from "../provider-config.js";
-import { isBedrockTransportConfig } from "../provider-config.js";
 import { buildSpiritCoreHostPrompt } from "../tool-agent.js";
 import { createJsonSchemaTransport } from "../transport-factory.js";
-
-function providerIdForTransportConfig(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  return config.llmVendor;
-}
 
 /** When the CLI has no separate lightweight config, reuse the current transport's active model. */
 export function createCliAutoApprovalReviewer(
   config: LlmTransportConfig,
+  providerId?: string,
 ): (input: ToolAutoReviewInput) => Promise<ToolAutoReviewResult | undefined> {
   return async (input) => {
     if (!config.apiKey?.trim()) {
@@ -22,9 +15,7 @@ export function createCliAutoApprovalReviewer(
     }
     const transport = createJsonSchemaTransport(config);
     return runAutoApprovalReview(transport, config, input, {
-      systemSections: [
-        buildSpiritCoreHostPrompt(config.model, providerIdForTransportConfig(config)),
-      ],
+      systemSections: [buildSpiritCoreHostPrompt(config.model, providerId)],
     });
   };
 }

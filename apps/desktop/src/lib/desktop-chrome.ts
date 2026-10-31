@@ -16,6 +16,7 @@ export {
   DESKTOP_COMPOSER_SURFACE_SOLID,
   DESKTOP_ELEVATION_SHADOW_SM,
   DESKTOP_OVERLAY_LIGHT_SHADOW,
+  DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
   desktopComposerChipSurfaceClass,
   desktopComposerSurfaceBackdropClass,
 } from "@/lib/desktop-translucency-surface";
@@ -36,7 +37,7 @@ export const DESKTOP_INSTANT_HOVER_OVERLAY = cn(
 /** Ghost icon/compact button: sidebar-sourced translucent hover + brighter text color */
 export const DESKTOP_INSTANT_HOVER_GHOST_BTN = cn(
   DESKTOP_INSTANT_HOVER_OVERLAY,
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground aria-expanded:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis aria-expanded:!text-chrome-emphasis",
 );
 
 /** In-place item highlight (Read File tool card): brighten text/icons, no wash overlay */
@@ -90,8 +91,11 @@ export const DESKTOP_SIDEBAR_ONLY_SPLIT_LINE_CLASS =
 export const DESKTOP_ALL_TRANSLUCENCY_SPLIT_LINE_CLASS =
   "bg-black/5 transition-colors group-hover:bg-black/10 dark:bg-white/5 dark:group-hover:bg-white/9";
 
+/** 右侧面板各 section 头部（Files 工具栏、Git Changes/History 栏）统一的最小高度，锁定一致的呼吸感：内容允许更高，不允许更矮 */
+export const DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS = "min-h-10";
+
 /** Default title-bar text/icon color, aligned with the sidebar's `sidebarItemDefaultTextClass` */
-export const DESKTOP_CHROME_MUTED_TEXT = "text-sidebar-action-foreground";
+export const DESKTOP_CHROME_MUTED_TEXT = "text-chrome-label";
 
 /** Inline session-title rename input: ghost, borderless, text color matches the sidebar/title-bar session name */
 export const SESSION_TITLE_RENAME_INPUT_CLASS = cn(
@@ -102,20 +106,20 @@ export const SESSION_TITLE_RENAME_INPUT_CLASS = cn(
 
 /** Title-bar session title hover: only the text color brightens, no translucent underlay */
 export const DESKTOP_SESSION_TITLE_HOVER_CLASS = cn(
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
   instantHoverMotionClass,
 );
 
 /** Title-bar hover/focus/current-item text color, aligned with the sidebar's `sidebarItemActiveTextClass` */
-export const DESKTOP_CHROME_ACTIVE_TEXT = "text-sidebar-foreground";
+export const DESKTOP_CHROME_ACTIVE_TEXT = "text-chrome-emphasis";
 
 /** ghost expanded uses `--canvas-hover`; title-bar icon buttons stay transparent until hover */
 export const DESKTOP_CHROME_TOGGLE_ICON_BTN = cn(
   "electron-no-drag size-7 shrink-0 bg-transparent",
   DESKTOP_CHROME_MUTED_TEXT,
-  "hover:bg-canvas-hover hover:text-sidebar-foreground focus-visible:bg-canvas-hover focus-visible:text-sidebar-foreground",
-  "aria-expanded:bg-transparent aria-expanded:text-sidebar-action-foreground",
-  "aria-expanded:hover:bg-canvas-hover aria-expanded:hover:text-sidebar-foreground",
+  "hover:bg-canvas-hover hover:text-chrome-emphasis focus-visible:bg-canvas-hover focus-visible:text-chrome-emphasis",
+  "aria-expanded:bg-transparent aria-expanded:text-chrome-label",
+  "aria-expanded:hover:bg-canvas-hover aria-expanded:hover:text-chrome-emphasis",
   "[&_svg]:size-3.5",
   instantHoverMotionClass,
 );
@@ -127,7 +131,7 @@ export const DESKTOP_FILES_EXPLORER_TOOLBAR_ICON_BTN = cn(
 );
 
 export const DESKTOP_CHROME_COMMIT_BTN = cn(
-  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-canvas-hover hover:text-sidebar-foreground",
+  "h-7 rounded-md px-2 text-xs text-foreground/90 hover:bg-canvas-hover hover:text-chrome-emphasis",
   FONT_WEIGHT_NORMAL,
   instantHoverMotionClass,
 );
@@ -135,9 +139,9 @@ export const DESKTOP_CHROME_COMMIT_BTN = cn(
 /** Primary button of the Git changes area (ButtonGroup segment, paired with `size="xs"`); `border-r-0` prevents the transparent right border from stacking on the divider and looking too thick */
 export const DESKTOP_GIT_ACTION_BTN = cn("border-r-0 shadow-none", instantHoverMotionClass);
 
-/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); `!bg-*` overrides the Separator default bg-border / bg-input */
+/** Middle vertical line of the Git ButtonGroup (`ButtonGroupSeparator`); geometry only, color is `bg-outline-border` */
 export const DESKTOP_GIT_ACTION_SPLIT = cn(
-  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-border-0 !bg-[var(--git-action-split)] !p-0",
+  "!my-0 !mx-0 h-auto w-px min-w-px max-w-px shrink-0 self-stretch !border-0 !bg-outline-border !p-0",
 );
 
 /** Dropdown trigger on the right side of the Git ButtonGroup */
@@ -158,8 +162,8 @@ export const DESKTOP_OVERLAY_SHADOW = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:sha
 /** Overlay shadow: light-mode diffuse + dark-mode keeps lg (Tooltip / Popover / HoverCard, etc.) */
 export const DESKTOP_OVERLAY_SHADOW_LG = cn(DESKTOP_OVERLAY_LIGHT_SHADOW, "dark:shadow-lg");
 
-/** Overlay panel edge: same 1px `--border` at 80% as Dropdown */
-export const DESKTOP_OVERLAY_EDGE = "border border-border/80";
+/** Overlay panel edge: 80% `--border` in light, 60% in dark */
+export const DESKTOP_OVERLAY_EDGE = "border border-border/80 dark:border-border/60";
 
 /** Ctrl+P / Ctrl+Shift+P command palette list icons and titles: slightly muted in light mode, brightened in dark mode */
 export const DESKTOP_COMMAND_PALETTE_ITEM_TONE = "opacity-70 dark:opacity-90";
@@ -212,7 +216,11 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_SURFACE = cn(
 export const DESKTOP_OVERLAY_LIST_WIDTH =
   "w-max min-w-[max(11rem,var(--radix-dropdown-menu-trigger-width))] max-w-[min(14rem,calc(100vw-1.25rem))]";
 
-export const DESKTOP_OVERLAY_LIST_FILTER_HEADER = "shrink-0 border-b border-border/40 p-1.5";
+export const DESKTOP_OVERLAY_LIST_FILTER_HEADER =
+  "shrink-0 border-b border-outline-border p-1 pr-1.5";
+
+/** Menu rule: inset from the item row so it does not meet the overlay chrome. */
+export const DESKTOP_OVERLAY_MENU_SEPARATOR = "mx-1 my-1 h-px bg-outline-border";
 
 /** Outline rest fill / hover wash (Input, Outline button, item cards and rows) */
 export const DESKTOP_OUTLINE_FILL = "bg-outline-fill";
@@ -229,8 +237,9 @@ export const DESKTOP_OUTLINE_FILL_HOVER = "hover:bg-outline-fill";
 /** Hover: wash + `--outline-border-hover` so the edge stays readable */
 export const DESKTOP_OUTLINE_HOVER = cn(DESKTOP_OUTLINE_BORDER_HOVER, DESKTOP_OUTLINE_FILL_HOVER);
 
-/** Mouse-click focus: keep the hover border, no ring */
-export const DESKTOP_OUTLINE_FOCUSED = "focus:border-outline-border-hover focus:bg-outline-fill";
+/** Keyboard focus: hover border/fill. Mouse click does not keep the wash. */
+export const DESKTOP_OUTLINE_FOCUSED =
+  "focus-visible:border-outline-border-hover focus-visible:bg-outline-fill";
 
 /** Card hover wash when replacing `background-color` would punch through translucency */
 export const DESKTOP_OUTLINE_FILL_UNDERLAY =
@@ -252,13 +261,10 @@ export const DESKTOP_CANVAS_CARD_SURFACE = cn(
 export const DESKTOP_ITEM_CARD_HOVER_BORDER = DESKTOP_OUTLINE_BORDER_HOVER;
 
 /** Outline button: Outline hover + brighter label */
-export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(
-  DESKTOP_OUTLINE_HOVER,
-  "hover:text-sidebar-foreground",
-);
+export const DESKTOP_OUTLINE_BUTTON_HOVER = cn(DESKTOP_OUTLINE_HOVER, "hover:text-chrome-emphasis");
 export const DESKTOP_OUTLINE_BUTTON_FOCUSED = DESKTOP_OUTLINE_FOCUSED;
 export const DESKTOP_OUTLINE_BUTTON_EXPANDED =
-  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-sidebar-foreground";
+  "aria-expanded:border-outline-border-hover aria-expanded:bg-outline-fill aria-expanded:text-chrome-emphasis";
 
 /** Select trigger: slightly smaller ring, consistent with the shadcn Select default */
 export const DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT =
@@ -272,7 +278,7 @@ export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_SHELL = cn(
 );
 
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT =
-  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-xs shadow-none";
+  "h-7 min-h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-2 py-1.5 text-xs shadow-none";
 
 /** ghost: transparent background consistent with popover; overrides the Input base class rest/hover/focus fill */
 export const DESKTOP_OVERLAY_LIST_FILTER_INPUT_GHOST = cn(
@@ -287,7 +293,7 @@ export const DESKTOP_FORM_INPUT_INNER =
   "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-2.5 py-1 text-sm shadow-none dark:bg-transparent";
 
 export const DESKTOP_FORM_TEXTAREA_INNER =
-  "min-h-9 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-sm shadow-none dark:bg-transparent";
+  "min-h-8 w-full min-w-0 flex-1 resize-none rounded-none border-0 bg-transparent px-2.5 py-2 text-[0.8rem] leading-4 shadow-none dark:bg-transparent";
 
 /** Select / custom trigger placed inside DESKTOP_FORM_INPUT_SHELL */
 export const DESKTOP_FORM_FIELD_TRIGGER_INNER =
@@ -315,10 +321,10 @@ export const DESKTOP_OVERLAY_LIST_DETAIL_LABEL = DESKTOP_OVERLAY_GROUP_LABEL_CLA
 export const DESKTOP_OVERLAY_LIST_ITEM = "px-2 py-1.5";
 
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT =
-  "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50";
+  "relative flex w-full cursor-pointer select-none items-center gap-1.5 rounded-sm px-2 py-1.5 text-xs outline-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5";
 
 export const DESKTOP_OVERLAY_LIST_ITEM_FOCUS =
-  "focus:bg-overlay-hover focus:text-accent-foreground";
+  "focus:bg-overlay-hover focus:text-accent-foreground focus:[&_svg]:text-inherit focus:[&_[data-slot$='-shortcut']]:text-inherit focus:[&_[data-slot='kbd']]:text-inherit";
 
 /** Long-list DropdownMenuItem primitive; shared by overlay list items such as model / workspace / approval */
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
@@ -327,10 +333,20 @@ export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM = cn(
 );
 
 /** Selected row fill: same wash as overlay item hover (`--overlay-hover`) */
-export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED = "bg-overlay-hover text-accent-foreground";
+export const DESKTOP_OVERLAY_LIST_ITEM_SELECTED =
+  "bg-overlay-hover text-accent-foreground [&_svg]:text-inherit [&_[data-slot$='-shortcut']]:text-inherit [&_[data-slot='kbd']]:text-inherit";
+
+export const DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE =
+  "text-destructive [&_svg]:text-destructive [&_[data-slot$='-shortcut']]:text-muted-foreground [&_[data-slot='kbd']]:text-muted-foreground data-[variant=destructive]:focus:[&_[data-slot$='-shortcut']]:text-muted-foreground data-[variant=destructive]:focus:[&_[data-slot='kbd']]:text-muted-foreground";
+
+export const DESKTOP_OVERLAY_LIST_ITEM_DESTRUCTIVE_FOCUS =
+  "focus:bg-destructive/10 focus:text-destructive focus:[&_svg]:text-destructive dark:focus:bg-destructive/20";
 
 /** Select dropdown item: same density as DropdownMenuItem + right-side space for the ItemIndicator */
-export const DESKTOP_SELECT_ITEM = cn(DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM, "pr-8");
+export const DESKTOP_SELECT_ITEM = cn(
+  DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM,
+  "pr-8 [&>span:not(.absolute)]:inline-flex [&>span:not(.absolute)]:items-center [&>span:not(.absolute)]:gap-1.5",
+);
 
 /** Select dropdown panel: same shell as Dropdown; scrolling is handled by the Radix Viewport while the outer layer stays overflow-hidden */
 export const DESKTOP_SELECT_CONTENT = cn(
@@ -349,7 +365,7 @@ export const DESKTOP_SELECT_TRIGGER = cn(
   DESKTOP_OUTLINE_FOCUSED,
   DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT,
   "disabled:cursor-not-allowed disabled:opacity-50",
-  "data-placeholder:text-muted-foreground [&>span]:line-clamp-1",
+  "data-placeholder:text-muted-foreground [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
 );
 
 export const DESKTOP_SELECT_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;
@@ -413,5 +429,5 @@ export function computeSessionSidebarMaxWidthPx(): number {
 }
 
 export function sessionSidebarShellWidth(open: boolean, widthPx: number): string {
-  return open ? `calc(0.25rem + ${widthPx}px)` : "0px";
+  return open ? `${widthPx}px` : "0px";
 }

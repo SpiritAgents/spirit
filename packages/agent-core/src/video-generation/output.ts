@@ -5,6 +5,7 @@ import {
   type VideoGenerationRequest,
 } from "../ports.js";
 import type { OpenAiVideoGenerationConfig } from "../openai/openai-compat.js";
+import { product } from "@spiritagent/product";
 
 export function normalizeGeneratedVideoMarkdownRef(markdownRef: string): string {
   const trimmed = markdownRef.trim();
@@ -20,7 +21,7 @@ export function normalizeGeneratedVideoMarkdownRef(markdownRef: string): string 
   }
 
   if (
-    url.protocol.toLowerCase() !== "spirit:" ||
+    url.protocol.toLowerCase() !== `${product.urlProtocol}:` ||
     url.hostname.toLowerCase() !== "generated" ||
     url.search.length > 0 ||
     url.hash.length > 0
@@ -50,7 +51,7 @@ export function normalizeGeneratedVideoMarkdownRef(markdownRef: string): string 
     throw new Error("Host returned an invalid generated video markdownRef.");
   }
 
-  return `spirit://generated/video/${encodeURIComponent(videoId)}`;
+  return `${product.urlProtocol}://generated/video/${encodeURIComponent(videoId)}`;
 }
 
 export function buildGeneratedVideoToolOutput(

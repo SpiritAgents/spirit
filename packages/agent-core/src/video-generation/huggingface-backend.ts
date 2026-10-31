@@ -19,7 +19,7 @@ function blobMediaType(blob: Blob): string {
 }
 
 export class HuggingFaceVideoBackend implements VideoGenerationBackend {
-  readonly id = "huggingface";
+  readonly id = "huggingface-inference";
 
   async generate(
     config: OpenAiVideoGenerationConfig,

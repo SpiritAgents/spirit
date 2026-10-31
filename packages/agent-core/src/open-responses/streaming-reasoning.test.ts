@@ -4,11 +4,11 @@ import { test } from "vitest";
 import { extractOpenResponsesReasoningTextFromRawChunk } from "./streaming.js";
 import { resolveOpenResponsesReasoningSummary } from "./responses-compat.js";
 
-test("resolveOpenResponsesReasoningSummary defaults to auto", () => {
+test("resolveOpenResponsesReasoningSummary defaults to auto when declared", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "gpt-5",
       reasoningEffort: "medium",
+      options: { reasoningSummary: true },
     }),
     "auto",
   );
@@ -17,30 +17,27 @@ test("resolveOpenResponsesReasoningSummary defaults to auto", () => {
 test("resolveOpenResponsesReasoningSummary respects none effort", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "gpt-5",
       reasoningEffort: "none",
       reasoningSummary: "auto",
+      options: { reasoningSummary: true },
     }),
     undefined,
   );
 });
 
-test("resolveOpenResponsesReasoningSummary disables summary for Bedrock Mantle", () => {
+test("resolveOpenResponsesReasoningSummary disables summary for the SigV4 surface", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "openai.gpt-5.5",
-      baseUrl: "https://bedrock-mantle.us-east-2.api.aws/openai/v1",
+      options: { auth: "aws-sigv4", reasoningSummary: true },
       reasoningEffort: "medium",
     }),
     undefined,
   );
 });
 
-test("resolveOpenResponsesReasoningSummary disables summary for volcengine", () => {
+test("resolveOpenResponsesReasoningSummary is suppressed without the declaration", () => {
   assert.equal(
     resolveOpenResponsesReasoningSummary({
-      model: "doubao-seed-1-8-251228",
-      llmVendor: "volcengine",
       reasoningEffort: "medium",
       reasoningSummary: "auto",
     }),

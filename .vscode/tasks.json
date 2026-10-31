@@ -1,0 +1,120 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install Dependencies",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["install"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["build"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:buildProductQuality}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["test"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["lint"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Check Formatting",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["format"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Built Desktop",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "@spiritagent/desktop", "start"],
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev Desktop",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:desktop"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev Site",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:site"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev CLI",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["dev:cli"],
+      "options": {
+        "env": {
+          "SPIRIT_PRODUCT_QUALITY": "${input:devProductQuality}"
+        }
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "devProductQuality",
+      "type": "pickString",
+      "description": "Product quality for development. Stable uses your regular data. Do not run both qualities concurrently in one checkout.",
+      "options": [
+        { "label": "Dev (~/.spirit-dev)", "value": "dev" },
+        { "label": "Stable (~/.spirit)", "value": "stable" }
+      ],
+      "default": "dev"
+    },
+    {
+      "id": "buildProductQuality",
+      "type": "pickString",
+      "description": "Product quality to bake into build outputs. Stop development tasks before switching quality.",
+      "options": [
+        { "label": "Stable (~/.spirit)", "value": "stable" },
+        { "label": "Dev (~/.spirit-dev)", "value": "dev" }
+      ],
+      "default": "stable"
+    }
+  ]
+}

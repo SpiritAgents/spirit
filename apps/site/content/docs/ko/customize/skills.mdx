@@ -1,17 +1,18 @@
 ---
 title: 스킬
-description: 사용자, .spirit 및 .agents 스킬과 내장 create-rule, create-skill, create-hook, create-extension 스킬.
+description: 사용자, {{product.workspaceDataFolderName}} 및 .agents 스킬과 내장
+  create-rule, create-skill, create-hook, create-extension 스킬.
 ---
 
-스킬은 `SKILL.md`가 포함된 폴더입니다. Spirit은 세 곳에서 스킬을 발견합니다:
+스킬은 `SKILL.md`가 포함된 폴더입니다. {{product.name|mdx}}은 세 곳에서 스킬을 발견합니다:
 
-| 범위            | 경로                                         |
-| --------------- | -------------------------------------------- |
-| 사용자          | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| 작업공간 Spirit | `{workspace}/.spirit/skills/{name}/SKILL.md` |
-| 작업공간 agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| 범위                    | 경로                                         |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| 사용자                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 작업공간 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| 작업공간 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-턴에서 스킬을 언급하면, Spirit은 해당 사용자 메시지에 전체 텍스트를 첨부할 수 있습니다. 모든 스킬을 시스템 프롬프트에 덤프하지는 않습니다.
+턴에서 스킬을 언급하면, {{product.name|mdx}}은 해당 사용자 메시지에 전체 텍스트를 첨부할 수 있습니다. 모든 스킬을 시스템 프롬프트에 덤프하지는 않습니다.
 
 ## 머리말
 
@@ -24,11 +25,11 @@ description: 사용자, .spirit 및 .agents 스킬과 내장 create-rule, create
 
 ## 내장 스킬
 
-이들은 Spirit에 포함되어 있습니다 (데이터 디렉토리의 파일이 아닙니다):
+이들은 {{product.name|mdx}}에 포함되어 있습니다 (데이터 디렉토리의 파일이 아닙니다):
 
 - `create-rule` — [규칙](./rules.mdx) 초안 작성
 - `create-skill` — [스킬](./skills.mdx) 초안 작성
 - `create-hook` — [훅](./hooks.mdx) 초안 작성
 - `create-extension` — [확장 프로그램](../develop/extensions.mdx) 초안 작성
 
-**설정 → 스킬**에서 스킬을 관리하세요. Git 커밋/푸시/병합 칩은 호스트 UI이며 번들 스킬이 아닙니다. [데스크톱](../desktop.mdx)을 참조하세요. [확장 프로그램](../develop/extensions.mdx)에 번들된 skills는 해당 확장이 켜져 있을 때만 사용할 수 있으며 이 설정 목록에는 나타나지 않습니다.
+**설정 → 스킬**에서 스킬을 관리하세요. Git 커밋/푸시/병합 칩은 호스트 UI이며 번들 스킬이 아닙니다. [데스크톱](../desktop.mdx)을 참조하세요. [확장 프로그램](../develop/extensions.mdx)에 번들된 스킬은 해당 확장이 켜져 있을 때만 사용할 수 있으며 이 설정 목록에는 나타나지 않습니다.

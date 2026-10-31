@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { test } from "vitest";
 
 import { setLlmFetchTransportOverrideForTests } from "../llm-fetch.js";
-import { clearMoonshotChatCompletionMessages } from "./moonshot-chat-completion-messages.js";
+import { clearVideoPassthroughMessages } from "./video-message-stash.js";
 import { applyCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import { AiSdkOpenAiCompatibleTransport } from "./ai-sdk-transport.js";
 import type { OpenAiTransportConfig } from "./openai-compat.js";
@@ -46,7 +47,7 @@ async function runDeepInfraChatRound(
       {
         apiKey: "test-key",
         model: "acme/chat-model",
-        llmVendor: "deepinfra",
+        sdk: "@ai-sdk/deepinfra",
         workspaceRoot: process.cwd(),
         ...overrides,
       },
@@ -92,26 +93,29 @@ test("DeepInfra transport omits reasoning_effort when effort is default", async 
   assert.equal("reasoning_effort" in captured[0]!.body, false);
 });
 
-test("DeepInfra transport injects reasoning.enabled=false when thinking is disabled", async () => {
-  // When thinking is disabled, the host pins effort to default (shouldPinReasoningEffortToDefault),
-  // so reasoning_effort is not injected here; only reasoning.enabled=false is injected.
+test("DeepInfra transport merges the declared thinkingSwitch off patch", async () => {
+  // The catalog/wizard materializes the endpoint's disable encoding as the thinkingSwitch off
+  // patch; the runtime applies it verbatim.
   const captured = await runDeepInfraChatRound({
     baseUrl: "https://api.deepinfra.com/v1/openai",
-    reasoningEffort: "default",
     vendorExtendedThinking: false,
+    supportsThinkingSwitch: true,
+    thinkingSwitch: { off: { body: { reasoning: { enabled: false } } } },
   });
   assert.deepEqual(captured[0]?.body.reasoning, { enabled: false });
   assert.equal("reasoning_effort" in captured[0]!.body, false);
 });
 
-test("DeepInfra code-completion profile omits reasoning_effort and disables reasoning", async () => {
+test("DeepInfra code-completion profile omits reasoning_effort and merges the declared off patch", async () => {
   const captured = await runDeepInfraChatRound(
     applyCodeCompletionTransportProfile({
       apiKey: "test-key",
       model: "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
       baseUrl: "https://api.deepinfra.com/v1/openai",
-      llmVendor: "deepinfra",
+      sdk: "@ai-sdk/deepinfra",
       reasoningEffort: "medium",
+      supportsThinkingSwitch: true,
+      thinkingSwitch: { off: { body: { reasoning: { enabled: false } } } },
       workspaceRoot: process.cwd(),
     }) as OpenAiTransportConfig,
   );
@@ -144,19 +148,18 @@ test("DeepInfra image generation reuses openai-compatible branch with preset /op
         apiKey: "test-key",
         model: "deepseek-ai/DeepSeek-V3",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
         imageGeneration: {
           apiKey: "test-key",
           model: "black-forest-labs/FLUX-1-schnell",
           baseUrl: "https://api.deepinfra.com/v1/openai",
-          llmVendor: "deepinfra",
+          imageApi: "openai-images",
         },
       },
       { prompt: "a red circle", size: "1024x1024" },
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
+        markdownRef: `${product.urlProtocol}://generated/image/abc`,
       }),
     );
 
@@ -192,7 +195,6 @@ test("DeepInfra transport embeds local video input via stash restore", async () 
         apiKey: "test-key",
         model: "acme/video-chat",
         baseUrl: "https://api.deepinfra.com/v1/openai",
-        llmVendor: "deepinfra",
         workspaceRoot,
         modelCapabilities: { videoInput: true },
       },
@@ -230,7 +232,7 @@ test("DeepInfra transport embeds local video input via stash restore", async () 
     );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
-    clearMoonshotChatCompletionMessages();
+    clearVideoPassthroughMessages();
     await rm(workspaceRoot, { recursive: true, force: true });
   }
 });

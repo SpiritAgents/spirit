@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
 
-import { setKeyringStoreForTests, groupKeyAccount } from "@spiritagent/host-internal";
+import { setLlmFetchTransportOverrideForTests } from "@spiritagent/agent-core";
+import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagent/host-internal";
 
 import { SessionManager } from "../src/session-manager.js";
 
@@ -13,16 +14,16 @@ function freshDataDir(): string {
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify({
-      schemaVersion: 2,
-      providerGroups: [
+      schemaVersion: 1,
+      providers: [
         {
           id: "openai",
-          provider: "openai",
           apiBase: "https://api.openai.com/v1",
+          transportKind: "open-responses",
           models: [{ name: "gpt-4o-mini" }, { name: "gpt-4o-mini-pane" }],
         },
       ],
-      activeModel: { groupId: "openai", name: "gpt-4o-mini" },
+      activeModel: { providerId: "openai", name: "gpt-4o-mini" },
     }),
   );
   return dir;
@@ -39,9 +40,35 @@ function withMockKeyring(run: () => Promise<void>): Promise<void> {
       store.delete(`${service}/${account}`);
     },
   });
-  // The canonical Desktop/CLI account scheme: group::{groupId}.
-  store.set(`Spirit/${groupKeyAccount("openai")}`, "test-key");
+  // The canonical internal account scheme: provider::{id}.
+  store.set(`Spirit/${providerInternalKeyAccount("openai")}`, "test-key");
   return run().finally(() => setKeyringStoreForTests(undefined));
+}
+
+/**
+ * Rewrites config.json with a per-model service tier preference. `serviceTiers` is declared so
+ * the file stays schema-valid for declared values (`flex`); anything else (`priority`) makes the
+ * whole config fail validation, which the daemon surfaces as an unconfigured session.
+ */
+function writeServiceTierConfig(dir: string, serviceTier: string): void {
+  writeFileSync(
+    join(dir, "config.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      providers: [
+        {
+          id: "openai",
+          apiBase: "https://api.openai.com/v1",
+          transportKind: "open-responses",
+          models: [
+            { name: "gpt-4o-mini", serviceTiers: ["default", "flex"], serviceTier },
+            { name: "gpt-4o-mini-pane" },
+          ],
+        },
+      ],
+      activeModel: { providerId: "openai", name: "gpt-4o-mini" },
+    }),
+  );
 }
 
 describe("SessionManager", () => {
@@ -100,7 +127,7 @@ describe("SessionManager", () => {
         workspaceRoot: tmpdir(),
         hostKind: "desktop",
         approvalLevel: "bypass-approval",
-        modelRef: { groupId: "openai", name: "gpt-4o-mini-pane" },
+        modelRef: { providerId: "openai", name: "gpt-4o-mini-pane" },
       });
       assert.equal(created.approvalLevel, "bypass-approval");
       assert.equal(created.model, "gpt-4o-mini-pane");
@@ -372,9 +399,9 @@ describe("SessionManager", () => {
     writeFileSync(
       join(dataDir, "config.json"),
       JSON.stringify({
-        schemaVersion: 2,
-        providerGroups: [],
-        activeModel: { groupId: "", name: "" },
+        schemaVersion: 1,
+        providers: [],
+        activeModel: { providerId: "", name: "" },
       }),
     );
     const manager = new SessionManager(dataDir, {
@@ -399,5 +426,211 @@ describe("SessionManager", () => {
 
     await manager.closeSession(created.sessionId);
     await manager.shutdown();
+  });
+
+  it("replaceConfig re-reads config.json and surfaces invalid service tier config", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+      const created = await manager.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "cli",
+      });
+
+      // Same model with a new declared tier preference: the daemon re-resolves from config.json.
+      writeServiceTierConfig(dataDir, "flex");
+      await manager.replaceConfig(created.sessionId);
+      assert.equal(manager.getSession(created.sessionId)?.model, "gpt-4o-mini");
+
+      // A tier outside the declared list fails schema validation: the session re-resolves to
+      // unconfigured and the config file is left untouched for the user to fix.
+      writeServiceTierConfig(dataDir, "priority");
+      const untouched = readFileSync(join(dataDir, "config.json"), "utf8");
+      await manager.replaceConfig(created.sessionId);
+      assert.equal(manager.getSession(created.sessionId)?.model, "");
+      await assert.rejects(
+        manager.submitUserTurn(created.sessionId, { text: "hi" }),
+        /No active model configured/,
+      );
+      assert.equal(readFileSync(join(dataDir, "config.json"), "utf8"), untouched);
+
+      await manager.shutdown();
+    });
+  });
+
+  it("replaceConfig preserves real usage for conditional fast fallback and recovery", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      writeFileSync(
+        join(dataDir, "config.json"),
+        JSON.stringify({
+          schemaVersion: 1,
+          providers: [
+            {
+              id: "openai",
+              apiBase: "https://api.openai.com/v1",
+              transportKind: "open-responses",
+              sdk: "@ai-sdk/openai",
+              models: [
+                {
+                  name: "gpt-5.4",
+                  serviceTier: "fast",
+                  serviceTiers: {
+                    default: { body: { service_tier: "default" } },
+                    flex: { body: { service_tier: "flex" } },
+                    fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+                  },
+                },
+              ],
+            },
+          ],
+          activeModel: { providerId: "openai", name: "gpt-5.4" },
+        }),
+      );
+      let turnWaiter: ((reason: string, result?: unknown) => void) | undefined;
+      const waitForTurn = () =>
+        new Promise<void>((resolve, reject) => {
+          turnWaiter = (reason, result) => {
+            turnWaiter = undefined;
+            if (reason === "completed") {
+              resolve();
+            } else {
+              reject(new Error(`${reason}: ${JSON.stringify(result)}`));
+            }
+          };
+        });
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: (_sessionId, reason, result) => turnWaiter?.(reason, result),
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+      const created = await manager.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "cli",
+        conversationKey: "ephemeral://tier-limit",
+      });
+
+      const requestTiers: unknown[] = [];
+      let requestCount = 0;
+      setLlmFetchTransportOverrideForTests(async (_input, init) => {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        requestTiers.push(body.service_tier);
+        assert.equal("maxInputTokens" in body, false);
+        const inputTokens = requestCount++ === 0 ? 278529 : 1000;
+        const message = {
+          type: "message",
+          id: `msg-${requestCount}`,
+          role: "assistant",
+          status: "completed",
+          content: [{ type: "output_text", text: "ok", annotations: [] }],
+        };
+        const completed = {
+          id: `resp-tier-${requestCount}`,
+          object: "response",
+          created_at: 0,
+          model: "gpt-5.4",
+          status: "completed",
+          output: [message],
+          usage: {
+            input_tokens: inputTokens,
+            output_tokens: 1,
+            total_tokens: inputTokens + 1,
+            input_tokens_details: { cached_tokens: 0 },
+            output_tokens_details: { reasoning_tokens: 0 },
+          },
+        };
+        const events = [
+          {
+            type: "response.created",
+            response: { ...completed, status: "in_progress", output: [] },
+          },
+          {
+            type: "response.output_item.added",
+            output_index: 0,
+            item: { ...message, status: "in_progress", content: [] },
+          },
+          {
+            type: "response.output_text.delta",
+            item_id: message.id,
+            output_index: 0,
+            content_index: 0,
+            delta: "ok",
+          },
+          {
+            type: "response.output_text.done",
+            item_id: message.id,
+            output_index: 0,
+            content_index: 0,
+            text: "ok",
+          },
+          { type: "response.output_item.done", output_index: 0, item: message },
+          { type: "response.completed", response: completed },
+        ];
+        return new Response(events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join(""), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream; charset=utf-8" },
+        });
+      });
+
+      try {
+        const firstFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "first" }), {
+          accepted: true,
+        });
+        await firstFinished;
+        await manager.replaceConfig(created.sessionId);
+        const secondFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "second" }), {
+          accepted: true,
+        });
+        await secondFinished;
+        const thirdFinished = waitForTurn();
+        assert.deepEqual(await manager.submitUserTurn(created.sessionId, { text: "third" }), {
+          accepted: true,
+        });
+        await thirdFinished;
+        assert.deepEqual(requestTiers, ["fast", "default", "fast"]);
+
+        const persisted = JSON.parse(readFileSync(join(dataDir, "config.json"), "utf8"));
+        assert.equal(persisted.providers[0].models[0].serviceTier, "fast");
+      } finally {
+        setLlmFetchTransportOverrideForTests(undefined);
+        await manager.shutdown();
+      }
+    });
+  });
+
+  it("createSession keeps an invalid service tier config unconfigured instead of serving it", async () => {
+    await withMockKeyring(async () => {
+      const dataDir = freshDataDir();
+      writeServiceTierConfig(dataDir, "priority");
+      const manager = new SessionManager(dataDir, {
+        broadcastRuntimeEvent: () => {},
+        broadcastTurnFinished: () => {},
+        broadcastSnapshot: () => {},
+        broadcastTrustRequest: () => {},
+        broadcastFileChange: () => {},
+      });
+
+      const created = await manager.createSession({
+        workspaceRoot: tmpdir(),
+        hostKind: "cli",
+      });
+      assert.equal(created.model, "");
+      await assert.rejects(
+        manager.submitUserTurn(created.sessionId, { text: "hi" }),
+        /No active model configured/,
+      );
+
+      await manager.shutdown();
+    });
   });
 });

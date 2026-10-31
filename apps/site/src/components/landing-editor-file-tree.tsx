@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 
 import { workspaceExplorerIcon } from "@/lib/workspace-explorer-icon";
 import type { LandingEditorTreeNode } from "@/lib/landing-code-completion-demo-script";
@@ -24,11 +24,15 @@ function TreeNode({ node, depth }: { node: LandingEditorTreeNode; depth: number 
         style={{ paddingLeft }}
       >
         {isDir ? (
-          <ChevronDown className="size-2.5 shrink-0 text-foreground/45" aria-hidden />
+          <ChevronDown
+            className="size-2.5 shrink-0 text-foreground/45"
+            aria-hidden
+            strokeWidth={1.75}
+          />
         ) : (
           <span className="size-2.5 shrink-0" aria-hidden />
         )}
-        <Icon className="size-3 shrink-0 text-foreground/55" aria-hidden />
+        <Icon className="size-3 shrink-0 text-foreground/55" aria-hidden strokeWidth={1.75} />
         <span className="truncate">{node.name}</span>
       </div>
       {node.children?.map((child) => (

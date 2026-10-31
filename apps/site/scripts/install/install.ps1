@@ -1,5 +1,5 @@
-# Spirit CLI installer for Windows.
-# Usage: irm https://spirit.dev/install.ps1 | iex
+# __PRODUCT_NAME__ CLI installer for Windows.
+# Usage: irm __WEBSITE_ORIGIN__/install.ps1 | iex
 #
 # Optional environment variables:
 #   SPIRIT_HOME     Install root (default: %LOCALAPPDATA%\Spirit)
@@ -7,7 +7,8 @@
 
 $ErrorActionPreference = 'Stop'
 
-$SpiritDownloadHost = if ($env:SPIRIT_DOWNLOAD_HOST) { $env:SPIRIT_DOWNLOAD_HOST } else { '__SPIRIT_DOWNLOAD_HOST__' }
+$ProductName = '__PRODUCT_NAME_QUOTED__'
+$SpiritDownloadOrigin = if ($env:SPIRIT_DOWNLOAD_HOST) { "https://$($env:SPIRIT_DOWNLOAD_HOST)" } else { '__DOWNLOAD_ORIGIN_QUOTED__' }
 $SpiritHome = if ($env:SPIRIT_HOME) { $env:SPIRIT_HOME } else { Join-Path $env:LOCALAPPDATA 'Spirit' }
 $SpiritVersion = if ($env:SPIRIT_VERSION) { $env:SPIRIT_VERSION } else { 'latest' }
 
@@ -30,18 +31,18 @@ function Get-SpiritArch {
     return 'x64'
   }
   if ($arch -eq 'x86') {
-    throw '32-bit Windows (x86) is not supported. Spirit CLI requires 64-bit Windows (x64 or ARM64).'
+    throw "32-bit Windows (x86) is not supported. $ProductName CLI requires 64-bit Windows (x64 or ARM64)."
   }
   throw "Unsupported architecture: $arch (supported: x64, arm64)"
 }
 
 function Get-CliArchiveName([string]$Arch) {
-  return "Spirit-CLI-windows-$Arch.zip"
+  return "$ProductName-CLI-windows-$Arch.zip"
 }
 
 function Get-CliDownloadUrl([string]$Arch, [string]$Version) {
   $fileName = Get-CliArchiveName -Arch $Arch
-  return "https://$SpiritDownloadHost/cli/windows/$Arch/$Version/$fileName"
+  return "$SpiritDownloadOrigin/cli/windows/$Arch/$Version/$fileName"
 }
 
 function Get-GithubChecksumsUrl([string]$Version) {
@@ -52,12 +53,12 @@ function Get-GithubChecksumsUrl([string]$Version) {
 }
 
 function Get-GithubCliAssetName([string]$Arch, [string]$Version) {
-  return "Spirit-CLI-$Version-windows-$Arch.zip"
+  return "$ProductName-CLI-$Version-windows-$Arch.zip"
 }
 
 function Get-ExpectedSha256FromSums([string]$Sums, [string]$Arch, [string]$Version) {
   $versionRe = '\d+\.\d+\.\d+(?:-(?:alpha|beta|rc)\.\d+)?'
-  $nameRe = "^Spirit-CLI-$versionRe-windows-$([regex]::Escape($Arch))\.zip$"
+  $nameRe = "^$([regex]::Escape($ProductName))-CLI-$versionRe-windows-$([regex]::Escape($Arch))\.zip$"
   $pinnedName = Get-GithubCliAssetName -Arch $Arch -Version $Version
   $found = New-Object System.Collections.Generic.List[string]
 
@@ -171,7 +172,7 @@ $cliDir = Join-Path $SpiritHome 'cli'
 $currentDir = Join-Path $cliDir 'current'
 $stagingDir = Join-Path $cliDir 'current.next'
 
-Write-Info 'Installing Spirit CLI'
+Write-Info "Installing $ProductName CLI"
 Write-Info "Platform: windows/$arch"
 Write-Info "SPIRIT_HOME: $SpiritHome"
 Write-Info "Version: $SpiritVersion"

@@ -81,7 +81,7 @@ export function BrowserHeroPagePreview({
           <NoTranslate>{messages.common.brand}</NoTranslate>
         </span>
         <nav
-          className="hidden items-center gap-3 text-[10px] text-sidebar-item-foreground sm:flex"
+          className="hidden items-center gap-3 text-[10px] text-chrome-secondary-label sm:flex"
           aria-hidden
         >
           <span>{messages.hero.nav.features}</span>
@@ -90,7 +90,7 @@ export function BrowserHeroPagePreview({
         <div className="flex items-center gap-2">
           <a
             href={SPIRIT_GITHUB_REPO_URL}
-            className="hidden text-sidebar-action-foreground transition-colors hover:text-sidebar-foreground sm:inline-flex"
+            className="hidden text-chrome-label transition-colors hover:text-chrome-emphasis sm:inline-flex"
             aria-label={messages.hero.nav.github}
             tabIndex={-1}
           >
@@ -154,7 +154,7 @@ export function BrowserHeroPagePreview({
           <span
             className={`inline-flex h-7 items-center gap-1 rounded-full bg-primary px-3 text-[11px] ${FONT_WEIGHT_NORMAL} text-primary-foreground`}
           >
-            <Download className="size-3" aria-hidden />
+            <Download className="size-3" aria-hidden strokeWidth={1.75} />
             {messages.common.download}
           </span>
         </div>

@@ -1,6 +1,3 @@
-// Copyright (c) 2026 N123999
-// SPDX-License-Identifier: MIT
-
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";

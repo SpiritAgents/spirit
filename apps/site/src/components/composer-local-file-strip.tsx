@@ -1,8 +1,9 @@
+import { X } from "@spiritagent/icons/x";
 import { useState } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { File, X } from "lucide-react";
+import { File } from "lucide-react";
 
 import type { ComposerLocalFileAttachmentView } from "../lib/local-file-attachments.js";
 
@@ -39,7 +40,7 @@ function ComposerLocalFileCard({
           className="inline-flex size-[18px] shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
           aria-label={t("composer.removeAttachment", { name: attachment.name })}
         >
-          <X className="size-3" aria-hidden />
+          <X className="size-3" aria-hidden strokeWidth={1.75} />
         </button>
       ) : null}
       {showImage ? (
@@ -55,7 +56,7 @@ function ComposerLocalFileCard({
         <div
           className={`${readOnly ? "" : "-ml-0.25"} inline-flex shrink-0 items-center justify-center rounded-sm text-muted-foreground`}
         >
-          <File className={`${ATTACHMENT_VISUAL_CLASS} shrink-0`} aria-hidden />
+          <File className={`${ATTACHMENT_VISUAL_CLASS} shrink-0`} aria-hidden strokeWidth={1.75} />
         </div>
       )}
       <div className="min-w-0 pr-0.5">

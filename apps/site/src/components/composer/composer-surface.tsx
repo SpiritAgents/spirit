@@ -1,3 +1,4 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import {
   useMemo,
   type ClipboardEvent as ReactClipboardEvent,
@@ -6,7 +7,7 @@ import {
 } from "react";
 import { useTranslation } from "@/lib/desktop-preview-i18n";
 
-import { ArrowUp, LoaderCircle, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 
 import {
   ComposerAbortShortcutKbd,
@@ -189,7 +190,11 @@ export function ComposerSurface({
               models={models}
               catalogHints={catalogHints}
               activeModelName={activeModel}
-              activeReasoningEffort={activeModelProfile?.reasoningEffort}
+              activeReasoningEffort={
+                activeModelProfile?.effortSemantics === "output"
+                  ? activeModelProfile.effort
+                  : activeModelProfile?.reasoningEffort
+              }
               disabled={readOnly}
               onModelSelect={onModelSelect}
               triggerClassName="max-w-[min(12rem,100%)] pr-0.5 pl-1"
@@ -220,7 +225,7 @@ export function ComposerSurface({
                 {showAbortButton ? (
                   <Square className="size-3.5" strokeWidth={2.4} aria-hidden />
                 ) : busy ? (
-                  <LoaderCircle className="size-3.5 animate-spin" />
+                  <LoaderCircle className="size-3.5 animate-spin" strokeWidth={1.75} />
                 ) : (
                   <ArrowUp className="size-3.5" strokeWidth={2.25} aria-hidden />
                 )}

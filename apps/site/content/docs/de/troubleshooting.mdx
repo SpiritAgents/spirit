@@ -5,7 +5,7 @@ description: Alte Konfiguration, unbeaufsichtigte Blöcke, Pairing-Sperren, fehl
 
 ## config.json wird abgelehnt
 
-Die Datei muss `schemaVersion: 2` sein. Löschen Sie die alte Datei und [verbinden Sie einen Anbieter neu](./providers.mdx). Schlüssel waren nie in dieser Datei – sie befinden sich im [Schlüsselbund](./security.mdx).
+Die Datei muss `schemaVersion: 1` sein. Jede andere Version wird abgelehnt – löschen Sie die alte Datei und [verbinden Sie einen Anbieter neu](./providers.mdx). Sofern Sie kein Klartext-`apiKey` deklariert haben, befinden sich Schlüssel nicht in dieser Datei – sie liegen im [Schlüsselbund](./security.mdx).
 
 ## CLI installiert, Einstellungen leer
 
@@ -35,7 +35,7 @@ Installieren Sie den Server selbst (clangd über Homebrew / winget, jdtls manuel
 
 ## Tab-Vervollständigung ist leer
 
-Aktivieren Sie **Einstellungen → Tab** und weisen Sie ein leichtgewichtiges Chat-Modell zu. Siehe [Desktop](./desktop.mdx).
+Aktivieren Sie **Einstellungen → Tab** und weisen Sie ein sekundäres Sprachmodell zu. Siehe [Desktop](./desktop.mdx).
 
 ## ACP nicht auf der Download-Seite
 

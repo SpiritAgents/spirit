@@ -1,17 +1,18 @@
 ---
 title: 技能
-description: 使用者、.spirit 和 .agents 技能，以及內建的 create-rule、create-skill、create-hook 和 create-extension。
+description: 使用者、{{product.workspaceDataFolderName}} 和 .agents 技能，以及內建的
+  create-rule、create-skill、create-hook 和 create-extension。
 ---
 
-技能是包含 `SKILL.md` 的資料夾。Spirit 從三個位置發現技能：
+技能是包含 `SKILL.md` 的資料夾。{{product.name|mdx}} 從三個位置發現技能：
 
-| 範圍          | 路徑                                         |
-| ------------- | -------------------------------------------- |
-| 使用者        | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| 工作區 Spirit | `{workspace}/.spirit/skills/{name}/SKILL.md` |
-| 工作區 agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| 範圍                  | 路徑                                         |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| 使用者                | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 工作區 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| 工作區 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-當您在對話中提到技能時，Spirit 可以將該技能的完整文字附加到該使用者訊息中。它不會將每個技能都傾倒到系統提示中。
+當您在對話中提到技能時，{{product.name|mdx}} 可以將該技能的完整文字附加到該使用者訊息中。它不會將每個技能都傾倒到系統提示中。
 
 ## Frontmatter
 
@@ -24,11 +25,11 @@ description: 使用者、.spirit 和 .agents 技能，以及內建的 create-rul
 
 ## 內建技能
 
-以下技能隨 Spirit 提供（它們不是您資料目錄中的檔案）：
+以下技能隨 {{product.name|mdx}} 提供（它們不是您資料目錄中的檔案）：
 
 - `create-rule` — 起草 [規則](./rules.mdx)
 - `create-skill` — 起草 [技能](./skills.mdx)
-- `create-hook` — 起草 [hook](./hooks.mdx)
+- `create-hook` — 起草 [掛鉤](./hooks.mdx)
 - `create-extension` — 起草 [擴充功能](../develop/extensions.mdx)
 
-在**設定 → 技能**中管理技能。Git commit / push / merge 標籤是主機介面的功能，不是隨附的技能。請參閱 [Desktop](../desktop.mdx)。[擴充功能](../develop/extensions.mdx) 捆綁的 skills 只在該擴充功能啟用時可用，不會出現在此設定清單。
+在**設定 → 技能**中管理技能。Git commit / push / merge 標籤是主機介面的功能，不是隨附的技能。請參閱 [Desktop](../desktop.mdx)。[擴充功能](../develop/extensions.mdx) 捆綁的技能只在該擴充功能啟用時可用，不會出現在此設定清單。

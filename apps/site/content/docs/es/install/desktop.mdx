@@ -1,13 +1,13 @@
 ---
 title: Instalar Desktop
-description: Descarga Spirit para macOS, Windows o Linux.
+description: Descarga {{product.name}} para macOS, Windows o Linux.
 ---
 
 Desktop es el host gráfico: chat, archivos del workspace, Git, ajustes, extensiones y automatizaciones. Comparte el daemon local con el [CLI](./cli.mdx).
 
 ## Descargar
 
-Usa la [página de descarga](/en-US/download). Selecciona una compilación para tu sistema operativo y arquitectura desde `download.spirit.dev`.
+Usa la [página de descarga](/en-US/download). Selecciona una compilación para tu sistema operativo y arquitectura desde `{{product.downloadOrigin|host}}`.
 
 | Plataforma | Archivo       | Arquitecturas    |
 | ---------- | ------------- | ---------------- |
@@ -21,13 +21,13 @@ No hay un paquete oficial de Homebrew, winget o apt para Desktop.
 
 ## Después de instalar
 
-1. Abre Spirit.
-2. [Abre un workspace](../quickstart.mdx#2-open-a-workspace).
+1. Abre {{product.name|mdx}}.
+2. [Abre un workspace](../quickstart.mdx#2-abre-un-workspace).
 3. Conecta un proveedor en **Settings → Models**. La clave se guarda en el llavero del sistema.
 
 En macOS, si Gatekeeper bloquea el primer lanzamiento, abre la app desde Finder con Control-clic → Abrir.
 
-En Linux, marca el AppImage como ejecutable (`chmod +x Spirit-linux-*.AppImage`) antes de ejecutarlo.
+En Linux, marca el AppImage como ejecutable (`chmod +x {{product.name}}-linux-*.AppImage`) antes de ejecutarlo.
 
 ## Actualizaciones
 

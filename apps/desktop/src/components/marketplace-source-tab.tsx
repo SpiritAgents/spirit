@@ -1,7 +1,5 @@
-// Copyright (c) 2026 N123999
-// SPDX-License-Identifier: MIT
+import { X } from "@spiritagent/icons/x";
 
-import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -58,7 +56,7 @@ export function MarketplaceSourceTab({
       <ContextMenuTrigger className="inline-flex">{tab}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem variant="destructive" onSelect={() => onRemove(source)}>
-          <X aria-hidden />
+          <X aria-hidden strokeWidth={1.75} />
           {t("marketplace.removeMarketplace")}
         </ContextMenuItem>
       </ContextMenuContent>

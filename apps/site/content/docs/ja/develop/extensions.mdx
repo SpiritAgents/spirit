@@ -3,14 +3,14 @@ title: 拡張機能
 description: npm create ウィザードまたは手動で拡張機能を作成し、独自のリモート拡張機能マーケットプレイスを運営します。
 ---
 
-拡張機能は、`.spirit/extension.json`（Spirit マニフェストダンプ）と純粋な npm の `package.json` を持つフォルダーです。Spirit は拡張機能をユーザーごと・ホストごとにインストールし、ワークスペースの `.spirit/` には置きません。各インストールは入手元のマーケットプレイスでスコープされます：インストール ID は `(ソース id, name)` です。
+拡張機能は、`{{product.workspaceDataFolderName}}/extension.json`（{{product.name|mdx}} マニフェストダンプ）と純粋な npm の `package.json` を持つフォルダーです。{{product.name|mdx}} は拡張機能をユーザーごと・ホストごとにインストールし、ワークスペースの `{{product.workspaceDataFolderName}}/` には置きません。各インストールは入手元のマーケットプレイスでスコープされます：インストール ID は `(ソース id, name)` です。
 
 | ホスト  | パス                                                    |
 | ------- | ------------------------------------------------------- |
 | Desktop | `{spiritDataDir}/extensions/desktop/<sourceId>/<name>/` |
 | CLI     | `{spiritDataDir}/extensions/cli/<sourceId>/<name>/`     |
 
-これは [Skills](../customize/skills.mdx)（`SKILL.md` フォルダー）、[MCP](../customize/mcp.mdx)（外部サーバー）、[Hooks](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットにスタイルを適用するもので、`hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言すれば、同じファイル群を*バンドル*することもできます。
+これは [スキル](../customize/skills.mdx)（`SKILL.md` フォルダー）、[MCP](../customize/mcp.mdx)（外部サーバー）、[フック](../customize/hooks.mdx)（`hooks.json` スクリプト）とは異なります。`contributes.cli.hooks` は CLI TUI スロットにスタイルを適用するもので、`hooks.json` ではありません。拡張機能は `mcp`、`hooks`、`skills`、`rules` を宣言すれば、同じファイル群を*バンドル*することもできます。
 
 インストール済みの各拡張機能には有効スイッチがあります。無効化またはアンインストールすると貢献は停止します。拡張機能を有効にすることは、宣言された MCP サーバー、エージェントフック、スキル、ルールの実行に同意することを意味します。
 
@@ -59,7 +59,7 @@ deno init --npm @spiritagent/extension
 </Tab>
 </Tabs>
 
-ウィザードは拡張機能名（kebab-case）、表示名、一行の説明、スキャフォールドする機能を尋ねます。`package.json`、`icon.svg`、`.spirit/extension.json` を書き込み、選んだ機能に応じたファイル（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`）を追加し、終了時にそのまま貼り付けられるマーケットプレイスエントリを出力します。
+ウィザードは拡張機能名（kebab-case）、表示名、一行の説明、スキャフォールドする機能を尋ねます。`package.json`、`icon.svg`、`{{product.workspaceDataFolderName}}/extension.json` を書き込み、選んだ機能に応じたファイル（`skills/<name>/SKILL.md`、`rule.md`、`mcp.json`、`hooks.json`、`styles.css`、`index.mjs`）を追加し、終了時にそのまま貼り付けられるマーケットプレイスエントリを出力します。
 
 スクリプト化する場合、すべての質問にフラグがあります：`[target-dir]`、`--name`、`--display-name`、`--description`、`--capabilities <csv>`、確認をスキップする `--yes`。
 
@@ -72,12 +72,12 @@ npx @spiritagent/extension-toolkit check ./my-extension
 </Tab>
 <Tab value="手動で作成">
 
-拡張機能ディレクトリに必要なのは `.spirit/extension.json` と `package.json` の 2 ファイルだけ、そして宣言する機能ファイルです：
+拡張機能ディレクトリに必要なのは `{{product.workspaceDataFolderName}}/extension.json` と `package.json` の 2 ファイルだけ、そして宣言する機能ファイルです：
 
 ```text
 my-extension/
-  .spirit/
-    extension.json        # Spirit マニフェストダンプ（必須）
+  {{product.workspaceDataFolderName}}/
+    extension.json        # {{product.name}} マニフェストダンプ（必須）
   package.json            # 純粋な npm。読み込まれるのは `main` のみ
   icon.svg                # 任意。SVG のみ、<script> 禁止
   index.mjs               # 任意。`main` が参照する activate エントリ
@@ -89,9 +89,9 @@ my-extension/
   cli-hooks.json          # CLI hooks を宣言する場合（パスはマニフェストから参照）
 ```
 
-`package.json` に Spirit のフィールドはありません——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` は純粋な npm のままです。ホストが読むのは `main` のみ、つまり [`activate`](#activate) のモジュールエントリです。
+`package.json` に {{product.name|mdx}} のフィールドはありません——`name`、`version`、`description`、`author`、`homepage`、`license`、`main`、`keywords` は純粋な npm のままです。ホストが読むのは `main` のみ、つまり [`activate`](#activate) のモジュールエントリです。
 
-`.spirit/extension.json` のフィールド：
+`{{product.workspaceDataFolderName}}/extension.json` のフィールド：
 
 | フィールド      | 説明                                                                                                                                                 |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -224,24 +224,24 @@ my-extension/
 }
 ```
 
-### バンドルする MCP、hooks、skills、rules
+### バンドルする MCP、フック、スキル、rules
 
 対応する capability が必要です。`contributes.mcp`、`contributes.hooks`、`contributes.skills`、`contributes.rules` は `true` または `{}` です。パスは規約どおりで、カスタム path はできません。
 
 | 貢献        | Capability | ファイル                                                                                             |
 | ----------- | ---------- | ---------------------------------------------------------------------------------------------------- |
 | MCP         | `mcp`      | パッケージルートの `mcp.json`（ユーザー/ワークスペース MCP と同じ schema）                           |
-| Agent hooks | `hooks`    | パッケージルートの `hooks.json`（agent hooks と同じ schema。`contributes.cli.hooks` ではありません） |
-| Skills      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
+| Agent フック | `hooks`    | パッケージルートの `hooks.json`（agent フックと同じ schema。`contributes.cli.hooks` ではありません） |
+| スキル      | `skills`   | `skills/<name>/SKILL.md`                                                                             |
 | Rules       | `rules`    | パッケージルートの `rule.md`                                                                         |
 
 宣言したのにファイルが無い、または不正な場合はインストールに失敗します。宣言されていないファイルは無視され、読み込まれません。
 
 相対 `command` / `cwd` は拡張機能ルート基準です。MCP stdio で `cwd` を省略すると拡張機能ルートになります。
 
-拡張機能が有効なときだけセッションに overlay され、**設定 → MCPs | Hooks | Skills | Rules** には出ません。名前の衝突は workspace > user > extension です。
+拡張機能が有効なときだけセッションに overlay され、**設定 → MCP | フック | スキル | Rules** には出ません。名前の衝突は workspace > user > extension です。
 
-`tools/call` 中、クライアントが `experimental["spirit/ui"]` を宣言していれば、同梱 MCP は JSON-RPC の `spirit/ui/open`（`{ viewId, params }`）を送れます。Spirit は同じ拡張の `contributes.desktop.views` だけを開きます。ユーザー / ワークスペース MCP は拒否されます。Dialog はその `tools/call` をブロックし、`close(result)` は同じリクエストに戻ります。ウィンドウのないホストは `{ "kind": "unavailable", "reason": "host-has-no-ui" }` を返し、ツール側でフォールバックします。
+`tools/call` 中、クライアントが `experimental["spirit/ui"]` を宣言していれば、同梱 MCP は JSON-RPC の `spirit/ui/open`（`{ viewId, params }`）を送れます。{{product.name|mdx}} は同じ拡張の `contributes.desktop.views` だけを開きます。ユーザー / ワークスペース MCP は拒否されます。Dialog はその `tools/call` をブロックし、`close(result)` は同じリクエストに戻ります。ウィンドウのないホストは `{ "kind": "unavailable", "reason": "host-has-no-ui" }` を返し、ツール側でフォールバックします。
 
 ### `settingsSchema`
 
@@ -351,7 +351,7 @@ export function activate(ctx) {
 
 ## ZIP として配布する
 
-拡張機能ディレクトリを共有可能な ZIP 形式（コンテンツと `.spirit/extension.json`）にパックします：
+拡張機能ディレクトリを共有可能な ZIP 形式（コンテンツと `{{product.workspaceDataFolderName}}/extension.json`）にパックします：
 
 ```bash
 npx @spiritagent/extension-toolkit pack ./my-extension
@@ -363,7 +363,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ## リモート拡張機能マーケットプレイスを運営する
 
-リモート拡張機能マーケットプレイスとは、`.spirit/marketplace.json` インデックスを提供するサービス可能なディレクトリです：Git リポジトリ、静的サイト、またはローカルディレクトリ。ユーザーは `spirit extension marketplace add <url|path>` または Desktop の**拡張機能**ページで追加し、エントリを閲覧・インストールします。
+リモート拡張機能マーケットプレイスとは、`{{product.workspaceDataFolderName}}/marketplace.json` インデックスを提供するサービス可能なディレクトリです：Git リポジトリ、静的サイト、またはローカルディレクトリ。ユーザーは `spirit extension marketplace add <url|path>` または Desktop の**拡張機能**ページで追加し、エントリを閲覧・インストールします。
 
 <Tabs items={["テンプレートリポジトリ", "手動で作成"]}>
 <Tab value="テンプレートリポジトリ">
@@ -373,7 +373,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 テンプレートにはレジストリレイアウト、2 つのサンプル拡張機能、そして push と pull request のたびにレジストリを検証する CI が含まれています。拡張機能を公開するには：
 
 1. `npm create @spiritagent/extension` でスキャフォールドする。
-2. `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` を実行する——拡張機能が `extensions/` にコピーされ、エントリが `.spirit/marketplace.json` にマージされます。[publish で公開する](#publish-で公開する)を参照してください。
+2. `npx @spiritagent/extension-toolkit publish ./my-extension /path/to/your-marketplace-clone` を実行する——拡張機能が `extensions/` にコピーされ、エントリが `{{product.workspaceDataFolderName}}/marketplace.json` にマージされます。[publish で公開する](#publish-で公開する)を参照してください。
 3. プッシュする——ユーザーはその Git URL でマーケットプレイスを追加します。
 
 </Tab>
@@ -383,7 +383,7 @@ npx @spiritagent/extension-toolkit pack ./my-extension
 
 ```text
 my-marketplace/
-  .spirit/
+  {{product.workspaceDataFolderName}}/
     marketplace.json  # インデックス
   extensions/
     my-extension/     # コンテンツディレクトリ（純粋な npm パッケージ + 機能ファイル）
@@ -416,18 +416,18 @@ npx -y @spiritagent/extension-toolkit marketplace check .
 
 ### ローカルマーケットプレイス
 
-`.spirit/marketplace.json` を持つ任意のローカルディレクトリはマーケットプレイスとして追加できます——`spirit extension marketplace add <path>` または Desktop の**ディスクから追加**で。ローカルマーケットプレイスはその場で読み取られ、CI は不要です。拡張機能作者の開発ループとしても使えます：編集、再インストール、繰り返し。
+`{{product.workspaceDataFolderName}}/marketplace.json` を持つ任意のローカルディレクトリはマーケットプレイスとして追加できます——`spirit extension marketplace add <path>` または Desktop の**ディスクから追加**で。ローカルマーケットプレイスはその場で読み取られ、CI は不要です。拡張機能作者の開発ループとしても使えます：編集、再インストール、繰り返し。
 
 ### publish で公開する
 
-`extension-toolkit publish` は拡張機能の `.spirit/extension.json` を対象マーケットプレイスの `.spirit/marketplace.json` にマージし、エントリの source が必要とするコンテンツをコピーします：
+`extension-toolkit publish` は拡張機能の `{{product.workspaceDataFolderName}}/extension.json` を対象マーケットプレイスの `{{product.workspaceDataFolderName}}/marketplace.json` にマージし、エントリの source が必要とするコンテンツをコピーします：
 
 ```bash
 npx @spiritagent/extension-toolkit publish ./my-extension ./my-marketplace
 ```
 
-- 第 1 引数は拡張機能ディレクトリ、第 2 引数はマーケットプレイスのルート——`.spirit/marketplace.json` を持つ任意のローカルディレクトリ：テンプレートリポジトリのクローン、`{spiritDataDir}/marketplaces/personal` の個人マーケットプレイスなど。
-- `--source local`（デフォルト）：パッケージ全体をマーケットプレイスの `extensions/<name>/` にコピーし（`.spirit/extension.json` を含み、`node_modules` と `.git` は除外）、エントリの `source` をそこに向けます。
+- 第 1 引数は拡張機能ディレクトリ、第 2 引数はマーケットプレイスのルート——`{{product.workspaceDataFolderName}}/marketplace.json` を持つ任意のローカルディレクトリ：テンプレートリポジトリのクローン、`{spiritDataDir}/marketplaces/personal` の個人マーケットプレイスなど。
+- `--source local`（デフォルト）：パッケージ全体をマーケットプレイスの `extensions/<name>/` にコピーし（`{{product.workspaceDataFolderName}}/extension.json` を含み、`node_modules` と `.git` は除外）、エントリの `source` をそこに向けます。
 - `--source npm`：拡張機能の `package.json` から `name@version` を読み取り、エントリの npm `source` として固定します。宣言されたアイコンのみを `extensions/<name>/` にコピーします（アイコンはマーケットプレイスが自己ホスト）。npm パッケージ自体の公開は、引き続き npm CLI で行います。
 - `--dry-run`：書き込まれるエントリと予定されるアクションを表示し、ディスクには書き込みません。
 - マージ規則：同名エントリはその位置で置き換え、なければ追加します。新規エントリや `version` 変更時は `reviewStatus` が `unverified` に戻り、同バージョンの再公開では維持されます。`featured` などのキュレーションフィールドは常にマーケットプレイス側の値を保持します。

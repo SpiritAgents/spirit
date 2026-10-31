@@ -1,17 +1,18 @@
 ---
-title: Skills
-description: 用户、.spirit、.agents 下的 Skill，以及内置的 create-rule、create-skill、create-hook、create-extension。
+title: 技能
+description: 用户、{{product.workspaceDataFolderName}}、.agents 下的技能，以及内置的
+  create-rule、create-skill、create-hook、create-extension。
 ---
 
-Skill 是带 `SKILL.md` 的文件夹。Spirit 从三处发现：
+技能是带 `SKILL.md` 的文件夹。{{product.name|mdx}} 从三处发现：
 
-| 范围          | 路径                                         |
-| ------------- | -------------------------------------------- |
-| 用户          | `{spiritDataDir}/skills/{name}/SKILL.md`     |
-| 工作区 Spirit | `{workspace}/.spirit/skills/{name}/SKILL.md` |
-| 工作区 agents | `{workspace}/.agents/skills/{name}/SKILL.md` |
+| 范围                  | 路径                                         |
+| --------------------- | -------------------------------------------- | ------------------------------------------------------------------------ |
+| 用户                  | `{spiritDataDir}/skills/{name}/SKILL.md`     |
+| 工作区 {{product.name|mdx}}                                        | `{workspace}/{{product.workspaceDataFolderName}}/skills/{name}/SKILL.md` |
+| 工作区 agents         | `{workspace}/.agents/skills/{name}/SKILL.md` |
 
-你在某一回合点名某个 Skill 时，Spirit 可以把全文附到那条用户消息上。它不会把所有 Skill 塞进 system。
+你在某一回合点名某个技能时，{{product.name|mdx}} 可以把全文附到那条用户消息上。它不会把所有技能塞进 system。
 
 ## Frontmatter
 
@@ -19,16 +20,16 @@ Skill 是带 `SKILL.md` 的文件夹。Spirit 从三处发现：
 
 | 参数          | 说明                                                                      |
 | ------------- | ------------------------------------------------------------------------- |
-| `name`        | 必填。Skill 名称，须与文件夹名一致。1–64 个字符，仅小写字母、数字和连字符 |
+| `name`        | 必填。技能名称，须与文件夹名一致。1–64 个字符，仅小写字母、数字和连字符 |
 | `description` | 必填。简短说明                                                            |
 
-## 内置 Skills
+## 内置技能
 
-这些随 Spirit 提供（不在你的数据目录里）：
+这些随 {{product.name|mdx}} 提供（不在你的数据目录里）：
 
 - `create-rule` — 起草一条 [rule](./rules.mdx)
-- `create-skill` — 起草一个 [Skill](./skills.mdx)
-- `create-hook` — 起草一个 [hook](./hooks.mdx)
+- `create-skill` — 起草一个 [技能](./skills.mdx)
+- `create-hook` — 起草一个 [挂钩](./hooks.mdx)
 - `create-extension` — 起草一个[扩展](../develop/extensions.mdx)
 
-在 **设置 → Skills** 管理。Git 的 commit / push / merge chip 是宿主 UI，不是内置 Skill。见 [Desktop](../desktop.mdx)。[扩展](../develop/extensions.mdx) 捆绑的 skills 只在该扩展启用时可用，不出现在此设置列表。
+在 **设置 → 技能** 管理。Git 的 commit / push / merge chip 是宿主 UI，不是内置技能。见 [Desktop](../desktop.mdx)。[扩展](../develop/extensions.mdx) 捆绑的技能只在该扩展启用时可用，不出现在此设置列表。

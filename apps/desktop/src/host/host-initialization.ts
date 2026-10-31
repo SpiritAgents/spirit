@@ -68,6 +68,8 @@ export interface HostInitializationContext {
   invalidateExtensionWarmup(): void;
   scheduleExtensionWarmup(trigger: ExtensionWarmupTrigger): void;
   loadDesktopPlanSnapshot(planPath: string, existsHint?: boolean): Promise<PlanSnapshot>;
+  /** Fires once per full (re)initialization, after the workspace root lands in state. */
+  evaluateWorkspaceTasksTrust(reason: string): void;
 }
 
 export async function ensureInitializedCommand(
@@ -241,6 +243,7 @@ export async function ensureInitializedCommand(
     ephemeralSessions: state?.ephemeralSessions ?? [],
   });
   ctx.setInitialized(true);
+  ctx.evaluateWorkspaceTasksTrust("startup");
   await ctx.refreshExtensionsList({ metadataOnly: true });
   await ctx.refreshLspSnapshot();
   const skipRuntimeRefresh = switchingWorkspace && options.deferRuntimeRefresh === true;

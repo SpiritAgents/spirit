@@ -1,15 +1,24 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 
 import "@xterm/xterm/css/xterm.css";
 
+import { useMessageQuoteActions } from "@/components/message-quote-actions-context";
+import {
+  TextSelectionActionMenu,
+  TextSelectionActionMenuItem,
+  TextSelectionActionMenuSegmentedItems,
+} from "@/components/text-selection-action-menu";
+import { useTerminalSelectionActionMenu } from "@/hooks/use-terminal-selection-action-menu";
 import {
   notifyEditCommandTargetsChanged,
   registerEditCommandTarget,
   writeEditClipboardText,
 } from "@/lib/edit-command-targets";
+import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
 import { readShellToolMonochromeTheme, stripAnsiSgrSequences } from "@/lib/shell-tool-xterm-theme";
 import { cn } from "@/lib/utils";
 
@@ -97,9 +106,12 @@ export function ShellToolXtermOutput({
   followTail = false,
   className,
 }: ShellToolXtermOutputProps) {
+  const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
+  const [termInstance, setTermInstance] = useState<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
+  const quoteActions = useMessageQuoteActions();
   /** Display window already written to the terminal (may be the tail of the full text). */
   const writtenDisplayRef = useRef<string>("");
   const followTailRef = useRef(followTail);
@@ -140,6 +152,7 @@ export function ShellToolXtermOutput({
     fitAddon.fit();
 
     termRef.current = term;
+    setTermInstance(term);
     fitRef.current = fitAddon;
     writtenDisplayRef.current = "";
     stickToBottomRef.current = true;
@@ -212,6 +225,7 @@ export function ShellToolXtermOutput({
       resizeObserver.disconnect();
       fitRef.current = null;
       termRef.current = null;
+      setTermInstance(null);
       writtenDisplayRef.current = "";
       term.dispose();
     };
@@ -283,12 +297,74 @@ export function ShellToolXtermOutput({
     writtenDisplayRef.current = nextDisplay;
   }, [text, followTail]);
 
+  const quoteMenuEnabled = Boolean(quoteActions?.onMessageQuoteAddToChat);
+  const {
+    open: quoteMenuOpen,
+    setOpen: setQuoteMenuOpen,
+    anchor: quoteMenuAnchor,
+    selectionText: quoteSelectionText,
+    dismiss: dismissQuoteMenu,
+  } = useTerminalSelectionActionMenu({
+    enabled: quoteMenuEnabled,
+    containerRef: hostRef,
+    terminal: termInstance,
+  });
+
+  const confirmQuoteSelection = useCallback(
+    (onAdd: ((attachment: MessageQuoteAttachment) => void) | undefined) => {
+      const term = termRef.current;
+      const selectedText = (quoteSelectionText.trim() || term?.getSelection() || "").trim();
+      if (!onAdd || !selectedText) {
+        dismissQuoteMenu();
+        return;
+      }
+      onAdd({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        selectedText,
+        ...(quoteActions?.quoteSessionPath ? { sessionPath: quoteActions.quoteSessionPath } : {}),
+        ...(quoteActions?.quoteOrigin ? { origin: quoteActions.quoteOrigin } : {}),
+      });
+      dismissQuoteMenu();
+      term?.clearSelection();
+    },
+    [dismissQuoteMenu, quoteActions, quoteSelectionText],
+  );
+
   return (
-    <div
-      ref={hostRef}
-      className={cn("shell-tool-xterm w-full min-w-0 overflow-hidden", className)}
-      style={{ maxHeight: SHELL_TOOL_XTERM_MAX_HEIGHT_PX }}
-      aria-label="Shell output"
-    />
+    <>
+      <div
+        ref={hostRef}
+        className={cn("shell-tool-xterm w-full min-w-0 overflow-hidden", className)}
+        style={{ maxHeight: SHELL_TOOL_XTERM_MAX_HEIGHT_PX }}
+        aria-label="Shell output"
+      />
+      {quoteMenuEnabled ? (
+        <TextSelectionActionMenu
+          open={quoteMenuOpen && Boolean(quoteSelectionText.trim())}
+          anchor={quoteMenuAnchor}
+          onOpenChange={setQuoteMenuOpen}
+        >
+          {quoteActions?.onMessageQuoteAddToSideChat ? (
+            <TextSelectionActionMenuSegmentedItems
+              segments={[
+                {
+                  label: t("workspace.addSelectionToChat"),
+                  onSelect: () => confirmQuoteSelection(quoteActions.onMessageQuoteAddToChat),
+                },
+                {
+                  label: t("workspace.addSelectionToSideChat"),
+                  onSelect: () => confirmQuoteSelection(quoteActions.onMessageQuoteAddToSideChat),
+                },
+              ]}
+            />
+          ) : (
+            <TextSelectionActionMenuItem
+              label={t("workspace.addSelectionToChat")}
+              onSelect={() => confirmQuoteSelection(quoteActions?.onMessageQuoteAddToChat)}
+            />
+          )}
+        </TextSelectionActionMenu>
+      ) : null}
+    </>
   );
 }

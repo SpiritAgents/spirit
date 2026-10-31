@@ -19,7 +19,7 @@ const ANTHROPIC_REASONING_SIGNATURE = "sig_anthropic_stream_1";
 const ANTHROPIC_TOOL_USE_ID = "toolu_anthropic_stream_1";
 const ANTHROPIC_PROJECTED_SYSTEM_CONTEXT_PREFIX = "[HOST_CONTEXT_FROM_SYSTEM]";
 const ANTHROPIC_SEPARATED_SYSTEM_CONTEXT_SAMPLE =
-  "[WORKSPACE_FILE]\npath: D:\\Spirit\\README.md\nchars: 11";
+  "[WORKSPACE_FILE]\npath: D:\\Spirit\\README.md\nbytes: 11";
 
 async function main(): Promise<void> {
   let requestCount = 0;
@@ -212,7 +212,6 @@ async function main(): Promise<void> {
     apiKey: "test-key",
     model: "deepseek-v4-pro",
     baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-    thinking: { type: "enabled" as const, budgetTokens: 1024 },
   };
 
   const started = await transport.startToolAgentRoundStreaming(
@@ -304,17 +303,6 @@ async function main(): Promise<void> {
   if (assistantText !== "AI_SDK_ANTHROPIC_STREAM_OK") {
     throw new Error(
       `ai-sdk anthropic streaming smoke step 2 did not get the expected final assistant text. Actual: ${assistantText ?? "<empty>"}`,
-    );
-  }
-
-  const firstRequest = requestBodies[0];
-  if (
-    !isJsonObject(firstRequest) ||
-    !isJsonObject(firstRequest.thinking) ||
-    firstRequest.thinking.type !== "enabled"
-  ) {
-    throw new Error(
-      "ai-sdk anthropic streaming smoke did not send thinking=enabled on the first-round request.",
     );
   }
 
@@ -442,7 +430,6 @@ async function runSeparatedSystemProjectionSmoke(): Promise<void> {
       apiKey: "test-key",
       model: "deepseek-v4-pro",
       baseUrl: `http://127.0.0.1:${(address as AddressInfo).port}/v1`,
-      thinking: { type: "enabled", budgetTokens: 1024 },
     },
     state,
     [],

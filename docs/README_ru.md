@@ -1,5 +1,11 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../packages/brand/assets/logo-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="../packages/brand/assets/logo-light.svg" />
+  <img alt="Spirit Logo" src="../packages/brand/assets/logo-dark.svg" width="120" />
+</picture>
+
 # Spirit
 
 Открытый AI-агент, созданный умножать вашу продуктивность.
@@ -8,9 +14,7 @@
 
 > Проект активно развивается. Поведение и API могут меняться между релизами.
 
-[English](../README.md)
-
-<img width="1552" height="1032" alt="Spirit Desktop" src="https://github.com/user-attachments/assets/7b07e79d-c800-405a-bee6-40dda9d75b13" />
+[English](../README.md) · [简体中文](README_zh-CN.md) · [繁體中文](README_zh-TW.md) · [日本語](README_ja.md) · [한국어](README_ko.md) · [Deutsch](README_de.md) · [Français](README_fr.md) · [Español](README_es.md) · [Português do Brasil](README_pt-BR.md)
 
 </div>
 
@@ -116,8 +120,6 @@ pnpm run dev:site
 
 ## CLI
 
-<img width="1014" height="744" alt="Spirit CLI" src="https://github.com/user-attachments/assets/ecf4fcec-6a9b-4562-b0da-cc14816f36d3" />
-
 [Rust CLI](../apps/cli) (`spirit`) — terminal-first хост с опциональным Ratatui UI. Подключается к общему daemon Spirit Server по WebSocket; подходит для скриптов, SSH-сессий и минимальных окружений.
 
 ```bash
@@ -169,14 +171,14 @@ pnpm run dev:cli    # cargo run -p spirit
 node path/to/packages/acp-server/dist/src/stdio-entry.js --setup
 ```
 
-| Переменная окружения   | Обязательна | Описание                                                                      |
-| ---------------------- | ----------- | ----------------------------------------------------------------------------- |
-| `SPIRIT_ACP_WORKSPACE` | Нет         | Корень workspace (по умолчанию: `cwd` клиента)                                |
-| `SPIRIT_ACP_DATA_DIR`  | Нет         | Каталог данных Spirit (по умолчанию: `%APPDATA%/Spirit` или `~/.spirit-data`) |
+| Переменная окружения   | Обязательна | Описание                                                                         |
+| ---------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `SPIRIT_ACP_WORKSPACE` | Нет         | Корень workspace (по умолчанию: `cwd` клиента)                                   |
+| `SPIRIT_ACP_DATA_DIR`  | Нет         | Каталог данных Spirit (по умолчанию: Stable: `~/.spirit` · Dev: `~/.spirit-dev`) |
 
 ## Разработка
 
-**Требования:** Node.js 24+, pnpm 12+ (включить через `corepack enable`). Для сборки CLI нужен Rust toolchain.
+**Требования:** Node.js 26.13.0, pnpm 12.4.2 (установить через `npm install --global pnpm@12.4.2`). Для сборки CLI нужен Rust toolchain.
 
 | Команда                    | Описание                                                                       |
 | -------------------------- | ------------------------------------------------------------------------------ |

@@ -1,7 +1,7 @@
 {
   "name": "@spiritagent/server",
   "version": "1.0.0-alpha.0",
-  "description": "Spirit Server — shared daemon backend for Spirit clients (CLI / Desktop / Web)",
+  "description": "Shared agent daemon backend for CLI, Desktop and Web clients",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,14 +33,15 @@
   },
   "dependencies": {
     "@spiritagent/agent-core": "workspace:*",
-    "@spiritagent/host-internal": "workspace:*"
+    "@spiritagent/host-internal": "workspace:*",
+    "@spiritagent/product": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "25.9.5",
-    "typescript": "5.9.3",
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2",
     "vitest": "^4.1.11"
   },
   "engines": {
-    "node": ">=24"
+    "node": "26.13.0"
   }
 }

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 
-import { ChipLabel } from "@/components/composer-lexical/chips/chip-shell";
+import { ChipShell, type ChipShellProps } from "@/components/composer-lexical/chips/chip-shell";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
@@ -18,12 +18,13 @@ import type { DesktopSnapshot } from "@/types";
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
-type ComposerChipNavigateContextValue = {
+export type ComposerChipNavigateContextValue = {
   isNavigable: (target: ComposerChipNavigateTarget) => boolean;
   navigate: (target: ComposerChipNavigateTarget) => void;
 };
 
-const ComposerChipNavigateContext = createContext<ComposerChipNavigateContextValue>({
+// Exported (beyond the provider/hook) so tests can inject a lightweight navigate value directly.
+export const ComposerChipNavigateContext = createContext<ComposerChipNavigateContextValue>({
   isNavigable: () => false,
   navigate: () => {},
 });
@@ -32,19 +33,24 @@ export function useComposerChipNavigate(): ComposerChipNavigateContextValue {
   return useContext(ComposerChipNavigateContext);
 }
 
-export function NavigableChipLabel({
+export function NavigableChipShell({
   target,
   children,
+  ...shellProps
 }: {
   target: ComposerChipNavigateTarget;
   children: ReactNode;
-}) {
+} & Omit<ChipShellProps, "navigable" | "onNavigate" | "children">) {
   const { isNavigable, navigate } = useComposerChipNavigate();
   const navigable = isNavigable(target);
   return (
-    <ChipLabel navigable={navigable} onNavigate={navigable ? () => navigate(target) : undefined}>
+    <ChipShell
+      {...shellProps}
+      navigable={navigable}
+      onNavigate={navigable ? () => navigate(target) : undefined}
+    >
       {children}
-    </ChipLabel>
+    </ChipShell>
   );
 }
 
@@ -191,6 +197,9 @@ export function ComposerChipNavigateProvider({
             absolutePath: action.absolutePath,
             viewMode: isMarkdownPath(action.absolutePath) ? "preview" : "edit",
           });
+          return;
+        case "open-plan":
+          workspaceTools.openWorkspacePlan();
           return;
         case "open-browser":
           workspaceTools.focusOrOpenBrowserUrl(action.url, action.preferTabId);

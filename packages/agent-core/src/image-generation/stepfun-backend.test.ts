@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
@@ -13,7 +14,7 @@ test("mapStepfunImageSize returns trimmed custom size when pattern does not matc
   assert.equal(mapStepfunImageSize("step-2x-large", " auto "), "auto");
 });
 
-test("generateStepfunImage posts to the configured site /v1/images/generations", async () => {
+test("generateStepfunImage posts to the configured site and fails fast without a baseUrl", async () => {
   const capturedUrls: string[] = [];
   setLlmFetchTransportOverrideForTests(async (input) => {
     capturedUrls.push(String(input));
@@ -24,14 +25,17 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
   });
 
   try {
-    await generateStepfunImage(
-      { apiKey: "test-key", model: "step-1x-medium" },
-      { prompt: "a red circle", size: "1024x1024" },
-      async (request) => ({
-        path: "/tmp/image.png",
-        mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
-      }),
+    await assert.rejects(
+      generateStepfunImage(
+        { apiKey: "test-key", model: "step-1x-medium" },
+        { prompt: "a red circle", size: "1024x1024" },
+        async (request) => ({
+          path: "/tmp/image.png",
+          mimeType: request.mediaType,
+          markdownRef: `${product.urlProtocol}://generated/image/abc`,
+        }),
+      ),
+      /requires a baseUrl/,
     );
     await generateStepfunImage(
       { apiKey: "test-key", model: "step-1x-medium", baseUrl: "https://api.stepfun.ai/v1" },
@@ -39,13 +43,10 @@ test("generateStepfunImage posts to the configured site /v1/images/generations",
       async (request) => ({
         path: "/tmp/image.png",
         mimeType: request.mediaType,
-        markdownRef: "spirit://generated/image/abc",
+        markdownRef: `${product.urlProtocol}://generated/image/abc`,
       }),
     );
-    assert.deepEqual(capturedUrls, [
-      "https://api.stepfun.com/v1/images/generations",
-      "https://api.stepfun.ai/v1/images/generations",
-    ]);
+    assert.deepEqual(capturedUrls, ["https://api.stepfun.ai/v1/images/generations"]);
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
   }

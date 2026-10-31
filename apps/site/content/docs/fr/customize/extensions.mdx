@@ -1,9 +1,10 @@
 ---
 title: Extensions
-description: Installez des extensions depuis des marchés, importez un paquet ZIP ou ajoutez votre propre marché d'extensions distant.
+description: Installez des extensions depuis des marchés, importez un paquet ZIP
+  ou ajoutez votre propre marché d'extensions distant.
 ---
 
-Les extensions ajoutent des capacités à Spirit — outils, skills, hooks, serveurs MCP et contributions d'interface. Elles sont distribuées via des marchés d'extensions :
+Les extensions ajoutent des capacités à {{product.name|mdx}} — outils, Skills, Hooks, serveurs MCP et contributions d'interface. Elles sont distribuées via des marchés d'extensions :
 
 - **Intégré** — fourni avec l'application.
 - **Personnel** — vos propres imports : des paquets ZIP que vous avez ajoutés vous-même.
@@ -54,7 +55,7 @@ Trois formes de localisateur :
 | Dépôt Git (HTTPS ou SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | URL d'index HTTP         | `spirit extension marketplace add https://example.com`                   |
 
-Les URL Git acceptent `--git-ref <tag|branch|commit>` pour épingler une ref ; par défaut, c'est la branche par défaut du distant. Une URL de site nue résout automatiquement vers son `/.spirit/marketplace.json`.
+Les URL Git acceptent `--git-ref <tag|branch|commit>` pour épingler une ref ; par défaut, c'est la branche par défaut du distant. Une URL de site nue résout automatiquement vers son `/{{product.workspaceDataFolderName}}/marketplace.json`.
 
 Gérez les marchés ajoutés avec `spirit extension marketplace list` et `spirit extension marketplace remove <name>`. Sur Desktop, faites un clic droit sur un onglet de marché pour l'action de suppression.
 

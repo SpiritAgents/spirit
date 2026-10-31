@@ -1,13 +1,13 @@
 ---
 title: 提供商
-description: 自带密钥，走连接向导，换一家不必换 Agent 工作流。
+description: 自带密钥，运行连接向导；更换提供商时，Agent 工作流保持不变。
 ---
 
-Spirit 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，Spirit 写入操作系统钥匙串。换一家不会改变打开工作区、审批编辑或跑 Agent 的方式。
+{{product.name|mdx}} 是 BYOK。你在提供商控制台创建 Key，粘进 Desktop 或 CLI，{{product.name|mdx}} 写入操作系统钥匙串。更换提供商不会改变你打开工作区、审批编辑或运行 Agent 的方式。
 
-连接向导在 Desktop 是 **设置 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。附加字段只在该家需要时出现。
+连接向导在 Desktop 是 **设置 → 模型**，在 CLI 是 `/model add` 或 `spirit model add`。附加字段只在该提供商需要时出现。
 
-Spirit 用下面四种传输之一和提供商通信。向导会固定类型，或让你选。
+{{product.name|mdx}} 用下面四种传输之一和提供商通信。向导会固定类型，或让你选。
 
 | 传输                | 向导标签                           | 典型用途                                                           |
 | ------------------- | ---------------------------------- | ------------------------------------------------------------------ |
@@ -16,7 +16,7 @@ Spirit 用下面四种传输之一和提供商通信。向导会固定类型，�
 | `anthropic`         | Messages API                       | Anthropic、MiniMax，以及可选的 Messages 兼容端点                   |
 | `bedrock`           | Amazon Bedrock                     | 仅 Amazon Bedrock                                                  |
 
-Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Responses 或 Messages，Spirit 会回落到 `openai-compatible`。
+Google 与 Vertex AI 预设固定走 Chat Completions——向导不提供传输选择器。
 
 有的提供商在 Key 之外还有第二维：
 
@@ -24,21 +24,25 @@ Google Gemini 与 Vertex AI 始终走 Chat Completions。若配置里要了 Resp
 - **套餐端点** — 阿里巴巴 Token Plan、阶跃星辰 Step Plan、Z.ai / 智谱 AI GLM Coding Plan
 - **云厂商字段** — Bedrock 区域、Azure 资源名、Cloudflare 账户（及可选 gateway）、Vertex 项目 / 位置
 
-没有这些维的提供商，向导就是：Key → 导入模型 → 选当前对话模型。
+没有这些维的提供商，向导就是：Key → 导入模型 → 选当前语言模型。
 
-Spirit 会导入模型目录，并让你指定当前对话模型；目录标了生图 / 生视频 / 轻量对话时再指定对应槽位。推理和提供商内置联网跟模型与传输走，不是 Spirit 上的单独开关。
+{{product.name|mdx}} 会导入模型目录，并让你指定当前语言模型；目录标了生图 / 生视频 / 次要语言模型时再指定对应槽位。推理选项跟随各模型声明的 `supportedReasoningEfforts`。联网搜索等提供商暴露的工具按提供商声明，由**提供商工具**开关统一控制——见[工具](./agent/tools.mdx#provider-tools)。
+
+向导写入 `config.json` 的是完全声明式的条目：最终 API Base、传输、SDK 适配器，以及提供商工具 / 文件上传 / 生成 API 声明。运行时原样读取这些声明，不会按提供商身份重新推导——你的修改会保留，只有重连会重置向导拥有的键（见[配置](./config.mdx)）。
 
 ## 目录
 
-以下是连接选择器里的提供商，顺序一致。每家只写 Key、传输和附加字段。上面的 Desktop / CLI 向导对每家都一样。
+以下是连接选择器里的提供商，顺序一致。每家写 Key、传输、附加字段，以及向导在 Key 之外声明的内容。除非特别说明，凭证形态都是单个 API Key，存入钥匙串。上面的 Desktop / CLI 向导对每家都一样。
 
 ### OpenAI
 
-在 [OpenAI 平台](https://platform.openai.com/api-keys) 创建 API Key。Spirit 不出售 OpenAI 额度。
+在 [OpenAI 平台](https://platform.openai.com/api-keys) 创建 API Key。{{product.name|mdx}} 不出售 OpenAI 额度。
 
 向导固定 **Responses API**（`open-responses`），没有传输选择器。默认 Base：`https://api.openai.com/v1`。
 
 导入后即可对话。推理跟模型走。生图 / 生视频只在目录标了对应能力时出现，到生图 / 生视频槽位里指定。
+
+声明：**联网搜索**提供商工具（由上游在请求内执行）和生图 API。
 
 ### Anthropic
 
@@ -52,7 +56,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 在 [Google AI Studio](https://aistudio.google.com/apikey) 创建 API Key。
 
-固定 **Chat Completions API**（`openai-compatible`）。若配置要了 Responses 或 Messages，会回落到 Chat Completions。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
+固定 **Chat Completions API**（`openai-compatible`），向导不提供传输选择器。默认 Base：`https://generativelanguage.googleapis.com/v1beta`。
 
 导入后即可对话。生图只在目录标了时再指定。要用 GCP 项目 / 位置，走 [Google Vertex AI](#google-vertex-ai)。
 
@@ -60,9 +64,11 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 在 [SpaceXAI 控制台](https://console.x.ai/team/default/api-keys) 创建 API Key。
 
-固定 **Chat Completions API**（`openai-compatible`）。默认 Base：`https://api.x.ai/v1`。
+固定 **Open Responses API**（`open-responses`）。默认 Base：`https://api.x.ai/v1`。
 
 导入后即可对话。推理、生图、生视频跟导入目录走，出现对应能力时再指定槽位。
+
+声明：**联网搜索**提供商工具（由上游在请求内执行）。
 
 ### Vercel AI Gateway
 
@@ -70,18 +76,20 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 固定 **Open Responses API**（`open-responses`）。默认 Base：`https://ai-gateway.vercel.sh/v1`。
 
-对话以及网关目录里标出的能力。生图以目录的 `type=image` 为准，不用 tags 推断。
+导入后即可对话，其他能力取决于网关目录暴露的内容。生图以目录的 `type=image` 为准，不从 tags 推断。
 
 不要用 tags 推断视觉或生图。经此网关的 MiniMax M3 在 Open Responses 下不会返回可展示的思考流。
+
+声明：**Perplexity Search** 提供商工具（由网关在请求内执行）和生图 / 生视频 API。
 
 ### Cloudflare AI Gateway
 
 在 [Cloudflare 控制台](https://developers.cloudflare.com/ai-gateway/) 创建 API token，并准备好账户 ID。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。Base 由账户拼出：`https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。Base 由账户拼出：`https://api.cloudflare.com/client/v4/accounts/{accountId}/ai/v1`。
 
 - **账户 ID**（必填）— 32 位十六进制
-- **Gateway ID**（可选）
+- **Gateway ID**（可选）— 写成字面 `cf-aig-gateway-id` 请求头
 
 没有账户 ID，向导无法拼出 API Base。对话和其他能力跟网关暴露的模型走。
 
@@ -89,23 +97,27 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 在 [DeepSeek 平台](https://platform.deepseek.com/api-keys) 创建 API Key。
 
-无选择器。连接默认是 **Open Responses**（`open-responses`）。兼容 Base 还有 `https://api.deepseek.com/v1`（Chat）和 `https://api.deepseek.com/anthropic`（Messages）。
+连接默认使用 **Chat Completions API**（`openai-compatible`）。默认 Base：`https://api.deepseek.com/v1`。显式备选为 **Open Responses**（`open-responses`，Base `https://api.deepseek.com`）和 **Messages**（`anthropic`，Base `https://api.deepseek.com/anthropic`）。
 
 导入后即可对话。推理跟模型走。
+
+声明：**联网搜索**提供商工具（静态 `function` 声明，由 {{product.name|mdx}} 通过 `POST /v1/tools/search` 执行调用）。
 
 ### OpenRouter
 
 在 [OpenRouter](https://openrouter.ai/keys) 创建 Key。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。默认 Base：`https://openrouter.ai/api/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。默认 Base：`https://openrouter.ai/api/v1`。
 
-对话，以及 OpenRouter 目录标了生图 / 生视频时的对应槽位。
+导入后即可对话；OpenRouter 目录标出生图 / 生视频能力时，再指定对应槽位。
+
+声明：生视频 API。
 
 ### Fireworks AI
 
 在 [Fireworks 控制台](https://app.fireworks.ai/settings/users/api-keys) 创建 API Key。
 
-可选手： **Chat Completions**、**Messages** 或 **Open Responses**。Chat / Responses Base：`https://api.fireworks.ai/inference/v1`。Messages Base：`https://api.fireworks.ai/inference`。
+选择器：**Chat Completions**、**Messages** 或 **Open Responses**。Chat / Responses Base：`https://api.fireworks.ai/inference/v1`。Messages Base：`https://api.fireworks.ai/inference`。
 
 导入后即可对话。其他能力跟 Fireworks 目录走。
 
@@ -116,6 +128,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 固定 **Chat Completions API**。默认 Base：`https://api.together.ai/v1`。
 
 导入后即可对话。只有目录标了生图 / 生视频时再指定槽位。
+
+声明：生图和生视频 API。
 
 ### Groq
 
@@ -133,6 +147,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 导入后即可对话。其他能力跟目录走。
 
+声明：生图和生视频 API。
+
 ### Baseten
 
 在 [Baseten 控制台](https://app.baseten.co/settings/api_keys) 创建 API Key。
@@ -149,6 +165,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 导入后即可对话。其他能力跟路由目录走。
 
+声明：生图和生视频 API。
+
 ### Moonshot AI
 
 在对应站点的控制台创建 API Key：[中国站](https://platform.kimi.com/console/api-keys) 或 [国际站](https://platform.kimi.ai/console/api-keys)。
@@ -158,7 +176,9 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 - **国际**（默认）— `https://api.moonshot.ai/v1`
 - **中国** — `https://api.moonshot.cn/v1`
 
-这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。moonshot-ai 的内置搜索不走 Kimi Code 托管搜索路径。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条连接，不要混用。
+这是 Moonshot AI，不是 [Kimi Code](#kimi-code)。Kimi Code 的 Key 和 Moonshot AI 的 Key 是两条不同的连接。
+
+声明：**联网搜索**提供商工具（静态 `function` 工具 schema，由 {{product.name|mdx}} 通过 `POST /v1/tools/search_pro` 执行调用）和视频文件上传（`ms://` 文件引用）。
 
 ### Kimi Code
 
@@ -166,7 +186,9 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 固定 **Chat Completions API**。默认 Base：`https://api.kimi.com/coding/v1`。Messages Base 为 `https://api.kimi.com/coding`，但向导不提供选择器。
 
-导入后即可对话。托管搜索（若有）只属于这家，不属于 moonshot-ai。
+导入后即可对话。这里的托管搜索只属于该提供商，不属于 moonshot-ai。
+
+声明：**联网搜索**提供商工具（由宿主按声明的搜索端点执行）、视频文件上传（`ms://` 文件引用），以及字面 `stream_options` 请求体合并。
 
 ### Z.ai
 
@@ -178,6 +200,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 导入后即可对话。推理跟模型走。
 
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–50）。
+
 ### 智谱 AI
 
 在 [智谱 AI 控制台](https://bigmodel.cn/console) 创建 API Key。套餐说明见 [GLM Coding Plan](https://docs.bigmodel.cn/cn/coding-plan/quick-start)。
@@ -187,6 +211,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 打开 **GLM Coding Plan** 后改用 `https://open.bigmodel.cn/api/coding/paas/v4`。
 
 导入后即可对话。推理跟模型走。
+
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–50）。
 
 ### 阿里巴巴
 
@@ -203,16 +229,20 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 导入后即可对话。其他能力跟目录走。
 
+声明：**联网搜索**和**代码解释器**提供商工具（请求体开关，由上游执行）。
+
 ### MiniMax
 
-在对应站点的控制台创建 API Key：[中国站](https://platform.minimaxi.com/console/) 或 [国际站](https://platform.minimax.io/console/)。
+在对应站点的控制台创建 API Key：[中国站](https://platform.minimax.cn/console/) 或 [国际站](https://platform.minimax.io/console/)。
 
 固定 **Messages API**（`anthropic`）。国际 Messages Base：`https://api.minimax.io/anthropic/v1`。
 
 - **国际**（默认）— `https://api.minimax.io/v1`（Chat 形态）/ `https://api.minimax.io/anthropic/v1`（Messages）
-- **中国** — `https://api.minimaxi.com/v1`
+- **中国** — `https://api.minimax.cn/v1`
 
 导入后即可对话。上游 `/models` 没有多模态字段；只有 M3 被当作支持图 / 视频输入。经 Vercel AI Gateway 的 Open Responses，MiniMax M3 不会返回可展示的思考流。
+
+声明：**联网搜索**提供商工具（Messages API server tool，由上游执行）和视频文件上传（`mm_file://` 文件引用）。
 
 ### 小米
 
@@ -226,12 +256,14 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 在对应站点的控制台创建 API Key：[国际站](https://cloud.siliconflow.com/me/account/ak) 或 [中国站](https://cloud.siliconflow.cn/me/account/ak)。
 
-可选手： **Chat Completions** 或 **Messages**。
+选择器：**Chat Completions** 或 **Messages**。
 
 - **国际**（默认）— `https://api.siliconflow.com/v1`
 - **中国** — `https://api.siliconflow.cn/v1`
 
 导入后即可对话。其他能力跟目录走。
+
+声明：生图和生视频 API。
 
 ### 阶跃星辰
 
@@ -246,21 +278,27 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 导入后即可对话。推理跟模型走。
 
+声明：**联网搜索**提供商工具（宿主执行；`max_results` 1–20）、视频文件上传（`stepfile://` 文件引用，128 MiB 上限）和生图 API。
+
 ### 火山引擎
 
 在 [火山引擎方舟控制台](https://console.volcengine.com/ark/apiKey) 创建 API Key。
 
-可选手： **Chat Completions** 或 **Responses API**。默认 Base：`https://ark.cn-beijing.volces.com/api/v3`。
+选择器：**Chat Completions** 或 **Responses API**。默认 Base：`https://ark.cn-beijing.volces.com/api/v3`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：生视频 API。
 
 ### BytePlus
 
 在 [BytePlus Ark 控制台](https://console.byteplus.com/ark/apiKey) 创建 API Key。
 
-可选手： **Chat Completions** 或 **Responses API**。默认 Base：`https://ark.ap-southeast.bytepluses.com/api/v3`。
+选择器：**Chat Completions** 或 **Responses API**。默认 Base：`https://ark.ap-southeast.bytepluses.com/api/v3`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：生视频 API。
 
 ### 美团
 
@@ -269,6 +307,8 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 固定 **Chat Completions API**。默认 Base：`https://api.longcat.chat/openai/v1`。
 
 导入后即可对话。其他能力跟目录走。
+
+声明：thinking 开关的 wire 编码（`thinkingSwitch`），带 thinking 开关的模型才有可用的切换。
 
 ### 腾讯 TokenHub
 
@@ -279,7 +319,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 - **广州**（默认）— `https://tokenhub.tencentmaas.com/v1`
 - **新加坡** — `https://tokenhub-intl.tencentmaas.com/v1`
 
-导入后即可对话。不要依赖 Chat 注入的联网搜索。TokenHub 文档写了 Chat `web_search_options` 和 Responses `web_search`，但实测 Chat 注入无效，Responses 也只覆盖少数模型。因此 Spirit 只保留 Chat Completions。
+导入后即可对话。不要依赖 Chat 注入的联网搜索。TokenHub 文档写了 Chat `web_search_options` 和 Responses `web_search`，但实测 Chat 注入无效，Responses 也只覆盖少数模型。因此 {{product.name|mdx}} 只保留 Chat Completions。
 
 ### Mistral
 
@@ -305,7 +345,7 @@ Spirit 会导入模型目录，并让你指定当前对话模型；目录标了�
 
 - **资源名**（必填）— 2–64 个字符，仅字母、数字和连字符；不能以连字符开头或结尾
 
-Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即可对话。生图在 Azure 目录标了时再指定。
+{{product.name|mdx}} 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即可对话。生图在 Azure 目录标了时再指定。
 
 ### Amazon Bedrock
 
@@ -316,15 +356,17 @@ Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即�
 - **AWS 区域**（必填），例如 `us-east-1`
 - **认证**：**Bearer** 或 **IAM**
   - Bearer — 粘贴 Bedrock API Key 和模型 id。**不会**自动拉模型列表。
-  - IAM — Access Key ID + Secret Access Key。Spirit 从账户列出 foundation models。
+  - IAM — Access Key ID + Secret Access Key。{{product.name|mdx}} 从账户列出 foundation models。
 
 选定模型后即可对话。其他能力跟该模型走。Bearer 只能做推理。`ListFoundationModels` 不接受 Bearer，所以导入目录需要 IAM。
+
+区域会物化进最终 API Base 和 `options.awsRegion`。Bearer 存为提供商 Key；IAM 存为 `accessKeyId` / `secretAccessKey` 凭证槽位。
 
 ### Google Vertex AI
 
 使用已开通 Vertex AI 的 GCP 项目。认证是 ADC、服务账号或 Express API Key，不是普通 OpenAI Key。
 
-固定 **Chat Completions API**。若配置要了 Responses 或 Messages，会回落到 Chat Completions。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
+固定 **Chat Completions API**，向导不提供传输选择器。Base 为 `https://{location}-aiplatform.googleapis.com/v1/projects/{project}/locations/{location}`。
 
 - **GCP 项目 ID** 和 **位置**（必填），例如 `us-central1`
 - **认证**
@@ -334,14 +376,16 @@ Spirit 会拼出 `https://{resource}.openai.azure.com/openai/v1`。导入后即�
 
 选定模型后即可对话。没有 GCP 项目、只用 AI Studio Key 时，走 [Google](#google)。Express 模式不能导入模型列表。服务账号模式要同时有 email 和私钥才能列模型。
 
+服务账号存为 `clientEmail` / `privateKey` 凭证槽位，并带 `options.project` / `options.location`；Express 模式写入 Express API Base，不需要项目 / 位置。
+
 ### 自定义
 
-使用该端点要求的 API Key。Spirit 不托管自定义提供商。
+使用该端点要求的 API Key。{{product.name|mdx}} 不托管自定义提供商。
 
-可选手： **Chat Completions**、**Open Responses** 或 **Messages**。必须填写 **Base URL**。留空时占位默认是 `https://api.openai.com/v1`。
+选择器：**Chat Completions**、**Open Responses** 或 **Messages**。必须填写 **Base URL**。留空时占位默认是 `https://api.openai.com/v1`。
 
-填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 Spirit 不会猜路径。
+填写厂商文档里的根地址，若对方要求版本后缀（`/v1`、`/v1/openai` 等）一并带上。自定义端点 {{product.name|mdx}} 不会猜路径。
 
-还可以给提供商分组起显示名，方便区分多条自定义端点。
+还可以给提供商条目起显示名，方便区分多条自定义端点。
 
-连接后导入或手填模型 id。若端点没有 Spirit 能读的目录，在向导里自行标记对话 / 生图 / 生视频能力。
+连接后导入或手填模型 id。若端点没有 {{product.name|mdx}} 能读的目录，在向导里自行标记对话 / 生图 / 生视频能力。

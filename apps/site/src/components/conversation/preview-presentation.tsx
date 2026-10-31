@@ -1,7 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useEffect, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
-
-import { ChevronRight } from "lucide-react";
 
 import { PreviewImageGenerationToolCard } from "@/components/preview-image-generation-tool-card";
 import { BrowserElementChip } from "@/components/browser-element-chip";
@@ -96,6 +95,7 @@ function AssistantThinkingCollapsible({ message }: { message: ConversationMessag
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>
@@ -232,6 +232,7 @@ function PreviewToolCallCard({ tool }: { tool: ToolBlockSnapshot }) {
             open && "rotate-90",
           )}
           aria-hidden
+          strokeWidth={1.75}
         />
       </button>
       <AnimatedCollapseContent className="min-w-0">

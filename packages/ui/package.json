@@ -1,0 +1,274 @@
+{
+  "name": "@spiritagent/ui",
+  "version": "1.0.0-alpha.0",
+  "description": "Shared React UI primitives for desktop and site",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpiritAgents/spirit.git",
+    "directory": "packages/ui"
+  },
+  "files": [
+    "dist",
+    "src/theme.css",
+    "LICENSE",
+    "README.md"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cn": {
+      "types": "./dist/cn.d.ts",
+      "default": "./dist/cn.js"
+    },
+    "./cjk": {
+      "types": "./dist/cjk.d.ts",
+      "default": "./dist/cjk.js"
+    },
+    "./chrome": {
+      "types": "./dist/chrome.d.ts",
+      "default": "./dist/chrome.js"
+    },
+    "./resize-cursor": {
+      "types": "./dist/resize-cursor.d.ts",
+      "default": "./dist/resize-cursor.js"
+    },
+    "./scroll-hover-keepalive": {
+      "types": "./dist/scroll-hover-keepalive.d.ts",
+      "default": "./dist/scroll-hover-keepalive.js"
+    },
+    "./badge": {
+      "types": "./dist/badge.d.ts",
+      "default": "./dist/badge.js"
+    },
+    "./breadcrumb": {
+      "types": "./dist/breadcrumb.d.ts",
+      "default": "./dist/breadcrumb.js"
+    },
+    "./button": {
+      "types": "./dist/button.d.ts",
+      "default": "./dist/button.js"
+    },
+    "./button-group": {
+      "types": "./dist/button-group.d.ts",
+      "default": "./dist/button-group.js"
+    },
+    "./card": {
+      "types": "./dist/card.d.ts",
+      "default": "./dist/card.js"
+    },
+    "./checkbox": {
+      "types": "./dist/checkbox.d.ts",
+      "default": "./dist/checkbox.js"
+    },
+    "./input": {
+      "types": "./dist/input.d.ts",
+      "default": "./dist/input.js"
+    },
+    "./input-group": {
+      "types": "./dist/input-group.d.ts",
+      "default": "./dist/input-group.js"
+    },
+    "./kbd": {
+      "types": "./dist/kbd.d.ts",
+      "default": "./dist/kbd.js"
+    },
+    "./label": {
+      "types": "./dist/label.d.ts",
+      "default": "./dist/label.js"
+    },
+    "./radio-group": {
+      "types": "./dist/radio-group.d.ts",
+      "default": "./dist/radio-group.js"
+    },
+    "./separator": {
+      "types": "./dist/separator.d.ts",
+      "default": "./dist/separator.js"
+    },
+    "./skeleton": {
+      "types": "./dist/skeleton.d.ts",
+      "default": "./dist/skeleton.js"
+    },
+    "./spinner": {
+      "types": "./dist/spinner.d.ts",
+      "default": "./dist/spinner.js"
+    },
+    "./switch": {
+      "types": "./dist/switch.d.ts",
+      "default": "./dist/switch.js"
+    },
+    "./table": {
+      "types": "./dist/table.d.ts",
+      "default": "./dist/table.js"
+    },
+    "./textarea": {
+      "types": "./dist/textarea.d.ts",
+      "default": "./dist/textarea.js"
+    },
+    "./toggle": {
+      "types": "./dist/toggle.d.ts",
+      "default": "./dist/toggle.js"
+    },
+    "./toggle-group": {
+      "types": "./dist/toggle-group.d.ts",
+      "default": "./dist/toggle-group.js"
+    },
+    "./overlay-motion": {
+      "types": "./dist/overlay-motion.d.ts",
+      "default": "./dist/overlay-motion.js"
+    },
+    "./portal": {
+      "types": "./dist/portal.d.ts",
+      "default": "./dist/portal.js"
+    },
+    "./alert-dialog": {
+      "types": "./dist/alert-dialog.d.ts",
+      "default": "./dist/alert-dialog.js"
+    },
+    "./command": {
+      "types": "./dist/command.d.ts",
+      "default": "./dist/command.js"
+    },
+    "./context-menu": {
+      "types": "./dist/context-menu.d.ts",
+      "default": "./dist/context-menu.js"
+    },
+    "./dialog": {
+      "types": "./dist/dialog.d.ts",
+      "default": "./dist/dialog.js"
+    },
+    "./image-preview-dialog": {
+      "types": "./dist/image-preview-dialog.d.ts",
+      "default": "./dist/image-preview-dialog.js"
+    },
+    "./dropdown-menu": {
+      "types": "./dist/dropdown-menu.d.ts",
+      "default": "./dist/dropdown-menu.js"
+    },
+    "./hover-card": {
+      "types": "./dist/hover-card.d.ts",
+      "default": "./dist/hover-card.js"
+    },
+    "./menubar": {
+      "types": "./dist/menubar.d.ts",
+      "default": "./dist/menubar.js"
+    },
+    "./popover": {
+      "types": "./dist/popover.d.ts",
+      "default": "./dist/popover.js"
+    },
+    "./scroll-area": {
+      "types": "./dist/scroll-area.d.ts",
+      "default": "./dist/scroll-area.js"
+    },
+    "./select": {
+      "types": "./dist/select.d.ts",
+      "default": "./dist/select.js"
+    },
+    "./sonner": {
+      "types": "./dist/sonner.d.ts",
+      "default": "./dist/sonner.js"
+    },
+    "./tooltip": {
+      "types": "./dist/tooltip.d.ts",
+      "default": "./dist/tooltip.js"
+    },
+    "./hooks/tooltip-switch-registry": {
+      "types": "./dist/hooks/tooltip-switch-registry.d.ts",
+      "default": "./dist/hooks/tooltip-switch-registry.js"
+    },
+    "./hooks/tooltip-item-interaction-store": {
+      "types": "./dist/hooks/tooltip-item-interaction-store.d.ts",
+      "default": "./dist/hooks/tooltip-item-interaction-store.js"
+    },
+    "./hooks/use-global-tooltip-switch": {
+      "types": "./dist/hooks/use-global-tooltip-switch.d.ts",
+      "default": "./dist/hooks/use-global-tooltip-switch.js"
+    },
+    "./hooks/use-anchored-item-switch": {
+      "types": "./dist/hooks/use-anchored-item-switch.d.ts",
+      "default": "./dist/hooks/use-anchored-item-switch.js"
+    },
+    "./hooks/use-collapsible-child-mount": {
+      "types": "./dist/hooks/use-collapsible-child-mount.d.ts",
+      "default": "./dist/hooks/use-collapsible-child-mount.js"
+    },
+    "./collapsible-animation": {
+      "types": "./dist/collapsible-animation.d.ts",
+      "default": "./dist/collapsible-animation.js"
+    },
+    "./empty": {
+      "types": "./dist/empty.d.ts",
+      "default": "./dist/empty.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "default": "./dist/link.js"
+    },
+    "./desktop-form-field": {
+      "types": "./dist/desktop-form-field.d.ts",
+      "default": "./dist/desktop-form-field.js"
+    },
+    "./animated-collapse": {
+      "types": "./dist/animated-collapse.d.ts",
+      "default": "./dist/animated-collapse.js"
+    },
+    "./filtered-overlay-menu": {
+      "types": "./dist/filtered-overlay-menu.d.ts",
+      "default": "./dist/filtered-overlay-menu.js"
+    },
+    "./theme.css": "./src/theme.css"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
+  },
+  "devDependencies": {
+    "@spiritagent/icons": "workspace:*",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "cmdk": "1.1.1",
+    "lucide-react": "1.28.0",
+    "radix-ui": "1.6.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "sonner": "2.0.7",
+    "tailwind-merge": "3.6.0",
+    "typescript": "7.0.2"
+  },
+  "peerDependencies": {
+    "@radix-ui/react-scroll-area": ">=1.2.0",
+    "@spiritagent/icons": ">=1.0.0-alpha.0",
+    "class-variance-authority": ">=0.7.0",
+    "clsx": ">=2.0.0",
+    "cmdk": ">=1.0.0",
+    "lucide-react": ">=1.14.0",
+    "radix-ui": ">=1.4.0",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "sonner": ">=2.0.0",
+    "tailwind-merge": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "cmdk": {
+      "optional": true
+    },
+    "sonner": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": "26.13.0"
+  }
+}

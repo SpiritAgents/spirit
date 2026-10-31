@@ -25,7 +25,7 @@ export function buildPaneSessionSlice(input: {
   pendingApproval?: {
     toolName: string;
     request: DesktopToolRequest;
-    prompt?: string;
+    prompt: import("@spiritagent/agent-core").ToolApprovalPrompt;
     rememberTarget?: import("@spiritagent/agent-core").PermissionMemoryTarget;
     subagentSessionId?: string;
     autoReviewBlockReason?: string;
@@ -71,9 +71,7 @@ export function buildPaneSessionSlice(input: {
           pendingToolApproval: mapPendingToolApproval({
             toolName: input.pendingApproval.toolName,
             request: input.pendingApproval.request,
-            ...(input.pendingApproval.prompt !== undefined
-              ? { prompt: input.pendingApproval.prompt }
-              : { prompt: "" }),
+            prompt: input.pendingApproval.prompt,
             ...(input.pendingApproval.rememberTarget
               ? { rememberTarget: input.pendingApproval.rememberTarget }
               : {}),
@@ -95,6 +93,7 @@ export function buildPaneSessionSlice(input: {
       : {}),
     ...(bundle.cachedTodoSnapshot ? { todos: bundle.cachedTodoSnapshot } : {}),
     ...(bundle.contextUsage ? { contextUsage: { ...bundle.contextUsage } } : {}),
+    ...(bundle.lastInputTokens !== undefined ? { lastInputTokens: bundle.lastInputTokens } : {}),
   };
 
   return {

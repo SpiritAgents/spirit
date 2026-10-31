@@ -15,7 +15,7 @@ const gatewayConfig: OpenResponsesTransportConfig = {
   transportKind: "open-responses",
   apiKey: "test",
   model: "deepseek/deepseek-v4-pro",
-  llmVendor: "vercel-ai-gateway",
+  sdk: "@ai-sdk/gateway",
 };
 
 async function collectGatewayToolRound(

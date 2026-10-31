@@ -17,7 +17,6 @@ Diese Werkzeuge arbeiten auf dem von Ihnen geöffneten Arbeitsbereich. Der Frage
 | `ls`              | Ein Verzeichnis auflisten, nicht rekursiv. Der Pfad muss absolut sein                                                                                               |
 | `shell`           | Mit `reason` und `command` einen Befehl ausführen. Der Fragemodus kann ihn nicht aufrufen                                                                           |
 | `web_fetch`       | Eine `http`- oder `https`-URL abrufen und Markdown zurückgeben. Ein Host-Werkzeug, keine Provider-Suche                                                             |
-| `web_search`      | Verfügbar, wenn der aktuelle Modellanbieter Websuche unterstützt. Gibt Titel, URLs und Textausschnitte zurück                                                       |
 | `generate_image`  | Verfügbar, nachdem Sie in **Einstellungen → Modelle** ein Bildmodell zugewiesen haben. Erzeugt ein Bild. Der Fragemodus kann es nicht aufrufen                      |
 | `generate_video`  | Verfügbar, nachdem Sie in **Einstellungen → Modelle** ein Videomodell zugewiesen haben. Erzeugt ein kurzes Video. Der Fragemodus kann es nicht aufrufen             |
 | `get_diagnostics` | Verfügbar, wenn ein Sprachserver bereit ist. Übergibt Pfade; gibt Fehler und Warnungen zurück. Der Fragemodus kann es verwenden                                     |
@@ -33,3 +32,11 @@ Diese Werkzeuge arbeiten auf dem von Ihnen geöffneten Arbeitsbereich. Der Frage
 Bearbeitungen und Löschungen warten auf [Genehmigung](./approvals.mdx) auf der Standardebene. `shell` wartet ebenfalls.
 
 Konfigurierte [MCP](../customize/mcp.mdx)-Server und Erweiterungen fügen weitere Werkzeuge zur selben Liste hinzu.
+
+## Anbieter-Werkzeuge [#provider-tools]
+
+Anbieter können eigene Werkzeuge bereitstellen – Websuche, Code-Interpreter und Ähnliches. Welche Werkzeuge existieren, ergibt sich aus der Deklaration des verbundenen Anbieters in [config.json](../config.mdx) (vom Verbindungsassistenten geschrieben), nicht aus einem eingebauten {{product.name|mdx}}-Werkzeug: Ein Anbieter, der keine Werkzeuge deklariert, stellt auch keine bereit.
+
+Je nach Deklaration läuft ein Aufruf entweder innerhalb der Upstream-Anfrage, oder {{product.name|mdx}} führt ihn deklarationsgemäß per HTTP aus und schreibt das Ergebnis als Werkzeugresultat zurück. Beide Formen rendern wie ein MCP-Werkzeugaufruf, und die Runtime ändert die deklarierten Parameter niemals eigenmächtig.
+
+Der Schalter **Anbieter-Werkzeuge** unter **Einstellungen → Agents** (`agents.providerTools.enabled`, standardmäßig an) steuert sie alle auf einmal. Die Liste der deklarierten Werkzeuge pro Haus steht unter [Anbieter](../providers.mdx).

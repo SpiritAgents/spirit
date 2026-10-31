@@ -185,7 +185,7 @@ test("cached workspace file suggestions do not block on cold index", async () =>
 test("resolve workspace file attachments truncates oversized content and ignores invalid references", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-internal-file-attachment-"));
   try {
-    const oversizedText = "a".repeat(24_010);
+    const oversizedText = "a".repeat(32_800);
     await writeFile(join(workspaceRoot, "README.md"), oversizedText);
 
     const attachments = await resolveWorkspaceFileReferenceAttachmentsFromInput(
@@ -198,7 +198,7 @@ test("resolve workspace file attachments truncates oversized content and ignores
     if (!attachments[0] || attachments[0].kind !== "text") {
       throw new Error("README.md should return a text attachment.");
     }
-    assert.equal(attachments[0].totalChars, oversizedText.length);
+    assert.equal(attachments[0].totalBytes, oversizedText.length);
     assert.equal(attachments[0].truncated, true);
     assert.match(attachments[0].content, /file content truncated/u);
   } finally {

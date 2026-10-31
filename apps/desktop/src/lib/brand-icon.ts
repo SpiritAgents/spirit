@@ -8,7 +8,7 @@ export const SPIRIT_AGENT_ICON_DARK_SRC = glyphWhiteUrl;
 /** Light UI: black glyph on transparent background (`@spiritagent/brand/assets/glyph-black.svg`) */
 export const SPIRIT_AGENT_ICON_LIGHT_SRC = glyphBlackUrl;
 
-/** Translucency title bar: brand logo on black background (`@spiritagent/brand/assets/logo-dark.svg`; the glyph occupies a smaller fraction of the canvas than the transparent variants) */
+/** Translucency title bar: the dark glass brand master, independent of the UI theme. */
 export const SPIRIT_AGENT_ICON_TRANSLUCENCY_SRC = logoDarkUrl;
 
 export function spiritAgentBrandIconSrc(dark: boolean): string {

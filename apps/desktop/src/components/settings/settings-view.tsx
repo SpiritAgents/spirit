@@ -67,13 +67,13 @@ export function SettingsView({
   onCreateRule,
   onDeleteRule,
   onListDreamsOverview,
-  onInstallLspProvider,
-  lspInstallBusy,
   onGenerateSkillNavigate,
   onGenerateRuleNavigate,
   onGenerateHookNavigate,
   onStartCompactionUiDemo,
   onStartLongConversationListDemo,
+  onStartApprovalPreviewDemo,
+  onStartToolCardPreviewDemo,
   useTranslucency: _useTranslucency = false,
   getGitHubAuthStatus,
   beginGitHubDeviceLogin,
@@ -145,6 +145,8 @@ export function SettingsView({
               <DeveloperSettingsPanel
                 onStartCompactionUiDemo={onStartCompactionUiDemo}
                 onStartLongConversationListDemo={onStartLongConversationListDemo}
+                onStartApprovalPreviewDemo={onStartApprovalPreviewDemo}
+                onStartToolCardPreviewDemo={onStartToolCardPreviewDemo}
               />
             ) : tab === "dreams" ? (
               <DreamSettingsPanel
@@ -158,9 +160,7 @@ export function SettingsView({
               <AgentsSettingsPanel
                 settings={settings}
                 snapshot={snapshot}
-                lspInstallBusy={lspInstallBusy}
                 onSavePatch={onSavePatch}
-                onInstallLspProvider={onInstallLspProvider}
               />
             ) : tab === "tab" ? (
               <TabSettingsPanel settings={settings} onSavePatch={onSavePatch} />

@@ -9,15 +9,12 @@ import {
   type JsonValue,
   type LlmMessage,
 } from "../ports.js";
-import { uploadOpenAiCompatibleVideoFile } from "./moonshot-files.js";
+import { uploadDeclaredFile } from "../file-upload/uploader.js";
+import type { FileUploadConfig } from "../file-upload/config.js";
 import {
   pathToLocalVideoReference,
   resolveLocalMediaPath,
 } from "./openai-multimodal-media-path.js";
-import {
-  resolveOpenAiModelCompatibilityProfile,
-  type OpenAiTransportConfig,
-} from "./openai-compat.js";
 
 export function llmHistoryToOpenAiMessages(
   history: LlmMessage[],
@@ -95,20 +92,85 @@ export function llmMessageToOpenAiMessage(message: LlmMessage, assetRoot: string
   };
 }
 
-/** Moonshot AI / Kimi Code: uploads local video paths via the Files API (purpose=video) and rewrites them as ms:// references. */
-export async function resolveMoonshotVideoUrlsInOpenAiMessages(
-  config: OpenAiTransportConfig,
+/** Minimal structural read of a transport config for declaration-driven media resolution. */
+export interface DeclaredMediaConfig {
+  apiKey: string;
+  baseUrl?: string;
+  fileUpload?: FileUploadConfig;
+  modelCapabilities?: { videoInput?: true };
+  options?: Record<string, unknown>;
+}
+
+/**
+ * A URL already carrying a wire scheme (`https://`, `data:`, or an upstream reference scheme such
+ * as `ms://` / `stepfile://` / `mm_file://`) passes through literally; anything else is a local
+ * path. Windows drive letters (`C:\…`) are not schemes.
+ */
+function urlHasWireScheme(url: string): boolean {
+  return /^data:/i.test(url) || /^[a-z][a-z0-9+.-]*:\/\//i.test(url);
+}
+
+/**
+ * `options.maxInlineMediaBytes`: cap on the base64-encoded inline payload size, enforced before
+ * the data URL is built (Xiaomi MiMo's 50 MB inline-video limit is the declaring preset).
+ */
+function readMaxInlineMediaBytes(config: DeclaredMediaConfig): number | undefined {
+  const value = config.options?.maxInlineMediaBytes;
+  return typeof value === "number" && Number.isInteger(value) && value > 0 ? value : undefined;
+}
+
+function formatInlineMediaCapMb(maxBytes: number): string {
+  const mb = maxBytes / (1024 * 1024);
+  return Number.isInteger(mb) ? String(mb) : mb.toFixed(1);
+}
+
+function pathToInlineVideoDataUrl(absolutePath: string, maxInlineMediaBytes?: number): string {
+  const bytes = readFileSync(absolutePath);
+  const base64 = Buffer.from(bytes).toString("base64");
+  if (
+    maxInlineMediaBytes !== undefined &&
+    Buffer.byteLength(base64, "utf8") > maxInlineMediaBytes
+  ) {
+    throw new Error(
+      `Inline video must not exceed ${formatInlineMediaCapMb(maxInlineMediaBytes)} MB after Base64 encoding (the provider entry's options.maxInlineMediaBytes); use a public URL or shorten the video instead.`,
+    );
+  }
+  return `data:${guessVideoMimeFromPath(absolutePath)};base64,${base64}`;
+}
+
+function guessVideoMimeFromPath(path: string): string {
+  switch (extname(path).toLowerCase()) {
+    case ".mp4":
+      return "video/mp4";
+    case ".mov":
+      return "video/quicktime";
+    case ".webm":
+      return "video/webm";
+    case ".avi":
+      return "video/x-msvideo";
+    case ".wmv":
+      return "video/x-ms-wmv";
+    default:
+      return "video/mp4";
+  }
+}
+
+/**
+ * Declaration-driven video input resolution: with a `fileUpload` declaration, local video files
+ * upload through it and the produced reference (e.g. `ms://{id}`) goes into the `video_url` field
+ * verbatim; when the declared purpose map does not cover `"video"`, or there is no declaration at
+ * all, the transport's generic base64 inline path applies. Upload failures throw (a turn error,
+ * as before).
+ */
+export async function resolveDeclaredVideoInputsInMessages(
+  config: DeclaredMediaConfig,
   messages: JsonValue[],
   assetRoot = process.cwd(),
 ): Promise<void> {
-  if (config.llmVendor !== "moonshot-ai" && config.llmVendor !== "kimi-code") {
+  if (config.modelCapabilities?.videoInput !== true) {
     return;
   }
-
-  const profile = resolveOpenAiModelCompatibilityProfile(config);
-  if (!profile.capabilities.videoInput) {
-    return;
-  }
+  const maxInlineMediaBytes = readMaxInlineMediaBytes(config);
 
   for (const message of messages) {
     if (!isJsonObject(message) || message.role !== "user" || !Array.isArray(message.content)) {
@@ -131,24 +193,30 @@ export async function resolveMoonshotVideoUrlsInOpenAiMessages(
       }
 
       const url = urlValue.trim();
-      if (!needsMoonshotVideoUpload(url)) {
+      if (url.length === 0 || urlHasWireScheme(url)) {
         continue;
       }
 
       const absolutePath = resolveLocalMediaPath(url, assetRoot);
-      rawVideoUrl["url"] = await uploadOpenAiCompatibleVideoFile(config, absolutePath);
+      if (config.fileUpload !== undefined) {
+        const upload = await uploadDeclaredFile(
+          config.fileUpload,
+          { apiBase: config.baseUrl ?? "", apiKey: config.apiKey },
+          absolutePath,
+          "video",
+        );
+        if (upload.kind === "failed") {
+          throw new Error(upload.error);
+        }
+        if (upload.kind === "uploaded") {
+          rawVideoUrl["url"] = upload.ref;
+          continue;
+        }
+        // kind === "inline": the purpose map does not cover video — fall through to inline.
+      }
+      rawVideoUrl["url"] = pathToInlineVideoDataUrl(absolutePath, maxInlineMediaBytes);
     }
   }
-}
-
-function needsMoonshotVideoUpload(url: string): boolean {
-  return (
-    url.length > 0 &&
-    !url.startsWith("http://") &&
-    !url.startsWith("https://") &&
-    !url.startsWith("data:") &&
-    !url.startsWith("ms://")
-  );
 }
 
 function pathToImageUrl(path: string, assetRoot: string): string {

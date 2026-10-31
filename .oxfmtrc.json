@@ -12,6 +12,7 @@
     "apps/desktop/release/**",
     "**/.next/**",
     "**/.source/**",
+    "**/.generated/**",
     "apps/cli/about.hbs",
     "apps/cli/about/NOTICE.hbs",
     "scripts/**"

@@ -1,9 +1,10 @@
 ---
 title: Hooks
-description: Run scripts on session, tool, and subagent events. They can allow, deny, or ask.
+description: Run scripts on session, tool, and subagent events. They can allow,
+  deny, or ask.
 ---
 
-Hooks are scripts Spirit runs at fixed points. They can allow a tool, deny it, or force an approval prompt (`ask`).
+Hooks are scripts {{product.name|mdx}} runs at fixed points. They can allow a tool, deny it, or force an approval prompt (`ask`).
 
 ## Events
 
@@ -19,10 +20,10 @@ Hooks are scripts Spirit runs at fixed points. They can allow a tool, deny it, o
 
 ## Where they live
 
-| Scope     | Config                           | Scripts                      |
-| --------- | -------------------------------- | ---------------------------- |
-| User      | `{spiritDataDir}/hooks.json`     | `{spiritDataDir}/hooks/`     |
-| Workspace | `{workspace}/.spirit/hooks.json` | `{workspace}/.spirit/hooks/` |
+| Scope     | Config                                                       | Scripts                                                  |
+| --------- | ------------------------------------------------------------ | -------------------------------------------------------- |
+| User      | `{spiritDataDir}/hooks.json`                                 | `{spiritDataDir}/hooks/`                                 |
+| Workspace | `{workspace}/{{product.workspaceDataFolderName}}/hooks.json` | `{workspace}/{{product.workspaceDataFolderName}}/hooks/` |
 
 On the same event, user entries and workspace entries are concatenated in that order. They do not overwrite each other.
 

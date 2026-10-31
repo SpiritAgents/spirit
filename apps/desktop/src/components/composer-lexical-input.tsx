@@ -99,7 +99,6 @@ import { AgentModeChipPlugin } from "@/lib/composer-lexical/plugins/agent-mode-c
 import { LoopChipPlugin } from "@/lib/composer-lexical/plugins/loop-chip-plugin";
 import { normalizeComposerSegmentsPolicy } from "@/lib/composer-lexical/composer-lexical-policy";
 import { cn } from "@/lib/utils";
-import { viewportLengthToScaleRootLocal } from "@/lib/ui-layout-scale";
 
 export type { ActiveWorkspaceFileReferenceQuery } from "@/lib/composer-segment-model";
 export type { RichSegment } from "@/lib/composer-segment-model";
@@ -115,9 +114,9 @@ const COMPOSER_PLACEHOLDER_CLASS =
 const AGENT_MODE_CHIP_SELECTOR =
   "[data-chip-kind='plan'],[data-chip-kind='ask'],[data-chip-kind='debug']";
 
-/** Absolute `left` inside Shell: getBoundingClientRect differences are in viewport units and must be converted to local px at the zoom root. */
+/** getBoundingClientRect deltas are already local CSS px under native Chromium page zoom. */
 function shellLocalLeftFromViewportDelta(delta: number): number {
-  return viewportLengthToScaleRootLocal(delta);
+  return delta;
 }
 
 function isLexicalChipDomNode(node: Node): boolean {
@@ -381,6 +380,7 @@ export type ComposerRichInputHandle = {
     path: string,
     query: ActiveWorkspaceFileReferenceQuery,
     finalize?: boolean,
+    options?: { isPlan?: boolean },
   ): void;
   insertSessionReference(
     session: { path: string; title: string; content?: string },
@@ -724,11 +724,17 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
     );
 
     const insertWorkspaceFileReference = useCallback(
-      (path: string, query: ActiveWorkspaceFileReferenceQuery, finalize = true) => {
+      (
+        path: string,
+        query: ActiveWorkspaceFileReferenceQuery,
+        finalize = true,
+        options?: { isPlan?: boolean },
+      ) => {
         editor.dispatchCommand(INSERT_WORKSPACE_FILE_REFERENCE_COMMAND, {
           path,
           query,
           finalize,
+          ...(options?.isPlan === true ? { isPlan: true } : {}),
         });
       },
       [editor],

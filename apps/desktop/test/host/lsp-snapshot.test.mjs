@@ -27,13 +27,6 @@ test("buildDesktopLspSnapshot marks providers disabled when user turns off LSP",
   assert.equal(snapshot.active, false);
   assert.ok(snapshot.providers.length > 0);
   assert.ok(snapshot.providers.every((provider) => provider.status === "disabled"));
-
-  const byId = Object.fromEntries(snapshot.providers.map((provider) => [provider.id, provider]));
-  assert.equal(byId.pyright?.installCommand, "npm install -g pyright");
-  assert.equal(byId.gopls?.installCommand, "go install golang.org/x/tools/gopls@latest");
-  assert.equal(byId["rust-analyzer"]?.installCommand, "rustup component add rust-analyzer");
-  assert.equal(byId.clangd?.installCommand, undefined);
-  assert.equal(byId.jdtls?.installCommand, undefined);
 });
 
 test("desktop tool executor omits get_diagnostics when lsp user config is disabled", async () => {

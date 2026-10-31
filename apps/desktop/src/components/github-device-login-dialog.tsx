@@ -1,4 +1,5 @@
-import { ExternalLink, LoaderCircle } from "lucide-react";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -70,12 +71,16 @@ export function GitHubDeviceLoginDialog({
                   aria-label={t("settings.integrationsOpenDevicePage")}
                   onClick={() => onOpenDevicePage(challenge.verificationUri)}
                 >
-                  <ExternalLink className="size-4" aria-hidden />
+                  <ExternalLink className="size-4" aria-hidden strokeWidth={1.75} />
                 </Button>
               ) : null}
             </div>
           ) : loading ? (
-            <LoaderCircle className="size-8 animate-spin text-muted-foreground" aria-hidden />
+            <LoaderCircle
+              className="size-8 animate-spin text-muted-foreground"
+              aria-hidden
+              strokeWidth={1.75}
+            />
           ) : null}
         </div>
 

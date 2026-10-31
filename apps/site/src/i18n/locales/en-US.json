@@ -1,16 +1,16 @@
 {
   "meta": {
-    "title": "Spirit",
-    "description": "Spirit is an open source AI agent you run with your models, your keys, and your workflow."
+    "title": "{{product.name}}",
+    "description": "{{product.name}} is an open source AI agent you run with your models, your keys, and your workflow."
   },
   "common": {
-    "brand": "Spirit",
+    "brand": "{{product.name}}",
     "download": "Download",
     "downloadForPlatform": "Download for {{platform}}"
   },
   "hero": {
-    "sectionAria": "Spirit",
-    "homeAria": "Spirit home",
+    "sectionAria": "{{product.name}}",
+    "homeAria": "{{product.name}} home",
     "primaryNavAria": "Primary",
     "nav": {
       "features": "Features",
@@ -31,8 +31,8 @@
     "headline": "An open-source AI agent\nbuilt to multiply your productivity."
   },
   "download": {
-    "metaTitle": "Download Spirit",
-    "metaDescription": "Download Spirit for Desktop, install the CLI, or watch for ACP.",
+    "metaTitle": "Download {{product.name}}",
+    "metaDescription": "Download {{product.name}} for Desktop, install the CLI, or watch for ACP.",
     "title": "The same agent, across all your work.",
     "sectionAria": "The same agent, across all your work.",
     "desktop": "Desktop",
@@ -42,7 +42,7 @@
     "copied": "Copied",
     "comingSoonJoke": "Coming soon™",
     "listingInProgress": "Listing…",
-    "cliLogoTitle": "Spirit",
+    "cliLogoTitle": "{{product.name}}",
     "cliUserMessage": "Review auth.ts and fix the session refresh bug.",
     "cliAssistantMessage": "I'll inspect auth.ts and patch the failing session check.",
     "cliUserFollowUp": "Also add a regression test.",
@@ -50,16 +50,16 @@
     "cliFooter": "Agent  |  Default Approval  |  Loop Off          gpt-5"
   },
   "landing": {
-    "sectionAria": "Spirit content",
+    "sectionAria": "{{product.name}} content",
     "featureHeading": ["Your models.", "Your keys.", "Your control."],
-    "featureBody": "Spirit does not lock you into a hosted stack. Bring a key from any provider, add it once, and use the same agent workflow across all of them.",
+    "featureBody": "{{product.name}} does not lock you into a hosted stack. Bring a key from any provider, add it once, and use the same agent workflow across all of them.",
     "agent": {
-      "sectionAria": "Spirit productivity",
+      "sectionAria": "{{product.name}} productivity",
       "featureHeading": ["Plan with context.", "Execute with tools.", "Ship in your workspace."],
-      "featureBody": "Spirit plans before it acts: generate mockups, write structured plans, and execute against your repo without leaving the desktop shell."
+      "featureBody": "{{product.name}} plans before it acts: generate mockups, write structured plans, and execute against your repo without leaving the desktop shell."
     },
-    "ctaSectionAria": "Download Spirit",
-    "ctaTitle": "Try Spirit.",
+    "ctaSectionAria": "Download {{product.name}}",
+    "ctaTitle": "Try {{product.name}}.",
     "trio": {
       "sectionAria": "Capability previews",
       "completion": {
@@ -97,7 +97,7 @@
     "linkHome": "Home",
     "changelog": "Changelog",
     "openSourceLicenses": "Open source licenses",
-    "copyrightLine": "© {{year}} Spirit. Open source AI agent."
+    "copyrightLine": "© {{year}} {{product.name}}. Open source AI agent."
   },
   "desktop": {
     "titleBar": {
@@ -121,19 +121,19 @@
       "mcps": "MCPs",
       "appearance": "Appearance",
       "settingsNavSidebarAria": "Settings Navigation Sidebar",
-      "sessionsSidebarAria": "Sessions and Settings Sidebar",
+      "sessionsSidebarAria": "Chats and Settings Sidebar",
       "back": "Back",
       "settingsHeading": "Settings",
       "pageNavigation": "Page navigation",
-      "newSession": "New Session",
+      "newChat": "New Chat",
       "extensionsButton": "Extensions",
-      "workspaceHeading": "Workspace",
+      "workspacesHeading": "Workspaces",
       "settingsTabsAria": "Settings Tabs",
-      "workspaceSessionsAria": "Workspace Sessions",
+      "workspaceSessionsAria": "Workspace Chats",
       "settingsButton": "Settings"
     },
     "conversation": {
-      "manualAssistantResponse": "Download Spirit.",
+      "manualAssistantResponse": "Download {{product.name}}.",
       "demoUserPrompt": "Review the current landing page and tell me what to improve next.",
       "demoThinkingText": "Checking the current Hero structure.\nLooking for the most visible gaps in the conversation surface.\nPreparing a short implementation summary.",
       "demoAssistantResponse": "Here is the next step I would take.\n\n- Replace the empty conversation area with a real streaming demo.\n- Keep the Hero window interruptible so visitors can take control immediately.\n- Reuse the Desktop message styles for Thinking and tool calls instead of approximating them.",
@@ -160,7 +160,7 @@
       ],
       "runningToolOutput": "Found a single Hero section, a reused Desktop shell, and a static conversation empty state.",
       "emptyTitle": "Start something.",
-      "composerPlaceholder": "Type a message…",
+      "composerPlaceholder": "Type a message",
       "agentDemo": {
         "demoUserPrompt": "Plan a landing hero refresh. Generate a mockup image first, then write the implementation plan.",
         "demoThinkingText": "Reviewing the current hero layout and messaging.\nChecking where a visual mockup would help the plan.\nPreparing to generate an image, then draft the plan document.",
@@ -203,8 +203,6 @@
       "providerDialogDescription": "Choose a provider, then enter the connection details.",
       "searchPlaceholder": "Search",
       "noMatches": "No matches",
-      "connectDialogDescriptionCustom": "Enter the endpoint and key.",
-      "connectDialogDescriptionDefault": "Enter an API key to connect.",
       "addModeLabel": "How to add models",
       "addModeAria": "How to add models",
       "addSingle": "Add one",
@@ -215,11 +213,9 @@
       "optionalPlaceholder": "Optional",
       "apiKeyLabel": "API key",
       "apiKeyPlaceholder": "Enter key",
-      "addThisModel": "Add this model",
-      "adding": "Adding…",
-      "addProvider": "Add Provider",
+      "connecting": "Connecting…",
       "customConnectionTitle": "Custom connection",
-      "connectProviderTitle": "Connect provider"
+      "connectNamedProviderTitle": "Connect {{provider}}"
     },
     "window": {
       "toolbarAria": "Sidebar and Tools",
@@ -233,7 +229,7 @@
       "previewEditorOnlyTextError": "Only text files in the preview editor can be opened.",
       "hostStatus": "Web Hero Preview",
       "mcpReady": "MCP ready",
-      "newSession": "New Session"
+      "newChat": "New Chat"
     },
     "commit": {
       "modeCommit": "Commit",
@@ -293,7 +289,7 @@
       "exited": "[exited, code {{exitCode}}]"
     },
     "previews": {
-      "siteReadmeDescription": "Marketing site preview for the Spirit desktop product.",
+      "siteReadmeDescription": "Marketing site preview for the {{product.name}} desktop product.",
       "desktopReadmeDescription": "Electron shell and web renderer for the desktop product.",
       "generatedWorkspaceDescription": "Mock workspace generated for the landing page {{label}} preview.",
       "generatedWorkspaceOverview": "Workspace root: {{root}}\\n\\nThis mock workspace keeps the file tab interactive without mounting the full desktop runtime.",
@@ -306,8 +302,8 @@
   },
   "docs": {
     "title": "Documentation",
-    "metaTitle": "Spirit Docs",
-    "metaDescription": "Install Spirit, connect a provider with your own key, and run the same agent on Desktop and CLI.",
+    "metaTitle": "{{product.name}} Docs",
+    "metaDescription": "Install {{product.name}}, connect a provider with your own key, and run the same agent on Desktop and CLI.",
     "comingSoon": "Coming soon.",
     "sectionAria": "Documentation",
     "search": "Search",

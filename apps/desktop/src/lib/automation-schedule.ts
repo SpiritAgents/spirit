@@ -15,7 +15,7 @@ export interface DesktopAutomationScheduleFormatLabels {
   formatWeekly?(weekday: string, time: string): string;
 }
 
-function formatTimeOfDay(hour: number, minute: number): string {
+export function formatDesktopAutomationTimeOfDay(hour: number, minute: number): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
@@ -26,7 +26,7 @@ export function formatDesktopAutomationScheduleLabel(
   if (schedule.kind === "hourly") {
     return labels.hourly;
   }
-  const time = formatTimeOfDay(schedule.hour, schedule.minute);
+  const time = formatDesktopAutomationTimeOfDay(schedule.hour, schedule.minute);
   if (schedule.kind === "daily") {
     return `${labels.dailyPrefix} ${time}`;
   }

@@ -1,6 +1,6 @@
 ---
 title: Loop
-description: 让 Agent 一直干到调用 finish_task。
+description: 让 Agent 持续工作，直到它调用 finish_task。
 ---
 
 Loop 是会话级开关。打开后，普通的助手回复**不会**结束这一轮。Agent 应继续用工具直到任务完成，然后调用 `finish_task`。
@@ -9,10 +9,10 @@ Loop 是会话级开关。打开后，普通的助手回复**不会**结束这�
 
 在 Desktop 的输入框打开 Loop（`/loop` chip）。在 CLI TUI 里运行 `/loop`。
 
-只有 Loop 打开时才暴露 `finish_task`。Loop 关闭时模型若仍调用它，Spirit 会按未知工具拒绝。
+只有 Loop 打开时才暴露 `finish_task`。Loop 关闭时模型若仍调用它，{{product.name|mdx}} 会按未知工具拒绝。
 
 ## 什么时候用
 
-适合你不想盯着的多步任务：实现、测试、再修。单问一句或只改一个文件时请关掉。
+适用于你不想全程监督的多步任务：实现、测试、修复、重复。单个问题或只改一个文件时，请保持关闭。
 
 Loop 不改变[审批](./approvals.mdx)。默认审批仍会在编辑和 shell 上停住。

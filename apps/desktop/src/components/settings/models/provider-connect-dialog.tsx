@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LoaderCircle, RefreshCw } from "lucide-react";
 
 import {
   connectTransportOptionSummary,
@@ -8,7 +8,6 @@ import {
   defaultConnectTransportKind,
   providerShowsConnectTransportPicker,
   resolveConnectTransportKindForProvider,
-  resolveCustomConnectApiBase,
 } from "@/components/settings/models/connect-transport";
 import { ModelCapabilitiesCombobox } from "@/components/settings/models/model-capabilities-combobox";
 import {
@@ -16,11 +15,12 @@ import {
   normalizeModelCapabilitySelection,
 } from "@/components/settings/models/model-defaults";
 import { providerPickerLabel } from "@/components/settings/models/provider-picker-rows";
+import { providerLabelKey } from "@/lib/model-picker-groups";
+import { joinWithCjkSpacing } from "@/lib/cjk";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogFooterActions,
   DialogHeader,
@@ -40,12 +40,10 @@ import {
   hasGoogleVertexServiceAccountCredentials,
 } from "@/lib/provider-runtime-credentials";
 import {
-  defaultProviderConnectSite,
-  listProviderConnectSiteOptions,
-  providerConnectSiteRequiresWorkspaceId,
-  providerSupportsSiteSelection,
-  resolveProviderConnectApiBase,
-} from "@spiritagent/host-internal/model-provider-presets";
+  CUSTOM_PROVIDER_PRESET_ID,
+  findProviderPreset,
+  type ProviderPresetCredentialKind,
+} from "@spiritagent/agent-core/provider-presets";
 import { DESKTOP_FORM_FIELD_TRIGGER_INNER, DESKTOP_FORM_INPUT_SHELL } from "@/lib/desktop-chrome";
 import { DESKTOP_EDITOR_TAB_CLASS } from "@/lib/desktop-typography";
 import { parseModelContextLength } from "@/lib/model-context-length";
@@ -54,34 +52,24 @@ import type {
   AddModelRequest,
   AddProviderModelsRequest,
   DesktopModelCapability,
-  DesktopModelProvider,
+  DesktopProviderPickerPreset,
   DesktopTransportKind,
   PreviewModelsRequest,
   PreviewModelsResponse,
 } from "@/types";
-import { bedrockApiBaseFromRegion } from "@spiritagent/host-internal/bedrock-region";
+import { isValidAzureResourceName } from "@spiritagent/host-internal/azure-resource";
 import {
-  defaultPresetProviderGroupId,
-  slugifyProviderGroupLabel,
-} from "@spiritagent/host-internal/config-v2";
-import {
-  bedrockMantleApiBaseFromRegion,
-  isBedrockMantleOpenAiModel,
-} from "@spiritagent/host-internal/bedrock-mantle";
-import {
-  azureApiBaseFromResourceName,
-  isValidAzureResourceName,
-} from "@spiritagent/host-internal/azure-resource";
-import {
-  cloudflareAiGatewayApiBaseFromAccountId,
   isValidCloudflareAccountId,
   isValidCloudflareGatewayId,
 } from "@spiritagent/host-internal/cloudflare-ai-gateway-resource";
-import { vertexApiBaseFromProjectAndLocation } from "@spiritagent/host-internal/google-vertex-endpoints";
 
 export type ProviderConnectDialogProps = {
-  /** Provider to connect; the parent remounts this component with a new key on each connection attempt to reset the form. */
-  provider: DesktopModelProvider;
+  /** Provider preset id (or `custom`) to connect; the parent remounts this component with a new key on each connection attempt to reset the form. */
+  provider: string;
+  /** Preset picker rows from the host snapshot (fallback label for the dialog title). */
+  providerPresets: readonly DesktopProviderPickerPreset[];
+  /** True when the config already has this provider's entry: reconnecting re-materializes the wizard-owned keys (the helper line says so). */
+  reconnect?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   busy: boolean;
@@ -98,6 +86,8 @@ export type ProviderConnectDialogProps = {
  */
 export function ProviderConnectDialog({
   provider,
+  providerPresets,
+  reconnect = false,
   open,
   onOpenChange,
   busy,
@@ -127,9 +117,11 @@ export function ProviderConnectDialog({
   const [connectTransportKind, setConnectTransportKind] = useState<DesktopTransportKind>(() =>
     defaultConnectTransportKind(provider),
   );
-  const [connectProviderSite, setConnectProviderSite] = useState(
-    () => defaultProviderConnectSite(provider) ?? "",
-  );
+  const [connectProviderSite, setConnectProviderSite] = useState(() => {
+    const preset =
+      provider === CUSTOM_PROVIDER_PRESET_ID ? undefined : findProviderPreset(provider);
+    return preset?.sites?.default ?? "";
+  });
   const [connectAlibabaBillingMode, setConnectAlibabaBillingMode] = useState<
     "standard" | "token-plan"
   >("standard");
@@ -147,18 +139,41 @@ export function ProviderConnectDialog({
   );
   const [connectCustomGroupLabel, setConnectCustomGroupLabel] = useState("");
 
-  function resolveConnectGroupId(target: DesktopModelProvider): string {
-    if (target === "custom") {
-      const label = connectCustomGroupLabel.trim();
-      return label ? slugifyProviderGroupLabel(label) : defaultPresetProviderGroupId("custom");
-    }
-    return defaultPresetProviderGroupId(target);
-  }
+  const connectPreset =
+    provider === CUSTOM_PROVIDER_PRESET_ID ? undefined : findProviderPreset(provider);
+  /** The preset's declared credential shape drives which credential form the wizard collects. */
+  const connectCredentialKind: ProviderPresetCredentialKind =
+    connectPreset?.credentials.kind ?? "apiKey";
+  /**
+   * The credential form currently in view, as a materialization input: the plain apiKey form on a
+   * non-apiKey preset (Vertex Express) selects the preset's `expressApiBase`.
+   */
+  const credentialKindForRequest: ProviderPresetCredentialKind =
+    connectCredentialKind === "bedrock"
+      ? bedrockConnectMode === "iam"
+        ? "bedrock"
+        : "apiKey"
+      : connectCredentialKind === "vertex"
+        ? vertexConnectMode === "express"
+          ? "apiKey"
+          : "vertex"
+        : "apiKey";
+  const connectSiteOptions = connectPreset?.sites?.items ?? [];
+  const connectSiteRequiresWorkspaceId = (siteId: string): boolean =>
+    connectSiteOptions.find((item) => item.id === siteId)?.requiresWorkspaceId === true;
 
   const selectedProviderLabel = providerPickerLabel(
     (key, options) => String(t(key, options)),
     provider,
+    providerPresets,
   );
+  const [connectionTitlePrefix = "", connectionTitleSuffix = ""] = t(
+    "settings.connectNamedProviderTitle",
+  ).split("{{provider}}");
+  const connectionTitle =
+    provider === CUSTOM_PROVIDER_PRESET_ID
+      ? t("settings.customConnection")
+      : joinWithCjkSpacing(connectionTitlePrefix, selectedProviderLabel, connectionTitleSuffix);
 
   const connectTransportKindForRequest = resolveConnectTransportKindForProvider(
     provider,
@@ -167,23 +182,15 @@ export function ProviderConnectDialog({
 
   const connectAlibabaIsTokenPlan =
     provider === "alibaba" && connectAlibabaBillingMode === "token-plan";
-  const connectAlibabaBillingModeForRequest = connectAlibabaIsTokenPlan
-    ? ("token-plan" as const)
-    : undefined;
-  const connectStepfunIsStepPlan =
-    provider === "stepfun" && connectStepfunBillingMode === "step-plan";
-  const connectStepfunBillingModeForRequest = connectStepfunIsStepPlan
-    ? ("step-plan" as const)
-    : undefined;
-  const connectGlmCodingPlanIsActive =
-    (provider === "z-ai" || provider === "zhipu-ai") &&
-    connectGlmCodingPlanBillingMode === "glm-coding-plan";
-  const connectZAiBillingModeForRequest =
-    provider === "z-ai" && connectGlmCodingPlanIsActive ? ("glm-coding-plan" as const) : undefined;
-  const connectZhipuBillingModeForRequest =
-    provider === "zhipu-ai" && connectGlmCodingPlanIsActive
-      ? ("glm-coding-plan" as const)
-      : undefined;
+  const connectBillingPlanIdForRequest =
+    provider === "alibaba" && connectAlibabaIsTokenPlan
+      ? "token-plan"
+      : provider === "stepfun" && connectStepfunBillingMode === "step-plan"
+        ? "step-plan"
+        : (provider === "z-ai" || provider === "zhipu-ai") &&
+            connectGlmCodingPlanBillingMode === "glm-coding-plan"
+          ? "glm-coding-plan"
+          : undefined;
   const connectProviderSiteForRequest = connectAlibabaIsTokenPlan
     ? undefined
     : connectProviderSite.trim() || undefined;
@@ -194,49 +201,7 @@ export function ProviderConnectDialog({
     provider === "alibaba" &&
     !connectAlibabaIsTokenPlan &&
     connectProviderSiteForRequest !== undefined &&
-    providerConnectSiteRequiresWorkspaceId("alibaba", connectProviderSiteForRequest);
-  const connectProviderSiteForApiBase =
-    connectProviderSiteForRequest &&
-    providerConnectSiteRequiresWorkspaceId(provider, connectProviderSiteForRequest) &&
-    !connectAlibabaWorkspaceIdForRequest
-      ? undefined
-      : connectProviderSiteForRequest;
-
-  const effectiveApiBase =
-    provider === "amazon-bedrock"
-      ? bedrockApiBaseFromRegion(connectAwsRegion)
-      : provider === "azure"
-        ? azureApiBaseFromResourceName(connectAzureResourceName)
-        : provider === "cloudflare-ai-gateway"
-          ? cloudflareAiGatewayApiBaseFromAccountId(connectCloudflareAccountId)
-          : provider === "google-vertex-ai" && vertexConnectMode !== "express"
-            ? vertexApiBaseFromProjectAndLocation(connectVertexProject, connectVertexLocation)
-            : provider === "custom"
-              ? resolveCustomConnectApiBase(connectApiBase)
-              : resolveProviderConnectApiBase(
-                  provider,
-                  connectTransportKindForRequest ?? defaultConnectTransportKind(provider),
-                  {
-                    ...(connectAlibabaBillingModeForRequest
-                      ? { billingMode: connectAlibabaBillingModeForRequest }
-                      : {}),
-                    ...(connectStepfunBillingModeForRequest
-                      ? { stepfunBillingMode: connectStepfunBillingModeForRequest }
-                      : {}),
-                    ...(connectZAiBillingModeForRequest
-                      ? { zAiBillingMode: connectZAiBillingModeForRequest }
-                      : {}),
-                    ...(connectZhipuBillingModeForRequest
-                      ? { zhipuBillingMode: connectZhipuBillingModeForRequest }
-                      : {}),
-                    ...(connectProviderSiteForApiBase
-                      ? { site: connectProviderSiteForApiBase }
-                      : {}),
-                    ...(connectAlibabaWorkspaceIdForRequest
-                      ? { workspaceId: connectAlibabaWorkspaceIdForRequest }
-                      : {}),
-                  },
-                );
+    connectSiteRequiresWorkspaceId(connectProviderSiteForRequest);
 
   const hasBedrockCatalogCredentials = hasBedrockIamCredentials({
     accessKeyId: connectAccessKeyId,
@@ -249,10 +214,13 @@ export function ProviderConnectDialog({
   const vertexConnectFields = {
     ...(connectVertexProject.trim() ? { vertexProject: connectVertexProject.trim() } : {}),
     ...(connectVertexLocation.trim() ? { vertexLocation: connectVertexLocation.trim() } : {}),
-    ...(connectVertexClientEmail.trim()
+    // ADC writes no credential slots: service-account secrets only leave the form in its own mode.
+    ...(vertexConnectMode === "service-account" && connectVertexClientEmail.trim()
       ? { vertexClientEmail: connectVertexClientEmail.trim() }
       : {}),
-    ...(connectVertexPrivateKey.trim() ? { vertexPrivateKey: connectVertexPrivateKey.trim() } : {}),
+    ...(vertexConnectMode === "service-account" && connectVertexPrivateKey.trim()
+      ? { vertexPrivateKey: connectVertexPrivateKey.trim() }
+      : {}),
   };
 
   const syncCatalogFromUpstream = async (forceRefresh: boolean) => {
@@ -270,9 +238,6 @@ export function ProviderConnectDialog({
       if (vertexConnectMode === "service-account" && !hasVertexCatalogCredentials) {
         throw new Error(t("settings.vertexCatalogServiceAccountRequired"));
       }
-      if (vertexConnectMode === "express") {
-        throw new Error(t("settings.vertexExpressCatalogUnsupported"));
-      }
     } else if (provider === "custom") {
       if (!connectApiBase.trim()) {
         throw new Error(t("settings.endpointRequired"));
@@ -284,9 +249,10 @@ export function ProviderConnectDialog({
       throw new Error(t("settings.alibabaWorkspaceIdRequired"));
     }
     const res = await onPreviewModels({
-      apiBase: effectiveApiBase,
+      apiBase: provider === CUSTOM_PROVIDER_PRESET_ID ? connectApiBase.trim() : "",
       apiKey: connectApiKey,
       provider,
+      credentialKind: credentialKindForRequest,
       ...(provider === "amazon-bedrock"
         ? {
             awsRegion: connectAwsRegion.trim(),
@@ -295,37 +261,35 @@ export function ProviderConnectDialog({
           }
         : {}),
       ...(provider === "google-vertex-ai" ? vertexConnectFields : {}),
+      ...(provider === "azure" && connectAzureResourceName.trim()
+        ? { azureResourceName: connectAzureResourceName.trim() }
+        : {}),
+      ...(provider === "cloudflare-ai-gateway"
+        ? {
+            cloudflareAccountId: connectCloudflareAccountId.trim(),
+            cloudflareGatewayId: connectCloudflareGatewayId.trim(),
+          }
+        : {}),
       ...(connectTransportKindForRequest !== undefined
         ? { transportKind: connectTransportKindForRequest }
         : {}),
-      ...(connectProviderSiteForRequest ? { providerSite: connectProviderSiteForRequest } : {}),
+      ...(connectProviderSiteForRequest ? { siteId: connectProviderSiteForRequest } : {}),
       ...(connectAlibabaWorkspaceIdForRequest
-        ? { alibabaWorkspaceId: connectAlibabaWorkspaceIdForRequest }
+        ? { workspaceId: connectAlibabaWorkspaceIdForRequest }
         : {}),
-      ...(connectAlibabaBillingModeForRequest
-        ? { alibabaBillingMode: connectAlibabaBillingModeForRequest }
-        : {}),
-      ...(connectStepfunBillingModeForRequest
-        ? { stepfunBillingMode: connectStepfunBillingModeForRequest }
-        : {}),
-      ...(connectZAiBillingModeForRequest
-        ? { zAiBillingMode: connectZAiBillingModeForRequest }
-        : {}),
-      ...(connectZhipuBillingModeForRequest
-        ? { zhipuBillingMode: connectZhipuBillingModeForRequest }
-        : {}),
+      ...(connectBillingPlanIdForRequest ? { billingPlanId: connectBillingPlanIdForRequest } : {}),
       forceRefresh,
     });
     if (res.modelIds.length === 0) {
       throw new Error(t("settings.noModelsReturned"));
     }
     const bulk: AddProviderModelsRequest = {
-      groupId: resolveConnectGroupId(provider),
-      apiBase: effectiveApiBase,
+      apiBase: provider === CUSTOM_PROVIDER_PRESET_ID ? connectApiBase.trim() : "",
       apiKey: connectApiKey,
       modelIds: res.modelIds,
       ...(res.models ? { modelCatalog: res.models } : {}),
       provider,
+      credentialKind: credentialKindForRequest,
       ...(provider === "amazon-bedrock"
         ? {
             awsRegion: connectAwsRegion.trim(),
@@ -334,27 +298,25 @@ export function ProviderConnectDialog({
           }
         : {}),
       ...(provider === "google-vertex-ai" ? vertexConnectFields : {}),
+      ...(provider === "azure" && connectAzureResourceName.trim()
+        ? { azureResourceName: connectAzureResourceName.trim() }
+        : {}),
+      ...(provider === "cloudflare-ai-gateway"
+        ? {
+            cloudflareAccountId: connectCloudflareAccountId.trim(),
+            cloudflareGatewayId: connectCloudflareGatewayId.trim(),
+          }
+        : {}),
       ...(connectTransportKindForRequest !== undefined
         ? { transportKind: connectTransportKindForRequest }
         : {}),
-      ...(connectProviderSiteForRequest ? { providerSite: connectProviderSiteForRequest } : {}),
+      ...(connectProviderSiteForRequest ? { siteId: connectProviderSiteForRequest } : {}),
       ...(connectAlibabaWorkspaceIdForRequest
-        ? { alibabaWorkspaceId: connectAlibabaWorkspaceIdForRequest }
+        ? { workspaceId: connectAlibabaWorkspaceIdForRequest }
         : {}),
-      ...(connectAlibabaBillingModeForRequest
-        ? { alibabaBillingMode: connectAlibabaBillingModeForRequest }
-        : {}),
-      ...(connectStepfunBillingModeForRequest
-        ? { stepfunBillingMode: connectStepfunBillingModeForRequest }
-        : {}),
-      ...(connectZAiBillingModeForRequest
-        ? { zAiBillingMode: connectZAiBillingModeForRequest }
-        : {}),
-      ...(connectZhipuBillingModeForRequest
-        ? { zhipuBillingMode: connectZhipuBillingModeForRequest }
-        : {}),
-      ...(provider === "custom" && connectCustomGroupLabel.trim()
-        ? { customGroupLabel: connectCustomGroupLabel.trim() }
+      ...(connectBillingPlanIdForRequest ? { billingPlanId: connectBillingPlanIdForRequest } : {}),
+      ...(provider === CUSTOM_PROVIDER_PRESET_ID && connectCustomGroupLabel.trim()
+        ? { customProviderLabel: connectCustomGroupLabel.trim() }
         : {}),
     };
     await onAddProviderModels(bulk);
@@ -362,15 +324,15 @@ export function ProviderConnectDialog({
   };
 
   const saveCustomSingle = async () => {
-    if (provider !== "custom") {
+    if (provider !== CUSTOM_PROVIDER_PRESET_ID) {
       return;
     }
     const name = connectName.trim();
-    const apiBase = effectiveApiBase;
+    const apiBase = connectApiBase.trim();
     if (!name) {
       throw new Error(t("settings.modelNameRequired"));
     }
-    if (!connectApiBase.trim()) {
+    if (!apiBase) {
       throw new Error(t("settings.endpointRequired"));
     }
     const contextLengthRaw = connectContextLength.trim();
@@ -383,16 +345,50 @@ export function ProviderConnectDialog({
       contextLength = parsed;
     }
     await onAddModel({
-      groupId: resolveConnectGroupId("custom"),
       name,
       apiBase,
       apiKey: connectApiKey,
-      provider: "custom",
+      provider: CUSTOM_PROVIDER_PRESET_ID,
       transportKind: connectTransportKind,
       capabilities: normalizeModelCapabilitySelection(connectCapabilities),
       ...(connectCustomGroupLabel.trim()
-        ? { customGroupLabel: connectCustomGroupLabel.trim() }
+        ? { customProviderLabel: connectCustomGroupLabel.trim() }
         : {}),
+      ...(contextLength !== undefined ? { contextLength } : {}),
+    });
+    onOpenChange(false);
+  };
+
+  /**
+   * Vertex Express: the plain apiKey credential form on the vertex preset. The express endpoint
+   * cannot list models, so this path adds one manually entered model instead of syncing the catalog.
+   */
+  const saveVertexExpressSingle = async () => {
+    if (provider !== "google-vertex-ai" || vertexConnectMode !== "express") {
+      return;
+    }
+    const name = connectName.trim();
+    if (!name) {
+      throw new Error(t("settings.modelNameRequired"));
+    }
+    if (!connectApiKey.trim()) {
+      throw new Error(t("settings.apiKeyRequired"));
+    }
+    const contextLengthRaw = connectContextLength.trim();
+    let contextLength: number | undefined;
+    if (contextLengthRaw) {
+      const parsed = parseModelContextLength(Number(contextLengthRaw));
+      if (parsed === undefined) {
+        throw new Error(t("settings.contextLengthInvalid"));
+      }
+      contextLength = parsed;
+    }
+    await onAddModel({
+      name,
+      apiBase: "",
+      apiKey: connectApiKey,
+      provider: "google-vertex-ai",
+      credentialKind: "apiKey",
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
     onOpenChange(false);
@@ -423,14 +419,12 @@ export function ProviderConnectDialog({
       contextLength = parsed;
     }
     await onAddModel({
-      groupId: defaultPresetProviderGroupId("amazon-bedrock"),
       name,
-      apiBase: isBedrockMantleOpenAiModel(name)
-        ? bedrockMantleApiBaseFromRegion(awsRegion)
-        : bedrockApiBaseFromRegion(awsRegion),
+      apiBase: "",
       apiKey: connectApiKey,
       provider: "amazon-bedrock",
       transportKind: "bedrock",
+      credentialKind: "apiKey",
       awsRegion,
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
@@ -468,12 +462,12 @@ export function ProviderConnectDialog({
       contextLength = parsed;
     }
     await onAddModel({
-      groupId: defaultPresetProviderGroupId("azure"),
       name,
-      apiBase: azureApiBaseFromResourceName(azureResourceName),
+      apiBase: "",
       apiKey: connectApiKey,
       provider: "azure",
       transportKind: "open-responses",
+      credentialKind: "apiKey",
       azureResourceName,
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
@@ -515,47 +509,15 @@ export function ProviderConnectDialog({
       contextLength = parsed;
     }
     await onAddModel({
-      groupId: defaultPresetProviderGroupId("cloudflare-ai-gateway"),
       name,
-      apiBase: cloudflareAiGatewayApiBaseFromAccountId(accountId),
+      apiBase: "",
       apiKey: connectApiKey,
       provider: "cloudflare-ai-gateway",
       transportKind:
         connectTransportKindForRequest ?? defaultConnectTransportKind("cloudflare-ai-gateway"),
+      credentialKind: "apiKey",
       cloudflareAccountId: accountId,
       cloudflareGatewayId: gatewayId,
-      ...(contextLength !== undefined ? { contextLength } : {}),
-    });
-    onOpenChange(false);
-  };
-
-  const saveVertexExpressSingle = async () => {
-    if (provider !== "google-vertex-ai" || vertexConnectMode !== "express") {
-      return;
-    }
-    const name = connectName.trim();
-    if (!name) {
-      throw new Error(t("settings.modelNameRequired"));
-    }
-    if (!connectApiKey.trim()) {
-      throw new Error(t("settings.apiKeyRequired"));
-    }
-    const contextLengthRaw = connectContextLength.trim();
-    let contextLength: number | undefined;
-    if (contextLengthRaw) {
-      const parsed = parseModelContextLength(Number(contextLengthRaw));
-      if (parsed === undefined) {
-        throw new Error(t("settings.contextLengthInvalid"));
-      }
-      contextLength = parsed;
-    }
-    await onAddModel({
-      groupId: defaultPresetProviderGroupId("google-vertex-ai"),
-      name,
-      apiBase: "",
-      apiKey: connectApiKey,
-      provider: "google-vertex-ai",
-      transportKind: "openai-compatible",
       ...(contextLength !== undefined ? { contextLength } : {}),
     });
     onOpenChange(false);
@@ -565,29 +527,14 @@ export function ProviderConnectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" showCloseButton>
         <DialogHeader>
-          <DialogTitle>
-            {provider === "custom" ? t("settings.customConnection") : selectedProviderLabel}
-          </DialogTitle>
-          <DialogDescription>
-            {provider === "custom"
-              ? t("settings.customConnectionDescription")
-              : provider === "volcengine"
-                ? t("settings.volcengineConnectionDescription")
-                : provider === "byteplus"
-                  ? t("settings.byteplusConnectionDescription")
-                  : provider === "siliconflow"
-                    ? t("settings.siliconflowConnectionDescription")
-                    : provider === "moonshot-ai"
-                      ? t("settings.moonshotConnectionDescription")
-                      : provider === "minimax"
-                        ? t("settings.minimaxConnectionDescription")
-                        : provider === "alibaba"
-                          ? t("settings.alibabaConnectionDescription")
-                          : providerShowsConnectTransportPicker(provider)
-                            ? t("settings.providerConnectionDescription")
-                            : t("settings.providerSimpleDescription")}
-          </DialogDescription>
+          <DialogTitle>{connectionTitle}</DialogTitle>
         </DialogHeader>
+
+        {reconnect ? (
+          <p className="rounded-md border border-border/40 bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            {t("settings.providerReconnectHint")}
+          </p>
+        ) : null}
 
         <div className="grid gap-3 py-1">
           {provider === "alibaba" ? (
@@ -680,7 +627,7 @@ export function ProviderConnectDialog({
               </div>
             </div>
           ) : null}
-          {providerSupportsSiteSelection(provider) && !connectAlibabaIsTokenPlan ? (
+          {connectSiteOptions.length > 0 && !connectAlibabaIsTokenPlan ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-provider-site">{t("settings.site")}</Label>
               <div className={DESKTOP_FORM_INPUT_SHELL}>
@@ -692,9 +639,11 @@ export function ProviderConnectDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {listProviderConnectSiteOptions(provider).map((option) => (
+                    {connectSiteOptions.map((option) => (
                       <SelectItem key={option.id} value={option.id}>
-                        {t(option.labelKey, { defaultValue: option.fallbackLabel })}
+                        {t(`${providerLabelKey(provider)}Site.${option.id}`, {
+                          defaultValue: option.label,
+                        })}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -780,7 +729,7 @@ export function ProviderConnectDialog({
                       DESKTOP_EDITOR_TAB_CLASS,
                       customConnectMode === value
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={busy || previewBusy}
                     onClick={() => setCustomConnectMode(value)}
@@ -841,7 +790,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" ? (
+          {connectCredentialKind === "bedrock" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-aws-region">{t("settings.bedrockRegion")}</Label>
               <DesktopFormInput
@@ -853,7 +802,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" ? (
+          {connectCredentialKind === "bedrock" ? (
             <div className="grid gap-2">
               <Label>{t("settings.bedrockAuthMode")}</Label>
               <div
@@ -871,7 +820,7 @@ export function ProviderConnectDialog({
                       DESKTOP_EDITOR_TAB_CLASS,
                       bedrockConnectMode === value
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={busy || previewBusy}
                     onClick={() => setBedrockConnectMode(value)}
@@ -884,7 +833,7 @@ export function ProviderConnectDialog({
               </div>
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-bedrock-model-name">{t("settings.modelName")}</Label>
               <DesktopFormInput
@@ -896,7 +845,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-context-length-bedrock">{t("settings.contextLength")}</Label>
               <DesktopFormInput
@@ -1012,11 +961,11 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {(provider !== "amazon-bedrock" || bedrockConnectMode === "bearer") &&
-          provider !== "google-vertex-ai" ? (
+          {connectCredentialKind === "apiKey" ||
+          (connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer") ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-api-key">
-                {provider === "amazon-bedrock"
+                {connectCredentialKind === "bedrock"
                   ? t("settings.bedrockApiKeyLabel")
                   : provider === "cloudflare-ai-gateway"
                     ? t("settings.cloudflareAiGatewayApiToken")
@@ -1034,14 +983,14 @@ export function ProviderConnectDialog({
                 }
                 autoComplete="off"
               />
-              {provider === "amazon-bedrock" ? (
+              {connectCredentialKind === "bedrock" ? (
                 <p className="text-xs leading-5 text-muted-foreground">
                   {t("settings.bedrockBearerHint")}
                 </p>
               ) : null}
             </div>
           ) : null}
-          {provider === "amazon-bedrock" && bedrockConnectMode === "iam" ? (
+          {connectCredentialKind === "bedrock" && bedrockConnectMode === "iam" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-access-key-id">{t("settings.bedrockAccessKeyId")}</Label>
@@ -1071,7 +1020,7 @@ export function ProviderConnectDialog({
               </p>
             </>
           ) : null}
-          {provider === "google-vertex-ai" ? (
+          {connectCredentialKind === "vertex" ? (
             <div className="grid gap-2">
               <Label>{t("settings.vertexAuthMode")}</Label>
               <div
@@ -1089,7 +1038,7 @@ export function ProviderConnectDialog({
                       DESKTOP_EDITOR_TAB_CLASS,
                       vertexConnectMode === value
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-sidebar-foreground",
+                        : "text-muted-foreground hover:text-chrome-emphasis",
                     )}
                     disabled={busy || previewBusy}
                     onClick={() => setVertexConnectMode(value)}
@@ -1104,7 +1053,7 @@ export function ProviderConnectDialog({
               </div>
             </div>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "express" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
             <div className="grid gap-2">
               <Label htmlFor="connect-vertex-api-key">API Key</Label>
               <DesktopFormInput
@@ -1117,7 +1066,7 @@ export function ProviderConnectDialog({
               />
             </div>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode !== "express" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode !== "express" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-vertex-project">{t("settings.vertexProject")}</Label>
@@ -1141,37 +1090,37 @@ export function ProviderConnectDialog({
               </div>
             </>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "adc" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode === "adc" ? (
             <p className="text-xs leading-5 text-muted-foreground">{t("settings.vertexAdcHint")}</p>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "express" ? (
-            <>
-              <div className="grid gap-2">
-                <Label htmlFor="connect-vertex-model-name">{t("settings.modelName")}</Label>
-                <DesktopFormInput
-                  id="connect-vertex-model-name"
-                  value={connectName}
-                  onChange={(e) => setConnectName(e.target.value)}
-                  placeholder={t("settings.vertexModelNamePlaceholder")}
-                  autoComplete="off"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="connect-context-length-vertex">{t("settings.contextLength")}</Label>
-                <DesktopFormInput
-                  id="connect-context-length-vertex"
-                  type="number"
-                  min={1}
-                  step={1}
-                  value={connectContextLength}
-                  onChange={(e) => setConnectContextLength(e.target.value)}
-                  placeholder={t("settings.optional")}
-                  autoComplete="off"
-                />
-              </div>
-            </>
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="connect-vertex-model-name">{t("settings.modelName")}</Label>
+              <DesktopFormInput
+                id="connect-vertex-model-name"
+                value={connectName}
+                onChange={(e) => setConnectName(e.target.value)}
+                placeholder={t("settings.vertexModelNamePlaceholder")}
+                autoComplete="off"
+              />
+            </div>
           ) : null}
-          {provider === "google-vertex-ai" && vertexConnectMode === "service-account" ? (
+          {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
+            <div className="grid gap-2">
+              <Label htmlFor="connect-context-length-vertex">{t("settings.contextLength")}</Label>
+              <DesktopFormInput
+                id="connect-context-length-vertex"
+                type="number"
+                min={1}
+                step={1}
+                value={connectContextLength}
+                onChange={(e) => setConnectContextLength(e.target.value)}
+                placeholder={t("settings.optional")}
+                autoComplete="off"
+              />
+            </div>
+          ) : null}
+          {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
             <>
               <div className="grid gap-2">
                 <Label htmlFor="connect-vertex-client-email">
@@ -1228,8 +1177,8 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addThisModel")}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "custom" && customConnectMode === "bulk" ? (
@@ -1248,14 +1197,12 @@ export function ProviderConnectDialog({
                 }}
               >
                 {busy || previewBusy ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-4" />
-                )}
-                {t("settings.addProvider")}
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
-            {provider === "amazon-bedrock" && bedrockConnectMode === "bearer" ? (
+            {connectCredentialKind === "bedrock" && bedrockConnectMode === "bearer" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1276,11 +1223,11 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addThisModel")}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
-            {provider === "amazon-bedrock" && bedrockConnectMode === "iam" ? (
+            {connectCredentialKind === "bedrock" && bedrockConnectMode === "iam" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1297,11 +1244,66 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addProvider")}
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
-            {provider === "google-vertex-ai" && vertexConnectMode === "express" ? (
+            {connectCredentialKind === "vertex" && vertexConnectMode === "adc" ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  busy ||
+                  previewBusy ||
+                  !connectVertexProject.trim() ||
+                  !connectVertexLocation.trim()
+                }
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await syncCatalogFromUpstream(false);
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.connectProvider")}
+              </Button>
+            ) : null}
+            {connectCredentialKind === "vertex" && vertexConnectMode === "service-account" ? (
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  busy ||
+                  previewBusy ||
+                  !connectVertexProject.trim() ||
+                  !connectVertexLocation.trim() ||
+                  !hasVertexCatalogCredentials
+                }
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await syncCatalogFromUpstream(false);
+                    } catch {
+                      /* runtimeError */
+                    }
+                  })();
+                }}
+              >
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.connectProvider")}
+              </Button>
+            ) : null}
+            {connectCredentialKind === "vertex" && vertexConnectMode === "express" ? (
               <Button
                 type="button"
                 size="sm"
@@ -1316,33 +1318,8 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addThisModel")}
-              </Button>
-            ) : null}
-            {provider === "google-vertex-ai" && vertexConnectMode !== "express" ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={
-                  busy ||
-                  previewBusy ||
-                  !connectVertexProject.trim() ||
-                  !connectVertexLocation.trim() ||
-                  (vertexConnectMode === "service-account" && !hasVertexCatalogCredentials)
-                }
-                onClick={() => {
-                  void (async () => {
-                    try {
-                      await syncCatalogFromUpstream(false);
-                    } catch {
-                      /* runtimeError */
-                    }
-                  })();
-                }}
-              >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addProvider")}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "azure" ? (
@@ -1366,8 +1343,8 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addThisModel")}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider === "cloudflare-ai-gateway" ? (
@@ -1392,14 +1369,13 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addThisModel")}
+                {busy ? <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} /> : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
             {provider !== "custom" &&
-            provider !== "amazon-bedrock" &&
+            connectCredentialKind === "apiKey" &&
             provider !== "azure" &&
-            provider !== "google-vertex-ai" &&
             provider !== "cloudflare-ai-gateway" ? (
               <Button
                 type="button"
@@ -1415,8 +1391,10 @@ export function ProviderConnectDialog({
                   })();
                 }}
               >
-                {busy || previewBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {t("settings.addProvider")}
+                {busy || previewBusy ? (
+                  <LoaderCircle className="size-4 animate-spin" strokeWidth={1.75} />
+                ) : null}
+                {t("settings.connectProvider")}
               </Button>
             ) : null}
           </DialogFooterActions>

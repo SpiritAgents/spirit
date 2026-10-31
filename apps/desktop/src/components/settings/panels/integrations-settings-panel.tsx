@@ -1,6 +1,6 @@
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
 import { useCallback, useEffect, useState } from "react";
 
-import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { GitHubDeviceLoginDialog } from "@/components/github-device-login-dialog";
@@ -55,8 +55,8 @@ export function IntegrationsSettingsPanel({
     showDesktopErrorToast(error ?? "", "github-integration-error");
   }, [isElectronShell, dialogOpen, error]);
 
-  const openExternalUrl = useCallback((url: string) => {
-    void window.spiritDesktop?.openExternalUrl(url);
+  const openBrowserUrl = useCallback((url: string) => {
+    void window.spiritDesktop?.openBrowserUrl(url);
   }, []);
 
   const handleConnectClick = useCallback(() => {
@@ -114,7 +114,7 @@ export function IntegrationsSettingsPanel({
                 aria-busy="true"
                 aria-label={t("settings.integrationsGitHubChecking")}
               >
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
               </Button>
             ) : authStatus.connected ? (
               <Button
@@ -125,7 +125,9 @@ export function IntegrationsSettingsPanel({
                 disabled={loadingAuth}
                 onClick={handleDisconnect}
               >
-                {loadingAuth ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
+                {loadingAuth ? (
+                  <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
+                ) : null}
                 {t("settings.integrationsGitHubDisconnect")}
               </Button>
             ) : (
@@ -150,7 +152,7 @@ export function IntegrationsSettingsPanel({
         challenge={deviceChallenge}
         error={error}
         onCancel={handleDialogCancel}
-        onOpenDevicePage={openExternalUrl}
+        onOpenDevicePage={openBrowserUrl}
       />
     </div>
   );

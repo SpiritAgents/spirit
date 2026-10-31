@@ -1,5 +1,7 @@
 # Contributing to Spirit
 
+[简体中文](docs/CONTRIBUTING_zh-CN.md) · [繁體中文](docs/CONTRIBUTING_zh-TW.md) · [日本語](docs/CONTRIBUTING_ja.md) · [한국어](docs/CONTRIBUTING_ko.md) · [Deutsch](docs/CONTRIBUTING_de.md) · [Français](docs/CONTRIBUTING_fr.md) · [Español](docs/CONTRIBUTING_es.md) · [Português do Brasil](docs/CONTRIBUTING_pt-BR.md) · [Русский](docs/CONTRIBUTING_ru.md)
+
 Thank you for your interest in Spirit! This project is an open-source, tool-using coding agent monorepo — Desktop (Electron), CLI (Rust), a shared daemon (`packages/server`), and the core runtime (`packages/agent-core`). Whether you are fixing docs, squashing bugs, or building new features, we welcome your help. If you are unsure where to start, feel free to open an Issue and say hello.
 
 ## Before you contribute
@@ -44,7 +46,7 @@ Do not duplicate tool definitions or prompts across CLI and Desktop. New tool co
 
 ## Development setup
 
-**Requirements:** Node.js 24+, pnpm 12+ (`corepack enable`), and the Rust toolchain (for CLI).
+**Requirements:** Node.js 26.13.0, pnpm 12.4.2 (install with `npm install --global pnpm@12.4.2`), and the Rust toolchain (for CLI).
 
 ```bash
 pnpm install          # once, at the repo root
@@ -53,6 +55,8 @@ pnpm run dev:site     # Marketing/docs site (Next.js)
 pnpm run dev:cli      # CLI with TUI
 pnpm run build        # production build of TS packages + Desktop + site + CLI
 ```
+
+During `pnpm run dev:desktop`, package source edits need no manual rebuild: renderer-consumed packages are served from their TypeScript sources (HMR), and Electron main-process changes rebuild via watch tasks and restart the app automatically.
 
 | Command                     | Description                              |
 | --------------------------- | ---------------------------------------- |

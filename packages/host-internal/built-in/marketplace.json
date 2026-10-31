@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "name": "built-in",
+  "displayName": "Built-in",
+  "description": "Extensions bundled with the app.",
+  "owner": { "name": "{{product.name}}", "url": "{{product.websiteOrigin}}" },
+  "extensions": []
+}

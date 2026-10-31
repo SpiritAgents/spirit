@@ -44,6 +44,7 @@ export function appendWorkspaceFileIcon(
   const template = doc.createElement("template");
   template.innerHTML = renderToStaticMarkup(
     createElement(Icon, {
+      strokeWidth: 1.75,
       ...(colorMode === "inherit" ? { size: attrs.size } : {}),
       className: className || undefined,
       "aria-hidden": true,

@@ -1,21 +1,18 @@
+import { Ellipsis } from "@spiritagent/icons/ellipsis";
+import { X } from "@spiritagent/icons/x";
+import { Pencil } from "@spiritagent/icons/pencil";
+import { Pin } from "@spiritagent/icons/pin";
+import { PinSlash } from "@spiritagent/icons/pin-slash";
+import { Plus } from "@spiritagent/icons/plus";
+import { SidebarRight } from "@spiritagent/icons/sidebar-right";
+import { SidebarRightCollapsed } from "@spiritagent/icons/sidebar-right-collapsed";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import {
-  MessageCircle,
-  PanelRightClose,
-  PanelRightOpen,
-  Pencil,
-  Plus,
-  MoreHorizontal,
-  SquareSplitHorizontal,
-  SquareSplitVertical,
-  Trash2,
-  X,
-} from "lucide-react";
+import { MessageCircle, SquareSplitHorizontal, SquareSplitVertical, Trash2 } from "lucide-react";
 
 import {
-  NewSessionShortcutKbd,
+  NewChatShortcutKbd,
   WorkspaceToolsShortcutKbd,
 } from "@/components/layout/desktop-shortcut-kbds";
 import { SessionSidebarToggleButton } from "@/components/layout/session-sidebar-toggle-button";
@@ -71,8 +68,8 @@ export function DesktopLayoutChromeBar({
   sessionTooltip,
   subagentPromptText,
   onExitSubagentViewer,
-  onNewSession,
-  newSessionBusy = false,
+  onNewChat,
+  newChatBusy = false,
   onSplit,
   onSideChat,
   onSplitVertical,
@@ -94,6 +91,8 @@ export function DesktopLayoutChromeBar({
   renameSessionDisplayName,
   renameSessionBusy = false,
   onRenameSession,
+  sessionPinned = false,
+  onTogglePinSession,
 }: {
   useTranslucency: boolean;
   showSessionSidebarToggle?: boolean;
@@ -106,8 +105,8 @@ export function DesktopLayoutChromeBar({
   sessionTooltip?: SessionGitTooltipItem | null;
   subagentPromptText?: string | null;
   onExitSubagentViewer?: () => void;
-  onNewSession?: () => void;
-  newSessionBusy?: boolean;
+  onNewChat?: () => void;
+  newChatBusy?: boolean;
   onSplit?: () => void;
   onSideChat?: () => void;
   onSplitVertical?: () => void;
@@ -135,6 +134,8 @@ export function DesktopLayoutChromeBar({
   renameSessionDisplayName?: string | null;
   renameSessionBusy?: boolean;
   onRenameSession?: (path: string, displayName: string) => void | Promise<void>;
+  sessionPinned?: boolean;
+  onTogglePinSession?: (path: string, pinned: boolean) => void | Promise<void>;
 }) {
   const { t } = useTranslation();
   const { open: sessionSidebarOpen } = useSessionSidebarChrome();
@@ -143,7 +144,7 @@ export function DesktopLayoutChromeBar({
     toggle: onToggleWorkspaceTools,
     fullScreen: workspaceToolsFullScreen,
     chromePinned: workspaceToolsChromePinned,
-    registerNewSessionChrome,
+    registerNewChatChrome,
   } = useWorkspaceToolsChrome();
   const darwinElectron = isDarwinElectronShell();
   const darwinFullScreen = useDarwinWindowFullscreen(darwinElectron);
@@ -166,6 +167,7 @@ export function DesktopLayoutChromeBar({
     Boolean(onRenameSession) &&
     Boolean(trimmedRenameSessionPath) &&
     !trimmedSubagentPromptText;
+  const togglePinLabel = sessionPinned ? t("sidebar.unpinSession") : t("sidebar.pinSession");
 
   const handleRenameCancel = useCallback(() => {
     setRenamingTitle(false);
@@ -231,11 +233,11 @@ export function DesktopLayoutChromeBar({
   }, []);
 
   useEffect(() => {
-    if (!onNewSession || !showSessionSidebarToggle) {
+    if (!onNewChat || !showSessionSidebarToggle) {
       return;
     }
-    return registerNewSessionChrome();
-  }, [onNewSession, registerNewSessionChrome, showSessionSidebarToggle]);
+    return registerNewChatChrome();
+  }, [onNewChat, registerNewChatChrome, showSessionSidebarToggle]);
 
   return (
     <div
@@ -301,14 +303,12 @@ export function DesktopLayoutChromeBar({
             aria-hidden
           />
         ) : null}
-        {onNewSession && showSessionSidebarToggle ? (
+        {onNewChat && showSessionSidebarToggle ? (
           // While the tools panel is full screen the outer wrapper fixed-pins the button above the
           // panel (see styles.css). position:fixed takes the inner width slot out of the leading
           // flex, so an in-flow ghost keeps the breadcrumb from snapping into that gap on frame 1.
           <>
-            <div
-              data-workspace-tools-pinned-new-session={workspaceToolsChromePinned ? "" : undefined}
-            >
+            <div data-workspace-tools-pinned-new-chat={workspaceToolsChromePinned ? "" : undefined}>
               <div
                 className={cn(
                   "shrink-0 overflow-hidden",
@@ -326,16 +326,16 @@ export function DesktopLayoutChromeBar({
                       variant="ghost"
                       size="icon"
                       className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
-                      onClick={onNewSession}
-                      disabled={newSessionBusy}
+                      onClick={onNewChat}
+                      disabled={newChatBusy}
                       tabIndex={sessionSidebarOpen ? -1 : undefined}
-                      aria-label={t("sidebar.newSession")}
+                      aria-label={t("sidebar.newChat")}
                     >
-                      <Plus className="size-3.5" aria-hidden />
+                      <Plus className="size-3.5" aria-hidden strokeWidth={1.75} />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center" sideOffset={4}>
-                    {t("sidebar.newSession")} <NewSessionShortcutKbd />
+                    {t("sidebar.newChat")} <NewChatShortcutKbd />
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -398,7 +398,11 @@ export function DesktopLayoutChromeBar({
                   className={DESKTOP_CHROME_TOGGLE_ICON_BTN}
                   aria-label={t("app.conversationPaneMenu")}
                 >
-                  <MoreHorizontal className="size-3.5 text-muted-foreground" aria-hidden />
+                  <Ellipsis
+                    className="size-3.5 text-muted-foreground"
+                    aria-hidden
+                    strokeWidth={1.75}
+                  />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -415,32 +419,31 @@ export function DesktopLayoutChromeBar({
                 <div className="p-1">
                   {showSideChat ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onSideChat?.()}>
-                      <MessageCircle
-                        className="size-3.5 shrink-0 text-muted-foreground"
-                        aria-hidden
-                      />
+                      <MessageCircle className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       <span>{t("app.sideChat")}</span>
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplit?.()}>
                     <SquareSplitHorizontal
-                      className="size-3.5 shrink-0 text-muted-foreground"
+                      className="size-3.5 shrink-0"
                       aria-hidden
+                      strokeWidth={1.75}
                     />
                     <span>{t("app.splitRight")}</span>
                     <DropdownMenuShortcut>{splitRightShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   <DropdownMenuItem className="gap-2" onSelect={() => onSplitVertical?.()}>
                     <SquareSplitVertical
-                      className="size-3.5 shrink-0 text-muted-foreground"
+                      className="size-3.5 shrink-0"
                       aria-hidden
+                      strokeWidth={1.75}
                     />
                     <span>{t("app.splitDown")}</span>
                     <DropdownMenuShortcut>{splitDownShortcutLabel}</DropdownMenuShortcut>
                   </DropdownMenuItem>
                   {showClosePane ? (
                     <DropdownMenuItem className="gap-2" onSelect={() => onClosePane?.()}>
-                      <X className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                      <X className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                       <span>{t("app.closePane")}</span>
                     </DropdownMenuItem>
                   ) : null}
@@ -449,16 +452,35 @@ export function DesktopLayoutChromeBar({
                   <>
                     <DropdownMenuSeparator />
                     <div className="p-1">
+                      {onTogglePinSession ? (
+                        <DropdownMenuItem
+                          className="gap-2"
+                          onSelect={() => {
+                            void onTogglePinSession(trimmedRenameSessionPath, !sessionPinned);
+                          }}
+                        >
+                          {sessionPinned ? (
+                            <PinSlash
+                              className="size-3.5 shrink-0"
+                              aria-hidden
+                              strokeWidth={1.75}
+                            />
+                          ) : (
+                            <Pin className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+                          )}
+                          <span>{togglePinLabel}</span>
+                        </DropdownMenuItem>
+                      ) : null}
                       <DropdownMenuItem
                         className="gap-2"
                         disabled={renameSessionBusy || conversationBusy}
-                        title={conversationBusy ? t("sidebar.cannotRenameBusySession") : undefined}
+                        title={conversationBusy ? t("sidebar.cannotRenameBusyChat") : undefined}
                         onSelect={() => {
                           pendingRenameFocusRef.current = true;
                           handleRenameStart();
                         }}
                       >
-                        <Pencil className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                        <Pencil className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         <span>{t("sidebar.renameSession")}</span>
                       </DropdownMenuItem>
                     </div>
@@ -472,12 +494,12 @@ export function DesktopLayoutChromeBar({
                         variant="destructive"
                         className="gap-2"
                         disabled={deleteSessionBusy || conversationBusy}
-                        title={conversationBusy ? t("sidebar.cannotDeleteBusySession") : undefined}
+                        title={conversationBusy ? t("sidebar.cannotDeleteBusyChat") : undefined}
                         onSelect={() => {
                           setDeleteSessionDialogOpen(true);
                         }}
                       >
-                        <Trash2 className="size-3.5 shrink-0" aria-hidden />
+                        <Trash2 className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                         <span>{t("common.delete")}</span>
                       </DropdownMenuItem>
                     </div>
@@ -500,9 +522,9 @@ export function DesktopLayoutChromeBar({
                   {...(workspaceToolsOpen ? { "aria-controls": "workspace-tools-panel" } : {})}
                 >
                   {workspaceToolsOpen ? (
-                    <PanelRightClose className="size-3.5" aria-hidden />
+                    <SidebarRight className="size-3.5" aria-hidden strokeWidth={1.75} />
                   ) : (
-                    <PanelRightOpen className="size-3.5" aria-hidden />
+                    <SidebarRightCollapsed className="size-3.5" aria-hidden strokeWidth={1.75} />
                   )}
                 </Button>
               </TooltipTrigger>

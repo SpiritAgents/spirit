@@ -2,6 +2,7 @@ import {
   tryExtractPartialJsonStringValue,
   tryExtractPartialPlanName,
 } from "./edit-file-line-delta.js";
+import { applyPatchSnippetPair } from "./apply-patch-snippet.js";
 import { monacoLanguageId } from "./monaco-language.js";
 import type { ToolBlockSnapshot } from "../types.js";
 
@@ -23,6 +24,7 @@ export const FILE_DIFF_TOOL_NAMES = new Set([
   "create_plan",
   "edit_file",
   "delete_file",
+  "apply_patch",
 ]);
 
 /** Consistent with delete-file-line-delta / readWorkspaceTextFile. */
@@ -46,7 +48,7 @@ function fileToolDiffArgumentsJsonForTool(tool: ToolBlockSnapshot): string | und
   return tool.fileToolDiffArgumentsJson ?? tool.streamingArgumentsJson;
 }
 
-/** On upsert during the approval/execution phases, keep the preview streaming arguments or the existing full JSON, so we are not left with only a truncated argsExcerpt. */
+/** On upsert during the approval/execution phases, keep the preview streaming arguments or the existing full JSON, so the diff resolver keeps a raw-request JSON even when the phase block's argsExcerpt is approval-shaped. */
 export function preserveFileToolDiffArguments(
   toolName: string,
   attached: ToolBlockSnapshot,
@@ -198,6 +200,18 @@ function parsePartialRequestRecord(
     return { path };
   }
 
+  if (toolName === "apply_patch") {
+    const type = tryExtractPartialJsonStringValue(argumentsJson, "type");
+    const diff = tryExtractPartialJsonStringValue(argumentsJson, "diff");
+    return {
+      operation: {
+        ...(type ? { type } : {}),
+        path,
+        ...(diff !== undefined ? { diff } : {}),
+      },
+    };
+  }
+
   return undefined;
 }
 
@@ -213,11 +227,66 @@ export function resolvePathFromFileDiffToolSnapshot(
   return extractPathFromRequest(tool.toolName, record);
 }
 
+function resolveApplyPatchFromRecord(
+  tool: ToolBlockSnapshot,
+  record: Record<string, unknown>,
+): FileToolDiffResolveResult {
+  const operation = record.operation;
+  if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+    return undefined;
+  }
+  const {
+    type,
+    path: pathValue,
+    diff,
+  } = operation as {
+    type?: unknown;
+    path?: unknown;
+    diff?: unknown;
+  };
+  if (typeof pathValue !== "string" || !pathValue.trim() || typeof type !== "string") {
+    return undefined;
+  }
+  const relativePath = pathValue.trim();
+  // delete_file carries no diff; the frozen pre-delete baseline is the diff's original side.
+  if (type === "delete_file") {
+    const original = tool.deleteFileBaselineText ?? "";
+    if (textExceedsDiffLimit(original)) {
+      return "too-large";
+    }
+    return {
+      relativePath,
+      languageId: monacoLanguageId(relativePath),
+      original,
+      modified: "",
+    };
+  }
+  const pair = applyPatchSnippetPair({
+    type,
+    diff: typeof diff === "string" ? diff : undefined,
+  });
+  if (!pair) {
+    return undefined;
+  }
+  if (textExceedsDiffLimit(pair.original) || textExceedsDiffLimit(pair.modified)) {
+    return "too-large";
+  }
+  return {
+    relativePath,
+    languageId: monacoLanguageId(relativePath),
+    original: pair.original,
+    modified: pair.modified,
+  };
+}
+
 function resolveFromRecord(
   tool: ToolBlockSnapshot,
   record: Record<string, unknown>,
   options: ResolveFileToolDiffOptions,
 ): FileToolDiffResolveResult {
+  if (tool.toolName === "apply_patch") {
+    return resolveApplyPatchFromRecord(tool, record);
+  }
   const relativePath = extractPathFromRequest(tool.toolName, record);
   if (!relativePath) {
     return undefined;
@@ -291,6 +360,21 @@ export function resolveFileToolDiffSource(
 ): FileToolDiffResolveResult {
   if (!FILE_DIFF_TOOL_NAMES.has(tool.toolName) || !options.open) {
     return undefined;
+  }
+
+  // Post-execution the executor's exact pair wins; the patch-text snippet reconstruction is the
+  // streaming-preview / persisted-history fallback.
+  if (tool.toolName === "apply_patch" && tool.fileChangeDiff) {
+    const diff = tool.fileChangeDiff;
+    if (textExceedsDiffLimit(diff.before) || textExceedsDiffLimit(diff.after)) {
+      return "too-large";
+    }
+    return {
+      relativePath: diff.path,
+      languageId: monacoLanguageId(diff.path),
+      original: diff.before,
+      modified: diff.after,
+    };
   }
 
   const argumentsJson = fileToolDiffArgumentsJsonForTool(tool);

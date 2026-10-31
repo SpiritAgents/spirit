@@ -24,8 +24,8 @@ function openTerminalLink(uri: string): void {
     return;
   }
   const bridge = window.spiritDesktop;
-  if (bridge?.openExternalUrl) {
-    void bridge.openExternalUrl(trimmed);
+  if (bridge?.openBrowserUrl) {
+    void bridge.openBrowserUrl(trimmed);
     return;
   }
   window.open(trimmed, "_blank", "noopener,noreferrer");

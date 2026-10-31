@@ -2,19 +2,24 @@ import {
   USE_SAME_LANGUAGE_AS_USER_MESSAGE_RULE,
   buildSpiritCoreHostPrompt,
   createJsonSchemaTransport,
-  isBedrockTransportConfig,
   type JsonObject,
   type LlmTransportConfig,
 } from "@spiritagent/agent-core";
 
-import { findModelByRef, type ModelRef, type ProviderGroupV2 } from "./config-v2.js";
-import type { SpiritConfigFile, SpiritModelCapability } from "./credentials/types.js";
+import {
+  resolveModelByRef,
+  resolveModelEntry,
+  type ModelRef,
+  type ProviderEntry,
+  type SpiritConfigFile,
+  type SpiritModelCapability,
+} from "./config.js";
 import { loadSpiritConfig } from "./credentials/index.js";
 import { resolveTransportConfig } from "./resolve-transport.js";
 
 export const SESSION_TITLE_MAX_LENGTH = 40;
 export const SESSION_TITLE_FALLBACK_SEED = "New conversation";
-export const LIGHTWEIGHT_CHAT_MODEL_FALLBACK_PATTERNS = ["deepseek-v4-flash"] as const;
+export const SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS = ["deepseek-v4-flash"] as const;
 
 export const SESSION_TITLE_JSON_SCHEMA: JsonObject = {
   type: "object",
@@ -31,7 +36,7 @@ export const SESSION_TITLE_JSON_SCHEMA: JsonObject = {
 
 export type SessionTitleModelConfig = Pick<
   SpiritConfigFile,
-  "activeModel" | "lightweightChatModel" | "providerGroups"
+  "activeModel" | "secondaryLanguageModel" | "providers"
 >;
 
 export function buildSessionTitlePrompt(
@@ -88,32 +93,37 @@ export function deriveSessionTitleFallbackSeed(text: string): string {
   return trimmed.length > 28 ? `${trimmed.slice(0, 28)}…` : trimmed;
 }
 
-export function modelSupportsChat(model: {
+export function modelSupportsLanguageModel(model: {
   capabilities?: readonly SpiritModelCapability[];
 }): boolean {
-  return model.capabilities === undefined || model.capabilities.includes("chat");
+  return model.capabilities === undefined || model.capabilities.includes("languageModel");
 }
 
-export function normalizeLightweightChatModel(
+export function normalizeSecondaryLanguageModel(
   value: ModelRef | undefined,
-  config: Pick<SessionTitleModelConfig, "providerGroups">,
+  config: Pick<SessionTitleModelConfig, "providers">,
 ): ModelRef | undefined {
-  const resolved = findModelByRef(config.providerGroups, value);
-  return resolved && modelSupportsChat(resolved.model) ? value : undefined;
+  const resolved = resolveModelByRef(config.providers, value);
+  return resolved && modelSupportsLanguageModel(resolved.model) ? value : undefined;
 }
 
-export function resolveLightweightChatModelRef(config: SessionTitleModelConfig): ModelRef {
-  const explicit = normalizeLightweightChatModel(config.lightweightChatModel, config);
+export function resolveSecondaryLanguageModelRef(config: SessionTitleModelConfig): ModelRef {
+  const explicit = normalizeSecondaryLanguageModel(config.secondaryLanguageModel, config);
   if (explicit) {
     return explicit;
   }
 
-  for (const pattern of LIGHTWEIGHT_CHAT_MODEL_FALLBACK_PATTERNS) {
+  for (const pattern of SECONDARY_LANGUAGE_MODEL_FALLBACK_PATTERNS) {
     const lowerPattern = pattern.toLowerCase();
-    for (const group of config.providerGroups) {
-      for (const model of group.models) {
-        if (modelSupportsChat(model) && model.name.toLowerCase().includes(lowerPattern)) {
-          return { groupId: group.id, name: model.name };
+    for (const provider of config.providers) {
+      for (const model of provider.models) {
+        const effective = resolveModelEntry(provider, model.name);
+        if (
+          effective &&
+          modelSupportsLanguageModel(effective) &&
+          effective.name.toLowerCase().includes(lowerPattern)
+        ) {
+          return { providerId: provider.id, name: effective.name };
         }
       }
     }
@@ -126,20 +136,20 @@ export function resolveSessionTitleModelRef(
   config: SessionTitleModelConfig,
   options?: { needsImage?: boolean; needsVideo?: boolean },
 ): ModelRef {
-  const lightweight = resolveLightweightChatModelRef(config);
+  const secondary = resolveSecondaryLanguageModelRef(config);
   const needsImage = options?.needsImage === true;
   const needsVideo = options?.needsVideo === true;
   if (!needsImage && !needsVideo) {
-    return lightweight;
+    return secondary;
   }
 
-  if (modelRefSupportsMedia(config.providerGroups, lightweight, needsImage, needsVideo)) {
-    return lightweight;
+  if (modelRefSupportsMedia(config.providers, secondary, needsImage, needsVideo)) {
+    return secondary;
   }
-  if (modelRefSupportsMedia(config.providerGroups, config.activeModel, needsImage, needsVideo)) {
+  if (modelRefSupportsMedia(config.providers, config.activeModel, needsImage, needsVideo)) {
     return config.activeModel;
   }
-  return lightweight;
+  return secondary;
 }
 
 export async function completeSessionTitle(input: {
@@ -148,6 +158,8 @@ export async function completeSessionTitle(input: {
   imagePaths?: readonly string[];
   videoPaths?: readonly string[];
   fallbackSeedTitle: string;
+  /** Config provider id, used as the prompt's provider display label. */
+  providerId?: string;
 }): Promise<{ title: string; modelName: string }> {
   const imagePaths = [...(input.imagePaths ?? [])];
   const videoPaths = [...(input.videoPaths ?? [])];
@@ -160,12 +172,7 @@ export async function completeSessionTitle(input: {
       schemaName: "session_title",
       schema: SESSION_TITLE_JSON_SCHEMA,
       includeToolAgentHostPrompt: false,
-      systemSections: [
-        buildSpiritCoreHostPrompt(
-          input.transportConfig.model,
-          providerIdForTransportConfig(input.transportConfig),
-        ),
-      ],
+      systemSections: [buildSpiritCoreHostPrompt(input.transportConfig.model, input.providerId)],
       ...(imagePaths.length > 0 ? { imagePaths } : {}),
       ...(videoPaths.length > 0 ? { videoPaths } : {}),
     },
@@ -187,7 +194,7 @@ export async function generateSessionTitleForTurn(input: {
 }): Promise<{ title: string; modelName: string }> {
   const config = loadSpiritConfig(input.spiritDataDir);
   if (!config) {
-    throw new Error("Spirit config is not available.");
+    throw new Error(`${product.name} config is not available.`);
   }
 
   const imagePaths = input.imagePaths ?? [];
@@ -208,17 +215,18 @@ export async function generateSessionTitleForTurn(input: {
     imagePaths,
     videoPaths,
     fallbackSeedTitle: input.fallbackSeedTitle,
+    providerId: modelRef.providerId,
   });
 }
 
 function modelRefSupportsMedia(
-  groups: readonly ProviderGroupV2[],
+  providers: readonly ProviderEntry[],
   ref: ModelRef | undefined,
   needsImage: boolean,
   needsVideo: boolean,
 ): boolean {
-  const resolved = findModelByRef(groups, ref);
-  if (!resolved || !modelSupportsChat(resolved.model)) {
+  const resolved = resolveModelByRef(providers, ref);
+  if (!resolved || !modelSupportsLanguageModel(resolved.model)) {
     return false;
   }
   const capabilities = resolved.model.capabilities ?? [];
@@ -230,10 +238,4 @@ function modelRefSupportsMedia(
   }
   return true;
 }
-
-function providerIdForTransportConfig(config: LlmTransportConfig): string | undefined {
-  if (isBedrockTransportConfig(config)) {
-    return "bedrock";
-  }
-  return config.llmVendor;
-}
+import { product } from "@spiritagent/product";

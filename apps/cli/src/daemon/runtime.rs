@@ -22,7 +22,7 @@ use crate::{
         CliMarketplaceSource, WorkspaceCapabilityTrustDecision, WorkspaceCapabilityTrustPrompter,
         WorkspaceCapabilityTrustRequest,
     },
-    host_runtime::RuntimeEvent,
+    host_runtime::{RuntimeEvent, approval_prompt_text},
     logging,
     model_registry::AppConfig,
     plan::{self, PlanMetadata, bootstrap_plan_metadata},
@@ -40,7 +40,7 @@ use crate::{
     view::{ChatMessage, PendingAssistantAux, PendingSubagentApprovalView},
 };
 
-use super::client::DaemonClient;
+use super::client::{DaemonClient, validate_product_build};
 use super::resolve::{ensure_daemon, is_loopback_host};
 
 /// Buffer window for draining daemon notifications without blocking.
@@ -130,16 +130,8 @@ impl DaemonRuntime {
             ));
         }
 
-        client.call(
-            "server.initialize",
-            json!({
-                "clientKind": "cli",
-                "clientId": format!("cli-{}", std::process::id()),
-                "workspaceRoot": workspace_root.to_string_lossy(),
-            }),
-        )?;
-
         let health = client.call("server.health", json!({}))?;
+        validate_product_build(&health).inspect_err(|_| client.close())?;
         let health_instance_id = health
             .get("instanceId")
             .and_then(Value::as_str)
@@ -151,6 +143,15 @@ impl DaemonRuntime {
                 health_instance_id
             ));
         }
+
+        client.call(
+            "server.initialize",
+            json!({
+                "clientKind": "cli",
+                "clientId": format!("cli-{}", std::process::id()),
+                "workspaceRoot": workspace_root.to_string_lossy(),
+            }),
+        )?;
 
         Ok(Self {
             client,
@@ -683,7 +684,6 @@ impl DaemonRuntime {
         TransportHost {
             workspace_root: &self.workspace_root,
             secret_store: self.secret_store.as_ref(),
-            stored_config: &self.config,
         }
     }
 
@@ -711,6 +711,9 @@ impl DaemonRuntime {
             self.handle_daemon_error(err);
         }
         if let Err(err) = self.apply_attribution_to_daemon() {
+            self.handle_daemon_error(err);
+        }
+        if let Err(err) = self.apply_web_tool_exposure_to_daemon() {
             self.handle_daemon_error(err);
         }
         if !transport_changed {
@@ -754,6 +757,22 @@ impl DaemonRuntime {
                     "commitEnabled": commit_attribution,
                     "prEnabled": pr_attribution,
                 },
+            })),
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn apply_web_tool_exposure_to_daemon(&mut self) -> Result<()> {
+        if self.daemon_failed {
+            return Err(anyhow!("daemon is already in a failed state."));
+        }
+        let (web_search_enabled, web_fetch_enabled) =
+            crate::model_registry::resolve_cli_web_tool_exposure(&self.config);
+        self.call_daemon(
+            "session.setWebToolExposure",
+            Some(json!({
+                "webSearchEnabled": web_search_enabled,
+                "webFetchEnabled": web_fetch_enabled,
             })),
         )?;
         Ok(())
@@ -1807,6 +1826,7 @@ impl DaemonRuntime {
     pub fn pending_subagent_approval(&self) -> Option<PendingSubagentApprovalView> {
         let approval = self.sync.current_pending_approval.as_ref()?;
         let session_id = approval.subagent_session_id.clone()?;
+        let (_, prompt) = approval_prompt_text(&approval.prompt, &approval.tool_name);
         Some(PendingSubagentApprovalView {
             session_id,
             session_title: approval
@@ -1814,7 +1834,7 @@ impl DaemonRuntime {
                 .clone()
                 .unwrap_or_else(|| "SubAgent".to_string()),
             tool_name: approval.tool_name.clone(),
-            prompt: approval.prompt.clone(),
+            prompt,
         })
     }
 

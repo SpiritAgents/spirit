@@ -1,6 +1,7 @@
+import { ChevronDown } from "@spiritagent/icons/chevron-down";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, GitBranch } from "lucide-react";
+import { GitBranch } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -109,11 +110,19 @@ export function BranchSelectMenu({
                 "text-muted-foreground",
               )}
             >
-              <GitBranch className="size-3.5 shrink-0 text-muted-foreground/80" aria-hidden />
+              <GitBranch
+                className="size-3.5 shrink-0 text-muted-foreground/80"
+                aria-hidden
+                strokeWidth={1.75}
+              />
               <span ref={labelRef} className="min-w-0 flex-1 truncate">
                 {label}
               </span>
-              <ChevronDown className="size-3 shrink-0 text-muted-foreground/80" aria-hidden />
+              <ChevronDown
+                className="size-3 shrink-0 text-muted-foreground/80"
+                aria-hidden
+                strokeWidth={1.75}
+              />
             </button>
           </DropdownMenuTrigger>
         </TooltipTrigger>

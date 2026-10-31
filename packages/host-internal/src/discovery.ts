@@ -1,6 +1,11 @@
 import { existsSync } from "node:fs";
 
-import { normalizeAgentMode, type AgentMode } from "@spiritagent/agent-core";
+import {
+  buildStartImplementingPrompt,
+  normalizeAgentMode,
+  type AgentMode,
+} from "@spiritagent/agent-core";
+import { product } from "@spiritagent/product";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -191,7 +196,7 @@ export async function discoverRuleEntries(
           paths.workspaceSpiritRuleFile,
           "workspace",
           "workspaceSpirit",
-          "Workspace Spirit rules",
+          `Workspace ${product.name} Rules`,
           WORKSPACE_SPIRIT_RULE_FILE_NAME.replace(/\\/gu, "/"),
         ),
         buildRuleSource(
@@ -369,11 +374,7 @@ export function buildStartImplementingUserTurn(
   _context: InstructionDiscoveryContext,
   activePlanPath?: string,
 ): string {
-  const trimmed = activePlanPath?.trim();
-  if (!trimmed) {
-    return "The user has approved the plan and asked to start implementing. No usable implementation plan path is recorded for this session; create one with create_plan before implementing.";
-  }
-  return `The user has approved the plan and asked to start implementing. Before implementing, read the Spirit-managed plan file ${trimmed} and follow its execution plan for coding and verification. If the file does not exist, cannot be read, or clearly does not match the current request, say so explicitly and ask the user to regenerate or confirm the plan; do not assume its contents.`;
+  return buildStartImplementingPrompt(activePlanPath);
 }
 
 async function buildRuleSource(

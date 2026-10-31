@@ -26,7 +26,7 @@ test("Moonshot official provider fetch sends kimi-k3 reasoning_effort without th
         apiKey: "test-key",
         model: "kimi-k3",
         baseUrl: "https://api.moonshot.cn/v1",
-        llmVendor: "moonshot-ai",
+        sdk: "@ai-sdk/moonshotai",
         reasoningEffort: "max",
         workspaceRoot: process.cwd(),
       },
@@ -65,7 +65,7 @@ test("Moonshot official provider fetch sends native video_url and reasoning_effo
         apiKey: "test-key",
         model: "kimi-k2.5",
         baseUrl: "https://api.moonshot.cn/v1",
-        llmVendor: "moonshot-ai",
+        sdk: "@ai-sdk/moonshotai",
         reasoningEffort: "low",
         workspaceRoot: process.cwd(),
         modelCapabilities: { videoInput: true },
@@ -103,7 +103,7 @@ test("Moonshot official provider fetch sends native video_url and reasoning_effo
   }
 });
 
-test("Moonshot transport uses official provider trace kind and base URL", async () => {
+test("Moonshot transport uses the declared sdk adapter and its base URL", async () => {
   let capturedUrl = "";
   setLlmFetchTransportOverrideForTests(async (input) => {
     capturedUrl =
@@ -124,7 +124,7 @@ test("Moonshot transport uses official provider trace kind and base URL", async 
         apiKey: "test-key",
         model: "kimi-k2.5",
         baseUrl: "https://api.moonshot.cn/v1",
-        llmVendor: "moonshot-ai",
+        sdk: "@ai-sdk/moonshotai",
         workspaceRoot: process.cwd(),
       },
       { messages: [{ role: "user", content: "hi" }], steps: 0 },
@@ -136,14 +136,14 @@ test("Moonshot transport uses official provider trace kind and base URL", async 
     const trace = result.kind === "success" ? result.result.requestTrace[0] : undefined;
     assert.equal(
       trace && typeof trace === "object" && !Array.isArray(trace) ? trace.kind : undefined,
-      "moonshot_sdk_chat_completions",
+      "openai_sdk_chat_completions",
     );
   } finally {
     setLlmFetchTransportOverrideForTests(undefined);
   }
 });
 
-test("Moonshot code-completion profile sends thinking.type disabled without reasoning_effort", async () => {
+test("Moonshot code-completion profile merges the declared thinking off patch without reasoning_effort", async () => {
   let capturedBody: Record<string, unknown> | undefined;
   setLlmFetchTransportOverrideForTests(async (_input, init) => {
     capturedBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
@@ -171,8 +171,13 @@ test("Moonshot code-completion profile sends thinking.type disabled without reas
       apiKey: "test-key",
       model: "kimi-k2.5",
       baseUrl: "https://api.moonshot.cn/v1",
-      llmVendor: "moonshot-ai",
+      sdk: "@ai-sdk/moonshotai",
       reasoningEffort: "high",
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
       workspaceRoot: process.cwd(),
     }) as import("./openai-compat.js").OpenAiTransportConfig;
 

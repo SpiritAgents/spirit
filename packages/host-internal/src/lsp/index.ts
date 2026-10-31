@@ -1,5 +1,3 @@
-export * from "./install-command.js";
-export * from "./install.js";
 export * from "./config.js";
 export * from "./connection.js";
 export * from "./document-store.js";

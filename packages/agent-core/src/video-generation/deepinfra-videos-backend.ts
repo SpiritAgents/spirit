@@ -24,16 +24,14 @@ interface DeepInfraVideoStatusResponse {
   }>;
 }
 
-const DEFAULT_DEEPINFRA_VIDEO_API_BASE = "https://api.deepinfra.com/v1";
-
 /**
- * DeepInfra video generation lives at the site root `/v1/videos` (not under the OpenAI-compatible root `/v1/openai`).
- * Connection configs store …/v1/openai, so the trailing /openai must be stripped; unlike Together's v1→v2 rewrite, that logic is not reused.
+ * The deepinfra-videos shape lives at the site root `/v1/videos` (not under the OpenAI-compatible
+ * root `/v1/openai`). Connection configs store …/v1/openai, so the trailing /openai is stripped.
  */
 export function resolveDeepInfraVideoApiBase(baseUrl: string | undefined): string {
   const trimmed = baseUrl?.trim().replace(/\/+$/, "");
   if (!trimmed) {
-    return DEFAULT_DEEPINFRA_VIDEO_API_BASE;
+    throw new Error("The deepinfra-videos API shape requires a baseUrl.");
   }
   return trimmed.endsWith("/openai") ? trimmed.slice(0, -"/openai".length) : trimmed;
 }

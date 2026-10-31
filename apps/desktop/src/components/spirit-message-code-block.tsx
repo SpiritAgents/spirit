@@ -65,7 +65,7 @@ export function SpiritMessageCodeBlock({
 
   return (
     <CodeBlockContainer isIncomplete={isIncomplete} language={language}>
-      <ScrollArea scrollbars="horizontal" className="w-full min-w-0">
+      <ScrollArea scrollbars="horizontal" className="w-full">
         {renderHighlightedCodeBody(result)}
       </ScrollArea>
     </CodeBlockContainer>

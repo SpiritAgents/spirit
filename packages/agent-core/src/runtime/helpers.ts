@@ -15,7 +15,7 @@ import {
   type ToolExecutionOutput,
 } from "../ports.js";
 
-import { PENDING_WORKSPACE_FILE_MAX_CHARS } from "./constants.js";
+import { CONTEXT_INJECTION_MAX_BYTES, decodeUtf8, sliceUtf8Head } from "../context-budget.js";
 import { formatUserMessageContentForLlm } from "./user-turn-timestamp.js";
 import type {
   AgentRuntimeOptions,
@@ -388,7 +388,7 @@ export function formatPendingWorkspaceFileContext(file: PendingWorkspaceTextFile
     "[WORKSPACE_FILE]",
     `path: ${file.path}`,
     `attached_at_unix_ms: ${file.attachedAtUnixMs}`,
-    `chars: ${file.totalChars}`,
+    `bytes: ${file.totalBytes}`,
     `truncated: ${file.truncated}`,
     "",
     file.content,
@@ -579,17 +579,15 @@ async function pendingWorkspaceFileFromPath(
     throw new Error(`Referencing binary files is not supported yet: ${referencePath}`);
   }
 
-  const text = bytes.toString("utf8");
-  const chars = Array.from(text);
-  const truncated = chars.length > PENDING_WORKSPACE_FILE_MAX_CHARS;
+  const truncated = bytes.length > CONTEXT_INJECTION_MAX_BYTES;
   const content = truncated
-    ? `${chars.slice(0, PENDING_WORKSPACE_FILE_MAX_CHARS).join("")}\n\n...<file content truncated>`
-    : text;
+    ? `${decodeUtf8(sliceUtf8Head(bytes, CONTEXT_INJECTION_MAX_BYTES))}\n\n...<file content truncated>`
+    : bytes.toString("utf8");
 
   return {
     kind: "text",
     path: relativeTarget.replace(/\\/gu, "/"),
-    totalChars: chars.length,
+    totalBytes: bytes.length,
     truncated,
     attachedAtUnixMs: Date.now(),
     content,

@@ -1,3 +1,8 @@
+import { Compose } from "@spiritagent/icons/compose";
+import { Gear } from "@spiritagent/icons/gear";
+import { LoaderCircle } from "@spiritagent/icons/loader-circle";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
+import { X } from "@spiritagent/icons/x";
 import {
   memo,
   useCallback,
@@ -15,19 +20,15 @@ import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 import {
   Bot,
   ArrowLeft,
-  ChevronRight,
   FolderClosed,
   FolderOpen,
   Layers,
-  LoaderCircle,
   MoonStar,
   Package,
   Palette,
   Plug,
-  Settings,
   SlidersHorizontal,
   Sparkles,
-  SquarePen,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -70,7 +71,7 @@ import i18n from "@/lib/desktop-preview-i18n";
 import type { SessionListItem } from "@/types/spirit-desktop";
 
 /** Platform shortcut hint, computed at module load (the platform never changes at runtime). */
-const newSessionShortcutLabel = shortcutLabel("N");
+const newChatShortcutLabel = shortcutLabel("N");
 
 function samePath(a: string, b: string): boolean {
   return a.replace(/\\/g, "/").toLowerCase() === b.replace(/\\/g, "/").toLowerCase();
@@ -86,7 +87,7 @@ type SessionSidebarProps = {
   sessions: SessionListItem[];
   activeFilePath: string | null;
   onSelectSession: (path: string) => void;
-  onNewSession: () => void;
+  onNewChat: () => void;
   onOpenMarketplace?: () => void;
   onOpenAutomations?: () => void;
   onOpenSettings: () => void;
@@ -103,12 +104,12 @@ type SessionSidebarProps = {
   onExtensionSettingsChange?: (extensionId: string) => void;
   /** Windows Mica: the sidebar needs translucency + blur so content behind the window does not bleed through and smear */
   translucency?: boolean;
-  newSessionBusy?: boolean;
+  newChatBusy?: boolean;
   sessionNavigationBusy?: boolean;
   deleteSessionBusy?: boolean;
   onDeleteSession?: (path: string) => void | Promise<void>;
-  deleteWorkspaceBusy?: boolean;
-  onDeleteWorkspace?: (workspacePath: string) => void | Promise<void>;
+  removeWorkspaceBusy?: boolean;
+  onRemoveWorkspace?: (workspacePath: string) => void | Promise<void>;
   disabled?: boolean;
   /** Blue dot shown when a background session has finished and the user has not opened it yet. */
   unseenCompletedSessionPaths?: ReadonlySet<string>;
@@ -247,7 +248,7 @@ type WorkspaceSessionGroupCollapsibleProps = {
 };
 
 const sidebarSectionHeaderTriggerClass =
-  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/40";
+  "group flex w-full min-w-0 items-center overflow-hidden px-2.5 pb-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none focus-visible:ring-2 focus-visible:ring-ring/40";
 
 const sidebarSectionChevronClass =
   "hidden size-3 shrink-0 text-muted-foreground/55 transition-transform duration-150 group-hover:inline-flex group-focus-visible:inline-flex";
@@ -289,6 +290,7 @@ function SidebarSectionCollapsible({
           <ChevronRight
             className={cn(sidebarSectionChevronClass, expanded && "rotate-90")}
             aria-hidden
+            strokeWidth={1.75}
           />
         </span>
       </AnimatedCollapseTrigger>
@@ -318,7 +320,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
           "group flex h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2.5 text-left text-sm",
           "outline-none",
           sidebarInteractionMotionClass,
-          "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+          "focus-visible:ring-2 focus-visible:ring-ring/40",
           sidebarItemDefaultTextClass,
           sessionRowHoverClass(translucency),
         )}
@@ -326,9 +328,9 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
         data-workspace-path={group.rootPath ?? group.id}
       >
         {expanded ? (
-          <FolderOpen className="size-3.5 shrink-0" aria-hidden />
+          <FolderOpen className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
         ) : (
-          <FolderClosed className="size-3.5 shrink-0" aria-hidden />
+          <FolderClosed className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
         )}
         <span className="flex min-w-0 flex-1 items-center overflow-hidden">
           <span className="inline-flex min-w-0 max-w-full items-center gap-1">
@@ -340,6 +342,7 @@ const WorkspaceSessionGroupCollapsible = memo(function WorkspaceSessionGroupColl
                 expanded && "rotate-90",
               )}
               aria-hidden
+              strokeWidth={1.75}
             />
           </span>
         </span>
@@ -389,11 +392,15 @@ function SessionListLoadMore({
       type="button"
       disabled={disabled}
       onClick={onLoadMore}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       className={cn(
-        "w-full py-1 text-left text-[0.65rem] text-sidebar-item-foreground outline-none",
+        "w-full py-1 text-left text-[0.65rem] text-chrome-secondary-label outline-none",
         nested ? "pr-2.5 pl-8" : "px-2.5",
-        "rounded-md hover:text-sidebar-foreground/75 focus-visible:text-sidebar-foreground/75",
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+        "rounded-md hover:text-chrome-emphasis/75 focus-visible:text-chrome-emphasis/75",
+        "focus-visible:ring-2 focus-visible:ring-ring/40",
         disabled && "pointer-events-none opacity-50",
       )}
     >
@@ -456,7 +463,7 @@ const SessionListRow = memo(function SessionListRow({
       className={cn(
         "group flex w-full min-w-0 items-center overflow-hidden rounded-md text-left text-sm outline-none",
         sidebarInteractionMotionClass,
-        "focus-visible:ring-2 focus-visible:ring-sidebar-ring/40",
+        "focus-visible:ring-2 focus-visible:ring-ring/40",
         nested
           ? "py-2 pr-2.5 pl-2.5 gap-2"
           : hasIndicator
@@ -544,7 +551,7 @@ function SessionListNav({
             }
           }}
         >
-          <Trash2 aria-hidden />
+          <Trash2 aria-hidden strokeWidth={1.75} />
           {t("sidebar.deleteSession")}
         </ContextMenuItem>
       </ContextMenuContent>
@@ -553,39 +560,39 @@ function SessionListNav({
 }
 
 type WorkspaceListNavProps = {
-  canDeleteWorkspace: boolean;
+  canRemoveWorkspace: boolean;
   canDeleteSession: boolean;
   contextMenuWorkspaceGroup: SessionWorkspaceGroup | null;
   contextMenuWorkspaceGroupRef: RefObject<SessionWorkspaceGroup | null>;
   contextMenuSession: SessionListItem | null;
   contextMenuSessionRef: RefObject<SessionListItem | null>;
-  deleteWorkspaceBusy?: boolean;
+  removeWorkspaceBusy?: boolean;
   deleteSessionBusy?: boolean;
   onContextMenuCapture(event: MouseEvent<HTMLElement>): void;
   onContextMenuOpenChange(open: boolean): void;
-  onRequestDeleteWorkspace(group: SessionWorkspaceGroup): void;
+  onRequestRemoveWorkspace(group: SessionWorkspaceGroup): void;
   onRequestDeleteSession(session: SessionListItem): void;
   children: ReactNode;
 };
 
 function WorkspaceListNav({
-  canDeleteWorkspace,
+  canRemoveWorkspace,
   canDeleteSession,
   contextMenuWorkspaceGroup,
   contextMenuWorkspaceGroupRef,
   contextMenuSession,
   contextMenuSessionRef,
-  deleteWorkspaceBusy,
+  removeWorkspaceBusy,
   deleteSessionBusy,
   onContextMenuCapture,
   onContextMenuOpenChange,
-  onRequestDeleteWorkspace,
+  onRequestRemoveWorkspace,
   onRequestDeleteSession,
   children,
 }: WorkspaceListNavProps) {
   const { t } = useTranslation();
 
-  const canShowMenu = canDeleteWorkspace || canDeleteSession;
+  const canShowMenu = canRemoveWorkspace || canDeleteSession;
 
   const inner = (
     <div className="min-w-0" onContextMenuCapture={canShowMenu ? onContextMenuCapture : undefined}>
@@ -609,19 +616,19 @@ function WorkspaceListNav({
       <ContextMenuContent
         aria-label={isWorkspaceTarget ? t("sidebar.workspaceActions") : t("sidebar.sessionActions")}
       >
-        {isWorkspaceTarget && canDeleteWorkspace ? (
+        {isWorkspaceTarget && canRemoveWorkspace ? (
           <ContextMenuItem
             variant="destructive"
-            disabled={deleteWorkspaceBusy}
+            disabled={removeWorkspaceBusy}
             onSelect={() => {
               const group = contextMenuWorkspaceGroupRef.current ?? contextMenuWorkspaceGroup;
               if (group) {
-                onRequestDeleteWorkspace(group);
+                onRequestRemoveWorkspace(group);
               }
             }}
           >
-            <Trash2 aria-hidden />
-            {t("sidebar.deleteWorkspace")}
+            <X aria-hidden strokeWidth={1.75} />
+            {t("common.remove")}
           </ContextMenuItem>
         ) : null}
         {!isWorkspaceTarget && canDeleteSession ? (
@@ -636,7 +643,7 @@ function WorkspaceListNav({
               }
             }}
           >
-            <Trash2 aria-hidden />
+            <Trash2 aria-hidden strokeWidth={1.75} />
             {t("sidebar.deleteSession")}
           </ContextMenuItem>
         ) : null}
@@ -648,23 +655,23 @@ function WorkspaceListNav({
 const sidebarInteractionMotionClass = "!transition-[opacity,transform,box-shadow] duration-150";
 
 /** Default text/icon color for sidebar interactive items; hover and selected states return to sidebar-foreground */
-const sidebarItemDefaultTextClass = "text-sidebar-action-foreground";
+const sidebarItemDefaultTextClass = "text-chrome-label";
 
-const sidebarItemActiveTextClass = "!text-sidebar-foreground";
+const sidebarItemActiveTextClass = "!text-chrome-emphasis";
 
 const sidebarMenuHoverClass = cn(
   "hover:!bg-accent focus-visible:!bg-accent",
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 const sidebarSessionListHoverClass = sidebarMenuHoverClass;
 
-const sidebarSelectedHoverClass = cn("hover:!bg-secondary hover:!text-sidebar-foreground");
+const sidebarSelectedHoverClass = cn("hover:!bg-secondary hover:!text-chrome-emphasis");
 
 /** Translucency transparent shell: selected/hover use a translucent fill so a solid secondary does not block the system material */
 const sidebarTranslucencyMenuHoverClass = cn(
   "hover:!bg-foreground/[0.06] focus-visible:!bg-foreground/[0.06] dark:hover:!bg-white/[0.06]",
-  "hover:!text-sidebar-foreground focus-visible:!text-sidebar-foreground",
+  "hover:!text-chrome-emphasis focus-visible:!text-chrome-emphasis",
 );
 
 const SIDEBAR_SCROLL_EDGE_THRESHOLD_PX = 1;
@@ -683,15 +690,15 @@ function readSidebarScrollEdgeFades(viewport: HTMLElement): SidebarScrollEdgeFad
 }
 
 const SIDEBAR_SCROLL_MASK =
-  "linear-gradient(to bottom, rgb(0 0 0 / var(--sidebar-mask-top-alpha)) 0, black 2rem, black calc(100% - 2rem), rgb(0 0 0 / var(--sidebar-mask-bottom-alpha)) 100%)";
+  "linear-gradient(to bottom, rgb(0 0 0 / var(--chrome-mask-top-alpha)) 0, black 2rem, black calc(100% - 2rem), rgb(0 0 0 / var(--chrome-mask-bottom-alpha)) 100%)";
 
 function sidebarScrollAreaMaskStyle(top: boolean, bottom: boolean): React.CSSProperties {
   return {
-    "--sidebar-mask-top-alpha": top ? "0" : "1",
-    "--sidebar-mask-bottom-alpha": bottom ? "0" : "1",
+    "--chrome-mask-top-alpha": top ? "0" : "1",
+    "--chrome-mask-bottom-alpha": bottom ? "0" : "1",
     maskImage: SIDEBAR_SCROLL_MASK,
     WebkitMaskImage: SIDEBAR_SCROLL_MASK,
-    transition: "--sidebar-mask-top-alpha 150ms, --sidebar-mask-bottom-alpha 150ms",
+    transition: "--chrome-mask-top-alpha 150ms, --chrome-mask-bottom-alpha 150ms",
   } as React.CSSProperties;
 }
 
@@ -736,7 +743,7 @@ function SessionSidebarInner({
   sessions,
   activeFilePath,
   onSelectSession,
-  onNewSession,
+  onNewChat,
   onOpenMarketplace,
   onOpenAutomations,
   onOpenSettings,
@@ -749,12 +756,12 @@ function SessionSidebarInner({
   onSettingsTabChange,
   onExtensionSettingsChange: _onExtensionSettingsChange,
   translucency,
-  newSessionBusy = false,
+  newChatBusy = false,
   sessionNavigationBusy = false,
   deleteSessionBusy = false,
   onDeleteSession,
-  deleteWorkspaceBusy = false,
-  onDeleteWorkspace,
+  removeWorkspaceBusy = false,
+  onRemoveWorkspace,
   disabled,
   unseenCompletedSessionPaths,
 }: SessionSidebarProps) {
@@ -809,7 +816,7 @@ function SessionSidebarInner({
   >({});
   const [unboundVisibleCount, setUnboundVisibleCount] = useState(SIDEBAR_SESSION_PAGE_SIZE);
   const [deleteTarget, setDeleteTarget] = useState<SessionListItem | null>(null);
-  const [deleteWorkspaceTarget, setDeleteWorkspaceTarget] = useState<SessionWorkspaceGroup | null>(
+  const [removeWorkspaceTarget, setRemoveWorkspaceTarget] = useState<SessionWorkspaceGroup | null>(
     null,
   );
   const [contextMenuSession, setContextMenuSession] = useState<SessionListItem | null>(null);
@@ -830,7 +837,7 @@ function SessionSidebarInner({
     return map;
   }, [sessions]);
   const canDeleteSession = Boolean(onDeleteSession) && !disabled;
-  const canDeleteWorkspace = Boolean(onDeleteWorkspace) && !disabled;
+  const canRemoveWorkspace = Boolean(onRemoveWorkspace) && !disabled;
 
   const workspaceGroupById = useMemo(() => {
     const map = new Map<string, SessionWorkspaceGroup>();
@@ -881,10 +888,10 @@ function SessionSidebarInner({
     }
   }, []);
 
-  const handleWorkspaceContextMenuDelete = useCallback((group: SessionWorkspaceGroup) => {
+  const handleWorkspaceContextMenuRemove = useCallback((group: SessionWorkspaceGroup) => {
     contextMenuWorkspaceGroupRef.current = null;
     setContextMenuWorkspaceGroup(null);
-    setDeleteWorkspaceTarget(group);
+    setRemoveWorkspaceTarget(group);
   }, []);
 
   const handleSessionContextMenuCapture = useCallback(
@@ -920,7 +927,7 @@ function SessionSidebarInner({
   const isSessionSelected = (sessionPath: string) =>
     !marketplaceActive &&
     !automationsActive &&
-    !newSessionBusy &&
+    !newChatBusy &&
     !sessionNavigationBusy &&
     activeFilePath !== null &&
     samePath(sessionPath, activeFilePath);
@@ -1040,8 +1047,8 @@ function SessionSidebarInner({
   return (
     <aside
       className={cn(
-        "flex h-full w-full min-w-0 flex-col overflow-hidden text-sidebar-item-foreground",
-        translucency ? "bg-transparent" : "bg-sidebar",
+        "flex h-full w-full min-w-0 flex-col overflow-hidden text-chrome-secondary-label",
+        translucency ? "bg-transparent" : "bg-chrome-background",
         className,
       )}
       data-narrow={narrow || undefined}
@@ -1063,7 +1070,7 @@ function SessionSidebarInner({
             )}
             onClick={onBackToSessions}
           >
-            <ArrowLeft className="size-4" aria-hidden />
+            <ArrowLeft className="size-4" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("common.back")}</span>
           </Button>
         </div>
@@ -1082,14 +1089,14 @@ function SessionSidebarInner({
               sidebarItemHoverClass(translucency),
               narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
             )}
-            disabled={disabled || newSessionBusy}
-            onClick={onNewSession}
+            disabled={disabled || newChatBusy}
+            onClick={onNewChat}
           >
-            <SquarePen className="size-3.5" aria-hidden />
-            <span className={cn(narrow && "sr-only")}>{t("sidebar.newSession")}</span>
+            <Compose className="size-3.5" aria-hidden strokeWidth={1.75} />
+            <span className={cn(narrow && "sr-only")}>{t("sidebar.newChat")}</span>
             {!narrow && (
-              <span className="ml-auto text-[0.65rem] text-sidebar-item-foreground" aria-hidden>
-                {newSessionShortcutLabel}
+              <span className="ml-auto text-[0.65rem] text-chrome-secondary-label" aria-hidden>
+                {newChatShortcutLabel}
               </span>
             )}
           </Button>
@@ -1111,7 +1118,7 @@ function SessionSidebarInner({
             disabled={disabled}
             onClick={onOpenMarketplace}
           >
-            <Package className="size-3.5" aria-hidden />
+            <Package className="size-3.5" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("sidebar.extensions")}</span>
           </Button>
           {onOpenAutomations ? (
@@ -1133,7 +1140,7 @@ function SessionSidebarInner({
               disabled={disabled}
               onClick={onOpenAutomations}
             >
-              <Bot className="size-3.5" aria-hidden />
+              <Bot className="size-3.5" aria-hidden strokeWidth={1.75} />
               <span className={cn(narrow && "sr-only")}>{t("sidebar.automations")}</span>
             </Button>
           ) : null}
@@ -1150,7 +1157,7 @@ function SessionSidebarInner({
         aria-hidden={!settingsMode && narrow}
       >
         <ScrollArea
-          className="h-full min-h-0 min-w-0"
+          className="h-full min-h-0"
           type="hover"
           scrollHideDelay={450}
           style={sidebarScrollAreaMaskStyle(scrollEdgeFades.top, scrollEdgeFades.bottom)}
@@ -1185,7 +1192,7 @@ function SessionSidebarInner({
                       narrow ? "size-8 shrink-0" : "h-8 w-full justify-start gap-2",
                     )}
                   >
-                    <Icon className="size-3.5" aria-hidden />
+                    <Icon className="size-3.5" aria-hidden strokeWidth={1.75} />
                     <span className={cn("min-w-0 truncate", narrow && "sr-only")}>{tab.label}</span>
                   </button>
                 );
@@ -1195,24 +1202,24 @@ function SessionSidebarInner({
             <div className="min-w-0 px-1.5 pb-1.5">
               {workspaceGroups.length > 0 ? (
                 <SidebarSectionCollapsible
-                  label={t("sidebar.workspace")}
+                  label={t("sidebar.workspaces")}
                   expanded={workspaceSectionExpanded}
                   disabled={disabled}
                   headerClassName="pt-2"
                   onOpenChange={setWorkspaceSectionExpandedPersisted}
                 >
                   <WorkspaceListNav
-                    canDeleteWorkspace={canDeleteWorkspace}
+                    canRemoveWorkspace={canRemoveWorkspace}
                     canDeleteSession={canDeleteSession}
                     contextMenuWorkspaceGroup={contextMenuWorkspaceGroup}
                     contextMenuWorkspaceGroupRef={contextMenuWorkspaceGroupRef}
                     contextMenuSession={contextMenuSession}
                     contextMenuSessionRef={contextMenuSessionRef}
-                    deleteWorkspaceBusy={deleteWorkspaceBusy}
+                    removeWorkspaceBusy={removeWorkspaceBusy}
                     deleteSessionBusy={deleteSessionBusy}
                     onContextMenuCapture={handleWorkspaceContextMenuCapture}
                     onContextMenuOpenChange={handleWorkspaceContextMenuOpenChange}
-                    onRequestDeleteWorkspace={handleWorkspaceContextMenuDelete}
+                    onRequestRemoveWorkspace={handleWorkspaceContextMenuRemove}
                     onRequestDeleteSession={handleContextMenuDelete}
                   >
                     {workspaceGroups.map((group) => {
@@ -1316,7 +1323,7 @@ function SessionSidebarInner({
             )}
             onClick={onOpenSettings}
           >
-            <Settings className="size-4" aria-hidden />
+            <Gear className="size-4" aria-hidden strokeWidth={1.75} />
             <span className={cn(narrow && "sr-only")}>{t("settings.title")}</span>
           </Button>
         </div>
@@ -1364,7 +1371,7 @@ function SessionSidebarInner({
               }}
             >
               {deleteSessionBusy ? (
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+                <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
               ) : null}
               {t("common.delete")}
             </Button>
@@ -1373,23 +1380,23 @@ function SessionSidebarInner({
       </Dialog>
 
       <Dialog
-        open={deleteWorkspaceTarget !== null}
+        open={removeWorkspaceTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setDeleteWorkspaceTarget(null);
+            setRemoveWorkspaceTarget(null);
           }
         }}
       >
         <DialogContent className="sm:max-w-md" showCloseButton>
           <DialogHeader>
             <DialogTitle>
-              {t("sidebar.deleteWorkspaceConfirmTitle", {
-                name: deleteWorkspaceTarget?.label ?? "",
+              {t("sidebar.removeWorkspaceConfirmTitle", {
+                name: removeWorkspaceTarget?.label ?? "",
               })}
             </DialogTitle>
             <DialogDescription>
-              {t("sidebar.deleteWorkspaceConfirmDescription", {
-                count: deleteWorkspaceTarget?.sessions.length ?? 0,
+              {t("sidebar.removeWorkspaceConfirmDescription", {
+                count: removeWorkspaceTarget?.sessions.length ?? 0,
               })}
             </DialogDescription>
           </DialogHeader>
@@ -1398,8 +1405,8 @@ function SessionSidebarInner({
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setDeleteWorkspaceTarget(null)}
-              disabled={deleteWorkspaceBusy}
+              onClick={() => setRemoveWorkspaceTarget(null)}
+              disabled={removeWorkspaceBusy}
             >
               {t("common.cancel")}
             </Button>
@@ -1407,22 +1414,22 @@ function SessionSidebarInner({
               type="button"
               variant="destructive"
               size="sm"
-              disabled={deleteWorkspaceBusy || !deleteWorkspaceTarget || !onDeleteWorkspace}
+              disabled={removeWorkspaceBusy || !removeWorkspaceTarget || !onRemoveWorkspace}
               onClick={() => {
-                const target = deleteWorkspaceTarget;
-                if (!target || !onDeleteWorkspace) {
+                const target = removeWorkspaceTarget;
+                if (!target || !onRemoveWorkspace) {
                   return;
                 }
                 void (async () => {
-                  await onDeleteWorkspace(target.rootPath ?? target.id);
-                  setDeleteWorkspaceTarget(null);
+                  await onRemoveWorkspace(target.rootPath ?? target.id);
+                  setRemoveWorkspaceTarget(null);
                 })();
               }}
             >
-              {deleteWorkspaceBusy ? (
-                <LoaderCircle className="size-4 animate-spin" aria-hidden />
+              {removeWorkspaceBusy ? (
+                <LoaderCircle className="size-4 animate-spin" aria-hidden strokeWidth={1.75} />
               ) : null}
-              {t("common.delete")}
+              {t("common.remove")}
             </Button>
           </div>
         </DialogContent>

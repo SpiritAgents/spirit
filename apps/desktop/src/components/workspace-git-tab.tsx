@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resizeCursor, useDragResizeCursor } from "@spiritagent/ui/resize-cursor";
 
 import { GitChangesSection } from "@/components/git-changes-section";
 import { GitCommitGraph } from "@/components/git-commit-graph";
@@ -16,6 +17,7 @@ import {
   GIT_CHANGES_HISTORY_SPLIT_SHELL_DIVIDER_ATTR,
   GIT_HISTORY_HEADER_SHELL_DIVIDER_ATTR,
 } from "@/lib/workspace-tools-panel-edge";
+import { DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS } from "@/lib/desktop-chrome";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { cn } from "@/lib/utils";
 import type { GitCommitAttachment } from "@/lib/git-commit-attachment";
@@ -46,7 +48,7 @@ export type WorkspaceGitTabProps = {
     request: ReadGitCommitMessageRequest,
   ) => Promise<import("@/types").GitCommitMessageSnapshot>;
   submitGitChip: (request: SubmitGitChipRequest) => Promise<boolean>;
-  onGitCommitAddToSession?: (attachment: GitCommitAttachment) => void;
+  onGitCommitAddToChat?: (attachment: GitCommitAttachment) => void;
   onOpenChangedFile?: (
     relativePath: string,
     options?: { viewMode?: WorkspaceEditorViewMode },
@@ -62,7 +64,7 @@ export function WorkspaceGitTab({
   readGitHistory,
   readGitCommitMessage,
   submitGitChip,
-  onGitCommitAddToSession,
+  onGitCommitAddToChat,
   onOpenChangedFile,
   className,
 }: WorkspaceGitTabProps) {
@@ -87,6 +89,7 @@ export function WorkspaceGitTab({
   const historyHeaderRef = useRef<HTMLDivElement>(null);
   const latestChangesPaneHeightPxRef = useRef<number | null>(null);
   const [changesPaneHeightPx, setChangesPaneHeightPx] = useState<number | null>(null);
+  const splitDragCursor = useDragResizeCursor();
   latestChangesPaneHeightPxRef.current = changesPaneHeightPx;
   const [isResizingSplit, setIsResizingSplit] = useState(false);
   const splitDragRef = useRef<{ startY: number; startHeight: number } | null>(null);
@@ -138,7 +141,7 @@ export function WorkspaceGitTab({
     changesHistorySplitterRef,
     {
       enabled: true,
-      edge: "top",
+      edge: "bottom",
       dividerAttr: GIT_CHANGES_HISTORY_SPLIT_SHELL_DIVIDER_ATTR,
       watchRefs: [splitContainerRef],
     },
@@ -167,9 +170,17 @@ export function WorkspaceGitTab({
           containerHeight * readGitChangesPaneRatio(containerHeight || undefined),
         );
       splitDragRef.current = { startY: event.clientY, startHeight };
+      splitDragCursor.start(
+        resizeCursor(
+          startHeight,
+          GIT_CHANGES_MIN_PX,
+          containerHeight - GIT_HISTORY_MIN_PX - GIT_HISTORY_HEADER_PX - GIT_SPLITTER_PX,
+          "down",
+        ),
+      );
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [changesPaneHeightPx, clampChangesPaneHeight],
+    [changesPaneHeightPx, clampChangesPaneHeight, splitDragCursor],
   );
 
   const onSplitResizePointerMove = useCallback(
@@ -180,28 +191,38 @@ export function WorkspaceGitTab({
       }
       const delta = event.clientY - drag.startY;
       const next = clampChangesPaneHeight(drag.startHeight + delta);
+      const max =
+        (splitContainerRef.current?.clientHeight ?? 0) -
+        GIT_HISTORY_MIN_PX -
+        GIT_HISTORY_HEADER_PX -
+        GIT_SPLITTER_PX;
+      splitDragCursor.update(resizeCursor(next, GIT_CHANGES_MIN_PX, max, "down"));
       latestChangesPaneHeightPxRef.current = next;
       setChangesPaneHeightPx(next);
     },
-    [clampChangesPaneHeight],
+    [clampChangesPaneHeight, splitDragCursor],
   );
 
-  const endSplitResize = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    setIsResizingSplit(false);
-    if (splitDragRef.current) {
-      const container = splitContainerRef.current;
-      const height = latestChangesPaneHeightPxRef.current;
-      if (container && container.clientHeight > 0 && height !== null) {
-        writeGitChangesPaneRatio(height / container.clientHeight, container.clientHeight);
+  const endSplitResize = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      splitDragCursor.end();
+      setIsResizingSplit(false);
+      if (splitDragRef.current) {
+        const container = splitContainerRef.current;
+        const height = latestChangesPaneHeightPxRef.current;
+        if (container && container.clientHeight > 0 && height !== null) {
+          writeGitChangesPaneRatio(height / container.clientHeight, container.clientHeight);
+        }
       }
-    }
-    splitDragRef.current = null;
-    try {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    } catch {
-      // already released
-    }
-  }, []);
+      splitDragRef.current = null;
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // already released
+      }
+    },
+    [splitDragCursor],
+  );
 
   const needsPush = gitSnapshot?.needsPush === true;
   const hasChanges = gitSnapshot?.hasChanges === true;
@@ -329,9 +350,9 @@ export function WorkspaceGitTab({
     [flashMergeButtonSucceeded, submitGitChip],
   );
 
-  const handleAddCommitToSession = useCallback(
+  const handleAddCommitToChat = useCallback(
     (commit: GitCommitRecord) => {
-      if (!onGitCommitAddToSession || loadingCommitMessage) {
+      if (!onGitCommitAddToChat || loadingCommitMessage) {
         return;
       }
       setCommitMessageError("");
@@ -349,7 +370,7 @@ export function WorkspaceGitTab({
             authoredAt: snapshot.authoredAt || commit.authoredAt,
             fullMessage: snapshot.fullMessage,
           };
-          onGitCommitAddToSession(attachment);
+          onGitCommitAddToChat(attachment);
         })
         .catch((error: unknown) => {
           setCommitMessageError(describeError(error));
@@ -358,7 +379,7 @@ export function WorkspaceGitTab({
           setLoadingCommitMessage(false);
         });
     },
-    [loadingCommitMessage, onGitCommitAddToSession, readGitCommitMessage, t],
+    [loadingCommitMessage, onGitCommitAddToChat, readGitCommitMessage, t],
   );
 
   const canMerge =
@@ -399,17 +420,36 @@ export function WorkspaceGitTab({
         aria-orientation="horizontal"
         aria-label={t("workspace.git.resizeChangesHistory")}
         className={cn(
-          "group relative z-10 h-1 shrink-0 cursor-row-resize touch-none select-none",
+          "group relative z-10 h-1 shrink-0 touch-none select-none",
           "before:absolute before:inset-x-0 before:-top-1 before:h-3 before:content-['']",
         )}
+        style={{
+          cursor: resizeCursor(
+            changesPaneHeightPx ?? GIT_CHANGES_MIN_PX,
+            GIT_CHANGES_MIN_PX,
+            (splitContainerRef.current?.clientHeight ?? 0) -
+              GIT_HISTORY_MIN_PX -
+              GIT_HISTORY_HEADER_PX -
+              GIT_SPLITTER_PX,
+            "down",
+          ),
+        }}
         onPointerDown={onSplitResizePointerDown}
         onPointerMove={onSplitResizePointerMove}
         onPointerUp={endSplitResize}
         onPointerCancel={endSplitResize}
       />
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div ref={historyHeaderRef} className="shrink-0 px-2 py-1.5">
-          <h3 className="text-xs font-normal text-foreground">{t("workspace.git.history")}</h3>
+        <div
+          ref={historyHeaderRef}
+          className={cn(
+            "flex shrink-0 items-center px-2 py-1.5",
+            DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS,
+          )}
+        >
+          <h3 className="text-xs font-normal leading-none text-foreground">
+            {t("workspace.git.history")}
+          </h3>
         </div>
         <GitCommitGraph
           className="flex-1"
@@ -418,8 +458,8 @@ export function WorkspaceGitTab({
           loadingMore={loadingMoreHistory}
           hasMore={history?.hasMore === true}
           onLoadMore={loadMoreHistory}
-          onAddCommitToSession={onGitCommitAddToSession ? handleAddCommitToSession : undefined}
-          addCommitToSessionDisabled={loadingCommitMessage}
+          onAddCommitToChat={onGitCommitAddToChat ? handleAddCommitToChat : undefined}
+          addCommitToChatDisabled={loadingCommitMessage}
           error={historyError || commitMessageError || undefined}
         />
       </div>

@@ -1,9 +1,10 @@
 ---
 title: Extensões
-description: Instale extensões de marketplaces, importe um pacote ZIP ou adicione seu próprio marketplace de extensões remoto.
+description: Instale extensões de marketplaces, importe um pacote ZIP ou
+  adicione seu próprio marketplace de extensões remoto.
 ---
 
-Extensões adicionam capacidades ao Spirit — ferramentas, skills, hooks, servidores MCP e contribuições de interface. Elas são distribuídas por marketplaces de extensões:
+Extensões adicionam capacidades ao {{product.name|mdx}} — ferramentas, Skills, Hooks, servidores MCP e contribuições de interface. Elas são distribuídas por marketplaces de extensões:
 
 - **Integrado** — acompanha o aplicativo.
 - **Pessoal** — suas próprias importações: pacotes ZIP que você mesmo adicionou.
@@ -54,7 +55,7 @@ Três formas de localizador:
 | Repositório Git (HTTPS ou SSH) | `spirit extension marketplace add git@github.com:octocat/extensions.git` |
 | URL de índice HTTP             | `spirit extension marketplace add https://example.com`                   |
 
-URLs Git aceitam `--git-ref <tag|branch|commit>` para fixar uma ref; o padrão é o branch padrão do remoto. Uma URL de site simples resolve automaticamente para o seu `/.spirit/marketplace.json`.
+URLs Git aceitam `--git-ref <tag|branch|commit>` para fixar uma ref; o padrão é o branch padrão do remoto. Uma URL de site simples resolve automaticamente para o seu `/{{product.workspaceDataFolderName}}/marketplace.json`.
 
 Gerencie os marketplaces adicionados com `spirit extension marketplace list` e `spirit extension marketplace remove <name>`. No Desktop, clique com o botão direito na aba de um marketplace para ver a ação de remoção.
 

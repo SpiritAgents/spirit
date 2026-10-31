@@ -31,11 +31,11 @@ spirit -p "your prompt here"
 | `SPIRIT_API_KEY`  | API-ключ для этого процесса. Порядок: env → keyring модели → глобальный keyring |
 | `SPIRIT_API_BASE` | Переопределение базового URL API                                                |
 | `SPIRIT_DATA_DIR` | Каталог данных (то же хранилище, что и у Desktop)                               |
-| `SPIRIT_HOME`     | Корень установки **бинарного** файла CLI — не каталог данных                    |
+| `SPIRIT_HOME`     | Каталог бинарных файлов CLI (bin/ и cli/), независимый от настроек общих данных |
 
 ## Общий демон
 
-`spirit` подключается через WebSocket к демону Spirit Server. Сессии, потоковая передача, инструменты и очередь подтверждений находятся там. Bearer-токен — `{spiritDataDir}/server.token` (режим `0600`). По умолчанию демон привязывается к `127.0.0.1` на случайном порту.
+`spirit` подключается через WebSocket к демону {{product.name|mdx}} Server. Сессии, потоковая передача, инструменты и очередь подтверждений находятся там. Bearer-токен — `{spiritDataDir}/server.token` (режим `0600`). По умолчанию демон привязывается к `127.0.0.1` на случайном порту.
 
 `spirit serve` запускает демон в фоновом режиме. Удаленный `0.0.0.0` не является открытым продуктовым путем. См. [Безопасность](./security.mdx).
 
@@ -49,5 +49,6 @@ spirit model list|add|remove|use|current
 spirit config show|set-base|set-image-model|clear-image-model|set-video-model|clear-video-model|key set|remove|status
 spirit mcp …
 spirit hook list|validate
+spirit permission check --shell <command>|--read-file <path>
 spirit extension list|import|remove …
 ```

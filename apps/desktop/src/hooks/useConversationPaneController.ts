@@ -12,9 +12,15 @@ import { useMessageRewind } from "@/hooks/useMessageRewind";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
 import type { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
 import type { useLongConversationListDemo } from "@/hooks/useLongConversationListDemo";
+import type { useApprovalPreviewDemo } from "@/hooks/useApprovalPreviewDemo";
+import type { useToolCardPreviewDemo } from "@/hooks/useToolCardPreviewDemo";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
-import { resolveEffectiveEmptySession } from "@/lib/conversation-surface-stale";
-import { resolvePaneDesktopSnapshot, lookupPaneSessionSlice } from "@/lib/pane-desktop-snapshot";
+import { resolveEffectiveEmptySession } from "@/lib/conversation-empty-session";
+import {
+  resolvePaneContentStatus,
+  type PaneContentStatus,
+} from "@/lib/conversation-navigation-pending";
+import { resolvePaneDesktopSnapshot } from "@/lib/pane-desktop-snapshot";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
 import type { ConversationMessageSnapshot, DesktopSnapshot } from "@/types";
@@ -23,6 +29,8 @@ type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type SubagentViewer = ReturnType<typeof useSubagentViewer>;
 type CompactionDemo = ReturnType<typeof useCompactionUiDemo>;
 type LongConversationListDemo = ReturnType<typeof useLongConversationListDemo>;
+type ApprovalPreviewDemo = ReturnType<typeof useApprovalPreviewDemo>;
+type ToolCardPreviewDemo = ReturnType<typeof useToolCardPreviewDemo>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
 
 export type UseConversationPaneControllerOptions = {
@@ -36,13 +44,11 @@ export type UseConversationPaneControllerOptions = {
   subagentViewer: SubagentViewer;
   compactionDemo: CompactionDemo;
   longConversationListDemo: LongConversationListDemo;
-  hideStaleConversationMessages: boolean;
-  showWorkspaceBindingControls: boolean;
-  sessionNavigationBusy: boolean;
-  newSessionBusy: boolean;
+  approvalPreviewDemo: ApprovalPreviewDemo;
+  toolCardPreviewDemo: ToolCardPreviewDemo;
+  newChatBusy: boolean;
   splitPaneCount: number;
-  layoutNavigationPending: boolean;
-  onNewSession?: () => void;
+  onNewChat?: () => void;
   onBeginSideChat?: () => void;
   workspaceTools: WorkspaceTools;
   onOpenIntegrationsSettings: () => void;
@@ -62,13 +68,11 @@ export function useConversationPaneController({
   subagentViewer,
   compactionDemo,
   longConversationListDemo,
-  hideStaleConversationMessages,
-  showWorkspaceBindingControls: _showWorkspaceBindingControls,
-  sessionNavigationBusy: _sessionNavigationBusy,
-  newSessionBusy,
+  approvalPreviewDemo,
+  toolCardPreviewDemo,
+  newChatBusy,
   splitPaneCount,
-  layoutNavigationPending,
-  onNewSession,
+  onNewChat,
   onBeginSideChat,
   workspaceTools,
   onOpenIntegrationsSettings: _onOpenIntegrationsSettings,
@@ -84,24 +88,19 @@ export function useConversationPaneController({
   const paneSubagentViewActive = isFocused && subagentViewActive;
   const paneCompactionDemoActive = isFocused && compactionDemo.active;
   const paneLongConversationListDemoActive = isFocused && longConversationListDemo.active;
+  const paneApprovalPreviewDemoActive = isFocused && approvalPreviewDemo.active;
+  const paneToolCardPreviewDemoActive = isFocused && toolCardPreviewDemo.active;
 
-  const paneMissingSliceDuringNav = useMemo(() => {
-    if (!layoutNavigationPending || splitPaneCount <= 1) {
-      return false;
-    }
-    const hasPaneSessions = Boolean(
-      baseSnapshot?.paneSessions && Object.keys(baseSnapshot.paneSessions).length > 0,
-    );
-    return hasPaneSessions && !lookupPaneSessionSlice(baseSnapshot, sessionPath);
-  }, [baseSnapshot, layoutNavigationPending, sessionPath, splitPaneCount]);
-
-  const paneHideStaleConversationMessages = useMemo(
-    () => (isFocused ? hideStaleConversationMessages : false) || paneMissingSliceDuringNav,
-    [hideStaleConversationMessages, isFocused, paneMissingSliceDuringNav],
-  );
+  const paneContentStatus: PaneContentStatus = resolvePaneContentStatus({
+    paneSessionPath: sessionPath,
+    snapshot: baseSnapshot,
+  });
+  const paneContentPending = paneContentStatus === "pending-placeholder";
 
   const paneIsEmptySession = useMemo(() => {
-    if (paneMissingSliceDuringNav) {
+    // While the pane's data is still in flight, "empty" is unknown — never show
+    // the empty-session hero as a transitional state.
+    if (paneContentPending) {
       return false;
     }
     return resolveEffectiveEmptySession({
@@ -109,16 +108,20 @@ export function useConversationPaneController({
       subagentViewActive: paneSubagentViewActive,
       compactionDemoActive: paneCompactionDemoActive,
       longConversationListDemoActive: paneLongConversationListDemoActive,
-      newSessionBusy: isFocused && splitPaneCount <= 1 ? newSessionBusy : false,
+      approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
+      toolCardPreviewDemoActive: paneToolCardPreviewDemoActive,
+      newChatBusy: isFocused && splitPaneCount <= 1 ? newChatBusy : false,
     });
   }, [
     isFocused,
-    newSessionBusy,
+    newChatBusy,
+    paneApprovalPreviewDemoActive,
     paneCompactionDemoActive,
+    paneContentPending,
     paneLongConversationListDemoActive,
-    paneMissingSliceDuringNav,
     paneSnapshot?.conversation.messages.length,
     paneSubagentViewActive,
+    paneToolCardPreviewDemoActive,
     splitPaneCount,
   ]);
 
@@ -136,6 +139,14 @@ export function useConversationPaneController({
     longConversationListDemo: {
       ...longConversationListDemo,
       active: paneLongConversationListDemoActive,
+    },
+    approvalPreviewDemo: {
+      ...approvalPreviewDemo,
+      active: paneApprovalPreviewDemoActive,
+    },
+    toolCardPreviewDemo: {
+      ...toolCardPreviewDemo,
+      active: paneToolCardPreviewDemoActive,
     },
     t,
     language,
@@ -175,11 +186,13 @@ export function useConversationPaneController({
     activeSessionReadOnly: conversation.activeSessionReadOnly,
     compactionDemoActive: paneCompactionDemoActive,
     longConversationListDemoActive: paneLongConversationListDemoActive,
+    approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
+    toolCardPreviewDemoActive: paneToolCardPreviewDemoActive,
     subagentViewActive: paneSubagentViewActive,
     pendingApproval: conversation.pendingApproval,
     pendingQuestions: conversation.pendingQuestions,
     conversationInterruptible: conversation.conversationInterruptible,
-    handleNewSession: onNewSession ?? (() => {}),
+    handleNewChat: onNewChat ?? (() => {}),
     setActiveSurface: () => {},
     setLastNonSettingsSurface: () => {},
     paneSessionPath: useIsolatedPane ? sessionPath : undefined,
@@ -311,7 +324,7 @@ export function useConversationPaneController({
     onSubmitComposerMessage: composer.submitComposerMessage,
     onComposerAgentModeChange: composer.handleComposerAgentModeChange,
     composerRichInputRef: composer.composerRichInputRef,
-    onMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
+    onMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
     onComposerKeyDown: composer.handleComposerKeyDown,
     onComposerCursorCodeUnitsChange: composer.setComposerCursorCodeUnits,
     onInsertFileReferenceTrigger: composer.insertFileReferenceTrigger,
@@ -329,21 +342,21 @@ export function useConversationPaneController({
   const composerInsertHandlers = useMemo(
     () => ({
       handleBrowserElementPicked: composer.handleBrowserElementPicked,
-      handlePrDiffAddToSession: composer.handlePrDiffAddToSession,
-      handleGitCommitAddToSession: composer.handleGitCommitAddToSession,
-      handleTerminalAddToSession: composer.handleTerminalAddToSession,
-      handleFileSnippetAddToSession: composer.handleFileSnippetAddToSession,
-      handleWorkspaceFileAddToSession: composer.handleWorkspaceFileAddToSession,
-      handleMessageQuoteAddToSession: composer.handleMessageQuoteAddToSession,
+      handlePrDiffAddToChat: composer.handlePrDiffAddToChat,
+      handleGitCommitAddToChat: composer.handleGitCommitAddToChat,
+      handleTerminalAddToChat: composer.handleTerminalAddToChat,
+      handleFileSnippetAddToChat: composer.handleFileSnippetAddToChat,
+      handleWorkspaceFileAddToChat: composer.handleWorkspaceFileAddToChat,
+      handleMessageQuoteAddToChat: composer.handleMessageQuoteAddToChat,
     }),
     [
       composer.handleBrowserElementPicked,
-      composer.handleFileSnippetAddToSession,
-      composer.handleGitCommitAddToSession,
-      composer.handleMessageQuoteAddToSession,
-      composer.handlePrDiffAddToSession,
-      composer.handleTerminalAddToSession,
-      composer.handleWorkspaceFileAddToSession,
+      composer.handleFileSnippetAddToChat,
+      composer.handleGitCommitAddToChat,
+      composer.handleMessageQuoteAddToChat,
+      composer.handlePrDiffAddToChat,
+      composer.handleTerminalAddToChat,
+      composer.handleWorkspaceFileAddToChat,
     ],
   );
 
@@ -365,7 +378,7 @@ export function useConversationPaneController({
   return {
     paneSnapshot,
     paneIsEmptySession,
-    hideStaleConversationMessages: paneHideStaleConversationMessages,
+    paneContentStatus,
     list,
     composerDock,
     branchCheckout: {
@@ -389,6 +402,11 @@ export function useConversationPaneController({
     subagentViewActive: paneSubagentViewActive,
     compactionDemoActive: paneCompactionDemoActive,
     longConversationListDemoActive: paneLongConversationListDemoActive,
+    approvalPreviewDemoActive: paneApprovalPreviewDemoActive,
+    approvalPreviewDemoApprovals: approvalPreviewDemo.approvals,
+    toolCardPreviewDemoActive: paneToolCardPreviewDemoActive,
+    toolCardPreviewDemoTools: toolCardPreviewDemo.tools,
+    onPaneKeyDown: composer.handlePaneKeyDown,
     composerInsertHandlers,
     composerControls,
   };

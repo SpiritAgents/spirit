@@ -6,26 +6,29 @@ import { createXai } from "@ai-sdk/xai";
 import { createHuggingFace } from "@ai-sdk/huggingface";
 
 import { getLlmFetch } from "../llm-fetch.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
-import { wrapFetchForCloudflareAiGateway } from "../cloudflare-ai-gateway-fetch.js";
-import type { JsonObject } from "../ports.js";
-import { createAlibabaResponsesAwareFetch } from "./alibaba-responses-fetch.js";
+import { createDeclaredWireMergeFetch } from "../llm-declared-wire-fetch.js";
 import {
-  createDeepSeekResponsesAwareFetch,
-  resolveDeepSeekResponsesReasoningEffort,
-} from "./deepseek-responses-fetch.js";
+  mergeServiceTierProviderOptions,
+  resolveServiceTierRequestPlan,
+  type ServiceTierRequestPlan,
+  type ServiceTierRequestSurface,
+} from "../service-tier-request.js";
+import type { JsonObject } from "../ports.js";
+import {
+  EMPTY_RESOLVED_PROVIDER_TOOLS,
+  type ResolvedProviderTools,
+} from "../provider-tools/runtime.js";
+import { createProviderToolsWireFetch } from "../provider-tools/wire-fetch.js";
 import {
   createResponsesStoredStateAwareFetch,
   shouldUseResponsesStoredStateFetch,
 } from "./responses-stored-state-fetch.js";
+import { createDefaultInputItemStatusFetch } from "./responses-input-item-status.js";
 import { createApplyPatchAwareFetch } from "./apply-patch-responses-fetch.js";
-import { createOpenRouterReasoningAwareFetch } from "./openrouter-reasoning-responses-fetch.js";
 import {
   resolveBedrockMantleOpenResponsesApiKey,
   wrapFetchForBedrockMantleIamAuth,
 } from "./bedrock-mantle-auth-fetch.js";
-import { shouldUseAlibabaResponsesBuiltInTools } from "./alibaba-built-in-tools.js";
-import { isCodeCompletionTransportProfile } from "../code-completion/transport-profile.js";
 import {
   buildResponsesAiSdkTools,
   type OpenAiFunctionToolDefinition,
@@ -36,64 +39,37 @@ import {
   shouldUseApplyPatchFunctionTool,
   shouldUseOpenAiSdkApplyPatchTool,
 } from "./apply-patch-eligibility.js";
-import {
-  buildGatewayMinimaxProviderOptions,
-  isGatewayMinimaxModel,
-} from "../openai/gateway-minimax-thinking.js";
-import {
-  buildGatewayAlibabaProviderOptions,
-  isGatewayAlibabaModel,
-} from "../openai/gateway-alibaba-thinking.js";
-import {
-  buildGatewayAnthropicProviderOptions,
-  isGatewayAnthropicClaudeModel,
-} from "../openai/gateway-anthropic-thinking.js";
-import {
-  buildGatewayCodeCompletionProviderOptions,
-  shouldUseGatewayCodeCompletionProviderOptions,
-} from "../openai/gateway-code-completion-thinking.js";
-import {
-  buildGatewayDeepSeekProviderOptions,
-  isGatewayDeepSeekModel,
-} from "../openai/gateway-deepseek-thinking.js";
-import {
-  buildGatewayMoonshotProviderOptions,
-  isGatewayMoonshotModel,
-} from "../openai/moonshot-thinking-switch.js";
-import {
-  buildDirectXiaomiResponsesProviderOptions,
-  buildGatewayXiaomiResponsesProviderOptions,
-  isGatewayXiaomiModel,
-} from "../openai/gateway-xiaomi-thinking.js";
-import {
-  buildGatewayZaiProviderOptions,
-  isGatewayZaiModel,
-} from "../openai/gateway-zai-thinking.js";
-import {
-  buildGatewayXaiProviderOptions,
-  isGatewayXaiModel,
-  resolveXaiProviderReasoningEffort,
-} from "../openai/gateway-xai-reasoning.js";
-import {
-  buildGatewayGoogleProviderOptions,
-  isGatewayGoogleGeminiModel,
-} from "../openai/gateway-google-thinking.js";
-import { isOpenRouterAnthropicClaudeModel } from "../openai/openrouter-anthropic-reasoning.js";
-import { buildGatewayWebSearchTool, shouldUseGatewayWebSearch } from "./gateway-web-search.js";
-import { resolveProviderWebSearchMode } from "./web-search-eligibility.js";
 import { responsesUsesStoredState } from "./responses-incremental-input.js";
+import { createOpenRouterAnthropicReasoningFetch } from "../openrouter-anthropic-reasoning.js";
+import { buildGatewayV3ProviderOptions } from "./gateway-v3-provider-options.js";
 import {
   openResponsesPostUrl,
   openResponsesReasoningEffort,
   openResponsesReasoningMode,
   resolveOpenResponsesLanguageModelId,
   resolveOpenResponsesReasoningSummary,
-  resolveOpenResponsesSdkProvider,
   resolveAzureResourceName,
   type OpenResponsesTransportConfig,
 } from "./responses-compat.js";
 
-const DEFAULT_XAI_BASE_URL = "https://api.x.ai/v1";
+/**
+ * Provider-options namespace of the generic `@ai-sdk/open-responses` adapter; the factory name and
+ * the options key must stay in sync for the adapter to pick the values up.
+ */
+const OPEN_RESPONSES_GENERIC_PROVIDER_NAME = "spirit";
+
+/**
+ * The bundled adapter set for the open-responses transport, keyed by the declared `sdk` npm
+ * package name. Unknown values are a fail-fast config error.
+ */
+export const OPEN_RESPONSES_SDK_ADAPTER_PACKAGES = [
+  "@ai-sdk/openai",
+  "@ai-sdk/xai",
+  "@ai-sdk/azure",
+  "@ai-sdk/gateway",
+  "@ai-sdk/huggingface",
+  "@ai-sdk/open-responses",
+] as const;
 
 /** The local contract smoke maps the …/v1 mock to the Gateway SDK's …/v3/ai. */
 function resolveGatewaySdkBaseUrl(config: OpenResponsesTransportConfig): string | undefined {
@@ -114,109 +90,142 @@ function resolveGatewaySdkBaseUrl(config: OpenResponsesTransportConfig): string 
   }
 }
 
-function responsesFetchForConfig(config: OpenResponsesTransportConfig): typeof fetch {
-  let fetchFn: typeof fetch = getLlmFetch();
-  if (shouldUseAlibabaResponsesBuiltInTools(config)) {
-    fetchFn = createAlibabaResponsesAwareFetch(config, fetchFn);
+/**
+ * Per-request service tier plan for the open-responses transport. The `@ai-sdk/gateway` adapter
+ * speaks the gateway v3 language-model protocol; everything else on this transport is a Responses
+ * surface (official OpenAI SDK or generic Open Responses).
+ */
+function responsesServiceTierSurface(
+  config: OpenResponsesTransportConfig,
+): ServiceTierRequestSurface {
+  return config.sdk === "@ai-sdk/gateway" ? "gateway-v3" : "responses";
+}
+
+function resolveResponsesServiceTierPlan(
+  config: OpenResponsesTransportConfig,
+): ServiceTierRequestPlan {
+  if (config.serviceTier === undefined) {
+    return {};
   }
-  if (config.llmVendor === "deepseek") {
-    fetchFn = createDeepSeekResponsesAwareFetch(config, fetchFn);
-  }
+  return resolveServiceTierRequestPlan({
+    serviceTier: config.serviceTier,
+    ...(config.serviceTiers !== undefined ? { serviceTiers: config.serviceTiers } : {}),
+    ...(config.lastInputTokens !== undefined ? { lastInputTokens: config.lastInputTokens } : {}),
+    surface: responsesServiceTierSurface(config),
+  });
+}
+
+function responsesFetchForConfig(
+  config: OpenResponsesTransportConfig,
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+): typeof fetch {
+  const serviceTierPlan = resolveResponsesServiceTierPlan(config);
+  // Provider tool literals/entry bodies merge first; the declared wire merge (provider-level
+  // headers/body, thinkingSwitch, serviceTier) wraps it so explicit declarations win on conflict.
+  // The `openRouterAnthropicReasoning` patch sits innermost so the unified shape replaces whatever
+  // reasoning/thinking encoding the merges produced for the route.
+  let fetchFn: typeof fetch = createProviderToolsWireFetch(
+    providerTools,
+    createDeclaredWireMergeFetch(
+      config,
+      responsesServiceTierSurface(config),
+      createOpenRouterAnthropicReasoningFetch(
+        config,
+        getLlmFetch({ flexWaiting: serviceTierPlan.flexWaiting }),
+      ),
+    ),
+  );
+  // `options.defaultInputItemStatus`: fills the declared status onto replayed input items that
+  // lack one.
+  fetchFn = createDefaultInputItemStatusFetch(config, fetchFn);
   if (shouldUseResponsesStoredStateFetch(config)) {
     fetchFn = createResponsesStoredStateAwareFetch(config, fetchFn);
   }
-  fetchFn = createOpenRouterReasoningAwareFetch(config, fetchFn);
   if (shouldUseApplyPatchFileTools(config)) {
     fetchFn = createApplyPatchAwareFetch(config, fetchFn);
   }
-  fetchFn = wrapFetchForCloudflareAiGateway(config.cloudflareGatewayId, fetchFn);
   return wrapFetchForBedrockMantleIamAuth(config, fetchFn);
 }
 
-export function createOpenAIResponsesProvider(
+function createOpenAIResponsesProvider(
   config: OpenResponsesTransportConfig,
-): OpenAIProvider | undefined {
-  if (resolveOpenResponsesSdkProvider(config) !== "openai") {
-    return undefined;
-  }
-
+  providerTools: Pick<ResolvedProviderTools, "literalEntries" | "bodyPatches">,
+): OpenAIProvider {
   return createOpenAI({
     apiKey: resolveBedrockMantleOpenResponsesApiKey(config),
     ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
     ...(config.organization ? { organization: config.organization } : {}),
     ...(config.project ? { project: config.project } : {}),
-    fetch: responsesFetchForConfig(config),
+    fetch: responsesFetchForConfig(config, providerTools),
   });
 }
 
-export function createResponsesLanguageModel(config: OpenResponsesTransportConfig): unknown {
+/**
+ * Adapter dispatch on the declared `sdk` package name; absent = the generic
+ * `@ai-sdk/open-responses` adapter. The gateway adapter is always the v3 language-model: declared
+ * provider tools are literal entries it passes through. Unknown packages fail fast.
+ */
+export function createResponsesLanguageModel(
+  config: OpenResponsesTransportConfig,
+  providerTools: Pick<
+    ResolvedProviderTools,
+    "literalEntries" | "bodyPatches"
+  > = EMPTY_RESOLVED_PROVIDER_TOOLS,
+): unknown {
   const languageModelId = resolveOpenResponsesLanguageModelId(config);
 
-  if (config.llmVendor === "hugging-face") {
-    return createHuggingFace({
-      apiKey: config.apiKey,
-      baseURL: config.baseUrl ?? "https://router.huggingface.co/v1",
-      fetch: getLlmFetch(),
-    }).responses(languageModelId);
-  }
-
-  const provider = resolveOpenResponsesSdkProvider(config);
-  if (provider === "openai") {
-    const openai = createOpenAIResponsesProvider(config);
-    if (!openai) {
-      throw new Error("OpenAI Responses provider is not configured.");
+  switch (config.sdk ?? "@ai-sdk/open-responses") {
+    case "@ai-sdk/openai":
+      return createOpenAIResponsesProvider(config, providerTools).responses(languageModelId);
+    case "@ai-sdk/xai":
+      return createXai({
+        apiKey: config.apiKey,
+        ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
+        fetch: responsesFetchForConfig(config, providerTools),
+      }).responses(languageModelId);
+    case "@ai-sdk/azure":
+      return createAzure({
+        apiKey: config.apiKey,
+        resourceName: resolveAzureResourceName(config),
+        fetch: responsesFetchForConfig(config, providerTools),
+      })(languageModelId);
+    case "@ai-sdk/gateway": {
+      const gatewayBaseUrl = resolveGatewaySdkBaseUrl(config);
+      return createGateway({
+        apiKey: config.apiKey,
+        fetch: responsesFetchForConfig(config, providerTools),
+        ...(gatewayBaseUrl !== undefined ? { baseURL: gatewayBaseUrl } : {}),
+      }).languageModel(config.model);
     }
-    return openai.responses(languageModelId);
+    case "@ai-sdk/huggingface":
+      return createHuggingFace({
+        apiKey: config.apiKey,
+        ...(config.baseUrl ? { baseURL: config.baseUrl } : {}),
+        fetch: responsesFetchForConfig(config, providerTools),
+      }).responses(languageModelId);
+    case "@ai-sdk/open-responses":
+      return createOpenResponses({
+        name: OPEN_RESPONSES_GENERIC_PROVIDER_NAME,
+        url: openResponsesPostUrl(config.baseUrl),
+        apiKey: config.apiKey,
+        fetch: responsesFetchForConfig(config, providerTools),
+      })(config.model);
+    default:
+      throw new Error(
+        `Unknown open-responses SDK adapter package ${JSON.stringify(config.sdk)}. Bundled adapters: ${OPEN_RESPONSES_SDK_ADAPTER_PACKAGES.join(", ")}.`,
+      );
   }
-
-  if (provider === "xai") {
-    return createXaiResponsesProvider(config).responses(languageModelId);
-  }
-
-  if (provider === "azure") {
-    return createAzureResponsesProvider(config)(languageModelId);
-  }
-
-  // Gateway Perplexity must use @ai-sdk/gateway v3 language-model; fetch must still go through responsesFetchForConfig to strip apply_patch responses
-  if (shouldUseGatewayWebSearch(config)) {
-    const gatewayBaseUrl = resolveGatewaySdkBaseUrl(config);
-    return createGateway({
-      apiKey: config.apiKey,
-      fetch: responsesFetchForConfig(config),
-      ...(gatewayBaseUrl !== undefined ? { baseURL: gatewayBaseUrl } : {}),
-    }).languageModel(config.model);
-  }
-
-  const openResponses = createOpenResponses({
-    name: config.llmVendor ?? "spirit",
-    url: openResponsesPostUrl(config.baseUrl),
-    apiKey: config.apiKey,
-    fetch: responsesFetchForConfig(config),
-  });
-  return openResponses(config.model);
-}
-
-function createXaiResponsesProvider(config: OpenResponsesTransportConfig) {
-  return createXai({
-    apiKey: config.apiKey,
-    baseURL: config.baseUrl ?? DEFAULT_XAI_BASE_URL,
-    fetch: getLlmFetch(),
-  });
-}
-
-function createAzureResponsesProvider(config: OpenResponsesTransportConfig) {
-  return createAzure({
-    apiKey: config.apiKey,
-    resourceName: resolveAzureResourceName(config),
-    fetch: responsesFetchForConfig(config),
-  });
 }
 
 export function buildResponsesGenerateTools(
   config: OpenResponsesTransportConfig,
   normalizedTools: readonly OpenAiFunctionToolDefinition[],
+  providerTools: Pick<ResolvedProviderTools, "functionTools"> = EMPTY_RESOLVED_PROVIDER_TOOLS,
 ): Record<string, unknown> {
-  let merged = buildResponsesAiSdkTools([...normalizedTools]) as Record<string, unknown>;
+  let merged = buildResponsesAiSdkTools([
+    ...normalizedTools,
+    ...providerTools.functionTools,
+  ]) as Record<string, unknown>;
   if (shouldUseApplyPatchFunctionTool(config)) {
     merged = {
       ...merged,
@@ -226,38 +235,10 @@ export function buildResponsesGenerateTools(
     };
   }
 
-  const webSearchMode = resolveProviderWebSearchMode(config);
-  const provider = resolveOpenResponsesSdkProvider(config);
-
-  if (provider === "openai") {
-    const openai = createOpenAIResponsesProvider(config);
-    if (openai) {
-      const sdkTools: Record<string, unknown> = {};
-      if (shouldUseOpenAiSdkApplyPatchTool(config)) {
-        sdkTools.apply_patch = openai.tools.applyPatch({});
-      }
-      if (webSearchMode === "openai-sdk-web-search") {
-        sdkTools.web_search = openai.tools.webSearch({});
-      }
-      if (Object.keys(sdkTools).length > 0) {
-        return { ...merged, ...sdkTools };
-      }
-    }
-  }
-
-  if (provider === "xai" && webSearchMode === "xai-sdk-web-search") {
-    const xai = createXaiResponsesProvider(config);
-    return {
-      ...merged,
-      web_search: xai.tools.webSearch({}),
-    };
-  }
-
-  if (webSearchMode === "gateway-sdk-web-search") {
-    return {
-      ...merged,
-      web_search: buildGatewayWebSearchTool(config),
-    };
+  // The official OpenAI adapter exposes apply_patch as an SDK-native tool.
+  if (shouldUseOpenAiSdkApplyPatchTool(config)) {
+    const openai = createOpenAIResponsesProvider(config, EMPTY_RESOLVED_PROVIDER_TOOLS);
+    return { ...merged, apply_patch: openai.tools.applyPatch({}) };
   }
 
   return merged;
@@ -270,100 +251,21 @@ export function buildResponsesProviderOptions(
   const reasoningEffort = openResponsesReasoningEffort(config);
   const reasoningMode = openResponsesReasoningMode(config);
   const reasoningSummary = resolveOpenResponsesReasoningSummary(config);
+  const sdk = config.sdk ?? "@ai-sdk/open-responses";
 
-  if (shouldUseGatewayWebSearch(config)) {
-    if (shouldUseGatewayCodeCompletionProviderOptions(config)) {
-      return buildGatewayCodeCompletionProviderOptions(config);
-    }
-
-    if (isGatewayAnthropicClaudeModel(config.llmVendor, config.model)) {
-      return buildGatewayAnthropicProviderOptions(config);
-    }
-
-    if (isGatewayGoogleGeminiModel(config.llmVendor, config.model)) {
-      return buildGatewayGoogleProviderOptions(config, reasoningEffort);
-    }
-
-    if (isGatewayDeepSeekModel(config.llmVendor, config.model)) {
-      return buildGatewayDeepSeekProviderOptions(config);
-    }
-
-    if (isGatewayMoonshotModel(config.llmVendor, config.model)) {
-      const moonshotOptions = buildGatewayMoonshotProviderOptions(config);
-      if (Object.keys(moonshotOptions).length > 0) {
-        return moonshotOptions;
-      }
-    }
-
-    if (isGatewayXiaomiModel(config.llmVendor, config.model)) {
-      const xiaomiOptions = buildGatewayXiaomiResponsesProviderOptions(
-        config,
-        reasoningEffort,
-        reasoningSummary,
-      );
-      if (Object.keys(xiaomiOptions).length > 0) {
-        return xiaomiOptions;
-      }
-    }
-
-    if (isGatewayZaiModel(config.llmVendor, config.model)) {
-      const zaiOptions = buildGatewayZaiProviderOptions(config);
-      if (Object.keys(zaiOptions).length > 0) {
-        // Gateway Z.ai does not return a displayable thinking stream upstream under the open-responses transport; see #169.
-        return zaiOptions;
-      }
-    }
-
-    if (isGatewayAlibabaModel(config.llmVendor, config.model)) {
-      const alibabaOptions = buildGatewayAlibabaProviderOptions(config);
-      if (Object.keys(alibabaOptions).length > 0) {
-        return alibabaOptions;
-      }
-    }
-
-    if (isGatewayMinimaxModel(config.llmVendor, config.model)) {
-      const minimaxOptions = buildGatewayMinimaxProviderOptions(config);
-      if (Object.keys(minimaxOptions).length > 0) {
-        // Gateway MiniMax M3 does not return a displayable thinking stream under open-responses; see #170.
-        return minimaxOptions;
-      }
-    }
-
-    if (isGatewayXaiModel(config.llmVendor, config.model)) {
-      const xaiOptions = buildGatewayXaiProviderOptions(
-        config.llmVendor,
-        config.model,
-        openResponsesReasoningEffort(config),
-      );
-      if (Object.keys(xaiOptions).length > 0) {
-        return xaiOptions;
-      }
-    }
-
-    // Gateway v3 language-model forwards providerOptions as-is; OpenAI-routed models must use the openai namespace (see Vercel AI Gateway reasoning docs).
-    const openaiOptions: JsonObject = {
-      ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
-      ...(reasoningSummary !== undefined ? { reasoningSummary } : {}),
-    };
-    const result = Object.keys(openaiOptions).length > 0 ? { openai: openaiOptions } : {};
-    return result;
-  }
-
-  const provider = resolveOpenResponsesSdkProvider(config);
-  if (provider === "xai") {
-    const xaiReasoningEffort = resolveXaiProviderReasoningEffort(reasoningEffort);
-    if (xaiReasoningEffort === undefined) {
+  if (sdk === "@ai-sdk/xai") {
+    if (reasoningEffort === undefined) {
       return {};
     }
 
     return {
       xai: {
-        reasoningEffort: xaiReasoningEffort,
+        reasoningEffort,
       } as JsonObject,
     };
   }
 
-  if (provider === "azure") {
+  if (sdk === "@ai-sdk/azure") {
     const azureOptions: JsonObject = {
       store: config.store ?? true,
       ...(config.truncation === "auto" ? { truncation: "auto" } : { truncation: "disabled" }),
@@ -384,88 +286,76 @@ export function buildResponsesProviderOptions(
     return { azure: azureOptions };
   }
 
-  if (provider !== "openai") {
-    if (isOpenRouterAnthropicClaudeModel(config.llmVendor, config.model)) {
-      return {};
-    }
-
-    if (config.llmVendor === "xiaomi") {
-      const xiaomiOptions = buildDirectXiaomiResponsesProviderOptions(
-        config,
-        reasoningEffort,
-        reasoningSummary,
-      );
-      if (Object.keys(xiaomiOptions).length > 0) {
-        return xiaomiOptions;
-      }
-    }
-
-    if (config.llmVendor === "hugging-face") {
-      const huggingfaceOptions: JsonObject = {};
-      if (reasoningEffort !== undefined) {
-        huggingfaceOptions.reasoningEffort = reasoningEffort;
-      }
-      return Object.keys(huggingfaceOptions).length > 0 ? { huggingface: huggingfaceOptions } : {};
-    }
-
-    if (config.llmVendor === "deepseek") {
-      const effort = resolveDeepSeekResponsesReasoningEffort(config);
-      if (effort === undefined) {
-        return {};
-      }
-      return {
-        deepseek: { reasoningEffort: effort },
-      };
-    }
-
-    const providerOptions: JsonObject = {
-      ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
-      ...(reasoningSummary !== undefined ? { reasoningSummary } : {}),
+  if (sdk === "@ai-sdk/openai") {
+    const openaiOptions: JsonObject = {
+      store: config.store ?? responsesUsesStoredState(config),
+      ...(config.truncation === "auto" ? { truncation: "auto" } : { truncation: "disabled" }),
     };
 
-    if (config.llmVendor === "alibaba") {
-      providerOptions.enable_thinking = !isCodeCompletionTransportProfile(config);
+    if (reasoningEffort !== undefined) {
+      openaiOptions.reasoningEffort = reasoningEffort;
     }
 
-    if (
-      (config.llmVendor === "alibaba" || isArkLlmVendor(config.llmVendor)) &&
-      responsesUsesStoredState(config)
-    ) {
-      providerOptions.store = config.store ?? true;
-      if (previousResponseId) {
-        providerOptions.previousResponseId = previousResponseId;
-      }
+    if (reasoningMode !== undefined) {
+      openaiOptions.reasoningMode = reasoningMode;
     }
 
-    if (Object.keys(providerOptions).length === 0) {
-      return {};
+    if (reasoningSummary !== undefined) {
+      openaiOptions.reasoningSummary = reasoningSummary;
     }
 
-    return {
-      [config.llmVendor ?? "open-responses"]: providerOptions,
-    };
+    if (previousResponseId && responsesUsesStoredState(config)) {
+      openaiOptions.previousResponseId = previousResponseId;
+    }
+
+    return { openai: openaiOptions };
   }
 
-  const openaiOptions: JsonObject = {
-    store: config.store ?? responsesUsesStoredState(config),
-    ...(config.truncation === "auto" ? { truncation: "auto" } : { truncation: "disabled" }),
+  if (sdk === "@ai-sdk/huggingface") {
+    if (reasoningEffort === undefined) {
+      return {};
+    }
+    return { huggingface: { reasoningEffort } as JsonObject };
+  }
+
+  if (sdk === "@ai-sdk/gateway") {
+    return buildGatewayV3ProviderOptions(config);
+  }
+
+  // Generic Open Responses adapter (`@ai-sdk/open-responses`): reasoning/store declarations pass
+  // through verbatim; server-side stored state requires the endpoint's `options.storedState`.
+  const providerOptions: JsonObject = {
+    ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
+    ...(reasoningSummary !== undefined ? { reasoningSummary } : {}),
   };
 
-  if (reasoningEffort !== undefined) {
-    openaiOptions.reasoningEffort = reasoningEffort;
+  if (config.options?.storedState === true) {
+    providerOptions.store = config.store ?? true;
+    if (previousResponseId) {
+      providerOptions.previousResponseId = previousResponseId;
+    }
   }
 
-  if (reasoningMode !== undefined) {
-    openaiOptions.reasoningMode = reasoningMode;
+  if (Object.keys(providerOptions).length === 0) {
+    return {};
   }
 
-  if (reasoningSummary !== undefined) {
-    openaiOptions.reasoningSummary = reasoningSummary;
-  }
+  return {
+    [OPEN_RESPONSES_GENERIC_PROVIDER_NAME]: providerOptions,
+  };
+}
 
-  if (previousResponseId && responsesUsesStoredState(config)) {
-    openaiOptions.previousResponseId = previousResponseId;
-  }
-
-  return { openai: openaiOptions };
+/**
+ * The service tier fragment is merged into the provider options builder result here instead of
+ * editing each adapter branch, so existing reasoning/store/previousResponseId options are never
+ * dropped.
+ */
+export function buildResponsesProviderOptionsWithServiceTier(
+  config: OpenResponsesTransportConfig,
+  previousResponseId?: string,
+): Record<string, JsonObject> {
+  return mergeServiceTierProviderOptions(
+    buildResponsesProviderOptions(config, previousResponseId),
+    resolveResponsesServiceTierPlan(config),
+  );
 }

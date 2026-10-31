@@ -15,7 +15,6 @@ import type {
   DesktopDreamOverviewItem,
   DeleteSkillRequest,
   DesktopMcpServerInspection,
-  DesktopModelProvider,
   DesktopLiveUpdate,
   DesktopSnapshot,
   ImportExtensionRequest,
@@ -41,7 +40,6 @@ import type {
   SubmitGitChipRequest,
   SubmitSkillSlashRequest,
   UpdateConfigRequest,
-  InstallLspProviderRequest,
   WorkspaceExplorerListResult,
   WorkspaceFileReferenceSuggestionsResponse,
   WorkspaceReadTextFileResult,
@@ -75,12 +73,11 @@ declare global {
     forgetWorkspace(request: ForgetWorkspaceRequest): Promise<DesktopSnapshot>;
     commitChanges(request: CommitChangesRequest): Promise<DesktopSnapshot>;
     updateConfig(request: UpdateConfigRequest): Promise<DesktopSnapshot>;
-    installLspProvider(request: InstallLspProviderRequest): Promise<DesktopSnapshot>;
     addModel(request: AddModelRequest): Promise<DesktopSnapshot>;
     addProviderModels(request: AddProviderModelsRequest): Promise<DesktopSnapshot>;
     previewModels(request: PreviewModelsRequest): Promise<PreviewModelsResponse>;
     removeModel(name: string): Promise<DesktopSnapshot>;
-    removeProviderModels(provider: DesktopModelProvider): Promise<DesktopSnapshot>;
+    removeProviderModels(provider: string): Promise<DesktopSnapshot>;
     removeProviderGroup(
       request: import("./types").RemoveProviderGroupRequest,
     ): Promise<DesktopSnapshot>;
@@ -152,6 +149,13 @@ declare global {
     ): Promise<DesktopSnapshot>;
     deleteAutomation(automationId: string): Promise<DesktopSnapshot>;
     setAutomationEnabled(automationId: string, enabled: boolean): Promise<DesktopSnapshot>;
+    listTaskMenuItems(): Promise<import("./types.js").DesktopTaskMenuItem[]>;
+    resolveTaskForRun(key: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    resolveTaskByLabel(label: string): Promise<import("./types.js").DesktopResolveTaskForRunResult>;
+    consumeFolderOpenTaskTriggers(): Promise<string[]>;
+    tasksSubscribe(
+      callback: (items: import("./types.js").DesktopTaskMenuItem[]) => void,
+    ): () => void;
     dreamSubscribe(callback: (update: DesktopLiveUpdate) => void): () => void;
     automationsSubscribe(callback: (snapshot: DesktopSnapshot) => void): () => void;
     sessionListSubscribe(callback: () => void): () => void;
@@ -205,6 +209,7 @@ declare global {
     ): Promise<DesktopSnapshot>;
     deleteSession(path: string): Promise<DesktopSnapshot>;
     renameSession(path: string, displayName: string): Promise<DesktopSnapshot>;
+    setSessionPinned(path: string, pinned: boolean): Promise<DesktopSnapshot>;
     listWorkspaceFileReferenceSuggestions(
       request: QueryWorkspaceFileReferenceSuggestionsRequest,
     ): Promise<WorkspaceFileReferenceSuggestionsResponse>;
@@ -315,6 +320,8 @@ declare global {
     syncLanguage(lang: string): Promise<void>;
     /** macOS: syncs the native traffic-light position after UI scaling so it stays aligned with the toggle button. */
     syncTrafficLightPosition(position: { x: number; y: number }): Promise<void>;
+    /** Applies the UI layout zoom synchronously (webFrame) and persists it for the next launch. */
+    setUiLayoutScale(scale: number): void;
     popupApplicationMenu(
       section: "file" | "edit" | "view" | "window" | "help",
       clientX: number,
@@ -325,12 +332,15 @@ declare global {
       cwd: string;
       cols: number;
       rows: number;
+      file?: string;
+      args?: string[];
+      env?: Record<string, string>;
     }): Promise<{ ok: true; id: string; shellDisplayName: string } | { ok: false; error: string }>;
     ptyWrite(id: string, data: string): void;
     ptyResize(id: string, cols: number, rows: number): void;
     ptyKill(id: string): Promise<void>;
     openSystemTerminal(cwd: string): Promise<void>;
-    openExternalUrl(url: string): Promise<void>;
+    openBrowserUrl(url: string): Promise<void>;
     subscribeBrowserOpenUrl(callback: (url: string) => void): () => void;
     listLocalListeningEndpoints(): Promise<
       Array<{ port: number; address?: string; processName?: string; url?: string; title?: string }>

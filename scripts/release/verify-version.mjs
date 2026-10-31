@@ -69,6 +69,7 @@ const expectedVersion =
       : undefined;
 
 const versions = [
+  ['product', 'packages/product/package.json', await readJsonVersion('packages/product/package.json')],
   ['desktop', 'apps/desktop/package.json', await readJsonVersion('apps/desktop/package.json')],
   ['agent-core', 'packages/agent-core/package.json', await readJsonVersion('packages/agent-core/package.json')],
   ['host-internal', 'packages/host-internal/package.json', await readJsonVersion('packages/host-internal/package.json')],

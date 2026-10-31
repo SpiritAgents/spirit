@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { product } from "@spiritagent/product";
 import "./setup";
 
 import { act, render } from "@testing-library/react";
@@ -22,7 +23,7 @@ test("iframe is sandboxed to scripts only and uses the View default-export srcdo
       requestId: "req-host",
       extensionId: "built-in/demo",
       viewId: "main",
-      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
       title: "Demo View",
     });
   });
@@ -43,7 +44,7 @@ function renderOpenExtensionView(chrome?: "default" | "close-only" | "none") {
       requestId: `req-chrome-${chrome ?? "default"}`,
       extensionId: "built-in/demo",
       viewId: "main",
-      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
       title: "Demo View",
       ...(chrome ? { chrome } : {}),
     });
@@ -118,7 +119,7 @@ test("declared height is an iframe max-height instead of a fixed dialog height",
       requestId: "req-max-height",
       extensionId: "built-in/demo",
       viewId: "main",
-      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
       title: "Demo View",
       height: 360,
     });
@@ -138,7 +139,7 @@ test("size messages from the iframe set the iframe height", async () => {
       requestId: "req-size",
       extensionId: "built-in/demo",
       viewId: "main",
-      viewUrl: "spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main",
+      viewUrl: `${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`,
       title: "Demo View",
     });
   });

@@ -468,7 +468,7 @@ export function ConversationSplitProvider({
         const pendingQuote = pendingPaneMessageQuotesRef.current.get(paneId);
         if (pendingQuote) {
           pendingPaneMessageQuotesRef.current.delete(paneId);
-          handlers.handleMessageQuoteAddToSession(pendingQuote);
+          handlers.handleMessageQuoteAddToChat(pendingQuote);
         }
       } else {
         paneComposerInsertRegistryRef.current.delete(paneId);
@@ -621,10 +621,6 @@ export function ConversationSplitProvider({
 
     const currentPaneCount = current ? countPanes(current) : 0;
 
-    if (decision !== "restore-binding") {
-      runtimeRef.current.releaseSessionNavigationBusy();
-    }
-
     if (decision === "keep-split-in-group") {
       if (current !== next) {
         setLayout(next);
@@ -685,8 +681,6 @@ export function ConversationSplitProvider({
             layoutNavigationLockRef.current = false;
 
             setLayoutNavigationPending(false);
-
-            runtimeRef.current.releaseSessionNavigationBusy();
           }
         }
       })();
@@ -1027,7 +1021,7 @@ export function ConversationSplitProvider({
         ? paneComposerInsertRegistryRef.current.get(candidateId)
         : undefined;
       if (candidateId && candidateId !== paneId && candidateLeaf && candidateHandlers) {
-        candidateHandlers.handleMessageQuoteAddToSession(attachment);
+        candidateHandlers.handleMessageQuoteAddToChat(attachment);
         focusPane(candidateId, candidateLeaf.sessionPath);
         return;
       }

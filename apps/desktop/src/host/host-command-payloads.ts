@@ -22,7 +22,6 @@ import type {
   InstallMarketplaceExtensionRequest,
   RemoveMarketplaceSourceRequest,
   UpdateExtensionRequest,
-  InstallLspProviderRequest,
   PreviewModelsRequest,
   RemoveProviderGroupRequest,
   QueryWorkspaceFileReferenceSuggestionsRequest,
@@ -77,7 +76,6 @@ export type CommandPayloads = {
   forgetWorkspace: { request: ForgetWorkspaceRequest };
   commitChanges: { request: CommitChangesRequest };
   updateConfig: { request: UpdateConfigRequest };
-  installLspProvider: { request: InstallLspProviderRequest };
   setLoopEnabled: { enabled: boolean };
   setApprovalLevel: { approvalLevel: ApprovalLevel };
   setPendingGitBranch: { branch: string };
@@ -150,6 +148,10 @@ export type CommandPayloads = {
   updateAutomation: { automationId: string; patch: DesktopUpdateAutomationRequest };
   deleteAutomation: { automationId: string };
   setAutomationEnabled: { automationId: string; enabled: boolean };
+  listTaskMenuItems: undefined;
+  resolveTaskForRun: { key: string };
+  resolveTaskByLabel: { label: string };
+  consumeFolderOpenTaskTriggers: undefined;
   replyPendingApproval: { request: ReplyPendingApprovalRequest };
   replyPendingQuestions: { request: ReplyPendingQuestionsRequest };
   replyWorkspaceCapabilityTrust: { request: ReplyWorkspaceCapabilityTrustRequest };
@@ -177,6 +179,7 @@ export type CommandPayloads = {
   checkoutPaneGitBranch: { request: CheckoutPaneGitBranchRequest };
   deleteSession: { path: string };
   renameSession: { path: string; displayName: string };
+  setSessionPinned: { path: string; pinned: boolean };
   listWorkspaceFileReferenceSuggestions: { request: QueryWorkspaceFileReferenceSuggestionsRequest };
   requestCodeCompletion: { request: RequestCodeCompletionRequest };
   abortCodeCompletion: undefined;

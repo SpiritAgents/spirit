@@ -1,3 +1,4 @@
+import { product } from "@spiritagent/product";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -20,7 +21,7 @@ import {
 test("srcdoc injects live cssText and the View default-export contract", () => {
   const html = buildExtensionViewSrcdoc({
     cssText: ":root { --foreground: black; } .text-muted-foreground { color: gray; }",
-    chrome: { htmlClassName: "dark", htmlStyle: "font-family: Geist" },
+    chrome: { htmlClassName: "dark", htmlStyle: "font-family: Example Sans" },
     viewUrl: extensionViewFileUrl("built-in/demo", "main"),
     params: { step: 1 },
     requestId: "test-request-id",
@@ -41,18 +42,26 @@ test("srcdoc injects live cssText and the View default-export contract", () => {
 });
 
 test("protocol only serves runtime.js and a declared view identity", () => {
-  assert.deepEqual(parseExtensionUiUrl(new URL("spirit://extension-ui/runtime.js")), {
-    kind: "runtime",
-  });
+  assert.deepEqual(
+    parseExtensionUiUrl(new URL(`${product.urlProtocol}://extension-ui/runtime.js`)),
+    {
+      kind: "runtime",
+    },
+  );
   assert.deepEqual(
     parseExtensionUiUrl(
-      new URL("spirit://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main"),
+      new URL(`${product.urlProtocol}://extension-ui/view?extensionId=built-in%2Fdemo&viewId=main`),
     ),
     { kind: "view", extensionId: "built-in/demo", viewId: "main" },
   );
-  assert.equal(parseExtensionUiUrl(new URL("spirit://extension-ui/chunk.js")).kind, "invalid");
   assert.equal(
-    parseExtensionUiUrl(new URL("spirit://extension-ui/view?extensionId=../x&viewId=main")).kind,
+    parseExtensionUiUrl(new URL(`${product.urlProtocol}://extension-ui/chunk.js`)).kind,
+    "invalid",
+  );
+  assert.equal(
+    parseExtensionUiUrl(
+      new URL(`${product.urlProtocol}://extension-ui/view?extensionId=../x&viewId=main`),
+    ).kind,
     "invalid",
   );
 });

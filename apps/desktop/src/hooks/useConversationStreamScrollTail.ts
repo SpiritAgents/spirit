@@ -14,6 +14,7 @@ import {
   scrollAreaAnimateToLiveBottom,
   scrollAreaToBottom,
   scrollAreaViewport,
+  scrollDistanceFromBottom,
 } from "@/lib/scroll-area-viewport";
 import type { ConversationMessageSnapshot, PendingAssistantAux } from "@/types";
 
@@ -137,7 +138,8 @@ export function useConversationStreamScrollTail({
     // and the scrollTop-decrease version); after wrongly turning off follow, the content RO no longer
     // re-pins, the "jump up after streaming ends".
     // Current rules (release is always anchored to user input):
-    // - wheel up → release;
+    // - wheel up → release, but only when the viewport can actually scroll; a short
+    //   transcript with scrollHeight === clientHeight never leaves the bottom;
     // - pointer down outside the viewport (Radix scrollbar drag) → release;
     // - middle-button down inside the viewport (Windows auto-scroll, subsequent scrolling has no wheel events) → release;
     // - scrollTop decreasing during pointerdown / touchstart inside the viewport (touch drag, text
@@ -155,6 +157,8 @@ export function useConversationStreamScrollTail({
     // ("swiping up a little, then toggling the sidebar jumps to the bottom").
     // Direction is only used to enable, not to disable: the worst misjudgment is missing one enable,
     // which the user's continued downward scroll will fix.
+    // A second restore path lives in the ResizeObserver effect below: layout changes (viewport
+    // resize, content collapse) re-arm stick only when they put the viewport exactly at the bottom.
     const UNSTICK_DRAG_THRESHOLD_PX = 4;
     let pointerHeld = false;
     let touchActive = false;
@@ -164,6 +168,9 @@ export function useConversationStreamScrollTail({
     let touchDragStartY = 0;
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY < 0) {
+        if (viewport.scrollHeight - viewport.clientHeight <= 0) {
+          return;
+        }
         setStickToBottom(false);
       }
     };
@@ -306,15 +313,27 @@ export function useConversationStreamScrollTail({
       return;
     }
 
+    // Re-evaluate the tail state on every layout change instead of waiting for the next user
+    // scroll (viewport resizes fire no scroll events, so without this the button state goes stale):
+    // - sticking → re-pin, so shrinking the window keeps the newest messages in view instead of
+    //   sitting at a stale scrollTop with the tail cut off and no button;
+    // - released → re-arm only when the layout itself put the viewport at the bottom (distance ≤ 1:
+    //   non-scrollable content, or scrollTop clamped by a resize/collapse). User scroll-ups always
+    //   leave a larger distance and re-release on their next wheel tick anyway, so the "swipe up a
+    //   little, then toggle the sidebar jumps to the bottom" race above cannot permanently re-arm.
     const observer = new ResizeObserver(() => {
-      if (!stickToBottomRef.current) {
+      if (stickToBottomRef.current) {
+        scrollToTail();
         return;
       }
-      scrollToTail();
+      if (scrollDistanceFromBottom(viewport) <= 1) {
+        setStickToBottom(true);
+      }
     });
     observer.observe(content);
+    observer.observe(viewport);
     return () => observer.disconnect();
-  }, [enabled, scrollAreaRef, scrollToTail]);
+  }, [enabled, scrollAreaRef, scrollToTail, setStickToBottom]);
 
   return {
     pinScrollToTail: scrollToTail,

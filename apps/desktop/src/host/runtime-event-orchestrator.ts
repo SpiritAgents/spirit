@@ -1,7 +1,5 @@
 import {
   isResponsesBuiltInToolName,
-  parseMoonshotFormulaSpiritUiFromArgumentsJson,
-  parseResponsesBuiltInToolUiFromArgumentsJson,
   previewRequestFromStreamingArguments,
   resolveResponsesBuiltInToolStreamPhaseFromArgumentsJson,
   type JsonObject,
@@ -25,6 +23,7 @@ import {
   serializeFileToolDiffArgumentsJson,
 } from "../lib/file-tool-diff-source.js";
 import i18n from "../lib/i18n-host.js";
+import { buildApprovalPromptView } from "../lib/approval-prompt.js";
 import {
   diagnosticsPathsHeadlineDetail,
   parseDiagnosticsPathsFromRequest,
@@ -35,7 +34,6 @@ import {
   type ContextUsageModelProfile,
   parseModelContextLength,
   resolveModelContextLength,
-  supportsContextUsageProvider,
 } from "../lib/context-usage.js";
 import type {
   ConversationContextUsageSnapshot,
@@ -43,6 +41,10 @@ import type {
   DesktopModelCatalogHint,
   ToolBlockSnapshot,
 } from "../types.js";
+import {
+  parseProviderToolSpiritUiPreview,
+  providerToolInputJsonFromRequest,
+} from "./provider-tool-preview.js";
 import type { DesktopToolRequest } from "./contracts.js";
 import type { DesktopHostRuntime } from "./runtime.js";
 import type { DesktopAssistantMessageStateMachine } from "./assistant-message-state.js";
@@ -59,6 +61,7 @@ import {
   hasActiveSubagentToolInMessages,
   hasInFlightSubagentDelegationInMessages,
   isSubagentStatusSurfaceText,
+  providerToolCallSummaryCopy,
   toolCallSummaryCopyForResponsesBuiltInTool,
   toolCallSummaryForPhase,
   toolCallSummaryForStreamingPreview,
@@ -69,7 +72,6 @@ import {
   messageOrderDebugLevel,
   summarizeMessagesTailForOrderDebug,
   summarizeToolRowsForDebug,
-  stripReasonLineFromShellPrompt,
   toolMessageKey,
 } from "./message-ordering.js";
 
@@ -100,8 +102,12 @@ export interface DesktopRuntimeEventOrchestratorOptions {
   /** delete_file: reads the full file from disk by path before deletion as the baseline */
   deleteFileBaselineForPath?: (inputPath: string) => string | undefined;
   resolveActiveModel?: () => ContextUsageModelProfile | undefined;
+  /** Gates the one-shot catalog re-fetch for unknown context lengths (provider has a catalog descriptor). */
+  supportsCatalogRefresh?: (model: ContextUsageModelProfile) => boolean;
   resolveCatalogHints?: () => DesktopModelCatalogHint[] | undefined;
   setContextUsage?: (usage: ConversationContextUsageSnapshot | undefined) => void;
+  /** Records real input usage for conditional tiers even when the model context length is unknown. */
+  setLastInputTokens?: (inputTokens: number) => void;
   refreshContextUsageCatalog?: (input: {
     usage: { inputTokens: number };
     activeModel: ContextUsageModelProfile;
@@ -381,15 +387,18 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "context-usage-updated") {
+        this.options.setLastInputTokens?.(event.usage.inputTokens);
         const activeModel = this.options.resolveActiveModel?.();
         const contextLength = resolveModelContextLength(
           activeModel,
           this.options.resolveCatalogHints?.(),
         );
+        // A missing context length triggers one catalog re-fetch when the provider entry has a
+        // catalog descriptor; the fetch itself no-ops without resolvable credentials.
         const shouldRefreshCatalog =
           activeModel !== undefined &&
           contextLength === undefined &&
-          supportsContextUsageProvider(activeModel.provider) &&
+          (this.options.supportsCatalogRefresh?.(activeModel) ?? false) &&
           parseModelContextLength(activeModel.contextLength) === undefined;
         if (shouldRefreshCatalog) {
           this.options.refreshContextUsageCatalog?.({
@@ -539,7 +548,7 @@ export class DesktopRuntimeEventOrchestrator {
               phase: "running",
               headline: runningSummary.headline,
               detailLines: [],
-              argsExcerpt: truncateJson(event.request),
+              argsExcerpt: JSON.stringify(event.request, null, 2),
               ...(event.toolName === "todo_write"
                 ? { todoWriteBeforeTodos: [...this.todoWriteBeforeSnapshot(event.toolCallId)] }
                 : {}),
@@ -642,23 +651,21 @@ export class DesktopRuntimeEventOrchestrator {
       // Before the tool preview, materialize the thinking deferred on the body aux into its own row (before-tools), so inserting the tool does not strip it away.
       this.flushDeferredAfterStreamThinking("before-next-tool");
       const isResponsesBuiltIn = isResponsesBuiltInToolName(event.toolName);
-      const formulaUi = isResponsesBuiltIn
-        ? parseMoonshotFormulaSpiritUiFromArgumentsJson(event.argumentsJson)
-        : undefined;
-      const providerUi = isResponsesBuiltIn
-        ? parseResponsesBuiltInToolUiFromArgumentsJson(event.argumentsJson)
-        : undefined;
-      const suppressExpand =
-        formulaUi?.suppressExpand === true || providerUi?.suppressExpand === true;
+      // The `_spiritUi` preview block carries the display contract: a declared entry `label`
+      // marks a provider tool call (rendered MCP-style), `suppressExpand` is the entry's
+      // `ui.expand === false` (ciphertext), and the excerpts feed the input/output detail.
+      const spiritUi = parseProviderToolSpiritUiPreview(event.argumentsJson);
+      const providerToolLabel = spiritUi?.label;
+      const suppressExpand = spiritUi?.suppressExpand === true;
       const previewRequest = previewRequestFromStreamingArguments(
         event.toolName,
         event.argumentsJson,
       );
-      const argsExcerpt = providerUi?.inputExcerpt?.trim()
-        ? providerUi.inputExcerpt
+      const argsExcerpt = spiritUi?.inputExcerpt?.trim()
+        ? spiritUi.inputExcerpt
         : previewRequest !== undefined
-          ? truncateJson(previewRequest)
-          : truncateText(event.argumentsJson, 4_000);
+          ? JSON.stringify(previewRequest, null, 2)
+          : event.argumentsJson;
       const previewSummary = toolCallSummaryForStreamingPreview(
         messages,
         event.toolCallId,
@@ -669,23 +676,23 @@ export class DesktopRuntimeEventOrchestrator {
           streamingArgumentsJson: event.argumentsJson,
         },
       );
-      const responsesBuiltInPhase = isResponsesBuiltIn
-        ? resolveResponsesBuiltInToolStreamPhaseFromArgumentsJson(event.argumentsJson)
-        : undefined;
+      const streamPhase =
+        isResponsesBuiltIn || spiritUi !== undefined
+          ? resolveResponsesBuiltInToolStreamPhaseFromArgumentsJson(event.argumentsJson)
+          : undefined;
       const toolPhase: ToolBlockSnapshot["phase"] =
-        responsesBuiltInPhase === "succeeded"
-          ? "succeeded"
-          : responsesBuiltInPhase === "failed"
-            ? "failed"
-            : "preview";
-      const summaryCopy = isResponsesBuiltIn
-        ? toolCallSummaryCopyForResponsesBuiltInTool(
-            event.toolName,
-            toolPhase,
-            previewSummary,
-            providerUi,
-          )
-        : previewSummary;
+        streamPhase === "succeeded" ? "succeeded" : streamPhase === "failed" ? "failed" : "preview";
+      const summaryCopy =
+        providerToolLabel !== undefined
+          ? providerToolCallSummaryCopy(providerToolLabel, toolPhase)
+          : isResponsesBuiltIn
+            ? toolCallSummaryCopyForResponsesBuiltInTool(
+                event.toolName,
+                toolPhase,
+                previewSummary,
+                spiritUi,
+              )
+            : previewSummary;
       const runningTool: ToolBlockSnapshot = this.attachLineDelta(
         applyToolCallSummaryCopy(
           {
@@ -693,10 +700,11 @@ export class DesktopRuntimeEventOrchestrator {
             toolName: event.toolName,
             phase: toolPhase,
             headline: summaryCopy.headline,
-            detailLines: providerUi?.detailLines ?? [],
+            detailLines: spiritUi?.detailLines ?? [],
             argsExcerpt,
-            ...(providerUi?.outputExcerpt ? { outputExcerpt: providerUi.outputExcerpt } : {}),
+            ...(spiritUi?.outputExcerpt ? { outputExcerpt: spiritUi.outputExcerpt } : {}),
             ...(suppressExpand ? { suppressExpand: true } : {}),
+            ...(providerToolLabel !== undefined ? { providerToolLabel } : {}),
             ...(FILE_DIFF_TOOL_NAMES.has(event.toolName) ||
             event.toolName === "tool_call" ||
             event.toolName === "tool_describe" ||
@@ -866,16 +874,12 @@ export class DesktopRuntimeEventOrchestrator {
             phase: "pending-approval",
             headline: approvalSummary.headline,
             detailLines: [
-              stripReasonLineFromShellPrompt(approval.toolName, approval.prompt),
+              buildApprovalPromptView(approval.prompt, approval.toolName, i18n.t).body,
               ...(approval.autoReviewBlockReason?.trim()
-                ? [
-                    i18n.t("app.autoReviewBlockReason", {
-                      reason: approval.autoReviewBlockReason.trim(),
-                    }),
-                  ]
+                ? [approval.autoReviewBlockReason.trim()]
                 : []),
             ],
-            argsExcerpt: truncateJson(approval.request),
+            argsExcerpt: JSON.stringify(approval.request, null, 2),
             ...(fileToolDiffArgumentsJson ? { fileToolDiffArgumentsJson } : {}),
           },
           approvalSummary,
@@ -898,7 +902,7 @@ export class DesktopRuntimeEventOrchestrator {
         phase: "pending-approval",
         headline: i18n.t("tool.awaitingInfo", { toolName: questions.toolName }),
         detailLines: [questions.questions.title ?? i18n.t("tool.answerFormQuestions")],
-        argsExcerpt: truncateJson(questions.questions),
+        argsExcerpt: JSON.stringify(questions.questions, null, 2),
       };
       this.options.assistantMessages.upsertToolMessage(
         toolMessageKey(questions),
@@ -973,39 +977,56 @@ export class DesktopRuntimeEventOrchestrator {
       const videoPaths = videoPathsFromExecution(execution);
       const todosBeforeWrite =
         execution.toolName === "todo_write" ? this.todoWriteBeforeSnapshot(callId) : undefined;
+      const providerToolLabel = existingSnapshot?.providerToolLabel;
       const executionSummary =
-        execution.toolName === "generate_image"
-          ? {
-              headline: execution.failed
-                ? i18n.t("tool.imageGenFailed")
-                : i18n.t("tool.imageGenComplete"),
-            }
-          : execution.toolName === "generate_video"
+        providerToolLabel !== undefined
+          ? providerToolCallSummaryCopy(
+              providerToolLabel,
+              execution.failed ? "failed" : "succeeded",
+            )
+          : execution.toolName === "generate_image"
             ? {
                 headline: execution.failed
-                  ? i18n.t("tool.videoGenFailed")
-                  : i18n.t("tool.videoGenComplete"),
+                  ? i18n.t("tool.imageGenFailed")
+                  : i18n.t("tool.imageGenComplete"),
               }
-            : toolCallSummaryForPhase(
-                execution.failed ? "failed" : "succeeded",
-                execution.toolName,
-                execution.request,
-                execution.toolName === "todo_write"
-                  ? {
-                      ...this.toolSummaryOptions(),
-                      executionOutput: execution.output,
-                      todosBeforeWrite,
-                    }
-                  : execution.toolName === "read_file"
+            : execution.toolName === "generate_video"
+              ? {
+                  headline: execution.failed
+                    ? i18n.t("tool.videoGenFailed")
+                    : i18n.t("tool.videoGenComplete"),
+                }
+              : toolCallSummaryForPhase(
+                  execution.failed ? "failed" : "succeeded",
+                  execution.toolName,
+                  execution.request,
+                  execution.toolName === "todo_write"
                     ? {
                         ...this.toolSummaryOptions(),
                         executionOutput: execution.output,
+                        todosBeforeWrite,
                       }
-                    : this.toolSummaryOptions(),
-              );
-      const argsExcerpt = existingSnapshot?.argsExcerpt?.trim()
-        ? existingSnapshot.argsExcerpt
-        : truncateJson(execution.request);
+                    : execution.toolName === "read_file"
+                      ? {
+                          ...this.toolSummaryOptions(),
+                          executionOutput: execution.output,
+                        }
+                      : this.toolSummaryOptions(),
+                );
+      // The executed request is the authoritative full-fidelity record: refresh it on completion
+      // (the preview/approval-phase excerpt may be a different shape or stale). Provider tool
+      // cards show the call arguments JSON as the Input (MCP-style); responses built-in tools
+      // keep their curated provider-UI excerpt (e.g. the search query).
+      const providerToolInputJson =
+        providerToolLabel !== undefined
+          ? providerToolInputJsonFromRequest(execution.request)
+          : undefined;
+      const curatedExcerpt =
+        providerToolInputJson ??
+        (isResponsesBuiltInToolName(execution.toolName)
+          ? existingSnapshot?.argsExcerpt?.trim()
+          : undefined);
+      const argsExcerpt = curatedExcerpt || JSON.stringify(execution.request, null, 2);
       const fileToolDiffArgumentsJson = FILE_DIFF_TOOL_NAMES.has(execution.toolName)
         ? serializeFileToolDiffArgumentsJson(execution.request)
         : undefined;
@@ -1018,16 +1039,19 @@ export class DesktopRuntimeEventOrchestrator {
             headline: executionSummary.headline,
             detailLines: [],
             argsExcerpt,
-            outputExcerpt:
-              execution.toolName === "shell"
-                ? execution.output
-                : truncateText(execution.output, 4_000),
+            // Full output for every tool, matching the long-standing shell behavior; display
+            // caps live in the render layer (scroll frames), not in the stored snapshot.
+            outputExcerpt: execution.output,
             ...(existingSnapshot?.suppressExpand ? { suppressExpand: true } : {}),
+            ...(providerToolLabel !== undefined ? { providerToolLabel } : {}),
             ...(fileToolDiffArgumentsJson ? { fileToolDiffArgumentsJson } : {}),
             ...(imagePaths.length > 0 ? { imagePaths } : {}),
             ...(videoPaths.length > 0 ? { videoPaths } : {}),
             ...(execution.hostUi?.lspWriteDiagnostics
               ? { lspWriteDiagnostics: execution.hostUi.lspWriteDiagnostics }
+              : {}),
+            ...(execution.hostUi?.fileChangeDiff
+              ? { fileChangeDiff: execution.hostUi.fileChangeDiff }
               : {}),
             ...(todosBeforeWrite !== undefined
               ? { todoWriteBeforeTodos: [...todosBeforeWrite] }
@@ -1124,7 +1148,7 @@ export class DesktopRuntimeEventOrchestrator {
           phase: "running",
           headline: runningSummary.headline,
           detailLines: [],
-          argsExcerpt: truncateJson(event.request),
+          argsExcerpt: JSON.stringify(event.request, null, 2),
         },
         runningSummary,
       ),
@@ -1227,18 +1251,6 @@ function videoPathsFromExecution(execution: RuntimeToolExecution<DesktopToolRequ
   return (execution.artifacts ?? [])
     .filter((artifact) => artifact.kind === "video" && artifact.path.trim().length > 0)
     .map((artifact) => artifact.path.trim());
-}
-
-function truncateJson(value: unknown): string {
-  return truncateText(JSON.stringify(value, null, 2), 4_000);
-}
-
-function truncateText(value: string, maxChars: number): string {
-  const chars = Array.from(value);
-  if (chars.length <= maxChars) {
-    return value;
-  }
-  return `${chars.slice(0, maxChars).join("")}...<truncated>`;
 }
 
 function diagnosticsCheckingSummary(request: unknown): ToolCallSummaryCopy {

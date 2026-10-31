@@ -54,6 +54,12 @@ export interface SessionBundle {
   pendingUnboundFileChangeIds: string[];
   nextTimelineAssistantSegmentKind: DesktopTimelineSegmentKind;
   deferredRuntimeRefreshWhileBusy: boolean;
+  /**
+   * Set when an inference-preference-only refresh (reasoning/thinking/service tier) was deferred
+   * while the runtime was busy; flushed as a light refresh that still pushes the re-resolved
+   * transport config to the daemon via `session.replaceConfig`.
+   */
+  deferredInferencePreferenceRefreshWhileBusy: boolean;
   deferredRuntimeHostEvents: RuntimeEvent<DesktopToolRequest>[];
   /** Provider builtin preview callIds applied in a prior drain (for deferring terminal previews). */
   responsesBuiltInPreviewSeenCallIds: Set<string>;
@@ -85,7 +91,11 @@ export interface SessionBundle {
   activePlanPath?: string;
   /** Tracks whether the sidebar title is seed-truncated or LLM-generated. */
   sessionTitleSource?: SessionTitleSource;
+  /** Unix ms when the session was pinned; drives sidebar Pinned grouping. Absent when unpinned. */
+  pinnedAtUnixMs?: number;
   contextUsage?: ConversationContextUsageSnapshot;
+  /** Latest real upstream input usage for conditional service tiers; live only, never persisted. */
+  lastInputTokens?: number;
   /** Composer direct image/video generation running in the background; drives snapshot.isBusy together with runtime.isBusy. */
   directMediaTurnInFlight?: boolean;
   /** First Worktree message: gates the LLM turn until the background bootstrap completes. Not persisted. */
@@ -125,6 +135,7 @@ export function createEmptySessionBundle(workspaceRoot: string, id = "__draft__"
     pendingUnboundFileChangeIds: [],
     nextTimelineAssistantSegmentKind: "initial",
     deferredRuntimeRefreshWhileBusy: false,
+    deferredInferencePreferenceRefreshWhileBusy: false,
     deferredRuntimeHostEvents: [],
     responsesBuiltInPreviewSeenCallIds: new Set(),
     queuedUserTurns: [],
@@ -170,12 +181,14 @@ export function sessionBundleFromRestored(
     pendingUnboundFileChangeIds: [],
     nextTimelineAssistantSegmentKind: "initial",
     deferredRuntimeRefreshWhileBusy: false,
+    deferredInferencePreferenceRefreshWhileBusy: false,
     deferredRuntimeHostEvents: [],
     responsesBuiltInPreviewSeenCallIds: new Set(),
     queuedUserTurns: restored.queuedUserTurns ? [...restored.queuedUserTurns] : [],
     conversationRevision: 0,
     ...(restored.activePlanPath ? { activePlanPath: restored.activePlanPath } : {}),
     ...(restored.sessionTitleSource ? { sessionTitleSource: restored.sessionTitleSource } : {}),
+    ...(restored.pinnedAtUnixMs ? { pinnedAtUnixMs: restored.pinnedAtUnixMs } : {}),
     ...(restored.contextUsage ? { contextUsage: { ...restored.contextUsage } } : {}),
     subagentDesktopMessagesBySessionId: restored.subagentDesktopMessagesBySessionId
       ? new Map(
@@ -209,6 +222,7 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.pendingUnboundFileChangeIds = [];
   bundle.nextTimelineAssistantSegmentKind = "initial";
   bundle.deferredRuntimeRefreshWhileBusy = false;
+  bundle.deferredInferencePreferenceRefreshWhileBusy = false;
   bundle.deferredRuntimeHostEvents = [];
   bundle.responsesBuiltInPreviewSeenCallIds = new Set();
   bundle.cachedTodoSnapshot = undefined;
@@ -216,7 +230,9 @@ export function resetSessionBundleInPlace(bundle: SessionBundle): void {
   bundle.conversationRevision = 0;
   bundle.activePlanPath = undefined;
   bundle.sessionTitleSource = undefined;
+  bundle.pinnedAtUnixMs = undefined;
   bundle.contextUsage = undefined;
+  bundle.lastInputTokens = undefined;
   bundle.directMediaTurnInFlight = false;
   bundle.pendingWorktreeBootstrap = undefined;
   bundle.queuedUserTurns = [];

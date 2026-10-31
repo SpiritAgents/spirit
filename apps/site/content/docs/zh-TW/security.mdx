@@ -5,13 +5,15 @@ description: 鑰匙圈、核准與迴圈精靈。無遙測。
 
 ## 鑰匙圈
 
-API 金鑰、Bedrock / Vertex 機密、擴充功能機密，以及 GitHub 整合權杖都儲存在作業系統的鑰匙圈中。服務名稱為 `Spirit`。
+API 金鑰、Bedrock / Vertex 機密、擴充功能機密，以及 GitHub 整合權杖都儲存在作業系統的鑰匙圈中。服務名稱為 `{{product.name}}`。
 
-`config.json` 存放提供者群組與模型參照，而非機密本身。大型機密可能會在鑰匙圈中分片儲存。
+連線精靈寫入的供應商金鑰使用帳戶方案 `provider::{id}`——每個 `config.json` 供應商條目一個；Bedrock IAM、Vertex 服務帳戶這類複合憑證槽位使用 `provider::{id}::{slot}`。大型機密可能會在鑰匙圈中分片儲存。
+
+`config.json` 存放供應商條目與模型參照，而非機密本身——除非你明確宣告了逃生口：明文 `apiKey`（不建議）、`apiKeyEnv` 環境變數參照，或指向外部鑰匙圈條目的 `apiKeyKeyring` / 槽位級 `keyring` 參照。請參閱[設定](./config.mdx)。
 
 ## 核准
 
-請參閱 [核准](./agent/approvals.mdx)。預設值是安全的起點。即使略過核准，仍會針對 `ask_questions` 與鉤子 `ask` 暫停。
+請參閱 [核准](./agent/approvals.mdx)。預設值是安全的起點。即使略過核准，仍會針對 `ask_questions` 與掛鉤 `ask` 暫停。
 
 ## 本機精靈
 
@@ -23,6 +25,6 @@ Web Host 配對使用 Desktop 上獨立的 6 位數代碼。五次失敗會鎖�
 
 ## 隱私
 
-Spirit 不搭載開發者遙測。資料保留在資料目錄與鑰匙圈中。請參閱存放庫中的 [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md)。
+{{product.name|mdx}} 不搭載開發者遙測。資料保留在資料目錄與鑰匙圈中。請參閱存放庫中的 [PRIVACY.md](https://github.com/SpiritAgents/spirit/blob/main/PRIVACY.md)。
 
 請私下回報漏洞（GitHub 私人安全公告），不要公開在問題中。請參閱 [SECURITY.md](https://github.com/SpiritAgents/spirit/blob/main/SECURITY.md)。

@@ -1,6 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronRight } from "lucide-react";
 
 import { AutomationHistoryTable } from "@/components/automation-history-table";
 import { AutomationSettingsPanel } from "@/components/automation-settings-panel";
@@ -78,7 +78,7 @@ function AutomationDetailTabs({
               "rounded-md px-3 py-2 text-sm",
               activeTab === id
                 ? "font-normal text-foreground underline decoration-foreground/80 underline-offset-[10px]"
-                : "text-muted-foreground hover:bg-canvas-hover hover:text-sidebar-foreground",
+                : "text-muted-foreground hover:bg-canvas-hover hover:text-chrome-emphasis",
             )}
             onClick={() => onTabChange(id)}
           >
@@ -160,11 +160,15 @@ export function AutomationDetailView({
             <button
               type="button"
               onClick={onBack}
-              className="font-normal text-muted-foreground transition-colors hover:text-sidebar-foreground"
+              className="font-normal text-muted-foreground transition-colors hover:text-chrome-emphasis"
             >
               {t("automations.detailBack")}
             </button>
-            <ChevronRight className="size-3.5 text-muted-foreground/70" aria-hidden />
+            <ChevronRight
+              className="size-3.5 text-muted-foreground/70"
+              aria-hidden
+              strokeWidth={1.75}
+            />
             <span className={cn(FONT_WEIGHT_MEDIUM, "text-foreground")}>
               {definition?.title ?? listFallback?.title ?? automationId}
             </span>

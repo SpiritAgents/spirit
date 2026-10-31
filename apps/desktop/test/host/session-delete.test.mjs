@@ -54,8 +54,8 @@ test("deleteStoredSession rejects paths outside chats directory", async () => {
 
 test("deleteStoredSession removes a stored session file", async () => {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "spirit-session-delete-"));
-  const originalAppData = process.env.APPDATA;
-  process.env.APPDATA = tempRoot;
+  const originalDataDir = process.env.SPIRIT_DATA_DIR;
+  process.env.SPIRIT_DATA_DIR = tempRoot;
   try {
     const chatsDir = chatsDirPath();
     await mkdir(chatsDir, { recursive: true });
@@ -66,10 +66,10 @@ test("deleteStoredSession removes a stored session file", async () => {
 
     await assert.rejects(() => access(sessionPath));
   } finally {
-    if (originalAppData === undefined) {
-      delete process.env.APPDATA;
+    if (originalDataDir === undefined) {
+      delete process.env.SPIRIT_DATA_DIR;
     } else {
-      process.env.APPDATA = originalAppData;
+      process.env.SPIRIT_DATA_DIR = originalDataDir;
     }
     await rm(tempRoot, { recursive: true, force: true });
   }

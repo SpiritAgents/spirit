@@ -1,20 +1,21 @@
 ---
 title: Config
-description: Directorio de datos, config.json v2, .spirit/ y variables de entorno.
+description: Directorio de datos, config.json v1,
+  {{product.workspaceDataFolderName}}/ y variables de entorno.
 ---
 
-Spirit guarda los binarios y los datos en lugares diferentes. Mezclarlos es la razón habitual por la que «instalé la CLI pero la configuración está vacía».
+El directorio de datos de usuario compartidos depende de la quality del build, no del directorio de aplicaciones del sistema.
 
 ## Directorio de datos
 
 Se puede sobrescribir con `SPIRIT_DATA_DIR`. El servidor también puede usar `SPIRIT_SERVER_DATA_DIR` (que tiene prioridad sobre el anterior).
 
-| SO       | Default                                           |
-| -------- | ------------------------------------------------- |
-| macOS    | `~/Library/Application Support/Spirit`            |
-| Windows  | `%APPDATA%\Spirit`                                |
-| Linux    | `$XDG_DATA_HOME/Spirit` o `~/.local/share/Spirit` |
-| Fallback | `~/.spirit-data`                                  |
+| Build  | macOS / Linux                             | Windows                                               |
+| ------ | ----------------------------------------- | ----------------------------------------------------- |
+| Stable | `~/{{product.stable.userDataFolderName}}` | `%USERPROFILE%\{{product.stable.userDataFolderName}}` |
+| Dev    | `~/{{product.dev.userDataFolderName}}`    | `%USERPROFILE%\{{product.dev.userDataFolderName}}`    |
+
+Breaking Change: los directorios anteriores no se leen ni migran automáticamente. Se mantienen las opciones explícitas para cambiar el directorio de datos. Las cachés de Electron, el almacenamiento del navegador y el estado de las ventanas permanecen en el directorio privado de la plataforma.
 
 Archivos típicos:
 
@@ -34,28 +35,105 @@ Archivos típicos:
   server/instances/
 ```
 
-Los binarios de la CLI viven en `SPIRIT_HOME` (`~/.spirit` o `%LOCALAPPDATA%\Spirit`). Ese no es este directorio. Ver [Instalar CLI](./install/cli.mdx).
+Los binarios CLI usan SPIRIT_HOME. En Unix, la instalación Stable y los datos compartidos pueden tener el mismo directorio padre; bin/ y cli/ siguen siendo archivos de instalación. Este ajuste no selecciona el directorio de datos compartidos.
 
-## config.json v2
+## config.json v1
 
-`schemaVersion` debe ser `2`. La versión 1 se rechaza: elimina el archivo antiguo y [vuelve a conectar un proveedor](./providers.mdx).
+`schemaVersion` debe ser `1`. Cualquier otro valor se rechaza: elimina el archivo antiguo y [vuelve a conectar un proveedor](./providers.mdx). No hay migración desde formas anteriores.
 
 Campos principales:
 
-- `providerGroups` — casas conectadas, base de API, transporte, modelos
+- `providers` — proveedores conectados: endpoint, transporte, credenciales, modelos
 - `activeModel`
-- `imageGenerationModel` / `videoGenerationModel` / `lightweightChatModel`
+- `imageGenerationModel` / `videoGenerationModel` / `secondaryLanguageModel`
+- `agents` — interruptores del agente como `agents.providerTools.enabled`
+- `permission` — reglas de la lista de permitidos
 
-Las claves **no** están en este archivo. Viven en el [keyring](./security.mdx).
+`activeModel` y los otros espacios de modelo son referencias de modelo: `{ "providerId": "…", "name": "…" }`, donde `providerId` es un `providers[].id` y `name` es uno de sus `models[].name`.
 
-## Espacio de trabajo `.spirit/`
+### Entradas de proveedor
 
-| Ruta                 | Rol                                                          |
-| -------------------- | ------------------------------------------------------------ |
-| `.spirit/rule.md`    | Regla del [espacio de trabajo](./customize/rules.mdx)        |
-| `.spirit/skills/`    | Habilidades del [espacio de trabajo](./customize/skills.mdx) |
-| `.spirit/mcp.json`   | MCP del [espacio de trabajo](./customize/mcp.mdx)            |
-| `.spirit/hooks.json` | Hooks del [espacio de trabajo](./customize/hooks.mdx)        |
+Cada entrada de `providers[]` es una conexión totalmente declarativa: lo que el asistente de conexión escribe es lo que el runtime lee. El runtime nunca vuelve a derivar `apiBase` a partir de la identidad del proveedor; las elecciones de sitio, plan y nube se materializan en la URL final al conectar.
+
+Campos de nivel de conexión:
+
+- `id` (obligatorio) — id único de la entrada. Las referencias de modelo y la cuenta del llavero interno apuntan a él
+- `label` — nombre visible opcional
+- `apiBase` (obligatorio) — el endpoint, la única fuente de verdad
+- `transportKind` — protocolo de wire: `openai-compatible` (predeterminado) / `open-responses` / `anthropic` / `bedrock`
+- `sdk` — nombre completo del paquete npm del adaptador SDK incluido (por ejemplo `@ai-sdk/openai-compatible`). Ausente = el predeterminado del transporte; un nombre de paquete desconocido se rechaza al cargar
+- `headers` — cabeceras de solicitud literales adicionales que se fusionan en cada solicitud saliente
+- `body` — campos literales que se fusionan en el nivel superior de cada cuerpo de solicitud. Una escotilla de escape para rarezas del wire — prefiere una declaración estructurada cuando exista
+- `providerTools` — herramientas que el proveedor expone (búsqueda web, intérprete de código). Ver [Herramientas del proveedor](./agent/tools.mdx#provider-tools)
+- `fileUpload` — el canal de subida para archivos locales que no deben ir en línea (`path` / `url`, `purpose`, `idPath`, `refTemplate`, `maxBytes`). Ausente = los medios van en línea
+- `imageApi` / `videoApi` — nombres de la forma de API para generación de imágenes / videos; ausente = sin esa generación
+- `options` — parámetros del transporte; el conjunto de claves válidas depende de `transportKind` × `sdk` (`awsRegion` para bedrock, `project` / `location` para `@ai-sdk/google-vertex`, los interruptores `auth` / `storedState` / `applyPatch` en open-responses). Las claves desconocidas se rechazan
+- `models` (array obligatorio, puede estar vacío)
+
+Los campos de nivel de modelo — `capabilities`, `contextLength`, `outputLimit`, `reasoningEffort`, `supportedReasoningEfforts`, `reasoningMode`, `supportedReasoningModes`, `supportsThinkingType`, `supportsThinkingSwitch`, `thinkingSwitch`, `serviceTiers`, `serviceTier` — también pueden declararse planos en la entrada del proveedor como valores predeterminados que hereda cada modelo; la declaración del propio modelo gana. Dentro de `models[]`, todo excepto `name` es opcional, y ausente significa no declarado, no un valor predeterminado.
+
+- Tokens de `capabilities`: `languageModel`, `image`, `audio`, `video`, `imageGeneration`, `videoGeneration`
+- `outputLimit` es el tope de tokens de salida, separado de `contextLength`
+- `supportedReasoningEfforts` / `supportedReasoningModes` / `serviceTiers` son la única fuente del selector y de la validación: una selección fuera de la lista es un error al cargar, nunca se recorta en silencio
+- `thinkingEnabled` es tu estado de thinking activado/desactivado (no una capacidad); es solo de nivel de modelo y requiere `supportsThinkingSwitch` declarado
+
+### Canales de claves
+
+Las claves no tienen que vivir en este archivo: el asistente de conexión las escribe por defecto en el [llavero](./security.mdx). La config puede declarar un canal en su lugar, resuelto en este orden:
+
+1. `apiKey` — texto plano. No recomendado; solo una escotilla de escape
+2. `apiKeyEnv` — el nombre de una variable de entorno de la que leer la clave
+3. `apiKeyKeyring` — `{ "service": "…", "account": "…" }`, una entrada en un llavero externo
+4. Llavero interno — el respaldo implícito que escribe el asistente (cuenta `provider::{id}`)
+
+Las credenciales compuestas (IAM de Bedrock, cuentas de servicio de Vertex) usan un mapa de slots `credentials` en lugar de las claves planas:
+
+```json
+{
+  "credentials": {
+    "accessKeyId": { "env": "AWS_ACCESS_KEY_ID" },
+    "secretAccessKey": { "keyring": { "service": "…", "account": "…" } }
+  }
+}
+```
+
+Los nombres de slot son campos del protocolo — `apiKey`, `accessKeyId` / `secretAccessKey` (IAM de Bedrock / SigV4), `clientEmail` / `privateKey` (Vertex) — y los slots desconocidos se rechazan. Cada slot se resuelve como `value` → `env` → `keyring` → llavero interno (`provider::{id}::{slot}`; el slot `apiKey` es simplemente `provider::{id}`). Las claves planas y `credentials.apiKey` no pueden coexistir en una misma entrada.
+
+### agents.providerTools
+
+`agents.providerTools.enabled` controla a la vez todas las herramientas declaradas por proveedores (renombrado desde `agents.webSearch.enabled`; la semántica no cambió: opt-out, activado por defecto). Si se pone en `false`, ninguna entrada de herramienta de proveedor ni interruptor de body llega a las solicitudes.
+
+### Actualización del catálogo y reconexión
+
+Las actualizaciones rutinarias del catálogo reescriben los campos de declaración de modelo que el catálogo posee (`capabilities`, `supportedReasoningEfforts`, `supportedReasoningModes`, `serviceTiers`, …): los datos de los modelos vienen del catálogo como única fuente de verdad, así que las ediciones manuales de esos campos se sobrescriben en la próxima actualización. Las materializaciones a nivel de proveedor (`apiBase`, `sdk`, `providerTools`, `fileUpload`, `options`, `imageApi` / `videoApi`) solo cambian cuando reconectas el proveedor. La reconexión restablece las claves que posee el asistente (tus ediciones sobre ellas se sobrescriben) y conserva todo lo demás: `label`, canales de credenciales, `headers` / `body`, valores predeterminados de modelo planos y los modelos que añadiste a mano.
+
+### permission
+
+`permission` fija qué pueden hacer comandos shell y rutas de archivo individuales, además del [nivel de aprobación](./agent/approvals.mdx) de la sesión. Las claves son nombres de herramientas (`shell`, `read_file`); los valores asignan patrones con comodines a `allow`, `ask` o `deny`.
+
+```json
+{
+  "permission": {
+    "shell": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}
+```
+
+`deny` es absoluto — ningún nivel de aprobación, Hook o memoria de sesión lo anula. La sintaxis de patrones, la semántica de rutas y la lista completa de acciones están en [Aprobaciones](./agent/approvals.mdx). Verifica las reglas sin ejecutar nada: `spirit permission check --shell "git status"`.
+
+El antiguo `tool-permissions.json` (escrito por el botón «Confiar siempre») está obsoleto: el código ya no lo lee ni lo escribe, y no hay migración automática. Los archivos sobrantes son inertes — elimínalos manualmente.
+
+## Espacio de trabajo `{{product.workspaceDataFolderName}}/`
+
+| Ruta                                             | Rol                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------ |
+| `{{product.workspaceDataFolderName}}/rule.md`    | Regla del [espacio de trabajo](./customize/rules.mdx)        |
+| `{{product.workspaceDataFolderName}}/skills/`    | Skills del [espacio de trabajo](./customize/skills.mdx) |
+| `{{product.workspaceDataFolderName}}/mcp.json`   | MCP del [espacio de trabajo](./customize/mcp.mdx)            |
+| `{{product.workspaceDataFolderName}}/hooks.json` | Hooks del [espacio de trabajo](./customize/hooks.mdx)        |
 
 También se usan: `{workspace}/AGENTS.md`, `{workspace}/.agents/skills/`, `{workspace}/plans/`.
 

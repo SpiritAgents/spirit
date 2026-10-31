@@ -5,6 +5,8 @@
  * and cannot itself fail inside a degraded main process; all wiring lives in main.ts.
  */
 
+import { product } from "@spiritagent/product";
+
 export type CrashPageTrigger = "render-process-gone" | "unresponsive";
 
 export interface CrashSceneDetails {
@@ -229,7 +231,7 @@ ${truncatedLog}
 ## Environment
 
 - OS / platform: ${input.env.platform} ${input.env.arch} (${input.env.osRelease})
-- Spirit version: ${input.env.version} (Electron ${input.env.electronVersion})
+- ${product.name} version: ${input.env.version} (Electron ${input.env.electronVersion})
 - Install source: ${input.env.packaged ? "packaged build" : "pnpm dev"}
 
 ## Additional Context
@@ -283,7 +285,7 @@ export function buildCrashPageHtml(
     color-scheme: light dark;
     --background: oklch(1 0 0);
     --foreground: #2b2b2b;
-    --muted-foreground: oklch(0.556 0 0);
+    --muted-foreground: color-mix(in oklab, black 50%, transparent);
     --card: oklch(1 0 0);
     --border: oklch(0.922 0 0);
     --primary: oklch(0.205 0 0);
@@ -294,7 +296,7 @@ export function buildCrashPageHtml(
     :root {
       --background: #000000;
       --foreground: #e4e4e4;
-      --muted-foreground: #a1a1a1;
+      --muted-foreground: color-mix(in oklab, white 60%, transparent);
       --card: #090909;
       --border: #272727;
       --primary: #ffffff;

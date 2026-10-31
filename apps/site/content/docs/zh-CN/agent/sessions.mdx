@@ -3,15 +3,15 @@ title: 会话
 description: 聊天记录、rewind、fork 与 git worktree。
 ---
 
-每一段对话是一个会话。会话存在 Spirit 数据目录的 `chats/` 下，侧栏按工作区分组。
+每一段对话是一个会话。会话存在 {{product.name|mdx}} 数据目录的 `chats/` 下，侧栏按工作区分组。
 
 ## Rewind
 
-把某条用户消息 rewind 回去，会话回到那一点；可以改提示再发。上一轮走偏、与其叠一句纠正不如重来时用它。
+把某条用户消息 rewind 回去，会话会回到那一点；你可以按需修改提示词再发送。当上一轮走偏、你宁愿重试而不是叠加一句纠正时，就使用它。
 
 ## Fork
 
-从某条助手消息 fork，分出一条分支。Desktop 也可以 fork 到侧边会话，原线程不动。
+从某条助手消息 fork，即可让对话分出一条分支。Desktop 也可以 fork 到侧边会话，这样原线程保持不动。
 
 ## Worktree
 
@@ -19,4 +19,4 @@ description: 聊天记录、rewind、fork 与 git worktree。
 
 Worktree 路径形如 `{repoRoot}.worktrees/spirit-*`。已经在 worktree 里跑的子智能体不能再从那里开一层 worktree。
 
-Worktree 用来避免并行编辑互相踩。它不是会话备份——对话历史靠 rewind 和 fork。
+Worktree 用于那些否则会互相冲突的并行编辑。它不是会话的备份——对话历史由 rewind 和 fork 负责。

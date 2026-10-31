@@ -9,55 +9,176 @@ import {
 import { HookDeniedError } from "./errors.js";
 import type { HookRunner } from "./types.js";
 
+const GREP_APPROVAL = {
+  kind: "tool",
+  request: { kind: "shell", command: "grep x", terminal: "zsh" },
+} as const;
+
 test("resolveApprovalGateAfterAuthorize keeps host approval when hook allows", () => {
   const gate = resolveApprovalGateAfterAuthorize(
     { kind: "ready", request: { name: "grep" } },
-    { kind: "need-approval", prompt: "approve grep?" },
+    {
+      kind: "need-approval",
+      approval: { kind: "shell", command: "grep x", terminal: "zsh" },
+    },
   );
   assert.deepEqual(gate, {
     kind: "needs-approval",
-    gate: { prompt: "approve grep?", rememberTarget: undefined },
+    gate: { prompt: GREP_APPROVAL, rememberTarget: undefined },
   });
 });
 
 test("resolveApprovalGateAfterAuthorize keeps host approval without hook bypass", () => {
   const gate = resolveApprovalGateAfterAuthorize(
     { kind: "ready", request: { name: "grep" } },
-    { kind: "need-approval", prompt: "approve grep?" },
+    {
+      kind: "need-approval",
+      approval: { kind: "shell", command: "grep x", terminal: "zsh" },
+    },
   );
   assert.deepEqual(gate, {
     kind: "needs-approval",
-    gate: { prompt: "approve grep?", rememberTarget: undefined },
+    gate: { prompt: GREP_APPROVAL, rememberTarget: undefined },
   });
 });
 
 test("resolveApprovalGateAfterAuthorize prefers hook ask prompt", () => {
   const gate = resolveApprovalGateAfterAuthorize(
-    { kind: "needs-approval", request: { name: "grep" }, prompt: "hook says ask" },
+    {
+      kind: "needs-approval",
+      request: { name: "grep" },
+      prompt: { kind: "hook", message: "hook says ask" },
+    },
     { kind: "allowed" },
   );
   assert.deepEqual(gate, {
     kind: "needs-approval",
-    gate: { prompt: "hook says ask", rememberTarget: undefined },
+    gate: { prompt: { kind: "hook", message: "hook says ask" }, rememberTarget: undefined },
   });
 });
 
 test("resolveApprovalGateAfterAuthorize keeps hook ask prompt when both hook and allowlist ask", () => {
   const gate = resolveApprovalGateAfterAuthorize(
-    { kind: "needs-approval", request: { name: "grep" }, prompt: "hook says ask" },
+    {
+      kind: "needs-approval",
+      request: { name: "grep" },
+      prompt: { kind: "hook", message: "hook says ask" },
+    },
     {
       kind: "need-approval",
-      prompt: "host prompt",
+      approval: { kind: "shell", command: "grep x", terminal: "zsh" },
       rememberTarget: { kind: "shell", command: "grep x" },
     },
   );
   assert.deepEqual(gate, {
     kind: "needs-approval",
     gate: {
-      prompt: "hook says ask",
+      // The hook keeps its message, and the host's structured request rides along so hosts
+      // can render the same rich approval form (command block / file previews).
+      prompt: {
+        kind: "hook",
+        message: "hook says ask",
+        request: { kind: "shell", command: "grep x", terminal: "zsh" },
+      },
       rememberTarget: { kind: "shell", command: "grep x" },
     },
   });
+});
+
+test("resolveApprovalGateAfterAuthorize attaches a described request when the host allows", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "read_file" },
+      prompt: { kind: "hook", message: "hook wants a look" },
+    },
+    { kind: "allowed" },
+    {
+      kind: "read_path",
+      operation: "read_file",
+      path: "src/index.ts",
+      fileContentPreview: { path: "src/index.ts", content: "export {};\n" },
+    },
+  );
+  assert.deepEqual(gate, {
+    kind: "needs-approval",
+    gate: {
+      prompt: {
+        kind: "hook",
+        message: "hook wants a look",
+        request: {
+          kind: "read_path",
+          operation: "read_file",
+          path: "src/index.ts",
+          fileContentPreview: { path: "src/index.ts", content: "export {};\n" },
+        },
+      },
+      rememberTarget: undefined,
+    },
+  });
+});
+
+test("resolveApprovalGateAfterAuthorize prefers the authorization request over the described one", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "delete_file" },
+      prompt: { kind: "hook", message: "confirm" },
+    },
+    {
+      kind: "need-approval",
+      approval: { kind: "delete_file", path: "tmp/a.log" },
+    },
+    { kind: "delete_file", path: "tmp/stale.log" },
+  );
+  assert.deepEqual(gate, {
+    kind: "needs-approval",
+    gate: {
+      prompt: {
+        kind: "hook",
+        message: "confirm",
+        request: { kind: "delete_file", path: "tmp/a.log" },
+      },
+      rememberTarget: undefined,
+    },
+  });
+});
+
+test("resolveApprovalGateAfterAuthorize attaches a file preview request to the hook prompt", () => {
+  const gate = resolveApprovalGateAfterAuthorize(
+    {
+      kind: "needs-approval",
+      request: { name: "delete_file" },
+      prompt: { kind: "hook", message: "confirm the cleanup" },
+    },
+    {
+      kind: "need-approval",
+      approval: {
+        kind: "delete_file",
+        path: "tmp/scratch.log",
+        fileDiffPreview: {
+          path: "tmp/scratch.log",
+          original: "seed\n",
+          modified: "",
+          operation: "delete",
+        },
+      },
+    },
+  );
+  if (!gate || gate.kind !== "needs-approval") {
+    throw new Error("expected a needs-approval gate");
+  }
+  assert.equal(gate.gate.prompt.kind, "hook");
+  if (gate.gate.prompt.kind !== "hook") {
+    return;
+  }
+  assert.equal(gate.gate.prompt.request?.kind, "delete_file");
+  assert.equal(
+    gate.gate.prompt.request.kind === "delete_file"
+      ? gate.gate.prompt.request.fileDiffPreview?.operation
+      : undefined,
+    "delete",
+  );
 });
 
 test("resolveApprovalGateAfterAuthorize denies on allowlist deny even when hook allows", () => {
@@ -70,7 +191,11 @@ test("resolveApprovalGateAfterAuthorize denies on allowlist deny even when hook 
 
 test("resolveApprovalGateAfterAuthorize denies on allowlist deny when hook asks", () => {
   const gate = resolveApprovalGateAfterAuthorize(
-    { kind: "needs-approval", request: { name: "shell" }, prompt: "hook says ask" },
+    {
+      kind: "needs-approval",
+      request: { name: "shell" },
+      prompt: { kind: "hook", message: "hook says ask" },
+    },
     { kind: "denied", reason: "shell is denied by rule" },
   );
   assert.deepEqual(gate, { kind: "denied", reason: "shell is denied by rule" });
@@ -137,7 +262,64 @@ test("runPreToolUseGate maps hook ask to needs-approval", async () => {
 
   assert.equal(gate.kind, "needs-approval");
   if (gate.kind === "needs-approval") {
-    assert.equal(gate.prompt, "confirm grep");
+    assert.deepEqual(gate.prompt, { kind: "hook", message: "confirm grep" });
+  }
+});
+
+test("runPreToolUseGate maps hook ask without message to an empty hook prompt", async () => {
+  const runner: HookRunner = {
+    runSessionStart: async () => {
+      throw new Error("unused");
+    },
+    runSessionEnd: async () => {
+      throw new Error("unused");
+    },
+    runSubmitPrompt: async () => {
+      throw new Error("unused");
+    },
+    runPreToolUse: async () => ({
+      records: [],
+      denied: false,
+      permission: "ask",
+      userMessage: undefined,
+      agentMessage: undefined,
+      updatedInput: undefined,
+      additionalContexts: [],
+      followupMessage: undefined,
+    }),
+    runPostToolUse: async () => {
+      throw new Error("unused");
+    },
+    runSubagentStart: async () => {
+      throw new Error("unused");
+    },
+    runSubagentEnd: async () => {
+      throw new Error("unused");
+    },
+  };
+
+  const gate = await runPreToolUseGate(
+    {
+      options: {
+        hookRunner: runner,
+        hookSessionContext: {
+          sessionId: "s1",
+          conversationPath: null,
+          workspaceRoot: "/w",
+          model: "m",
+        },
+        toolExecutor: {
+          requestFromFunctionCall: async () => ({ name: "grep" }),
+        },
+      },
+    } as never,
+    { id: "tc1", name: "grep", argumentsJson: "{}" },
+    { name: "grep" },
+  );
+
+  assert.equal(gate.kind, "needs-approval");
+  if (gate.kind === "needs-approval") {
+    assert.deepEqual(gate.prompt, { kind: "hook", message: undefined });
   }
 });
 

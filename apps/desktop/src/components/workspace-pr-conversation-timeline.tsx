@@ -1,16 +1,10 @@
+import { Check } from "@spiritagent/icons/check";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  Check,
-  ChevronRight,
-  CircleX,
-  Eye,
-  GitCommit,
-  GitPullRequest,
-  MessageSquare,
-} from "lucide-react";
+import { CircleX, Eye, GitCommit, GitPullRequest, MessageSquare } from "lucide-react";
 
 import { ReviewCommentHunkView } from "@/components/review-comment-hunk-view";
 import { WorkspacePrMarkdown } from "@/components/workspace-pr-markdown";
@@ -136,7 +130,7 @@ export function PrConversationTimelineNode({
           size === "compact" ? "size-2" : "size-2.5",
           iconClassName ?? "text-muted-foreground",
         )}
-        strokeWidth={2}
+        strokeWidth={1.75}
       />
     </div>
   );
@@ -325,6 +319,7 @@ function ReviewFileThreadCard({ thread }: { thread: GitHubPullRequestConversatio
                 open && "rotate-90",
               )}
               aria-hidden
+              strokeWidth={1.75}
             />
             <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground/75 dark:text-muted-foreground/65">
               {thread.path}

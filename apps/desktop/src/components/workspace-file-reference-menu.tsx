@@ -1,6 +1,8 @@
+import { ChevronLeft } from "@spiritagent/icons/chevron-left";
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, MessageCircle } from "lucide-react";
+import { ListTodo, MessageCircle } from "lucide-react";
 
 import { ComposerSuggestionMenuItem } from "@/components/composer-suggestion-menu-item";
 import { useComposerSuggestionMenuHighlight } from "@/hooks/useComposerSuggestionMenuHighlight";
@@ -13,7 +15,7 @@ import { cn } from "@/lib/utils";
 type WorkspaceFileReferenceMenuProps = {
   items: AtReferenceMenuItem[];
   selectedIndex: number;
-  onApplyFile(path: string): void;
+  onApplyFile(path: string, options?: { isPlan?: boolean }): void;
   onApplySession(session: { path: string; title: string }): void;
   onOpenSessions(): void;
   onBack(): void;
@@ -55,8 +57,8 @@ export function WorkspaceFileReferenceMenu({
               onClick={onBack}
               {...getItemPointerHandlers(index)}
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden text-muted-foreground">
-                <ChevronLeft className="size-3.5 shrink-0" aria-hidden />
+              <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                <ChevronLeft className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
                   {t("composer.atReference.back")}
                 </span>
@@ -64,7 +66,7 @@ export function WorkspaceFileReferenceMenu({
             </ComposerSuggestionMenuItem>
           );
         }
-        if (item.kind === "file") {
+        if (item.kind === "file" || item.kind === "plan") {
           return (
             <ComposerSuggestionMenuItem
               key={`file:${item.path}`}
@@ -72,10 +74,19 @@ export function WorkspaceFileReferenceMenu({
               selected={index === highlightedIndex}
               title={item.path}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onApplyFile(item.path)}
+              onClick={() => onApplyFile(item.path, { isPlan: item.kind === "plan" })}
               {...getItemPointerHandlers(index)}
             >
-              <WorkspaceFilePickerRow path={item.path} tone="menu" layout="stacked" />
+              {item.kind === "plan" ? (
+                <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                  <ListTodo className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
+                  <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
+                    Plan
+                  </span>
+                </div>
+              ) : (
+                <WorkspaceFilePickerRow path={item.path} tone="menu" layout="stacked" />
+              )}
             </ComposerSuggestionMenuItem>
           );
         }
@@ -85,19 +96,20 @@ export function WorkspaceFileReferenceMenu({
               key="sessions-entry"
               data-workspace-file-reference-index={index}
               selected={index === highlightedIndex}
-              title={t("composer.atReference.sessions")}
+              title={t("composer.atReference.chats")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={onOpenSessions}
               {...getItemPointerHandlers(index)}
             >
               <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-                <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                <MessageCircle className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
                 <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
-                  {t("composer.atReference.sessions")}
+                  {t("composer.atReference.chats")}
                 </span>
                 <ChevronRight
-                  className="ml-auto size-3.5 shrink-0 text-muted-foreground"
+                  className="ml-auto size-3.5 shrink-0"
                   aria-hidden
+                  strokeWidth={1.75}
                 />
               </div>
             </ComposerSuggestionMenuItem>
@@ -114,7 +126,7 @@ export function WorkspaceFileReferenceMenu({
             {...getItemPointerHandlers(index)}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-              <MessageCircle className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+              <MessageCircle className="size-3.5 shrink-0" aria-hidden strokeWidth={1.75} />
               <span className={cn("min-w-0 truncate", DESKTOP_OVERLAY_LIST_ITEM_PRIMARY)}>
                 {item.title}
               </span>

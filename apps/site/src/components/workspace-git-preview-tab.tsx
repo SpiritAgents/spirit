@@ -94,7 +94,11 @@ export function WorkspaceGitPreviewTab({ branch = "main" }: { branch?: string })
                       title={change.path}
                       onClick={previewNoop}
                     >
-                      <Icon className="size-3.5 shrink-0 opacity-70" aria-hidden />
+                      <Icon
+                        className="size-3.5 shrink-0 opacity-70"
+                        aria-hidden
+                        strokeWidth={1.75}
+                      />
                       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
                         <span className="shrink-0 truncate text-foreground/90">{fileName}</span>
                         {dirLabel ? (
@@ -140,6 +144,7 @@ export function WorkspaceGitPreviewTab({ branch = "main" }: { branch?: string })
                     <GitCommitHorizontal
                       className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/70"
                       aria-hidden
+                      strokeWidth={1.75}
                     />
                     <span className="min-w-0 flex-1">
                       <span className={`block truncate ${FONT_WEIGHT_NORMAL} text-foreground/90`}>

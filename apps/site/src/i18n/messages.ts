@@ -84,8 +84,6 @@ type DesktopModelsCopy = {
   providerDialogDescription: string;
   searchPlaceholder: string;
   noMatches: string;
-  connectDialogDescriptionCustom: string;
-  connectDialogDescriptionDefault: string;
   addModeLabel: string;
   addModeAria: string;
   addSingle: string;
@@ -96,11 +94,9 @@ type DesktopModelsCopy = {
   optionalPlaceholder: string;
   apiKeyLabel: string;
   apiKeyPlaceholder: string;
-  addThisModel: string;
-  adding: string;
-  addProvider: string;
+  connecting: string;
   customConnectionTitle: string;
-  connectProviderTitle: string;
+  connectNamedProviderTitle(provider: string): string;
 };
 
 type DesktopWindowCopy = {
@@ -115,7 +111,7 @@ type DesktopWindowCopy = {
   previewEditorOnlyTextError: string;
   hostStatus: string;
   mcpReady: string;
-  newSession: string;
+  newChat: string;
 };
 
 type DesktopCommitCopy = {
@@ -160,9 +156,9 @@ type DesktopSessionSidebarCopy = {
   back: string;
   settingsHeading: string;
   pageNavigation: string;
-  newSession: string;
+  newChat: string;
   extensionsButton: string;
-  workspaceHeading: string;
+  workspacesHeading: string;
   settingsTabsAria: string;
   workspaceSessionsAria: string;
   settingsButton: string;

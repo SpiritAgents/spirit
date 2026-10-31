@@ -8,17 +8,39 @@ import {
   usesProviderListedModelCatalogMetadata,
 } from "../../dist-electron/src/host/model-catalog-metadata.js";
 
+const GPT5_EFFORTS = ["minimal", "low", "medium", "high"];
+const OPENAI_FLEX_FAST_TIERS = ["auto", "default", "flex", "fast"];
+const OPENAI_LIMITED_FAST_TIERS = {
+  auto: { body: { service_tier: "auto" } },
+  default: { body: { service_tier: "default" } },
+  flex: { body: { service_tier: "flex" } },
+  fast: { body: { service_tier: "fast" }, maxInputTokens: 278528 },
+};
+
+function outputEfforts(efforts) {
+  return { effortSemantics: "output", supportedEfforts: efforts };
+}
+
+const ADAPTIVE_THINKING = {
+  supported: true,
+  types: { adaptive: true, betweenTools: false, disabled: true, enabled: true },
+};
+const BUDGET_THINKING = {
+  supported: true,
+  types: { adaptive: false, betweenTools: false, disabled: true, enabled: true },
+};
+
 test("siliconflow provider uses listed model catalog metadata", () => {
   assert.equal(
     usesProviderListedModelCatalogMetadata({
-      provider: "siliconflow",
+      providerId: "siliconflow",
       transportKind: "openai-compatible",
     }),
     true,
   );
 
   const preview = previewModelCatalogForTransport({
-    provider: "siliconflow",
+    providerId: "siliconflow",
     transportKind: "openai-compatible",
     listedModels: [
       { id: "deepseek-ai/DeepSeek-V3" },
@@ -31,7 +53,7 @@ test("siliconflow provider uses listed model catalog metadata", () => {
     {
       id: "deepseek-ai/DeepSeek-V3",
       displayName: "DeepSeek AI DeepSeek V3",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
     {
       id: "black-forest-labs/FLUX.1-schnell",
@@ -47,19 +69,16 @@ test("siliconflow provider uses listed model catalog metadata", () => {
 });
 
 test("custom anthropic transport consumes Anthropic model catalog metadata", () => {
-  assert.equal(
-    usesAnthropicModelCatalogMetadata({ provider: "custom", transportKind: "anthropic" }),
-    true,
-  );
+  assert.equal(usesAnthropicModelCatalogMetadata({ transportKind: "anthropic" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "custom",
+    providerId: "custom",
     transportKind: "anthropic",
     listedModels: [
       {
         id: "claude-sonnet-4-20250514",
         supportsImageInput: false,
-        supportedReasoningEfforts: ["low", "high", "high", "default", "max"],
+        supportedEfforts: ["low", "high", "high", "default", "max"],
       },
     ],
   });
@@ -68,13 +87,24 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
     {
       id: "claude-sonnet-4-20250514",
       displayName: "Claude Sonnet 4.20250514",
-      capabilities: ["chat"],
-      supportedReasoningEfforts: ["low", "high", "max"],
+      capabilities: ["languageModel"],
+      ...outputEfforts(["low", "high", "max"]),
+      // Folded from the anthropic-claude model-knowledge record for claude-sonnet-4-* (switch + encoding).
+      supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: "omit",
+      },
     },
   ]);
 
   const catalogMap = previewCatalogMapForTransport({
-    provider: "custom",
+    providerId: "custom",
     transportKind: "anthropic",
     modelCatalog: preview,
   });
@@ -83,18 +113,22 @@ test("custom anthropic transport consumes Anthropic model catalog metadata", () 
 });
 
 test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "moonshot-ai" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "moonshot-ai" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "moonshot-ai",
+    providerId: "moonshot-ai",
     transportKind: "openai-compatible",
     listedModels: [
       {
-        id: "kimi-k2.5",
+        id: "kimi-k2.6",
         supportsImageInput: true,
         supportsVideoInput: false,
-        supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+        supportedReasoningEfforts: [],
         contextLength: 256000,
+      },
+      {
+        id: "kimi-k2.7-code",
+        supportedReasoningEfforts: [],
       },
       {
         id: "kimi-k2-turbo-preview",
@@ -102,29 +136,72 @@ test("moonshot-ai provider consumes Moonshot model catalog metadata", () => {
         supportsVideoInput: false,
         supportedReasoningEfforts: [],
       },
+      {
+        id: "kimi-k3.1-pro",
+        supportsImageInput: true,
+        supportsVideoInput: true,
+        supportedReasoningEfforts: ["low", "high", "max"],
+        contextLength: 1048576,
+      },
+      {
+        id: "kimi-k3.2-pro",
+        supportedReasoningEfforts: ["low", "high", "max"],
+      },
     ],
   });
 
   assert.deepEqual(preview, [
     {
-      id: "kimi-k2.5",
-      displayName: "Kimi K2.5",
-      capabilities: ["chat", "image"],
-      supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
+      id: "kimi-k2.6",
+      displayName: "Kimi K2.6",
+      capabilities: ["languageModel", "image"],
+      supportedReasoningEfforts: [],
       contextLength: 256000,
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: {
+          body: { thinking: { type: "enabled" } },
+          providerOptions: { moonshotai: { thinking: { type: "enabled" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { moonshotai: { thinking: { type: "disabled" } } },
+        },
+      },
+    },
+    {
+      id: "kimi-k2.7-code",
+      displayName: "Kimi K2.7 Code",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: [],
     },
     {
       id: "kimi-k2-turbo-preview",
       displayName: "Kimi K2 Turbo Preview",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       supportedReasoningEfforts: [],
+    },
+    {
+      id: "kimi-k3.1-pro",
+      displayName: "Kimi K3.1 Pro",
+      capabilities: ["languageModel", "image", "video"],
+      supportedReasoningEfforts: ["low", "high", "max"],
+      contextLength: 1048576,
+      supportsThinkingType: "only",
+    },
+    {
+      id: "kimi-k3.2-pro",
+      displayName: "Kimi K3.2 Pro",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: ["low", "high", "max"],
+      supportsThinkingType: "only",
     },
   ]);
 });
 
 test("openrouter provider passes through display metadata and pricing", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -148,12 +225,23 @@ test("openrouter provider passes through display metadata and pricing", () => {
         inputPerTokenUsd: "0.000003",
         outputPerTokenUsd: "0.000015",
       },
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      ...outputEfforts([]),
+      supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: "omit",
+      },
     },
   ]);
 
   const catalogMap = previewCatalogMapForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     modelCatalog: preview,
   });
@@ -162,10 +250,10 @@ test("openrouter provider passes through display metadata and pricing", () => {
 });
 
 test("openrouter provider maps output_modalities to catalog capabilities", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "openrouter" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "openrouter" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -181,7 +269,8 @@ test("openrouter provider maps output_modalities to catalog capabilities", () =>
   assert.deepEqual(preview, [
     {
       id: "openai/gpt-4o",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      serviceTiers: ["auto", "default", "fast"],
     },
     {
       id: "google/imagen-4",
@@ -191,10 +280,10 @@ test("openrouter provider maps output_modalities to catalog capabilities", () =>
 });
 
 test("vercel-ai-gateway provider maps language and image model types to catalog capabilities", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "vercel-ai-gateway" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "vercel-ai-gateway" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "vercel-ai-gateway",
+    providerId: "vercel-ai-gateway",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -214,7 +303,9 @@ test("vercel-ai-gateway provider maps language and image model types to catalog 
   assert.deepEqual(preview, [
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
     {
       id: "google/imagen-4",
@@ -227,9 +318,9 @@ test("vercel-ai-gateway provider maps language and image model types to catalog 
   ]);
 });
 
-test("vercel-ai-gateway infers supportedReasoningEfforts for anthropic claude catalog entries", () => {
+test("vercel-ai-gateway folds anthropic claude knowledge declarations into catalog entries", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "vercel-ai-gateway",
+    providerId: "vercel-ai-gateway",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -244,19 +335,32 @@ test("vercel-ai-gateway infers supportedReasoningEfforts for anthropic claude ca
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      capabilities: ["languageModel"],
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: "omit",
+      },
     },
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
   ]);
 });
 
-test("openrouter infers supportedReasoningEfforts for anthropic claude catalog entries", () => {
+test("openrouter folds anthropic claude knowledge declarations into catalog entries", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -271,19 +375,32 @@ test("openrouter infers supportedReasoningEfforts for anthropic claude catalog e
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
-      supportedReasoningEfforts: ["low", "medium", "high"],
+      capabilities: ["languageModel"],
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: "omit",
+      },
     },
     {
       id: "openai/gpt-5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: GPT5_EFFORTS,
+      serviceTiers: OPENAI_FLEX_FAST_TIERS,
     },
   ]);
 });
 
-test("openrouter keeps explicit empty supportedReasoningEfforts without claude inference", () => {
+test("knowledge declarations win over empty catalog effort lists", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -293,18 +410,31 @@ test("openrouter keeps explicit empty supportedReasoningEfforts without claude i
     ],
   });
 
+  // The curated knowledge record is the single source of truth for declared efforts; an empty
+  // upstream list is treated as a stale fact and replaced.
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4.6",
-      capabilities: ["chat"],
-      supportedReasoningEfforts: [],
+      capabilities: ["languageModel"],
+      ...outputEfforts(["low", "medium", "high", "max"]),
+      defaultEffort: "high",
+      thinkingCapabilities: ADAPTIVE_THINKING,
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { anthropic: { thinking: { type: "adaptive" } } },
+        },
+        off: "omit",
+      },
     },
   ]);
 });
 
 test("moonshot-ai video input maps to video capability not videoGeneration", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "moonshot-ai",
+    providerId: "moonshot-ai",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -318,16 +448,16 @@ test("moonshot-ai video input maps to video capability not videoGeneration", () 
     {
       id: "moonshot-v1-128k-vision-preview",
       displayName: "Moonshot V1 128k Vision Preview",
-      capabilities: ["chat", "video"],
+      capabilities: ["languageModel", "video"],
     },
   ]);
 });
 
 test("xiaomi provider consumes Xiaomi model catalog metadata", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "xiaomi" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "xiaomi" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "xiaomi",
+    providerId: "xiaomi",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -347,21 +477,27 @@ test("xiaomi provider consumes Xiaomi model catalog metadata", () => {
     {
       id: "mimo-v2.5",
       displayName: "MiMo V2.5",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
+      // mimo-v2.5 carries a model-knowledge thinking-switch declaration (v2-flash is excluded).
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: { body: { thinking: { type: "enabled" } } },
+        off: { body: { thinking: { type: "disabled" } } },
+      },
     },
     {
       id: "mimo-v2-flash",
       displayName: "MiMo V2 Flash",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
     },
   ]);
 });
 
 test("minimax provider consumes MiniMax model catalog metadata", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "minimax" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "minimax" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "minimax",
+    providerId: "minimax",
     transportKind: "anthropic",
     listedModels: [
       {
@@ -381,21 +517,35 @@ test("minimax provider consumes MiniMax model catalog metadata", () => {
     {
       id: "MiniMax-M3",
       displayName: "MiniMax M3",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
+      // minimax-m3 knowledge record: thinking switch.
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: {
+          body: { thinking: { type: "adaptive" } },
+          providerOptions: { minimax: { thinking: { type: "adaptive" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { minimax: { thinking: { type: "disabled" } } },
+        },
+      },
     },
     {
       id: "MiniMax-M2.5",
       displayName: "MiniMax M2.5",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      // minimax-m2.5 knowledge record: thinking is always on.
+      supportsThinkingType: "only",
     },
   ]);
 });
 
 test("volcengine provider maps domain-derived traits to catalog capabilities", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "volcengine" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "volcengine" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "volcengine",
+    providerId: "volcengine",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -423,13 +573,13 @@ test("volcengine provider maps domain-derived traits to catalog capabilities", (
     {
       id: "doubao-1-5-pro-32k-250115",
       displayName: "doubao-1-5-pro-32k",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 131072,
     },
     {
       id: "doubao-seed-1-6-250615",
       displayName: "Doubao Seed 1.6 250615",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
     },
     {
       id: "doubao-seedance-2-0-260128",
@@ -444,15 +594,15 @@ test("volcengine provider maps domain-derived traits to catalog capabilities", (
   ]);
 });
 
-test("byteplus provider uses Ark catalog metadata path", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "byteplus" }), true);
+test("byteplus provider uses the Ark catalog parser", () => {
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "byteplus" }), true);
 });
 
 test("meituan provider maps LongCat catalog metadata to preview entries", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "meituan" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "meituan" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "meituan",
+    providerId: "meituan",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -472,7 +622,7 @@ test("meituan provider maps LongCat catalog metadata to preview entries", () => 
     {
       id: "LongCat-2.0",
       displayName: "LongCat-2.0",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 1048576,
       supportsThinkingSwitch: true,
       pricing: {
@@ -484,10 +634,10 @@ test("meituan provider maps LongCat catalog metadata to preview entries", () => 
 });
 
 test("tencent-tokenhub provider preserves upstream displayName from models catalog", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "tencent-tokenhub" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "tencent-tokenhub" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "tencent-tokenhub",
+    providerId: "tencent-tokenhub",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -501,16 +651,29 @@ test("tencent-tokenhub provider preserves upstream displayName from models catal
     {
       id: "deepseek-v4-pro",
       displayName: "DeepSeek-V4-Pro",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
+      // deepseek-v4-* knowledge record: hybrid thinking tiers.
+      supportedReasoningEfforts: ["high", "max"],
+      supportsThinkingSwitch: true,
+      thinkingSwitch: {
+        on: {
+          body: { thinking: { type: "enabled" } },
+          providerOptions: { deepseek: { thinking: { type: "enabled" } } },
+        },
+        off: {
+          body: { thinking: { type: "disabled" } },
+          providerOptions: { deepseek: { thinking: { type: "disabled" } } },
+        },
+      },
     },
   ]);
 });
 
 test("mistral provider maps catalog metadata including vision and context length", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "mistral" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "mistral" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "mistral",
+    providerId: "mistral",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -529,16 +692,16 @@ test("mistral provider maps catalog metadata including vision and context length
       displayName: "Pixtral Large",
       description: "Vision chat model",
       contextLength: 128000,
-      capabilities: ["chat", "image"],
+      capabilities: ["languageModel", "image"],
     },
   ]);
 });
 
 test("google provider uses upstream display metadata from native models catalog", () => {
-  assert.equal(usesProviderListedModelCatalogMetadata({ provider: "google" }), true);
+  assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "google" }), true);
 
   const preview = previewModelCatalogForTransport({
-    provider: "google",
+    providerId: "google",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -555,42 +718,56 @@ test("google provider uses upstream display metadata from native models catalog"
       id: "gemini-3.1-pro-preview",
       displayName: "Gemini 3.1 Pro Preview",
       description: "Preview model for advanced reasoning.",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 1048576 + 8192,
+      // gemini-3+ knowledge record: effort tiers.
+      supportedReasoningEfforts: ["low", "medium", "high"],
+      // The gemini knowledge records declare the literal tier map (Gemini serviceTier wire enum).
+      serviceTiers: {
+        default: { body: { serviceTier: "standard" } },
+        flex: { body: { serviceTier: "flex" } },
+        priority: { body: { serviceTier: "priority" } },
+      },
     },
   ]);
 });
 
-test("openai-compatible transport does not treat metadata as Anthropic-specific catalog data", () => {
-  assert.equal(
-    usesAnthropicModelCatalogMetadata({ provider: "custom", transportKind: "openai-compatible" }),
-    false,
-  );
+test("custom openai-compatible entries produce generic catalog metadata", () => {
+  assert.equal(usesAnthropicModelCatalogMetadata({ transportKind: "openai-compatible" }), false);
 
-  assert.equal(
+  // Custom entries list via the generic openai-models shape; metadata (display name synthesis +
+  // knowledge declarations) applies to any listing.
+  assert.deepEqual(
     previewModelCatalogForTransport({
-      provider: "custom",
+      providerId: "custom",
       transportKind: "openai-compatible",
       listedModels: [
         { id: "some-model", supportsImageInput: true, supportedReasoningEfforts: ["low"] },
       ],
     }),
-    undefined,
+    [
+      {
+        id: "some-model",
+        displayName: "Some Model",
+        capabilities: ["languageModel", "image"],
+        supportedReasoningEfforts: ["low"],
+      },
+    ],
   );
 
   assert.equal(
     previewCatalogMapForTransport({
-      provider: "custom",
+      providerId: "custom",
       transportKind: "openai-compatible",
-      modelCatalog: [{ id: "some-model", capabilities: ["chat", "image"] }],
+      modelCatalog: [{ id: "some-model", capabilities: ["languageModel", "image"] }],
     }).size,
-    0,
+    1,
   );
 });
 
 test("openrouter provider passes contextLength through catalog metadata", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "openrouter",
+    providerId: "openrouter",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -603,15 +780,26 @@ test("openrouter provider passes contextLength through catalog metadata", () => 
   assert.deepEqual(preview, [
     {
       id: "anthropic/claude-sonnet-4",
-      capabilities: ["chat"],
+      capabilities: ["languageModel"],
       contextLength: 200000,
+      ...outputEfforts([]),
+      supportsThinkingSwitch: true,
+      thinkingCapabilities: BUDGET_THINKING,
+      thinkingSwitch: {
+        defaultState: "off",
+        on: {
+          body: { thinking: { type: "enabled", budget_tokens: 12000 } },
+          providerOptions: { anthropic: { thinking: { type: "enabled", budgetTokens: 12000 } } },
+        },
+        off: "omit",
+      },
     },
   ]);
 });
 
 test("kimi-code provider maps catalog traits including displayName and supportsThinkingType", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "kimi-code",
+    providerId: "kimi-code",
     transportKind: "openai-compatible",
     listedModels: [
       {
@@ -640,7 +828,7 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
     {
       id: "kimi-for-coding",
       displayName: "K2.7 Code",
-      capabilities: ["chat", "image", "video"],
+      capabilities: ["languageModel", "image", "video"],
       supportedReasoningEfforts: ["minimal", "low", "medium", "high"],
       contextLength: 262144,
       supportsThinkingType: "only",
@@ -648,7 +836,7 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
     {
       id: "k3",
       displayName: "K3",
-      capabilities: ["chat", "image"],
+      capabilities: ["languageModel", "image"],
       supportedReasoningEfforts: ["low", "high", "max"],
       defaultReasoningEffort: "high",
       contextLength: 262144,
@@ -659,7 +847,7 @@ test("kimi-code provider maps catalog traits including displayName and supportsT
 
 test("hugging-face provider preserves inferenceProvider in preview catalog", () => {
   const preview = previewModelCatalogForTransport({
-    provider: "hugging-face",
+    providerId: "hugging-face",
     transportKind: "open-responses",
     listedModels: [
       {
@@ -678,4 +866,244 @@ test("hugging-face provider preserves inferenceProvider in preview catalog", () 
       inferenceProvider: "fal-ai",
     },
   ]);
+});
+
+test("aggregator providers preserve upstreamProvider through preview and catalog map", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      { id: "openai/gpt-5.4", upstreamProvider: "OpenAI" },
+      { id: "meta/llama-4-maverick" },
+    ],
+  });
+
+  assert.deepEqual(preview, [
+    {
+      id: "openai/gpt-5.4",
+      capabilities: ["languageModel"],
+      supportedReasoningEfforts: ["none", "low", "medium", "high", "xhigh"],
+      serviceTiers: OPENAI_LIMITED_FAST_TIERS,
+      upstreamProvider: "OpenAI",
+    },
+    {
+      id: "meta/llama-4-maverick",
+      capabilities: ["languageModel"],
+    },
+  ]);
+
+  const catalogMap = previewCatalogMapForTransport({
+    providerId: "openrouter",
+    transportKind: "openai-compatible",
+    modelCatalog: [{ id: "x-ai/grok-4.3", upstreamProvider: "x-ai" }],
+  });
+
+  assert.equal(catalogMap.get("x-ai/grok-4.3")?.upstreamProvider, "x-ai");
+});
+
+test("legacy OpenAI knowledge folds exact efforts and tiers into direct catalog entries", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "openai",
+    transportKind: "open-responses",
+    listedModels: [{ id: "gpt-5.4" }, { id: "gpt-5.3-codex" }, { id: "gpt-4.1" }],
+  });
+  const byId = new Map(preview?.map((entry) => [entry.id, entry]));
+
+  assert.deepEqual(byId.get("gpt-5.4")?.supportedReasoningEfforts, [
+    "none",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(byId.get("gpt-5.4")?.serviceTiers, OPENAI_LIMITED_FAST_TIERS);
+  assert.deepEqual(byId.get("gpt-5.3-codex")?.supportedReasoningEfforts, [
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(byId.get("gpt-5.3-codex")?.serviceTiers, ["auto", "default"]);
+  assert.deepEqual(byId.get("gpt-4.1")?.serviceTiers, ["auto", "default", "fast"]);
+  assert.equal(byId.get("gpt-4.1")?.supportedReasoningEfforts, undefined);
+});
+
+test("parser-materialized serviceTiers win over the provider-agnostic knowledge record", () => {
+  // The vercel parser declares the route-specific literal map for openai-upstream routes; the
+  // provider-agnostic gpt-5.6+ knowledge list (with the OpenAI-native auto tier) must not win.
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      {
+        id: "openai/gpt-5.6",
+        upstreamProvider: "OpenAI",
+        serviceTiers: {
+          default: {},
+          flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+          fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+        },
+      },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.serviceTiers, {
+    default: {},
+    flex: { providerOptions: { gateway: { serviceTier: "flex" } } },
+    fast: { providerOptions: { gateway: { serviceTier: "fast" } } },
+  });
+});
+
+test("an explicit empty parser declaration suppresses the knowledge tier fold", () => {
+  // anthropic/claude-opus-4.8 matches the Opus 4.8 knowledge record (native Fast); the vercel
+  // parser declares no tiers for anthropic upstreams, and the explicit empty list must hold.
+  const preview = previewModelCatalogForTransport({
+    providerId: "vercel-ai-gateway",
+    transportKind: "open-responses",
+    listedModels: [
+      { id: "anthropic/claude-opus-4.8", upstreamProvider: "Anthropic", serviceTiers: [] },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.serviceTiers, []);
+});
+
+test("bedrock listings withhold the provider-agnostic knowledge tier declaration", () => {
+  // Converse has no service tier parameter, so the Claude Opus Fast declaration must not fold
+  // onto a Bedrock entry (it would be a no-op control).
+  const preview = previewModelCatalogForTransport({
+    providerId: "amazon-bedrock",
+    transportKind: "bedrock",
+    listedModels: [{ id: "anthropic.claude-opus-5-5-v1" }],
+  });
+
+  assert.equal(preview?.[0]?.serviceTiers, undefined);
+
+  // Direct anthropic listings do fold it.
+  const direct = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [{ id: "claude-opus-5" }],
+  });
+
+  assert.deepEqual(direct?.[0]?.serviceTiers, ["fast"]);
+});
+
+test("muse model ids override stale catalog reasoning efforts on any provider", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "custom",
+    transportKind: "openai-compatible",
+    listedModels: [
+      {
+        id: "meta/muse-spark-1.3-contributor",
+        supportedReasoningEfforts: ["none", "max"],
+      },
+      { id: "muse-wonder-1.0" },
+    ],
+  });
+
+  assert.deepEqual(preview?.[0]?.supportedReasoningEfforts, [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.deepEqual(preview?.[1]?.supportedReasoningEfforts, [
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+  ]);
+});
+
+test("anthropic listings prefer explicit API effort lists and retain knowledge display", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        displayName: "Claude Opus 5",
+        contextLength: 1000000,
+        outputLimit: 128000,
+        supportedEfforts: [],
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+        },
+        catalogCapabilities: { serverTools: { supported: true } },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.displayName, "Claude Opus 5");
+  assert.equal(model?.contextLength, 1000000);
+  assert.equal(model?.outputLimit, 128000);
+  assert.deepEqual(model?.supportedEfforts, []);
+  assert.equal(model?.supportsThinkingSwitch, true);
+  assert.deepEqual(model?.thinkingCapabilities, {
+    supported: true,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+  assert.deepEqual(model?.catalogCapabilities, { serverTools: { supported: true } });
+  assert.deepEqual(model?.thinkingSwitch?.on, {
+    body: { thinking: { type: "adaptive", display: "summarized" } },
+    providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+  });
+});
+
+test("anthropic API thinking unsupported revokes the old switch and encoding", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        supportedEfforts: ["low"],
+        thinkingCapabilities: {
+          supported: false,
+          types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+        },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.supportsThinkingSwitch, false);
+  assert.equal(model?.supportsThinkingType, undefined);
+  assert.equal(model?.thinkingSwitch, undefined);
+  assert.deepEqual(model?.thinkingCapabilities, {
+    supported: false,
+    types: { adaptive: true, betweenTools: false, disabled: true, enabled: false },
+  });
+});
+
+test("anthropic API off-type rejection removes the off patch and marks always-on thinking", () => {
+  const preview = previewModelCatalogForTransport({
+    providerId: "anthropic",
+    transportKind: "anthropic",
+    listedModels: [
+      {
+        id: "claude-opus-5",
+        supportedEfforts: ["low"],
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: false, enabled: false },
+        },
+      },
+    ],
+  });
+
+  const model = preview?.[0];
+  assert.equal(model?.supportsThinkingSwitch, false);
+  assert.equal(model?.supportsThinkingType, "only");
+  assert.deepEqual(model?.thinkingSwitch?.on, {
+    body: { thinking: { type: "adaptive", display: "summarized" } },
+    providerOptions: { anthropic: { thinking: { type: "adaptive", display: "summarized" } } },
+  });
+  assert.equal(model?.thinkingSwitch && "off" in model.thinkingSwitch, false);
 });

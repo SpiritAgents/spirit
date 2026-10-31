@@ -1,6 +1,7 @@
 ---
 title: Desktop
-description: Carte des paramètres, Fichiers / Git / Navigateur, extensions, automations et jumelage avec l'hôte Web local.
+description: Carte des paramètres, Fichiers / Git / Navigateur, extensions,
+  automations et jumelage avec l'hôte Web local.
 ---
 
 Desktop est l'hôte graphique. Il partage le démon local avec le [CLI](./cli.mdx). Installez-le depuis [Installer Desktop](./install/desktop.mdx).
@@ -62,7 +63,7 @@ Ces puces injectent une invite fixe. L'agent utilise ensuite les outils [workspa
 
 ### LSP
 
-Activez les serveurs de langage dans **Paramètres → Agents**, puis installez un fournisseur s'il manque. Une fois qu'un serveur est prêt, l'agent peut appeler [`get_diagnostics`](./agent/tools.mdx).
+Activez les serveurs de langage dans **Paramètres → Agents**. {{product.name|mdx}} détecte uniquement les serveurs déjà installés sur cette machine ; installez vous-même ceux qui manquent avec la chaîne d'outils du tableau. Une fois qu'un serveur est prêt, l'agent peut appeler [`get_diagnostics`](./agent/tools.mdx).
 
 | Id              | Langages | Comment il est installé                                  |
 | --------------- | -------- | -------------------------------------------------------- |
@@ -73,13 +74,13 @@ Activez les serveurs de langage dans **Paramètres → Agents**, puis installez 
 | `jdtls`         | Java     | Manuel                                                   |
 | `omnisharp`     | C#       | .NET                                                     |
 
-clangd et jdtls ne sont pas fournis. Installez-les vous-même, puis revenez à Paramètres → Agents.
+{{product.name|mdx}} n'installe pas les serveurs de langage. Installez vous-même ceux qui manquent, puis revenez à Paramètres → Agents.
 
 ### Onglet
 
-Tab est la complétion en ligne de Monaco. Acceptez le texte fantôme avec une seule touche Tab. Ouvrez **Paramètres → Tab**, activez la complétion de code (`codeCompletionEnabled`) et attribuez un modèle de chat léger dans **Paramètres → Modèles**. Cet emplacement sert également à d'autres tâches de fond légères.
+Tab est la complétion en ligne de Monaco. Acceptez le texte fantôme avec une seule touche Tab. Ouvrez **Paramètres → Tab**, activez la complétion de code (`codeCompletionEnabled`) et attribuez un modèle de langue secondaire dans **Paramètres → Modèles**. Cet emplacement sert également à d'autres tâches de fond secondaires.
 
-Si la complétion est vide, vérifiez qu'un modèle de chat léger est connecté et que le paramètre est activé. Ce n'est pas la conversation de l'agent.
+Si la complétion est vide, vérifiez qu'un modèle de langue secondaire est connecté et que le paramètre est activé. Ce n'est pas la conversation de l'agent.
 
 ## Extensions et automatisations
 

@@ -1,6 +1,6 @@
 ---
 title: 上手
-description: 安装 Spirit，接上一家提供商，完成一次带审批的小改。
+description: 安装 {{product.name}}，接上一家提供商，完成一次带审批的小改。
 ---
 
 这一页带你从全新安装走到一次有用的改动。后面的提供商和宿主文档都挂在这条路径上；没有它，那些页面无处附着。
@@ -24,11 +24,11 @@ description: 安装 Spirit，接上一家提供商，完成一次带审批的小
   <Tab value="CLI">
 
 ```bash
-curl -fsSL https://spirit.dev/install | bash
+curl -fsSL {{product.websiteOrigin}}/install | bash
 ```
 
 ```powershell
-irm https://spirit.dev/install.ps1 | iex
+irm {{product.websiteOrigin}}/install.ps1 | iex
 ```
 
 新开一个终端，运行 `spirit --version`。细节见 [安装 CLI](./install/cli.mdx)。
@@ -60,15 +60,15 @@ TUI 把当前目录当作工作区。
 
 ## 3. 接上第一家提供商
 
-你需要一把已有提供商的 API Key。Spirit 把它写入操作系统钥匙串（服务名 `Spirit`）。
+你需要一把已有提供商的 API Key。{{product.name|mdx}} 把它写入操作系统钥匙串（服务名 `{{product.name}}`）。
 
 <Tabs items={["Desktop", "CLI"]}>
   <Tab value="Desktop">
 
 1. 打开 **设置 → 模型**。
 2. 选一家提供商，按连接向导走完。
-3. 粘贴 Key。区域、站点、套餐端点等字段只在该家需要时出现。
-4. 把一个对话模型设为当前模型。
+3. 粘贴 Key。区域、站点、套餐端点等额外字段只会在该提供商需要时出现。
+4. 把一个语言模型设为当前模型。
 
   </Tab>
   <Tab value="CLI">
@@ -101,4 +101,4 @@ Agent 会读文件、提出编辑，然后等待。在提示里批准文件改�
 ## 接下来
 
 - 需要另一个宿主或固定版本时，看 [安装 Desktop](./install/desktop.mdx) 和 [安装 CLI](./install/cli.mdx)
-- 换一家或导入不到模型时，看 [提供商](./providers.mdx) 核对该家的站点、套餐或云字段
+- 需要再连接一家提供商，或导入不到模型时核对站点、套餐、云字段，看 [提供商](./providers.mdx)

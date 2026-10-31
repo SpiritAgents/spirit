@@ -21,6 +21,7 @@
     "customize/hooks",
     "customize/dreams",
     "customize/automations",
+    "customize/tasks",
     "customize/integrations",
     "customize/extensions",
     "---Hosts---",

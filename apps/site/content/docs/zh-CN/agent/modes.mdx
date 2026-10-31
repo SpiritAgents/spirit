@@ -3,14 +3,14 @@ title: 模式
 description: 在 Agent、Plan、Ask、Debug 之间切换。同一工作区，权限不同。
 ---
 
-Spirit 有四种 Agent 模式。Desktop 与 CLI 用 Tab 循环：**Agent → Plan → Ask → Debug → Agent**。
+{{product.name|mdx}} 有四种 Agent 模式。Desktop 与 CLI 用 Tab 循环：**Agent → Plan → Ask → Debug → Agent**。
 
-| 模式      | 做什么                                                                                                             |
-| --------- | ------------------------------------------------------------------------------------------------------------------ |
-| **Agent** | 默认。读、改、跑命令、验证。                                                                                       |
-| **Plan**  | 只规划。用 [ask_questions](./ask-questions.mdx) 澄清，用 `create_plan` 写计划，然后请你点开始实现或切回 Agent。    |
-| **Ask**   | 只读。解释和搜索。不能改文件、跑 shell、打补丁或生图/生视频。要改代码请切到 Agent。                                |
-| **Debug** | 查 bug：排列假设，在 `.spirit/logs/` 插入 NDJSON 日志（用 `#region agent log` 包起来），等你回复已解决或仍能复现。 |
+| 模式      | 做什么                                                                                                                                         |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Agent** | 默认。读、改、跑命令、验证。                                                                                                                   |
+| **Plan**  | 只规划。用 [ask_questions](./ask-questions.mdx) 澄清，用 `create_plan` 写计划，然后请你点开始实现或切回 Agent。                                |
+| **Ask**   | 只读。解释和搜索。不能改文件、跑 shell、打补丁或生图/生视频。要改代码请切到 Agent。                                                            |
+| **Debug** | 查 bug：排列假设，在 `{{product.workspaceDataFolderName}}/logs/` 插入 NDJSON 日志（用 `#region agent log` 包起来），等你回复已解决或仍能复现。 |
 
 改动大或目标含糊时用 Plan。只想读懂仓库时用 Ask。能复现故障、想系统排查时用 Debug。日常小改留在 Agent。
 

@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import { AppProviders } from "@/components/app-providers";
-import { LocaleFonts } from "@/components/locale-fonts";
 import {
   DEFAULT_LOCALE,
   isSupportedLocale,
@@ -40,10 +39,7 @@ export default async function LocaleLayout({
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body>
-        <AppProviders locale={locale}>
-          <LocaleFonts locale={locale} />
-          {children}
-        </AppProviders>
+        <AppProviders locale={locale}>{children}</AppProviders>
       </body>
     </html>
   );

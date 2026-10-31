@@ -1,6 +1,6 @@
+import { ChevronRight } from "@spiritagent/icons/chevron-right";
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { ProcessGroupThinkingBlock } from "@/components/process-group-blocks";
@@ -126,6 +126,7 @@ export function ProcessCardCollapsible({
               expanded && "rotate-90",
             )}
             aria-hidden
+            strokeWidth={1.75}
           />
         ) : null}
       </AnimatedCollapseTrigger>

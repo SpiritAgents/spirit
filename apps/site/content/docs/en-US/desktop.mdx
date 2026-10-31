@@ -1,6 +1,7 @@
 ---
 title: Desktop
-description: Settings map, Files / Git / Browser, extensions, automations, and local Web Host pairing.
+description: Settings map, Files / Git / Browser, extensions, automations, and
+  local Web Host pairing.
 ---
 
 Desktop is the graphical host. It shares the local daemon with the [CLI](./cli.mdx). Install it from [Install Desktop](./install/desktop.mdx).
@@ -62,7 +63,7 @@ Those chips inject a fixed prompt. The agent then uses [workspace and `shell` to
 
 ### LSP
 
-Turn language servers on in **Settings → Agents**, then install a provider if it is missing. Once a server is ready, the agent can call [`get_diagnostics`](./agent/tools.mdx).
+Turn language servers on in **Settings → Agents**. {{product.name|mdx}} only detects servers already installed on this machine; install any missing one yourself with the toolchain in the table. Once a server is ready, the agent can call [`get_diagnostics`](./agent/tools.mdx).
 
 | Id              | Languages | How it is installed                               |
 | --------------- | --------- | ------------------------------------------------- |
@@ -73,13 +74,13 @@ Turn language servers on in **Settings → Agents**, then install a provider if 
 | `jdtls`         | Java      | Manual                                            |
 | `omnisharp`     | C#        | .NET                                              |
 
-clangd and jdtls are not bundled. Install them yourself, then come back to Settings → Agents.
+{{product.name|mdx}} does not install language servers. Install a missing one yourself, then come back to Settings → Agents.
 
 ### Tab
 
-Tab is Monaco inline completion. Accept ghost text with one Tab. Open **Settings → Tab**, enable code completion (`codeCompletionEnabled`), and assign a lightweight chat model in **Settings → Models**. That slot also serves other lightweight background tasks.
+Tab is Monaco inline completion. Accept ghost text with one Tab. Open **Settings → Tab**, enable code completion (`codeCompletionEnabled`), and assign a secondary language model in **Settings → Models**. That slot also serves other secondary background tasks.
 
-If completion is empty, check that a lightweight chat model is connected and that the setting is on. This is not the agent conversation.
+If completion is empty, check that a secondary language model is connected and that the setting is on. This is not the agent conversation.
 
 ## Extensions and automations
 

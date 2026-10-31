@@ -1,32 +1,30 @@
 import type { JsonObject, JsonValue, AgentMode } from "../ports.js";
-import type { LlmModelCapabilities, TransportRequestProfile } from "../llm-provider-shared.js";
+import type { FileUploadConfig } from "../file-upload/uploader.js";
+import type {
+  LlmModelCapabilities,
+  LlmWebToolExposure,
+  ThinkingSwitchDeclaration,
+  TransportRequestProfile,
+} from "../llm-provider-shared.js";
+import type { ModelServiceTier, ModelServiceTiersDeclaration } from "../model-service-tier.js";
+import type { ProviderToolEntry } from "../provider-tools/types.js";
 import type {
   OpenAiImageGenerationConfig,
-  OpenAiLlmVendor,
   OpenAiVideoGenerationConfig,
 } from "../openai/openai-compat.js";
-import { isGatewayAnthropicClaudeModel } from "../openai/gateway-anthropic-thinking.js";
 import {
-  buildOpenRouterClaudeReasoningBody,
-  isOpenRouterAnthropicClaudeModel,
-} from "../openai/openrouter-anthropic-reasoning.js";
-import { resolveOpenAiTransportReasoningEffortForContext } from "../reasoning-effort.js";
-import {
-  resolveOpenAiTransportReasoningModeForContext,
+  resolveDeclaredReasoningEffort,
+  resolveDeclaredReasoningMode,
   type ModelReasoningMode,
-} from "../openai/gpt-reasoning-controls.js";
+} from "../reasoning-effort.js";
 import { extractAzureResourceNameFromApiBase } from "../azure-resource.js";
 import { cloneJsonValue } from "../tool-agent.js";
-import { isArkLlmVendor } from "../ark/ark-provider.js";
-
-/** Underlying AI SDK provider: official OpenAI Responses, official Azure Responses, or an Open Responses compatible endpoint. */
-export type OpenResponsesSdkProvider = "openai" | "xai" | "azure" | "open-responses-compatible";
 
 export type OpenResponsesPreviousResponseMode = "disabled" | "stored" | "stateless";
 
 export type OpenResponsesReasoningSummary = "auto" | "detailed" | "off";
 
-export interface OpenResponsesTransportConfig {
+export interface OpenResponsesTransportConfig extends LlmWebToolExposure {
   transportKind: "open-responses";
   apiKey: string;
   model: string;
@@ -35,21 +33,16 @@ export interface OpenResponsesTransportConfig {
   project?: string;
   compactModel?: string;
   workspaceRoot?: string;
-  /**
-   * Aligned with the host `ModelProfile.provider`; used to infer the default `responsesProvider`.
-   */
-  llmVendor?: OpenAiLlmVendor;
   modelCapabilities?: LlmModelCapabilities;
-  /**
-   * Explicitly selects the underlying SDK. Default: `openai` → official OpenAI, `xai` → official `@ai-sdk/xai`,
-   * Gateway `openai/*` → `@ai-sdk/openai`, all other Gateway routes and vendors → `open-responses-compatible`.
-   */
-  responsesProvider?: OpenResponsesSdkProvider;
   /** Official OpenAI Responses: whether the conversation is stored server-side by OpenAI. Defaults to true when unset. */
   store?: boolean;
   /** @deprecated Determined by responsesUsesStoredState; field kept only for compatibility with serialized legacy configs. */
   previousResponseMode?: OpenResponsesPreviousResponseMode;
+  /** Declared reasoning effort selection; sent to the wire verbatim. `default`/absent sends nothing. */
   reasoningEffort?: "default" | "minimal" | "none" | "low" | "medium" | "high" | "xhigh" | "max";
+  effortSemantics?: "output";
+  /** Output-wide effort used by declarations such as OpenRouter's unified reasoning adapter. */
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
   reasoningMode?: ModelReasoningMode;
   reasoningSummary?: OpenResponsesReasoningSummary;
   truncation?: "disabled" | "auto";
@@ -69,30 +62,53 @@ export interface OpenResponsesTransportConfig {
     secretAccessKey: string;
     sessionToken?: string;
   };
-  /** Azure resource name; aligned with `@ai-sdk/azure`'s `resourceName`. */
-  azureResourceName?: string;
-  /** Cloudflare AI Gateway name; injected as `cf-aig-gateway-id` on requests. */
-  cloudflareGatewayId?: string;
   /** Request policy profile for non-agent lightweight requests such as code completion; defaults to the agent path behavior. */
   transportRequestProfile?: TransportRequestProfile;
-  /** Vendor extended thinking; false disables the Claude / DeepSeek style thinking toggle. */
+  /** User thinking-switch state: `false` selects the `thinkingSwitch.off` encoding. Absent = on. */
   vendorExtendedThinking?: boolean;
+  /**
+   * Selected service tier (validated at config load). The wire effect comes from the fixed
+   * transport API table (simple form) or the tier's literal `serviceTiers` declaration.
+   */
+  serviceTier?: ModelServiceTier;
+  /** Declared service tiers: a tier-name list or a literal map with wire effects and input limits. */
+  serviceTiers?: ModelServiceTiersDeclaration;
+  /** Runtime-only last upstream input usage used by conditional tiers; never persisted in config.json. */
+  lastInputTokens?: number;
+  /** Full npm package name of the SDK adapter (e.g. `@ai-sdk/openai`); absent = the generic `@ai-sdk/open-responses` adapter. */
+  sdk?: string;
+  /** Literal extra headers merged into every outbound request; explicit declarations win on conflicts. */
+  headers?: Record<string, string>;
+  /** Literal fields merged unconditionally into every request body top level; escape hatch, prefer structured declarations. */
+  body?: JsonObject;
+  /** Declared provider tools; injected, recognized, and executed purely by declaration. */
+  providerTools?: ProviderToolEntry[];
+  /** Declared generic upload channel; absent = media inputs use the transport's inline path. */
+  fileUpload?: FileUploadConfig;
+  /** Transport option namespace (`auth` / `storedState` / `applyPatch` / `reasoningSummary` / `defaultInputItemStatus`); unknown keys are rejected at config load. */
+  options?: Record<string, unknown>;
+  /** Declared output token limit for the model; mapped to the Responses `max_output_tokens` parameter. */
+  outputLimit?: number;
+  /** Declared reasoning mode set; the picker and validation source for `reasoningMode`. */
+  supportedReasoningModes?: readonly ModelReasoningMode[];
+  /** Declared wire encoding of the thinking on/off switch; absent = transport default encoding. */
+  thinkingSwitch?: ThinkingSwitchDeclaration;
 }
 
 export type OpenResponsesRequestTraceKind =
   | "openai_sdk_responses"
   | "xai_sdk_responses"
   | "azure_sdk_responses"
-  | "open_responses_sdk_responses"
-  | "alibaba_open_responses"
-  | "deepseek_open_responses";
+  | "open_responses_sdk_responses";
 
 export interface OpenResponsesRequestTrace extends JsonObject {
   kind: OpenResponsesRequestTraceKind;
   stepIndex: number;
   model: string;
   stream: boolean;
-  input?: JsonValue;
+  /** Configured per-model service tier preference (requested preference, not the upstream-granted tier). */
+  serviceTier?: ModelServiceTier;
+  input?: JsonValue[];
   tools?: JsonValue[];
   store?: boolean;
   previousResponseId?: string;
@@ -101,125 +117,54 @@ export interface OpenResponsesRequestTrace extends JsonObject {
 }
 
 /**
- * Strips Gateway-style `openai/` routing prefix. Other vendor prefixes return undefined.
- */
-export function normalizeGatewayOpenAiModelId(model: string): string | undefined {
-  const trimmed = model.trim();
-  const lower = trimmed.toLowerCase();
-  const prefix = "openai/";
-  if (!lower.startsWith(prefix)) {
-    return undefined;
-  }
-
-  return trimmed.slice(prefix.length).trim();
-}
-
-export function isGatewayOpenAiRoutedModel(model: string): boolean {
-  return normalizeGatewayOpenAiModelId(model) !== undefined;
-}
-
-/**
- * Aggregators uniformly strip the `openai/*` model id (`resolveOpenResponsesLanguageModelId` etc.).
- * Do not use for apply_patch shape decisions: Gateway uses a function tool, OpenRouter uses built-in (see apply-patch-eligibility).
- */
-export function isAggregatedOpenAiRoutedVendor(
-  llmVendor: OpenAiLlmVendor | undefined,
-): llmVendor is "vercel-ai-gateway" | "cloudflare-ai-gateway" | "openrouter" {
-  return (
-    llmVendor === "vercel-ai-gateway" ||
-    llmVendor === "cloudflare-ai-gateway" ||
-    llmVendor === "openrouter"
-  );
-}
-
-/**
- * Model id passed to `@ai-sdk/openai` / `@ai-sdk/xai` language model factories.
- * Gateway OpenAI routes use the stripped id (e.g. `gpt-5.1` from `openai/gpt-5.1`).
+ * Model id passed to the adapter's language model factory. Gateway-routed models keep their
+ * `openai/` prefix: the gateway adapter needs it for routing, and `@ai-sdk/openai` is never used
+ * for gateway-routed models (it assumes a direct OpenAI endpoint, strips the routing prefix, and
+ * injects direct-only request shaping).
  */
 export function resolveOpenResponsesLanguageModelId(
-  config: Pick<OpenResponsesTransportConfig, "model" | "llmVendor">,
+  config: Pick<OpenResponsesTransportConfig, "model">,
 ): string {
-  if (isAggregatedOpenAiRoutedVendor(config.llmVendor)) {
-    const routed = normalizeGatewayOpenAiModelId(config.model);
-    if (routed) {
-      return routed;
-    }
-  }
-
   return config.model;
 }
 
-/** Bedrock Mantle Open Responses (e.g. openai.gpt-5.5 @ bedrock-mantle.*.api.aws/openai/v1). */
-export function isBedrockMantleOpenResponsesConfig(
-  config: Pick<OpenResponsesTransportConfig, "baseUrl" | "model">,
+/** `options.auth: "aws-sigv4"`: the Bedrock Mantle Open Responses surface (SigV4 IAM auth). */
+export function isAwsSigV4AuthConfig(
+  config: Pick<OpenResponsesTransportConfig, "options">,
 ): boolean {
-  const baseUrl = config.baseUrl?.trim().toLowerCase() ?? "";
-  if (baseUrl.includes("bedrock-mantle.") && baseUrl.includes("/openai/")) {
-    return true;
-  }
-
-  return /^openai\.gpt-/i.test(config.model.trim());
+  return config.options?.auth === "aws-sigv4";
 }
 
-export function resolveOpenResponsesSdkProvider(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "responsesProvider" | "model">,
-): OpenResponsesSdkProvider {
-  // Honor an explicit choice (including `openai`) when the caller sets one.
-  if (config.responsesProvider !== undefined) {
-    return config.responsesProvider;
-  }
-
-  if (config.llmVendor === "openai") {
-    return "openai";
-  }
-
-  if (config.llmVendor === "xai") {
-    return "xai";
-  }
-
-  if (config.llmVendor === "azure") {
-    return "azure";
-  }
-
-  // Gateway-routed OpenAI models (e.g. `openai/gpt-5.4`) MUST use the generic
-  // `@ai-sdk/open-responses` provider, not `@ai-sdk/openai`. The latter assumes a
-  // direct OpenAI endpoint: it strips the `openai/` routing prefix and injects
-  // direct-only request shaping, which makes the Vercel AI Gateway silently stop
-  // streaming reasoning summaries. apply_patch stays available via the flat
-  // function-tool path (shouldUseApplyPatchFunctionTool).
-  return "open-responses-compatible";
-}
-
+/** The declared reasoning effort for the wire, verbatim; `default`/absent sends nothing. */
 export function openResponsesReasoningEffort(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "model" | "reasoningEffort">,
+  config: Pick<OpenResponsesTransportConfig, "reasoningEffort">,
 ): string | undefined {
-  return resolveOpenAiTransportReasoningEffortForContext(config.reasoningEffort, {
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-    transportKind: "open-responses",
-  });
+  return resolveDeclaredReasoningEffort(config.reasoningEffort);
+}
+
+/** The declared reasoning mode for the wire; only `"pro"` is sent. */
+export function openResponsesReasoningMode(
+  config: Pick<OpenResponsesTransportConfig, "reasoningMode">,
+): ModelReasoningMode | undefined {
+  return resolveDeclaredReasoningMode(config.reasoningMode);
 }
 
 /**
  * Resolves whether to request a reasoning summary from Responses.
- * When not explicitly configured: disabled when reasoningEffort is none, otherwise defaults to auto (so the UI can show the thinking summary).
+ * Emission is opt-in via the `options.reasoningSummary` declaration: endpoints that reject or
+ * silently drop OpenAI-style `reasoning.summary` (DeepSeek, Ark, StepFun Responses) never declare
+ * it and nothing is sent. When declared and not explicitly configured: disabled when
+ * reasoningEffort is none, otherwise defaults to auto (so the UI can show the thinking summary).
  */
 export function resolveOpenResponsesReasoningSummary(
-  config: Pick<
-    OpenResponsesTransportConfig,
-    "baseUrl" | "llmVendor" | "model" | "reasoningEffort" | "reasoningSummary"
-  >,
+  config: Pick<OpenResponsesTransportConfig, "reasoningEffort" | "reasoningSummary" | "options">,
 ): OpenResponsesReasoningSummary | undefined {
-  if (isBedrockMantleOpenResponsesConfig(config)) {
+  // The SigV4 (Bedrock Mantle) Open Responses surface has no reasoning summary support.
+  if (isAwsSigV4AuthConfig(config)) {
     return undefined;
   }
 
-  // Ark Responses only supports reasoning.effort and rejects OpenAI-style reasoning.summary.
-  if (
-    isArkLlmVendor(config.llmVendor) ||
-    config.llmVendor === "stepfun" ||
-    config.llmVendor === "deepseek"
-  ) {
+  if (config.options?.["reasoningSummary"] !== true) {
     return undefined;
   }
 
@@ -234,30 +179,12 @@ export function resolveOpenResponsesReasoningSummary(
   return "auto";
 }
 
-export function openResponsesReasoningMode(
-  config: Pick<OpenResponsesTransportConfig, "llmVendor" | "model" | "reasoningMode">,
-): ModelReasoningMode | undefined {
-  return resolveOpenAiTransportReasoningModeForContext(config.reasoningMode, {
-    ...(config.llmVendor ? { provider: config.llmVendor } : {}),
-    model: config.model,
-  });
-}
-
 export function openResponsesReasoningTrace(
   config: Pick<
     OpenResponsesTransportConfig,
-    "llmVendor" | "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary"
+    "model" | "reasoningEffort" | "reasoningMode" | "reasoningSummary" | "options"
   >,
 ): JsonObject | undefined {
-  if (isGatewayAnthropicClaudeModel(config.llmVendor, config.model)) {
-    return undefined;
-  }
-
-  if (isOpenRouterAnthropicClaudeModel(config.llmVendor, config.model)) {
-    const reasoning = buildOpenRouterClaudeReasoningBody(config);
-    return reasoning;
-  }
-
   const effort = openResponsesReasoningEffort(config);
   const mode = openResponsesReasoningMode(config);
   const summary = resolveOpenResponsesReasoningSummary(config);
@@ -297,31 +224,29 @@ export function buildOpenResponsesRequestTrace(
     "store" | "previousResponseId" | "reasoning" | "truncation"
   >,
 ): JsonValue[] {
-  const provider = resolveOpenResponsesSdkProvider(config);
   const kind: OpenResponsesRequestTraceKind =
-    config.llmVendor === "deepseek" && provider === "open-responses-compatible"
-      ? "deepseek_open_responses"
-      : config.llmVendor === "alibaba" && provider === "open-responses-compatible"
-        ? "alibaba_open_responses"
-        : provider === "openai"
-          ? "openai_sdk_responses"
-          : provider === "xai"
-            ? "xai_sdk_responses"
-            : provider === "azure"
-              ? "azure_sdk_responses"
-              : "open_responses_sdk_responses";
+    config.sdk === "@ai-sdk/openai"
+      ? "openai_sdk_responses"
+      : config.sdk === "@ai-sdk/xai"
+        ? "xai_sdk_responses"
+        : config.sdk === "@ai-sdk/azure"
+          ? "azure_sdk_responses"
+          : "open_responses_sdk_responses";
 
   const trace: OpenResponsesRequestTrace = {
     kind,
     stepIndex,
     model: config.model,
     stream,
+    ...(config.serviceTier !== undefined ? { serviceTier: config.serviceTier } : {}),
     input: input.map((item) => cloneJsonValue(item)),
     ...(tools.length > 0 ? { tools: tools.map((tool) => cloneJsonValue(tool as JsonValue)) } : {}),
     ...(extras?.store !== undefined ? { store: extras.store } : {}),
-    ...(extras?.previousResponseId ? { previousResponseId: extras.previousResponseId } : {}),
+    ...(extras?.previousResponseId !== undefined
+      ? { previousResponseId: extras.previousResponseId }
+      : {}),
     ...(extras?.reasoning !== undefined ? { reasoning: extras.reasoning } : {}),
-    ...(extras?.truncation ? { truncation: extras.truncation } : {}),
+    ...(extras?.truncation !== undefined ? { truncation: extras.truncation } : {}),
   };
 
   return [trace];
@@ -337,18 +262,19 @@ export function openResponsesPostUrl(baseUrl: string | undefined): string {
   return normalized.endsWith("/responses") ? normalized : `${normalized}/responses`;
 }
 
+/**
+ * The `@ai-sdk/azure` adapter's `resourceName`: parsed from the materialized apiBase
+ * (`https://{resourceName}.openai.azure.com/openai/v1`).
+ */
 export function resolveAzureResourceName(
-  config: Pick<OpenResponsesTransportConfig, "azureResourceName" | "baseUrl">,
+  config: Pick<OpenResponsesTransportConfig, "baseUrl">,
 ): string {
-  const explicit = config.azureResourceName?.trim();
-  if (explicit) {
-    return explicit;
-  }
-
   const fromBase = extractAzureResourceNameFromApiBase(config.baseUrl ?? "");
   if (fromBase) {
     return fromBase;
   }
 
-  throw new Error("Azure azureResourceName configuration is missing.");
+  throw new Error(
+    "Azure resource name cannot be parsed from apiBase (expected https://{resourceName}.openai.azure.com/...).",
+  );
 }
