@@ -727,6 +727,10 @@ fn vertex_without_any_credential_is_a_setup_error() {
 
 #[test]
 fn declared_key_channel_resolving_to_nothing_is_a_setup_error() {
+    let _guard = shared_env_lock()
+        .lock()
+        .unwrap_or_else(|err| err.into_inner());
+    let _missing_override = ScopedEnv::remove(ENV_API_KEY);
     let config = config_from(json!({
         "schemaVersion": 1,
         "providers": [{
