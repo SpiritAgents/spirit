@@ -87,7 +87,7 @@ enum Commands {
     Serve,
     Model {
         #[command(subcommand)]
-        action: ModelAction,
+        action: Box<ModelAction>,
     },
     Config {
         #[command(subcommand)]
@@ -363,7 +363,7 @@ fn main() -> Result<()> {
         Some(Commands::Skill) => print_skills_stub(),
         Some(Commands::Serve) => run_serve()?,
         Some(Commands::Interactive) | None => run_interactive(&options, &config)?,
-        Some(Commands::Model { action }) => handle_model_cli(into_model_command(action))?,
+        Some(Commands::Model { action }) => handle_model_cli(into_model_command(*action))?,
         Some(Commands::Config { action }) => handle_config_cli(into_config_command(action))?,
         Some(Commands::Mcp { action }) => handle_mcp_cli(into_mcp_command(action))?,
         Some(Commands::Hook { action }) => handle_hooks_cli(into_hook_command(action))?,

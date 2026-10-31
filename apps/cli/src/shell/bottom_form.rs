@@ -302,7 +302,7 @@ fn model_add_text_values_by_label(form: &BottomFormView) -> HashMap<String, Stri
         .collect()
 }
 
-fn model_add_saved_text<'a>(texts: &'a HashMap<String, String>, labels: &[String]) -> String {
+fn model_add_saved_text(texts: &HashMap<String, String>, labels: &[String]) -> String {
     labels
         .iter()
         .find_map(|label| texts.get(label))
@@ -613,7 +613,7 @@ impl ModelAddFormPlan {
 
         if self.collect_gateway_id {
             let label = t!("form.model.field.cloudflare_gateway_id.label").into_owned();
-            let value = model_add_saved_text(texts, &[label.clone()]);
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
             fields.push(model_add_text_field(
                 label,
                 t!("form.model.field.cloudflare_gateway_id.help").into_owned(),
@@ -637,7 +637,7 @@ impl ModelAddFormPlan {
 
         if self.has_api_base_field {
             let label = t!("form.model.field.api_base.label").into_owned();
-            let value = model_add_saved_text(texts, &[label.clone()]);
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
             fields.push(model_add_text_field(
                 label,
                 String::new(),
@@ -649,7 +649,7 @@ impl ModelAddFormPlan {
 
         if self.manual_single {
             let label = t!("form.model.field.context_length.label").into_owned();
-            let value = model_add_saved_text(texts, &[label.clone()]);
+            let value = model_add_saved_text(texts, std::slice::from_ref(&label));
             fields.push(model_add_text_field(
                 label,
                 t!("form.model.field.context_length.help").into_owned(),
@@ -667,7 +667,7 @@ impl ModelAddFormPlan {
             }
             CredentialForm::BedrockIam => {
                 let access_label = t!("form.model.field.bedrock_access_key_id.label").into_owned();
-                let access_value = model_add_saved_text(texts, &[access_label.clone()]);
+                let access_value = model_add_saved_text(texts, std::slice::from_ref(&access_label));
                 fields.push(model_add_text_field(
                     access_label,
                     String::new(),
@@ -677,7 +677,7 @@ impl ModelAddFormPlan {
                 ));
                 let secret_label =
                     t!("form.model.field.bedrock_secret_access_key.label").into_owned();
-                let secret_value = model_add_saved_text(texts, &[secret_label.clone()]);
+                let secret_value = model_add_saved_text(texts, std::slice::from_ref(&secret_label));
                 fields.push(model_add_text_field(
                     secret_label,
                     String::new(),
@@ -688,7 +688,7 @@ impl ModelAddFormPlan {
             }
             CredentialForm::VertexServiceAccount => {
                 let email_label = t!("form.model.field.vertex_client_email.label").into_owned();
-                let email_value = model_add_saved_text(texts, &[email_label.clone()]);
+                let email_value = model_add_saved_text(texts, std::slice::from_ref(&email_label));
                 fields.push(model_add_text_field(
                     email_label,
                     t!("form.model.field.vertex_client_email.help").into_owned(),
@@ -697,7 +697,7 @@ impl ModelAddFormPlan {
                     false,
                 ));
                 let key_label = t!("form.model.field.vertex_private_key.label").into_owned();
-                let key_value = model_add_saved_text(texts, &[key_label.clone()]);
+                let key_value = model_add_saved_text(texts, std::slice::from_ref(&key_label));
                 fields.push(model_add_text_field(
                     key_label,
                     t!("form.model.field.vertex_private_key.help").into_owned(),

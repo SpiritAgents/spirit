@@ -323,7 +323,9 @@ pub(crate) enum BridgeManualToolCommandStartResult {
         user_message: String,
     },
     #[serde(rename = "requires-approval")]
-    RequiresApproval { approval: BridgePendingApproval },
+    RequiresApproval {
+        approval: Box<BridgePendingApproval>,
+    },
     #[serde(rename = "denied")]
     Denied {
         request: Value,
