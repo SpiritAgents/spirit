@@ -691,6 +691,39 @@ test("bedrock deepseek.r1 ids are thinking-only with the budgetTokens effort lad
   expectClaudeDeclaration(lookupModelKnowledge("us.deepseek.r1-v1:0"), expected);
 });
 
+test("minimax m3.1 flash declares always-on adaptive output effort before the m3 record", () => {
+  const expected = {
+    effortSemantics: "output",
+    supportedEfforts: ["low", "medium", "high", "xhigh"],
+    thinkingCapabilities: {
+      supported: true,
+      types: { adaptive: true, betweenTools: false, disabled: false, enabled: false },
+    },
+    supportsThinkingType: "only",
+    supportsThinkingSwitch: false,
+    thinkingSwitch: {
+      defaultState: "on",
+      on: {
+        body: { thinking: { type: "adaptive" } },
+        providerOptions: { minimax: { thinking: { type: "adaptive" } } },
+      },
+    },
+  };
+  for (const id of [
+    "MiniMax-M3.1-Flash",
+    "minimax/minimax-m3.1-flash",
+    "minimax-m3.1-flash-snapshot",
+  ]) {
+    assert.deepEqual(lookupModelKnowledge(id), expected, id);
+  }
+
+  for (const id of ["minimax-m3.1-flashlite", "minimax-m3.10-flash", "minimax-m3.2-flash"]) {
+    const declaration = lookupModelKnowledge(id);
+    assert.equal(declaration?.["effortSemantics"], undefined, id);
+    assert.equal(declaration?.["supportsThinkingSwitch"], true, id);
+  }
+});
+
 test("minimax m2.5/m2.7 are thinking-only across id forms; m3 supports the switch", () => {
   const m2 = { supportsThinkingType: "only" };
   for (const id of [

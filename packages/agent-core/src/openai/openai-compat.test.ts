@@ -29,6 +29,11 @@ test("openAiReasoningEffort passes the declared tier verbatim and drops default"
   assert.equal(openAiReasoningEffort({}), undefined);
 });
 
+test("openAiReasoningEffort maps output effort declarations to the OpenAI wire field", () => {
+  assert.equal(openAiReasoningEffort({ effortSemantics: "output", effort: "xhigh" }), "xhigh");
+  assert.equal(openAiReasoningEffort({ effortSemantics: "output" }), undefined);
+});
+
 test("buildOpenAiRequestTrace records the declared effort and tier", () => {
   const config: OpenAiTransportConfig = {
     apiKey: "k",

@@ -171,13 +171,14 @@ export function resolveOpenAiModelCompatibilityProfile(
 }
 
 /**
- * The declared reasoning effort for the wire, verbatim; `default`/absent leaves it to the upstream
- * or the model's default behavior. Maps to the chat.completions `reasoning_effort` field.
+ * The declared effort for chat.completions `reasoning_effort`, verbatim; output-effort declarations
+ * use the same OpenAI wire field. `default`/absent leaves the choice to the upstream.
  */
 export function openAiReasoningEffort(
-  config: Pick<OpenAiTransportConfig, "reasoningEffort">,
+  config: Pick<OpenAiTransportConfig, "reasoningEffort" | "effortSemantics" | "effort">,
 ): string | undefined {
-  return resolveDeclaredReasoningEffort(config.reasoningEffort);
+  const effort = config.effortSemantics === "output" ? config.effort : config.reasoningEffort;
+  return resolveDeclaredReasoningEffort(effort);
 }
 
 export function buildOpenAiRequestTrace(

@@ -8,6 +8,29 @@
       "note": "MiniMax M2.5/M2.7: thinking is always on and cannot be disabled; the record matches bare ids and hyphen-delimited suffixed variants."
     },
     {
+      "match": "minimax-m3\\.1-flash(?:$|[-_.])",
+      "declare": {
+        "effortSemantics": "output",
+        "supportedEfforts": ["low", "medium", "high", "xhigh"],
+        "thinkingCapabilities": {
+          "supported": true,
+          "types": { "adaptive": true, "betweenTools": false, "disabled": false, "enabled": false }
+        },
+        "supportsThinkingType": "only",
+        "supportsThinkingSwitch": false,
+        "thinkingSwitch": {
+          "defaultState": "on",
+          "on": {
+            "body": { "thinking": { "type": "adaptive" } },
+            "providerOptions": {
+              "minimax": { "thinking": { "type": "adaptive" } }
+            }
+          }
+        }
+      },
+      "note": "MiniMax M3.1 Flash: low/medium/high/xhigh output effort; thinking is always on, with omission and adaptive both enabling it, so no off encoding or default effort is declared. Suffixed ids require a separator."
+    },
+    {
       "match": "minimax-m3",
       "declare": {
         "supportsThinkingSwitch": true,

@@ -541,6 +541,38 @@ test("minimax provider consumes MiniMax model catalog metadata", () => {
   ]);
 });
 
+test("minimax m3.1 flash materializes output effort and always-on thinking on both transports", () => {
+  for (const transportKind of ["anthropic", "openai-compatible"]) {
+    const preview = previewModelCatalogForTransport({
+      providerId: "minimax",
+      transportKind,
+      listedModels: [{ id: "MiniMax-M3.1-Flash" }],
+    });
+
+    assert.deepEqual(preview, [
+      {
+        id: "MiniMax-M3.1-Flash",
+        displayName: "MiniMax M3.1 Flash",
+        capabilities: ["languageModel"],
+        ...outputEfforts(["low", "medium", "high", "xhigh"]),
+        thinkingCapabilities: {
+          supported: true,
+          types: { adaptive: true, betweenTools: false, disabled: false, enabled: false },
+        },
+        supportsThinkingSwitch: false,
+        supportsThinkingType: "only",
+        thinkingSwitch: {
+          defaultState: "on",
+          on: {
+            body: { thinking: { type: "adaptive" } },
+            providerOptions: { minimax: { thinking: { type: "adaptive" } } },
+          },
+        },
+      },
+    ]);
+  }
+});
+
 test("volcengine provider maps domain-derived traits to catalog capabilities", () => {
   assert.equal(usesProviderListedModelCatalogMetadata({ providerId: "volcengine" }), true);
 
