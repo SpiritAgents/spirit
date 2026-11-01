@@ -39,10 +39,6 @@ export function showsThinkingSwitchControl(model: DeclaredControlModel): boolean
   return model.supportsThinkingSwitch === true && model.supportsThinkingType !== "only";
 }
 
-export function showsThinkingAlwaysOnHint(model: DeclaredControlModel): boolean {
-  return model.effortSemantics === "output" && model.supportsThinkingType === "only";
-}
-
 export function effectiveThinkingEnabled(model: DeclaredControlModel): boolean {
   return (
     resolveThinkingSwitchState({

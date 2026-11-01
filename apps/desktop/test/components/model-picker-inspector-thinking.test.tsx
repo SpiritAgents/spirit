@@ -166,10 +166,10 @@ test("blocked effort temporarily forces thinking on and restores the saved off p
   expect(screen.queryByText("Thinking stays on at the selected effort.")).toBeNull();
 });
 
-test("always-on Claude hides the switch and explains the thinking state", () => {
+test("always-on output-effort models hide the switch without an always-on hint", () => {
   renderInspector(
     thinkingModel({
-      name: "claude-opus-5.5",
+      name: "minimax-m3.1-flash",
       effortSemantics: "output",
       supportsThinkingType: "only",
       supportsThinkingSwitch: false,
@@ -177,7 +177,7 @@ test("always-on Claude hides the switch and explains the thinking state", () => 
     { onThinkingEnabledChange: vi.fn() },
   );
   expect(screen.queryByRole("switch", { name: "Thinking" })).toBeNull();
-  expect(screen.getByText("Thinking is always on for this model.")).toBeTruthy();
+  expect(screen.queryByText("Thinking is always on for this model.")).toBeNull();
 });
 
 test("modelPickerInspectorNeedsWideLayout includes models with a thinking switch", () => {

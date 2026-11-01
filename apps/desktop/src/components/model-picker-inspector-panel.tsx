@@ -19,7 +19,6 @@ import {
   showsEffortControl,
   showsReasoningModeControl,
   showsServiceTierControl,
-  showsThinkingAlwaysOnHint,
   showsThinkingSwitchControl,
   thinkingSwitchForcedOn,
 } from "@/lib/model-picker-controls";
@@ -65,7 +64,7 @@ export function modelPickerInspectorNeedsWideLayout(
   if (showsServiceTierControl(model, catalogEntry)) {
     return true;
   }
-  if (showsThinkingSwitchControl(model) || showsThinkingAlwaysOnHint(model)) {
+  if (showsThinkingSwitchControl(model)) {
     return true;
   }
   if (showsReasoningModeControl(model)) {
@@ -115,7 +114,6 @@ export function ModelPickerInspectorPanel({
   const modelRef = modelInspectorRef(model);
   const showThinkingSwitch =
     onThinkingEnabledChange !== undefined && showsThinkingSwitchControl(model);
-  const showThinkingAlwaysOn = showsThinkingAlwaysOnHint(model);
   const thinkingForcedOn = thinkingSwitchForcedOn(model);
   const [pendingThinkingEnabled, setPendingThinkingEnabled] = useState<boolean | null>(null);
   useEffect(() => {
@@ -182,7 +180,6 @@ export function ModelPickerInspectorPanel({
 
   const modelControls =
     showThinkingSwitch ||
-    showThinkingAlwaysOn ||
     showEffort ||
     showReasoningMode ||
     (serviceTierOptions.length > 0 && displayedServiceTierLabel !== undefined) ||
@@ -212,9 +209,6 @@ export function ModelPickerInspectorPanel({
           <p className="text-xs text-muted-foreground">
             {t("app.modelPickerThinkingRequiredForEffort")}
           </p>
-        ) : null}
-        {showThinkingAlwaysOn ? (
-          <p className="text-xs text-muted-foreground">{t("app.modelPickerThinkingAlwaysOn")}</p>
         ) : null}
         {showEffort ? (
           <div className="flex items-center justify-between gap-2">
