@@ -1,11 +1,11 @@
 {
   "models": [
     {
-      "match": "minimax-m2\\.[57]$",
+      "match": "minimax-m2\\.[57](?:-|$)",
       "declare": {
         "supportsThinkingType": "only"
       },
-      "note": "MiniMax M2.5/M2.7: thinking is always on and cannot be disabled; the record matches the bare ids exactly, so suffixed variants are not covered."
+      "note": "MiniMax M2.5/M2.7: thinking is always on and cannot be disabled; the record matches bare ids and hyphen-delimited suffixed variants."
     },
     {
       "match": "minimax-m3",

@@ -691,9 +691,24 @@ test("bedrock deepseek.r1 ids are thinking-only with the budgetTokens effort lad
   expectClaudeDeclaration(lookupModelKnowledge("us.deepseek.r1-v1:0"), expected);
 });
 
-test("minimax m2.5/m2.7 are thinking-only; m3 supports the switch", () => {
-  expectClaudeDeclaration(lookupModelKnowledge("minimax-m2.5"), { supportsThinkingType: "only" });
-  expectClaudeDeclaration(lookupModelKnowledge("minimax-m2.7"), { supportsThinkingType: "only" });
+test("minimax m2.5/m2.7 are thinking-only across id forms; m3 supports the switch", () => {
+  const m2 = { supportsThinkingType: "only" };
+  for (const id of [
+    "minimax-m2.5",
+    "minimax-m2.7",
+    "minimax/MiniMax-M2.5-highspeed",
+    "minimax/MiniMax-M2.7-highspeed",
+  ]) {
+    expectClaudeDeclaration(lookupModelKnowledge(id), m2, id);
+  }
+  for (const id of [
+    "minimax-m2.50",
+    "minimax-m2.70-highspeed",
+    "minimax-m2.5x",
+    "minimax-m2.7x-highspeed",
+  ]) {
+    assert.equal(lookupModelKnowledge(id), undefined, id);
+  }
   const m3 = {
     supportsThinkingSwitch: true,
     thinkingSwitch: {
