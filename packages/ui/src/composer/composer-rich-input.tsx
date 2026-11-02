@@ -31,7 +31,12 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { KEY_DOWN_COMMAND, COMMAND_PRIORITY_HIGH, type LexicalEditor } from "lexical";
+import {
+  KEY_DOWN_COMMAND,
+  COMMAND_PRIORITY_HIGH,
+  SKIP_SELECTION_FOCUS_TAG,
+  type LexicalEditor,
+} from "lexical";
 
 import type { BrowserElementAttachment } from "./browser-element-attachment.js";
 import type { PrDiffAttachment } from "./pr-diff-attachment.js";
@@ -561,11 +566,24 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
     );
 
     const pushSegmentsToEditor = useCallback(
-      (next: RichSegment[], caret: SegmentCaret | null) => {
+      (
+        next: RichSegment[],
+        caret: SegmentCaret | null,
+        options?: { skipSelectionFocus?: boolean },
+      ) => {
         skipEditorSyncRef.current = true;
-        richSegmentsToEditorState(next, editor);
+        // Host-driven syncs (mount hydrate, controlled-segment updates) must not steal focus:
+        // SKIP_SELECTION_FOCUS_TAG tells Lexical to skip the focus() call after applying the
+        // DOM selection, which would otherwise yank focus + scroll the caret into view.
+        const tag = options?.skipSelectionFocus ? SKIP_SELECTION_FOCUS_TAG : undefined;
+        richSegmentsToEditorState(next, editor, tag ? { tag } : undefined);
         if (caret) {
-          segmentCaretToLexicalSelection(editor, next, normalizeCaretForComposer(next, caret));
+          segmentCaretToLexicalSelection(
+            editor,
+            next,
+            normalizeCaretForComposer(next, caret),
+            tag ? { tag } : undefined,
+          );
         }
         skipEditorSyncRef.current = false;
       },
@@ -612,6 +630,8 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
           syncLoop?: boolean;
           syncAgentMode?: boolean;
           pushEditor?: boolean;
+          /** Host-driven sync: content+selection update without stealing DOM focus. */
+          skipSelectionFocus?: boolean;
         },
       ) => {
         const merged = applyComposerPolicy(next);
@@ -636,7 +656,9 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
           notifyParents(merged);
         }
         if (options?.pushEditor !== false) {
-          pushSegmentsToEditor(merged, resolvedCaret);
+          pushSegmentsToEditor(merged, resolvedCaret, {
+            skipSelectionFocus: options?.skipSelectionFocus === true,
+          });
           pendingCaretRef.current = null;
           reportSelectionChange();
         }
@@ -785,9 +807,15 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
     );
 
     const applySegments = useCallback(
-      (next: RichSegment[], caret?: SegmentCaret | null, notifyParent = true) => {
+      (
+        next: RichSegment[],
+        caret?: SegmentCaret | null,
+        notifyParent = true,
+        skipSelectionFocus = false,
+      ) => {
         commitSegments(next, caret ?? caretAtEnd(mergeAdjacentTextSegments(next)), {
           notifyParent,
+          skipSelectionFocus,
         });
       },
       [commitSegments],
@@ -1001,7 +1029,18 @@ const ComposerLexicalInputCore = forwardRef<ComposerRichInputHandle, ComposerLex
       if (segmentsEqual(merged, segmentsRef.current)) {
         return;
       }
-      applySegments(merged, caretAtEnd(merged), false);
+      // Defer out of the React effect window: with chip decorators, the editor update makes
+      // @lexical/react flushSync synchronously, and React dev-mode warns about flushSync inside
+      // an effect ("1 Issue" badge in dev overlays). A microtask keeps the same paint frame.
+      let cancelled = false;
+      queueMicrotask(() => {
+        if (!cancelled) {
+          applySegments(merged, caretAtEnd(merged), false, true);
+        }
+      });
+      return () => {
+        cancelled = true;
+      };
     }, [applySegments, controlledSegments]);
 
     const handleEditorChange = useCallback(

@@ -48,11 +48,15 @@ export function LoopChipPlugin({
           agentMode,
           agentModeChipDismissed,
         });
-        skipEditorSyncRef.current = true;
-        richSegmentsToEditorState(stripped, editor);
-        skipEditorSyncRef.current = false;
-        onSegmentsNormalized(stripped);
-        onLoopEnabledChange?.(false);
+        // Defer the editor write out of the effect window: with chip decorators the update
+        // makes @lexical/react flushSync synchronously, which React dev-mode flags in effects.
+        queueMicrotask(() => {
+          skipEditorSyncRef.current = true;
+          richSegmentsToEditorState(stripped, editor);
+          skipEditorSyncRef.current = false;
+          onSegmentsNormalized(stripped);
+          onLoopEnabledChange?.(false);
+        });
       }
       return;
     }
@@ -66,10 +70,12 @@ export function LoopChipPlugin({
       if (segmentsEqual(next, raw)) {
         return;
       }
-      skipEditorSyncRef.current = true;
-      richSegmentsToEditorState(next, editor);
-      skipEditorSyncRef.current = false;
-      onSegmentsNormalized(next);
+      queueMicrotask(() => {
+        skipEditorSyncRef.current = true;
+        richSegmentsToEditorState(next, editor);
+        skipEditorSyncRef.current = false;
+        onSegmentsNormalized(next);
+      });
     }
   }, [
     agentMode,

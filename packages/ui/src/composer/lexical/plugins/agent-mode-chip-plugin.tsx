@@ -56,11 +56,13 @@ export function AgentModeChipPlugin({
           agentMode,
           agentModeChipDismissed: true,
         });
-        skipEditorSyncRef.current = true;
-        richSegmentsToEditorState(next, editor);
-        skipEditorSyncRef.current = false;
-        onSegmentsNormalized(next);
-        onAgentModeChange?.("agent");
+        queueMicrotask(() => {
+          skipEditorSyncRef.current = true;
+          richSegmentsToEditorState(next, editor);
+          skipEditorSyncRef.current = false;
+          onSegmentsNormalized(next);
+          onAgentModeChange?.("agent");
+        });
       }
       return;
     }
@@ -81,12 +83,16 @@ export function AgentModeChipPlugin({
     if (segmentsEqual(next, raw)) {
       return;
     }
-    skipEditorSyncRef.current = true;
-    richSegmentsToEditorState(next, editor);
-    skipEditorSyncRef.current = false;
-    dismissedRef.current = false;
-    onAgentModeChipDismissChange?.(false);
-    onSegmentsNormalized(next);
+    // Defer the editor write out of the effect window: with chip decorators the update
+    // makes @lexical/react flushSync synchronously, which React dev-mode flags in effects.
+    queueMicrotask(() => {
+      skipEditorSyncRef.current = true;
+      richSegmentsToEditorState(next, editor);
+      skipEditorSyncRef.current = false;
+      dismissedRef.current = false;
+      onAgentModeChipDismissChange?.(false);
+      onSegmentsNormalized(next);
+    });
   }, [
     agentMode,
     editor,
@@ -108,12 +114,14 @@ export function AgentModeChipPlugin({
     if (segmentsEqual(next, raw)) {
       return;
     }
-    skipEditorSyncRef.current = true;
-    richSegmentsToEditorState(next, editor);
-    skipEditorSyncRef.current = false;
-    if (!segmentsEqual(next, segmentsRef.current)) {
-      onSegmentsNormalized(next);
-    }
+    queueMicrotask(() => {
+      skipEditorSyncRef.current = true;
+      richSegmentsToEditorState(next, editor);
+      skipEditorSyncRef.current = false;
+      if (!segmentsEqual(next, segmentsRef.current)) {
+        onSegmentsNormalized(next);
+      }
+    });
   }, [
     agentMode,
     agentModeChipDismissed,

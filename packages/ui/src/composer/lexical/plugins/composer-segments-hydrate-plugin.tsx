@@ -1,6 +1,6 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useLayoutEffect, type RefObject } from "react";
-import type { LexicalEditor } from "lexical";
+import { SKIP_SELECTION_FOCUS_TAG, type LexicalEditor } from "lexical";
 
 import { caretAtEnd } from "../../composer-segment-model.js";
 import { normalizeCaretForComposer } from "../../composer-caret-normalize.js";
@@ -36,15 +36,21 @@ export function ComposerSegmentsHydratePlugin({
       return;
     }
     mountHydratedRef.current = true;
-    const segments = segmentsRef.current;
-    skipEditorSyncRef.current = true;
-    richSegmentsToEditorState(segments, editor);
-    segmentCaretToLexicalSelection(
-      editor,
-      segments,
-      normalizeCaretForComposer(segments, caretAtEnd(segments)),
-    );
-    skipEditorSyncRef.current = false;
+    // Defer out of the layout-effect window: with chip decorators present, the mount push makes
+    // @lexical/react flushSync synchronously, which React dev-mode flags when it happens inside
+    // a layout effect. The microtask still lands before first paint, so nothing flashes.
+    queueMicrotask(() => {
+      const segments = segmentsRef.current;
+      skipEditorSyncRef.current = true;
+      richSegmentsToEditorState(segments, editor, { tag: SKIP_SELECTION_FOCUS_TAG });
+      segmentCaretToLexicalSelection(
+        editor,
+        segments,
+        normalizeCaretForComposer(segments, caretAtEnd(segments)),
+        { tag: SKIP_SELECTION_FOCUS_TAG },
+      );
+      skipEditorSyncRef.current = false;
+    });
   }, [editor, editorRef, mountHydratedRef, segmentsRef, skipEditorSyncRef]);
 
   return null;
