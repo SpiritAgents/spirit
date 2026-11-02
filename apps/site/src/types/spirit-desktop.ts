@@ -52,6 +52,9 @@ export interface ModelProfileSnapshot {
   name: string;
   apiBase: string;
   provider?: DesktopModelProvider;
+  /** The ui picker's structural contract. */
+  providerId: string;
+  ref: { providerId: string; name: string };
   transportKind?: DesktopTransportKind;
   keyConfigured?: boolean;
   reasoningEffort?: DesktopModelReasoningEffort;
@@ -65,6 +68,7 @@ export interface ModelProfileSnapshot {
 }
 
 export interface DesktopModelCatalogHint {
+  providerId: string;
   apiBase: string;
   modelIds: string[];
   fetchedAtUnixMs: number;

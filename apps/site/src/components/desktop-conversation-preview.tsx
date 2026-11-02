@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-import { ComposerSurface } from "@/components/composer/composer-surface";
+import { ComposerSurface, segmentsToPlainText, type RichSegment } from "@spiritagent/ui/composer";
+import type { ModelCatalogHint, ModelPickerModelProfile } from "@spiritagent/ui/model-picker";
+import { UiPreviewProviders } from "@/components/ui-preview-providers";
 import {
   buildRunningTool,
   buildSucceededTool,
@@ -34,7 +36,7 @@ import {
   buildAgentImageRunningTool,
   buildAgentImageSucceededTool,
 } from "@/lib/agent-plan-demo-script";
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
 import {
   DESIGN_MODE_ASSISTANT_STREAM_SPEED_MS,
   DESIGN_MODE_ASSISTANT_STREAM_START_DELAY_MS,
@@ -66,11 +68,7 @@ import {
   useDesktopPreviewDensity,
 } from "@/contexts/desktop-preview-density-context";
 import { cn } from "@/lib/utils";
-import type {
-  ConversationMessageSnapshot,
-  DesktopModelCatalogHint,
-  ModelProfileSnapshot,
-} from "@/types/spirit-desktop";
+import type { ConversationMessageSnapshot } from "@/types/spirit-desktop";
 
 type AvailableWorkspace = {
   label: string;
@@ -82,8 +80,8 @@ export type DemoStaticSnapshot = "defaultEnd";
 type DesktopConversationPreviewProps = {
   workspaceRoot: string;
   availableWorkspaces: AvailableWorkspace[];
-  models: ModelProfileSnapshot[];
-  catalogHints?: DesktopModelCatalogHint[];
+  models: ModelPickerModelProfile[];
+  catalogHints?: ModelCatalogHint[];
   activeModel: string;
   planMode: boolean;
   demoVariant?: "default" | "agentPlan" | "designMode";
@@ -196,10 +194,21 @@ export function DesktopConversationPreview({
   const onWorkspaceToolsCloseRef = useRef(onWorkspaceToolsClose);
   const onDesignModeStateChangeRef = useRef(onDesignModeStateChange);
   const onDesignModeResetRef = useRef(onDesignModeReset);
-  const [composer, setComposer] = useState("");
+  const [composerSegments, setComposerSegments] = useState<RichSegment[]>([]);
+  const composer = segmentsToPlainText(composerSegments);
+  const setComposer = (text: string) =>
+    setComposerSegments(text ? [{ kind: "text", value: text }] : []);
   const [browserElementAttachments, setBrowserElementAttachments] = useState<
     BrowserElementAttachment[]
   >([]);
+  const activeModelRef = useMemo(
+    () =>
+      models.find((model) => model.name === activeModel)?.ref ?? {
+        providerId: "",
+        name: activeModel,
+      },
+    [models, activeModel],
+  );
   const [messages, setMessages] = useState<ConversationMessageSnapshot[]>(() =>
     demoStaticSnapshot === "defaultEnd" ? buildDefaultEndSnapshot(conversationCopy) : [],
   );
@@ -335,9 +344,9 @@ export function DesktopConversationPreview({
     setMessages(pruneInterruptedMessages);
   };
 
-  const handleComposerChange = (value: string) => {
+  const handleComposerChange = (segments: RichSegment[]) => {
     takeConversationControl();
-    setComposer(value);
+    setComposerSegments(segments);
   };
 
   const handleSelectWorkspace = (nextWorkspaceRoot: string) => {
@@ -882,9 +891,9 @@ export function DesktopConversationPreview({
       const designElementAttachment: BrowserElementAttachment = {
         id: "design-element-headline",
         tagName: "span",
-        url: DESIGN_MODE_BROWSER_URL,
         pageUrl: DESIGN_MODE_BROWSER_URL,
         outerHtml: designDemoCopy.selectedElementHtml,
+        screenshotDataUrl: "",
       };
 
       const userPrompt = designDemoCopy.demoUserPrompt;
@@ -991,7 +1000,7 @@ export function DesktopConversationPreview({
               {
                 id: designElementAttachment.id,
                 tagName: designElementAttachment.tagName,
-                url: designElementAttachment.url,
+                url: designElementAttachment.pageUrl,
                 pageUrl: designElementAttachment.pageUrl,
               },
             ],
@@ -1267,25 +1276,29 @@ export function DesktopConversationPreview({
           ) : null}
 
           <div className="grid gap-1.5">
-            <ComposerSurface
-              value={composer}
-              localFileAttachments={[]}
-              onChange={handleComposerChange}
-              onSubmit={handleManualSubmit}
-              placeholder={conversationCopy.composerPlaceholder}
-              models={models}
-              catalogHints={catalogHints}
-              activeModel={activeModel}
-              agentMode={planMode ? "plan" : "agent"}
-              loopEnabled={false}
-              canSend={
-                (composer.trim().length > 0 || browserElementAttachments.length > 0) && !busy
-              }
-              busy={busy}
-              onModelSelect={handleModelSelect}
-              onAgentModeChange={(mode) => handlePlanModeSelect(mode === "plan")}
-              browserElementAttachments={browserElementAttachments}
-            />
+            <UiPreviewProviders>
+              <ComposerSurface
+                segments={composerSegments}
+                localFileAttachments={[]}
+                onSegmentsChange={handleComposerChange}
+                onSubmit={handleManualSubmit}
+                placeholder={conversationCopy.composerPlaceholder}
+                models={models}
+                catalogHints={catalogHints}
+                activeModel={activeModelRef}
+                agentMode={planMode ? "plan" : "agent"}
+                loopEnabled={false}
+                canSend={
+                  (composer.trim().length > 0 || browserElementAttachments.length > 0) && !busy
+                }
+                busy={busy}
+                onModelSelect={(ref) => handleModelSelect(ref.name)}
+                onModelReasoningEffortSelect={() => {}}
+                onAgentModeChange={(mode) => handlePlanModeSelect(mode === "plan")}
+                browserElementAttachments={browserElementAttachments}
+                onElementAttachmentsChange={setBrowserElementAttachments}
+              />
+            </UiPreviewProviders>
           </div>
         </div>
       </div>

@@ -2,8 +2,6 @@ import { LandingEditFileLineDeltaBadge } from "@/components/landing-edit-file-li
 import type { EditFileLineDelta, ToolCardsToolPhase } from "@/lib/landing-tool-cards-demo-script";
 import { FONT_WEIGHT_NORMAL } from "@/lib/typography";
 
-const toolCardSecondaryTextClass = "text-muted-foreground/75 dark:text-muted-foreground/65";
-
 function toolCallPhaseShowsShimmer(phase: ToolCardsToolPhase): boolean {
   return phase === "running";
 }
@@ -27,7 +25,7 @@ function ToolCallSummary({
       {detail ? (
         <>
           {" "}
-          <span className={toolCardSecondaryTextClass}>{detail}</span>
+          <span className="text-foreground-subtle">{detail}</span>
         </>
       ) : null}
     </span>

@@ -123,8 +123,6 @@ function previewToolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
 
 const toolSummaryClass = "text-xs leading-relaxed text-muted-foreground";
 
-const toolCardSecondaryTextClass = "text-muted-foreground/75 dark:text-muted-foreground/65";
-
 const toolCallDetailPreClass =
   "overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-border/20 bg-muted/15 p-2 font-mono text-xs leading-relaxed text-muted-foreground";
 
@@ -147,7 +145,7 @@ function ToolCallSummary({
       {detail ? (
         <>
           {" "}
-          <span className={toolCardSecondaryTextClass}>{detail}</span>
+          <span className="text-foreground-subtle">{detail}</span>
         </>
       ) : null}
     </span>

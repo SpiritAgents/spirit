@@ -92,21 +92,27 @@ const MOCK_MODELS: ModelProfileSnapshot[] = [
     name: "GPT 5.5",
     apiBase: "https://api.openai.com/v1",
     provider: "openai",
+    providerId: "openai",
+    ref: { providerId: "openai", name: "GPT 5.5" },
   },
   {
     name: "DeepSeek V4 Pro",
     apiBase: "https://api.deepseek.com/v1",
     provider: "deepseek",
+    providerId: "deepseek",
+    ref: { providerId: "deepseek", name: "DeepSeek V4 Pro" },
   },
 ];
 
 const MOCK_MODEL_CATALOG_HINTS: DesktopModelCatalogHint[] = [
   {
+    providerId: "openai",
     apiBase: "https://api.openai.com/v1",
     modelIds: ["GPT 5.5"],
     fetchedAtUnixMs: 1_775_500_000_000,
   },
   {
+    providerId: "deepseek",
     apiBase: "https://api.deepseek.com/v1",
     modelIds: ["DeepSeek V4 Pro"],
     fetchedAtUnixMs: 1_775_500_000_000,
