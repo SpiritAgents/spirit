@@ -21,9 +21,8 @@ if (typeof globalThis.MutationObserver === "undefined") {
 
 const { $getRoot } = await import("lexical");
 const { createComposerLexicalEditor, richSegmentsToEditorState } =
-  await import("../../src/lib/composer-lexical/bridge/index.ts");
-const { $isSpiritChipNode } =
-  await import("../../src/lib/composer-lexical/nodes/spirit-chip-node.ts");
+  await import("@spiritagent/ui/composer");
+const { $isSpiritChipNode } = await import("@spiritagent/ui/composer");
 
 const mixedSegments = [
   { kind: "text", value: "look at " },

@@ -5,11 +5,8 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
-import {
-  messageQuoteContextText,
-  scanMessageQuoteWireBlocks,
-} from "../../src/lib/message-quote-wire-text.ts";
+} from "@spiritagent/ui/composer";
+import { messageQuoteContextText, scanMessageQuoteWireBlocks } from "@spiritagent/ui/composer";
 
 test("messageQuoteContextText serializes quote info line and selected text", () => {
   const wire = messageQuoteContextText({ selectedText: "hello\nworld" });

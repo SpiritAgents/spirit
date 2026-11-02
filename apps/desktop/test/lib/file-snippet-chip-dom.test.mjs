@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 const { assertRichSegmentsRoundTrip, richSegmentsRoundTrip } =
-  await import("../../src/lib/composer-lexical/bridge/index.ts");
-const { segmentsToPlainText } = await import("../../src/lib/composer-segment-model.ts");
+  await import("@spiritagent/ui/composer");
+const { segmentsToPlainText } = await import("@spiritagent/ui/composer");
 
 const sampleAttachment = {
   id: "file-dom-1",

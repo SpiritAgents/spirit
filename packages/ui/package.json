@@ -34,6 +34,22 @@
       "types": "./dist/chrome.d.ts",
       "default": "./dist/chrome.js"
     },
+    "./composer": {
+      "types": "./dist/composer/index.d.ts",
+      "default": "./dist/composer/index.js"
+    },
+    "./model-picker": {
+      "types": "./dist/model-picker/index.d.ts",
+      "default": "./dist/model-picker/index.js"
+    },
+    "./platform": {
+      "types": "./dist/platform.d.ts",
+      "default": "./dist/platform.js"
+    },
+    "./typography": {
+      "types": "./dist/typography.d.ts",
+      "default": "./dist/typography.js"
+    },
     "./resize-cursor": {
       "types": "./dist/resize-cursor.d.ts",
       "default": "./dist/resize-cursor.js"
@@ -233,12 +249,15 @@
     "prepublishOnly": "pnpm run build && node ../../scripts/publish/assert-no-workspace-deps.mjs"
   },
   "devDependencies": {
+    "@lexical/headless": "0.46.0",
+    "@lexical/react": "0.46.0",
     "@spiritagent/icons": "workspace:*",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.1.1",
+    "lexical": "0.46.0",
     "lucide-react": "1.28.0",
     "radix-ui": "1.6.7",
     "react": "19.2.8",
@@ -248,11 +267,14 @@
     "typescript": "7.0.2"
   },
   "peerDependencies": {
+    "@lexical/headless": ">=0.46.0",
+    "@lexical/react": ">=0.46.0",
     "@radix-ui/react-scroll-area": ">=1.2.0",
     "@spiritagent/icons": ">=1.0.0-alpha.0",
     "class-variance-authority": ">=0.7.0",
     "clsx": ">=2.0.0",
     "cmdk": ">=1.0.0",
+    "lexical": ">=0.46.0",
     "lucide-react": ">=1.14.0",
     "radix-ui": ">=1.4.0",
     "react": ">=18",

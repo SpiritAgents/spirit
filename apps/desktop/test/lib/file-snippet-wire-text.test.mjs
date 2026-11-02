@@ -5,12 +5,12 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 import {
   fileSnippetContextText,
   parseFileSnippetLinePart,
   scanFileSnippetWireBlocks,
-} from "../../src/lib/file-snippet-wire-text.ts";
+} from "@spiritagent/ui/composer";
 
 test("fileSnippetContextText serializes file path, line range, and selected text", () => {
   const wire = fileSnippetContextText({

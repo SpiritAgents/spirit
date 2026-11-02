@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
-import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
-import type { GitCommitAttachment } from "@/lib/git-commit-attachment";
-import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
-import type { PrDiffAttachment } from "@/lib/pr-diff-attachment";
-import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
+import type { FileSnippetAttachment } from "@spiritagent/ui/composer";
+import type { GitCommitAttachment } from "@spiritagent/ui/composer";
+import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
+import type { PrDiffAttachment } from "@spiritagent/ui/composer";
+import type { TerminalSnippetAttachment } from "@spiritagent/ui/composer";
 
 export type FocusedPaneComposerInsertHandlers = {
   handleBrowserElementPicked: (attachment: BrowserElementAttachment) => void | Promise<void>;

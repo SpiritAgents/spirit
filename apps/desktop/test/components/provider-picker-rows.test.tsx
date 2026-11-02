@@ -16,7 +16,7 @@ import { expect, test, vi } from "vitest";
 import { ModelsSettingsPanel } from "@/components/settings/models/models-settings-panel";
 import { ProviderPickerRowButton } from "@/components/settings/models/provider-picker-rows";
 import type { SettingsFormState } from "@/components/settings/types";
-import { emptyModelRef } from "@/lib/model-ref";
+import { emptyModelRef } from "@spiritagent/ui/model-picker";
 
 test("provider picker rows use a fixed sparkle icon for every provider", () => {
   const { container } = render(

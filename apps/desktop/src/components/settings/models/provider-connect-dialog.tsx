@@ -15,7 +15,7 @@ import {
   normalizeModelCapabilitySelection,
 } from "@/components/settings/models/model-defaults";
 import { providerPickerLabel } from "@/components/settings/models/provider-picker-rows";
-import { providerLabelKey } from "@/lib/model-picker-groups";
+import { providerLabelKey } from "@spiritagent/ui/model-picker";
 import { joinWithCjkSpacing } from "@/lib/cjk";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,7 +46,7 @@ import {
 } from "@spiritagent/agent-core/provider-presets";
 import { DESKTOP_FORM_FIELD_TRIGGER_INNER, DESKTOP_FORM_INPUT_SHELL } from "@/lib/desktop-chrome";
 import { DESKTOP_EDITOR_TAB_CLASS } from "@/lib/desktop-typography";
-import { parseModelContextLength } from "@/lib/model-context-length";
+import { parseModelContextLength } from "@spiritagent/ui/model-picker";
 import { cn } from "@/lib/utils";
 import type {
   AddModelRequest,

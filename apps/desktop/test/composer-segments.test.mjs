@@ -20,7 +20,7 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsEqual,
-} from "../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 import {
   ensureLoopChipTypingTail,
   ensureLoopPinned,
@@ -29,13 +29,13 @@ import {
   isCaretAtLoopRemovalPoint,
   normalizeCaretForPinnedLoopChip,
   removeLoopSegment,
-} from "../src/lib/composer-loop-segments.ts";
+} from "@spiritagent/ui/composer";
 import {
   isCaretAtInlineChipRemovalPoint,
   normalizeCaretForInlineAttachmentChips,
   removeInlineChipAtRemovalPoint,
-} from "../src/lib/composer-inline-chip-caret.ts";
-import { normalizeCaretForComposer } from "../src/lib/composer-caret-normalize.ts";
+} from "@spiritagent/ui/composer";
+import { normalizeCaretForComposer } from "@spiritagent/ui/composer";
 import {
   currentAgentModeSegment,
   ensureAgentModePinned,
@@ -43,13 +43,13 @@ import {
   insertAgentModeSegment,
   isCaretAtAgentModeRemovalPoint,
   removeAgentModeSegment,
-} from "../src/lib/composer-agent-mode-segments.ts";
+} from "@spiritagent/ui/composer";
 import {
   applyAgentModeChipPolicy,
   buildPostSendComposerSegments,
   composerShowsAgentModeChipPlaceholder,
   composerShowsPlaceholder,
-} from "../src/lib/composer-agent-mode-policy.ts";
+} from "@spiritagent/ui/composer";
 
 const sampleAttachment = {
   id: "el-1",
@@ -1213,7 +1213,7 @@ test("insertSegmentAtCaret adds trailing space after fileSnippet at caret", () =
   assert.equal(caret.offset, 1);
 });
 
-import { currentWorkspaceFileReferenceQueryFromSegments } from "../src/lib/composer-file-reference-query.ts";
+import { currentWorkspaceFileReferenceQueryFromSegments } from "@/lib/composer-file-reference-query";
 
 test("currentWorkspaceFileReferenceQueryFromSegments suppresses query on workspaceFile chip", () => {
   const segments = [{ kind: "workspaceFile", path: "README.md" }];

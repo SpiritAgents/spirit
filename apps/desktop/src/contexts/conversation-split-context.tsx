@@ -65,7 +65,7 @@ import {
 
 import type { FocusedPaneComposerControls } from "@/lib/focused-pane-composer-controls";
 import type { FocusedPaneComposerInsertHandlers } from "@/lib/focused-pane-composer-insert";
-import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
+import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
 import type { ConversationAbortShortcutTargetRef } from "@/lib/conversation-abort-shortcut";
 import {
   registerSplitPaneShortcut,

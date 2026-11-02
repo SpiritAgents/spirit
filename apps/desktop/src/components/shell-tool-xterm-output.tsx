@@ -18,7 +18,7 @@ import {
   registerEditCommandTarget,
   writeEditClipboardText,
 } from "@/lib/edit-command-targets";
-import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
+import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
 import { readShellToolMonochromeTheme, stripAnsiSgrSequences } from "@/lib/shell-tool-xterm-theme";
 import { cn } from "@/lib/utils";
 

@@ -13,8 +13,8 @@ import { DEFAULT_TRANSLUCENCY, parseTranslucencyPreference } from "@/lib/translu
 
 import type { SettingsFormState } from "@/components/settings/types";
 import { useHostApi } from "@/hooks/useHostApi";
-import { emptyModelRef, modelRefsEqual } from "@/lib/model-ref";
-import { modelEffortPreference } from "@/lib/model-picker-controls";
+import { emptyModelRef, modelRefsEqual } from "@spiritagent/ui/model-picker";
+import { modelEffortPreference } from "@spiritagent/ui/model-picker";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type { ModelRef } from "@/types";
 import {
@@ -25,18 +25,18 @@ import {
 import {
   composerAttachmentViewFromPath,
   type ComposerLocalFileAttachmentView,
-} from "@/lib/local-file-attachments";
-import { isCompactSlashComposerRequest, isExportSessionSlashInput } from "@/lib/skill-slash";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
+} from "@spiritagent/ui/composer";
+import { isCompactSlashComposerRequest, isExportSessionSlashInput } from "@spiritagent/ui/composer";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import { followQuoteSessionPathsInSegments } from "@/lib/composer-chip-navigate-meta";
 import {
   normalizeComposerPlain,
   segmentsToPlainText,
   type RichSegment,
-} from "@/lib/composer-segment-model";
-import { emptySegments, syncSegmentsFromExternalValue } from "@/lib/composer-segments";
-import { isAgentModeChipKind } from "@/lib/composer-agent-mode-segments";
-import { buildPostSendComposerSegments } from "@/lib/composer-agent-mode-policy";
+} from "@spiritagent/ui/composer";
+import { emptySegments, syncSegmentsFromExternalValue } from "@spiritagent/ui/composer";
+import { isAgentModeChipKind } from "@spiritagent/ui/composer";
+import { buildPostSendComposerSegments } from "@spiritagent/ui/composer";
 import { clearGitHubAutomationRepositoriesCache } from "@/lib/github-automation-repositories-cache";
 import { isSubagentToolCallPending } from "@/lib/subagent-viewer-pending";
 import { resolveWorkspaceDisplayLabel } from "@/lib/workspace-display-label";

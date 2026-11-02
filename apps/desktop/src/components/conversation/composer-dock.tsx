@@ -15,21 +15,21 @@ import { useTranslation } from "react-i18next";
 import { ApprovalLevelMenu } from "@/components/approval-level-menu";
 import { BranchSelectMenu } from "@/components/branch-select-menu";
 import { ComposerSurface } from "@/components/composer/composer-surface";
-import { Doodle } from "@/components/conversation/doodle";
+import { Doodle } from "@spiritagent/ui/composer";
 import { ComposerChangesCard } from "@/components/composer-changes-card";
 import { ComposerContextUsageRing } from "@/components/composer-context-usage-ring";
 import { ComposerScrollToBottomButton } from "@/components/composer-scroll-to-bottom-button";
 import { ComposerSuggestionDropdown } from "@/components/composer-suggestion-dropdown";
 import { ComposerTodoCard } from "@/components/composer-todo-card";
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
 import { EmptyStateWorkspaceSelector } from "@/components/empty-state-workspace-selector";
 import { PendingApprovalCard } from "@/components/pending-approval-card";
 import { PendingQuestionsCard } from "@/components/pending-questions-card";
 import { SkillSlashMenu } from "@/components/skill-slash-menu";
 import { WorkLocationMenu } from "@/components/work-location-menu";
 import { WorkspaceFileReferenceMenu } from "@/components/workspace-file-reference-menu";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
 import {
   CONVERSATION_GUTTER_NEG_X,
   CONVERSATION_GUTTER_X,
@@ -44,12 +44,12 @@ import {
   readElementUniformBorderRadius,
   type ConversationScrollOccludeShape,
 } from "@/lib/conversation-scroll-occlude-mask";
-import type { ActiveWorkspaceFileReferenceQuery, RichSegment } from "@/lib/composer-segment-model";
-import type { ActiveSkillSlashQuery, SkillSlashSuggestion } from "@/lib/skill-slash";
+import type { ActiveWorkspaceFileReferenceQuery, RichSegment } from "@spiritagent/ui/composer";
+import type { ActiveSkillSlashQuery, SkillSlashSuggestion } from "@spiritagent/ui/composer";
 import { sameWorkspacePath } from "@/lib/workspace-display-label";
 import { normalizePaneSessionPathKey } from "@/lib/pane-desktop-snapshot";
 import { shouldShowComposerChangesCard } from "@/lib/composer-changes-card-visibility";
-import type { ComposerLocalFileAttachmentView } from "@/lib/local-file-attachments";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import { useComposerSuggestionAnchor } from "@/hooks/use-composer-suggestion-anchor";
 import type { DesktopSnapshot } from "@/types";

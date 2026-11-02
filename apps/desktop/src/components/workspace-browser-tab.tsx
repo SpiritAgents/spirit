@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { normalizeBrowserUrl, toLocalHostUrl } from "@/lib/browser-url";
 import { BROWSER_NEW_TAB_SENTINEL, isBrowserNewTabUrl } from "@/lib/workspace-tool-tabs";
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
-import { truncateOuterHtml } from "@/lib/browser-element-attachment";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
+import { truncateOuterHtml } from "@spiritagent/ui/composer";
 import {
   buildPickerInjectScript,
   PICKER_INJECT_CSS,

@@ -7,7 +7,7 @@ import {
   buildActionPaletteItemsWithTasks,
   groupActionPaletteRootItems,
 } from "../../src/lib/action-palette.ts";
-import { STATIC_SLASH_COMMANDS } from "../../src/lib/skill-slash.ts";
+import { STATIC_SLASH_COMMANDS } from "@spiritagent/ui/composer";
 
 const EN_LABELS = {
   "sidebar.newChat": "New Chat",

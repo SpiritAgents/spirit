@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { formatGitCommitChipLabel } from "../../src/lib/git-commit-chip-styles.ts";
+import { formatGitCommitChipLabel } from "@spiritagent/ui/composer";
 
 test("formatGitCommitChipLabel keeps short subjects unchanged", () => {
   assert.equal(formatGitCommitChipLabel("  feat: add chip  "), "feat: add chip");

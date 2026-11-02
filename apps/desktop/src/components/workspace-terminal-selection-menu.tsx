@@ -9,7 +9,7 @@ import {
   useTerminalSelectionActionMenu,
   readTerminalSelectionLineRange,
 } from "@/hooks/use-terminal-selection-action-menu";
-import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
+import type { TerminalSnippetAttachment } from "@spiritagent/ui/composer";
 import type { Terminal } from "@xterm/xterm";
 
 function TerminalSelectionMenu({

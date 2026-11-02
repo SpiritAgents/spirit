@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { truncateOuterHtml } from "../../src/lib/browser-element-attachment.ts";
+import { truncateOuterHtml } from "@spiritagent/ui/composer";
 
 test("truncateOuterHtml keeps short html unchanged", () => {
   const html = "<div>ok</div>";

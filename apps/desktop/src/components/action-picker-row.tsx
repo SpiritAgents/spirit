@@ -19,7 +19,7 @@ import {
   type ActionPaletteItem,
 } from "@/lib/action-palette";
 import { SLASH_SUGGESTION_ICONS } from "@/lib/slash-command-icons";
-import type { SkillSlashSuggestionKind } from "@/lib/skill-slash";
+import type { SkillSlashSuggestionKind } from "@spiritagent/ui/composer";
 import { resolveTaskIcon, type TaskIconResolution } from "@/lib/task-icon";
 
 type ActionPickerRowProps = {

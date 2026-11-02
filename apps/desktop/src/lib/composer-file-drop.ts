@@ -1,5 +1,5 @@
 import { joinWorkspaceAbsolutePath } from "@/lib/workspace-entry-path-sync";
-import { normalizeSlashPath } from "@/lib/local-file-attachments";
+import { normalizeSlashPath } from "@spiritagent/ui/composer";
 
 export const SPIRIT_WORKSPACE_ENTRY_MIME = "application/spirit-workspace-entry";
 

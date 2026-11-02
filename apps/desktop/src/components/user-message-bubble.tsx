@@ -14,8 +14,8 @@ import {
   FileText,
 } from "lucide-react";
 
-import { BROWSER_ELEMENT_CHIP_ICON_CLASS } from "@/lib/browser-element-chip-styles";
-import { ComposerLocalFileStrip } from "@/components/composer-local-file-strip";
+import { BROWSER_ELEMENT_CHIP_ICON_CLASS } from "@spiritagent/ui/composer";
+import { ComposerLocalFileStrip } from "@spiritagent/ui/composer";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
 import {
   isAttachmentOnlyDisplayText,
@@ -25,12 +25,12 @@ import {
   snapshotsToComposerAttachmentViews,
   uploadOnlyLocalFileAttachmentSnapshots,
   type ComposerLocalFileAttachmentView,
-} from "@/lib/local-file-attachments";
+} from "@spiritagent/ui/composer";
 import {
   parseMessageContentParts,
   trimMessageTextAroundElements,
   type MessageContentPart,
-} from "@/lib/composer-segment-model";
+} from "@spiritagent/ui/composer";
 import {
   alignChipNavigateMetaToParts,
   isNavigableComposerChipKind,
@@ -40,44 +40,44 @@ import {
   formatGitCommitChipLabel,
   formatGitCommitChipTitle,
   GIT_COMMIT_CHIP_ICON_CLASS,
-} from "@/lib/git-commit-chip-styles";
+} from "@spiritagent/ui/composer";
 import {
   formatPrDiffChipLabel,
   formatPrDiffChipTitle,
   PR_DIFF_CHIP_ICON_CLASS,
-} from "@/lib/github-pr-diff-chip-styles";
+} from "@spiritagent/ui/composer";
 import {
   formatFileSnippetChipLabel,
   formatFileSnippetChipTitle,
   FILE_SNIPPET_CHIP_ICON_CLASS,
-} from "@/lib/file-snippet-chip-styles";
+} from "@spiritagent/ui/composer";
 import {
   formatTerminalChipLabel,
   formatTerminalChipTitle,
   TERMINAL_CHIP_ICON_CLASS,
-} from "@/lib/terminal-chip-styles";
+} from "@spiritagent/ui/composer";
 import {
   formatMessageQuoteChipLabel,
   formatMessageQuoteChipTitle,
   MESSAGE_QUOTE_CHIP_ICON_CLASS,
-} from "@/lib/message-quote-chip-styles";
-import type { PullRequestChipStatus } from "@/lib/pr-diff-attachment";
-import { MESSAGE_BUBBLE_CHIP_CLASS } from "@/lib/composer-inline-chip-styles";
+} from "@spiritagent/ui/composer";
+import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
+import { MESSAGE_BUBBLE_CHIP_CLASS } from "@spiritagent/ui/composer";
 import { workspaceFileBasename } from "@/lib/file-picker-path";
 import {
   resolveWorkspaceFileChipPresentation,
   WORKSPACE_FILE_CHIP_ICON_CLASS,
-} from "@/lib/workspace-file-chip-styles";
-import { SKILL_CHIP_CLASS } from "@/lib/skill-chip-styles";
+} from "@spiritagent/ui/composer";
+import { SKILL_CHIP_CLASS } from "@spiritagent/ui/composer";
 import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
 import {
   WORKSPACE_FILE_ICON_CHIP_CLASS,
   WORKSPACE_FILE_ICON_CHIP_SIZE_PX,
-} from "@/lib/workspace-file-icon-sizes";
+} from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import type { ConversationMessageSnapshot } from "@/types";
 import { NavigableChipShell } from "@/contexts/composer-chip-navigate-context";
-import { ChipLabel } from "@/components/composer-lexical/chips/chip-shell";
+import { ChipLabel } from "@spiritagent/ui/composer";
 
 function sourceTabIdFields(
   meta: ComposerChipNavigateMeta | undefined,

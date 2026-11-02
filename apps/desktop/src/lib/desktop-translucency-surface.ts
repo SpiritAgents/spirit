@@ -1,53 +1,20 @@
 /** LaunchSplash / OOBE overlay tint when translucency is on (tint only; no CSS backdrop-blur stacked). */
 export const DESKTOP_TRANSLUCENCY_CONTENT_TINT_CLASS = "bg-background/70";
 
-/**
- * In-app frosted surfaces. The rule in `@spiritagent/ui` theme.css listens for
- * `prefers-reduced-transparency: reduce` and, when it matches, paints an opaque
- * theme background and clears CSS backdrop-blur. Compose this onto future
- * in-app translucent overlays. Native window material does not use it.
- */
-export const DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS = "spirit-reduced-transparency-opaque";
-
-/** Translucent background of the Composer input (dark mode overlays a faint input layer); shared source for non-translucency overlays */
-export const DESKTOP_COMPOSER_SURFACE_BACKDROP = [
-  "bg-background/55 backdrop-blur-xl dark:bg-input/30 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/25",
+// The composer surface family (backdrop, edge, elevation shadow, reduced-transparency hook)
+// lives in @spiritagent/ui/chrome; re-exported here so desktop consumers keep one import site.
+export {
+  DESKTOP_COMPOSER_EDGE,
+  DESKTOP_COMPOSER_EDGE_HOVER,
+  DESKTOP_COMPOSER_SURFACE_BACKDROP,
+  DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT,
+  DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT as DESKTOP_COMPOSER_SURFACE_SOLID,
+  DESKTOP_ELEVATION_SHADOW_SM,
+  DESKTOP_OVERLAY_LIGHT_SHADOW,
   DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
-].join(" ");
-
-/**
- * Translucent Composer tint when translucency is on (no CSS blur stacked, letting the
- * window-level system material show through).
- * Message bleed-through is clipped by the viewport shape mask; dark mode uses a pure black
- * background with alpha.
- */
-export const DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT = "bg-background/30";
-
-/** @deprecated Use {@link DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT} */
-export const DESKTOP_COMPOSER_SURFACE_SOLID = DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT;
-
-/** Diffuse shadow for light-mode overlays / elevated surfaces; do not enlarge in dark mode — callers pair it with dark:shadow-* */
-export const DESKTOP_OVERLAY_LIGHT_SHADOW = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)]";
-
-/** Elevated surface shadow: light-mode diffuse + dark-mode keeps sm (Composer / Changes / message bubbles, etc.) */
-export const DESKTOP_ELEVATION_SHADOW_SM = `${DESKTOP_OVERLAY_LIGHT_SHADOW} dark:shadow-sm`;
-
-/** Translucent tint under translucency; keeps the glassmorphism look when off */
-export function desktopComposerSurfaceBackdropClass(useTranslucency: boolean): string {
-  return useTranslucency
-    ? DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT
-    : DESKTOP_COMPOSER_SURFACE_BACKDROP;
-}
-
-/** Composer pill (Changes, etc.): border / hover / shadow aligned with the input; background switches with translucency */
-export function desktopComposerChipSurfaceClass(useTranslucency: boolean): string {
-  return [
-    "border border-ring/30 dark:border-white/10",
-    "hover:border-ring/40 dark:hover:border-white/12",
-    DESKTOP_ELEVATION_SHADOW_SM,
-    desktopComposerSurfaceBackdropClass(useTranslucency),
-  ].join(" ");
-}
+  desktopComposerChipSurfaceClass,
+  desktopComposerSurfaceBackdropClass,
+} from "@spiritagent/ui/chrome";
 
 /** Sidebar: a light tint under translucency so the system material stays legible. */
 export const DESKTOP_TRANSLUCENCY_SIDEBAR_TINT_CLASS = "bg-background/45";

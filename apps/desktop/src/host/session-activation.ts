@@ -4,7 +4,7 @@ import { resolveEffectivePaneActiveModel } from "./active-model-sync.js";
 
 import type { SessionEndHookInput, SessionStartHookInput } from "@spiritagent/agent-core";
 
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import i18n from "../lib/i18n-host.js";
 import type { ConversationMessageSnapshot, DesktopGitSnapshot, DesktopSnapshot } from "../types.js";
 import type { DesktopHostRuntime } from "./runtime.js";

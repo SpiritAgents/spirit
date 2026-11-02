@@ -24,7 +24,7 @@ import type {
 } from "@spiritagent/agent-core";
 import type { ToolExecutionFileChangeDiff } from "@spiritagent/agent-core";
 
-import type { DesktopAgentMode } from "./lib/agent-mode.js";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { DesktopAutomationTrigger } from "./lib/automation-trigger.js";
 import type { TranslucencyPreference } from "./lib/translucency.js";
 
@@ -53,8 +53,8 @@ export type {
 };
 
 import type { ComposerChipNavigateMeta } from "./lib/composer-chip-navigate-meta.js";
-import type { RichSegment } from "./lib/composer-segment-model.js";
-import type { ComposerLocalFileAttachmentView } from "./lib/local-file-attachments.js";
+import type { RichSegment } from "@spiritagent/ui/composer";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
 
 export type { ModelRef, ModelEntry, ProviderEntry, SpiritConfigSchemaVersion };
 

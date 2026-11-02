@@ -1,5 +1,5 @@
-import type { MessageContentPart, RichSegment } from "./composer-segment-model.js";
-import type { QuoteChipOrigin } from "./message-quote-attachment.js";
+import type { MessageContentPart, RichSegment } from "@spiritagent/ui/composer";
+import type { QuoteChipOrigin } from "@spiritagent/ui/composer";
 import { normalizeSessionPathKey } from "./session-path-kind.js";
 
 export type { QuoteChipOrigin };

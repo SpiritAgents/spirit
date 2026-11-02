@@ -1,58 +1,33 @@
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 
-import { ChipShell, type ChipShellProps } from "@/components/composer-lexical/chips/chip-shell";
 import { useConversationSplit } from "@/contexts/conversation-split-context";
 import { useGitHubAuthConnected } from "@/hooks/use-github-auth-connected";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useWorkspaceToolsController } from "@/hooks/useWorkspaceToolsController";
+import { resolveComposerChipNavigate } from "@/lib/composer-chip-navigation";
 import {
-  resolveComposerChipNavigate,
+  ComposerChipNavigateContext,
+  type ComposerChipNavigateContextValue,
   type ComposerChipNavigateTarget,
-} from "@/lib/composer-chip-navigation";
+} from "@spiritagent/ui/composer";
 import { collectSplitLayoutLeaves, findLeafBySessionPath } from "@/lib/conversation-split-layout";
 import { isMarkdownPath } from "@/lib/file-picker-path";
 import { followSessionPathAlias } from "@/lib/session-path-alias";
 import { normalizeSessionPathKey } from "@/lib/session-path-kind";
 import type { DesktopSnapshot } from "@/types";
 
+// The context, shell, and target type live in @spiritagent/ui; re-exported here so existing
+// desktop imports keep working.
+export {
+  ComposerChipNavigateContext,
+  NavigableChipShell,
+  useComposerChipNavigate,
+  type ComposerChipNavigateContextValue,
+  type ComposerChipNavigateTarget,
+} from "@spiritagent/ui/composer";
+
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 type WorkspaceTools = ReturnType<typeof useWorkspaceToolsController>;
-
-export type ComposerChipNavigateContextValue = {
-  isNavigable: (target: ComposerChipNavigateTarget) => boolean;
-  navigate: (target: ComposerChipNavigateTarget) => void;
-};
-
-// Exported (beyond the provider/hook) so tests can inject a lightweight navigate value directly.
-export const ComposerChipNavigateContext = createContext<ComposerChipNavigateContextValue>({
-  isNavigable: () => false,
-  navigate: () => {},
-});
-
-export function useComposerChipNavigate(): ComposerChipNavigateContextValue {
-  return useContext(ComposerChipNavigateContext);
-}
-
-export function NavigableChipShell({
-  target,
-  children,
-  ...shellProps
-}: {
-  target: ComposerChipNavigateTarget;
-  children: ReactNode;
-} & Omit<ChipShellProps, "navigable" | "onNavigate" | "children">) {
-  const { isNavigable, navigate } = useComposerChipNavigate();
-  const navigable = isNavigable(target);
-  return (
-    <ChipShell
-      {...shellProps}
-      navigable={navigable}
-      onNavigate={navigable ? () => navigate(target) : undefined}
-    >
-      {children}
-    </ChipShell>
-  );
-}
 
 export function ComposerChipNavigateProvider({
   runtime,
@@ -270,7 +245,10 @@ export function ComposerChipNavigateProvider({
     [env, paneId, paneSessionPath, runtime, split, workspaceTools],
   );
 
-  const value = useMemo(() => ({ isNavigable, navigate }), [isNavigable, navigate]);
+  const value = useMemo<ComposerChipNavigateContextValue>(
+    () => ({ isNavigable, navigate }),
+    [isNavigable, navigate],
+  );
 
   return (
     <ComposerChipNavigateContext.Provider value={value}>

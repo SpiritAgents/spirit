@@ -47,7 +47,7 @@ import {
   resolveSpiritDataDir,
 } from "@spiritagent/host-internal";
 
-import { resolveDesktopAgentMode, type DesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode, type DesktopAgentMode } from "@spiritagent/ui/composer";
 import { normalizeContextUsageSnapshot } from "../lib/context-usage.js";
 
 import type {

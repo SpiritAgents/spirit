@@ -6,7 +6,7 @@ import { resolveTranscriptsDir } from "@spiritagent/host-internal";
 import {
   scanSessionReferenceWireBlocks,
   sessionReferenceContextText,
-} from "../lib/session-reference-wire-text.js";
+} from "@spiritagent/ui/composer";
 import { spiritDataDir } from "./storage.js";
 
 const TRANSCRIPT_UNAVAILABLE_BODY = "[session transcript unavailable: file missing or unreadable]";

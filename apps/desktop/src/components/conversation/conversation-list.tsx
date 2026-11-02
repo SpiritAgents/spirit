@@ -3,12 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ProcessCardCollapsible } from "@/components/process-card-collapsible";
 import { ToolCallDiffHostProvider } from "@/components/tool-call-diff-host-context";
 import { ToolCallCollapsible } from "@/components/tool-call/tool-call-collapsible";
-import type { ComposerLocalFileAttachmentView } from "@/components/composer-local-file-strip";
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
 import { MessageCard } from "@/components/conversation/message-card";
 import { MessageTurnActions } from "@/components/conversation/message-turn-actions";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
-import { segmentsToAttachments, segmentsToPlainText } from "@/lib/composer-segment-model";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
+import { segmentsToAttachments, segmentsToPlainText } from "@spiritagent/ui/composer";
 import { conversationMessageStableId } from "@/lib/conversation-list-scope";
 import {
   shouldShowContinueToolbarOnProcessGroup,
@@ -223,7 +223,7 @@ export function ConversationList({
     [removeQueuedUserTurn],
   );
   const handleRewindSegmentsChange = useCallback(
-    (segments: import("@/lib/composer-segment-model").RichSegment[]) => {
+    (segments: import("@spiritagent/ui/composer").RichSegment[]) => {
       onRewindDraftChange((current) => (current ? { ...current, segments } : current));
     },
     [onRewindDraftChange],

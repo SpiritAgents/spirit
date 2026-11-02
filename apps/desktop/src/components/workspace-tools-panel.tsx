@@ -67,7 +67,7 @@ import {
   workspaceToolsWidthExpression,
   writeWorkspaceToolsWidthRatio,
 } from "@/lib/layout-prefs";
-import type { PullRequestChipStatus } from "@/lib/pr-diff-attachment";
+import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import {
   registerWorkspaceNewToolTabShortcut,
@@ -174,16 +174,16 @@ export type WorkspaceToolsDockProps = {
   onTabsChange: Dispatch<SetStateAction<WorkspaceToolTab[]>>;
   onActiveTabIdChange(id: string): void;
   onBrowserElementPicked?: WorkspaceBrowserTabProps["onElementPicked"];
-  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
   onTerminalAddToChat?: (
-    attachment: import("@/lib/terminal-snippet-attachment").TerminalSnippetAttachment,
+    attachment: import("@spiritagent/ui/composer").TerminalSnippetAttachment,
   ) => void;
   onFileSnippetAddToChat?: (
-    attachment: import("@/lib/file-snippet-attachment").FileSnippetAttachment,
+    attachment: import("@spiritagent/ui/composer").FileSnippetAttachment,
   ) => void;
   onWorkspaceFileAddToChat?: (relativePath: string, sourceTabId?: string) => void;
   onGitCommitAddToChat?: (
-    attachment: import("@/lib/git-commit-attachment").GitCommitAttachment,
+    attachment: import("@spiritagent/ui/composer").GitCommitAttachment,
   ) => void;
   onBrowserOpenInNewTab?: WorkspaceBrowserTabProps["onOpenUrlInNewTab"];
   /** The Electron desktop build can create/use browser tabs; on the Web host the menu item is visible but disabled. */

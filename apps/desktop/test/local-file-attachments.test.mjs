@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { uploadOnlyLocalFileAttachmentSnapshots } from "../src/lib/local-file-attachments.ts";
+import { uploadOnlyLocalFileAttachmentSnapshots } from "@spiritagent/ui/composer";
 
 test("uploadOnlyLocalFileAttachmentSnapshots returns undefined for missing snapshots", () => {
   assert.equal(uploadOnlyLocalFileAttachmentSnapshots(undefined, new Set(["a/b.ts"])), undefined);

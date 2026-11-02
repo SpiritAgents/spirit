@@ -5,12 +5,12 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 import {
   parseTerminalSnippetLinePart,
   scanTerminalSnippetWireBlocks,
   terminalSnippetContextText,
-} from "../../src/lib/terminal-snippet-wire-text.ts";
+} from "@spiritagent/ui/composer";
 
 test("terminalSnippetContextText serializes terminal name, line range, and selected text", () => {
   const wire = terminalSnippetContextText({

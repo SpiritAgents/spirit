@@ -3,16 +3,13 @@ import type { LspWriteDiagnosticsUi } from "@spiritagent/agent-core";
 import { DESKTOP_ITEM_HIGHLIGHT } from "@/lib/desktop-chrome";
 import type { ToolBlockSnapshot } from "@/types";
 
-/** Secondary text of short tool cards (shell reason, file name, LSP summary, etc.). */
-export const toolCardSecondaryTextClass = "text-muted-foreground/75 dark:text-muted-foreground/65";
-
 /** An even lighter third level for shell `{command}` etc.; separated from the reason color so the summary line does not blur into one block. */
 export const toolCardFileNameDetailClass = "text-muted-foreground/42 dark:text-muted-foreground/45";
 
 /**
  * Fourth segment of the four-part shell card (failure status); the lightest level of the
  * summary line, lighter than the command segment {@link toolCardFileNameDetailClass}.
- * Grayscale (opacity): verb 100% → reason 75/65% → command 42/45% → failure 30/32%.
+ * Grayscale (opacity): verb 100% → reason `--foreground-subtle` → command 42/45% → failure 30/32%.
  */
 export const toolCardFailedStatusClass = "text-muted-foreground/30 dark:text-muted-foreground/32";
 

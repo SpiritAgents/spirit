@@ -85,7 +85,7 @@ import {
 
 import type { AskQuestionsQuestionSpec } from "../types.js";
 import { spiritDataDir } from "./storage.js";
-import type { DesktopAgentMode } from "../lib/agent-mode.js";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { DesktopToolRequest } from "./contracts.js";
 
 type DesktopDreamToolMode = "read-only" | "collector";

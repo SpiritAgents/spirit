@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { groupModelsForPicker, providerLabelMetadata } from "../../src/lib/model-picker-groups.ts";
+import { groupModelsForPicker, providerLabelMetadata } from "@spiritagent/ui/model-picker";
 
 const PRESET_ROWS = [
   { id: "openai", label: "OpenAI" },

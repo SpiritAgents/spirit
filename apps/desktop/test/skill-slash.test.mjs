@@ -8,7 +8,7 @@ import {
   currentSkillSlashQuery,
   currentSkillSlashQueryAtCursor,
   skillSlashQueryKey,
-} from "../src/lib/skill-slash.ts";
+} from "@spiritagent/ui/composer";
 
 test("buildSkillSlashSuggestions excludes start-implementing slash", () => {
   const suggestions = buildSkillSlashSuggestions("/", []);
@@ -153,8 +153,8 @@ test("buildSkillSlashSuggestions returns empty for undefined query", () => {
 
 test("isCompactSlashComposerSegments matches chip-only compact composer", async () => {
   const { COMPACT_SLASH_ALIAS, isCompactSlashComposerRequest, isCompactSlashComposerSegments } =
-    await import("../src/lib/skill-slash.ts");
-  const { skillContextText } = await import("../src/lib/skill-wire-text.ts");
+    await import("@spiritagent/ui/composer");
+  const { skillContextText } = await import("@spiritagent/ui/composer");
 
   assert.equal(
     isCompactSlashComposerSegments([{ kind: "skill", alias: COMPACT_SLASH_ALIAS }]),

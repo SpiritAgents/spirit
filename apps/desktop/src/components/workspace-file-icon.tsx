@@ -6,11 +6,11 @@ import {
   WORKSPACE_FILE_ICON_CHIP_SIZE_PX,
   WORKSPACE_FILE_ICON_LIST_CLASS,
   type WorkspaceFileIconColorMode,
-} from "@/lib/workspace-file-icon-sizes";
+} from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import type { WorkspaceExplorerEntryKind } from "@/types";
 
-export type { WorkspaceFileIconColorMode } from "@/lib/workspace-file-icon-sizes";
+export type { WorkspaceFileIconColorMode } from "@spiritagent/ui/composer";
 
 export type WorkspaceFileIconProps = {
   name?: string;

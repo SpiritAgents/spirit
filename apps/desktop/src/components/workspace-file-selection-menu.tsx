@@ -11,7 +11,7 @@ import {
   readMonacoSelectionLineRange,
 } from "@/hooks/use-monaco-selection-action-menu";
 import { useTextSelectionActionMenu } from "@/hooks/use-text-selection-action-menu";
-import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
+import type { FileSnippetAttachment } from "@spiritagent/ui/composer";
 import type * as Monaco from "monaco-editor";
 
 type MonacoEditor = Monaco.editor.IStandaloneCodeEditor;

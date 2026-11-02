@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import { clearCodeCompletionStateForWorkspace } from "./code-completion-commands.js";
 import type { PlanSnapshot } from "../types.js";
 import {

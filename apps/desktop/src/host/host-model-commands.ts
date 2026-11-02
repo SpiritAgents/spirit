@@ -24,7 +24,7 @@ import {
   isValidCloudflareGatewayId,
 } from "@spiritagent/agent-core/cloudflare-ai-gateway-resource";
 
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import { parseTranslucencyPreference } from "../lib/translucency.js";
 import { parseModelContextLength } from "../lib/context-usage.js";
 import i18n from "../lib/i18n-host.js";

@@ -3,7 +3,7 @@ import { Search } from "@spiritagent/icons/search";
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 
-import { ModelCatalogDetailPanel } from "@/components/model-catalog-detail-panel";
+import { ModelCatalogDetailPanel } from "@spiritagent/ui/model-picker";
 import {
   type ModelDefaultAssignments,
   type ModelDefaultRole,
@@ -52,10 +52,11 @@ import {
   buildModelCatalogDisplayTitleMap,
   modelCatalogScopeEntryKey,
   modelDisplayTitleFromMap,
-} from "@/lib/model-catalog-detail";
+} from "@spiritagent/ui/model-picker";
+import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
 import { runAfterRadixOverlayClose } from "@/lib/overlay-motion";
 import type { DesktopProviderConfigEntry } from "@/types";
-import { modelRefsEqual } from "@/lib/model-ref";
+import { modelRefsEqual } from "@spiritagent/ui/model-picker";
 import { DESKTOP_CANVAS_CARD_SURFACE } from "@/lib/desktop-chrome";
 import { isElectronChrome } from "@/lib/desktop-shell";
 import {
@@ -193,7 +194,12 @@ export function ModelsSettingsPanel({
     [models, snapshot?.config.modelCatalogHints],
   );
   const displayTitleByModelName = useMemo(
-    () => buildModelCatalogDisplayTitleMap(models, snapshot?.config.modelCatalogHints),
+    () =>
+      buildModelCatalogDisplayTitleMap(
+        desktopModelPickerRuntime,
+        models,
+        snapshot?.config.modelCatalogHints,
+      ),
     [models, snapshot?.config.modelCatalogHints],
   );
 

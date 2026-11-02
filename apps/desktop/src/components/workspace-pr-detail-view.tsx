@@ -31,8 +31,8 @@ import {
 } from "@/lib/layout-prefs";
 import { PR_OVERVIEW_SHELL_DIVIDER_ATTR } from "@/lib/workspace-tools-panel-edge";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
-import type { PrDiffAttachment } from "@/lib/pr-diff-attachment";
-import { resolvePullRequestChipStatus } from "@/lib/pr-diff-attachment";
+import type { PrDiffAttachment } from "@spiritagent/ui/composer";
+import { resolvePullRequestChipStatus } from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import type {
   GitHubPullRequestCheck,

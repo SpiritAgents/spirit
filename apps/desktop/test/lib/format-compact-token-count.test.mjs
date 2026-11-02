@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { formatCompactTokenCount } from "../../src/lib/format-compact-token-count.ts";
+import { formatCompactTokenCount } from "@spiritagent/ui/model-picker";
 
 test("formatCompactTokenCount abbreviates thousands and millions", () => {
   assert.equal(formatCompactTokenCount(503), "503");

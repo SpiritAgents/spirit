@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { normalizeComposerSegmentsPolicy } from "../../src/lib/composer-lexical/composer-lexical-policy.ts";
-import { emptySegments } from "../../src/lib/composer-segment-model.ts";
-import {
-  hasAgentModeSegment,
-  insertAgentModeSegment,
-} from "../../src/lib/composer-agent-mode-segments.ts";
-import { hasLoopSegment, insertLoopSegment } from "../../src/lib/composer-loop-segments.ts";
+import { normalizeComposerSegmentsPolicy } from "@spiritagent/ui/composer";
+import { emptySegments } from "@spiritagent/ui/composer";
+import { hasAgentModeSegment, insertAgentModeSegment } from "@spiritagent/ui/composer";
+import { hasLoopSegment, insertLoopSegment } from "@spiritagent/ui/composer";
 
 test("normalizeComposerSegmentsPolicy pins ask chip when host mode is ask", () => {
   const normalized = normalizeComposerSegmentsPolicy(emptySegments(), {

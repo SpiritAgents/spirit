@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { parseModelContextLength } from "../../src/lib/model-context-length.ts";
+import { parseModelContextLength } from "@spiritagent/ui/model-picker";
 import {
   buildContextUsagePercent,
   normalizeContextUsageSnapshot,

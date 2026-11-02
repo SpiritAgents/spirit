@@ -6,12 +6,12 @@ import {
   parsePrDiffWireMeta,
   prDiffContextText,
   scanPrDiffWireBlocks,
-} from "../../src/lib/pr-diff-wire-text.ts";
+} from "@spiritagent/ui/composer";
 import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 
 test("prDiffContextText serializes PR URL, filename, line range, status, and diff body", () => {
   const wire = prDiffContextText({

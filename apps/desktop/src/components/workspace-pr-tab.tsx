@@ -13,7 +13,7 @@ import {
   type WorkspacePrListViewHandle,
 } from "@/components/workspace-pr-list-view";
 import type { GitHubPullRequestRevealRequest } from "@/lib/workspace-pr-navigation";
-import { resolvePullRequestChipStatus, type PullRequestChipStatus } from "@/lib/pr-diff-attachment";
+import { resolvePullRequestChipStatus, type PullRequestChipStatus } from "@spiritagent/ui/composer";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
 import { cn } from "@/lib/utils";
 import type {
@@ -134,7 +134,7 @@ export type WorkspacePrTabProps = {
   prRevealEnabled?: boolean;
   prRevealNonce?: number;
   prRevealRequest?: GitHubPullRequestRevealRequest | null;
-  onPrDiffAddToChat?: (attachment: import("@/lib/pr-diff-attachment").PrDiffAttachment) => void;
+  onPrDiffAddToChat?: (attachment: import("@spiritagent/ui/composer").PrDiffAttachment) => void;
   /** Windows Mica / macOS Vibrancy: forwarded to the detail view's changes tab. */
   useTranslucency?: boolean;
   /** Called when the current PR detail title changes ("PR #XXX" in detail view, undefined when back to the list or on load failure) */

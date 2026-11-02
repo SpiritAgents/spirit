@@ -5,7 +5,8 @@ import "./setup";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { ModelPickerInspectorPanel } from "@/components/model-picker-inspector-panel";
+import { ModelPickerInspectorPanel } from "@spiritagent/ui/model-picker";
+import { UiTestProviders } from "./ui-test-providers";
 import type { ModelProfileSnapshot } from "@/types";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -40,12 +41,14 @@ function effortModel(overrides: Partial<ModelProfileSnapshot>): ModelProfileSnap
 
 function renderInspector(model: ModelProfileSnapshot, withThinkingSwitch = false) {
   return render(
-    <ModelPickerInspectorPanel
-      model={model}
-      providerLabel="Provider"
-      onEffortChange={() => {}}
-      {...(withThinkingSwitch ? { onThinkingEnabledChange: () => {} } : {})}
-    />,
+    <UiTestProviders>
+      <ModelPickerInspectorPanel
+        model={model}
+        providerLabel="Provider"
+        onEffortChange={() => {}}
+        {...(withThinkingSwitch ? { onThinkingEnabledChange: () => {} } : {})}
+      />
+    </UiTestProviders>,
   );
 }
 

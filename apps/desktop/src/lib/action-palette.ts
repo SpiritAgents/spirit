@@ -4,7 +4,7 @@ import {
   LOCALE_LABEL_KEYS,
   type LanguagePreference,
 } from "@/lib/ui-locale";
-import { STATIC_SLASH_COMMANDS, type SkillSlashSuggestion } from "@/lib/skill-slash";
+import { STATIC_SLASH_COMMANDS, type SkillSlashSuggestion } from "@spiritagent/ui/composer";
 import type { ThemePreference } from "@/lib/theme";
 
 export type ActionPaletteTranslate = (key: string) => string;

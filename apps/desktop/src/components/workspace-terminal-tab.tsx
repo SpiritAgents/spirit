@@ -18,7 +18,7 @@ export type WorkspaceTerminalTabProps = {
   /** Terminal name used for the Chip and menu display (OSC title or the default Terminal label). */
   terminalDisplayName?: string;
   onTerminalAddToChat?: (
-    attachment: import("@/lib/terminal-snippet-attachment").TerminalSnippetAttachment,
+    attachment: import("@spiritagent/ui/composer").TerminalSnippetAttachment,
   ) => void;
   /** True while the sidebar is being continuously drag-resized; pauses terminal fit until release. */
   suspendTerminalResize?: boolean;

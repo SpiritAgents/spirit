@@ -5,12 +5,12 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 import {
   deriveGitCommitSubject,
   gitCommitContextText,
   scanGitCommitWireBlocks,
-} from "../../src/lib/git-commit-wire-text.ts";
+} from "@spiritagent/ui/composer";
 
 const sampleAttachment = {
   id: "git-1",

@@ -9,7 +9,8 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 import {
   ModelPickerInspectorPanel,
   modelPickerInspectorNeedsWideLayout,
-} from "@/components/model-picker-inspector-panel";
+} from "@spiritagent/ui/model-picker";
+import { UiTestProviders } from "./ui-test-providers";
 import type { ModelProfileSnapshot, ModelRef, PreviewModelCatalogEntry } from "@/types";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -66,14 +67,16 @@ function renderInspector(
 ) {
   const { catalogEntry, lastInputTokens, onServiceTierChange } = options;
   return render(
-    <ModelPickerInspectorPanel
-      model={model}
-      {...(catalogEntry ? { catalogEntry } : {})}
-      {...(lastInputTokens !== undefined ? { lastInputTokens } : {})}
-      providerLabel="Provider"
-      onEffortChange={() => {}}
-      {...(onServiceTierChange ? { onServiceTierChange } : {})}
-    />,
+    <UiTestProviders>
+      <ModelPickerInspectorPanel
+        model={model}
+        {...(catalogEntry ? { catalogEntry } : {})}
+        {...(lastInputTokens !== undefined ? { lastInputTokens } : {})}
+        providerLabel="Provider"
+        onEffortChange={() => {}}
+        {...(onServiceTierChange ? { onServiceTierChange } : {})}
+      />
+    </UiTestProviders>,
   );
 }
 

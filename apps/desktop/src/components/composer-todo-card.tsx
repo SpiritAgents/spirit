@@ -6,6 +6,7 @@ import { Circle } from "lucide-react";
 
 import type { ConversationTodoSnapshot } from "@/types";
 import {
+  DESKTOP_COMPOSER_EDGE,
   DESKTOP_ELEVATION_SHADOW_SM,
   desktopComposerSurfaceBackdropClass,
 } from "@/lib/desktop-translucency-surface";
@@ -122,7 +123,8 @@ export function ComposerTodoCard({
     <div
       data-spirit-surface="composer-todo-card"
       className={cn(
-        "overflow-hidden rounded-t-2xl rounded-b-none border border-ring/30 transition-[max-height] duration-300 ease-out dark:border-white/12",
+        "overflow-hidden rounded-t-2xl rounded-b-none transition-[max-height] duration-300 ease-out",
+        DESKTOP_COMPOSER_EDGE,
         DESKTOP_ELEVATION_SHADOW_SM,
         desktopComposerSurfaceBackdropClass(useTranslucency),
       )}

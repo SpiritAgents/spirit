@@ -1,15 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import {
-  browserElementContextText,
-  scanBrowserElementWireBlocks,
-} from "../../src/lib/browser-element-wire-text.ts";
+import { browserElementContextText, scanBrowserElementWireBlocks } from "@spiritagent/ui/composer";
 import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
+} from "@spiritagent/ui/composer";
 
 const sampleAttachment = {
   id: "el-1",

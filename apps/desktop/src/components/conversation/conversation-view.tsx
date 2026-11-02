@@ -22,9 +22,9 @@ import { sessionGitTooltipItemFromChromeSession } from "@/components/session-lis
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
 import { CONVERSATION_GUTTER_X, CONVERSATION_MAX_W } from "@/lib/conversation-layout-constants";
 import {
   desktopTranslucencyTintClass,
@@ -32,11 +32,11 @@ import {
 } from "@/lib/desktop-translucency-surface";
 import type { EditorFileTarget } from "@/lib/workspace-editor-navigation";
 import { scrollAreaViewport } from "@/lib/scroll-area-viewport";
-import type { ActiveWorkspaceFileReferenceQuery } from "@/lib/composer-segment-model";
-import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
+import type { ActiveWorkspaceFileReferenceQuery } from "@spiritagent/ui/composer";
+import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
 import { isSideChatPaneProvisionalSessionPath } from "@/lib/session-path-kind";
-import type { ActiveSkillSlashQuery, SkillSlashSuggestion } from "@/lib/skill-slash";
-import type { ComposerLocalFileAttachmentView } from "@/lib/local-file-attachments";
+import type { ActiveSkillSlashQuery, SkillSlashSuggestion } from "@spiritagent/ui/composer";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import type {
   ConversationMessageSnapshot,
@@ -108,10 +108,8 @@ export type ComposerDockSectionProps = {
   showWorkspaceBindingControls: boolean;
   paneSessionPath?: string;
   useIsolatedPaneWorkspace?: boolean;
-  composerSegments: readonly import("@/lib/composer-segment-model").RichSegment[];
-  onComposerSegmentsChange: (
-    segments: import("@/lib/composer-segment-model").RichSegment[],
-  ) => void;
+  composerSegments: readonly import("@spiritagent/ui/composer").RichSegment[];
+  onComposerSegmentsChange: (segments: import("@spiritagent/ui/composer").RichSegment[]) => void;
   composerLocalFileAttachments: ComposerLocalFileAttachmentView[];
   onComposerLocalFileAttachmentsChange: (attachments: ComposerLocalFileAttachmentView[]) => void;
   commitBusy: boolean;

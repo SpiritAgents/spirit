@@ -1,6 +1,11 @@
 import i18n from "@/lib/i18n";
 import type { DesktopModelCapability, DesktopSnapshot, ModelRef } from "@/types";
-import { emptyModelRef, isEmptyModelRef, modelRefKey, modelRefsEqual } from "@/lib/model-ref";
+import {
+  emptyModelRef,
+  isEmptyModelRef,
+  modelRefKey,
+  modelRefsEqual,
+} from "@spiritagent/ui/model-picker";
 
 export const defaultCustomModelCapabilities: DesktopModelCapability[] = ["languageModel", "image"];
 

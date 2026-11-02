@@ -10,8 +10,8 @@ import { useTranslation } from "react-i18next";
 
 import { AgentMarkdownMessage } from "@/components/agent-markdown-message";
 import { ComposerSurface } from "@/components/composer/composer-surface";
-import type { ComposerLocalFileAttachmentView } from "@/components/composer-local-file-strip";
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
 import {
   AssistantCompactionCollapsible,
   AssistantThinkingCollapsible,
@@ -19,8 +19,8 @@ import {
 import { TurnErrorMessageCard } from "@/components/conversation/turn-error-message-card";
 import { QueuedUserMessageHoverActions } from "@/components/queued-user-message-hover-actions";
 import { ToolCallCollapsible } from "@/components/tool-call/tool-call-collapsible";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
-import { segmentsToAttachments } from "@/lib/composer-segment-model";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
+import { segmentsToAttachments } from "@spiritagent/ui/composer";
 import type {
   ReadLocalImagePreview,
   ReadLocalVideoPreview,
@@ -142,7 +142,7 @@ function MessageCardImpl({
   showContinueButton: boolean;
   continueTarget?: ConversationMessageSnapshot;
   continueBusy: boolean;
-  rewindSegments: readonly import("@/lib/composer-segment-model").RichSegment[];
+  rewindSegments: readonly import("@spiritagent/ui/composer").RichSegment[];
   rewindLocalFileAttachments: readonly ComposerLocalFileAttachmentView[];
   rewindSelected: boolean;
   rewindCanSubmit: boolean;
@@ -155,7 +155,7 @@ function MessageCardImpl({
   activeModel: ModelRef;
   agentMode: DesktopAgentMode;
   onContinue(message: ConversationMessageSnapshot): void;
-  onRewindSegmentsChange(segments: import("@/lib/composer-segment-model").RichSegment[]): void;
+  onRewindSegmentsChange(segments: import("@spiritagent/ui/composer").RichSegment[]): void;
   onRewindStart(message: ConversationMessageSnapshot, listIndex: number): void;
   onRewindSubmit(): void;
   onRewindRemoveLocalFileAttachment(path: string): void;

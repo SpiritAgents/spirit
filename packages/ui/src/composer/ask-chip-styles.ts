@@ -1,0 +1,34 @@
+import { COMPOSER_PILL_CHIP_ICON_SIZE_PX } from "./composer-inline-chip-styles.js";
+import { FONT_WEIGHT_NORMAL } from "../typography.js";
+
+// Semi-transparent background blends with the Composer frosted surface, avoiding opaque blocks that clash with the base tone
+// Must be inline (not inline-flex): the label text merges into the outer line box so the selection band matches plain text in height and color
+// --chip-pad must equal the root px, --chip-mx must equal the root mx: lets the two spacers extend to cover the
+// padding and margin selection band (see chip-shell.tsx)
+export const ASK_CHIP_CLASS = `inline whitespace-nowrap rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-xs ${FONT_WEIGHT_NORMAL} leading-none text-emerald-900 mx-0.5 [--chip-pad:6px] [--chip-mx:2px] dark:bg-emerald-500/15 dark:text-emerald-500`;
+
+export function makeAskChipNode(doc: Document, label = "Ask"): HTMLElement {
+  const span = doc.createElement("span");
+  span.contentEditable = "false";
+  span.setAttribute("data-ask-chip", "true");
+  span.dataset.askChip = "true";
+  span.className = ASK_CHIP_CLASS;
+  span.setAttribute("aria-label", label);
+
+  const icon = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("width", String(COMPOSER_PILL_CHIP_ICON_SIZE_PX));
+  icon.setAttribute("height", String(COMPOSER_PILL_CHIP_ICON_SIZE_PX));
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "1.75");
+  icon.setAttribute("stroke-linecap", "round");
+  icon.setAttribute("stroke-linejoin", "round");
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML =
+    '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>';
+
+  span.appendChild(icon);
+  span.appendChild(doc.createTextNode(label));
+  return span;
+}

@@ -8,19 +8,19 @@ import {
   type DragEvent as ReactDragEvent,
 } from "react";
 
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
-import { segmentsToMessageText } from "@/components/composer-rich-input";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
+import { segmentsToMessageText } from "@spiritagent/ui/composer";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
 import type { useDesktopRuntime } from "@/hooks/useDesktopRuntime";
 import type { useSubagentViewer } from "@/hooks/useSubagentViewer";
-import { messageContentToRichSegments } from "@/lib/composer-segment-model";
+import { messageContentToRichSegments } from "@spiritagent/ui/composer";
 import { applyChipNavigateMeta, extractChipNavigateMeta } from "@/lib/composer-chip-navigate-meta";
 import {
   composerAttachmentViewFromPath,
   isAttachmentOnlyDisplayText,
   normalizeSlashPath as normalizeAttachmentPath,
   snapshotsToComposerAttachmentViews,
-} from "@/lib/local-file-attachments";
+} from "@spiritagent/ui/composer";
 import { canStartMessageRewind } from "@/lib/message-rewind-eligibility";
 import {
   isComposerFileDropAccepted,

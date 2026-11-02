@@ -20,7 +20,7 @@ import {
 import { DESKTOP_SHELL_SECTION_HEADER_MIN_HEIGHT_CLASS } from "@/lib/desktop-chrome";
 import { useWorkspaceToolsShellHorizontalDivider } from "@/lib/use-workspace-tools-shell-horizontal-divider";
 import { cn } from "@/lib/utils";
-import type { GitCommitAttachment } from "@/lib/git-commit-attachment";
+import type { GitCommitAttachment } from "@spiritagent/ui/composer";
 import type {
   DesktopGitSnapshot,
   GitCommitRecord,

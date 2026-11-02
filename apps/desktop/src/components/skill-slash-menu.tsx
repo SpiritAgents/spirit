@@ -9,7 +9,7 @@ import {
   DESKTOP_OVERLAY_LIST_ITEM_SECONDARY,
 } from "@/lib/desktop-chrome";
 import { SLASH_SUGGESTION_ICONS } from "@/lib/slash-command-icons";
-import type { SkillSlashSuggestion, SkillSlashSuggestionKind } from "@/lib/skill-slash";
+import type { SkillSlashSuggestion, SkillSlashSuggestionKind } from "@spiritagent/ui/composer";
 
 type SkillSlashMenuProps = {
   suggestions: SkillSlashSuggestion[];

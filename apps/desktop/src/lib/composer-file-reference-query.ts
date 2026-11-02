@@ -8,7 +8,7 @@ import {
   mergeAdjacentTextSegments,
   workspaceFilePlainToken,
   type RichSegment,
-} from "@/lib/composer-segment-model";
+} from "@spiritagent/ui/composer";
 
 function segmentPlainTextCharCount(seg: RichSegment): number {
   if (seg.kind === "text") {

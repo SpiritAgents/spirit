@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 
 import { Badge } from "@/components/ui/badge";
 import { TooltipItem, useTooltipTriggerProps } from "@/components/ui/tooltip";
-import { modelSettingsRowAriaLabel } from "@/lib/model-catalog-detail";
+import { modelSettingsRowAriaLabel } from "@spiritagent/ui/model-picker";
 import { modelCapabilityLabel } from "@/lib/model-capability-label";
 import { cn } from "@/lib/utils";
 import type { SettingsModelProfile } from "./model-defaults";

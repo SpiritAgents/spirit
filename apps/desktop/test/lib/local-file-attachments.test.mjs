@@ -7,7 +7,7 @@ import {
   isPreviewableImagePath,
   readCachedLocalFilePreviewDataUrl,
   rememberLocalFilePreviewDataUrl,
-} from "../../src/lib/local-file-attachments.ts";
+} from "@spiritagent/ui/composer";
 
 test("isPreviewableImagePath accepts common image extensions", () => {
   assert.equal(isPreviewableImagePath("/tmp/element-1739.png"), true);

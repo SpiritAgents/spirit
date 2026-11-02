@@ -10,7 +10,7 @@ import {
   isPreviewableImagePath,
   readCachedLocalFilePreviewDataUrl,
   rememberLocalFilePreviewDataUrl,
-} from "@/lib/local-file-attachments";
+} from "@spiritagent/ui/composer";
 import { cn } from "@/lib/utils";
 import type { ToolBlockSnapshot } from "@/types";
 

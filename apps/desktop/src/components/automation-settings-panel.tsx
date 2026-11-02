@@ -6,7 +6,7 @@ import {
   AutomationTriggerMenu,
   defaultDesktopTimeTrigger,
 } from "@/components/automation-trigger-menu";
-import { ModelPickerMenu } from "@/components/model-picker-menu";
+import { ModelPickerMenu } from "@spiritagent/ui/model-picker";
 import { WorkspaceSelectorMenu } from "@/components/workspace-selector-menu";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +26,8 @@ import type {
   ModelRef,
   SearchGitHubAutomationRepositoriesSnapshot,
 } from "@/types";
-import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@/lib/model-ref";
-import { configuredModelEffort, modelEffortPreference } from "@/lib/model-picker-controls";
+import { emptyModelRef, isEmptyModelRef, modelRefsEqual } from "@spiritagent/ui/model-picker";
+import { configuredModelEffort, modelEffortPreference } from "@spiritagent/ui/model-picker";
 import { resolveWorkspaceBindingForStoredRoot } from "@/lib/workspace-display-label";
 
 type AutomationSettingsPanelProps = {

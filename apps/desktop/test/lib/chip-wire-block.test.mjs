@@ -8,7 +8,7 @@ import {
   parseLineRangeSuffix,
   scanChipWireBlocks,
   splitInfoPayloadAndLineRange,
-} from "../../src/lib/chip-wire-block.ts";
+} from "@spiritagent/ui/composer";
 
 test("formatChipWireBlock serializes info line and body", () => {
   const wire = formatChipWireBlock("file:README.md:12-15", "hello world");

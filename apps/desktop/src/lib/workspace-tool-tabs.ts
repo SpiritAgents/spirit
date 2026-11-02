@@ -1,4 +1,4 @@
-import type { PullRequestChipStatus } from "@/lib/pr-diff-attachment";
+import type { PullRequestChipStatus } from "@spiritagent/ui/composer";
 
 export type WorkspaceToolTabKind = "files" | "terminal" | "git" | "browser" | "pr" | "task";
 

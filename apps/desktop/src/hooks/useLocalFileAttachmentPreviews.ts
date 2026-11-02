@@ -1,13 +1,13 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 
-import type { ComposerLocalFileAttachmentView } from "../lib/local-file-attachments.js";
+import type { ComposerLocalFileAttachmentView } from "@spiritagent/ui/composer";
 import {
   isPreviewableImagePath,
   localFileAttachmentsSnapshotKey,
   normalizeSlashPath,
   readCachedLocalFilePreviewDataUrl,
   rememberLocalFilePreviewDataUrl,
-} from "../lib/local-file-attachments.js";
+} from "@spiritagent/ui/composer";
 
 type ReadLocalImagePreview = (filePath: string) => Promise<string | null>;
 

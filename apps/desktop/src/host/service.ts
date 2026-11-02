@@ -7,7 +7,7 @@ import {
   lineDeltaForDeleteFilePath,
 } from "./delete-file-line-delta.js";
 import i18n from "../lib/i18n-host.js";
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import {
   buildBasicInfoSystemMessage,
   buildDreamsSystemMessage,

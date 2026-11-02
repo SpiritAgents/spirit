@@ -5,8 +5,8 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
-import { scanSkillWireBlocks, skillContextText } from "../../src/lib/skill-wire-text.ts";
+} from "@spiritagent/ui/composer";
+import { scanSkillWireBlocks, skillContextText } from "@spiritagent/ui/composer";
 
 test("skillContextText serializes typed fence block", () => {
   const wire = skillContextText("/git-commit");

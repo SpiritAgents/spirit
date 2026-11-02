@@ -5,7 +5,7 @@ import {
   providerLabelKey,
   providerLabelMetadata,
   type ProviderPickerPresetRow,
-} from "@/lib/model-picker-groups";
+} from "@spiritagent/ui/model-picker";
 
 /** Minimal signature compatible with react-i18next `t`, avoiding a direct dependency on the TFunction generic. */
 export type ProviderLabelTranslate = (key: string, options?: { defaultValue?: string }) => string;

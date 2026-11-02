@@ -10,7 +10,28 @@ import {
   modelCatalogHasDetailBody,
   modelDisplayTitleFromMap,
   modelHasCatalogDetail,
-} from "../../src/lib/model-catalog-detail.ts";
+} from "@spiritagent/ui/model-picker";
+import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
+
+const labels = {
+  detailContext: "Context",
+  detailMaxOutput: "Max output",
+  detailInput: "Input",
+  detailOutput: "Output",
+  detailCachedInput: "Cached input",
+  detailImage: "Image",
+  detailRequest: "Request",
+  detailVideo: "Video",
+  detailPricingInput: (value) => `${value} / M`,
+  detailPricingOutput: (value) => `${value} / M`,
+  detailPricingImage: (value) => value,
+  detailPricingRequest: (value) => value,
+  detailPricingVideo: (value) => value,
+  detailPricingImageMegapixel: (value) => `${value} / megapixel`,
+  detailPricingExample: (value, description) => `${value} (${description})`,
+  detailVideoPerSecond: (value) => `${value} / sec`,
+  detailVideoResolutionWithAudio: (resolution) => `${resolution} (audio)`,
+};
 
 test("buildModelCatalogDisplayTitleMap uses catalog displayName for gateway models", () => {
   const hints = [
@@ -30,7 +51,7 @@ test("buildModelCatalogDisplayTitleMap uses catalog displayName for gateway mode
     },
   ];
 
-  const titles = buildModelCatalogDisplayTitleMap(models, hints);
+  const titles = buildModelCatalogDisplayTitleMap(desktopModelPickerRuntime, models, hints);
   assert.equal(titles.get("vercel-ai-gateway::openai/gpt-5"), "GPT-5");
   assert.equal(modelDisplayTitleFromMap(models[0], titles), "GPT-5");
   assert.equal(
@@ -70,12 +91,7 @@ test("buildModelCatalogDetailFields renders video duration pricing rows", () => 
         { resolution: "1080p", costPerSecondUsd: "0.15" },
       ],
     },
-    t: (key, options) => {
-      if (key === "settings.modelDetailPricingVideoPerSecond") {
-        return `${options.value} / sec`;
-      }
-      return key;
-    },
+    labels,
   });
 
   assert.deepEqual(fields, [
@@ -91,17 +107,7 @@ test("buildModelCatalogDetailFields renders Together megapixel and example prici
       imageExamplePricing: { priceUsd: "0.018", description: "720x1280" },
       videoExamplePricing: { priceUsd: "0.924", description: "1080p / 5s" },
     },
-    t: (key, options) => {
-      if (key === "settings.modelDetailLabelImage") return "Image";
-      if (key === "settings.modelDetailLabelVideo") return "Video";
-      if (key === "settings.modelDetailPricingImageMegapixel") {
-        return `${options.value} / megapixel`;
-      }
-      if (key === "settings.modelDetailPricingExample") {
-        return `${options.value} (${options.description})`;
-      }
-      return key;
-    },
+    labels,
   });
 
   assert.deepEqual(fields, [
@@ -120,15 +126,7 @@ test("buildModelCatalogDetailFields appends audio suffix to video duration prici
         { resolution: "4k", costPerSecondUsd: "0.6", audio: true },
       ],
     },
-    t: (key, options) => {
-      if (key === "settings.modelDetailPricingVideoPerSecond") {
-        return `${options.value} / sec`;
-      }
-      if (key === "settings.modelDetailPricingVideoResolutionWithAudio") {
-        return `${options.resolution} (audio)`;
-      }
-      return key;
-    },
+    labels,
   });
 
   assert.deepEqual(fields, [
@@ -147,7 +145,7 @@ test("buildModelCatalogDisplayTitleMap formats non-gateway model ids", () => {
     },
   ];
 
-  const titles = buildModelCatalogDisplayTitleMap(models, []);
+  const titles = buildModelCatalogDisplayTitleMap(desktopModelPickerRuntime, models, []);
   assert.equal(titles.get("openai::gpt-4o-mini"), "GPT 4o Mini");
 });
 
@@ -174,7 +172,7 @@ test("buildModelCatalogDisplayTitleMap scopes titles by provider for shared mode
     },
   ];
 
-  const titles = buildModelCatalogDisplayTitleMap(models, hints);
+  const titles = buildModelCatalogDisplayTitleMap(desktopModelPickerRuntime, models, hints);
   assert.equal(modelDisplayTitleFromMap(models[0], titles), "DeepSeek V4 Pro");
   assert.equal(modelDisplayTitleFromMap(models[1], titles), "DeepSeek-V4-Pro");
 });
@@ -185,7 +183,10 @@ test("modelCatalogDisplayTitle keeps raw id for gateway without catalog entry", 
     apiBase: "https://gateway.example/v1",
     providerId: "vercel-ai-gateway",
   };
-  assert.equal(modelCatalogDisplayTitle(model, undefined), "openai/gpt-5");
+  assert.equal(
+    modelCatalogDisplayTitle(desktopModelPickerRuntime, model, undefined),
+    "openai/gpt-5",
+  );
 });
 
 test("findModelCatalogEntry returns entry without pricing", () => {
@@ -205,7 +206,10 @@ test("findModelCatalogEntry returns entry without pricing", () => {
   };
   const entry = findModelCatalogEntry(model, hints);
   assert.equal(entry?.displayName, "Claude Sonnet 4");
-  assert.equal(modelCatalogDisplayTitle(model, entry), "Claude Sonnet 4");
+  assert.equal(
+    modelCatalogDisplayTitle(desktopModelPickerRuntime, model, entry),
+    "Claude Sonnet 4",
+  );
 });
 
 test("findModelCatalogEntry resolves moonshot-ai catalog with contextLength", () => {
@@ -262,7 +266,7 @@ test("findModelCatalogEntry resolves meituan catalog with pricing", () => {
   const fields = buildModelCatalogDetailFields({
     contextLength: entry?.contextLength,
     pricing: entry?.pricing,
-    t: (key) => key,
+    labels,
   });
   assert.ok(fields.some((field) => field.id === "input"));
   assert.ok(fields.some((field) => field.id === "output"));

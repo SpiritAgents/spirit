@@ -1,15 +1,18 @@
 import { parseGitHubPullRequestUrl } from "@spiritagent/host-internal/github-pull-request-url";
 
 import type { ComposerChipNavigateMeta } from "./composer-chip-navigate-meta.js";
-import type { QuoteChipOrigin } from "./message-quote-attachment.js";
 import { looksLikeAbsolutePath } from "./file-picker-path.js";
 import { tryResolveWorkspaceRelativePath } from "./read-file-tool-navigation.js";
-import { skillSlashAlias } from "./skill-slash.js";
+import { skillSlashAlias } from "@spiritagent/ui/composer";
 import {
   isSideChatPaneProvisionalSessionPath,
   normalizeSessionPathKey,
 } from "./session-path-kind.js";
-import { isWorkspaceDirectoryChipPath } from "./workspace-file-chip-styles.js";
+import {
+  isWorkspaceDirectoryChipPath,
+  COMPOSER_CHIP_NAVIGATE_POINTER_THRESHOLD_PX,
+  pointerMovedBeyondChipNavigateThreshold,
+} from "@spiritagent/ui/composer";
 import {
   findWorkspaceToolTab,
   type WorkspaceToolTab,
@@ -17,29 +20,11 @@ import {
 } from "./workspace-tool-tabs.js";
 import { findFilesTabWithWorkspacePath } from "./workspace-editor-navigation.js";
 
-export const COMPOSER_CHIP_NAVIGATE_POINTER_THRESHOLD_PX = 4;
+/** The chip target vocabulary lives in @spiritagent/ui (chips render there); re-exported for desktop callers. */
+export type { ComposerChipNavigateTarget } from "@spiritagent/ui/composer";
+import type { ComposerChipNavigateTarget, QuoteChipOrigin } from "@spiritagent/ui/composer";
 
-export type ComposerChipNavigateTarget =
-  | { kind: "skill"; alias: string }
-  | { kind: "workspaceFile"; path: string; sourceTabId?: string; isPlan?: boolean }
-  | {
-      kind: "fileSnippet";
-      filePath: string;
-      lineStart: number;
-      lineEnd: number;
-      sourceTabId?: string;
-    }
-  | { kind: "sessionReference"; transcriptPath: string }
-  | { kind: "element"; pageUrl: string; sourceTabId?: string }
-  | { kind: "gitCommit"; sourceTabId?: string }
-  | { kind: "terminalSnippet"; sourceTabId?: string }
-  | { kind: "prDiff"; prUrl: string; sourceTabId?: string }
-  | {
-      kind: "messageQuote";
-      quoteSessionPath?: string;
-      quoteMessageId?: number;
-      quoteOrigin?: QuoteChipOrigin;
-    };
+export { COMPOSER_CHIP_NAVIGATE_POINTER_THRESHOLD_PX, pointerMovedBeyondChipNavigateThreshold };
 
 export type ComposerChipNavigateSkill = {
   name: string;
@@ -89,16 +74,6 @@ export type ComposerChipNavigateAction =
 export type ComposerChipNavigateDecision =
   | { navigable: false }
   | { navigable: true; action: ComposerChipNavigateAction };
-
-export function pointerMovedBeyondChipNavigateThreshold(
-  start: { x: number; y: number },
-  end: { x: number; y: number },
-  thresholdPx = COMPOSER_CHIP_NAVIGATE_POINTER_THRESHOLD_PX,
-): boolean {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  return dx * dx + dy * dy >= thresholdPx * thresholdPx;
-}
 
 export function trackedTabOfKind(
   tabs: readonly WorkspaceToolTab[],

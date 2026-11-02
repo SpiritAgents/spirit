@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SessionSidebarChromeProvider } from "@/contexts/session-sidebar-chrome-context";
@@ -25,6 +25,14 @@ import { WebHostPairingGate } from "@/components/web-host-pairing-gate";
 import { WorkspaceCapabilityTrustDialog } from "@/components/workspace-capability-trust-dialog";
 import { WorkspaceFilePickerDialog } from "@/components/workspace-file-picker-dialog";
 import { WorkspaceMarkdownLinkProvider } from "@/components/workspace-markdown-link-context";
+import { WorkspaceFileIcon } from "@/components/workspace-file-icon";
+import { desktopModelPickerRuntime } from "@/lib/model-picker-runtime";
+import { desktopComposerLabels, desktopModelPickerLabels } from "@/lib/ui-labels";
+import { ComposerLabelsProvider, WorkspaceFileIconProvider } from "@spiritagent/ui/composer";
+import {
+  ModelPickerLabelsProvider,
+  ModelPickerRuntimeProvider,
+} from "@spiritagent/ui/model-picker";
 import { useAppSurfaceNavigation } from "@/hooks/useAppSurfaceNavigation";
 import { useClickablePointerCursor } from "@/hooks/useClickablePointerCursor";
 import { useCompactionUiDemo } from "@/hooks/useCompactionUiDemo";
@@ -86,6 +94,8 @@ export default function App() {
   const { t, i18n } = useTranslation();
   // Subscribe only to the constant-reference setter: App does not re-render on theme value changes (a full re-render of the invisible app-body measured 40–55ms)
   useThemeSetter();
+  const composerLabels = useMemo(() => desktopComposerLabels(t), [t]);
+  const modelPickerLabels = useMemo(() => desktopModelPickerLabels(t), [t]);
   const { font, setFont } = useFont();
   const { clickablePointerCursor, setClickablePointerCursor } = useClickablePointerCursor();
   const { fontSmoothing, setFontSmoothing } = useFontSmoothing();
@@ -434,530 +444,564 @@ export default function App() {
   }
 
   return (
-    <WorkspaceMarkdownLinkProvider onLinkClick={handleWorkspaceMarkdownLinkClick}>
-      <EditCommandStateProvider>
-        <SessionSidebarChromeProvider apiRef={surfaceNav.sessionSidebarChromeApiRef}>
-          <div
-            data-spirit-surface="desktop-chrome-root"
-            className="flex h-full min-h-0 flex-col text-foreground"
-          >
-            {winElectronChrome ? (
-              <DesktopTitleBar
-                useTranslucency={useTranslucency}
-                useContentTranslucency={useContentTranslucency}
-                onZoomIn={uiLayoutScale.zoomIn}
-                onZoomOut={uiLayoutScale.zoomOut}
-                onZoomReset={uiLayoutScale.resetScale}
-                onOpenSettings={surfaceNav.handleOpenSettings}
-              />
-            ) : null}
-            <div id={UI_LAYOUT_SCALE_ROOT_ID} className="flex min-h-0 min-w-0 flex-1 flex-col">
-              <div
-                data-spirit-surface="app-shell"
-                data-spirit-shell-kind={isElectronShell ? "electron" : "web"}
-                data-spirit-mica={useTranslucency ? "true" : "false"}
-                data-spirit-content-translucency={useContentTranslucency ? "true" : "false"}
-                className={cn(
-                  "flex h-full min-h-0 flex-col",
-                  useTranslucency ? "bg-transparent" : "bg-background",
-                )}
-              >
-                <LaunchSplash
-                  active={launchSplashActive}
-                  useTranslucency={useTranslucency}
-                  onPhaseChange={setLaunchSplashPhase}
-                />
-                <OnboardingWizard
-                  active={onboardingVisible}
-                  useTranslucency={useTranslucency}
-                  settings={runtime.settings}
-                  onSavePatch={runtime.saveSettingsPatch}
-                  providerPickerPresets={snapshot?.config.providerPickerPresets ?? []}
-                  modelsBusy={runtime.busyAction === "models"}
-                  modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
-                  onAddModel={runtime.addModel}
-                  onAddProviderModels={runtime.addProviderModels}
-                  onPreviewModels={runtime.previewModels}
-                  onDone={handleOnboardingDone}
-                  onPhaseChange={setOnboardingPhase}
-                />
-                <div
-                  data-spirit-surface="app-body"
-                  inert={shellUnderlayHidden}
-                  className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-                >
-                  {!desktopTitleBarChrome ? (
-                    <div
-                      className={cn(
-                        "h-px w-full shrink-0",
-                        // Non-Electron: shell top separator line
-                        useTranslucency
-                          ? "bg-black/5 dark:bg-white/10"
-                          : "bg-border/30 dark:bg-white/12",
-                      )}
-                      role="separator"
-                      aria-orientation="horizontal"
-                    />
-                  ) : null}
+    <ModelPickerRuntimeProvider value={desktopModelPickerRuntime}>
+      <ModelPickerLabelsProvider value={modelPickerLabels}>
+        <ComposerLabelsProvider value={composerLabels}>
+          <WorkspaceFileIconProvider value={WorkspaceFileIcon}>
+            <WorkspaceMarkdownLinkProvider onLinkClick={handleWorkspaceMarkdownLinkClick}>
+              <EditCommandStateProvider>
+                <SessionSidebarChromeProvider apiRef={surfaceNav.sessionSidebarChromeApiRef}>
                   <div
-                    data-spirit-surface="main-frame"
-                    className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
+                    data-spirit-surface="desktop-chrome-root"
+                    className="flex h-full min-h-0 flex-col text-foreground"
                   >
-                    <ConversationSplitProvider
-                      runtime={runtime}
-                      snapshot={snapshot}
-                      conversationAbortShortcutTargetRef={conversationAbortShortcutTargetRef}
-                      registerBeginSideChat={registerBeginSideChat}
-                      onEnsureConversationSurface={() => {
-                        surfaceNav.setLastNonSettingsSurface("conversation");
-                        surfaceNav.setActiveSurface("conversation");
-                      }}
-                    >
-                      <ConversationSessionFocusComposerBridge
-                        composerSessionKey={conversation.composerSessionKey}
-                        surfaceActive={conversationSurfaceActive}
-                        ready={focusComposerReady}
-                        composerAutomationApiRef={composerAutomationApiRef}
-                      />
-                      <ConversationTypingFocusRedirectBridge enabled={focusComposerEnabled} />
-                      <SessionSidebarShell
+                    {winElectronChrome ? (
+                      <DesktopTitleBar
                         useTranslucency={useTranslucency}
                         useContentTranslucency={useContentTranslucency}
+                        onZoomIn={uiLayoutScale.zoomIn}
+                        onZoomOut={uiLayoutScale.zoomOut}
+                        onZoomReset={uiLayoutScale.resetScale}
+                        onOpenSettings={surfaceNav.handleOpenSettings}
+                      />
+                    ) : null}
+                    <div
+                      id={UI_LAYOUT_SCALE_ROOT_ID}
+                      className="flex min-h-0 min-w-0 flex-1 flex-col"
+                    >
+                      <div
+                        data-spirit-surface="app-shell"
+                        data-spirit-shell-kind={isElectronShell ? "electron" : "web"}
+                        data-spirit-mica={useTranslucency ? "true" : "false"}
+                        data-spirit-content-translucency={useContentTranslucency ? "true" : "false"}
+                        className={cn(
+                          "flex h-full min-h-0 flex-col",
+                          useTranslucency ? "bg-transparent" : "bg-background",
+                        )}
                       >
-                        <SessionSidebar
-                          narrow={false}
-                          mode={surfaceNav.settingsMode ? "settings" : "sessions"}
-                          userHomeDirectory={snapshot?.userHomeDirectory ?? null}
-                          sessions={runtime.sessions}
-                          activeFilePath={sidebarActiveFilePath}
-                          onNewChat={handleNewChat}
-                          onNewChatInWorkspace={handleNewChatInWorkspace}
-                          onSelectSession={handleSelectSession}
-                          onOpenMarketplace={() => {
-                            surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
-                            surfaceNav.setLastNonSettingsSurface("marketplace");
-                            surfaceNav.setActiveSurface("marketplace");
-                          }}
-                          onOpenAutomations={() => {
-                            surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
-                            surfaceNav.setLastNonSettingsSurface("automations");
-                            surfaceNav.setSelectedAutomationId(null);
-                            surfaceNav.setActiveSurface("automations");
-                          }}
-                          onOpenSettings={surfaceNav.handleOpenSettings}
-                          onBackToSessions={surfaceNav.handleCloseSettings}
-                          marketplaceActive={surfaceNav.marketplaceMode}
-                          automationsActive={surfaceNav.automationsMode}
-                          settingsTab={surfaceNav.settingsTab}
-                          extensionSettingsId={surfaceNav.extensionSettingsId}
-                          extensionSettingsItems={surfaceNav.extensionSettingsItems}
-                          onSettingsTabChange={(tab) => {
-                            surfaceNav.setExtensionSettingsId(null);
-                            surfaceNav.setSettingsTab(tab);
-                          }}
-                          onExtensionSettingsChange={(id) => surfaceNav.setExtensionSettingsId(id)}
-                          translucency={useTranslucency}
-                          newChatBusy={newChatBusy}
-                          deleteSessionBusy={sessionMutationBusy}
-                          onDeleteSession={(path) => runtime.deleteSession(path)}
-                          renameSessionBusy={sessionMutationBusy}
-                          onRenameSession={(path, displayName) =>
-                            runtime.renameSession(path, displayName)
-                          }
-                          onTogglePinSession={(path, pinned) =>
-                            runtime.setSessionPinned(path, pinned)
-                          }
-                          removeWorkspaceBusy={sessionMutationBusy}
-                          onRemoveWorkspace={(workspacePath) =>
-                            runtime.removeWorkspace(workspacePath)
-                          }
-                          unseenCompletedSessionPaths={runtime.unseenCompletedSessionPaths}
+                        <LaunchSplash
+                          active={launchSplashActive}
+                          useTranslucency={useTranslucency}
+                          onPhaseChange={setLaunchSplashPhase}
                         />
-                      </SessionSidebarShell>
-
-                      {surfaceNav.settingsMode ? (
+                        <OnboardingWizard
+                          active={onboardingVisible}
+                          useTranslucency={useTranslucency}
+                          settings={runtime.settings}
+                          onSavePatch={runtime.saveSettingsPatch}
+                          providerPickerPresets={snapshot?.config.providerPickerPresets ?? []}
+                          modelsBusy={runtime.busyAction === "models"}
+                          modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
+                          onAddModel={runtime.addModel}
+                          onAddProviderModels={runtime.addProviderModels}
+                          onPreviewModels={runtime.previewModels}
+                          onDone={handleOnboardingDone}
+                          onPhaseChange={setOnboardingPhase}
+                        />
                         <div
-                          data-spirit-surface="settings-shell"
-                          className={cn(
-                            "flex min-h-0 min-w-0 flex-1 flex-col",
-                            desktopTranslucencyTintClass(useContentTranslucency),
-                          )}
+                          data-spirit-surface="app-body"
+                          inert={shellUnderlayHidden}
+                          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
                         >
-                          <DesktopLayoutChromeBar
-                            useTranslucency={useTranslucency}
-                            showWorkspaceToggle={false}
-                          />
-                          <SettingsView
-                            useTranslucency={useTranslucency}
-                            tab={surfaceNav.settingsTab}
-                            extensionSettingsId={surfaceNav.extensionSettingsId}
-                            font={font}
-                            onFontChange={setFont}
-                            clickablePointerCursor={clickablePointerCursor}
-                            onClickablePointerCursorChange={setClickablePointerCursor}
-                            fontSmoothing={fontSmoothing}
-                            onFontSmoothingChange={setFontSmoothing}
-                            settings={runtime.settings}
-                            snapshot={snapshot}
-                            apiReady={runtime.apiReady}
-                            busyAction={runtime.busyAction}
-                            modelsBusy={runtime.busyAction === "models"}
-                            modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
-                            mcpsBusy={runtime.busyAction === "mcps"}
-                            hooksBusy={runtime.busyAction === "hooks"}
-                            skillsBusy={runtime.busyAction === "skills"}
-                            rulesBusy={runtime.busyAction === "rules"}
-                            extensionsBusy={
-                              runtime.busyAction === "extensions" ||
-                              runtime.busyAction === "extensionsImport"
-                            }
-                            isElectronShell={isElectronShell}
-                            onSavePatch={runtime.saveSettingsPatch}
-                            onResetWebHostPairing={runtime.resetWebHostPairing}
-                            onAddModel={runtime.addModel}
-                            onAddProviderModels={runtime.addProviderModels}
-                            onPreviewModels={runtime.previewModels}
-                            onRemoveModel={runtime.removeModel}
-                            onRemoveProviderModels={runtime.removeProviderModels}
-                            onAddMcpServer={runtime.addMcpServer}
-                            onUpdateExtensionSettings={runtime.updateExtensionSettings}
-                            onUpdateExtensionSecret={runtime.updateExtensionSecret}
-                            onDeleteMcpServer={runtime.deleteMcpServer}
-                            onSaveHookEntry={runtime.saveHookEntry}
-                            onDeleteHookEntry={runtime.deleteHookEntry}
-                            onInspectMcpServer={runtime.inspectMcpServer}
-                            onCreateSkill={runtime.createSkill}
-                            onCreateRule={runtime.createRule}
-                            onStartCompactionUiDemo={() => {
-                              longConversationListDemo.stop();
-                              approvalPreviewDemo.stop();
-                              toolCardPreviewDemo.stop();
-                              surfaceNav.setActiveSurface("conversation");
-                              compactionDemo.start();
-                            }}
-                            onStartLongConversationListDemo={() => {
-                              compactionDemo.stop();
-                              approvalPreviewDemo.stop();
-                              toolCardPreviewDemo.stop();
-                              surfaceNav.setActiveSurface("conversation");
-                              longConversationListDemo.start();
-                            }}
-                            onStartApprovalPreviewDemo={() => {
-                              compactionDemo.stop();
-                              longConversationListDemo.stop();
-                              toolCardPreviewDemo.stop();
-                              surfaceNav.setActiveSurface("conversation");
-                              approvalPreviewDemo.start();
-                            }}
-                            onStartToolCardPreviewDemo={() => {
-                              compactionDemo.stop();
-                              longConversationListDemo.stop();
-                              approvalPreviewDemo.stop();
-                              surfaceNav.setActiveSurface("conversation");
-                              toolCardPreviewDemo.start();
-                            }}
-                            onDeleteSkill={runtime.deleteSkill}
-                            onDeleteRule={runtime.deleteRule}
-                            onListDreamsOverview={runtime.listDreamsOverview}
-                            onGenerateSkillNavigate={() => {
-                              surfaceNav.handlePrefillComposerSkillChip("create-skill");
-                            }}
-                            onGenerateRuleNavigate={() => {
-                              surfaceNav.handlePrefillComposerSkillChip("create-rule");
-                            }}
-                            onGenerateHookNavigate={() => {
-                              surfaceNav.handlePrefillComposerSkillChip("create-hook");
-                            }}
-                            getGitHubAuthStatus={runtime.getGitHubAuthStatus}
-                            beginGitHubDeviceLogin={runtime.beginGitHubDeviceLogin}
-                            completeGitHubDeviceLogin={runtime.completeGitHubDeviceLogin}
-                            cancelGitHubDeviceLogin={runtime.cancelGitHubDeviceLogin}
-                            disconnectGitHub={runtime.disconnectGitHub}
-                          />
-                        </div>
-                      ) : surfaceNav.automationsMode ? (
-                        <div
-                          data-spirit-surface="automations-layout"
-                          className={cn(
-                            "flex min-h-0 min-w-0 flex-1 flex-col",
-                            desktopTranslucencyTintClass(useContentTranslucency),
-                          )}
-                        >
-                          <DesktopLayoutChromeBar
-                            useTranslucency={useTranslucency}
-                            showWorkspaceToggle={false}
-                          />
-                          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                            {surfaceNav.automationDetailMode && surfaceNav.selectedAutomationId ? (
-                              <AutomationDetailView
-                                automationId={surfaceNav.selectedAutomationId}
-                                snapshot={snapshot}
-                                onBack={() => {
-                                  surfaceNav.setSelectedAutomationId(null);
-                                  surfaceNav.setActiveSurface("automations");
-                                }}
-                                onOpenSession={(path) => {
-                                  surfaceNav.beginSessionNavigation(path);
-                                }}
-                                getAutomation={runtime.getAutomation}
-                                updateAutomation={(id, patch) =>
-                                  void runtime.updateAutomation(id, patch)
-                                }
-                                settingsDisabled={
-                                  !runtime.apiReady || runtime.busyAction === "automation"
-                                }
-                                githubConnected={gitHubAuthConnected === true}
-                                githubAuthChecking={gitHubAuthConnected === null}
-                                onOpenIntegrationsSettings={openIntegrationsSettings}
-                                listGitHubRepositories={runtime.listGitHubAutomationRepositories}
-                                searchGitHubRepositories={
-                                  runtime.searchGitHubAutomationRepositories
-                                }
-                                onAddWorkspace={() =>
-                                  void runtime.pickWorkspaceDirectory?.().then((path) => {
-                                    if (path) {
-                                      void runtime.rememberWorkspaceRoot(path);
-                                    }
-                                  })
-                                }
+                          {!desktopTitleBarChrome ? (
+                            <div
+                              className={cn(
+                                "h-px w-full shrink-0",
+                                // Non-Electron: shell top separator line
+                                useTranslucency
+                                  ? "bg-black/5 dark:bg-white/10"
+                                  : "bg-border/30 dark:bg-white/12",
+                              )}
+                              role="separator"
+                              aria-orientation="horizontal"
+                            />
+                          ) : null}
+                          <div
+                            data-spirit-surface="main-frame"
+                            className="flex min-h-0 min-w-0 flex-1 overflow-hidden"
+                          >
+                            <ConversationSplitProvider
+                              runtime={runtime}
+                              snapshot={snapshot}
+                              conversationAbortShortcutTargetRef={
+                                conversationAbortShortcutTargetRef
+                              }
+                              registerBeginSideChat={registerBeginSideChat}
+                              onEnsureConversationSurface={() => {
+                                surfaceNav.setLastNonSettingsSurface("conversation");
+                                surfaceNav.setActiveSurface("conversation");
+                              }}
+                            >
+                              <ConversationSessionFocusComposerBridge
+                                composerSessionKey={conversation.composerSessionKey}
+                                surfaceActive={conversationSurfaceActive}
+                                ready={focusComposerReady}
+                                composerAutomationApiRef={composerAutomationApiRef}
                               />
-                            ) : (
-                              <AutomationsView
-                                snapshot={snapshot}
-                                apiReady={runtime.apiReady}
-                                busyAction={runtime.busyAction}
-                                githubConnected={gitHubAuthConnected === true}
-                                onGenerateAutomation={() =>
-                                  void surfaceNav.handleGenerateAutomation()
-                                }
-                                onCreateAutomation={() =>
-                                  surfaceNav.setCreateAutomationDialogOpen(true)
-                                }
-                                onOpenAutomation={(automationId) => {
-                                  surfaceNav.setSelectedAutomationId(automationId);
-                                  surfaceNav.setActiveSurface("automation-detail");
-                                }}
-                                onDeleteAutomation={async (automationId) => {
-                                  await runtime.deleteAutomation(automationId);
-                                  if (surfaceNav.selectedAutomationId === automationId) {
+                              <ConversationTypingFocusRedirectBridge
+                                enabled={focusComposerEnabled}
+                              />
+                              <SessionSidebarShell
+                                useTranslucency={useTranslucency}
+                                useContentTranslucency={useContentTranslucency}
+                              >
+                                <SessionSidebar
+                                  narrow={false}
+                                  mode={surfaceNav.settingsMode ? "settings" : "sessions"}
+                                  userHomeDirectory={snapshot?.userHomeDirectory ?? null}
+                                  sessions={runtime.sessions}
+                                  activeFilePath={sidebarActiveFilePath}
+                                  onNewChat={handleNewChat}
+                                  onNewChatInWorkspace={handleNewChatInWorkspace}
+                                  onSelectSession={handleSelectSession}
+                                  onOpenMarketplace={() => {
+                                    surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
+                                    surfaceNav.setLastNonSettingsSurface("marketplace");
+                                    surfaceNav.setActiveSurface("marketplace");
+                                  }}
+                                  onOpenAutomations={() => {
+                                    surfaceNav.sessionSidebarChromeApiRef.current?.openSidebar();
+                                    surfaceNav.setLastNonSettingsSurface("automations");
                                     surfaceNav.setSelectedAutomationId(null);
                                     surfaceNav.setActiveSurface("automations");
+                                  }}
+                                  onOpenSettings={surfaceNav.handleOpenSettings}
+                                  onBackToSessions={surfaceNav.handleCloseSettings}
+                                  marketplaceActive={surfaceNav.marketplaceMode}
+                                  automationsActive={surfaceNav.automationsMode}
+                                  settingsTab={surfaceNav.settingsTab}
+                                  extensionSettingsId={surfaceNav.extensionSettingsId}
+                                  extensionSettingsItems={surfaceNav.extensionSettingsItems}
+                                  onSettingsTabChange={(tab) => {
+                                    surfaceNav.setExtensionSettingsId(null);
+                                    surfaceNav.setSettingsTab(tab);
+                                  }}
+                                  onExtensionSettingsChange={(id) =>
+                                    surfaceNav.setExtensionSettingsId(id)
                                   }
-                                }}
-                              />
-                            )}
-                            <CreateAutomationDialog
-                              open={surfaceNav.createAutomationDialogOpen}
-                              onOpenChange={surfaceNav.setCreateAutomationDialogOpen}
-                              snapshot={snapshot}
-                              disabled={!runtime.apiReady || runtime.busyAction === "automation"}
-                              githubConnected={gitHubAuthConnected === true}
-                              githubAuthChecking={gitHubAuthConnected === null}
-                              onOpenIntegrationsSettings={openIntegrationsSettings}
-                              listGitHubRepositories={runtime.listGitHubAutomationRepositories}
-                              searchGitHubRepositories={runtime.searchGitHubAutomationRepositories}
-                              onSubmit={(request) => void runtime.createAutomation(request)}
-                              onAddWorkspace={() =>
-                                void runtime.pickWorkspaceDirectory?.().then((path) => {
-                                  if (path) {
-                                    void runtime.rememberWorkspaceRoot(path);
+                                  translucency={useTranslucency}
+                                  newChatBusy={newChatBusy}
+                                  deleteSessionBusy={sessionMutationBusy}
+                                  onDeleteSession={(path) => runtime.deleteSession(path)}
+                                  renameSessionBusy={sessionMutationBusy}
+                                  onRenameSession={(path, displayName) =>
+                                    runtime.renameSession(path, displayName)
                                   }
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-                      ) : surfaceNav.marketplaceMode ? (
-                        <div
-                          data-spirit-surface="marketplace-layout"
-                          className={cn(
-                            "flex min-h-0 min-w-0 flex-1 flex-col",
-                            desktopTranslucencyTintClass(useContentTranslucency),
-                          )}
-                        >
-                          <DesktopLayoutChromeBar
-                            useTranslucency={useTranslucency}
-                            showWorkspaceToggle={false}
-                          />
-                          <MarketplaceView
-                            useTranslucency={useContentTranslucency}
-                            snapshot={snapshot}
-                            extensionsBusy={
-                              runtime.busyAction === "extensions" ||
-                              runtime.busyAction === "extensionsImport"
-                            }
-                            extensionsInstalling={runtime.busyAction === "extensionsImport"}
-                            onImportExtension={runtime.importExtension}
-                            onInstallMarketplaceExtension={runtime.installMarketplaceExtension}
-                            onUpdateExtension={runtime.updateExtension}
-                            onAddMarketplaceSource={runtime.addMarketplaceSource}
-                            onRemoveMarketplaceSource={runtime.removeMarketplaceSource}
-                            onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
-                            onDeleteExtension={runtime.deleteExtension}
-                            onSetExtensionEnabled={runtime.setExtensionEnabled}
-                            onGenerateExtensionNavigate={() => {
-                              surfaceNav.handlePrefillComposerSkillChip("create-extension");
-                            }}
-                          />
-                        </div>
-                      ) : null}
+                                  onTogglePinSession={(path, pinned) =>
+                                    runtime.setSessionPinned(path, pinned)
+                                  }
+                                  removeWorkspaceBusy={sessionMutationBusy}
+                                  onRemoveWorkspace={(workspacePath) =>
+                                    runtime.removeWorkspace(workspacePath)
+                                  }
+                                  unseenCompletedSessionPaths={runtime.unseenCompletedSessionPaths}
+                                />
+                              </SessionSidebarShell>
 
-                      {surfaceNav.preserveConversationSurface ? (
-                        <div
-                          className={cn(
-                            "flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden",
-                            desktopTranslucencyTintInnerClass(useContentTranslucency),
-                            surfaceNav.settingsMode && "hidden",
-                          )}
-                          aria-hidden={surfaceNav.settingsMode}
-                        >
-                          <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
-                            <div
-                              data-spirit-surface="conversation-main-column"
-                              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-                            >
-                              <ConversationSplitRoot
-                                useTranslucency={useContentTranslucency}
-                                renderPane={(pane) => (
-                                  <ConversationPaneHost
-                                    key={pane.paneId}
-                                    runtime={runtime}
-                                    baseSnapshot={snapshot}
-                                    sessionPath={pane.sessionPath}
-                                    paneId={pane.paneId}
-                                    isFocused={pane.isFocused}
-                                    isAnchorPane={pane.isAnchorPane}
-                                    isSessionSidebarAnchorPane={pane.isSessionSidebarAnchorPane}
-                                    useIsolatedPane={pane.useIsolatedPane}
-                                    splitPaneCount={pane.splitPaneCount}
-                                    onFocusPane={pane.onFocusPane}
-                                    onSideChat={pane.onSideChat}
-                                    onSplit={pane.onSplit}
-                                    onSplitVertical={pane.onSplitVertical}
-                                    onClosePane={pane.onClosePane}
-                                    showClosePane={pane.showClosePane}
-                                    paneReorderEnabled={pane.paneReorderEnabled}
-                                    onPaneDragStart={pane.onPaneDragStart}
-                                    onPaneDragLeave={pane.onPaneDragLeave}
-                                    onPaneDrop={pane.onPaneDrop}
-                                    onSidebarSessionDrop={pane.onSidebarSessionDrop}
-                                    paneDropOverlayActive={pane.paneDropOverlayActive}
-                                    paneDragSourcePaneId={pane.paneDragSourcePaneId}
-                                    sidebarSessionDragActive={pane.sidebarSessionDragActive}
-                                    useTranslucency={useContentTranslucency}
-                                    subagentViewActive={subagentViewActive}
-                                    subagentViewer={subagentViewer}
-                                    compactionDemo={compactionDemo}
-                                    longConversationListDemo={longConversationListDemo}
-                                    approvalPreviewDemo={approvalPreviewDemo}
-                                    toolCardPreviewDemo={toolCardPreviewDemo}
-                                    newChatBusy={newChatBusy}
-                                    onNewChat={handleNewChat}
-                                    deleteSessionBusy={sessionMutationBusy}
-                                    onDeleteSession={(path) => runtime.deleteSession(path)}
-                                    renameSessionBusy={sessionMutationBusy}
-                                    onRenameSession={(path, displayName) =>
-                                      runtime.renameSession(path, displayName)
-                                    }
-                                    onTogglePinSession={(path, pinned) =>
-                                      runtime.setSessionPinned(path, pinned)
-                                    }
-                                    workspaceTools={workspaceTools}
-                                    onOpenIntegrationsSettings={openIntegrationsSettings}
-                                    onCompactionDemoStop={compactionDemo.stop}
-                                    onLongConversationListDemoStop={longConversationListDemo.stop}
-                                    onApprovalPreviewDemoStop={approvalPreviewDemo.stop}
-                                    onToolCardPreviewDemoStop={toolCardPreviewDemo.stop}
-                                    t={t}
-                                    language={i18n.language}
+                              {surfaceNav.settingsMode ? (
+                                <div
+                                  data-spirit-surface="settings-shell"
+                                  className={cn(
+                                    "flex min-h-0 min-w-0 flex-1 flex-col",
+                                    desktopTranslucencyTintClass(useContentTranslucency),
+                                  )}
+                                >
+                                  <DesktopLayoutChromeBar
+                                    useTranslucency={useTranslucency}
+                                    showWorkspaceToggle={false}
                                   />
-                                )}
-                              />
-                            </div>
-                            <ConversationWorkspaceToolsDock
-                              useTranslucency={useContentTranslucency}
-                              snapshot={snapshot}
-                              runtime={runtime}
-                              conversation={conversation}
-                              composer={composer}
-                              workspaceTools={workspaceTools}
-                              onOpenIntegrationsSettings={openIntegrationsSettings}
-                            />
+                                  <SettingsView
+                                    useTranslucency={useTranslucency}
+                                    tab={surfaceNav.settingsTab}
+                                    extensionSettingsId={surfaceNav.extensionSettingsId}
+                                    font={font}
+                                    onFontChange={setFont}
+                                    clickablePointerCursor={clickablePointerCursor}
+                                    onClickablePointerCursorChange={setClickablePointerCursor}
+                                    fontSmoothing={fontSmoothing}
+                                    onFontSmoothingChange={setFontSmoothing}
+                                    settings={runtime.settings}
+                                    snapshot={snapshot}
+                                    apiReady={runtime.apiReady}
+                                    busyAction={runtime.busyAction}
+                                    modelsBusy={runtime.busyAction === "models"}
+                                    modelsPreviewBusy={runtime.busyAction === "modelsPreview"}
+                                    mcpsBusy={runtime.busyAction === "mcps"}
+                                    hooksBusy={runtime.busyAction === "hooks"}
+                                    skillsBusy={runtime.busyAction === "skills"}
+                                    rulesBusy={runtime.busyAction === "rules"}
+                                    extensionsBusy={
+                                      runtime.busyAction === "extensions" ||
+                                      runtime.busyAction === "extensionsImport"
+                                    }
+                                    isElectronShell={isElectronShell}
+                                    onSavePatch={runtime.saveSettingsPatch}
+                                    onResetWebHostPairing={runtime.resetWebHostPairing}
+                                    onAddModel={runtime.addModel}
+                                    onAddProviderModels={runtime.addProviderModels}
+                                    onPreviewModels={runtime.previewModels}
+                                    onRemoveModel={runtime.removeModel}
+                                    onRemoveProviderModels={runtime.removeProviderModels}
+                                    onAddMcpServer={runtime.addMcpServer}
+                                    onUpdateExtensionSettings={runtime.updateExtensionSettings}
+                                    onUpdateExtensionSecret={runtime.updateExtensionSecret}
+                                    onDeleteMcpServer={runtime.deleteMcpServer}
+                                    onSaveHookEntry={runtime.saveHookEntry}
+                                    onDeleteHookEntry={runtime.deleteHookEntry}
+                                    onInspectMcpServer={runtime.inspectMcpServer}
+                                    onCreateSkill={runtime.createSkill}
+                                    onCreateRule={runtime.createRule}
+                                    onStartCompactionUiDemo={() => {
+                                      longConversationListDemo.stop();
+                                      approvalPreviewDemo.stop();
+                                      toolCardPreviewDemo.stop();
+                                      surfaceNav.setActiveSurface("conversation");
+                                      compactionDemo.start();
+                                    }}
+                                    onStartLongConversationListDemo={() => {
+                                      compactionDemo.stop();
+                                      approvalPreviewDemo.stop();
+                                      toolCardPreviewDemo.stop();
+                                      surfaceNav.setActiveSurface("conversation");
+                                      longConversationListDemo.start();
+                                    }}
+                                    onStartApprovalPreviewDemo={() => {
+                                      compactionDemo.stop();
+                                      longConversationListDemo.stop();
+                                      toolCardPreviewDemo.stop();
+                                      surfaceNav.setActiveSurface("conversation");
+                                      approvalPreviewDemo.start();
+                                    }}
+                                    onStartToolCardPreviewDemo={() => {
+                                      compactionDemo.stop();
+                                      longConversationListDemo.stop();
+                                      approvalPreviewDemo.stop();
+                                      surfaceNav.setActiveSurface("conversation");
+                                      toolCardPreviewDemo.start();
+                                    }}
+                                    onDeleteSkill={runtime.deleteSkill}
+                                    onDeleteRule={runtime.deleteRule}
+                                    onListDreamsOverview={runtime.listDreamsOverview}
+                                    onGenerateSkillNavigate={() => {
+                                      surfaceNav.handlePrefillComposerSkillChip("create-skill");
+                                    }}
+                                    onGenerateRuleNavigate={() => {
+                                      surfaceNav.handlePrefillComposerSkillChip("create-rule");
+                                    }}
+                                    onGenerateHookNavigate={() => {
+                                      surfaceNav.handlePrefillComposerSkillChip("create-hook");
+                                    }}
+                                    getGitHubAuthStatus={runtime.getGitHubAuthStatus}
+                                    beginGitHubDeviceLogin={runtime.beginGitHubDeviceLogin}
+                                    completeGitHubDeviceLogin={runtime.completeGitHubDeviceLogin}
+                                    cancelGitHubDeviceLogin={runtime.cancelGitHubDeviceLogin}
+                                    disconnectGitHub={runtime.disconnectGitHub}
+                                  />
+                                </div>
+                              ) : surfaceNav.automationsMode ? (
+                                <div
+                                  data-spirit-surface="automations-layout"
+                                  className={cn(
+                                    "flex min-h-0 min-w-0 flex-1 flex-col",
+                                    desktopTranslucencyTintClass(useContentTranslucency),
+                                  )}
+                                >
+                                  <DesktopLayoutChromeBar
+                                    useTranslucency={useTranslucency}
+                                    showWorkspaceToggle={false}
+                                  />
+                                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                                    {surfaceNav.automationDetailMode &&
+                                    surfaceNav.selectedAutomationId ? (
+                                      <AutomationDetailView
+                                        automationId={surfaceNav.selectedAutomationId}
+                                        snapshot={snapshot}
+                                        onBack={() => {
+                                          surfaceNav.setSelectedAutomationId(null);
+                                          surfaceNav.setActiveSurface("automations");
+                                        }}
+                                        onOpenSession={(path) => {
+                                          surfaceNav.beginSessionNavigation(path);
+                                        }}
+                                        getAutomation={runtime.getAutomation}
+                                        updateAutomation={(id, patch) =>
+                                          void runtime.updateAutomation(id, patch)
+                                        }
+                                        settingsDisabled={
+                                          !runtime.apiReady || runtime.busyAction === "automation"
+                                        }
+                                        githubConnected={gitHubAuthConnected === true}
+                                        githubAuthChecking={gitHubAuthConnected === null}
+                                        onOpenIntegrationsSettings={openIntegrationsSettings}
+                                        listGitHubRepositories={
+                                          runtime.listGitHubAutomationRepositories
+                                        }
+                                        searchGitHubRepositories={
+                                          runtime.searchGitHubAutomationRepositories
+                                        }
+                                        onAddWorkspace={() =>
+                                          void runtime.pickWorkspaceDirectory?.().then((path) => {
+                                            if (path) {
+                                              void runtime.rememberWorkspaceRoot(path);
+                                            }
+                                          })
+                                        }
+                                      />
+                                    ) : (
+                                      <AutomationsView
+                                        snapshot={snapshot}
+                                        apiReady={runtime.apiReady}
+                                        busyAction={runtime.busyAction}
+                                        githubConnected={gitHubAuthConnected === true}
+                                        onGenerateAutomation={() =>
+                                          void surfaceNav.handleGenerateAutomation()
+                                        }
+                                        onCreateAutomation={() =>
+                                          surfaceNav.setCreateAutomationDialogOpen(true)
+                                        }
+                                        onOpenAutomation={(automationId) => {
+                                          surfaceNav.setSelectedAutomationId(automationId);
+                                          surfaceNav.setActiveSurface("automation-detail");
+                                        }}
+                                        onDeleteAutomation={async (automationId) => {
+                                          await runtime.deleteAutomation(automationId);
+                                          if (surfaceNav.selectedAutomationId === automationId) {
+                                            surfaceNav.setSelectedAutomationId(null);
+                                            surfaceNav.setActiveSurface("automations");
+                                          }
+                                        }}
+                                      />
+                                    )}
+                                    <CreateAutomationDialog
+                                      open={surfaceNav.createAutomationDialogOpen}
+                                      onOpenChange={surfaceNav.setCreateAutomationDialogOpen}
+                                      snapshot={snapshot}
+                                      disabled={
+                                        !runtime.apiReady || runtime.busyAction === "automation"
+                                      }
+                                      githubConnected={gitHubAuthConnected === true}
+                                      githubAuthChecking={gitHubAuthConnected === null}
+                                      onOpenIntegrationsSettings={openIntegrationsSettings}
+                                      listGitHubRepositories={
+                                        runtime.listGitHubAutomationRepositories
+                                      }
+                                      searchGitHubRepositories={
+                                        runtime.searchGitHubAutomationRepositories
+                                      }
+                                      onSubmit={(request) => void runtime.createAutomation(request)}
+                                      onAddWorkspace={() =>
+                                        void runtime.pickWorkspaceDirectory?.().then((path) => {
+                                          if (path) {
+                                            void runtime.rememberWorkspaceRoot(path);
+                                          }
+                                        })
+                                      }
+                                    />
+                                  </div>
+                                </div>
+                              ) : surfaceNav.marketplaceMode ? (
+                                <div
+                                  data-spirit-surface="marketplace-layout"
+                                  className={cn(
+                                    "flex min-h-0 min-w-0 flex-1 flex-col",
+                                    desktopTranslucencyTintClass(useContentTranslucency),
+                                  )}
+                                >
+                                  <DesktopLayoutChromeBar
+                                    useTranslucency={useTranslucency}
+                                    showWorkspaceToggle={false}
+                                  />
+                                  <MarketplaceView
+                                    useTranslucency={useContentTranslucency}
+                                    snapshot={snapshot}
+                                    extensionsBusy={
+                                      runtime.busyAction === "extensions" ||
+                                      runtime.busyAction === "extensionsImport"
+                                    }
+                                    extensionsInstalling={runtime.busyAction === "extensionsImport"}
+                                    onImportExtension={runtime.importExtension}
+                                    onInstallMarketplaceExtension={
+                                      runtime.installMarketplaceExtension
+                                    }
+                                    onUpdateExtension={runtime.updateExtension}
+                                    onAddMarketplaceSource={runtime.addMarketplaceSource}
+                                    onRemoveMarketplaceSource={runtime.removeMarketplaceSource}
+                                    onPickMarketplaceDirectory={runtime.pickWorkspaceDirectory}
+                                    onDeleteExtension={runtime.deleteExtension}
+                                    onSetExtensionEnabled={runtime.setExtensionEnabled}
+                                    onGenerateExtensionNavigate={() => {
+                                      surfaceNav.handlePrefillComposerSkillChip("create-extension");
+                                    }}
+                                  />
+                                </div>
+                              ) : null}
+
+                              {surfaceNav.preserveConversationSurface ? (
+                                <div
+                                  className={cn(
+                                    "flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden",
+                                    desktopTranslucencyTintInnerClass(useContentTranslucency),
+                                    surfaceNav.settingsMode && "hidden",
+                                  )}
+                                  aria-hidden={surfaceNav.settingsMode}
+                                >
+                                  <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden">
+                                    <div
+                                      data-spirit-surface="conversation-main-column"
+                                      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                                    >
+                                      <ConversationSplitRoot
+                                        useTranslucency={useContentTranslucency}
+                                        renderPane={(pane) => (
+                                          <ConversationPaneHost
+                                            key={pane.paneId}
+                                            runtime={runtime}
+                                            baseSnapshot={snapshot}
+                                            sessionPath={pane.sessionPath}
+                                            paneId={pane.paneId}
+                                            isFocused={pane.isFocused}
+                                            isAnchorPane={pane.isAnchorPane}
+                                            isSessionSidebarAnchorPane={
+                                              pane.isSessionSidebarAnchorPane
+                                            }
+                                            useIsolatedPane={pane.useIsolatedPane}
+                                            splitPaneCount={pane.splitPaneCount}
+                                            onFocusPane={pane.onFocusPane}
+                                            onSideChat={pane.onSideChat}
+                                            onSplit={pane.onSplit}
+                                            onSplitVertical={pane.onSplitVertical}
+                                            onClosePane={pane.onClosePane}
+                                            showClosePane={pane.showClosePane}
+                                            paneReorderEnabled={pane.paneReorderEnabled}
+                                            onPaneDragStart={pane.onPaneDragStart}
+                                            onPaneDragLeave={pane.onPaneDragLeave}
+                                            onPaneDrop={pane.onPaneDrop}
+                                            onSidebarSessionDrop={pane.onSidebarSessionDrop}
+                                            paneDropOverlayActive={pane.paneDropOverlayActive}
+                                            paneDragSourcePaneId={pane.paneDragSourcePaneId}
+                                            sidebarSessionDragActive={pane.sidebarSessionDragActive}
+                                            useTranslucency={useContentTranslucency}
+                                            subagentViewActive={subagentViewActive}
+                                            subagentViewer={subagentViewer}
+                                            compactionDemo={compactionDemo}
+                                            longConversationListDemo={longConversationListDemo}
+                                            approvalPreviewDemo={approvalPreviewDemo}
+                                            toolCardPreviewDemo={toolCardPreviewDemo}
+                                            newChatBusy={newChatBusy}
+                                            onNewChat={handleNewChat}
+                                            deleteSessionBusy={sessionMutationBusy}
+                                            onDeleteSession={(path) => runtime.deleteSession(path)}
+                                            renameSessionBusy={sessionMutationBusy}
+                                            onRenameSession={(path, displayName) =>
+                                              runtime.renameSession(path, displayName)
+                                            }
+                                            onTogglePinSession={(path, pinned) =>
+                                              runtime.setSessionPinned(path, pinned)
+                                            }
+                                            workspaceTools={workspaceTools}
+                                            onOpenIntegrationsSettings={openIntegrationsSettings}
+                                            onCompactionDemoStop={compactionDemo.stop}
+                                            onLongConversationListDemoStop={
+                                              longConversationListDemo.stop
+                                            }
+                                            onApprovalPreviewDemoStop={approvalPreviewDemo.stop}
+                                            onToolCardPreviewDemoStop={toolCardPreviewDemo.stop}
+                                            t={t}
+                                            language={i18n.language}
+                                          />
+                                        )}
+                                      />
+                                    </div>
+                                    <ConversationWorkspaceToolsDock
+                                      useTranslucency={useContentTranslucency}
+                                      snapshot={snapshot}
+                                      runtime={runtime}
+                                      conversation={conversation}
+                                      composer={composer}
+                                      workspaceTools={workspaceTools}
+                                      onOpenIntegrationsSettings={openIntegrationsSettings}
+                                    />
+                                  </div>
+                                </div>
+                              ) : null}
+                            </ConversationSplitProvider>
                           </div>
                         </div>
-                      ) : null}
-                    </ConversationSplitProvider>
+
+                        <ExtensionViewHost
+                          extensionsList={snapshot?.extensionsList}
+                          sessionKey={snapshot?.activeSession?.filePath}
+                          hostRequest={snapshot?.pendingExtensionUi}
+                          onHostResult={runtime.resolveExtensionUi}
+                        />
+
+                        <ActionPickerDialog
+                          open={composer.actionPickerOpen}
+                          onOpenChange={composer.setActionPickerOpen}
+                          onSelect={composer.runActionPaletteItem}
+                          onSavePatch={runtime.saveSettingsPatch}
+                          taskItems={runtime.taskMenuItems}
+                          onRunTask={(key) => void runTaskByKey(key)}
+                          isItemDisabled={composer.isActionPaletteItemDisabled}
+                          shouldIncludeItem={composer.filterActionPaletteItem}
+                        />
+
+                        <TaskInstanceLimitDialog />
+
+                        <WorkspaceFilePickerDialog
+                          open={composer.filePickerOpen}
+                          onOpenChange={composer.setFilePickerOpen}
+                          workspaceRoot={snapshot?.workspaceRoot ?? ""}
+                          workspaceBinding={snapshot?.workspaceBinding ?? "project"}
+                          recentFiles={composer.recentFilePool.fileDisplayPaths}
+                          onValidateRecentFiles={composer.recentFilePool.validateEntries}
+                          onOpenPlan={() => workspaceTools.openWorkspacePlan()}
+                          onOpenWorkspaceFile={(relativePath) => {
+                            if (isWorkspaceReferenceDirectoryPath(relativePath)) {
+                              workspaceTools.revealWorkspaceDirectory(
+                                normalizeWorkspaceReferenceDirectoryPath(relativePath),
+                              );
+                              return;
+                            }
+                            workspaceTools.openWorkspaceFile(relativePath, {
+                              viewMode: isMarkdownPath(relativePath) ? "preview" : "edit",
+                            });
+                          }}
+                          onOpenExternalFile={(absolutePath) => {
+                            workspaceTools.openEditorFile({
+                              scope: "external",
+                              absolutePath,
+                              viewMode: isMarkdownPath(absolutePath) ? "preview" : "edit",
+                            });
+                          }}
+                          statHostTextFile={runtime.statHostTextFile}
+                          indexReady={composer.workspaceFileIndex.ready}
+                          searchWorkspaceFiles={composer.workspaceFileIndex.searchFilesOnly}
+                        />
+
+                        <WorkspaceCapabilityTrustDialog
+                          // The prompt must not preempt the launch overlay: while the splash/OOBE
+                          // is up the app body is still hidden, so hold the request until the
+                          // exit animation has finished.
+                          pending={
+                            shellUnderlayHidden
+                              ? undefined
+                              : snapshot?.pendingWorkspaceCapabilityTrust
+                          }
+                          busy={runtime.busyAction === "workspaceTrust"}
+                          onReply={(decision) => {
+                            void runtime.replyWorkspaceCapabilityTrust(decision);
+                          }}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-
-                <ExtensionViewHost
-                  extensionsList={snapshot?.extensionsList}
-                  sessionKey={snapshot?.activeSession?.filePath}
-                  hostRequest={snapshot?.pendingExtensionUi}
-                  onHostResult={runtime.resolveExtensionUi}
-                />
-
-                <ActionPickerDialog
-                  open={composer.actionPickerOpen}
-                  onOpenChange={composer.setActionPickerOpen}
-                  onSelect={composer.runActionPaletteItem}
-                  onSavePatch={runtime.saveSettingsPatch}
-                  taskItems={runtime.taskMenuItems}
-                  onRunTask={(key) => void runTaskByKey(key)}
-                  isItemDisabled={composer.isActionPaletteItemDisabled}
-                  shouldIncludeItem={composer.filterActionPaletteItem}
-                />
-
-                <TaskInstanceLimitDialog />
-
-                <WorkspaceFilePickerDialog
-                  open={composer.filePickerOpen}
-                  onOpenChange={composer.setFilePickerOpen}
-                  workspaceRoot={snapshot?.workspaceRoot ?? ""}
-                  workspaceBinding={snapshot?.workspaceBinding ?? "project"}
-                  recentFiles={composer.recentFilePool.fileDisplayPaths}
-                  onValidateRecentFiles={composer.recentFilePool.validateEntries}
-                  onOpenPlan={() => workspaceTools.openWorkspacePlan()}
-                  onOpenWorkspaceFile={(relativePath) => {
-                    if (isWorkspaceReferenceDirectoryPath(relativePath)) {
-                      workspaceTools.revealWorkspaceDirectory(
-                        normalizeWorkspaceReferenceDirectoryPath(relativePath),
-                      );
-                      return;
-                    }
-                    workspaceTools.openWorkspaceFile(relativePath, {
-                      viewMode: isMarkdownPath(relativePath) ? "preview" : "edit",
-                    });
-                  }}
-                  onOpenExternalFile={(absolutePath) => {
-                    workspaceTools.openEditorFile({
-                      scope: "external",
-                      absolutePath,
-                      viewMode: isMarkdownPath(absolutePath) ? "preview" : "edit",
-                    });
-                  }}
-                  statHostTextFile={runtime.statHostTextFile}
-                  indexReady={composer.workspaceFileIndex.ready}
-                  searchWorkspaceFiles={composer.workspaceFileIndex.searchFilesOnly}
-                />
-
-                <WorkspaceCapabilityTrustDialog
-                  // The prompt must not preempt the launch overlay: while the splash/OOBE
-                  // is up the app body is still hidden, so hold the request until the
-                  // exit animation has finished.
-                  pending={
-                    shellUnderlayHidden ? undefined : snapshot?.pendingWorkspaceCapabilityTrust
-                  }
-                  busy={runtime.busyAction === "workspaceTrust"}
-                  onReply={(decision) => {
-                    void runtime.replyWorkspaceCapabilityTrust(decision);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </SessionSidebarChromeProvider>
-      </EditCommandStateProvider>
-    </WorkspaceMarkdownLinkProvider>
+                </SessionSidebarChromeProvider>
+              </EditCommandStateProvider>
+            </WorkspaceMarkdownLinkProvider>
+          </WorkspaceFileIconProvider>
+        </ComposerLabelsProvider>
+      </ModelPickerLabelsProvider>
+    </ModelPickerRuntimeProvider>
   );
 }

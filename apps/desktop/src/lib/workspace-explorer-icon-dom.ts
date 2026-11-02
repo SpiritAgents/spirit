@@ -7,7 +7,7 @@ import { workspaceExplorerIcon } from "@/lib/workspace-explorer-icon";
 import {
   WORKSPACE_FILE_ICON_LIST_CLASS,
   type WorkspaceFileIconColorMode,
-} from "@/lib/workspace-file-icon-sizes";
+} from "@spiritagent/ui/composer";
 import type { WorkspaceExplorerEntryKind } from "@/types";
 
 export type AppendWorkspaceFileIconOptions = {

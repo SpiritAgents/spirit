@@ -7,7 +7,7 @@ import {
   TextSelectionActionMenuSegmentedItems,
 } from "@/components/text-selection-action-menu";
 import { useTextSelectionActionMenu } from "@/hooks/use-text-selection-action-menu";
-import type { MessageQuoteAttachment, QuoteChipOrigin } from "@/lib/message-quote-attachment";
+import type { MessageQuoteAttachment, QuoteChipOrigin } from "@spiritagent/ui/composer";
 
 function quotedMessageIdFromSelection(selection: Selection | null): number | undefined {
   const node = selection?.anchorNode;

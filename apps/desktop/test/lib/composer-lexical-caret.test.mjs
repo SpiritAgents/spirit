@@ -20,14 +20,14 @@ if (typeof globalThis.MutationObserver === "undefined") {
 }
 
 const { createComposerLexicalEditor, richSegmentsToEditorState } =
-  await import("../../src/lib/composer-lexical/bridge/index.ts");
+  await import("@spiritagent/ui/composer");
 const { caretAtEnd, caretToPlainTextOffset, insertSegmentAtCaret, segmentsToPlainText } =
-  await import("../../src/lib/composer-segment-model.ts");
+  await import("@spiritagent/ui/composer");
 const {
   lexicalSelectionToPlainTextOffset,
   lexicalSelectionToSegmentCaret,
   segmentCaretToLexicalSelection,
-} = await import("../../src/lib/composer-lexical/caret.ts");
+} = await import("@spiritagent/ui/composer");
 
 const multilineSegments = [
   {

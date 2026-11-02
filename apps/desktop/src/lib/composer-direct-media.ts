@@ -1,5 +1,5 @@
 import type { ModelRef } from "../types.js";
-import { isEmptyModelRef, modelRefsEqual } from "./model-ref.js";
+import { isEmptyModelRef, modelRefsEqual } from "@spiritagent/ui/model-picker";
 
 export type DirectMediaTool = "generate_image" | "generate_video";
 

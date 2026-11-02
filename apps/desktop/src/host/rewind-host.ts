@@ -3,7 +3,7 @@ import path from "node:path";
 import type { ChatArchive, RuntimeToolExecution } from "@spiritagent/agent-core";
 import type { HostRecordedFileChange } from "@spiritagent/host-internal";
 
-import { resolveDesktopAgentMode } from "../lib/agent-mode.js";
+import { resolveDesktopAgentMode } from "@spiritagent/ui/composer";
 import type { ConversationMessageSnapshot, DesktopGitSnapshot, PlanSnapshot } from "../types.js";
 import type { DesktopHostRuntime } from "./runtime.js";
 import type { SessionBundle } from "./session-bundle.js";

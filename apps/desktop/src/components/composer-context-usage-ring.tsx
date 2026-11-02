@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatCompactTokenCount } from "@/lib/format-compact-token-count";
+import { formatCompactTokenCount } from "@spiritagent/ui/model-picker";
 import type { ConversationContextUsageSnapshot } from "@/types";
 
 const RING_SIZE_PX = 13;

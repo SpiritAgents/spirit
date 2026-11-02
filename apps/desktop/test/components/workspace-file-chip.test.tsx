@@ -5,7 +5,7 @@ import "./setup";
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
-import { WorkspaceFileChip } from "@/components/composer-lexical/chips/workspace-file-chip";
+import { WorkspaceFileChip } from "@spiritagent/ui/composer";
 import {
   ComposerChipNavigateContext,
   type ComposerChipNavigateContextValue,

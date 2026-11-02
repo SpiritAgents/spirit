@@ -1,5 +1,5 @@
 import type { SettingsSidebarTab } from "@/components/session-sidebar";
-import type { DesktopAgentMode } from "@/lib/agent-mode";
+import type { DesktopAgentMode } from "@spiritagent/ui/composer";
 import type { FontPreference } from "@/lib/font";
 import type { TranslucencyPreference } from "@/lib/translucency";
 import type {

@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { MessageQuoteAttachment, QuoteChipOrigin } from "@/lib/message-quote-attachment";
+import type { MessageQuoteAttachment, QuoteChipOrigin } from "@spiritagent/ui/composer";
 
 /**
  * Quote-attachment pipeline of the conversation pane ("Add to Chat | Add to Side Chat"). The

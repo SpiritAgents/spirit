@@ -11,7 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import type { SkillSlashSuggestionKind } from "@/lib/skill-slash";
+import type { SkillSlashSuggestionKind } from "@spiritagent/ui/composer";
 
 export const SLASH_SUGGESTION_ICONS: Record<SkillSlashSuggestionKind, LucideIcon> = {
   "export-session": ScrollText,

@@ -26,9 +26,9 @@ const {
   editorStateToRichSegments,
   richSegmentsRoundTrip,
   richSegmentsToEditorState,
-} = await import("../../src/lib/composer-lexical/bridge/index.ts");
+} = await import("@spiritagent/ui/composer");
 const { emptySegments, segmentsEqual, segmentsToMessageText } =
-  await import("../../src/lib/composer-segment-model.ts");
+  await import("@spiritagent/ui/composer");
 
 const sampleElement = {
   id: "el-1",

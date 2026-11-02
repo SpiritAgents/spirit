@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-const { spiritChipPlainText } =
-  await import("../../src/lib/composer-lexical/spirit-chip-payload.ts");
+const { spiritChipPlainText } = await import("@spiritagent/ui/composer");
 
 test("workspaceFile chip plain text is the @path token", () => {
   assert.equal(

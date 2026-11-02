@@ -15,18 +15,18 @@ import {
   mergeRecentIntoSuggestions,
 } from "@spiritagent/host-internal/workspace-file-reference-query";
 
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
-import { segmentsToMessageText, segmentsToPlainText } from "@/components/composer-rich-input";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
+import { segmentsToMessageText, segmentsToPlainText } from "@spiritagent/ui/composer";
 import {
   extractComposerChipMetadata,
   hasInlineAttachmentChipSegments,
   normalizeComposerPlain,
-} from "@/lib/composer-segment-model";
+} from "@spiritagent/ui/composer";
 import { extractChipNavigateMeta } from "@/lib/composer-chip-navigate-meta";
-import { emptySegments, syncSegmentsFromExternalValue } from "@/lib/composer-segments";
-import { buildPostSendComposerSegments } from "@/lib/composer-agent-mode-policy";
-import { currentAgentModeSegment, isAgentModeChipKind } from "@/lib/composer-agent-mode-segments";
-import { cycleAgentMode, type DesktopAgentMode } from "@/lib/agent-mode";
+import { emptySegments, syncSegmentsFromExternalValue } from "@spiritagent/ui/composer";
+import { buildPostSendComposerSegments } from "@spiritagent/ui/composer";
+import { currentAgentModeSegment, isAgentModeChipKind } from "@spiritagent/ui/composer";
+import { cycleAgentMode, type DesktopAgentMode } from "@spiritagent/ui/composer";
 import { currentWorkspaceFileReferenceQueryFromSegments } from "@/lib/composer-file-reference-query";
 import {
   atReferenceNeedle,
@@ -36,12 +36,12 @@ import {
   type AtReferenceMenuView,
 } from "@/lib/composer-at-reference-demo";
 import { resolveComposerDirectMediaTool } from "@/lib/composer-direct-media";
-import type { BrowserElementAttachment } from "@/lib/browser-element-attachment";
-import type { PrDiffAttachment } from "@/lib/pr-diff-attachment";
-import type { GitCommitAttachment } from "@/lib/git-commit-attachment";
-import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
-import type { MessageQuoteAttachment } from "@/lib/message-quote-attachment";
-import type { TerminalSnippetAttachment } from "@/lib/terminal-snippet-attachment";
+import type { BrowserElementAttachment } from "@spiritagent/ui/composer";
+import type { PrDiffAttachment } from "@spiritagent/ui/composer";
+import type { GitCommitAttachment } from "@spiritagent/ui/composer";
+import type { FileSnippetAttachment } from "@spiritagent/ui/composer";
+import type { MessageQuoteAttachment } from "@spiritagent/ui/composer";
+import type { TerminalSnippetAttachment } from "@spiritagent/ui/composer";
 import { useLocalFileAttachmentPreviews } from "@/hooks/useLocalFileAttachmentPreviews";
 import { useRecentFilePool } from "@/hooks/useRecentFilePool";
 import { useWorkspaceFileIndex } from "@/hooks/use-workspace-file-index";
@@ -51,7 +51,7 @@ import {
   composerAttachmentViewFromPath,
   normalizeSlashPath,
   removeComposerLocalFileAttachment,
-} from "@/lib/local-file-attachments";
+} from "@spiritagent/ui/composer";
 import {
   isAppearanceMenuAction,
   isLocaleOptionAction,
@@ -70,7 +70,7 @@ import {
   skillSlashAlias,
   skillSlashQueryKey,
   type SkillSlashSuggestion,
-} from "@/lib/skill-slash";
+} from "@spiritagent/ui/composer";
 import { canBeginSideChat, canForkSession } from "@/lib/fork-eligibility";
 import { findLastForkableAssistantMessageId } from "@/lib/fork-session-utils";
 import { shouldPromptGitBranchCheckoutBeforeSend } from "@/lib/composer-branch-checkout-gate";
@@ -91,7 +91,7 @@ import type {
   SubmitUserTurnRequest,
   WorkspaceFileReferenceSuggestionsResponse,
 } from "@/types";
-import type { RichSegment } from "@/lib/composer-segment-model";
+import type { RichSegment } from "@spiritagent/ui/composer";
 
 type DesktopRuntime = ReturnType<typeof useDesktopRuntime>;
 

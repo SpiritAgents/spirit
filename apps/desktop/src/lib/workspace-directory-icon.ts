@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   WORKSPACE_FILE_ICON_CHIP_CLASS,
   type WorkspaceFileIconColorMode,
-} from "@/lib/workspace-file-icon-sizes";
+} from "@spiritagent/ui/composer";
 
 /** Matches the Lucide icons in the slash / @ dropdowns (see skill-slash-menu). */
 export const WORKSPACE_DIRECTORY_LIST_ICON_CLASS = "size-3.5 shrink-0 opacity-70";

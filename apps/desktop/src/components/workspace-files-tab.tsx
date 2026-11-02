@@ -75,7 +75,7 @@ import type {
   EditorFileRevealLocation,
   WorkspaceEditorViewMode,
 } from "@/lib/workspace-editor-navigation";
-import type { FileSnippetAttachment } from "@/lib/file-snippet-attachment";
+import type { FileSnippetAttachment } from "@spiritagent/ui/composer";
 import { installContainedSelectAll } from "@/lib/contained-text-selection";
 import { workspaceContentInvalidationTouchesPath } from "@/lib/workspace-content-invalidation";
 import type {

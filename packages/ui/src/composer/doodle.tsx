@@ -1,0 +1,24 @@
+// Doodle is the welcome line above the empty-session composer, built solely
+// on the project's own typography tokens.
+
+import * as React from "react";
+
+import { FONT_WEIGHT_MEDIUM } from "../typography.js";
+import { cn } from "../cn.js";
+
+/** Centered welcome line above the empty-session composer. */
+export function Doodle({ className, children, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div data-spirit-surface="doodle" className={cn("mb-6", className)} {...props}>
+      <p
+        className={cn(
+          "text-center text-2xl tracking-tight text-foreground sm:text-3xl",
+          FONT_WEIGHT_MEDIUM,
+        )}
+        data-testid="doodle"
+      >
+        {children}
+      </p>
+    </div>
+  );
+}

@@ -12,7 +12,7 @@ import {
 import { FileContentPreviewFrame } from "@/components/file-content-preview-frame";
 import { FileDiffPreviewFrame } from "@/components/file-diff-preview-frame";
 import { APPROVAL_LEVEL_ICONS } from "@/components/approval-level-menu";
-import { ComposerSendEnterKbd } from "@/components/composer/composer-shortcut-kbds";
+import { ComposerSendEnterKbd } from "@spiritagent/ui/composer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Kbd } from "@/components/ui/kbd";
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { DESKTOP_FORM_INPUT_SHELL, DESKTOP_FORM_TEXTAREA_INNER } from "@/lib/desktop-chrome";
 import {
+  DESKTOP_COMPOSER_EDGE,
   DESKTOP_ELEVATION_SHADOW_SM,
   desktopComposerSurfaceBackdropClass,
 } from "@/lib/desktop-translucency-surface";
@@ -108,7 +109,8 @@ export function PendingApprovalCard({
     <Card
       data-spirit-surface="pending-approval-card"
       className={cn(
-        "gap-2 border border-ring/30 py-3 text-sm ring-0 dark:border-white/10",
+        "gap-2 py-3 text-sm ring-0",
+        DESKTOP_COMPOSER_EDGE,
         DESKTOP_ELEVATION_SHADOW_SM,
         desktopComposerSurfaceBackdropClass(useTranslucency),
       )}

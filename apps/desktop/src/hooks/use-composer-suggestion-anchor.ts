@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type RefObject } from "react";
 
-import type { ComposerRichInputHandle } from "@/components/composer-rich-input";
+import type { ComposerRichInputHandle } from "@spiritagent/ui/composer";
 
 function normalizeAnchorRect(rect: DOMRect): DOMRect {
   return new DOMRect(rect.left, rect.top, Math.max(rect.width, 1), Math.max(rect.height, 1));

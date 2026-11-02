@@ -5,7 +5,7 @@ import "./setup";
 import { fireEvent, render } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 
-import { ChipIcon, ChipLabel, ChipShell } from "@/components/composer-lexical/chips/chip-shell";
+import { ChipIcon, ChipLabel, ChipShell } from "@spiritagent/ui/composer";
 
 // jsdom does not implement PointerEvent; MouseEvent accepts the same init keys
 // (button / clientX / clientY), so aliasing it keeps fireEvent.pointerDown usable.

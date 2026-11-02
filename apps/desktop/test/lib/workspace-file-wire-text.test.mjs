@@ -5,11 +5,8 @@ import {
   messageContentToRichSegments,
   parseMessageContentParts,
   segmentsToMessageText,
-} from "../../src/lib/composer-segment-model.ts";
-import {
-  scanWorkspaceFileWireBlocks,
-  workspaceFileContextText,
-} from "../../src/lib/workspace-file-wire-text.ts";
+} from "@spiritagent/ui/composer";
+import { scanWorkspaceFileWireBlocks, workspaceFileContextText } from "@spiritagent/ui/composer";
 
 test("workspaceFileContextText serializes typed fence block", () => {
   const wire = workspaceFileContextText("src/App.tsx");

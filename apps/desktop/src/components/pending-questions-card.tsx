@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import type { QuestionDraft } from "@/hooks/useDesktopRuntime";
 import { DESKTOP_CHROME_TOGGLE_ICON_BTN, instantHoverMotionClass } from "@/lib/desktop-chrome";
 import {
+  DESKTOP_COMPOSER_EDGE,
   DESKTOP_ELEVATION_SHADOW_SM,
   desktopComposerSurfaceBackdropClass,
 } from "@/lib/desktop-translucency-surface";
@@ -48,7 +49,7 @@ const questionInputRowClass = cn(
 const questionInputInnerClass = cn(
   "h-7 min-h-7 min-w-0 flex-1 border-0 bg-transparent px-0 py-0 text-sm shadow-none dark:!bg-transparent",
   questionRowTextClass,
-  "placeholder:text-muted-foreground focus-visible:border-transparent focus-visible:ring-0",
+  "placeholder:text-foreground-subtle focus-visible:border-transparent focus-visible:ring-0",
   "hover:bg-transparent focus-visible:bg-transparent",
 );
 
@@ -130,7 +131,8 @@ export function PendingQuestionsCard({
     <Card
       data-spirit-surface="pending-questions-card"
       className={cn(
-        "gap-0 border border-ring/30 py-0 text-sm ring-0 dark:border-white/10",
+        "gap-0 py-0 text-sm ring-0",
+        DESKTOP_COMPOSER_EDGE,
         DESKTOP_ELEVATION_SHADOW_SM,
         desktopComposerSurfaceBackdropClass(useTranslucency),
       )}

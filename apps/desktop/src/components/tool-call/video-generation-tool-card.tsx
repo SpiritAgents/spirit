@@ -9,7 +9,7 @@ import {
   isPreviewableVideoPath,
   readCachedLocalFilePreviewDataUrl,
   rememberLocalFilePreviewDataUrl,
-} from "@/lib/local-file-attachments";
+} from "@spiritagent/ui/composer";
 import { isManagedGeneratedVideoRef } from "@/lib/managed-generated-asset";
 import { cn } from "@/lib/utils";
 import type { ToolBlockSnapshot } from "@/types";

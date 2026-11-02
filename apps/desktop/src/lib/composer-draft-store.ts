@@ -1,5 +1,5 @@
-import type { RichSegment } from "./composer-segment-model.js";
-import { normalizeComposerPlain, segmentsToPlainText } from "./composer-segment-model.js";
+import type { RichSegment } from "@spiritagent/ui/composer";
+import { normalizeComposerPlain, segmentsToPlainText } from "@spiritagent/ui/composer";
 import { normalizeSessionPathKey } from "./session-path-kind.js";
 
 export const COMPOSER_DRAFT_STORAGE_KEY = "spirit-desktop-composer-drafts";

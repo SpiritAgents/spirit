@@ -1,4 +1,4 @@
-import { parseModelContextLength } from "./model-context-length.js";
+import { parseModelContextLength } from "@spiritagent/ui/model-picker";
 import type {
   ConversationContextUsageSnapshot,
   DesktopModelCatalogHint,
@@ -14,7 +14,7 @@ export interface ContextUsageModelProfile {
   contextLength?: number;
 }
 
-export { parseModelContextLength } from "./model-context-length.js";
+export { parseModelContextLength } from "@spiritagent/ui/model-picker";
 
 /**
  * Context usage display resolution: the model's declared `contextLength` first, then the provider

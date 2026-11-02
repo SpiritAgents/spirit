@@ -27,7 +27,7 @@ import { scrollAreaViewport, useStickyHeaderPinned } from "@/hooks/use-sticky-he
 import { useTextSelectionActionMenu } from "@/hooks/use-text-selection-action-menu";
 import { buildPrChangedFilesTree } from "@/lib/pr-changed-files-tree";
 import { installContainedSelectAll } from "@/lib/contained-text-selection";
-import type { PrDiffAttachment, PullRequestChipStatus } from "@/lib/pr-diff-attachment";
+import type { PrDiffAttachment, PullRequestChipStatus } from "@spiritagent/ui/composer";
 import { buildPrDiffSnippetFromPatch, buildPrDiffSnippetText } from "@/lib/pr-diff-text";
 import { inferLineRangeFromPatch } from "@/lib/pr-diff-patch-slice";
 import {

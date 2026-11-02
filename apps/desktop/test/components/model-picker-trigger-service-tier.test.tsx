@@ -5,7 +5,8 @@ import "./setup";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { ModelPickerMenu } from "@/components/model-picker-menu";
+import { ModelPickerMenu } from "@spiritagent/ui/model-picker";
+import { UiTestProviders } from "./ui-test-providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { DesktopModelCatalogHint, ModelProfileSnapshot, ModelRef } from "@/types";
 
@@ -55,14 +56,16 @@ function renderPickerTrigger(
   catalogHints?: DesktopModelCatalogHint[],
 ): HTMLElement {
   render(
-    <TooltipProvider>
-      <ModelPickerMenu
-        models={[model]}
-        {...(catalogHints ? { catalogHints } : {})}
-        activeModelRef={modelRefOf(model)}
-        onModelSelect={() => {}}
-      />
-    </TooltipProvider>,
+    <UiTestProviders>
+      <TooltipProvider>
+        <ModelPickerMenu
+          models={[model]}
+          {...(catalogHints ? { catalogHints } : {})}
+          activeModelRef={modelRefOf(model)}
+          onModelSelect={() => {}}
+        />
+      </TooltipProvider>
+    </UiTestProviders>,
   );
   return screen.getByRole("button", { name: "Select Model" });
 }
@@ -126,13 +129,15 @@ test("an Ultrafast tier appends the Ultrafast suffix after the effort label", ()
 test("Auto, Default, and unset tiers add no trigger suffix", () => {
   for (const serviceTier of ["auto", "default", undefined] as const) {
     const { unmount } = render(
-      <TooltipProvider>
-        <ModelPickerMenu
-          models={[triggerModel(serviceTier === undefined ? {} : { serviceTier })]}
-          activeModelRef={{ providerId: "openai", name: "gpt-5" }}
-          onModelSelect={() => {}}
-        />
-      </TooltipProvider>,
+      <UiTestProviders>
+        <TooltipProvider>
+          <ModelPickerMenu
+            models={[triggerModel(serviceTier === undefined ? {} : { serviceTier })]}
+            activeModelRef={{ providerId: "openai", name: "gpt-5" }}
+            onModelSelect={() => {}}
+          />
+        </TooltipProvider>
+      </UiTestProviders>,
     );
     const text = screen.getByRole("button", { name: "Select Model" }).textContent ?? "";
     expect(text).not.toContain("Fast");

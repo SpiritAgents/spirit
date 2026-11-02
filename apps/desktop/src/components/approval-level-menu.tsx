@@ -20,7 +20,7 @@ import {
 import {
   COMPOSER_INLINE_CHIP_ICON_CLASS,
   COMPOSER_INLINE_CHIP_TEXT_CLASS,
-} from "@/lib/composer-inline-chip-styles";
+} from "@spiritagent/ui/composer";
 import { DESKTOP_MENU_TRIGGER_TEXT_CLASS } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 

@@ -8,7 +8,8 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
   ModelPickerInspectorPanel,
   modelPickerInspectorNeedsWideLayout,
-} from "@/components/model-picker-inspector-panel";
+} from "@spiritagent/ui/model-picker";
+import { UiTestProviders } from "./ui-test-providers";
 import type { ModelProfileSnapshot, ModelRef } from "@/types";
 
 const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
@@ -56,6 +57,7 @@ function renderInspector(
         ? { onThinkingEnabledChange: options.onThinkingEnabledChange }
         : {})}
     />,
+    { wrapper: UiTestProviders },
   );
 }
 
