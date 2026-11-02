@@ -104,6 +104,13 @@ export const DESKTOP_OVERLAY_LIST_LIST_GAP = "gap-0.5";
 export const DESKTOP_OVERLAY_LIST_GROUP_LABEL =
   "px-2 py-1.5 text-[11px] font-normal tracking-wide text-muted-foreground";
 
+/** Ghost Select trigger inside popovers (Effort, etc.): no border wash, keep side padding */
+export const DESKTOP_GHOST_SELECT_TRIGGER =
+  "min-h-0 w-auto rounded-full border-0 bg-transparent px-2 py-0 text-xs shadow-none hover:border-transparent [&_span]:justify-end [&_svg]:size-3";
+
+/** Detail Popover paired with a long list: label density aligned with DESKTOP_OVERLAY_LIST_* */
+export const DESKTOP_OVERLAY_LIST_DETAIL_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;
+
 export const DESKTOP_OVERLAY_LIST_ITEM = "px-2 py-1.5";
 
 export const DESKTOP_OVERLAY_LIST_DROPDOWN_ITEM_LAYOUT =
@@ -147,7 +154,7 @@ export const DESKTOP_SELECT_TRIGGER = cn(
   DESKTOP_OUTLINE_FOCUSED,
   DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT,
   "disabled:cursor-not-allowed disabled:opacity-50",
-  "data-placeholder:text-muted-foreground [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
+  "data-placeholder:text-foreground-subtle [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
 );
 
 export const DESKTOP_SELECT_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;
@@ -183,4 +190,76 @@ export const DESKTOP_OVERLAY_SHORT_ITEM = "px-2 py-1.5 text-sm";
 
 export function stopOverlayScrollPropagation(event: { stopPropagation(): void }): void {
   event.stopPropagation();
+}
+
+/* ---- Composer surface family (dock cards share these so the group reads as one) ---- */
+
+/** Composer-internal ghost hover: full muted on light; muted wash on dark so it does not flash */
+export const DESKTOP_COMPOSER_GHOST_HOVER = cn(
+  "hover:bg-muted dark:hover:bg-muted/40",
+  "aria-expanded:bg-muted dark:aria-expanded:bg-muted/40",
+  "aria-expanded:hover:bg-muted dark:aria-expanded:hover:bg-muted/40",
+);
+
+/** Ghost dropdown trigger: horizontal padding stays even when the label is short */
+export const DESKTOP_GHOST_MENU_TRIGGER = cn(
+  "inline-flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-full border-0 bg-transparent px-2 text-left outline-none",
+  "hover:bg-canvas-hover focus-visible:ring-2 focus-visible:ring-ring/50",
+  "disabled:pointer-events-none disabled:opacity-50",
+  instantHoverMotionClass,
+);
+
+/** Diffuse shadow for light-mode overlays / elevated surfaces; do not enlarge in dark mode — callers pair it with dark:shadow-* */
+export const DESKTOP_OVERLAY_LIGHT_SHADOW = "shadow-[0_2px_20px_-4px_rgb(0_0_0/0.06)]";
+
+/** Elevated surface shadow: light-mode diffuse + dark-mode keeps sm (Composer / Changes / message bubbles, etc.) */
+export const DESKTOP_ELEVATION_SHADOW_SM = `${DESKTOP_OVERLAY_LIGHT_SHADOW} dark:shadow-sm`;
+
+/**
+ * In-app frosted surfaces. The rule in theme.css listens for
+ * `prefers-reduced-transparency: reduce` and, when it matches, paints an opaque
+ * theme background and clears CSS backdrop-blur. Compose this onto future
+ * in-app translucent overlays. Native window material does not use it.
+ */
+export const DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS = "spirit-reduced-transparency-opaque";
+
+/**
+ * Translucent background of the Composer input; shared source for non-translucency overlays.
+ * Dark mode: on the pure-black `--background` canvas the fill is lifted to a deep asphalt
+ * gray (~#121212 composited) so the card separates by fill, letting the border stay faint.
+ */
+export const DESKTOP_COMPOSER_SURFACE_BACKDROP = [
+  "bg-background/55 backdrop-blur-xl dark:bg-input/50 supports-[backdrop-filter]:bg-background/40 dark:supports-[backdrop-filter]:bg-input/45",
+  DESKTOP_REDUCED_TRANSPARENCY_OPAQUE_CLASS,
+].join(" ");
+
+/**
+ * Translucent Composer tint when translucency is on (no CSS blur stacked, letting the
+ * window-level system material show through).
+ * Message bleed-through is clipped by the viewport shape mask; dark mode uses a pure black
+ * background with alpha.
+ */
+export const DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT = "bg-background/30";
+
+/** Composer dock family edge at rest (input surface, stacked TODO / approval cards, floating pills) */
+export const DESKTOP_COMPOSER_EDGE = "border border-composer-edge";
+
+/** Interactive edge step for family members with hover (input surface also adds focus-within) */
+export const DESKTOP_COMPOSER_EDGE_HOVER = "hover:border-composer-edge-hover";
+
+/** Translucent tint under translucency; keeps the glassmorphism look when off */
+export function desktopComposerSurfaceBackdropClass(useTranslucency: boolean): string {
+  return useTranslucency
+    ? DESKTOP_COMPOSER_SURFACE_TRANSLUCENCY_TINT
+    : DESKTOP_COMPOSER_SURFACE_BACKDROP;
+}
+
+/** Composer pill (Changes, etc.): border / hover / shadow aligned with the input; background switches with translucency */
+export function desktopComposerChipSurfaceClass(useTranslucency: boolean): string {
+  return [
+    DESKTOP_COMPOSER_EDGE,
+    DESKTOP_COMPOSER_EDGE_HOVER,
+    DESKTOP_ELEVATION_SHADOW_SM,
+    desktopComposerSurfaceBackdropClass(useTranslucency),
+  ].join(" ");
 }

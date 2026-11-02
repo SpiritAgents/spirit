@@ -91,6 +91,9 @@
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
   --muted-foreground: color-mix(in oklab, black 50%, transparent);
+  /* Hint-level text (input placeholders, non-interactive hints): one step below
+     --muted-foreground, which stays reserved for functional secondary controls */
+  --foreground-subtle: color-mix(in oklab, var(--muted-foreground) 75%, transparent);
   --skeleton-shimmer: color-mix(in oklab, white 78%, transparent);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
@@ -103,6 +106,10 @@
   --outline-border-hover: var(--border);
   /* Outline wash: Input / Outline button hover, item-card and history-row hover */
   --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* Composer dock family edge (input surface, stacked TODO / approval cards, floating pills):
+     rest border + the interactive hover/focus step */
+  --composer-edge: color-mix(in oklab, var(--ring) 30%, transparent);
+  --composer-edge-hover: color-mix(in oklab, var(--ring) 40%, transparent);
   /* Canvas outline/card fill under All-mode translucency; light /30 so white keeps presence */
   --content-translucent-fill: color-mix(in oklab, var(--background) 30%, transparent);
   --control-border: var(--outline-border);
@@ -147,6 +154,8 @@ html.dark,
   --secondary-foreground: #d4d4d4;
   --muted: #181818;
   --muted-foreground: color-mix(in oklab, white 60%, transparent);
+  /* Dark step-down of --foreground-subtle; see :root */
+  --foreground-subtle: color-mix(in oklab, var(--muted-foreground) 65%, transparent);
   --skeleton-shimmer: color-mix(in oklab, white 18%, transparent);
   --accent: #181818;
   --accent-foreground: #d4d4d4;
@@ -158,6 +167,10 @@ html.dark,
   /* Solid `--border` (#272727) is too hard on black; step up from rest, not full */
   --outline-border-hover: color-mix(in oklab, var(--border) 80%, transparent);
   --outline-fill: color-mix(in oklab, var(--muted) 30%, transparent);
+  /* On the pure-black canvas a faint white rim is enough; the hover step stays gentle —
+     a bigger jump (e.g. 10%) reads like a high-contrast outline on #000000 */
+  --composer-edge: color-mix(in oklab, white 6%, transparent);
+  --composer-edge-hover: color-mix(in oklab, white 8%, transparent);
   /* Dark already reads well at /10; do not match the light /30 bump */
   --content-translucent-fill: color-mix(in oklab, var(--background) 10%, transparent);
   --control-border: var(--outline-border);
@@ -198,6 +211,8 @@ html.dark,
   --color-outline-border: var(--outline-border);
   --color-outline-border-hover: var(--outline-border-hover);
   --color-outline-fill: var(--outline-fill);
+  --color-composer-edge: var(--composer-edge);
+  --color-composer-edge-hover: var(--composer-edge-hover);
   --color-content-translucent-fill: var(--content-translucent-fill);
   --color-control-border: var(--control-border);
   --color-canvas-hover: var(--canvas-hover);
@@ -218,6 +233,7 @@ html.dark,
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-foreground: var(--foreground);
+  --color-foreground-subtle: var(--foreground-subtle);
   --color-background: var(--background);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);

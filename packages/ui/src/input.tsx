@@ -12,7 +12,7 @@ export function Input({ className, type = "text", ...props }: ComponentProps<"in
         "h-8 w-full min-w-0 rounded-lg bg-background px-2.5 py-1 text-sm outline-none",
         DESKTOP_CONTENT_TRANSLUCENT_FILL,
         DESKTOP_OUTLINE_BORDER,
-        "placeholder:text-muted-foreground",
+        "placeholder:text-foreground-subtle",
         "disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
         "file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-normal",
         "aria-invalid:border-destructive",

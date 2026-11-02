@@ -11,7 +11,7 @@ export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
         "field-sizing-content min-h-16 w-full min-w-0 rounded-lg bg-background px-2.5 py-2 text-sm outline-none",
         DESKTOP_CONTENT_TRANSLUCENT_FILL,
         DESKTOP_OUTLINE_BORDER,
-        "placeholder:text-muted-foreground",
+        "placeholder:text-foreground-subtle",
         "disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
         "aria-invalid:border-destructive",
         className,
