@@ -365,7 +365,7 @@ export const DESKTOP_SELECT_TRIGGER = cn(
   DESKTOP_OUTLINE_FOCUSED,
   DESKTOP_OUTLINE_FOCUS_VISIBLE_SELECT,
   "disabled:cursor-not-allowed disabled:opacity-50",
-  "data-placeholder:text-muted-foreground [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
+  "data-placeholder:text-foreground-subtle [&>span]:inline-flex [&>span]:items-center [&>span]:gap-1.5 [&>span]:truncate",
 );
 
 export const DESKTOP_SELECT_LABEL = DESKTOP_OVERLAY_LIST_GROUP_LABEL;

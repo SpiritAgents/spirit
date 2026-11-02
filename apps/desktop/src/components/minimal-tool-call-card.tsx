@@ -49,7 +49,6 @@ import {
   shouldShowLspDiagnosticsOnToolCard,
   toolCardFailedStatusClass,
   toolCardFileNameDetailClass,
-  toolCardSecondaryTextClass,
 } from "@/lib/file-tool-lsp-diagnostics-display";
 import { instantHoverMotionClass } from "@/lib/desktop-chrome";
 import { resolveFileDiffToolEditorTarget } from "@/lib/file-tool-navigation";
@@ -93,11 +92,11 @@ const statusSuffixToneClass: Record<ToolSummaryStatusSuffixTone, string> = {
 };
 
 /**
- * Short tool-card summary grayscale: primary 100% + secondary {@link toolCardSecondaryTextClass};
+ * Short tool-card summary grayscale: primary 100% + secondary hint level (`--foreground-subtle`);
  * shell commands additionally keep the lighter {@link toolCardFileNameDetailClass}.
  */
 const summaryDetailToneClass: Record<ToolSummaryDetailTone, string> = {
-  default: toolCardSecondaryTextClass,
+  default: "text-foreground-subtle",
   "shell-command": toolCardFileNameDetailClass,
 };
 
@@ -216,7 +215,7 @@ export function MinimalToolSummary({
       {shellSummary ? (
         <>
           <span className={shimmerClass}>{shellSummary.verb}</span>{" "}
-          <span className={toolCardSecondaryTextClass}>{shellSummary.reason}</span>
+          <span className="text-foreground-subtle">{shellSummary.reason}</span>
         </>
       ) : (
         <span className={shimmerClass}>{headline}</span>

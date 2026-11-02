@@ -1,10 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import {
-  lspDiagnosticsCounts,
-  toolCardSecondaryTextClass,
-} from "@/lib/file-tool-lsp-diagnostics-display";
-import { cn } from "@/lib/utils";
+import { lspDiagnosticsCounts } from "@/lib/file-tool-lsp-diagnostics-display";
 import type { LspWriteDiagnosticsUi } from "@spiritagent/agent-core";
 
 export function FileToolLspDiagnosticsBadge({
@@ -20,9 +16,7 @@ export function FileToolLspDiagnosticsBadge({
   }
 
   return (
-    <span
-      className={cn("inline-flex shrink-0 text-xs leading-relaxed", toolCardSecondaryTextClass)}
-    >
+    <span className="inline-flex shrink-0 text-xs leading-relaxed text-foreground-subtle">
       {t("tool.diagnosticsIssueCount", { count: totalIssues })}
     </span>
   );

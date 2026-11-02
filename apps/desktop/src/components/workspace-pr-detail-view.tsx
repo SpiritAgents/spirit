@@ -22,7 +22,6 @@ import {
   GITHUB_PR_MERGED_BADGE_CLASS,
   GITHUB_PR_OPEN_BADGE_CLASS,
 } from "@/lib/github-pr-merged-badge-styles";
-import { toolCardSecondaryTextClass } from "@/lib/file-tool-lsp-diagnostics-display";
 import {
   PR_OVERVIEW_MIN_PX,
   PR_OVERVIEW_SPLITTER_PX,
@@ -338,7 +337,7 @@ export function WorkspacePrDetailView({
                   <span>@{detail.authorLogin}</span>
                   <span>{detail.headRef}</span>
                   <ArrowRight
-                    className={cn("size-2.5 shrink-0", toolCardSecondaryTextClass)}
+                    className="size-2.5 shrink-0 text-foreground-subtle"
                     aria-hidden
                     strokeWidth={1.75}
                   />

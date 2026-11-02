@@ -25,7 +25,6 @@ import {
   DESKTOP_SESSION_TITLE_HOVER_CLASS,
   SESSION_TITLE_RENAME_INPUT_CLASS,
 } from "@/lib/desktop-chrome";
-import { toolCardSecondaryTextClass } from "@/lib/file-tool-lsp-diagnostics-display";
 import { DESKTOP_SIDEBAR_TEXT_CLASS, FONT_WEIGHT_NORMAL } from "@/lib/desktop-typography";
 import { cn } from "@/lib/utils";
 
@@ -180,9 +179,7 @@ export function SessionChromeBreadcrumb({
         {trimmedSessionTitleSuffix ? (
           <span className="inline-flex min-w-0 max-w-full items-baseline gap-1.5">
             <span className="min-w-0 truncate">{trimmedSessionTitle}</span>
-            <span className={cn("shrink-0", toolCardSecondaryTextClass)}>
-              {trimmedSessionTitleSuffix}
-            </span>
+            <span className="shrink-0 text-foreground-subtle">{trimmedSessionTitleSuffix}</span>
           </span>
         ) : (
           trimmedSessionTitle

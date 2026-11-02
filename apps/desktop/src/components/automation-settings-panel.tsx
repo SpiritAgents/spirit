@@ -199,7 +199,7 @@ export function AutomationSettingsPanel({
           placeholder={t("automations.dialogTitlePlaceholder")}
           disabled={disabled}
           className={cn(
-            "w-full border-0 bg-transparent text-lg text-foreground outline-none placeholder:text-muted-foreground/70",
+            "w-full border-0 bg-transparent text-lg text-foreground outline-none placeholder:text-foreground-subtle",
             FONT_WEIGHT_MEDIUM,
           )}
         />
@@ -210,7 +210,7 @@ export function AutomationSettingsPanel({
           disabled={disabled}
           rows={8}
           className={cn(
-            "min-h-[12rem] w-full resize-none border-0 bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70",
+            "min-h-[12rem] w-full resize-none border-0 bg-transparent text-sm leading-relaxed text-foreground outline-none placeholder:text-foreground-subtle",
           )}
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
