@@ -1,7 +1,12 @@
 import { release as osRelease } from "node:os";
+import { randomUUID } from "node:crypto";
+import path from "node:path";
 
 import {
   AgentRuntime,
+  SessionTaskManager,
+  isBackgroundTaskTerminal,
+  type AgentRuntimeOptions,
   createLlmTransport,
   setTransportConfigLastInputTokens,
   pendingWorkspaceFilesFromInput,
@@ -51,6 +56,14 @@ import {
   readGitBranchLabelForBasicInfo,
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
+  createBackgroundTaskOwner,
+  type BackgroundTaskOwner,
+  FileBackgroundTaskStore,
+  isBackgroundTaskOwnerAlive,
+  ensureSessionStorageKey,
+  readSessionStorageKey,
+  RuntimeSessionStore,
+  createSubagentWorkspaceBootstrap,
 } from "@spiritagent/host-internal";
 
 import { createNoopPeer } from "./noop-peer.js";
@@ -69,6 +82,137 @@ export interface AcpRuntimeResult {
   activeSkills: LlmActiveSkill[];
   /** Switch agent mode: updates tool exposure + planMetadata seen by closures */
   setAgentMode: (mode: AgentMode) => Promise<void>;
+  agentModeSnapshot(): AgentMode;
+  tasks: SessionTaskManager;
+  storageSessionKey: string;
+  restoredFromDisk: boolean;
+  persist(): Promise<void>;
+  dispose(): Promise<void>;
+}
+
+export async function createAcpRuntime(
+  config: AcpServerConfig,
+  onEvent: (event: RuntimeEvent<JsonValue>) => void,
+  initialMode: AgentMode = "agent",
+  transcriptSessionKey = `acp_${randomUUID()}`,
+  options: { taskOwner?: BackgroundTaskOwner; requireExisting?: boolean } = {},
+): Promise<AcpRuntimeResult> {
+  const storageKey = options.requireExisting
+    ? readSessionStorageKey(config.spiritDataDir, transcriptSessionKey)
+    : await ensureSessionStorageKey(config.spiritDataDir, transcriptSessionKey);
+  if (!storageKey) throw new Error("Stored ACP session not found.");
+  const sessionStore = new RuntimeSessionStore(config.spiritDataDir, storageKey);
+  const saved = await sessionStore.read();
+  if (options.requireExisting && !saved) throw new Error("Stored ACP session not found.");
+  if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(config.workspaceRoot)) {
+    throw new Error("The stored session belongs to a different workspace.");
+  }
+  const owner = options.taskOwner ?? (await createBackgroundTaskOwner(config.spiritDataDir));
+  let result: AcpRuntimeResult | undefined;
+  let closed = false;
+  const report = (error: unknown, taskId?: string) =>
+    onEvent({
+      kind: "background-task-error",
+      error: error instanceof Error ? error.message : String(error),
+      ...(taskId ? { taskId } : {}),
+    });
+  const persist = async () => {
+    if (!result) throw new Error("ACP runtime is not initialized.");
+    await sessionStore.save({
+      version: 1,
+      sessionKey: storageKey,
+      workspaceRoot: config.workspaceRoot,
+      agentMode: result.agentModeSnapshot(),
+      initialized: true,
+      archive: result.runtime.toArchive([], []),
+    });
+  };
+  try {
+    const store = new FileBackgroundTaskStore({
+      spiritDataDir: config.spiritDataDir,
+      sessionKey: storageKey,
+      owner: owner.owner,
+    });
+    await store.recoverInterrupted((identity) =>
+      isBackgroundTaskOwnerAlive(config.spiritDataDir, identity),
+    );
+    if ((await store.list()).some((task) => !isBackgroundTaskTerminal(task.status))) {
+      throw new Error("This session has active tasks in another runtime. Reconnect to that host.");
+    }
+    const tasks = new SessionTaskManager({
+      sessionKey: storageKey,
+      store,
+      onError: report,
+      onOutput: (task, chunk) => {
+        if (task.background) onEvent({ kind: "background-task-output", task, chunk });
+      },
+      onChanged: (task) => {
+        onEvent({ kind: "background-task-changed", task });
+        void persist().catch((error: unknown) => report(error, task.id));
+      },
+    });
+    const prepared = await prepareAcpRuntime(
+      config,
+      onEvent,
+      saved?.agentMode ?? initialMode,
+      storageKey,
+    );
+    prepared.runtimeOptions.backgroundTasks = {
+      manager: tasks,
+      scope: { runtimeId: "main" },
+      persistHistory: persist,
+    };
+    const runtime = new AgentRuntime(prepared.runtimeOptions);
+    result = {
+      ...prepared,
+      runtime,
+      tasks,
+      storageSessionKey: storageKey,
+      restoredFromDisk: Boolean(saved),
+      persist,
+      setAgentMode: async (mode) => {
+        await prepared.setAgentMode(mode);
+        await persist();
+      },
+      dispose: async () => {
+        if (closed) return;
+        closed = true;
+        const stopped = await Promise.allSettled([runtime.shutdown()]);
+        const persisted = await Promise.allSettled([persist()]);
+        const owners = await Promise.allSettled(options.taskOwner ? [] : [owner.close()]);
+        const errors = [...stopped, ...persisted, ...owners].flatMap((entry) =>
+          entry.status === "rejected" ? [entry.reason] : [],
+        );
+        if (errors.length) throw new AggregateError(errors, "ACP session shutdown failed.");
+      },
+    };
+    await tasks.restore();
+    if (saved) runtime.replaceFromArchive(saved.archive);
+    await runtime.restoreBackgroundTaskNotifications();
+    await persist();
+    return result;
+  } catch (error) {
+    const cleanup = await Promise.allSettled(
+      result ? [result.dispose()] : options.taskOwner ? [] : [owner.close()],
+    );
+    const errors = cleanup.flatMap((entry) => (entry.status === "rejected" ? [entry.reason] : []));
+    if (errors.length)
+      throw new AggregateError([error, ...errors], "ACP initialization and cleanup failed.");
+    throw error;
+  }
+}
+
+interface PreparedAcpRuntime extends Pick<
+  AcpRuntimeResult,
+  | "toolExecutor"
+  | "enabledRules"
+  | "enabledSkillCatalog"
+  | "planMetadata"
+  | "activeSkills"
+  | "setAgentMode"
+  | "agentModeSnapshot"
+> {
+  runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue>;
 }
 
 /**
@@ -79,13 +223,16 @@ export interface AcpRuntimeResult {
  * - host-internal is loaded directly as a dependency (not via env-var dynamic import)
  * - No LSP, extensions, todos, or image/video generation
  */
-export async function createAcpRuntime(
+async function prepareAcpRuntime(
   config: AcpServerConfig,
   onEvent: (event: RuntimeEvent<JsonValue>) => void,
-  initialMode: AgentMode = "agent",
-  transcriptSessionKey?: string,
-): Promise<AcpRuntimeResult> {
-  const resolvedTransport = tryResolveTransportConfig(config);
+  initialMode: AgentMode,
+  transcriptSessionKey: string,
+  inheritedTransport?: { config: LlmTransportConfig; providerId?: string },
+): Promise<PreparedAcpRuntime> {
+  const resolvedTransport = inheritedTransport
+    ? { ok: true as const, ...inheritedTransport }
+    : tryResolveTransportConfig(config);
   if (!resolvedTransport.ok) {
     throw new Error(resolvedTransport.error);
   }
@@ -115,6 +262,7 @@ export async function createAcpRuntime(
     },
   );
   toolExecutor.setLocalHostService(service as unknown as LocalHostToolService);
+  toolExecutor.setBackgroundTaskExposure(true);
   toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
   await toolExecutor.refreshCaches();
 
@@ -226,7 +374,7 @@ export async function createAcpRuntime(
   const llmTransport = createLlmTransport(transportConfig);
 
   // 9. Assemble AgentRuntime
-  const runtime = new AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>({
+  const runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue> = {
     config: transportConfig,
     llmTransport,
     toolExecutor,
@@ -312,13 +460,29 @@ export async function createAcpRuntime(
     resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
       resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
     persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
+    bootstrapSubagentWorkspace: createSubagentWorkspaceBootstrap({
+      parentWorkspaceRoot: workspaceRoot,
+      buildScopedRuntime: async (scopedRoot) => {
+        const child = await prepareAcpRuntime(
+          { ...config, workspaceRoot: scopedRoot },
+          onEvent,
+          currentPlanMetadata?.agentMode ?? initialMode,
+          transcriptSessionKey,
+          {
+            config: { ...transportConfig, workspaceRoot: scopedRoot },
+            ...(hostPromptProviderId ? { providerId: hostPromptProviderId } : {}),
+          },
+        );
+        return { toolExecutor: child.toolExecutor, runtimeOptions: child.runtimeOptions };
+      },
+    }),
     onEvent: (event) => {
       if (event.kind === "context-usage-updated") {
         setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
       }
       onEvent(event);
     },
-  });
+  };
 
   // 10. Mode switching: update planMetadata binding seen by closures + tool exposure
   const setAgentMode = async (mode: AgentMode): Promise<void> => {
@@ -331,12 +495,13 @@ export async function createAcpRuntime(
   };
 
   return {
-    runtime,
+    runtimeOptions,
     toolExecutor,
     enabledRules,
     enabledSkillCatalog,
     planMetadata: currentPlanMetadata,
     activeSkills,
     setAgentMode,
+    agentModeSnapshot: () => currentPlanMetadata?.agentMode ?? initialMode,
   };
 }

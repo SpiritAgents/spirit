@@ -1,9 +1,11 @@
+import type { ToolKind } from "@agentclientprotocol/sdk";
+
 /**
  * Maps agent-core tool names to ACP ToolCall kinds and extracts metadata.
  *
  * ACP standard kinds: read, edit, delete, move, search, execute, think, fetch, other
  */
-export function mapToolNameToKind(toolName: string): string {
+export function mapToolNameToKind(toolName: string): ToolKind {
   switch (toolName) {
     // File reading
     case "read_file":
@@ -66,6 +68,12 @@ export function buildToolCallTitle(toolName: string, argumentsJson: string): str
         return `Deleting ${formatPath(args["path"])}`;
       case "shell":
         return `Running: ${truncate(String(args["command"] ?? ""), 60)}`;
+      case "subagent":
+        return `Subagent: ${truncate(String(args["prompt"] ?? args["task"] ?? ""), 60)}`;
+      case "delay":
+        return "Delaying";
+      case "stop_task":
+        return `Stopping ${String(args["task_id"] ?? "")}`;
       case "glob":
         return `Searching files: ${String(args["pattern"] ?? "")}`;
       case "grep":

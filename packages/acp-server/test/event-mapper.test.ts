@@ -2,9 +2,57 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { mapRuntimeEventToUpdate, createEventMapperState } from "../src/event-mapper.js";
-import type { RuntimeEvent, JsonValue } from "@spiritagent/agent-core";
+import type { RuntimeEvent, JsonValue, BackgroundTaskRecord } from "@spiritagent/agent-core";
 
 const SESSION_ID = "sess_test123";
+
+test("background tasks keep distinct IDs, bounded output, and terminal metadata", () => {
+  const state = createEventMapperState();
+  const task: BackgroundTaskRecord = {
+    version: 1,
+    id: "task_000000000001",
+    sessionKey: "session",
+    runtimeId: "main",
+    toolCallId: "call_1",
+    kind: "shell",
+    input: "command",
+    argumentsJson: "{}",
+    owner: { id: "host", pid: 1 },
+    status: "running",
+    background: true,
+    outputPath: "/workspace/background-tasks/shell-task_000000000001.log",
+    startedAtUnixMs: 0,
+    updatedAtUnixMs: 0,
+    elapsedMs: 0,
+  };
+  const second = { ...task, id: "task_000000000002", toolCallId: "call_2" };
+  assert.equal(
+    map({ kind: "background-task-changed", task }, state)?.update.sessionUpdate,
+    "tool_call",
+  );
+  assert.equal(
+    map({ kind: "background-task-changed", task: second }, state)?.update.sessionUpdate,
+    "tool_call",
+  );
+  const output = map({ kind: "background-task-output", task, chunk: "x".repeat(8_000) }, state);
+  assert.equal(output?.update.sessionUpdate, "tool_call_update");
+  assert.equal(state.outputs.get(task.id)?.length, 4_000);
+  assert.equal(state.outputs.has(second.id), false);
+  const terminal = map(
+    {
+      kind: "background-task-notification",
+      task: { ...task, status: "failed", exitCode: 2, elapsedMs: 2_500 },
+      content: "Failed.",
+      restored: true,
+    },
+    state,
+  )?.update;
+  assert.ok(terminal && terminal.sessionUpdate === "tool_call_update");
+  assert.equal(terminal.toolCallId, task.id);
+  assert.equal(terminal.status, "failed");
+  assert.equal((terminal.rawOutput as { exit_code: number }).exit_code, 2);
+  assert.equal(state.outputs.has(task.id), false);
+});
 
 /** Helper: create a fresh mapper state and call mapRuntimeEventToUpdate */
 function map(event: RuntimeEvent<JsonValue>, state = createEventMapperState()) {

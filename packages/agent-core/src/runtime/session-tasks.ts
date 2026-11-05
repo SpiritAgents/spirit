@@ -40,6 +40,7 @@ export interface SessionTaskManagerOptions {
   sessionKey: string;
   store: BackgroundTaskStore;
   onChanged?(record: BackgroundTaskRecord): void;
+  onOutput?(record: BackgroundTaskRecord, chunk: string): void;
   onError(error: Error, taskId: string): void;
 }
 
@@ -201,6 +202,7 @@ export class SessionTaskManager {
       writeOutput: (text) =>
         this.mutate(entry, async () => {
           await this.options.store.appendOutput(record.id, text);
+          this.options.onOutput?.(structuredClone(entry.record), text);
         }),
       update: (metadata, status) =>
         this.mutate(entry, async () => {

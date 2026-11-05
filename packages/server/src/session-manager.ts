@@ -602,7 +602,15 @@ export class SessionManager {
               }));
           this.callbacks.broadcastSubagentEvents?.(session.info.sessionId, drains);
         }
-        if (childSessionsChanged) {
+        const childInputChanged = childDrains.some((drain) =>
+          drain.events.some(
+            (event) =>
+              event.kind === "approval-requested" ||
+              event.kind === "approval-resolved" ||
+              event.kind === "questions-requested",
+          ),
+        );
+        if (childSessionsChanged || childInputChanged) {
           this.callbacks.broadcastSnapshot(
             session.info.sessionId,
             this.snapshotForSession(session),
@@ -610,6 +618,7 @@ export class SessionManager {
         }
         // The bridge had clients drive this on a timer; the daemon pump owns it now.
         runtime.handleStreamStallTimeout();
+        runtime.drainEvents();
 
         const turnResult = runtime.takeCompletedTurnResult();
         if (turnResult && session.turnActive) {
@@ -1318,9 +1327,8 @@ export class SessionManager {
     decision: Parameters<ServerRuntimeResult["runtime"]["continuePendingApproval"]>[0],
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await this.serializeSession(session, () =>
-      session.runtimeResult.runtime.continuePendingApproval(decision),
-    );
+    // poll() can await an early-stream approval; its reply must not queue behind that poll.
+    await session.runtimeResult.runtime.continuePendingApproval(decision);
     // approval-resolved mid-broadcast often sees isBusy=false (pending cleared, tool not
     // inFlight yet). Push again after continue so clients see the resumed busy edge —
     // same pattern as replyPendingQuestions.
@@ -1380,9 +1388,7 @@ export class SessionManager {
     result: Parameters<ServerRuntimeResult["runtime"]["continuePendingQuestions"]>[0],
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await this.serializeSession(session, () =>
-      session.runtimeResult.runtime.continuePendingQuestions(result),
-    );
+    await session.runtimeResult.runtime.continuePendingQuestions(result);
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
   }
 

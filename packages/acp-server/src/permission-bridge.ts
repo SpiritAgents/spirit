@@ -20,7 +20,10 @@ export async function handleApprovalRequest(
   approval: RuntimePendingApproval<JsonValue>,
 ): Promise<RuntimeApprovalDecision> {
   try {
-    const toolCallId = approval.toolCallId ?? `approval_${Date.now()}`;
+    const callId = approval.toolCallId ?? `approval_${Date.now()}`;
+    const toolCallId = approval.subagentSessionId
+      ? `${approval.subagentSessionId}:${callId}`
+      : callId;
     const kind = mapToolNameToKind(approval.toolName);
 
     // Build the descriptive text from the structured approval prompt
@@ -47,7 +50,8 @@ export async function handleApprovalRequest(
     });
 
     return mapPermissionResponse(response);
-  } catch {
+  } catch (error) {
+    console.error("[acp-server] Permission request failed:", error);
     // If permission request fails (e.g. connection closed), deny the operation
     return { kind: "deny", resultText: "Permission request failed." };
   }
@@ -87,7 +91,8 @@ export async function handleQuestionsRequest(
     });
 
     return response.outcome.outcome !== "cancelled" && response.outcome.optionId === "allow";
-  } catch {
+  } catch (error) {
+    console.error("[acp-server] Questionnaire request failed:", error);
     return false;
   }
 }

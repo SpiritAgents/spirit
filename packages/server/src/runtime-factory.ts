@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   AgentRuntime,
   SessionTaskManager,
+  isBackgroundTaskTerminal,
   type AgentRuntimeOptions,
   type McpService,
   buildAgentModeSystemMessage,
@@ -292,6 +293,9 @@ export async function createServerRuntime(
     await taskStore.recoverInterrupted((identity) =>
       isBackgroundTaskOwnerAlive(options.spiritDataDir, identity),
     );
+    if ((await taskStore.list()).some((task) => !isBackgroundTaskTerminal(task.status))) {
+      throw new Error("This session has active tasks in another runtime. Reconnect to that host.");
+    }
     const tasks = new SessionTaskManager({
       sessionKey: storageSessionKey,
       store: taskStore,
@@ -300,6 +304,9 @@ export async function createServerRuntime(
         void persist().catch((error: unknown) => report(error, task.id));
       },
       onError: report,
+      onOutput: (task, chunk) => {
+        if (task.background) options.onEvent({ kind: "background-task-output", task, chunk });
+      },
     });
     const prepared = await prepareServerRuntime({
       ...options,

@@ -137,6 +137,11 @@ export type RuntimeEvent<ToolRequest> =
       task: import("../background-tasks.js").BackgroundTaskRecord;
     }
   | {
+      kind: "background-task-output";
+      task: import("../background-tasks.js").BackgroundTaskRecord;
+      chunk: string;
+    }
+  | {
       kind: "background-task-notification";
       task: import("../background-tasks.js").BackgroundTaskRecord;
       content: string;

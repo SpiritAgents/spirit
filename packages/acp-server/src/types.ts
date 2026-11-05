@@ -3,6 +3,7 @@ import type {
   LlmActiveSkill,
   LlmEnabledSkillCatalogEntry,
   LlmTransportConfig,
+  LlmToolAgentState,
   AgentMode,
 } from "@spiritagent/agent-core";
 import type { HostToolExecutorProxy } from "@spiritagent/agent-core/host-bridge";
@@ -23,7 +24,7 @@ export interface AcpServerConfig {
  */
 export interface AcpSessionState {
   readonly sessionId: string;
-  readonly runtime: AgentRuntime<LlmTransportConfig, unknown, JsonValue>;
+  readonly runtime: AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>;
   readonly toolExecutor: HostToolExecutorProxy;
   readonly workspaceRoot: string;
   currentMode: AgentMode;

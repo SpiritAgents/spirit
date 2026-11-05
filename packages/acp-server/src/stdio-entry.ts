@@ -48,11 +48,30 @@ async function main(): Promise<void> {
   const input = Readable.toWeb(process.stdin) as ReadableStream<Uint8Array>;
   const stream = acp.ndJsonStream(output, input);
 
-  const connection = new acp.AgentSideConnection(
-    (conn) => new SpiritAcpAgent(conn, config, authState),
-    stream,
-  );
-  void connection;
+  let agent: SpiritAcpAgent | undefined;
+  const connection = new acp.AgentSideConnection((conn) => {
+    agent = new SpiritAcpAgent(conn, config, authState);
+    return agent;
+  }, stream);
+  let shutdown: Promise<void> | undefined;
+  const stop = () => (shutdown ??= agent?.shutdown() ?? Promise.resolve());
+  const onSignal = () => {
+    void stop()
+      .catch((error: unknown) => {
+        console.error("[acp-server] Shutdown failed:", error);
+        process.exitCode = 1;
+      })
+      .finally(() => process.exit(process.exitCode ?? 0));
+  };
+  process.once("SIGINT", onSignal);
+  process.once("SIGTERM", onSignal);
+  try {
+    await connection.closed;
+  } finally {
+    process.removeListener("SIGINT", onSignal);
+    process.removeListener("SIGTERM", onSignal);
+    await stop();
+  }
 }
 
 main().catch((err) => {

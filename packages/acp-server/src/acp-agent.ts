@@ -3,6 +3,7 @@ import { product } from "@spiritagent/product";
 import type * as schema from "@agentclientprotocol/sdk";
 import { RequestError } from "@agentclientprotocol/sdk";
 import type { JsonValue, LlmActiveSkill, RuntimeEvent } from "@spiritagent/agent-core";
+import { llmMessageTextContent } from "@spiritagent/agent-core";
 import type { AuthState } from "./auth/auth-state.js";
 import { buildAuthMethods } from "./auth/build-auth-methods.js";
 import { TERMINAL_AUTH_METHOD_ID } from "./auth/constants.js";
@@ -40,6 +41,7 @@ export class SpiritAcpAgent implements acp.Agent {
   private readonly mapperStates = new Map<string, EventMapperState>();
   /** Per-session prompt generation counter to prevent stale turn results */
   private readonly promptGenerations = new Map<string, number>();
+  private readonly loadingSessions = new Set<string>();
 
   constructor(connection: acp.AgentSideConnection, config: AcpServerConfig, authState: AuthState) {
     this.connection = connection;
@@ -54,7 +56,7 @@ export class SpiritAcpAgent implements acp.Agent {
     return {
       protocolVersion: 1, // PROTOCOL_VERSION
       agentCapabilities: {
-        loadSession: false,
+        loadSession: true,
         auth: {
           logout: {},
         },
@@ -63,6 +65,7 @@ export class SpiritAcpAgent implements acp.Agent {
         },
         sessionCapabilities: {
           close: {},
+          delete: {},
         },
       },
       agentInfo: {
@@ -148,9 +151,87 @@ export class SpiritAcpAgent implements acp.Agent {
         "Provider credentials are not configured. Run setup in the terminal first.",
       );
     }
-
     this.authState.markAuthenticated();
     return {};
+  }
+
+  async loadSession(params: schema.LoadSessionRequest): Promise<schema.LoadSessionResponse> {
+    if (!canCreateSession(this.config, this.authState)) throw RequestError.authRequired();
+    this.loadingSessions.add(params.sessionId);
+    try {
+      const result = await this.sessionManager.loadSession(
+        params.sessionId,
+        params.cwd,
+        (sessionId, event) => this.handleRuntimeEvent(sessionId, event),
+      );
+      return await this.sessionManager.withSession(params.sessionId, async (session) => {
+        const mapper = createEventMapperState();
+        this.mapperStates.set(params.sessionId, mapper);
+        const notifications = session.runtime.backgroundTaskNotifications();
+        const noticeContents = new Set(notifications.map((notice) => notice.content));
+        const taskCalls = new Map(
+          session.runtime.backgroundTaskRecords().map((task) => [task.toolCallId, task]),
+        );
+        for (const message of session.runtime.history()) {
+          const text = llmMessageTextContent(message.content);
+          if (noticeContents.has(text)) continue;
+          if ((message.role === "user" || message.role === "assistant") && text) {
+            await this.connection.sessionUpdate({
+              sessionId: params.sessionId,
+              update: {
+                sessionUpdate:
+                  message.role === "user" ? "user_message_chunk" : "agent_message_chunk",
+                content: { type: "text", text },
+              },
+            });
+          }
+          for (const call of message.toolCalls ?? []) {
+            const update = mapRuntimeEventToUpdate(
+              {
+                kind: "streaming-tool-preview",
+                toolCallId: call.id,
+                toolName: call.name,
+                argumentsJson: call.argumentsJson,
+              },
+              params.sessionId,
+              mapper,
+            );
+            if (update) await this.connection.sessionUpdate(update);
+          }
+          if (message.role === "tool" && message.toolCallId) {
+            const task = taskCalls.get(message.toolCallId);
+            const failed =
+              task &&
+              !task.background &&
+              ["failed", "stopped", "interrupted"].includes(task.status);
+            await this.connection.sessionUpdate({
+              sessionId: params.sessionId,
+              update: {
+                sessionUpdate: "tool_call_update",
+                toolCallId: message.toolCallId,
+                status: failed ? "failed" : "completed",
+                content: [{ type: "content", content: { type: "text", text } }],
+              },
+            });
+          }
+        }
+        for (const notice of notifications) {
+          const update = mapRuntimeEventToUpdate(
+            { kind: "background-task-notification", ...notice },
+            params.sessionId,
+            mapper,
+          );
+          if (update) await this.connection.sessionUpdate(update);
+        }
+        return {
+          modes: { currentModeId: result.currentMode, availableModes: [...AVAILABLE_MODES] },
+        };
+      });
+    } catch (error) {
+      throw mapSessionSetupError(error);
+    } finally {
+      this.loadingSessions.delete(params.sessionId);
+    }
   }
 
   async unstable_logout(_params: schema.LogoutRequest): Promise<schema.LogoutResponse | void> {
@@ -178,13 +259,7 @@ export class SpiritAcpAgent implements acp.Agent {
   async prompt(params: schema.PromptRequest): Promise<schema.PromptResponse> {
     const session = this.sessionManager.requireSession(params.sessionId);
 
-    // Abort any previous pending prompt
-    session.pendingPrompt?.abort();
-    // Also abort the runtime to stop streaming/tool execution and release isBusy()
-    if (session.runtime.isBusy()) {
-      session.runtime.abort();
-    }
-    session.pendingPrompt = new AbortController();
+    this.sessionManager.cancel(params.sessionId);
 
     // Increment generation so stale prompt completions are discarded
     const generation = (this.promptGenerations.get(params.sessionId) ?? 0) + 1;
@@ -213,7 +288,9 @@ export class SpiritAcpAgent implements acp.Agent {
     }
 
     // Reset thinking delta tracker for the new prompt turn
-    this.mapperStates.set(params.sessionId, createEventMapperState());
+    const mapper = this.mapperStates.get(params.sessionId) ?? createEventMapperState();
+    mapper.sentThinkingLength = 0;
+    this.mapperStates.set(params.sessionId, mapper);
 
     try {
       // Extract images from content blocks
@@ -222,32 +299,26 @@ export class SpiritAcpAgent implements acp.Agent {
       );
 
       try {
-        // Use streaming start so onEvent fires real-time chunks
-        await session.runtime.startUserTurnStreaming(
+        if (this.promptGenerations.get(params.sessionId) !== generation) {
+          return { stopReason: "cancelled" };
+        }
+        const stopReason = await this.sessionManager.runPrompt(
+          params.sessionId,
           userInput,
           explicitImages,
-          [],
           activeSkillsForTurn,
         );
-        const result = await session.runtime.waitForCompletedTurnResult();
 
         // Check if a newer prompt has superseded this one
         if (this.promptGenerations.get(params.sessionId) !== generation) {
           return { stopReason: "cancelled" };
         }
 
-        session.pendingPrompt = null;
-
-        // Map turn result to stop reason
-        if (result.kind === "failed") {
-          return { stopReason: "refusal" };
-        }
-
-        return { stopReason: "end_turn" };
+        return { stopReason };
       } finally {
         // Clean up temp files after the entire turn completes (LLM may still
         // read image files during processing between start and completion)
-        cleanupImages().catch(() => {});
+        await cleanupImages();
       }
     } catch (err) {
       // Stale generation — a newer prompt took over, treat as cancelled
@@ -268,16 +339,11 @@ export class SpiritAcpAgent implements acp.Agent {
   }
 
   async cancel(params: schema.CancelNotification): Promise<void> {
-    const session = this.sessionManager.getSession(params.sessionId);
-    if (!session) {
-      return;
-    }
-
-    // Abort the pending prompt
-    session.pendingPrompt?.abort();
-
-    // Abort the runtime
-    session.runtime.abort();
+    this.promptGenerations.set(
+      params.sessionId,
+      (this.promptGenerations.get(params.sessionId) ?? 0) + 1,
+    );
+    this.sessionManager.cancel(params.sessionId);
   }
 
   async closeSession(
@@ -285,7 +351,25 @@ export class SpiritAcpAgent implements acp.Agent {
   ): Promise<schema.CloseSessionResponse | void> {
     await this.sessionManager.closeSession(params.sessionId);
     this.mapperStates.delete(params.sessionId);
+    this.promptGenerations.delete(params.sessionId);
     return {};
+  }
+
+  async deleteSession(params: schema.DeleteSessionRequest): Promise<schema.DeleteSessionResponse> {
+    try {
+      await this.sessionManager.deleteSession(params.sessionId);
+    } catch (error) {
+      throw mapSessionSetupError(error);
+    }
+    this.mapperStates.delete(params.sessionId);
+    this.promptGenerations.delete(params.sessionId);
+    return {};
+  }
+
+  async shutdown(): Promise<void> {
+    await this.sessionManager.shutdown();
+    this.mapperStates.clear();
+    this.promptGenerations.clear();
   }
 
   /**
@@ -293,26 +377,27 @@ export class SpiritAcpAgent implements acp.Agent {
    * For approval-requested events, triggers the permission bridge.
    */
   private handleRuntimeEvent(sessionId: string, event: RuntimeEvent<JsonValue>): void {
+    if (event.kind === "background-task-notification" && this.loadingSessions.has(sessionId))
+      return;
     // Handle approval requests asynchronously
     if (event.kind === "approval-requested") {
       const session = this.sessionManager.getSession(sessionId);
       if (session) {
-        // Fire-and-forget: request permission, then continue approval
-        handleApprovalRequest(this.connection, sessionId, event.approval as any)
-          .then((decision) => {
-            // The pending approval may have been cleared by cancel/abort
-            // in the meantime. Catch the rejection to avoid unhandled errors.
-            session.runtime.continuePendingApproval(decision).catch(() => {});
+        void handleApprovalRequest(this.connection, sessionId, event.approval)
+          .then(async (decision) => {
+            const pending = session.runtime.currentPendingApproval();
+            if (
+              pending?.request !== event.approval.request ||
+              pending?.toolCallId !== event.approval.toolCallId ||
+              pending?.subagentSessionId !== event.approval.subagentSessionId
+            )
+              return;
+            // Early-stream execution can await this decision inside the session pump.
+            await session.runtime.continuePendingApproval(decision);
           })
-          .catch((err) => {
-            console.error("Permission request failed:", err);
-            session.runtime
-              .continuePendingApproval({
-                kind: "deny",
-                resultText: "Permission request failed.",
-              })
-              .catch(() => {});
-          });
+          .catch((error: unknown) =>
+            console.error("Failed to apply ACP permission response:", error),
+          );
       }
       return;
     }
@@ -321,42 +406,28 @@ export class SpiritAcpAgent implements acp.Agent {
     if (event.kind === "questions-requested") {
       const session = this.sessionManager.getSession(sessionId);
       if (session) {
-        // RuntimePendingQuestions has nested .questions (AskQuestionsRequest) with .title
-        const pending = event.questions as unknown as {
-          questions?: { title?: string };
-          toolName?: string;
-        };
-        const description =
-          pending.questions?.title ?? pending.toolName ?? "The agent needs additional input.";
-        handleQuestionsRequest(this.connection, sessionId, { prompt: description })
-          .then((allowed) => {
-            if (allowed) {
-              session.runtime
-                .resumePendingQuestions({
-                  status: "answered",
-                  answers: [],
-                })
-                .catch((err) => {
-                  console.error("Failed to resume questions:", err);
-                });
-            } else {
-              session.runtime
-                .resumePendingQuestions({
-                  status: "skipped",
-                })
-                .catch((err) => {
-                  console.error("Failed to skip questions:", err);
-                });
-            }
+        const description = event.questions.questions.title ?? event.questions.toolName;
+        void handleQuestionsRequest(this.connection, sessionId, { prompt: description })
+          .then(async (allowed) => {
+            const pending = session.runtime.currentPendingQuestions();
+            if (
+              pending?.request !== event.questions.request ||
+              pending?.toolCallId !== event.questions.toolCallId
+            )
+              return;
+            await session.runtime.continuePendingQuestions(
+              allowed ? { status: "answered", answers: [] } : { status: "skipped" },
+            );
           })
-          .catch((err) => {
-            console.error("Questions request failed:", err);
-          });
+          .catch((error: unknown) =>
+            console.error("Failed to apply ACP questionnaire response:", error),
+          );
       }
       return;
     }
 
     // Forward other events to ACP client
+    if (event.kind === "background-task-error") console.error("[acp-server]", event.error);
     let mapperState = this.mapperStates.get(sessionId);
     if (!mapperState) {
       mapperState = createEventMapperState();

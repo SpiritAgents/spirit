@@ -186,6 +186,7 @@ impl RuntimeSyncState {
                 }
                 BridgeRuntimeEvent::BackgroundToolStatus { .. } => {}
                 BridgeRuntimeEvent::BackgroundTaskChanged { .. }
+                | BridgeRuntimeEvent::BackgroundTaskOutput { .. }
                 | BridgeRuntimeEvent::BackgroundTaskNotification { .. } => {}
                 BridgeRuntimeEvent::BackgroundTaskError { error } => {
                     self.events

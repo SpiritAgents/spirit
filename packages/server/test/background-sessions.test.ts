@@ -56,15 +56,16 @@ async function fixture() {
 function managerFor(dataDir: string) {
   const events: RuntimeEvent<JsonValue>[] = [];
   const finished: string[] = [];
+  const snapshots: ReturnType<SessionManager["snapshot"]>[] = [];
   const manager = new SessionManager(dataDir, {
     broadcastRuntimeEvent: (_id, event) => events.push(event),
     broadcastTurnFinished: (_id, reason) => finished.push(reason),
-    broadcastSnapshot: () => {},
+    broadcastSnapshot: (_id, snapshot) => snapshots.push(snapshot),
     broadcastTrustRequest: () => {},
     broadcastFileChange: () => {},
   });
   cleanups.push(() => manager.shutdown());
-  return { manager, events, finished };
+  return { manager, events, finished, snapshots };
 }
 
 function response(text: string, tool?: { name: string; arguments: object }): Response {
@@ -121,6 +122,40 @@ function gatedShell(gate: string) {
 async function waitUntil(predicate: () => boolean | Promise<boolean>) {
   await expect.poll(predicate, { timeout: 8_000, interval: 20 }).toBe(true);
 }
+
+it("resolves streamed tool approvals while the foreground poll awaits their outcomes", async () => {
+  const { root, dataDir, workspaceRoot } = await fixture();
+  const { manager, finished, events } = managerFor(dataDir);
+  const gate = path.join(root, "release");
+  const requests = scriptedModel((_body, index) =>
+    index === 0
+      ? response("", {
+          name: "shell",
+          arguments: {
+            command: gatedShell(gate),
+            reason: "Run the local fixture.",
+            background: { delay: 0 },
+          },
+        })
+      : response("response"),
+  );
+  const { sessionId } = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    approvalLevel: "default",
+    conversationKey: "ephemeral://approval",
+  });
+  manager.attachSession("client", { sessionId });
+  await manager.submitUserTurn(sessionId, { text: "Run the check." });
+  await waitUntil(() => events.some((event) => event.kind === "approval-requested"));
+  expect(manager.snapshot(sessionId).backgroundTasks).toHaveLength(0);
+  await manager.replyPendingApproval(sessionId, { kind: "allow" });
+  await waitUntil(() => finished.length === 1);
+  expect(manager.snapshot(sessionId).backgroundTasks?.[0]?.status).toBe("running");
+  await writeFile(gate, "");
+  await waitUntil(() => finished.length === 2);
+  expect(requests).toHaveLength(3);
+});
 
 it("keeps detached tasks and output paths across promotion and model changes, then wakes once", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
@@ -343,7 +378,7 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
   );
   await writeFile(path.join(workspaceRoot, "tracked.txt"), "dirty");
   await writeFile(path.join(workspaceRoot, "local-only.txt"), "untracked");
-  const { manager, finished, events } = managerFor(dataDir);
+  const { manager, finished, events, snapshots } = managerFor(dataDir);
   const requests = scriptedModel((_body, index) => {
     if (index === 0)
       return response("", {
@@ -372,9 +407,13 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
     workspaceRoot,
     hostKind: "cli",
     conversationKey: "ephemeral://worktree",
-    approvalLevel: "bypass-approval",
+    approvalLevel: "default",
   });
   await manager.submitUserTurn(sessionId, { text: "Delegate the worktree inspection." });
+  await waitUntil(() =>
+    snapshots.some((snapshot) => Boolean(snapshot.currentPendingApproval?.subagentSessionId)),
+  );
+  await manager.replyPendingApproval(sessionId, { kind: "allow" });
   await waitUntil(() => finished.length === 1);
   expect(requests).toHaveLength(4);
   const snapshot = manager.snapshot(sessionId);

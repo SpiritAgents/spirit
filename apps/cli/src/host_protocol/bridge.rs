@@ -417,6 +417,8 @@ pub(crate) enum BridgeRuntimeEvent {
     },
     #[serde(rename = "background-task-changed")]
     BackgroundTaskChanged { task: Value },
+    #[serde(rename = "background-task-output")]
+    BackgroundTaskOutput { task: Value, chunk: String },
     #[serde(rename = "background-task-notification")]
     BackgroundTaskNotification {
         task: Value,
