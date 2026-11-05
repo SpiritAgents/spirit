@@ -3903,6 +3903,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
     let childRuntime: AgentRuntime<Config, State, ToolRequest> | undefined;
     let workspaceRoot: string | undefined;
     let childExecutor = this.baseToolExecutor;
+    let rollbackBootstrap: (() => Promise<void>) | undefined;
+    let markWorkspaceStarted: (() => void) | undefined;
     let output: { text: string; failed: boolean };
     const cancel = (): void => childRuntime?.abort();
     context.signal.addEventListener("abort", cancel, { once: true });
@@ -3920,6 +3922,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
           signal: context.signal,
         });
         if ("error" in boot) throw new Error(boot.error);
+        rollbackBootstrap = boot.rollback;
+        markWorkspaceStarted = boot.markStarted;
         workspaceRoot = boot.workspaceRoot;
         childExecutor = boot.toolExecutor ?? this.baseToolExecutor;
         if (boot.worktreePath) record.summary.worktreePath = boot.worktreePath;
@@ -3940,6 +3944,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
         { context, record },
       );
       this.managedSubagents.set(sessionId, { parentToolCallId, childRuntime, childRecord: record });
+      markWorkspaceStarted?.();
+      rollbackBootstrap = undefined;
       await childRuntime.startUserTurnStreaming(buildSubagentUserTurn(request));
       const scope = { runtimeId: sessionId, parentTaskId: context.taskId };
       let finalResult:
@@ -3984,7 +3990,18 @@ export class AgentRuntime<Config, State, ToolRequest> {
         failed: finalResult.kind === "failed",
       };
     } catch (error) {
-      output = { text: `[subagent failed] ${renderError(error)}`, failed: true };
+      let failure = error;
+      if (rollbackBootstrap) {
+        try {
+          await rollbackBootstrap();
+        } catch (cleanupError) {
+          failure = new AggregateError(
+            [error, cleanupError],
+            `Subagent initialization and worktree cleanup failed: ${renderError(cleanupError)}`,
+          );
+        }
+      }
+      output = { text: `[subagent failed] ${renderError(failure)}`, failed: true };
     } finally {
       context.signal.removeEventListener("abort", cancel);
       if (childRuntime) this.refreshChildSessionRecord(record, childRuntime);

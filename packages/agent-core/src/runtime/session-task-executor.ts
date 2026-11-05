@@ -1,4 +1,5 @@
 import { parseBackgroundOptions, parseDelayRequest } from "../background-tasks.js";
+import { parseShellToolResult, serializeShellToolResult } from "../shell-tool-result.js";
 import {
   createToolExecutionTextOutput,
   type JsonObject,
@@ -173,6 +174,16 @@ export function createSessionTaskExecutor<ToolRequest>(
       );
       const result = await options.manager.initialResult(taskId, options.scope, background);
       detached = result.kind === "background";
+      if (result.kind === "completed" && call.name === "shell") {
+        const shell = parseShellToolResult(result.result.output.summaryText);
+        if (shell?.truncated) {
+          const text = serializeShellToolResult({ ...shell, outputPath: result.record.outputPath });
+          result.result.output = {
+            ...result.result.output,
+            ...createToolExecutionTextOutput(text),
+          };
+        }
+      }
       return result.kind === "completed"
         ? {
             ...result.result.output,

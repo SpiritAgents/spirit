@@ -1133,9 +1133,9 @@ test("abortShell terminates a running shell by toolCallId", async () => {
     assert.equal(service.abortShell("unknown-id"), false);
 
     const output = await executePromise;
-    assertTextToolOutput(output);
-    const parsed = JSON.parse(output) as { exitCode: number };
-    assert.equal(parsed.exitCode, -1);
+    assertHostToolExecutionOutput(output);
+    const parsed = JSON.parse(output.summaryText) as { exitCode: number | null };
+    assert.equal(parsed.exitCode, null);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }

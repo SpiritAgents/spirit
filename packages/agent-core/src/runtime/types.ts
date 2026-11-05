@@ -524,6 +524,8 @@ export type SubagentWorkspaceBootstrapResult<ToolRequest = unknown> =
       worktreePath?: string;
       branchName?: string;
       toolExecutor?: ToolExecutor<ToolRequest>;
+      markStarted?(): void;
+      rollback?(): Promise<void>;
     }
   | { error: string };
 

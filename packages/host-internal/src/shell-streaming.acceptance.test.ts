@@ -43,14 +43,14 @@ test("NodeHostToolService streams incremental shell output via attachRequestMeta
     });
 
     const output = await service.execute(request);
-    assert.equal(typeof output, "string");
+    assert.ok(typeof output === "object");
     assert.ok(chunks.join("").includes("a"));
     assert.ok(chunks.join("").includes("b"));
     assert.ok(chunkTimes.length >= 1);
     if (chunkTimes.length >= 2) {
       assert.ok(chunkTimes[1]! >= chunkTimes[0]!);
     }
-    assert.match(String(output), /"exitCode":0/);
+    assert.match(output.summaryText, /"exitCode":0/);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }
@@ -82,7 +82,8 @@ test("NodeHostToolService.abortRunningShell kills in-flight shell", async () => 
     });
     service.abortRunningShell();
     const output = await execution;
-    assert.match(String(output), /"exitCode":-1/);
+    assert.ok(typeof output === "object");
+    assert.match(output.summaryText, /"exitCode":null/);
   } finally {
     await rm(workspaceRoot, { recursive: true, force: true });
   }

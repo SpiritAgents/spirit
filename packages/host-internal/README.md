@@ -20,6 +20,24 @@ This is a direct default-root change: there is no old-directory lookup, automati
 
 MCP file discovery is supplied through `createHostMcpService(workspaceRoot, spiritDataDir, includeWorkspace, options)`. It injects a configuration source into Agent Core, so a daemon's selected data root is also used for MCP reads. MCP and Hooks path helpers live in this package rather than Agent Core.
 
+## Background task execution
+
+`FileBackgroundTaskStore` keeps complete output and atomic task records in each session's
+`transcripts/{session-hash}/background-tasks` directory, separately from truncated tool archives.
+File tools treat these records as read-only. The runtime retains only the initial output window;
+the full file remains available until the session is deleted.
+
+`createBackgroundTaskOwner` uses an instance-specific local IPC endpoint, not a PID liveness guess.
+Recovery can mark an absent owner interrupted without replaying work or counting downtime.
+`runShell` applies output backpressure and supervises process lifetime: POSIX commands run in an
+owned process group with a host-disconnect watchdog; Windows uses a suspended launch and a
+kill-on-close Job Object. This is lifecycle management, not a sandbox for commands that
+deliberately escape their POSIX session.
+
+`createSubagentWorkspaceBootstrap` starts from the parent's exact HEAD, including linked
+worktrees and detached HEADs. It rolls back unmodified, unstarted workspaces on initialization
+failure and retains workspaces once handed to a running subagent.
+
 ## Config and credentials
 
 `config.json` is `schemaVersion: 1`; any other version fails to load. Each `providers[]` entry is fully declarative — `apiBase`, `transportKind`, `sdk`, `headers` / `body`, `providerTools`, `fileUpload`, `options`, plus flat model-level defaults its `models[]` inherit. Unknown keys, unknown `sdk` package names, unknown `credentials` slots, and out-of-range `serviceTier` / `reasoningEffort` / `reasoningMode` selections are fail-fast schema errors; the file is never silently rewritten.
