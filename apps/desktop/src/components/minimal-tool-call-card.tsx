@@ -556,13 +556,11 @@ function ShellToolExpandedBody({
   command,
   onAbortShell,
   open,
-  onOpenReadFile,
 }: {
   tool: ToolBlockSnapshot;
   command: string | undefined;
   onAbortShell?: (toolCallId: string) => void;
   open: boolean;
-  onOpenReadFile?: (target: EditorFileTarget) => void;
 }) {
   const { t } = useTranslation();
   const readHostTextFile = useToolCallDiffHost()?.readHostTextFile;
@@ -681,33 +679,6 @@ function ShellToolExpandedBody({
             <li key={`${index}:${line}`}>{line}</li>
           ))}
         </ul>
-      ) : null}
-      {task ? (
-        <div className="space-y-1 text-xs text-muted-foreground">
-          <p>
-            {task.id}
-            {task.exitCode !== undefined
-              ? ` · ${t("tool.backgroundExitCode", { code: task.exitCode })}`
-              : ""}
-          </p>
-          {onOpenReadFile ? (
-            <button
-              type="button"
-              className="max-w-full truncate text-left underline underline-offset-2"
-              onClick={() =>
-                onOpenReadFile({
-                  scope: "external",
-                  absolutePath: task.outputPath,
-                  viewMode: "preview",
-                })
-              }
-            >
-              {task.outputPath}
-            </button>
-          ) : (
-            <p className="break-all">{task.outputPath}</p>
-          )}
-        </div>
       ) : null}
       {showArgsExcerpt ? (
         <pre
@@ -880,7 +851,6 @@ export function MinimalToolCallCard({
           command={shellCommand}
           onAbortShell={onAbortShell}
           open={open}
-          onOpenReadFile={onOpenReadFile}
         />
       ) : isFileDiff ? (
         <FileToolDiffExpandedBody tool={tool} open={open} />

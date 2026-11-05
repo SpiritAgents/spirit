@@ -1472,7 +1472,6 @@
     "backgroundTaskStatus_stopped": "{{task}} 已停止",
     "backgroundTaskStatus_interrupted": "{{task}} 已中斷",
     "backgroundOutputUnavailable": "輸出無法使用：{{error}}",
-    "backgroundExitCode": "結束代碼：{{code}}",
     "directory": "目錄",
     "generateImage": "生成圖片",
     "generateVideo": "生成影片",

@@ -1476,7 +1476,6 @@
     "backgroundTaskStatus_stopped": "{{task}} Остановлен",
     "backgroundTaskStatus_interrupted": "{{task}} Прерван",
     "backgroundOutputUnavailable": "Вывод недоступен: {{error}}",
-    "backgroundExitCode": "Код Выхода: {{code}}",
     "directory": "Директория",
     "generateImage": "Сгенерировать изображение",
     "generateVideo": "Сгенерировать видео",

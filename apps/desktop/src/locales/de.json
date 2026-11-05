@@ -1472,7 +1472,6 @@
     "backgroundTaskStatus_stopped": "{{task}} Gestoppt",
     "backgroundTaskStatus_interrupted": "{{task}} Unterbrochen",
     "backgroundOutputUnavailable": "Ausgabe nicht verfügbar: {{error}}",
-    "backgroundExitCode": "Exit-Code: {{code}}",
     "directory": "Verzeichnis",
     "generateImage": "Bild generieren",
     "generateVideo": "Video generieren",
