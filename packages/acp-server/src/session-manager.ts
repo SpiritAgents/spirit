@@ -11,6 +11,7 @@ import {
 } from "@spiritagent/agent-core";
 import {
   createBackgroundTaskOwner,
+  acquireRuntimeSessionLease,
   deleteTranscriptSessionDir,
   FileBackgroundTaskStore,
   isBackgroundTaskOwnerAlive,
@@ -326,18 +327,29 @@ export class SessionManager {
       const owner = await (this.owner ??= createBackgroundTaskOwner(
         this.globalConfig.spiritDataDir,
       ));
-      const store = new FileBackgroundTaskStore({
-        spiritDataDir: this.globalConfig.spiritDataDir,
+      const lease = await acquireRuntimeSessionLease(
+        this.globalConfig.spiritDataDir,
         sessionKey,
-        owner: owner.owner,
-      });
-      await store.recoverInterrupted((identity) =>
-        isBackgroundTaskOwnerAlive(this.globalConfig.spiritDataDir, identity),
+        owner.owner,
       );
-      if ((await store.list()).some((task) => !isBackgroundTaskTerminal(task.status)))
-        throw new Error(
-          "This session has active tasks in another runtime. Close it in that host before deleting it.",
+      try {
+        const store = new FileBackgroundTaskStore({
+          spiritDataDir: this.globalConfig.spiritDataDir,
+          sessionKey,
+          owner: owner.owner,
+        });
+        await store.recoverInterrupted((identity) =>
+          isBackgroundTaskOwnerAlive(this.globalConfig.spiritDataDir, identity),
         );
+        if ((await store.list()).some((task) => !isBackgroundTaskTerminal(task.status)))
+          throw new Error(
+            "This session has active tasks in another runtime. Close it in that host before deleting it.",
+          );
+        await deleteTranscriptSessionDir(this.globalConfig.spiritDataDir, sessionId);
+      } finally {
+        await lease.release();
+      }
+      return;
     }
     await deleteTranscriptSessionDir(this.globalConfig.spiritDataDir, sessionId);
   }

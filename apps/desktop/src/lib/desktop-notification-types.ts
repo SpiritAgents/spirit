@@ -14,6 +14,7 @@ export type DesktopNotificationAction =
     };
 
 export type DesktopNotificationContext = {
+  requestId?: string;
   approvalId?: string;
   questionToolCallId?: string;
   questionId?: string;

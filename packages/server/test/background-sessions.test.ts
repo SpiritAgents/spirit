@@ -55,30 +55,35 @@ async function fixture() {
 
 function managerFor(dataDir: string) {
   const events: RuntimeEvent<JsonValue>[] = [];
+  const childEvents: RuntimeEvent<JsonValue>[] = [];
   const finished: string[] = [];
   const snapshots: ReturnType<SessionManager["snapshot"]>[] = [];
   const manager = new SessionManager(dataDir, {
     broadcastRuntimeEvent: (_id, event) => events.push(event),
+    broadcastSubagentEvents: (_id, drains) =>
+      childEvents.push(...drains.flatMap((drain) => drain.events)),
     broadcastTurnFinished: (_id, reason) => finished.push(reason),
     broadcastSnapshot: (_id, snapshot) => snapshots.push(snapshot),
     broadcastTrustRequest: () => {},
     broadcastFileChange: () => {},
   });
   cleanups.push(() => manager.shutdown());
-  return { manager, events, finished, snapshots };
+  return { manager, events, childEvents, finished, snapshots };
 }
 
-function response(text: string, tool?: { name: string; arguments: object }): Response {
-  const delta = tool
+function response(
+  text: string,
+  tool?: { name: string; arguments: object } | { name: string; arguments: object }[],
+): Response {
+  const tools = tool ? (Array.isArray(tool) ? tool : [tool]) : [];
+  const delta = tools.length
     ? {
-        tool_calls: [
-          {
-            index: 0,
-            id: `call-${tool.name}`,
-            type: "function",
-            function: { name: tool.name, arguments: JSON.stringify(tool.arguments) },
-          },
-        ],
+        tool_calls: tools.map((entry, index) => ({
+          index,
+          id: `call-${entry.name}${tools.length > 1 ? `-${index}` : ""}`,
+          type: "function",
+          function: { name: entry.name, arguments: JSON.stringify(entry.arguments) },
+        })),
       }
     : { content: text };
   const chunk = {
@@ -119,9 +124,164 @@ function gatedShell(gate: string) {
   );
 }
 
+it("rejects a second host opening an idle session with no task records", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const first = managerFor(dataDir).manager;
+  const second = managerFor(dataDir).manager;
+  const input = {
+    workspaceRoot,
+    hostKind: "desktop" as const,
+    conversationKey: "ephemeral://idle-owner",
+  };
+  const session = await first.createSession(input);
+  expect(first.snapshot(session.sessionId).backgroundTasks).toEqual([]);
+  await expect(second.createSession(input)).rejects.toThrow("active in another runtime");
+  await first.closeSession(session.sessionId);
+  await expect(second.createSession(input)).resolves.toHaveProperty("sessionId");
+});
+
 async function waitUntil(predicate: () => boolean | Promise<boolean>) {
   await expect.poll(predicate, { timeout: 8_000, interval: 20 }).toBe(true);
 }
+
+async function parallelInputFixture(kind: "approval" | "questions", rounds = 1) {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager, childEvents } = managerFor(dataDir);
+  let inputRequests = 0;
+  scriptedModel((body) => {
+    const messages = body["messages"] as { role: string; content: unknown }[];
+    const child = JSON.stringify(
+      messages.find((message) => message.role === "user")?.content,
+    ).includes("Parallel child");
+    const results = messages.filter((message) => message.role === "tool").length;
+    if (!child) {
+      return results
+        ? response("Parent response.")
+        : response(
+            "",
+            ["A", "B"].map((name) => ({
+              name: "subagent",
+              arguments: { prompt: `Parallel child ${name}`, background: { delay: 0 } },
+            })),
+          );
+    }
+    if (results >= rounds) return response("Child response.");
+    inputRequests += 1;
+    return kind === "approval"
+      ? response("", {
+          name: "shell",
+          arguments: {
+            command: nodeCommand("console.log('completed')"),
+            reason: "Inspect the fixture.",
+            background: { type: false },
+          },
+        })
+      : response("", {
+          name: "ask_questions",
+          arguments: { questions: [{ id: "choice", title: "Which option?" }] },
+        });
+  });
+  const { sessionId } = await manager.createSession({
+    workspaceRoot,
+    hostKind: "cli",
+    approvalLevel: "default",
+  });
+  await manager.submitUserTurn(sessionId, { text: "Run two independent tasks." });
+  const tasks = () =>
+    manager.snapshot(sessionId).backgroundTasks?.filter((task) => task.kind === "subagent") ?? [];
+  await waitUntil(() => tasks().filter((task) => task.status === "blocked").length === 2);
+  const pending = () => {
+    const snapshot = manager.snapshot(sessionId);
+    return kind === "approval" ? snapshot.currentPendingApproval : snapshot.currentPendingQuestions;
+  };
+  const reply = (requestId: string | undefined) =>
+    kind === "approval"
+      ? manager.replyPendingApproval(sessionId, { kind: "allow" }, requestId)
+      : manager.replyPendingQuestions(sessionId, { status: "skipped" }, requestId);
+  const requests = () =>
+    childEvents.flatMap<NonNullable<ReturnType<typeof pending>>>((event) => {
+      if (kind === "approval" && event.kind === "approval-requested") return [event.approval];
+      if (kind === "questions" && event.kind === "questions-requested") return [event.questions];
+      return [];
+    });
+  await waitUntil(() => requests().length === 2);
+  return {
+    manager,
+    sessionId,
+    tasks,
+    pending,
+    reply,
+    requests,
+    inputRequests: () => inputRequests,
+  };
+}
+
+it.each(["approval", "questions"] as const)(
+  "rejects a stale %s reply instead of answering the next parallel child",
+  async (kind) => {
+    const { pending, reply, tasks, requests } = await parallelInputFixture(kind);
+    const first = pending()!;
+    expect(first.requestId).toBeTruthy();
+    const second = requests().find((request) => request.requestId !== first.requestId)!;
+    expect(second.toolCallId).toBe(first.toolCallId);
+    await reply(second.requestId);
+    expect(pending()?.requestId).toBe(first.requestId);
+    await expect(reply(second.requestId)).rejects.toThrow("no longer pending");
+    expect(pending()?.requestId).toBe(first.requestId);
+    await reply(first.requestId);
+    await waitUntil(() => tasks().every((task) => task.status === "completed"));
+    await expect(reply(second.requestId)).rejects.toThrow("no longer pending");
+  },
+);
+
+it.each(["approval", "questions"] as const)(
+  "settles all parallel and subsequent %s requests after the last client disconnects",
+  async (kind) => {
+    const { manager, pending, tasks, inputRequests } = await parallelInputFixture(kind, 2);
+    manager.handleNoClientsRemaining();
+    await waitUntil(() => tasks().every((task) => task.status === "completed"));
+    expect(pending()).toBeUndefined();
+    expect(inputRequests()).toBe(4);
+  },
+);
+
+it("starts two streamed default-delay shells before either hands off", async () => {
+  const { root, dataDir, workspaceRoot } = await fixture();
+  const { manager, finished } = managerFor(dataDir);
+  const requests = scriptedModel(() =>
+    response(
+      "",
+      [0, 1].map(() => ({
+        name: "shell",
+        arguments: { command: gatedShell(path.join(root, "never")), reason: "Run the fixture." },
+      })),
+    ),
+  );
+  const { sessionId } = await manager.createSession({
+    workspaceRoot,
+    hostKind: "cli",
+    conversationKey: "ephemeral://parallel-default",
+    approvalLevel: "bypass-approval",
+  });
+  await manager.submitUserTurn(sessionId, { text: "Run independent checks." });
+  await waitUntil(async () => {
+    const tasks = manager.snapshot(sessionId).backgroundTasks ?? [];
+    if (tasks.length !== 2) return false;
+    const outputs = await Promise.all(tasks.map((task) => readFile(task.outputPath, "utf8")));
+    return outputs.every((output) => output.includes("started"));
+  });
+  const tasks = manager.snapshot(sessionId).backgroundTasks!;
+  expect(tasks.every((task) => !task.background && task.status === "running")).toBe(true);
+  expect(finished).toEqual([]);
+  expect(requests).toHaveLength(1);
+  await manager.closeSession(sessionId);
+  for (const task of tasks) {
+    const record = JSON.parse(
+      await readFile(path.join(path.dirname(task.outputPath), `${task.id}.json`), "utf8"),
+    );
+    expect(record.status).toBe("stopped");
+  }
+});
 
 it("restores offline background replies after the acknowledged UI checkpoint without running the model", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
@@ -413,6 +573,47 @@ it("restores interrupted work and its UI timeline without invoking the model or 
   expect(requests).toHaveLength(0);
 });
 
+it("retains an imported UI baseline and offline replies before the first checkpoint", async () => {
+  const { dataDir, workspaceRoot } = await fixture();
+  const { manager, finished } = managerFor(dataDir);
+  const requests = scriptedModel(() => response("New reply."));
+  const input = {
+    workspaceRoot,
+    hostKind: "cli" as const,
+    conversationKey: "ephemeral://ui-baseline",
+  };
+  const { sessionId } = await manager.createSession(input);
+  const timeline = [{ turnId: 1, createdOrder: 0, segments: [] }];
+  await manager.replaceFromArchive(sessionId, {
+    messages: [],
+    assistantAux: [],
+    llmHistory: [{ role: "user", content: "Imported context." }],
+    desktopMessageTimeline: timeline,
+  });
+  await manager.submitUserTurn(sessionId, { text: "New request." });
+  await waitUntil(() => finished.length === 1);
+  await manager.closeSession(sessionId);
+  const restored = await manager.createSession(input);
+  const archive = manager.exportArchive(restored.sessionId, [], []) as {
+    desktopMessageTimeline: unknown[];
+    presentation: { entries: unknown[] };
+  };
+  expect(archive.desktopMessageTimeline).toEqual(timeline);
+  expect(archive.presentation.entries).toContainEqual(
+    expect.objectContaining({
+      kind: "user",
+      text: "New request.",
+    }),
+  );
+  expect(archive.presentation.entries).toContainEqual(
+    expect.objectContaining({
+      kind: "runtime",
+      event: { kind: "assistant-chunk", text: "New reply." },
+    }),
+  );
+  expect(requests).toHaveLength(1);
+});
+
 it("runs a worktree child with scoped instructions, branch, filesystem, and isolated reply events", async () => {
   const { dataDir, workspaceRoot } = await fixture();
   const git = (...args: string[]) =>
@@ -470,6 +671,13 @@ it("runs a worktree child with scoped instructions, branch, filesystem, and isol
   await waitUntil(() =>
     snapshots.some((snapshot) => Boolean(snapshot.currentPendingApproval?.subagentSessionId)),
   );
+  await expect
+    .poll(
+      () =>
+        manager.snapshot(sessionId).backgroundTasks?.find((task) => task.kind === "subagent")
+          ?.status,
+    )
+    .toBe("blocked");
   await manager.replyPendingApproval(sessionId, { kind: "allow" });
   await waitUntil(() => finished.length === 1);
   expect(requests).toHaveLength(4);

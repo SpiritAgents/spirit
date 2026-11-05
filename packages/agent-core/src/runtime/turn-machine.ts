@@ -385,6 +385,7 @@ export async function resumePendingQuestions<Config, State, ToolRequest>(
           activeGate.autoReviewBlockReason,
         );
         runtime.pendingApproval = {
+          requestId: approval.requestId,
           pendingUserInput: pending.pendingUserInput,
           state: pending.state,
           request: continuedRequest,
@@ -735,6 +736,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
         approvalGate.autoReviewBlockReason,
       );
       runtime.pendingApproval = {
+        requestId: approval.requestId,
         pendingUserInput,
         state: currentState,
         request,
@@ -770,6 +772,7 @@ export async function processToolCalls<Config, State, ToolRequest>(
     if (authorization.kind === "need-questions") {
       const questions = createQuestions(request, call.id, call.name, authorization.questions);
       runtime.pendingQuestions = {
+        requestId: questions.requestId,
         pendingUserInput,
         state: currentState,
         request,
@@ -1511,6 +1514,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
         approvalGate.autoReviewBlockReason,
       );
       runtime.pendingApproval = {
+        requestId: approval.requestId,
         pendingUserInput,
         state: currentState,
         request,
@@ -1551,6 +1555,7 @@ export async function processToolCallsAsync<Config, State, ToolRequest>(
     if (authorization.kind === "need-questions") {
       const questions = createQuestions(request, call.id, call.name, authorization.questions);
       runtime.pendingQuestions = {
+        requestId: questions.requestId,
         pendingUserInput,
         state: currentState,
         request,
@@ -2292,6 +2297,7 @@ function showEarlyStreamApproval<Config, State, ToolRequest>(
     item.autoReviewBlockReason,
   );
   runtime.pendingApproval = {
+    requestId: approval.requestId,
     source: "early-stream",
     pendingUserInput: item.pendingUserInput,
     state,
@@ -2528,8 +2534,9 @@ function createApproval<ToolRequest>(
   toolName: string,
   rememberTarget: PermissionMemoryTarget | undefined,
   autoReviewBlockReason?: string,
-): RuntimePendingApproval<ToolRequest> {
+): RuntimePendingApproval<ToolRequest> & { requestId: string } {
   return {
+    requestId: crypto.randomUUID(),
     prompt,
     request,
     ...(rememberTarget !== undefined ? { rememberTarget } : {}),
@@ -2544,8 +2551,9 @@ function createQuestions<ToolRequest>(
   toolCallId: string,
   toolName: string,
   questions: RuntimePendingQuestions<ToolRequest>["questions"],
-): RuntimePendingQuestions<ToolRequest> {
+): RuntimePendingQuestions<ToolRequest> & { requestId: string } {
   return {
+    requestId: crypto.randomUUID(),
     request,
     toolCallId,
     toolName,

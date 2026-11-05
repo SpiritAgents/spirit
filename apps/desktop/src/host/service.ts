@@ -2416,14 +2416,22 @@ export class DesktopHostService {
         this.paneSessionScopeContext(),
         sessionPath,
         async () => {
-          await replyPendingApprovalCommand(this.sessionTurnContext(), request.decision);
+          await replyPendingApprovalCommand(
+            this.sessionTurnContext(),
+            request.decision,
+            request.requestId,
+          );
         },
       );
       await this.refreshConfigAfterRememberedApproval(request.decision);
       await this.ensureInitialized(undefined, { fastPath: true });
       return this.buildSnapshot();
     }
-    const snapshot = await replyPendingApprovalCommand(this.sessionTurnContext(), request.decision);
+    const snapshot = await replyPendingApprovalCommand(
+      this.sessionTurnContext(),
+      request.decision,
+      request.requestId,
+    );
     await this.refreshConfigAfterRememberedApproval(request.decision);
     return snapshot;
   }
@@ -2449,13 +2457,21 @@ export class DesktopHostService {
         this.paneSessionScopeContext(),
         sessionPath,
         async () => {
-          await replyPendingQuestionsCommand(this.sessionTurnContext(), request.result);
+          await replyPendingQuestionsCommand(
+            this.sessionTurnContext(),
+            request.result,
+            request.requestId,
+          );
         },
       );
       await this.ensureInitialized(undefined, { fastPath: true });
       return this.buildSnapshot();
     }
-    return replyPendingQuestionsCommand(this.sessionTurnContext(), request.result);
+    return replyPendingQuestionsCommand(
+      this.sessionTurnContext(),
+      request.result,
+      request.requestId,
+    );
   }
 
   async replyWorkspaceCapabilityTrust(
@@ -3108,7 +3124,12 @@ export class DesktopHostService {
       workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
       modelRef: effectiveActiveModel,
       agentMode: resolveDesktopAgentMode(state.config),
-      archive,
+      archive: {
+        ...archive,
+        desktopMessageTimeline: normalizeTimelineSnapshotForPersistence(
+          bundle.messageTimeline.snapshot(),
+        ),
+      },
       approvalLevel: normalizeApprovalLevel(bundle.approvalLevel),
       todoSessionKey: this.resolveTodoSessionKeyForBundle(bundle),
       webToolExposure: {
@@ -3981,6 +4002,7 @@ export class DesktopHostService {
       ...(pendingApproval
         ? {
             pendingApproval: {
+              requestId: pendingApproval.requestId,
               toolName: pendingApproval.toolName,
               request: pendingApproval.request as DesktopToolRequest,
               prompt: pendingApproval.prompt,
@@ -4138,6 +4160,7 @@ export class DesktopHostService {
         ...(pendingApproval
           ? {
               pendingToolApproval: mapPendingToolApproval({
+                requestId: pendingApproval.requestId,
                 toolName: pendingApproval.toolName,
                 request: pendingApproval.request as DesktopToolRequest,
                 prompt: pendingApproval.prompt,
@@ -4236,6 +4259,8 @@ export class DesktopHostService {
         isSessionBundleBusy(bundle) ? 1 : 0,
         bundle.activeSession?.filePath ?? bundle.id,
         pendingApproval?.toolCallId ?? "",
+        pendingApproval?.requestId ?? "",
+        pendingQuestions?.requestId ?? "",
         pendingQuestions ? JSON.stringify(pendingQuestions.request) : "",
         bundleRuntime?.pendingUserTurn() ?? "",
         bundleRuntime?.pendingImagePaths()?.length ?? 0,
@@ -4266,6 +4291,7 @@ export class DesktopHostService {
         ...(pendingApproval
           ? {
               pendingApproval: {
+                requestId: pendingApproval.requestId,
                 toolName: pendingApproval.toolName,
                 request: pendingApproval.request as DesktopToolRequest,
                 prompt: pendingApproval.prompt,

@@ -865,10 +865,15 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
       ipcRenderer.removeListener("desktop:notify-refresh", onRefresh);
     };
   },
-  subscribeApprovalFromNotification(callback: (payload: { decision: "allow" | "deny" }) => void) {
-    const onApproval = (_event: Electron.IpcRendererEvent, payload: { decision?: string }) => {
+  subscribeApprovalFromNotification(
+    callback: (payload: { decision: "allow" | "deny"; requestId?: string }) => void,
+  ) {
+    const onApproval = (
+      _event: Electron.IpcRendererEvent,
+      payload: { decision?: string; requestId?: string },
+    ) => {
       if (payload?.decision === "allow" || payload?.decision === "deny") {
-        callback({ decision: payload.decision });
+        callback({ decision: payload.decision, requestId: payload.requestId });
       }
     };
     ipcRenderer.on("desktop:approval-from-notification", onApproval);
@@ -881,6 +886,7 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
       kind: "approval" | "ask-questions";
       text: string;
       context?: {
+        requestId?: string;
         approvalId?: string;
         questionToolCallId?: string;
         questionId?: string;
@@ -893,6 +899,7 @@ contextBridge.exposeInMainWorld("spiritDesktop", {
         kind?: string;
         text?: string;
         context?: {
+          requestId?: string;
           approvalId?: string;
           questionToolCallId?: string;
           questionId?: string;

@@ -78,6 +78,8 @@ import {
   isBackgroundTaskOwnerAlive,
   FileBackgroundTaskStore,
   RuntimeSessionStore,
+  acquireRuntimeSessionLease,
+  type RuntimeSessionLease,
   type RuntimeSessionState,
   ensureSessionStorageKey,
   bindSessionStorageKey,
@@ -258,47 +260,56 @@ export async function createServerRuntime(
     options.sessionKey,
   );
   const sessionStore = new RuntimeSessionStore(options.spiritDataDir, storageSessionKey);
-  const saved = await sessionStore.read();
-  if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(options.workspaceRoot)) {
-    throw new Error("The stored session belongs to a different workspace.");
-  }
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(options.spiritDataDir));
   const executors = new Set<HostToolExecutorProxy>();
-  let result: ServerRuntimeResult;
-  let closed = false;
-  let initialized = saved?.initialized ?? false;
-  let desktopTimeline = saved?.desktopTimeline;
-  const presentation = new PresentationJournal(saved?.presentation);
-  const onEvent: ServerRuntimeOptions["onEvent"] = (event) =>
-    options.onEvent(event, presentation.append({ kind: "runtime", event }));
-  const report = (error: unknown, taskId?: string): void =>
-    onEvent({
-      kind: "background-task-error",
-      error: error instanceof Error ? error.message : String(error),
-      ...(taskId ? { taskId } : {}),
-    });
-  const persist = async (
-    state: {
-      initialized?: boolean;
-      desktopTimeline?: RuntimeSessionState["desktopTimeline"] | null;
-    } = {},
-  ): Promise<void> => {
-    initialized ||= state.initialized === true || result.runtime.history().length > 0;
-    if ("desktopTimeline" in state) desktopTimeline = state.desktopTimeline ?? undefined;
-    const activePlanPath = result.activePlanPathSnapshot();
-    await sessionStore.save({
-      version: 1,
-      sessionKey: storageSessionKey,
-      workspaceRoot: options.workspaceRoot,
-      agentMode: result.agentModeSnapshot(),
-      ...(activePlanPath ? { activePlanPath } : {}),
-      initialized,
-      archive: result.runtime.toArchive([], []),
-      presentation: presentation.snapshot(),
-      ...(desktopTimeline ? { desktopTimeline } : {}),
-    });
-  };
+  let lease: RuntimeSessionLease | undefined;
   try {
+    const sessionLease = await acquireRuntimeSessionLease(
+      options.spiritDataDir,
+      storageSessionKey,
+      owner.owner,
+    );
+    lease = sessionLease;
+    const saved = await sessionStore.read();
+    if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(options.workspaceRoot)) {
+      throw new Error("The stored session belongs to a different workspace.");
+    }
+    let result: ServerRuntimeResult;
+    let closed = false;
+    let initialized = saved?.initialized ?? false;
+    let desktopTimeline: RuntimeSessionState["desktopTimeline"] = saved
+      ? saved.desktopTimeline
+      : { revision: 0, timeline: [], updatedAtUnixMs: Date.now(), presentationSequence: 0 };
+    const presentation = new PresentationJournal(saved?.presentation);
+    const onEvent: ServerRuntimeOptions["onEvent"] = (event) =>
+      options.onEvent(event, presentation.append({ kind: "runtime", event }));
+    const report = (error: unknown, taskId?: string): void =>
+      onEvent({
+        kind: "background-task-error",
+        error: error instanceof Error ? error.message : String(error),
+        ...(taskId ? { taskId } : {}),
+      });
+    const persist = async (
+      state: {
+        initialized?: boolean;
+        desktopTimeline?: RuntimeSessionState["desktopTimeline"] | null;
+      } = {},
+    ): Promise<void> => {
+      initialized ||= state.initialized === true || result.runtime.history().length > 0;
+      if ("desktopTimeline" in state) desktopTimeline = state.desktopTimeline ?? undefined;
+      const activePlanPath = result.activePlanPathSnapshot();
+      await sessionStore.save({
+        version: 1,
+        sessionKey: storageSessionKey,
+        workspaceRoot: options.workspaceRoot,
+        agentMode: result.agentModeSnapshot(),
+        ...(activePlanPath ? { activePlanPath } : {}),
+        initialized,
+        archive: result.runtime.toArchive([], []),
+        presentation: presentation.snapshot(),
+        ...(desktopTimeline ? { desktopTimeline } : {}),
+      });
+    };
     const taskStore = new FileBackgroundTaskStore({
       spiritDataDir: options.spiritDataDir,
       sessionKey: storageSessionKey,
@@ -367,6 +378,7 @@ export async function createServerRuntime(
           const saved = await Promise.allSettled([persist()]);
           const disposed = await Promise.allSettled([
             ...[...executors].map((executor) => executor.disposeLsp()),
+            sessionLease.release(),
             ...(options.taskOwner ? [] : [owner.close()]),
           ]);
           const errors = [...stopped, ...saved, ...disposed].flatMap((entry) =>
@@ -385,6 +397,7 @@ export async function createServerRuntime(
   } catch (error) {
     const cleanup = await Promise.allSettled([
       ...[...executors].map((executor) => executor.disposeLsp()),
+      ...(lease ? [lease.release()] : []),
       ...(options.taskOwner ? [] : [owner.close()]),
     ]);
     const errors = cleanup.flatMap((entry) => (entry.status === "rejected" ? [entry.reason] : []));

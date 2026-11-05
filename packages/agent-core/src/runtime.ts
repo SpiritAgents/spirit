@@ -308,6 +308,10 @@ export class AgentRuntime<Config, State, ToolRequest> {
   private lastSubmittedUserInputStore = "";
   private readonly pendingTaskHookContexts: LlmMessage[] = [];
   private taskNotificationsStore: import("./background-tasks.js").BackgroundTaskNotification[] = [];
+  // Notification writes must settle before the host releases its session lease.
+  private readonly taskNotificationPreparations = new Set<Promise<State>>();
+  private foregroundGeneration = 0;
+  private shuttingDown = false;
 
   constructor(
     options: AgentRuntimeOptions<Config, State, ToolRequest>,
@@ -361,8 +365,6 @@ export class AgentRuntime<Config, State, ToolRequest> {
             ...options.backgroundTasks,
             executeSubagent: (request, toolCallId, context) =>
               this.executeManagedSubagent(request, toolCallId, context),
-            onError: (error) =>
-              this.emitEvent({ kind: "background-task-error", error: renderError(error) }),
             onHostUi: (toolCallId, toolName, argumentsJson, hostUi) =>
               this.emitEvent({
                 kind: "tool-execution-ui-updated",
@@ -409,7 +411,22 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.lastSubmittedUserInputStore = message ? llmMessageTextContent(message.content) : "";
   }
 
-  private async prepareTaskNotificationState(state: State, restored = false): Promise<State> {
+  private prepareTaskNotificationState(state: State, restored = false): Promise<State> {
+    if (this.shuttingDown) return Promise.reject(new Error("Runtime is shutting down."));
+    const generation = this.foregroundGeneration;
+    const operation = this.prepareTaskNotificationStateInner(state, restored);
+    this.taskNotificationPreparations.add(operation);
+    return operation
+      .then((prepared) => {
+        if (generation !== this.foregroundGeneration) {
+          throw new Error("The foreground turn stopped before model dispatch.");
+        }
+        return prepared;
+      })
+      .finally(() => this.taskNotificationPreparations.delete(operation));
+  }
+
+  private async prepareTaskNotificationStateInner(state: State, restored: boolean): Promise<State> {
     const tasks = this.options.backgroundTasks;
     if (
       !tasks ||
@@ -492,11 +509,28 @@ export class AgentRuntime<Config, State, ToolRequest> {
     return structuredClone(this.taskNotificationsStore);
   }
 
-  async shutdown(): Promise<void> {
-    this.abort();
-    if (this.options.backgroundTasks && !this.options.backgroundTasks.scope.parentTaskId) {
-      await this.options.backgroundTasks.manager.shutdown();
+  async settlePendingTaskNotifications(): Promise<void> {
+    const settled = await Promise.allSettled(this.taskNotificationPreparations);
+    const failures = settled.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (failures.length) {
+      throw new AggregateError(failures, "Background task notification persistence failed.");
     }
+  }
+
+  async shutdown(): Promise<void> {
+    this.shuttingDown = true;
+    this.abort();
+    const stopping =
+      this.options.backgroundTasks && !this.options.backgroundTasks.scope.parentTaskId
+        ? this.options.backgroundTasks.manager.shutdown()
+        : Promise.resolve();
+    const settled = await Promise.allSettled([stopping, this.settlePendingTaskNotifications()]);
+    const failures = settled.flatMap((result) =>
+      result.status === "rejected" ? [result.reason] : [],
+    );
+    if (failures.length) throw new AggregateError(failures, "Runtime shutdown failed.");
   }
 
   private async appendToolResultMessageWithOutputTruncation(
@@ -742,9 +776,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
   }
 
-  currentPendingApproval(): RuntimePendingApproval<ToolRequest> | undefined {
-    if (this.pendingApproval) {
+  currentPendingApproval(requestId?: string): RuntimePendingApproval<ToolRequest> | undefined {
+    if (
+      this.pendingApproval &&
+      (requestId === undefined || this.pendingApproval.requestId === requestId)
+    ) {
       return {
+        requestId: this.pendingApproval.requestId,
         prompt: this.pendingApproval.prompt,
         request: this.pendingApproval.request,
         ...(this.pendingApproval.rememberTarget !== undefined
@@ -758,8 +796,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
       };
     }
 
-    if (this.pendingManualApproval) {
+    if (
+      this.pendingManualApproval &&
+      (requestId === undefined || this.pendingManualApproval.requestId === requestId)
+    ) {
       return {
+        requestId: this.pendingManualApproval.requestId,
         prompt: this.pendingManualApproval.prompt,
         request: this.pendingManualApproval.request,
         ...(this.pendingManualApproval.rememberTarget !== undefined
@@ -772,9 +814,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
       };
     }
 
-    const pendingSubagent = this.findPendingSubagentWithApproval();
+    const pendingSubagent = this.findPendingSubagentWithApproval(requestId);
     if (pendingSubagent) {
-      const approval = pendingSubagent.childRuntime.currentPendingApproval();
+      const approval = pendingSubagent.childRuntime.currentPendingApproval(requestId);
       if (approval) {
         return {
           ...approval,
@@ -787,9 +829,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     return undefined;
   }
 
-  currentPendingQuestions(): RuntimePendingQuestions<ToolRequest> | undefined {
-    if (this.pendingQuestions) {
+  currentPendingQuestions(requestId?: string): RuntimePendingQuestions<ToolRequest> | undefined {
+    if (
+      this.pendingQuestions &&
+      (requestId === undefined || this.pendingQuestions.requestId === requestId)
+    ) {
       return {
+        requestId: this.pendingQuestions.requestId,
         request: this.pendingQuestions.request,
         toolCallId: this.pendingQuestions.toolCallId,
         toolName: this.pendingQuestions.toolName,
@@ -797,9 +843,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
       };
     }
 
-    const pendingSubagent = this.findPendingSubagentWithQuestions();
+    const pendingSubagent = this.findPendingSubagentWithQuestions(requestId);
     if (pendingSubagent) {
-      return pendingSubagent.childRuntime.currentPendingQuestions();
+      return pendingSubagent.childRuntime.currentPendingQuestions(requestId);
     }
 
     return undefined;
@@ -839,28 +885,32 @@ export class AgentRuntime<Config, State, ToolRequest> {
     return undefined;
   }
 
-  private findPendingSubagentWithApproval():
+  private findPendingSubagentWithApproval(
+    requestId?: string,
+  ):
     | Pick<PendingSubagentExecution<Config, State, ToolRequest>, "childRuntime" | "childRecord">
     | undefined {
     for (const pending of [
       ...this.pendingSubagentExecutions.values(),
       ...this.managedSubagents.values(),
     ]) {
-      if (pending.childRuntime.hasPendingApproval()) {
+      if (pending.childRuntime.currentPendingApproval(requestId)) {
         return pending;
       }
     }
     return undefined;
   }
 
-  private findPendingSubagentWithQuestions():
+  private findPendingSubagentWithQuestions(
+    requestId?: string,
+  ):
     | Pick<PendingSubagentExecution<Config, State, ToolRequest>, "childRuntime" | "childRecord">
     | undefined {
     for (const pending of [
       ...this.pendingSubagentExecutions.values(),
       ...this.managedSubagents.values(),
     ]) {
-      if (pending.childRuntime.hasPendingQuestions()) {
+      if (pending.childRuntime.currentPendingQuestions(requestId)) {
         return pending;
       }
     }
@@ -975,6 +1025,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   abort(): void {
+    this.foregroundGeneration += 1;
     if (!this.isBusy()) {
       return;
     }
@@ -1570,14 +1621,22 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
   }
 
-  async continuePendingApproval(decision: RuntimeApprovalDecision): Promise<void> {
+  async continuePendingApproval(
+    decision: RuntimeApprovalDecision,
+    requestId?: string,
+  ): Promise<void> {
+    if (
+      this.pendingManualApproval &&
+      (requestId === undefined || this.pendingManualApproval.requestId === requestId)
+    ) {
+      const result = await this.continuePendingManualToolApproval(decision, requestId);
+      if (result.kind === "completed") this.completedManualToolCommandResultStore = result;
+      return;
+    }
     const pending = this.pendingApproval;
-    if (!pending) {
-      if (this.findPendingSubagentWithApproval()) {
-        await this.continuePendingSubagentApproval(decision);
-        return;
-      }
-      throw new Error("There is no pending tool call to confirm.");
+    if (!pending || (requestId !== undefined && pending.requestId !== requestId)) {
+      await this.continuePendingSubagentApproval(decision, requestId);
+      return;
     }
 
     this.pendingApproval = undefined;
@@ -1789,15 +1848,22 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
   }
 
-  async continuePendingQuestions(result: AskQuestionsResult): Promise<void> {
-    if (!this.pendingQuestions) {
-      const pendingSubagent = this.findPendingSubagentWithQuestions();
+  async continuePendingQuestions(result: AskQuestionsResult, requestId?: string): Promise<void> {
+    if (
+      !this.pendingQuestions ||
+      (requestId !== undefined && this.pendingQuestions.requestId !== requestId)
+    ) {
+      const pendingSubagent = this.findPendingSubagentWithQuestions(requestId);
       if (!pendingSubagent) {
-        throw new Error("There is no pending question form to answer.");
+        throw new Error(
+          requestId !== undefined
+            ? "This question form is no longer pending. Refresh the pending request."
+            : "There is no pending question form to answer.",
+        );
       }
 
       this.completedTurnResultStore = undefined;
-      await pendingSubagent.childRuntime.continuePendingQuestions(result);
+      await pendingSubagent.childRuntime.continuePendingQuestions(result, requestId);
       this.refreshChildSessionRecord(pendingSubagent.childRecord, pendingSubagent.childRuntime);
       const childQuestions = pendingSubagent.childRuntime.currentPendingQuestions();
       if (childQuestions) {
@@ -1872,6 +1938,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
       if (authorization.kind === "need-approval") {
         const approval = {
+          requestId: crypto.randomUUID(),
           prompt: { kind: "tool" as const, request: authorization.approval },
           request: continuedRequest,
           ...(authorization.rememberTarget !== undefined
@@ -1881,6 +1948,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
           toolName: pending.toolName,
         };
         this.pendingApproval = {
+          requestId: approval.requestId,
           pendingUserInput: pending.pendingUserInput,
           state: pending.state,
           request: continuedRequest,
@@ -2069,10 +2137,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
   async continuePendingManualToolApproval(
     decision: RuntimeApprovalDecision,
+    requestId?: string,
   ): Promise<RuntimeManualToolCommandStartResult<State, ToolRequest>> {
     return continuePendingManualToolApprovalInternal(
       this as unknown as ManualToolsRuntime<Config, State, ToolRequest>,
       decision,
+      requestId,
     );
   }
 
@@ -2649,6 +2719,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   private async pollPendingBackgroundToolExecution(): Promise<void> {
+    // Preview execution may finish first; commit results only after the stream records its calls.
+    if (this.pendingStreamingRound) return;
     return pollPendingBackgroundToolExecutionInternal(
       this as unknown as BackgroundToolsRuntime<Config, State, ToolRequest>,
     );
@@ -2702,6 +2774,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   private storeCompletedTurnResult(result: RuntimeTurnResult<State, ToolRequest>): void {
+    // Failed streams terminate foreground work too; detached tasks remain session-owned.
+    if (result.kind === "failed") this.abort();
     this.completedTurnResultStore = result;
     // Streaming turns complete here (not via completeTurn); keep transcript in sync.
     if (this.runtimeDepthStore === 0) {
@@ -3622,14 +3696,21 @@ export class AgentRuntime<Config, State, ToolRequest> {
     void this.syncSubagentTranscriptBestEffort(record.summary.sessionId, record.llmHistory);
   }
 
-  private async continuePendingSubagentApproval(decision: RuntimeApprovalDecision): Promise<void> {
-    const pending = this.findPendingSubagentWithApproval();
+  private async continuePendingSubagentApproval(
+    decision: RuntimeApprovalDecision,
+    requestId?: string,
+  ): Promise<void> {
+    const pending = this.findPendingSubagentWithApproval(requestId);
     if (!pending) {
-      throw new Error("There is no pending tool call to confirm.");
+      throw new Error(
+        requestId !== undefined
+          ? "This approval is no longer pending. Refresh the pending request."
+          : "There is no pending tool call to confirm.",
+      );
     }
 
     this.completedTurnResultStore = undefined;
-    await pending.childRuntime.continuePendingApproval(decision);
+    await pending.childRuntime.continuePendingApproval(decision, requestId);
     this.refreshChildSessionRecord(pending.childRecord, pending.childRuntime);
     pending.childRecord.summary.status = pending.childRuntime.currentPendingApproval()
       ? "blocked"
@@ -4001,6 +4082,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     let disposeWorkspace: (() => Promise<void>) | undefined;
     let workspaceRuntimeOptions: AgentRuntimeOptions<Config, State, ToolRequest> | undefined;
     let output: { text: string; failed: boolean };
+    let phase: "running" | "blocked" | "waiting-for-background" = "running";
+    const updatePhase = async (next: typeof phase): Promise<void> => {
+      if (phase === next) return;
+      phase = next;
+      record.summary.status = next === "blocked" ? "blocked" : "running";
+      await context.update({}, next);
+    };
     const cancel = (): void => childRuntime?.abort();
     context.signal.addEventListener("abort", cancel, { once: true });
     try {
@@ -4039,7 +4127,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
         record.summary.title,
         childExecutor,
         workspaceRoot,
-        { context, record },
+        { context, record, onInputRequested: () => updatePhase("blocked") },
         workspaceRuntimeOptions,
       );
       this.managedSubagents.set(sessionId, { parentToolCallId, childRuntime, childRecord: record });
@@ -4050,7 +4138,6 @@ export class AgentRuntime<Config, State, ToolRequest> {
       let finalResult:
         | Extract<RuntimeTurnResult<State, ToolRequest>, { kind: "completed" | "failed" }>
         | undefined;
-      let phase: "running" | "blocked" | "waiting-for-background" = "running";
       for (;;) {
         context.signal.throwIfAborted();
         await childRuntime.poll();
@@ -4070,11 +4157,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
             : finalResult && !childRuntime.isBusy() && active
               ? "waiting-for-background"
               : "running";
-        if (nextPhase !== phase) {
-          phase = nextPhase;
-          await context.update({}, phase);
-        }
-        record.summary.status = phase === "blocked" ? "blocked" : "running";
+        await updatePhase(nextPhase);
         await waitForTaskDelay(0.025, context.signal);
       }
       if (!finalResult) throw new Error("The subagent ended without a result.");
@@ -4141,7 +4224,11 @@ export class AgentRuntime<Config, State, ToolRequest> {
     subagentTitle: string,
     childToolExecutor?: AgentRuntimeOptions<Config, State, ToolRequest>["toolExecutor"],
     childWorkspaceRoot?: string,
-    managed?: { context: SessionTaskContext; record: RuntimeSubagentSessionArchiveEntry },
+    managed?: {
+      context: SessionTaskContext;
+      record: RuntimeSubagentSessionArchiveEntry;
+      onInputRequested(): Promise<void>;
+    },
     workspaceRuntimeOptions?: AgentRuntimeOptions<Config, State, ToolRequest>,
   ): AgentRuntime<Config, State, ToolRequest> {
     const baseExecutor = childToolExecutor ?? this.baseToolExecutor;
@@ -4181,6 +4268,16 @@ export class AgentRuntime<Config, State, ToolRequest> {
         ...(managed
           ? {
               onEvent: (event: RuntimeEvent<ToolRequest>) => {
+                // A streaming tool poll can await input before returning to the child pump.
+                if (event.kind === "approval-requested" || event.kind === "questions-requested") {
+                  void managed.onInputRequested().catch((error: unknown) =>
+                    this.emitEvent({
+                      kind: "background-task-error",
+                      taskId: managed.context.taskId,
+                      error: renderError(error),
+                    }),
+                  );
+                }
                 const text =
                   event.kind === "assistant-chunk"
                     ? event.text

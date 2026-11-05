@@ -1,6 +1,60 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 import { RemoteDesktopRuntime } from "../../dist-electron/src/host/remote-runtime.js";
+import { replyPendingApprovalCommand } from "../../dist-electron/src/host/session-turn-orchestrator.js";
+
+test("remote replies preserve the displayed input identity rather than the latest snapshot", async () => {
+  const calls = [];
+  const runtime = new RemoteDesktopRuntime(
+    {
+      onNotification: () => () => {},
+      call: async (method, params) => {
+        if (method === "session.exportArchive")
+          return { messages: [], llmHistory: [], assistantAux: [] };
+        calls.push({ method, params });
+        if (!params.requestId) throw new Error("missing requestId");
+        return { ok: true };
+      },
+    },
+    "session",
+    { messages: [], llmHistory: [], assistantAux: [] },
+  );
+  await runtime.initializeFromSnapshot({
+    currentPendingApproval: { requestId: "new-approval" },
+    currentPendingQuestions: { requestId: "new-questions" },
+  });
+  await runtime.continuePendingApproval({ kind: "allow" }, "shown-approval");
+  await runtime.continuePendingQuestions({ status: "skipped" }, "shown-questions");
+  assert.equal(calls[0].params.requestId, "shown-approval");
+  assert.equal(calls[1].params.requestId, "shown-questions");
+  await assert.rejects(runtime.continuePendingApproval({ kind: "allow" }), /missing requestId/);
+});
+
+test("a stale guidance reply does not insert a user bubble before the daemon accepts it", async () => {
+  const messages = [];
+  const ctx = {
+    runSerialized: (action) => action(),
+    ensureInitialized: async () => {},
+    requireRuntime: () => ({
+      currentPendingApproval: () => ({ requestId: "new-approval" }),
+      continuePendingApproval: async (_decision, requestId) => {
+        assert.equal(requestId, "shown-approval");
+        throw new Error("This approval is no longer pending.");
+      },
+    }),
+    normalizeApprovalDecision: (decision) => decision,
+    insertUserApprovalReplyMessage: (message) => messages.push(message),
+  };
+  await assert.rejects(
+    replyPendingApprovalCommand(
+      ctx,
+      { kind: "guidance", userMessage: "Use the other option." },
+      "shown-approval",
+    ),
+    /no longer pending/,
+  );
+  assert.deepEqual(messages, []);
+});
 
 test("reconnect recovers offline replies and deduplicates notifications racing with archive export", async () => {
   let listener;
@@ -121,4 +175,73 @@ test("live remote user turns are projected between their surrounding runtime eve
   assert.deepEqual(users, []);
   assert.deepEqual(runtime.drainEvents(), [{ kind: "begin-assistant-response" }]);
   assert.deepEqual(users, ["Next request"]);
+});
+
+test("child events never enter the parent's event drain", () => {
+  let listener;
+  const runtime = new RemoteDesktopRuntime(
+    {
+      onNotification(callback) {
+        listener = callback;
+        return () => {};
+      },
+    },
+    "session",
+    { messages: [], llmHistory: [], assistantAux: [] },
+  );
+  listener({
+    method: "session.subagentEvents",
+    params: {
+      sessionId: "session",
+      drains: [
+        {
+          sessionId: "child",
+          parentToolCallId: "delegate",
+          events: [{ kind: "assistant-chunk", text: "Child reply." }],
+        },
+      ],
+    },
+  });
+  listener({
+    method: "runtime.event",
+    params: {
+      sessionId: "session",
+      presentationSequence: 1,
+      event: { kind: "assistant-chunk", text: "Parent reply." },
+    },
+  });
+  assert.deepEqual(runtime.drainEvents(), [{ kind: "assistant-chunk", text: "Parent reply." }]);
+  assert.deepEqual(runtime.drainActiveChildSessionEvents(), [
+    {
+      sessionId: "child",
+      parentToolCallId: "delegate",
+      events: [{ kind: "assistant-chunk", text: "Child reply." }],
+    },
+  ]);
+});
+
+test("archive import sends its UI baseline with the matching model history", async () => {
+  const calls = [];
+  const timeline = [{ turnId: 1, createdOrder: 0, segments: [] }];
+  const archive = {
+    messages: [],
+    assistantAux: [],
+    llmHistory: [{ role: "user", content: "Imported context." }],
+    desktopMessageTimeline: timeline,
+  };
+  const runtime = new RemoteDesktopRuntime(
+    {
+      onNotification: () => () => {},
+      async call(method, params) {
+        calls.push({ method, params });
+        return method === "session.exportArchive" ? archive : { snapshot: { isBusy: false } };
+      },
+    },
+    "session",
+    archive,
+  );
+  await runtime.initialize(false, true);
+  assert.deepEqual(calls[0].params.archive.desktopMessageTimeline, timeline);
+  assert.deepEqual(runtime.takeRestoredPresentation().timeline, timeline);
+  await runtime.dispose();
 });

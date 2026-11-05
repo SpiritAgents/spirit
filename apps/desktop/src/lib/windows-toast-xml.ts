@@ -1,4 +1,5 @@
 export type WindowsToastPayload = {
+  requestId?: string;
   title: string;
   body?: string;
   tag?: string;
@@ -52,7 +53,7 @@ export function buildWindowsToastXml(payload: WindowsToastPayload): string {
   const actionsXml = (payload.actions ?? [])
     .slice(0, TOAST_ACTION_MAX)
     .map((action, index) => {
-      const argumentsValue = `type=action&action=${index}`;
+      const argumentsValue = `type=action&action=${index}${payload.requestId ? `&requestId=${encodeURIComponent(payload.requestId)}` : ""}`;
       return `<action content="${escapeToastXml(action.text)}" arguments="${escapeToastXml(argumentsValue)}" activationType="background" />`;
     })
     .join("");
@@ -73,16 +74,17 @@ export type WindowsToastActivationDetails = {
 /** Normalize WinRT activation payload from `Notification.handleActivation` / `action` events. */
 export function parseWindowsToastActivation(
   details: WindowsToastActivationDetails,
-): { kind: "click" } | { kind: "action"; actionIndex: number } {
+): { kind: "click" } | { kind: "action"; actionIndex: number; requestId?: string } {
+  const rawArguments = details.arguments?.trim() ?? "";
+  const params = new URLSearchParams(rawArguments.replace(/;/g, "&"));
+  const requestId = params.get("requestId");
   if (details.type?.toLowerCase() === "action") {
     const directIndex = details.actionIndex;
     if (typeof directIndex === "number" && directIndex >= 0) {
-      return { kind: "action", actionIndex: directIndex };
+      return { kind: "action", actionIndex: directIndex, ...(requestId ? { requestId } : {}) };
     }
   }
 
-  const rawArguments = details.arguments?.trim() ?? "";
-  const params = new URLSearchParams(rawArguments.replace(/;/g, "&"));
   const activationType = (params.get("type") ?? details.type ?? "click").toLowerCase();
   if (activationType !== "action") {
     return { kind: "click" };
@@ -98,7 +100,7 @@ export function parseWindowsToastActivation(
   if (actionIndex === undefined) {
     return { kind: "click" };
   }
-  return { kind: "action", actionIndex };
+  return { kind: "action", actionIndex, ...(requestId ? { requestId } : {}) };
 }
 
 export function resolveNotificationActionIndex(

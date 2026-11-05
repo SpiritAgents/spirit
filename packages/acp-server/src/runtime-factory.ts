@@ -63,6 +63,8 @@ import {
   ensureSessionStorageKey,
   readSessionStorageKey,
   RuntimeSessionStore,
+  acquireRuntimeSessionLease,
+  type RuntimeSessionLease,
   createSubagentWorkspaceBootstrap,
 } from "@spiritagent/host-internal";
 
@@ -102,32 +104,39 @@ export async function createAcpRuntime(
     : await ensureSessionStorageKey(config.spiritDataDir, transcriptSessionKey);
   if (!storageKey) throw new Error("Stored ACP session not found.");
   const sessionStore = new RuntimeSessionStore(config.spiritDataDir, storageKey);
-  const saved = await sessionStore.read();
-  if (options.requireExisting && !saved) throw new Error("Stored ACP session not found.");
-  if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(config.workspaceRoot)) {
-    throw new Error("The stored session belongs to a different workspace.");
-  }
   const owner = options.taskOwner ?? (await createBackgroundTaskOwner(config.spiritDataDir));
   let result: AcpRuntimeResult | undefined;
-  let closed = false;
-  const report = (error: unknown, taskId?: string) =>
-    onEvent({
-      kind: "background-task-error",
-      error: error instanceof Error ? error.message : String(error),
-      ...(taskId ? { taskId } : {}),
-    });
-  const persist = async () => {
-    if (!result) throw new Error("ACP runtime is not initialized.");
-    await sessionStore.save({
-      version: 1,
-      sessionKey: storageKey,
-      workspaceRoot: config.workspaceRoot,
-      agentMode: result.agentModeSnapshot(),
-      initialized: true,
-      archive: result.runtime.toArchive([], []),
-    });
-  };
+  let lease: RuntimeSessionLease | undefined;
   try {
+    const sessionLease = await acquireRuntimeSessionLease(
+      config.spiritDataDir,
+      storageKey,
+      owner.owner,
+    );
+    lease = sessionLease;
+    const saved = await sessionStore.read();
+    if (options.requireExisting && !saved) throw new Error("Stored ACP session not found.");
+    if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(config.workspaceRoot)) {
+      throw new Error("The stored session belongs to a different workspace.");
+    }
+    let closed = false;
+    const report = (error: unknown, taskId?: string) =>
+      onEvent({
+        kind: "background-task-error",
+        error: error instanceof Error ? error.message : String(error),
+        ...(taskId ? { taskId } : {}),
+      });
+    const persist = async () => {
+      if (!result) throw new Error("ACP runtime is not initialized.");
+      await sessionStore.save({
+        version: 1,
+        sessionKey: storageKey,
+        workspaceRoot: config.workspaceRoot,
+        agentMode: result.agentModeSnapshot(),
+        initialized: true,
+        archive: result.runtime.toArchive([], []),
+      });
+    };
     const store = new FileBackgroundTaskStore({
       spiritDataDir: config.spiritDataDir,
       sessionKey: storageKey,
@@ -179,7 +188,10 @@ export async function createAcpRuntime(
         closed = true;
         const stopped = await Promise.allSettled([runtime.shutdown()]);
         const persisted = await Promise.allSettled([persist()]);
-        const owners = await Promise.allSettled(options.taskOwner ? [] : [owner.close()]);
+        const owners = await Promise.allSettled([
+          sessionLease.release(),
+          ...(options.taskOwner ? [] : [owner.close()]),
+        ]);
         const errors = [...stopped, ...persisted, ...owners].flatMap((entry) =>
           entry.status === "rejected" ? [entry.reason] : [],
         );
@@ -193,7 +205,9 @@ export async function createAcpRuntime(
     return result;
   } catch (error) {
     const cleanup = await Promise.allSettled(
-      result ? [result.dispose()] : options.taskOwner ? [] : [owner.close()],
+      result
+        ? [result.dispose()]
+        : [...(lease ? [lease.release()] : []), ...(options.taskOwner ? [] : [owner.close()])],
     );
     const errors = cleanup.flatMap((entry) => (entry.status === "rejected" ? [entry.reason] : []));
     if (errors.length)

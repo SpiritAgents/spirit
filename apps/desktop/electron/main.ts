@@ -362,13 +362,16 @@ async function handleSpiritOpenSessionFromProtocol(sessionPath: string): Promise
   }
 }
 
-async function handleApprovalNotificationAction(decision: "allow" | "deny"): Promise<void> {
+async function handleApprovalNotificationAction(
+  decision: "allow" | "deny",
+  requestId?: string,
+): Promise<void> {
   let deliveredToRenderer = false;
   for (const window of BrowserWindow.getAllWindows()) {
     if (window.isDestroyed() || window.webContents.isDestroyed()) {
       continue;
     }
-    window.webContents.send("desktop:approval-from-notification", { decision });
+    window.webContents.send("desktop:approval-from-notification", { decision, requestId });
     deliveredToRenderer = true;
   }
   if (deliveredToRenderer) {
@@ -377,7 +380,7 @@ async function handleApprovalNotificationAction(decision: "allow" | "deny"): Pro
 
   try {
     const next = await invokeMainDesktopHostCommand("replyPendingApproval", {
-      request: { decision: { kind: decision } },
+      request: { decision: { kind: decision }, requestId },
     });
     if (isDesktopSnapshot(next)) {
       for (const window of BrowserWindow.getAllWindows()) {

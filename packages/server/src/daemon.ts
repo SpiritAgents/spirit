@@ -581,13 +581,21 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
       case SESSION_REPLY_PENDING_APPROVAL: {
         const sessionId = readSessionId(params);
         requireAttachedToSession(clientState, sessionId);
-        await sessionManager.replyPendingApproval(sessionId, params["decision"] as never);
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
+        await sessionManager.replyPendingApproval(
+          sessionId,
+          params["decision"] as never,
+          requestId,
+        );
         return { ok: true };
       }
       case SESSION_REPLY_PENDING_QUESTIONS: {
         const sessionId = readSessionId(params);
         requireAttachedToSession(clientState, sessionId);
-        await sessionManager.replyPendingQuestions(sessionId, params["result"] as never);
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
+        await sessionManager.replyPendingQuestions(sessionId, params["result"] as never, requestId);
         return { ok: true };
       }
       case SESSION_RESOLVE_EXTENSION_UI: {
@@ -707,11 +715,15 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           readSessionId(params),
           String(params["message"] ?? ""),
         );
-      case SESSION_CONTINUE_MANUAL_APPROVAL:
+      case SESSION_CONTINUE_MANUAL_APPROVAL: {
+        const requestId = params["requestId"];
+        if (typeof requestId !== "string" || !requestId) throw new Error("missing requestId");
         return sessionManager.continuePendingManualToolApproval(
           readSessionId(params),
           params["decision"],
+          requestId,
         );
+      }
       case SESSION_TAKE_MANUAL_RESULT:
         return sessionManager.takeCompletedManualToolCommandResult(readSessionId(params));
       case SESSION_SUBAGENT_ARCHIVE:

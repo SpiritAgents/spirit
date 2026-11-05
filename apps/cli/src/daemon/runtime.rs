@@ -1468,24 +1468,35 @@ impl DaemonRuntime {
             Some(crate::runtime_sync::PendingApprovalKind::Tool) => "session.replyPendingApproval",
             None => return,
         };
-        if let Err(err) = self.call_daemon(method, Some(json!({ "decision": decision }))) {
+        let request_id = self
+            .sync
+            .current_pending_approval
+            .as_ref()
+            .and_then(|pending| pending.request_id.clone());
+        if let Err(err) = self.call_daemon(
+            method,
+            Some(json!({ "decision": decision, "requestId": request_id })),
+        ) {
             self.handle_daemon_error(err);
         }
     }
 
     pub fn respond_to_pending_questions(
         &mut self,
+        request_id: Option<&str>,
         result: &crate::ask_questions::AskQuestionsResult,
-    ) {
+    ) -> bool {
         if self.daemon_failed {
-            return;
+            return false;
         }
         if let Err(err) = self.call_daemon(
             "session.replyPendingQuestions",
-            Some(json!({ "result": result })),
+            Some(json!({ "result": result, "requestId": request_id })),
         ) {
             self.handle_daemon_error(err);
+            return false;
         }
+        true
     }
 
     pub fn execute_manual_tool_command(&mut self, message: &str) {

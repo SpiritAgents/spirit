@@ -147,8 +147,9 @@ export async function runDesktopAutomationOnce(
       }
       if (result.kind === "requires-approval") {
         if (input.definition.approvalLevel === "bypass-approval") {
+          const requestId = result.approval.requestId;
           result = await runAutomationStreamingTurn(runtime, projection, async () => {
-            await runtime.continuePendingApproval({ kind: "allow" });
+            await runtime.continuePendingApproval({ kind: "allow" }, requestId);
           });
           continue;
         }
@@ -170,8 +171,9 @@ export async function runDesktopAutomationOnce(
       }
       if (result.kind === "requires-questions") {
         if (input.definition.approvalLevel === "bypass-approval") {
+          const requestId = result.questions.requestId;
           result = await runAutomationStreamingTurn(runtime, projection, async () => {
-            await runtime.continuePendingQuestions({ status: "skipped" });
+            await runtime.continuePendingQuestions({ status: "skipped" }, requestId);
           });
           continue;
         }

@@ -284,12 +284,31 @@ it("refuses to load or delete task files owned by another live ACP host", async 
   await second.client.initialize({ protocolVersion: 1 });
   await expect(
     second.client.loadSession({ sessionId, cwd: config.workspaceRoot, mcpServers: [] }),
-  ).rejects.toThrow("active tasks in another runtime");
+  ).rejects.toThrow("active in another runtime");
   await expect(second.client.deleteSession({ sessionId })).rejects.toThrow(
-    "active tasks in another runtime",
+    "active in another runtime",
   );
   expect(requests).toBe(2);
   await first.client.closeSession({ sessionId });
+  await second.client.deleteSession({ sessionId });
+});
+
+it("preserves an idle session when another host tries to load or delete it", async () => {
+  const { config } = await fixture();
+  const first = connect(config);
+  const { sessionId } = await createClientSession(first.client, config);
+  const second = connect(config);
+  await second.client.initialize({ protocolVersion: 1 });
+  await expect(
+    second.client.loadSession({ sessionId, cwd: config.workspaceRoot, mcpServers: [] }),
+  ).rejects.toThrow("active in another runtime");
+  await expect(second.client.deleteSession({ sessionId })).rejects.toThrow(
+    "active in another runtime",
+  );
+  await first.client.closeSession({ sessionId });
+  await expect(
+    second.client.loadSession({ sessionId, cwd: config.workspaceRoot, mcpServers: [] }),
+  ).resolves.toHaveProperty("modes");
   await second.client.deleteSession({ sessionId });
 });
 

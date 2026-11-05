@@ -253,6 +253,7 @@ pub(crate) enum BridgeToolApprovalPrompt {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgePendingApproval {
+    pub(crate) request_id: Option<String>,
     pub(crate) prompt: BridgeToolApprovalPrompt,
     pub(crate) request: Value,
     pub(crate) remember_target: Option<BridgePermissionMemoryTarget>,
@@ -267,6 +268,7 @@ pub(crate) struct BridgePendingApproval {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgePendingQuestions {
+    pub(crate) request_id: Option<String>,
     pub(crate) request: Value,
     pub(crate) tool_call_id: String,
     pub(crate) tool_name: String,

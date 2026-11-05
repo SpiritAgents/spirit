@@ -103,6 +103,7 @@ pub enum BottomFormKind {
     McpAdd,
     ModelAdd,
     AskQuestions {
+        request_id: Option<String>,
         tool_call_id: String,
         tool_name: String,
         request: AskQuestionsRequest,

@@ -131,6 +131,54 @@ test("keeps delay timing metadata through completion and cancellation", () => {
   assert.equal(tool.delay.elapsedMs, 1250);
 });
 
+test("an active Subagent does not hide independent parent tools or assistant text", () => {
+  const { orchestrator, timeline, pushUser } = createHarness();
+  pushUser("Delegate research and inspect a separate file.");
+  orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "tool-call-started",
+      toolCallId: "child",
+      toolName: "subagent",
+      request: { name: "subagent", prompt: "Research." },
+    },
+    {
+      kind: "streaming-tool-preview",
+      toolCallId: "parent-read",
+      toolName: "read_file",
+      argumentsJson: '{"path":"note.txt"}',
+    },
+    {
+      kind: "tool-call-started",
+      toolCallId: "parent-read",
+      toolName: "read_file",
+      request: { name: "read_file", path: "note.txt" },
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "parent-read",
+        toolName: "read_file",
+        request: { name: "read_file", path: "note.txt" },
+        output: "Parent file.",
+        failed: false,
+      },
+    },
+    { kind: "assistant-chunk", text: "Parent continues independently." },
+    { kind: "assistant-response-completed" },
+  ]);
+  const messages = timeline.toMessages();
+  assert.equal(
+    messages.find((message) => message.tool?.toolCallId === "child").tool.phase,
+    "running",
+  );
+  assert.equal(
+    messages.find((message) => message.tool?.toolCallId === "parent-read").tool.phase,
+    "succeeded",
+  );
+  assert(messages.some((message) => message.content === "Parent continues independently."));
+});
+
 function rowToken(message) {
   if (message.role === "user") return "user";
   if (message.tool) return `tool:${message.tool.toolCallId}`;

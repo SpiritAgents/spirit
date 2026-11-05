@@ -33,11 +33,12 @@ pub(super) fn apply_runtime_events(shell: &mut TuiShell) {
                 upsert_tool_preview(shell, &tool_call_id, &tool_name, &request);
             }
             RuntimeEvent::OpenAskQuestions {
+                request_id,
                 tool_call_id,
                 tool_name,
                 questions,
             } => {
-                shell.open_ask_questions_form(tool_call_id, tool_name, questions);
+                shell.open_ask_questions_form(request_id, tool_call_id, tool_name, questions);
             }
             RuntimeEvent::BeginAssistantResponse => {
                 let should_reanchor_persisted_subagent_status =

@@ -62,8 +62,6 @@ import {
   finishTaskNoticePreviewFromArguments,
   finishTaskSummaryFromExecution,
   applyToolCallSummaryCopy,
-  hasActiveSubagentToolInMessages,
-  hasInFlightSubagentDelegationInMessages,
   isSubagentStatusSurfaceText,
   providerToolCallSummaryCopy,
   toolCallSummaryCopyForResponsesBuiltInTool,
@@ -160,15 +158,6 @@ export class DesktopRuntimeEventOrchestrator {
       this.findExistingToolSnapshot(toolCallId)?.todoWriteBeforeTodos,
       this.options.todoItemsBeforeWrite?.() ?? [],
     );
-  }
-
-  private shouldSuppressMainTimelineChildToolSurface(toolName: string): boolean {
-    if (toolName === "subagent") {
-      return false;
-    }
-    const timelineMessages =
-      this.options.messageTimeline?.()?.toMessages() ?? this.options.messages();
-    return hasInFlightSubagentDelegationInMessages(timelineMessages);
   }
 
   private findExistingToolSnapshot(toolCallId: string | undefined): ToolBlockSnapshot | undefined {
@@ -362,6 +351,7 @@ export class DesktopRuntimeEventOrchestrator {
   }
 
   applyRuntimeHostEvents(events: RuntimeEvent<DesktopToolRequest>[]): void {
+    // Child streams arrive separately through session.subagentEvents, not this root event stream.
     const messages = this.options.messages();
     const batchId =
       events.length > 0 ? (this.lastApplyEventBatchId += 1) : this.lastApplyEventBatchId;
@@ -478,11 +468,6 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "update-pending-assistant-thinking") {
-        const timelineMessages =
-          this.options.messageTimeline?.()?.toMessages() ?? this.options.messages();
-        if (hasActiveSubagentToolInMessages(timelineMessages)) {
-          continue;
-        }
         const timeline = this.options.messageTimeline?.();
         if (
           timeline &&
@@ -501,10 +486,6 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "assistant-chunk") {
-        const timelineMessagesForChunk = this.options.messageTimeline?.()?.toMessages() ?? messages;
-        if (hasActiveSubagentToolInMessages(timelineMessagesForChunk)) {
-          continue;
-        }
         this.options.assistantMessages.appendPendingAssistantChunk(event.text);
         this.options.messageTimeline?.()?.appendAssistantTextChunk(event.text);
         continue;
@@ -566,9 +547,6 @@ export class DesktopRuntimeEventOrchestrator {
       }
       if (event.kind === "tool-call-started") {
         if (isFinishTaskToolName(event.toolName)) {
-          continue;
-        }
-        if (this.shouldSuppressMainTimelineChildToolSurface(event.toolName)) {
           continue;
         }
         const runningSummary =
@@ -633,9 +611,6 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "tool-execution-output-chunk") {
-        if (this.shouldSuppressMainTimelineChildToolSurface(event.toolName)) {
-          continue;
-        }
         const existing = this.findExistingToolSnapshot(event.toolCallId);
         if (!existing || existing.backgroundTask) {
           continue;
@@ -649,9 +624,6 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "tool-execution-finished") {
-        if (this.shouldSuppressMainTimelineChildToolSurface(event.execution.toolName)) {
-          continue;
-        }
         if (event.execution.toolName === "generate_image" && event.execution.toolCallId) {
           this.activeGenerateImageTools.delete(event.execution.toolCallId);
         }
@@ -687,9 +659,6 @@ export class DesktopRuntimeEventOrchestrator {
         if (notice) {
           this.applyFinishTaskNoticePreview(notice);
         }
-        continue;
-      }
-      if (this.shouldSuppressMainTimelineChildToolSurface(event.toolName)) {
         continue;
       }
       // Before the tool preview, materialize the thinking deferred on the body aux into its own row (before-tools), so inserting the tool does not strip it away.
@@ -785,9 +754,6 @@ export class DesktopRuntimeEventOrchestrator {
       return;
     }
     const messages = this.options.messageTimeline?.()?.toMessages() ?? this.options.messages();
-    if (hasActiveSubagentToolInMessages(messages)) {
-      return;
-    }
 
     const pendingTrim = runtime.pendingAssistantText().trim();
     const awaitingInteractive =
@@ -895,12 +861,8 @@ export class DesktopRuntimeEventOrchestrator {
 
   syncPendingToolStates(): void {
     const runtime = this.options.runtime();
-    const timelineMessages =
-      this.options.messageTimeline?.()?.toMessages() ?? this.options.messages();
-    const suppressSubagentChildToolSurface =
-      hasInFlightSubagentDelegationInMessages(timelineMessages);
     const approval = runtime?.currentPendingApproval();
-    if (approval && !approval.subagentSessionId && !suppressSubagentChildToolSurface) {
+    if (approval && !approval.subagentSessionId) {
       const approvalSummary = toolCallSummaryForPhase(
         "pending-approval",
         approval.toolName,
@@ -939,7 +901,7 @@ export class DesktopRuntimeEventOrchestrator {
     }
 
     const questions = runtime?.currentPendingQuestions();
-    if (questions && !suppressSubagentChildToolSurface) {
+    if (questions) {
       const pendingTool: ToolBlockSnapshot = {
         toolCallId: toolMessageKey(questions),
         toolName: questions.toolName,
@@ -987,9 +949,6 @@ export class DesktopRuntimeEventOrchestrator {
     source: "event" | "turn-result",
   ): void {
     for (const execution of executions) {
-      if (this.shouldSuppressMainTimelineChildToolSurface(execution.toolName)) {
-        continue;
-      }
       if (isFinishTaskToolName(execution.toolName)) {
         const toolCallId = execution.toolCallId || `tool:${execution.toolName}`;
         this.options.assistantMessages.removeToolMessage(toolCallId);

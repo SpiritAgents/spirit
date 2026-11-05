@@ -409,8 +409,13 @@ impl RuntimeHandle {
         self.backend.respond_to_pending_tool_approval(message)
     }
 
-    pub fn respond_to_pending_questions(&mut self, result: &AskQuestionsResult) {
-        self.backend.respond_to_pending_questions(result)
+    pub fn respond_to_pending_questions(
+        &mut self,
+        request_id: Option<&str>,
+        result: &AskQuestionsResult,
+    ) -> bool {
+        self.backend
+            .respond_to_pending_questions(request_id, result)
     }
 
     pub fn execute_manual_tool_command(&mut self, message: &str) {

@@ -20,6 +20,7 @@ import {
   type RuntimeParityCaseResult,
   writeFile,
 } from "./harness.js";
+import { CONTEXT_INJECTION_MAX_BYTES } from "../../../../context-budget.js";
 
 export async function runContextProjectionCase(): Promise<RuntimeParityCaseResult> {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-runtime-"));
@@ -28,7 +29,7 @@ export async function runContextProjectionCase(): Promise<RuntimeParityCaseResul
     await mkdir(join(workspaceRoot, "src"), { recursive: true });
     await writeFile(join(workspaceRoot, "src", "runtime.ts"), "export const runtime = true;\n");
     await writeFile(join(workspaceRoot, "README.md"), "hello from readme\n");
-    await writeFile(join(workspaceRoot, "large.txt"), "x".repeat(24_050));
+    await writeFile(join(workspaceRoot, "large.txt"), "x".repeat(CONTEXT_INJECTION_MAX_BYTES + 50));
 
     const referencedFiles = await pendingWorkspaceFilesFromInput(
       workspaceRoot,
@@ -46,7 +47,8 @@ export async function runContextProjectionCase(): Promise<RuntimeParityCaseResul
       !largeFile ||
       largeFile.kind !== "text" ||
       !largeFile.truncated ||
-      !largeFile.content.endsWith("...<file content truncated>")
+      largeFile.content !==
+        `${"x".repeat(CONTEXT_INJECTION_MAX_BYTES)}\n\n...<file content truncated>`
     ) {
       throw new Error(
         "workspace file helper smoke did not truncate the oversized file as expected.",

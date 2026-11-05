@@ -23,6 +23,7 @@ export function buildPaneSessionSlice(input: {
   livePendingAux?: PendingAssistantAux;
   isForegroundActive: boolean;
   pendingApproval?: {
+    requestId?: string;
     toolName: string;
     request: DesktopToolRequest;
     prompt: import("@spiritagent/agent-core").ToolApprovalPrompt;
@@ -69,6 +70,7 @@ export function buildPaneSessionSlice(input: {
     ...(input.pendingApproval
       ? {
           pendingToolApproval: mapPendingToolApproval({
+            requestId: input.pendingApproval.requestId,
             toolName: input.pendingApproval.toolName,
             request: input.pendingApproval.request,
             prompt: input.pendingApproval.prompt,

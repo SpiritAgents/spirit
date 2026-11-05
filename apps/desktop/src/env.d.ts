@@ -391,7 +391,7 @@ declare global {
     subscribeAppAwayChanged(callback: (away: boolean) => void): () => void;
     subscribeNotifyRefresh(callback: () => void): () => void;
     subscribeApprovalFromNotification(
-      callback: (payload: { decision: "allow" | "deny" }) => void,
+      callback: (payload: { decision: "allow" | "deny"; requestId?: string }) => void,
     ): () => void;
     subscribeNotificationReply(
       callback: (payload: {

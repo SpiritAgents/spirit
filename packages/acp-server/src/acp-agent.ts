@@ -385,7 +385,7 @@ export class SpiritAcpAgent implements acp.Agent {
       if (session) {
         void handleApprovalRequest(this.connection, sessionId, event.approval)
           .then(async (decision) => {
-            const pending = session.runtime.currentPendingApproval();
+            const pending = session.runtime.currentPendingApproval(event.approval.requestId);
             if (
               pending?.request !== event.approval.request ||
               pending?.toolCallId !== event.approval.toolCallId ||
@@ -393,7 +393,7 @@ export class SpiritAcpAgent implements acp.Agent {
             )
               return;
             // Early-stream execution can await this decision inside the session pump.
-            await session.runtime.continuePendingApproval(decision);
+            await session.runtime.continuePendingApproval(decision, event.approval.requestId);
           })
           .catch((error: unknown) =>
             console.error("Failed to apply ACP permission response:", error),
@@ -409,7 +409,7 @@ export class SpiritAcpAgent implements acp.Agent {
         const description = event.questions.questions.title ?? event.questions.toolName;
         void handleQuestionsRequest(this.connection, sessionId, { prompt: description })
           .then(async (allowed) => {
-            const pending = session.runtime.currentPendingQuestions();
+            const pending = session.runtime.currentPendingQuestions(event.questions.requestId);
             if (
               pending?.request !== event.questions.request ||
               pending?.toolCallId !== event.questions.toolCallId
@@ -417,6 +417,7 @@ export class SpiritAcpAgent implements acp.Agent {
               return;
             await session.runtime.continuePendingQuestions(
               allowed ? { status: "answered", answers: [] } : { status: "skipped" },
+              event.questions.requestId,
             );
           })
           .catch((error: unknown) =>

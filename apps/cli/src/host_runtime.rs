@@ -34,6 +34,7 @@ pub enum RuntimeEvent {
         arguments: serde_json::Value,
     },
     OpenAskQuestions {
+        request_id: Option<String>,
         tool_call_id: String,
         tool_name: String,
         questions: AskQuestionsRequest,

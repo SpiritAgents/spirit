@@ -93,16 +93,26 @@ Notes for client authors:
 - `update-pending-assistant-thinking` carries the full accumulated thinking text (same contract as the legacy host bridge) — clients that want deltas must diff locally.
 - `session.list` covers **live** sessions only. `session.create` reports `restoredFromDisk` when the daemon recovered persisted runtime history; clients must not overwrite that history with an older local archive. Uninitialized sessions still accept the client's archive.
 - Multi-client: every connected client receives every session's events; filter by `sessionId`. When the **last** client disconnects, pending approvals are denied and pending questions skipped so no runtime parks forever.
+- Approval and question payloads carry a stable `requestId`. Reply RPCs, including manual-command approval continuations, require the ID from the displayed request, including notification actions and retained forms. IDs route to the owning child even when several children have pending input with the same tool call ID; replayed, replaced, or cancelled requests are rejected instead of consuming another request. Disconnected hosts also settle subsequent child inputs until a client attaches again.
 
 ### Background tasks and session lifetime
 
 Shell and Subagent tasks are owned by the session, not its current foreground turn. `session.abort` cancels foreground work; already-backgrounded tasks continue. `session.detach` removes an observer without closing the session. Explicit `session.close`, `session.reset`, and daemon shutdown stop owned work. Model changes replace foreground bindings while running children retain their original model, mode, and workspace services.
+
+Tools may start from streaming previews, but their results are committed only after the assistant tool calls are recorded. A failed stream cancels foreground continuations instead of resuming from an orphan result; already-backgrounded tasks retain their session lifetime.
+
+Notification persistence settles before ownership is released or history is replaced. Cancelling during notification preparation prevents a subsequent model request, and a stopping parent rejects late child-task launches.
 
 The daemon serializes foreground entry points and polls task state independently. A completed background task is delivered once at a safe tool boundary, or starts one continuation when the foreground is idle. Snapshots include `backgroundTasks` and `backgroundTaskNotifications`; runtime events distinguish task changes, terminal notifications, and persistence errors.
 
 Runtime history and Desktop timeline snapshots are persisted alongside task records. A stable internal storage identity keeps transcript and live-output paths unchanged when a provisional conversation acquires its permanent chat path. External conversation paths are lookup keys in `session-storage-index`, not directories to move.
 
 `runtime.event` and `session.userTurnSubmitted` include a monotonic `presentationSequence`. The archive also contains a presentation journal after the latest acknowledged Desktop snapshot. This journal retains public responses independently of model-history compaction; streaming task logs remain in their output files instead of being copied into it. Desktop checkpoints only fully projected, idle boundaries with `session.pushDesktopTimeline({ timeline, presentationSequence })`. Acknowledgment and the matching timeline are persisted together, and stale or invalid cursors are rejected. Reconnecting clients replay the remaining entries in order and discard overlapping live events by sequence without invoking the model.
+
+New sessions start with an empty UI baseline. Desktop and CLI include `desktopMessageTimeline`
+when importing an archive, so baseline and model history change atomically; replay replaces the
+client's partial local projection instead of appending duplicates. This also lets CLI-only
+sessions recover pre-compaction replies from the journal before any Desktop checkpoint exists.
 
 Task completion rows retain their task ID, terminal event ID, source, output preview, and file reference as structured metadata. Shell output stays inspectable after interruption, and Subagent rows retain the original child-session navigation target. Missing output files are reported explicitly.
 

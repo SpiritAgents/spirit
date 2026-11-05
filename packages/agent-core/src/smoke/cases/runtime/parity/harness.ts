@@ -55,6 +55,22 @@ export function historyAsPlainApiMessages(history: LlmMessage[]): JsonValue[] {
     role: message.role,
     content: llmMessageTextContent(message.content),
     ...(message.toolCallId !== undefined ? { tool_call_id: message.toolCallId } : {}),
+    ...(message.toolCalls?.length
+      ? {
+          tool_calls: message.toolCalls.map((call) => ({
+            id: call.id,
+            type: "function",
+            function: { name: call.name, arguments: call.argumentsJson },
+          })),
+        }
+      : {}),
+    ...(message.role === "user" && llmMessageHasImages(message.content)
+      ? {
+          image_paths: message.content
+            .filter((part): part is { type: "image"; path: string } => part.type === "image")
+            .map((part) => part.path),
+        }
+      : {}),
   }));
 }
 
@@ -2486,18 +2502,7 @@ export class PollingManualBackgroundExecutor extends HostExecutor {
 export function createScriptedState(history: LlmMessage[], userInput: string): ScriptedState {
   const messages: JsonValue[] = [
     { role: "system", content: "scripted-runtime" },
-    ...history.map((message) => ({
-      role: message.role,
-      content: llmMessageTextContent(message.content),
-      ...(message.toolCallId !== undefined ? { tool_call_id: message.toolCallId } : {}),
-      ...(message.role === "user" && llmMessageHasImages(message.content)
-        ? {
-            image_paths: message.content
-              .filter((part): part is { type: "image"; path: string } => part.type === "image")
-              .map((part) => part.path),
-          }
-        : {}),
-    })),
+    ...historyAsPlainApiMessages(history),
   ];
 
   const last = messages.at(-1);

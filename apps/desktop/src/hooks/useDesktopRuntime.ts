@@ -3258,7 +3258,7 @@ export function useDesktopRuntime() {
   );
 
   const submitApproval = useCallback(
-    async (decision: DesktopApprovalDecision, sessionPath?: string) => {
+    async (decision: DesktopApprovalDecision, sessionPath?: string, requestId?: string) => {
       if (!api) {
         return;
       }
@@ -3272,6 +3272,7 @@ export function useDesktopRuntime() {
       try {
         const next = await api.replyPendingApproval({
           decision,
+          ...(requestId ? { requestId } : {}),
           ...(sessionPath?.trim() ? { sessionPath: sessionPath.trim() } : {}),
         });
         applySnapshot(next);
@@ -3326,9 +3327,9 @@ export function useDesktopRuntime() {
     if (!bridge?.subscribeApprovalFromNotification) {
       return;
     }
-    return bridge.subscribeApprovalFromNotification(({ decision }) => {
+    return bridge.subscribeApprovalFromNotification(({ decision, requestId }) => {
       const sessionPath = resolvePendingApprovalSessionPath(snapshotRef.current);
-      void submitApproval({ kind: decision }, sessionPath);
+      void submitApproval({ kind: decision }, sessionPath, requestId);
     });
   }, [submitApproval]);
 
@@ -3347,7 +3348,11 @@ export function useDesktopRuntime() {
         return;
       }
       const sessionPath = resolvePendingApprovalSessionPath(snapshotRef.current);
-      void submitApproval({ kind: "guidance", userMessage }, sessionPath);
+      void submitApproval(
+        { kind: "guidance", userMessage },
+        sessionPath,
+        payload.context?.requestId,
+      );
     });
   }, [submitApproval]);
 
@@ -3371,6 +3376,7 @@ export function useDesktopRuntime() {
         try {
           const next = await api.replyPendingQuestions({
             result,
+            ...(payload.context?.requestId ? { requestId: payload.context.requestId } : {}),
             ...(sessionPath ? { sessionPath } : {}),
           });
           applySnapshot(next);
@@ -3409,6 +3415,7 @@ export function useDesktopRuntime() {
       try {
         const next = await api.replyPendingQuestions({
           result: built.result,
+          ...(effectiveQuestions.requestId ? { requestId: effectiveQuestions.requestId } : {}),
           ...(sessionPath?.trim() ? { sessionPath: sessionPath.trim() } : {}),
         });
         applySnapshot(next);
@@ -3434,6 +3441,7 @@ export function useDesktopRuntime() {
       try {
         const next = await api.replyPendingQuestions({
           result: { status: "skipped" },
+          ...(effectiveQuestions.requestId ? { requestId: effectiveQuestions.requestId } : {}),
           ...(sessionPath?.trim() ? { sessionPath: sessionPath.trim() } : {}),
         });
         applySnapshot(next);

@@ -31,10 +31,10 @@ function resolveAttentionBlockKey(
   questions: PendingQuestionsSnapshot | undefined,
 ): string | undefined {
   if (approval) {
-    return `approval:${approval.toolName}:${approval.prompt}`;
+    return `approval:${approval.requestId}:${approval.toolName}:${approval.prompt}`;
   }
   if (questions) {
-    return `questions:${questions.toolCallId}`;
+    return `questions:${questions.requestId}:${questions.toolCallId}`;
   }
   return undefined;
 }
@@ -80,6 +80,7 @@ function approvalNotificationPayload(
 
   return {
     kind: "approval",
+    context: { requestId: approval.requestId },
     tag: "spirit-approval",
     title: formatSessionPrefixedTitle(sessionName, i18n.t("notification.approval.title")),
     body: isWindows ? body : `${body}\n${i18n.t("notification.approval.returnToApp")}`,
@@ -133,6 +134,7 @@ function askQuestionsNotificationPayload(
             },
           ],
           context: {
+            requestId: pending.requestId,
             questionToolCallId: pending.toolCallId,
             questionId: singleQuestion.id,
           },
@@ -267,7 +269,9 @@ export function useDesktopSystemNotifications(options: {
     }
     prevBusyRef.current = isBusy;
 
-    const approvalKey = approval ? `${approval.toolName}:${approval.prompt}` : undefined;
+    const approvalKey = approval
+      ? `${approval.requestId}:${approval.toolName}:${approval.prompt}`
+      : undefined;
     if (approval && approvalKey !== prevApprovalKeyRef.current) {
       void requestDesktopNotification(
         bridge,
@@ -276,7 +280,7 @@ export function useDesktopSystemNotifications(options: {
     }
     prevApprovalKeyRef.current = approvalKey;
 
-    const questionsKey = questions?.toolCallId;
+    const questionsKey = questions ? `${questions.requestId}:${questions.toolCallId}` : undefined;
     if (questions && questionsKey && questionsKey !== prevQuestionsKeyRef.current) {
       void requestDesktopNotification(
         bridge,

@@ -262,6 +262,7 @@ export type RuntimeEvent<ToolRequest> =
     };
 
 export interface RuntimePendingApproval<ToolRequest> {
+  requestId?: string;
   prompt: ToolApprovalPrompt;
   request: ToolRequest;
   rememberTarget?: PermissionMemoryTarget;
@@ -293,6 +294,7 @@ export interface RuntimeSubagentSessionArchiveEntry extends SubagentSessionArchi
 }
 
 export interface RuntimePendingQuestions<ToolRequest> {
+  requestId?: string;
   request: ToolRequest;
   toolCallId: string;
   toolName: string;
@@ -560,6 +562,7 @@ export interface RuntimeTurnContext<ToolRequest> {
 }
 
 export interface PendingApprovalState<State, ToolRequest> {
+  requestId: string;
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
@@ -581,6 +584,7 @@ export interface PendingApprovalState<State, ToolRequest> {
 }
 
 export interface PendingQuestionsState<State, ToolRequest> {
+  requestId: string;
   pendingUserInput: string;
   state: State;
   request: ToolRequest;
@@ -606,6 +610,7 @@ export interface PendingToolCallContinuation<State, ToolRequest> {
 }
 
 export interface PendingManualApprovalState<ToolRequest> {
+  requestId: string;
   request: ToolRequest;
   prompt: ToolApprovalPrompt;
   rememberTarget?: PermissionMemoryTarget;
@@ -658,7 +663,12 @@ export interface PendingToolCallBackgroundToolExecution<State, ToolRequest> {
   failed: boolean | undefined;
 }
 
-/** Held while the background slot is occupied; the state after prior tools complete is injected at actual start. */
+export interface StartedBackgroundToolExecution {
+  startedAtUnixMs: number;
+  result: Promise<{ output: ToolExecutionOutput; failed: boolean }>;
+}
+
+/** Results commit after prior tools; opted-in executions can already be running. */
 export interface DeferredBackgroundToolExecutionSpec<_State, ToolRequest> {
   pendingUserInput: string;
   request: ToolRequest;
@@ -670,6 +680,7 @@ export interface DeferredBackgroundToolExecutionSpec<_State, ToolRequest> {
   streamingEmitBeginResponse: boolean;
   earlyToolExecutions?: Map<string, PendingEarlyToolExecution<ToolRequest>>;
   postHookToolInput?: JsonObject;
+  startedExecution?: StartedBackgroundToolExecution;
 }
 
 export interface PendingManualBackgroundToolExecution<ToolRequest> {

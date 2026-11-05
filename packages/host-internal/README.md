@@ -31,6 +31,13 @@ the full file remains available until the session is deleted.
 
 `createBackgroundTaskOwner` uses an instance-specific local IPC endpoint, not a PID liveness guess.
 Recovery can mark an absent owner interrupted without replaying work or counting downtime.
+`acquireRuntimeSessionLease` claims the entire session before reading runtime state, including
+sessions without background tasks. A small built-in SQLite table in
+`session-storage-index/runtime-leases.sqlite` atomically claims or replaces an inactive owner;
+IPC probes run outside transactions, and lease tokens prevent stale recovery or release from
+overwriting another host's claim. Daemon and ACP release ownership after shutdown and persistence;
+ACP deletion holds its own lease while removing stored files.
+
 `runShell` applies output backpressure and supervises process lifetime: POSIX commands run in an
 owned process group with a host-disconnect watchdog; Windows uses a suspended launch and a
 kill-on-close Job Object. This is lifecycle management, not a sandbox for commands that

@@ -76,6 +76,106 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("session task lifecycle", () => {
+  it.each(["stopping", "stopped"] as const)(
+    "rejects descendants launched while their parent is %s",
+    async (status) => {
+      const { manager, input, scope, done } = fixture();
+      const parent = await manager.launch(input, async (context) => {
+        await waitForTaskDelay(60, context.signal);
+        return done;
+      });
+      await manager.initialResult(parent, scope, { delay: 0 });
+      const stopping = manager.stop(parent, scope);
+      if (status === "stopped") await stopping;
+      await expect(
+        manager.launch({ ...input, runtimeId: "child", parentTaskId: parent }, async () => done),
+      ).rejects.toThrow("Parent task is no longer active");
+      await stopping;
+    },
+  );
+
+  it("does not start work cancelled while its task record is being created", async () => {
+    const { manager, store, input, scope, done } = fixture();
+    const create = store.create.bind(store);
+    let release!: () => void;
+    store.create = async (value) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return create(value);
+    };
+    const foreground = new AbortController();
+    const run = vi.fn(async () => done);
+    const launching = manager.launch(input, run, foreground.signal);
+    foreground.abort(new Error("Turn cancelled."));
+    release();
+    const id = await launching;
+    expect(await manager.initialResult(id, scope, { type: false })).toMatchObject({
+      kind: "completed",
+      record: { status: "stopped" },
+    });
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("waits for in-flight task creation before completing shutdown", async () => {
+    const { manager, store, input, done } = fixture();
+    const create = store.create.bind(store);
+    let release!: () => void;
+    store.create = async (value) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return create(value);
+    };
+    const run = vi.fn(async () => done);
+    const launching = manager.launch(input, run);
+    let closed = false;
+    const closing = manager.shutdown().then(() => {
+      closed = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(closed).toBe(false);
+    release();
+    await launching;
+    await closing;
+    expect(manager.records()[0]?.status).toBe("stopped");
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it("waits for a child's in-flight creation when stopping its parent task", async () => {
+    const { manager, store, input, scope, done } = fixture();
+    const parent = await manager.launch(input, async (context) => {
+      await waitForTaskDelay(60, context.signal);
+      return done;
+    });
+    await manager.initialResult(parent, scope, { delay: 0 });
+    const create = store.create.bind(store);
+    let release!: () => void;
+    store.create = async (value) => {
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return create(value);
+    };
+    const launching = manager.launch(
+      { ...input, runtimeId: "child", parentTaskId: parent },
+      async (context) => {
+        await waitForTaskDelay(60, context.signal);
+        return done;
+      },
+    );
+    let stopped = false;
+    const stopping = manager.stop(parent, scope).then(() => {
+      stopped = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(stopped).toBe(false);
+    release();
+    await launching;
+    await stopping;
+    expect(manager.records().every((record) => record.status === "stopped")).toBe(true);
+  });
+
   it.each([16_384, 16_385])(
     "marks output previews truncated only beyond the limit (%i)",
     async (size) => {
@@ -309,7 +409,10 @@ function toolCalls(
   };
 }
 
-function runtimeFixture(script: (state: ScriptedState) => ToolAgentRoundCompletion<ScriptedState>) {
+function runtimeFixture(
+  script: (state: ScriptedState) => ToolAgentRoundCompletion<ScriptedState>,
+  shellSeconds = 2,
+) {
   const tasks = fixture();
   class Executor extends HostExecutor {
     metadata = new WeakMap<ScriptedToolRequest, ToolRequestExecutionMetadata>();
@@ -321,7 +424,7 @@ function runtimeFixture(script: (state: ScriptedState) => ToolAgentRoundCompleti
       if (request.name !== "shell") return super.execute(request);
       const metadata = this.metadata.get(request);
       await metadata?.onOutputChunk?.("running\n");
-      await waitForTaskDelay(2, metadata?.signal);
+      await waitForTaskDelay(shellSeconds, metadata?.signal);
       await metadata?.onOutputChunk?.("complete\n");
       return { ...createToolExecutionTextOutput("shell complete"), execution: { exitCode: 0 } };
     }
@@ -356,6 +459,158 @@ async function advanceRuntime(
 }
 
 describe("managed tasks in AgentRuntime", () => {
+  it.each(["shutdown", "abort", "reset"] as const)(
+    "finishes pending notification persistence without starting a model call after %s",
+    async (action) => {
+      const invoke = vi.fn((state: ScriptedState) => finalResponse(state, "unexpected"));
+      const { runtime, manager, store, input, done, scope } = runtimeFixture(invoke);
+      const id = await manager.launch(input, async () => {
+        await waitForTaskDelay(1);
+        return done;
+      });
+      await manager.initialResult(id, scope, { delay: 0 });
+      await vi.advanceTimersByTimeAsync(1000);
+      const save = store.save.bind(store);
+      let release!: () => void;
+      store.save = async (record) => {
+        if (record.notificationDelivered) {
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        }
+        await save(record);
+      };
+      await runtime.startUserTurnStreaming("Inspect the completed task.");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(release).toBeTypeOf("function");
+      let closed = false;
+      const closing = (async () => {
+        if (action === "shutdown") await runtime.shutdown();
+        else {
+          runtime.abort();
+          if (action === "reset") {
+            await manager.cancelOwnedWork();
+            await runtime.settlePendingTaskNotifications();
+            runtime.replaceHistory([], { retainBackgroundHistory: false });
+          }
+        }
+        closed = true;
+      })();
+      await vi.advanceTimersByTimeAsync(0);
+      try {
+        expect(closed).toBe(action === "abort");
+      } finally {
+        release();
+        await closing;
+        await vi.advanceTimersByTimeAsync(0);
+      }
+      expect(invoke).not.toHaveBeenCalled();
+      if (action === "reset") expect(runtime.history()).toEqual([]);
+      await runtime.shutdown();
+    },
+  );
+
+  it("starts multiple default-delay calls concurrently before the 30-second handoff", async () => {
+    let rounds = 0;
+    const { runtime, manager } = runtimeFixture(
+      (state) =>
+        ++rounds === 1
+          ? toolCalls(state, [
+              { id: "first-default", name: "shell", argumentsJson: '{"command":"first"}' },
+              { id: "second-default", name: "shell", argumentsJson: '{"command":"second"}' },
+            ])
+          : finalResponse(state, "Both started."),
+      35,
+    );
+    await runtime.startUserTurnStreaming("Run two independent tasks.");
+    await advanceRuntime(runtime, 1000);
+    expect(manager.records()).toHaveLength(2);
+    expect(manager.records().every((record) => !record.background)).toBe(true);
+    await advanceRuntime(runtime, 29_500);
+    expect(manager.records().every((record) => record.background)).toBe(true);
+    expect(runtime.takeCompletedTurnResult()).toMatchObject({ assistantText: "Both started." });
+    expect(
+      runtime
+        .history()
+        .filter((message) => message.role === "tool")
+        .map((message) => message.toolCallId),
+    ).toEqual(["first-default", "second-default"]);
+    await advanceRuntime(runtime, 5000);
+    expect(manager.records().every((record) => record.status === "completed")).toBe(true);
+    await runtime.shutdown();
+  });
+
+  it("cancels every concurrent foreground task before handoff", async () => {
+    let rounds = 0;
+    const { runtime, manager } = runtimeFixture(
+      (state) =>
+        ++rounds === 1
+          ? toolCalls(state, [
+              {
+                id: "first-foreground",
+                name: "shell",
+                argumentsJson: '{"command":"first","background":{"type":false}}',
+              },
+              {
+                id: "second-foreground",
+                name: "shell",
+                argumentsJson: '{"command":"second","background":{"type":false}}',
+              },
+            ])
+          : finalResponse(state, "Finished."),
+      35,
+    );
+    await runtime.startUserTurnStreaming("Start the work.");
+    await advanceRuntime(runtime, 1000);
+    expect(manager.records()).toHaveLength(2);
+    runtime.abort();
+    await advanceRuntime(runtime, 250);
+    expect(
+      manager.records().every((record) => record.status === "stopped" && !record.background),
+    ).toBe(true);
+    expect(rounds).toBe(1);
+    await runtime.shutdown();
+  });
+
+  it("can stop a task while an earlier call in the same batch waits for it", async () => {
+    let rounds = 0;
+    const { runtime, manager } = runtimeFixture((state) => {
+      if (++rounds === 1)
+        return toolCalls(state, [
+          {
+            id: "shell-control",
+            name: "shell",
+            argumentsJson: '{"command":"work","background":{"delay":0}}',
+          },
+        ]);
+      if (rounds === 2)
+        return toolCalls(state, [
+          {
+            id: "wait-control",
+            name: "delay",
+            argumentsJson: '{"task_id":"task_000000000001","seconds":60}',
+          },
+          {
+            id: "stop-control",
+            name: "stop_task",
+            argumentsJson: '{"task_id":"task_000000000001"}',
+          },
+        ]);
+      return finalResponse(state, "Stopped.");
+    }, 35);
+    await runtime.startUserTurnStreaming("Manage the background task.");
+    await advanceRuntime(runtime, 500);
+    expect(manager.records()[0]?.status).toBe("stopped");
+    expect(runtime.takeCompletedTurnResult()).toMatchObject({ assistantText: "Stopped." });
+    expect(
+      runtime
+        .history()
+        .filter((message) => message.role === "tool")
+        .map((message) => message.toolCallId),
+    ).toEqual(["shell-control", "wait-control", "stop-control"]);
+    await runtime.shutdown();
+  });
+
   it("publishes host timing before a delay resolves and records actual elapsed time", async () => {
     let rounds = 0;
     const { runtime } = runtimeFixture((state) =>

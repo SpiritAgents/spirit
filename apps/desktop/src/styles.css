@@ -800,18 +800,6 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
     }
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .spirit-delay-duration {
-      transition: none;
-    }
-    .spirit-delay-duration-enter {
-      animation: none;
-    }
-    .spirit-delay-duration-outgoing {
-      display: none;
-    }
-  }
-
   /* OOBE step transitions: directional non-linear fade in/out (exit faster than enter), no blur */
   @keyframes spirit-oobe-step-exit-forward {
     from {
@@ -895,6 +883,16 @@ html.spirit-reduce-motion.spirit-launch-splash-exiting
   }
 
   html.spirit-reduce-motion {
+    .spirit-delay-duration {
+      transition: none;
+    }
+    .spirit-delay-duration-enter {
+      animation: none;
+    }
+    .spirit-delay-duration-outgoing {
+      display: none;
+    }
+
     .spirit-oobe-step-exit-forward,
     .spirit-oobe-step-exit-backward {
       animation: spirit-oobe-step-fade-out 120ms ease-out both;

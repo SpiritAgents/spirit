@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { COMPACT_PROGRESS_TEXT } from "../../../../llm-context-block.js";
 import {
   AgentRuntime,
@@ -58,6 +59,37 @@ export async function runManualToolsCase(): Promise<RuntimeParityCaseResult> {
   ) {
     throw new Error("manual guidance smoke did not complete the final reply.");
   }
+
+  const firstApproval = await hostRuntime.startManualToolCommand("/tool delete demo.txt");
+  if (firstApproval.kind !== "requires-approval" || !firstApproval.approval.requestId) {
+    throw new Error("manual approval smoke did not expose a request identity.");
+  }
+  await hostRuntime.continuePendingApproval({ kind: "deny" }, firstApproval.approval.requestId);
+  if (hostRuntime.hasPendingManualApproval()) {
+    throw new Error("the shared approval path did not settle the manual request.");
+  }
+  const secondApproval = await hostRuntime.startManualToolCommand("/tool delete demo.txt");
+  if (secondApproval.kind !== "requires-approval" || !secondApproval.approval.requestId) {
+    throw new Error("the subsequent manual approval did not expose a request identity.");
+  }
+  assert.notEqual(secondApproval.approval.requestId, firstApproval.approval.requestId);
+  await assert.rejects(
+    hostRuntime.continuePendingManualToolApproval(
+      { kind: "allow" },
+      firstApproval.approval.requestId,
+    ),
+    /no longer pending/u,
+  );
+  assert.equal(hostRuntime.currentPendingApproval()?.requestId, secondApproval.approval.requestId);
+  await hostRuntime.continuePendingApproval({ kind: "allow" }, secondApproval.approval.requestId);
+  assert.equal(
+    hostRuntime.takeCompletedManualToolCommandResult()?.output,
+    "manual output for delete_file",
+  );
+  await assert.rejects(
+    hostRuntime.continuePendingApproval({ kind: "allow" }, secondApproval.approval.requestId),
+    /no longer pending/u,
+  );
 
   const manualBackgroundExecutor = new PollingManualBackgroundExecutor();
   const manualBackgroundRuntime = new AgentRuntime({

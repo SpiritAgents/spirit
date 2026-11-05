@@ -155,6 +155,7 @@ impl RuntimeSyncState {
                 }
                 BridgeRuntimeEvent::QuestionsRequested { questions } => {
                     self.events.push_back(RuntimeEvent::OpenAskQuestions {
+                        request_id: questions.request_id,
                         tool_call_id: questions.tool_call_id,
                         tool_name: questions.tool_name,
                         questions: questions.questions,

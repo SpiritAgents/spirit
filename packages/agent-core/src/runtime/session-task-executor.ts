@@ -31,7 +31,6 @@ export interface SessionTaskExecutorOptions {
     toolCallId: string,
     context: SessionTaskContext,
   ): Promise<SessionTaskResult>;
-  onError(error: unknown): void;
   onHostUi(
     toolCallId: string,
     toolName: string,
@@ -81,10 +80,12 @@ export function createSessionTaskExecutor<ToolRequest>(
     shouldExecuteInBackground(request) {
       return isManaged(getCall(request)) || (base.shouldExecuteInBackground?.(request) ?? false);
     },
+    canExecuteConcurrently(request) {
+      return isManaged(getCall(request)) || (base.canExecuteConcurrently?.(request) ?? false);
+    },
     abortRunningShell() {
       foreground.abort(new Error("Foreground turn stopped."));
       foreground = new AbortController();
-      void options.manager.stopForeground(options.scope).catch(options.onError);
     },
     async execute(request) {
       const call = getCall(request);
@@ -195,6 +196,7 @@ export function createSessionTaskExecutor<ToolRequest>(
           );
           return { output, ...output.execution };
         },
+        foreground.signal,
       );
       const result = await options.manager.initialResult(taskId, options.scope, background);
       detached = result.kind === "background";

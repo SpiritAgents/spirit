@@ -81,6 +81,27 @@ test("crossfades units and releases the outgoing text", () => {
   expect(ui.container.querySelector(".spirit-delay-duration-outgoing")).toBeNull();
 });
 
+test("enabling reduced motion settles an active completion animation and cancels its frames", () => {
+  const ui = render(
+    <DelayToolDuration
+      tool={{ ...tool, delay: { startedAtUnixMs: 1000, deadlineUnixMs: 2000 } }}
+    />,
+  );
+  const completed: ToolBlockSnapshot = {
+    ...tool,
+    phase: "succeeded",
+    delay: { ...tool.delay!, elapsedMs: 252000 },
+  };
+  ui.rerender(<DelayToolDuration tool={completed} />);
+  act(() => vi.advanceTimersByTime(80));
+  expect(ui.getByRole("timer").getAttribute("aria-label")).not.toBe("4m 12s");
+  preferences.reduced = true;
+  ui.rerender(<DelayToolDuration tool={completed} />);
+  expect(ui.getByRole("timer").getAttribute("aria-label")).toBe("4m 12s");
+  expect(ui.container.querySelector(".spirit-delay-duration-outgoing")).toBeNull();
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 test("unbounded waits reveal elapsed duration once, with no replay on completed remount", () => {
   preferences.reduced = true;
   const waiting: ToolBlockSnapshot = {

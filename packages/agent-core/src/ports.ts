@@ -752,6 +752,8 @@ export interface ToolExecutor<
     result: AskQuestionsResult,
   ): Promise<ToolRequest | undefined>;
   shouldExecuteInBackground?(request: ToolRequest): boolean;
+  /** Overlap execution while committing results in tool-call order. */
+  canExecuteConcurrently?(request: ToolRequest): boolean;
   backgroundStatusText?(request: ToolRequest): string | undefined;
   abortRunningShell?(): void;
   startMcpBackgroundRefresh(): void;

@@ -276,6 +276,8 @@ export class SessionManager {
   private readonly conversationIndex = new Map<string, string>();
   /** sessionId → attached clientIds (refcount). */
   private readonly attachments = new Map<string, Set<string>>();
+  private noClientsRemaining = false;
+  private readonly unattendedInputs = new Set<string>();
   private readonly pendingTrustRequests = new Map<string, PendingTrustRequest>();
   private readonly pendingExtensionUi = new Map<
     string,
@@ -427,6 +429,7 @@ export class SessionManager {
       this.attachments.set(sessionId, clients);
     }
     clients.add(clientId);
+    this.noClientsRemaining = false;
     return {
       session: this.projectInfo(session),
       snapshot: this.snapshotForSession(session),
@@ -574,6 +577,7 @@ export class SessionManager {
   }
 
   private tickSession(session: ServerSession): void {
+    if (this.noClientsRemaining) this.denyUnattendedInputs(session);
     if (session.polling || session.closing) {
       return;
     }
@@ -1018,6 +1022,7 @@ export class SessionManager {
     session.runtimeResult.runtime.abort();
     await this.serializeSession(session, async () => {
       await session.runtimeResult.tasks.cancelOwnedWork();
+      await session.runtimeResult.runtime.settlePendingTaskNotifications();
       for (const task of session.runtimeResult.tasks.records()) {
         if (task.terminalEventId && !task.notificationDelivered) {
           await session.runtimeResult.tasks.markNotified(task.id, { runtimeId: "main" });
@@ -1029,13 +1034,21 @@ export class SessionManager {
       session.runtimeResult.presentation.clear();
       session.runtimeResult.setActivePlanPath();
       session.info.isBusy = false;
-      session.desktopTimeline = undefined;
+      session.desktopTimeline = {
+        revision: (session.desktopTimeline?.revision ?? 0) + 1,
+        timeline: [],
+        updatedAtUnixMs: Date.now(),
+        presentationSequence: session.runtimeResult.presentation.snapshot().sequence,
+      };
       // Match the legacy bridge's fresh-session semantics: todos reset with it.
       await createHostTodoStore({
         spiritDataDir: this.spiritDataDir,
         scope: { sessionKey: session.todoSessionKey },
       }).purge();
-      await session.runtimeResult.persist({ initialized: true, desktopTimeline: null });
+      await session.runtimeResult.persist({
+        initialized: true,
+        desktopTimeline: session.desktopTimeline,
+      });
       this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
     });
   }
@@ -1059,16 +1072,33 @@ export class SessionManager {
       if (runtime.isBusy() || session.turnActive) {
         throw new Error("session is busy; cannot replace archive while a turn is active");
       }
-      session.runtimeResult.runtime.replaceFromArchive(archive as never);
+      const importedTimeline =
+        archive && typeof archive === "object" && "desktopMessageTimeline" in archive
+          ? archive.desktopMessageTimeline
+          : undefined;
+      if (importedTimeline !== undefined && !Array.isArray(importedTimeline)) {
+        throw new Error("desktop timeline must be an array");
+      }
+      await runtime.settlePendingTaskNotifications();
+      runtime.replaceFromArchive(archive as never);
       session.runtimeResult.presentation.clear();
       session.runtimeResult.setActivePlanPath(
         extractActivePlanPathFromLlmHistory(runtime.history()),
       );
-      // History was replaced wholesale; the previous timeline is stale until
-      // the owning host pushes a fresh snapshot.
-      session.desktopTimeline = undefined;
+      // Import the matching UI baseline before any new journal events can arrive.
+      session.desktopTimeline = importedTimeline
+        ? {
+            revision: (session.desktopTimeline?.revision ?? 0) + 1,
+            timeline: structuredClone(importedTimeline),
+            updatedAtUnixMs: Date.now(),
+            presentationSequence: session.runtimeResult.presentation.snapshot().sequence,
+          }
+        : undefined;
       await session.runtimeResult.restoreTaskNotifications();
-      await session.runtimeResult.persist({ initialized: true, desktopTimeline: null });
+      await session.runtimeResult.persist({
+        initialized: true,
+        desktopTimeline: session.desktopTimeline ?? null,
+      });
     });
   }
 
@@ -1261,11 +1291,16 @@ export class SessionManager {
     });
   }
 
-  async continuePendingManualToolApproval(sessionId: string, decision: unknown): Promise<unknown> {
+  async continuePendingManualToolApproval(
+    sessionId: string,
+    decision: unknown,
+    requestId?: string,
+  ): Promise<unknown> {
     const session = this.requireSession(sessionId);
     return this.serializeSession(session, async () => {
       const result = await session.runtimeResult.runtime.continuePendingManualToolApproval(
         decision as never,
+        requestId,
       );
       return { result, snapshot: this.snapshot(sessionId) };
     });
@@ -1394,10 +1429,11 @@ export class SessionManager {
   async replyPendingApproval(
     sessionId: string,
     decision: Parameters<ServerRuntimeResult["runtime"]["continuePendingApproval"]>[0],
+    requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
     // poll() can await an early-stream approval; its reply must not queue behind that poll.
-    await session.runtimeResult.runtime.continuePendingApproval(decision);
+    await session.runtimeResult.runtime.continuePendingApproval(decision, requestId);
     // approval-resolved mid-broadcast often sees isBusy=false (pending cleared, tool not
     // inFlight yet). Push again after continue so clients see the resumed busy edge —
     // same pattern as replyPendingQuestions.
@@ -1429,8 +1465,11 @@ export class SessionManager {
   }
 
   private createExtensionUiOpener(sessionId: string): McpUiOpener {
-    return (request: McpUiOpenRequest) =>
-      new Promise<McpUiOpenResult>((resolve) => {
+    return (request: McpUiOpenRequest) => {
+      if (this.noClientsRemaining) {
+        return Promise.resolve({ kind: "unavailable" as const, reason: "host-has-no-ui" });
+      }
+      return new Promise<McpUiOpenResult>((resolve) => {
         const requestId = randomUUID();
         this.pendingExtensionUi.set(requestId, { sessionId, resolve });
         this.callbacks.broadcastExtensionUiRequested?.(sessionId, {
@@ -1440,6 +1479,7 @@ export class SessionManager {
           ...(request.params === undefined ? {} : { params: request.params }),
         });
       });
+    };
   }
 
   private settleExtensionUiForSession(sessionId: string, result: McpUiOpenResult): void {
@@ -1455,9 +1495,10 @@ export class SessionManager {
   async replyPendingQuestions(
     sessionId: string,
     result: Parameters<ServerRuntimeResult["runtime"]["continuePendingQuestions"]>[0],
+    requestId?: string,
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.runtime.continuePendingQuestions(result);
+    await session.runtimeResult.runtime.continuePendingQuestions(result, requestId);
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
   }
 
@@ -1465,6 +1506,7 @@ export class SessionManager {
     sessionId: string,
     request: WorkspaceCapabilityTrustRequestPayload,
   ): Promise<WorkspaceCapabilityTrustDecision> {
+    if (this.noClientsRemaining) return Promise.resolve("deny");
     return new Promise((resolve) => {
       const requestId = randomUUID();
       const timer = setTimeout(() => {
@@ -1500,25 +1542,9 @@ export class SessionManager {
    * runtime parks on input that can never arrive.
    */
   handleNoClientsRemaining(): void {
+    this.noClientsRemaining = true;
     for (const session of this.sessions.values()) {
-      const { runtime } = session.runtimeResult;
-      if (runtime.hasPendingApproval()) {
-        this.replyPendingApproval(session.info.sessionId, {
-          kind: "deny",
-          resultText: "All clients disconnected.",
-        }).catch((err) =>
-          this.callbacks.log?.(
-            `session ${session.info.sessionId}: deny failed: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-      }
-      if (runtime.hasPendingQuestions()) {
-        this.replyPendingQuestions(session.info.sessionId, { status: "skipped" }).catch((err) =>
-          this.callbacks.log?.(
-            `session ${session.info.sessionId}: skip questions failed: ${err instanceof Error ? err.message : String(err)}`,
-          ),
-        );
-      }
+      this.denyUnattendedInputs(session);
     }
     for (const [requestId, pending] of this.pendingTrustRequests) {
       this.pendingTrustRequests.delete(requestId);
@@ -1529,6 +1555,41 @@ export class SessionManager {
       this.pendingExtensionUi.delete(requestId);
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
+  }
+
+  private denyUnattendedInputs(session: ServerSession): void {
+    const { sessionId } = session.info;
+    if (session.closing || this.unattendedInputs.has(sessionId)) return;
+    this.unattendedInputs.add(sessionId);
+    void (async () => {
+      const { runtime } = session.runtimeResult;
+      while (this.noClientsRemaining && !session.closing) {
+        const approval = runtime.currentPendingApproval();
+        if (approval) {
+          await this.replyPendingApproval(
+            sessionId,
+            {
+              kind: "deny",
+              resultText: "All clients disconnected.",
+            },
+            approval.requestId,
+          );
+          continue;
+        }
+        const questions = runtime.currentPendingQuestions();
+        if (questions) {
+          await this.replyPendingQuestions(sessionId, { status: "skipped" }, questions.requestId);
+          continue;
+        }
+        break;
+      }
+    })()
+      .catch((error) => {
+        this.callbacks.log?.(
+          `session ${sessionId}: unattended input failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      })
+      .finally(() => this.unattendedInputs.delete(sessionId));
   }
 
   /** Re-read installed extensions into every live session (post install/remove). */

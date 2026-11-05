@@ -338,13 +338,16 @@ describe("SessionManager", () => {
         hostKind: "desktop",
       });
 
-      // No timeline yet: get returns null and exportArchive stays untouched.
-      assert.equal(manager.getDesktopTimeline(created.sessionId), null);
+      // The empty baseline lets either client replay the complete journal before its first checkpoint.
+      assert.deepEqual(manager.getDesktopTimeline(created.sessionId), {
+        revision: 0,
+        timeline: [],
+      });
       const plainArchive = manager.exportArchive(created.sessionId, [], []) as Record<
         string,
         unknown
       >;
-      assert.equal("desktopMessageTimeline" in plainArchive, false);
+      assert.deepEqual(plainArchive["desktopMessageTimeline"], []);
 
       // Non-array payloads are rejected at the boundary.
       await assert.rejects(
@@ -390,7 +393,7 @@ describe("SessionManager", () => {
 
       await manager.pushDesktopTimeline(created.sessionId, timelineV1, 0);
       await manager.reset(created.sessionId);
-      assert.equal(manager.getDesktopTimeline(created.sessionId), null);
+      assert.deepEqual(manager.getDesktopTimeline(created.sessionId)?.timeline, []);
 
       await manager.shutdown();
     });

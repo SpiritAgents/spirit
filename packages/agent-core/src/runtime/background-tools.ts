@@ -17,6 +17,7 @@ import type {
   RuntimeCompletedManualToolCommandResult,
   RuntimeEvent,
   RuntimeTurnContext,
+  StartedBackgroundToolExecution,
 } from "./types.js";
 
 export interface BackgroundToolsRuntime<Config, State, ToolRequest> {
@@ -95,6 +96,40 @@ function buildBackgroundToolContinuationState<Config, State, ToolRequest>(
   );
 }
 
+function executeBackgroundRequest<Config, State, ToolRequest>(
+  runtime: BackgroundToolsRuntime<Config, State, ToolRequest>,
+  request: ToolRequest,
+  toolCallId: string,
+  toolName: string,
+): StartedBackgroundToolExecution {
+  const startedAtUnixMs = Date.now();
+  const result = (async () => {
+    try {
+      const requestForExecution =
+        runtime.options.toolExecutor.attachRequestMetadata?.(request, {
+          toolCallId,
+          toolName,
+          onOutputChunk: (chunk) =>
+            runtime.emitEvent({
+              kind: "tool-execution-output-chunk",
+              toolCallId,
+              toolName,
+              request,
+              chunk,
+            }),
+        }) ?? request;
+      const output = await runtime.options.toolExecutor.execute(requestForExecution);
+      return { output, failed: output.execution?.failed === true };
+    } catch (error) {
+      return {
+        output: createToolExecutionTextOutput(`[tool error] ${renderError(error)}`),
+        failed: true,
+      };
+    }
+  })();
+  return { startedAtUnixMs, result };
+}
+
 export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
   runtime: BackgroundToolsRuntime<Config, State, ToolRequest>,
   pendingUserInput: string,
@@ -109,6 +144,7 @@ export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
   streamingEmitBeginResponse = true,
   earlyToolExecutions?: Map<string, PendingEarlyToolExecution<ToolRequest>>,
   postHookToolInput?: JsonObject,
+  startedExecution?: StartedBackgroundToolExecution,
 ): void {
   const statusText = runtime.options.toolExecutor.backgroundStatusText?.(request);
   runtime.pendingBackgroundToolStatusStore = statusText;
@@ -120,6 +156,8 @@ export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
     ...(statusText !== undefined ? { statusText } : {}),
   });
 
+  const execution =
+    startedExecution ?? executeBackgroundRequest(runtime, request, toolCallId, toolName);
   const pending: PendingToolCallBackgroundToolExecution<State, ToolRequest> = {
     kind: "tool-call",
     pendingUserInput,
@@ -128,7 +166,7 @@ export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
     toolCallId,
     toolName,
     argumentsJson,
-    startedAtUnixMs: Date.now(),
+    startedAtUnixMs: execution.startedAtUnixMs,
     ...(postHookToolInput ? { postHookToolInput } : {}),
     remainingCalls: [...remainingCalls],
     turn,
@@ -141,35 +179,12 @@ export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
   };
   runtime.pendingBackgroundToolExecution = pending;
 
-  const requestForExecution =
-    runtime.options.toolExecutor.attachRequestMetadata?.(request, {
-      toolCallId,
-      toolName,
-      onOutputChunk: (chunk) => {
-        runtime.emitEvent({
-          kind: "tool-execution-output-chunk",
-          toolCallId,
-          toolName,
-          request,
-          chunk,
-        });
-      },
-    }) ?? request;
-
-  void runtime.options.toolExecutor
-    .execute(requestForExecution)
-    .then((output) => {
-      if (runtime.pendingBackgroundToolExecution === pending) {
-        pending.output = output;
-        pending.failed = output.execution?.failed === true;
-      }
-    })
-    .catch((error: unknown) => {
-      if (runtime.pendingBackgroundToolExecution === pending) {
-        pending.output = createToolExecutionTextOutput(`[tool error] ${renderError(error)}`);
-        pending.failed = true;
-      }
-    });
+  void execution.result.then(({ output, failed }) => {
+    if (runtime.pendingBackgroundToolExecution === pending) {
+      pending.output = output;
+      pending.failed = failed;
+    }
+  });
 }
 
 export function scheduleBackgroundToolExecutionAsync<Config, State, ToolRequest>(
@@ -198,6 +213,9 @@ export function scheduleBackgroundToolExecutionAsync<Config, State, ToolRequest>
       streamingEmitBeginResponse,
       ...(earlyToolExecutions ? { earlyToolExecutions } : {}),
       ...(postHookToolInput ? { postHookToolInput } : {}),
+      ...(runtime.options.toolExecutor.canExecuteConcurrently?.(request)
+        ? { startedExecution: executeBackgroundRequest(runtime, request, toolCallId, toolName) }
+        : {}),
     });
     return;
   }
@@ -242,6 +260,7 @@ function startNextDeferredBackgroundToolExecution<Config, State, ToolRequest>(
     next.streamingEmitBeginResponse,
     next.earlyToolExecutions,
     next.postHookToolInput,
+    next.startedExecution,
   );
 }
 

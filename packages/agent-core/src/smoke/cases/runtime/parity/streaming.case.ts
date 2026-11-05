@@ -57,7 +57,7 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
   const timeoutEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
   const streamingFailureEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
   const previewEarlyExecutionEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
-  const previewBackgroundDeferredEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
+  const previewBackgroundEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
   const previewSubagentDeferredEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
   const authorizationFailureEvents: RuntimeEvent<ScriptedToolRequest>[] = [];
 
@@ -167,7 +167,7 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
     throw new Error("preview early execution smoke did not reuse the preview-phase tool result.");
   }
 
-  const previewBackgroundTransport = new PreviewBackgroundDeferredTransport();
+  const previewBackgroundTransport = new PreviewBackgroundTransport();
   const previewBackgroundExecutor = new CountingBackgroundExecutor();
   const previewBackgroundRuntime = new AgentRuntime({
     config: undefined,
@@ -177,7 +177,7 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
     appendToolResultMessage: appendScriptedToolResult,
     appendUserMessage: appendScriptedUserMessage,
     extractAssistantText: extractScriptedAssistantText,
-    onEvent: (event) => previewBackgroundDeferredEvents.push(event),
+    onEvent: (event) => previewBackgroundEvents.push(event),
   });
 
   await previewBackgroundRuntime.startUserTurnStreaming("Preview, then search in the background");
@@ -185,29 +185,33 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
     await flushMicrotasks(4);
     await previewBackgroundRuntime.poll();
   }
-  if (previewBackgroundExecutor.executedCalls !== 0) {
+  if (previewBackgroundExecutor.executedCalls !== 1) {
     throw new Error(
-      "preview background smoke should not start the background tool before the formal tool-calls completion.",
+      "preview background smoke should start the background tool once before the formal tool-calls completion.",
     );
   }
   if (
-    previewBackgroundDeferredEvents.some(
+    previewBackgroundEvents.filter(
       (event) =>
         event.kind === "tool-call-started" && event.toolCallId === "call-preview-background",
-    )
+    ).length !== 1
   ) {
     throw new Error(
-      "preview background smoke should not emit tool-call-started before the formal path.",
+      "preview background smoke should emit tool-call-started once during the preview.",
     );
   }
   if (
-    previewBackgroundDeferredEvents.some(
-      (event) => event.kind === "background-tool-status" && event.toolName === "grep",
+    !previewBackgroundEvents.some(
+      (event) =>
+        event.kind === "background-tool-status" &&
+        event.toolName === "grep" &&
+        event.phase === "started",
     )
   ) {
-    throw new Error(
-      "preview background smoke should not emit background status events before the formal path.",
-    );
+    throw new Error("preview background smoke should emit background status during the preview.");
+  }
+  if (previewBackgroundRuntime.history().some((message) => message.role === "tool")) {
+    throw new Error("preview background smoke committed a result before the assistant tool calls.");
   }
 
   previewBackgroundTransport.resolveToolCallRound();
@@ -220,16 +224,56 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
   }
   if (Number(previewBackgroundExecutor.executedCalls) !== 1) {
     throw new Error(
-      "preview background smoke should execute the background tool exactly once on the formal path.",
+      "preview background smoke should reuse the preview execution on the formal path.",
     );
   }
   if (
-    previewBackgroundDeferredEvents.filter(
+    previewBackgroundEvents.filter(
       (event) =>
         event.kind === "tool-call-started" && event.toolCallId === "call-preview-background",
     ).length !== 1
   ) {
     throw new Error("preview background smoke formal path tool-call-started count is incorrect.");
+  }
+  const previewBackgroundResult = previewBackgroundRuntime.takeCompletedTurnResult();
+  if (
+    previewBackgroundResult?.kind !== "completed" ||
+    previewBackgroundResult.assistantText !== "PREVIEW_BACKGROUND_OK" ||
+    previewBackgroundResult.toolExecutions.filter(
+      (execution) => execution.toolCallId === "call-preview-background" && !execution.failed,
+    ).length !== 1
+  ) {
+    throw new Error("preview background smoke did not preserve its single successful tool result.");
+  }
+
+  const failedPreviewTransport = new PreviewBackgroundTransport();
+  const failedPreviewRuntime = new AgentRuntime({
+    config: undefined,
+    llmTransport: failedPreviewTransport,
+    toolExecutor: new CountingBackgroundExecutor(),
+    createToolAgentState: createScriptedState,
+    appendToolResultMessage: appendScriptedToolResult,
+    appendUserMessage: appendScriptedUserMessage,
+    extractAssistantText: extractScriptedAssistantText,
+  });
+  await failedPreviewRuntime.startUserTurnStreaming("Start a tool before the stream fails");
+  for (let index = 0; index < 8; index += 1) {
+    await flushMicrotasks(4);
+    await failedPreviewRuntime.poll();
+  }
+  failedPreviewTransport.resolveToolCallRound("preview stream failed");
+  for (let index = 0; index < 16 && failedPreviewRuntime.isBusy(); index += 1) {
+    await flushMicrotasks(4);
+    await failedPreviewRuntime.poll();
+  }
+  const failedPreviewResult = failedPreviewRuntime.takeCompletedTurnResult();
+  if (
+    failedPreviewRuntime.isBusy() ||
+    failedPreviewResult?.kind !== "failed" ||
+    failedPreviewResult.error !== "preview stream failed" ||
+    failedPreviewRuntime.history().some((message) => message.role === "tool")
+  ) {
+    throw new Error("failed preview background smoke resumed or committed an orphan result.");
   }
 
   const previewSubagentTransport = new PreviewSubagentDeferredTransport();
@@ -277,6 +321,13 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
     ).length !== 1
   ) {
     throw new Error("preview subagent smoke tool-call-started should not be duplicated.");
+  }
+  const previewSubagentResult = previewSubagentRuntime.takeCompletedTurnResult();
+  if (
+    previewSubagentResult?.kind !== "completed" ||
+    previewSubagentResult.assistantText !== "PREVIEW_SUBAGENT_OK"
+  ) {
+    throw new Error("preview subagent smoke did not complete the parent round successfully.");
   }
 
   const authorizationFailureRuntime = new AgentRuntime({
@@ -444,14 +495,15 @@ export async function runStreamingCase(): Promise<RuntimeParityCaseResult> {
     throw new Error("streaming failure smoke did not clear the pending user turn after finishing.");
   }
   const drainedStreamingFailureEvents = streamingFailureRuntime.drainEvents();
+  const streamingFailureResult = streamingFailureRuntime.takeCompletedTurnResult();
   if (
-    !drainedStreamingFailureEvents.some(
-      (event) =>
-        event.kind === "replace-pending-assistant" &&
-        event.text.includes("invalid chat setting (2013)"),
-    )
+    streamingFailureResult?.kind !== "failed" ||
+    !streamingFailureResult.error.includes("invalid chat setting (2013)") ||
+    !drainedStreamingFailureEvents.some((event) => event.kind === "remove-pending-assistant")
   ) {
-    throw new Error("streaming failure smoke did not output the expected error message.");
+    throw new Error(
+      "streaming failure smoke did not surface the error and discard the pending bubble.",
+    );
   }
   if (
     !drainedStreamingFailureEvents.some((event) => event.kind === "assistant-response-completed")
@@ -1527,7 +1579,7 @@ class AuthorizationFailureExecutor extends HostExecutor {
   }
 }
 
-class PreviewBackgroundDeferredTransport implements LlmTransport<undefined, ScriptedState> {
+class PreviewBackgroundTransport implements LlmTransport<undefined, ScriptedState> {
   private rounds = 0;
   private firstRoundState: ScriptedState | undefined;
   private resolveFirstRound:
@@ -1600,9 +1652,13 @@ class PreviewBackgroundDeferredTransport implements LlmTransport<undefined, Scri
     };
   }
 
-  resolveToolCallRound(): void {
+  resolveToolCallRound(failure?: string): void {
     if (!this.firstRoundState || !this.resolveFirstRound) {
       throw new Error("preview background smoke did not prepare the formal tool-calls completion.");
+    }
+    if (failure !== undefined) {
+      this.resolveFirstRound({ kind: "failure", error: failure, requestTrace: [] });
+      return;
     }
     this.resolveFirstRound({
       kind: "success",
@@ -1709,7 +1765,7 @@ class PreviewSubagentDeferredTransport implements LlmTransport<undefined, Script
             kind: "streaming-tool-preview",
             toolCallId: "call-preview-subagent",
             toolName: "subagent",
-            argumentsJson: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+            argumentsJson: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
           },
         ]),
         completion: new Promise((resolve) => {
@@ -1724,7 +1780,7 @@ class PreviewSubagentDeferredTransport implements LlmTransport<undefined, Script
           isJsonObject(message) &&
           message.role === "user" &&
           typeof message.content === "string" &&
-          message.content.includes("You are already inside the delegated child session."),
+          message.content.includes("Output: OK, I am the SubAgent, hahaha"),
       );
       if (!delegatedPromptPresent) {
         return {
@@ -1829,7 +1885,7 @@ class PreviewSubagentDeferredTransport implements LlmTransport<undefined, Script
                   type: "function",
                   function: {
                     name: "subagent",
-                    arguments: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+                    arguments: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
                   },
                 },
               ],
@@ -1843,7 +1899,7 @@ class PreviewSubagentDeferredTransport implements LlmTransport<undefined, Script
             {
               id: "call-preview-subagent",
               name: "subagent",
-              argumentsJson: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+              argumentsJson: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
             },
           ],
         },

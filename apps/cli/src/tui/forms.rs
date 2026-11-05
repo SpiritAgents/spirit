@@ -766,11 +766,17 @@ impl TuiShell {
 
     pub(super) fn open_ask_questions_form(
         &mut self,
+        request_id: Option<String>,
         tool_call_id: String,
         tool_name: String,
         questions: crate::ask_questions::AskQuestionsRequest,
     ) {
-        self.forms.active = Some(ask_questions::new_form(tool_call_id, tool_name, questions));
+        self.forms.active = Some(ask_questions::new_form(
+            request_id,
+            tool_call_id,
+            tool_name,
+            questions,
+        ));
         self.model_picker_active = false;
         self.language_picker_active = false;
         self.approval_picker_active = false;
@@ -788,6 +794,7 @@ impl TuiShell {
             return;
         };
         let BottomFormKind::AskQuestions {
+            request_id,
             tool_call_id,
             tool_name,
             request,
@@ -798,6 +805,13 @@ impl TuiShell {
             return;
         };
 
+        if !self
+            .runtime
+            .respond_to_pending_questions(request_id.as_deref(), &result)
+        {
+            self.apply_runtime_events();
+            return;
+        }
         let request_value = ToolUiRequest::new(
             "ask_questions",
             serde_json::json!({
@@ -818,7 +832,6 @@ impl TuiShell {
             ),
         ));
         self.scroll_history_to_bottom();
-        self.runtime.respond_to_pending_questions(&result);
         self.apply_runtime_events();
     }
 

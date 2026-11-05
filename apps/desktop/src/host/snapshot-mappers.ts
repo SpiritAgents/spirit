@@ -45,6 +45,7 @@ function normalizeAutomationApprovalLevel(level: string): ApprovalLevel {
 }
 
 export function mapPendingToolApproval(input: {
+  requestId?: string;
   toolName: string;
   request: DesktopToolRequest;
   prompt: ToolApprovalPrompt;
@@ -80,6 +81,7 @@ export function mapPendingToolApproval(input: {
       : undefined;
   return {
     toolName: hookShellReason ?? view.title,
+    ...(input.requestId ? { requestId: input.requestId } : {}),
     prompt: view.body,
     ...(shellCommand !== undefined ? { shellCommand } : {}),
     ...(mcpToolCallArgumentsJson !== undefined ? { mcpToolCallArgumentsJson } : {}),

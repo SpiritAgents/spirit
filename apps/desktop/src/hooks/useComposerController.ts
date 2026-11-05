@@ -1446,8 +1446,12 @@ export function useComposerController({
   );
 
   const submitApprovalAllowShortcut = useCallback(() => {
-    void runtime.submitApproval({ kind: "allow" }, isPaneIsolated ? paneSessionPath : undefined);
-  }, [runtime, isPaneIsolated, paneSessionPath]);
+    void runtime.submitApproval(
+      { kind: "allow" },
+      isPaneIsolated ? paneSessionPath : undefined,
+      pendingApproval?.requestId,
+    );
+  }, [runtime, isPaneIsolated, paneSessionPath, pendingApproval]);
 
   const handleComposerKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {

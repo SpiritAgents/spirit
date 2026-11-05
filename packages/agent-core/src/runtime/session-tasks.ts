@@ -57,6 +57,7 @@ interface TaskEntry {
   settled: boolean;
   failure?: Error;
   stopping: boolean;
+  releaseForeground?(): void;
 }
 
 export type SessionTaskInitialResult =
@@ -104,6 +105,8 @@ export function waitForTaskDelay(seconds: number, signal?: AbortSignal): Promise
 export class SessionTaskManager {
   private readonly entries = new Map<string, TaskEntry>();
   private readonly restored = new Map<string, BackgroundTaskRecord>();
+  private readonly starting = new Map<Promise<string>, string | undefined>();
+  private cancellation: Promise<void> | undefined;
   private closing = false;
 
   constructor(private readonly options: SessionTaskManagerOptions) {}
@@ -172,11 +175,34 @@ export class SessionTaskManager {
     }
   }
 
-  async launch(
+  launch(
     input: Omit<BackgroundTaskCreateInput, "sessionKey">,
     run: (context: SessionTaskContext) => Promise<SessionTaskResult>,
+    foregroundSignal?: AbortSignal,
   ): Promise<string> {
-    if (this.closing) throw new Error("The task host is shutting down.");
+    if (this.closing || this.cancellation) {
+      return Promise.reject(new Error("The task host is stopping owned work."));
+    }
+    if (input.parentTaskId) {
+      const parent = this.entries.get(input.parentTaskId);
+      const record = parent?.record ?? this.restored.get(input.parentTaskId);
+      // Late child work must not escape a parent's descendant-cancellation snapshot.
+      if (!record || isBackgroundTaskTerminal(record.status) || parent?.controller.signal.aborted) {
+        return Promise.reject(new Error("Parent task is no longer active."));
+      }
+    }
+    const operation = this.launchOwned(input, run, foregroundSignal);
+    this.starting.set(operation, input.parentTaskId);
+    const finished = () => this.starting.delete(operation);
+    void operation.then(finished, finished);
+    return operation;
+  }
+
+  private async launchOwned(
+    input: Omit<BackgroundTaskCreateInput, "sessionKey">,
+    run: (context: SessionTaskContext) => Promise<SessionTaskResult>,
+    foregroundSignal?: AbortSignal,
+  ): Promise<string> {
     const record = await this.options.store.create({
       ...input,
       sessionKey: this.options.sessionKey,
@@ -196,11 +222,19 @@ export class SessionTaskManager {
       completion,
       resolve,
       reject,
-      stopping: this.closing,
+      stopping: this.closing || this.cancellation !== undefined,
       initialDelivered: false,
       settled: false,
     };
-    if (this.closing) entry.controller.abort(new Error("The task host is shutting down."));
+    if (entry.stopping) entry.controller.abort(new Error("The task host is stopping owned work."));
+    const stopForeground = (): void => {
+      if (entry.record.background || isBackgroundTaskTerminal(entry.record.status)) return;
+      entry.stopping = true;
+      entry.controller.abort(foregroundSignal?.reason);
+    };
+    foregroundSignal?.addEventListener("abort", stopForeground, { once: true });
+    entry.releaseForeground = () => foregroundSignal?.removeEventListener("abort", stopForeground);
+    if (foregroundSignal?.aborted) stopForeground();
     this.entries.set(record.id, entry);
     void entry.completion.catch((error: unknown) =>
       this.options.onError(asError(error), record.id),
@@ -258,6 +292,8 @@ export class SessionTaskManager {
         entry.record = { ...entry.record, status: "failed", error: asError(error).message };
         delete entry.record.terminalEventId;
         entry.reject(error);
+      } finally {
+        entry.releaseForeground?.();
       }
     })();
     return record.id;
@@ -274,6 +310,7 @@ export class SessionTaskManager {
     try {
       return await this.deliverInitialResult(entry, scope, background);
     } finally {
+      entry.releaseForeground?.();
       entry.initialDelivered = true;
       this.releaseResult(entry);
     }
@@ -434,11 +471,20 @@ export class SessionTaskManager {
   }
 
   private async stopDescendants(taskId: string, scope: TaskScope): Promise<void> {
+    const initialized = await Promise.allSettled(
+      [...this.starting]
+        .filter(([, parentId]) => parentId === taskId)
+        .map(([operation]) => operation),
+    );
     await Promise.all(
       this.records()
         .filter((child) => child.parentTaskId === taskId && !isBackgroundTaskTerminal(child.status))
         .map((child) => this.stop(child.id, scope)),
     );
+    const failures = initialized.flatMap((entry) =>
+      entry.status === "rejected" ? [entry.reason] : [],
+    );
+    if (failures.length) throw new AggregateError(failures, "Child task initialization failed.");
   }
 
   async stopForeground(scope: TaskScope): Promise<void> {
@@ -459,13 +505,25 @@ export class SessionTaskManager {
     await this.cancelOwnedWork();
   }
 
-  async cancelOwnedWork(): Promise<void> {
+  cancelOwnedWork(): Promise<void> {
+    if (this.cancellation) return this.cancellation;
+    const operation = this.cancelOwnedWorkAndInitializations();
+    this.cancellation = operation;
+    const finished = () => {
+      this.cancellation = undefined;
+    };
+    void operation.then(finished, finished);
+    return operation;
+  }
+
+  private async cancelOwnedWorkAndInitializations(): Promise<void> {
+    const initialized = await Promise.allSettled(this.starting.keys());
     const results = await Promise.allSettled(
       this.records()
         .filter((record) => this.entries.has(record.id) && !isBackgroundTaskTerminal(record.status))
         .map((record) => this.stop(record.id, { runtimeId: record.runtimeId })),
     );
-    const failures = results
+    const failures = [...initialized, ...results]
       .filter((result) => result.status === "rejected")
       .map((result) => result.reason);
     if (failures.length) throw new AggregateError(failures, "Background task shutdown failed.");

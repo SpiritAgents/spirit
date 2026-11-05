@@ -606,19 +606,24 @@ export class RemoteDesktopRuntime {
     await this.client.call("session.compactHistory", { sessionId: this.sessionId });
   }
 
-  async continuePendingApproval(decision: RuntimeApprovalDecision): Promise<void> {
+  async continuePendingApproval(
+    decision: RuntimeApprovalDecision,
+    requestId?: string,
+  ): Promise<void> {
     await this.awaitMutations();
     await this.client.call("session.replyPendingApproval", {
       sessionId: this.sessionId,
       decision,
+      requestId,
     });
   }
 
-  async continuePendingQuestions(result: AskQuestionsResult): Promise<void> {
+  async continuePendingQuestions(result: AskQuestionsResult, requestId?: string): Promise<void> {
     await this.awaitMutations();
     await this.client.call("session.replyPendingQuestions", {
       sessionId: this.sessionId,
       result,
+      requestId,
     });
   }
 

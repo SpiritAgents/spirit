@@ -348,6 +348,7 @@ export function mapPendingQuestions(
   pending: RuntimePendingQuestions<DesktopToolRequest>,
 ): PendingQuestionsSnapshot {
   return {
+    ...(pending.requestId ? { requestId: pending.requestId } : {}),
     toolCallId: pending.toolCallId,
     toolName: pending.toolName,
     request: {

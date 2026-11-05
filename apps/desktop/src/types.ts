@@ -851,12 +851,14 @@ export interface AbortConversationRequest {
 }
 
 export interface ReplyPendingApprovalRequest {
+  requestId?: string;
   decision: DesktopApprovalDecision;
   /** Reply for a loaded split pane session without switching sidebar foreground. */
   sessionPath?: string;
 }
 
 export interface ReplyPendingQuestionsRequest {
+  requestId?: string;
   result: AskQuestionsResult;
   /** Reply for a loaded split pane session without switching sidebar foreground. */
   sessionPath?: string;
@@ -1841,6 +1843,7 @@ export interface MessageAuxSnapshot {
 }
 
 export interface PendingToolApprovalSnapshot {
+  requestId?: string;
   toolName: string;
   prompt: string;
   /** Shell approvals render the command as a syntax-highlighted block instead of the plain prompt. */
@@ -1885,6 +1888,7 @@ export type DesktopApprovalDecision =
   | { kind: "guidance"; userMessage: string; resultText?: string };
 
 export interface PendingQuestionsSnapshot {
+  requestId?: string;
   toolCallId: string;
   toolName: string;
   request: AskQuestionsRequest;

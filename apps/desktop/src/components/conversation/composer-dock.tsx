@@ -524,11 +524,16 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                       ...(decision.remember ? { remember: decision.remember } : {}),
                     },
                     approvalSessionPath,
+                    pendingApproval.requestId,
                   );
                   return;
                 }
                 if (decision.kind === "deny") {
-                  void runtime.submitApproval({ kind: "deny" }, approvalSessionPath);
+                  void runtime.submitApproval(
+                    { kind: "deny" },
+                    approvalSessionPath,
+                    pendingApproval.requestId,
+                  );
                   return;
                 }
                 void runtime.submitApproval(
@@ -537,6 +542,7 @@ export const ComposerDock = forwardRef<HTMLDivElement, ComposerDockProps>(functi
                     userMessage: decision.userMessage ?? "",
                   },
                   approvalSessionPath,
+                  pendingApproval.requestId,
                 );
               }}
             />
