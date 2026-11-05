@@ -253,8 +253,9 @@ export function ConversationList({
     () => ({
       workspaceRoot,
       readWorkspaceTextFile: runtime.readWorkspaceTextFile,
+      readHostTextFile: runtime.readHostTextFile,
     }),
-    [workspaceRoot, runtime.readWorkspaceTextFile],
+    [workspaceRoot, runtime.readWorkspaceTextFile, runtime.readHostTextFile],
   );
 
   const sizingRef = useRef<HTMLDivElement | null>(null);

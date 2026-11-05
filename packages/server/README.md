@@ -102,6 +102,10 @@ The daemon serializes foreground entry points and polls task state independently
 
 Runtime history and Desktop timeline snapshots are persisted alongside task records. A stable internal storage identity keeps transcript and live-output paths unchanged when a provisional conversation acquires its permanent chat path. External conversation paths are lookup keys in `session-storage-index`, not directories to move.
 
+`runtime.event` and `session.userTurnSubmitted` include a monotonic `presentationSequence`. The archive also contains a presentation journal after the latest acknowledged Desktop snapshot. This journal retains public responses independently of model-history compaction; streaming task logs remain in their output files instead of being copied into it. Desktop checkpoints only fully projected, idle boundaries with `session.pushDesktopTimeline({ timeline, presentationSequence })`. Acknowledgment and the matching timeline are persisted together, and stale or invalid cursors are rejected. Reconnecting clients replay the remaining entries in order and discard overlapping live events by sequence without invoking the model.
+
+Task completion rows retain their task ID, terminal event ID, source, output preview, and file reference as structured metadata. Shell output stays inspectable after interruption, and Subagent rows retain the original child-session navigation target. Missing output files are reported explicitly.
+
 Restarting a daemon never resumes old processes or invokes the model automatically. It verifies the previous host's unique local IPC identity and records interrupted tasks using their last persisted elapsed time. Worktree children rebuild workspace-bound instructions, Git information, tools, MCP, LSP, and hooks from the isolated checkout; started worktrees and branches are retained.
 
 ## Remote access

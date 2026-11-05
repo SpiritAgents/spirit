@@ -1025,6 +1025,7 @@ fn rewind_picker_deemphasizes_tool_messages() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1083,6 +1084,7 @@ fn streaming_tool_preview_renders_tool_card_on_separate_message_row() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1587,6 +1589,7 @@ fn subagent_tool_card_hides_output_when_aux_details_collapsed() {
         video_paths: Vec::new(),
         args_excerpt: Some("{\n  \"limit\": 3\n}".to_string()),
         output_excerpt: Some("3 results found.".to_string()),
+        metadata: Default::default(),
         suppress_expand: None,
     };
     let message = ChatMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
@@ -1610,6 +1613,7 @@ fn subagent_tool_card_shows_output_when_aux_details_expanded() {
         video_paths: Vec::new(),
         args_excerpt: Some("{\n  \"limit\": 3\n}".to_string()),
         output_excerpt: Some("3 results found.".to_string()),
+        metadata: Default::default(),
         suppress_expand: None,
     };
     let message = ChatMessage::with_tool_block(MessageRole::Agent, String::new(), tool);
@@ -1639,6 +1643,7 @@ fn shell_pending_approval_title_line_shows_reason_instead_of_call_id() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1670,6 +1675,7 @@ fn generate_image_tool_card_shows_structured_path_when_aux_details_collapsed() {
             video_paths: Vec::new(),
             args_excerpt: Some("{\n  \"prompt\": \"draw a picture\"\n}".to_string()),
             output_excerpt: Some("[generated image]\npath: C:/Users/pc/AppData/Roaming/Spirit/generated-images/example.png".to_string()),
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1712,6 +1718,7 @@ fn generate_video_tool_card_shows_managed_uri_when_aux_details_collapsed() {
             output_excerpt: Some(
                 "[generated video]\nvideo_ref: spirit://generated/video/example.mp4".to_string(),
             ),
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1749,6 +1756,7 @@ fn generate_image_tool_card_keeps_rail_on_wrapped_path_lines() {
         video_paths: Vec::new(),
             args_excerpt: None,
         output_excerpt: None,
+        metadata: Default::default(),
         suppress_expand: None,
     },
     ));
@@ -1791,6 +1799,7 @@ fn generate_image_tool_card_selection_highlights_wrapped_rail_consistently() {
         video_paths: Vec::new(),
             args_excerpt: None,
         output_excerpt: None,
+        metadata: Default::default(),
         suppress_expand: None,
     },
     ));
@@ -1856,6 +1865,7 @@ fn generate_image_history_render_reserves_image_block() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1895,6 +1905,7 @@ fn generate_image_ui_renders_halfblock_preview_from_local_file() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));
@@ -1995,6 +2006,7 @@ fn inline_mode_skips_tool_image_blocks() {
             video_paths: Vec::new(),
             args_excerpt: None,
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
     ));

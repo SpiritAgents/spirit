@@ -24,6 +24,10 @@ impl ToolUiRequest {
 
 pub enum RuntimeEvent {
     PushMessage(ChatMessage),
+    UpsertTaskTool {
+        message: ChatMessage,
+        insert: bool,
+    },
     UpsertToolPreview {
         tool_call_id: String,
         tool_name: String,
@@ -461,6 +465,7 @@ pub(crate) fn build_tool_preview_block(
         video_paths: Vec::new(),
         args_excerpt,
         output_excerpt: None,
+        metadata: Default::default(),
         suppress_expand: suppress_expand.then_some(true),
     }
 }
@@ -603,6 +608,7 @@ pub(crate) fn tool_approval_block(
         video_paths: Vec::new(),
         args_excerpt: None,
         output_excerpt: None,
+        metadata: Default::default(),
         suppress_expand: None,
     }
 }
@@ -623,6 +629,7 @@ pub(crate) fn tool_failed_block(
         video_paths: Vec::new(),
         args_excerpt: None,
         output_excerpt: Some(truncate_output_for_tool_ui(err, 2000)),
+        metadata: Default::default(),
         suppress_expand: None,
     }
 }
@@ -655,6 +662,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "web_fetch" => ToolUiBlock {
@@ -670,6 +678,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "ls" => ToolUiBlock {
@@ -688,6 +697,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "glob" => ToolUiBlock {
@@ -706,6 +716,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "read_file" => {
@@ -727,6 +738,7 @@ pub(crate) fn build_tool_result_block(
                 video_paths: Vec::new(),
                 args_excerpt: Some(args_excerpt),
                 output_excerpt: None,
+                metadata: Default::default(),
                 suppress_expand: None,
             }
         }
@@ -746,6 +758,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "subagent" => ToolUiBlock {
@@ -766,6 +779,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "ask_questions" => ToolUiBlock {
@@ -784,6 +798,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "generate_image" => {
@@ -801,6 +816,7 @@ pub(crate) fn build_tool_result_block(
                 video_paths: Vec::new(),
                 args_excerpt: Some(args_excerpt),
                 output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+                metadata: Default::default(),
                 suppress_expand: None,
             }
         }
@@ -819,6 +835,7 @@ pub(crate) fn build_tool_result_block(
                 video_paths,
                 args_excerpt: Some(args_excerpt),
                 output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+                metadata: Default::default(),
                 suppress_expand: None,
             }
         }
@@ -838,6 +855,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "edit_file" => ToolUiBlock {
@@ -856,6 +874,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "delete_file" => ToolUiBlock {
@@ -874,6 +893,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: None,
+            metadata: Default::default(),
             suppress_expand: None,
         },
         "apply_patch" => {
@@ -894,6 +914,7 @@ pub(crate) fn build_tool_result_block(
                 video_paths: Vec::new(),
                 args_excerpt: Some(args_excerpt),
                 output_excerpt: None,
+                metadata: Default::default(),
                 suppress_expand: None,
             }
         }
@@ -913,6 +934,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
         _ => ToolUiBlock {
@@ -925,6 +947,7 @@ pub(crate) fn build_tool_result_block(
             video_paths: Vec::new(),
             args_excerpt: Some(args_excerpt),
             output_excerpt: Some(truncate_output_for_tool_ui(output, 3600)),
+            metadata: Default::default(),
             suppress_expand: None,
         },
     }

@@ -23,7 +23,7 @@ export interface SessionTaskContext {
     metadata: Partial<
       Pick<
         BackgroundTaskRecord,
-        "sessionId" | "sessionTranscript" | "worktreePath" | "worktreeBranch"
+        "sessionId" | "sessionTranscript" | "worktreePath" | "worktreeBranch" | "finalOutputPreview"
       >
     >,
     status?: "running" | "blocked" | "waiting-for-background",
@@ -61,7 +61,12 @@ interface TaskEntry {
 
 export type SessionTaskInitialResult =
   | { kind: "completed"; record: BackgroundTaskRecord; result: SessionTaskResult }
-  | { kind: "background"; record: BackgroundTaskRecord; outputTail: string };
+  | {
+      kind: "background";
+      record: BackgroundTaskRecord;
+      outputTail: string;
+      outputTruncated: boolean;
+    };
 
 function asError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
@@ -263,7 +268,7 @@ export class SessionTaskManager {
     const entry = this.entries.get(taskId);
     if (!entry) throw new Error(`Task ${taskId} is not owned by this host instance.`);
     try {
-      return await this.deliverInitialResult(entry, background);
+      return await this.deliverInitialResult(entry, scope, background);
     } finally {
       entry.initialDelivered = true;
       this.releaseResult(entry);
@@ -272,6 +277,7 @@ export class SessionTaskManager {
 
   private async deliverInitialResult(
     entry: TaskEntry,
+    scope: TaskScope,
     background?: BackgroundOptions,
   ): Promise<SessionTaskInitialResult> {
     if (background?.type === false) {
@@ -305,10 +311,12 @@ export class SessionTaskManager {
       const result = await entry.completion;
       return { kind: "completed", record: structuredClone(entry.record), result };
     }
+    const preview = await this.readOutputPreview(entry.record.id, scope);
     return {
       kind: "background",
       record: handoffRecord ?? structuredClone(entry.record),
-      outputTail: await this.options.store.readOutputTail(entry.record.id, 16_384),
+      outputTail: preview.text,
+      outputTruncated: preview.truncated,
     };
   }
 
@@ -348,6 +356,12 @@ export class SessionTaskManager {
         record.terminalEventId &&
         !record.notificationDelivered,
     );
+  }
+
+  async readOutputPreview(taskId: string, scope: TaskScope) {
+    this.getRecord(taskId, scope);
+    const text = await this.options.store.readOutputTail(taskId, 16_385);
+    return { text: text.slice(-16_384), truncated: text.length > 16_384 };
   }
 
   async markNotified(taskId: string, scope: TaskScope): Promise<void> {

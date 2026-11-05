@@ -1,6 +1,7 @@
 //! Shared runtime-sync state for CLI daemon backend. Projects daemon
 //! `BridgeRuntimeEvent` / `BridgeRuntimeSnapshot` shapes into TUI-facing state.
 
+use crate::background_task_display::TaskOutput;
 use rust_i18n::t;
 use serde_json::Value;
 use std::collections::{HashMap, VecDeque};
@@ -41,9 +42,14 @@ pub(crate) struct RuntimeSyncState {
     /// Latest `session.titleUpdated` title for this session; TUI takes and applies it.
     pub(crate) pending_session_title: Option<String>,
     pub(crate) events: VecDeque<RuntimeEvent>,
+    task_output: HashMap<String, TaskOutput>,
 }
 
 impl RuntimeSyncState {
+    pub(crate) fn clear_task_output(&mut self) {
+        self.task_output.clear();
+    }
+
     pub(crate) fn new() -> Self {
         Self {
             session: SessionModel::new(),
@@ -58,6 +64,7 @@ impl RuntimeSyncState {
             desktop_timeline_resync_pending: false,
             pending_session_title: None,
             events: VecDeque::new(),
+            task_output: HashMap::new(),
         }
     }
 
@@ -185,9 +192,52 @@ impl RuntimeSyncState {
                         )));
                 }
                 BridgeRuntimeEvent::BackgroundToolStatus { .. } => {}
-                BridgeRuntimeEvent::BackgroundTaskChanged { .. }
-                | BridgeRuntimeEvent::BackgroundTaskOutput { .. }
-                | BridgeRuntimeEvent::BackgroundTaskNotification { .. } => {}
+                BridgeRuntimeEvent::BackgroundTaskChanged { task } => {
+                    if task.get("background").and_then(Value::as_bool) == Some(true) {
+                        let output = task
+                            .get("id")
+                            .and_then(Value::as_str)
+                            .and_then(|id| self.task_output.get(id))
+                            .cloned()
+                            .unwrap_or_default();
+                        self.project_task_tool(&task, &output, false, false, None);
+                    }
+                }
+                BridgeRuntimeEvent::BackgroundTaskOutput { task, chunk } => {
+                    if let Some(id) = task.get("id").and_then(Value::as_str) {
+                        let output = self.task_output.entry(id.to_string()).or_default();
+                        output.append(&chunk);
+                        let output = output.clone();
+                        self.project_task_tool(&task, &output, false, false, None);
+                    }
+                }
+                BridgeRuntimeEvent::BackgroundTaskNotification {
+                    task,
+                    output,
+                    restored,
+                    output_error,
+                    ..
+                } => {
+                    match output.map(serde_json::from_value::<TaskOutput>).transpose() {
+                        Ok(output) => self.project_task_tool(
+                            &task,
+                            &output.unwrap_or_default(),
+                            true,
+                            restored,
+                            output_error.as_deref(),
+                        ),
+                        Err(error) => {
+                            self.events
+                                .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                                    MessageRole::Agent,
+                                    error.to_string(),
+                                )))
+                        }
+                    }
+                    if let Some(id) = task.get("id").and_then(Value::as_str) {
+                        self.task_output.remove(id);
+                    }
+                }
                 BridgeRuntimeEvent::BackgroundTaskError { error } => {
                     self.events
                         .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
@@ -199,6 +249,50 @@ impl RuntimeSyncState {
                 // TODO(cli): project tool-execution-output-chunk into TUI shell tool cards.
                 BridgeRuntimeEvent::ToolExecutionOutputChunk { .. } => {}
                 BridgeRuntimeEvent::ToolExecutionFinished { execution } => {
+                    if matches!(execution.tool_name.as_str(), "shell" | "subagent")
+                        && let Some(task) = execution
+                            .host_ui
+                            .as_ref()
+                            .and_then(|ui| ui.get("backgroundTask"))
+                    {
+                        let output = execution
+                            .host_ui
+                            .as_ref()
+                            .and_then(|ui| ui.get("backgroundTaskOutput"))
+                            .cloned()
+                            .map(serde_json::from_value::<TaskOutput>)
+                            .transpose();
+                        let output =
+                            match output {
+                                Ok(output) => output.unwrap_or_default(),
+                                Err(error) => {
+                                    self.events.push_back(RuntimeEvent::PushMessage(
+                                        ChatMessage::new(MessageRole::Agent, error.to_string()),
+                                    ));
+                                    continue;
+                                }
+                            };
+                        if let Some(id) = task.get("id").and_then(Value::as_str) {
+                            self.task_output.insert(id.to_string(), output.clone());
+                        }
+                        // The initial call is complete even though its task keeps running.
+                        match crate::background_task_display::task_tool_message(
+                            task, &output, false, false, None,
+                        ) {
+                            Ok(message) => self.events.push_back(RuntimeEvent::UpsertTaskTool {
+                                message,
+                                insert: true,
+                            }),
+                            Err(error) => {
+                                self.events
+                                    .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                                        MessageRole::Agent,
+                                        error,
+                                    )))
+                            }
+                        }
+                        continue;
+                    }
                     if execution.tool_name.starts_with("todo_") {
                         continue;
                     }
@@ -470,6 +564,30 @@ impl RuntimeSyncState {
                         },
                     )));
             }
+        }
+    }
+
+    fn project_task_tool(
+        &mut self,
+        task: &Value,
+        output: &TaskOutput,
+        notice: bool,
+        restored: bool,
+        error: Option<&str>,
+    ) {
+        match crate::background_task_display::task_tool_message(
+            task, output, notice, restored, error,
+        ) {
+            Ok(message) => self.events.push_back(RuntimeEvent::UpsertTaskTool {
+                message,
+                insert: notice,
+            }),
+            Err(error) => self
+                .events
+                .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                    MessageRole::Agent,
+                    error,
+                ))),
         }
     }
 

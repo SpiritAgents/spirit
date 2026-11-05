@@ -21,6 +21,8 @@ import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge"
 import type {
   WorkspaceCapabilityTrustDecision,
   WorkspaceCapabilityTrustRequest,
+  RuntimePresentationEntry,
+  RuntimePresentationState,
 } from "@spiritagent/host-internal";
 import type {
   ModelRef,
@@ -47,7 +49,22 @@ import {
 import { sameWorkspaceRoot } from "./service-utils.js";
 import { sameSessionPath } from "./session-path.js";
 
+type PresentationArchive = ChatArchive & {
+  presentation?: RuntimePresentationState;
+  desktopMessageTimeline?: PersistedDesktopTimelineTurnSnapshot[];
+  desktopPresentationSequence?: number;
+};
+
+type PendingPresentationEvent =
+  | { event: RuntimeEvent<DesktopToolRequest>; sequence: number }
+  | {
+      userTurn: { text: string; explicitWorkspaceFiles: PendingWorkspaceFile[] };
+      clientTurnId?: string;
+      sequence: number;
+    };
+
 interface RemoteDesktopRuntimeInput {
+  restorePresentation?: boolean;
   dataDir: string;
   workspaceRoot: string;
   modelRef: ModelRef;
@@ -306,7 +323,7 @@ export async function attachRemoteDesktopRuntime(
   }
   const runtime = buildRemoteDesktopRuntime(client, synced.session.sessionId, input);
   try {
-    await runtime.initializeFromSnapshot(synced.snapshot);
+    await runtime.initializeFromSnapshot(synced.snapshot, input.restorePresentation);
     await applyRemoteSessionPreferences(runtime, input);
     return runtime;
   } catch (error) {
@@ -340,7 +357,7 @@ export async function createRemoteDesktopRuntime(
   await client.call("session.attach", { sessionId: created.sessionId });
   const runtime = buildRemoteDesktopRuntime(client, created.sessionId, input);
   try {
-    await runtime.initialize(created.restoredFromDisk === true);
+    await runtime.initialize(created.restoredFromDisk === true, input.restorePresentation);
     return runtime;
   } catch (error) {
     await runtime.close().catch(() => undefined);
@@ -365,7 +382,11 @@ export async function openRemoteDesktopRuntime(
 export class RemoteDesktopRuntime {
   private snapshot: BridgeRuntimeSnapshot = { ...EMPTY_SNAPSHOT };
   private archive: ChatArchive;
-  private events: RuntimeEvent<DesktopToolRequest>[] = [];
+  private events: PendingPresentationEvent[] = [];
+  private projectedPresentationSequence = 0;
+  private restoringPresentation = false;
+  private receivedDuringRestore: RuntimePresentationEntry[] = [];
+  private restoredPresentation: PresentationArchive | undefined;
   private completedTurnResult: RuntimeTurnResult<unknown, DesktopToolRequest> | undefined;
   private pendingAssistantTextStore = "";
   private thinkingTextStore = "";
@@ -424,7 +445,7 @@ export class RemoteDesktopRuntime {
     this.unsubscribe = client.onNotification(listener);
   }
 
-  async initialize(restoredFromDisk = false): Promise<void> {
+  async initialize(restoredFromDisk = false, restorePresentation = false): Promise<void> {
     if (
       !restoredFromDisk &&
       (this.archive.llmHistory.length > 0 || (this.archive.subagentSessions?.length ?? 0) > 0)
@@ -437,12 +458,52 @@ export class RemoteDesktopRuntime {
     const result = await this.client.call<SessionPollResult>("session.poll", {
       sessionId: this.sessionId,
     });
-    await this.initializeFromSnapshot(result.snapshot);
+    await this.initializeFromSnapshot(result.snapshot, restorePresentation);
   }
 
-  async initializeFromSnapshot(snapshot: BridgeRuntimeSnapshot): Promise<void> {
+  async initializeFromSnapshot(
+    snapshot: BridgeRuntimeSnapshot,
+    restorePresentation = false,
+  ): Promise<void> {
+    this.restoringPresentation = restorePresentation;
     this.snapshot = snapshot;
     await this.refreshArchive();
+    this.restoredPresentation = this.archive as PresentationArchive;
+    if (
+      !this.restoredPresentation.presentation?.entries.length &&
+      !this.restoredPresentation.desktopMessageTimeline &&
+      this.receivedDuringRestore.length === 0
+    ) {
+      this.restoringPresentation = false;
+    }
+  }
+
+  takeRestoredPresentation() {
+    const archive = this.restoredPresentation;
+    this.restoredPresentation = undefined;
+    this.restoringPresentation = false;
+    if (!archive) return undefined;
+    const sequence = archive.presentation?.sequence ?? 0;
+    const entries = [
+      ...(archive.presentation?.entries ?? []),
+      ...this.receivedDuringRestore.filter((entry) => entry.sequence > sequence),
+    ];
+    this.receivedDuringRestore = [];
+    this.events = this.events.filter((entry) => entry.sequence > sequence);
+    for (const entry of entries) {
+      if (entry.kind === "runtime") {
+        this.applyRuntimeEvent(entry.event as RuntimeEvent<DesktopToolRequest>);
+      }
+    }
+    this.projectedPresentationSequence = entries.reduce(
+      (latest, entry) => Math.max(latest, entry.sequence),
+      sequence,
+    );
+    return {
+      timeline: archive.desktopMessageTimeline,
+      entries,
+      notifications: archive.backgroundTaskNotifications ?? [],
+    };
   }
 
   private dropNotificationListener(): void {
@@ -475,11 +536,13 @@ export class RemoteDesktopRuntime {
    * persist boundary re-pushes a full snapshot, so nothing needs a retry).
    */
   pushDesktopTimeline(timeline: PersistedDesktopTimelineTurnSnapshot[]): void {
+    const presentationSequence = this.projectedPresentationSequence;
     this.timelinePushTail = this.timelinePushTail.then(async () => {
       try {
         await this.client.call("session.pushDesktopTimeline", {
           sessionId: this.sessionId,
           timeline,
+          presentationSequence,
         });
       } catch (error) {
         console.warn("[desktop-host] pushDesktopTimeline failed", error);
@@ -605,8 +668,24 @@ export class RemoteDesktopRuntime {
   }
 
   drainEvents(): RuntimeEvent<DesktopToolRequest>[] {
-    const events = this.events;
-    this.events = [];
+    const events: RuntimeEvent<DesktopToolRequest>[] = [];
+    while (this.events.length > 0) {
+      const entry = this.events[0]!;
+      if ("userTurn" in entry && events.length > 0) break;
+      this.events.shift();
+      this.projectedPresentationSequence = Math.max(
+        this.projectedPresentationSequence,
+        entry.sequence,
+      );
+      if ("userTurn" in entry) {
+        if (!entry.clientTurnId || !this.pendingLocalClientTurnIds.delete(entry.clientTurnId)) {
+          this.onRemoteUserTurnSubmitted?.(entry.userTurn);
+          this.onActivity?.();
+        }
+      } else {
+        events.push(entry.event);
+      }
+    }
     return events;
   }
 
@@ -810,8 +889,16 @@ export class RemoteDesktopRuntime {
     if (method === "runtime.event") {
       const event = params["event"] as RuntimeEvent<DesktopToolRequest>;
       if (event) {
+        const sequence =
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : this.projectedPresentationSequence;
+        if (this.restoringPresentation) {
+          this.receivedDuringRestore.push({ kind: "runtime", event, sequence });
+          return;
+        }
         this.applyRuntimeEvent(event);
-        this.events.push(event);
+        this.events.push({ event, sequence });
         this.onActivity?.();
       }
       return;
@@ -819,19 +906,36 @@ export class RemoteDesktopRuntime {
     if (method === "session.userTurnSubmitted" && typeof params["text"] === "string") {
       const clientTurnId =
         typeof params["clientTurnId"] === "string" ? params["clientTurnId"] : undefined;
+      if (this.restoringPresentation) {
+        this.receivedDuringRestore.push({
+          kind: "user",
+          sequence:
+            typeof params["presentationSequence"] === "number" ? params["presentationSequence"] : 0,
+          text: params["text"],
+          clientTurnId,
+          explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
+            ? params["explicitWorkspaceFiles"]
+            : [],
+        });
+        return;
+      }
       this.archive.llmHistory.push({
         role: "user",
         content: params["text"],
         imagePaths: [],
       });
-      if (clientTurnId && this.pendingLocalClientTurnIds.delete(clientTurnId)) {
-        return;
-      }
-      this.onRemoteUserTurnSubmitted?.({
-        text: params["text"],
-        explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
-          ? (params["explicitWorkspaceFiles"] as PendingWorkspaceFile[])
-          : [],
+      this.events.push({
+        userTurn: {
+          text: params["text"],
+          explicitWorkspaceFiles: Array.isArray(params["explicitWorkspaceFiles"])
+            ? (params["explicitWorkspaceFiles"] as PendingWorkspaceFile[])
+            : [],
+        },
+        clientTurnId,
+        sequence:
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : this.projectedPresentationSequence,
       });
       this.onActivity?.();
       return;
@@ -843,6 +947,7 @@ export class RemoteDesktopRuntime {
       return;
     }
     if (method === "session.turnFinished") {
+      if (this.restoringPresentation) return;
       this.applyTurnFinished(params as unknown as SessionTurnFinishedNotification);
       this.onActivity?.();
       return;

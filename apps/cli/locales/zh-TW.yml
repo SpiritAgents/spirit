@@ -1,4 +1,10 @@
 _version: 1
+tui.task.subagent: "子代理"
+tui.task.completed: "%{task} 已完成"
+tui.task.failed: "%{task} 失敗"
+tui.task.stopped: "%{task} 已停止"
+tui.task.interrupted: "%{task} 已中斷"
+tui.task.delegated: "已委派給子代理"
 ui.brand.title: "%{product_name}"
 ui.input.title: "輸入"
 ui.input.title_agent: "Agent"

@@ -1,6 +1,12 @@
 import { lstat, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import {
+  hydrateTimelineSnapshotFromPersistence,
+  normalizeTimelineSnapshotForPersistence,
+  timelinePersistedSnapshotToMessages,
+  validateTimelineSnapshotV2,
+} from "./chat-schema.js";
 
 import {
   deleteFileBaselineTextForPath,
@@ -3097,6 +3103,7 @@ export class DesktopHostService {
       ? path.resolve(bundle.activeSession.filePath)
       : undefined;
     const remoteRuntimeInput = {
+      restorePresentation: true,
       dataDir: spiritDataDir(),
       workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
       modelRef: effectiveActiveModel,
@@ -3161,6 +3168,51 @@ export class DesktopHostService {
         : await createRemoteDesktopRuntime(remoteRuntimeInput);
       runtime.setLoopEnabled(bundle.loopEnabled);
       bundle.runtime = runtime;
+      const restoredPresentation = runtime.takeRestoredPresentation();
+      if (restoredPresentation) {
+        if (restoredPresentation.timeline) {
+          validateTimelineSnapshotV2(restoredPresentation.timeline);
+          bundle.messages = timelinePersistedSnapshotToMessages(restoredPresentation.timeline);
+          bundle.messageTimeline = this.createMessageTimelineFromMessages(
+            bundle.messages,
+            hydrateTimelineSnapshotFromPersistence(restoredPresentation.timeline),
+          );
+          bundle.messageIdCounter = nextMessageIdFromMessages(bundle.messages);
+          this.bundleOrchestrations.delete(bundle);
+        }
+        const projection = this.orchestrationFor(bundle).runtimeEvents;
+        for (const entry of restoredPresentation.entries) {
+          if (entry.kind === "user") {
+            this.projectRemoteUserTurn(bundle, {
+              text: entry.text,
+              explicitWorkspaceFiles: (entry.explicitWorkspaceFiles ??
+                []) as PendingWorkspaceFile[],
+            });
+          } else {
+            projection.applyRuntimeHostEvents([entry.event as RuntimeEvent<DesktopToolRequest>]);
+          }
+        }
+        const knownNotices = new Set(
+          bundle.messageTimeline
+            .toMessages()
+            .flatMap((message) =>
+              message.tool?.taskNotification ? [message.tool.taskNotification.eventId] : [],
+            ),
+        );
+        for (const notice of restoredPresentation.notifications) {
+          if (notice.task.terminalEventId && !knownNotices.has(notice.task.terminalEventId)) {
+            projection.applyRuntimeHostEvents([
+              { kind: "background-task-notification", ...notice },
+            ]);
+          }
+        }
+        bundle.messages = bundle.messageTimeline.toMessages();
+      }
+      if (!runtime.isBusy() && !runtime.needsProjection()) {
+        runtime.pushDesktopTimeline(
+          normalizeTimelineSnapshotForPersistence(bundle.messageTimeline.snapshot()),
+        );
+      }
       const newSessionId = remoteDesktopSessionId(runtime);
       if (previousRuntime) {
         if (previousSessionId && previousSessionId === newSessionId) {
@@ -4917,7 +4969,13 @@ export class DesktopHostService {
     // The daemon keeps the latest snapshot per session; other attached hosts
     // (e.g. CLI) pull it on attach and on update notifications.
     const timelineRuntime = options.fromRuntime ?? bundle.runtime;
-    if (result.desktopMessageTimeline && timelineRuntime) {
+    if (
+      result.desktopMessageTimeline &&
+      timelineRuntime &&
+      !timelineRuntime.isBusy() &&
+      !timelineRuntime.needsProjection() &&
+      bundle.deferredRuntimeHostEvents.length === 0
+    ) {
       timelineRuntime.pushDesktopTimeline(result.desktopMessageTimeline);
     }
   }

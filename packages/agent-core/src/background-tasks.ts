@@ -43,6 +43,7 @@ export interface BackgroundTaskRecord {
   sessionTranscript?: string;
   worktreePath?: string;
   worktreeBranch?: string;
+  finalOutputPreview?: string;
   terminalEventId?: string;
   notificationDelivered?: boolean;
 }
@@ -51,6 +52,13 @@ export interface BackgroundTaskNotification {
   task: BackgroundTaskRecord;
   content: string;
   restored: boolean;
+  output?: BackgroundTaskOutputPreview;
+  outputError?: string;
+}
+
+export interface BackgroundTaskOutputPreview {
+  text: string;
+  truncated: boolean;
 }
 
 export type BackgroundTaskCreateInput = Pick<

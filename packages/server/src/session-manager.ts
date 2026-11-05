@@ -121,6 +121,7 @@ interface ServerSession {
         revision: number;
         timeline: unknown[];
         updatedAtUnixMs: number;
+        presentationSequence?: number;
       }
     | undefined;
   /** Fingerprint of childSessions summaries; used to push archives when membership/status changes. */
@@ -129,7 +130,11 @@ interface ServerSession {
 
 export interface SessionManagerCallbacks {
   /** Broadcast a runtime event to every connected client. */
-  broadcastRuntimeEvent: (sessionId: string, event: RuntimeEvent<JsonValue>) => void;
+  broadcastRuntimeEvent: (
+    sessionId: string,
+    event: RuntimeEvent<JsonValue>,
+    presentationSequence?: number,
+  ) => void;
   broadcastSubagentEvents?: (
     sessionId: string,
     drains: Array<{
@@ -141,7 +146,11 @@ export interface SessionManagerCallbacks {
     }>,
   ) => void;
   /** Broadcast before the runtime starts so every client opens the same turn boundary. */
-  broadcastUserTurnSubmitted?: (sessionId: string, turn: QueuedUserTurn) => void;
+  broadcastUserTurnSubmitted?: (
+    sessionId: string,
+    turn: QueuedUserTurn,
+    presentationSequence?: number,
+  ) => void;
   /** Broadcast turn completion (terminal state of a submitUserTurn). */
   broadcastTurnFinished: (
     sessionId: string,
@@ -360,7 +369,7 @@ export class SessionManager {
         ? { hostToolDescriptionHints: params.hostToolDescriptionHints }
         : {}),
       basicInfoHost: resolveBasicInfoHost(params),
-      onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
+      onEvent: (event, sequence) => this.handleRuntimeEvent(sessionId, event, sequence),
       onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
       requestWorkspaceCapabilityTrust: (request) =>
         this.requestWorkspaceCapabilityTrust(sessionId, request),
@@ -522,11 +531,15 @@ export class SessionManager {
     return session;
   }
 
-  private handleRuntimeEvent(sessionId: string, event: RuntimeEvent<JsonValue>): void {
+  private handleRuntimeEvent(
+    sessionId: string,
+    event: RuntimeEvent<JsonValue>,
+    presentationSequence?: number,
+  ): void {
     if (event.kind === "background-task-error") {
       this.callbacks.log?.(`session ${sessionId}: ${event.error}`);
     }
-    this.callbacks.broadcastRuntimeEvent(sessionId, event);
+    this.callbacks.broadcastRuntimeEvent(sessionId, event, presentationSequence);
     // Approval/question lifecycle changes are exactly when clients need a
     // fresh projection (to open or close the interactive UI).
     if (
@@ -801,6 +814,13 @@ export class SessionManager {
     });
     session.pendingActiveSkills = [];
 
+    const presentationSequence = session.runtimeResult.presentation.append({
+      kind: "user",
+      text: turn.text,
+      explicitWorkspaceFiles: turn.explicitWorkspaceFiles,
+      ...(turn.clientTurnId ? { clientTurnId: turn.clientTurnId } : {}),
+    });
+    this.callbacks.broadcastUserTurnSubmitted?.(session.info.sessionId, turn, presentationSequence);
     await this.startForegroundAction(session, () =>
       runtime.startUserTurnStreaming(
         turn.text,
@@ -810,7 +830,6 @@ export class SessionManager {
       ),
     );
     this.scheduleSessionTitleGenerationIfNeeded(session, turn.text);
-    this.callbacks.broadcastUserTurnSubmitted?.(session.info.sessionId, turn);
     // Push the busy edge immediately so clients see the turn start.
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
   }
@@ -1007,6 +1026,7 @@ export class SessionManager {
       session.queue = [];
       session.turnActive = false;
       session.runtimeResult.runtime.replaceHistory([], { retainBackgroundHistory: false });
+      session.runtimeResult.presentation.clear();
       session.runtimeResult.setActivePlanPath();
       session.info.isBusy = false;
       session.desktopTimeline = undefined;
@@ -1040,6 +1060,7 @@ export class SessionManager {
         throw new Error("session is busy; cannot replace archive while a turn is active");
       }
       session.runtimeResult.runtime.replaceFromArchive(archive as never);
+      session.runtimeResult.presentation.clear();
       session.runtimeResult.setActivePlanPath(
         extractActivePlanPathFromLlmHistory(runtime.history()),
       );
@@ -1053,10 +1074,10 @@ export class SessionManager {
 
   exportArchive(sessionId: string, messages: unknown, assistantAux: unknown): unknown {
     const session = this.requireSession(sessionId);
-    const archive = session.runtimeResult.runtime.toArchive(
-      messages as never,
-      assistantAux as never,
-    );
+    const archive = {
+      ...session.runtimeResult.runtime.toArchive(messages as never, assistantAux as never),
+      presentation: session.runtimeResult.presentation.snapshot(),
+    };
     const stored = session.desktopTimeline;
     if (!stored) {
       return archive;
@@ -1065,6 +1086,7 @@ export class SessionManager {
       ...archive,
       desktopMessageTimeline: stored.timeline,
       desktopMessageTimelineRevision: stored.revision,
+      desktopPresentationSequence: stored.presentationSequence ?? 0,
     };
   }
 
@@ -1076,17 +1098,26 @@ export class SessionManager {
   async pushDesktopTimeline(
     sessionId: string,
     timeline: unknown,
+    presentationSequence?: number,
   ): Promise<{ ok: true; revision: number }> {
     const session = this.requireSession(sessionId);
     if (!Array.isArray(timeline)) {
       throw new Error("desktop timeline must be an array");
     }
+    if (presentationSequence === undefined) {
+      throw new Error("A presentation cursor is required for a desktop timeline.");
+    }
     return this.serializeSession(session, async () => {
+      if (presentationSequence < (session.desktopTimeline?.presentationSequence ?? 0)) {
+        throw new Error("The timeline is older than the saved presentation cursor.");
+      }
+      session.runtimeResult.presentation.acknowledge(presentationSequence);
       const revision = (session.desktopTimeline?.revision ?? 0) + 1;
       session.desktopTimeline = {
         revision,
         timeline,
         updatedAtUnixMs: Date.now(),
+        presentationSequence,
       };
       await session.runtimeResult.persist({ desktopTimeline: session.desktopTimeline });
       this.callbacks.broadcastDesktopTimelineUpdated?.(sessionId, revision);
@@ -1303,7 +1334,7 @@ export class SessionManager {
           : {}),
         ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
         basicInfoHost: resolveBasicInfoHost(session.createParams),
-        onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
+        onEvent: (event, sequence) => this.handleRuntimeEvent(sessionId, event, sequence),
         onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
         requestWorkspaceCapabilityTrust: (request) =>
           this.requestWorkspaceCapabilityTrust(sessionId, request),

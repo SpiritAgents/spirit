@@ -8,6 +8,7 @@ export type ToolCallDiffHostContextValue = {
     relativePath: string,
     options?: ReadWorkspaceTextFileOptions,
   ) => Promise<WorkspaceReadTextFileResult>;
+  readHostTextFile?: (absolutePath: string) => Promise<WorkspaceReadTextFileResult>;
 };
 
 const ToolCallDiffHostContext = createContext<ToolCallDiffHostContextValue | null>(null);

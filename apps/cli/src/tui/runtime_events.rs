@@ -5,6 +5,25 @@ pub(super) fn apply_runtime_events(shell: &mut TuiShell) {
     for event in shell.runtime.drain_events() {
         match event {
             RuntimeEvent::PushMessage(msg) => shell.messages.push(msg),
+            RuntimeEvent::UpsertTaskTool { message, insert } => {
+                let id = message
+                    .tool_block
+                    .as_ref()
+                    .and_then(|tool| tool.tool_call_id.as_ref());
+                let existing = shell.messages.iter_mut().find(|entry| {
+                    id.is_some()
+                        && entry
+                            .tool_block
+                            .as_ref()
+                            .and_then(|tool| tool.tool_call_id.as_ref())
+                            == id
+                });
+                if let Some(existing) = existing {
+                    *existing = message;
+                } else if insert {
+                    shell.messages.push(message);
+                }
+            }
             RuntimeEvent::UpsertToolPreview {
                 tool_call_id,
                 tool_name,

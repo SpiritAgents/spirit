@@ -200,6 +200,7 @@ mod tests {
                 video_paths: vec![],
                 args_excerpt: None,
                 output_excerpt: None,
+                metadata: Default::default(),
                 suppress_expand: None,
             },
         )];

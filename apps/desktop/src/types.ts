@@ -18,6 +18,8 @@ import type {
 import type { ProviderListedCatalogCapabilities } from "@spiritagent/agent-core/model-catalog";
 import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tier";
 import type {
+  BackgroundTaskRecord,
+  BackgroundTaskOutputPreview,
   LspWriteDiagnosticsUi,
   PermissionMemoryTarget,
   ThinkingCapabilities,
@@ -1784,6 +1786,14 @@ export interface FileRewindWarning {
 
 export interface ToolBlockSnapshot {
   toolCallId?: string;
+  backgroundTask?: BackgroundTaskRecord;
+  backgroundTaskOutput?: BackgroundTaskOutputPreview;
+  taskNotification?: {
+    eventId: string;
+    origin: "background-task";
+    restored: boolean;
+    outputError?: string;
+  };
   toolName: string;
   phase: "preview" | "pending-approval" | "running" | "succeeded" | "failed";
   headline: string;

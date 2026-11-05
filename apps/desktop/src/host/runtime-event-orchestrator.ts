@@ -8,6 +8,10 @@ import {
   type RuntimeTurnResult,
 } from "@spiritagent/agent-core";
 import { toolCallPhaseShowsShimmer } from "../lib/tool-call-shimmer.js";
+import {
+  appendBackgroundTaskOutput,
+  backgroundTaskNotificationTool,
+} from "../lib/background-task-display.js";
 import type { HostExtensionEvent } from "@spiritagent/host-internal";
 
 import {
@@ -362,6 +366,30 @@ export class DesktopRuntimeEventOrchestrator {
     const batchId =
       events.length > 0 ? (this.lastApplyEventBatchId += 1) : this.lastApplyEventBatchId;
     for (const event of events) {
+      if (event.kind === "background-task-error") {
+        this.options.setLastRuntimeError(event.error);
+        continue;
+      }
+      if (event.kind === "background-task-notification") {
+        const tool = backgroundTaskNotificationTool(event, (key, options) => i18n.t(key, options));
+        this.options.assistantMessages.upsertToolMessage(tool.toolCallId!, tool, batchId);
+        this.options.messageTimeline?.()?.upsertToolMessage(tool.toolCallId!, tool);
+        continue;
+      }
+      if (event.kind === "background-task-changed" || event.kind === "background-task-output") {
+        const existing = this.findExistingToolSnapshot(event.task.toolCallId);
+        if (!existing?.backgroundTask || existing.backgroundTask.id !== event.task.id) continue;
+        const tool: ToolBlockSnapshot = {
+          ...existing,
+          backgroundTask: event.task,
+          ...(event.kind === "background-task-output"
+            ? { backgroundTaskOutput: appendBackgroundTaskOutput(existing, event.chunk) }
+            : {}),
+        };
+        this.options.assistantMessages.upsertToolMessage(event.task.toolCallId, tool, batchId);
+        this.options.messageTimeline?.()?.upsertToolMessage(event.task.toolCallId, tool);
+        continue;
+      }
       if (event.kind === "begin-assistant-response") {
         this.deferredAfterStreamThinking = undefined;
         const insertAt = messages.length;
@@ -593,7 +621,7 @@ export class DesktopRuntimeEventOrchestrator {
           continue;
         }
         const existing = this.findExistingToolSnapshot(event.toolCallId);
-        if (!existing) {
+        if (!existing || existing.backgroundTask) {
           continue;
         }
         const updated: ToolBlockSnapshot = {
@@ -1042,6 +1070,12 @@ export class DesktopRuntimeEventOrchestrator {
             // Full output for every tool, matching the long-standing shell behavior; display
             // caps live in the render layer (scroll frames), not in the stored snapshot.
             outputExcerpt: execution.output,
+            ...(execution.hostUi?.backgroundTask
+              ? { backgroundTask: execution.hostUi.backgroundTask }
+              : {}),
+            ...(execution.hostUi?.backgroundTaskOutput
+              ? { backgroundTaskOutput: execution.hostUi.backgroundTaskOutput }
+              : {}),
             ...(existingSnapshot?.suppressExpand ? { suppressExpand: true } : {}),
             ...(providerToolLabel !== undefined ? { providerToolLabel } : {}),
             ...(fileToolDiffArgumentsJson ? { fileToolDiffArgumentsJson } : {}),

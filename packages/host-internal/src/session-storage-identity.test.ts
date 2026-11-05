@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { FileBackgroundTaskStore } from "./background-task-store.js";
-import { RuntimeSessionStore } from "./runtime-session-store.js";
+import { RuntimeSessionStore, type RuntimePresentationState } from "./runtime-session-store.js";
 import {
   bindSessionStorageKey,
   ensureSessionStorageKey,
@@ -89,4 +89,31 @@ it("does not reassign a conversation or discard existing destination transcript 
     "already has transcript data",
   );
   expect(await readFile(path.join(directory, "transcript.json"), "utf8")).toBe("existing");
+});
+
+it.each<RuntimePresentationState>([
+  { sequence: -1, entries: [] },
+  { sequence: 0.5, entries: [] },
+  { sequence: 1, entries: [{ sequence: 2, kind: "user", text: "invalid" }] },
+  { sequence: 2, entries: [{ sequence: 0, kind: "user", text: "invalid" }] },
+  {
+    sequence: 2,
+    entries: [
+      { sequence: 2, kind: "user", text: "second" },
+      { sequence: 1, kind: "user", text: "first" },
+    ],
+  },
+])("rejects an invalid persisted presentation cursor or ordering: %j", async (presentation) => {
+  const root = await fixture();
+  const store = new RuntimeSessionStore(root, "journal");
+  await store.save({
+    version: 1,
+    sessionKey: "journal",
+    workspaceRoot: root,
+    agentMode: "agent",
+    initialized: true,
+    archive: { messages: [], assistantAux: [], llmHistory: [] },
+    presentation,
+  });
+  await expect(store.read()).rejects.toThrow("Invalid persisted runtime session");
 });

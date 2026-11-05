@@ -1,4 +1,10 @@
 _version: 1
+tui.task.subagent: "Sous-agent"
+tui.task.completed: "%{task} Terminé"
+tui.task.failed: "%{task} Échoué"
+tui.task.stopped: "%{task} Arrêté"
+tui.task.interrupted: "%{task} Interrompu"
+tui.task.delegated: "Délégué au Sous-agent"
 ui.brand.title: "%{product_name}"
 ui.input.title: "Saisie"
 ui.input.title_agent: "Agent"

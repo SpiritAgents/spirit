@@ -353,7 +353,7 @@ describe("SessionManager", () => {
       );
 
       const timelineV1 = [{ turnId: 1, createdOrder: 0, segments: [] }];
-      const first = await manager.pushDesktopTimeline(created.sessionId, timelineV1);
+      const first = await manager.pushDesktopTimeline(created.sessionId, timelineV1, 0);
       assert.deepEqual(first, { ok: true, revision: 1 });
       assert.deepEqual(manager.getDesktopTimeline(created.sessionId), {
         revision: 1,
@@ -364,7 +364,7 @@ describe("SessionManager", () => {
         { turnId: 1, createdOrder: 0, segments: [] },
         { turnId: 2, createdOrder: 1, segments: [] },
       ];
-      const second = await manager.pushDesktopTimeline(created.sessionId, timelineV2);
+      const second = await manager.pushDesktopTimeline(created.sessionId, timelineV2, 0);
       assert.deepEqual(second, { ok: true, revision: 2 });
       assert.deepEqual(broadcasts, [
         { sessionId: created.sessionId, revision: 1 },
@@ -388,7 +388,7 @@ describe("SessionManager", () => {
       });
       assert.equal(manager.getDesktopTimeline(created.sessionId), null);
 
-      await manager.pushDesktopTimeline(created.sessionId, timelineV1);
+      await manager.pushDesktopTimeline(created.sessionId, timelineV1, 0);
       await manager.reset(created.sessionId);
       assert.equal(manager.getDesktopTimeline(created.sessionId), null);
 

@@ -1,8 +1,19 @@
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import type { AgentMode, ChatArchive } from "@spiritagent/agent-core";
+import type { AgentMode, ChatArchive, RuntimeEvent } from "@spiritagent/agent-core";
 import { writeTaskStateJson } from "./background-task-store.js";
 import { resolveTranscriptSessionDir } from "./transcript.js";
+
+export type RuntimePresentationPayload =
+  | { kind: "runtime"; event: RuntimeEvent<unknown> }
+  | { kind: "user"; text: string; explicitWorkspaceFiles?: unknown[]; clientTurnId?: string };
+
+export type RuntimePresentationEntry = RuntimePresentationPayload & { sequence: number };
+
+export interface RuntimePresentationState {
+  sequence: number;
+  entries: RuntimePresentationEntry[];
+}
 
 export interface RuntimeSessionState {
   version: 1;
@@ -12,10 +23,12 @@ export interface RuntimeSessionState {
   activePlanPath?: string;
   initialized: boolean;
   archive: ChatArchive;
+  presentation?: RuntimePresentationState;
   desktopTimeline?: {
     revision: number;
     timeline: unknown[];
     updatedAtUnixMs: number;
+    presentationSequence?: number;
   };
 }
 
@@ -90,14 +103,54 @@ function isRuntimeSessionState(value: unknown): value is RuntimeSessionState {
       timeline === null ||
       !("revision" in timeline) ||
       !Number.isSafeInteger(timeline.revision) ||
+      Number(timeline.revision) < 0 ||
       !("timeline" in timeline) ||
       !Array.isArray(timeline.timeline) ||
       !("updatedAtUnixMs" in timeline) ||
-      typeof timeline.updatedAtUnixMs !== "number"
+      typeof timeline.updatedAtUnixMs !== "number" ||
+      ("presentationSequence" in timeline &&
+        (!Number.isSafeInteger(timeline.presentationSequence) ||
+          Number(timeline.presentationSequence) < 0))
     )
       return false;
   }
   if ("activePlanPath" in value && typeof value.activePlanPath !== "string") return false;
+  if ("presentation" in value) {
+    const presentation = value.presentation;
+    if (
+      !presentation ||
+      typeof presentation !== "object" ||
+      !("sequence" in presentation) ||
+      !Number.isSafeInteger(presentation.sequence) ||
+      Number(presentation.sequence) < 0 ||
+      !("entries" in presentation) ||
+      !Array.isArray(presentation.entries)
+    )
+      return false;
+    const cursor =
+      "desktopTimeline" in value &&
+      typeof value.desktopTimeline === "object" &&
+      value.desktopTimeline !== null &&
+      "presentationSequence" in value.desktopTimeline
+        ? Number(value.desktopTimeline.presentationSequence)
+        : 0;
+    if (cursor > Number(presentation.sequence)) return false;
+    let previous = cursor;
+    for (const entry of presentation.entries) {
+      if (
+        !entry ||
+        typeof entry !== "object" ||
+        !Number.isSafeInteger(entry.sequence) ||
+        entry.sequence <= previous ||
+        entry.sequence > Number(presentation.sequence) ||
+        (entry.kind !== "runtime" && entry.kind !== "user") ||
+        (entry.kind === "runtime" && (!entry.event || typeof entry.event.kind !== "string")) ||
+        (entry.kind === "user" && typeof entry.text !== "string")
+      )
+        return false;
+      previous = entry.sequence;
+    }
+  }
   const archive = value.archive;
   return (
     "llmHistory" in archive &&

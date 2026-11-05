@@ -82,7 +82,7 @@ function ToolCallDetailScrollPre({ children }: { children: string }) {
   );
 }
 
-export type ToolSummaryDetailTone = "default" | "shell-command";
+export type ToolSummaryDetailTone = "default" | "shell-command" | "single-line";
 
 export type ToolSummaryStatusSuffixTone = "filename-detail" | "failed-status";
 
@@ -97,6 +97,7 @@ const statusSuffixToneClass: Record<ToolSummaryStatusSuffixTone, string> = {
  */
 const summaryDetailToneClass: Record<ToolSummaryDetailTone, string> = {
   default: "text-foreground-subtle",
+  "single-line": "text-foreground-subtle",
   "shell-command": toolCardFileNameDetailClass,
 };
 
@@ -136,14 +137,14 @@ function ToolCallSummaryRow({
     () => resolveToolLineDeltaForDisplay(tool),
     [tool.phase, tool.toolName, tool.editLineDelta, tool.argsExcerpt],
   );
-  const statusSuffix = tool.phase === "failed" ? t("failed") : undefined;
+  const statusSuffix = tool.phase === "failed" && !tool.taskNotification ? t("failed") : undefined;
   const statusSuffixTone: ToolSummaryStatusSuffixTone | undefined = statusSuffix
     ? shellSummary
       ? "failed-status"
       : "filename-detail"
     : undefined;
 
-  const truncateSummary = detailTone === "shell-command";
+  const truncateSummary = detailTone !== "default";
 
   return (
     <span
@@ -203,7 +204,7 @@ export function MinimalToolSummary({
   const shimmerClass = shimmerActive
     ? "spirit-thinking-shimmer-text font-normal tracking-wide"
     : summaryClass;
-  const truncateSummary = detailTone === "shell-command";
+  const truncateSummary = detailTone !== "default";
 
   return (
     <span
@@ -550,21 +551,63 @@ function ShellToolExpandedBody({
   tool,
   command,
   onAbortShell,
+  open,
+  onOpenReadFile,
 }: {
   tool: ToolBlockSnapshot;
   command: string | undefined;
   onAbortShell?: (toolCallId: string) => void;
+  open: boolean;
+  onOpenReadFile?: (target: EditorFileTarget) => void;
 }) {
   const { t } = useTranslation();
-  const followTail = tool.phase === "running";
+  const readHostTextFile = useToolCallDiffHost()?.readHostTextFile;
+  const task = tool.backgroundTask;
+  const outputPath = task?.outputPath;
+  const taskRunning = task !== undefined && task.endedAtUnixMs === undefined;
+  const followTail = task ? taskRunning : tool.phase === "running";
+  const [savedOutput, setSavedOutput] = useState<{ path: string; text: string }>();
+  const [outputError, setOutputError] = useState<string>();
+  useEffect(() => {
+    if (!open || !outputPath || !readHostTextFile) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const read = async () => {
+      try {
+        const result = await readHostTextFile(outputPath);
+        if (cancelled) return;
+        setSavedOutput({ path: outputPath, text: result.text });
+        setOutputError(undefined);
+      } catch (error) {
+        if (cancelled) return;
+        setOutputError(error instanceof Error ? error.message : String(error));
+        return;
+      }
+      if (!cancelled && taskRunning) timer = setTimeout(read, 1_000);
+    };
+    void read();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, outputPath, readHostTextFile, taskRunning]);
   const shellOutput = useMemo(() => {
+    if (task) {
+      if (savedOutput?.path === task.outputPath) {
+        return {
+          text: savedOutput.text.slice(-512 * 1024),
+          truncated: savedOutput.text.length > 512 * 1024,
+        };
+      }
+      return tool.backgroundTaskOutput ?? null;
+    }
     const parsed = parseShellToolResult(tool.outputExcerpt);
     if (parsed) {
       return { text: parsed.output, truncated: parsed.truncated === true };
     }
     const raw = tool.outputExcerpt?.trim();
     return raw ? { text: raw, truncated: false } : null;
-  }, [tool.outputExcerpt]);
+  }, [tool.outputExcerpt, task, tool.backgroundTaskOutput, savedOutput]);
   const detailLines = shellToolExpandableDetailLines(tool, command);
   const showArgsExcerpt = !command && Boolean(tool.argsExcerpt?.trim());
 
@@ -573,9 +616,19 @@ function ShellToolExpandedBody({
   const showTerminateButton =
     tool.phase === "running" && toolCallId.length > 0 && Boolean(onAbortShell);
   const showShellPanel = Boolean(commandLine || shellOutput);
+  const displayedOutputError =
+    outputError ??
+    (savedOutput?.path === outputPath ? undefined : tool.taskNotification?.outputError);
 
   return (
     <div className="space-y-2">
+      {displayedOutputError ? (
+        <p role="status" className="text-xs text-destructive">
+          {t("tool.backgroundOutputUnavailable", {
+            error: displayedOutputError,
+          })}
+        </p>
+      ) : null}
       {showShellPanel ? (
         <div className="space-y-1">
           <div className="overflow-hidden rounded-md border border-border/20 bg-muted/15 p-2 text-xs leading-relaxed text-muted-foreground">
@@ -625,6 +678,33 @@ function ShellToolExpandedBody({
           ))}
         </ul>
       ) : null}
+      {task ? (
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>
+            {task.id}
+            {task.exitCode !== undefined
+              ? ` · ${t("tool.backgroundExitCode", { code: task.exitCode })}`
+              : ""}
+          </p>
+          {onOpenReadFile ? (
+            <button
+              type="button"
+              className="max-w-full truncate text-left underline underline-offset-2"
+              onClick={() =>
+                onOpenReadFile({
+                  scope: "external",
+                  absolutePath: task.outputPath,
+                  viewMode: "preview",
+                })
+              }
+            >
+              {task.outputPath}
+            </button>
+          ) : (
+            <p className="break-all">{task.outputPath}</p>
+          )}
+        </div>
+      ) : null}
       {showArgsExcerpt ? (
         <pre
           data-spirit-selectable="text"
@@ -656,7 +736,7 @@ export function MinimalToolCallCard({
   const shimmerActive = toolCallPhaseShowsShimmer(tool.phase);
   const isShell = tool.toolName === "shell";
   const isSubagent = tool.toolName === "subagent";
-  const subagentToolCallId = tool.toolCallId?.trim() ?? "";
+  const subagentToolCallId = tool.backgroundTask?.toolCallId ?? tool.toolCallId?.trim() ?? "";
   const canOpenSubagentViewer = Boolean(isSubagent && onOpenSubagentViewer && subagentToolCallId);
   const readFileTarget = useMemo(
     () =>
@@ -706,7 +786,7 @@ export function MinimalToolCallCard({
       resultDetailTone={summary.resultDetailTone}
       shellSummary={summary.shellSummary}
       shimmerActive={shimmerActive}
-      detailTone={isShell ? "shell-command" : "default"}
+      detailTone={isShell ? "shell-command" : tool.taskNotification ? "single-line" : "default"}
       hideLineDelta={canOpenFileDiffNav}
       hideLspBadge={canOpenFileDiffNav}
     />
@@ -791,7 +871,13 @@ export function MinimalToolCallCard({
   const expandedBody = (
     <div className="pt-1.5">
       {isShell ? (
-        <ShellToolExpandedBody tool={tool} command={shellCommand} onAbortShell={onAbortShell} />
+        <ShellToolExpandedBody
+          tool={tool}
+          command={shellCommand}
+          onAbortShell={onAbortShell}
+          open={open}
+          onOpenReadFile={onOpenReadFile}
+        />
       ) : isFileDiff ? (
         <FileToolDiffExpandedBody tool={tool} open={open} />
       ) : isProviderToolCard ? (

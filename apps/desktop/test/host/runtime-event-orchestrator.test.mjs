@@ -105,6 +105,88 @@ function visibleRowTokens(messages) {
   }).map(rowToken);
 }
 
+test("background completion is an idempotent process row after the prior reply", () => {
+  const harness = createHarness();
+  const task = {
+    version: 1,
+    id: "task_0123456789ab",
+    sessionKey: "fixture",
+    runtimeId: "main",
+    toolCallId: "call-shell",
+    kind: "shell",
+    input: "echo done",
+    argumentsJson: '{"name":"shell","command":"echo done"}',
+    owner: { id: "fixture", pid: 1 },
+    status: "completed",
+    background: true,
+    outputPath: "/session/background-tasks/shell-task_0123456789ab.log",
+    startedAtUnixMs: 1,
+    updatedAtUnixMs: 2,
+    endedAtUnixMs: 2,
+    elapsedMs: 1,
+    terminalEventId: "task_0123456789ab:completed",
+    exitCode: 0,
+  };
+  harness.pushUser("Start the task");
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    { kind: "assistant-chunk", text: "The task is running." },
+    { kind: "assistant-response-completed" },
+  ]);
+  const notice = {
+    kind: "background-task-notification",
+    task,
+    content: "Model-only notification",
+    restored: false,
+    output: { text: "done\n", truncated: false },
+  };
+  harness.orchestrator.applyRuntimeHostEvents([notice, notice]);
+  assert.deepEqual(visibleRowTokens(harness.timeline.toMessages()), [
+    "user",
+    "assistant:The task is running.",
+    "tool:task-notice:task_0123456789ab:completed",
+  ]);
+  const tool = harness.timeline.toMessages().at(-1).tool;
+  assert.equal(tool.phase, "succeeded");
+  assert.equal(tool.backgroundTaskOutput.text, "done\n");
+  assert.equal(tool.taskNotification.eventId, task.terminalEventId);
+});
+
+test("detached output updates the original card without restarting its shimmer", () => {
+  const harness = createHarness();
+  const task = {
+    id: "task_0123456789ab",
+    toolCallId: "call-shell",
+    kind: "shell",
+    status: "running",
+    input: "echo done",
+    background: true,
+  };
+  harness.pushUser("Run a task");
+  harness.orchestrator.applyRuntimeHostEvents([
+    { kind: "begin-assistant-response" },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "call-shell",
+        toolName: "shell",
+        request: { name: "shell", command: "echo done", reason: "Run a task" },
+        output: "Background task metadata",
+        failed: false,
+        hostUi: {
+          backgroundTask: task,
+          backgroundTaskOutput: { text: "first\n", truncated: false },
+        },
+      },
+    },
+    { kind: "background-task-output", task, chunk: "next\n" },
+  ]);
+  const tool = harness.timeline.toMessages().find((message) => message.tool)?.tool;
+  assert.equal(tool.phase, "succeeded");
+  assert.equal(tool.backgroundTaskOutput.text, "first\nnext\n");
+  assert.equal(tool.outputExcerpt, "Background task metadata");
+});
+
 test("abort preemptive thinking finalize ignores duplicate deferred after-stream finalize event", () => {
   const harness = createHarness();
   const thinking = "The user just sent random typing.";

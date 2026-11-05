@@ -80,6 +80,10 @@ pub(crate) struct BridgeExportState {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgeChatArchive {
+    #[serde(default)]
+    pub(crate) presentation: Option<Value>,
+    #[serde(default)]
+    pub(crate) background_task_notifications: Vec<Value>,
     pub(crate) messages: Vec<BridgeChatMessage>,
     pub(crate) assistant_aux: Vec<BridgeAssistantAuxEntry>,
     pub(crate) llm_history: Vec<ArchivedLlmMessage>,
@@ -289,6 +293,8 @@ pub(crate) struct BridgeWorkspaceFileReferenceSuggestions {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct BridgeToolExecution {
+    #[serde(default)]
+    pub(crate) host_ui: Option<Value>,
     pub(crate) tool_call_id: String,
     pub(crate) tool_name: String,
     pub(crate) request: Value,
@@ -424,6 +430,10 @@ pub(crate) enum BridgeRuntimeEvent {
         task: Value,
         content: String,
         restored: bool,
+        #[serde(default)]
+        output: Option<Value>,
+        #[serde(default, rename = "outputError")]
+        output_error: Option<String>,
     },
     #[serde(rename = "background-task-error")]
     BackgroundTaskError { error: String },

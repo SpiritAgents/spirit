@@ -332,16 +332,17 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
   };
 
   const sessionManager = new SessionManager(dataDir, {
-    broadcastRuntimeEvent: (sessionId, event) => {
-      broadcast(RUNTIME_EVENT, { sessionId, event });
+    broadcastRuntimeEvent: (sessionId, event, presentationSequence) => {
+      broadcast(RUNTIME_EVENT, { sessionId, event, presentationSequence });
     },
     broadcastSubagentEvents: (sessionId, drains) => {
       broadcast(SESSION_SUBAGENT_EVENTS, { sessionId, drains });
     },
-    broadcastUserTurnSubmitted: (sessionId, turn) => {
+    broadcastUserTurnSubmitted: (sessionId, turn, presentationSequence) => {
       broadcast(SESSION_USER_TURN_SUBMITTED, {
         sessionId,
         text: turn.text,
+        presentationSequence,
         ...(turn.clientTurnId ? { clientTurnId: turn.clientTurnId } : {}),
         ...(turn.explicitWorkspaceFiles.length > 0
           ? { explicitWorkspaceFiles: turn.explicitWorkspaceFiles }
@@ -656,7 +657,13 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
           params["assistantAux"],
         );
       case SESSION_PUSH_DESKTOP_TIMELINE:
-        return sessionManager.pushDesktopTimeline(readSessionId(params), params["timeline"]);
+        return sessionManager.pushDesktopTimeline(
+          readSessionId(params),
+          params["timeline"],
+          typeof params["presentationSequence"] === "number"
+            ? params["presentationSequence"]
+            : undefined,
+        );
       case SESSION_GET_DESKTOP_TIMELINE:
         return sessionManager.getDesktopTimeline(readSessionId(params));
       case SESSION_EXPORT_STATE:

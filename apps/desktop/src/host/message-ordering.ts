@@ -1326,6 +1326,8 @@ function readFileSummaryCopy(
   const detail = readFileToolHeadlineDetail(rawPath, {
     emptyFileLabel: i18n.t("tool.file"),
     toolOutputLabel: i18n.t("tool.toolOutput"),
+    shellOutputLabel: i18n.t("tool.shellOutput"),
+    subagentOutputLabel: i18n.t("tool.subagentOutput"),
     lineRange,
     skillMarkdownContent,
   });

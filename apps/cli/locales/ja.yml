@@ -1,4 +1,10 @@
 _version: 1
+tui.task.subagent: "サブエージェント"
+tui.task.completed: "%{task} 完了"
+tui.task.failed: "%{task} 失敗"
+tui.task.stopped: "%{task} 停止"
+tui.task.interrupted: "%{task} 中断"
+tui.task.delegated: "サブエージェントに委任"
 ui.brand.title: "%{product_name}"
 ui.input.title: "入力"
 ui.input.title_agent: "Agent"

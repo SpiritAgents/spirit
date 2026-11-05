@@ -1,4 +1,10 @@
 _version: 1
+tui.task.subagent: "Суб-агент"
+tui.task.completed: "%{task} Завершён"
+tui.task.failed: "%{task} — Ошибка"
+tui.task.stopped: "%{task} Остановлен"
+tui.task.interrupted: "%{task} Прерван"
+tui.task.delegated: "Делегировано Суб-агенту"
 ui.brand.title: "%{product_name}"
 ui.input.title: "Ввод"
 ui.input.title_agent: "Agent"

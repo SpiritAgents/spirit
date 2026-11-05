@@ -413,7 +413,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     const notifications = tasks.manager.pendingNotifications(tasks.scope);
     const contexts = this.pendingTaskHookContexts.splice(0);
     if (notifications.length === 0 && contexts.length === 0) return state;
-    const added: Array<{ task: (typeof notifications)[number]; content: string }> = [];
+    const added: import("./background-tasks.js").BackgroundTaskNotification[] = [];
     for (const task of notifications) {
       const marker = `\ntask_event_id: ${task.terminalEventId}\n`;
       const existing = this.historyStore.find(
@@ -425,13 +425,28 @@ export class AgentRuntime<Config, State, ToolRequest> {
         : formatUserMessageContentForLlm(formatBackgroundTaskNotification(task));
       if (!existing)
         this.historyStore.push({ role: "user", content: createLlmMessageContentFromText(content) });
-      added.push({ task, content });
+      const notification: import("./background-tasks.js").BackgroundTaskNotification = {
+        task: structuredClone(task),
+        content,
+        restored,
+      };
+      try {
+        notification.output = await tasks.manager.readOutputPreview(task.id, tasks.scope);
+      } catch (error) {
+        notification.outputError = renderError(error);
+        this.emitEvent({
+          kind: "background-task-error",
+          taskId: task.id,
+          error: notification.outputError,
+        });
+      }
+      added.push(notification);
       if (
         !this.taskNotificationsStore.some(
           (entry) => entry.task.terminalEventId === task.terminalEventId,
         )
       ) {
-        this.taskNotificationsStore.push({ task: structuredClone(task), content, restored });
+        this.taskNotificationsStore.push(notification);
       }
     }
     this.historyStore.push(...contexts);
@@ -4088,6 +4103,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     record.summary.status = output.failed ? "failed" : "completed";
     record.summary.completedAtUnixMs = Date.now();
     record.summary.updatedAtUnixMs = record.summary.completedAtUnixMs;
+    await context.update({ finalOutputPreview: output.text.slice(0, 16_384) });
     await context.writeOutput(`\n\nFinal response:\n${output.text}\n`);
     if (this.options.syncSubagentTranscript) {
       await this.options.syncSubagentTranscript({

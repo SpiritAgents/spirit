@@ -76,6 +76,25 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("session task lifecycle", () => {
+  it.each([16_384, 16_385])(
+    "marks output previews truncated only beyond the limit (%i)",
+    async (size) => {
+      const { manager, input, scope, outputs, done } = fixture();
+      const id = await manager.launch(input, async (context) => {
+        await waitForTaskDelay(60, context.signal);
+        return done;
+      });
+      outputs.set(id, "x".repeat(size));
+      const result = await manager.initialResult(id, scope, { delay: 0 });
+      expect(result).toMatchObject({
+        kind: "background",
+        outputTail: "x".repeat(16_384),
+        outputTruncated: size > 16_384,
+      });
+      await manager.stop(id, scope);
+    },
+  );
+
   it("returns final output without a duplicate notification when work finishes in the initial wait", async () => {
     const { manager, input, done, scope } = fixture();
     const id = await manager.launch(input, async () => {

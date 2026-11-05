@@ -1,5 +1,6 @@
 import { release as osRelease } from "node:os";
 import path from "node:path";
+import { PresentationJournal } from "./presentation-journal.js";
 
 import {
   AgentRuntime,
@@ -135,7 +136,7 @@ export interface ServerRuntimeOptions {
   dreamSourceSession?: HostDreamSourceSessionRef;
   /** Main-session usage carried across runtime replacement; absent means no measured input yet. */
   initialLastInputTokens?: number;
-  onEvent: (event: RuntimeEvent<JsonValue>) => void;
+  onEvent: (event: RuntimeEvent<JsonValue>, presentationSequence?: number) => void;
   /**
    * Workspace capability trust prompt (hooks). The session manager routes this
    * to connected clients; when no client can answer, the caller's fallback
@@ -219,6 +220,7 @@ interface ServerRuntimeBindings {
 }
 
 export interface ServerRuntimeResult extends ServerRuntimeBindings {
+  presentation: PresentationJournal;
   storageSessionKey: string;
   restoredFromDisk: boolean;
   tasks: SessionTaskManager;
@@ -266,8 +268,11 @@ export async function createServerRuntime(
   let closed = false;
   let initialized = saved?.initialized ?? false;
   let desktopTimeline = saved?.desktopTimeline;
+  const presentation = new PresentationJournal(saved?.presentation);
+  const onEvent: ServerRuntimeOptions["onEvent"] = (event) =>
+    options.onEvent(event, presentation.append({ kind: "runtime", event }));
   const report = (error: unknown, taskId?: string): void =>
-    options.onEvent({
+    onEvent({
       kind: "background-task-error",
       error: error instanceof Error ? error.message : String(error),
       ...(taskId ? { taskId } : {}),
@@ -289,6 +294,7 @@ export async function createServerRuntime(
       ...(activePlanPath ? { activePlanPath } : {}),
       initialized,
       archive: result.runtime.toArchive([], []),
+      presentation: presentation.snapshot(),
       ...(desktopTimeline ? { desktopTimeline } : {}),
     });
   };
@@ -308,16 +314,17 @@ export async function createServerRuntime(
       sessionKey: storageSessionKey,
       store: taskStore,
       onChanged: (task) => {
-        options.onEvent({ kind: "background-task-changed", task });
+        onEvent({ kind: "background-task-changed", task });
         void persist().catch((error: unknown) => report(error, task.id));
       },
       onError: report,
       onOutput: (task, chunk) => {
-        if (task.background) options.onEvent({ kind: "background-task-output", task, chunk });
+        if (task.background) onEvent({ kind: "background-task-output", task, chunk });
       },
     });
     const prepared = await prepareServerRuntime({
       ...options,
+      onEvent,
       sessionKey: storageSessionKey,
       ...(saved ? { agentMode: saved.agentMode } : {}),
       ...(saved?.activePlanPath ? { activePlanPath: saved.activePlanPath } : {}),
@@ -338,12 +345,14 @@ export async function createServerRuntime(
         restoredFromDisk: saved?.initialized === true,
         restoredDesktopTimeline: desktopTimeline,
         tasks,
+        presentation,
         persist,
         restoreTaskNotifications: () => runtime.restoreBackgroundTaskNotifications(),
         reconfigure: async (next) => {
           const activePlanPath = result.activePlanPathSnapshot();
           const fresh = await prepareServerRuntime({
             ...next,
+            onEvent,
             sessionKey: storageSessionKey,
             ...(activePlanPath ? { activePlanPath } : {}),
           });

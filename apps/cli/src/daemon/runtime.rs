@@ -60,6 +60,8 @@ pub(crate) struct DaemonRuntime {
     daemon_failed: bool,
     workspace_capability_trust_prompter: Option<WorkspaceCapabilityTrustPrompter>,
     pending_local_client_turn_ids: HashSet<String>,
+    recovered_presentation_sequence: u64,
+    exported_presentation_sequence: u64,
 }
 
 impl DaemonRuntime {
@@ -166,6 +168,8 @@ impl DaemonRuntime {
             daemon_failed: false,
             workspace_capability_trust_prompter: None,
             pending_local_client_turn_ids: HashSet::new(),
+            recovered_presentation_sequence: 0,
+            exported_presentation_sequence: 0,
         })
     }
 
@@ -179,6 +183,9 @@ impl DaemonRuntime {
     }
 
     fn detach_current_session(&mut self) {
+        self.recovered_presentation_sequence = 0;
+        self.exported_presentation_sequence = 0;
+        self.sync.clear_task_output();
         self.sync.pending_session_title = None;
         if self.daemon_failed {
             return;
@@ -323,7 +330,10 @@ impl DaemonRuntime {
 
     /// Export the daemon session's live archive (llm history, subagents, loop state).
     pub fn fetch_live_chat_archive(&mut self) -> Result<ChatArchive> {
-        self.export_chat_archive(&[], &[])
+        let archive = self.export_chat_archive(&[], &[])?;
+        self.recovered_presentation_sequence = self.exported_presentation_sequence;
+        self.sync.events.clear();
+        Ok(archive)
     }
 
     pub fn desktop_timeline_resync_pending(&self) -> bool {
@@ -458,6 +468,15 @@ impl DaemonRuntime {
         let params = message.get("params").cloned().unwrap_or(Value::Null);
         let for_this_session =
             params.get("sessionId").and_then(Value::as_str) == self.session_id.as_deref();
+        if for_this_session
+            && matches!(method, "runtime.event" | "session.userTurnSubmitted")
+            && params
+                .get("presentationSequence")
+                .and_then(Value::as_u64)
+                .is_some_and(|sequence| sequence <= self.recovered_presentation_sequence)
+        {
+            return;
+        }
 
         match method {
             "runtime.event" if for_this_session => {
@@ -1727,13 +1746,50 @@ impl DaemonRuntime {
             Some(json!({ "messages": message_values, "assistantAux": assistant_aux })),
         )?;
         let bridge_archive: BridgeChatArchive = serde_json::from_value(value)?;
+        self.exported_presentation_sequence = bridge_archive
+            .presentation
+            .as_ref()
+            .and_then(|journal| journal.get("sequence"))
+            .and_then(Value::as_u64)
+            .unwrap_or(0);
         // Live timeline pushed by the authoritative desktop host; hydrate it
         // into desktop messages exactly like a disk load would.
-        let desktop_messages = bridge_archive
+        let mut desktop_messages = bridge_archive
             .desktop_message_timeline
             .as_deref()
-            .map(crate::chat_timeline::hydrate_desktop_messages_from_timeline)
-            .filter(|snapshots| !snapshots.is_empty());
+            .map(crate::chat_timeline::hydrate_desktop_messages_from_timeline);
+        if let Some(snapshots) = desktop_messages.as_ref() {
+            let (messages, assistant_aux_by_message) =
+                crate::rewind::restore_conversation(snapshots);
+            let mut projection = crate::chat_timeline::LiveChatProjection {
+                messages,
+                assistant_aux_by_message,
+            };
+            if let Some(entries) = bridge_archive
+                .presentation
+                .as_ref()
+                .and_then(|journal| journal.get("entries"))
+                .and_then(Value::as_array)
+            {
+                crate::chat_timeline::append_presentation_events(&mut projection, entries)
+                    .map_err(anyhow::Error::msg)?;
+            }
+            desktop_messages = Some(crate::rewind::conversation_snapshots(
+                &projection.messages,
+                &projection.assistant_aux_by_message,
+                None,
+            ));
+        } else if !bridge_archive.background_task_notifications.is_empty() {
+            let projection = crate::chat_timeline::project_live_chat_with_task_notices(
+                &bridge_archive.llm_history,
+                &bridge_archive.background_task_notifications,
+            );
+            desktop_messages = Some(crate::rewind::conversation_snapshots(
+                &projection.messages,
+                &projection.assistant_aux_by_message,
+                None,
+            ));
+        }
         Ok(ChatArchive {
             messages: bridge_archive
                 .messages

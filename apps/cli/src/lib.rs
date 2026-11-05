@@ -1,5 +1,6 @@
 pub mod adapters;
 pub mod ask_questions;
+mod background_task_display;
 pub mod bedrock_mantle;
 pub mod chat_archive;
 pub mod chat_store;

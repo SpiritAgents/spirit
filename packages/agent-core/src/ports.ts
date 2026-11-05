@@ -117,6 +117,7 @@ export interface ToolExecutionOutput {
 
 export interface ToolExecutionHostUi {
   backgroundTask?: import("./background-tasks.js").BackgroundTaskRecord;
+  backgroundTaskOutput?: import("./background-tasks.js").BackgroundTaskOutputPreview;
   delay?: {
     startedAtUnixMs: number;
     deadlineUnixMs?: number;

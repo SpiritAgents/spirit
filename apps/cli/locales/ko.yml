@@ -1,4 +1,10 @@
 _version: 1
+tui.task.subagent: "서브 에이전트"
+tui.task.completed: "%{task} 완료"
+tui.task.failed: "%{task} 실패"
+tui.task.stopped: "%{task} 중지됨"
+tui.task.interrupted: "%{task} 중단됨"
+tui.task.delegated: "서브 에이전트에 위임됨"
 ui.brand.title: "%{product_name}"
 ui.input.title: "입력"
 ui.input.title_agent: "Agent"

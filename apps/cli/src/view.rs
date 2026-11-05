@@ -210,6 +210,7 @@ pub enum ToolUiPhase {
 /// Structured tool call display block; `content` still keeps a plain-text copy for archiving and export.
 #[derive(Clone, Debug)]
 pub struct ToolUiBlock {
+    pub metadata: serde_json::Map<String, serde_json::Value>,
     pub tool_call_id: Option<String>,
     pub tool_name: String,
     pub phase: ToolUiPhase,

@@ -123,6 +123,63 @@ async function waitUntil(predicate: () => boolean | Promise<boolean>) {
   await expect.poll(predicate, { timeout: 8_000, interval: 20 }).toBe(true);
 }
 
+it("restores offline background replies after the acknowledged UI checkpoint without running the model", async () => {
+  const { root, dataDir, workspaceRoot } = await fixture();
+  const { manager, finished } = managerFor(dataDir);
+  const gate = path.join(root, "release");
+  const requests = scriptedModel((_body, index) =>
+    index === 0
+      ? response("", {
+          name: "shell",
+          arguments: {
+            command: gatedShell(gate),
+            reason: "Run the fixture.",
+            background: { delay: 0 },
+          },
+        })
+      : response(index === 1 ? "The task is running." : "The offline task is complete."),
+  );
+  const key = "ephemeral://presentation";
+  const { sessionId } = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    conversationKey: key,
+    approvalLevel: "bypass-approval",
+  });
+  await manager.submitUserTurn(sessionId, { text: "Start the task." });
+  await waitUntil(() => finished.length === 1);
+  const checkpoint = manager.exportArchive(sessionId, [], []) as ChatArchive & {
+    presentation: { sequence: number; entries: unknown[] };
+  };
+  await manager.pushDesktopTimeline(sessionId, [], checkpoint.presentation.sequence);
+  await writeFile(gate, "");
+  await waitUntil(() => finished.length === 2);
+  await manager.closeSession(sessionId);
+  const resumed = managerFor(dataDir).manager;
+  const reopened = await resumed.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    conversationKey: key,
+  });
+  const archive = resumed.exportArchive(reopened.sessionId, [], []) as ChatArchive & {
+    presentation: { sequence: number; entries: unknown[] };
+    desktopPresentationSequence: number;
+  };
+  expect(archive.desktopPresentationSequence).toBe(checkpoint.presentation.sequence);
+  const events = JSON.stringify(archive.presentation.entries);
+  expect(events).toContain("The offline task is complete.");
+  expect(events).toContain("background-task-notification");
+  expect(events).not.toContain("The task is running.");
+  expect(requests).toHaveLength(3);
+  await expect(
+    resumed.pushDesktopTimeline(reopened.sessionId, [], checkpoint.presentation.sequence - 1),
+  ).rejects.toThrow("older than the saved");
+  await resumed.pushDesktopTimeline(reopened.sessionId, [], archive.presentation.sequence);
+  expect(
+    (resumed.exportArchive(reopened.sessionId, [], []) as typeof archive).presentation.entries,
+  ).toEqual([]);
+});
+
 it("resolves streamed tool approvals while the foreground poll awaits their outcomes", async () => {
   const { root, dataDir, workspaceRoot } = await fixture();
   const { manager, finished, events } = managerFor(dataDir);

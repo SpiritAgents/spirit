@@ -1,4 +1,5 @@
 import { FILE_DIFF_TOOL_NAMES } from "@/lib/file-tool-diff-source.js";
+import { backgroundTaskSummary } from "./background-task-display.js";
 import i18n from "@/lib/i18n";
 import {
   parseShellToolCommand,
@@ -193,6 +194,8 @@ function readFileToolSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts
     const computedDetail = readFileToolHeadlineDetail(rawPath, {
       emptyFileLabel: i18n.t("tool.file"),
       toolOutputLabel: i18n.t("tool.toolOutput"),
+      shellOutputLabel: i18n.t("tool.shellOutput"),
+      subagentOutputLabel: i18n.t("tool.subagentOutput"),
       lineRange,
       skillMarkdownContent,
     }).trim();
@@ -212,6 +215,8 @@ function readFileToolSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts
       const legacyDetail = readFileToolHeadlineDetail(legacyPath, {
         emptyFileLabel: i18n.t("tool.file"),
         toolOutputLabel: i18n.t("tool.toolOutput"),
+        shellOutputLabel: i18n.t("tool.shellOutput"),
+        subagentOutputLabel: i18n.t("tool.subagentOutput"),
       }).trim();
       return {
         headline: i18n.t(readFileVerbKey(legacyPath), tOpts),
@@ -228,6 +233,9 @@ function readFileToolSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts
 }
 
 export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts {
+  if (tool.taskNotification && tool.backgroundTask) {
+    return backgroundTaskSummary(tool, (key, options) => i18n.t(key, options));
+  }
   const headline = tool.headline.trim();
   const snapshotDetail = tool.headlineDetail?.trim();
 
@@ -428,7 +436,7 @@ export function formatToolCallSummaryPlainText(tool: ToolBlockSnapshot): string 
   if (summary.resultDetail) {
     text = `${text} ${summary.resultDetail}`;
   }
-  if (tool.phase === "failed") {
+  if (tool.phase === "failed" && !tool.taskNotification) {
     text = `${text} ${i18n.t("settings.failed")}`;
   }
   return text;
@@ -467,6 +475,8 @@ export function toolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
   if (tool.suppressExpand) {
     return false;
   }
+  if (tool.taskNotification) return tool.toolName === "shell";
+  if (tool.backgroundTask?.kind === "shell") return true;
   if (tool.toolName === "read_file") {
     return false;
   }

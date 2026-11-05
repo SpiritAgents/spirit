@@ -194,7 +194,13 @@ export function createSessionTaskExecutor<ToolRequest>(
           }
         : {
             ...createToolExecutionTextOutput(formatTaskInitialResult(result)),
-            hostUi: { backgroundTask: result.record },
+            hostUi: {
+              backgroundTask: result.record,
+              backgroundTaskOutput: {
+                text: result.outputTail,
+                truncated: result.outputTruncated,
+              },
+            },
           };
     },
   };
