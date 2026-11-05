@@ -504,12 +504,17 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         trackAttachment(conn, result.session.sessionId);
         return result;
       }
-      case SESSION_DETACH:
-      case SESSION_CLOSE: {
+      case SESSION_DETACH: {
         const sessionId = readSessionId(params);
         const result = await sessionManager.detachSession(clientId, sessionId);
         untrackAttachment(conn, sessionId);
-        return method === SESSION_DETACH ? result : { ok: true, ...result };
+        return result;
+      }
+      case SESSION_CLOSE: {
+        const sessionId = readSessionId(params);
+        await sessionManager.closeSession(sessionId);
+        for (const connection of connections.values()) untrackAttachment(connection, sessionId);
+        return { ok: true, closed: true };
       }
       case SESSION_LIST:
         return { sessions: sessionManager.listSessions() };
@@ -599,7 +604,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         sessionManager.setLoopEnabled(readSessionId(params), params["enabled"] === true);
         return { ok: true };
       case SESSION_RESET:
-        sessionManager.reset(readSessionId(params));
+        await sessionManager.reset(readSessionId(params));
         return { ok: true };
       case SESSION_RENAME: {
         const title = params["title"];
@@ -635,7 +640,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         return { ok: true };
       }
       case SESSION_REPLACE_FROM_ARCHIVE:
-        sessionManager.replaceFromArchive(readSessionId(params), params["archive"]);
+        await sessionManager.replaceFromArchive(readSessionId(params), params["archive"]);
         return { ok: true };
       case SESSION_EXPORT_ARCHIVE:
         return sessionManager.exportArchive(

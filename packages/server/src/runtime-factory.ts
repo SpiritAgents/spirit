@@ -1,9 +1,10 @@
-import { access, mkdir, rename } from "node:fs/promises";
 import { release as osRelease } from "node:os";
 import path from "node:path";
 
 import {
   AgentRuntime,
+  SessionTaskManager,
+  type AgentRuntimeOptions,
   type McpService,
   buildAgentModeSystemMessage,
   buildApplyPatchFileToolsPromptSection,
@@ -70,6 +71,14 @@ import {
   createHostMcpService,
   createHookRunner,
   createNoopMcpAdapter,
+  createSubagentWorkspaceBootstrap,
+  createBackgroundTaskOwner,
+  isBackgroundTaskOwnerAlive,
+  FileBackgroundTaskStore,
+  RuntimeSessionStore,
+  type RuntimeSessionState,
+  ensureSessionStorageKey,
+  bindSessionStorageKey,
   ensureBuiltInExtensions,
   ensureBuiltInSkills,
   ensurePersonalMarketplace,
@@ -88,6 +97,7 @@ import {
   type HostDreamScope,
   type HostDreamSourceSessionRef,
   type ModelRef,
+  type BackgroundTaskOwner,
 } from "@spiritagent/host-internal";
 
 import { joinHostPromptSections, normalizeHostUiPromptSection } from "./host-ui-prompt.js";
@@ -105,6 +115,7 @@ export interface ServerRuntimeOptions {
   spiritDataDir: string;
   /** Transcript + todo scope key; defaults to the session id. */
   sessionKey: string;
+  taskOwner?: BackgroundTaskOwner;
   modelRef?: ModelRef;
   /** Todo store scope override (CLI keys todos by its own chat session id). */
   todoSessionKey?: string;
@@ -113,6 +124,7 @@ export interface ServerRuntimeOptions {
   /** Extensions/todo surfaces differ per host; a session inherits its creator's kind. */
   hostKind: "cli" | "desktop";
   approvalLevel: ApprovalLevel;
+  agentMode?: AgentMode;
   sessionKind?: ServerSessionKind;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
@@ -153,7 +165,7 @@ export interface ServerRuntimeOptions {
   };
 }
 
-export interface ServerRuntimeResult {
+interface ServerRuntimeBindings {
   runtime: ServerHostRuntime;
   toolExecutor: HostToolExecutorProxy;
   mcpService: McpService;
@@ -170,6 +182,7 @@ export interface ServerRuntimeResult {
   setAgentMode: (mode: AgentMode) => Promise<void>;
   setApprovalLevel: (level: ApprovalLevel) => void;
   approvalLevelSnapshot: () => ApprovalLevel;
+  agentModeSnapshot: () => AgentMode;
   setLoopEnabled: (enabled: boolean) => void;
   /** Re-read installed extensions and refresh tool defs + system prompts. */
   refreshExtensions: () => Promise<void>;
@@ -192,13 +205,24 @@ export interface ServerRuntimeResult {
   setWebToolExposure: (exposure: { webSearchEnabled?: boolean; webFetchEnabled?: boolean }) => void;
   /** Re-scope the todo store (CLI keys todos by its own chat session id). */
   setTodoSessionKey: (sessionKey: string) => void;
-  /**
-   * Re-key transcript persistence after provisional → stable chat promote.
-   * Moves the on-disk transcript dir when present and updates hook sessionId.
-   */
+  /** Bind the promoted conversation path to the same immutable transcript identity. */
   setTranscriptSessionKey: (nextSessionKey: string) => Promise<void>;
   /** Abort a running shell process owned by this session. */
   abortShell: (toolCallId: string) => boolean;
+}
+
+export interface ServerRuntimeResult extends ServerRuntimeBindings {
+  storageSessionKey: string;
+  restoredFromDisk: boolean;
+  tasks: SessionTaskManager;
+  restoredDesktopTimeline: RuntimeSessionState["desktopTimeline"];
+  persist(options?: {
+    initialized?: boolean;
+    desktopTimeline?: RuntimeSessionState["desktopTimeline"] | null;
+  }): Promise<void>;
+  restoreTaskNotifications(): Promise<void>;
+  reconfigure(options: ServerRuntimeOptions): Promise<ServerRuntimeResult>;
+  dispose(): Promise<void>;
 }
 
 /**
@@ -220,9 +244,138 @@ const builtInSeededTrees = new Set<string>();
 export async function createServerRuntime(
   options: ServerRuntimeOptions,
 ): Promise<ServerRuntimeResult> {
+  const storageSessionKey = await ensureSessionStorageKey(
+    options.spiritDataDir,
+    options.sessionKey,
+  );
+  const sessionStore = new RuntimeSessionStore(options.spiritDataDir, storageSessionKey);
+  const saved = await sessionStore.read();
+  if (saved && path.resolve(saved.workspaceRoot) !== path.resolve(options.workspaceRoot)) {
+    throw new Error("The stored session belongs to a different workspace.");
+  }
+  const owner = options.taskOwner ?? (await createBackgroundTaskOwner(options.spiritDataDir));
+  const executors = new Set<HostToolExecutorProxy>();
+  let result: ServerRuntimeResult;
+  let closed = false;
+  let initialized = saved?.initialized ?? false;
+  let desktopTimeline = saved?.desktopTimeline;
+  const report = (error: unknown, taskId?: string): void =>
+    options.onEvent({
+      kind: "background-task-error",
+      error: error instanceof Error ? error.message : String(error),
+      ...(taskId ? { taskId } : {}),
+    });
+  const persist = async (
+    state: {
+      initialized?: boolean;
+      desktopTimeline?: RuntimeSessionState["desktopTimeline"] | null;
+    } = {},
+  ): Promise<void> => {
+    initialized ||= state.initialized === true || result.runtime.history().length > 0;
+    if ("desktopTimeline" in state) desktopTimeline = state.desktopTimeline ?? undefined;
+    await sessionStore.save({
+      version: 1,
+      sessionKey: storageSessionKey,
+      workspaceRoot: options.workspaceRoot,
+      agentMode: result.agentModeSnapshot(),
+      initialized,
+      archive: result.runtime.toArchive([], []),
+      ...(desktopTimeline ? { desktopTimeline } : {}),
+    });
+  };
+  try {
+    const taskStore = new FileBackgroundTaskStore({
+      spiritDataDir: options.spiritDataDir,
+      sessionKey: storageSessionKey,
+      owner: owner.owner,
+    });
+    await taskStore.recoverInterrupted((identity) =>
+      isBackgroundTaskOwnerAlive(options.spiritDataDir, identity),
+    );
+    const tasks = new SessionTaskManager({
+      sessionKey: storageSessionKey,
+      store: taskStore,
+      onChanged: (task) => {
+        options.onEvent({ kind: "background-task-changed", task });
+        void persist().catch((error: unknown) => report(error, task.id));
+      },
+      onError: report,
+    });
+    const prepared = await prepareServerRuntime({
+      ...options,
+      sessionKey: storageSessionKey,
+      ...(saved ? { agentMode: saved.agentMode } : {}),
+    });
+    executors.add(prepared.toolExecutor);
+    prepared.runtimeOptions.backgroundTasks = {
+      manager: tasks,
+      scope: { runtimeId: "main" },
+      persistHistory: persist,
+    };
+    const runtime = new AgentRuntime(prepared.runtimeOptions);
+    const bind = (environment: PreparedServerRuntime): ServerRuntimeResult => {
+      const bindings = environment.bind(runtime);
+      executors.add(bindings.toolExecutor);
+      result = {
+        ...bindings,
+        storageSessionKey,
+        restoredFromDisk: saved?.initialized === true,
+        restoredDesktopTimeline: desktopTimeline,
+        tasks,
+        persist,
+        restoreTaskNotifications: () => runtime.restoreBackgroundTaskNotifications(),
+        reconfigure: async (next) => {
+          const fresh = await prepareServerRuntime({ ...next, sessionKey: storageSessionKey });
+          executors.add(fresh.toolExecutor);
+          runtime.replaceHostOptions(fresh.runtimeOptions);
+          return bind(fresh);
+        },
+        dispose: async () => {
+          if (closed) return;
+          closed = true;
+          const stopped = await Promise.allSettled([runtime.shutdown()]);
+          const saved = await Promise.allSettled([persist()]);
+          const disposed = await Promise.allSettled([
+            ...[...executors].map((executor) => executor.disposeLsp()),
+            ...(options.taskOwner ? [] : [owner.close()]),
+          ]);
+          const errors = [...stopped, ...saved, ...disposed].flatMap((entry) =>
+            entry.status === "rejected" ? [entry.reason] : [],
+          );
+          if (errors.length) throw new AggregateError(errors, "Session shutdown failed.");
+        },
+      };
+      return result;
+    };
+    bind(prepared);
+    await tasks.restore();
+    if (saved) runtime.replaceFromArchive(saved.archive);
+    await runtime.restoreBackgroundTaskNotifications();
+    return result!;
+  } catch (error) {
+    const cleanup = await Promise.allSettled([
+      ...[...executors].map((executor) => executor.disposeLsp()),
+      ...(options.taskOwner ? [] : [owner.close()]),
+    ]);
+    const errors = cleanup.flatMap((entry) => (entry.status === "rejected" ? [entry.reason] : []));
+    if (errors.length)
+      throw new AggregateError([error, ...errors], "Runtime initialization and cleanup failed.");
+    throw error;
+  }
+}
+
+interface PreparedServerRuntime {
+  toolExecutor: HostToolExecutorProxy;
+  runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue>;
+  bind(runtime: ServerHostRuntime): ServerRuntimeBindings;
+}
+
+async function prepareServerRuntime(
+  options: ServerRuntimeOptions,
+  inheritedTransport?: { config: LlmTransportConfig; providerId?: string },
+): Promise<PreparedServerRuntime> {
   const { workspaceRoot, spiritDataDir, hostKind, onEvent } = options;
-  // Mutable: provisional → stable promote re-keys transcript persistence in place.
-  let sessionKey = options.sessionKey;
+  const sessionKey = options.sessionKey;
   const log = options.log ?? (() => {});
   const approvalLevel = options.approvalLevel;
   const isDreamCollector = options.sessionKind === "dream-collector";
@@ -230,11 +383,13 @@ export async function createServerRuntime(
     throw new Error("dream-collector session requires dreamScope");
   }
 
-  const resolvedTransport = tryResolveTransportConfig({
-    workspaceRoot,
-    spiritDataDir,
-    ...(options.modelRef ? { modelRef: options.modelRef } : {}),
-  });
+  const resolvedTransport = inheritedTransport
+    ? { ok: true as const, ...inheritedTransport }
+    : tryResolveTransportConfig({
+        workspaceRoot,
+        spiritDataDir,
+        ...(options.modelRef ? { modelRef: options.modelRef } : {}),
+      });
   const unconfiguredReason = resolvedTransport.ok ? undefined : resolvedTransport.error;
   const transportConfig = resolvedTransport.ok
     ? resolvedTransport.config
@@ -253,304 +408,244 @@ export async function createServerRuntime(
         extraConfigs: createExtensionMcpExtraConfigs(spiritDataDir, hostKind),
       }));
   const toolExecutor = new HostToolExecutorProxy(createNoopPeer(), mcpService);
+  try {
+    toolExecutor.setBackgroundTaskExposure(!isDreamCollector);
 
-  // 2. Local tool service: real shell/file/web execution, noop management MCP
-  //    adapter (MCP tool execution lives on the executor's McpService, same
-  //    split as Desktop), extensions, todos, approval level.
-  let extensionManager: ReturnType<typeof createHostExtensionManager> | undefined;
-  const extensionSystemPrompts: LlmExtensionSystemPrompt[] = [];
-  if (!isDreamCollector) {
-    await ensureBuiltInSkills(spiritDataDir);
-    await ensurePersonalMarketplace(spiritDataDir);
-    extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
-    const builtInTreeKey = `${hostKind}\n${spiritDataDir}`;
-    if (!builtInSeededTrees.has(builtInTreeKey)) {
-      await ensureBuiltInExtensions({
-        spiritDataDir,
-        hostKind,
-        manager: extensionManager,
-      });
-      builtInSeededTrees.add(builtInTreeKey);
+    // 2. Local tool service: real shell/file/web execution, noop management MCP
+    //    adapter (MCP tool execution lives on the executor's McpService, same
+    //    split as Desktop), extensions, todos, approval level.
+    let extensionManager: ReturnType<typeof createHostExtensionManager> | undefined;
+    const extensionSystemPrompts: LlmExtensionSystemPrompt[] = [];
+    if (!isDreamCollector) {
+      await ensureBuiltInSkills(spiritDataDir);
+      await ensurePersonalMarketplace(spiritDataDir);
+      extensionManager = createHostExtensionManager({ spiritDataDir, hostKind });
+      const builtInTreeKey = `${hostKind}\n${spiritDataDir}`;
+      if (!builtInSeededTrees.has(builtInTreeKey)) {
+        await ensureBuiltInExtensions({
+          spiritDataDir,
+          hostKind,
+          manager: extensionManager,
+        });
+        builtInSeededTrees.add(builtInTreeKey);
+      }
+      // After the recopy (first session on this tree) so extension stdio cwd
+      // still exists when `node server.mjs` starts.
+      mcpService.startBackgroundRefreshInBackground(false);
     }
-    // After the recopy (first session on this tree) so extension stdio cwd
-    // still exists when `node server.mjs` starts.
-    mcpService.startBackgroundRefreshInBackground(false);
-  }
-  let currentApprovalLevel = approvalLevel;
-  const service = new NodeHostToolService(
-    { workspaceRoot, spiritDataDir },
-    {
-      mcp: createNoopMcpAdapter(),
-      ...(isDreamCollector
-        ? {
-            dreamScope: options.dreamScope!,
-            ...(options.dreamSourceSession
-              ? { dreamSourceSession: options.dreamSourceSession }
-              : {}),
-          }
-        : {
-            extensions: {
-              manager: extensionManager!,
-              getHost: () => ({}),
-              logger: console,
-            },
-            fileChangeObserver: {
-              async recordFileChange(change: unknown): Promise<void> {
-                await toolExecutor.lspServiceSnapshot()?.syncFromRecordedChange(change);
-                options.onFileChange?.(change);
-              },
-            },
-            todoScope: { sessionKey: options.todoSessionKey?.trim() || sessionKey },
-          }),
-      getApprovalLevel: () => currentApprovalLevel,
-    },
-  );
-  toolExecutor.setLocalHostService(service as unknown as LocalHostToolService);
-  toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
-  if (options.hostToolDescriptionHints) {
-    toolExecutor.setHostToolDescriptionHints(options.hostToolDescriptionHints);
-  }
-  toolExecutor.setApprovalLevel(currentApprovalLevel);
-  if (isDreamCollector) {
-    toolExecutor.setDreamToolDefinitions(buildDreamHostToolDefinitions());
-    toolExecutor.setDreamOnlyToolSurface(true);
-    toolExecutor.setExtensionToolDefinitions([]);
-    toolExecutor.setTodoToolDefinitions([]);
-  } else {
-    toolExecutor.setTodoToolDefinitions(buildTodoHostToolDefinitions());
-    // The bridge passes these via a loosely-typed dynamic import; with static
-    // imports the nominal types diverge slightly (structurally compatible).
-    toolExecutor.setLspHostBindings({
-      LspService,
-      appendLspDiagnosticsAfterWriteIfNeeded,
-    } as unknown as LspHostBindings);
-    await toolExecutor.setLspWorkspaceRoot(workspaceRoot);
-
-    // Extension-contributed tools + system prompts (host-scoped).
-    const installedExtensions = await extensionManager!.list();
-    toolExecutor.setExtensionToolDefinitions(
-      buildContributedHostToolDefinitions(
-        collectHostExtensionContributedTools(
-          installedExtensions,
-        ) as unknown as ContributedHostToolDefinition[],
-      ),
-    );
-    extensionSystemPrompts.push(
-      ...mergeEnabledExtensionSystemPrompts(
-        installedExtensions
-          .filter((item) => extensionExposesModelContext(item))
-          .map((item) => ({
-            extensionId: item.id,
-            extensionName: item.manifest.displayName,
-            enabled: item.enabled,
-          })),
-        (
-          await extensionManager!.collectSystemPromptContributions({ host: {}, logger: console })
-        ).map((entry) => ({
-          extensionId: entry.extensionId,
-          extensionName: entry.extensionName,
-          content: entry.content,
-        })),
-      ),
-    );
-  }
-
-  if (isDreamCollector) {
-    extensionSystemPrompts.push({
-      extensionId: "dream-collector",
-      extensionName: "Dream Collector",
-      content: buildDreamCollectorSystemMessage(),
-    });
-  }
-
-  await toolExecutor.refreshCaches();
-
-  // 3. Rules / skills / plan metadata.
-  const enabledRules: LlmEnabledRule[] = [];
-  const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
-  let baseEnabledRules: LlmEnabledRule[] = [];
-  let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
-  let currentPlanMetadata: LlmPlanMetadata | undefined;
-
-  const applyExtensionInstructionOverlay = async (): Promise<void> => {
-    if (!extensionManager) {
-      enabledRules.length = 0;
-      enabledRules.push(...baseEnabledRules);
-      enabledSkillCatalog.length = 0;
-      enabledSkillCatalog.push(...baseEnabledSkillCatalog);
-      return;
-    }
-    const overlay = await overlayEnabledExtensionRulesAndSkills(
-      await extensionManager.list(),
-      baseEnabledRules,
-      baseEnabledSkillCatalog,
-      (message: string) => log(message),
-    );
-    enabledRules.length = 0;
-    enabledRules.push(...overlay.rules);
-    enabledSkillCatalog.length = 0;
-    enabledSkillCatalog.push(...overlay.skills);
-  };
-
-  if (isDreamCollector) {
-    currentPlanMetadata = {
-      path: "",
-      exists: false,
-      agentMode: "agent",
-      planMode: false,
-    };
-    toolExecutor.setAgentModeToolExposure("agent");
-  } else {
-    const metadata = await loadHostInstructionMetadata(
+    let currentApprovalLevel = approvalLevel;
+    const service = new NodeHostToolService(
       { workspaceRoot, spiritDataDir },
-      { planMode: false, agentMode: "agent" },
+      {
+        mcp: createNoopMcpAdapter(),
+        ...(isDreamCollector
+          ? {
+              dreamScope: options.dreamScope!,
+              ...(options.dreamSourceSession
+                ? { dreamSourceSession: options.dreamSourceSession }
+                : {}),
+            }
+          : {
+              extensions: {
+                manager: extensionManager!,
+                getHost: () => ({}),
+                logger: console,
+              },
+              fileChangeObserver: {
+                async recordFileChange(change: unknown): Promise<void> {
+                  await toolExecutor.lspServiceSnapshot()?.syncFromRecordedChange(change);
+                  options.onFileChange?.(change);
+                },
+              },
+              todoScope: { sessionKey: options.todoSessionKey?.trim() || sessionKey },
+            }),
+        getApprovalLevel: () => currentApprovalLevel,
+      },
     );
-    baseEnabledRules = [...metadata.rules.enabledRules];
-    baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
-    await applyExtensionInstructionOverlay();
-    currentPlanMetadata = metadata.planMetadata;
-    toolExecutor.setAgentModeToolExposure("agent");
-  }
+    toolExecutor.setLocalHostService(service as unknown as LocalHostToolService);
+    toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
+    if (options.hostToolDescriptionHints) {
+      toolExecutor.setHostToolDescriptionHints(options.hostToolDescriptionHints);
+    }
+    toolExecutor.setApprovalLevel(currentApprovalLevel);
+    if (isDreamCollector) {
+      toolExecutor.setDreamToolDefinitions(buildDreamHostToolDefinitions());
+      toolExecutor.setDreamOnlyToolSurface(true);
+      toolExecutor.setExtensionToolDefinitions([]);
+      toolExecutor.setTodoToolDefinitions([]);
+    } else {
+      toolExecutor.setTodoToolDefinitions(buildTodoHostToolDefinitions());
+      // The bridge passes these via a loosely-typed dynamic import; with static
+      // imports the nominal types diverge slightly (structurally compatible).
+      toolExecutor.setLspHostBindings({
+        LspService,
+        appendLspDiagnosticsAfterWriteIfNeeded,
+      } as unknown as LspHostBindings);
+      await toolExecutor.setLspWorkspaceRoot(workspaceRoot);
 
-  // 4. Basic info block.
-  const shell = service.toolDefinitionEnvironment();
-  const basicInfoHost = options.basicInfoHost
-    ? {
-        kind: options.basicInfoHost.kind,
-        ...(options.basicInfoHost.url?.trim() ? { url: options.basicInfoHost.url.trim() } : {}),
-      }
-    : undefined;
-  const basicInfo: LlmToolAgentBasicInfo = {
-    workspaceRoot,
-    ...(shell?.shellDisplayName ? { terminal: shell.shellDisplayName } : {}),
-    gitBranch:
-      isDreamCollector && options.dreamScope
-        ? options.dreamScope.gitBranch
-        : await readGitBranchLabelForBasicInfo(workspaceRoot),
-    sessionTranscript: resolveTranscriptSessionDir(spiritDataDir, sessionKey),
-    system: service.operatingSystemInfo?.() ?? {
-      name:
-        process.platform === "win32"
-          ? "Windows"
-          : process.platform === "darwin"
-            ? "macOS"
-            : process.platform === "linux"
-              ? "Linux"
-              : process.platform,
-      version: osRelease(),
-    },
-    ...(basicInfoHost ? { host: basicInfoHost } : {}),
-  };
-  const hookSessionContext = {
-    sessionId: sessionKey,
-    conversationPath: null as string | null,
-    workspaceRoot,
-    model: transportConfig.model,
-  };
+      // Extension-contributed tools + system prompts (host-scoped).
+      const installedExtensions = await extensionManager!.list();
+      toolExecutor.setExtensionToolDefinitions(
+        buildContributedHostToolDefinitions(
+          collectHostExtensionContributedTools(
+            installedExtensions,
+          ) as unknown as ContributedHostToolDefinition[],
+        ),
+      );
+      extensionSystemPrompts.push(
+        ...mergeEnabledExtensionSystemPrompts(
+          installedExtensions
+            .filter((item) => extensionExposesModelContext(item))
+            .map((item) => ({
+              extensionId: item.id,
+              extensionName: item.manifest.displayName,
+              enabled: item.enabled,
+            })),
+          (
+            await extensionManager!.collectSystemPromptContributions({ host: {}, logger: console })
+          ).map((entry) => ({
+            extensionId: entry.extensionId,
+            extensionName: entry.extensionName,
+            content: entry.content,
+          })),
+        ),
+      );
+    }
 
-  // 5. Prompt sections.
-  const applyPatchPromptSection =
-    transportConfig.transportKind === "open-responses"
-      ? buildApplyPatchFileToolsPromptSection()
-      : undefined;
-  const hostUiPromptSection = normalizeHostUiPromptSection(options.hostUiPromptSection);
-  // apply_patch + optional host UI Markdown (Desktop Mermaid) share the trailing plain slot.
-  const trailingHostPromptSection = joinHostPromptSections(
-    applyPatchPromptSection,
-    hostUiPromptSection,
-  );
+    if (isDreamCollector) {
+      extensionSystemPrompts.push({
+        extensionId: "dream-collector",
+        extensionName: "Dream Collector",
+        content: buildDreamCollectorSystemMessage(),
+      });
+    }
 
-  const activeSkills: LlmActiveSkill[] = [];
-  // Mutable: state factory closures capture the binding; setLoopEnabled updates it.
-  let loopEnabled = false;
-  let attribution: { commitEnabled?: boolean; prEnabled?: boolean } | undefined;
+    await toolExecutor.refreshCaches();
 
-  const createToolAgentState = (messages: LlmMessage[], userInput: string) =>
-    startLlmToolAgentState(
-      messages,
-      userInput,
-      workspaceRoot,
-      enabledRules,
-      enabledSkillCatalog,
-      transportConfig.model,
-      currentPlanMetadata,
-      extensionSystemPrompts,
-      undefined, // dreamsContextText — Desktop-only product surface, wired in a later phase
-      basicInfo,
-      trailingHostPromptSection,
-      undefined,
-      loopEnabled,
-      toolExecutor.mcpToolCatalogSnapshot(),
-      attribution,
-      hostPromptProviderId,
-      transportConfig.webFetchEnabled,
-    );
+    // 3. Rules / skills / plan metadata.
+    const enabledRules: LlmEnabledRule[] = [];
+    const enabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
+    let baseEnabledRules: LlmEnabledRule[] = [];
+    let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
+    let currentPlanMetadata: LlmPlanMetadata | undefined;
 
-  const createContinuationState = (messages: LlmMessage[]) =>
-    continueLlmToolAgentState(
-      messages,
-      workspaceRoot,
-      enabledRules,
-      enabledSkillCatalog,
-      transportConfig.model,
-      currentPlanMetadata,
-      extensionSystemPrompts,
-      undefined,
-      basicInfo,
-      trailingHostPromptSection,
-      undefined,
-      loopEnabled,
-      toolExecutor.mcpToolCatalogSnapshot(),
-      attribution,
-      hostPromptProviderId,
-      transportConfig.webFetchEnabled,
-    );
-
-  const llmTransport = createLlmTransport(transportConfig);
-
-  // 6. Hooks: workspace capability trust routes to clients when available.
-  const hookRunner = createHookRunner({
-    spiritDataDir,
-    workspaceRoot,
-    logger: (message) => log(`[hooks] ${message}`),
-    requestWorkspaceCapabilityTrust: async (request) => {
-      if (options.requestWorkspaceCapabilityTrust) {
-        return options.requestWorkspaceCapabilityTrust(request);
-      }
-      return "deny";
-    },
-    loadExtensionHooks: async (event) => {
+    const applyExtensionInstructionOverlay = async (): Promise<void> => {
       if (!extensionManager) {
-        return [];
+        enabledRules.length = 0;
+        enabledRules.push(...baseEnabledRules);
+        enabledSkillCatalog.length = 0;
+        enabledSkillCatalog.push(...baseEnabledSkillCatalog);
+        return;
       }
-      const contributions = await collectEnabledExtensionInstructionContributions(
+      const overlay = await overlayEnabledExtensionRulesAndSkills(
         await extensionManager.list(),
+        baseEnabledRules,
+        baseEnabledSkillCatalog,
         (message: string) => log(message),
       );
-      return contributions.hooks.filter((hook) => hook.event === event);
-    },
-  });
+      enabledRules.length = 0;
+      enabledRules.push(...overlay.rules);
+      enabledSkillCatalog.length = 0;
+      enabledSkillCatalog.push(...overlay.skills);
+    };
 
-  const runtime = new AgentRuntime<LlmTransportConfig, LlmToolAgentState, JsonValue>({
-    config: transportConfig,
-    llmTransport,
-    toolExecutor,
-    createToolAgentState,
-    createContinuationState,
-    appendToolResultMessage: appendLlmToolResultMessage,
-    assistantToolCallMessageFromState: assistantToolCallMessageFromLlmState,
-    finalAssistantHistoryMessageFromState: finalAssistantHistoryMessageFromLlmState,
-    appendUserMessage: appendLlmUserMessage,
-    appendUserLlmMessage: (state, message) =>
-      appendLlmUserLlmMessage(state, message, workspaceRoot),
-    extractAssistantText: extractLastLlmAssistantText,
-    truncateStateForContextRetry: truncateLlmToolAgentStateForContextRetry,
-    truncateHistoryForCompaction: truncateLlmHistoryForCompaction,
-    rebuildRetryStateAfterCompaction: (messages, userInput, retryState) =>
-      rebuildLlmToolAgentStateAfterCompaction(
+    if (isDreamCollector) {
+      currentPlanMetadata = {
+        path: "",
+        exists: false,
+        agentMode: "agent",
+        planMode: false,
+      };
+      toolExecutor.setAgentModeToolExposure("agent");
+    } else {
+      const metadata = await loadHostInstructionMetadata(
+        { workspaceRoot, spiritDataDir },
+        { planMode: options.agentMode === "plan", agentMode: options.agentMode ?? "agent" },
+      );
+      baseEnabledRules = [...metadata.rules.enabledRules];
+      baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
+      await applyExtensionInstructionOverlay();
+      currentPlanMetadata = metadata.planMetadata;
+      toolExecutor.setAgentModeToolExposure(options.agentMode ?? "agent");
+    }
+
+    // 4. Basic info block.
+    const shell = service.toolDefinitionEnvironment();
+    const basicInfoHost = options.basicInfoHost
+      ? {
+          kind: options.basicInfoHost.kind,
+          ...(options.basicInfoHost.url?.trim() ? { url: options.basicInfoHost.url.trim() } : {}),
+        }
+      : undefined;
+    const basicInfo: LlmToolAgentBasicInfo = {
+      workspaceRoot,
+      ...(shell?.shellDisplayName ? { terminal: shell.shellDisplayName } : {}),
+      gitBranch:
+        isDreamCollector && options.dreamScope
+          ? options.dreamScope.gitBranch
+          : await readGitBranchLabelForBasicInfo(workspaceRoot),
+      sessionTranscript: resolveTranscriptSessionDir(spiritDataDir, sessionKey),
+      system: service.operatingSystemInfo?.() ?? {
+        name:
+          process.platform === "win32"
+            ? "Windows"
+            : process.platform === "darwin"
+              ? "macOS"
+              : process.platform === "linux"
+                ? "Linux"
+                : process.platform,
+        version: osRelease(),
+      },
+      ...(basicInfoHost ? { host: basicInfoHost } : {}),
+    };
+    const hookSessionContext = {
+      sessionId: sessionKey,
+      conversationPath: null as string | null,
+      workspaceRoot,
+      model: transportConfig.model,
+    };
+
+    // 5. Prompt sections.
+    const applyPatchPromptSection =
+      transportConfig.transportKind === "open-responses"
+        ? buildApplyPatchFileToolsPromptSection()
+        : undefined;
+    const hostUiPromptSection = normalizeHostUiPromptSection(options.hostUiPromptSection);
+    // apply_patch + optional host UI Markdown (Desktop Mermaid) share the trailing plain slot.
+    const trailingHostPromptSection = joinHostPromptSections(
+      applyPatchPromptSection,
+      hostUiPromptSection,
+    );
+
+    const activeSkills: LlmActiveSkill[] = [];
+    // Mutable: state factory closures capture the binding; setLoopEnabled updates it.
+    let loopEnabled = false;
+    let attribution: { commitEnabled?: boolean; prEnabled?: boolean } | undefined;
+
+    const createToolAgentState = (messages: LlmMessage[], userInput: string) =>
+      startLlmToolAgentState(
         messages,
         userInput,
-        retryState,
+        workspaceRoot,
+        enabledRules,
+        enabledSkillCatalog,
+        transportConfig.model,
+        currentPlanMetadata,
+        extensionSystemPrompts,
+        undefined, // dreamsContextText — Desktop-only product surface, wired in a later phase
+        basicInfo,
+        trailingHostPromptSection,
+        undefined,
+        loopEnabled,
+        toolExecutor.mcpToolCatalogSnapshot(),
+        attribution,
+        hostPromptProviderId,
+        transportConfig.webFetchEnabled,
+      );
+
+    const createContinuationState = (messages: LlmMessage[]) =>
+      continueLlmToolAgentState(
+        messages,
         workspaceRoot,
         enabledRules,
         enabledSkillCatalog,
@@ -566,242 +661,328 @@ export async function createServerRuntime(
         attribution,
         hostPromptProviderId,
         transportConfig.webFetchEnabled,
-      ),
-    generateImage: (request) =>
-      llmTransport.generateImage(
-        transportConfig,
-        request,
-        async (saveRequest: GeneratedImageSaveRequest) => {
-          const saveGeneratedImage = service.saveGeneratedImage;
-          if (!saveGeneratedImage) {
-            throw new Error("server host: image generation not supported");
-          }
-          return saveGeneratedImage.call(service, saveRequest);
-        },
-      ),
-    generateVideo: (request) =>
-      llmTransport.generateVideo(transportConfig, request, async (saveRequest) => {
-        const saveGeneratedVideo = service.saveGeneratedVideo;
-        if (!saveGeneratedVideo) {
-          throw new Error("server host: video generation not supported");
+      );
+
+    const llmTransport = createLlmTransport(transportConfig);
+
+    // 6. Hooks: workspace capability trust routes to clients when available.
+    const hookRunner = createHookRunner({
+      spiritDataDir,
+      workspaceRoot,
+      logger: (message) => log(`[hooks] ${message}`),
+      requestWorkspaceCapabilityTrust: async (request) => {
+        if (options.requestWorkspaceCapabilityTrust) {
+          return options.requestWorkspaceCapabilityTrust(request);
         }
-        return saveGeneratedVideo.call(service, saveRequest);
-      }),
-    resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
-    hookRunner,
-    hookSessionContext,
-    syncSessionTranscript: async ({ transcript, sessionKey: key }) =>
-      persistSessionTranscript(spiritDataDir, transcript, {
-        sessionKey: key ?? sessionKey,
-      }),
-    syncSubagentTranscript: async ({ transcript, sessionKey: key, subagentSessionId }) => {
-      await persistSubagentTranscript(spiritDataDir, transcript, {
-        subagentSessionId,
-        sessionKey: key ?? sessionKey,
-      });
-    },
-    resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
-      resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
-    persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
-    getApprovalLevel: () => currentApprovalLevel,
-    reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
-    onEvent: (event) => {
-      if (event.kind === "context-usage-updated") {
-        setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
-      }
-      onEvent(event);
-    },
-  });
-
-  const setAgentMode = async (mode: AgentMode): Promise<void> => {
-    if (isDreamCollector) {
-      return;
-    }
-    toolExecutor.setAgentModeToolExposure(mode);
-    const refreshed = await loadHostInstructionMetadata(
-      { workspaceRoot, spiritDataDir },
-      { planMode: mode === "plan", agentMode: mode },
-    );
-    currentPlanMetadata = refreshed.planMetadata;
-  };
-
-  const setApprovalLevel = (level: ApprovalLevel): void => {
-    currentApprovalLevel = level;
-    toolExecutor.setApprovalLevel(level);
-  };
-
-  const setLoopEnabled = (enabled: boolean): void => {
-    loopEnabled = enabled;
-    runtime.setLoopEnabled(enabled);
-    toolExecutor.setLoopToolExposure(enabled);
-  };
-
-  const refreshExtensions = async (): Promise<void> => {
-    if (isDreamCollector || !extensionManager) {
-      return;
-    }
-    const installed = await extensionManager.list();
-    toolExecutor.setExtensionToolDefinitions(
-      buildContributedHostToolDefinitions(
-        collectHostExtensionContributedTools(
-          installed,
-        ) as unknown as ContributedHostToolDefinition[],
-      ),
-    );
-    const collected = await extensionManager.collectSystemPromptContributions({
-      host: {},
-      logger: console,
+        return "deny";
+      },
+      loadExtensionHooks: async (event) => {
+        if (!extensionManager) {
+          return [];
+        }
+        const contributions = await collectEnabledExtensionInstructionContributions(
+          await extensionManager.list(),
+          (message: string) => log(message),
+        );
+        return contributions.hooks.filter((hook) => hook.event === event);
+      },
     });
-    extensionSystemPrompts.length = 0;
-    extensionSystemPrompts.push(
-      ...mergeEnabledExtensionSystemPrompts(
-        installed
-          .filter((item) => extensionExposesModelContext(item))
-          .map((item) => ({
-            extensionId: item.id,
-            extensionName: item.manifest.displayName,
-            enabled: item.enabled,
-          })),
-        collected.map((entry) => ({
-          extensionId: entry.extensionId,
-          extensionName: entry.extensionName,
-          content: entry.content,
-        })),
-      ),
-    );
-    await applyExtensionInstructionOverlay();
-    await mcpService.refreshConfig();
-    mcpService.startBackgroundRefreshInBackground(true);
-  };
 
-  return {
-    runtime,
-    toolExecutor,
-    mcpService,
-    transportConfig,
-    ...(unconfiguredReason ? { unconfiguredReason } : {}),
-    enabledRules,
-    enabledSkillCatalog,
-    activeSkills,
-    setAgentMode,
-    setApprovalLevel,
-    approvalLevelSnapshot: () => currentApprovalLevel,
-    setLoopEnabled,
-    refreshExtensions,
-    runSessionStart: async (source) => {
-      await runSessionStartHookAndApply(
-        hookRunner,
-        (role, content) => runtime.recordContextMessage(role, content),
-        { ...hookSessionContext },
-        source,
-      );
-    },
-    runSessionEnd: async (reason) => {
-      await runSessionEndHook(hookRunner, { ...hookSessionContext }, reason);
-    },
-    reloadHostMetadata: async (mode) => {
-      if (isDreamCollector) {
-        return;
-      }
-      const refreshed = await loadHostInstructionMetadata(
-        { workspaceRoot, spiritDataDir },
-        { planMode: mode === "plan", agentMode: mode },
-      );
-      baseEnabledRules = [...refreshed.rules.enabledRules];
-      baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
-      await applyExtensionInstructionOverlay();
-      currentPlanMetadata = refreshed.planMetadata;
-    },
-    exportState: async () => {
-      const exportTransport = createLlmTransport(transportConfig);
-      const baseSystemPrompts = exportTransport.llmSystemPromptsForExport() as Record<
-        string,
-        JsonValue
-      >;
-      const rulesSystemPrompt = buildRulesSystemMessage(enabledRules);
-      const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(enabledSkillCatalog);
-      const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
-        toolExecutor.mcpToolCatalogSnapshot(),
-      );
-      const agentModeSystemPrompt = buildAgentModeSystemMessage(currentPlanMetadata);
-      const loopModeSystemPrompt = buildLoopModeSystemMessage(runtime.loopEnabled());
-      const extensionsSystemPrompt = buildExtensionsSystemMessage(extensionSystemPrompts);
-      const basicInfoSystemPrompt = buildBasicInfoSystemMessage(basicInfo);
-      return {
-        apiMessages: exportTransport.llmHistoryAsApiMessages([...runtime.history()]),
-        requestTrace: [...runtime.requestTrace()],
-        systemPrompts: {
-          ...baseSystemPrompts,
-          tool_agent: buildToolAgentHostPrompt(transportConfig.model, hostPromptProviderId, {
-            webFetchEnabled: transportConfig.webFetchEnabled,
-          }),
-          ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
-          ...(skillsCatalogSystemPrompt === undefined
-            ? {}
-            : { skillsCatalog: skillsCatalogSystemPrompt }),
-          ...(mcpCatalogSystemPrompt === undefined ? {} : { mcpCatalog: mcpCatalogSystemPrompt }),
-          agentMode: agentModeSystemPrompt,
-          ...(loopModeSystemPrompt === undefined ? {} : { loopMode: loopModeSystemPrompt }),
-          ...(extensionsSystemPrompt === undefined ? {} : { extensions: extensionsSystemPrompt }),
-          ...(basicInfoSystemPrompt === undefined ? {} : { basicInfo: basicInfoSystemPrompt }),
-          ...(hostUiPromptSection === undefined ? {} : { hostUi: hostUiPromptSection }),
-          ...(applyPatchPromptSection === undefined
-            ? {}
-            : { applyPatchFileTools: applyPatchPromptSection }),
+    const runtimeOptions: AgentRuntimeOptions<LlmTransportConfig, LlmToolAgentState, JsonValue> = {
+      config: transportConfig,
+      llmTransport,
+      toolExecutor,
+      createToolAgentState,
+      createContinuationState,
+      appendToolResultMessage: appendLlmToolResultMessage,
+      assistantToolCallMessageFromState: assistantToolCallMessageFromLlmState,
+      finalAssistantHistoryMessageFromState: finalAssistantHistoryMessageFromLlmState,
+      appendUserMessage: appendLlmUserMessage,
+      appendUserLlmMessage: (state, message) =>
+        appendLlmUserLlmMessage(state, message, workspaceRoot),
+      extractAssistantText: extractLastLlmAssistantText,
+      truncateStateForContextRetry: truncateLlmToolAgentStateForContextRetry,
+      truncateHistoryForCompaction: truncateLlmHistoryForCompaction,
+      rebuildRetryStateAfterCompaction: (messages, userInput, retryState) =>
+        rebuildLlmToolAgentStateAfterCompaction(
+          messages,
+          userInput,
+          retryState,
+          workspaceRoot,
+          enabledRules,
+          enabledSkillCatalog,
+          transportConfig.model,
+          currentPlanMetadata,
+          extensionSystemPrompts,
+          undefined,
+          basicInfo,
+          trailingHostPromptSection,
+          undefined,
+          loopEnabled,
+          toolExecutor.mcpToolCatalogSnapshot(),
+          attribution,
+          hostPromptProviderId,
+          transportConfig.webFetchEnabled,
+        ),
+      generateImage: (request) =>
+        llmTransport.generateImage(
+          transportConfig,
+          request,
+          async (saveRequest: GeneratedImageSaveRequest) => {
+            const saveGeneratedImage = service.saveGeneratedImage;
+            if (!saveGeneratedImage) {
+              throw new Error("server host: image generation not supported");
+            }
+            return saveGeneratedImage.call(service, saveRequest);
+          },
+        ),
+      generateVideo: (request) =>
+        llmTransport.generateVideo(transportConfig, request, async (saveRequest) => {
+          const saveGeneratedVideo = service.saveGeneratedVideo;
+          if (!saveGeneratedVideo) {
+            throw new Error("server host: video generation not supported");
+          }
+          return saveGeneratedVideo.call(service, saveRequest);
+        }),
+      resolveWorkspaceFilesFromInput: (text) => pendingWorkspaceFilesFromInput(workspaceRoot, text),
+      hookRunner,
+      hookSessionContext,
+      syncSessionTranscript: async ({ transcript, sessionKey: key }) =>
+        persistSessionTranscript(spiritDataDir, transcript, {
+          sessionKey: key ?? sessionKey,
+        }),
+      syncSubagentTranscript: async ({ transcript, sessionKey: key, subagentSessionId }) => {
+        await persistSubagentTranscript(spiritDataDir, transcript, {
+          subagentSessionId,
+          sessionKey: key ?? sessionKey,
+        });
+      },
+      resolveSubagentTranscriptPath: ({ sessionKey: key, subagentSessionId }) =>
+        resolveSubagentTranscriptFilePath(spiritDataDir, key ?? sessionKey, subagentSessionId),
+      persistToolOutputArchive: async (input) => persistToolOutputArchive(spiritDataDir, input),
+      getApprovalLevel: () => currentApprovalLevel,
+      bootstrapSubagentWorkspace: createSubagentWorkspaceBootstrap({
+        parentWorkspaceRoot: workspaceRoot,
+        buildScopedRuntime: async (scopedRoot) => {
+          const { mcpService: _parentMcpService, ...childOptions } = options;
+          const child = await prepareServerRuntime(
+            {
+              ...childOptions,
+              workspaceRoot: scopedRoot,
+              sessionKey,
+              approvalLevel: currentApprovalLevel,
+              agentMode: currentPlanMetadata?.agentMode ?? "agent",
+            },
+            {
+              config: { ...transportConfig, workspaceRoot: scopedRoot },
+              ...(hostPromptProviderId ? { providerId: hostPromptProviderId } : {}),
+            },
+          );
+          return {
+            runtimeOptions: child.runtimeOptions,
+            toolExecutor: child.runtimeOptions.toolExecutor,
+            dispose: async () => {
+              const executor = child.runtimeOptions.toolExecutor;
+              if (executor instanceof HostToolExecutorProxy) await executor.disposeLsp();
+            },
+          };
         },
-      };
-    },
-    setAttribution: (next) => {
-      attribution = next;
-    },
-    setWebToolExposure: (next) => {
-      // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI end flips;
-      // it maps onto the providerTools exposure gate.
-      if (next.webSearchEnabled !== undefined) {
-        transportConfig.providerToolsEnabled = next.webSearchEnabled;
-      }
-      if (next.webFetchEnabled !== undefined) {
-        transportConfig.webFetchEnabled = next.webFetchEnabled;
-      }
-      toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
-    },
-    setTodoSessionKey: (key) => {
-      service.setTodoScope?.({ sessionKey: key });
-    },
-    setTranscriptSessionKey: async (nextSessionKey) => {
-      const trimmed = nextSessionKey.trim();
-      if (!trimmed || trimmed === sessionKey) {
-        return;
-      }
-      const previousKey = sessionKey;
-      const fromDir = resolveTranscriptSessionDir(spiritDataDir, previousKey);
-      const toDir = resolveTranscriptSessionDir(spiritDataDir, trimmed);
-      if (fromDir !== toDir) {
-        let sourceExists = false;
-        try {
-          await access(fromDir);
-          sourceExists = true;
-        } catch {
-          sourceExists = false;
+      }),
+      reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
+      onEvent: (event) => {
+        if (event.kind === "context-usage-updated") {
+          setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
         }
-        let targetExists = false;
-        try {
-          await access(toDir);
-          targetExists = true;
-        } catch {
-          targetExists = false;
-        }
-        if (sourceExists && !targetExists) {
-          await mkdir(path.dirname(toDir), { recursive: true });
-          await rename(fromDir, toDir);
-        } else if (!targetExists) {
-          await ensureTranscriptSessionDir(spiritDataDir, trimmed);
-        }
-      }
-      sessionKey = trimmed;
-      hookSessionContext.sessionId = trimmed;
-      basicInfo.sessionTranscript = resolveTranscriptSessionDir(spiritDataDir, trimmed);
-    },
-    abortShell: (toolCallId) => service.abortShell(toolCallId),
-  };
+        onEvent(event);
+      },
+    };
+
+    return {
+      toolExecutor,
+      runtimeOptions,
+      bind: (runtime) => {
+        const setAgentMode = async (mode: AgentMode): Promise<void> => {
+          if (isDreamCollector) {
+            return;
+          }
+          toolExecutor.setAgentModeToolExposure(mode);
+          const refreshed = await loadHostInstructionMetadata(
+            { workspaceRoot, spiritDataDir },
+            { planMode: mode === "plan", agentMode: mode },
+          );
+          currentPlanMetadata = refreshed.planMetadata;
+        };
+
+        const setApprovalLevel = (level: ApprovalLevel): void => {
+          currentApprovalLevel = level;
+          toolExecutor.setApprovalLevel(level);
+        };
+
+        const setLoopEnabled = (enabled: boolean): void => {
+          loopEnabled = enabled;
+          runtime.setLoopEnabled(enabled);
+          toolExecutor.setLoopToolExposure(enabled);
+        };
+
+        const refreshExtensions = async (): Promise<void> => {
+          if (isDreamCollector || !extensionManager) {
+            return;
+          }
+          const installed = await extensionManager.list();
+          toolExecutor.setExtensionToolDefinitions(
+            buildContributedHostToolDefinitions(
+              collectHostExtensionContributedTools(
+                installed,
+              ) as unknown as ContributedHostToolDefinition[],
+            ),
+          );
+          const collected = await extensionManager.collectSystemPromptContributions({
+            host: {},
+            logger: console,
+          });
+          extensionSystemPrompts.length = 0;
+          extensionSystemPrompts.push(
+            ...mergeEnabledExtensionSystemPrompts(
+              installed
+                .filter((item) => extensionExposesModelContext(item))
+                .map((item) => ({
+                  extensionId: item.id,
+                  extensionName: item.manifest.displayName,
+                  enabled: item.enabled,
+                })),
+              collected.map((entry) => ({
+                extensionId: entry.extensionId,
+                extensionName: entry.extensionName,
+                content: entry.content,
+              })),
+            ),
+          );
+          await applyExtensionInstructionOverlay();
+          await mcpService.refreshConfig();
+          mcpService.startBackgroundRefreshInBackground(true);
+        };
+
+        return {
+          runtime,
+          toolExecutor,
+          mcpService,
+          transportConfig,
+          ...(unconfiguredReason ? { unconfiguredReason } : {}),
+          enabledRules,
+          enabledSkillCatalog,
+          activeSkills,
+          setAgentMode,
+          setApprovalLevel,
+          approvalLevelSnapshot: () => currentApprovalLevel,
+          agentModeSnapshot: () => currentPlanMetadata?.agentMode ?? "agent",
+          setLoopEnabled,
+          refreshExtensions,
+          runSessionStart: async (source) => {
+            await runSessionStartHookAndApply(
+              hookRunner,
+              (role, content) => runtime.recordContextMessage(role, content),
+              { ...hookSessionContext },
+              source,
+            );
+          },
+          runSessionEnd: async (reason) => {
+            await runSessionEndHook(hookRunner, { ...hookSessionContext }, reason);
+          },
+          reloadHostMetadata: async (mode) => {
+            if (isDreamCollector) {
+              return;
+            }
+            const refreshed = await loadHostInstructionMetadata(
+              { workspaceRoot, spiritDataDir },
+              { planMode: mode === "plan", agentMode: mode },
+            );
+            baseEnabledRules = [...refreshed.rules.enabledRules];
+            baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
+            await applyExtensionInstructionOverlay();
+            currentPlanMetadata = refreshed.planMetadata;
+          },
+          exportState: async () => {
+            const exportTransport = createLlmTransport(transportConfig);
+            const baseSystemPrompts = exportTransport.llmSystemPromptsForExport() as Record<
+              string,
+              JsonValue
+            >;
+            const rulesSystemPrompt = buildRulesSystemMessage(enabledRules);
+            const skillsCatalogSystemPrompt = buildSkillsCatalogSystemMessage(enabledSkillCatalog);
+            const mcpCatalogSystemPrompt = buildMcpCatalogSystemMessage(
+              toolExecutor.mcpToolCatalogSnapshot(),
+            );
+            const agentModeSystemPrompt = buildAgentModeSystemMessage(currentPlanMetadata);
+            const loopModeSystemPrompt = buildLoopModeSystemMessage(runtime.loopEnabled());
+            const extensionsSystemPrompt = buildExtensionsSystemMessage(extensionSystemPrompts);
+            const basicInfoSystemPrompt = buildBasicInfoSystemMessage(basicInfo);
+            return {
+              apiMessages: exportTransport.llmHistoryAsApiMessages([...runtime.history()]),
+              requestTrace: [...runtime.requestTrace()],
+              systemPrompts: {
+                ...baseSystemPrompts,
+                tool_agent: buildToolAgentHostPrompt(transportConfig.model, hostPromptProviderId, {
+                  webFetchEnabled: transportConfig.webFetchEnabled,
+                }),
+                ...(rulesSystemPrompt === undefined ? {} : { rules: rulesSystemPrompt }),
+                ...(skillsCatalogSystemPrompt === undefined
+                  ? {}
+                  : { skillsCatalog: skillsCatalogSystemPrompt }),
+                ...(mcpCatalogSystemPrompt === undefined
+                  ? {}
+                  : { mcpCatalog: mcpCatalogSystemPrompt }),
+                agentMode: agentModeSystemPrompt,
+                ...(loopModeSystemPrompt === undefined ? {} : { loopMode: loopModeSystemPrompt }),
+                ...(extensionsSystemPrompt === undefined
+                  ? {}
+                  : { extensions: extensionsSystemPrompt }),
+                ...(basicInfoSystemPrompt === undefined
+                  ? {}
+                  : { basicInfo: basicInfoSystemPrompt }),
+                ...(hostUiPromptSection === undefined ? {} : { hostUi: hostUiPromptSection }),
+                ...(applyPatchPromptSection === undefined
+                  ? {}
+                  : { applyPatchFileTools: applyPatchPromptSection }),
+              },
+            };
+          },
+          setAttribution: (next) => {
+            attribution = next;
+          },
+          setWebToolExposure: (next) => {
+            // The daemon wire field keeps the legacy `webSearchEnabled` name until the CLI end flips;
+            // it maps onto the providerTools exposure gate.
+            if (next.webSearchEnabled !== undefined) {
+              transportConfig.providerToolsEnabled = next.webSearchEnabled;
+            }
+            if (next.webFetchEnabled !== undefined) {
+              transportConfig.webFetchEnabled = next.webFetchEnabled;
+            }
+            toolExecutor.setTransportConfigForToolDefinitions(transportConfig);
+          },
+          setTodoSessionKey: (key) => {
+            service.setTodoScope?.({ sessionKey: key });
+          },
+          setTranscriptSessionKey: async (nextSessionKey) => {
+            const trimmed = nextSessionKey.trim();
+            if (!trimmed || trimmed === sessionKey) {
+              return;
+            }
+            await bindSessionStorageKey(spiritDataDir, trimmed, sessionKey);
+          },
+          abortShell: (toolCallId) => service.abortShell(toolCallId),
+        };
+      },
+    };
+  } catch (error) {
+    try {
+      await toolExecutor.disposeLsp();
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Workspace runtime initialization and cleanup failed.",
+      );
+    }
+    throw error;
+  }
 }

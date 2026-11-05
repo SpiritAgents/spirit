@@ -40,7 +40,7 @@ async function fixture() {
   const executor = new HostExecutor();
   const bootstrap = createSubagentWorkspaceBootstrap({
     parentWorkspaceRoot: repo,
-    buildScopedToolExecutor: async () => executor,
+    buildScopedRuntime: async () => ({ toolExecutor: executor }),
   });
   const input = {
     subagentSessionId: "child",
@@ -95,7 +95,7 @@ it("rolls back initialization failures but preserves a concurrently modified wor
   const { repo, input } = await fixture();
   const bootstrap = createSubagentWorkspaceBootstrap({
     parentWorkspaceRoot: repo,
-    buildScopedToolExecutor: async () => {
+    buildScopedRuntime: async () => {
       throw new Error("service initialization failed");
     },
   });
@@ -106,7 +106,7 @@ it("rolls back initialization failures but preserves a concurrently modified wor
   let modified = "";
   const retained = createSubagentWorkspaceBootstrap({
     parentWorkspaceRoot: repo,
-    buildScopedToolExecutor: async (workspaceRoot) => {
+    buildScopedRuntime: async (workspaceRoot) => {
       modified = workspaceRoot;
       await writeFile(path.join(workspaceRoot, "untracked.txt"), "keep\n");
       throw new Error("initialization failed after modification");

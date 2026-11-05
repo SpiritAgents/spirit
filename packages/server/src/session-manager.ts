@@ -15,6 +15,8 @@ import {
 import type { BridgeRuntimeSnapshot } from "@spiritagent/agent-core/host-bridge";
 import {
   createHostTodoStore,
+  createBackgroundTaskOwner,
+  type BackgroundTaskOwner,
   deriveSessionTitleFallbackSeed,
   generateSessionTitleForTurn,
   type ApprovalLevel,
@@ -62,6 +64,7 @@ export interface ServerSessionInfo {
   queuedTurns: number;
   conversationKey?: string;
   attachmentCount: number;
+  restoredFromDisk: boolean;
 }
 
 interface QueuedUserTurn {
@@ -99,6 +102,8 @@ interface ServerSession {
   /** Ticks spent idle while turnActive — guards against result-less endings. */
   idleTicksWhileActive: number;
   polling: boolean;
+  closing: boolean;
+  operations: Promise<void>;
   /** Skills activated out-of-turn (slash); consumed by the next turn. */
   pendingActiveSkills: LlmActiveSkill[];
   createParams: CreateSessionParams;
@@ -269,6 +274,7 @@ export class SessionManager {
     }
   >();
   private readonly spiritDataDir: string;
+  private taskOwner: Promise<BackgroundTaskOwner> | undefined;
   /** Shared per-workspace MCP services (also serve host.mcp* management RPCs). */
   readonly mcpRegistry: McpRegistry;
   /** conversationKey → in-flight create; collapses concurrent creates for the same chat. */
@@ -335,6 +341,7 @@ export class SessionManager {
       workspaceRoot: params.workspaceRoot,
       spiritDataDir: this.spiritDataDir,
       sessionKey: transcriptSessionKey,
+      taskOwner: await (this.taskOwner ??= createBackgroundTaskOwner(this.spiritDataDir)),
       ...(params.modelRef ? { modelRef: params.modelRef } : {}),
       ...(params.todoSessionKey?.trim() ? { todoSessionKey: params.todoSessionKey.trim() } : {}),
       ...(params.sessionKind === "dream-collector"
@@ -342,6 +349,7 @@ export class SessionManager {
         : { mcpService: this.mcpRegistry.forWorkspace(params.workspaceRoot) }),
       hostKind: params.hostKind === "web" ? "cli" : params.hostKind,
       approvalLevel: params.approvalLevel ?? "default",
+      agentMode: params.agentMode ?? "agent",
       ...(params.sessionKind ? { sessionKind: params.sessionKind } : {}),
       ...(params.dreamScope ? { dreamScope: params.dreamScope } : {}),
       ...(params.dreamSourceSession ? { dreamSourceSession: params.dreamSourceSession } : {}),
@@ -356,7 +364,7 @@ export class SessionManager {
         this.requestWorkspaceCapabilityTrust(sessionId, request),
       ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
     });
-    await runtimeResult.setAgentMode(params.agentMode ?? "agent");
+    if (params.agentMode) await runtimeResult.setAgentMode(params.agentMode);
     this.attachDesktopMcpUiOpener(sessionId, runtimeResult, params.hostKind);
 
     const info: ServerSessionInfo = {
@@ -369,6 +377,7 @@ export class SessionManager {
       model: runtimeResult.transportConfig.model,
       queuedTurns: 0,
       attachmentCount: 0,
+      restoredFromDisk: runtimeResult.restoredFromDisk,
       ...(trimmedKey ? { conversationKey: trimmedKey } : {}),
     };
     const session: ServerSession = {
@@ -380,6 +389,11 @@ export class SessionManager {
       turnActive: false,
       idleTicksWhileActive: 0,
       polling: false,
+      closing: false,
+      operations: Promise.resolve(),
+      ...(runtimeResult.restoredDesktopTimeline
+        ? { desktopTimeline: runtimeResult.restoredDesktopTimeline }
+        : {}),
       pendingActiveSkills: [],
       createParams: params,
       todoSessionKey: params.todoSessionKey?.trim() || sessionId,
@@ -418,8 +432,7 @@ export class SessionManager {
       return { closed: false };
     }
     this.attachments.delete(sessionId);
-    await this.destroySession(sessionId);
-    return { closed: true };
+    return { closed: false };
   }
 
   /** Move a live session to a new conversation key (e.g. provisional → stable chat path). */
@@ -437,6 +450,7 @@ export class SessionManager {
     if (occupied && occupied !== sessionId) {
       throw new Error(`conversationKey already registered: ${trimmed}`);
     }
+    await session.runtimeResult.setTranscriptSessionKey(trimmed);
     if (previousKey) {
       const indexed = this.conversationIndex.get(previousKey);
       if (indexed === sessionId) {
@@ -445,7 +459,7 @@ export class SessionManager {
     }
     session.info.conversationKey = trimmed;
     this.conversationIndex.set(trimmed, sessionId);
-    await session.runtimeResult.setTranscriptSessionKey(trimmed);
+    await session.runtimeResult.persist();
   }
 
   private resolveSessionId(params: AttachSessionParams): string {
@@ -500,13 +514,16 @@ export class SessionManager {
 
   private requireSession(sessionId: string): ServerSession {
     const session = this.sessions.get(sessionId);
-    if (!session) {
+    if (!session || session.closing) {
       throw new Error(`session not found: ${sessionId}`);
     }
     return session;
   }
 
   private handleRuntimeEvent(sessionId: string, event: RuntimeEvent<JsonValue>): void {
+    if (event.kind === "background-task-error") {
+      this.callbacks.log?.(`session ${sessionId}: ${event.error}`);
+    }
     this.callbacks.broadcastRuntimeEvent(sessionId, event);
     // Approval/question lifecycle changes are exactly when clients need a
     // fresh projection (to open or close the interactive UI).
@@ -524,98 +541,148 @@ export class SessionManager {
 
   // ------------------------------------------------------------------ pump
 
+  private serializeSession<T>(
+    session: ServerSession,
+    action: () => Promise<T>,
+    allowClosing = false,
+  ): Promise<T> {
+    const guarded = async () => {
+      if (session.closing && !allowClosing) throw new Error("Session is closing.");
+      return action();
+    };
+    const run = session.operations.then(guarded, guarded);
+    session.operations = run.then(
+      () => {},
+      () => {},
+    );
+    return run;
+  }
+
   private tickSession(session: ServerSession): void {
-    if (session.polling) {
+    if (session.polling || session.closing) {
       return;
     }
     session.polling = true;
-    void (async () => {
-      const { runtime } = session.runtimeResult;
-      await session.runtimeResult.toolExecutor.refreshCaches();
-      await runtime.poll();
-      const childSessions = runtime.childSessions();
-      const childSessionsFingerprint = childSessions
-        .map((entry) => `${entry.sessionId}:${entry.status}:${entry.parentToolCallId}`)
-        .join("|");
-      const childSessionsChanged = session.childSessionsFingerprint !== childSessionsFingerprint;
-      if (childSessionsChanged) {
-        session.childSessionsFingerprint = childSessionsFingerprint;
-      }
-
-      const childDrains = runtime.drainActiveChildSessionEvents().map((drain) => ({
-        ...drain,
-        pendingAux: runtime.childSessionPendingAuxState(drain.sessionId),
-        archive: runtime.childSessionArchive(drain.sessionId),
-      }));
-      const hasLiveChildPayload = childDrains.some(
-        (drain) => drain.events.length > 0 || drain.pendingAux !== undefined,
-      );
-      // Membership/status changes (incl. first create + mid-turn complete) must push
-      // archives even when the child produced no events this tick — Desktop remote
-      // runtime otherwise keeps empty childSessionArchives until turnFinished.
-      if (hasLiveChildPayload || childSessionsChanged) {
-        const drains = hasLiveChildPayload
-          ? childDrains
-          : runtime.childSessionArchives().map((archive) => ({
-              sessionId: archive.summary.sessionId,
-              parentToolCallId: archive.summary.parentToolCallId,
-              events: [] as RuntimeEvent<JsonValue>[],
-              pendingAux: runtime.childSessionPendingAuxState(archive.summary.sessionId),
-              archive,
-            }));
-        this.callbacks.broadcastSubagentEvents?.(session.info.sessionId, drains);
-      }
-      if (childSessionsChanged) {
-        this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
-      }
-      // The bridge had clients drive this on a timer; the daemon pump owns it now.
-      runtime.handleStreamStallTimeout();
-
-      const turnResult = runtime.takeCompletedTurnResult();
-      if (turnResult && session.turnActive) {
-        if (turnResult.kind !== "completed" && turnResult.kind !== "failed") {
-          return;
+    void this.serializeSession(
+      session,
+      async () => {
+        if (this.sessions.get(session.info.sessionId) !== session || session.closing) return;
+        const { runtime } = session.runtimeResult;
+        await session.runtimeResult.toolExecutor.refreshCaches();
+        await runtime.poll({ allowBackgroundWakeup: false });
+        const childSessions = runtime.childSessions();
+        const childSessionsFingerprint = childSessions
+          .map((entry) => `${entry.sessionId}:${entry.status}:${entry.parentToolCallId}`)
+          .join("|");
+        const childSessionsChanged = session.childSessionsFingerprint !== childSessionsFingerprint;
+        if (childSessionsChanged) {
+          session.childSessionsFingerprint = childSessionsFingerprint;
         }
-        this.finishTurn(
-          session,
-          session.turnGeneration,
-          turnResult.kind === "failed" ? "failed" : "completed",
-          turnResult.kind === "failed"
-            ? {
-                kind: "failed",
-                error: turnResult.error,
-                toolExecutions: turnResult.toolExecutions,
-              }
-            : {
-                kind: "completed",
-                assistantText: turnResult.assistantText,
-                toolExecutions: turnResult.toolExecutions,
-              },
+
+        const childDrains = runtime.drainActiveChildSessionEvents().map((drain) => ({
+          ...drain,
+          pendingAux: runtime.childSessionPendingAuxState(drain.sessionId),
+          archive: runtime.childSessionArchive(drain.sessionId),
+        }));
+        const hasLiveChildPayload = childDrains.some(
+          (drain) => drain.events.length > 0 || drain.pendingAux !== undefined,
         );
-        return;
-      }
-      const compactionResult = runtime.takeCompletedManualHistoryCompactionResult();
-      if (compactionResult && session.turnActive) {
-        this.finishTurn(session, session.turnGeneration, "completed");
-        return;
-      }
+        // Membership/status changes (incl. first create + mid-turn complete) must push
+        // archives even when the child produced no events this tick — Desktop remote
+        // runtime otherwise keeps empty childSessionArchives until turnFinished.
+        if (hasLiveChildPayload || childSessionsChanged) {
+          const drains = hasLiveChildPayload
+            ? childDrains
+            : runtime.childSessionArchives().map((archive) => ({
+                sessionId: archive.summary.sessionId,
+                parentToolCallId: archive.summary.parentToolCallId,
+                events: [] as RuntimeEvent<JsonValue>[],
+                pendingAux: runtime.childSessionPendingAuxState(archive.summary.sessionId),
+                archive,
+              }));
+          this.callbacks.broadcastSubagentEvents?.(session.info.sessionId, drains);
+        }
+        if (childSessionsChanged) {
+          this.callbacks.broadcastSnapshot(
+            session.info.sessionId,
+            this.snapshotForSession(session),
+          );
+        }
+        // The bridge had clients drive this on a timer; the daemon pump owns it now.
+        runtime.handleStreamStallTimeout();
 
-      if (session.turnActive) {
-        const idle =
-          !runtime.isBusy() && !runtime.hasPendingApproval() && !runtime.hasPendingQuestions();
-        session.idleTicksWhileActive = idle ? session.idleTicksWhileActive + 1 : 0;
-        if (session.idleTicksWhileActive >= IDLE_GRACE_TICKS) {
-          // The turn machine went idle without producing a result (should not
-          // happen outside abort); release the session instead of hanging.
-          this.finishTurn(session, session.turnGeneration, "cancelled");
+        const turnResult = runtime.takeCompletedTurnResult();
+        if (turnResult && session.turnActive) {
+          if (turnResult.kind !== "completed" && turnResult.kind !== "failed") {
+            return;
+          }
+          await this.finishTurn(
+            session,
+            session.turnGeneration,
+            turnResult.kind === "failed" ? "failed" : "completed",
+            turnResult.kind === "failed"
+              ? {
+                  kind: "failed",
+                  error: turnResult.error,
+                  toolExecutions: turnResult.toolExecutions,
+                }
+              : {
+                  kind: "completed",
+                  assistantText: turnResult.assistantText,
+                  toolExecutions: turnResult.toolExecutions,
+                },
+          );
           return;
         }
-      } else {
-        session.idleTicksWhileActive = 0;
-      }
+        const compactionResult = runtime.takeCompletedManualHistoryCompactionResult();
+        if (compactionResult && session.turnActive) {
+          await this.finishTurn(session, session.turnGeneration, "completed");
+          return;
+        }
 
-      this.drainQueue(session);
-    })()
+        if (session.turnActive) {
+          const idle =
+            !runtime.isBusy() && !runtime.hasPendingApproval() && !runtime.hasPendingQuestions();
+          session.idleTicksWhileActive = idle ? session.idleTicksWhileActive + 1 : 0;
+          if (session.idleTicksWhileActive >= IDLE_GRACE_TICKS) {
+            // The turn machine went idle without producing a result (should not
+            // happen outside abort); release the session instead of hanging.
+            await this.finishTurn(session, session.turnGeneration, "cancelled");
+            return;
+          }
+        } else {
+          session.idleTicksWhileActive = 0;
+        }
+
+        await this.drainQueue(session);
+        if (
+          !session.turnActive &&
+          !runtime.isBusy() &&
+          !runtime.hasPendingApproval() &&
+          !runtime.hasPendingQuestions() &&
+          runtime.hasPendingBackgroundTaskNotifications()
+        ) {
+          session.turnActive = true;
+          session.turnGeneration += 1;
+          session.info.isBusy = true;
+          try {
+            if (!(await runtime.resumeBackgroundTaskNotifications())) {
+              session.turnActive = false;
+              session.info.isBusy = false;
+            }
+          } catch (error) {
+            session.turnActive = false;
+            session.info.isBusy = false;
+            throw error;
+          }
+          this.callbacks.broadcastSnapshot(
+            session.info.sessionId,
+            this.snapshotForSession(session),
+          );
+        }
+      },
+      true,
+    )
       .catch((err) => {
         this.callbacks.log?.(
           `session ${session.info.sessionId} pump error: ${err instanceof Error ? err.message : String(err)}`,
@@ -633,6 +700,13 @@ export class SessionManager {
     params: SubmitUserTurnParams,
   ): Promise<SubmitUserTurnOutcome> {
     const session = this.requireSession(sessionId);
+    return this.serializeSession(session, () => this.submitUserTurnNow(session, params));
+  }
+
+  private async submitUserTurnNow(
+    session: ServerSession,
+    params: SubmitUserTurnParams,
+  ): Promise<SubmitUserTurnOutcome> {
     const { runtime } = session.runtimeResult;
     const text = params.text.trim();
     const imageCount = params.explicitImages?.length ?? 0;
@@ -671,11 +745,6 @@ export class SessionManager {
     }
     const { runtime } = session.runtimeResult;
     await session.runtimeResult.toolExecutor.refreshCaches();
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.info.isBusy = true;
-    session.turnGeneration += 1;
-
     // Skills activated out-of-turn (slash) merge with per-turn activations.
     const pending = session.pendingActiveSkills ?? [];
     const merged = [...pending, ...(turn.activeSkills ?? [])];
@@ -689,11 +758,13 @@ export class SessionManager {
     });
     session.pendingActiveSkills = [];
 
-    await runtime.startUserTurnStreaming(
-      turn.text,
-      turn.explicitImages,
-      turn.explicitWorkspaceFiles,
-      activeSkills,
+    await this.startForegroundAction(session, () =>
+      runtime.startUserTurnStreaming(
+        turn.text,
+        turn.explicitImages,
+        turn.explicitWorkspaceFiles,
+        activeSkills,
+      ),
     );
     this.scheduleSessionTitleGenerationIfNeeded(session, turn.text);
     this.callbacks.broadcastUserTurnSubmitted?.(session.info.sessionId, turn);
@@ -740,24 +811,25 @@ export class SessionManager {
       });
   }
 
-  private finishTurn(
+  private async finishTurn(
     session: ServerSession,
     generation: number,
     stopReason: TurnStopReason,
     result?: ServerTurnResult,
-  ): void {
+  ): Promise<void> {
     if (session.turnGeneration !== generation || !session.turnActive) {
       return;
     }
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = false;
+    await session.runtimeResult.persist();
     this.callbacks.broadcastTurnFinished(session.info.sessionId, stopReason, result);
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));
-    this.drainQueue(session);
+    await this.drainQueue(session);
   }
 
-  private drainQueue(session: ServerSession): void {
+  private async drainQueue(session: ServerSession): Promise<void> {
     const { runtime } = session.runtimeResult;
     if (session.queue.length === 0 || session.turnActive || runtime.isBusy()) {
       return;
@@ -766,7 +838,9 @@ export class SessionManager {
       return;
     }
     const next = session.queue.shift()!;
-    this.startTurn(session, next).catch((err) => {
+    try {
+      await this.startTurn(session, next);
+    } catch (err) {
       session.turnActive = false;
       session.info.isBusy = false;
       const message = err instanceof Error ? err.message : String(err);
@@ -776,8 +850,8 @@ export class SessionManager {
         toolExecutions: [],
       });
       this.callbacks.log?.(`drainQueue failed: ${message}`);
-      this.drainQueue(session);
-    });
+      await this.drainQueue(session);
+    }
   }
 
   abort(sessionId: string): void {
@@ -789,7 +863,15 @@ export class SessionManager {
     session.info.isBusy = false;
     this.callbacks.broadcastTurnFinished(sessionId, "cancelled");
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
-    this.drainQueue(session);
+    void this.serializeSession(session, async () => {
+      await session.runtimeResult.persist();
+      await this.drainQueue(session);
+    }).catch((error: unknown) =>
+      this.callbacks.broadcastRuntimeEvent(sessionId, {
+        kind: "background-task-error",
+        error: error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 
   abortShell(sessionId: string, toolCallId: string): boolean {
@@ -798,28 +880,52 @@ export class SessionManager {
 
   async continueAssistantCompletion(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
-    const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
-      throw new Error("session is busy; wait for the current turn to finish");
-    }
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.info.isBusy = true;
-    session.turnGeneration += 1;
-    await runtime.continueAssistantCompletionStreaming();
+    await this.serializeSession(session, () =>
+      this.startForegroundAction(session, () =>
+        session.runtimeResult.runtime.continueAssistantCompletionStreaming(),
+      ),
+    );
   }
 
   async compactHistory(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
+    await this.serializeSession(session, () =>
+      this.startForegroundAction(session, () =>
+        session.runtimeResult.runtime.startManualHistoryCompaction(),
+      ),
+    );
+  }
+
+  private requireIdleForeground(session: ServerSession): void {
     const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
+    if (
+      runtime.isBusy() ||
+      session.turnActive ||
+      runtime.hasPendingApproval() ||
+      runtime.hasPendingQuestions()
+    ) {
       throw new Error("session is busy; wait for the current turn to finish");
     }
+  }
+
+  private async startForegroundAction<T>(
+    session: ServerSession,
+    action: () => Promise<T>,
+  ): Promise<T> {
+    this.requireIdleForeground(session);
     session.turnActive = true;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = true;
-    session.turnGeneration += 1;
-    await runtime.startManualHistoryCompaction();
+    const generation = ++session.turnGeneration;
+    try {
+      return await action();
+    } catch (error) {
+      if (session.turnGeneration === generation) {
+        session.turnActive = false;
+        session.info.isBusy = false;
+      }
+      throw error;
+    }
   }
 
   // ------------------------------------------------------- session config
@@ -832,8 +938,11 @@ export class SessionManager {
 
   async setAgentMode(sessionId: string, mode: AgentMode): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.setAgentMode(mode);
-    session.createParams.agentMode = mode;
+    await this.serializeSession(session, async () => {
+      await session.runtimeResult.setAgentMode(mode);
+      session.createParams.agentMode = mode;
+      await session.runtimeResult.persist();
+    });
   }
 
   setLoopEnabled(sessionId: string, enabled: boolean): void {
@@ -841,23 +950,30 @@ export class SessionManager {
     session.runtimeResult.setLoopEnabled(enabled);
   }
 
-  reset(sessionId: string): void {
+  async reset(sessionId: string): Promise<void> {
     const session = this.requireSession(sessionId);
     session.turnGeneration += 1;
     session.runtimeResult.runtime.abort();
-    session.queue = [];
-    session.turnActive = false;
-    session.runtimeResult.runtime.replaceHistory([]);
-    session.info.isBusy = false;
-    session.desktopTimeline = undefined;
-    // Match the legacy bridge's fresh-session semantics: todos reset with it.
-    void createHostTodoStore({
-      spiritDataDir: this.spiritDataDir,
-      scope: { sessionKey: session.todoSessionKey },
-    })
-      .purge()
-      .catch(() => {});
-    this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    await this.serializeSession(session, async () => {
+      await session.runtimeResult.tasks.cancelOwnedWork();
+      for (const task of session.runtimeResult.tasks.records()) {
+        if (task.terminalEventId && !task.notificationDelivered) {
+          await session.runtimeResult.tasks.markNotified(task.id, { runtimeId: "main" });
+        }
+      }
+      session.queue = [];
+      session.turnActive = false;
+      session.runtimeResult.runtime.replaceHistory([], { retainBackgroundHistory: false });
+      session.info.isBusy = false;
+      session.desktopTimeline = undefined;
+      // Match the legacy bridge's fresh-session semantics: todos reset with it.
+      await createHostTodoStore({
+        spiritDataDir: this.spiritDataDir,
+        scope: { sessionKey: session.todoSessionKey },
+      }).purge();
+      await session.runtimeResult.persist({ initialized: true, desktopTimeline: null });
+      this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+    });
   }
 
   rename(sessionId: string, title: string): void {
@@ -872,16 +988,20 @@ export class SessionManager {
 
   // ---------------------------------------------------- archive / restore
 
-  replaceFromArchive(sessionId: string, archive: unknown): void {
+  async replaceFromArchive(sessionId: string, archive: unknown): Promise<void> {
     const session = this.requireSession(sessionId);
-    const { runtime } = session.runtimeResult;
-    if (runtime.isBusy() || session.turnActive) {
-      throw new Error("session is busy; cannot replace archive while a turn is active");
-    }
-    session.runtimeResult.runtime.replaceFromArchive(archive as never);
-    // History was replaced wholesale; the previous timeline is stale until
-    // the owning host pushes a fresh snapshot.
-    session.desktopTimeline = undefined;
+    await this.serializeSession(session, async () => {
+      const { runtime } = session.runtimeResult;
+      if (runtime.isBusy() || session.turnActive) {
+        throw new Error("session is busy; cannot replace archive while a turn is active");
+      }
+      session.runtimeResult.runtime.replaceFromArchive(archive as never);
+      // History was replaced wholesale; the previous timeline is stale until
+      // the owning host pushes a fresh snapshot.
+      session.desktopTimeline = undefined;
+      await session.runtimeResult.restoreTaskNotifications();
+      await session.runtimeResult.persist({ initialized: true, desktopTimeline: null });
+    });
   }
 
   exportArchive(sessionId: string, messages: unknown, assistantAux: unknown): unknown {
@@ -906,19 +1026,25 @@ export class SessionManager {
    * notify every attached client. Payload stays opaque; only the array shape
    * is enforced at this boundary.
    */
-  pushDesktopTimeline(sessionId: string, timeline: unknown): { ok: true; revision: number } {
+  async pushDesktopTimeline(
+    sessionId: string,
+    timeline: unknown,
+  ): Promise<{ ok: true; revision: number }> {
     const session = this.requireSession(sessionId);
     if (!Array.isArray(timeline)) {
       throw new Error("desktop timeline must be an array");
     }
-    const revision = (session.desktopTimeline?.revision ?? 0) + 1;
-    session.desktopTimeline = {
-      revision,
-      timeline,
-      updatedAtUnixMs: Date.now(),
-    };
-    this.callbacks.broadcastDesktopTimelineUpdated?.(sessionId, revision);
-    return { ok: true, revision };
+    return this.serializeSession(session, async () => {
+      const revision = (session.desktopTimeline?.revision ?? 0) + 1;
+      session.desktopTimeline = {
+        revision,
+        timeline,
+        updatedAtUnixMs: Date.now(),
+      };
+      await session.runtimeResult.persist({ desktopTimeline: session.desktopTimeline });
+      this.callbacks.broadcastDesktopTimelineUpdated?.(sessionId, revision);
+      return { ok: true, revision };
+    });
   }
 
   getDesktopTimeline(sessionId: string): { revision: number; timeline: unknown[] } | null {
@@ -974,11 +1100,17 @@ export class SessionManager {
     userMessage?: string,
   ): Promise<string> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.toolExecutor.refreshCaches();
-    session.turnActive = true;
-    session.idleTicksWhileActive = 0;
-    session.turnGeneration += 1;
-    return session.runtimeResult.runtime.startApplyMcpPrompt(server, prompt, argsJson, userMessage);
+    return this.serializeSession(session, () =>
+      this.startForegroundAction(session, async () => {
+        await session.runtimeResult.toolExecutor.refreshCaches();
+        return session.runtimeResult.runtime.startApplyMcpPrompt(
+          server,
+          prompt,
+          argsJson,
+          userMessage,
+        );
+      }),
+    );
   }
 
   /** MCP management/read pass-throughs to the session's tool executor. */
@@ -1024,12 +1156,16 @@ export class SessionManager {
         toolExecutor.startMcpBackgroundRefresh();
         return toolExecutor.mcpStatusSnapshot();
       case "startManualMcpTool": {
-        const request = await toolExecutor.createMcpToolRequest(
-          String(params["server"] ?? ""),
-          String(params["tool"] ?? ""),
-          typeof params["argsJson"] === "string" ? params["argsJson"] : undefined,
-        );
-        return runtime.startManualToolRequestDirect(request, "manual");
+        const session = this.requireSession(sessionId);
+        return this.serializeSession(session, async () => {
+          this.requireIdleForeground(session);
+          const request = await toolExecutor.createMcpToolRequest(
+            String(params["server"] ?? ""),
+            String(params["tool"] ?? ""),
+            typeof params["argsJson"] === "string" ? params["argsJson"] : undefined,
+          );
+          return runtime.startManualToolRequestDirect(request, "manual");
+        });
       }
       default:
         throw new Error(`unknown mcp action: ${action}`);
@@ -1039,15 +1175,22 @@ export class SessionManager {
   // -------------------------------------------------------- manual tools
 
   async startManualToolCommand(sessionId: string, message: string): Promise<unknown> {
-    const { runtime } = this.requireSession(sessionId).runtimeResult;
-    const result = await runtime.startManualToolCommand(message);
-    return { result, snapshot: this.snapshot(sessionId) };
+    const session = this.requireSession(sessionId);
+    return this.serializeSession(session, async () => {
+      this.requireIdleForeground(session);
+      const result = await session.runtimeResult.runtime.startManualToolCommand(message);
+      return { result, snapshot: this.snapshot(sessionId) };
+    });
   }
 
   async continuePendingManualToolApproval(sessionId: string, decision: unknown): Promise<unknown> {
-    const { runtime } = this.requireSession(sessionId).runtimeResult;
-    const result = await runtime.continuePendingManualToolApproval(decision as never);
-    return { result, snapshot: this.snapshot(sessionId) };
+    const session = this.requireSession(sessionId);
+    return this.serializeSession(session, async () => {
+      const result = await session.runtimeResult.runtime.continuePendingManualToolApproval(
+        decision as never,
+      );
+      return { result, snapshot: this.snapshot(sessionId) };
+    });
   }
 
   takeCompletedManualToolCommandResult(sessionId: string): unknown {
@@ -1076,54 +1219,62 @@ export class SessionManager {
 
   // ------------------------------------------------- config / hooks / mode
 
-  /** Re-resolve the transport from config.json and rebuild the runtime, preserving history. */
+  /** Refresh foreground bindings while live tasks retain their original execution environment. */
   async replaceConfig(sessionId: string, modelRef?: ModelRef): Promise<void> {
     const session = this.requireSession(sessionId);
-    if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
-      session.createParams.modelRef = {
-        providerId: modelRef.providerId.trim(),
-        name: modelRef.name.trim(),
-      };
-    } else {
-      delete session.createParams.modelRef;
-    }
-    const old = session.runtimeResult;
-    await old.runSessionEnd("switch");
-    old.runtime.abort();
-    const history = [...old.runtime.history()];
-    const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
+    session.runtimeResult.runtime.abort();
+    await this.serializeSession(session, async () => {
+      if (modelRef?.providerId?.trim() && modelRef?.name?.trim()) {
+        session.createParams.modelRef = {
+          providerId: modelRef.providerId.trim(),
+          name: modelRef.name.trim(),
+        };
+      } else {
+        delete session.createParams.modelRef;
+      }
+      const old = session.runtimeResult;
+      const mode = session.createParams.agentMode ?? old.agentModeSnapshot();
+      await old.runSessionEnd("switch");
+      old.runtime.abort();
+      const lastInputTokens = getTransportConfigLastInputTokens(old.transportConfig);
 
-    const fresh = await createServerRuntime({
-      workspaceRoot: session.createParams.workspaceRoot,
-      spiritDataDir: this.spiritDataDir,
-      sessionKey: sessionId,
-      ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
-      todoSessionKey: session.todoSessionKey,
-      mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
-      hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
-      approvalLevel: session.info.approvalLevel,
-      ...(session.createParams.hostUiPromptSection
-        ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
-        : {}),
-      ...(session.createParams.hostToolDescriptionHints
-        ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
-        : {}),
-      ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
-      basicInfoHost: resolveBasicInfoHost(session.createParams),
-      onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
-      onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
-      requestWorkspaceCapabilityTrust: (request) =>
-        this.requestWorkspaceCapabilityTrust(sessionId, request),
-      ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+      const fresh = await old.reconfigure({
+        workspaceRoot: session.createParams.workspaceRoot,
+        spiritDataDir: this.spiritDataDir,
+        sessionKey: old.storageSessionKey,
+        agentMode: mode,
+        ...(session.createParams.modelRef ? { modelRef: session.createParams.modelRef } : {}),
+        todoSessionKey: session.todoSessionKey,
+        mcpService: this.mcpRegistry.forWorkspace(session.createParams.workspaceRoot),
+        hostKind: session.createParams.hostKind === "web" ? "cli" : session.createParams.hostKind,
+        approvalLevel: session.info.approvalLevel,
+        ...(session.createParams.hostUiPromptSection
+          ? { hostUiPromptSection: session.createParams.hostUiPromptSection }
+          : {}),
+        ...(session.createParams.hostToolDescriptionHints
+          ? { hostToolDescriptionHints: session.createParams.hostToolDescriptionHints }
+          : {}),
+        ...(lastInputTokens !== undefined ? { initialLastInputTokens: lastInputTokens } : {}),
+        basicInfoHost: resolveBasicInfoHost(session.createParams),
+        onEvent: (event) => this.handleRuntimeEvent(sessionId, event),
+        onFileChange: (change) => this.callbacks.broadcastFileChange(sessionId, change),
+        requestWorkspaceCapabilityTrust: (request) =>
+          this.requestWorkspaceCapabilityTrust(sessionId, request),
+        ...(this.callbacks.log ? { log: this.callbacks.log } : {}),
+      });
+      fresh.setLoopEnabled(old.runtime.loopEnabled());
+      await fresh.setAgentMode(mode);
+      this.attachDesktopMcpUiOpener(sessionId, fresh, session.createParams.hostKind);
+      session.runtimeResult = fresh;
+      session.info.model = fresh.transportConfig.model;
+      await fresh.runSessionStart("resume");
+      await fresh.persist();
+      session.turnActive = false;
+      session.info.isBusy = false;
+      session.idleTicksWhileActive = 0;
+      this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
+      await this.drainQueue(session);
     });
-    fresh.runtime.replaceHistory(history);
-    fresh.setLoopEnabled(old.runtime.loopEnabled());
-    await fresh.setAgentMode(session.createParams.agentMode ?? "agent");
-    this.attachDesktopMcpUiOpener(sessionId, fresh, session.createParams.hostKind);
-    session.runtimeResult = fresh;
-    session.info.model = fresh.transportConfig.model;
-    await old.toolExecutor.disposeLsp();
-    await fresh.runSessionStart("resume");
   }
 
   async reloadHostMetadata(sessionId: string, mode: AgentMode): Promise<void> {
@@ -1167,7 +1318,9 @@ export class SessionManager {
     decision: Parameters<ServerRuntimeResult["runtime"]["continuePendingApproval"]>[0],
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.runtime.continuePendingApproval(decision);
+    await this.serializeSession(session, () =>
+      session.runtimeResult.runtime.continuePendingApproval(decision),
+    );
     // approval-resolved mid-broadcast often sees isBusy=false (pending cleared, tool not
     // inFlight yet). Push again after continue so clients see the resumed busy edge —
     // same pattern as replyPendingQuestions.
@@ -1227,7 +1380,9 @@ export class SessionManager {
     result: Parameters<ServerRuntimeResult["runtime"]["continuePendingQuestions"]>[0],
   ): Promise<void> {
     const session = this.requireSession(sessionId);
-    await session.runtimeResult.runtime.continuePendingQuestions(result);
+    await this.serializeSession(session, () =>
+      session.runtimeResult.runtime.continuePendingQuestions(result),
+    );
     this.callbacks.broadcastSnapshot(sessionId, this.snapshotForSession(session));
   }
 
@@ -1273,25 +1428,21 @@ export class SessionManager {
     for (const session of this.sessions.values()) {
       const { runtime } = session.runtimeResult;
       if (runtime.hasPendingApproval()) {
-        runtime
-          .continuePendingApproval({
-            kind: "deny",
-            resultText: "All clients disconnected.",
-          })
-          .catch((err) =>
-            this.callbacks.log?.(
-              `session ${session.info.sessionId}: deny failed: ${err instanceof Error ? err.message : String(err)}`,
-            ),
-          );
+        this.replyPendingApproval(session.info.sessionId, {
+          kind: "deny",
+          resultText: "All clients disconnected.",
+        }).catch((err) =>
+          this.callbacks.log?.(
+            `session ${session.info.sessionId}: deny failed: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
       }
       if (runtime.hasPendingQuestions()) {
-        runtime
-          .continuePendingQuestions({ status: "skipped" })
-          .catch((err) =>
-            this.callbacks.log?.(
-              `session ${session.info.sessionId}: skip questions failed: ${err instanceof Error ? err.message : String(err)}`,
-            ),
-          );
+        this.replyPendingQuestions(session.info.sessionId, { status: "skipped" }).catch((err) =>
+          this.callbacks.log?.(
+            `session ${session.info.sessionId}: skip questions failed: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
       }
     }
     for (const [requestId, pending] of this.pendingTrustRequests) {
@@ -1322,28 +1473,36 @@ export class SessionManager {
     if (!session) {
       return;
     }
+    session.closing = true;
     const conversationKey = session.info.conversationKey?.trim();
     if (conversationKey && this.conversationIndex.get(conversationKey) === sessionId) {
       this.conversationIndex.delete(conversationKey);
     }
     this.attachments.delete(sessionId);
+    for (const [requestId, pending] of this.pendingTrustRequests) {
+      if (pending.sessionId !== sessionId) continue;
+      this.pendingTrustRequests.delete(requestId);
+      clearTimeout(pending.timer);
+      pending.resolve("deny");
+    }
     this.settleExtensionUiForSession(sessionId, { kind: "unavailable", reason: "host-has-no-ui" });
     session.turnGeneration += 1;
     session.queue = [];
     clearInterval(session.pump);
     session.runtimeResult.runtime.abort();
+    await this.serializeSession(session, () => session.runtimeResult.dispose(), true);
     this.sessions.delete(sessionId);
-    await session.runtimeResult.toolExecutor.disposeLsp();
   }
 
   /** Aborts every session; called on daemon shutdown. */
   async shutdown(): Promise<void> {
     const disposals: Promise<void>[] = [];
     for (const session of this.sessions.values()) {
+      session.closing = true;
       session.turnGeneration += 1;
       clearInterval(session.pump);
       session.runtimeResult.runtime.abort();
-      disposals.push(session.runtimeResult.toolExecutor.disposeLsp());
+      disposals.push(this.serializeSession(session, () => session.runtimeResult.dispose(), true));
     }
     this.sessions.clear();
     this.conversationIndex.clear();
@@ -1357,6 +1516,14 @@ export class SessionManager {
       this.pendingExtensionUi.delete(requestId);
       pending.resolve({ kind: "unavailable", reason: "host-has-no-ui" });
     }
-    await Promise.all(disposals);
+    const settled = await Promise.allSettled(disposals);
+    const owner = await Promise.allSettled(
+      this.taskOwner ? [this.taskOwner.then((value) => value.close())] : [],
+    );
+    this.taskOwner = undefined;
+    const failures = [...settled, ...owner].flatMap((entry) =>
+      entry.status === "rejected" ? [entry.reason] : [],
+    );
+    if (failures.length) throw new AggregateError(failures, "Daemon session shutdown failed.");
   }
 }

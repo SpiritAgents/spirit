@@ -24,3 +24,12 @@ it("checks a unique local IPC owner rather than treating a reusable PID as ident
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+it.skipIf(process.platform === "win32")(
+  "explains an unsupported local IPC path without creating an owner",
+  async () => {
+    await expect(createBackgroundTaskOwner(path.join(tmpdir(), "x".repeat(120)))).rejects.toThrow(
+      "Choose a shorter data directory",
+    );
+  },
+);

@@ -185,6 +185,15 @@ impl RuntimeSyncState {
                         )));
                 }
                 BridgeRuntimeEvent::BackgroundToolStatus { .. } => {}
+                BridgeRuntimeEvent::BackgroundTaskChanged { .. }
+                | BridgeRuntimeEvent::BackgroundTaskNotification { .. } => {}
+                BridgeRuntimeEvent::BackgroundTaskError { error } => {
+                    self.events
+                        .push_back(RuntimeEvent::PushMessage(ChatMessage::new(
+                            MessageRole::Agent,
+                            t!("tui.tool.failed", output = error).into_owned(),
+                        )));
+                }
                 BridgeRuntimeEvent::ContextUsageUpdated { .. } => {}
                 // TODO(cli): project tool-execution-output-chunk into TUI shell tool cards.
                 BridgeRuntimeEvent::ToolExecutionOutputChunk { .. } => {}

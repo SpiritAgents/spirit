@@ -216,7 +216,7 @@ impl DaemonRuntime {
         &mut self,
         conversation_key: &str,
         archive: &ChatArchive,
-    ) -> Result<()> {
+    ) -> Result<bool> {
         let created = self.client.call(
             "session.create",
             json!({
@@ -235,8 +235,11 @@ impl DaemonRuntime {
             "session.attach",
             json!({ "conversationKey": conversation_key }),
         )?;
-        self.replace_runtime_archive(archive)?;
-        Ok(())
+        let restored = created.get("restoredFromDisk").and_then(Value::as_bool) == Some(true);
+        if !restored {
+            self.replace_runtime_archive(archive)?;
+        }
+        Ok(restored)
     }
 
     fn apply_loaded_chat_metadata(&mut self, archive: &ChatArchive, conversation_key: &str) {
@@ -303,9 +306,13 @@ impl DaemonRuntime {
                 Ok(AttachChatSessionOutcome::AttachedLive)
             }
             Err(err) if Self::is_attach_miss(&err) => {
-                self.create_and_attach_session(&conversation_key, archive)?;
-                self.apply_loaded_chat_metadata(archive, &conversation_key);
-                Ok(AttachChatSessionOutcome::Created)
+                if self.create_and_attach_session(&conversation_key, archive)? {
+                    self.apply_attached_live_session_metadata(&conversation_key)?;
+                    Ok(AttachChatSessionOutcome::AttachedLive)
+                } else {
+                    self.apply_loaded_chat_metadata(archive, &conversation_key);
+                    Ok(AttachChatSessionOutcome::Created)
+                }
             }
             Err(err) => {
                 self.handle_daemon_error(err);

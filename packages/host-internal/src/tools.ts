@@ -1833,10 +1833,15 @@ export class NodeHostToolService<
       ? path.resolve(trimmed)
       : path.resolve(this.workspaceRoot, trimmed);
     const canonical = canonicalWritePath(target);
-    const transcripts = resolveTranscriptsDir(canonicalWritePath(this.spiritDataDir));
+    const dataRoot = canonicalWritePath(this.spiritDataDir);
+    const transcripts = resolveTranscriptsDir(dataRoot);
     const relative = path.relative(transcripts, canonical).replaceAll("\\", "/");
     if (/^[a-f0-9]{32}\/background-tasks(?:\/|$)/u.test(relative)) {
       throw new Error("Background task records and output are read-only host-managed files.");
+    }
+    const dataRelative = path.relative(dataRoot, canonical).replaceAll("\\", "/");
+    if (/^session-storage-index(?:\/|$)/u.test(dataRelative)) {
+      throw new Error("Session storage identities are read-only host-managed files.");
     }
     return target;
   }

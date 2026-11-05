@@ -505,7 +505,7 @@ export interface AgentRuntimeOptions<Config, State, ToolRequest> {
     workspaceRoot: string,
     userInput: string,
   ) => Promise<PendingWorkspaceFile[]> | PendingWorkspaceFile[];
-  bootstrapSubagentWorkspace?: SubagentWorkspaceBootstrap<ToolRequest>;
+  bootstrapSubagentWorkspace?: SubagentWorkspaceBootstrap<ToolRequest, Config, State>;
   getApprovalLevel?: () => import("../auto-approval/types.js").SessionApprovalLevel;
   reviewToolApproval?: import("../auto-approval/types.js").ToolAutoReviewer;
 }
@@ -518,20 +518,26 @@ export interface SubagentWorkspaceBootstrapInput {
   signal?: AbortSignal;
 }
 
-export type SubagentWorkspaceBootstrapResult<ToolRequest = unknown> =
+export type SubagentWorkspaceBootstrapResult<
+  ToolRequest = unknown,
+  Config = unknown,
+  State = unknown,
+> =
   | {
       workspaceRoot: string;
       worktreePath?: string;
       branchName?: string;
       toolExecutor?: ToolExecutor<ToolRequest>;
+      runtimeOptions?: AgentRuntimeOptions<Config, State, ToolRequest>;
       markStarted?(): void;
       rollback?(): Promise<void>;
+      dispose?(): Promise<void>;
     }
   | { error: string };
 
-export type SubagentWorkspaceBootstrap<ToolRequest = unknown> = (
+export type SubagentWorkspaceBootstrap<ToolRequest = unknown, Config = unknown, State = unknown> = (
   input: SubagentWorkspaceBootstrapInput,
-) => Promise<SubagentWorkspaceBootstrapResult<ToolRequest>>;
+) => Promise<SubagentWorkspaceBootstrapResult<ToolRequest, Config, State>>;
 
 export interface RuntimeTurnContext<ToolRequest> {
   requestTrace: JsonValue[];

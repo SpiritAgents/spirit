@@ -25,7 +25,7 @@ const fixtures = [
 
 for (const fixture of fixtures) {
   test(`server export uses the config provider id for ${fixture.providerId}`, async () => {
-    const spiritDataDir = mkdtempSync(join(tmpdir(), "spirit-server-host-prompt-"));
+    const spiritDataDir = mkdtempSync(join(tmpdir(), "rf-"));
     const workspaceRoot = mkdtempSync(join(tmpdir(), "spirit-server-host-prompt-ws-"));
     writeFileSync(
       join(spiritDataDir, "config.json"),
@@ -49,8 +49,9 @@ for (const fixture of fixtures) {
       deletePassword: () => {},
     });
 
+    let result: Awaited<ReturnType<typeof createServerRuntime>> | undefined;
     try {
-      const result = await createServerRuntime({
+      result = await createServerRuntime({
         workspaceRoot,
         spiritDataDir,
         sessionKey: "sess_host_prompt_provider_id",
@@ -69,6 +70,7 @@ for (const fixture of fixtures) {
       );
       assert.doesNotMatch(prompt, /@ai-sdk\//);
     } finally {
+      await result?.dispose();
       setKeyringStoreForTests(undefined);
     }
   });

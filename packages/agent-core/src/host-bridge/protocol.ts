@@ -68,6 +68,8 @@ export interface BridgeRuntimeSnapshot {
   loopEnabled: boolean;
   approvalLevel: BridgeApprovalLevel;
   backgroundToolStatus?: string;
+  backgroundTasks?: import("../background-tasks.js").BackgroundTaskRecord[];
+  backgroundTaskNotifications?: import("../background-tasks.js").BackgroundTaskNotification[];
 }
 
 export interface DrainEventsResult {

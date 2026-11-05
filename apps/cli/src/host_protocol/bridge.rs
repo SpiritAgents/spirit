@@ -415,6 +415,16 @@ pub(crate) enum BridgeRuntimeEvent {
         status_text: Option<String>,
         failed: Option<bool>,
     },
+    #[serde(rename = "background-task-changed")]
+    BackgroundTaskChanged { task: Value },
+    #[serde(rename = "background-task-notification")]
+    BackgroundTaskNotification {
+        task: Value,
+        content: String,
+        restored: bool,
+    },
+    #[serde(rename = "background-task-error")]
+    BackgroundTaskError { error: String },
     #[serde(rename = "tool-execution-finished")]
     ToolExecutionFinished { execution: BridgeToolExecution },
     /// Incremental shell stdout/stderr while `shell` runs in the background.

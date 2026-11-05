@@ -90,8 +90,18 @@ Notes for client authors:
 
 - Events are **pushed**, not polled; each session runs a 25ms pump inside the daemon (the Desktop session-pump model) that drives `runtime.poll()` and harvests terminal results, so turns survive transient idle windows inside the turn machine (e.g. the await boundary while an approval resolves).
 - `update-pending-assistant-thinking` carries the full accumulated thinking text (same contract as the legacy host bridge) — clients that want deltas must diff locally.
-- `session.list` covers **live** sessions only. Desktop restores disk chats by creating a live daemon session and sending its archive; the daemon registry itself is not a disk-chat index.
+- `session.list` covers **live** sessions only. `session.create` reports `restoredFromDisk` when the daemon recovered persisted runtime history; clients must not overwrite that history with an older local archive. Uninitialized sessions still accept the client's archive.
 - Multi-client: every connected client receives every session's events; filter by `sessionId`. When the **last** client disconnects, pending approvals are denied and pending questions skipped so no runtime parks forever.
+
+### Background tasks and session lifetime
+
+Shell and Subagent tasks are owned by the session, not its current foreground turn. `session.abort` cancels foreground work; already-backgrounded tasks continue. `session.detach` removes an observer without closing the session. Explicit `session.close`, `session.reset`, and daemon shutdown stop owned work. Model changes replace foreground bindings while running children retain their original model, mode, and workspace services.
+
+The daemon serializes foreground entry points and polls task state independently. A completed background task is delivered once at a safe tool boundary, or starts one continuation when the foreground is idle. Snapshots include `backgroundTasks` and `backgroundTaskNotifications`; runtime events distinguish task changes, terminal notifications, and persistence errors.
+
+Runtime history and Desktop timeline snapshots are persisted alongside task records. A stable internal storage identity keeps transcript and live-output paths unchanged when a provisional conversation acquires its permanent chat path. External conversation paths are lookup keys in `session-storage-index`, not directories to move.
+
+Restarting a daemon never resumes old processes or invokes the model automatically. It verifies the previous host's unique local IPC identity and records interrupted tasks using their last persisted elapsed time. Worktree children rebuild workspace-bound instructions, Git information, tools, MCP, LSP, and hooks from the isolated checkout; started worktrees and branches are retained.
 
 ## Remote access
 

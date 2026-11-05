@@ -359,6 +359,7 @@ export interface SubagentSessionSummary {
 
 export interface SubagentSessionArchiveEntry {
   summary: SubagentSessionSummary;
+  backgroundTaskNotifications?: import("./background-tasks.js").BackgroundTaskNotification[];
   llmHistory: Array<StoredLlmMessageArchiveEntry | LegacyLlmMessageArchiveEntry>;
 }
 
@@ -440,6 +441,7 @@ export interface DreamSettings {
 }
 
 export interface ChatArchive {
+  backgroundTaskNotifications?: import("./background-tasks.js").BackgroundTaskNotification[];
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   assistantAux: AssistantAuxArchiveEntry[];
   llmHistory: Array<StoredLlmMessageArchiveEntry | LegacyLlmMessageArchiveEntry>;

@@ -45,6 +45,7 @@ import {
   buildDesktopUiMarkdownPromptSection,
 } from "./desktop-ui-markdown-prompt.js";
 import { sameWorkspaceRoot } from "./service-utils.js";
+import { sameSessionPath } from "./session-path.js";
 
 interface RemoteDesktopRuntimeInput {
   dataDir: string;
@@ -90,6 +91,7 @@ interface RemoteDesktopRuntimeInput {
 
 interface SessionCreateResult {
   sessionId: string;
+  restoredFromDisk?: boolean;
 }
 
 interface SessionAttachResult {
@@ -338,7 +340,7 @@ export async function createRemoteDesktopRuntime(
   await client.call("session.attach", { sessionId: created.sessionId });
   const runtime = buildRemoteDesktopRuntime(client, created.sessionId, input);
   try {
-    await runtime.initialize();
+    await runtime.initialize(created.restoredFromDisk === true);
     return runtime;
   } catch (error) {
     await runtime.close().catch(() => undefined);
@@ -422,8 +424,11 @@ export class RemoteDesktopRuntime {
     this.unsubscribe = client.onNotification(listener);
   }
 
-  async initialize(): Promise<void> {
-    if (this.archive.llmHistory.length > 0 || (this.archive.subagentSessions?.length ?? 0) > 0) {
+  async initialize(restoredFromDisk = false): Promise<void> {
+    if (
+      !restoredFromDisk &&
+      (this.archive.llmHistory.length > 0 || (this.archive.subagentSessions?.length ?? 0) > 0)
+    ) {
       await this.client.call("session.replaceFromArchive", {
         sessionId: this.sessionId,
         archive: this.archive,
@@ -455,11 +460,13 @@ export class RemoteDesktopRuntime {
     await this.timelinePushTail;
   }
 
-  async close(): Promise<void> {
+  async close(options: { closeSession?: boolean } = {}): Promise<void> {
     this.dropNotificationListener();
     await this.awaitMutations();
     await this.timelinePushTail;
-    await this.client.call("session.detach", { sessionId: this.sessionId });
+    await this.client.call(options.closeSession ? "session.close" : "session.detach", {
+      sessionId: this.sessionId,
+    });
   }
 
   /**
@@ -1091,10 +1098,33 @@ export async function disposeRemoteDesktopRuntime(runtime: unknown): Promise<voi
   }
 }
 
-export async function closeRemoteDesktopRuntime(runtime: unknown): Promise<void> {
+export async function closeRemoteDesktopRuntime(
+  runtime: unknown,
+  options: { closeSession?: boolean } = {},
+): Promise<void> {
   if (runtime instanceof RemoteDesktopRuntime) {
-    await runtime.close();
+    await runtime.close(options);
   }
+}
+
+export async function closeRemoteDesktopConversation(
+  dataDir: string,
+  conversationKey: string,
+  runtime: unknown,
+): Promise<void> {
+  if (runtime instanceof RemoteDesktopRuntime) {
+    await runtime.close({ closeSession: true });
+    return;
+  }
+  const client = await sharedDesktopServerClient(dataDir);
+  const sessions =
+    await client.call<{ sessionId: string; conversationKey?: string }[]>("session.list");
+  const session = sessions.find(
+    (entry) => entry.conversationKey && sameSessionPath(entry.conversationKey, conversationKey),
+  );
+  if (!session) return;
+  await client.call("session.attach", { sessionId: session.sessionId });
+  await client.call("session.close", { sessionId: session.sessionId });
 }
 
 export function remoteDesktopRuntimeNeedsProjection(runtime: unknown): boolean {

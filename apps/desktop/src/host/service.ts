@@ -475,6 +475,7 @@ import { hydrateSessionReferenceWiresInUserText } from "./hydrate-session-refere
 import {
   abortRemoteDesktopShell,
   closeRemoteDesktopRuntime,
+  closeRemoteDesktopConversation,
   closeSharedDesktopServerClient,
   notifyDesktopServerRefreshExtensions,
   createRemoteDesktopRuntime,
@@ -2961,9 +2962,9 @@ export class DesktopHostService {
         const bundle = this.sessionRegistry.findBySessionPath(sessionPath);
         return isSessionBundleBusy(bundle);
       },
-      disposeSessionRuntime: async (bundle) => {
-        await closeRemoteDesktopRuntime(bundle.runtime);
-        bundle.runtime = undefined;
+      disposeSessionRuntime: async (bundle, sessionPath) => {
+        await closeRemoteDesktopConversation(spiritDataDir(), sessionPath, bundle?.runtime);
+        if (bundle) bundle.runtime = undefined;
       },
     };
   }

@@ -10,7 +10,7 @@ import { setKeyringStoreForTests, providerInternalKeyAccount } from "@spiritagen
 import { SessionManager } from "../src/session-manager.js";
 
 function freshDataDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "spirit-server-session-"));
+  const dir = mkdtempSync(join(tmpdir(), "ss-"));
   writeFileSync(
     join(dir, "config.json"),
     JSON.stringify({
@@ -184,6 +184,8 @@ describe("SessionManager", () => {
         "loopEnabled",
         "approvalLevel",
         "backgroundToolStatus",
+        "backgroundTasks",
+        "backgroundTaskNotifications",
       ]);
       for (const key of Object.keys(snapshot)) {
         assert.ok(allowedKeys.has(key), `unexpected snapshot key: ${key}`);
@@ -237,9 +239,9 @@ describe("SessionManager", () => {
       assert.equal(manager.getSession(created.sessionId)?.sessionId, created.sessionId);
 
       const secondDetach = await manager.detachSession(clientB, created.sessionId);
-      assert.equal(secondDetach.closed, true);
-      assert.equal(manager.getSession(created.sessionId), undefined);
-      assert.deepEqual(manager.listSessions(), []);
+      assert.equal(secondDetach.closed, false);
+      assert.equal(manager.getSession(created.sessionId)?.attachmentCount, 0);
+      assert.equal(manager.listSessions().length, 1);
 
       await manager.shutdown();
     });
@@ -345,13 +347,13 @@ describe("SessionManager", () => {
       assert.equal("desktopMessageTimeline" in plainArchive, false);
 
       // Non-array payloads are rejected at the boundary.
-      assert.throws(
+      await assert.rejects(
         () => manager.pushDesktopTimeline(created.sessionId, { not: "an-array" }),
         /desktop timeline must be an array/,
       );
 
       const timelineV1 = [{ turnId: 1, createdOrder: 0, segments: [] }];
-      const first = manager.pushDesktopTimeline(created.sessionId, timelineV1);
+      const first = await manager.pushDesktopTimeline(created.sessionId, timelineV1);
       assert.deepEqual(first, { ok: true, revision: 1 });
       assert.deepEqual(manager.getDesktopTimeline(created.sessionId), {
         revision: 1,
@@ -362,7 +364,7 @@ describe("SessionManager", () => {
         { turnId: 1, createdOrder: 0, segments: [] },
         { turnId: 2, createdOrder: 1, segments: [] },
       ];
-      const second = manager.pushDesktopTimeline(created.sessionId, timelineV2);
+      const second = await manager.pushDesktopTimeline(created.sessionId, timelineV2);
       assert.deepEqual(second, { ok: true, revision: 2 });
       assert.deepEqual(broadcasts, [
         { sessionId: created.sessionId, revision: 1 },
@@ -377,7 +379,7 @@ describe("SessionManager", () => {
       assert.equal(mergedArchive["desktopMessageTimelineRevision"], 2);
 
       // History replacement invalidates the stored timeline.
-      manager.replaceFromArchive(created.sessionId, {
+      await manager.replaceFromArchive(created.sessionId, {
         messages: [],
         assistantAux: [],
         llmHistory: [],
@@ -386,8 +388,8 @@ describe("SessionManager", () => {
       });
       assert.equal(manager.getDesktopTimeline(created.sessionId), null);
 
-      manager.pushDesktopTimeline(created.sessionId, timelineV1);
-      manager.reset(created.sessionId);
+      await manager.pushDesktopTimeline(created.sessionId, timelineV1);
+      await manager.reset(created.sessionId);
       assert.equal(manager.getDesktopTimeline(created.sessionId), null);
 
       await manager.shutdown();
@@ -395,7 +397,7 @@ describe("SessionManager", () => {
   });
 
   it("creates a session without an active model and rejects turns until setup", async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), "spirit-server-session-nomodel-"));
+    const dataDir = mkdtempSync(join(tmpdir(), "sn-"));
     writeFileSync(
       join(dataDir, "config.json"),
       JSON.stringify({

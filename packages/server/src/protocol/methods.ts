@@ -232,6 +232,7 @@ export interface SessionInfo {
   model: string;
   conversationKey?: string;
   attachmentCount: number;
+  restoredFromDisk?: boolean;
 }
 
 export interface SessionSubmitUserTurnParams {

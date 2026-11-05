@@ -8,16 +8,28 @@ type TaskOwner = BackgroundTaskRecord["owner"];
 
 function ownerEndpoint(spiritDataDir: string, id: string): string {
   if (!/^[a-f0-9]{16}$/u.test(id)) throw new Error("Invalid background task owner identity.");
-  return process.platform === "win32"
-    ? `\\\\.\\pipe\\spirit-task-${id}`
-    : path.join(spiritDataDir, "task-owners", `${id}.sock`);
+  const endpoint =
+    process.platform === "win32"
+      ? `\\\\.\\pipe\\spirit-task-${id}`
+      : path.join(spiritDataDir, "task-owners", `${id}.sock`);
+  const limit = process.platform === "darwin" ? 103 : 107;
+  if (process.platform !== "win32" && Buffer.byteLength(endpoint) > limit) {
+    throw new Error(
+      "The Spirit data directory is too long for local task IPC. Choose a shorter data directory.",
+    );
+  }
+  return endpoint;
+}
+
+export interface BackgroundTaskOwner {
+  owner: TaskOwner;
+  close(): Promise<void>;
 }
 
 /** An instance-specific local IPC endpoint proves ownership without relying on a reusable PID. */
-export async function createBackgroundTaskOwner(spiritDataDir: string): Promise<{
-  owner: TaskOwner;
-  close(): Promise<void>;
-}> {
+export async function createBackgroundTaskOwner(
+  spiritDataDir: string,
+): Promise<BackgroundTaskOwner> {
   const owner = { id: randomBytes(8).toString("hex"), pid: process.pid };
   const endpoint = ownerEndpoint(spiritDataDir, owner.id);
   if (process.platform !== "win32") {

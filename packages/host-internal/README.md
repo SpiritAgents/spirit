@@ -1,5 +1,7 @@
 # @spiritagent/host-internal
 
+Session persistence uses an immutable internal storage key. `ensureSessionStorageKey` registers a conversation lookup key; `bindSessionStorageKey` associates a promoted chat path with the same transcript directory. Promotion does not rename live task files or create directory symlinks. `RuntimeSessionStore` atomically persists runtime archives and host timeline snapshots; `FileBackgroundTaskStore` owns individual task records and complete output.
+
 Shared **host-side implementation** for [Spirit](https://github.com/SpiritAgents/spirit). It sits between platform hosts (Desktop, CLI, ACP server) and [`@spiritagent/agent-core`](https://www.npmjs.com/package/@spiritagent/agent-core), providing discovery, workspace helpers, and local execution plumbing.
 
 This package is in a transitional role: it currently still owns the shared host config and credential resolution, and the recorded direction is for it to be gradually hollowed out into `agent-core`. Only the provider presets and the wizard/catalog materialization core have moved so far; the rest follows opportunistically.

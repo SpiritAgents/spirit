@@ -37,5 +37,7 @@ export function buildServerSnapshot(runtimeResult: ServerRuntimeResult): BridgeR
     loopEnabled: target.loopEnabled(),
     approvalLevel: runtimeResult.approvalLevelSnapshot(),
     ...(backgroundToolStatus !== undefined ? { backgroundToolStatus } : {}),
+    backgroundTasks: target.backgroundTaskRecords(),
+    backgroundTaskNotifications: target.backgroundTaskNotifications(),
   };
 }

@@ -234,7 +234,7 @@ type SubagentToolExecutionResult<ToolRequest> =
     };
 
 export class AgentRuntime<Config, State, ToolRequest> {
-  private readonly options: AgentRuntimeOptions<Config, State, ToolRequest>;
+  private options: AgentRuntimeOptions<Config, State, ToolRequest>;
   private historyStore: LlmMessage[];
   private requestTraceStore: JsonValue[];
   private eventQueueStore: RuntimeEvent<ToolRequest>[];
@@ -295,16 +295,8 @@ export class AgentRuntime<Config, State, ToolRequest> {
   private childSessionCounterStore: number;
   /** Durable transcript messages that survive compaction shrinking historyStore. */
   private sealedTranscriptMessagesStore: SessionTranscriptMessage[] = [];
-  private readonly baseToolExecutor: AgentRuntimeOptions<
-    Config,
-    State,
-    ToolRequest
-  >["toolExecutor"];
-  private readonly baseLlmTransport: AgentRuntimeOptions<
-    Config,
-    State,
-    ToolRequest
-  >["llmTransport"];
+  private baseToolExecutor: AgentRuntimeOptions<Config, State, ToolRequest>["toolExecutor"];
+  private baseLlmTransport: AgentRuntimeOptions<Config, State, ToolRequest>["llmTransport"];
   private readonly managedSubagents = new Map<
     string,
     {
@@ -315,6 +307,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
   >();
   private lastSubmittedUserInputStore = "";
   private readonly pendingTaskHookContexts: LlmMessage[] = [];
+  private taskNotificationsStore: import("./background-tasks.js").BackgroundTaskNotification[] = [];
 
   constructor(
     options: AgentRuntimeOptions<Config, State, ToolRequest>,
@@ -323,7 +316,45 @@ export class AgentRuntime<Config, State, ToolRequest> {
   ) {
     this.baseToolExecutor = options.toolExecutor;
     this.baseLlmTransport = options.llmTransport;
-    this.options = options.backgroundTasks
+    this.options = this.configureOptions(options);
+    this.historyStore = cloneHistory(initialHistory);
+    this.requestTraceStore = [];
+    this.eventQueueStore = [];
+    this.pendingImagePathsStore = [];
+    this.pendingMcpResourcesStore = [];
+    this.pendingAssistantTextStore = "";
+    this.thinkingTextStore = "";
+    this.toolPreviewSeenInStreamRoundStore = false;
+    this.providerBuiltinToolTerminalSeenInStreamRoundStore = false;
+    this.awaitingPostBuiltInToolStreamDeltaStore = false;
+    this.compactionTextStore = "";
+    this.childSessionsStore = [];
+    this.streamChunkCounterStore = 0;
+    this.loopEnabledStore = false;
+    this.runtimeDepthStore = runtimeDepth;
+    this.childSessionCounterStore = 0;
+    this.sealedTranscriptMessagesStore = buildSessionTranscript(this.historyStore).messages;
+    this.restoreLastUserInput();
+  }
+
+  /** Rebind the idle foreground while active tasks retain their original executors and models. */
+  replaceHostOptions(options: AgentRuntimeOptions<Config, State, ToolRequest>): void {
+    if (this.isBusy() || this.hasPendingApproval() || this.hasPendingQuestions()) {
+      throw new Error("Host options can only change after the foreground turn has stopped.");
+    }
+    const backgroundTasks = this.options.backgroundTasks;
+    this.baseToolExecutor = options.toolExecutor;
+    this.baseLlmTransport = options.llmTransport;
+    this.options = this.configureOptions({
+      ...options,
+      ...(backgroundTasks ? { backgroundTasks } : {}),
+    });
+  }
+
+  private configureOptions(
+    options: AgentRuntimeOptions<Config, State, ToolRequest>,
+  ): AgentRuntimeOptions<Config, State, ToolRequest> {
+    return options.backgroundTasks
       ? {
           ...options,
           toolExecutor: createSessionTaskExecutor(options.toolExecutor, {
@@ -357,24 +388,6 @@ export class AgentRuntime<Config, State, ToolRequest> {
           }),
         }
       : options;
-    this.historyStore = cloneHistory(initialHistory);
-    this.requestTraceStore = [];
-    this.eventQueueStore = [];
-    this.pendingImagePathsStore = [];
-    this.pendingMcpResourcesStore = [];
-    this.pendingAssistantTextStore = "";
-    this.thinkingTextStore = "";
-    this.toolPreviewSeenInStreamRoundStore = false;
-    this.providerBuiltinToolTerminalSeenInStreamRoundStore = false;
-    this.awaitingPostBuiltInToolStreamDeltaStore = false;
-    this.compactionTextStore = "";
-    this.childSessionsStore = [];
-    this.streamChunkCounterStore = 0;
-    this.loopEnabledStore = false;
-    this.runtimeDepthStore = runtimeDepth;
-    this.childSessionCounterStore = 0;
-    this.sealedTranscriptMessagesStore = buildSessionTranscript(this.historyStore).messages;
-    this.restoreLastUserInput();
   }
 
   private restoreLastUserInput(): void {
@@ -413,6 +426,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
       if (!existing)
         this.historyStore.push({ role: "user", content: createLlmMessageContentFromText(content) });
       added.push({ task, content });
+      if (
+        !this.taskNotificationsStore.some(
+          (entry) => entry.task.terminalEventId === task.terminalEventId,
+        )
+      ) {
+        this.taskNotificationsStore.push({ task: structuredClone(task), content, restored });
+      }
     }
     this.historyStore.push(...contexts);
     await tasks.persistHistory();
@@ -443,6 +463,10 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
   backgroundTaskRecords(): import("./background-tasks.js").BackgroundTaskRecord[] {
     return this.options.backgroundTasks?.manager.records() ?? [];
+  }
+
+  backgroundTaskNotifications(): import("./background-tasks.js").BackgroundTaskNotification[] {
+    return structuredClone(this.taskNotificationsStore);
   }
 
   async shutdown(): Promise<void> {
@@ -532,6 +556,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
   childSessionArchives(): readonly RuntimeSubagentSessionArchiveEntry[] {
     return this.childSessionsStore.map((entry) => ({
       summary: { ...entry.summary },
+      ...(entry.backgroundTaskNotifications
+        ? { backgroundTaskNotifications: structuredClone(entry.backgroundTaskNotifications) }
+        : {}),
       llmHistory: entry.llmHistory.map((message) => serializeRuntimeLlmMessageForArchive(message)),
     }));
   }
@@ -546,6 +573,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
     return {
       summary: { ...entry.summary },
+      ...(entry.backgroundTaskNotifications
+        ? { backgroundTaskNotifications: structuredClone(entry.backgroundTaskNotifications) }
+        : {}),
       llmHistory: entry.llmHistory.map((message) => serializeRuntimeLlmMessageForArchive(message)),
     };
   }
@@ -980,10 +1010,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
   }
 
-  replaceHistory(history: LlmMessage[]): void {
-    this.historyStore = this.mergeRetainedTaskMessages(
-      repairMissingToolResultsInHistory(cloneHistory(history)),
-    );
+  replaceHistory(history: LlmMessage[], options: { retainBackgroundHistory?: boolean } = {}): void {
+    if (options.retainBackgroundHistory === false) this.taskNotificationsStore = [];
+    const repaired = repairMissingToolResultsInHistory(cloneHistory(history));
+    this.historyStore =
+      options.retainBackgroundHistory === false
+        ? repaired
+        : this.mergeRetainedTaskMessages(repaired);
     // Keep sealedTranscriptMessagesStore: durable transcript must survive compaction reloads.
     clearEarlyApprovalWaiters(this as unknown as TurnMachineRuntime<Config, State, ToolRequest>);
     this.clearPendingStreamingState();
@@ -995,11 +1028,19 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.pendingApproval = undefined;
     this.pendingManualApproval = undefined;
     this.clearPendingSubagentState();
-    this.childSessionsStore = this.retainedTaskChildSessions();
+    this.childSessionsStore =
+      options.retainBackgroundHistory === false ? [] : this.retainedTaskChildSessions();
     this.restoreLastUserInput();
   }
 
   replaceFromArchive(archive: ChatArchive): void {
+    this.taskNotificationsStore = [
+      ...new Map(
+        [...(archive.backgroundTaskNotifications ?? []), ...this.taskNotificationsStore].map(
+          (entry) => [entry.task.terminalEventId, structuredClone(entry)],
+        ),
+      ).values(),
+    ];
     const retainedChildren = this.retainedTaskChildSessions();
     this.historyStore = this.mergeRetainedTaskMessages(
       repairMissingToolResultsInHistory(
@@ -1022,6 +1063,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.clearPendingSubagentState();
     this.childSessionsStore = (archive.subagentSessions ?? []).map((entry) => ({
       summary: { ...entry.summary },
+      ...(entry.backgroundTaskNotifications
+        ? { backgroundTaskNotifications: structuredClone(entry.backgroundTaskNotifications) }
+        : {}),
       llmHistory: entry.llmHistory.map((message) => normalizeStoredLlmMessage(message)),
     }));
     for (const record of retainedChildren) {
@@ -1176,6 +1220,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
     return {
       messages,
       assistantAux,
+      ...(this.taskNotificationsStore.length
+        ? { backgroundTaskNotifications: this.backgroundTaskNotifications() }
+        : {}),
       llmHistory: this.historyStore.map((message) => ({
         role: message.role,
         content: cloneLlmMessageContent(message.content),
@@ -1195,6 +1242,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
       })),
       subagentSessions: this.childSessionsStore.map((entry) => ({
         summary: { ...entry.summary },
+        ...(entry.backgroundTaskNotifications
+          ? { backgroundTaskNotifications: structuredClone(entry.backgroundTaskNotifications) }
+          : {}),
         llmHistory: entry.llmHistory.map((message) => ({
           role: message.role,
           content: cloneLlmMessageContent(message.content),
@@ -1426,7 +1476,28 @@ export class AgentRuntime<Config, State, ToolRequest> {
     await this.startStreamingRound(state, pendingUserText, createTurnContext<ToolRequest>(), true);
   }
 
-  async poll(): Promise<void> {
+  hasPendingBackgroundTaskNotifications(): boolean {
+    const tasks = this.options.backgroundTasks;
+    return Boolean(tasks && tasks.manager.pendingNotifications(tasks.scope).length > 0);
+  }
+
+  async resumeBackgroundTaskNotifications(): Promise<boolean> {
+    if (
+      this.isBusy() ||
+      this.hasPendingApproval() ||
+      this.hasPendingQuestions() ||
+      hasUnansweredAssistantToolCalls(this.historyStore) ||
+      !this.hasPendingBackgroundTaskNotifications()
+    )
+      return false;
+    const input = this.lastSubmittedUserInputStore;
+    this.pendingUserTurnStore = input;
+    const state = buildToolContinuationStateFromHistory(this.options, this.historyStore, input);
+    await this.startStreamingRound(state, input, createTurnContext<ToolRequest>(), true);
+    return true;
+  }
+
+  async poll(options: { allowBackgroundWakeup?: boolean } = {}): Promise<void> {
     await this.pollPendingStreamingRound();
     await this.pollPendingToolCallContinuation();
     await this.pollPendingToolAgentRound();
@@ -1437,6 +1508,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     if (this.options.backgroundTasks) {
       await this.options.backgroundTasks.manager.checkpoint();
       if (
+        options.allowBackgroundWakeup !== false &&
         !this.isBusy() &&
         !this.completedTurnResultStore &&
         !hasUnansweredAssistantToolCalls(this.historyStore) &&
@@ -1444,10 +1516,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
           this.options.backgroundTasks.scope,
         ).length > 0
       ) {
-        const input = this.lastSubmittedUserInputStore;
-        this.pendingUserTurnStore = input;
-        const state = buildToolContinuationStateFromHistory(this.options, this.historyStore, input);
-        await this.startStreamingRound(state, input, createTurnContext<ToolRequest>(), true);
+        await this.resumeBackgroundTaskNotifications();
       }
     }
   }
@@ -3494,6 +3563,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     record: RuntimeSubagentSessionArchiveEntry,
     childRuntime: AgentRuntime<Config, State, ToolRequest>,
   ): void {
+    record.backgroundTaskNotifications = childRuntime.backgroundTaskNotifications();
     record.llmHistory = childRuntime
       .history()
       .map((message) => serializeRuntimeLlmMessageForArchive(message));
@@ -3905,25 +3975,30 @@ export class AgentRuntime<Config, State, ToolRequest> {
     let childExecutor = this.baseToolExecutor;
     let rollbackBootstrap: (() => Promise<void>) | undefined;
     let markWorkspaceStarted: (() => void) | undefined;
+    let disposeWorkspace: (() => Promise<void>) | undefined;
+    let workspaceRuntimeOptions: AgentRuntimeOptions<Config, State, ToolRequest> | undefined;
     let output: { text: string; failed: boolean };
     const cancel = (): void => childRuntime?.abort();
     context.signal.addEventListener("abort", cancel, { once: true });
     try {
       const transcript = this.resolveSubagentTranscriptPath(sessionId);
       await context.update({ sessionId, ...(transcript ? { sessionTranscript: transcript } : {}) });
-      if (request.worktree) {
-        const bootstrap = this.options.bootstrapSubagentWorkspace;
-        if (!bootstrap) throw new Error("Worktree subagents are not supported on this host.");
+      const bootstrap = this.options.bootstrapSubagentWorkspace;
+      if (request.worktree && !bootstrap)
+        throw new Error("Worktree subagents are not supported on this host.");
+      if (bootstrap) {
         const boot = await bootstrap({
           subagentSessionId: sessionId,
           task: request.prompt,
-          worktree: true,
+          worktree: request.worktree === true,
           parentWorkspaceRoot: resolveHookSessionContext(this.options).workspaceRoot ?? "",
           signal: context.signal,
         });
         if ("error" in boot) throw new Error(boot.error);
         rollbackBootstrap = boot.rollback;
         markWorkspaceStarted = boot.markStarted;
+        disposeWorkspace = boot.dispose;
+        workspaceRuntimeOptions = boot.runtimeOptions;
         workspaceRoot = boot.workspaceRoot;
         childExecutor = boot.toolExecutor ?? this.baseToolExecutor;
         if (boot.worktreePath) record.summary.worktreePath = boot.worktreePath;
@@ -3942,6 +4017,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
         childExecutor,
         workspaceRoot,
         { context, record },
+        workspaceRuntimeOptions,
       );
       this.managedSubagents.set(sessionId, { parentToolCallId, childRuntime, childRecord: record });
       markWorkspaceStarted?.();
@@ -3990,21 +4066,20 @@ export class AgentRuntime<Config, State, ToolRequest> {
         failed: finalResult.kind === "failed",
       };
     } catch (error) {
-      let failure = error;
-      if (rollbackBootstrap) {
-        try {
-          await rollbackBootstrap();
-        } catch (cleanupError) {
-          failure = new AggregateError(
-            [error, cleanupError],
-            `Subagent initialization and worktree cleanup failed: ${renderError(cleanupError)}`,
-          );
-        }
-      }
-      output = { text: `[subagent failed] ${renderError(failure)}`, failed: true };
+      output = { text: `[subagent failed] ${renderError(error)}`, failed: true };
     } finally {
       context.signal.removeEventListener("abort", cancel);
       if (childRuntime) this.refreshChildSessionRecord(record, childRuntime);
+      for (const cleanup of [disposeWorkspace, rollbackBootstrap]) {
+        try {
+          await cleanup?.();
+        } catch (error) {
+          output = {
+            text: `${output!.text}\n[subagent cleanup failed] ${renderError(error)}`,
+            failed: true,
+          };
+        }
+      }
       this.managedSubagents.delete(sessionId);
     }
     record.summary.latestMessage = truncateTextForSubagentSummary(output.text, 180);
@@ -4043,11 +4118,14 @@ export class AgentRuntime<Config, State, ToolRequest> {
     childToolExecutor?: AgentRuntimeOptions<Config, State, ToolRequest>["toolExecutor"],
     childWorkspaceRoot?: string,
     managed?: { context: SessionTaskContext; record: RuntimeSubagentSessionArchiveEntry },
+    workspaceRuntimeOptions?: AgentRuntimeOptions<Config, State, ToolRequest>,
   ): AgentRuntime<Config, State, ToolRequest> {
     const baseExecutor = childToolExecutor ?? this.baseToolExecutor;
-    const scopedOptions = childWorkspaceRoot?.trim()
-      ? scopeAgentRuntimeOptionsForSubagentWorkspace(this.options, childWorkspaceRoot)
-      : this.options;
+    const scopedOptions =
+      workspaceRuntimeOptions ??
+      (childWorkspaceRoot?.trim()
+        ? scopeAgentRuntimeOptionsForSubagentWorkspace(this.options, childWorkspaceRoot)
+        : this.options);
     // Parent owns transcript files; child must not overwrite the main session transcript.
     // onEvent is the parent session's host channel (e.g. the server broadcasts it as
     // `runtime.event`); child events must reach hosts only via drainActiveChildSessionEvents,
@@ -4073,17 +4151,29 @@ export class AgentRuntime<Config, State, ToolRequest> {
     const childRuntime = new AgentRuntime<Config, State, ToolRequest>(
       {
         ...childRuntimeOptions,
-        llmTransport: this.baseLlmTransport,
+        llmTransport: workspaceRuntimeOptions?.llmTransport ?? this.baseLlmTransport,
         toolExecutor: createSubagentToolExecutor(baseExecutor, subagentSessionId, subagentTitle),
         ...(backgroundTasks ? { backgroundTasks } : {}),
         ...(managed
           ? {
               onEvent: (event: RuntimeEvent<ToolRequest>) => {
-                if (event.kind === "assistant-chunk") void managed.context.writeOutput(event.text);
-                else if (event.kind === "begin-assistant-response")
-                  void managed.context.writeOutput("\n\n");
-                else if (event.kind === "replace-pending-assistant")
-                  void managed.context.writeOutput(`\n\n${event.text}`);
+                const text =
+                  event.kind === "assistant-chunk"
+                    ? event.text
+                    : event.kind === "begin-assistant-response"
+                      ? "\n\n"
+                      : event.kind === "replace-pending-assistant"
+                        ? `\n\n${event.text}`
+                        : undefined;
+                if (text !== undefined) {
+                  void managed.context.writeOutput(text).catch((error: unknown) =>
+                    this.emitEvent({
+                      kind: "background-task-error",
+                      taskId: managed.context.taskId,
+                      error: renderError(error),
+                    }),
+                  );
+                }
               },
             }
           : {}),

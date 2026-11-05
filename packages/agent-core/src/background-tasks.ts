@@ -47,6 +47,12 @@ export interface BackgroundTaskRecord {
   notificationDelivered?: boolean;
 }
 
+export interface BackgroundTaskNotification {
+  task: BackgroundTaskRecord;
+  content: string;
+  restored: boolean;
+}
+
 export type BackgroundTaskCreateInput = Pick<
   BackgroundTaskRecord,
   "sessionKey" | "runtimeId" | "parentTaskId" | "toolCallId" | "kind" | "input" | "argumentsJson"

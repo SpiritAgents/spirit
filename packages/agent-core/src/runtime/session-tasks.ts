@@ -436,6 +436,10 @@ export class SessionTaskManager {
 
   async shutdown(): Promise<void> {
     this.closing = true;
+    await this.cancelOwnedWork();
+  }
+
+  async cancelOwnedWork(): Promise<void> {
     const results = await Promise.allSettled(
       this.records()
         .filter((record) => this.entries.has(record.id) && !isBackgroundTaskTerminal(record.status))

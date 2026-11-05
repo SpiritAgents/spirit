@@ -30,10 +30,7 @@ function hasCode(error: unknown, code: string): boolean {
   return error instanceof Error && "code" in error && error.code === code;
 }
 
-async function writeRecordAtomically(
-  filePath: string,
-  record: BackgroundTaskRecord,
-): Promise<void> {
+export async function writeTaskStateJson(filePath: string, record: unknown): Promise<void> {
   const temporary = `${filePath}.${randomBytes(6).toString("hex")}.tmp`;
   const handle = await open(temporary, "wx", 0o600);
   try {
@@ -214,7 +211,7 @@ export class FileBackgroundTaskStore implements BackgroundTaskStore {
         const output = await open(record.outputPath, "wx", 0o600);
         createdOutput = true;
         await output.close();
-        await writeRecordAtomically(file, record);
+        await writeTaskStateJson(file, record);
       } catch (error) {
         if (createdOutput) {
           try {
@@ -268,7 +265,7 @@ export class FileBackgroundTaskStore implements BackgroundTaskStore {
           await output.close();
         }
       }
-      await writeRecordAtomically(this.recordPath(record.id), snapshot);
+      await writeTaskStateJson(this.recordPath(record.id), snapshot);
     });
   }
 

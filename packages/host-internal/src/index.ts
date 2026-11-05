@@ -15,6 +15,8 @@ export * from "./built-in/extensions.js";
 export * from "./transcript.js";
 export * from "./background-task-store.js";
 export * from "./background-task-owner.js";
+export * from "./session-storage-identity.js";
+export * from "./runtime-session-store.js";
 export * from "./subagent-worktree-bootstrap.js";
 export * from "./background-task-path.js";
 export * from "./tool-output-archive.js";

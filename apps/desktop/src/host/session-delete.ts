@@ -22,7 +22,7 @@ export interface SessionDeleteContext
     Pick<SessionSplitHostContext, "visiblePaneSessionPaths" | "setVisiblePaneSessionPaths"> {
   removeEphemeralSession(filePath: string): void;
   bundleRuntimeIsBusy(sessionPath: string): boolean;
-  disposeSessionRuntime(bundle: SessionBundle): Promise<void>;
+  disposeSessionRuntime(bundle: SessionBundle | undefined, sessionPath: string): Promise<void>;
 }
 
 /** Reads the rewind sessionId before deleting the session file, for linked cleanup of the rewind sidecar directory. */
@@ -93,6 +93,8 @@ export async function deleteSessionCommand(
       }
     }
 
+    await ctx.disposeSessionRuntime(registry.findBySessionPath(resolvedPath), resolvedPath);
+
     // —— atomic section start: remove the old bundle and synchronously establish the new active; no await allowed in between ——
     const removedBundle = registry.removeBySessionPath(resolvedPath);
     if (deletedFromMultiPane) {
@@ -121,10 +123,6 @@ export async function deleteSessionCommand(
       }
       await finishSessionActivationCommand(ctx, newActive);
     }
-    if (removedBundle) {
-      await ctx.disposeSessionRuntime(removedBundle);
-    }
-
     let rewindSessionId = removedBundle?.rewind.sessionId;
     if (isEphemeralDebugSessionPath(resolvedPath)) {
       ctx.removeEphemeralSession(resolvedPath);
