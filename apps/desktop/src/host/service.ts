@@ -32,7 +32,6 @@ import {
   type McpUiOpenResult,
 } from "@spiritagent/agent-core";
 import {
-  buildStartImplementingUserTurn,
   extractActivePlanPathFromLlmHistory,
   createHostExtensionManager,
   collectEnabledExtensionInstructionContributions,
@@ -1781,7 +1780,11 @@ export class DesktopHostService {
     return this.runSerialized(async () => {
       await this.ensureInitialized(undefined, { fastPath: true });
       const runtime = this.requireRuntime();
-      if (runtime.isBusy()) {
+      if (
+        runtime.isBusy() ||
+        runtime.currentPendingApproval() ||
+        runtime.currentPendingQuestions()
+      ) {
         throw new Error(i18n.t("error.runtimeBusy"));
       }
 
@@ -1794,20 +1797,10 @@ export class DesktopHostService {
           activePlanPath: bundle.activePlanPath,
           workspaceBinding: state.workspaceBinding,
         });
-        bundle.toolExecutor?.setAgentModeToolExposure("agent");
       }
-      return this.submitUserTurnAfterInitialized(
-        buildStartImplementingUserTurn(
-          {
-            workspaceRoot: state.workspaceRoot,
-            spiritDataDir: spiritDataDir(),
-          },
-          bundle.activePlanPath,
-        ),
-        {
-          displayText: i18n.t("workspace.startImplementing"),
-        },
-      );
+      return this.submitUserTurnAfterInitialized(i18n.t("workspace.startImplementing"), {
+        startImplementing: true,
+      });
     });
   }
 

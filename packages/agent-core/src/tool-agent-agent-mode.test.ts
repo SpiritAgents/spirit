@@ -12,13 +12,20 @@ import {
 test("implementation approval uses the product identity and the explicitly recorded plan", () => {
   const message = buildStartImplementingPrompt(" /plans/implementation.md ");
   assert.ok(message.includes(`${product.name}-managed plan file /plans/implementation.md`));
-  assert.ok(message.includes("do not assume its contents"));
+  assert.equal(
+    message,
+    `The user has approved the plan and asked to start implementing. Before implementing, read the ${product.name}-managed plan file /plans/implementation.md and follow its execution plan for coding and verification.`,
+  );
   assert.ok(!message.includes("file  /plans"));
 });
 
-test("implementation approval without a recorded path requires a plan", () => {
+test("implementation approval without a recorded path guides diagnosis and user recovery", () => {
   for (const activePlanPath of [undefined, "", "   "]) {
-    assert.ok(buildStartImplementingPrompt(activePlanPath).includes("create one with create_plan"));
+    const message = buildStartImplementingPrompt(activePlanPath);
+    assert.ok(message.includes("Investigate the cause."));
+    assert.ok(message.includes("switch to Plan mode"));
+    assert.ok(message.includes("use ask_questions"));
+    assert.ok(!message.includes("create_plan"));
   }
 });
 
@@ -37,12 +44,12 @@ test("buildAgentModeSystemMessage: Plan mode guidance", () => {
     agentMode: "plan",
   });
   assert.ok(message.includes("You are in Plan mode."));
-  assert.ok(message.includes("ask_questions"));
-  assert.ok(message.includes("multiple subagent tools in parallel"));
-  assert.ok(message.includes("scoped overview per task-relevant area"));
-  assert.ok(message.includes("create_plan"));
-  assert.ok(message.includes("Start implementing"));
-  assert.ok(message.includes("switch to Agent mode"));
+  assert.ok(
+    message.includes(
+      "Clarify the user's goal and scope as needed, then investigate the workspace and prepare an actionable implementation plan. Explain the key decisions and trade-offs for the user to review. Implementation begins after the user approves the plan.",
+    ),
+  );
+  assert.doesNotMatch(message, /subagent|create_plan|Start implementing/);
 });
 
 test("buildAgentModeSystemMessage: Ask mode guidance", () => {

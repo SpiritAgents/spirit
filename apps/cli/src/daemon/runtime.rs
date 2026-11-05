@@ -1144,21 +1144,27 @@ impl DaemonRuntime {
         text: String,
         explicit_images: Option<Vec<String>>,
     ) -> Result<()> {
+        let mut params = json!({ "text": text });
+        if let Some(images) = explicit_images {
+            params["explicitImages"] = serde_json::to_value(images)?;
+        }
+        self.submit_session_turn("session.submitUserTurn", params)
+    }
+
+    pub fn start_implementing(&mut self) -> Result<()> {
+        self.submit_session_turn("session.startImplementing", json!({}))
+    }
+
+    fn submit_session_turn(&mut self, method: &str, mut params: Value) -> Result<()> {
         if self.daemon_failed {
             return Err(anyhow!("daemon is already in a failed state."));
         }
         let client_turn_id = uuid::Uuid::new_v4().to_string();
         self.pending_local_client_turn_ids
             .insert(client_turn_id.clone());
-        let mut params = json!({
-            "text": text,
-            "clientTurnId": client_turn_id,
-        });
-        if let Some(images) = explicit_images {
-            params["explicitImages"] = serde_json::to_value(images).unwrap_or(Value::Array(vec![]));
-        }
+        params["clientTurnId"] = json!(client_turn_id);
         logging::log_event(&format!(
-            "[daemon-runtime] submit_user_turn chars={} explicit_images={}",
+            "[daemon-runtime] {method} chars={} explicit_images={}",
             params
                 .get("text")
                 .and_then(Value::as_str)
@@ -1170,7 +1176,7 @@ impl DaemonRuntime {
                 .map(|items| items.len())
                 .unwrap_or(0)
         ));
-        if let Err(err) = self.call_daemon("session.submitUserTurn", Some(params)) {
+        if let Err(err) = self.call_daemon(method, Some(params)) {
             self.pending_local_client_turn_ids.remove(&client_turn_id);
             return Err(err);
         }

@@ -72,6 +72,7 @@ import {
   SESSION_SUBAGENT_AUX,
   SESSION_SUBAGENT_EVENTS,
   SESSION_SUBMIT_USER_TURN,
+  SESSION_START_IMPLEMENTING,
   SESSION_TAKE_MANUAL_RESULT,
   SESSION_TURN_FINISHED,
   SESSION_USER_TURN_SUBMITTED,
@@ -104,6 +105,7 @@ const SESSION_METHODS = new Set([
   SESSION_MIGRATE_CONVERSATION_KEY,
   SESSION_CLOSE,
   SESSION_SUBMIT_USER_TURN,
+  SESSION_START_IMPLEMENTING,
   SESSION_ABORT,
   SESSION_ABORT_SHELL,
   SESSION_SET_APPROVAL_LEVEL,
@@ -526,6 +528,11 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         await sessionManager.migrateConversationKey(readSessionId(params), conversationKey.trim());
         return { ok: true };
       }
+      case SESSION_START_IMPLEMENTING:
+        return sessionManager.startImplementing(
+          readSessionId(params),
+          typeof params["clientTurnId"] === "string" ? params["clientTurnId"].trim() : undefined,
+        );
       case SESSION_SUBMIT_USER_TURN: {
         const text = params["text"];
         if (typeof text !== "string") {

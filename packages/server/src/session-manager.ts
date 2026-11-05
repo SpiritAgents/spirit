@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import {
+  buildStartImplementingPrompt,
   getTransportConfigLastInputTokens,
   type HostToolDescriptionHint,
   type JsonValue,
@@ -19,6 +20,7 @@ import {
   type BackgroundTaskOwner,
   deriveSessionTitleFallbackSeed,
   generateSessionTitleForTurn,
+  extractActivePlanPathFromLlmHistory,
   type ApprovalLevel,
   type HostDreamScope,
   type HostDreamSourceSessionRef,
@@ -712,6 +714,38 @@ export class SessionManager {
     return this.serializeSession(session, () => this.submitUserTurnNow(session, params));
   }
 
+  async startImplementing(
+    sessionId: string,
+    clientTurnId?: string,
+  ): Promise<SubmitUserTurnOutcome> {
+    const session = this.requireSession(sessionId);
+    const assertReady = () => {
+      const { runtime } = session.runtimeResult;
+      if (
+        runtime.isBusy() ||
+        session.turnActive ||
+        runtime.hasPendingApproval() ||
+        runtime.hasPendingQuestions()
+      )
+        throw new Error(
+          "Finish the current turn and answer pending requests before starting implementation.",
+        );
+    };
+    assertReady();
+    return this.serializeSession(session, async () => {
+      assertReady();
+      const planPath = session.runtimeResult.activePlanPathSnapshot();
+      session.runtimeResult.setActivePlanPath(planPath);
+      await session.runtimeResult.setAgentMode("agent");
+      session.createParams.agentMode = "agent";
+      await session.runtimeResult.persist();
+      return this.submitUserTurnNow(session, {
+        text: buildStartImplementingPrompt(planPath),
+        ...(clientTurnId ? { clientTurnId } : {}),
+      });
+    });
+  }
+
   private async submitUserTurnNow(
     session: ServerSession,
     params: SubmitUserTurnParams,
@@ -973,6 +1007,7 @@ export class SessionManager {
       session.queue = [];
       session.turnActive = false;
       session.runtimeResult.runtime.replaceHistory([], { retainBackgroundHistory: false });
+      session.runtimeResult.setActivePlanPath();
       session.info.isBusy = false;
       session.desktopTimeline = undefined;
       // Match the legacy bridge's fresh-session semantics: todos reset with it.
@@ -1005,6 +1040,9 @@ export class SessionManager {
         throw new Error("session is busy; cannot replace archive while a turn is active");
       }
       session.runtimeResult.runtime.replaceFromArchive(archive as never);
+      session.runtimeResult.setActivePlanPath(
+        extractActivePlanPathFromLlmHistory(runtime.history()),
+      );
       // History was replaced wholesale; the previous timeline is stale until
       // the owning host pushes a fresh snapshot.
       session.desktopTimeline = undefined;

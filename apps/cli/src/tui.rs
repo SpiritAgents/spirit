@@ -24,7 +24,7 @@ use crate::{
     mcp_types::{ManagedMcpServer, McpDiscoveredPrompt},
     model_registry::ModelTransportKind,
     openai_models_list,
-    plan::{self, PlanMetadata},
+    plan::PlanMetadata,
     ports::{
         AppPaths, AssistantAuxArchiveEntry, AttachChatSessionOutcome, ChatArchive, ChatRepository,
         ChatSessionListItem, ConfigStore, SecretStore, SubagentSessionArchiveEntry,
@@ -967,6 +967,13 @@ impl TuiShell {
         user_turn: String,
         explicit_images: Option<Vec<String>>,
     ) -> Result<()> {
+        self.submit_runtime_action(|runtime| runtime.submit_user_turn(user_turn, explicit_images))
+    }
+
+    fn submit_runtime_action(
+        &mut self,
+        submit: impl FnOnce(&mut RuntimeHandle) -> Result<()>,
+    ) -> Result<()> {
         self.last_turn_can_continue = false;
         let user_message_count = self.messages.len();
         let Some(user_message_index) = user_message_count.checked_sub(1) else {
@@ -975,7 +982,7 @@ impl TuiShell {
         let before_archive = self.export_chat_archive_for_message_count(user_message_index);
         let before_messages = self.conversation_snapshots_for_message_count(user_message_index);
         let before_todos = self.runtime.list_session_todos().ok();
-        let submit_result = self.runtime.submit_user_turn(user_turn, explicit_images);
+        let submit_result = submit(&mut self.runtime);
         if submit_result.is_err() {
             self.messages.pop();
         } else {

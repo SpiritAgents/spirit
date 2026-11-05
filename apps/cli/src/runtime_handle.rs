@@ -328,6 +328,10 @@ impl RuntimeHandle {
         self.backend.submit_user_turn(text, explicit_images)
     }
 
+    pub fn start_implementing(&mut self) -> Result<()> {
+        self.backend.start_implementing()
+    }
+
     pub fn list_mcp_servers(&mut self) -> Result<Vec<ManagedMcpServer>> {
         self.backend.list_mcp_servers()
     }

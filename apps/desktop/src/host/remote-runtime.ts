@@ -501,19 +501,29 @@ export class RemoteDesktopRuntime {
     explicitWorkspaceFiles: PendingWorkspaceFile[] = [],
     activeSkills: LlmActiveSkill[] = [],
   ): Promise<void> {
+    await this.startTurnRpc("session.submitUserTurn", {
+      text,
+      explicitImages,
+      explicitWorkspaceFiles,
+      activeSkills,
+    });
+  }
+
+  async startImplementing(): Promise<void> {
+    await this.startTurnRpc("session.startImplementing", {});
+  }
+
+  private async startTurnRpc(method: string, params: Record<string, unknown>): Promise<void> {
     await this.awaitMutations();
     this.snapshot = { ...this.snapshot, isBusy: true };
     this.pendingStartedAtStore = Date.now();
     const clientTurnId = randomUUID();
     this.pendingLocalClientTurnIds.add(clientTurnId);
     try {
-      await this.client.call("session.submitUserTurn", {
+      await this.client.call(method, {
         sessionId: this.sessionId,
         clientTurnId,
-        text,
-        explicitImages,
-        explicitWorkspaceFiles,
-        activeSkills,
+        ...params,
       });
     } catch (error) {
       this.pendingLocalClientTurnIds.delete(clientTurnId);

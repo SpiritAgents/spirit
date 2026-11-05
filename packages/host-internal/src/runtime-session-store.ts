@@ -9,6 +9,7 @@ export interface RuntimeSessionState {
   sessionKey: string;
   workspaceRoot: string;
   agentMode: AgentMode;
+  activePlanPath?: string;
   initialized: boolean;
   archive: ChatArchive;
   desktopTimeline?: {
@@ -96,6 +97,7 @@ function isRuntimeSessionState(value: unknown): value is RuntimeSessionState {
     )
       return false;
   }
+  if ("activePlanPath" in value && typeof value.activePlanPath !== "string") return false;
   const archive = value.archive;
   return (
     "llmHistory" in archive &&

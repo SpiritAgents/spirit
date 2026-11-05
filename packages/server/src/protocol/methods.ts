@@ -28,6 +28,8 @@ export const SESSION_LIST = "session.list";
 export const SESSION_CLOSE = "session.close";
 /** RPC: submit a user turn; streaming arrives via `runtime.event`. */
 export const SESSION_SUBMIT_USER_TURN = "session.submitUserTurn";
+/** RPC: approve the recorded plan, switch to Agent mode, and submit the shared implementation prompt. */
+export const SESSION_START_IMPLEMENTING = "session.startImplementing";
 /** RPC: abort the current turn. */
 export const SESSION_ABORT = "session.abort";
 /** RPC: abort a running daemon shell by tool call id. */

@@ -105,4 +105,4 @@ On Open Responses, use the declared built-in tools (web_search, code_interpreter
 2. If visible, is system still paraphrasing it? → Delete the system section or move it to a tool description / API injection.
 3. Is it written only "just in case"? → Delete it.
 4. Is it in English, and can it be shortened by half?
-5. Does an upstream workaround carry a Chinese comment next to the code (see the Bug Fixes section in copilot-instructions)?
+5. Does an upstream workaround carry an English comment next to the code (see the Bug Fixes section in copilot-instructions)?

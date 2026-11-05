@@ -886,7 +886,7 @@ impl TuiShell {
     }
 
     pub(crate) fn handle_start_implementing_slash(&mut self) {
-        if self.runtime.is_busy() {
+        if self.runtime.is_busy() || self.runtime.has_pending_tool_approval() {
             self.messages.push(ChatMessage {
                 role: MessageRole::Agent,
                 content: t!("tui.busy.pending_reply").into_owned(),
@@ -896,8 +896,9 @@ impl TuiShell {
         }
 
         self.set_input_mode(MainInputMode::Agent);
-        let user_turn = plan::build_start_implementing_user_turn(self.runtime.active_plan_path());
-        let _ = self.submit_runtime_user_turn(user_turn, None);
+        if let Err(err) = self.submit_runtime_action(|runtime| runtime.start_implementing()) {
+            self.push_agent_message(err.to_string());
+        }
     }
 
     pub(crate) fn handle_continue_slash(&mut self) {

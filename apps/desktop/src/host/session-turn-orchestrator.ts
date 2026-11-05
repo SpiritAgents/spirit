@@ -70,6 +70,7 @@ type TurnOrchestration = {
 };
 
 export interface SubmitUserTurnAfterInitializedOptions {
+  startImplementing?: boolean;
   preserveRewindWarnings?: boolean;
   displayText?: string;
   turnSkills?: LlmActiveSkill[];
@@ -219,7 +220,7 @@ export async function submitUserTurnAfterInitializedCommand(
     explicitWorkspaceFiles.length,
   );
 
-  if (directMediaTool && trimmed) {
+  if (directMediaTool && trimmed && !options.startImplementing) {
     try {
       await startComposerDirectMediaTurn(ctx, {
         bundle,
@@ -250,7 +251,8 @@ export async function submitUserTurnAfterInitializedCommand(
     throw new Error(i18n.t("error.runtimeNotReady"));
   }
   try {
-    await runtime.startUserTurnStreaming(trimmed, [], explicitWorkspaceFiles, turnSkills);
+    if (options.startImplementing) await runtime.startImplementing();
+    else await runtime.startUserTurnStreaming(trimmed, [], explicitWorkspaceFiles, turnSkills);
     ctx.refreshArchiveFromRuntime(bundle);
     await ctx.recordRewindCheckpoint(userMessage.id, beforeUserCheckpoint, bundle);
     await runtime.poll();

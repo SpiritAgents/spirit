@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-
+import { formatLoopContinuationGuidance } from "./runtime/helpers.js";
 import {
   buildLoopModeSystemMessage,
   buildToolAgentMessages,
   hasLoopModeSystemMessage,
 } from "./tool-agent.js";
+
+test("Loop continuation preserves the approved guidance and original user goal", () => {
+  assert.equal(
+    formatLoopContinuationGuidance(" Improve the requested work for 20 rounds. "),
+    "Revisit the user's goal and the results so far. Continue with useful improvements or verification within the requested scope, respecting any explicit iteration requirement. Call finish_task when the requested work is complete; if blocked, explain what is needed.\n\nOriginal user request:\nImprove the requested work for 20 rounds.",
+  );
+});
 
 test("buildLoopModeSystemMessage returns undefined when Loop is off", () => {
   assert.equal(buildLoopModeSystemMessage(false), undefined);

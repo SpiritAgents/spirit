@@ -93,6 +93,9 @@ import {
   resolveSubagentTranscriptFilePath,
   resolveTranscriptSessionDir,
   tryResolveTransportConfig,
+  extractActivePlanPathFromLlmHistory,
+  parseCreatePlanPathFromToolOutput,
+  planMetadataSnapshot,
   unconfiguredTransportConfig,
   type ApprovalLevel,
   type HostDreamScope,
@@ -126,6 +129,7 @@ export interface ServerRuntimeOptions {
   hostKind: "cli" | "desktop";
   approvalLevel: ApprovalLevel;
   agentMode?: AgentMode;
+  activePlanPath?: string;
   sessionKind?: ServerSessionKind;
   dreamScope?: HostDreamScope;
   dreamSourceSession?: HostDreamSourceSessionRef;
@@ -184,6 +188,8 @@ interface ServerRuntimeBindings {
   setApprovalLevel: (level: ApprovalLevel) => void;
   approvalLevelSnapshot: () => ApprovalLevel;
   agentModeSnapshot: () => AgentMode;
+  activePlanPathSnapshot: () => string | undefined;
+  setActivePlanPath: (path?: string) => void;
   setLoopEnabled: (enabled: boolean) => void;
   /** Re-read installed extensions and refresh tool defs + system prompts. */
   refreshExtensions: () => Promise<void>;
@@ -274,11 +280,13 @@ export async function createServerRuntime(
   ): Promise<void> => {
     initialized ||= state.initialized === true || result.runtime.history().length > 0;
     if ("desktopTimeline" in state) desktopTimeline = state.desktopTimeline ?? undefined;
+    const activePlanPath = result.activePlanPathSnapshot();
     await sessionStore.save({
       version: 1,
       sessionKey: storageSessionKey,
       workspaceRoot: options.workspaceRoot,
       agentMode: result.agentModeSnapshot(),
+      ...(activePlanPath ? { activePlanPath } : {}),
       initialized,
       archive: result.runtime.toArchive([], []),
       ...(desktopTimeline ? { desktopTimeline } : {}),
@@ -312,6 +320,7 @@ export async function createServerRuntime(
       ...options,
       sessionKey: storageSessionKey,
       ...(saved ? { agentMode: saved.agentMode } : {}),
+      ...(saved?.activePlanPath ? { activePlanPath: saved.activePlanPath } : {}),
     });
     executors.add(prepared.toolExecutor);
     prepared.runtimeOptions.backgroundTasks = {
@@ -332,7 +341,12 @@ export async function createServerRuntime(
         persist,
         restoreTaskNotifications: () => runtime.restoreBackgroundTaskNotifications(),
         reconfigure: async (next) => {
-          const fresh = await prepareServerRuntime({ ...next, sessionKey: storageSessionKey });
+          const activePlanPath = result.activePlanPathSnapshot();
+          const fresh = await prepareServerRuntime({
+            ...next,
+            sessionKey: storageSessionKey,
+            ...(activePlanPath ? { activePlanPath } : {}),
+          });
           executors.add(fresh.toolExecutor);
           runtime.replaceHostOptions(fresh.runtimeOptions);
           return bind(fresh);
@@ -535,6 +549,13 @@ async function prepareServerRuntime(
     let baseEnabledRules: LlmEnabledRule[] = [];
     let baseEnabledSkillCatalog: LlmEnabledSkillCatalogEntry[] = [];
     let currentPlanMetadata: LlmPlanMetadata | undefined;
+    const setActivePlanPath = (activePlanPath?: string): void => {
+      currentPlanMetadata = planMetadataSnapshot(
+        { workspaceRoot, spiritDataDir },
+        currentPlanMetadata?.agentMode ?? options.agentMode ?? "agent",
+        { activePlanPath: activePlanPath ?? "" },
+      );
+    };
 
     const applyExtensionInstructionOverlay = async (): Promise<void> => {
       if (!extensionManager) {
@@ -567,7 +588,11 @@ async function prepareServerRuntime(
     } else {
       const metadata = await loadHostInstructionMetadata(
         { workspaceRoot, spiritDataDir },
-        { planMode: options.agentMode === "plan", agentMode: options.agentMode ?? "agent" },
+        {
+          planMode: options.agentMode === "plan",
+          agentMode: options.agentMode ?? "agent",
+          activePlanPath: options.activePlanPath ?? "",
+        },
       );
       baseEnabledRules = [...metadata.rules.enabledRules];
       baseEnabledSkillCatalog = [...metadata.skills.enabledSkillCatalog];
@@ -777,6 +802,7 @@ async function prepareServerRuntime(
               ...childOptions,
               workspaceRoot: scopedRoot,
               sessionKey,
+              activePlanPath: "",
               approvalLevel: currentApprovalLevel,
               agentMode: currentPlanMetadata?.agentMode ?? "agent",
             },
@@ -797,6 +823,14 @@ async function prepareServerRuntime(
       }),
       reviewToolApproval: createCliAutoApprovalReviewer(transportConfig, hostPromptProviderId),
       onEvent: (event) => {
+        if (
+          event.kind === "tool-execution-finished" &&
+          event.execution.toolName === "create_plan" &&
+          !event.execution.failed
+        ) {
+          const path = parseCreatePlanPathFromToolOutput(event.execution.output);
+          if (path) setActivePlanPath(path);
+        }
         if (event.kind === "context-usage-updated") {
           setTransportConfigLastInputTokens(transportConfig, event.usage.inputTokens);
         }
@@ -815,7 +849,11 @@ async function prepareServerRuntime(
           toolExecutor.setAgentModeToolExposure(mode);
           const refreshed = await loadHostInstructionMetadata(
             { workspaceRoot, spiritDataDir },
-            { planMode: mode === "plan", agentMode: mode },
+            {
+              planMode: mode === "plan",
+              agentMode: mode,
+              activePlanPath: currentPlanMetadata?.path ?? "",
+            },
           );
           currentPlanMetadata = refreshed.planMetadata;
         };
@@ -882,6 +920,10 @@ async function prepareServerRuntime(
           setApprovalLevel,
           approvalLevelSnapshot: () => currentApprovalLevel,
           agentModeSnapshot: () => currentPlanMetadata?.agentMode ?? "agent",
+          activePlanPathSnapshot: () =>
+            currentPlanMetadata?.path.trim() ||
+            extractActivePlanPathFromLlmHistory(runtime.history()),
+          setActivePlanPath,
           setLoopEnabled,
           refreshExtensions,
           runSessionStart: async (source) => {
@@ -901,7 +943,11 @@ async function prepareServerRuntime(
             }
             const refreshed = await loadHostInstructionMetadata(
               { workspaceRoot, spiritDataDir },
-              { planMode: mode === "plan", agentMode: mode },
+              {
+                planMode: mode === "plan",
+                agentMode: mode,
+                activePlanPath: currentPlanMetadata?.path ?? "",
+              },
             );
             baseEnabledRules = [...refreshed.rules.enabledRules];
             baseEnabledSkillCatalog = [...refreshed.skills.enabledSkillCatalog];
