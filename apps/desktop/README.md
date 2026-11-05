@@ -69,6 +69,8 @@ While it runs, workspace package edits apply without a manual rebuild: the rende
 
 Runtime initialization and refresh failures are reported in the UI and logged to the host's stderr with `[desktop-host] runtime refresh failed`, the session bundle/workspace context, and the original error stack. In Electron development, these logs appear under the `[electron]` terminal prefix; request payloads and provider configuration are not included.
 
+`config.json` uses `schemaVersion: 1`; saved chats independently use `chatSchemaVersion: 2`. These storage format versions are not the application release version. A daemon's presentation baseline may be empty for a new or reset session; it still replaces the previous local timeline before offline events are replayed. Saved chat files continue to require a non-empty timeline.
+
 From `apps/desktop` (after `pnpm install` at the repo root):
 
 ```bash

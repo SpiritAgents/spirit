@@ -3192,7 +3192,10 @@ export class DesktopHostService {
       const restoredPresentation = runtime.takeRestoredPresentation();
       if (restoredPresentation) {
         if (restoredPresentation.timeline) {
-          validateTimelineSnapshotV2(restoredPresentation.timeline);
+          // A new or reset daemon session has an empty baseline, unlike a saved chat file.
+          if (restoredPresentation.timeline.length !== 0) {
+            validateTimelineSnapshotV2(restoredPresentation.timeline);
+          }
           bundle.messages = timelinePersistedSnapshotToMessages(restoredPresentation.timeline);
           bundle.messageTimeline = this.createMessageTimelineFromMessages(
             bundle.messages,
@@ -3260,6 +3263,9 @@ export class DesktopHostService {
         inferencePreferenceOnly,
         error,
       });
+      if (bundle.runtime !== previousRuntime) {
+        await closeRemoteDesktopRuntime(bundle.runtime);
+      }
       await closeRemoteDesktopRuntime(previousRuntime);
       bundle.runtime = undefined;
       if (bundle.id === this.sessionRegistry.activeSessionId()) {

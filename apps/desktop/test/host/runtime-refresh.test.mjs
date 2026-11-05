@@ -5,6 +5,12 @@ import { createEmptySessionBundle } from "../../dist-electron/src/host/session-b
 import { loadConfig, saveConfig, spiritDataDir } from "../../dist-electron/src/host/storage.js";
 import { closeSharedDesktopServerClient } from "../../dist-electron/src/host/remote-runtime.js";
 import { DesktopHostService } from "../../dist-electron/src/host/service.js";
+import {
+  ChatSessionSchemaError,
+  hydrateTimelineSnapshotFromPersistence,
+  timelinePersistedSnapshotToMessages,
+  validateTimelineSnapshotV2,
+} from "../../dist-electron/src/host/chat-schema.js";
 
 const daemon = vi.hoisted(() => ({
   calls: [],
@@ -25,6 +31,7 @@ vi.mock("@spiritagent/server/client", () => ({
           case "session.pushDesktopTimeline":
           case "session.submitUserTurn":
           case "session.detach":
+          case "session.replaceFromArchive":
             return { ok: true };
           case "session.create":
             if (daemon.failure) throw daemon.failure;
@@ -93,6 +100,7 @@ async function withHostService(run) {
     config,
   };
   vi.spyOn(service["sessionRegistry"], "activeSessionId").mockReturnValue(bundle.id);
+  vi.spyOn(service["sessionRegistry"], "getActive").mockReturnValue(bundle);
   service["syncPlanStateForBundle"] = async () => {};
   service["refreshTodoSnapshotForBundle"] = async () => {};
   daemon.archive = {
@@ -132,4 +140,131 @@ test("runtime refresh failures log the original error and context while preservi
     assert.equal(service["runtime"], undefined);
     assert.equal(bundle.runtime, undefined);
   });
+});
+
+function timelineWithUser(text) {
+  return [
+    {
+      turnId: 1,
+      createdOrder: 0,
+      userRow: {
+        rowId: "user-1",
+        messageId: 1,
+        turnId: 1,
+        kind: "user",
+        createdOrder: 0,
+        content: text,
+        pending: false,
+      },
+      segments: [],
+    },
+  ];
+}
+
+function setLocalTimeline(service, bundle, timeline) {
+  bundle.messages = timelinePersistedSnapshotToMessages(timeline);
+  bundle.messageTimeline = service["createMessageTimelineFromMessages"](
+    bundle.messages,
+    hydrateTimelineSnapshotFromPersistence(timeline),
+  );
+  bundle.messageIdCounter = 2;
+}
+
+test("a fresh empty daemon timeline initializes the runtime and permits the first user turn", async () => {
+  await withHostService(async ({ service, bundle, config }) => {
+    await service["refreshRuntimeForBundle"](bundle);
+
+    assert.equal(service["lastRuntimeError"], "");
+    assert.ok(bundle.runtime);
+    assert.equal(service["requireRuntime"](), bundle.runtime);
+    assert.equal(service["activeApiKeyConfigured"], true);
+    assert.equal(config.providers[0].models[0].reasoningEffort, "high");
+    assert.deepEqual(bundle.messageTimeline.toMessages(), []);
+    await bundle.runtime.startUserTurnStreaming("First request.");
+    const submitted = daemon.calls.find((call) => call.method === "session.submitUserTurn");
+    assert.equal(submitted.params.text, "First request.");
+    assert.equal(submitted.params.sessionId, "test-session");
+  });
+});
+
+test("an empty authoritative baseline clears stale local rows before replaying offline entries", async () => {
+  await withHostService(async ({ service, bundle }) => {
+    setLocalTimeline(service, bundle, timelineWithUser("Stale local message."));
+    daemon.archive.presentation = {
+      sequence: 4,
+      entries: [
+        { sequence: 1, kind: "user", text: "Offline request." },
+        { sequence: 2, kind: "runtime", event: { kind: "begin-assistant-response" } },
+        {
+          sequence: 3,
+          kind: "runtime",
+          event: { kind: "assistant-chunk", text: "Offline response." },
+        },
+        { sequence: 4, kind: "runtime", event: { kind: "assistant-response-completed" } },
+      ],
+    };
+
+    await service["refreshRuntimeForBundle"](bundle);
+
+    assert.equal(service["lastRuntimeError"], "");
+    assert.ok(bundle.runtime);
+    assert.deepEqual(
+      bundle.messageTimeline.toMessages().map((message) => message.content),
+      ["Offline request.", "Offline response."],
+    );
+    assert.equal(
+      daemon.calls.findLast((call) => call.method === "session.pushDesktopTimeline").params
+        .presentationSequence,
+      4,
+    );
+  });
+});
+
+test("an empty reset baseline clears the prior conversation and resets message numbering", async () => {
+  await withHostService(async ({ service, bundle }) => {
+    setLocalTimeline(service, bundle, timelineWithUser("Prior conversation."));
+
+    await service["refreshRuntimeForBundle"](bundle);
+
+    assert.equal(service["lastRuntimeError"], "");
+    assert.ok(bundle.runtime);
+    assert.deepEqual(bundle.messages, []);
+    assert.deepEqual(bundle.messageTimeline.snapshot(), []);
+    assert.equal(bundle.messageIdCounter, 1);
+  });
+});
+
+test("a valid non-empty daemon baseline retains its persisted conversation", async () => {
+  await withHostService(async ({ service, bundle }) => {
+    daemon.archive.desktopMessageTimeline = timelineWithUser("Saved conversation.");
+
+    await service["refreshRuntimeForBundle"](bundle);
+
+    assert.equal(service["lastRuntimeError"], "");
+    assert.ok(bundle.runtime);
+    assert.deepEqual(
+      bundle.messageTimeline.toMessages().map((message) => message.content),
+      ["Saved conversation."],
+    );
+  });
+});
+
+test("invalid non-empty daemon timelines remain errors and detach the failed runtime", async () => {
+  await withHostService(async ({ service, bundle }) => {
+    daemon.archive.desktopMessageTimeline = timelineWithUser("");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await service["refreshRuntimeForBundle"](bundle);
+
+    assert.match(service["lastRuntimeError"], /user rows require content/);
+    assert.equal(log.mock.calls.length, 1);
+    assert.ok(log.mock.calls[0][1].error instanceof ChatSessionSchemaError);
+    assert.equal(bundle.runtime, undefined);
+    assert.equal(daemon.listeners.size, 0);
+    assert.equal(daemon.calls.filter((call) => call.method === "session.detach").length, 1);
+  });
+});
+
+test("saved chat timelines still reject an empty conversation", () => {
+  assert.throws(() => validateTimelineSnapshotV2([]), /non-empty array/);
 });
