@@ -4,12 +4,24 @@ import type { ToolBlockSnapshot } from "../types.js";
 
 type Translate = (key: string, options?: { task?: string; error?: string }) => string;
 
+function shellTaskReason(argumentsJson: string): string | undefined {
+  try {
+    const args = JSON.parse(argumentsJson) as { reason?: unknown };
+    return typeof args.reason === "string" && args.reason.trim() ? args.reason.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function backgroundTaskSummary(tool: ToolBlockSnapshot, t: Translate) {
   const task = tool.backgroundTask!;
+  const headline = t(`tool.backgroundTaskStatus_${task.status}`, {
+    task: t(`tool.backgroundTaskName_${task.kind}`),
+  });
+  const reason = task.kind === "shell" ? shellTaskReason(task.argumentsJson) : undefined;
   return {
-    headline: t(`tool.backgroundTaskStatus_${task.status}`, {
-      task: t(`tool.backgroundTaskName_${task.kind}`),
-    }),
+    headline: reason ? `${headline} ${reason}` : headline,
+    ...(reason ? { shellSummary: { verb: headline, reason } } : {}),
     detail:
       task.kind === "shell"
         ? task.input

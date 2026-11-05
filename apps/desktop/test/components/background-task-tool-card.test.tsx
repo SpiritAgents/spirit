@@ -8,6 +8,8 @@ import { beforeEach, expect, test, vi } from "vitest";
 import type { BackgroundTaskRecord } from "@spiritagent/agent-core";
 
 import { MinimalToolCallCard } from "@/components/minimal-tool-call-card";
+import { backgroundTaskNotificationTool } from "@/lib/background-task-display";
+import { toolCardFileNameDetailClass } from "@/lib/file-tool-lsp-diagnostics-display";
 import i18n from "@/lib/i18n";
 import type { ToolBlockSnapshot } from "@/types";
 
@@ -53,6 +55,23 @@ beforeEach(async () => {
       disconnect() {}
     },
   );
+});
+
+test("Shell notification places its reason before the command with standard detail emphasis", () => {
+  const tool = backgroundTaskNotificationTool(
+    {
+      task,
+      content: "Model notification",
+      restored: false,
+      output: { text: "done\n", truncated: false },
+    },
+    (key, options) => i18n.t(key, options),
+  );
+  render(<MinimalToolCallCard tool={tool} />);
+
+  expect(screen.getByText("Shell Completed")).toBeTruthy();
+  expect(screen.getByText("Run a task").className).toContain("text-foreground-subtle");
+  expect(screen.getByText("echo done").className).toContain(toolCardFileNameDetailClass);
 });
 
 test("expanded background Shell output omits task IDs, exit codes, and output paths", async () => {

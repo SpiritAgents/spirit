@@ -62,6 +62,22 @@ test("notifications retranslate statuses without appending a misleading Failed s
   assert.equal(getToolCallSummaryParts(tool).headline, "Shell 已完成");
 });
 
+test("Shell notices retain the reason before the command with Shell summary tones", async () => {
+  await i18n.changeLanguage("en");
+  const tool = makeTool({
+    argumentsJson: JSON.stringify({
+      command: "echo done",
+      reason: "Run a task",
+    }),
+  });
+  assert.deepEqual(getToolCallSummaryParts(tool), {
+    headline: "Shell Completed Run a task",
+    shellSummary: { verb: "Shell Completed", reason: "Run a task" },
+    detail: "echo done",
+  });
+  assert.equal(formatToolCallSummaryPlainText(tool), "Shell Completed Run a task echo done");
+});
+
 test("subagent notice uses the final reply, not progress, and keeps the original navigation ID", async () => {
   await i18n.changeLanguage("en");
   const tool = makeTool({
