@@ -20,6 +20,7 @@ import type { ModelServiceTier } from "@spiritagent/agent-core/model-service-tie
 import type {
   BackgroundTaskRecord,
   BackgroundTaskOutputPreview,
+  ToolExecutionHostUi,
   LspWriteDiagnosticsUi,
   PermissionMemoryTarget,
   ThinkingCapabilities,
@@ -1785,6 +1786,7 @@ export interface FileRewindWarning {
 }
 
 export interface ToolBlockSnapshot {
+  delay?: ToolExecutionHostUi["delay"];
   toolCallId?: string;
   backgroundTask?: BackgroundTaskRecord;
   backgroundTaskOutput?: BackgroundTaskOutputPreview;

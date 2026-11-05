@@ -1,5 +1,6 @@
 import { FILE_DIFF_TOOL_NAMES } from "@/lib/file-tool-diff-source.js";
 import { backgroundTaskSummary } from "./background-task-display.js";
+import { delayArguments, delayDisplaySeconds, durationText } from "./delay-tool-display.js";
 import i18n from "@/lib/i18n";
 import {
   parseShellToolCommand,
@@ -233,6 +234,21 @@ function readFileToolSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts
 }
 
 export function getToolCallSummaryParts(tool: ToolBlockSnapshot): ToolCallSummaryParts {
+  if (tool.toolName === "delay") {
+    const waiting = Boolean(tool.delay?.taskId ?? delayArguments(tool).task_id);
+    const context =
+      tool.phase === "running" ? "running" : tool.phase === "succeeded" ? "succeeded" : undefined;
+    const seconds = delayDisplaySeconds(tool);
+    return {
+      headline: i18n.t(waiting ? "tool.waitForTask" : "tool.delay", {
+        ...(context ? { context } : {}),
+        task: i18n.t(`tool.backgroundTaskName_${tool.delay?.taskKind ?? "task"}`),
+      }),
+      ...(seconds !== undefined
+        ? { detail: durationText(seconds, i18n.resolvedLanguage ?? i18n.language) }
+        : {}),
+    };
+  }
   if (tool.taskNotification && tool.backgroundTask) {
     return backgroundTaskSummary(tool, (key, options) => i18n.t(key, options));
   }
@@ -472,6 +488,7 @@ function providerToolCardHasExpandableContent(tool: ToolBlockSnapshot): boolean 
 }
 
 export function toolHasExpandableContent(tool: ToolBlockSnapshot): boolean {
+  if (tool.toolName === "delay") return false;
   if (tool.suppressExpand) {
     return false;
   }

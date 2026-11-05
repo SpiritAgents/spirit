@@ -16,6 +16,7 @@ import type {
   ToolApprovalPrompt,
   ToolCallRequest,
   ToolExecutionOutput,
+  ToolExecutionHostUi,
   ToolExecutor,
 } from "../ports.js";
 import type { HookRunner, HookSessionContext } from "../hooks/types.js";
@@ -227,6 +228,13 @@ export type RuntimeEvent<ToolRequest> =
       toolCallId: string;
       toolName: string;
       argumentsJson: string;
+    }
+  | {
+      kind: "tool-execution-ui-updated";
+      toolCallId: string;
+      toolName: string;
+      argumentsJson: string;
+      hostUi: ToolExecutionHostUi;
     }
   | {
       kind: "tool-execution-finished";

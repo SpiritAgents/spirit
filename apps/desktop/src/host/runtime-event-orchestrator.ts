@@ -366,6 +366,22 @@ export class DesktopRuntimeEventOrchestrator {
     const batchId =
       events.length > 0 ? (this.lastApplyEventBatchId += 1) : this.lastApplyEventBatchId;
     for (const event of events) {
+      if (event.kind === "tool-execution-ui-updated") {
+        const existing = this.findExistingToolSnapshot(event.toolCallId);
+        const tool: ToolBlockSnapshot = {
+          ...existing,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          phase: existing && existing.phase !== "preview" ? existing.phase : "running",
+          headline: existing?.headline ?? event.toolName,
+          detailLines: existing?.detailLines ?? [],
+          argsExcerpt: event.argumentsJson,
+          ...(event.hostUi.delay ? { delay: event.hostUi.delay } : {}),
+        };
+        this.options.assistantMessages.upsertToolMessage(event.toolCallId, tool, batchId);
+        this.options.messageTimeline?.()?.upsertToolMessage(event.toolCallId, tool);
+        continue;
+      }
       if (event.kind === "background-task-error") {
         this.options.setLastRuntimeError(event.error);
         continue;
@@ -1070,6 +1086,9 @@ export class DesktopRuntimeEventOrchestrator {
             // Full output for every tool, matching the long-standing shell behavior; display
             // caps live in the render layer (scroll frames), not in the stored snapshot.
             outputExcerpt: execution.output,
+            ...((execution.hostUi?.delay ?? existingSnapshot?.delay)
+              ? { delay: execution.hostUi?.delay ?? existingSnapshot?.delay }
+              : {}),
             ...(execution.hostUi?.backgroundTask
               ? { backgroundTask: execution.hostUi.backgroundTask }
               : {}),

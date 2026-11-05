@@ -1,5 +1,6 @@
 import { ChevronRight } from "@spiritagent/icons/chevron-right";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { DelayToolDuration } from "./delay-tool-duration";
 
 import { Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -157,6 +158,7 @@ function ToolCallSummaryRow({
         <MinimalToolSummary
           headline={headline}
           detail={detail}
+          detailNode={tool.toolName === "delay" ? <DelayToolDuration tool={tool} /> : undefined}
           resultDetail={resultDetail}
           resultDetailTone={resultDetailTone}
           shellSummary={shellSummary}
@@ -183,6 +185,7 @@ function ToolCallSummaryRow({
 export function MinimalToolSummary({
   headline,
   detail,
+  detailNode,
   resultDetail,
   resultDetailTone = "default",
   shellSummary,
@@ -193,6 +196,7 @@ export function MinimalToolSummary({
 }: {
   headline: string;
   detail?: string;
+  detailNode?: ReactNode;
   resultDetail?: string;
   resultDetailTone?: ToolSummaryResultDetailTone;
   shellSummary?: ShellToolSummaryParts;
@@ -221,10 +225,10 @@ export function MinimalToolSummary({
       ) : (
         <span className={shimmerClass}>{headline}</span>
       )}
-      {detail ? (
+      {(detailNode ?? detail) ? (
         <>
           {" "}
-          <span className={summaryDetailToneClass[detailTone]}>{detail}</span>
+          <span className={summaryDetailToneClass[detailTone]}>{detailNode ?? detail}</span>
         </>
       ) : null}
       {resultDetail ? (

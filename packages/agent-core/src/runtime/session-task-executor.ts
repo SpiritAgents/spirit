@@ -5,6 +5,7 @@ import {
   type JsonObject,
   type SubagentRequest,
   type ToolExecutor,
+  type ToolExecutionHostUi,
   type ToolRequestExecutionMetadata,
 } from "../ports.js";
 import {
@@ -31,6 +32,12 @@ export interface SessionTaskExecutorOptions {
     context: SessionTaskContext,
   ): Promise<SessionTaskResult>;
   onError(error: unknown): void;
+  onHostUi(
+    toolCallId: string,
+    toolName: string,
+    argumentsJson: string,
+    hostUi: ToolExecutionHostUi,
+  ): void;
 }
 
 function parseArguments(text: string): JsonObject {
@@ -89,7 +96,28 @@ export function createSessionTaskExecutor<ToolRequest>(
       if (call.name === "delay") {
         const delayRequest = parseDelayRequest(call.arguments);
         const startedAtUnixMs = Date.now();
-        const result = await options.manager.delay(delayRequest, options.scope, foreground.signal);
+        const startedAt = performance.now();
+        const toolCallId = call.metadata.toolCallId;
+        if (!toolCallId) throw new Error("Managed execution requires a tool call ID.");
+        const task = delayRequest.task_id
+          ? options.manager.record(delayRequest.task_id, options.scope)
+          : undefined;
+        const delay = {
+          startedAtUnixMs,
+          ...(delayRequest.seconds !== undefined
+            ? { deadlineUnixMs: startedAtUnixMs + delayRequest.seconds * 1000 }
+            : {}),
+          ...(task ? { taskId: task.id, taskKind: task.kind } : {}),
+        };
+        options.onHostUi(toolCallId, call.name, call.argumentsJson, { delay });
+        const result = await options.manager
+          .delay(delayRequest, options.scope, foreground.signal)
+          .catch((error: unknown) => {
+            options.onHostUi(toolCallId, call.name, call.argumentsJson, {
+              delay: { ...delay, elapsedMs: performance.now() - startedAt },
+            });
+            throw error;
+          });
         return {
           ...createToolExecutionTextOutput(
             JSON.stringify({
@@ -105,12 +133,8 @@ export function createSessionTaskExecutor<ToolRequest>(
           ),
           hostUi: {
             delay: {
-              startedAtUnixMs,
-              ...(delayRequest.seconds !== undefined
-                ? { deadlineUnixMs: startedAtUnixMs + delayRequest.seconds * 1000 }
-                : {}),
+              ...delay,
               elapsedMs: result.elapsedSeconds * 1000,
-              ...(delayRequest.task_id ? { taskId: delayRequest.task_id } : {}),
             },
           },
         };

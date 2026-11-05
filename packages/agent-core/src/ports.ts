@@ -123,6 +123,7 @@ export interface ToolExecutionHostUi {
     deadlineUnixMs?: number;
     elapsedMs?: number;
     taskId?: string;
+    taskKind?: "shell" | "subagent";
   };
   lspWriteDiagnostics?: import("./lsp/types.js").LspWriteDiagnosticsUi;
   /**

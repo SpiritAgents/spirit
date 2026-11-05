@@ -106,6 +106,8 @@ Runtime history and Desktop timeline snapshots are persisted alongside task reco
 
 Task completion rows retain their task ID, terminal event ID, source, output preview, and file reference as structured metadata. Shell output stays inspectable after interruption, and Subagent rows retain the original child-session navigation target. Missing output files are reported explicitly.
 
+`tool-execution-ui-updated` publishes the host's delay start time, optional deadline, and resolved task kind before waiting. The final tool result carries the actual elapsed time; cancellation preserves the measured time as well. Desktop renders non-expandable delay cards with localized countdowns, switches to actual elapsed duration at completion, and shows no unbounded counter for task-only waits. Digit and unit transitions respect reduced motion.
+
 Restarting a daemon never resumes old processes or invokes the model automatically. It verifies the previous host's unique local IPC identity and records interrupted tasks using their last persisted elapsed time. Worktree children rebuild workspace-bound instructions, Git information, tools, MCP, LSP, and hooks from the isolated checkout; started worktrees and branches are retained.
 
 ## Remote access

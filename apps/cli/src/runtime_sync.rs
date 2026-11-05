@@ -246,6 +246,7 @@ impl RuntimeSyncState {
                         )));
                 }
                 BridgeRuntimeEvent::ContextUsageUpdated { .. } => {}
+                BridgeRuntimeEvent::ToolExecutionUiUpdated {} => {}
                 // TODO(cli): project tool-execution-output-chunk into TUI shell tool cards.
                 BridgeRuntimeEvent::ToolExecutionOutputChunk { .. } => {}
                 BridgeRuntimeEvent::ToolExecutionFinished { execution } => {

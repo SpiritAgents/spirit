@@ -439,6 +439,8 @@ pub(crate) enum BridgeRuntimeEvent {
     BackgroundTaskError { error: String },
     #[serde(rename = "tool-execution-finished")]
     ToolExecutionFinished { execution: BridgeToolExecution },
+    #[serde(rename = "tool-execution-ui-updated")]
+    ToolExecutionUiUpdated {},
     /// Incremental shell stdout/stderr while `shell` runs in the background.
     /// CLI TUI does not render chunks yet; Desktop projects them into tool cards.
     #[serde(rename = "tool-execution-output-chunk")]

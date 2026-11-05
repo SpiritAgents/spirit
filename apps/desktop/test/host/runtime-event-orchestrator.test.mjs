@@ -90,6 +90,47 @@ function createHarness() {
   };
 }
 
+test("keeps delay timing metadata through completion and cancellation", () => {
+  const { orchestrator, timeline } = createHarness();
+  const delay = { startedAtUnixMs: 1000, deadlineUnixMs: 253000 };
+  orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "tool-execution-ui-updated",
+      toolCallId: "delay-clock",
+      toolName: "delay",
+      argumentsJson: '{"seconds":252}',
+      hostUi: { delay },
+    },
+  ]);
+  let tool = timeline
+    .toMessages()
+    .find((message) => message.tool?.toolCallId === "delay-clock").tool;
+  assert.equal(tool.phase, "running");
+  assert.deepEqual(tool.delay, delay);
+  orchestrator.applyRuntimeHostEvents([
+    {
+      kind: "tool-execution-ui-updated",
+      toolCallId: "delay-clock",
+      toolName: "delay",
+      argumentsJson: '{"seconds":252}',
+      hostUi: { delay: { ...delay, elapsedMs: 1250 } },
+    },
+    {
+      kind: "tool-execution-finished",
+      execution: {
+        toolCallId: "delay-clock",
+        toolName: "delay",
+        request: { name: "delay", seconds: 252 },
+        output: "Cancelled",
+        failed: true,
+      },
+    },
+  ]);
+  tool = timeline.toMessages().find((message) => message.tool?.toolCallId === "delay-clock").tool;
+  assert.equal(tool.phase, "failed");
+  assert.equal(tool.delay.elapsedMs, 1250);
+});
+
 function rowToken(message) {
   if (message.role === "user") return "user";
   if (message.tool) return `tool:${message.tool.toolCallId}`;

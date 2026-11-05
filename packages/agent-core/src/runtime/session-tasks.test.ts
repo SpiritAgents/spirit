@@ -356,6 +356,39 @@ async function advanceRuntime(
 }
 
 describe("managed tasks in AgentRuntime", () => {
+  it("publishes host timing before a delay resolves and records actual elapsed time", async () => {
+    let rounds = 0;
+    const { runtime } = runtimeFixture((state) =>
+      ++rounds === 1
+        ? toolCalls(state, [{ id: "delay-ui", name: "delay", argumentsJson: '{"seconds":2}' }])
+        : finalResponse(state, "Finished."),
+    );
+    await runtime.startUserTurnStreaming("Wait briefly.");
+    await advanceRuntime(runtime, 250);
+    const started = runtime
+      .drainEvents()
+      .find((event) => event.kind === "tool-execution-ui-updated");
+    expect(started).toMatchObject({
+      kind: "tool-execution-ui-updated",
+      toolCallId: "delay-ui",
+      toolName: "delay",
+      hostUi: {
+        delay: { deadlineUnixMs: expect.any(Number), startedAtUnixMs: expect.any(Number) },
+      },
+    });
+    const timing = started?.hostUi.delay;
+    expect(timing).toBeDefined();
+    expect(timing?.deadlineUnixMs).toBe((timing?.startedAtUnixMs ?? 0) + 2000);
+    expect(timing?.elapsedMs).toBeUndefined();
+    await advanceRuntime(runtime, 2200);
+    const finished = runtime
+      .drainEvents()
+      .filter((event) => event.kind === "tool-execution-finished")
+      .find((event) => event.execution.toolName === "delay");
+    expect(finished?.execution.hostUi?.delay?.elapsedMs).toBe(2000);
+    await runtime.shutdown();
+  });
+
   it("steers only after every tool result in a batch has been paired", async () => {
     let rounds = 0;
     const { runtime } = runtimeFixture((state) => {

@@ -122,6 +122,10 @@ export class SessionTaskManager {
     ].map((record) => structuredClone(record));
   }
 
+  record(taskId: string, scope: TaskScope): BackgroundTaskRecord {
+    return structuredClone(this.getRecord(taskId, scope));
+  }
+
   private getRecord(taskId: string, scope: TaskScope): BackgroundTaskRecord {
     const record = this.entries.get(taskId)?.record ?? this.restored.get(taskId);
     if (!record) throw new Error(`Unknown background task: ${taskId}`);

@@ -363,6 +363,14 @@ export class AgentRuntime<Config, State, ToolRequest> {
               this.executeManagedSubagent(request, toolCallId, context),
             onError: (error) =>
               this.emitEvent({ kind: "background-task-error", error: renderError(error) }),
+            onHostUi: (toolCallId, toolName, argumentsJson, hostUi) =>
+              this.emitEvent({
+                kind: "tool-execution-ui-updated",
+                toolCallId,
+                toolName,
+                argumentsJson,
+                hostUi,
+              }),
           }),
           llmTransport: new Proxy(options.llmTransport, {
             get: (target, key) => {
