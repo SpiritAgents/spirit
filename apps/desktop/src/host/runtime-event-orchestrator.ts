@@ -377,9 +377,19 @@ export class DesktopRuntimeEventOrchestrator {
         continue;
       }
       if (event.kind === "background-task-notification") {
+        const runtime = this.options.runtime();
         const tool = backgroundTaskNotificationTool(event, (key, options) => i18n.t(key, options));
+        const timeline = this.options.messageTimeline?.();
         this.options.assistantMessages.upsertToolMessage(tool.toolCallId!, tool, batchId);
-        this.options.messageTimeline?.()?.upsertToolMessage(tool.toolCallId!, tool);
+        timeline?.upsertToolMessage(tool.toolCallId!, tool);
+        if (runtime?.isBusy()) {
+          // Task notices precede begin-assistant-response, so the notified turn needs the same
+          // post-tool placeholder as an ordinary tool completion while model output is pending.
+          const placeholder = timeline?.ensureAfterToolsThinkingPlaceholderRow();
+          if (placeholder) {
+            runtime.expectLiveReasoningPlaceholder?.();
+          }
+        }
         continue;
       }
       if (event.kind === "background-task-changed" || event.kind === "background-task-output") {

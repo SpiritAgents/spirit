@@ -22,6 +22,7 @@ function createHarness() {
   let nextTimelineMessageId = 1;
   let nextSegmentKind = "initial";
   let completedTurnResult = undefined;
+  let liveReasoningAwaitingDetail = false;
   const allocateMessageId = () => nextMessageId++;
   const timeline = new DesktopMessageTimeline({
     allocateMessageId: () => nextTimelineMessageId++,
@@ -47,6 +48,9 @@ function createHarness() {
         const next = completedTurnResult;
         completedTurnResult = undefined;
         return next;
+      },
+      expectLiveReasoningPlaceholder: () => {
+        liveReasoningAwaitingDetail = true;
       },
     }),
     messages: () => messages,
@@ -77,6 +81,8 @@ function createHarness() {
       completedTurnResult = result;
     },
     timeline,
+    pendingAuxState: () =>
+      liveReasoningAwaitingDetail ? { kind: "thinking", statusText: "| Thinking…" } : undefined,
     pushUser(content) {
       const message = {
         id: allocateMessageId(),
@@ -194,7 +200,7 @@ function visibleRowTokens(messages) {
   }).map(rowToken);
 }
 
-test("background completion is an idempotent process row after the prior reply", () => {
+test("background completion shows Thinking before the first reasoning token", () => {
   const harness = createHarness();
   const task = {
     version: 1,
@@ -230,12 +236,38 @@ test("background completion is an idempotent process row after the prior reply",
     output: { text: "done\n", truncated: false },
   };
   harness.orchestrator.applyRuntimeHostEvents([notice, notice]);
-  assert.deepEqual(visibleRowTokens(harness.timeline.toMessages()), [
+  const timelineMessages = harness.timeline.toMessages();
+  const pendingAux = harness.pendingAuxState();
+  assert.deepEqual(
+    buildVisibleMessageSnapshots({
+      messages: timelineMessages,
+      livePendingAux: pendingAux,
+      rewind: createDesktopRewindMetadata(),
+    }).map(rowToken),
+    [
+      "user",
+      "assistant:The task is running.",
+      "tool:task-notice:task_0123456789ab:completed",
+      "pending-assistant",
+    ],
+  );
+  assert.deepEqual(visibleRowTokens(timelineMessages), [
     "user",
     "assistant:The task is running.",
     "tool:task-notice:task_0123456789ab:completed",
   ]);
-  const tool = harness.timeline.toMessages().at(-1).tool;
+  const pending = timelineMessages.at(-1);
+  assert.equal(pending.pending, true);
+  assert.equal(
+    shouldShowAssistantThinkingCollapsible(
+      pending,
+      pendingAux,
+      timelineMessages,
+      timelineMessages.length - 1,
+    ),
+    true,
+  );
+  const tool = timelineMessages.at(-2).tool;
   assert.equal(tool.phase, "succeeded");
   assert.equal(tool.backgroundTaskOutput.text, "done\n");
   assert.equal(tool.taskNotification.eventId, task.terminalEventId);
