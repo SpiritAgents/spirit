@@ -111,10 +111,18 @@ function cloneJsonValue(value: JsonValue): JsonValue {
 export interface ToolExecutionOutput {
   content: LlmMessageContent;
   summaryText: string;
+  execution?: { failed?: boolean; exitCode?: number };
   hostUi?: ToolExecutionHostUi;
 }
 
 export interface ToolExecutionHostUi {
+  backgroundTask?: import("./background-tasks.js").BackgroundTaskRecord;
+  delay?: {
+    startedAtUnixMs: number;
+    deadlineUnixMs?: number;
+    elapsedMs?: number;
+    taskId?: string;
+  };
   lspWriteDiagnostics?: import("./lsp/types.js").LspWriteDiagnosticsUi;
   /**
    * apply_patch: the exact before/after file content the executor computed atomically with the
@@ -702,7 +710,9 @@ export interface ToolRequestExecutionMetadata {
   subagentTitle?: string;
   userInitiated?: boolean;
   /** In-process only; not serialized across host bridge IPC. */
-  onOutputChunk?: (chunk: string) => void;
+  onOutputChunk?: (chunk: string) => void | Promise<void>;
+  /** Execution-scoped cancellation; background work does not inherit a foreground turn abort. */
+  signal?: AbortSignal;
 }
 
 export interface ToolExecutor<

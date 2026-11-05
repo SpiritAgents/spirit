@@ -1,4 +1,11 @@
-import { parseBackgroundOptions } from "./background-tasks.js";
+import { formatBackgroundTaskNotification, parseBackgroundOptions } from "./background-tasks.js";
+import { createSessionTaskExecutor } from "./runtime/session-task-executor.js";
+import {
+  waitForTaskDelay,
+  type SessionTaskContext,
+  type SessionTaskResult,
+} from "./runtime/session-tasks.js";
+import { formatUserMessageContentForLlm } from "./runtime/user-turn-timestamp.js";
 import type {
   AskQuestionsResult,
   SubagentRequest,
@@ -288,13 +295,68 @@ export class AgentRuntime<Config, State, ToolRequest> {
   private childSessionCounterStore: number;
   /** Durable transcript messages that survive compaction shrinking historyStore. */
   private sealedTranscriptMessagesStore: SessionTranscriptMessage[] = [];
+  private readonly baseToolExecutor: AgentRuntimeOptions<
+    Config,
+    State,
+    ToolRequest
+  >["toolExecutor"];
+  private readonly baseLlmTransport: AgentRuntimeOptions<
+    Config,
+    State,
+    ToolRequest
+  >["llmTransport"];
+  private readonly managedSubagents = new Map<
+    string,
+    {
+      parentToolCallId: string;
+      childRecord: RuntimeSubagentSessionArchiveEntry;
+      childRuntime: AgentRuntime<Config, State, ToolRequest>;
+    }
+  >();
+  private lastSubmittedUserInputStore = "";
+  private readonly pendingTaskHookContexts: LlmMessage[] = [];
 
   constructor(
     options: AgentRuntimeOptions<Config, State, ToolRequest>,
     initialHistory: LlmMessage[] = [],
     runtimeDepth = 0,
   ) {
-    this.options = options;
+    this.baseToolExecutor = options.toolExecutor;
+    this.baseLlmTransport = options.llmTransport;
+    this.options = options.backgroundTasks
+      ? {
+          ...options,
+          toolExecutor: createSessionTaskExecutor(options.toolExecutor, {
+            ...options.backgroundTasks,
+            executeSubagent: (request, toolCallId, context) =>
+              this.executeManagedSubagent(request, toolCallId, context),
+            onError: (error) =>
+              this.emitEvent({ kind: "background-task-error", error: renderError(error) }),
+          }),
+          llmTransport: new Proxy(options.llmTransport, {
+            get: (target, key) => {
+              if (key === "startToolAgentRound") {
+                return async (config: Config, state: State, tools: JsonValue) =>
+                  target.startToolAgentRound(
+                    config,
+                    await this.prepareTaskNotificationState(state),
+                    tools,
+                  );
+              }
+              if (key === "startToolAgentRoundStreaming" && target.startToolAgentRoundStreaming) {
+                return async (config: Config, state: State, tools: JsonValue) =>
+                  target.startToolAgentRoundStreaming!(
+                    config,
+                    await this.prepareTaskNotificationState(state),
+                    tools,
+                  );
+              }
+              const value: unknown = Reflect.get(target, key);
+              return typeof value === "function" ? value.bind(target) : value;
+            },
+          }),
+        }
+      : options;
     this.historyStore = cloneHistory(initialHistory);
     this.requestTraceStore = [];
     this.eventQueueStore = [];
@@ -312,6 +374,82 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.runtimeDepthStore = runtimeDepth;
     this.childSessionCounterStore = 0;
     this.sealedTranscriptMessagesStore = buildSessionTranscript(this.historyStore).messages;
+    this.restoreLastUserInput();
+  }
+
+  private restoreLastUserInput(): void {
+    const message = [...this.historyStore]
+      .reverse()
+      .find(
+        (entry) =>
+          entry.role === "user" &&
+          !llmMessageTextContent(entry.content).includes("\ntask_event_id: "),
+      );
+    this.lastSubmittedUserInputStore = message ? llmMessageTextContent(message.content) : "";
+  }
+
+  private async prepareTaskNotificationState(state: State, restored = false): Promise<State> {
+    const tasks = this.options.backgroundTasks;
+    if (
+      !tasks ||
+      hasUnansweredAssistantToolCalls(this.historyStore) ||
+      this.pendingApproval ||
+      this.pendingQuestions
+    )
+      return state;
+    const notifications = tasks.manager.pendingNotifications(tasks.scope);
+    const contexts = this.pendingTaskHookContexts.splice(0);
+    if (notifications.length === 0 && contexts.length === 0) return state;
+    const added: Array<{ task: (typeof notifications)[number]; content: string }> = [];
+    for (const task of notifications) {
+      const marker = `\ntask_event_id: ${task.terminalEventId}\n`;
+      const existing = this.historyStore.find(
+        (message) =>
+          message.role === "user" && llmMessageTextContent(message.content).includes(marker),
+      );
+      const content = existing
+        ? llmMessageTextContent(existing.content)
+        : formatUserMessageContentForLlm(formatBackgroundTaskNotification(task));
+      if (!existing)
+        this.historyStore.push({ role: "user", content: createLlmMessageContentFromText(content) });
+      added.push({ task, content });
+    }
+    this.historyStore.push(...contexts);
+    await tasks.persistHistory();
+    for (const item of added) {
+      await tasks.manager.markNotified(item.task.id, tasks.scope);
+      this.emitEvent({ kind: "background-task-notification", ...item, restored });
+    }
+    return buildToolContinuationStateFromHistory(
+      this.options,
+      this.historyStore,
+      this.pendingUserTurnStore ?? this.lastSubmittedUserInputStore,
+    );
+  }
+
+  async restoreBackgroundTaskNotifications(): Promise<void> {
+    const tasks = this.options.backgroundTasks;
+    if (!tasks) return;
+    if (this.isBusy()) throw new Error("Task recovery requires an idle session.");
+    await tasks.manager.restore();
+    this.restoreLastUserInput();
+    const state = buildToolContinuationStateFromHistory(
+      this.options,
+      this.historyStore,
+      this.lastSubmittedUserInputStore,
+    );
+    await this.prepareTaskNotificationState(state, true);
+  }
+
+  backgroundTaskRecords(): import("./background-tasks.js").BackgroundTaskRecord[] {
+    return this.options.backgroundTasks?.manager.records() ?? [];
+  }
+
+  async shutdown(): Promise<void> {
+    this.abort();
+    if (this.options.backgroundTasks && !this.options.backgroundTasks.scope.parentTaskId) {
+      await this.options.backgroundTasks.manager.shutdown();
+    }
   }
 
   private async appendToolResultMessageWithOutputTruncation(
@@ -423,7 +561,10 @@ export class AgentRuntime<Config, State, ToolRequest> {
       events: RuntimeEvent<ToolRequest>[];
     }> = [];
 
-    for (const pending of this.pendingSubagentExecutions.values()) {
+    for (const pending of [
+      ...this.pendingSubagentExecutions.values(),
+      ...this.managedSubagents.values(),
+    ]) {
       drains.push({
         sessionId: pending.childRecord.summary.sessionId,
         parentToolCallId: pending.childRecord.summary.parentToolCallId,
@@ -631,8 +772,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
   private findPendingSubagentBySessionId(
     sessionId: string,
-  ): PendingSubagentExecution<Config, State, ToolRequest> | undefined {
-    for (const pending of this.pendingSubagentExecutions.values()) {
+  ):
+    | Pick<PendingSubagentExecution<Config, State, ToolRequest>, "childRuntime" | "childRecord">
+    | undefined {
+    for (const pending of [
+      ...this.pendingSubagentExecutions.values(),
+      ...this.managedSubagents.values(),
+    ]) {
       if (pending.childRecord.summary.sessionId === sessionId) {
         return pending;
       }
@@ -641,9 +787,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   private findPendingSubagentWithApproval():
-    | PendingSubagentExecution<Config, State, ToolRequest>
+    | Pick<PendingSubagentExecution<Config, State, ToolRequest>, "childRuntime" | "childRecord">
     | undefined {
-    for (const pending of this.pendingSubagentExecutions.values()) {
+    for (const pending of [
+      ...this.pendingSubagentExecutions.values(),
+      ...this.managedSubagents.values(),
+    ]) {
       if (pending.childRuntime.hasPendingApproval()) {
         return pending;
       }
@@ -652,9 +801,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   private findPendingSubagentWithQuestions():
-    | PendingSubagentExecution<Config, State, ToolRequest>
+    | Pick<PendingSubagentExecution<Config, State, ToolRequest>, "childRuntime" | "childRecord">
     | undefined {
-    for (const pending of this.pendingSubagentExecutions.values()) {
+    for (const pending of [
+      ...this.pendingSubagentExecutions.values(),
+      ...this.managedSubagents.values(),
+    ]) {
       if (pending.childRuntime.hasPendingQuestions()) {
         return pending;
       }
@@ -761,7 +913,11 @@ export class AgentRuntime<Config, State, ToolRequest> {
       this.pendingSubagentExecutions.size > 0 ||
       this.pendingSubagentWorktreeBootstraps.size > 0 ||
       this.pendingQuestions !== undefined ||
-      this.hasPendingApproval()
+      this.pendingApproval !== undefined ||
+      this.pendingManualApproval !== undefined ||
+      [...this.pendingSubagentExecutions.values()].some((pending) =>
+        pending.childRuntime.hasPendingApproval(),
+      )
     );
   }
 
@@ -771,6 +927,26 @@ export class AgentRuntime<Config, State, ToolRequest> {
     }
 
     this.options.toolExecutor.abortRunningShell?.();
+    if (this.options.backgroundTasks) {
+      for (const message of this.historyStore) {
+        if (message.role !== "assistant") continue;
+        for (const call of message.toolCalls ?? []) {
+          if (
+            !this.historyStore.some(
+              (result) => result.role === "tool" && result.toolCallId === call.id,
+            )
+          ) {
+            this.historyStore.push({
+              role: "tool",
+              toolCallId: call.id,
+              content: createLlmMessageContentFromText(
+                "[tool cancelled] The foreground response stopped; execution cancellation was requested.",
+              ),
+            });
+          }
+        }
+      }
+    }
 
     const hasPendingAssistantText = this.pendingAssistantTextStore.trim().length > 0;
 
@@ -805,7 +981,9 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   replaceHistory(history: LlmMessage[]): void {
-    this.historyStore = repairMissingToolResultsInHistory(cloneHistory(history));
+    this.historyStore = this.mergeRetainedTaskMessages(
+      repairMissingToolResultsInHistory(cloneHistory(history)),
+    );
     // Keep sealedTranscriptMessagesStore: durable transcript must survive compaction reloads.
     clearEarlyApprovalWaiters(this as unknown as TurnMachineRuntime<Config, State, ToolRequest>);
     this.clearPendingStreamingState();
@@ -817,12 +995,16 @@ export class AgentRuntime<Config, State, ToolRequest> {
     this.pendingApproval = undefined;
     this.pendingManualApproval = undefined;
     this.clearPendingSubagentState();
-    this.childSessionsStore = [];
+    this.childSessionsStore = this.retainedTaskChildSessions();
+    this.restoreLastUserInput();
   }
 
   replaceFromArchive(archive: ChatArchive): void {
-    this.historyStore = repairMissingToolResultsInHistory(
-      archive.llmHistory.map((message) => normalizeStoredLlmMessage(message)),
+    const retainedChildren = this.retainedTaskChildSessions();
+    this.historyStore = this.mergeRetainedTaskMessages(
+      repairMissingToolResultsInHistory(
+        archive.llmHistory.map((message) => normalizeStoredLlmMessage(message)),
+      ),
     );
     // Keep sealedTranscriptMessagesStore: archive llmHistory may already be compacted.
     this.loopEnabledStore = archive.loopEnabled === true;
@@ -842,6 +1024,37 @@ export class AgentRuntime<Config, State, ToolRequest> {
       summary: { ...entry.summary },
       llmHistory: entry.llmHistory.map((message) => normalizeStoredLlmMessage(message)),
     }));
+    for (const record of retainedChildren) {
+      const index = this.childSessionsStore.findIndex(
+        (entry) => entry.summary.sessionId === record.summary.sessionId,
+      );
+      if (index < 0) this.childSessionsStore.push(record);
+      else this.childSessionsStore[index] = record;
+    }
+    this.restoreLastUserInput();
+  }
+
+  private retainedTaskChildSessions(): RuntimeSubagentSessionArchiveEntry[] {
+    const ids = new Set(this.backgroundTaskRecords().map((record) => record.sessionId));
+    return this.childSessionsStore.filter((entry) => ids.has(entry.summary.sessionId));
+  }
+
+  private mergeRetainedTaskMessages(history: LlmMessage[]): LlmMessage[] {
+    const markers = this.backgroundTaskRecords()
+      .filter((record) => record.terminalEventId)
+      .map((record) => `\ntask_event_id: ${record.terminalEventId}\n`);
+    for (const message of this.historyStore) {
+      const content = llmMessageTextContent(message.content);
+      if (message.role !== "user" || !markers.some((marker) => content.includes(marker))) continue;
+      if (
+        !history.some(
+          (entry) => entry.role === "user" && llmMessageTextContent(entry.content) === content,
+        )
+      ) {
+        history.push({ role: "user", content: cloneLlmMessageContent(message.content) });
+      }
+    }
+    return history;
   }
 
   async syncSessionTranscriptFromHistory(
@@ -1028,6 +1241,13 @@ export class AgentRuntime<Config, State, ToolRequest> {
   }
 
   recordContextMessage(role: "system" | "user" | "assistant", content: string): void {
+    if (this.options.backgroundTasks && hasUnansweredAssistantToolCalls(this.historyStore)) {
+      this.pendingTaskHookContexts.push({
+        role,
+        content: createLlmMessageContentFromText(content),
+      });
+      return;
+    }
     this.historyStore.push({
       role,
       content: createLlmMessageContentFromText(content),
@@ -1116,6 +1336,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     if (this.isBusy()) {
       throw new Error("A response or approval is already being processed; please wait.");
     }
+    this.lastSubmittedUserInputStore = userInput;
 
     this.completedTurnResultStore = undefined;
     try {
@@ -1144,6 +1365,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     if (this.isBusy()) {
       throw new Error("A response or approval is already being processed; please wait.");
     }
+    this.lastSubmittedUserInputStore = userInput;
 
     this.completedTurnResultStore = undefined;
     try {
@@ -1212,6 +1434,22 @@ export class AgentRuntime<Config, State, ToolRequest> {
     await this.pollPendingBackgroundToolExecution();
     await this.pollPendingSubagentWorktreeBootstrap();
     await this.pollPendingSubagentExecution();
+    if (this.options.backgroundTasks) {
+      await this.options.backgroundTasks.manager.checkpoint();
+      if (
+        !this.isBusy() &&
+        !this.completedTurnResultStore &&
+        !hasUnansweredAssistantToolCalls(this.historyStore) &&
+        this.options.backgroundTasks.manager.pendingNotifications(
+          this.options.backgroundTasks.scope,
+        ).length > 0
+      ) {
+        const input = this.lastSubmittedUserInputStore;
+        this.pendingUserTurnStore = input;
+        const state = buildToolContinuationStateFromHistory(this.options, this.historyStore, input);
+        await this.startStreamingRound(state, input, createTurnContext<ToolRequest>(), true);
+      }
+    }
   }
 
   handleStreamStallTimeout(nowMs = Date.now(), stallTimeoutMs = STREAM_STALL_TIMEOUT_MS): void {
@@ -1243,7 +1481,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
   async continuePendingApproval(decision: RuntimeApprovalDecision): Promise<void> {
     const pending = this.pendingApproval;
     if (!pending) {
-      if (this.pendingSubagentExecutions.size > 0) {
+      if (this.findPendingSubagentWithApproval()) {
         await this.continuePendingSubagentApproval(decision);
         return;
       }
@@ -2802,6 +3040,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
     resumeAsStreaming = false,
     streamingEmitBeginResponse = true,
   ): Promise<SubagentToolExecutionResult<ToolRequest>> {
+    if (this.options.backgroundTasks) return { kind: "not-handled" };
     const subagent = extractSubagentRequest(request);
     if (!subagent) {
       return { kind: "not-handled" };
@@ -3640,13 +3879,155 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
   }
 
+  private async executeManagedSubagent(
+    request: SubagentRequest,
+    parentToolCallId: string,
+    context: SessionTaskContext,
+  ): Promise<SessionTaskResult> {
+    if (this.runtimeDepthStore >= 1) throw new Error("Nested subagents are not supported.");
+    const tasks = this.options.backgroundTasks;
+    if (!tasks) throw new Error("Background task support is not configured.");
+    const sessionId = this.nextChildSessionId();
+    const record: RuntimeSubagentSessionArchiveEntry = {
+      summary: {
+        sessionId,
+        parentToolCallId,
+        title: truncateTextForSubagentSummary(request.prompt.trim(), 72) || "SubAgent",
+        status: request.worktree ? "bootstrapping" : "running",
+        startedAtUnixMs: Date.now(),
+        updatedAtUnixMs: Date.now(),
+      },
+      llmHistory: [],
+    };
+    this.childSessionsStore.push(record);
+    let childRuntime: AgentRuntime<Config, State, ToolRequest> | undefined;
+    let workspaceRoot: string | undefined;
+    let childExecutor = this.baseToolExecutor;
+    let output: { text: string; failed: boolean };
+    const cancel = (): void => childRuntime?.abort();
+    context.signal.addEventListener("abort", cancel, { once: true });
+    try {
+      const transcript = this.resolveSubagentTranscriptPath(sessionId);
+      await context.update({ sessionId, ...(transcript ? { sessionTranscript: transcript } : {}) });
+      if (request.worktree) {
+        const bootstrap = this.options.bootstrapSubagentWorkspace;
+        if (!bootstrap) throw new Error("Worktree subagents are not supported on this host.");
+        const boot = await bootstrap({
+          subagentSessionId: sessionId,
+          task: request.prompt,
+          worktree: true,
+          parentWorkspaceRoot: resolveHookSessionContext(this.options).workspaceRoot ?? "",
+          signal: context.signal,
+        });
+        if ("error" in boot) throw new Error(boot.error);
+        workspaceRoot = boot.workspaceRoot;
+        childExecutor = boot.toolExecutor ?? this.baseToolExecutor;
+        if (boot.worktreePath) record.summary.worktreePath = boot.worktreePath;
+        if (boot.branchName) record.summary.worktreeBranch = boot.branchName;
+        await context.update({
+          ...(boot.worktreePath ? { worktreePath: boot.worktreePath } : {}),
+          ...(boot.branchName ? { worktreeBranch: boot.branchName } : {}),
+        });
+      }
+      context.signal.throwIfAborted();
+      const denied = await this.subagentStartHook(sessionId, request, workspaceRoot);
+      if (denied) throw new Error(denied);
+      childRuntime = this.createChildRuntime(
+        sessionId,
+        record.summary.title,
+        childExecutor,
+        workspaceRoot,
+        { context, record },
+      );
+      this.managedSubagents.set(sessionId, { parentToolCallId, childRuntime, childRecord: record });
+      await childRuntime.startUserTurnStreaming(buildSubagentUserTurn(request));
+      const scope = { runtimeId: sessionId, parentTaskId: context.taskId };
+      let finalResult:
+        | Extract<RuntimeTurnResult<State, ToolRequest>, { kind: "completed" | "failed" }>
+        | undefined;
+      let phase: "running" | "blocked" | "waiting-for-background" = "running";
+      for (;;) {
+        context.signal.throwIfAborted();
+        await childRuntime.poll();
+        this.refreshChildSessionRecord(record, childRuntime);
+        const result = childRuntime.takeCompletedTurnResult();
+        if (result?.kind === "completed" || result?.kind === "failed") finalResult = result;
+        const active = tasks.manager.hasActive(scope);
+        const notices = tasks.manager.pendingNotifications(scope).length > 0;
+        if (
+          finalResult?.kind === "failed" ||
+          (finalResult && !childRuntime.isBusy() && !active && !notices)
+        )
+          break;
+        const nextPhase =
+          childRuntime.hasPendingApproval() || childRuntime.hasPendingQuestions()
+            ? "blocked"
+            : finalResult && !childRuntime.isBusy() && active
+              ? "waiting-for-background"
+              : "running";
+        if (nextPhase !== phase) {
+          phase = nextPhase;
+          await context.update({}, phase);
+        }
+        record.summary.status = phase === "blocked" ? "blocked" : "running";
+        await waitForTaskDelay(0.025, context.signal);
+      }
+      if (!finalResult) throw new Error("The subagent ended without a result.");
+      output = {
+        text: resolveSubagentResultText(
+          finalResult.kind === "completed"
+            ? finalResult.assistantText
+            : `[subagent failed] ${finalResult.error}`,
+          record,
+          finalResult.kind === "failed",
+        ),
+        failed: finalResult.kind === "failed",
+      };
+    } catch (error) {
+      output = { text: `[subagent failed] ${renderError(error)}`, failed: true };
+    } finally {
+      context.signal.removeEventListener("abort", cancel);
+      if (childRuntime) this.refreshChildSessionRecord(record, childRuntime);
+      this.managedSubagents.delete(sessionId);
+    }
+    record.summary.latestMessage = truncateTextForSubagentSummary(output.text, 180);
+    if (output.failed) record.summary.error = output.text;
+    else record.summary.finalOutput = output.text;
+    record.summary.status = output.failed ? "failed" : "completed";
+    record.summary.completedAtUnixMs = Date.now();
+    record.summary.updatedAtUnixMs = record.summary.completedAtUnixMs;
+    await context.writeOutput(`\n\nFinal response:\n${output.text}\n`);
+    if (this.options.syncSubagentTranscript) {
+      await this.options.syncSubagentTranscript({
+        transcript: buildSessionTranscript(record.llmHistory),
+        subagentSessionId: sessionId,
+        ...(resolveHookSessionContext(this.options).sessionId
+          ? { sessionKey: resolveHookSessionContext(this.options).sessionId! }
+          : {}),
+      });
+    }
+    await this.dispatchSubagentEndHook(request, record, output, workspaceRoot);
+    const text = prependSubagentWorktreeMeta(
+      buildParentSubagentToolResultText(
+        output.text,
+        output.failed,
+        sessionId,
+        this.resolveSubagentTranscriptPath(sessionId),
+      ),
+      record.summary.worktreePath,
+      record.summary.worktreeBranch,
+    );
+    return { output: createToolExecutionTextOutput(text), failed: output.failed };
+  }
+
   private createChildRuntime(
     subagentSessionId: string,
     subagentTitle: string,
     childToolExecutor?: AgentRuntimeOptions<Config, State, ToolRequest>["toolExecutor"],
     childWorkspaceRoot?: string,
+    managed?: { context: SessionTaskContext; record: RuntimeSubagentSessionArchiveEntry },
   ): AgentRuntime<Config, State, ToolRequest> {
-    const baseExecutor = childToolExecutor ?? this.options.toolExecutor;
+    const baseExecutor = childToolExecutor ?? this.baseToolExecutor;
     const scopedOptions = childWorkspaceRoot?.trim()
       ? scopeAgentRuntimeOptionsForSubagentWorkspace(this.options, childWorkspaceRoot)
       : this.options;
@@ -3658,16 +4039,42 @@ export class AgentRuntime<Config, State, ToolRequest> {
       syncSessionTranscript: _omitSyncSessionTranscript,
       syncSubagentTranscript: _omitSyncSubagentTranscript,
       onEvent: _omitOnEvent,
+      backgroundTasks: _omitBackgroundTasks,
       ...childRuntimeOptions
     } = scopedOptions;
-    return new AgentRuntime<Config, State, ToolRequest>(
+    const backgroundTasks =
+      managed && this.options.backgroundTasks
+        ? {
+            ...this.options.backgroundTasks,
+            scope: { runtimeId: subagentSessionId, parentTaskId: managed.context.taskId },
+            persistHistory: async () => {
+              this.refreshChildSessionRecord(managed.record, childRuntime);
+              await this.options.backgroundTasks!.persistHistory();
+            },
+          }
+        : undefined;
+    const childRuntime = new AgentRuntime<Config, State, ToolRequest>(
       {
         ...childRuntimeOptions,
+        llmTransport: this.baseLlmTransport,
         toolExecutor: createSubagentToolExecutor(baseExecutor, subagentSessionId, subagentTitle),
+        ...(backgroundTasks ? { backgroundTasks } : {}),
+        ...(managed
+          ? {
+              onEvent: (event: RuntimeEvent<ToolRequest>) => {
+                if (event.kind === "assistant-chunk") void managed.context.writeOutput(event.text);
+                else if (event.kind === "begin-assistant-response")
+                  void managed.context.writeOutput("\n\n");
+                else if (event.kind === "replace-pending-assistant")
+                  void managed.context.writeOutput(`\n\n${event.text}`);
+              },
+            }
+          : {}),
       },
       [],
       this.runtimeDepthStore + 1,
     );
+    return childRuntime;
   }
 
   private nextChildSessionId(): string {
@@ -3715,12 +4122,29 @@ export class AgentRuntime<Config, State, ToolRequest> {
     output: { text: string; failed: boolean },
     hookWorkspaceRoot?: string,
   ): Promise<void> {
+    await this.dispatchSubagentEndHook(
+      extractSubagentRequest(pending.parentRequest) ?? {
+        prompt: pending.childRecord.summary.title,
+      },
+      pending.childRecord,
+      output,
+      hookWorkspaceRoot,
+      pending.parentTurn,
+    );
+  }
+
+  private async dispatchSubagentEndHook(
+    request: SubagentRequest,
+    record: RuntimeSubagentSessionArchiveEntry,
+    output: { text: string; failed: boolean },
+    hookWorkspaceRoot?: string,
+    parentTurn?: RuntimeTurnContext<ToolRequest>,
+  ): Promise<void> {
     const hookRunner = resolveHookRunner(this.options);
     if (!hookRunner) {
       return;
     }
 
-    const subagentRequest = extractSubagentRequest(pending.parentRequest);
     const context = resolveHookSessionContext(this.options);
     const workspaceRoot = hookWorkspaceRoot?.trim() || context.workspaceRoot;
     const result = await hookRunner.runSubagentEnd({
@@ -3728,10 +4152,10 @@ export class AgentRuntime<Config, State, ToolRequest> {
       conversationPath: context.conversationPath,
       workspaceRoot,
       model: context.model,
-      subagentSessionId: pending.childRecord.summary.sessionId,
-      subagentType: subagentRequest?.subagentType ?? "generalPurpose",
+      subagentSessionId: record.summary.sessionId,
+      subagentType: request.subagentType ?? "generalPurpose",
       status: output.failed ? "error" : "completed",
-      task: subagentRequest?.prompt ?? pending.childRecord.summary.title,
+      task: request.prompt,
       summary: output.text,
       modifiedFiles: undefined,
     });
@@ -3742,7 +4166,12 @@ export class AgentRuntime<Config, State, ToolRequest> {
     );
 
     if (!output.failed && result.followupMessage?.trim()) {
-      enqueueDeferredUserGuidance(pending.parentTurn, result.followupMessage.trim());
+      if (parentTurn) enqueueDeferredUserGuidance(parentTurn, result.followupMessage.trim());
+      else
+        this.recordContextMessage(
+          "user",
+          formatUserMessageContentForLlm(result.followupMessage.trim()),
+        );
     }
   }
 }

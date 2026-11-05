@@ -161,7 +161,7 @@ export function startBackgroundToolExecutionAsync<Config, State, ToolRequest>(
     .then((output) => {
       if (runtime.pendingBackgroundToolExecution === pending) {
         pending.output = output;
-        pending.failed = false;
+        pending.failed = output.execution?.failed === true;
       }
     })
     .catch((error: unknown) => {
@@ -289,7 +289,7 @@ export function startManualBackgroundToolExecution<Config, State, ToolRequest>(
     .then((output) => {
       if (runtime.pendingBackgroundToolExecution === pending) {
         pending.output = output;
-        pending.failed = false;
+        pending.failed = output.execution?.failed === true;
       }
     })
     .catch((error: unknown) => {

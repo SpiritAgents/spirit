@@ -2363,7 +2363,7 @@ async function performEarlyExternalToolExecution<Config, State, ToolRequest>(
     const output = await runtime.options.toolExecutor.execute(request);
     return {
       output,
-      failed: false,
+      failed: output.execution?.failed === true,
       backgroundExecution: false,
     };
   } catch (error) {

@@ -133,6 +133,21 @@ export interface RuntimeHistoryPreparationResult {
 
 export type RuntimeEvent<ToolRequest> =
   | {
+      kind: "background-task-changed";
+      task: import("../background-tasks.js").BackgroundTaskRecord;
+    }
+  | {
+      kind: "background-task-notification";
+      task: import("../background-tasks.js").BackgroundTaskRecord;
+      content: string;
+      restored: boolean;
+    }
+  | {
+      kind: "background-task-error";
+      taskId?: string;
+      error: string;
+    }
+  | {
       kind: "begin-assistant-response";
     }
   | {
@@ -426,6 +441,11 @@ export type RuntimeManualHistoryCompactionResult =
     };
 
 export interface AgentRuntimeOptions<Config, State, ToolRequest> {
+  backgroundTasks?: {
+    manager: import("./session-tasks.js").SessionTaskManager;
+    scope: import("./session-tasks.js").TaskScope;
+    persistHistory(): Promise<void>;
+  };
   config: Config;
   llmTransport: LlmTransport<Config, State>;
   toolExecutor: ToolExecutor<ToolRequest>;
@@ -495,6 +515,7 @@ export interface SubagentWorkspaceBootstrapInput {
   task: string;
   worktree: boolean;
   parentWorkspaceRoot: string;
+  signal?: AbortSignal;
 }
 
 export type SubagentWorkspaceBootstrapResult<ToolRequest = unknown> =

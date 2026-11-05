@@ -155,6 +155,7 @@ export function formatBackgroundTaskNotification(record: BackgroundTaskRecord): 
   const lines = [
     `Background task ${record.status}.`,
     `task_id: ${record.id}`,
+    ...(record.terminalEventId ? [`task_event_id: ${record.terminalEventId}`] : []),
     `tool: ${record.kind}`,
     `${record.kind === "shell" ? "command" : "prompt"}: ${JSON.stringify(record.input)}`,
     `elapsed_seconds: ${record.elapsedMs / 1000}`,
