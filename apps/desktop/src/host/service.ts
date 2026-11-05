@@ -3254,6 +3254,12 @@ export class DesktopHostService {
       await this.refreshTodoSnapshotForBundle(bundle);
       bundle.runtimeActivationSignature = this.runtimeActivationSignature(bundle);
     } catch (error) {
+      console.error("[desktop-host] runtime refresh failed", {
+        bundleId: bundle.id,
+        workspaceRoot: bundle.workspaceRoot || state.workspaceRoot,
+        inferencePreferenceOnly,
+        error,
+      });
       await closeRemoteDesktopRuntime(previousRuntime);
       bundle.runtime = undefined;
       if (bundle.id === this.sessionRegistry.activeSessionId()) {
