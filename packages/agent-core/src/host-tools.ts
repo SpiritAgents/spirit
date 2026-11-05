@@ -10,6 +10,7 @@ import {
   type AgentMode,
 } from "./ports.js";
 import { throwUnknownToolError, toolNamesFromDefinitions } from "./unknown-tool-error.js";
+import { buildBackgroundOptionsSchema } from "./background-tasks.js";
 
 export {
   enrichUnknownToolError,
@@ -20,6 +21,7 @@ export {
 export interface BuiltinHostToolDefinitionEnvironment {
   shellDisplayName: string;
   commandParameterDescription: string;
+  backgroundTasksEnabled?: boolean;
 }
 
 export interface ContributedHostToolDefinition {
@@ -222,10 +224,49 @@ export function buildFinishTaskHostToolDefinitions(): JsonValue[] {
   ];
 }
 
+export function buildBackgroundTaskToolDefinitions(): JsonValue[] {
+  return [
+    functionTool(
+      "delay",
+      "Wait for a duration or for a background task. With both seconds and task_id, return when the task finishes or the duration elapses, whichever comes first.",
+      {
+        type: "object",
+        properties: {
+          seconds: {
+            type: "number",
+            minimum: 0,
+            description: "Seconds to wait, or the maximum wait when task_id is provided.",
+          },
+          task_id: {
+            type: "string",
+            minLength: 1,
+            description: "The background task to wait for. Omit seconds to wait until it finishes.",
+          },
+        },
+        anyOf: [{ required: ["seconds"] }, { required: ["task_id"] }],
+        additionalProperties: false,
+      },
+    ),
+    functionTool("stop_task", "Stop a running background task and its owned work.", {
+      type: "object",
+      properties: {
+        task_id: {
+          type: "string",
+          minLength: 1,
+          description: "The ID of the background task to stop.",
+        },
+      },
+      required: ["task_id"],
+      additionalProperties: false,
+    }),
+  ];
+}
+
 export function buildBuiltinHostToolDefinitions(
   environment: BuiltinHostToolDefinitionEnvironment,
 ): JsonValue[] {
   return [
+    ...(environment.backgroundTasksEnabled ? buildBackgroundTaskToolDefinitions() : []),
     functionTool("shell", buildShellToolDescription(environment.shellDisplayName), {
       type: "object",
       properties: {
@@ -241,6 +282,9 @@ export function buildBuiltinHostToolDefinitions(
           type: "string",
           description: environment.commandParameterDescription,
         },
+        ...(environment.backgroundTasksEnabled
+          ? { background: buildBackgroundOptionsSchema("shell") }
+          : {}),
       },
       required: ["reason", "command"],
       additionalProperties: false,
@@ -396,25 +440,25 @@ export function buildBuiltinHostToolDefinitions(
     ),
     functionTool(
       "subagent",
-      "Delegate a scoped task to a child agent session. Use this when the task can be isolated from the main conversation and you want the child agent to return only its final result.",
+      "Delegate substantial research or implementation work to a child agent. Parallel agents can reduce elapsed time and keep the main conversation focused across large workstreams. Each child starts a fresh context, so weigh that setup and token cost against doing the work directly; small or tightly connected tasks often fit better in the main agent.",
       {
         type: "object",
         properties: {
-          task: { type: "string" },
-          success_criteria: { type: "string" },
-          context_summary: { type: "string" },
-          files_to_inspect: {
-            type: "array",
-            items: { type: "string" },
+          prompt: {
+            type: "string",
+            minLength: 1,
+            description: "The prompt sent to the child agent.",
           },
-          expected_output: { type: "string" },
+          ...(environment.backgroundTasksEnabled
+            ? { background: buildBackgroundOptionsSchema("subagent") }
+            : {}),
           worktree: {
             type: "boolean",
             description:
               "When true, run the subagent in an isolated git worktree so parallel subagents can edit files without conflicting. Use when the subagent will modify workspace files and other subagents may edit at the same time; omit for read-only tasks.",
           },
         },
-        required: ["task"],
+        required: ["prompt"],
         additionalProperties: false,
       },
     ),

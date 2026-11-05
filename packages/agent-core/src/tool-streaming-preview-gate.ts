@@ -5,7 +5,7 @@ import { isJsonObject } from "./tool-agent.js";
 const PARTIAL_PATH_PATTERN = /"path"\s*:\s*"((?:\\.|[^"\\])*)"/;
 const PARTIAL_PLAN_NAME_PATTERN = /"name"\s*:\s*"((?:\\.|[^"\\])*)"/;
 const PARTIAL_QUERY_PATTERN = /"query"\s*:\s*"((?:\\.|[^"\\])*)/;
-const PARTIAL_SUBAGENT_TASK_PATTERN = /"task"\s*:\s*"((?:\\.|[^"\\])*)/;
+const PARTIAL_SUBAGENT_TASK_PATTERN = /"prompt"\s*:\s*"((?:\\.|[^"\\])*)/;
 const PARTIAL_APPLY_PATCH_OPERATION_TYPE_PATTERN =
   /"type"\s*:\s*"(create_file|update_file|delete_file)"/;
 const PARTIAL_POSITIVE_INT_FIELD_PATTERN = (key: string): RegExp =>
@@ -129,7 +129,7 @@ export function webSearchStreamingPreviewSignature(argumentsJson: string): strin
   return tryExtractPartialWebSearchQuery(argumentsJson);
 }
 
-/** Extract `task` from complete or in-flight subagent argument JSON. */
+/** Extract `prompt` from complete or in-flight subagent argument JSON. */
 export function tryExtractPartialSubagentTask(argumentsJson: string): string | undefined {
   const trimmed = argumentsJson.trim();
   if (!trimmed) {
@@ -138,8 +138,8 @@ export function tryExtractPartialSubagentTask(argumentsJson: string): string | u
 
   try {
     const parsed = JSON.parse(trimmed) as JsonValue;
-    if (isJsonObject(parsed) && typeof parsed.task === "string" && parsed.task.trim()) {
-      return parsed.task.trim();
+    if (isJsonObject(parsed) && typeof parsed.prompt === "string" && parsed.prompt.trim()) {
+      return parsed.prompt.trim();
     }
   } catch {
     // Streaming JSON may be incomplete.
@@ -641,8 +641,8 @@ export function previewRequestFromStreamingArguments(
       return query ? { query } : undefined;
     }
     if (toolName === "subagent") {
-      const task = tryExtractPartialSubagentTask(argumentsJson);
-      return task ? { task } : undefined;
+      const prompt = tryExtractPartialSubagentTask(argumentsJson);
+      return prompt ? { prompt } : undefined;
     }
     return undefined;
   }

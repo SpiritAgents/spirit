@@ -9,6 +9,8 @@ import { glob as globPaths } from "glob";
 
 import {
   APPLY_PATCH_HOST_TOOL_NAME,
+  parseBackgroundOptions,
+  type BackgroundOptions,
   throwUnknownToolError,
   toolNamesFromDefinitions,
   type JsonValue,
@@ -223,12 +225,9 @@ export interface HostAskQuestionsRequest<QuestionSpec = HostAskQuestionsQuestion
 }
 
 export interface SubagentRequest {
-  task: string;
-  success_criteria?: string;
-  context_summary?: string;
-  files_to_inspect: string[];
-  expected_output?: string;
+  prompt: string;
   worktree?: boolean;
+  background?: BackgroundOptions;
 }
 
 export type ApplyPatchOperationType = "create_file" | "update_file" | "delete_file";
@@ -241,7 +240,7 @@ export interface ApplyPatchOperation {
 
 export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
   | { name: "finish_task"; summary?: string }
-  | { name: "shell"; command: string; reason: string }
+  | { name: "shell"; command: string; reason: string; background?: BackgroundOptions }
   | { name: "web_fetch"; url: string }
   | { name: "ls"; path: string }
   | { name: "glob"; pattern: string }
@@ -269,12 +268,9 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
     }
   | {
       name: "subagent";
-      task: string;
-      success_criteria?: string;
-      context_summary?: string;
-      files_to_inspect: string[];
-      expected_output?: string;
+      prompt: string;
       worktree?: boolean;
+      background?: BackgroundOptions;
     }
   | {
       name: "generate_image";
@@ -723,12 +719,15 @@ export class NodeHostToolService<
           ...(summary ? { summary } : {}),
         };
       }
-      case "shell":
+      case "shell": {
+        const background = parseBackgroundOptions(parsed.background);
         return {
           name,
           reason: requiredString(parsed, "reason"),
           command: requiredString(parsed, "command"),
+          ...(background !== undefined ? { background } : {}),
         };
+      }
       case "web_fetch":
         return {
           name,
@@ -785,18 +784,13 @@ export class NodeHostToolService<
         };
       }
       case "subagent": {
-        const successCriteria = optionalStringStrict(parsed, "success_criteria");
-        const contextSummary = optionalStringStrict(parsed, "context_summary");
-        const expectedOutput = optionalStringStrict(parsed, "expected_output");
         const worktree = optionalBoolean(parsed, "worktree");
+        const background = parseBackgroundOptions(parsed.background);
         return {
           name,
-          task: requiredString(parsed, "task"),
-          ...(successCriteria ? { success_criteria: successCriteria } : {}),
-          ...(contextSummary ? { context_summary: contextSummary } : {}),
-          files_to_inspect: optionalStringArrayStrict(parsed, "files_to_inspect"),
-          ...(expectedOutput ? { expected_output: expectedOutput } : {}),
+          prompt: requiredString(parsed, "prompt"),
           ...(worktree === true ? { worktree: true } : {}),
+          ...(background !== undefined ? { background } : {}),
         };
       }
       case "generate_image": {

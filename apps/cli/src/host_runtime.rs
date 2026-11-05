@@ -756,7 +756,9 @@ pub(crate) fn build_tool_result_block(
             detail_lines: vec![
                 t!(
                     "tui.tool.detail.task",
-                    task = string_arg(request, "task").unwrap_or("<unknown>")
+                    task = string_arg(request, "prompt")
+                        .or_else(|| string_arg(request, "task"))
+                        .unwrap_or("<unknown>")
                 )
                 .into_owned(),
             ],
@@ -966,7 +968,9 @@ pub(crate) fn format_tool_ui_message(
         "grep" => output.to_string(),
         "subagent" => t!(
             "tui.tool.message.subagent_done",
-            task = string_arg(request, "task").unwrap_or("<unknown>"),
+            task = string_arg(request, "prompt")
+                .or_else(|| string_arg(request, "task"))
+                .unwrap_or("<unknown>"),
             output = truncate_for_preview(output, 1200)
         )
         .into_owned(),

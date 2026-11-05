@@ -1,3 +1,4 @@
+import { parseBackgroundOptions } from "./background-tasks.js";
 import type {
   AskQuestionsResult,
   SubagentRequest,
@@ -3031,7 +3032,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
       summary: {
         sessionId,
         parentToolCallId,
-        title: truncateTextForSubagentSummary(request.task.trim(), 72) || "SubAgent",
+        title: truncateTextForSubagentSummary(request.prompt.trim(), 72) || "SubAgent",
         status: "running",
         startedAtUnixMs,
         updatedAtUnixMs: startedAtUnixMs,
@@ -3064,7 +3065,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
             content: createLlmMessageContentFromText(childUserTurn),
           },
         ];
-        record.summary.latestMessage = truncateTextForSubagentSummary(request.task.trim(), 180);
+        record.summary.latestMessage = truncateTextForSubagentSummary(request.prompt.trim(), 180);
         this.childSessionsStore.push(record);
         this.pendingSubagentWorktreeBootstraps.set(parentToolCallId, {
           parentRequest,
@@ -3084,7 +3085,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
       const boot = await bootstrap({
         subagentSessionId: sessionId,
-        task: request.task,
+        task: request.prompt,
         worktree: true,
         parentWorkspaceRoot,
       });
@@ -3143,7 +3144,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
         content: createLlmMessageContentFromText(childUserTurn),
       },
     ];
-    record.summary.latestMessage = truncateTextForSubagentSummary(request.task.trim(), 180);
+    record.summary.latestMessage = truncateTextForSubagentSummary(request.prompt.trim(), 180);
 
     if (resumeAsStreaming) {
       try {
@@ -3338,7 +3339,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
     const boot = await bootstrap({
       subagentSessionId: pending.childRecord.summary.sessionId,
-      task: pending.request.task,
+      task: pending.request.prompt,
       worktree: true,
       parentWorkspaceRoot: pending.parentWorkspaceRoot,
     });
@@ -3410,7 +3411,6 @@ export class AgentRuntime<Config, State, ToolRequest> {
 
     const parentToolResultText = prependSubagentWorktreeMeta(
       buildParentSubagentToolResultText(
-        pending.childRecord.summary.title,
         failed,
         true,
         pending.childRecord.summary.sessionId,
@@ -3553,7 +3553,6 @@ export class AgentRuntime<Config, State, ToolRequest> {
           };
     const parentToolResultText = prependSubagentWorktreeMeta(
       buildParentSubagentToolResultText(
-        pending.childRecord.summary.title,
         output.text,
         output.failed,
         pending.childRecord.summary.sessionId,
@@ -3695,7 +3694,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
       model: context.model,
       subagentSessionId,
       subagentType: request.subagentType ?? "generalPurpose",
-      task: request.task,
+      task: request.prompt,
     });
 
     appendHookAdditionalContexts(
@@ -3732,7 +3731,7 @@ export class AgentRuntime<Config, State, ToolRequest> {
       subagentSessionId: pending.childRecord.summary.sessionId,
       subagentType: subagentRequest?.subagentType ?? "generalPurpose",
       status: output.failed ? "error" : "completed",
-      task: subagentRequest?.task ?? pending.childRecord.summary.title,
+      task: subagentRequest?.prompt ?? pending.childRecord.summary.title,
       summary: output.text,
       modifiedFiles: undefined,
     });
@@ -3874,7 +3873,7 @@ function extractSubagentRequest<ToolRequest>(request: ToolRequest): SubagentRequ
 
   let value: JsonValue;
   if (readOptionalStringField(request, "name") === "subagent") {
-    if (readOptionalStringField(request, "task") !== undefined) {
+    if (readOptionalStringField(request, "prompt") !== undefined) {
       value = request;
     } else {
       const argumentsJson = readOptionalStringField(request, "argumentsJson");
@@ -3904,63 +3903,35 @@ function extractSubagentRequest<ToolRequest>(request: ToolRequest): SubagentRequ
 
     value = isJsonObject(candidate.request) ? candidate.request : candidate;
   }
-  const task = readOptionalStringField(value, "task");
-  if (task === undefined) {
+  const prompt = readOptionalStringField(value, "prompt");
+  if (prompt === undefined) {
     return undefined;
   }
 
-  const successCriteria = readOptionalStringField(value, "success_criteria", "successCriteria");
-  const contextSummary = readOptionalStringField(value, "context_summary", "contextSummary");
-  const filesToInspect = readOptionalStringArrayField(value, "files_to_inspect", "filesToInspect");
-  const expectedOutput = readOptionalStringField(value, "expected_output", "expectedOutput");
   const subagentType = readOptionalStringField(value, "subagent_type", "subagentType");
   const worktree = value.worktree === true ? true : undefined;
+  const background = parseBackgroundOptions(value.background);
 
   return {
-    task,
+    prompt,
     ...(subagentType !== undefined ? { subagentType } : {}),
-    ...(successCriteria !== undefined ? { successCriteria } : {}),
-    ...(contextSummary !== undefined ? { contextSummary } : {}),
-    ...(filesToInspect !== undefined ? { filesToInspect } : {}),
-    ...(expectedOutput !== undefined ? { expectedOutput } : {}),
     ...(worktree !== undefined ? { worktree } : {}),
+    ...(background !== undefined ? { background } : {}),
   };
 }
 
-function buildSubagentUserTurn(request: SubagentRequest): string {
-  const sections = [request.task.trim()];
-  if (request.contextSummary?.trim()) {
-    sections.push(`Context summary:\n${request.contextSummary.trim()}`);
-  }
-  if (request.successCriteria?.trim()) {
-    sections.push(`Success criteria:\n${request.successCriteria.trim()}`);
-  }
-  if (request.filesToInspect && request.filesToInspect.length > 0) {
-    sections.push(`Suggested files to inspect:\n- ${request.filesToInspect.join("\n- ")}`);
-  }
-  if (request.expectedOutput?.trim()) {
-    sections.push(`Expected output:\n${request.expectedOutput.trim()}`);
-  }
-  sections.push(
-    "You are already inside the delegated child session. Execute the delegated task directly.",
-  );
-  sections.push(
-    "Do not discuss whether subagent sessions, delegation, or system permissions are available. Do not add policy or configuration commentary.",
-  );
-  sections.push("Return only the requested result.");
-  return sections.filter((section) => section.trim().length > 0).join("\n\n");
+export function buildSubagentUserTurn(request: SubagentRequest): string {
+  return request.prompt;
 }
 
 function buildParentSubagentToolResultTextFromRequest<ToolRequest>(
-  request: ToolRequest,
+  _request: ToolRequest,
   outputText: string,
   failed: boolean,
   sessionId?: string,
   sessionTranscript?: string,
 ): string {
-  const subagent = extractSubagentRequest(request);
-  const title = truncateTextForSubagentSummary(subagent?.task?.trim() ?? "", 72) || "SubAgent";
-  return buildParentSubagentToolResultText(title, outputText, failed, sessionId, sessionTranscript);
+  return buildParentSubagentToolResultText(outputText, failed, sessionId, sessionTranscript);
 }
 
 function resolveSubagentResultText(
@@ -4098,24 +4069,6 @@ function readOptionalStringField(
     if (typeof candidate === "string" && candidate.trim().length > 0) {
       return candidate;
     }
-  }
-
-  return undefined;
-}
-
-function readOptionalStringArrayField(
-  value: Record<string, JsonValue>,
-  ...keys: string[]
-): string[] | undefined {
-  for (const key of keys) {
-    const candidate = value[key];
-    if (!Array.isArray(candidate)) {
-      continue;
-    }
-
-    return candidate.filter(
-      (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
-    );
   }
 
   return undefined;

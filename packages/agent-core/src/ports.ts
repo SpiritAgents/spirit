@@ -567,13 +567,10 @@ export type AskQuestionsResult =
   | { status: "answered"; answers: AskQuestionsAnswer[] };
 
 export interface SubagentRequest {
-  task: string;
+  prompt: string;
   subagentType?: string;
-  successCriteria?: string;
-  contextSummary?: string;
-  filesToInspect?: string[];
-  expectedOutput?: string;
   worktree?: boolean;
+  background?: import("./background-tasks.js").BackgroundOptions;
 }
 
 export type PermissionMemoryTarget =

@@ -982,7 +982,7 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
                     type: "function",
                     function: {
                       name: "subagent",
-                      arguments: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+                      arguments: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
                     },
                   },
                 ],
@@ -996,7 +996,7 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
               {
                 id: "call-subagent",
                 name: "subagent",
-                argumentsJson: '{"task":"Output: OK, I am the SubAgent, hahaha"}',
+                argumentsJson: '{"prompt":"Output: OK, I am the SubAgent, hahaha"}',
               },
             ],
           },
@@ -1011,7 +1011,8 @@ export class SubagentTransport implements LlmTransport<undefined, ScriptedState>
           isJsonObject(message) &&
           message.role === "user" &&
           typeof message.content === "string" &&
-          message.content.includes("You are already inside the delegated child session."),
+          message.content.includes("Output: OK, I am the SubAgent, hahaha") &&
+          !message.content.includes("You are already inside the delegated child session."),
       );
       if (!delegatedPromptPresent) {
         return {
