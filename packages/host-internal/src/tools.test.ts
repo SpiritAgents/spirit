@@ -583,6 +583,34 @@ test("requestFromFunctionCall parses grep glob", async () => {
   }
 });
 
+test("requestFromFunctionCall preserves the subagent continuation session ID", async () => {
+  const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-subagent-session-"));
+  const spiritDataDir = join(workspaceRoot, ".spirit-data");
+  const sessionId = "00000000-0000-4000-8000-000000000020";
+
+  try {
+    await mkdir(spiritDataDir, { recursive: true });
+    const service = new NodeHostToolService({ workspaceRoot, spiritDataDir });
+    const request = await service.requestFromFunctionCall(
+      "subagent",
+      JSON.stringify({
+        prompt: "Continue the existing session",
+        session_id: sessionId,
+        background: { type: false },
+      }),
+    );
+
+    assert.deepEqual(request, {
+      name: "subagent",
+      prompt: "Continue the existing session",
+      sessionId,
+      background: { type: false },
+    });
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true });
+  }
+});
+
 test("grep matches ripgrep regular expressions by default", async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), "spirit-host-tools-search-regexp-"));
   const spiritDataDir = join(workspaceRoot, ".spirit-data");

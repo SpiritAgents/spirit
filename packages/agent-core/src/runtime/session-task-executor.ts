@@ -176,6 +176,9 @@ export function createSessionTaskExecutor<ToolRequest>(
             return options.executeSubagent(
               {
                 prompt: input,
+                ...(typeof call.arguments.session_id === "string"
+                  ? { sessionId: call.arguments.session_id }
+                  : {}),
                 ...(call.arguments.worktree === true ? { worktree: true } : {}),
               },
               toolCallId,

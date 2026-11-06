@@ -228,6 +228,7 @@ export interface HostAskQuestionsRequest<QuestionSpec = HostAskQuestionsQuestion
 
 export interface SubagentRequest {
   prompt: string;
+  sessionId?: string;
   worktree?: boolean;
   background?: BackgroundOptions;
 }
@@ -273,6 +274,7 @@ export type HostToolRequest<QuestionSpec = HostAskQuestionsQuestionSpec> =
   | {
       name: "subagent";
       prompt: string;
+      sessionId?: string;
       worktree?: boolean;
       background?: BackgroundOptions;
     }
@@ -793,10 +795,12 @@ export class NodeHostToolService<
       }
       case "subagent": {
         const worktree = optionalBoolean(parsed, "worktree");
+        const sessionId = optionalStringStrict(parsed, "session_id");
         const background = parseBackgroundOptions(parsed.background);
         return {
           name,
           prompt: requiredString(parsed, "prompt"),
+          ...(sessionId !== undefined ? { sessionId } : {}),
           ...(worktree === true ? { worktree: true } : {}),
           ...(background !== undefined ? { background } : {}),
         };

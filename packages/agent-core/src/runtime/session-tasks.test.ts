@@ -885,3 +885,42 @@ describe("managed tasks in AgentRuntime", () => {
     await runtime.shutdown();
   });
 });
+
+it("forwards a continuation session ID through the managed subagent executor", async () => {
+  let resumedSessionId: string | undefined;
+  const delegate: import("../runtime/types.js").SubagentSessionDelegate = {
+    execute: async (request) => {
+      resumedSessionId = request.sessionId;
+      return {
+        output: createToolExecutionTextOutput(
+          buildParentSubagentToolResultText(
+            "Continued result",
+            false,
+            "sess_native",
+            "/tmp/native.json",
+          ),
+        ),
+      };
+    },
+  };
+  let rounds = 0;
+  const { runtime } = runtimeFixture(
+    (state) =>
+      ++rounds === 1
+        ? toolCalls(state, [
+            {
+              id: "native-continuation",
+              name: "subagent",
+              argumentsJson:
+                '{"prompt":"Continue","session_id":"sess_native","background":{"type":false}}',
+            },
+          ])
+        : finalResponse(state, "Done."),
+    undefined,
+    delegate,
+  );
+  await runtime.startUserTurnStreaming("Continue");
+  await advanceRuntime(runtime, 500);
+  expect(resumedSessionId).toBe("sess_native");
+  await runtime.shutdown();
+});
