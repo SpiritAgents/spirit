@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -912,6 +912,7 @@ it("interrupts an ordinary target turn before continuing it", async () => {
   const { dataDir, workspaceRoot } = await fixture();
   const { manager, finished } = managerFor(dataDir);
   const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const secondParent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
   const target = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
   let calls = 0;
   setLlmFetchTransportOverrideForTests(async () => {
@@ -920,6 +921,10 @@ it("interrupts an ordinary target turn before continuing it", async () => {
   });
   const internal = manager["sessions"].get(target.sessionId)!;
   internal.turnActive = true;
+  let releaseOperations!: () => void;
+  internal.operations = new Promise<void>((resolve) => {
+    releaseOperations = resolve;
+  });
   internal.runtimeResult.runtime.replaceHistory([
     ...internal.runtimeResult.runtime.history(),
     { role: "user", content: [{ type: "text", text: "Ordinary old turn" }] },
@@ -930,6 +935,16 @@ it("interrupts an ordinary target turn before continuing it", async () => {
     parentToolCallId: "call-continue",
     context: delegatedContext().context,
   });
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await expect(
+    manager.delegateSubagentTurn(secondParent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Must not interrupt the first writer",
+      parentToolCallId: "call-second-during-interruption",
+      context: delegatedContext().context,
+    }),
+  ).rejects.toThrow(/already being prompted by another agent/);
+  releaseOperations();
   const result = await continuation;
   expect(result.output.summaryText).toContain("Continued reply");
   expect(finished).toContain("cancelled");
@@ -1031,7 +1046,15 @@ it("does not prompt or move a session when worktree creation fails", async () =>
   const { dataDir, workspaceRoot } = await fixture();
   const { manager } = managerFor(dataDir);
   const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
-  const target = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
+  const target = await manager.createSession({
+    workspaceRoot,
+    hostKind: "desktop",
+    sessionKind: "subagent",
+    subagentOrigin: {
+      parentSessionId: parent.sessionId,
+      parentToolCallId: "call-worktree-target",
+    },
+  });
   let requests = 0;
   setLlmFetchTransportOverrideForTests(async () => {
     requests += 1;
@@ -1057,5 +1080,110 @@ it("does not prompt or move a session when worktree creation fails", async () =>
   expect(manager.getSession(target.sessionId)?.worktreePath).toBeUndefined();
   expect(JSON.stringify(manager.exportArchive(target.sessionId, [], []))).not.toContain(
     "Must not enter history",
+  );
+  const recovery = await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Recovery after failure",
+    parentToolCallId: "call-worktree-recovery",
+    context: delegatedContext().context,
+  });
+  expect(recovery.output.summaryText).toContain("Unexpected reply");
+  expect(requests).toBe(1);
+  expect(JSON.stringify(manager.exportArchive(target.sessionId, [], []))).toContain(
+    "Recovery after failure",
+  );
+});
+
+it("keeps CLI target background work on its original checkout across a worktree switch", async () => {
+  const { root, dataDir, workspaceRoot } = await fixture();
+  const git = (...args: string[]) =>
+    execFileSync("git", args, { cwd: workspaceRoot, stdio: "pipe" });
+  git("init", "--quiet");
+  await writeFile(path.join(workspaceRoot, "tracked.txt"), "committed");
+  git("add", "tracked.txt");
+  git(
+    "-c",
+    "user.name=Fixture",
+    "-c",
+    "user.email=fixture@example.invalid",
+    "-c",
+    "commit.gpgsign=false",
+    "commit",
+    "--quiet",
+    "-m",
+    "fixture",
+  );
+  const { manager } = managerFor(dataDir);
+  const parent = await manager.createSession({ workspaceRoot, hostKind: "cli" });
+  const secondParent = await manager.createSession({ workspaceRoot, hostKind: "cli" });
+  const target = await manager.createSession({
+    workspaceRoot,
+    hostKind: "cli",
+    sessionKind: "subagent",
+    subagentOrigin: {
+      parentSessionId: parent.sessionId,
+      parentToolCallId: "call-cli-background-target",
+    },
+    approvalLevel: "bypass-approval",
+  });
+  const gate = path.join(root, "release-cli-worktree");
+  const script = `const fs=require("node:fs");console.log(JSON.stringify({phase:"started",cwd:process.cwd()}));const timer=setInterval(()=>{if(!fs.existsSync(${JSON.stringify(gate)}))return;console.log(JSON.stringify({phase:"done",cwd:process.cwd()}));clearInterval(timer);},20);`;
+  const requests = scriptedModel((_body, index) => {
+    if (index === 0)
+      return response("", {
+        name: "shell",
+        arguments: {
+          command: nodeCommand(script),
+          reason: "Run the original checkout fixture.",
+          background: { delay: 0 },
+        },
+      });
+    return response(
+      index === 1 ? "Background started" : index === 2 ? "Worktree reply" : "Background finished",
+    );
+  });
+
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Start CLI background work",
+    parentToolCallId: "call-cli-background-start",
+    context: delegatedContext().context,
+  });
+  const running = manager
+    .snapshot(target.sessionId)
+    .backgroundTasks?.find((task) => task.kind === "shell");
+  expect(running?.status).toBe("running");
+  const storageKey = readSessionStorageKey(dataDir, target.sessionId);
+
+  await manager.delegateSubagentTurn(secondParent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Switch CLI target to a worktree",
+    parentToolCallId: "call-cli-background-worktree",
+    worktree: true,
+    context: delegatedContext().context,
+  });
+  const moved = manager.getSession(target.sessionId)!;
+  expect(moved.workLocation).toBe("worktree");
+  expect(moved.worktreePath).not.toBe(workspaceRoot);
+  expect(readSessionStorageKey(dataDir, target.sessionId)).toBe(storageKey);
+  const preserved = manager
+    .snapshot(target.sessionId)
+    .backgroundTasks?.find((task) => task.kind === "shell");
+  expect(preserved).toMatchObject({ status: "running", outputPath: running!.outputPath });
+
+  await writeFile(gate, "");
+  await waitUntil(() => requests.length === 4);
+  const output = await readFile(running!.outputPath, "utf8");
+  const lines = output
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line));
+  const originalCheckout = await realpath(workspaceRoot);
+  expect(lines).toEqual([
+    { phase: "started", cwd: originalCheckout },
+    { phase: "done", cwd: originalCheckout },
+  ]);
+  expect(JSON.stringify(manager.exportArchive(target.sessionId, [], []))).toContain(
+    "Switch CLI target to a worktree",
   );
 });

@@ -74,12 +74,14 @@ function connect(config: AcpServerConfig) {
     ),
   );
   const updates: acp.SessionNotification[] = [];
+  const permissionRequests: acp.RequestPermissionRequest[] = [];
   const client = new acp.ClientSideConnection(
     () => ({
       async sessionUpdate(update) {
         updates.push(update);
       },
-      async requestPermission() {
+      async requestPermission(request) {
+        permissionRequests.push(request);
         return { outcome: { outcome: "selected", optionId: "allow" } };
       },
     }),
@@ -102,7 +104,7 @@ function connect(config: AcpServerConfig) {
     await Promise.all([server.closed, client.closed]);
   };
   cleanups.push(close);
-  return { client, updates, close };
+  return { client, updates, permissionRequests, close };
 }
 
 function response(tool?: { name: string; arguments: object }): Response {
@@ -391,12 +393,15 @@ it("runs ACP worktree children against committed files with scoped context and r
       });
     return response();
   });
-  const { client } = connect(config);
+  const { client, permissionRequests } = connect(config);
   const { sessionId } = await createClientSession(client, config);
   expect(await client.prompt(prompt(sessionId, "Delegate inspection."))).toEqual({
     stopReason: "end_turn",
   });
   expect(requests).toHaveLength(4);
+  expect(permissionRequests).toHaveLength(1);
+  expect(permissionRequests[0]?.sessionId).toBe(sessionId);
+  expect(permissionRequests[0]?.toolCall.toolCallId).toMatch(/^sess_[0-9a-f]{32}:/);
   expect(JSON.stringify(requests[1])).toContain("Use the scoped fixture marker.");
   const result = JSON.parse(
     requests[2]!.messages.find((message) => message.role === "tool")!.content,
@@ -613,5 +618,52 @@ it("does not prompt or move an ACP session when worktree creation fails", async 
   expect(JSON.stringify(manager.getSession(target.sessionId)?.runtime.history())).not.toContain(
     "Must not enter ACP history",
   );
+  await manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "ACP recovery after failure",
+    parentToolCallId: "call-acp-worktree-recovery",
+    context: delegatedContext().context,
+  });
+  expect(requests).toBe(1);
+  expect(JSON.stringify(manager.getSession(target.sessionId)?.runtime.history())).toContain(
+    "ACP recovery after failure",
+  );
+  await manager.shutdown();
+});
+
+it("rejects a second ACP writer throughout ordinary-turn interruption", async () => {
+  const { config } = await fixture();
+  const manager = new SessionManager(config);
+  const parent = await manager.createSession(config.workspaceRoot, () => {});
+  const secondParent = await manager.createSession(config.workspaceRoot, () => {});
+  const target = await manager.createSession(config.workspaceRoot, () => {});
+  setLlmFetchTransportOverrideForTests(async () => response());
+  const session = manager["sessions"].get(target.sessionId)!;
+  session.turnActive = true;
+  let releaseOperations!: () => void;
+  session.operations = new Promise<void>((resolve) => {
+    releaseOperations = resolve;
+  });
+
+  const continuation = manager.delegateSubagentTurn(parent.sessionId, {
+    sessionId: target.sessionId,
+    prompt: "Continue after interruption",
+    parentToolCallId: "call-acp-interrupt",
+    context: delegatedContext().context,
+  });
+  await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  await expect(
+    manager.delegateSubagentTurn(secondParent.sessionId, {
+      sessionId: target.sessionId,
+      prompt: "Must not interrupt the first ACP writer",
+      parentToolCallId: "call-acp-second-during-interruption",
+      context: delegatedContext().context,
+    }),
+  ).rejects.toThrow(/already being prompted by another agent/);
+  releaseOperations();
+  await continuation;
+  const history = JSON.stringify(manager.getSession(target.sessionId)?.runtime.history());
+  expect(history).toContain("Continue after interruption");
+  expect(history).not.toContain("Must not interrupt the first ACP writer");
   await manager.shutdown();
 });

@@ -563,40 +563,46 @@ export class SessionManager {
       blocked: false,
     };
     targetSession.agentWriter = writer;
-    if (runtime.isBusy() || targetSession.turnActive) {
-      this.abort(target.sessionId, { preserveAgentWriter: true });
-      await targetSession.operations;
-    }
-    if (request.worktree) {
-      await this.setSessionWorktree(target.sessionId);
-    }
-    const transcript = resolveSubagentTranscriptFilePath(
-      this.spiritDataDir,
-      target.sessionId,
-      target.sessionId,
-    );
-    await request.context.update({
-      sessionId: target.sessionId,
-      sessionTranscript: transcript,
-      ...(targetSession.info.worktreePath ? { worktreePath: targetSession.info.worktreePath } : {}),
-      ...(targetSession.info.worktreeBranch
-        ? { worktreeBranch: targetSession.info.worktreeBranch }
-        : {}),
-    });
-    const completion = this.waitForAgentTurn(target.sessionId);
     const cancel = () => {
       const target = this.sessions.get(targetSession.info.sessionId);
-      if (target && !target.closing) this.abort(target.info.sessionId);
+      if (target && !target.closing)
+        this.abort(target.info.sessionId, { preserveAgentWriter: true });
     };
     request.context.signal.addEventListener("abort", cancel, { once: true });
+    let completion: Promise<{ text: string; failed: boolean }> | undefined;
     try {
-      await this.startTurn(targetSession, {
-        text: request.prompt,
-        explicitImages: [],
-        explicitWorkspaceFiles: [],
-        activeSkills: [],
+      const transcript = resolveSubagentTranscriptFilePath(
+        this.spiritDataDir,
+        target.sessionId,
+        target.sessionId,
+      );
+      if (runtime.isBusy() || targetSession.turnActive) {
+        this.abort(target.sessionId, { preserveAgentWriter: true });
+        await targetSession.operations;
+      }
+      await this.serializeSession(targetSession, async () => {
+        if (request.worktree) {
+          await this.setSessionWorktree(target.sessionId);
+        }
+        await request.context.update({
+          sessionId: target.sessionId,
+          sessionTranscript: transcript,
+          ...(targetSession.info.worktreePath
+            ? { worktreePath: targetSession.info.worktreePath }
+            : {}),
+          ...(targetSession.info.worktreeBranch
+            ? { worktreeBranch: targetSession.info.worktreeBranch }
+            : {}),
+        });
+        completion = this.waitForAgentTurn(target.sessionId);
+        await this.startTurn(targetSession, {
+          text: request.prompt,
+          explicitImages: [],
+          explicitWorkspaceFiles: [],
+          activeSkills: [],
+        });
       });
-      const result = await completion;
+      const result = await completion!;
       await request.context.update({
         finalOutputPreview: result.text.slice(0, 16_384),
       });
@@ -613,11 +619,14 @@ export class SessionManager {
         failed: result.failed,
       };
     } catch (error) {
-      delete targetSession.agentWriter;
-      this.failAgentTurnWaiters(target.sessionId, error);
+      if (targetSession.agentWriter === writer) {
+        void completion?.catch(() => {});
+        this.failAgentTurnWaiters(target.sessionId, error);
+      }
       throw error;
     } finally {
       request.context.signal.removeEventListener("abort", cancel);
+      if (targetSession.agentWriter === writer) delete targetSession.agentWriter;
     }
   }
 
@@ -1280,7 +1289,6 @@ export class SessionManager {
     session.turnActive = false;
     session.idleTicksWhileActive = 0;
     session.info.isBusy = false;
-    delete session.agentWriter;
     await session.runtimeResult.persist();
     this.callbacks.broadcastTurnFinished(session.info.sessionId, stopReason, result);
     this.callbacks.broadcastSnapshot(session.info.sessionId, this.snapshotForSession(session));

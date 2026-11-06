@@ -41,7 +41,13 @@ interface SessionSummary {
 }
 interface LiveSession extends AcpSessionState {
   result: AcpRuntimeResult;
-  agentWriter?: { ownerSessionId: string; toolCallId: string };
+  agentWriter?: {
+    ownerSessionId: string;
+    toolCallId: string;
+    context: import("@spiritagent/agent-core").SubagentSessionExecutionRequest["context"];
+    onEvent: EventSink;
+    blocked: boolean;
+  };
   operations: Promise<void>;
   pump: NodeJS.Timeout;
   polling: boolean;
@@ -259,14 +265,11 @@ export class SessionManager {
     text: string,
     images: string[],
     skills: LlmActiveSkill[],
+    beforeStart?: () => Promise<void>,
   ): Promise<StopReason> {
     const session = this.sessions.get(sessionId);
     if (!session || session.closing) throw new Error(`Session ${sessionId} not found`);
-    const agentWriter = session.agentWriter;
-    this.cancel(sessionId);
-    if (agentWriter) {
-      session.agentWriter = agentWriter;
-    }
+    this.cancel(sessionId, { preserveAgentWriter: true });
     const generation = session.generation;
     delete session.lastTurnResult;
     session.pendingPrompt = new AbortController();
@@ -275,6 +278,7 @@ export class SessionManager {
     });
     try {
       await this.serialize(session, async () => {
+        await beforeStart?.();
         if (generation !== session.generation) return;
         session.turnActive = true;
         await session.runtime.startUserTurnStreaming(text, images, [], skills);
@@ -289,11 +293,11 @@ export class SessionManager {
     return completed;
   }
 
-  cancel(sessionId: string): void {
+  cancel(sessionId: string, options: { preserveAgentWriter?: boolean } = {}): void {
     const session = this.sessions.get(sessionId);
     if (!session) return;
     session.generation += 1;
-    delete session.agentWriter;
+    if (!options.preserveAgentWriter) delete session.agentWriter;
     session.pendingPrompt?.abort();
     session.pendingPrompt = null;
     session.runtime.abort();
@@ -307,13 +311,39 @@ export class SessionManager {
     // Input delivery must remain live even when poll awaits an early tool decision.
     // The runtime selects one pending child, so concurrent children cannot cross-apply replies.
     const approval = session.runtime.currentPendingApproval();
-    if (approval && approval.request !== session.reportedApproval?.request)
-      session.onEvent(session.sessionId, { kind: "approval-requested", approval });
+    const writer = session.agentWriter;
+    if (approval && approval.request !== session.reportedApproval?.request) {
+      const eventApproval = writer
+        ? {
+            ...approval,
+            subagentSessionId: session.sessionId,
+            subagentTitle: "SubAgent",
+          }
+        : approval;
+      (writer?.onEvent ?? session.onEvent)(writer?.ownerSessionId ?? session.sessionId, {
+        kind: "approval-requested",
+        approval: eventApproval,
+      });
+    }
     session.reportedApproval = approval;
     const questions = session.runtime.currentPendingQuestions();
-    if (questions && questions.request !== session.reportedQuestions?.request)
-      session.onEvent(session.sessionId, { kind: "questions-requested", questions });
+    if (questions && questions.request !== session.reportedQuestions?.request) {
+      (writer?.onEvent ?? session.onEvent)(writer?.ownerSessionId ?? session.sessionId, {
+        kind: "questions-requested",
+        questions,
+      });
+    }
     session.reportedQuestions = questions;
+    const blocked = Boolean(approval || questions);
+    if (writer && writer.blocked !== blocked) {
+      writer.blocked = blocked;
+      void writer.context.update({}, blocked ? "blocked" : "running").catch((error: unknown) => {
+        session.onEvent(session.sessionId, {
+          kind: "background-task-error",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
     if (session.polling) return;
     session.polling = true;
     const generation = session.generation;
@@ -328,7 +358,6 @@ export class SessionManager {
         if (result?.kind === "completed" || result?.kind === "failed") {
           await session.result.persist();
           if (generation !== session.generation) return;
-          delete session.agentWriter;
           session.lastTurnResult =
             result.kind === "completed"
               ? { assistantText: result.assistantText }
@@ -393,36 +422,43 @@ export class SessionManager {
     if (session.agentWriter) {
       throw new Error("The target session is already being prompted by another agent.");
     }
-    session.agentWriter = {
+    const writer: NonNullable<LiveSession["agentWriter"]> = {
       ownerSessionId: parentSessionId,
       toolCallId: request.parentToolCallId,
+      context: request.context,
+      onEvent: parent.onEvent,
+      blocked: false,
     };
-    if (session.turnActive || session.waiter) {
-      this.cancel(target.sessionId);
-      await session.operations;
-      session.agentWriter = {
-        ownerSessionId: parentSessionId,
-        toolCallId: request.parentToolCallId,
-      };
-    }
-    if (request.worktree) {
-      await this.setSessionWorktree(target.sessionId);
-    }
-    const transcript = resolveSubagentTranscriptFilePath(
-      this.globalConfig.spiritDataDir,
-      target.sessionId,
-      target.sessionId,
-    );
-    await request.context.update({
-      sessionId: target.sessionId,
-      sessionTranscript: transcript,
-      ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
-      ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
-    });
-    const cancel = () => this.cancel(target.sessionId);
+    session.agentWriter = writer;
+    const cancel = () => this.cancel(target.sessionId, { preserveAgentWriter: true });
     request.context.signal.addEventListener("abort", cancel, { once: true });
     try {
-      const stopReason = await this.runPrompt(target.sessionId, request.prompt, [], []);
+      if (session.turnActive || session.waiter) {
+        this.cancel(target.sessionId, { preserveAgentWriter: true });
+        await session.operations;
+      }
+      const transcript = resolveSubagentTranscriptFilePath(
+        this.globalConfig.spiritDataDir,
+        target.sessionId,
+        target.sessionId,
+      );
+      const stopReason = await this.runPrompt(
+        target.sessionId,
+        request.prompt,
+        [],
+        [],
+        async () => {
+          if (request.worktree) {
+            await this.setSessionWorktree(target.sessionId);
+          }
+          await request.context.update({
+            sessionId: target.sessionId,
+            sessionTranscript: transcript,
+            ...(session.worktreePath ? { worktreePath: session.worktreePath } : {}),
+            ...(session.worktreeBranch ? { worktreeBranch: session.worktreeBranch } : {}),
+          });
+        },
+      );
       const result = session.lastTurnResult;
       const failed = stopReason !== "end_turn";
       const text = result?.assistantText ?? result?.error ?? "The turn was cancelled.";
@@ -438,8 +474,24 @@ export class SessionManager {
       };
     } finally {
       request.context.signal.removeEventListener("abort", cancel);
-      delete session.agentWriter;
+      if (session.agentWriter === writer) delete session.agentWriter;
     }
+  }
+
+  delegatedInputSessionId(
+    parentSessionId: string,
+    kind: "approval" | "questions",
+    requestId?: string,
+  ): string | undefined {
+    for (const session of this.sessions.values()) {
+      if (session.agentWriter?.ownerSessionId !== parentSessionId) continue;
+      const pending =
+        kind === "approval"
+          ? session.runtime.currentPendingApproval(requestId)
+          : session.runtime.currentPendingQuestions(requestId);
+      if (pending) return session.sessionId;
+    }
+    return undefined;
   }
 
   async setSessionWorktree(sessionId: string): Promise<AcpSessionState> {

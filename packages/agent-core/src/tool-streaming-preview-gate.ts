@@ -5,7 +5,7 @@ import { isJsonObject } from "./tool-agent.js";
 const PARTIAL_PATH_PATTERN = /"path"\s*:\s*"((?:\\.|[^"\\])*)"/;
 const PARTIAL_PLAN_NAME_PATTERN = /"name"\s*:\s*"((?:\\.|[^"\\])*)"/;
 const PARTIAL_QUERY_PATTERN = /"query"\s*:\s*"((?:\\.|[^"\\])*)/;
-const PARTIAL_SUBAGENT_TASK_PATTERN = /"prompt"\s*:\s*"((?:\\.|[^"\\])*)/;
+const PARTIAL_SUBAGENT_TASK_PATTERN = /"(?:prompt|task)"\s*:\s*"((?:\\.|[^"\\])*)/;
 const PARTIAL_APPLY_PATCH_OPERATION_TYPE_PATTERN =
   /"type"\s*:\s*"(create_file|update_file|delete_file)"/;
 const PARTIAL_POSITIVE_INT_FIELD_PATTERN = (key: string): RegExp =>
@@ -138,8 +138,9 @@ export function tryExtractPartialSubagentTask(argumentsJson: string): string | u
 
   try {
     const parsed = JSON.parse(trimmed) as JsonValue;
-    if (isJsonObject(parsed) && typeof parsed.prompt === "string" && parsed.prompt.trim()) {
-      return parsed.prompt.trim();
+    if (isJsonObject(parsed)) {
+      const prompt = typeof parsed.prompt === "string" ? parsed.prompt : parsed.task;
+      if (typeof prompt === "string" && prompt.trim()) return prompt.trim();
     }
   } catch {
     // Streaming JSON may be incomplete.

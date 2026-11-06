@@ -381,7 +381,15 @@ export class SpiritAcpAgent implements acp.Agent {
       return;
     // Handle approval requests asynchronously
     if (event.kind === "approval-requested") {
-      const session = this.sessionManager.getSession(sessionId);
+      const targetSessionId =
+        event.approval.subagentSessionId ??
+        this.sessionManager.delegatedInputSessionId(
+          sessionId,
+          "approval",
+          event.approval.requestId,
+        ) ??
+        sessionId;
+      const session = this.sessionManager.getSession(targetSessionId);
       if (session) {
         void handleApprovalRequest(this.connection, sessionId, event.approval)
           .then(async (decision) => {
@@ -389,7 +397,8 @@ export class SpiritAcpAgent implements acp.Agent {
             if (
               pending?.request !== event.approval.request ||
               pending?.toolCallId !== event.approval.toolCallId ||
-              pending?.subagentSessionId !== event.approval.subagentSessionId
+              (pending?.subagentSessionId !== undefined &&
+                pending.subagentSessionId !== event.approval.subagentSessionId)
             )
               return;
             // Early-stream execution can await this decision inside the session pump.
@@ -404,7 +413,13 @@ export class SpiritAcpAgent implements acp.Agent {
 
     // Handle questions-requested by degrading to a permission prompt
     if (event.kind === "questions-requested") {
-      const session = this.sessionManager.getSession(sessionId);
+      const targetSessionId =
+        this.sessionManager.delegatedInputSessionId(
+          sessionId,
+          "questions",
+          event.questions.requestId,
+        ) ?? sessionId;
+      const session = this.sessionManager.getSession(targetSessionId);
       if (session) {
         const description = event.questions.questions.title ?? event.questions.toolName;
         void handleQuestionsRequest(this.connection, sessionId, { prompt: description })

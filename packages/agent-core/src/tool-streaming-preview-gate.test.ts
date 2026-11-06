@@ -230,6 +230,14 @@ test("subagent early preview extracts prompt from incomplete JSON", () => {
   });
 });
 
+test("subagent early preview still reads legacy task arguments", () => {
+  const partial = '{"task":"Review auth';
+  assert.equal(tryExtractPartialSubagentTask(partial), "Review auth");
+  assert.deepEqual(previewRequestFromStreamingArguments("subagent", partial), {
+    prompt: "Review auth",
+  });
+});
+
 test("resolveStreamingToolPreviewEmit repeats subagent preview when prompt grows", () => {
   const partial = '{"prompt":"Explore';
   const first = resolveStreamingToolPreviewEmit("subagent", partial, {
