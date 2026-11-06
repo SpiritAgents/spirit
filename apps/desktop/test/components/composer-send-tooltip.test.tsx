@@ -2,7 +2,7 @@
 
 import "./setup";
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { ComposerLabelsProvider, ComposerSurface } from "@spiritagent/ui/composer";
@@ -81,6 +81,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.clearAllTimers();
   vi.useRealTimers();
   vi.unstubAllGlobals();
