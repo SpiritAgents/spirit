@@ -13,6 +13,8 @@ import {
   type McpUiOpener,
   type PendingWorkspaceFile,
   type RuntimeEvent,
+  type RuntimeSubagentSessionArchiveEntry,
+  type RuntimeSubagentSessionSummary,
   type AgentMode,
   type SubagentSessionExecutionRequest,
   type SessionTaskContext,
@@ -150,6 +152,12 @@ interface ServerSession {
     resolve(result: { text: string; failed: boolean }): void;
     reject(error: unknown): void;
   }>;
+}
+
+interface NativeSubagentLink {
+  parentSessionId: string;
+  parentToolCallId: string;
+  title: string;
 }
 
 export interface SessionManagerCallbacks {
@@ -328,6 +336,7 @@ export class SessionManager {
       reject(error: unknown): void;
     }>
   >();
+  private readonly nativeSubagentLinks = new Map<string, Map<string, NativeSubagentLink>>();
 
   constructor(
     spiritDataDir: string,
@@ -533,6 +542,13 @@ export class SessionManager {
             : {}),
         });
     const targetSession = this.requireSession(target.sessionId);
+    const links = this.nativeSubagentLinks.get(target.sessionId) ?? new Map();
+    links.set(`${parentSessionId}\n${request.parentToolCallId}`, {
+      parentSessionId,
+      parentToolCallId: request.parentToolCallId,
+      title: request.prompt.trim().slice(0, 72) || "SubAgent",
+    });
+    this.nativeSubagentLinks.set(target.sessionId, links);
     const { runtime } = targetSession.runtimeResult;
     if (runtime.hasPendingApproval() || runtime.hasPendingQuestions()) {
       throw new Error("Answer the target session's pending approval or questionnaire first.");
@@ -1011,7 +1027,8 @@ export class SessionManager {
         }
         // The bridge had clients drive this on a timer; the daemon pump owns it now.
         runtime.handleStreamStallTimeout();
-        runtime.drainEvents();
+        const drainedEvents = runtime.drainEvents();
+        this.broadcastNativeSubagentEvents(session, drainedEvents);
 
         const turnResult = runtime.takeCompletedTurnResult();
         if (turnResult && session.turnActive) {
@@ -1700,19 +1717,106 @@ export class SessionManager {
 
   // ------------------------------------------------------------ subagents
 
-  subagentSessionArchive(sessionId: string, subagentSessionId: string): unknown {
-    return (
-      this.requireSession(sessionId).runtimeResult.runtime.childSessionArchive(subagentSessionId) ??
-      null
+  async subagentSessionArchive(
+    sessionId: string,
+    subagentSessionId: string,
+    parentToolCallId?: string,
+  ): Promise<RuntimeSubagentSessionArchiveEntry | null> {
+    const parent = this.requireSession(sessionId);
+    const archived = parent.runtimeResult.runtime.childSessionArchive(subagentSessionId);
+    if (archived) return archived;
+    const link = this.nativeSubagentLinksForTarget(subagentSessionId).find(
+      (candidate) =>
+        candidate.parentSessionId === sessionId &&
+        (!parentToolCallId || candidate.parentToolCallId === parentToolCallId),
     );
+    if (!link) return null;
+    await this.resumeSession(subagentSessionId, parent.info.workspaceRoot, parent.info.hostKind);
+    const target = this.requireSession(subagentSessionId);
+    return this.nativeSubagentArchive(target, link);
   }
 
   subagentPendingAuxState(sessionId: string, subagentSessionId: string): unknown {
-    return (
-      this.requireSession(sessionId).runtimeResult.runtime.childSessionPendingAuxState(
-        subagentSessionId,
-      ) ?? null
+    const parent = this.requireSession(sessionId);
+    const pending = parent.runtimeResult.runtime.childSessionPendingAuxState(subagentSessionId);
+    if (pending) return pending;
+    if (
+      !this.nativeSubagentLinksForTarget(subagentSessionId).some(
+        (candidate) => candidate.parentSessionId === sessionId,
+      )
+    )
+      return null;
+    return this.sessions.get(subagentSessionId)?.runtimeResult.runtime.pendingAuxState() ?? null;
+  }
+
+  private nativeSubagentLinksForTarget(targetSessionId: string): NativeSubagentLink[] {
+    const links = new Map<string, NativeSubagentLink>(
+      this.nativeSubagentLinks.get(targetSessionId) ?? [],
     );
+    for (const parent of this.sessions.values()) {
+      for (const task of parent.runtimeResult.runtime.backgroundTaskRecords()) {
+        if (task.kind !== "subagent" || task.sessionId !== targetSessionId) continue;
+        const key = `${parent.info.sessionId}\n${task.toolCallId}`;
+        if (links.has(key)) continue;
+        links.set(key, {
+          parentSessionId: parent.info.sessionId,
+          parentToolCallId: task.toolCallId,
+          title: task.input.trim().slice(0, 72) || "SubAgent",
+        });
+      }
+    }
+    return [...links.values()].filter((link) => {
+      const parent = this.sessions.get(link.parentSessionId);
+      return parent && !parent.closing;
+    });
+  }
+
+  private nativeSubagentArchive(
+    target: ServerSession,
+    link: NativeSubagentLink,
+  ): RuntimeSubagentSessionArchiveEntry {
+    const parent = this.requireSession(link.parentSessionId);
+    const taskSummary = buildServerSnapshot(parent.runtimeResult).childSessions.find(
+      (summary) =>
+        summary.sessionId === target.info.sessionId &&
+        summary.parentToolCallId === link.parentToolCallId,
+    );
+    const summary: RuntimeSubagentSessionSummary = taskSummary ?? {
+      sessionId: target.info.sessionId,
+      parentToolCallId: link.parentToolCallId,
+      title: link.title,
+      status: target.agentWriter?.blocked
+        ? "blocked"
+        : target.turnActive || target.runtimeResult.runtime.isBusy()
+          ? "running"
+          : "completed",
+      startedAtUnixMs: Date.parse(target.info.createdAt),
+      updatedAtUnixMs: Date.now(),
+      ...(target.info.worktreePath ? { worktreePath: target.info.worktreePath } : {}),
+      ...(target.info.worktreeBranch ? { worktreeBranch: target.info.worktreeBranch } : {}),
+    };
+    return {
+      summary: { ...summary },
+      llmHistory: [...target.runtimeResult.runtime.history()],
+    };
+  }
+
+  private broadcastNativeSubagentEvents(
+    target: ServerSession,
+    events: RuntimeEvent<JsonValue>[],
+  ): void {
+    if (events.length === 0) return;
+    for (const link of this.nativeSubagentLinksForTarget(target.info.sessionId)) {
+      this.callbacks.broadcastSubagentEvents?.(link.parentSessionId, [
+        {
+          sessionId: target.info.sessionId,
+          parentToolCallId: link.parentToolCallId,
+          events,
+          pendingAux: target.runtimeResult.runtime.pendingAuxState(),
+          archive: this.nativeSubagentArchive(target, link),
+        },
+      ]);
+    }
   }
 
   // ------------------------------------------------- config / hooks / mode

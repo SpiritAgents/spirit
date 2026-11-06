@@ -64,6 +64,10 @@ function historyText(content: unknown): string {
   return "";
 }
 
+export function stripSubagentUserMessageTimestamp(content: string): string {
+  return content.replace(/^<user_message_at>[^<\r\n]+<\/user_message_at>(?:\r?\n|$)/u, "");
+}
+
 function inferToolPhase(
   sessionStatus: SubagentViewerSessionStatus,
   hasOutput: boolean,
@@ -219,7 +223,7 @@ export function buildSubagentConversationSnapshots(
     }
 
     if (entry.role === "user") {
-      const content = historyText(entry.content).trim();
+      const content = stripSubagentUserMessageTimestamp(historyText(entry.content)).trim();
       if (!content) {
         continue;
       }

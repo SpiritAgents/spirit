@@ -51,6 +51,20 @@ test("SubagentConversationProjection.fromSession skips worktree bootstrap card w
   );
 });
 
+test("SubagentConversationProjection.fromSession hides archived user timestamp metadata", () => {
+  const projection = SubagentConversationProjection.fromSession(
+    buildSubagentSession({
+      llmHistory: [
+        {
+          role: "user",
+          content: "<user_message_at>2026-11-06T01:00:00.000+08:00</user_message_at>\nSay hello",
+        },
+      ],
+    }),
+  );
+  assert.equal(projection.toMessages()[0]?.content, "Say hello");
+});
+
 test("SubagentConversationProjection.fromSession keeps worktree bootstrap card for worktree subagent", () => {
   const projection = SubagentConversationProjection.fromSession(
     buildSubagentSession({

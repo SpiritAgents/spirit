@@ -803,7 +803,7 @@ function delegatedContext() {
 
 it("creates and continues native subagent sessions by ID", async () => {
   const { dataDir, workspaceRoot } = await fixture();
-  const { manager } = managerFor(dataDir);
+  const { manager, childEvents } = managerFor(dataDir);
   const parent = await manager.createSession({ workspaceRoot, hostKind: "desktop" });
   let replies = 0;
   setLlmFetchTransportOverrideForTests(async () => response(`Reply ${++replies}`));
@@ -819,6 +819,17 @@ it("creates and continues native subagent sessions by ID", async () => {
   if (!targetId) throw new Error("Missing delegated session ID.");
   expect(created.output.summaryText).toContain("Reply 1");
   expect(created.output.summaryText).toContain(targetId);
+  expect(JSON.stringify(childEvents)).toContain("Reply 1");
+  expect(JSON.stringify(manager.exportArchive(parent.sessionId, [], []))).not.toContain(
+    "First continuation",
+  );
+  const viewerArchive = await manager.subagentSessionArchive(parent.sessionId, targetId);
+  expect(viewerArchive?.summary.parentToolCallId).toBe("call-native");
+  expect(JSON.stringify(viewerArchive?.llmHistory)).toContain("First continuation");
+  expect(JSON.stringify(viewerArchive?.llmHistory)).toContain("Reply 1");
+  await manager.closeSession(targetId);
+  const restoredViewerArchive = await manager.subagentSessionArchive(parent.sessionId, targetId);
+  expect(JSON.stringify(restoredViewerArchive?.llmHistory)).toContain("Reply 1");
 
   const second = delegatedContext();
   const continued = await manager.delegateSubagentTurn(parent.sessionId, {
@@ -829,6 +840,14 @@ it("creates and continues native subagent sessions by ID", async () => {
   });
   expect(continued.output.summaryText).toContain("Reply 2");
   expect(second.updates[0]?.sessionId).toBe(targetId);
+  expect(
+    (await manager.subagentSessionArchive(parent.sessionId, targetId, "call-native"))?.summary
+      .parentToolCallId,
+  ).toBe("call-native");
+  expect(
+    (await manager.subagentSessionArchive(parent.sessionId, targetId, "call-resume"))?.summary
+      .parentToolCallId,
+  ).toBe("call-resume");
   const archive = manager.exportArchive(targetId, [], []);
   expect(JSON.stringify(archive)).toContain("First continuation");
   expect(JSON.stringify(archive)).toContain("Second continuation");

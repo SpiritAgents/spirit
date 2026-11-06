@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import { RemoteDesktopRuntime } from "../../dist-electron/src/host/remote-runtime.js";
+import {
+  RemoteDesktopRuntime,
+  resolveRemoteUserSessionTarget,
+} from "../../dist-electron/src/host/remote-runtime.js";
 import { replyPendingApprovalCommand } from "../../dist-electron/src/host/session-turn-orchestrator.js";
 
 test("remote replies preserve the displayed input identity rather than the latest snapshot", async () => {
@@ -218,6 +221,144 @@ test("child events never enter the parent's event drain", () => {
       events: [{ kind: "assistant-chunk", text: "Child reply." }],
     },
   ]);
+});
+
+test("native session archives refresh independently and retain their latest summaries", async () => {
+  let listener;
+  let listedSessions = [];
+  const sessionId = `sess_${"a".repeat(32)}`;
+  const nativeArchive = {
+    summary: {
+      sessionId,
+      parentToolCallId: "delegate-native",
+      title: "Native continuation",
+      status: "running",
+      startedAtUnixMs: 1,
+      updatedAtUnixMs: 1,
+    },
+    llmHistory: [
+      {
+        role: "user",
+        content: "<user_message_at>2026-11-06T01:00:00.000+08:00</user_message_at>\nNative prompt",
+      },
+    ],
+  };
+  const runtime = new RemoteDesktopRuntime(
+    {
+      onNotification(callback) {
+        listener = callback;
+        return () => {};
+      },
+      async call(method) {
+        if (method === "session.exportArchive")
+          return { messages: [], llmHistory: [], assistantAux: [] };
+        if (method === "session.subagentSessionArchive") return nativeArchive;
+        if (method === "session.list") return { sessions: listedSessions };
+        return { ok: true };
+      },
+    },
+    "parent",
+    { messages: [], llmHistory: [], assistantAux: [] },
+  );
+  await runtime.initializeFromSnapshot({
+    childSessions: [nativeArchive.summary],
+    isBusy: false,
+  });
+  await runtime.ensureChildSessionArchivesFresh();
+  assert.equal(runtime.childSessionArchives()[0]?.summary.sessionId, sessionId);
+  assert.equal(runtime.drainEvents().length, 0);
+  assert.equal(await resolveRemoteUserSessionTarget(runtime, "delegate-native"), undefined);
+  listedSessions = [
+    {
+      sessionId,
+      sessionKind: "default",
+      conversationKey: "/sessions/user.json",
+      workspaceRoot: "/workspace",
+    },
+  ];
+  assert.deepEqual(await resolveRemoteUserSessionTarget(runtime, "delegate-native"), {
+    conversationKey: "/sessions/user.json",
+    workspaceRoot: "/workspace",
+  });
+  listedSessions = [];
+
+  nativeArchive.llmHistory.push({ role: "assistant", content: "Native reply" });
+  listener({
+    method: "session.subagentEvents",
+    params: {
+      sessionId: "parent",
+      drains: [
+        {
+          sessionId,
+          parentToolCallId: "delegate-native",
+          archive: nativeArchive,
+          events: [{ kind: "assistant-chunk", text: "Native reply" }],
+        },
+      ],
+    },
+  });
+  assert.equal(runtime.drainEvents().length, 0);
+  assert.equal(runtime.drainActiveChildSessionEvents().length, 1);
+
+  nativeArchive.summary = {
+    ...nativeArchive.summary,
+    status: "completed",
+    finalOutput: "Native reply",
+    completedAtUnixMs: 2,
+    updatedAtUnixMs: 2,
+  };
+  listener({
+    method: "session.snapshot",
+    params: {
+      sessionId: "parent",
+      snapshot: { childSessions: [nativeArchive.summary], isBusy: false },
+    },
+  });
+  assert.equal(runtime.childSessionArchives()[0]?.summary.status, "completed");
+  await runtime.ensureChildSessionArchivesFresh();
+  assert.equal(runtime.childSessionArchives().length, 1);
+  assert.equal(runtime.childSessionArchives()[0]?.summary.status, "completed");
+  assert.equal(runtime.childSessionArchives()[0]?.llmHistory.length, 2);
+});
+
+test("native archives retain separate parent links for continued sessions", async () => {
+  const sessionId = `sess_${"b".repeat(32)}`;
+  const summaries = ["delegate-first", "delegate-second"].map((parentToolCallId) => ({
+    sessionId,
+    parentToolCallId,
+    title: "Shared native session",
+    status: "completed",
+    startedAtUnixMs: 1,
+    updatedAtUnixMs: 1,
+  }));
+  const runtime = new RemoteDesktopRuntime(
+    {
+      onNotification: () => () => {},
+      async call(method, params) {
+        if (method === "session.exportArchive")
+          return { messages: [], llmHistory: [], assistantAux: [] };
+        if (method === "session.subagentSessionArchive") {
+          const summary = summaries.find(
+            (candidate) => candidate.parentToolCallId === params.parentToolCallId,
+          );
+          return {
+            summary,
+            llmHistory: [{ role: "user", content: "Shared prompt" }],
+          };
+        }
+        return { ok: true };
+      },
+    },
+    "parent",
+    { messages: [], llmHistory: [], assistantAux: [] },
+  );
+  await runtime.initializeFromSnapshot({ childSessions: summaries, isBusy: false });
+  await runtime.ensureChildSessionArchivesFresh();
+  assert.equal(runtime.childSessionArchives().length, 2);
+  assert.deepEqual(
+    runtime.childSessionArchives().map((entry) => entry.summary.parentToolCallId),
+    ["delegate-first", "delegate-second"],
+  );
 });
 
 test("archive import sends its UI baseline with the matching model history", async () => {

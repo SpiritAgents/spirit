@@ -462,6 +462,7 @@ import {
   isSideChatProvisionalSessionPath,
   loadHostMetadata,
   loadStoredSession,
+  saveStoredSession,
   modelSecretKeyPresence,
   resolveApiKeyForConfigModel,
   createDesktopExtensionStateStore,
@@ -487,6 +488,7 @@ import {
   createRemoteDesktopRuntime,
   disposeRemoteDesktopRuntime,
   ensureRemoteChildSessionArchivesFresh,
+  resolveRemoteUserSessionTarget,
   exportRemoteDesktopState,
   migrateRemoteConversationKey,
   openRemoteDesktopRuntime,
@@ -2379,6 +2381,36 @@ export class DesktopHostService {
     if (this.subagentViewerTargetToolCallId) {
       const bundle = this.activeBundle();
       await ensureRemoteChildSessionArchivesFresh(bundle.runtime);
+      const userSession = await resolveRemoteUserSessionTarget(
+        bundle.runtime,
+        this.subagentViewerTargetToolCallId,
+      );
+      if (userSession) {
+        this.subagentViewerTargetToolCallId = null;
+        const sessionPath = userSession.conversationKey;
+        const stored = await loadStoredSession(sessionPath);
+        const workLocation = userSession.workLocation ?? "local";
+        const nextStored = {
+          ...stored,
+          workspaceRoot: userSession.workspaceRoot,
+          workLocation,
+        };
+        if (userSession.worktreePath) nextStored.worktreePath = userSession.worktreePath;
+        else delete nextStored.worktreePath;
+        if (userSession.worktreeBranch) nextStored.worktreeBranch = userSession.worktreeBranch;
+        else delete nextStored.worktreeBranch;
+        await saveStoredSession(sessionPath, nextStored);
+        const loadedBundle = this.sessionRegistry.findBySessionPath(path.resolve(sessionPath));
+        if (loadedBundle) {
+          loadedBundle.workspaceRoot = userSession.workspaceRoot;
+          loadedBundle.workLocation = workLocation;
+          if (userSession.worktreePath) loadedBundle.worktreePath = userSession.worktreePath;
+          else delete loadedBundle.worktreePath;
+          if (userSession.worktreeBranch) loadedBundle.worktreeBranch = userSession.worktreeBranch;
+          else delete loadedBundle.worktreeBranch;
+        }
+        return this.openSession(sessionPath);
+      }
       this.refreshArchiveFromRuntime(bundle);
     }
     const snapshot = await this.buildSnapshot();

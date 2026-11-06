@@ -4,6 +4,7 @@ import type {
   SubagentSessionStatus,
 } from "@spiritagent/agent-core";
 import { llmMessageTextContent } from "@spiritagent/agent-core";
+import { stripSubagentUserMessageTimestamp } from "@spiritagent/host-internal";
 
 import type { ConversationMessageSnapshot } from "../types.js";
 import { DesktopAssistantMessageStateMachine } from "./assistant-message-state.js";
@@ -46,7 +47,7 @@ function seedMessagesFromSubagentSession(
     if (entry.role !== "user") {
       continue;
     }
-    const content = historyText(entry.content).trim();
+    const content = stripSubagentUserMessageTimestamp(historyText(entry.content)).trim();
     if (!content) {
       continue;
     }

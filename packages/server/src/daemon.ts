@@ -760,6 +760,7 @@ export async function startDaemon(options: DaemonOptions): Promise<RunningDaemon
         return sessionManager.subagentSessionArchive(
           readSessionId(params),
           String(params["subagentSessionId"] ?? ""),
+          typeof params["parentToolCallId"] === "string" ? params["parentToolCallId"] : undefined,
         );
       case SESSION_SUBAGENT_AUX:
         return sessionManager.subagentPendingAuxState(
